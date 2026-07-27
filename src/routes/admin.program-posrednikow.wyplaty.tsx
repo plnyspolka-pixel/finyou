@@ -5,8 +5,21 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { BanknoteIcon, Plus, Eye, CheckCircle2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { formatPLN, formatDate } from "@/lib/labels";
@@ -50,9 +63,14 @@ function WyplatyPage() {
     try {
       const res = (await createFn({ data: {} })) as any;
       const skipped = (res?.skipped ?? []) as any[];
-      toast.success(`Utworzono paczkę: ${res?.count ?? 0} wypłat na ${formatPLN(res?.total ?? 0)}`, {
-        description: skipped.length ? `Pominięto ${skipped.length} partnerów (poniżej progu 500 zł lub brak rachunku).` : undefined,
-      });
+      toast.success(
+        `Utworzono paczkę: ${res?.count ?? 0} wypłat na ${formatPLN(res?.total ?? 0)}`,
+        {
+          description: skipped.length
+            ? `Pominięto ${skipped.length} partnerów (poniżej progu 500 zł lub brak rachunku).`
+            : undefined,
+        },
+      );
       void qc.invalidateQueries({ queryKey: ["admin-affiliate-batches"] });
     } catch (e) {
       toast.error("Nie udało się utworzyć paczki", { description: (e as Error).message });
@@ -75,10 +93,16 @@ function WyplatyPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><BanknoteIcon className="h-6 w-6" /> Wypłaty</h1>
-          <p className="text-sm text-muted-foreground">Paczki wypłat prowizji. Próg wypłaty wynosi 500 zł na partnera.</p>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <BanknoteIcon className="h-6 w-6" /> Wypłaty
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Paczki wypłat prowizji. Próg wypłaty wynosi 500 zł na partnera.
+          </p>
         </div>
-        <Button onClick={createBatch} disabled={creating}><Plus className="mr-2 h-4 w-4" /> {creating ? "Tworzenie…" : "Utwórz paczkę wypłat"}</Button>
+        <Button onClick={createBatch} disabled={creating}>
+          <Plus className="mr-2 h-4 w-4" /> {creating ? "Tworzenie…" : "Utwórz paczkę wypłat"}
+        </Button>
       </div>
 
       <Card>
@@ -96,20 +120,55 @@ function WyplatyPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {q.isLoading && <TableRow><TableCell colSpan={7} className="p-6 text-center text-muted-foreground">Ładowanie…</TableCell></TableRow>}
-              {!q.isLoading && rows.length === 0 && <TableRow><TableCell colSpan={7} className="p-6 text-center text-muted-foreground">Brak paczek wypłat.</TableCell></TableRow>}
+              {q.isLoading && (
+                <TableRow>
+                  <TableCell colSpan={7} className="p-6 text-center text-muted-foreground">
+                    Ładowanie…
+                  </TableCell>
+                </TableRow>
+              )}
+              {!q.isLoading && rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="p-6 text-center text-muted-foreground">
+                    Brak paczek wypłat.
+                  </TableCell>
+                </TableRow>
+              )}
               {rows.map((b) => (
                 <TableRow key={b.id}>
-                  <TableCell className="font-medium">{b.name ?? `Paczka ${String(b.id).slice(0, 8)}`}</TableCell>
-                  <TableCell><Badge variant="secondary" className={b.status === "paid" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>{payoutBatchStatusLabels[b.status] ?? b.status}</Badge></TableCell>
-                  <TableCell className="text-right tabular-nums font-semibold">{formatPLN(b.total_amount)}</TableCell>
+                  <TableCell className="font-medium">
+                    {b.name ?? `Paczka ${String(b.id).slice(0, 8)}`}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="secondary"
+                      className={
+                        b.status === "paid"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-amber-100 text-amber-800"
+                      }
+                    >
+                      {payoutBatchStatusLabels[b.status] ?? b.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-semibold">
+                    {formatPLN(b.total_amount)}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{b.payout_count ?? 0}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(b.created_at)}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{b.paid_at ? formatDate(b.paid_at) : "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                    {formatDate(b.created_at)}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                    {b.paid_at ? formatDate(b.paid_at) : "—"}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="outline" size="sm" onClick={() => setOpenBatch(b.id)}><Eye className="h-4 w-4" /></Button>
-                      <Button variant="outline" size="sm" onClick={() => exportTransfers(b.id)}><Download className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="sm" onClick={() => setOpenBatch(b.id)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => exportTransfers(b.id)}>
+                        <Download className="h-4 w-4" />
+                      </Button>
                       {b.status !== "paid" && <MarkPaidButton batchId={b.id} />}
                     </div>
                   </TableCell>
@@ -144,7 +203,14 @@ function MarkPaidButton({ batchId }: { batchId: string }) {
   }
 
   return (
-    <Button variant="outline" size="sm" className="text-emerald-700" onClick={mark} disabled={busy} title="Oznacz jako wypłacone">
+    <Button
+      variant="outline"
+      size="sm"
+      className="text-emerald-700"
+      onClick={mark}
+      disabled={busy}
+      title="Oznacz jako wypłacone"
+    >
       <CheckCircle2 className="h-4 w-4" />
     </Button>
   );
@@ -152,7 +218,10 @@ function MarkPaidButton({ batchId }: { batchId: string }) {
 
 function ItemsDialog({ batchId, onClose }: { batchId: string; onClose: () => void }) {
   const getFn = useServerFn(adminGetPayoutItems);
-  const q = useQuery({ queryKey: ["admin-affiliate-batch-items", batchId], queryFn: () => getFn({ data: { batchId } }) });
+  const q = useQuery({
+    queryKey: ["admin-affiliate-batch-items", batchId],
+    queryFn: () => getFn({ data: { batchId } }),
+  });
   const items = (q.data as any[]) ?? [];
 
   return (
@@ -170,15 +239,33 @@ function ItemsDialog({ batchId, onClose }: { batchId: string; onClose: () => voi
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow><TableHead>Partner</TableHead><TableHead className="text-right">Kwota</TableHead><TableHead>Tytuł przelewu</TableHead><TableHead>Status</TableHead></TableRow>
+                <TableRow>
+                  <TableHead>Partner</TableHead>
+                  <TableHead className="text-right">Kwota</TableHead>
+                  <TableHead>Tytuł przelewu</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((it) => (
                   <TableRow key={it.id}>
                     <TableCell className="font-medium">{it.partner_name ?? "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums font-semibold">{formatPLN(it.amount)}</TableCell>
+                    <TableCell className="text-right tabular-nums font-semibold">
+                      {formatPLN(it.amount)}
+                    </TableCell>
                     <TableCell className="text-xs">{it.transfer_title ?? "—"}</TableCell>
-                    <TableCell><Badge variant="secondary" className={it.status === "paid" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>{it.status === "paid" ? "Wypłacone" : "Oczekuje"}</Badge></TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={
+                          it.status === "paid"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-amber-100 text-amber-800"
+                        }
+                      >
+                        {it.status === "paid" ? "Wypłacone" : "Oczekuje"}
+                      </Badge>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

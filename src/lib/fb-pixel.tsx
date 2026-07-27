@@ -56,11 +56,7 @@ function initPixel(id: string) {
   window.__fbPixelActive = id;
 }
 
-export function trackFbEvent(
-  event: string,
-  params?: Record<string, unknown>,
-  eventId?: string,
-) {
+export function trackFbEvent(event: string, params?: Record<string, unknown>, eventId?: string) {
   if (typeof window === "undefined" || !window.fbq || !window.__fbPixelActive) return;
   if (eventId) {
     window.fbq("track", event, params || {}, { eventID: eventId });
@@ -136,8 +132,7 @@ export async function trackEvent(
       : "client";
     const { sendFbCapiEvent } = await import("./fb-capi.functions");
     const value = typeof params?.value === "number" ? (params.value as number) : undefined;
-    const currency =
-      typeof params?.currency === "string" ? (params.currency as string) : undefined;
+    const currency = typeof params?.currency === "string" ? (params.currency as string) : undefined;
     await sendFbCapiEvent({
       data: {
         event,
@@ -159,7 +154,6 @@ export async function trackEvent(
     console.warn("[fb-capi]", e);
   }
 }
-
 
 function pixelForPath(path: string, s: Settings): string | null {
   if (path.startsWith("/inwestor")) return s.investor_pixel_id;

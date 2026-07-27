@@ -7,10 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, RefreshCw, Sparkles, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import {
-  fetchClarityMetrics,
-  analyzeClarityMetrics,
-} from "@/lib/clarity.functions";
+import { fetchClarityMetrics, analyzeClarityMetrics } from "@/lib/clarity.functions";
 
 export const Route = createFileRoute("/admin/clarity")({
   component: ClarityPage,
@@ -46,7 +43,9 @@ function MetricBlock({ title, payload }: { title: string; payload: any }) {
               <thead>
                 <tr className="border-b text-left text-xs uppercase text-muted-foreground">
                   {cols.map((c) => (
-                    <th key={c} className="py-2 pr-3 font-medium">{c}</th>
+                    <th key={c} className="py-2 pr-3 font-medium">
+                      {c}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -117,8 +116,8 @@ function ClarityPage() {
         <div>
           <h1 className="text-2xl font-semibold">Microsoft Clarity</h1>
           <p className="text-sm text-muted-foreground">
-            Metryki z Clarity + analiza AI. Nagrania sesji i heatmapy (obrazy)
-            Microsoft udostępnia tylko w panelu Clarity — link niżej.
+            Metryki z Clarity + analiza AI. Nagrania sesji i heatmapy (obrazy) Microsoft udostępnia
+            tylko w panelu Clarity — link niżej.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -154,8 +153,7 @@ function ClarityPage() {
       {!metrics && !loading && (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Kliknij „Pobierz dane", aby pobrać metryki z Clarity (limit:
-            10 zapytań/dzień).
+            Kliknij „Pobierz dane", aby pobrać metryki z Clarity (limit: 10 zapytań/dzień).
           </CardContent>
         </Card>
       )}
@@ -198,8 +196,7 @@ function ClarityPage() {
           </Card>
 
           <p className="text-xs text-muted-foreground">
-            Pobrano: {formatDateTime(metrics.fetchedAt)} ·
-            Zakres: {metrics.numOfDays} dni
+            Pobrano: {formatDateTime(metrics.fetchedAt)} · Zakres: {metrics.numOfDays} dni
           </p>
         </>
       )}

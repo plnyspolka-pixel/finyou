@@ -115,9 +115,15 @@ ODPOWIEDŹ — wyłącznie poprawny JSON, bez markdown:
 function tryParseJson(s: string): any | null {
   const m = s.match(/\{[\s\S]*\}/);
   if (!m) return null;
-  try { return JSON.parse(m[0]); } catch { return null; }
+  try {
+    return JSON.parse(m[0]);
+  } catch {
+    return null;
+  }
 }
-function b(v: any): boolean { return v === true || v === "true"; }
+function b(v: any): boolean {
+  return v === true || v === "true";
+}
 function numOrNull(v: any): number | null {
   const n = Number(v);
   return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
@@ -128,7 +134,10 @@ function isAgriLand(propertyType: string): boolean {
 }
 
 // Rozsądny/sprzedawalny rynek: miasto >20 tys. mieszk. albo grunt rolny (bez ograniczeń).
-export function isReasonableMarket(propertyType: string, localityPopulation: number | null): boolean {
+export function isReasonableMarket(
+  propertyType: string,
+  localityPopulation: number | null,
+): boolean {
   if (isAgriLand(propertyType)) return true;
   return (localityPopulation ?? 0) >= REASONABLE_POPULATION;
 }
@@ -157,11 +166,11 @@ function computeScore(d: {
   // oddalenie od miasta, brak ofert biur, „nietypowy typ") — zawyżałyby ryzyko.
   if (agri) {
     let sa = 58; // bazowa płynność rynku gruntów rolnych
-    if (d.majorRoadWithin10km) sa += 4;               // dojazd/logistyka
+    if (d.majorRoadWithin10km) sa += 4; // dojazd/logistyka
     if (d.waterBodyWithin20km) sa += 2;
-    if (d.largeCityWithin50km) sa += 4;               // bliskość rynku zbytu podnosi cenę/płynność
+    if (d.largeCityWithin50km) sa += 4; // bliskość rynku zbytu podnosi cenę/płynność
     if (d.nearestCityDistanceKm != null && d.nearestCityDistanceKm <= 30) sa += 3;
-    if (d.populationTrend === "malejaca") sa -= 2;     // słaby wpływ
+    if (d.populationTrend === "malejaca") sa -= 2; // słaby wpływ
     if (d.agencyListings >= 1 || d.totalActiveListings >= 3) sa += 4; // aktywny obrót w okolicy
     return Math.max(0, Math.min(100, Math.round(sa)));
   }
@@ -207,7 +216,8 @@ function computeScore(d: {
   else s -= 5; // brak ofert biur = płytki rynek
   if (d.totalActiveListings >= 10) s += 2; // aktywna podaż porównywalnych ofert
   // Typ nieruchomości.
-  if (d.liquidType) s += 4; else s -= 4;
+  if (d.liquidType) s += 4;
+  else s -= 4;
   return Math.max(0, Math.min(100, Math.round(s)));
 }
 
@@ -221,7 +231,8 @@ export async function analyzeSaleability(args: {
   voivodeship: string | null;
   areaM2?: number | null;
 }): Promise<SaleabilityForecast> {
-  const loc = [args.address, args.city, args.voivodeship, "Polska"].filter(Boolean).join(", ") || "Polska";
+  const loc =
+    [args.address, args.city, args.voivodeship, "Polska"].filter(Boolean).join(", ") || "Polska";
   const liquidType = LIQUID_TYPES.includes(args.propertyType);
 
   // Aktywne oferty biur w okolicy — równolegle z Perplexity.
@@ -242,8 +253,12 @@ export async function analyzeSaleability(args: {
     populationTrend: "nieznana",
     nearestLargeCity: { name: null, population: null, distanceKm: null },
     demandDrivers: {
-      largeCityWithin50km: false, waterBodyWithin20km: false, spaResortWithin20km: false,
-      sanatoriumWithin20km: false, touristAttractionWithin20km: false, majorRoadWithin10km: false,
+      largeCityWithin50km: false,
+      waterBodyWithin20km: false,
+      spaResortWithin20km: false,
+      sanatoriumWithin20km: false,
+      touristAttractionWithin20km: false,
+      majorRoadWithin10km: false,
     },
     rentalDemand: "nieznany",
     purchasingPowerComment: null,
@@ -258,7 +273,10 @@ export async function analyzeSaleability(args: {
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) {
     const offers = await offersPromise;
-    return empty("Brak PERPLEXITY_API_KEY — prognoza łatwości sprzedaży pominięta (dane o ofertach biur zachowane).", offers);
+    return empty(
+      "Brak PERPLEXITY_API_KEY — prognoza łatwości sprzedaży pominięta (dane o ofertach biur zachowane).",
+      offers,
+    );
   }
 
   try {
@@ -269,7 +287,11 @@ export async function analyzeSaleability(args: {
         body: JSON.stringify({
           model: "sonar-pro",
           messages: [
-            { role: "system", content: "Jesteś analitykiem rynku nieruchomości w Polsce. Odpowiadasz wyłącznie poprawnym JSON-em." },
+            {
+              role: "system",
+              content:
+                "Jesteś analitykiem rynku nieruchomości w Polsce. Odpowiadasz wyłącznie poprawnym JSON-em.",
+            },
             { role: "user", content: buildPrompt(loc, args.propertyType) },
           ],
           temperature: 0.2,
@@ -280,7 +302,10 @@ export async function analyzeSaleability(args: {
     ]);
 
     if (!res.ok) {
-      return empty(`Perplexity HTTP ${res.status} — prognoza łatwości sprzedaży niedostępna.`, offers);
+      return empty(
+        `Perplexity HTTP ${res.status} — prognoza łatwości sprzedaży niedostępna.`,
+        offers,
+      );
     }
     const json: any = await res.json();
     const content: string = json?.choices?.[0]?.message?.content ?? "";
@@ -297,8 +322,12 @@ export async function analyzeSaleability(args: {
       touristAttractionWithin20km: b(parsed.touristAttractionWithin20km),
       majorRoadWithin10km: b(parsed.majorRoadWithin10km),
     };
-    const populationTrend = ["rosnaca", "stabilna", "malejaca"].includes(parsed.populationTrend) ? parsed.populationTrend : "nieznana";
-    const rentalDemand = ["wysoki", "sredni", "niski"].includes(parsed.rentalDemand) ? parsed.rentalDemand : "nieznany";
+    const populationTrend = ["rosnaca", "stabilna", "malejaca"].includes(parsed.populationTrend)
+      ? parsed.populationTrend
+      : "nieznana";
+    const rentalDemand = ["wysoki", "sredni", "niski"].includes(parsed.rentalDemand)
+      ? parsed.rentalDemand
+      : "nieznany";
     const localityPopulation = numOrNull(parsed.localityPopulation);
     const nearestDistanceKm = numOrNull(nearest.distanceKm);
 
@@ -331,9 +360,13 @@ export async function analyzeSaleability(args: {
         : "Miejscowość poniżej 20 tys. mieszkańców — ograniczona sprzedawalność. ";
     const summary =
       `Prognozowana łatwość sprzedaży: ${score}/100 (${band.replace(/_/g, " ")}). ` +
-      (localityPopulation ? `Miejscowość ~${localityPopulation.toLocaleString("pl-PL")} mieszk. (${populationTrend}). ` : "") +
+      (localityPopulation
+        ? `Miejscowość ~${localityPopulation.toLocaleString("pl-PL")} mieszk. (${populationTrend}). `
+        : "") +
       reasonNote +
-      (nearest.name ? `Najbliższe większe miasto: ${nearest.name}${nearestDistanceKm ? ` (${nearestDistanceKm} km)` : ""}. ` : "") +
+      (nearest.name
+        ? `Najbliższe większe miasto: ${nearest.name}${nearestDistanceKm ? ` (${nearestDistanceKm} km)` : ""}. `
+        : "") +
       (drivers.length ? `Czynniki popytu: ${drivers.join(", ")}. ` : "") +
       `Oferty sprzedaży w okolicy: ${offers.totalActiveListings} (biura: ${offers.agencyListings}).`;
 
@@ -353,7 +386,8 @@ export async function analyzeSaleability(args: {
       },
       demandDrivers,
       rentalDemand,
-      purchasingPowerComment: typeof parsed.purchasingPowerComment === "string" ? parsed.purchasingPowerComment : null,
+      purchasingPowerComment:
+        typeof parsed.purchasingPowerComment === "string" ? parsed.purchasingPowerComment : null,
       localMarketOffers: offers,
       rationale: typeof parsed.rationale === "string" ? parsed.rationale : "",
       citations,
@@ -369,7 +403,10 @@ export async function analyzeSaleability(args: {
  * Nakłada czynnik kondygnacji (mieszkania) na prognozę łatwości sprzedaży —
  * koryguje wynik o piętro i przelicza pasmo. Zwraca nowy obiekt (bez mutacji).
  */
-export function applyFloorToSaleability(base: SaleabilityForecast, floor: FloorFactorResult): SaleabilityForecast {
+export function applyFloorToSaleability(
+  base: SaleabilityForecast,
+  floor: FloorFactorResult,
+): SaleabilityForecast {
   if (!floor.available) return { ...base, floorFactor: floor };
   // Odchylenie od neutralnych 70 pkt, skala 0.15 → maks. ±~6 pkt.
   const delta = Math.max(-6, Math.min(5, Math.round((floor.score - 70) * 0.15)));
@@ -388,7 +425,10 @@ export function applyFloorToSaleability(base: SaleabilityForecast, floor: FloorF
  * Nakłada wpływ prawa zabudowy działki (RM/siedlisko/grunt rolny) na łatwość
  * sprzedaży — ograniczony krąg nabywców obniża wynik. Zwraca nowy obiekt.
  */
-export function applyPlotBuildabilityToSaleability(base: SaleabilityForecast, pb: PlotBuildabilityResult): SaleabilityForecast {
+export function applyPlotBuildabilityToSaleability(
+  base: SaleabilityForecast,
+  pb: PlotBuildabilityResult,
+): SaleabilityForecast {
   if (!pb.applicable || pb.saleabilityDelta === 0) return base;
   const newScore = Math.max(0, Math.min(100, base.score + pb.saleabilityDelta));
   return {

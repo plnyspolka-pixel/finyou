@@ -26,7 +26,13 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminders")({
         const inWindow = hour >= 8 && hour < 22;
         if (isSunday || !inWindow) {
           return new Response(
-            JSON.stringify({ ok: true, skipped: true, reason: isSunday ? "sunday" : "outside_hours", hour, weekday }),
+            JSON.stringify({
+              ok: true,
+              skipped: true,
+              reason: isSunday ? "sunday" : "outside_hours",
+              hour,
+              weekday,
+            }),
             { headers: { "content-type": "application/json" } },
           );
         }

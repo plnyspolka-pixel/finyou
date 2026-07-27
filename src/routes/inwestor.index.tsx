@@ -6,12 +6,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Ruler, Calendar, Percent, Wallet, TrendingUp, X } from "lucide-react";
 import { formatPLN, propertyTypeLabels, visibilityLabels } from "@/lib/labels";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
-import { isShowablePropertyPhoto, isPropertyPhotoDocument, signStoragePath } from "@/lib/property-photos";
+import {
+  isShowablePropertyPhoto,
+  isPropertyPhotoDocument,
+  signStoragePath,
+} from "@/lib/property-photos";
 import { useAccessState } from "@/hooks/use-access";
 import { InvestorTeaserList } from "@/components/access/InvestorTeaserList";
 
@@ -49,7 +59,10 @@ function maskKw(kw: string): string {
   const parts = kw.trim().toUpperCase().split("/");
   if (parts.length !== 3) return kw.replace(/\d/g, "•");
   const [court, num, _check] = parts;
-  const masked = num.length > 2 ? num.slice(0, 2) + "•".repeat(Math.max(0, num.length - 2)) : "•".repeat(num.length);
+  const masked =
+    num.length > 2
+      ? num.slice(0, 2) + "•".repeat(Math.max(0, num.length - 2))
+      : "•".repeat(num.length);
   return `${court}/${masked}/•`;
 }
 
@@ -68,74 +81,100 @@ function InwestorList() {
   const [ltvMax, setLtvMax] = useState("");
   const [periodMax, setPeriodMax] = useState("");
 
-  useEffect(() => { if (!user) return; void (async () => {
-    const { data } = await supabase
-      .from("loan_applications")
-      .select("id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, max_monthly_payment, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos, description, street, land_register_number)")
-      .eq("available_to_investors", true)
-      .order("created_at", { ascending: false });
-    // Defensywnie: pokazuj wyłącznie wnioski z podstawą dla inwestora —
-    // nieruchomość z typem oraz sensowną kwotą. Zabezpiecza przed pustymi
-    // kartami z legacy-danych mimo flagi available_to_investors.
-    const list = (data ?? []).filter((a) => {
-      const p = a.properties?.[0];
-      return !!p?.property_type && a.loan_amount != null && Number(a.loan_amount) > 0;
-    });
-    setApps(list); setLoading(false);
-
-    const appIds = list.map((a) => a.id).filter(Boolean);
-    const docsByApp = new Map<string, any[]>();
-    if (appIds.length > 0) {
-      const { data: docRows } = await supabase
-        .from("documents")
-        .select("loan_application_id, file_path, file_name, document_type")
-        .in("loan_application_id", appIds);
-      (docRows ?? []).filter(isPropertyPhotoDocument).forEach((doc: any) => {
-        const appId = doc.loan_application_id;
-        docsByApp.set(appId, [...(docsByApp.get(appId) ?? []), doc]);
+  useEffect(() => {
+    if (!user) return;
+    void (async () => {
+      const { data } = await supabase
+        .from("loan_applications")
+        .select(
+          "id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, max_monthly_payment, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos, description, street, land_register_number)",
+        )
+        .eq("available_to_investors", true)
+        .order("created_at", { ascending: false });
+      // Defensywnie: pokazuj wyłącznie wnioski z podstawą dla inwestora —
+      // nieruchomość z typem oraz sensowną kwotą. Zabezpiecza przed pustymi
+      // kartami z legacy-danych mimo flagi available_to_investors.
+      const list = (data ?? []).filter((a) => {
+        const p = a.properties?.[0];
+        return !!p?.property_type && a.loan_amount != null && Number(a.loan_amount) > 0;
       });
-    }
+      setApps(list);
+      setLoading(false);
 
-    // Resolve first photo per app to a viewable URL (storage paths → signed URLs).
-    // Najpierw properties.photos, potem fallback do tabeli documents (ścieżki mogą być userId/appId/file).
-    const tasks: Array<Promise<void>> = [];
-    const next: Record<string, string> = {};
-    for (const a of list) {
-      const photos: string[] = a.properties?.[0]?.photos ?? [];
-      const first = photos.find(isShowablePropertyPhoto) ?? docsByApp.get(a.id)?.[0]?.file_path;
-      if (!first) continue;
-      if (/^https?:\/\//i.test(first)) { next[a.id] = first; continue; }
-      tasks.push((async () => {
-        const url = await signStoragePath(first, 3600);
-        if (url) next[a.id] = url;
-      })());
-    }
-    await Promise.all(tasks);
-    setPhotoUrls(next);
-  })(); }, [user]);
+      const appIds = list.map((a) => a.id).filter(Boolean);
+      const docsByApp = new Map<string, any[]>();
+      if (appIds.length > 0) {
+        const { data: docRows } = await supabase
+          .from("documents")
+          .select("loan_application_id, file_path, file_name, document_type")
+          .in("loan_application_id", appIds);
+        (docRows ?? []).filter(isPropertyPhotoDocument).forEach((doc: any) => {
+          const appId = doc.loan_application_id;
+          docsByApp.set(appId, [...(docsByApp.get(appId) ?? []), doc]);
+        });
+      }
+
+      // Resolve first photo per app to a viewable URL (storage paths → signed URLs).
+      // Najpierw properties.photos, potem fallback do tabeli documents (ścieżki mogą być userId/appId/file).
+      const tasks: Array<Promise<void>> = [];
+      const next: Record<string, string> = {};
+      for (const a of list) {
+        const photos: string[] = a.properties?.[0]?.photos ?? [];
+        const first = photos.find(isShowablePropertyPhoto) ?? docsByApp.get(a.id)?.[0]?.file_path;
+        if (!first) continue;
+        if (/^https?:\/\//i.test(first)) {
+          next[a.id] = first;
+          continue;
+        }
+        tasks.push(
+          (async () => {
+            const url = await signStoragePath(first, 3600);
+            if (url) next[a.id] = url;
+          })(),
+        );
+      }
+      await Promise.all(tasks);
+      setPhotoUrls(next);
+    })();
+  }, [user]);
 
   const voivodeships = useMemo(() => {
     const set = new Set<string>();
-    apps.forEach(a => a.properties?.[0]?.voivodeship && set.add(a.properties[0].voivodeship));
+    apps.forEach((a) => a.properties?.[0]?.voivodeship && set.add(a.properties[0].voivodeship));
     return Array.from(set).sort();
   }, [apps]);
 
-  const filtered = useMemo(() => apps.filter(a => {
-    const p = a.properties?.[0];
-    const qLow = q.trim().toLowerCase();
-    if (qLow) {
-      const hay = `${p?.city ?? ""} ${p?.voivodeship ?? ""} ${p?.street ?? ""} ${p?.description ?? ""}`.toLowerCase();
-      if (!hay.includes(qLow)) return false;
-    }
-    if (ptype !== "all" && p?.property_type !== ptype) return false;
-    if (voivodeship !== "all" && p?.voivodeship !== voivodeship) return false;
-    if (amountMin && Number(a.loan_amount) < Number(amountMin)) return false;
-    if (amountMax && Number(a.loan_amount) > Number(amountMax)) return false;
-    if (yieldMin && (a.annual_investor_rate == null || Number(a.annual_investor_rate) < Number(yieldMin))) return false;
-    if (ltvMax && (a.estimated_ltv == null || Number(a.estimated_ltv) > Number(ltvMax))) return false;
-    if (periodMax && (a.preferred_period_months == null || Number(a.preferred_period_months) > Number(periodMax))) return false;
-    return true;
-  }), [apps, q, ptype, voivodeship, amountMin, amountMax, yieldMin, ltvMax, periodMax]);
+  const filtered = useMemo(
+    () =>
+      apps.filter((a) => {
+        const p = a.properties?.[0];
+        const qLow = q.trim().toLowerCase();
+        if (qLow) {
+          const hay =
+            `${p?.city ?? ""} ${p?.voivodeship ?? ""} ${p?.street ?? ""} ${p?.description ?? ""}`.toLowerCase();
+          if (!hay.includes(qLow)) return false;
+        }
+        if (ptype !== "all" && p?.property_type !== ptype) return false;
+        if (voivodeship !== "all" && p?.voivodeship !== voivodeship) return false;
+        if (amountMin && Number(a.loan_amount) < Number(amountMin)) return false;
+        if (amountMax && Number(a.loan_amount) > Number(amountMax)) return false;
+        if (
+          yieldMin &&
+          (a.annual_investor_rate == null || Number(a.annual_investor_rate) < Number(yieldMin))
+        )
+          return false;
+        if (ltvMax && (a.estimated_ltv == null || Number(a.estimated_ltv) > Number(ltvMax)))
+          return false;
+        if (
+          periodMax &&
+          (a.preferred_period_months == null ||
+            Number(a.preferred_period_months) > Number(periodMax))
+        )
+          return false;
+        return true;
+      }),
+    [apps, q, ptype, voivodeship, amountMin, amountMax, yieldMin, ltvMax, periodMax],
+  );
 
   // Każde wyświetlenie wniosku w wyszukiwarce inwestora liczymy jako wyświetlenie (1x na sesję na wniosek).
   useEffect(() => {
@@ -149,13 +188,34 @@ function InwestorList() {
     if (toCount.length === 0) return;
     void (async () => {
       for (const a of toCount) {
-        try { await supabase.rpc("increment_loan_view", { _loan_id: a.id }); } catch { /* ignore */ }
+        try {
+          await supabase.rpc("increment_loan_view", { _loan_id: a.id });
+        } catch {
+          /* ignore */
+        }
       }
     })();
   }, [filtered]);
 
-  const reset = () => { setQ(""); setPtype("all"); setVoivodeship("all"); setAmountMin(""); setAmountMax(""); setYieldMin(""); setLtvMax(""); setPeriodMax(""); };
-  const hasFilters = q || ptype !== "all" || voivodeship !== "all" || amountMin || amountMax || yieldMin || ltvMax || periodMax;
+  const reset = () => {
+    setQ("");
+    setPtype("all");
+    setVoivodeship("all");
+    setAmountMin("");
+    setAmountMax("");
+    setYieldMin("");
+    setLtvMax("");
+    setPeriodMax("");
+  };
+  const hasFilters =
+    q ||
+    ptype !== "all" ||
+    voivodeship !== "all" ||
+    amountMin ||
+    amountMax ||
+    yieldMin ||
+    ltvMax ||
+    periodMax;
 
   if (loading) return <div className="text-muted-foreground">Ładowanie…</div>;
 
@@ -171,59 +231,115 @@ function InwestorList() {
         <CardContent className="pt-6 space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Miasto, ulica, województwo, słowo kluczowe…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9 h-11" />
+            <Input
+              placeholder="Miasto, ulica, województwo, słowo kluczowe…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-9 h-11"
+            />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Typ nieruchomości</Label>
               <Select value={ptype} onValueChange={setPtype}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Wszystkie</SelectItem>
-                  {PROPERTY_TYPES.map(t => <SelectItem key={t} value={t}>{propertyTypeLabels[t]}</SelectItem>)}
+                  {PROPERTY_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {propertyTypeLabels[t]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Województwo</Label>
               <Select value={voivodeship} onValueChange={setVoivodeship}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Wszystkie</SelectItem>
-                  {voivodeships.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                  {voivodeships.map((v) => (
+                    <SelectItem key={v} value={v}>
+                      {v}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Kwota od (zł)</Label>
-              <Input type="number" inputMode="numeric" value={amountMin} onChange={(e) => setAmountMin(e.target.value)} placeholder="np. 100000" />
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={amountMin}
+                onChange={(e) => setAmountMin(e.target.value)}
+                placeholder="np. 100000"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Kwota do (zł)</Label>
-              <Input type="number" inputMode="numeric" value={amountMax} onChange={(e) => setAmountMax(e.target.value)} placeholder="np. 800000" />
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={amountMax}
+                onChange={(e) => setAmountMax(e.target.value)}
+                placeholder="np. 800000"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Min. zysk roczny (%)</Label>
-              <Input type="number" inputMode="decimal" value={yieldMin} onChange={(e) => setYieldMin(e.target.value)} placeholder="np. 12" />
+              <Input
+                type="number"
+                inputMode="decimal"
+                value={yieldMin}
+                onChange={(e) => setYieldMin(e.target.value)}
+                placeholder="np. 12"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Max LTV (%)</Label>
-              <Input type="number" inputMode="decimal" value={ltvMax} onChange={(e) => setLtvMax(e.target.value)} placeholder="np. 50" />
+              <Input
+                type="number"
+                inputMode="decimal"
+                value={ltvMax}
+                onChange={(e) => setLtvMax(e.target.value)}
+                placeholder="np. 50"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Max okres (mies.)</Label>
-              <Input type="number" inputMode="numeric" value={periodMax} onChange={(e) => setPeriodMax(e.target.value)} placeholder="np. 36" />
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={periodMax}
+                onChange={(e) => setPeriodMax(e.target.value)}
+                placeholder="np. 36"
+              />
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Znaleziono: <strong className="text-foreground">{filtered.length}</strong> z {apps.length}</span>
-            {hasFilters && <Button variant="ghost" size="sm" onClick={reset}><X className="h-4 w-4 mr-1" /> Wyczyść filtry</Button>}
+            <span className="text-sm text-muted-foreground">
+              Znaleziono: <strong className="text-foreground">{filtered.length}</strong> z{" "}
+              {apps.length}
+            </span>
+            {hasFilters && (
+              <Button variant="ghost" size="sm" onClick={reset}>
+                <X className="h-4 w-4 mr-1" /> Wyczyść filtry
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-12">Brak wniosków spełniających kryteria.</p>
+        <p className="text-sm text-muted-foreground text-center py-12">
+          Brak wniosków spełniających kryteria.
+        </p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((a) => {
@@ -238,37 +354,57 @@ function InwestorList() {
                         alt={p?.city ?? ""}
                         className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
                       />
-                    ) : <div className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20" />}
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20" />
+                    )}
                     {p?.property_type && (
                       <Badge className="absolute top-3 left-3 bg-background/95 text-foreground hover:bg-background backdrop-blur-sm shadow">
                         {propertyTypeLabels[p.property_type]}
                       </Badge>
                     )}
                     {p?.photos?.length > 1 && (
-                      <Badge variant="secondary" className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm">
+                      <Badge
+                        variant="secondary"
+                        className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm"
+                      >
                         +{p.photos.length - 1} zdjęć
                       </Badge>
                     )}
                   </div>
                   <CardContent className="p-4 space-y-3 flex-1 flex flex-col">
                     <div>
-                      <div className="text-2xl font-bold tabular-nums">{formatPLN(a.loan_amount)}</div>
+                      <div className="text-2xl font-bold tabular-nums">
+                        {formatPLN(a.loan_amount)}
+                      </div>
                       {p && (
                         <div className="flex items-center text-sm text-muted-foreground mt-0.5">
                           <MapPin className="h-3.5 w-3.5 mr-1 shrink-0" />
-                          <span className="truncate">{[p.city, p.voivodeship].filter(Boolean).join(", ")}</span>
+                          <span className="truncate">
+                            {[p.city, p.voivodeship].filter(Boolean).join(", ")}
+                          </span>
                         </div>
                       )}
                     </div>
 
                     {p && (
                       <div className="grid grid-cols-2 gap-2 text-sm border-y py-2">
-                        <div className="flex items-center gap-1.5"><Ruler className="h-3.5 w-3.5 text-muted-foreground" />{p.area_sqm ? `${p.area_sqm} m²` : "—"}</div>
-                        <div className="flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 text-muted-foreground" />{formatPLN(p.estimated_value)}</div>
+                        <div className="flex items-center gap-1.5">
+                          <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+                          {p.area_sqm ? `${p.area_sqm} m²` : "—"}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                          {formatPLN(p.estimated_value)}
+                        </div>
                         {p.land_register_number && (
-                          <div className="flex items-center gap-1.5 col-span-2 text-xs text-muted-foreground font-mono" title="Pełny numer KW widoczny we wniosku">
+                          <div
+                            className="flex items-center gap-1.5 col-span-2 text-xs text-muted-foreground font-mono"
+                            title="Pełny numer KW widoczny we wniosku"
+                          >
                             KW: {maskKw(p.land_register_number)}
                           </div>
                         )}
@@ -276,18 +412,28 @@ function InwestorList() {
                     )}
 
                     <div className="space-y-1.5 text-xs">
-                      <div className="font-medium text-muted-foreground uppercase tracking-wide text-[10px]">Parametry wnioskowane przez klienta</div>
+                      <div className="font-medium text-muted-foreground uppercase tracking-wide text-[10px]">
+                        Parametry wnioskowane przez klienta
+                      </div>
                       <div className="grid grid-cols-2 gap-1.5">
-                        <div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-muted-foreground" />{a.preferred_period_months ?? "—"} mies.</div>
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          {a.preferred_period_months ?? "—"} mies.
+                        </div>
                         {a.estimated_ltv != null && (
-                          <div className="flex items-center gap-1.5"><Percent className="h-3.5 w-3.5 text-muted-foreground" />LTV {a.estimated_ltv}%</div>
+                          <div className="flex items-center gap-1.5">
+                            <Percent className="h-3.5 w-3.5 text-muted-foreground" />
+                            LTV {a.estimated_ltv}%
+                          </div>
                         )}
                         {a.max_monthly_payment != null && (
-                          <div className="flex items-center gap-1.5 col-span-2"><TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />Max rata: {formatPLN(a.max_monthly_payment)}</div>
+                          <div className="flex items-center gap-1.5 col-span-2">
+                            <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                            Max rata: {formatPLN(a.max_monthly_payment)}
+                          </div>
                         )}
                       </div>
                     </div>
-
                   </CardContent>
                 </Card>
               </Link>

@@ -11,9 +11,16 @@ export const Route = createFileRoute("/propozycje/")({
   head: () => ({
     meta: [
       { title: "Publiczne propozycje pożyczek — Finance You" },
-      { name: "description", content: "Otwarta lista wygenerowanych propozycji pożyczek z harmonogramem spłat. Zobacz parametry, koszty i harmonogram każdej oferty." },
+      {
+        name: "description",
+        content:
+          "Otwarta lista wygenerowanych propozycji pożyczek z harmonogramem spłat. Zobacz parametry, koszty i harmonogram każdej oferty.",
+      },
       { property: "og:title", content: "Propozycje pożyczek — Finance You" },
-      { property: "og:description", content: "Otwarta lista propozycji wygenerowanych w kalkulatorze inwestora." },
+      {
+        property: "og:description",
+        content: "Otwarta lista propozycji wygenerowanych w kalkulatorze inwestora.",
+      },
     ],
   }),
   component: PropozycjeList,
@@ -23,8 +30,7 @@ function PropozycjeList() {
   const q = useQuery({
     queryKey: ["loan-proposals-public"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .rpc("list_public_loan_proposals");
+      const { data, error } = await supabase.rpc("list_public_loan_proposals");
       if (error) throw error;
       return data ?? [];
     },
@@ -34,11 +40,16 @@ function PropozycjeList() {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
         <div className="flex items-center justify-between">
-          <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4" /> Strona główna
           </Link>
           <Link to="/negocjuj">
-            <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Nowa propozycja</Button>
+            <Button size="sm">
+              <Plus className="mr-1 h-4 w-4" /> Nowa propozycja
+            </Button>
           </Link>
         </div>
 
@@ -48,7 +59,8 @@ function PropozycjeList() {
             <h1 className="text-2xl font-bold">Propozycje pożyczek</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Otwarta lista propozycji wygenerowanych w kalkulatorze inwestora — każda zawiera parametry pożyczki, koszty i harmonogram spłat.
+            Otwarta lista propozycji wygenerowanych w kalkulatorze inwestora — każda zawiera
+            parametry pożyczki, koszty i harmonogram spłat.
           </p>
         </div>
 
@@ -61,26 +73,52 @@ function PropozycjeList() {
               <Card className="transition hover:border-primary">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="text-base">
-                      Propozycja pożyczki
-                    </CardTitle>
-                    <Badge variant={p.status === "open" ? "default" : "secondary"}>{p.status}</Badge>
+                    <CardTitle className="text-base">Propozycja pożyczki</CardTitle>
+                    <Badge variant={p.status === "open" ? "default" : "secondary"}>
+                      {p.status}
+                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="grid gap-2 text-sm sm:grid-cols-3">
-                  <div><span className="text-muted-foreground">Kwota: </span><b className="tabular-nums">{formatPLN(Number(p.amount))}</b></div>
-                  <div><span className="text-muted-foreground">Okres: </span><b>{p.months} mies.</b></div>
-                  <div><span className="text-muted-foreground">Oprocentowanie: </span><b className="tabular-nums">{Number(p.annual_rate).toFixed(2)}%</b></div>
-                  <div><span className="text-muted-foreground">Rata: </span><b className="tabular-nums">{formatPLN(Number(p.capped_rata))}</b></div>
-                  <div><span className="text-muted-foreground">Prowizja: </span><b className="tabular-nums">{Number(p.commission_pct).toFixed(2)}%</b></div>
-                  <div><span className="text-muted-foreground">Do spłaty: </span><b className="tabular-nums">{formatPLN(Number(p.total_to_repay))}</b></div>
-                  {p.note && <div className="sm:col-span-3 text-muted-foreground line-clamp-2">{p.note}</div>}
+                  <div>
+                    <span className="text-muted-foreground">Kwota: </span>
+                    <b className="tabular-nums">{formatPLN(Number(p.amount))}</b>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Okres: </span>
+                    <b>{p.months} mies.</b>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Oprocentowanie: </span>
+                    <b className="tabular-nums">{Number(p.annual_rate).toFixed(2)}%</b>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Rata: </span>
+                    <b className="tabular-nums">{formatPLN(Number(p.capped_rata))}</b>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Prowizja: </span>
+                    <b className="tabular-nums">{Number(p.commission_pct).toFixed(2)}%</b>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Do spłaty: </span>
+                    <b className="tabular-nums">{formatPLN(Number(p.total_to_repay))}</b>
+                  </div>
+                  {p.note && (
+                    <div className="sm:col-span-3 text-muted-foreground line-clamp-2">{p.note}</div>
+                  )}
                 </CardContent>
               </Card>
             </Link>
           ))}
           {q.data && q.data.length === 0 && (
-            <p className="text-sm text-muted-foreground">Brak propozycji. Bądź pierwszy — <Link to="/negocjuj" className="underline">otwórz kalkulator</Link>.</p>
+            <p className="text-sm text-muted-foreground">
+              Brak propozycji. Bądź pierwszy —{" "}
+              <Link to="/negocjuj" className="underline">
+                otwórz kalkulator
+              </Link>
+              .
+            </p>
           )}
         </div>
       </div>

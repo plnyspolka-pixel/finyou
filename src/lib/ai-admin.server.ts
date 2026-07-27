@@ -8,11 +8,18 @@ const ANTHROPIC_VERSION = "2023-06-01";
 // Project root (works in dev sandbox + Worker bundle that includes src/)
 const PROJECT_ROOT = process.cwd();
 
-const FORBIDDEN_SQL = /\b(alter\s+role|alter\s+system|create\s+role|drop\s+role|create\s+user|drop\s+user)\b/i;
+const FORBIDDEN_SQL =
+  /\b(alter\s+role|alter\s+system|create\s+role|drop\s+role|create\s+user|drop\s+user)\b/i;
 
 function isSelectOnly(sql: string): boolean {
-  const trimmed = sql.trim().replace(/^with\s+[^;]+;/i, "").trim();
-  return /^(select|with\s)/i.test(trimmed) && !/;\s*(insert|update|delete|alter|drop|create|truncate)/i.test(sql);
+  const trimmed = sql
+    .trim()
+    .replace(/^with\s+[^;]+;/i, "")
+    .trim();
+  return (
+    /^(select|with\s)/i.test(trimmed) &&
+    !/;\s*(insert|update|delete|alter|drop|create|truncate)/i.test(sql)
+  );
 }
 
 export type ToolCall = {
@@ -129,7 +136,12 @@ function safeFilePath(rel: string): string | null {
 
 export async function runTool(
   call: ToolCall,
-  opts: { enableDbRead: boolean; enableDbWrite: boolean; enableFileRead: boolean; enableFileWrite: boolean }
+  opts: {
+    enableDbRead: boolean;
+    enableDbWrite: boolean;
+    enableFileRead: boolean;
+    enableFileWrite: boolean;
+  },
 ): Promise<{ ok: boolean; output: unknown; error?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -138,10 +150,15 @@ export async function runTool(
       if (!opts.enableDbRead) return { ok: false, output: null, error: "Odczyt bazy wyłączony." };
       const sql = String(call.input.sql ?? "");
       const limit = Math.min(Number(call.input.limit ?? 50) || 50, 200);
-      if (!isSelectOnly(sql)) return { ok: false, output: null, error: "Tylko SELECT/WITH są dozwolone tutaj." };
-      if (FORBIDDEN_SQL.test(sql)) return { ok: false, output: null, error: "Zapytanie zawiera zabronione operacje." };
+      if (!isSelectOnly(sql))
+        return { ok: false, output: null, error: "Tylko SELECT/WITH są dozwolone tutaj." };
+      if (FORBIDDEN_SQL.test(sql))
+        return { ok: false, output: null, error: "Zapytanie zawiera zabronione operacje." };
       const wrapped = `SELECT * FROM (${sql.replace(/;\s*$/, "")}) _q LIMIT ${limit}`;
-      const { data, error } = await supabaseAdmin.rpc("exec_admin_select" as never, { _sql: wrapped } as never);
+      const { data, error } = await supabaseAdmin.rpc(
+        "exec_admin_select" as never,
+        { _sql: wrapped } as never,
+      );
       if (error) {
         // Fallback: direct via PostgREST not possible for arbitrary SQL — return error
         return { ok: false, output: null, error: `DB: ${error.message}` };
@@ -152,25 +169,35 @@ export async function runTool(
     if (call.name === "mutate_database") {
       if (!opts.enableDbWrite) return { ok: false, output: null, error: "Zapis bazy wyłączony." };
       const sql = String(call.input.sql ?? "");
-      if (isSelectOnly(sql)) return { ok: false, output: null, error: "To jest SELECT — użyj query_database." };
-      if (FORBIDDEN_SQL.test(sql)) return { ok: false, output: null, error: "Zapytanie zawiera zabronione operacje." };
-      if (!/\b(insert|update|delete)\b/i.test(sql)) return { ok: false, output: null, error: "Dozwolone: INSERT/UPDATE/DELETE." };
-      const { data, error } = await supabaseAdmin.rpc("exec_admin_write" as never, { _sql: sql } as never);
+      if (isSelectOnly(sql))
+        return { ok: false, output: null, error: "To jest SELECT — użyj query_database." };
+      if (FORBIDDEN_SQL.test(sql))
+        return { ok: false, output: null, error: "Zapytanie zawiera zabronione operacje." };
+      if (!/\b(insert|update|delete)\b/i.test(sql))
+        return { ok: false, output: null, error: "Dozwolone: INSERT/UPDATE/DELETE." };
+      const { data, error } = await supabaseAdmin.rpc(
+        "exec_admin_write" as never,
+        { _sql: sql } as never,
+      );
       if (error) return { ok: false, output: null, error: `DB: ${error.message}` };
       return { ok: true, output: data ?? { ok: true } };
     }
 
     if (call.name === "list_database_tables") {
       if (!opts.enableDbRead) return { ok: false, output: null, error: "Odczyt bazy wyłączony." };
-      const { data, error } = await supabaseAdmin.rpc("exec_admin_select" as never, {
-        _sql: `SELECT table_name, (SELECT count(*) FROM information_schema.columns c WHERE c.table_schema='public' AND c.table_name = t.table_name) AS cols FROM information_schema.tables t WHERE table_schema='public' ORDER BY table_name`,
-      } as never);
+      const { data, error } = await supabaseAdmin.rpc(
+        "exec_admin_select" as never,
+        {
+          _sql: `SELECT table_name, (SELECT count(*) FROM information_schema.columns c WHERE c.table_schema='public' AND c.table_name = t.table_name) AS cols FROM information_schema.tables t WHERE table_schema='public' ORDER BY table_name`,
+        } as never,
+      );
       if (error) return { ok: false, output: null, error: error.message };
       return { ok: true, output: data };
     }
 
     if (call.name === "list_project_files") {
-      if (!opts.enableFileRead) return { ok: false, output: null, error: "Odczyt plików wyłączony." };
+      if (!opts.enableFileRead)
+        return { ok: false, output: null, error: "Odczyt plików wyłączony." };
       const rel = String(call.input.dir ?? "src");
       const safe = safeFilePath(rel);
       if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona." };
@@ -196,49 +223,73 @@ export async function runTool(
     }
 
     if (call.name === "read_project_file") {
-      if (!opts.enableFileRead) return { ok: false, output: null, error: "Odczyt plików wyłączony." };
+      if (!opts.enableFileRead)
+        return { ok: false, output: null, error: "Odczyt plików wyłączony." };
       const rel = String(call.input.path ?? "");
       const safe = safeFilePath(rel);
-      if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona (pliki z sekretami są zablokowane)." };
+      if (!safe)
+        return {
+          ok: false,
+          output: null,
+          error: "Ścieżka niedozwolona (pliki z sekretami są zablokowane).",
+        };
       const stat = await fs.stat(safe).catch(() => null);
       if (!stat || !stat.isFile()) return { ok: false, output: null, error: "Plik nie istnieje." };
-      if (stat.size > 1024 * 1024) return { ok: false, output: null, error: "Plik za duży (>1 MB)." };
+      if (stat.size > 1024 * 1024)
+        return { ok: false, output: null, error: "Plik za duży (>1 MB)." };
       const content = await fs.readFile(safe, "utf8");
       return { ok: true, output: { path: rel, size: stat.size, content } };
     }
 
     if (call.name === "write_project_file") {
-      if (!opts.enableFileWrite) return { ok: false, output: null, error: "Zapis plików wyłączony." };
+      if (!opts.enableFileWrite)
+        return { ok: false, output: null, error: "Zapis plików wyłączony." };
       const rel = String(call.input.path ?? "");
       const content = String(call.input.content ?? "");
       const safe = safeFilePath(rel);
-      if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona (pliki z sekretami są zablokowane)." };
-      if (content.length > 500 * 1024) return { ok: false, output: null, error: "Zawartość za duża (>500 KB)." };
+      if (!safe)
+        return {
+          ok: false,
+          output: null,
+          error: "Ścieżka niedozwolona (pliki z sekretami są zablokowane).",
+        };
+      if (content.length > 500 * 1024)
+        return { ok: false, output: null, error: "Zawartość za duża (>500 KB)." };
       await fs.mkdir(path.dirname(safe), { recursive: true });
       await fs.writeFile(safe, content, "utf8");
       return { ok: true, output: { path: rel, bytes: content.length, action: "written" } };
     }
 
     if (call.name === "delete_project_file") {
-      if (!opts.enableFileWrite) return { ok: false, output: null, error: "Zapis plików wyłączony." };
+      if (!opts.enableFileWrite)
+        return { ok: false, output: null, error: "Zapis plików wyłączony." };
       const rel = String(call.input.path ?? "");
       const safe = safeFilePath(rel);
       if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona." };
-      await fs.unlink(safe).catch((e) => { throw new Error(e instanceof Error ? e.message : String(e)); });
+      await fs.unlink(safe).catch((e) => {
+        throw new Error(e instanceof Error ? e.message : String(e));
+      });
       return { ok: true, output: { path: rel, action: "deleted" } };
     }
 
-
     if (call.name === "execute_sql") {
-      if (!opts.enableDbRead && !opts.enableDbWrite) return { ok: false, output: null, error: "Dostęp do bazy wyłączony." };
+      if (!opts.enableDbRead && !opts.enableDbWrite)
+        return { ok: false, output: null, error: "Dostęp do bazy wyłączony." };
       const sql = String(call.input.sql ?? "");
       if (!sql.trim()) return { ok: false, output: null, error: "Puste zapytanie." };
-      if (FORBIDDEN_SQL.test(sql)) return { ok: false, output: null, error: "Zablokowane: operacje na rolach / ustawieniach systemu." };
-      const { data, error } = await supabaseAdmin.rpc("exec_admin_any" as never, { _sql: sql } as never);
+      if (FORBIDDEN_SQL.test(sql))
+        return {
+          ok: false,
+          output: null,
+          error: "Zablokowane: operacje na rolach / ustawieniach systemu.",
+        };
+      const { data, error } = await supabaseAdmin.rpc(
+        "exec_admin_any" as never,
+        { _sql: sql } as never,
+      );
       if (error) return { ok: false, output: null, error: `DB: ${error.message}` };
       return { ok: true, output: data };
     }
-
 
     return { ok: false, output: null, error: `Nieznane narzędzie: ${call.name}` };
   } catch (e) {

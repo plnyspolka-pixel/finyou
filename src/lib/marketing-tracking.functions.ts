@@ -7,8 +7,13 @@ function genCode() {
 }
 
 function slugify(s: string) {
-  return s.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 60);
+  return s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 60);
 }
 
 export const listCampaigns = createServerFn({ method: "GET" })
@@ -23,13 +28,20 @@ export const listCampaigns = createServerFn({ method: "GET" })
 
     // Per-campaign metrics
     const ids = (data ?? []).map((c: any) => c.id);
-    let clicks: Record<string, number> = {};
-    let leads: Record<string, number> = {};
+    const clicks: Record<string, number> = {};
+    const leads: Record<string, number> = {};
     if (ids.length) {
-      const { data: c } = await supabase.from("campaign_clicks").select("campaign_id").in("campaign_id", ids);
+      const { data: c } = await supabase
+        .from("campaign_clicks")
+        .select("campaign_id")
+        .in("campaign_id", ids);
       for (const r of c ?? []) clicks[r.campaign_id] = (clicks[r.campaign_id] || 0) + 1;
-      const { data: a } = await supabase.from("lead_attributions").select("campaign_id").in("campaign_id", ids);
-      for (const r of a ?? []) if (r.campaign_id) leads[r.campaign_id] = (leads[r.campaign_id] || 0) + 1;
+      const { data: a } = await supabase
+        .from("lead_attributions")
+        .select("campaign_id")
+        .in("campaign_id", ids);
+      for (const r of a ?? [])
+        if (r.campaign_id) leads[r.campaign_id] = (leads[r.campaign_id] || 0) + 1;
     }
     return {
       campaigns: (data ?? []).map((c: any) => ({
@@ -42,61 +54,81 @@ export const listCampaigns = createServerFn({ method: "GET" })
 
 export const createCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i) => z.object({
-    name: z.string().min(1).max(120),
-    target_url: z.string().url(),
-    utm_source: z.string().max(60).optional().nullable(),
-    utm_medium: z.string().max(60).optional().nullable(),
-    utm_campaign: z.string().max(80).optional().nullable(),
-    utm_term: z.string().max(80).optional().nullable(),
-    utm_content: z.string().max(120).optional().nullable(),
-    cost: z.number().min(0).default(0),
-    notes: z.string().max(2000).optional().nullable(),
-  }).parse(i))
+  .inputValidator((i) =>
+    z
+      .object({
+        name: z.string().min(1).max(120),
+        target_url: z.string().url(),
+        utm_source: z.string().max(60).optional().nullable(),
+        utm_medium: z.string().max(60).optional().nullable(),
+        utm_campaign: z.string().max(80).optional().nullable(),
+        utm_term: z.string().max(80).optional().nullable(),
+        utm_content: z.string().max(120).optional().nullable(),
+        cost: z.number().min(0).default(0),
+        notes: z.string().max(2000).optional().nullable(),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const baseSlug = slugify(data.name) || "kampania";
     let slug = baseSlug;
     let attempts = 0;
     while (attempts < 5) {
-      const { data: existing } = await supabase.from("marketing_campaigns").select("id").eq("slug", slug).maybeSingle();
+      const { data: existing } = await supabase
+        .from("marketing_campaigns")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
       if (!existing) break;
       slug = `${baseSlug}-${Math.random().toString(36).slice(2, 5)}`;
       attempts++;
     }
     let short_code = genCode();
     for (let i = 0; i < 5; i++) {
-      const { data: existing } = await supabase.from("marketing_campaigns").select("id").eq("short_code", short_code).maybeSingle();
+      const { data: existing } = await supabase
+        .from("marketing_campaigns")
+        .select("id")
+        .eq("short_code", short_code)
+        .maybeSingle();
       if (!existing) break;
       short_code = genCode();
     }
 
-    const { data: row, error } = await supabase.from("marketing_campaigns").insert({
-      name: data.name,
-      slug,
-      short_code,
-      target_url: data.target_url,
-      utm_source: data.utm_source ?? null,
-      utm_medium: data.utm_medium ?? null,
-      utm_campaign: data.utm_campaign ?? slug,
-      utm_term: data.utm_term ?? null,
-      utm_content: data.utm_content ?? null,
-      cost: data.cost,
-      notes: data.notes ?? null,
-      created_by: userId,
-    }).select().single();
+    const { data: row, error } = await supabase
+      .from("marketing_campaigns")
+      .insert({
+        name: data.name,
+        slug,
+        short_code,
+        target_url: data.target_url,
+        utm_source: data.utm_source ?? null,
+        utm_medium: data.utm_medium ?? null,
+        utm_campaign: data.utm_campaign ?? slug,
+        utm_term: data.utm_term ?? null,
+        utm_content: data.utm_content ?? null,
+        cost: data.cost,
+        notes: data.notes ?? null,
+        created_by: userId,
+      })
+      .select()
+      .single();
     if (error) throw new Error(error.message);
     return { campaign: row };
   });
 
 export const updateCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i) => z.object({
-    id: z.string().uuid(),
-    is_active: z.boolean().optional(),
-    cost: z.number().min(0).optional(),
-    notes: z.string().max(2000).optional().nullable(),
-  }).parse(i))
+  .inputValidator((i) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        is_active: z.boolean().optional(),
+        cost: z.number().min(0).optional(),
+        notes: z.string().max(2000).optional().nullable(),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { id, ...patch } = data;
@@ -122,8 +154,16 @@ export const getCampaignStats = createServerFn({ method: "POST" })
     const { supabase } = context;
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const [{ data: clicks }, { data: attrs }] = await Promise.all([
-      supabase.from("campaign_clicks").select("created_at, country, device, referrer").eq("campaign_id", data.id).gte("created_at", since),
-      supabase.from("lead_attributions").select("created_at, utm_source").eq("campaign_id", data.id).gte("created_at", since),
+      supabase
+        .from("campaign_clicks")
+        .select("created_at, country, device, referrer")
+        .eq("campaign_id", data.id)
+        .gte("created_at", since),
+      supabase
+        .from("lead_attributions")
+        .select("created_at, utm_source")
+        .eq("campaign_id", data.id)
+        .gte("created_at", since),
     ]);
     // Daily series
     const days: Record<string, { clicks: number; leads: number }> = {};

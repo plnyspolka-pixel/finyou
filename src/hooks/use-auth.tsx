@@ -57,7 +57,14 @@ const FAKE_USER = {
   aud: "authenticated",
   created_at: new Date().toISOString(),
 } as unknown as User;
-const ALL_ROLES: AppRole[] = ["administrator", "operator", "klient", "inwestor", "ksiegowosc", "posrednik"];
+const ALL_ROLES: AppRole[] = [
+  "administrator",
+  "operator",
+  "klient",
+  "inwestor",
+  "ksiegowosc",
+  "posrednik",
+];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -79,25 +86,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // przy rejestracji), przekieruj go do wyboru roli, gdzie nadamy właściwą rolę.
     try {
       const pending =
-        typeof window !== "undefined" ? window.localStorage.getItem("pending_role_selection") : null;
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("pending_role_selection")
+          : null;
       if (!pending) return;
       const needsFix =
         (pending === "inwestor" && !next.includes("inwestor") && !next.includes("administrator")) ||
-        (pending === "posrednik" && !next.includes("posrednik") && !next.includes("operator") && !next.includes("administrator")) ||
+        (pending === "posrednik" &&
+          !next.includes("posrednik") &&
+          !next.includes("operator") &&
+          !next.includes("administrator")) ||
         (pending === "klient" && next.length > 0 && !next.includes("klient"));
       const path = typeof window !== "undefined" ? window.location.pathname : "";
-      if (needsFix && typeof window !== "undefined" && !path.startsWith("/wybor-roli") && !path.startsWith("/embed")) {
+      if (
+        needsFix &&
+        typeof window !== "undefined" &&
+        !path.startsWith("/wybor-roli") &&
+        !path.startsWith("/embed")
+      ) {
         window.location.assign("/wybor-roli");
-
       } else if (!needsFix) {
         window.localStorage.removeItem("pending_role_selection");
       }
     } catch {}
   };
 
-
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       // Po świeżym zalogowaniu role dociągają się asynchronicznie z bazy. Dopóki ich nie znamy,

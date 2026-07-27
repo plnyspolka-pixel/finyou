@@ -12,10 +12,16 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ subscription_status, limit }, ctx: ToolContext) => {
-    try { requireAuth(ctx); } catch (e) { return fail((e as Error).message); }
+    try {
+      requireAuth(ctx);
+    } catch (e) {
+      return fail((e as Error).message);
+    }
     let q = userClient(ctx)
       .from("investors")
-      .select("id, first_name, last_name, email, investor_type, company_name, subscription_plan, subscription_status, is_active, created_at")
+      .select(
+        "id, first_name, last_name, email, investor_type, company_name, subscription_plan, subscription_status, is_active, created_at",
+      )
       .order("created_at", { ascending: false })
       .limit(limit ?? 20);
     if (subscription_status) q = q.eq("subscription_status", subscription_status);

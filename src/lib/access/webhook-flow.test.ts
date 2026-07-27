@@ -431,7 +431,13 @@ describe("webhook Tpay — transakcje legacy (userId|plan)", () => {
   it("transakcja rozliczona przez STARY webhook przed wdrożeniem nie jest przetwarzana ponownie", async () => {
     // Ślad starego przepływu: wpis rejestru osób fizycznych dla tej transakcji.
     db().tables.individual_sales_register = [
-      { id: fakeUuid(), transaction_id: "tr_old", user_id: USER, description: "x", gross_amount: 399 },
+      {
+        id: fakeUuid(),
+        transaction_id: "tr_old",
+        user_id: USER,
+        description: "x",
+        gross_amount: 399,
+      },
     ];
     tpayState.tx["tr_old"] = {
       transactionId: "tr_old",

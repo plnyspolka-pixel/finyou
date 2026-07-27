@@ -58,7 +58,12 @@ function emptyDiag(): RcnDiagnostics {
     featuresRawCount: 0,
     featuresFilteredCount: 0,
     filtersApplied: [],
-    periodCounts: { countAllDates: 0, countLast12Months: 0, countLast24Months: 0, countLast36Months: 0 },
+    periodCounts: {
+      countAllDates: 0,
+      countLast12Months: 0,
+      countLast24Months: 0,
+      countLast36Months: 0,
+    },
     sampleFeature: null,
     rawResponseSnippet: null,
     errorTechnical: null,
@@ -68,7 +73,11 @@ function emptyDiag(): RcnDiagnostics {
 }
 
 // Bounding-box w stopniach wokół punktu (WGS84).
-function degreeBox(lat: number, lng: number, radiusM: number): { minLat: number; maxLat: number; minLng: number; maxLng: number } {
+function degreeBox(
+  lat: number,
+  lng: number,
+  radiusM: number,
+): { minLat: number; maxLat: number; minLng: number; maxLng: number } {
   const dLat = radiusM / 111_320;
   const dLng = radiusM / (111_320 * Math.max(0.1, Math.cos((lat * Math.PI) / 180)));
   return { minLat: lat - dLat, maxLat: lat + dLat, minLng: lng - dLng, maxLng: lng + dLng };
@@ -120,7 +129,10 @@ export async function rcnBenchmark(args: {
     return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
   }
 
-  const isLand = typeStr === "grunt_rolny" || typeStr === "dzialka_budowlana" || typeStr === "dzialka_zabudowana";
+  const isLand =
+    typeStr === "grunt_rolny" ||
+    typeStr === "dzialka_budowlana" ||
+    typeStr === "dzialka_zabudowana";
   const kinds = TYPE_TO_KINDS[typeStr] ?? TYPE_TO_KINDS.inna;
   diag.availableLayers = kinds;
   diag.propertyTypeMapping.matchedLayerKeywords = kinds;
@@ -142,7 +154,13 @@ export async function rcnBenchmark(args: {
     chosenRadius = r;
     diag.radiusM = r;
     const box = degreeBox(lat, lng, r);
-    diag.queryBbox = { minX: box.minLng, minY: box.minLat, maxX: box.maxLng, maxY: box.maxLat, crs: "EPSG:4326" };
+    diag.queryBbox = {
+      minX: box.minLng,
+      minY: box.minLat,
+      maxX: box.maxLng,
+      maxY: box.maxLat,
+      crs: "EPSG:4326",
+    };
     if (rows.length >= MIN_DESIRED) break;
   }
   diag.featuresRawCount = rows.length;
@@ -152,7 +170,12 @@ export async function rcnBenchmark(args: {
     diag.status = "no_features";
     diag.statusMessage =
       "Brak transakcji RCN w bazie w analizowanym promieniu (zbiór obejmuje wybrane miasta — poza nimi wycena korzysta z GUS BDL).";
-    return { stats: null, transactionsCount: 0, radiusKm: chosenRadius ? chosenRadius / 1000 : null, diagnostics: diag };
+    return {
+      stats: null,
+      transactionsCount: 0,
+      radiusKm: chosenRadius ? chosenRadius / 1000 : null,
+      diagnostics: diag,
+    };
   }
 
   const valOf = (row: RcnRow) => (isLand ? row.price_per_ha : row.price_per_m2);
@@ -176,7 +199,11 @@ export async function rcnBenchmark(args: {
   ];
 
   for (const p of periods) {
-    diag.filtersApplied = [`propertyType=${typeStr}`, `kinds=${kinds.join("|")}`, `periodMonths<=${p.months}`];
+    diag.filtersApplied = [
+      `propertyType=${typeStr}`,
+      `kinds=${kinds.join("|")}`,
+      `periodMonths<=${p.months}`,
+    ];
     const filtered = rows.filter((t) => {
       if (!t.tx_date) return true;
       const ts = Date.parse(t.tx_date);
@@ -234,16 +261,27 @@ export async function rcnBenchmarkCached(args: {
 // Komunikat dla użytkownika zależny od statusu.
 export function rcnStatusMessage(status: RcnStatus): string {
   switch (status) {
-    case "success": return "Znaleziono transakcje porównawcze w RCN.";
-    case "no_features": return "Brak transakcji RCN w bazie w analizowanym obszarze (zbiór obejmuje wybrane miasta).";
-    case "no_features_in_bbox": return "Nie znaleziono transakcji RCN w analizowanym obszarze.";
-    case "features_found_but_filtered_out": return "RCN zwrócił rekordy, ale za mało po zastosowaniu filtrów.";
-    case "features_found": return "Znaleziono transakcje RCN w analizowanym obszarze.";
-    case "wfs_request_failed": return "Nie udało się odczytać transakcji RCN z bazy.";
-    case "missing_coordinates": return "Brak współrzędnych — RCN nie odpytany.";
-    case "geocoding_failed": return "Nie udało się zgeokodować adresu — RCN nie odpytany.";
-    case "filter_too_strict": return "Filtry RCN zbyt restrykcyjne.";
-    case "not_started": return "Diagnostyka RCN nie została uruchomiona.";
-    default: return "Status RCN nieznany.";
+    case "success":
+      return "Znaleziono transakcje porównawcze w RCN.";
+    case "no_features":
+      return "Brak transakcji RCN w bazie w analizowanym obszarze (zbiór obejmuje wybrane miasta).";
+    case "no_features_in_bbox":
+      return "Nie znaleziono transakcji RCN w analizowanym obszarze.";
+    case "features_found_but_filtered_out":
+      return "RCN zwrócił rekordy, ale za mało po zastosowaniu filtrów.";
+    case "features_found":
+      return "Znaleziono transakcje RCN w analizowanym obszarze.";
+    case "wfs_request_failed":
+      return "Nie udało się odczytać transakcji RCN z bazy.";
+    case "missing_coordinates":
+      return "Brak współrzędnych — RCN nie odpytany.";
+    case "geocoding_failed":
+      return "Nie udało się zgeokodować adresu — RCN nie odpytany.";
+    case "filter_too_strict":
+      return "Filtry RCN zbyt restrykcyjne.";
+    case "not_started":
+      return "Diagnostyka RCN nie została uruchomiona.";
+    default:
+      return "Status RCN nieznany.";
   }
 }

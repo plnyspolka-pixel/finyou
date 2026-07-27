@@ -37,7 +37,8 @@ function extractLayers(xml: string): string[] {
   const layers: string[] = [];
 
   // WFS 2.0 / 1.1 — <Name> wewnątrz <FeatureType>
-  const featureTypeRegex = /<(?:[a-zA-Z0-9]+:)?FeatureType[\s\S]*?<(?:[a-zA-Z0-9]+:)?Name>([\s\S]*?)<\/(?:[a-zA-Z0-9]+:)?Name>/g;
+  const featureTypeRegex =
+    /<(?:[a-zA-Z0-9]+:)?FeatureType[\s\S]*?<(?:[a-zA-Z0-9]+:)?Name>([\s\S]*?)<\/(?:[a-zA-Z0-9]+:)?Name>/g;
   let match;
   while ((match = featureTypeRegex.exec(xml)) !== null) {
     const name = match[1].trim().replace(/^ms:/i, "");
@@ -46,7 +47,8 @@ function extractLayers(xml: string): string[] {
 
   // WMS — <Layer><Name>
   if (layers.length === 0) {
-    const layerNameRegex = /<(?:[a-zA-Z0-9]+:)?Layer[^>]*>[\s\S]*?<(?:[a-zA-Z0-9]+:)?Name>([\s\S]*?)<\/(?:[a-zA-Z0-9]+:)?Name>/g;
+    const layerNameRegex =
+      /<(?:[a-zA-Z0-9]+:)?Layer[^>]*>[\s\S]*?<(?:[a-zA-Z0-9]+:)?Name>([\s\S]*?)<\/(?:[a-zA-Z0-9]+:)?Name>/g;
     while ((match = layerNameRegex.exec(xml)) !== null) {
       const name = match[1].trim().replace(/^ms:/i, "");
       if (/^wms$/i.test(name) || /^default$/i.test(name)) continue;
@@ -144,18 +146,13 @@ async function testCapabilities(): Promise<{
           allAttempts,
         };
       } else {
-        attempt.error =
-          response.ok
-            ? "Odpowiedź HTTP OK ale brak rozpoznanych tagów XML capabilities"
-            : `HTTP ${response.status}`;
+        attempt.error = response.ok
+          ? "Odpowiedź HTTP OK ale brak rozpoznanych tagów XML capabilities"
+          : `HTTP ${response.status}`;
       }
     } catch (e: unknown) {
       attempt.error =
-        e instanceof Error
-          ? e.name === "AbortError"
-            ? "Timeout po 20s"
-            : e.message
-          : String(e);
+        e instanceof Error ? (e.name === "AbortError" ? "Timeout po 20s" : e.message) : String(e);
     }
 
     allAttempts.push(attempt);
@@ -192,8 +189,7 @@ async function getFeature(params: {
 }> {
   const { layerName, wfsVersion, bbox, maxFeatures = 100 } = params;
 
-  const countParam =
-    wfsVersion === "2.0.0" ? `COUNT=${maxFeatures}` : `MAXFEATURES=${maxFeatures}`;
+  const countParam = wfsVersion === "2.0.0" ? `COUNT=${maxFeatures}` : `MAXFEATURES=${maxFeatures}`;
 
   const url =
     `${RCN_BASE}?SERVICE=WFS&REQUEST=GetFeature` +
@@ -281,7 +277,7 @@ async function getFeatureXmlFallback(
   layerName: string,
   wfsVersion: string,
   bbox: string,
-  maxFeatures: number
+  maxFeatures: number,
 ): Promise<{
   success: boolean;
   rawCount: number;
@@ -290,8 +286,7 @@ async function getFeatureXmlFallback(
   error: string;
   status: string;
 }> {
-  const countParam =
-    wfsVersion === "2.0.0" ? `COUNT=${maxFeatures}` : `MAXFEATURES=${maxFeatures}`;
+  const countParam = wfsVersion === "2.0.0" ? `COUNT=${maxFeatures}` : `MAXFEATURES=${maxFeatures}`;
 
   const url =
     `${RCN_BASE}?SERVICE=WFS&REQUEST=GetFeature` +
@@ -403,7 +398,12 @@ serve(async (req: Request) => {
         clearTimeout(t);
         return new Response(
           JSON.stringify({
-            error: e instanceof Error ? (e.name === "AbortError" ? "Timeout po 25s" : e.message) : String(e),
+            error:
+              e instanceof Error
+                ? e.name === "AbortError"
+                  ? "Timeout po 25s"
+                  : e.message
+                : String(e),
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 502 },
         );
@@ -418,17 +418,14 @@ serve(async (req: Request) => {
         ? result.serviceType === "WMS"
           ? "wms_capabilities_success_but_wfs_failed"
           : result.availableLayers.length > 0
-          ? "capabilities_success"
-          : "no_layers_detected"
+            ? "capabilities_success"
+            : "no_layers_detected"
         : "capabilities_failed";
 
-      return new Response(
-        JSON.stringify({ ...result, diagnosticStatus: status }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
+      return new Response(JSON.stringify({ ...result, diagnosticStatus: status }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
     }
 
     // --- Akcja: GetFeature ---
@@ -442,7 +439,7 @@ serve(async (req: Request) => {
             error:
               "Wymagane parametry: layerName, wfsVersion, bbox. Najpierw wywołaj /rcn-proxy?action=capabilities",
           }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
         );
       }
 
@@ -454,15 +451,17 @@ serve(async (req: Request) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: "Nieznana akcja. Użyj: capabilities | getfeature | proxy" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 400,
-    });
-  } catch (e: unknown) {
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      JSON.stringify({ error: "Nieznana akcja. Użyj: capabilities | getfeature | proxy" }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      },
     );
+  } catch (e: unknown) {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
   }
 });
-

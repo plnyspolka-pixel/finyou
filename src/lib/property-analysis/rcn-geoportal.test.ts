@@ -52,9 +52,9 @@ describe("parseRcnGml — eksport RCN (GML)", () => {
   it("działka: powierzchnia w ha, konwersja daty dd.mm.rrrr, cena/ha", () => {
     const dz = recs.find((r) => r.propertyKind === "dzialka");
     expect(dz).toBeTruthy();
-    expect(dz!.areaHa).toBe(3);              // 30000 m² = 3 ha
-    expect(dz!.txDate).toBe("2023-09-01");   // dd.mm.rrrr → ISO
-    expect(dz!.pricePerHa).toBe(60000);      // 180000 / 3 ha
+    expect(dz!.areaHa).toBe(3); // 30000 m² = 3 ha
+    expect(dz!.txDate).toBe("2023-09-01"); // dd.mm.rrrr → ISO
+    expect(dz!.pricePerHa).toBe(60000); // 180000 / 3 ha
     expect(dz!.landUse).toBe("R");
   });
 

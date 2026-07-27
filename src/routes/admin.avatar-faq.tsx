@@ -45,8 +45,7 @@ function AvatarFaqPage() {
   });
 
   const upsertM = useMutation({
-    mutationFn: (vars: Parameters<typeof upsertAvatarFaq>[0]["data"]) =>
-      upsert({ data: vars }),
+    mutationFn: (vars: Parameters<typeof upsertAvatarFaq>[0]["data"]) => upsert({ data: vars }),
     onSuccess: () => {
       toast.success("Zapisano");
       qc.invalidateQueries({ queryKey: ["avatar-faqs-admin"] });
@@ -109,12 +108,18 @@ function AvatarFaqPage() {
         <div>
           <h1 className="text-2xl font-bold">Awatar FAQ — Filip na landingu</h1>
           <p className="text-sm text-muted-foreground">
-            Pytania klientów + odpowiedzi nagrane awatarem HeyGen, głosem ElevenLabs.
-            Generowanie ręczne (klikasz przycisk → ~1 min na render).
+            Pytania klientów + odpowiedzi nagrane awatarem HeyGen, głosem ElevenLabs. Generowanie
+            ręczne (klikasz przycisk → ~1 min na render).
           </p>
         </div>
         <Button
-          onClick={() => upsertM.mutate({ question: "Nowe pytanie", answer_text: "Odpowiedź…", sort_order: rows.length })}
+          onClick={() =>
+            upsertM.mutate({
+              question: "Nowe pytanie",
+              answer_text: "Odpowiedź…",
+              sort_order: rows.length,
+            })
+          }
         >
           <Plus className="mr-2 h-4 w-4" />
           Dodaj
@@ -125,8 +130,8 @@ function AvatarFaqPage() {
         <CardHeader>
           <CardTitle className="text-base">Wybór awatara HeyGen</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Kliknij awatara, aby ustawić go dla WSZYSTKICH FAQ. Po zmianie musisz
-            ponownie wygenerować wideo (przycisk „Wygeneruj ponownie" przy każdym FAQ).
+            Kliknij awatara, aby ustawić go dla WSZYSTKICH FAQ. Po zmianie musisz ponownie
+            wygenerować wideo (przycisk „Wygeneruj ponownie" przy każdym FAQ).
           </p>
         </CardHeader>
         <CardContent>
@@ -171,8 +176,6 @@ function AvatarFaqPage() {
         </CardContent>
       </Card>
 
-
-
       {isLoading ? (
         <Loader2 className="h-6 w-6 animate-spin" />
       ) : rows.length === 0 ? (
@@ -192,10 +195,7 @@ function AvatarFaqPage() {
               onGenerate={() => generateM.mutate(row.id)}
               onPoll={() => pollM.mutate(row.id)}
               busy={
-                generateM.isPending ||
-                removeM.isPending ||
-                upsertM.isPending ||
-                pollM.isPending
+                generateM.isPending || removeM.isPending || upsertM.isPending || pollM.isPending
               }
             />
           ))}
@@ -258,8 +258,8 @@ function FaqCard({
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          {intro && <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />}
-          #{order} — {q.slice(0, 60)}
+          {intro && <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />}#{order} —{" "}
+          {q.slice(0, 60)}
         </CardTitle>
         {statusBadge}
       </CardHeader>

@@ -13,26 +13,32 @@ function admin() {
 
 function warsawHour(now: Date = new Date()): number {
   const p = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Warsaw", hour: "2-digit", hour12: false,
+    timeZone: "Europe/Warsaw",
+    hour: "2-digit",
+    hour12: false,
   }).formatToParts(now);
   return parseInt(p.find((x) => x.type === "hour")?.value ?? "0", 10);
 }
 function warsawWeekday(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Warsaw", weekday: "short" })
-    .formatToParts(now).find((x) => x.type === "weekday")?.value ?? "";
+  return (
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Warsaw", weekday: "short" })
+      .formatToParts(now)
+      .find((x) => x.type === "weekday")?.value ?? ""
+  );
 }
 function warsawDateKey(now: Date = new Date()): string {
   const p = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Warsaw", year: "numeric", month: "2-digit", day: "2-digit",
+    timeZone: "Europe/Warsaw",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   }).formatToParts(now);
-  return `${p.find(x=>x.type==="year")?.value}-${p.find(x=>x.type==="month")?.value}-${p.find(x=>x.type==="day")?.value}`;
+  return `${p.find((x) => x.type === "year")?.value}-${p.find((x) => x.type === "month")?.value}-${p.find((x) => x.type === "day")?.value}`;
 }
 
 function publicBaseUrl(): string {
   // Pierwszeństwo dla pełnej domeny produkcyjnej
-  return process.env.PUBLIC_BASE_URL
-    || process.env.SITE_URL
-    || "https://financeyou.pl";
+  return process.env.PUBLIC_BASE_URL || process.env.SITE_URL || "https://financeyou.pl";
 }
 
 function renderTemplate(tpl: string, vars: Record<string, string>): string {
@@ -41,13 +47,24 @@ function renderTemplate(tpl: string, vars: Record<string, string>): string {
 
 function fmtPLN(n: number | null | undefined): string {
   if (!n || n <= 0) return "Twojej kwoty";
-  return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN", maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("pl-PL", {
+    style: "currency",
+    currency: "PLN",
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 
-function pickVariantEpsilonGreedy(variants: Array<{
-  id: string; subject: string; preview_text: string | null; body_html: string; weight: number;
-  sent_count: number; opened_count: number;
-}>): typeof variants[number] | null {
+function pickVariantEpsilonGreedy(
+  variants: Array<{
+    id: string;
+    subject: string;
+    preview_text: string | null;
+    body_html: string;
+    weight: number;
+    sent_count: number;
+    opened_count: number;
+  }>,
+): (typeof variants)[number] | null {
   if (variants.length === 0) return null;
   // 15% exploration: czysto losowy wariant ważony `weight`
   if (Math.random() < 0.15) {
@@ -88,9 +105,15 @@ export interface SendReminderResult {
 
 async function ensureReturnToken(loanId: string): Promise<string> {
   const s = admin();
-  const { data } = await s.from("loan_applications").select("return_link_token").eq("id", loanId).maybeSingle();
+  const { data } = await s
+    .from("loan_applications")
+    .select("return_link_token")
+    .eq("id", loanId)
+    .maybeSingle();
   if (data?.return_link_token) return data.return_link_token as string;
-  const token = (globalThis.crypto as any)?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,10)}`;
+  const token =
+    (globalThis.crypto as any)?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   await s.from("loan_applications").update({ return_link_token: token }).eq("id", loanId);
   return token;
 }
@@ -108,9 +131,13 @@ async function bumpPreferredHourFromOpens(loanId: string) {
     const h = Number(o.sent_hour_warsaw);
     counts.set(h, (counts.get(h) ?? 0) + 1);
   }
-  let bestH = 10, bestC = -1;
+  let bestH = 10,
+    bestC = -1;
   for (const [h, c] of counts.entries()) {
-    if (c > bestC) { bestC = c; bestH = h; }
+    if (c > bestC) {
+      bestC = c;
+      bestH = h;
+    }
   }
   if (bestH < 6) bestH = 6;
   if (bestH > 23) bestH = 23;
@@ -118,15 +145,21 @@ async function bumpPreferredHourFromOpens(loanId: string) {
 }
 
 /** Główna procedura cron: znajduje odbiorców na bieżącą godzinę i wysyła. */
-export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; onlyLoanId?: string }): Promise<{
-  ok: true;
-  hour: number;
-  weekday: string;
-  candidates: number;
-  sent: number;
-  errors: number;
-  results: SendReminderResult[];
-} | { ok: false; skipped: string; hour: number; weekday: string }> {
+export async function runDailyReminderEmailsBatch(opts?: {
+  force?: boolean;
+  onlyLoanId?: string;
+}): Promise<
+  | {
+      ok: true;
+      hour: number;
+      weekday: string;
+      candidates: number;
+      sent: number;
+      errors: number;
+      results: SendReminderResult[];
+    }
+  | { ok: false; skipped: string; hour: number; weekday: string }
+> {
   const now = new Date();
   const hour = warsawHour(now);
   const weekday = warsawWeekday(now);
@@ -153,7 +186,9 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
   // Pełna sekwencja 150 maili (P1 = 1..60, dni 1..30 × 2/dzień; P2 = 61..150, co 2 dni o 8:00)
   const { data: variants } = await s
     .from("loan_reminder_email_variants")
-    .select("id,subject,preview_text,body_html,weight,sent_count,opened_count,sequence_index,phase,slot")
+    .select(
+      "id,subject,preview_text,body_html,weight,sent_count,opened_count,sequence_index,phase,slot",
+    )
     .eq("active", true)
     .not("sequence_index", "is", null)
     .order("sequence_index", { ascending: true });
@@ -169,18 +204,20 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
   /** Zwraca wariant dla n-tej wysyłki (1-indexed) z zawijaniem po całej puli. */
   const variantForSeq = (n: number): any => {
     if (seqCount === 0) return null;
-    const pos = ((n - 1) % seqCount + seqCount) % seqCount; // 0-based, bezpieczne dla n<=0
+    const pos = (((n - 1) % seqCount) + seqCount) % seqCount; // 0-based, bezpieczne dla n<=0
     return variantBySeq.get(seqIndices[pos]) ?? null;
   };
 
   let q = s
     .from("loan_applications")
-    .select(`
+    .select(
+      `
       id, status, current_form_step, loan_amount, preferred_period_months,
       preferred_email_hour, reminder_email_count, reminder_email_unsubscribed,
       reminder_email_last_sent_at, return_link_token, created_at,
       client:clients!inner(id, first_name, last_name, email, phone_normalized, phone, do_not_email)
-    `)
+    `,
+    )
     .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
     .eq("reminder_email_unsubscribed", false)
     // BEZ górnego limitu wysłanych maili — sekwencja cyklu­je w nieskończoność
@@ -191,8 +228,9 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
   if (opts?.onlyLoanId) q = q.eq("id", opts.onlyLoanId);
   const { data: loans } = await q;
 
-  const candidates = (loans ?? []).filter((l: any) => !!l.client?.email && l.client?.do_not_email !== true);
-
+  const candidates = (loans ?? []).filter(
+    (l: any) => !!l.client?.email && l.client?.do_not_email !== true,
+  );
 
   if (candidates.length === 0) {
     return { ok: true, hour, weekday, candidates: 0, sent: 0, errors: 0, results: [] };
@@ -213,7 +251,8 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
 
   const baseUrl = publicBaseUrl();
   const results: SendReminderResult[] = [];
-  let sent = 0, errors = 0;
+  let sent = 0,
+    errors = 0;
 
   for (const loan of candidates as any[]) {
     const sentCount = Number(loan.reminder_email_count ?? 0);
@@ -232,7 +271,8 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
         const lastIso: string | null = loan.reminder_email_last_sent_at ?? null;
         if (lastIso) {
           const ageHours = (Date.now() - new Date(lastIso).getTime()) / 3_600_000;
-          if (ageHours < 40) { // ~co 2 dni z buforem
+          if (ageHours < 40) {
+            // ~co 2 dni z buforem
             results.push({ ok: false, skipped: "p2_too_soon" });
             continue;
           }
@@ -279,8 +319,6 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
       continue;
     }
 
-
-
     const token = await ensureReturnToken(loan.id);
 
     // Wstępny wpis żeby mieć ID do linków
@@ -312,9 +350,12 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
     const sendId = pending.id;
     const wniosekLink = `${baseUrl}/api/public/email/click?s=${sendId}`;
     const pixelUrl = `${baseUrl}/api/public/email/open?s=${sendId}`;
-    const missing = progress.missing_documents.length > 0
-      ? progress.missing_documents.join(", ")
-      : (progress.current_step <= 2 ? "uzupełnienie danych kontaktowych" : "kilka informacji");
+    const missing =
+      progress.missing_documents.length > 0
+        ? progress.missing_documents.join(", ")
+        : progress.current_step <= 2
+          ? "uzupełnienie danych kontaktowych"
+          : "kilka informacji";
 
     const fname = (loan.client.first_name ?? "").trim();
     const vars = {
@@ -337,23 +378,41 @@ ${bodyInner}
 <p style="font-size:11px;color:#888;text-align:center;margin:0">Finance You — pożyczki pod zastaw nieruchomości. Otrzymujesz tę wiadomość bo złożyłeś wniosek na <a href="https://financeyou.pl" style="color:#888">financeyou.pl</a>. <a href="${baseUrl}/email/unsubscribe?s=${sendId}" style="color:#888">Wypisz mnie z przypomnień</a>.</p>
 <img src="${pixelUrl}" width="1" height="1" alt="" style="display:block;border:0" />
 </body></html>`;
-    const text = bodyInner.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() + `\n\nLink: ${wniosekLink}`;
+    const text =
+      bodyInner
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s+/g, " ")
+        .trim() + `\n\nLink: ${wniosekLink}`;
 
-    const res = await sendResendEmail({ to: loan.client.email, subject, text, html, replyTo: "kontakt@app.financeyou.pl" });
+    const res = await sendResendEmail({
+      to: loan.client.email,
+      subject,
+      text,
+      html,
+      replyTo: "kontakt@app.financeyou.pl",
+    });
 
     if (!res.ok) {
       errors++;
-      await s.from("loan_reminder_email_sends").update({
-        subject, error_message: res.error?.slice(0, 500) ?? "unknown",
-      }).eq("id", sendId);
+      await s
+        .from("loan_reminder_email_sends")
+        .update({
+          subject,
+          error_message: res.error?.slice(0, 500) ?? "unknown",
+        })
+        .eq("id", sendId);
       results.push({ ok: false, sendId, variantId: variant.id, error: res.error });
       continue;
     }
 
     sent++;
-    await s.from("loan_reminder_email_sends").update({
-      subject, mg_message_id: res.id ?? null,
-    }).eq("id", sendId);
+    await s
+      .from("loan_reminder_email_sends")
+      .update({
+        subject,
+        mg_message_id: res.id ?? null,
+      })
+      .eq("id", sendId);
 
     // Loguj wysyłkę do lead_communications (żeby licznik "maile" na liście klientów się zgadzał)
     try {
@@ -369,7 +428,12 @@ ${bodyInner}
         subject,
         content: text,
         externalId: res.id ?? null,
-        metadata: { source: "loan_reminder_sequence", variant_id: variant.id, send_id: sendId, sequence_index: nextSeq },
+        metadata: {
+          source: "loan_reminder_sequence",
+          variant_id: variant.id,
+          send_id: sendId,
+          sequence_index: nextSeq,
+        },
       });
     } catch (e) {
       console.error("[loan-reminder-emails] log comm error", e);
@@ -379,22 +443,27 @@ ${bodyInner}
     await s.rpc("increment_email_variant_sent", { p_variant_id: variant.id }).then(
       () => {},
       async () => {
-        await s.from("loan_reminder_email_variants").update({
-          sent_count: (variant.sent_count ?? 0) + 1,
-        }).eq("id", variant.id);
+        await s
+          .from("loan_reminder_email_variants")
+          .update({
+            sent_count: (variant.sent_count ?? 0) + 1,
+          })
+          .eq("id", variant.id);
       },
     );
 
     // Aktualizuj wniosek
     const newPrefHour = loan.preferred_email_hour ?? hour;
     const nowIso = new Date().toISOString();
-    await s.from("loan_applications").update({
-      reminder_email_count: (loan.reminder_email_count ?? 0) + 1,
-      reminder_email_first_sent_at: loan.reminder_email_count ? undefined : nowIso,
-      reminder_email_last_sent_at: nowIso,
-      preferred_email_hour: newPrefHour,
-    }).eq("id", loan.id);
-
+    await s
+      .from("loan_applications")
+      .update({
+        reminder_email_count: (loan.reminder_email_count ?? 0) + 1,
+        reminder_email_first_sent_at: loan.reminder_email_count ? undefined : nowIso,
+        reminder_email_last_sent_at: nowIso,
+        preferred_email_hour: newPrefHour,
+      })
+      .eq("id", loan.id);
 
     results.push({ ok: true, sendId, variantId: variant.id });
   }
@@ -411,16 +480,27 @@ export async function recordEmailOpen(sendId: string): Promise<void> {
     .eq("id", sendId)
     .maybeSingle();
   if (!row) return;
-  await s.from("loan_reminder_email_sends").update({
-    opened_at: row.opened_at ?? new Date().toISOString(),
-    open_count: (row.open_count ?? 0) + 1,
-  }).eq("id", sendId);
+  await s
+    .from("loan_reminder_email_sends")
+    .update({
+      opened_at: row.opened_at ?? new Date().toISOString(),
+      open_count: (row.open_count ?? 0) + 1,
+    })
+    .eq("id", sendId);
   if (!row.opened_at && row.variant_id) {
     await s.rpc("increment_email_variant_opened", { p_variant_id: row.variant_id }).then(
       () => {},
       async () => {
-        const { data: v } = await s.from("loan_reminder_email_variants").select("opened_count").eq("id", row.variant_id).maybeSingle();
-        if (v) await s.from("loan_reminder_email_variants").update({ opened_count: (v.opened_count ?? 0) + 1 }).eq("id", row.variant_id);
+        const { data: v } = await s
+          .from("loan_reminder_email_variants")
+          .select("opened_count")
+          .eq("id", row.variant_id)
+          .maybeSingle();
+        if (v)
+          await s
+            .from("loan_reminder_email_variants")
+            .update({ opened_count: (v.opened_count ?? 0) + 1 })
+            .eq("id", row.variant_id);
       },
     );
   }
@@ -437,17 +517,28 @@ export async function recordEmailClick(sendId: string): Promise<string | null> {
     .maybeSingle();
   if (!row) return null;
   const nowIso = new Date().toISOString();
-  await s.from("loan_reminder_email_sends").update({
-    clicked_at: row.clicked_at ?? nowIso,
-    click_count: (row.click_count ?? 0) + 1,
-    opened_at: row.opened_at ?? nowIso,
-  }).eq("id", sendId);
+  await s
+    .from("loan_reminder_email_sends")
+    .update({
+      clicked_at: row.clicked_at ?? nowIso,
+      click_count: (row.click_count ?? 0) + 1,
+      opened_at: row.opened_at ?? nowIso,
+    })
+    .eq("id", sendId);
   if (!row.clicked_at && row.variant_id) {
     await s.rpc("increment_email_variant_clicked", { p_variant_id: row.variant_id }).then(
       () => {},
       async () => {
-        const { data: v } = await s.from("loan_reminder_email_variants").select("clicked_count").eq("id", row.variant_id).maybeSingle();
-        if (v) await s.from("loan_reminder_email_variants").update({ clicked_count: (v.clicked_count ?? 0) + 1 }).eq("id", row.variant_id);
+        const { data: v } = await s
+          .from("loan_reminder_email_variants")
+          .select("clicked_count")
+          .eq("id", row.variant_id)
+          .maybeSingle();
+        if (v)
+          await s
+            .from("loan_reminder_email_variants")
+            .update({ clicked_count: (v.clicked_count ?? 0) + 1 })
+            .eq("id", row.variant_id);
       },
     );
   }

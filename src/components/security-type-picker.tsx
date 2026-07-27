@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { Building2, Home, Trees, Map, Store, FileQuestion, Pencil, type LucideIcon } from "lucide-react";
+import {
+  Building2,
+  Home,
+  Trees,
+  Map,
+  Store,
+  FileQuestion,
+  Pencil,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SecurityType } from "@/lib/loan-math";
 import { securityTypeLabels } from "@/lib/loan-math";

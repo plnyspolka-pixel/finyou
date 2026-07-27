@@ -11,7 +11,9 @@ export default defineTool({
   handler: async ({ slug }) => {
     const { data, error } = await publicClient()
       .from("ai_seo_articles")
-      .select("title, slug, audience, meta_description, content_md, published_at, keywords, reading_minutes")
+      .select(
+        "title, slug, audience, meta_description, content_md, published_at, keywords, reading_minutes",
+      )
       .eq("status", "published")
       .eq("slug", slug)
       .maybeSingle();

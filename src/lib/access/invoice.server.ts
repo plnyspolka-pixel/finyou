@@ -92,7 +92,12 @@ export async function ensureInvoiceForAccessPayment(
           .from("access_payments")
           .update({ invoice_id: raced.id, invoice_error: null })
           .eq("id", paymentId);
-        return { ok: true, invoiceId: raced.id, invoiceNumber: raced.invoice_number ?? null, deduped: true };
+        return {
+          ok: true,
+          invoiceId: raced.id,
+          invoiceNumber: raced.invoice_number ?? null,
+          deduped: true,
+        };
       }
     }
 

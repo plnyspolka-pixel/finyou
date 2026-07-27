@@ -10,7 +10,7 @@ function verifySignature(rawBody: string, header: string | null, secret: string)
     header.split(",").map((p) => {
       const i = p.indexOf("=");
       return [p.slice(0, i).trim(), p.slice(i + 1).trim()];
-    })
+    }),
   );
   const t = parts["t"];
   const v0 = parts["v0"];
@@ -58,39 +58,67 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
         }
 
         const envelope = (() => {
-          try { return JSON.parse(rawBody); } catch { return {} as any; }
+          try {
+            return JSON.parse(rawBody);
+          } catch {
+            return {} as any;
+          }
         })();
         // ElevenLabs zwykle wysyła { type, event_timestamp, data: {...} } — wspieramy też płaski payload
-        const body: any = envelope?.data && typeof envelope.data === "object" ? envelope.data : envelope;
+        const body: any =
+          envelope?.data && typeof envelope.data === "object" ? envelope.data : envelope;
 
         const callId: string | undefined =
           body.conversation_id || body.call_id || body.id || envelope.conversation_id;
         const phone: string | undefined =
-          body.phone_number || body.to_number || body?.metadata?.phone_call?.external_number || body?.conversation_initiation_client_data?.dynamic_variables?.phone;
-        const transcript: string | undefined = body.transcript_text || body.summary_transcript ||
-          (Array.isArray(body.transcript) ? body.transcript.map((t: any) => `${t.role ?? t.speaker ?? ""}: ${t.message ?? t.text ?? ""}`.trim()).filter(Boolean).join("\n") : undefined);
+          body.phone_number ||
+          body.to_number ||
+          body?.metadata?.phone_call?.external_number ||
+          body?.conversation_initiation_client_data?.dynamic_variables?.phone;
+        const transcript: string | undefined =
+          body.transcript_text ||
+          body.summary_transcript ||
+          (Array.isArray(body.transcript)
+            ? body.transcript
+                .map((t: any) =>
+                  `${t.role ?? t.speaker ?? ""}: ${t.message ?? t.text ?? ""}`.trim(),
+                )
+                .filter(Boolean)
+                .join("\n")
+            : undefined);
         const summary: string | undefined =
           body?.analysis?.transcript_summary || body?.analysis?.summary || body.summary;
 
         // ── Mapowanie wyniku rozmowy ─────────────────────────────────────────
-        const callSuccessful: string | undefined = body?.analysis?.call_successful || body.call_successful;
+        const callSuccessful: string | undefined =
+          body?.analysis?.call_successful || body.call_successful;
         const callStatus: string | undefined = body.status || body.call_status;
         const disconnectionReason: string | undefined =
-          body?.metadata?.termination_reason || body.disconnection_reason || body.termination_reason;
-        const durationSec = Number(
-          body?.metadata?.call_duration_secs ?? body?.duration_seconds ?? body?.call_duration_secs
-        ) || null;
+          body?.metadata?.termination_reason ||
+          body.disconnection_reason ||
+          body.termination_reason;
+        const durationSec =
+          Number(
+            body?.metadata?.call_duration_secs ??
+              body?.duration_seconds ??
+              body?.call_duration_secs,
+          ) || null;
 
         function classifyOutcome(): { outcome: string; label: string } {
           const d = (disconnectionReason || "").toLowerCase();
           const s = (callStatus || "").toLowerCase();
           const succ = (callSuccessful || "").toLowerCase();
-          if (d.includes("no_answer") || d.includes("noanswer") || s === "no-answer") return { outcome: "no_answer", label: "Nieodebrana" };
+          if (d.includes("no_answer") || d.includes("noanswer") || s === "no-answer")
+            return { outcome: "no_answer", label: "Nieodebrana" };
           if (d.includes("busy")) return { outcome: "busy", label: "Zajęte" };
-          if (d.includes("voicemail") || d.includes("machine")) return { outcome: "voicemail", label: "Poczta głosowa" };
-          if (d.includes("failed") || s === "failed" || succ === "failure") return { outcome: "failed", label: "Błąd połączenia" };
-          if ((durationSec ?? 0) < 5 && (d || s)) return { outcome: "no_answer", label: "Nieodebrana" };
-          if (succ === "success" || (durationSec ?? 0) >= 5) return { outcome: "answered", label: "Odebrana" };
+          if (d.includes("voicemail") || d.includes("machine"))
+            return { outcome: "voicemail", label: "Poczta głosowa" };
+          if (d.includes("failed") || s === "failed" || succ === "failure")
+            return { outcome: "failed", label: "Błąd połączenia" };
+          if ((durationSec ?? 0) < 5 && (d || s))
+            return { outcome: "no_answer", label: "Nieodebrana" };
+          if (succ === "success" || (durationSec ?? 0) >= 5)
+            return { outcome: "answered", label: "Odebrana" };
           return { outcome: "completed", label: "Zakończona" };
         }
         const { outcome, label: outcomeLabel } = classifyOutcome();
@@ -98,10 +126,11 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
         // ── Wyciąganie wyników data collection z ElevenLabs ──────────────────
         // ElevenLabs zwraca: analysis.data_collection_results = { field: { value, rationale, ... } }
         function extractDataCollection(): Record<string, any> {
-          const raw = body?.analysis?.data_collection_results
-            ?? body?.data_collection_results
-            ?? body?.analysis?.data_collection
-            ?? null;
+          const raw =
+            body?.analysis?.data_collection_results ??
+            body?.data_collection_results ??
+            body?.analysis?.data_collection ??
+            null;
           if (!raw || typeof raw !== "object") return {};
           const out: Record<string, any> = {};
           for (const [k, v] of Object.entries(raw)) {
@@ -118,7 +147,10 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
         const parseAmount = (v: any): number | null => {
           if (v === null || v === undefined || v === "") return null;
           if (typeof v === "number") return Number.isFinite(v) ? v : null;
-          const s = String(v).replace(/[^\d.,-]/g, "").replace(/\s/g, "").replace(",", ".");
+          const s = String(v)
+            .replace(/[^\d.,-]/g, "")
+            .replace(/\s/g, "")
+            .replace(",", ".");
           const n = parseFloat(s);
           return Number.isFinite(n) ? n : null;
         };
@@ -130,14 +162,20 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           if (["false", "nie", "no", "0", "n", "f"].includes(s)) return false;
           return null;
         };
-        const loanAmountRequested = parseAmount(collected.loan_amount_requested ?? collected.loan_amount ?? collected.kwota);
+        const loanAmountRequested = parseAmount(
+          collected.loan_amount_requested ?? collected.loan_amount ?? collected.kwota,
+        );
         const collateralType = collected.collateral_type ?? collected.zabezpieczenie ?? null;
         const willingOnline = parseBool(collected.customer_willing_to_apply_online);
         const directedToWebsite = parseBool(collected.application_directed_to_website);
 
         let queueRow: any = null;
         if (callId) {
-          const r = await supabase.from("call_queue").select("*").eq("agent_id", callId).maybeSingle();
+          const r = await supabase
+            .from("call_queue")
+            .select("*")
+            .eq("agent_id", callId)
+            .maybeSingle();
           queueRow = r.data;
         }
         if (!queueRow && phone) {
@@ -151,12 +189,17 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
         }
         if (queueRow) {
           const queueStatus =
-            outcome === "answered" ? "zakonczona" :
-            outcome === "no_answer" ? "nieodebrana" :
-            outcome === "busy" ? "nieodebrana" :
-            outcome === "voicemail" ? "poczta_glosowa" :
-            outcome === "failed" ? "blad" :
-            "zakonczona";
+            outcome === "answered"
+              ? "zakonczona"
+              : outcome === "no_answer"
+                ? "nieodebrana"
+                : outcome === "busy"
+                  ? "nieodebrana"
+                  : outcome === "voicemail"
+                    ? "poczta_glosowa"
+                    : outcome === "failed"
+                      ? "blad"
+                      : "zakonczona";
           await supabase
             .from("call_queue")
             .update({
@@ -170,7 +213,11 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
 
           // === Zagęszczenie prób — szybki retry dla nieodebranych / błędów / poczty głosowej ===
           // Cap: max 6 prób retry per wniosek/telefon (oprócz oryginalnej sekwencji follow-up).
-          const isRetryable = outcome === "no_answer" || outcome === "busy" || outcome === "voicemail" || outcome === "failed";
+          const isRetryable =
+            outcome === "no_answer" ||
+            outcome === "busy" ||
+            outcome === "voicemail" ||
+            outcome === "failed";
           if (isRetryable) {
             try {
               let cntQ = supabase
@@ -190,10 +237,13 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
               if (alreadyRetried < MAX_RETRIES) {
                 // Odstęp: no_answer 20 min, busy 25 min, voicemail 45 min, failed 60 min
                 const offsetMin =
-                  outcome === "no_answer" ? 20 :
-                  outcome === "busy" ? 25 :
-                  outcome === "voicemail" ? 45 :
-                  60;
+                  outcome === "no_answer"
+                    ? 20
+                    : outcome === "busy"
+                      ? 25
+                      : outcome === "voicemail"
+                        ? 45
+                        : 60;
                 const candidate = new Date(Date.now() + offsetMin * 60_000);
                 const { getCallingWindow } = await import("@/lib/voicebot.functions");
                 const win = getCallingWindow(candidate);
@@ -243,7 +293,11 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
             const phoneForLead = queueRow?.phone_normalized ?? phone ?? null;
             let leadRow: any = null;
             if (leadId) {
-              const r = await supabase.from("leads").select("id, application_data").eq("id", leadId).maybeSingle();
+              const r = await supabase
+                .from("leads")
+                .select("id, application_data")
+                .eq("id", leadId)
+                .maybeSingle();
               leadRow = r.data;
             } else if (phoneForLead) {
               const r = await supabase
@@ -256,7 +310,10 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
               leadRow = r.data;
             }
             if (leadRow) {
-              const prev = (leadRow.application_data && typeof leadRow.application_data === "object") ? leadRow.application_data : {};
+              const prev =
+                leadRow.application_data && typeof leadRow.application_data === "object"
+                  ? leadRow.application_data
+                  : {};
               const voicebotData = {
                 ...(prev as any).voicebot,
                 last_call_id: callId ?? null,
@@ -277,8 +334,6 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           }
         }
 
-
-
         // Wykryj kierunek — INBOUND: klient dzwoni do nas.
         const dynVars = body?.conversation_initiation_client_data?.dynamic_variables ?? {};
         const phoneCallMeta = body?.metadata?.phone_call ?? {};
@@ -290,15 +345,17 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
 
         const callerPhone: string | null =
           (isInbound
-            ? phoneCallMeta?.external_number ?? dynVars?.caller_phone ?? phone
+            ? (phoneCallMeta?.external_number ?? dynVars?.caller_phone ?? phone)
             : phone) ?? null;
 
         // Zapis do zunifikowanego logu komunikacji widocznego w panelu admina
         try {
           const { logLeadCommunication } = await import("@/lib/lead-comms.server");
-          const recordingUrl = body?.recording_url || body?.audio_url || body?.metadata?.recording_url || null;
+          const recordingUrl =
+            body?.recording_url || body?.audio_url || body?.metadata?.recording_url || null;
           await logLeadCommunication({
-            loanApplicationId: queueRow?.loan_application_id ?? (dynVars?.loan_application_id as string) ?? null,
+            loanApplicationId:
+              queueRow?.loan_application_id ?? (dynVars?.loan_application_id as string) ?? null,
             clientId: queueRow?.client_id ?? (dynVars?.client_id as string) ?? null,
             metaLeadId: queueRow?.meta_lead_id ?? null,
             phoneNormalized: queueRow?.phone_normalized ?? callerPhone ?? null,
@@ -306,10 +363,19 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
             direction: isInbound ? "inbound" : "outbound",
             status: outcomeLabel,
             subject: isInbound
-              ? (summary ? "Połączenie przychodzące" : "Połączenie przychodzące — nieodebrane")
-              : (summary ? "Rozmowa voicebota" : `Próba połączenia — ${outcomeLabel}`),
+              ? summary
+                ? "Połączenie przychodzące"
+                : "Połączenie przychodzące — nieodebrane"
+              : summary
+                ? "Rozmowa voicebota"
+                : `Próba połączenia — ${outcomeLabel}`,
             content: summary || transcript || null,
-            transcript: body?.transcript || body?.transcript_segments || body?.turns || body?.messages || (transcript ? { text: transcript } : null),
+            transcript:
+              body?.transcript ||
+              body?.transcript_segments ||
+              body?.turns ||
+              body?.messages ||
+              (transcript ? { text: transcript } : null),
             recordingUrl,
             durationSeconds: durationSec,
             externalId: callId ?? null,
@@ -371,7 +437,6 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           sent_payload: {},
           response_payload: body,
         });
-
 
         return new Response(JSON.stringify({ ok: true }), {
           headers: { "content-type": "application/json" },

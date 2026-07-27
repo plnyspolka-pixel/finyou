@@ -129,8 +129,8 @@ export function DiditKycPanel({ customer }: { customer: Customer }) {
         <p className="text-xs text-amber-600">
           Integracja Didit nie jest skonfigurowana. Ustaw sekrety środowiska{" "}
           <code>DIDIT_API_KEY</code>, <code>DIDIT_WORKFLOW_ID_KYC</code>,{" "}
-          <code>DIDIT_WORKFLOW_ID_KYB</code> oraz <code>DIDIT_WEBHOOK_SECRET</code>, aby
-          uruchomić realną weryfikację.
+          <code>DIDIT_WORKFLOW_ID_KYB</code> oraz <code>DIDIT_WEBHOOK_SECRET</code>, aby uruchomić
+          realną weryfikację.
         </p>
       )}
 
@@ -162,9 +162,7 @@ export function DiditKycPanel({ customer }: { customer: Customer }) {
                     size="sm"
                     variant="ghost"
                     className="h-7 px-2"
-                    onClick={() =>
-                      window.open(v.verification_url, "_blank", "noopener,noreferrer")
-                    }
+                    onClick={() => window.open(v.verification_url, "_blank", "noopener,noreferrer")}
                   >
                     <ExternalLink className="h-3 w-3 mr-1" /> Otwórz
                   </Button>

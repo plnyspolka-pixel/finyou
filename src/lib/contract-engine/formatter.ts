@@ -3,7 +3,6 @@
  * Służy do diffów, przeglądu i testów regresyjnych treści.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Dokument, Strona } from "./renderer";
 
 // Wierny port `textwrap.fill` (initial_indent="", drop_whitespace=True,
@@ -18,14 +17,37 @@ const WP = "[\\p{L}\\p{N}_!\"'&.,?]";
 const W = "[\\p{L}\\p{N}_]";
 const WORDSEP_RE = new RegExp(
   "(" +
-    WS + "+" +
-    "|(?<=" + WP + ")-{2,}(?=" + W + ")" +
-    "|" + NWS + "+?(?:" +
-      "-(?:(?<=" + LT + "{2}-)|(?<=" + LT + "-" + LT + "-))(?=" + LT + "-?" + LT + ")" +
-      "|(?=" + WS + "|$)" +
-      "|(?<=" + WP + ")(?=-{2,}" + W + ")" +
+    WS +
+    "+" +
+    "|(?<=" +
+    WP +
+    ")-{2,}(?=" +
+    W +
     ")" +
-  ")",
+    "|" +
+    NWS +
+    "+?(?:" +
+    "-(?:(?<=" +
+    LT +
+    "{2}-)|(?<=" +
+    LT +
+    "-" +
+    LT +
+    "-))(?=" +
+    LT +
+    "-?" +
+    LT +
+    ")" +
+    "|(?=" +
+    WS +
+    "|$)" +
+    "|(?<=" +
+    WP +
+    ")(?=-{2,}" +
+    W +
+    ")" +
+    ")" +
+    ")",
   "u",
 );
 

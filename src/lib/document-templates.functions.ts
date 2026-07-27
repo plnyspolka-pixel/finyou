@@ -7,19 +7,25 @@ const DOCS_GW = "https://connector-gateway.lovable.dev/google_docs/v1";
 
 function gwHeaders(kind: "drive" | "docs") {
   const lovableKey = process.env.LOVABLE_API_KEY;
-  const apiKey = kind === "drive" ? process.env.GOOGLE_DRIVE_API_KEY : process.env.GOOGLE_DOCS_API_KEY;
+  const apiKey =
+    kind === "drive" ? process.env.GOOGLE_DRIVE_API_KEY : process.env.GOOGLE_DOCS_API_KEY;
   if (!lovableKey) throw new Error("LOVABLE_API_KEY not configured");
-  if (!apiKey) throw new Error(`${kind === "drive" ? "GOOGLE_DRIVE_API_KEY" : "GOOGLE_DOCS_API_KEY"} not configured`);
+  if (!apiKey)
+    throw new Error(
+      `${kind === "drive" ? "GOOGLE_DRIVE_API_KEY" : "GOOGLE_DOCS_API_KEY"} not configured`,
+    );
   return { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": apiKey };
 }
 
 export const listGoogleDocs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      search: z.string().max(200).optional(),
-      scope: z.enum(["all", "mine", "shared", "drives"]).optional(),
-    }).parse(input),
+    z
+      .object({
+        search: z.string().max(200).optional(),
+        scope: z.enum(["all", "mine", "shared", "drives"]).optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     try {
@@ -37,7 +43,8 @@ export const listGoogleDocs = createServerFn({ method: "POST" })
         q,
         pageSize: "100",
         orderBy: "modifiedTime desc",
-        fields: "files(id,name,mimeType,modifiedTime,owners(displayName,emailAddress),webViewLink,driveId,shared)",
+        fields:
+          "files(id,name,mimeType,modifiedTime,owners(displayName,emailAddress),webViewLink,driveId,shared)",
         includeItemsFromAllDrives: "true",
         supportsAllDrives: "true",
         corpora: scope === "drives" ? "allDrives" : "allDrives",
@@ -45,7 +52,8 @@ export const listGoogleDocs = createServerFn({ method: "POST" })
       const url = `${DRIVE_GW}/files?${params.toString()}`;
       const res = await fetch(url, { headers: gwHeaders("drive") });
       const json: any = await res.json();
-      if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}`, files: [] };
+      if (!res.ok)
+        return { ok: false, error: json?.error?.message || `HTTP ${res.status}`, files: [] };
       let files = (json.files || []) as Array<any>;
       if (scope === "drives") files = files.filter((f) => !!f.driveId);
       return { ok: true, files };
@@ -69,7 +77,10 @@ export const getConnectedGoogleAccount = createServerFn({ method: "GET" })
   });
 
 function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+  return s.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
 }
 
 function gdocsToHtml(doc: any): { html: string; title: string } {
@@ -92,7 +103,10 @@ function gdocsToHtml(doc: any): { html: string; title: string } {
       runs.push(txt);
     }
     const inner = runs.join("");
-    if (!inner.trim()) { out.push("<p></p>"); continue; }
+    if (!inner.trim()) {
+      out.push("<p></p>");
+      continue;
+    }
     const m = /^HEADING_(\d)$/.exec(style);
     if (m) out.push(`<h${m[1]}>${inner}</h${m[1]}>`);
     else if (style === "TITLE") out.push(`<h1>${inner}</h1>`);
@@ -107,7 +121,9 @@ export const importGoogleDoc = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ documentId: z.string().min(5).max(200) }).parse(input))
   .handler(async ({ data }) => {
     try {
-      const res = await fetch(`${DOCS_GW}/documents/${data.documentId}`, { headers: gwHeaders("docs") });
+      const res = await fetch(`${DOCS_GW}/documents/${data.documentId}`, {
+        headers: gwHeaders("docs"),
+      });
       const json: any = await res.json();
       if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}` };
       const { html, title } = gdocsToHtml(json);
@@ -118,20 +134,31 @@ export const importGoogleDoc = createServerFn({ method: "POST" })
   });
 
 const KNOWN_PLACEHOLDERS = [
-  "klient.imie", "klient.nazwisko", "klient.pelne_imie", "klient.email", "klient.telefon",
-  "klient.pesel", "klient.adres",
-  "wniosek.kwota", "wniosek.okres_miesiace", "wniosek.oprocentowanie",
-  "wniosek.miesięczna_rata", "wniosek.cel",
-  "nieruchomosc.adres", "nieruchomosc.miasto", "nieruchomosc.kw",
-  "nieruchomosc.powierzchnia", "nieruchomosc.wartosc",
-  "dzisiejsza_data", "firma.nazwa", "firma.nip",
+  "klient.imie",
+  "klient.nazwisko",
+  "klient.pelne_imie",
+  "klient.email",
+  "klient.telefon",
+  "klient.pesel",
+  "klient.adres",
+  "wniosek.kwota",
+  "wniosek.okres_miesiace",
+  "wniosek.oprocentowanie",
+  "wniosek.miesięczna_rata",
+  "wniosek.cel",
+  "nieruchomosc.adres",
+  "nieruchomosc.miasto",
+  "nieruchomosc.kw",
+  "nieruchomosc.powierzchnia",
+  "nieruchomosc.wartosc",
+  "dzisiejsza_data",
+  "firma.nazwa",
+  "firma.nip",
 ];
 
 export const suggestPlaceholders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z.object({ content: z.string().min(1).max(50000) }).parse(input)
-  )
+  .inputValidator((input) => z.object({ content: z.string().min(1).max(50000) }).parse(input))
   .handler(async ({ data }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) return { ok: false, error: "LOVABLE_API_KEY nieskonfigurowany", placeholders: [] };
@@ -156,46 +183,63 @@ Zwróć JSON z listą propozycji. Każda propozycja zawiera:
           { role: "system", content: systemPrompt },
           { role: "user", content: `Treść szablonu:\n\n${data.content}` },
         ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "suggest_placeholders",
-            description: "Zwraca listę proponowanych placeholderów",
-            parameters: {
-              type: "object",
-              properties: {
-                suggestions: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      original: { type: "string" },
-                      placeholder: { type: "string" },
-                      reason: { type: "string" },
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "suggest_placeholders",
+              description: "Zwraca listę proponowanych placeholderów",
+              parameters: {
+                type: "object",
+                properties: {
+                  suggestions: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        original: { type: "string" },
+                        placeholder: { type: "string" },
+                        reason: { type: "string" },
+                      },
+                      required: ["original", "placeholder", "reason"],
+                      additionalProperties: false,
                     },
-                    required: ["original", "placeholder", "reason"],
-                    additionalProperties: false,
                   },
                 },
+                required: ["suggestions"],
+                additionalProperties: false,
               },
-              required: ["suggestions"],
-              additionalProperties: false,
             },
           },
-        }],
+        ],
         tool_choice: { type: "function", function: { name: "suggest_placeholders" } },
       }),
     });
 
     if (!res.ok) {
-      if (res.status === 429) return { ok: false, error: "Za dużo zapytań, spróbuj za chwilę", placeholders: [] };
-      if (res.status === 402) return { ok: false, error: "Brak kredytów Lovable AI — dodaj środki w Ustawieniach", placeholders: [] };
+      if (res.status === 429)
+        return { ok: false, error: "Za dużo zapytań, spróbuj za chwilę", placeholders: [] };
+      if (res.status === 402)
+        return {
+          ok: false,
+          error: "Brak kredytów Lovable AI — dodaj środki w Ustawieniach",
+          placeholders: [],
+        };
       return { ok: false, error: `AI error ${res.status}`, placeholders: [] };
     }
     const json: any = await res.json();
     try {
-      const args = JSON.parse(json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ?? "{}");
-      return { ok: true, placeholders: (args.suggestions ?? []) as Array<{ original: string; placeholder: string; reason: string }> };
+      const args = JSON.parse(
+        json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ?? "{}",
+      );
+      return {
+        ok: true,
+        placeholders: (args.suggestions ?? []) as Array<{
+          original: string;
+          placeholder: string;
+          reason: string;
+        }>,
+      };
     } catch {
       return { ok: false, error: "Nie udało się sparsować odpowiedzi AI", placeholders: [] };
     }

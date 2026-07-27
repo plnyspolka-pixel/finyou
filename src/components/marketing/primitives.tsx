@@ -11,13 +11,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 /* ----------------------------- Button ----------------------------------- */
 
-type ButtonVariant =
-  | "default"
-  | "cta"
-  | "outline"
-  | "secondary"
-  | "ghost"
-  | "link";
+type ButtonVariant = "default" | "cta" | "outline" | "secondary" | "ghost" | "link";
 type ButtonSize = "sm" | "default" | "lg" | "xl" | "cta" | "icon";
 
 const base: CSSProperties = {
@@ -37,31 +31,84 @@ const base: CSSProperties = {
 };
 
 const sizes: Record<ButtonSize, CSSProperties> = {
-  sm: { height: "2rem", padding: "0 0.75rem", fontSize: "0.75rem", borderRadius: "var(--radius-md)" },
-  default: { height: "2.25rem", padding: "0 1rem", fontSize: "0.875rem", borderRadius: "var(--radius-md)" },
-  lg: { height: "2.5rem", padding: "0 2rem", fontSize: "0.875rem", borderRadius: "var(--radius-md)" },
+  sm: {
+    height: "2rem",
+    padding: "0 0.75rem",
+    fontSize: "0.75rem",
+    borderRadius: "var(--radius-md)",
+  },
+  default: {
+    height: "2.25rem",
+    padding: "0 1rem",
+    fontSize: "0.875rem",
+    borderRadius: "var(--radius-md)",
+  },
+  lg: {
+    height: "2.5rem",
+    padding: "0 2rem",
+    fontSize: "0.875rem",
+    borderRadius: "var(--radius-md)",
+  },
   xl: { height: "3.5rem", padding: "0 2.5rem", fontSize: "1rem", borderRadius: "var(--radius-xl)" },
-  cta: { height: "3.5rem", padding: "0 2.5rem", fontSize: "1.0625rem", borderRadius: "var(--radius-2xl)" },
+  cta: {
+    height: "3.5rem",
+    padding: "0 2.5rem",
+    fontSize: "1.0625rem",
+    borderRadius: "var(--radius-2xl)",
+  },
   icon: { height: "2.25rem", width: "2.25rem", padding: 0, borderRadius: "var(--radius-md)" },
 };
 
 const variants: Record<ButtonVariant, CSSProperties> = {
-  default: { background: "var(--primary)", color: "var(--primary-foreground)", boxShadow: "var(--shadow-sm)" },
-  cta: { background: "var(--gradient-cta)", color: "var(--accent-foreground)", fontWeight: 800, letterSpacing: "0.01em", boxShadow: "var(--shadow-sm)" },
-  outline: { background: "var(--card)", color: "var(--foreground)", borderColor: "var(--border)", boxShadow: "var(--shadow-xs)" },
-  secondary: { background: "var(--secondary)", color: "var(--secondary-foreground)", boxShadow: "var(--shadow-xs)" },
+  default: {
+    background: "var(--primary)",
+    color: "var(--primary-foreground)",
+    boxShadow: "var(--shadow-sm)",
+  },
+  cta: {
+    background: "var(--gradient-cta)",
+    color: "var(--accent-foreground)",
+    fontWeight: 800,
+    letterSpacing: "0.01em",
+    boxShadow: "var(--shadow-sm)",
+  },
+  outline: {
+    background: "var(--card)",
+    color: "var(--foreground)",
+    borderColor: "var(--border)",
+    boxShadow: "var(--shadow-xs)",
+  },
+  secondary: {
+    background: "var(--secondary)",
+    color: "var(--secondary-foreground)",
+    boxShadow: "var(--shadow-xs)",
+  },
   ghost: { background: "transparent", color: "var(--foreground)" },
-  link: { background: "transparent", color: "var(--accent)", textUnderlineOffset: "4px", padding: 0, height: "auto" },
+  link: {
+    background: "transparent",
+    color: "var(--accent)",
+    textUnderlineOffset: "4px",
+    padding: 0,
+    height: "auto",
+  },
 };
 
 function hoverFor(variant: ButtonVariant): CSSProperties {
   switch (variant) {
     case "cta":
-      return { filter: "brightness(1.08)", transform: "translateY(-1px)", boxShadow: "var(--shadow-md)" };
+      return {
+        filter: "brightness(1.08)",
+        transform: "translateY(-1px)",
+        boxShadow: "var(--shadow-md)",
+      };
     case "default":
       return { background: "oklch(0.20 0.08 265 / 0.9)" };
     case "outline":
-      return { background: "var(--accent)", color: "var(--accent-foreground)", borderColor: "var(--accent)" };
+      return {
+        background: "var(--accent)",
+        color: "var(--accent-foreground)",
+        borderColor: "var(--accent)",
+      };
     case "secondary":
       return { background: "oklch(0.91 0.012 250)" };
     case "ghost":
@@ -158,13 +205,42 @@ type BadgeVariant =
   | "destructive";
 
 const badgeVariants: Record<BadgeVariant, CSSProperties> = {
-  default: { background: "var(--primary)", color: "var(--primary-foreground)", border: "1px solid transparent", boxShadow: "var(--shadow-xs)" },
-  secondary: { background: "var(--secondary)", color: "var(--secondary-foreground)", border: "1px solid transparent" },
-  outline: { background: "transparent", color: "var(--foreground)", border: "1px solid var(--border)" },
-  accent: { background: "oklch(0.40 0.25 268 / 0.12)", color: "var(--accent)", border: "1px solid oklch(0.40 0.25 268 / 0.25)" },
-  gold: { background: "oklch(0.78 0.18 85 / 0.16)", color: "var(--gold-600)", border: "1px solid oklch(0.78 0.18 85 / 0.35)" },
-  success: { background: "oklch(0.62 0.15 155 / 0.12)", color: "var(--success)", border: "1px solid oklch(0.62 0.15 155 / 0.3)" },
-  destructive: { background: "var(--destructive)", color: "var(--destructive-foreground)", border: "1px solid transparent" },
+  default: {
+    background: "var(--primary)",
+    color: "var(--primary-foreground)",
+    border: "1px solid transparent",
+    boxShadow: "var(--shadow-xs)",
+  },
+  secondary: {
+    background: "var(--secondary)",
+    color: "var(--secondary-foreground)",
+    border: "1px solid transparent",
+  },
+  outline: {
+    background: "transparent",
+    color: "var(--foreground)",
+    border: "1px solid var(--border)",
+  },
+  accent: {
+    background: "oklch(0.40 0.25 268 / 0.12)",
+    color: "var(--accent)",
+    border: "1px solid oklch(0.40 0.25 268 / 0.25)",
+  },
+  gold: {
+    background: "oklch(0.78 0.18 85 / 0.16)",
+    color: "var(--gold-600)",
+    border: "1px solid oklch(0.78 0.18 85 / 0.35)",
+  },
+  success: {
+    background: "oklch(0.62 0.15 155 / 0.12)",
+    color: "var(--success)",
+    border: "1px solid oklch(0.62 0.15 155 / 0.3)",
+  },
+  destructive: {
+    background: "var(--destructive)",
+    color: "var(--destructive-foreground)",
+    border: "1px solid transparent",
+  },
 };
 
 export function MktBadge({

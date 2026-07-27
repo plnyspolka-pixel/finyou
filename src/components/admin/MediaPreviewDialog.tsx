@@ -5,7 +5,14 @@ import { signStoragePath, signStoragePathsMap } from "@/lib/property-photos";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, ExternalLink, FileText, Image as ImageIcon, Loader2, File as FileIcon } from "lucide-react";
+import {
+  Download,
+  ExternalLink,
+  FileText,
+  Image as ImageIcon,
+  Loader2,
+  File as FileIcon,
+} from "lucide-react";
 
 type Doc = {
   id: string;
@@ -107,7 +114,9 @@ export function MediaPreviewDialog({
         setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [open, loanApplicationId, photoPaths.join("|")]);
 
   return (
@@ -146,7 +155,12 @@ export function MediaPreviewDialog({
                       title={it.name}
                     >
                       {it.kind === "image" ? (
-                        <img src={it.url} alt={it.name} loading="lazy" className="h-full w-full object-cover" />
+                        <img
+                          src={it.url}
+                          alt={it.name}
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <div className="h-full w-full flex flex-col items-center justify-center gap-1 p-2 bg-muted">
                           {it.kind === "pdf" ? (
@@ -154,7 +168,9 @@ export function MediaPreviewDialog({
                           ) : (
                             <FileIcon className="h-8 w-8 text-muted-foreground" />
                           )}
-                          <span className="text-[9px] uppercase text-muted-foreground">{it.kind}</span>
+                          <span className="text-[9px] uppercase text-muted-foreground">
+                            {it.kind}
+                          </span>
                         </div>
                       )}
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1">
@@ -172,14 +188,29 @@ export function MediaPreviewDialog({
                 <>
                   <div className="flex items-center justify-between gap-2 px-3 py-2 border-b bg-muted/30">
                     <div className="flex items-center gap-2 min-w-0">
-                      {active.kind === "image" ? <ImageIcon className="h-4 w-4 shrink-0" /> : <FileText className="h-4 w-4 shrink-0" />}
+                      {active.kind === "image" ? (
+                        <ImageIcon className="h-4 w-4 shrink-0" />
+                      ) : (
+                        <FileText className="h-4 w-4 shrink-0" />
+                      )}
                       <span className="text-sm font-medium truncate">{active.name}</span>
-                      <Badge variant="outline" className="text-[10px] uppercase">{active.kind}</Badge>
-                      {active.docType && <Badge variant="outline" className="text-[10px]">{active.docType}</Badge>}
+                      <Badge variant="outline" className="text-[10px] uppercase">
+                        {active.kind}
+                      </Badge>
+                      {active.docType && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {active.docType}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <Button asChild size="sm" variant="ghost">
-                        <a href={active.url} target="_blank" rel="noreferrer" aria-label="Otwórz w nowej karcie">
+                        <a
+                          href={active.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label="Otwórz w nowej karcie"
+                        >
                           <ExternalLink className="h-3.5 w-3.5" />
                         </a>
                       </Button>
@@ -192,10 +223,18 @@ export function MediaPreviewDialog({
                   </div>
                   <div className="flex-1 min-h-0 overflow-auto bg-black/5">
                     {active.kind === "image" && (
-                      <img src={active.url} alt={active.name} className="max-h-full max-w-full w-auto mx-auto object-contain" />
+                      <img
+                        src={active.url}
+                        alt={active.name}
+                        className="max-h-full max-w-full w-auto mx-auto object-contain"
+                      />
                     )}
                     {active.kind === "pdf" && (
-                      <iframe src={active.url} title={active.name} className="w-full h-full min-h-[70vh] bg-white" />
+                      <iframe
+                        src={active.url}
+                        title={active.name}
+                        className="w-full h-full min-h-[70vh] bg-white"
+                      />
                     )}
                     {active.kind === "other" && (
                       <div className="p-8 text-sm text-muted-foreground text-center">

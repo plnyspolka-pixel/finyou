@@ -21,7 +21,12 @@ export type KwAddress = {
   fullAddress: string | null;
 };
 
-const stripTags = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim();
+const stripTags = (s: string) =>
+  s
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 /** Wyciąga treść komórek następujących po podanej etykiecie w danych tabeli KW. */
 function cellsAfter(html: string, labelRegex: RegExp, count: number): string[] {
@@ -80,8 +85,16 @@ export function parseKwAddress(dzial1o: string | null | undefined): KwAddress {
   let city: string | null = null;
   const locCell = posCells.find((c) => /,/.test(c) && !/^Lp\.?/i.test(c) && !/^\d+$/.test(c));
   if (locCell) {
-    const parts = locCell.split(",").map((p) => p.trim()).filter(Boolean);
-    [voivodeship, powiat, gmina, city] = [parts[0] ?? null, parts[1] ?? null, parts[2] ?? null, parts[3] ?? null];
+    const parts = locCell
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    [voivodeship, powiat, gmina, city] = [
+      parts[0] ?? null,
+      parts[1] ?? null,
+      parts[2] ?? null,
+      parts[3] ?? null,
+    ];
   }
 
   // "Numer lokalu" (ostatnia z trzech etykiet w wierszu) — kolejne 3 komórki to Ulica, Nr bud., Nr lok.

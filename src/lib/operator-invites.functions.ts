@@ -56,10 +56,7 @@ export const revokeOperatorInvite = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => z.object({ id: z.string().uuid() }).parse(raw))
   .handler(async ({ context, data }) => {
     await assertAdmin(context.supabase, context.userId);
-    const { error } = await context.supabase
-      .from("operator_invites")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("operator_invites").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

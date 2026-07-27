@@ -22,27 +22,42 @@ export const listAccountingDocuments = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     await assertAccounting(accountingDb, context.userId);
-    let q = accountingDb.from("accounting_documents").select("*").order("issue_date", { ascending: false }).limit(data.limit);
+    let q = accountingDb
+      .from("accounting_documents")
+      .select("*")
+      .order("issue_date", { ascending: false })
+      .limit(data.limit);
     if (data.entityId) q = q.eq("entity_id", data.entityId);
     if (data.direction) q = q.eq("direction", data.direction);
     if (data.source) q = q.eq("source", data.source);
     if (data.from) q = q.gte("issue_date", data.from);
     if (data.to) q = q.lte("issue_date", data.to);
-    if (data.search) q = q.or(`invoice_number.ilike.%${data.search}%,counterparty_name.ilike.%${data.search}%,counterparty_nip.ilike.%${data.search}%`);
+    if (data.search)
+      q = q.or(
+        `invoice_number.ilike.%${data.search}%,counterparty_name.ilike.%${data.search}%,counterparty_nip.ilike.%${data.search}%`,
+      );
     const { data: docs } = await q;
 
     const { data: ents } = await accountingDb.from("accounting_entities").select("id,name");
     const nameMap: Record<string, string> = {};
     for (const e of (ents ?? []) as any[]) nameMap[e.id] = e.name;
 
-    return (docs ?? []).map((d: any) => ({ ...d, xml_content: undefined, has_xml: !!d.xml_content, entity_name: nameMap[d.entity_id] ?? "—" }));
+    return (docs ?? []).map((d: any) => ({
+      ...d,
+      xml_content: undefined,
+      has_xml: !!d.xml_content,
+      entity_name: nameMap[d.entity_id] ?? "—",
+    }));
   });
 
 export const getAccountingSyncStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAccounting(accountingDb, context.userId);
-    const { data } = await accountingDb.from("accounting_sync_status").select("*").order("updated_at", { ascending: false });
+    const { data } = await accountingDb
+      .from("accounting_sync_status")
+      .select("*")
+      .order("updated_at", { ascending: false });
     const { data: ents } = await accountingDb.from("accounting_entities").select("id,name");
     const nameMap: Record<string, string> = {};
     for (const e of (ents ?? []) as any[]) nameMap[e.id] = e.name;
@@ -54,10 +69,23 @@ export const getBookkeepingSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAccounting(accountingDb, context.userId);
-    const { data } = await accountingDb.from("accounting_documents").select("direction,issue_date,net_amount,vat_amount,gross_amount,entity_id").limit(20000);
+    const { data } = await accountingDb
+      .from("accounting_documents")
+      .select("direction,issue_date,net_amount,vat_amount,gross_amount,entity_id")
+      .limit(20000);
     const rows = (data ?? []) as any[];
-    const byMonth: Record<string, { sales_net: number; sales_vat: number; purchase_net: number; purchase_vat: number }> = {};
-    let ytd = { sales_net: 0, sales_vat: 0, sales_gross: 0, purchase_net: 0, purchase_vat: 0, purchase_gross: 0 };
+    const byMonth: Record<
+      string,
+      { sales_net: number; sales_vat: number; purchase_net: number; purchase_vat: number }
+    > = {};
+    let ytd = {
+      sales_net: 0,
+      sales_vat: 0,
+      sales_gross: 0,
+      purchase_net: 0,
+      purchase_vat: 0,
+      purchase_gross: 0,
+    };
     const year = new Date().getFullYear();
     for (const r of rows) {
       const d = r.issue_date ? String(r.issue_date).slice(0, 7) : null;
@@ -70,38 +98,77 @@ export const getBookkeepingSummary = createServerFn({ method: "GET" })
         byMonth[d].sales_net += net;
         byMonth[d].sales_vat += vat;
         if (String(r.issue_date).startsWith(String(year))) {
-          ytd.sales_net += net; ytd.sales_vat += vat; ytd.sales_gross += gross;
+          ytd.sales_net += net;
+          ytd.sales_vat += vat;
+          ytd.sales_gross += gross;
         }
       } else {
         byMonth[d].purchase_net += net;
         byMonth[d].purchase_vat += vat;
         if (String(r.issue_date).startsWith(String(year))) {
-          ytd.purchase_net += net; ytd.purchase_vat += vat; ytd.purchase_gross += gross;
+          ytd.purchase_net += net;
+          ytd.purchase_vat += vat;
+          ytd.purchase_gross += gross;
         }
       }
     }
     const months = Object.entries(byMonth)
       .sort(([a], [b]) => (a < b ? -1 : 1))
       .slice(-12)
-      .map(([month, v]) => ({ month, ...v, vat_due: Math.round((v.sales_vat - v.purchase_vat) * 100) / 100 }));
-    ytd = Object.fromEntries(Object.entries(ytd).map(([k, v]) => [k, Math.round(v * 100) / 100])) as typeof ytd;
-    return { months, ytd, vatDueYtd: Math.round((ytd.sales_vat - ytd.purchase_vat) * 100) / 100, count: rows.length };
+      .map(([month, v]) => ({
+        month,
+        ...v,
+        vat_due: Math.round((v.sales_vat - v.purchase_vat) * 100) / 100,
+      }));
+    ytd = Object.fromEntries(
+      Object.entries(ytd).map(([k, v]) => [k, Math.round(v * 100) / 100]),
+    ) as typeof ytd;
+    return {
+      months,
+      ytd,
+      vatDueYtd: Math.round((ytd.sales_vat - ytd.purchase_vat) * 100) / 100,
+      count: rows.length,
+    };
   });
 
 export const exportAccountingDocumentsCsv = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i) => z.object({ direction: z.enum(["sales", "purchase"]).optional() }).parse(i ?? {}))
+  .inputValidator((i) =>
+    z.object({ direction: z.enum(["sales", "purchase"]).optional() }).parse(i ?? {}),
+  )
   .handler(async ({ data, context }) => {
     await assertAccounting(accountingDb, context.userId);
-    let q = accountingDb.from("accounting_documents").select("*").order("issue_date", { ascending: false });
+    let q = accountingDb
+      .from("accounting_documents")
+      .select("*")
+      .order("issue_date", { ascending: false });
     if (data.direction) q = q.eq("direction", data.direction);
     const { data: docs } = await q;
     const { data: ents } = await accountingDb.from("accounting_entities").select("id,name");
     const nameMap: Record<string, string> = {};
     for (const e of (ents ?? []) as any[]) nameMap[e.id] = e.name;
-    const cell = (v: unknown) => { const s = v == null ? "" : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const money = (n: unknown) => Number(n ?? 0).toFixed(2).replace(".", ",");
-    const headers = ["Kierunek", "Źródło", "Numer", "Data", "Podmiot", "Kontrahent", "NIP", "Netto", "VAT", "Brutto", "Waluta", "Nr KSeF"];
+    const cell = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const money = (n: unknown) =>
+      Number(n ?? 0)
+        .toFixed(2)
+        .replace(".", ",");
+    const headers = [
+      "Kierunek",
+      "Źródło",
+      "Numer",
+      "Data",
+      "Podmiot",
+      "Kontrahent",
+      "NIP",
+      "Netto",
+      "VAT",
+      "Brutto",
+      "Waluta",
+      "Nr KSeF",
+    ];
     const lines = [headers.join(";")];
     for (const d of (docs ?? []) as any[]) {
       lines.push(
@@ -123,7 +190,10 @@ export const exportAccountingDocumentsCsv = createServerFn({ method: "GET" })
           .join(";"),
       );
     }
-    return { filename: `ksiegowosc-${new Date().toISOString().slice(0, 10)}.csv`, csv: "\uFEFF" + lines.join("\r\n") };
+    return {
+      filename: `ksiegowosc-${new Date().toISOString().slice(0, 10)}.csv`,
+      csv: "\uFEFF" + lines.join("\r\n"),
+    };
   });
 
 // ---- KSeF XML: pojedyncze pobranie oraz eksport ZIP dla wybranego zakresu ----
@@ -164,7 +234,9 @@ export const exportAccountingXmlZip = createServerFn({ method: "GET" })
     await assertAccounting(accountingDb, context.userId);
     let q = accountingDb
       .from("accounting_documents")
-      .select("id, entity_id, direction, invoice_number, issue_date, counterparty_name, counterparty_nip, net_amount, vat_amount, gross_amount, currency, ksef_reference_number, xml_content")
+      .select(
+        "id, entity_id, direction, invoice_number, issue_date, counterparty_name, counterparty_nip, net_amount, vat_amount, gross_amount, currency, ksef_reference_number, xml_content",
+      )
       .eq("source", "ksef")
       .not("xml_content", "is", null)
       .order("issue_date", { ascending: false })
@@ -182,33 +254,45 @@ export const exportAccountingXmlZip = createServerFn({ method: "GET" })
     for (const e of (ents ?? []) as any[]) nameMap[e.id] = e.name;
 
     const files: Record<string, Uint8Array> = {};
-    const csvCell = (v: unknown) => { const s = v == null ? "" : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const manifest = ["Plik;Podmiot;Kierunek;Numer;Data;Kontrahent;NIP;Netto;VAT;Brutto;Waluta;NrKSeF"];
+    const csvCell = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const manifest = [
+      "Plik;Podmiot;Kierunek;Numer;Data;Kontrahent;NIP;Netto;VAT;Brutto;Waluta;NrKSeF",
+    ];
     let total = 0;
     let skipped = 0;
     for (const r of rows) {
       const xml: string = r.xml_content;
       const bytes = strToU8(xml);
-      if (total + bytes.byteLength > MAX_XML_ZIP_BYTES) { skipped += 1; continue; }
+      if (total + bytes.byteLength > MAX_XML_ZIP_BYTES) {
+        skipped += 1;
+        continue;
+      }
       total += bytes.byteLength;
       const base = safeName(r.ksef_reference_number || r.invoice_number || r.id);
       const dir = r.direction === "sales" ? "sprzedaz" : "koszty";
       const path = `${dir}/${base}.xml`;
       files[path] = bytes;
-      manifest.push([
-        path,
-        nameMap[r.entity_id] ?? "",
-        r.direction === "sales" ? "Sprzedaż" : "Koszt",
-        r.invoice_number ?? "",
-        r.issue_date ?? "",
-        r.counterparty_name ?? "",
-        r.counterparty_nip ?? "",
-        String(r.net_amount ?? "").replace(".", ","),
-        String(r.vat_amount ?? "").replace(".", ","),
-        String(r.gross_amount ?? "").replace(".", ","),
-        r.currency ?? "",
-        r.ksef_reference_number ?? "",
-      ].map(csvCell).join(";"));
+      manifest.push(
+        [
+          path,
+          nameMap[r.entity_id] ?? "",
+          r.direction === "sales" ? "Sprzedaż" : "Koszt",
+          r.invoice_number ?? "",
+          r.issue_date ?? "",
+          r.counterparty_name ?? "",
+          r.counterparty_nip ?? "",
+          String(r.net_amount ?? "").replace(".", ","),
+          String(r.vat_amount ?? "").replace(".", ","),
+          String(r.gross_amount ?? "").replace(".", ","),
+          r.currency ?? "",
+          r.ksef_reference_number ?? "",
+        ]
+          .map(csvCell)
+          .join(";"),
+      );
     }
     files["manifest.csv"] = strToU8("\uFEFF" + manifest.join("\r\n"));
 
@@ -219,7 +303,8 @@ export const exportAccountingXmlZip = createServerFn({ method: "GET" })
     for (let i = 0; i < zipped.length; i += chunk) {
       bin += String.fromCharCode(...zipped.subarray(i, Math.min(i + chunk, zipped.length)));
     }
-    const base64 = typeof btoa === "function" ? btoa(bin) : Buffer.from(bin, "binary").toString("base64");
+    const base64 =
+      typeof btoa === "function" ? btoa(bin) : Buffer.from(bin, "binary").toString("base64");
     const stamp = new Date().toISOString().slice(0, 10);
     return {
       filename: `ksef-xml-${stamp}.zip`,

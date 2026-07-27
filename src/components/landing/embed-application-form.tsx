@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Send, Upload, Camera, FileText, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  Send,
+  Upload,
+  Camera,
+  FileText,
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,14 +103,22 @@ export function EmbedApplicationForm() {
       setPhotos((cur) =>
         cur.map((p) =>
           p.id === id
-            ? { ...p, status: "ready", storagePath: res.path, uploadedMime: mimeType, uploadedName: fileName }
+            ? {
+                ...p,
+                status: "ready",
+                storagePath: res.path,
+                uploadedMime: mimeType,
+                uploadedName: fileName,
+              }
             : p,
         ),
       );
     } catch (e: any) {
       console.error("[embed-form] upload failed", e);
       setPhotos((cur) =>
-        cur.map((p) => (p.id === id ? { ...p, status: "error", errorMsg: e?.message ?? "Błąd wysyłki" } : p)),
+        cur.map((p) =>
+          p.id === id ? { ...p, status: "error", errorMsg: e?.message ?? "Błąd wysyłki" } : p,
+        ),
       );
     }
   };
@@ -108,7 +126,10 @@ export function EmbedApplicationForm() {
   const addPhotos = (files: FileList | null) => {
     if (!files?.length) return;
     const next: PhotoItem[] = Array.from(files).map((f) => ({
-      id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${f.name}`,
+      id:
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${f.name}`,
       name: f.name,
       type: f.type,
       url: URL.createObjectURL(f),
@@ -121,7 +142,9 @@ export function EmbedApplicationForm() {
   };
 
   const retryUpload = (id: string) => {
-    setPhotos((cur) => cur.map((p) => (p.id === id ? { ...p, status: "uploading", errorMsg: undefined } : p)));
+    setPhotos((cur) =>
+      cur.map((p) => (p.id === id ? { ...p, status: "uploading", errorMsg: undefined } : p)),
+    );
     const target = photos.find((p) => p.id === id);
     if (target) void uploadOne(id, target.file);
   };
@@ -169,7 +192,9 @@ export function EmbedApplicationForm() {
       return;
     }
     if (!allPhotosReady) {
-      toast.error(anyUploading ? "Poczekaj — trwa wysyłanie zdjęć." : "Nie wszystkie pliki zostały wysłane.");
+      toast.error(
+        anyUploading ? "Poczekaj — trwa wysyłanie zdjęć." : "Nie wszystkie pliki zostały wysłane.",
+      );
       return;
     }
     setSubmitting(true);
@@ -201,11 +226,19 @@ export function EmbedApplicationForm() {
       void trackEvent(
         "CompleteRegistration",
         { value: amount, currency: "PLN", content_category: secType, loan_period_months: months },
-        { email: email.trim(), phone: phone.trim(), firstName: firstName.trim(), lastName: lastName.trim() },
+        {
+          email: email.trim(),
+          phone: phone.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+        },
       );
 
       if (res.token_hash) {
-        const { error: otpErr } = await supabase.auth.verifyOtp({ token_hash: res.token_hash, type: "magiclink" });
+        const { error: otpErr } = await supabase.auth.verifyOtp({
+          token_hash: res.token_hash,
+          type: "magiclink",
+        });
         if (!otpErr) {
           toast.success("Wniosek wysłany. Przenosimy Cię do panelu klienta.");
           openClientPanel("/klient");
@@ -261,7 +294,9 @@ export function EmbedApplicationForm() {
                 <div className="space-y-3">
                   <div className="flex items-baseline justify-between">
                     <Label className="text-sm font-semibold text-white">Kwota pożyczki</Label>
-                    <span className="text-2xl font-extrabold tabular-nums text-white">{formatPLN(amount)}</span>
+                    <span className="text-2xl font-extrabold tabular-nums text-white">
+                      {formatPLN(amount)}
+                    </span>
                   </div>
                   <Slider
                     gradient="brand"
@@ -279,7 +314,9 @@ export function EmbedApplicationForm() {
                 <div className="space-y-3">
                   <div className="flex items-baseline justify-between">
                     <Label className="text-sm font-semibold text-white">Okres spłaty</Label>
-                    <span className="text-2xl font-extrabold tabular-nums text-white">{months} mies.</span>
+                    <span className="text-2xl font-extrabold tabular-nums text-white">
+                      {months} mies.
+                    </span>
                   </div>
                   <Slider
                     gradient="brand"
@@ -301,19 +338,43 @@ export function EmbedApplicationForm() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="text-white">Imię *</Label>
-                  <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Anna" className={INPUT_CLASS} />
+                  <Input
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Anna"
+                    className={INPUT_CLASS}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-white">Nazwisko *</Label>
-                  <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Kowalska" className={INPUT_CLASS} />
+                  <Input
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Kowalska"
+                    className={INPUT_CLASS}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-white">Telefon *</Label>
-                  <Input type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48 600 000 000" className={INPUT_CLASS} />
+                  <Input
+                    type="tel"
+                    inputMode="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+48 600 000 000"
+                    className={INPUT_CLASS}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-white">E-mail *</Label>
-                  <Input type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="anna@example.com" className={INPUT_CLASS} />
+                  <Input
+                    type="email"
+                    inputMode="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="anna@example.com"
+                    className={INPUT_CLASS}
+                  />
                 </div>
               </div>
             )}
@@ -401,9 +462,16 @@ export function EmbedApplicationForm() {
                 {photos.length > 0 && (
                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     {photos.map((p) => (
-                      <div key={p.id} className="relative overflow-hidden rounded-md border border-white/30 bg-white/10">
+                      <div
+                        key={p.id}
+                        className="relative overflow-hidden rounded-md border border-white/30 bg-white/10"
+                      >
                         {p.type.startsWith("image/") ? (
-                          <img src={p.url} alt={p.name} className="aspect-square w-full object-cover" />
+                          <img
+                            src={p.url}
+                            alt={p.name}
+                            className="aspect-square w-full object-cover"
+                          />
                         ) : (
                           <div className="grid aspect-square place-items-center bg-white/10">
                             <FileText className="h-6 w-6 text-white/80" />
@@ -457,11 +525,28 @@ export function EmbedApplicationForm() {
             {currentStep === "consent" && (
               <div className="space-y-4">
                 <div className="rounded-xl border border-white/25 bg-white/10 p-4 text-sm text-white backdrop-blur-sm space-y-1">
-                  <div className="flex justify-between"><span className="text-white/70">Kwota</span><span className="font-semibold">{formatPLN(amount)}</span></div>
-                  <div className="flex justify-between"><span className="text-white/70">Okres</span><span className="font-semibold">{months} mies.</span></div>
-                  <div className="flex justify-between"><span className="text-white/70">Nieruchomość</span><span className="font-semibold">{PROPERTY_TYPES.find((p) => p.value === secType)?.label}</span></div>
-                  <div className="flex justify-between"><span className="text-white/70">KW</span><span className="font-semibold">{kwNumber}</span></div>
-                  <div className="flex justify-between"><span className="text-white/70">Zdjęcia</span><span className="font-semibold">{photos.length}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-white/70">Kwota</span>
+                    <span className="font-semibold">{formatPLN(amount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/70">Okres</span>
+                    <span className="font-semibold">{months} mies.</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/70">Nieruchomość</span>
+                    <span className="font-semibold">
+                      {PROPERTY_TYPES.find((p) => p.value === secType)?.label}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/70">KW</span>
+                    <span className="font-semibold">{kwNumber}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/70">Zdjęcia</span>
+                    <span className="font-semibold">{photos.length}</span>
+                  </div>
                 </div>
                 <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-white/25 bg-white/10 p-3 text-xs text-white backdrop-blur-sm">
                   <Checkbox
@@ -470,7 +555,8 @@ export function EmbedApplicationForm() {
                     className="mt-0.5 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground"
                   />
                   <span>
-                    Akceptuję politykę prywatności i regulamin serwisu Finance You oraz zgadzam się na kontakt w sprawie mojego wniosku.
+                    Akceptuję politykę prywatności i regulamin serwisu Finance You oraz zgadzam się
+                    na kontakt w sprawie mojego wniosku.
                   </span>
                 </label>
               </div>
@@ -498,11 +584,17 @@ export function EmbedApplicationForm() {
               className="h-14 flex-1 rounded-xl bg-white text-base font-bold text-foreground hover:bg-white/90"
             >
               {submitting ? (
-                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłanie…</>
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłanie…
+                </>
               ) : isLast ? (
-                <><Send className="mr-2 h-5 w-5" /> Wyślij wniosek</>
+                <>
+                  <Send className="mr-2 h-5 w-5" /> Wyślij wniosek
+                </>
               ) : (
-                <>Dalej <ArrowRight className="ml-2 h-5 w-5" /></>
+                <>
+                  Dalej <ArrowRight className="ml-2 h-5 w-5" />
+                </>
               )}
             </Button>
           </div>

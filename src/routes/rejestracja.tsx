@@ -103,7 +103,8 @@ function RegisterPage() {
       return;
     }
     setLoading(true);
-    const target = role === "inwestor" ? "/inwestor" : role === "posrednik" ? "/posrednik" : "/klient";
+    const target =
+      role === "inwestor" ? "/inwestor" : role === "posrednik" ? "/posrednik" : "/klient";
     try {
       window.localStorage.setItem("pending_role_selection", role);
     } catch {}
@@ -142,16 +143,51 @@ function RegisterPage() {
 
       <section className="fy-hero" style={{ color: "#fff" }}>
         <div aria-hidden className="fy-hero-fx" />
-        <div style={{ position: "relative", maxWidth: "48rem", margin: "0 auto", padding: "3rem 1.5rem 2rem", textAlign: "center" }}>
+        <div
+          style={{
+            position: "relative",
+            maxWidth: "48rem",
+            margin: "0 auto",
+            padding: "3rem 1.5rem 2rem",
+            textAlign: "center",
+          }}
+        >
           <MktBadge variant={ROLE_TILES.find((t) => t.value === role)!.badge.v}>
             {ROLE_TILES.find((t) => t.value === role)!.badge.t}
           </MktBadge>
-          <h1 style={{ marginTop: "0.8rem", fontSize: "clamp(1.8rem, 3.4vw, 2.5rem)", fontWeight: 800, letterSpacing: "-0.02em" }}>{hero.title}</h1>
-          <p style={{ marginTop: "0.7rem", fontSize: "1rem", color: "rgba(255,255,255,.8)", maxWidth: "34rem", marginInline: "auto" }}>{hero.lead}</p>
+          <h1
+            style={{
+              marginTop: "0.8rem",
+              fontSize: "clamp(1.8rem, 3.4vw, 2.5rem)",
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {hero.title}
+          </h1>
+          <p
+            style={{
+              marginTop: "0.7rem",
+              fontSize: "1rem",
+              color: "rgba(255,255,255,.8)",
+              maxWidth: "34rem",
+              marginInline: "auto",
+            }}
+          >
+            {hero.lead}
+          </p>
         </div>
       </section>
 
-      <div style={{ maxWidth: "42rem", margin: "-1.5rem auto 0", padding: "0 1.5rem 4rem", position: "relative", zIndex: 2 }}>
+      <div
+        style={{
+          maxWidth: "42rem",
+          margin: "-1.5rem auto 0",
+          padding: "0 1.5rem 4rem",
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
         <Card className="border-border shadow-2xl">
           <CardContent className="space-y-6 p-6 md:p-8">
             {sent ? (
@@ -193,11 +229,21 @@ function RegisterPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor="fn">Imię</Label>
-                      <Input id="fn" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                      <Input
+                        id="fn"
+                        required
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="ln">Nazwisko</Label>
-                      <Input id="ln" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                      <Input
+                        id="ln"
+                        required
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -213,7 +259,13 @@ function RegisterPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">E-mail</Label>
-                    <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <Input
+                      id="email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Wysyłanie linku…" : "Załóż konto i wyślij link"}

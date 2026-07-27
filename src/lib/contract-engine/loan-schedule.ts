@@ -76,8 +76,11 @@ function parseAnyDate(s: string): { y: number; m: number; d: number } | null {
   return null;
 }
 
-function addMonthsClamped(base: { y: number; m: number; d: number }, add: number): { y: number; m: number; d: number } {
-  const total = (base.y * 12 + (base.m - 1)) + add;
+function addMonthsClamped(
+  base: { y: number; m: number; d: number },
+  add: number,
+): { y: number; m: number; d: number } {
+  const total = base.y * 12 + (base.m - 1) + add;
   const y = Math.floor(total / 12);
   const m = (total % 12) + 1;
   const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -104,15 +107,23 @@ export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule 
 
   if (N <= 0 || K <= 0) {
     return {
-      rows: [], kwotaPozyczki: K, prowizja: P, months: N, monthlyCommission: 0,
-      regularPayment: maxPay, totalInterest: 0, totalToRepay: 0, balloon: 0,
+      rows: [],
+      kwotaPozyczki: K,
+      prowizja: P,
+      months: N,
+      monthlyCommission: 0,
+      regularPayment: maxPay,
+      totalInterest: 0,
+      totalToRepay: 0,
+      balloon: 0,
       warnings: ["Brak kwoty pożyczki lub liczby rat — harmonogram pusty."],
     };
   }
 
   // prowizja rozłożona równo; ostatnia rata absorbuje zaokrąglenie
   const monthlyCommission = round2(P / N);
-  const commissionOf = (i: number) => (i < N ? monthlyCommission : round2(P - monthlyCommission * (N - 1)));
+  const commissionOf = (i: number) =>
+    i < N ? monthlyCommission : round2(P - monthlyCommission * (N - 1));
 
   const first = input.firstPaymentDate ? parseAnyDate(input.firstPaymentDate) : null;
 

@@ -4,7 +4,13 @@
 // POMOCNICZO — przede wszystkim dla gruntów rolnych (ceny zł/ha wg klasy).
 // Czysta, testowalna logika — bez zależności serwerowych i bez LLM.
 
-import type { MasterValuation, MarketComparablesResult, GovBenchmark, KwLegalAnalysis, Recommendation } from "./types";
+import type {
+  MasterValuation,
+  MarketComparablesResult,
+  GovBenchmark,
+  KwLegalAnalysis,
+  Recommendation,
+} from "./types";
 
 export interface MarketValuationInput {
   propertyType: string;
@@ -17,7 +23,10 @@ export interface MarketValuationInput {
   marketComparables: MarketComparablesResult | null;
   /** GUS BDL — pomocniczo; dla gruntu rolnego podstawa (zł/ha × ha). */
   govBenchmark: GovBenchmark | null;
-  kwLegal: Pick<KwLegalAnalysis, "hasEnforcement" | "hasUsufruct" | "totalMortgageAmountPln" | "mortgages">;
+  kwLegal: Pick<
+    KwLegalAnalysis,
+    "hasEnforcement" | "hasUsufruct" | "totalMortgageAmountPln" | "mortgages"
+  >;
   ownerMatchesKw: boolean | null;
   saleabilityScore: number | null;
   onlyFarmerCanBuild?: boolean;
@@ -44,7 +53,8 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
   const isAgri = i.propertyType === "grunt_rolny";
   const mc = i.marketComparables;
   const gov = i.govBenchmark;
-  const mcUsable = !!mc && (mc.status === "success" || mc.status === "partial") && mc.pricePerM2Median != null;
+  const mcUsable =
+    !!mc && (mc.status === "success" || mc.status === "partial") && mc.pricePerM2Median != null;
   const sampleN = mc ? mc.transactionsCount + mc.offersCount : 0;
 
   let low: number | null = null;
@@ -75,13 +85,15 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
     mid = Math.round(medPpm2 * i.areaM2);
     low = Math.round(Math.min(lowPpm2, medPpm2) * i.areaM2);
     high = Math.round(Math.max(highPpm2, medPpm2) * i.areaM2);
-    basisSource = mc!.transactionsCount > 0
-      ? "deweloperuch.pl (transakcje) + otodom.pl (oferty)"
-      : "otodom.pl (aktywne oferty)";
+    basisSource =
+      mc!.transactionsCount > 0
+        ? "deweloperuch.pl (transakcje) + otodom.pl (oferty)"
+        : "otodom.pl (aktywne oferty)";
     rationaleParts.push(
       `Wycena ze scrapingu rynku: mediana ${medPpm2.toLocaleString("pl-PL")} zł/m² (${mc!.transactionsCount} transakcji deweloperuch, ${mc!.offersCount} ofert otodom${mc!.city ? `, ${mc!.city}` : ""}) × ${i.areaM2} m² = ${mid.toLocaleString("pl-PL")} PLN; widełki z kwartyli próbki.`,
     );
-    if (isAgri) rationaleParts.push("Uwaga: brak danych GUS dla gruntu rolnego — użyto ofert rynkowych.");
+    if (isAgri)
+      rationaleParts.push("Uwaga: brak danych GUS dla gruntu rolnego — użyto ofert rynkowych.");
   } else if (!isAgri && gov?.pricePerM2Median != null && i.areaM2 != null && i.areaM2 > 0) {
     // Fallback pomocniczy: GUS zł/m² (przeciętne ceny lokali), gdy scraping nie dał danych.
     mid = Math.round(gov.pricePerM2Median * i.areaM2);
@@ -94,14 +106,18 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
   }
 
   if (mid == null) {
-    const why = i.areaM2 == null && !(isAgri && i.landAreaHa != null)
-      ? "brak powierzchni nieruchomości (KW/wniosek)"
-      : "brak danych porównawczych ze scrapingu (deweloperuch/otodom) i danych GUS";
+    const why =
+      i.areaM2 == null && !(isAgri && i.landAreaHa != null)
+        ? "brak powierzchni nieruchomości (KW/wniosek)"
+        : "brak danych porównawczych ze scrapingu (deweloperuch/otodom) i danych GUS";
     return {
       status: "no_data",
       basisSource: "brak",
-      estimatedValueLowPln: null, estimatedValueMidPln: null, estimatedValueHighPln: null,
-      suggestedMaxLoanAmountPln: null, suggestedLtvCapPercent: null,
+      estimatedValueLowPln: null,
+      estimatedValueMidPln: null,
+      estimatedValueHighPln: null,
+      suggestedMaxLoanAmountPln: null,
+      suggestedLtvCapPercent: null,
       marketTrend: "nieznany",
       liquidityComment: "",
       keyRisks: ["Brak wiarygodnej wyceny rynkowej — wymagana ręczna weryfikacja."],
@@ -125,29 +141,45 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
   const keyRisks: string[] = [];
   const keyStrengths: string[] = [];
 
-  if (mcUsable && sampleN < 3) keyRisks.push(`Wąska próbka porównawcza (${sampleN} rekordów) — wycena o obniżonej pewności.`);
-  if (basisSource.startsWith("GUS BDL — przeciętne")) keyRisks.push("Wycena oparta o przeciętne GUS (fallback) — brak lokalnych danych ze scrapingu rynku.");
+  if (mcUsable && sampleN < 3)
+    keyRisks.push(`Wąska próbka porównawcza (${sampleN} rekordów) — wycena o obniżonej pewności.`);
+  if (basisSource.startsWith("GUS BDL — przeciętne"))
+    keyRisks.push(
+      "Wycena oparta o przeciętne GUS (fallback) — brak lokalnych danych ze scrapingu rynku.",
+    );
   if (i.kwLegal.mortgages.length > 0) {
     keyRisks.push(
       `Hipoteki w dziale IV${i.kwLegal.totalMortgageAmountPln ? ` (~${i.kwLegal.totalMortgageAmountPln.toLocaleString("pl-PL")} PLN)` : ""} obniżają wartość zabezpieczenia netto.`,
     );
   }
   if (i.kwLegal.hasEnforcement) keyRisks.push("Egzekucja/zajęcie w KW — pułap LTV obniżony.");
-  if (i.kwLegal.hasUsufruct) keyRisks.push("Służebność/dożywocie — ograniczenie zbywalności i wartości.");
-  if (i.declaredValuePln != null && (i.declaredValuePln < pct(mid, 0.7) || i.declaredValuePln > pct(mid, 1.3))) {
+  if (i.kwLegal.hasUsufruct)
+    keyRisks.push("Służebność/dożywocie — ograniczenie zbywalności i wartości.");
+  if (
+    i.declaredValuePln != null &&
+    (i.declaredValuePln < pct(mid, 0.7) || i.declaredValuePln > pct(mid, 1.3))
+  ) {
     keyRisks.push(
       `Wartość deklarowana (${i.declaredValuePln.toLocaleString("pl-PL")} PLN) istotnie odbiega od wyceny rynkowej (${mid.toLocaleString("pl-PL")} PLN).`,
     );
   }
-  if (i.requestedLoanPln != null && suggestedMaxLoan != null && i.requestedLoanPln > suggestedMaxLoan) {
+  if (
+    i.requestedLoanPln != null &&
+    suggestedMaxLoan != null &&
+    i.requestedLoanPln > suggestedMaxLoan
+  ) {
     keyRisks.push(
       `Wnioskowana kwota (${i.requestedLoanPln.toLocaleString("pl-PL")} PLN) przekracza kwotę przy pułapie LTV ${ltvCap}% (${suggestedMaxLoan.toLocaleString("pl-PL")} PLN).`,
     );
   }
 
-  if (mc && mc.transactionsCount >= 3) keyStrengths.push(`Wycena kotwiczona w rzeczywistych transakcjach (deweloperuch.pl: ${mc.transactionsCount}).`);
+  if (mc && mc.transactionsCount >= 3)
+    keyStrengths.push(
+      `Wycena kotwiczona w rzeczywistych transakcjach (deweloperuch.pl: ${mc.transactionsCount}).`,
+    );
   if (sampleN >= 8) keyStrengths.push(`Solidna próbka porównawcza (${sampleN} rekordów z rynku).`);
-  if (isAgri && basisSource.startsWith("GUS")) keyStrengths.push("Grunt rolny wyceniony wg urzędowych cen GUS — stabilna, płynna kotwica.");
+  if (isAgri && basisSource.startsWith("GUS"))
+    keyStrengths.push("Grunt rolny wyceniony wg urzędowych cen GUS — stabilna, płynna kotwica.");
 
   let recommendation: Recommendation = "rekomendowana";
   if (i.kwLegal.hasEnforcement || i.ownerMatchesKw === false) recommendation = "warunkowa";

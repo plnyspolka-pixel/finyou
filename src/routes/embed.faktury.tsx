@@ -74,7 +74,9 @@ function EmbedInvoices() {
                   <div className="text-sm sm:text-base font-semibold tabular-nums text-emerald-300">
                     {formatPLN(inv.gross_amount)}
                   </div>
-                  <div className="text-[10px] uppercase tracking-wider text-slate-500">netto / brutto</div>
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500">
+                    netto / brutto
+                  </div>
                 </div>
               </li>
             ))}

@@ -38,7 +38,13 @@ export const getMyLoanProgress = createServerFn({ method: "GET" })
     if (!loan) {
       // Brak wniosku — zwracamy „pusty" enrich z odpowiednim next_step
       const empty = computeLoanProgress({
-        loan: { id: "", current_form_step: 0, status: "", loan_amount: null, preferred_period_months: null },
+        loan: {
+          id: "",
+          current_form_step: 0,
+          status: "",
+          loan_amount: null,
+          preferred_period_months: null,
+        },
         client,
         property: null,
         documents: [],

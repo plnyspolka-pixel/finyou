@@ -1,7 +1,11 @@
 // Typy modułu „Wycena i ocena ryzyka inwestycji".
 // Bezpieczne do importu po stronie klienta i serwera (brak zależności serwerowych).
 
-import type { SourceStatus, DataSourceUsage, PropertyAnalysisResult } from "@/lib/property-analysis/types";
+import type {
+  SourceStatus,
+  DataSourceUsage,
+  PropertyAnalysisResult,
+} from "@/lib/property-analysis/types";
 import type { KwAddress } from "@/lib/kw-address-core";
 import type { LifeExpectancyResult } from "./life-expectancy";
 import type { FloorFactorResult } from "./floor-factor";
@@ -39,15 +43,9 @@ export interface MarketComparablesResult {
   summaryLine: string;
 }
 
-
-
 export type RiskGrade = "A" | "B" | "C" | "D" | "E";
 
-export type Recommendation =
-  | "rekomendowana"
-  | "warunkowa"
-  | "do_weryfikacji"
-  | "odradzana";
+export type Recommendation = "rekomendowana" | "warunkowa" | "do_weryfikacji" | "odradzana";
 
 // ---- CEIDG: działalność gospodarcza właściciela ----
 // Sprawdzenie, czy właściciel (zidentyfikowany po PESEL) jest już przedsiębiorcą
@@ -121,7 +119,12 @@ export interface KwLegalAnalysis {
   /** Dział III — prawa, roszczenia, ograniczenia. */
   encumbrances: string[];
   /** Dział IV — hipoteki. */
-  mortgages: Array<{ text: string; amount: number | null; currency: string | null; creditor: string | null }>;
+  mortgages: Array<{
+    text: string;
+    amount: number | null;
+    currency: string | null;
+    creditor: string | null;
+  }>;
   totalMortgageAmountPln: number | null;
   hasEnforcement: boolean; // egzekucja / komornik
   hasUsufruct: boolean; // służebność / dożywocie
@@ -213,24 +216,31 @@ export interface SaleabilityForecast {
   // Czynniki popytu w otoczeniu (20/50 km).
   demandDrivers: {
     largeCityWithin50km: boolean;
-    waterBodyWithin20km: boolean;      // jezioro / zbiornik / zalew
-    spaResortWithin20km: boolean;      // kurort / miejscowość uzdrowiskowa
+    waterBodyWithin20km: boolean; // jezioro / zbiornik / zalew
+    spaResortWithin20km: boolean; // kurort / miejscowość uzdrowiskowa
     sanatoriumWithin20km: boolean;
     touristAttractionWithin20km: boolean;
-    majorRoadWithin10km: boolean;      // dostępność komunikacyjna (S/A/DK)
+    majorRoadWithin10km: boolean; // dostępność komunikacyjna (S/A/DK)
   };
   rentalDemand: "wysoki" | "sredni" | "niski" | "nieznany";
   purchasingPowerComment: string | null;
   // Aktywne oferty sprzedaży w okolicy wystawione przez biura nieruchomości.
   localMarketOffers: {
-    available: boolean;          // czy rynek jest zaopatrzony w oferty biur
+    available: boolean; // czy rynek jest zaopatrzony w oferty biur
     totalActiveListings: number; // wszystkie znalezione oferty w okolicy
-    agencyListings: number;      // wystawione przez biura nieruchomości
-    privateListings: number;     // oferty prywatne
+    agencyListings: number; // wystawione przez biura nieruchomości
+    privateListings: number; // oferty prywatne
     medianPricePerM2: number | null;
     radiusKm: number;
     source: string;
-    sample: Array<{ title: string; url: string; source: string; postedBy: string; pricePln: number | null; pricePerM2: number | null }>;
+    sample: Array<{
+      title: string;
+      url: string;
+      source: string;
+      postedBy: string;
+      pricePln: number | null;
+      pricePerM2: number | null;
+    }>;
   };
   rationale: string;
   citations: string[];
@@ -255,17 +265,17 @@ export interface ResidentialAuctionBlock {
 }
 
 export interface ForcedSaleEstimate {
-  basisValuePln: number | null;   // suma oszacowania przyjęta do wyliczeń
+  basisValuePln: number | null; // suma oszacowania przyjęta do wyliczeń
   basisSource: string;
   marketSalePriceLowPln: number | null;
   marketSalePriceMidPln: number | null;
   marketSalePriceHighPln: number | null;
-  firstAuctionOpeningPln: number | null;   // 3/4 sumy oszacowania (art. 965 KPC)
-  secondAuctionOpeningPln: number | null;  // 2/3 sumy oszacowania (art. 983 KPC)
+  firstAuctionOpeningPln: number | null; // 3/4 sumy oszacowania (art. 965 KPC)
+  secondAuctionOpeningPln: number | null; // 2/3 sumy oszacowania (art. 983 KPC)
   expectedForcedSaleLowPln: number | null;
   expectedForcedSaleHighPln: number | null;
   likelyAuctionOutcome: AuctionOutcome;
-  loanToForcedSalePercent: number | null;  // pokrycie kwoty pożyczki z wymuszonej sprzedaży
+  loanToForcedSalePercent: number | null; // pokrycie kwoty pożyczki z wymuszonej sprzedaży
   residentialAuctionBlock: ResidentialAuctionBlock;
   recoveryComment: string;
   legalBasis: string;
@@ -363,9 +373,13 @@ export function gradeFromScore(score: number): RiskGrade {
 // Neutralna klasyfikacja ryzyka (NIE rekomendacja/porada inwestycyjna).
 export function recommendationLabel(r: Recommendation): string {
   switch (r) {
-    case "rekomendowana": return "Profil niskiego ryzyka";
-    case "warunkowa": return "Profil ryzyka umiarkowanego (warunkowy)";
-    case "do_weryfikacji": return "Wymaga dodatkowej weryfikacji";
-    case "odradzana": return "Profil wysokiego ryzyka";
+    case "rekomendowana":
+      return "Profil niskiego ryzyka";
+    case "warunkowa":
+      return "Profil ryzyka umiarkowanego (warunkowy)";
+    case "do_weryfikacji":
+      return "Wymaga dodatkowej weryfikacji";
+    case "odradzana":
+      return "Profil wysokiego ryzyka";
   }
 }

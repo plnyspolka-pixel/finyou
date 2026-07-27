@@ -37,7 +37,6 @@ export type EnrichmentContext = {
   panelByUser?: Map<string, string>;
   // przypisany operator wniosku (opcjonalnie)
   operatorByLoan: Map<string, string | null>;
-
 };
 
 // Kanały które SĄ realnym źródłem pogłębionych danych (formularze / panel
@@ -76,10 +75,7 @@ function digitsOnly(s: string): string {
   return s.replace(/\D+/g, "");
 }
 
-function commsContainingDigits(
-  comms: CommRef[] | undefined,
-  needleDigits: string,
-): CommRef | null {
+function commsContainingDigits(comms: CommRef[] | undefined, needleDigits: string): CommRef | null {
   if (!comms || needleDigits.length < 4) return null;
   for (const c of comms) {
     if (!c.content) continue;
@@ -89,10 +85,7 @@ function commsContainingDigits(
   return null;
 }
 
-function commsContainingText(
-  comms: CommRef[] | undefined,
-  needle: string,
-): CommRef | null {
+function commsContainingText(comms: CommRef[] | undefined, needle: string): CommRef | null {
   if (!comms || !needle) return null;
   const n = needle.toLowerCase();
   for (const c of comms) {
@@ -123,7 +116,6 @@ function manualBy(loanId: string, ctx: EnrichmentContext): FieldSource {
     title: who ? `Wpisane ręcznie (${who})` : "Wpisane ręcznie w panelu",
   };
 }
-
 
 /** Dla wniosku, który wszedł formularzem/z panelu klienta zwraca to źródło. */
 function baseFormSource(appSource: string | null): FieldSource | null {
@@ -177,8 +169,7 @@ export function inferKwSource(
   // 1. wiadomość przychodząca od klienta z numerem KW
   const comms = clientId ? ctx.commsByClient.get(clientId) : undefined;
   const hit =
-    commsContainingText(comms, trimmed) ??
-    commsContainingDigits(comms, digitsOnly(trimmed));
+    commsContainingText(comms, trimmed) ?? commsContainingDigits(comms, digitsOnly(trimmed));
   const src = channelToSource(hit);
   if (src) {
     return {

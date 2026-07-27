@@ -38,18 +38,26 @@ function WniosekReturn() {
       }
 
       // 2) Sprawdzamy sesję — jeśli klient już zalogowany, claim odbywa się natychmiast
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session?.user) {
         try {
           const res = await runClaim({ data: { token } });
           if (res.ok && !res.alreadyClaimed) toast.success("Połączyliśmy Twój wniosek z kontem");
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          console.error(e);
+        }
         void navigate({ to: "/klient" });
         return;
       }
 
       // 3) Nie zalogowany — zapamiętujemy token do claim po zalogowaniu/rejestracji
-      try { localStorage.setItem(CLAIM_KEY, token); } catch { /* noop */ }
+      try {
+        localStorage.setItem(CLAIM_KEY, token);
+      } catch {
+        /* noop */
+      }
       void navigate({ to: "/klient" });
     })();
   }, [token, navigate, runClaim]);

@@ -44,7 +44,16 @@ export type GusCompany = {
 
 export type GusLookupResult =
   | { success: true; source: "GUS REGON BIR"; searchType: SearchType; company: GusCompany }
-  | { success: false; errorCode: "NOT_FOUND" | "INVALID_IDENTIFIER" | "LOGIN_FAILED" | "GUS_CONNECTION_ERROR" | "NOT_CONFIGURED"; message: string };
+  | {
+      success: false;
+      errorCode:
+        | "NOT_FOUND"
+        | "INVALID_IDENTIFIER"
+        | "LOGIN_FAILED"
+        | "GUS_CONNECTION_ERROR"
+        | "NOT_CONFIGURED";
+      message: string;
+    };
 
 // ---------- helpers ----------
 
@@ -62,7 +71,10 @@ function pickTag(xml: string, tag: string): string {
   return m ? m[1].trim() : "";
 }
 function pickTagAny(xml: string, ...tags: string[]): string {
-  for (const t of tags) { const v = pickTag(xml, t); if (v) return v; }
+  for (const t of tags) {
+    const v = pickTag(xml, t);
+    if (v) return v;
+  }
   return "";
 }
 
@@ -74,9 +86,15 @@ function pickAllBlocks(xml: string, tag: string): string[] {
   return out;
 }
 
-function validateNip(nip: string) { return /^\d{10}$/.test(nip); }
-function validateRegon(r: string) { return /^\d{9}$/.test(r) || /^\d{14}$/.test(r); }
-function validateKrs(k: string) { return /^\d{1,10}$/.test(k); }
+function validateNip(nip: string) {
+  return /^\d{10}$/.test(nip);
+}
+function validateRegon(r: string) {
+  return /^\d{9}$/.test(r) || /^\d{14}$/.test(r);
+}
+function validateKrs(k: string) {
+  return /^\d{1,10}$/.test(k);
+}
 
 // ---------- SOAP envelopes ----------
 
@@ -94,7 +112,14 @@ function envZaloguj(key: string): string {
 }
 
 function envSzukaj(sid: string, kind: SearchType, value: string): string {
-  const param = kind === "nip" ? "Nip" : kind === "regon" ? (value.length === 14 ? "Regon14zn" : "Regon9zn") : "Krs";
+  const param =
+    kind === "nip"
+      ? "Nip"
+      : kind === "regon"
+        ? value.length === 14
+          ? "Regon14zn"
+          : "Regon9zn"
+        : "Krs";
   return `<?xml version="1.0" encoding="utf-8"?>
 <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing" xmlns:bir="${BIR_NS}">
   <s:Header>
@@ -111,7 +136,6 @@ function envSzukaj(sid: string, kind: SearchType, value: string): string {
   </s:Body>
 </s:Envelope>`;
 }
-
 
 function envPelnyRaport(sid: string, regon: string, raport: string): string {
   return `<?xml version="1.0" encoding="utf-8"?>
@@ -150,7 +174,11 @@ async function login(key: string): Promise<string> {
   return sid;
 }
 
-async function searchOnce(sid: string, kind: SearchType, value: string): Promise<{ inner: string } | null> {
+async function searchOnce(
+  sid: string,
+  kind: SearchType,
+  value: string,
+): Promise<{ inner: string } | null> {
   const xml = await soapCall(envSzukaj(sid, kind, value), "DaneSzukajPodmioty", sid);
   const raw = pickTag(xml, "DaneSzukajPodmiotyResult");
   if (!raw) return null;
@@ -168,9 +196,19 @@ async function reportOnce(sid: string, regon: string, raport: string): Promise<s
 // ---------- Mapping ----------
 
 function mapDane(daneBlock: string): {
-  name: string; regon: string; nip: string; typ: string; silosID: string;
-  voivodeship: string; county: string; municipality: string; city: string;
-  postalCode: string; street: string; buildingNumber: string; apartmentNumber: string;
+  name: string;
+  regon: string;
+  nip: string;
+  typ: string;
+  silosID: string;
+  voivodeship: string;
+  county: string;
+  municipality: string;
+  city: string;
+  postalCode: string;
+  street: string;
+  buildingNumber: string;
+  apartmentNumber: string;
   endDate: string;
 } {
   return {
@@ -197,7 +235,14 @@ function reportNames(typ: string): { ogolne: string; pkd: string } {
   return { ogolne: "BIR11OsFizycznaDaneOgolne", pkd: "BIR11OsFizycznaPkd" };
 }
 
-function buildFullAddress(a: { street: string; buildingNumber: string; apartmentNumber: string; postalCode: string; city: string; country?: string }): string {
+function buildFullAddress(a: {
+  street: string;
+  buildingNumber: string;
+  apartmentNumber: string;
+  postalCode: string;
+  city: string;
+  country?: string;
+}): string {
   const street = [a.street, a.buildingNumber].filter(Boolean).join(" ");
   const flat = a.apartmentNumber ? `/${a.apartmentNumber}` : "";
   const cityLine = [a.postalCode, a.city].filter(Boolean).join(" ");
@@ -209,38 +254,70 @@ function buildFullAddress(a: { street: string; buildingNumber: string; apartment
 export const gusCompanyLookup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({
-      nip: z.string().trim().optional(),
-      regon: z.string().trim().optional(),
-      krs: z.string().trim().optional(),
-    }).parse(input),
+    z
+      .object({
+        nip: z.string().trim().optional(),
+        regon: z.string().trim().optional(),
+        krs: z.string().trim().optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data }): Promise<GusLookupResult> => {
     const key = process.env.BIR_API_KEY;
-    if (!key) return { success: false, errorCode: "NOT_CONFIGURED", message: "Brak BIR_API_KEY w konfiguracji backendu." };
+    if (!key)
+      return {
+        success: false,
+        errorCode: "NOT_CONFIGURED",
+        message: "Brak BIR_API_KEY w konfiguracji backendu.",
+      };
 
     // Priorytet: NIP > REGON > KRS
     let kind: SearchType | null = null;
     let value = "";
     if (data.nip) {
       const v = data.nip.replace(/\D/g, "");
-      if (!validateNip(v)) return { success: false, errorCode: "INVALID_IDENTIFIER", message: "Nieprawidłowy NIP (oczekiwane 10 cyfr)." };
-      kind = "nip"; value = v;
+      if (!validateNip(v))
+        return {
+          success: false,
+          errorCode: "INVALID_IDENTIFIER",
+          message: "Nieprawidłowy NIP (oczekiwane 10 cyfr).",
+        };
+      kind = "nip";
+      value = v;
     } else if (data.regon) {
       const v = data.regon.replace(/\D/g, "");
-      if (!validateRegon(v)) return { success: false, errorCode: "INVALID_IDENTIFIER", message: "Nieprawidłowy REGON (9 lub 14 cyfr)." };
-      kind = "regon"; value = v;
+      if (!validateRegon(v))
+        return {
+          success: false,
+          errorCode: "INVALID_IDENTIFIER",
+          message: "Nieprawidłowy REGON (9 lub 14 cyfr).",
+        };
+      kind = "regon";
+      value = v;
     } else if (data.krs) {
       const v = data.krs.replace(/\D/g, "");
-      if (!validateKrs(v)) return { success: false, errorCode: "INVALID_IDENTIFIER", message: "Nieprawidłowy KRS." };
-      kind = "krs"; value = v.padStart(10, "0");
+      if (!validateKrs(v))
+        return { success: false, errorCode: "INVALID_IDENTIFIER", message: "Nieprawidłowy KRS." };
+      kind = "krs";
+      value = v.padStart(10, "0");
     } else {
-      return { success: false, errorCode: "INVALID_IDENTIFIER", message: "Podaj NIP, REGON albo KRS." };
+      return {
+        success: false,
+        errorCode: "INVALID_IDENTIFIER",
+        message: "Podaj NIP, REGON albo KRS.",
+      };
     }
 
     let sid: string;
-    try { sid = await login(key); }
-    catch { return { success: false, errorCode: "LOGIN_FAILED", message: "Nie udało się zalogować do usługi GUS BIR." }; }
+    try {
+      sid = await login(key);
+    } catch {
+      return {
+        success: false,
+        errorCode: "LOGIN_FAILED",
+        message: "Nie udało się zalogować do usługi GUS BIR.",
+      };
+    }
 
     // Wykonaj wyszukiwanie z automatycznym ponowieniem przy wygaśnięciu SID
     const doSearch = async (s: string) => searchOnce(s, kind!, value);
@@ -253,34 +330,58 @@ export const gusCompanyLookup = createServerFn({ method: "POST" })
         found = await doSearch(sid);
       }
     } catch {
-      return { success: false, errorCode: "GUS_CONNECTION_ERROR", message: "Nie udało się połączyć z usługą GUS REGON." };
+      return {
+        success: false,
+        errorCode: "GUS_CONNECTION_ERROR",
+        message: "Nie udało się połączyć z usługą GUS REGON.",
+      };
     }
-    if (!found) return { success: false, errorCode: "NOT_FOUND", message: "Nie znaleziono firmy w bazie GUS REGON." };
+    if (!found)
+      return {
+        success: false,
+        errorCode: "NOT_FOUND",
+        message: "Nie znaleziono firmy w bazie GUS REGON.",
+      };
     const daneBlock = pickAllBlocks(found.inner, "dane")[0] ?? "";
     const base = mapDane(daneBlock);
     // Diagnostyka — gdy brak REGON/TYP, logujemy surowy blok do worker logs (bez PII poza NIP/REGON).
     if (!base.regon || !base.typ) {
-      console.warn("[GUS] base incomplete", { nip: base.nip, regon: base.regon, typ: base.typ, daneSnippet: daneBlock.slice(0, 800) });
+      console.warn("[GUS] base incomplete", {
+        nip: base.nip,
+        regon: base.regon,
+        typ: base.typ,
+        daneSnippet: daneBlock.slice(0, 800),
+      });
     }
 
     // Pełny raport dla dodatkowych pól (KRS, forma prawna, daty, PKD, kontakt)
     const { ogolne, pkd } = reportNames(base.typ);
-    let ogolneXml = "", pkdXml = "";
+    let ogolneXml = "",
+      pkdXml = "";
     try {
       ogolneXml = await reportOnce(sid, base.regon, ogolne);
       pkdXml = await reportOnce(sid, base.regon, pkd);
-    } catch { /* miękko — zwracamy co mamy */ }
+    } catch {
+      /* miękko — zwracamy co mamy */
+    }
 
     const ogolneBlock = pickAllBlocks(ogolneXml, "dane")[0] ?? "";
     const pkdBlocks = pickAllBlocks(pkdXml, "dane");
 
     const isPrawna = base.typ === "P" || base.typ === "LP";
     const legalForm = isPrawna
-      ? (pickTag(ogolneBlock, "praw_podstawowaFormaPrawna_Nazwa") || pickTag(ogolneBlock, "praw_szczegolnaFormaPrawna_Nazwa"))
-      : (pickTag(ogolneBlock, "fiz_szczegolnaFormaPrawna_Nazwa") || "Osoba fizyczna prowadząca działalność");
+      ? pickTag(ogolneBlock, "praw_podstawowaFormaPrawna_Nazwa") ||
+        pickTag(ogolneBlock, "praw_szczegolnaFormaPrawna_Nazwa")
+      : pickTag(ogolneBlock, "fiz_szczegolnaFormaPrawna_Nazwa") ||
+        "Osoba fizyczna prowadząca działalność";
     const status = isPrawna
-      ? (pickTag(ogolneBlock, "praw_statusNip") || pickTag(ogolneBlock, "praw_dataSkresleniaPodmiotuZregon") ? "wykreślony" : "aktywny")
-      : (pickTag(ogolneBlock, "fiz_dataZakonczeniaDzialalnosci") ? "zakończona" : "aktywna");
+      ? pickTag(ogolneBlock, "praw_statusNip") ||
+        pickTag(ogolneBlock, "praw_dataSkresleniaPodmiotuZregon")
+        ? "wykreślony"
+        : "aktywny"
+      : pickTag(ogolneBlock, "fiz_dataZakonczeniaDzialalnosci")
+        ? "zakończona"
+        : "aktywna";
 
     // GUS BIR1.1 używa różnych wariantów nazwy pola w zależności od raportu — sprawdź wszystkie znane.
     const krs = isPrawna
@@ -294,16 +395,32 @@ export const gusCompanyLookup = createServerFn({ method: "POST" })
       : "";
 
     const startDate = isPrawna
-      ? (pickTag(ogolneBlock, "praw_dataPowstania") || pickTag(ogolneBlock, "praw_dataRozpoczeciaDzialalnosci"))
-      : (pickTag(ogolneBlock, "fiz_dataRozpoczeciaDzialalnosci") || pickTag(ogolneBlock, "fiz_dataPowstania"));
-    const suspensionDate = isPrawna ? pickTag(ogolneBlock, "praw_dataZawieszeniaDzialalnosci") : pickTag(ogolneBlock, "fiz_dataZawieszeniaDzialalnosci");
-    const resumptionDate = isPrawna ? pickTag(ogolneBlock, "praw_dataWznowieniaDzialalnosci") : pickTag(ogolneBlock, "fiz_dataWznowieniaDzialalnosci");
-    const endDate = base.endDate || (isPrawna ? pickTag(ogolneBlock, "praw_dataZakonczeniaDzialalnosci") : pickTag(ogolneBlock, "fiz_dataZakonczeniaDzialalnosci"));
+      ? pickTag(ogolneBlock, "praw_dataPowstania") ||
+        pickTag(ogolneBlock, "praw_dataRozpoczeciaDzialalnosci")
+      : pickTag(ogolneBlock, "fiz_dataRozpoczeciaDzialalnosci") ||
+        pickTag(ogolneBlock, "fiz_dataPowstania");
+    const suspensionDate = isPrawna
+      ? pickTag(ogolneBlock, "praw_dataZawieszeniaDzialalnosci")
+      : pickTag(ogolneBlock, "fiz_dataZawieszeniaDzialalnosci");
+    const resumptionDate = isPrawna
+      ? pickTag(ogolneBlock, "praw_dataWznowieniaDzialalnosci")
+      : pickTag(ogolneBlock, "fiz_dataWznowieniaDzialalnosci");
+    const endDate =
+      base.endDate ||
+      (isPrawna
+        ? pickTag(ogolneBlock, "praw_dataZakonczeniaDzialalnosci")
+        : pickTag(ogolneBlock, "fiz_dataZakonczeniaDzialalnosci"));
 
     const phone = pickTag(ogolneBlock, isPrawna ? "praw_numerTelefonu" : "fiz_numerTelefonu");
     const email = pickTag(ogolneBlock, isPrawna ? "praw_adresEmail" : "fiz_adresEmail");
-    const website = pickTag(ogolneBlock, isPrawna ? "praw_adresStronyinternetowej" : "fiz_adresStronyinternetowej");
-    const postOffice = pickTag(ogolneBlock, isPrawna ? "praw_adSiedzPoczta_Nazwa" : "fiz_adSiedzPoczta_Nazwa");
+    const website = pickTag(
+      ogolneBlock,
+      isPrawna ? "praw_adresStronyinternetowej" : "fiz_adresStronyinternetowej",
+    );
+    const postOffice = pickTag(
+      ogolneBlock,
+      isPrawna ? "praw_adSiedzPoczta_Nazwa" : "fiz_adSiedzPoczta_Nazwa",
+    );
     const country = "Polska";
 
     const pkdList = pkdBlocks.map((b) => {
@@ -344,7 +461,9 @@ export const gusCompanyLookup = createServerFn({ method: "POST" })
         "Wyloguj",
         sid,
       );
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     return {
       success: true,

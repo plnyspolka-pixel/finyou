@@ -33,9 +33,14 @@ export const syncMetaAdAccounts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
-    const { data: logRow } = await supabaseAdmin.from("meta_sync_log").insert({
-      sync_type: "ad_accounts", status: "running",
-    }).select("id").single();
+    const { data: logRow } = await supabaseAdmin
+      .from("meta_sync_log")
+      .insert({
+        sync_type: "ad_accounts",
+        status: "running",
+      })
+      .select("id")
+      .single();
 
     try {
       const me = await metaFetch("/me/adaccounts", {
@@ -57,15 +62,25 @@ export const syncMetaAdAccounts = createServerFn({ method: "POST" })
         await supabaseAdmin.from("meta_ad_accounts").upsert(r, { onConflict: "meta_account_id" });
       }
 
-      await supabaseAdmin.from("meta_sync_log").update({
-        status: "success", items_synced: rows.length, finished_at: new Date().toISOString(),
-      }).eq("id", logRow!.id);
+      await supabaseAdmin
+        .from("meta_sync_log")
+        .update({
+          status: "success",
+          items_synced: rows.length,
+          finished_at: new Date().toISOString(),
+        })
+        .eq("id", logRow!.id);
 
       return { count: rows.length };
     } catch (e: any) {
-      await supabaseAdmin.from("meta_sync_log").update({
-        status: "error", error_message: String(e.message), finished_at: new Date().toISOString(),
-      }).eq("id", logRow!.id);
+      await supabaseAdmin
+        .from("meta_sync_log")
+        .update({
+          status: "error",
+          error_message: String(e.message),
+          finished_at: new Date().toISOString(),
+        })
+        .eq("id", logRow!.id);
       throw e;
     }
   });
@@ -75,17 +90,26 @@ export const syncMetaCampaigns = createServerFn({ method: "POST" })
   .inputValidator((d: { accountId: string }) => d)
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
-    const { data: acc } = await supabaseAdmin.from("meta_ad_accounts")
-      .select("id, meta_account_id").eq("id", data.accountId).single();
+    const { data: acc } = await supabaseAdmin
+      .from("meta_ad_accounts")
+      .select("id, meta_account_id")
+      .eq("id", data.accountId)
+      .single();
     if (!acc) throw new Error("Konto nie znalezione");
 
-    const { data: logRow } = await supabaseAdmin.from("meta_sync_log").insert({
-      sync_type: "campaigns", status: "running",
-    }).select("id").single();
+    const { data: logRow } = await supabaseAdmin
+      .from("meta_sync_log")
+      .insert({
+        sync_type: "campaigns",
+        status: "running",
+      })
+      .select("id")
+      .single();
 
     try {
       const camps = await metaFetch(`/act_${acc.meta_account_id}/campaigns`, {
-        fields: "id,name,objective,status,daily_budget,lifetime_budget,start_time,stop_time,insights.date_preset(maximum){spend,impressions,clicks,ctr,cpc,actions,cost_per_action_type}",
+        fields:
+          "id,name,objective,status,daily_budget,lifetime_budget,start_time,stop_time,insights.date_preset(maximum){spend,impressions,clicks,ctr,cpc,actions,cost_per_action_type}",
         limit: "200",
       });
 
@@ -93,38 +117,53 @@ export const syncMetaCampaigns = createServerFn({ method: "POST" })
       for (const c of camps.data ?? []) {
         const ins = c.insights?.data?.[0] ?? {};
         const leadAction = (ins.actions ?? []).find((a: any) => a.action_type === "lead");
-        const cplAction = (ins.cost_per_action_type ?? []).find((a: any) => a.action_type === "lead");
-        await supabaseAdmin.from("meta_campaigns").upsert({
-          meta_campaign_id: c.id,
-          ad_account_id: acc.id,
-          name: c.name,
-          objective: c.objective,
-          status: c.status,
-          daily_budget: c.daily_budget ? Number(c.daily_budget) / 100 : null,
-          lifetime_budget: c.lifetime_budget ? Number(c.lifetime_budget) / 100 : null,
-          start_time: c.start_time,
-          stop_time: c.stop_time,
-          spend: Number(ins.spend ?? 0),
-          impressions: Number(ins.impressions ?? 0),
-          clicks: Number(ins.clicks ?? 0),
-          ctr: Number(ins.ctr ?? 0),
-          cpc: Number(ins.cpc ?? 0),
-          leads_count: Number(leadAction?.value ?? 0),
-          cost_per_lead: Number(cplAction?.value ?? 0),
-          last_synced_at: new Date().toISOString(),
-        }, { onConflict: "meta_campaign_id" });
+        const cplAction = (ins.cost_per_action_type ?? []).find(
+          (a: any) => a.action_type === "lead",
+        );
+        await supabaseAdmin.from("meta_campaigns").upsert(
+          {
+            meta_campaign_id: c.id,
+            ad_account_id: acc.id,
+            name: c.name,
+            objective: c.objective,
+            status: c.status,
+            daily_budget: c.daily_budget ? Number(c.daily_budget) / 100 : null,
+            lifetime_budget: c.lifetime_budget ? Number(c.lifetime_budget) / 100 : null,
+            start_time: c.start_time,
+            stop_time: c.stop_time,
+            spend: Number(ins.spend ?? 0),
+            impressions: Number(ins.impressions ?? 0),
+            clicks: Number(ins.clicks ?? 0),
+            ctr: Number(ins.ctr ?? 0),
+            cpc: Number(ins.cpc ?? 0),
+            leads_count: Number(leadAction?.value ?? 0),
+            cost_per_lead: Number(cplAction?.value ?? 0),
+            last_synced_at: new Date().toISOString(),
+          },
+          { onConflict: "meta_campaign_id" },
+        );
         count++;
       }
 
-      await supabaseAdmin.from("meta_sync_log").update({
-        status: "success", items_synced: count, finished_at: new Date().toISOString(),
-      }).eq("id", logRow!.id);
+      await supabaseAdmin
+        .from("meta_sync_log")
+        .update({
+          status: "success",
+          items_synced: count,
+          finished_at: new Date().toISOString(),
+        })
+        .eq("id", logRow!.id);
 
       return { count };
     } catch (e: any) {
-      await supabaseAdmin.from("meta_sync_log").update({
-        status: "error", error_message: String(e.message), finished_at: new Date().toISOString(),
-      }).eq("id", logRow!.id);
+      await supabaseAdmin
+        .from("meta_sync_log")
+        .update({
+          status: "error",
+          error_message: String(e.message),
+          finished_at: new Date().toISOString(),
+        })
+        .eq("id", logRow!.id);
       throw e;
     }
   });
@@ -135,8 +174,16 @@ export const listMetaOverview = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     const [{ data: accounts }, { data: campaigns }, { data: logs }] = await Promise.all([
       supabaseAdmin.from("meta_ad_accounts").select("*").order("name"),
-      supabaseAdmin.from("meta_campaigns").select("*").order("spend", { ascending: false }).limit(50),
-      supabaseAdmin.from("meta_sync_log").select("*").order("started_at", { ascending: false }).limit(10),
+      supabaseAdmin
+        .from("meta_campaigns")
+        .select("*")
+        .order("spend", { ascending: false })
+        .limit(50),
+      supabaseAdmin
+        .from("meta_sync_log")
+        .select("*")
+        .order("started_at", { ascending: false })
+        .limit(10),
     ]);
     return { accounts: accounts ?? [], campaigns: campaigns ?? [], logs: logs ?? [] };
   });

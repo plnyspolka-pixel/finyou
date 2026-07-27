@@ -60,7 +60,8 @@ export const FOLLOW_UP_ENGINES: FollowUpEngine[] = [
     name: "Sekwencja Ania (nurture leada)",
     purpose: "Dociska leada z niedokończonym wnioskiem aż do złożenia lub statusu terminalnego.",
     trigger: "Nowy lead / niedokończony wniosek",
-    cadence: "365 dni opadająco — codziennie w 1. m-cu, co 3 dni w 2.–3., tygodniowo w 4.–6., co 2 tyg. do końca roku",
+    cadence:
+      "365 dni opadająco — codziennie w 1. m-cu, co 3 dni w 2.–3., tygodniowo w 4.–6., co 2 tyg. do końca roku",
     channels: ["email", "sms", "call"],
     window: `${LEAD_CONTACT_WINDOW.startHour}:00–${LEAD_CONTACT_WINDOW.endHour}:00, ${LEAD_CONTACT_WINDOW.days}`,
     table: "lead_follow_up_schedule",
@@ -68,4 +69,3 @@ export const FOLLOW_UP_ENGINES: FollowUpEngine[] = [
     manageHref: "/admin/klienci",
   },
 ];
-

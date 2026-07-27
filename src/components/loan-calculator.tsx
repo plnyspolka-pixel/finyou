@@ -354,7 +354,15 @@ export function LoanCalculator({
     const rows = eng.rows.map((r) => {
       const d = new Date(start);
       d.setMonth(d.getMonth() + r.nr);
-      return { idx: r.nr, date: d.toLocaleDateString("pl-PL"), rata: r.rata_razem, kap: r.kapital, ods: r.odsetki, prow: r.prowizja, saldo: r.saldo };
+      return {
+        idx: r.nr,
+        date: d.toLocaleDateString("pl-PL"),
+        rata: r.rata_razem,
+        kap: r.kapital,
+        ods: r.odsetki,
+        prow: r.prowizja,
+        saldo: r.saldo,
+      };
     });
     return {
       rows,
@@ -519,7 +527,11 @@ export function LoanCalculator({
     const fmt = (n: number) => n.toFixed(2).replace(".", ",");
     const lines = [header.join(";")];
     for (const r of schedule.rows) {
-      lines.push([r.idx, r.date, fmt(r.rata), fmt(r.kap), fmt(r.ods), fmt(r.prow ?? 0), fmt(r.saldo)].join(";"));
+      lines.push(
+        [r.idx, r.date, fmt(r.rata), fmt(r.kap), fmt(r.ods), fmt(r.prow ?? 0), fmt(r.saldo)].join(
+          ";",
+        ),
+      );
     }
     lines.push(
       [
@@ -1830,7 +1842,9 @@ export function LoanCalculator({
                       <TableCell className="tabular-nums text-white">{formatPLN(r.rata)}</TableCell>
                       <TableCell className="tabular-nums text-white">{formatPLN(r.kap)}</TableCell>
                       <TableCell className="tabular-nums text-white">{formatPLN(r.ods)}</TableCell>
-                      <TableCell className="tabular-nums text-white">{formatPLN(r.prow ?? 0)}</TableCell>
+                      <TableCell className="tabular-nums text-white">
+                        {formatPLN(r.prow ?? 0)}
+                      </TableCell>
                       <TableCell className="tabular-nums text-white">
                         {formatPLN(r.saldo)}
                       </TableCell>

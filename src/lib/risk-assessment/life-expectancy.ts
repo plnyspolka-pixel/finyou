@@ -10,17 +10,53 @@ import type { Sex } from "./pesel";
 // Punkty węzłowe e(x) — dalsze przeciętne trwanie życia [lata] wg wieku i płci.
 // Wartości pomiędzy węzłami interpolujemy liniowo.
 const EX_MEN: Array<[age: number, ex: number]> = [
-  [0, 73.4], [1, 72.8], [5, 68.9], [10, 63.9], [15, 59.0], [20, 54.3],
-  [25, 49.7], [30, 45.2], [35, 40.6], [40, 36.0], [45, 31.5], [50, 27.3],
-  [55, 23.2], [60, 19.4], [65, 15.8], [70, 12.5], [75, 9.5], [80, 7.0],
-  [85, 5.1], [90, 3.7], [95, 2.8], [100, 2.1],
+  [0, 73.4],
+  [1, 72.8],
+  [5, 68.9],
+  [10, 63.9],
+  [15, 59.0],
+  [20, 54.3],
+  [25, 49.7],
+  [30, 45.2],
+  [35, 40.6],
+  [40, 36.0],
+  [45, 31.5],
+  [50, 27.3],
+  [55, 23.2],
+  [60, 19.4],
+  [65, 15.8],
+  [70, 12.5],
+  [75, 9.5],
+  [80, 7.0],
+  [85, 5.1],
+  [90, 3.7],
+  [95, 2.8],
+  [100, 2.1],
 ];
 
 const EX_WOMEN: Array<[age: number, ex: number]> = [
-  [0, 81.1], [1, 80.4], [5, 76.5], [10, 71.5], [15, 66.6], [20, 61.7],
-  [25, 56.8], [30, 51.9], [35, 47.0], [40, 42.1], [45, 37.4], [50, 32.7],
-  [55, 28.2], [60, 23.9], [65, 19.7], [70, 15.7], [75, 11.9], [80, 8.6],
-  [85, 5.9], [90, 4.1], [95, 3.0], [100, 2.2],
+  [0, 81.1],
+  [1, 80.4],
+  [5, 76.5],
+  [10, 71.5],
+  [15, 66.6],
+  [20, 61.7],
+  [25, 56.8],
+  [30, 51.9],
+  [35, 47.0],
+  [40, 42.1],
+  [45, 37.4],
+  [50, 32.7],
+  [55, 28.2],
+  [60, 23.9],
+  [65, 19.7],
+  [70, 15.7],
+  [75, 11.9],
+  [80, 8.6],
+  [85, 5.9],
+  [90, 4.1],
+  [95, 3.0],
+  [100, 2.2],
 ];
 
 // Pożyczki udzielamy na 1–5 lat — dożycie (prawdopodobieństwo przeżycia okresu)
@@ -90,7 +126,11 @@ function survivalProbability(remainingYears: number, termYears: number): number 
   return Math.max(0, Math.min(1, Math.exp(-mu * termYears)));
 }
 
-function classifyBand(remainingYears: number | null, termYears: number | null, age: number | null): LongevityBand {
+function classifyBand(
+  remainingYears: number | null,
+  termYears: number | null,
+  age: number | null,
+): LongevityBand {
   if (remainingYears == null) return "nieznane";
   // Gdy znamy horyzont pożyczki — oceniamy zapas trwania życia względem tenoru.
   if (termYears != null && termYears > 0) {
@@ -110,11 +150,16 @@ function classifyBand(remainingYears: number | null, termYears: number | null, a
 
 export function bandLabel(b: LongevityBand): string {
   switch (b) {
-    case "niskie": return "niskie ryzyko dożycia/sukcesji";
-    case "umiarkowane": return "umiarkowane ryzyko dożycia/sukcesji";
-    case "podwyzszone": return "podwyższone ryzyko dożycia/sukcesji";
-    case "wysokie": return "wysokie ryzyko dożycia/sukcesji";
-    case "nieznane": return "nieznane ryzyko dożycia/sukcesji";
+    case "niskie":
+      return "niskie ryzyko dożycia/sukcesji";
+    case "umiarkowane":
+      return "umiarkowane ryzyko dożycia/sukcesji";
+    case "podwyzszone":
+      return "podwyższone ryzyko dożycia/sukcesji";
+    case "wysokie":
+      return "wysokie ryzyko dożycia/sukcesji";
+    case "nieznane":
+      return "nieznane ryzyko dożycia/sukcesji";
   }
 }
 
@@ -145,14 +190,18 @@ export function estimateLifeExpectancy(input: EstimateLifeExpectancyInput): Life
     return {
       ...base,
       longevityRiskBand: "nieznane",
-      summary: "Brak danych (wiek/płeć) do oszacowania trwania życia — wymagane dane właściciela (np. PESEL).",
+      summary:
+        "Brak danych (wiek/płeć) do oszacowania trwania życia — wymagane dane właściciela (np. PESEL).",
     };
   }
 
   const table = sex === "M" ? EX_MEN : EX_WOMEN;
   const remainingYears = Math.round(interpolateEx(table, Math.max(0, age)) * 10) / 10;
   const projectedAgeAtDeath = Math.round((age + remainingYears) * 10) / 10;
-  const survival = termYears != null ? Math.round(survivalProbability(remainingYears, termYears) * 100) / 100 : null;
+  const survival =
+    termYears != null
+      ? Math.round(survivalProbability(remainingYears, termYears) * 100) / 100
+      : null;
   const band = classifyBand(remainingYears, termYears, age);
 
   // Dożycie dla oferowanego zakresu pożyczek 1–5 lat.
@@ -163,15 +212,16 @@ export function estimateLifeExpectancy(input: EstimateLifeExpectancyInput): Life
   const survival5y = survivalByLoanYear[survivalByLoanYear.length - 1].probability;
   const survival1y = survivalByLoanYear[0].probability;
 
-  const termPart = termYears != null
-    ? ` Dla horyzontu pożyczki ${termYears} lat szacunkowe prawdopodobieństwo przeżycia całego okresu wynosi ~${Math.round((survival ?? 0) * 100)}%.`
-    : "";
-  const rangePart =
-    ` Dożycie dla pożyczek 1–5 lat: P(1 rok) ≈ ${Math.round(survival1y * 100)}%, P(5 lat) ≈ ${Math.round(survival5y * 100)}%.`;
+  const termPart =
+    termYears != null
+      ? ` Dla horyzontu pożyczki ${termYears} lat szacunkowe prawdopodobieństwo przeżycia całego okresu wynosi ~${Math.round((survival ?? 0) * 100)}%.`
+      : "";
+  const rangePart = ` Dożycie dla pożyczek 1–5 lat: P(1 rok) ≈ ${Math.round(survival1y * 100)}%, P(5 lat) ≈ ${Math.round(survival5y * 100)}%.`;
   const summary =
     `Właściciel: ${sex === "M" ? "mężczyzna" : "kobieta"}, wiek ${age} lat. ` +
     `Dalsze przeciętne trwanie życia wg GUS ≈ ${remainingYears} lat (przewidywany wiek dożycia ≈ ${projectedAgeAtDeath}).` +
-    termPart + rangePart;
+    termPart +
+    rangePart;
 
   return {
     ...base,

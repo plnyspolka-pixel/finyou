@@ -21,12 +21,21 @@ export const Route = createFileRoute("/admin/facebook-connect")({
   head: () => ({
     meta: [
       { title: "Connect Facebook Page — Finance You" },
-      { name: "description", content: "Connect the Facebook Page that powers our Messenger integration." },
+      {
+        name: "description",
+        content: "Connect the Facebook Page that powers our Messenger integration.",
+      },
     ],
   }),
 });
 
-type FbPage = { id: string; name: string; category?: string; access_token?: string; tasks?: string[] };
+type FbPage = {
+  id: string;
+  name: string;
+  category?: string;
+  access_token?: string;
+  tasks?: string[];
+};
 
 const KNOWN_TARGET_PAGE_ID = "661893307005604";
 
@@ -120,7 +129,11 @@ function FacebookConnectPage() {
           },
         );
       },
-      { scope: "pages_show_list,pages_messaging,pages_manage_metadata", return_scopes: true, auth_type: "reauthorize" },
+      {
+        scope: "pages_show_list,pages_messaging,pages_manage_metadata",
+        return_scopes: true,
+        auth_type: "reauthorize",
+      },
     );
   };
 
@@ -154,7 +167,9 @@ function FacebookConnectPage() {
         setTestResult(`❌ ${r?.error?.message ?? "Unknown error"}`);
         return;
       }
-      setTestResult(`✅ Messenger integration ready for "${r.name}" (id: ${r.id}). Link: ${r.link ?? "n/a"}`);
+      setTestResult(
+        `✅ Messenger integration ready for "${r.name}" (id: ${r.id}). Link: ${r.link ?? "n/a"}`,
+      );
     });
   };
 
@@ -190,7 +205,11 @@ function FacebookConnectPage() {
             integration.
           </p>
           <Button onClick={connect} disabled={!ready || busy || !APP_ID} size="lg">
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Facebook className="mr-2 h-4 w-4" />}
+            {busy ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Facebook className="mr-2 h-4 w-4" />
+            )}
             Connect Facebook Page
           </Button>
           <Button
@@ -200,7 +219,11 @@ function FacebookConnectPage() {
             size="lg"
             className="ml-2"
           >
-            {resetBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldOff className="mr-2 h-4 w-4" />}
+            {resetBusy ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <ShieldOff className="mr-2 h-4 w-4" />
+            )}
             Reset Facebook permissions
           </Button>
         </CardContent>
@@ -216,8 +239,9 @@ function FacebookConnectPage() {
           </CardHeader>
           <CardContent>
             <div className="mb-4 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-              If the Page you want is missing here, Facebook did not return it to the app. Reset permissions,
-              connect again, then choose access to all current and future Pages or explicitly select the target Page.
+              If the Page you want is missing here, Facebook did not return it to the app. Reset
+              permissions, connect again, then choose access to all current and future Pages or
+              explicitly select the target Page.
             </div>
             {directLookupMessage && (
               <div className="mb-4 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">

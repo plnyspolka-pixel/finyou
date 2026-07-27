@@ -57,7 +57,10 @@ function stableId(city: string, r: RcnGmlRecord): string {
   return `${city}-${h.toString(36)}`;
 }
 
-interface GmlFile { file: string; city: string; }
+interface GmlFile {
+  file: string;
+  city: string;
+}
 
 function collectGmlFiles(root: string): GmlFile[] {
   const all = walk(root);
@@ -113,7 +116,11 @@ async function main() {
 
   for (const { file, city } of files) {
     let xml: string;
-    try { xml = readFileSync(file, "utf-8"); } catch { continue; }
+    try {
+      xml = readFileSync(file, "utf-8");
+    } catch {
+      continue;
+    }
     const records = parseRcnGml(xml);
     totalParsed += records.length;
     for (const r of records) {
@@ -141,7 +148,9 @@ async function main() {
 
     for (let i = 0; i < rows.length; i += 500) {
       const batch = rows.slice(i, i + 500);
-      const { error } = await supabase.from("rcn_transactions").upsert(batch, { onConflict: "source,external_id" });
+      const { error } = await supabase
+        .from("rcn_transactions")
+        .upsert(batch, { onConflict: "source,external_id" });
       if (error) console.error(`[import-rcn] upsert ${basename(file)} [${i}]: ${error.message}`);
       else totalUpserted += batch.length;
     }
@@ -153,4 +162,7 @@ async function main() {
   else console.log(`[import-rcn] zapisano/zaktualizowano: ${totalUpserted}`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

@@ -41,7 +41,10 @@ export interface LoanForScoring {
  *   B (50) — wypełniony wniosek bez nieruchomości.
  *   C — tylko podstawowe dane kontaktowe.
  */
-export function scoreLead(lead: LeadForScoring, loan: LoanForScoring | null): {
+export function scoreLead(
+  lead: LeadForScoring,
+  loan: LoanForScoring | null,
+): {
   tier: Tier;
   score: number;
   reason: string;
@@ -54,7 +57,7 @@ export function scoreLead(lead: LeadForScoring, loan: LoanForScoring | null): {
   const hasName = Boolean(lead.first_name && lead.last_name);
   const hasLoan = Boolean(lead.loan_application_id);
   const hasAnyProperty = Boolean(
-    loan?.has_property_record || loan?.property_type || loan?.property_quality
+    loan?.has_property_record || loan?.property_type || loan?.property_quality,
   );
   const isFlat = (loan?.property_type ?? "").toLowerCase() === "mieszkanie";
   const amount = Number(loan?.loan_amount ?? 0);
@@ -127,11 +130,7 @@ function buildUserData(lead: LeadForScoring): Record<string, string[] | string> 
   return ud;
 }
 
-export type CapiEventName =
-  | "Lead"
-  | "SubmitApplication"
-  | "Purchase"
-  | "BadLead"; // custom — sygnał negatywny
+export type CapiEventName = "Lead" | "SubmitApplication" | "Purchase" | "BadLead"; // custom — sygnał negatywny
 
 export async function sendCapiEvent(opts: {
   supabaseAdmin: any;
@@ -191,7 +190,7 @@ export async function sendCapiEvent(opts: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      }
+      },
     );
     const json: any = await res.json().catch(() => ({}));
     const ok = res.ok && !json?.error;
@@ -215,7 +214,11 @@ export async function sendCapiEvent(opts: {
         .eq("id", opts.lead.id);
     }
 
-    return { ok, eventId, error: ok ? undefined : JSON.stringify(json?.error ?? json).slice(0, 300) };
+    return {
+      ok,
+      eventId,
+      error: ok ? undefined : JSON.stringify(json?.error ?? json).slice(0, 300),
+    };
   } catch (e: any) {
     await opts.supabaseAdmin
       .from("meta_capi_events")
@@ -235,7 +238,9 @@ export async function rescoreAndSend(opts: {
 }): Promise<{ tier: Tier; score: number; reason: string; capi?: { ok: boolean; error?: string } }> {
   const { data: lead, error: lErr } = await opts.supabaseAdmin
     .from("leads")
-    .select("id, first_name, last_name, email, phone_normalized, consent_rodo, loan_application_id, marked_bad_lead, application_data")
+    .select(
+      "id, first_name, last_name, email, phone_normalized, consent_rodo, loan_application_id, marked_bad_lead, application_data",
+    )
     .eq("id", opts.leadId)
     .single();
   if (lErr || !lead) throw new Error(`Lead not found: ${lErr?.message ?? opts.leadId}`);

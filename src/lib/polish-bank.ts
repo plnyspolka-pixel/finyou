@@ -53,7 +53,10 @@ export const POLISH_BANKS: Record<string, string> = {
 };
 
 export function cleanAccountInput(raw: string): string {
-  return (raw ?? "").replace(/[\s\-]/g, "").replace(/[^0-9A-Za-z]/g, "").toUpperCase();
+  return (raw ?? "")
+    .replace(/[\s\-]/g, "")
+    .replace(/[^0-9A-Za-z]/g, "")
+    .toUpperCase();
 }
 
 function ibanMod97(iban: string): number {
@@ -73,7 +76,12 @@ export function detectPolishBankAccount(raw: string): BankDetectResult {
   const cleaned = cleanAccountInput(input);
 
   if (!cleaned) {
-    return { success: false, isValid: false, errorCode: "TOO_SHORT", message: "Wpisz 26-cyfrowy numer rachunku albo IBAN." };
+    return {
+      success: false,
+      isValid: false,
+      errorCode: "TOO_SHORT",
+      message: "Wpisz 26-cyfrowy numer rachunku albo IBAN.",
+    };
   }
 
   let format: "NRB" | "IBAN";
@@ -84,7 +92,12 @@ export function detectPolishBankAccount(raw: string): BankDetectResult {
     format = "IBAN";
     iban = cleaned;
     if (iban.length !== 28 || !/^PL\d{26}$/.test(iban)) {
-      return { success: false, isValid: false, errorCode: "INVALID_ACCOUNT_NUMBER", message: "Numer rachunku bankowego jest nieprawidłowy." };
+      return {
+        success: false,
+        isValid: false,
+        errorCode: "INVALID_ACCOUNT_NUMBER",
+        message: "Numer rachunku bankowego jest nieprawidłowy.",
+      };
     }
     nrb = iban.slice(2);
   } else if (/^\d{26}$/.test(cleaned)) {
@@ -93,13 +106,28 @@ export function detectPolishBankAccount(raw: string): BankDetectResult {
     iban = "PL" + nrb;
   } else {
     if (/^\d+$/.test(cleaned) && cleaned.length < 26) {
-      return { success: false, isValid: false, errorCode: "TOO_SHORT", message: "Wpisz 26-cyfrowy numer rachunku albo IBAN." };
+      return {
+        success: false,
+        isValid: false,
+        errorCode: "TOO_SHORT",
+        message: "Wpisz 26-cyfrowy numer rachunku albo IBAN.",
+      };
     }
-    return { success: false, isValid: false, errorCode: "INVALID_ACCOUNT_NUMBER", message: "Numer rachunku bankowego jest nieprawidłowy." };
+    return {
+      success: false,
+      isValid: false,
+      errorCode: "INVALID_ACCOUNT_NUMBER",
+      message: "Numer rachunku bankowego jest nieprawidłowy.",
+    };
   }
 
   if (ibanMod97(iban) !== 1) {
-    return { success: false, isValid: false, errorCode: "INVALID_ACCOUNT_NUMBER", message: "Numer rachunku bankowego jest nieprawidłowy." };
+    return {
+      success: false,
+      isValid: false,
+      errorCode: "INVALID_ACCOUNT_NUMBER",
+      message: "Numer rachunku bankowego jest nieprawidłowy.",
+    };
   }
 
   const clearingNumber = nrb.slice(2, 10);
@@ -119,14 +147,21 @@ export function detectPolishBankAccount(raw: string): BankDetectResult {
     clearingNumber,
     branchIdentifier,
     bankName,
-    message: bankName ? `Bank: ${bankName}` : "Numer rachunku jest poprawny, ale bank nie został rozpoznany.",
+    message: bankName
+      ? `Bank: ${bankName}`
+      : "Numer rachunku jest poprawny, ale bank nie został rozpoznany.",
   };
 }
 
 export function formatAccountGroups(nrbOrIban: string): string {
   const c = cleanAccountInput(nrbOrIban);
-  if (/^PL\d{26}$/.test(c)) return c.replace(/^(PL)(\d{2})(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})$/, "$1$2 $3 $4 $5 $6 $7 $8");
-  if (/^\d{26}$/.test(c)) return c.replace(/^(\d{2})(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})$/, "$1 $2 $3 $4 $5 $6 $7");
+  if (/^PL\d{26}$/.test(c))
+    return c.replace(
+      /^(PL)(\d{2})(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})$/,
+      "$1$2 $3 $4 $5 $6 $7 $8",
+    );
+  if (/^\d{26}$/.test(c))
+    return c.replace(/^(\d{2})(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})(\d{4})$/, "$1 $2 $3 $4 $5 $6 $7");
   return nrbOrIban;
 }
 

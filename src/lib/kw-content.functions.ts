@@ -34,7 +34,9 @@ export const getKwForApplication = createServerFn({ method: "POST" })
     if (!kw) return { hasKw: false as const };
     const { data: row, error } = await context.supabase
       .from("kw_documents")
-      .select("status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error, ordered_at")
+      .select(
+        "status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error, ordered_at",
+      )
       .eq("kw_number", kw)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -56,10 +58,12 @@ export const getKwForApplication = createServerFn({ method: "POST" })
 export const fetchKwForApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
-    z.object({
-      loanApplicationId: z.string().uuid(),
-      force: z.boolean().optional(),
-    }).parse(i),
+    z
+      .object({
+        loanApplicationId: z.string().uuid(),
+        force: z.boolean().optional(),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     const { userId, supabase } = context;

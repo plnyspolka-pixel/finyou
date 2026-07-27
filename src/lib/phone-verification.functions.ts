@@ -19,10 +19,19 @@ export const sendPhoneOtp = createServerFn({ method: "POST" })
     if (!valid || !normalized) return { ok: false as const, reason: "invalid_phone" as const };
 
     // throttle: max 1 SMS / 60 s
-    const { data: row } = await supabase.from("clients").select("id, phone_otp_sent_at").eq("user_id", userId).maybeSingle();
+    const { data: row } = await supabase
+      .from("clients")
+      .select("id, phone_otp_sent_at")
+      .eq("user_id", userId)
+      .maybeSingle();
     if (row?.phone_otp_sent_at) {
       const diff = Date.now() - new Date(row.phone_otp_sent_at).getTime();
-      if (diff < 60_000) return { ok: false as const, reason: "rate_limited" as const, retryInSec: Math.ceil((60_000 - diff) / 1000) };
+      if (diff < 60_000)
+        return {
+          ok: false as const,
+          reason: "rate_limited" as const,
+          retryInSec: Math.ceil((60_000 - diff) / 1000),
+        };
     }
 
     const code = String(Math.floor(100000 + Math.random() * 900000));
@@ -40,7 +49,9 @@ export const sendPhoneOtp = createServerFn({ method: "POST" })
     if (row?.id) {
       await supabase.from("clients").update(payload).eq("id", row.id);
     } else {
-      await supabase.from("clients").insert({ ...payload, user_id: userId, first_name: "", last_name: "" });
+      await supabase
+        .from("clients")
+        .insert({ ...payload, user_id: userId, first_name: "", last_name: "" });
     }
 
     const sms = await sendSmsInternal({
@@ -48,7 +59,8 @@ export const sendPhoneOtp = createServerFn({ method: "POST" })
       body: `Finance You: Twój kod weryfikacyjny to ${code}. Wazny 10 min.`,
       source: "phone_verification",
     });
-    if (!sms.ok) return { ok: false as const, reason: "sms_failed" as const, error: sms.error ?? "sms_error" };
+    if (!sms.ok)
+      return { ok: false as const, reason: "sms_failed" as const, error: sms.error ?? "sms_error" };
 
     return { ok: true as const };
   });
@@ -59,7 +71,11 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ code: z.string().min(4).max(8) }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: row } = await supabase.from("clients").select("id, phone_otp_hash, phone_otp_target, phone_otp_expires_at, phone_otp_attempts").eq("user_id", userId).maybeSingle();
+    const { data: row } = await supabase
+      .from("clients")
+      .select("id, phone_otp_hash, phone_otp_target, phone_otp_expires_at, phone_otp_attempts")
+      .eq("user_id", userId)
+      .maybeSingle();
     if (!row?.phone_otp_hash || !row.phone_otp_target || !row.phone_otp_expires_at) {
       return { ok: false as const, reason: "no_code" as const };
     }
@@ -73,19 +89,25 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
     const submitted = data.code.replace(/\D/g, "");
     const expected = hashCode(submitted, userId);
     if (expected !== row.phone_otp_hash) {
-      await supabase.from("clients").update({ phone_otp_attempts: (row.phone_otp_attempts ?? 0) + 1 }).eq("id", row.id);
+      await supabase
+        .from("clients")
+        .update({ phone_otp_attempts: (row.phone_otp_attempts ?? 0) + 1 })
+        .eq("id", row.id);
       return { ok: false as const, reason: "wrong_code" as const };
     }
 
-    await supabase.from("clients").update({
-      phone_verified_at: new Date().toISOString(),
-      phone_verified_value: row.phone_otp_target,
-      phone: row.phone_otp_target,
-      phone_otp_hash: null,
-      phone_otp_target: null,
-      phone_otp_expires_at: null,
-      phone_otp_attempts: 0,
-    }).eq("id", row.id);
+    await supabase
+      .from("clients")
+      .update({
+        phone_verified_at: new Date().toISOString(),
+        phone_verified_value: row.phone_otp_target,
+        phone: row.phone_otp_target,
+        phone_otp_hash: null,
+        phone_otp_target: null,
+        phone_otp_expires_at: null,
+        phone_otp_attempts: 0,
+      })
+      .eq("id", row.id);
 
     return { ok: true as const, phone: row.phone_otp_target };
   });

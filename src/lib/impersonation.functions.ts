@@ -5,9 +5,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const impersonateUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z.object({ email: z.string().email() }).parse(input),
-  )
+  .inputValidator((input) => z.object({ email: z.string().email() }).parse(input))
   .handler(async ({ data, context }) => {
     // Caller must be administrator
     const { data: rows, error: roleErr } = await supabaseAdmin

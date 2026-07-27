@@ -38,10 +38,39 @@ export interface RcnGmlRecord {
 const PL_LAT = [48.5, 55.5] as const;
 const PL_LNG = [13.5, 24.6] as const;
 
-const PRICE_KEYS = ["cena_brutto", "cenatransakcji", "cena_transakcji", "cenanieruchomosci", "cena"];
-const AREA_KEYS = ["pole_powierzchni", "polepowierzchni", "powierzchnia_uzytkowa", "powierzchniauzytkowa", "powierzchnia", "obszar", "pole"];
-const DATE_KEYS = ["data_zawarcia", "datazawarcia", "data_transakcji", "datatransakcji", "data_aktu", "dataaktu", "data_czynnosci", "data"];
-const LANDUSE_KEYS = ["sposob_korzystania", "sposobkorzystania", "funkcja", "rodzaj_uzytku", "przeznaczenie"];
+const PRICE_KEYS = [
+  "cena_brutto",
+  "cenatransakcji",
+  "cena_transakcji",
+  "cenanieruchomosci",
+  "cena",
+];
+const AREA_KEYS = [
+  "pole_powierzchni",
+  "polepowierzchni",
+  "powierzchnia_uzytkowa",
+  "powierzchniauzytkowa",
+  "powierzchnia",
+  "obszar",
+  "pole",
+];
+const DATE_KEYS = [
+  "data_zawarcia",
+  "datazawarcia",
+  "data_transakcji",
+  "datatransakcji",
+  "data_aktu",
+  "dataaktu",
+  "data_czynnosci",
+  "data",
+];
+const LANDUSE_KEYS = [
+  "sposob_korzystania",
+  "sposobkorzystania",
+  "funkcja",
+  "rodzaj_uzytku",
+  "przeznaczenie",
+];
 const KIND_KEYS = ["rodzaj_nieruchomosci", "rodzajnieruchomosci", "rodzaj", "typ", "przedmiot"];
 
 const COMBINING = new RegExp("[\\u0300-\\u036f]", "g");
@@ -52,7 +81,11 @@ function norm(s: string): string {
 function toNumber(v: unknown): number | null {
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
   if (typeof v !== "string") return null;
-  const cleaned = v.trim().replace(/\s/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", ".");
+  const cleaned = v
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/\.(?=\d{3}\b)/g, "")
+    .replace(",", ".");
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
@@ -91,7 +124,10 @@ function flattenLeaves(node: unknown, out: Leaf[], keyHint = ""): void {
 
 function findByKeys(leaves: Leaf[], keys: string[]): string | null {
   for (const k of keys) {
-    const hit = leaves.find((l) => l.key.includes(k) && !l.key.includes("slownie") && l.value.trim() && l.value.trim() !== "-");
+    const hit = leaves.find(
+      (l) =>
+        l.key.includes(k) && !l.key.includes("slownie") && l.value.trim() && l.value.trim() !== "-",
+    );
     if (hit) return hit.value;
   }
   return null;
@@ -99,21 +135,37 @@ function findByKeys(leaves: Leaf[], keys: string[]): string | null {
 
 // Znajdź współrzędne w liściach — pola pos/coordinates/corner z geometrii GML (EPSG:2180).
 function findCoords(leaves: Leaf[]): [number, number] | null {
-  const geomLeaf = leaves.find((l) => /(^|_)(pos|coordinates|lowercorner|uppercorner|point)($|_)/.test(l.key) || l.key.endsWith("pos") || l.key.includes("coord"));
-  const candidates = geomLeaf ? [geomLeaf.value] : leaves.filter((l) => /^-?\d{5,7}[\s,]+-?\d{5,7}/.test(l.value.trim())).map((l) => l.value);
+  const geomLeaf = leaves.find(
+    (l) =>
+      /(^|_)(pos|coordinates|lowercorner|uppercorner|point)($|_)/.test(l.key) ||
+      l.key.endsWith("pos") ||
+      l.key.includes("coord"),
+  );
+  const candidates = geomLeaf
+    ? [geomLeaf.value]
+    : leaves.filter((l) => /^-?\d{5,7}[\s,]+-?\d{5,7}/.test(l.value.trim())).map((l) => l.value);
   for (const raw of candidates) {
-    const nums = raw.trim().split(/[\s,]+/).map(Number).filter(Number.isFinite);
+    const nums = raw
+      .trim()
+      .split(/[\s,]+/)
+      .map(Number)
+      .filter(Number.isFinite);
     if (nums.length < 2) continue;
     const [a, b] = nums;
     // Spróbuj obu kolejności osi (easting,northing) i (northing,easting) — wybierz tę,
     // która po reprojekcji trafia w granice Polski.
-    for (const [easting, northing] of [[a, b], [b, a]] as Array<[number, number]>) {
+    for (const [easting, northing] of [
+      [a, b],
+      [b, a],
+    ] as Array<[number, number]>) {
       try {
         const [lng, lat] = proj4("EPSG:2180", "EPSG:4326", [easting, northing]) as [number, number];
         if (lat >= PL_LAT[0] && lat <= PL_LAT[1] && lng >= PL_LNG[0] && lng <= PL_LNG[1]) {
           return [Math.round(lat * 1e6) / 1e6, Math.round(lng * 1e6) / 1e6];
         }
-      } catch { /* próbuj dalej */ }
+      } catch {
+        /* próbuj dalej */
+      }
     }
   }
   return null;
@@ -121,14 +173,21 @@ function findCoords(leaves: Leaf[]): [number, number] | null {
 
 function inferKind(leaves: Leaf[], typeName: string): RcnPropertyKind {
   const explicit = findByKeys(leaves, KIND_KEYS);
-  const blob = norm(typeName) + " " + (explicit ? norm(explicit) + " " : "") + leaves.map((l) => l.key).join(" ");
+  const blob =
+    norm(typeName) +
+    " " +
+    (explicit ? norm(explicit) + " " : "") +
+    leaves.map((l) => l.key).join(" ");
   if (/lokal/.test(blob)) return "lokal";
   if (/budynek|budynkow/.test(blob)) return "budynek";
   if (/dzialk|dzialek|grunt|parcela|dzialkowa/.test(blob)) return "dzialka";
   return "inne";
 }
 
-interface FeatureNode { node: unknown; typeName: string; }
+interface FeatureNode {
+  node: unknown;
+  typeName: string;
+}
 
 // Zbiera obiekty-cechy z drzewa GML (featureMember / member / *Member) wraz z nazwą
 // typu (elementu-owijki), która niesie rodzaj nieruchomości (Lokal/Budynek/Działka).
@@ -136,15 +195,21 @@ function collectFeatureNodes(root: unknown): FeatureNode[] {
   const nodes: FeatureNode[] = [];
   const visit = (node: unknown) => {
     if (node == null || typeof node !== "object") return;
-    if (Array.isArray(node)) { node.forEach(visit); return; }
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
     for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
       if (/member$/i.test(k)) {
         const members = Array.isArray(v) ? v : [v];
         for (const m of members) {
           // featureMember zwykle owija jeden obiekt-cechę (klucz = nazwa typu).
           if (m && typeof m === "object" && !Array.isArray(m)) {
-            const childKeys = Object.keys(m as Record<string, unknown>).filter((kk) => !kk.startsWith("@_"));
-            if (childKeys.length === 1) nodes.push({ node: (m as any)[childKeys[0]], typeName: childKeys[0] });
+            const childKeys = Object.keys(m as Record<string, unknown>).filter(
+              (kk) => !kk.startsWith("@_"),
+            );
+            if (childKeys.length === 1)
+              nodes.push({ node: (m as any)[childKeys[0]], typeName: childKeys[0] });
             else nodes.push({ node: m, typeName: k });
           } else nodes.push({ node: m, typeName: k });
         }
@@ -166,7 +231,11 @@ export function parseRcnGml(xml: string): RcnGmlRecord[] {
     trimValues: true,
   });
   let doc: unknown;
-  try { doc = parser.parse(xml); } catch { return []; }
+  try {
+    doc = parser.parse(xml);
+  } catch {
+    return [];
+  }
 
   const featureNodes = collectFeatureNodes(doc);
   // Fallback: brak *member — potraktuj dzieci-tablice korzenia jako cechy.
@@ -186,9 +255,10 @@ export function parseRcnGml(xml: string): RcnGmlRecord[] {
     const leaves: Leaf[] = [];
     flattenLeaves(node, leaves);
     if (leaves.length === 0) continue;
-    const attrId = node && typeof node === "object" && !Array.isArray(node)
-      ? ((node as any)["@_id"] ?? (node as any)["@_gml:id"] ?? null)
-      : null;
+    const attrId =
+      node && typeof node === "object" && !Array.isArray(node)
+        ? ((node as any)["@_id"] ?? (node as any)["@_gml:id"] ?? null)
+        : null;
 
     const coords = findCoords(leaves);
     if (!coords) continue; // bez lokalizacji rekord bezużyteczny do zapytań przestrzennych
@@ -203,14 +273,19 @@ export function parseRcnGml(xml: string): RcnGmlRecord[] {
     // Dla działek powierzchnia to grunt (m²) → także w ha; dla lokali/budynków — m² użytkowe.
     const areaM2 = areaRaw != null && areaRaw > 0 ? areaRaw : null;
     const areaHa = kind === "dzialka" && areaM2 != null ? areaM2 / 10_000 : null;
-    const pricePerM2 = pricePln != null && areaM2 != null && areaM2 > 0 && kind !== "dzialka" ? pricePln / areaM2 : null;
+    const pricePerM2 =
+      pricePln != null && areaM2 != null && areaM2 > 0 && kind !== "dzialka"
+        ? pricePln / areaM2
+        : null;
     const pricePerHa = pricePln != null && areaHa != null && areaHa > 0 ? pricePln / areaHa : null;
 
     const idLeaf = leaves.find((l) => /(^|_)(id|identyfikator|lokalnyid|idiip)($|_)/.test(l.key));
     out.push({
       externalId: (attrId ? String(attrId) : null) ?? idLeaf?.value ?? null,
       propertyKind: kind,
-      lat, lng, txDate,
+      lat,
+      lng,
+      txDate,
       pricePln,
       areaM2,
       areaHa,

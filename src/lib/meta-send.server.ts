@@ -8,9 +8,7 @@ export async function sendMetaMessage(opts: {
 }): Promise<{ ok: boolean; messageId?: string; error?: string }> {
   // Preferuj token dedykowany dla platformy (IG ma osobny), potem ogólny Page token, potem fallback.
   const token =
-    (opts.platform === "instagram"
-      ? process.env.META_IG_PAGE_ACCESS_TOKEN
-      : undefined) ??
+    (opts.platform === "instagram" ? process.env.META_IG_PAGE_ACCESS_TOKEN : undefined) ??
     process.env.META_PAGE_ACCESS_TOKEN ??
     process.env.META_ACCESS_TOKEN;
   if (!token) return { ok: false, error: "META_PAGE_ACCESS_TOKEN / META_ACCESS_TOKEN missing" };

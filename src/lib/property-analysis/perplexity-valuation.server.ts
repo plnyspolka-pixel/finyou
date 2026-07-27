@@ -22,7 +22,6 @@ export interface PerplexityValuationInput {
   declaredPropertyValuePln?: number | null;
 }
 
-
 export interface PerplexityValuation {
   status: "success" | "no_data" | "error";
   pricePerM2Median: number | null;
@@ -54,20 +53,27 @@ const PROPERTY_LABELS: Record<string, string> = {
 function buildPrompt(input: PerplexityValuationInput): string {
   const typeLabel = PROPERTY_LABELS[String(input.propertyType)] ?? "nieruchomość";
   const loc = [input.address, input.city, input.voivodeship].filter(Boolean).join(", ") || "Polska";
-  const area =
-    input.usableAreaM2 ? `${input.usableAreaM2} m² pow. użytkowej`
-    : input.buildingAreaM2 ? `${input.buildingAreaM2} m² pow. zabudowy`
-    : input.landAreaHa ? `${input.landAreaHa} ha`
-    : input.landAreaM2 ? `${input.landAreaM2} m² działki`
-    : "powierzchnia nieznana";
+  const area = input.usableAreaM2
+    ? `${input.usableAreaM2} m² pow. użytkowej`
+    : input.buildingAreaM2
+      ? `${input.buildingAreaM2} m² pow. zabudowy`
+      : input.landAreaHa
+        ? `${input.landAreaHa} ha`
+        : input.landAreaM2
+          ? `${input.landAreaM2} m² działki`
+          : "powierzchnia nieznana";
   const declared = input.declaredPropertyValuePln
     ? `Wartość deklarowana przez właściciela: ${input.declaredPropertyValuePln.toLocaleString("pl-PL")} PLN.`
     : "";
   const extraParams = [
     input.landUse ? `- Rodzaj/sposób korzystania: ${input.landUse}` : null,
     input.roomCount != null ? `- Liczba izb/pokoi: ${input.roomCount}` : null,
-    input.floorPietro != null ? `- Kondygnacja: ${input.floorPietro === 0 ? "parter" : input.floorPietro + ". piętro"}` : null,
-  ].filter(Boolean).join("\n");
+    input.floorPietro != null
+      ? `- Kondygnacja: ${input.floorPietro === 0 ? "parter" : input.floorPietro + ". piętro"}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
   const sourceNote = input.parametersFromKw
     ? "\n\nParametry nieruchomości oraz lokalizacja pochodzą z księgi wieczystej (dział I-O — oznaczenie nieruchomości). Wyceniaj DOKŁADNIE taką nieruchomość o tych parametrach, położoną w podanej lokalizacji."
     : "";
@@ -118,10 +124,16 @@ function tryParseJson(s: string): any | null {
   // wyciągnij pierwszy obiekt JSON z tekstu (na wypadek otoczki ```json ... ```)
   const match = s.match(/\{[\s\S]*\}/);
   if (!match) return null;
-  try { return JSON.parse(match[0]); } catch { return null; }
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
 }
 
-export async function perplexityValuation(input: PerplexityValuationInput): Promise<PerplexityValuation> {
+export async function perplexityValuation(
+  input: PerplexityValuationInput,
+): Promise<PerplexityValuation> {
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) {
     return emptyResult("error", "Brak PERPLEXITY_API_KEY w środowisku.");
@@ -137,15 +149,27 @@ export async function perplexityValuation(input: PerplexityValuationInput): Prom
       body: JSON.stringify({
         model: "sonar-pro",
         messages: [
-          { role: "system", content: "Jesteś analitykiem rynku nieruchomości w Polsce. Odpowiadasz wyłącznie poprawnym JSON-em, bez dodatkowych komentarzy ani backticków." },
+          {
+            role: "system",
+            content:
+              "Jesteś analitykiem rynku nieruchomości w Polsce. Odpowiadasz wyłącznie poprawnym JSON-em, bez dodatkowych komentarzy ani backticków.",
+          },
           { role: "user", content: buildPrompt(input) },
         ],
         temperature: 0.2,
         search_recency_filter: "year",
         search_domain_filter: [
-          "otodom.pl", "olx.pl", "domiporta.pl", "gratka.pl", "morizon.pl",
-          "nieruchomosci-online.pl", "rynekpierwotny.pl", "bankier.pl",
-          "gethome.pl", "kowr.gov.pl", "stat.gov.pl",
+          "otodom.pl",
+          "olx.pl",
+          "domiporta.pl",
+          "gratka.pl",
+          "morizon.pl",
+          "nieruchomosci-online.pl",
+          "rynekpierwotny.pl",
+          "bankier.pl",
+          "gethome.pl",
+          "kowr.gov.pl",
+          "stat.gov.pl",
         ],
       }),
     });
@@ -161,7 +185,11 @@ export async function perplexityValuation(input: PerplexityValuationInput): Prom
     const parsed = tryParseJson(content);
 
     if (!parsed) {
-      return { ...emptyResult("no_data", "Nie udało się sparsować odpowiedzi Perplexity."), rawAnswer: content, citations };
+      return {
+        ...emptyResult("no_data", "Nie udało się sparsować odpowiedzi Perplexity."),
+        rawAnswer: content,
+        citations,
+      };
     }
 
     return {
@@ -173,10 +201,14 @@ export async function perplexityValuation(input: PerplexityValuationInput): Prom
       pricePerHa: numOrNull(parsed.pricePerHa),
       estimatedValueLowPln: numOrNull(parsed.estimatedValueLowPln),
       estimatedValueHighPln: numOrNull(parsed.estimatedValueHighPln),
-      marketTrend: ["rosnacy", "stabilny", "spadkowy", "nieznany"].includes(parsed.marketTrend) ? parsed.marketTrend : "nieznany",
+      marketTrend: ["rosnacy", "stabilny", "spadkowy", "nieznany"].includes(parsed.marketTrend)
+        ? parsed.marketTrend
+        : "nieznany",
       liquidityComment: String(parsed.liquidityComment ?? ""),
       rationale: String(parsed.rationale ?? ""),
-      comparablesFound: Number.isFinite(Number(parsed.comparablesFound)) ? Math.max(0, Math.round(Number(parsed.comparablesFound))) : 0,
+      comparablesFound: Number.isFinite(Number(parsed.comparablesFound))
+        ? Math.max(0, Math.round(Number(parsed.comparablesFound)))
+        : 0,
       citations,
       rawAnswer: content,
     };
@@ -193,10 +225,20 @@ function numOrNull(v: any): number | null {
 function emptyResult(status: "no_data" | "error", message: string): PerplexityValuation {
   return {
     status,
-    pricePerM2Median: null, pricePerM2Average: null, pricePerM2Min: null, pricePerM2Max: null,
-    pricePerHa: null, estimatedValueLowPln: null, estimatedValueHighPln: null,
-    marketTrend: "nieznany", liquidityComment: "", rationale: "",
-    comparablesFound: 0, citations: [], rawAnswer: "", errorMessage: message,
+    pricePerM2Median: null,
+    pricePerM2Average: null,
+    pricePerM2Min: null,
+    pricePerM2Max: null,
+    pricePerHa: null,
+    estimatedValueLowPln: null,
+    estimatedValueHighPln: null,
+    marketTrend: "nieznany",
+    liquidityComment: "",
+    rationale: "",
+    comparablesFound: 0,
+    citations: [],
+    rawAnswer: "",
+    errorMessage: message,
   };
 }
 
@@ -209,7 +251,8 @@ export function perplexityToRcnStats(p: PerplexityValuation, isLand: boolean): R
       count: p.comparablesFound,
       median: p.pricePerHa,
       average: p.pricePerHa,
-      q1: null, q3: null,
+      q1: null,
+      q3: null,
       unit: "pln_per_ha",
       radiusM: 0,
       periodMonths: 12,
@@ -221,7 +264,8 @@ export function perplexityToRcnStats(p: PerplexityValuation, isLand: boolean): R
     count: p.comparablesFound,
     median: p.pricePerM2Median ?? p.pricePerM2Average,
     average: p.pricePerM2Average ?? p.pricePerM2Median,
-    q1: p.pricePerM2Min, q3: p.pricePerM2Max,
+    q1: p.pricePerM2Min,
+    q3: p.pricePerM2Max,
     unit: "pln_per_m2",
     radiusM: 0,
     periodMonths: 12,

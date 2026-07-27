@@ -28,7 +28,10 @@ function textToInnerHtml(text: string): string {
   );
   const paragraphs = linked
     .split(/\n{2,}/)
-    .map((p) => `<p style="font-size:14px;color:#222;line-height:1.6;margin:0 0 14px">${p.replace(/\n/g, "<br/>")}</p>`)
+    .map(
+      (p) =>
+        `<p style="font-size:14px;color:#222;line-height:1.6;margin:0 0 14px">${p.replace(/\n/g, "<br/>")}</p>`,
+    )
     .join("\n");
   return paragraphs;
 }
@@ -53,8 +56,12 @@ export function wrapBrandedEmail(opts: BrandOptions): string {
     <img src="${FAVICON_URL}" width="64" height="64" alt="Finance You" style="display:block;margin:0 auto 18px;border:0"/>
   </a>
   ${inner}
-  ${showReply ? `<p style="font-size:14px;color:#111;margin:24px 0 6px"><strong>Masz pytanie? Po prostu odpisz na tego maila.</strong></p>
-  <p style="font-size:13px;color:#555;margin:0 0 18px">Czytamy każdą wiadomość — pomożemy rozwiać wątpliwości, doprecyzować warunki lub pokazać alternatywy.</p>` : ""}
+  ${
+    showReply
+      ? `<p style="font-size:14px;color:#111;margin:24px 0 6px"><strong>Masz pytanie? Po prostu odpisz na tego maila.</strong></p>
+  <p style="font-size:13px;color:#555;margin:0 0 18px">Czytamy każdą wiadomość — pomożemy rozwiać wątpliwości, doprecyzować warunki lub pokazać alternatywy.</p>`
+      : ""
+  }
   <hr style="margin:24px 0;border:none;border-top:1px solid #eee"/>
   <a href="https://financeyou.pl" style="display:block;text-align:center;text-decoration:none;margin:0 0 10px">
     <img src="${WORDMARK_URL}" width="180" alt="financeyou.pl" style="display:block;margin:0 auto;border:0;max-width:60%;height:auto"/>

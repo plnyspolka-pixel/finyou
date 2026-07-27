@@ -27,16 +27,24 @@ export interface KwDocumentSections {
 }
 
 function norm(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 }
 
 function matchSad(text: string): string | null {
-  const m = text.match(/prowadzonej\s+przez\s+(S[ĄA]D\s+REJONOWY[^,.;]*?)(?=,|\.|;|\s+[IVX]+\s+WYDZIA|\s+WYDZIA|$)/i);
+  const m = text.match(
+    /prowadzonej\s+przez\s+(S[ĄA]D\s+REJONOWY[^,.;]*?)(?=,|\.|;|\s+[IVX]+\s+WYDZIA|\s+WYDZIA|$)/i,
+  );
   return m ? m[1].replace(/\s+/g, " ").trim() : null;
 }
 
 function matchTyp(text: string): string | null {
-  const m = text.match(/(LOKAL\s+STANOWI[ĄA]CY\s+ODR[ĘE]BN[ĄA]\s+NIERUCHOMO[ŚS][ĆC]|NIERUCHOMO[ŚS][ĆC]\s+GRUNTOWA|NIERUCHOMO[ŚS][ĆC]\s+BUDYNKOWA)/i);
+  const m = text.match(
+    /(LOKAL\s+STANOWI[ĄA]CY\s+ODR[ĘE]BN[ĄA]\s+NIERUCHOMO[ŚS][ĆC]|NIERUCHOMO[ŚS][ĆC]\s+GRUNTOWA|NIERUCHOMO[ŚS][ĆC]\s+BUDYNKOWA)/i,
+  );
   return m ? m[1].replace(/\s+/g, " ").toUpperCase() : null;
 }
 
@@ -52,7 +60,9 @@ function extractDzialki(dzial1o: string | null | undefined): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   // po etykiecie "Numer działki" albo w sekcji "Działki ewidencyjne"
-  for (const m of text.matchAll(/(?:numer\s+dzia[łl]ki|dzia[łl]ki\s+ewidencyjne)[^0-9]{0,40}(\d{1,4}(?:\/\d{1,4})?)/gi)) {
+  for (const m of text.matchAll(
+    /(?:numer\s+dzia[łl]ki|dzia[łl]ki\s+ewidencyjne)[^0-9]{0,40}(\d{1,4}(?:\/\d{1,4})?)/gi,
+  )) {
     const n = m[1];
     if (!seen.has(n)) {
       seen.add(n);
@@ -122,7 +132,12 @@ export function kwDocumentToExtraction(doc: KwDocumentSections): KwExtraction {
       miejscowosc: addr.city ?? null,
       ulica: addr.street ?? null,
       przeznaczenie: pp.kind ?? null,
-      obszar: pp.landAreaHa != null ? `${pp.landAreaHa} HA` : pp.usableAreaM2 != null ? `${pp.usableAreaM2} M2` : null,
+      obszar:
+        pp.landAreaHa != null
+          ? `${pp.landAreaHa} HA`
+          : pp.usableAreaM2 != null
+            ? `${pp.usableAreaM2} M2`
+            : null,
       dzialki: dzialki.length ? dzialki : null,
     },
     dzial2: { wlasciciele },

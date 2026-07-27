@@ -66,15 +66,7 @@ type Props = {
   imgStyle?: CSSProperties;
 };
 
-export function Icon3D({
-  name,
-  size = 64,
-  alt,
-  shadow = true,
-  className,
-  style,
-  imgStyle,
-}: Props) {
+export function Icon3D({ name, size = 64, alt, shadow = true, className, style, imgStyle }: Props) {
   const file = FILES[name] ?? FILES.shield;
   const src = `${BASE}/${file}`;
   const decorative = alt == null;
@@ -102,9 +94,7 @@ export function Icon3D({
           maxWidth: "100%",
           maxHeight: "100%",
           objectFit: "contain",
-          filter: shadow
-            ? "drop-shadow(0 6px 9px oklch(0.16 0.09 265 / 0.28))"
-            : "none",
+          filter: shadow ? "drop-shadow(0 6px 9px oklch(0.16 0.09 265 / 0.28))" : "none",
           ...imgStyle,
         }}
       />

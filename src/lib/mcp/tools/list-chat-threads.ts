@@ -13,7 +13,11 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ loan_application_id, investor_id, limit }, ctx: ToolContext) => {
-    try { requireAuth(ctx); } catch (e) { return fail((e as Error).message); }
+    try {
+      requireAuth(ctx);
+    } catch (e) {
+      return fail((e as Error).message);
+    }
     let q = userClient(ctx)
       .from("chat_threads")
       .select("id, loan_application_id, investor_id, client_id, status, created_at, updated_at")

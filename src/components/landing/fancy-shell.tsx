@@ -20,7 +20,6 @@ export function FancyShell({
   variant?: Variant;
   motion?: boolean;
 }) {
-
   if (variant === "silver") {
     return (
       <div
@@ -35,7 +34,9 @@ export function FancyShell({
             animation: "fy-kw-spin 9s linear infinite",
           }}
         />
-        <div className={`relative overflow-hidden rounded-[22px] p-5 text-slate-800 md:p-6 ${innerClassName}`}>
+        <div
+          className={`relative overflow-hidden rounded-[22px] p-5 text-slate-800 md:p-6 ${innerClassName}`}
+        >
           <span
             aria-hidden
             className="absolute inset-0"
@@ -97,7 +98,9 @@ export function FancyShell({
             animation: motion ? "fy-kw-spin 7s linear infinite" : undefined,
           }}
         />
-        <div className={`relative overflow-hidden rounded-[20px] p-5 text-white md:p-6 ${innerClassName}`}>
+        <div
+          className={`relative overflow-hidden rounded-[20px] p-5 text-white md:p-6 ${innerClassName}`}
+        >
           <span
             aria-hidden
             className="absolute inset-0"
@@ -112,7 +115,8 @@ export function FancyShell({
                 aria-hidden
                 className="absolute -left-10 -top-10 h-40 w-40 rounded-full blur-2xl"
                 style={{
-                  background: "radial-gradient(circle, oklch(0.80 0.18 85 / 0.55), transparent 70%)",
+                  background:
+                    "radial-gradient(circle, oklch(0.80 0.18 85 / 0.55), transparent 70%)",
                   animation: "fy-kw-drift-a 9s ease-in-out infinite alternate",
                 }}
               />
@@ -120,7 +124,8 @@ export function FancyShell({
                 aria-hidden
                 className="absolute -right-12 top-2 h-44 w-44 rounded-full blur-2xl"
                 style={{
-                  background: "radial-gradient(circle, oklch(0.70 0.16 65 / 0.55), transparent 70%)",
+                  background:
+                    "radial-gradient(circle, oklch(0.70 0.16 65 / 0.55), transparent 70%)",
                   animation: "fy-kw-drift-b 11s ease-in-out infinite alternate",
                 }}
               />
@@ -151,7 +156,9 @@ export function FancyShell({
         }}
       />
 
-      <div className={`relative overflow-hidden rounded-[22px] p-5 text-white md:p-6 ${innerClassName}`}>
+      <div
+        className={`relative overflow-hidden rounded-[22px] p-5 text-white md:p-6 ${innerClassName}`}
+      >
         <span
           aria-hidden
           className="absolute inset-0"

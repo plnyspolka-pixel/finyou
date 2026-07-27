@@ -120,7 +120,10 @@ function leksuj(expr: string): Tok[] {
 // ── parser + ewaluacja (zejścia rekurencyjne) ──────────────────
 class Parser {
   private p = 0;
-  constructor(private readonly toks: Tok[], private readonly ctx: Ctx) {}
+  constructor(
+    private readonly toks: Tok[],
+    private readonly ctx: Ctx,
+  ) {}
 
   private peek(): Tok | undefined {
     return this.toks[this.p];

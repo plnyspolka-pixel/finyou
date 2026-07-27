@@ -22,8 +22,7 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: app, error: appErr } = await (supabaseAdmin
-      .from("loan_applications") as any)
+    const { data: app, error: appErr } = await (supabaseAdmin.from("loan_applications") as any)
       .select(
         "id, created_by_partner_user_id, deleted_at, loan_amount, preferred_period_months, client:clients(first_name,last_name,city), properties(property_type,street,address,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)",
       )
@@ -46,26 +45,35 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
       .eq("user_id", context.userId)
       .maybeSingle();
 
-    const p: any = Array.isArray((app as any).properties) ? (app as any).properties[0] : (app as any).properties;
+    const p: any = Array.isArray((app as any).properties)
+      ? (app as any).properties[0]
+      : (app as any).properties;
     const photos: string[] = Array.isArray(p?.photos) ? p.photos.filter(Boolean) : [];
     const kw = p?.land_register_number ?? "—";
     const extraKw: string[] = Array.isArray(p?.additional_land_register_numbers)
       ? p.additional_land_register_numbers.filter(Boolean)
       : [];
-    const address = [p?.street ?? p?.address, p?.city, p?.voivodeship].filter(Boolean).join(", ") || "—";
+    const address =
+      [p?.street ?? p?.address, p?.city, p?.voivodeship].filter(Boolean).join(", ") || "—";
     const kwota = app.loan_amount
-      ? new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN", maximumFractionDigits: 0 }).format(
-          Number(app.loan_amount),
-        )
+      ? new Intl.NumberFormat("pl-PL", {
+          style: "currency",
+          currency: "PLN",
+          maximumFractionDigits: 0,
+        }).format(Number(app.loan_amount))
       : "—";
     const okres = app.preferred_period_months ? `${app.preferred_period_months} mies.` : "—";
     const value = p?.estimated_value
-      ? new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN", maximumFractionDigits: 0 }).format(
-          Number(p.estimated_value),
-        )
+      ? new Intl.NumberFormat("pl-PL", {
+          style: "currency",
+          currency: "PLN",
+          maximumFractionDigits: 0,
+        }).format(Number(p.estimated_value))
       : "—";
 
-    const brokerName = [brokerProfile?.first_name, brokerProfile?.last_name].filter(Boolean).join(" ") || "Pośrednik Finance You";
+    const brokerName =
+      [brokerProfile?.first_name, brokerProfile?.last_name].filter(Boolean).join(" ") ||
+      "Pośrednik Finance You";
     const brokerPhone = brokerProfile?.phone ?? "";
     const brokerEmail = brokerProfile?.email ?? "";
 
@@ -75,14 +83,17 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
     // linki w treści — `file_url`/`photos` to zwykle klucze w Storage, więc
     // linki i tak nie działały u odbiorcy. Serwer pobierze pliki przy wysyłce.
     const isHttp = (s: string) => /^https?:\/\//i.test(s);
-    const baseName = (p: string) => decodeURIComponent(p.split("/").pop() ?? p).split("?")[0] || "plik";
+    const baseName = (p: string) =>
+      decodeURIComponent(p.split("/").pop() ?? p).split("?")[0] || "plik";
 
     const attachments: Array<{ name: string; path?: string | null; url?: string | null }> = [];
     for (const d of docs ?? []) {
       const src = (d as any).file_path ?? (d as any).file_url;
       if (!src) continue;
       const name = (d as any).file_name ?? (d as any).document_type ?? baseName(String(src));
-      attachments.push(isHttp(String(src)) ? { name, url: String(src) } : { name, path: String(src) });
+      attachments.push(
+        isHttp(String(src)) ? { name, url: String(src) } : { name, path: String(src) },
+      );
     }
     const photoAttachments = photos.map((u) =>
       isHttp(u) ? { name: baseName(u), url: u } : { name: baseName(u), path: u },
@@ -132,7 +143,6 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
       </div>
     `;
 
-
     const bodyHtml = `
       <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#0f172a;max-width:640px">
         <p>Dzień dobry,</p>
@@ -162,4 +172,3 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
       attachments,
     };
   });
-

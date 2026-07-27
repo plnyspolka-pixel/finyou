@@ -22,7 +22,9 @@ const blogQO = queryOptions({
   queryFn: async (): Promise<Article[]> => {
     const { data } = await supabase
       .from("ai_seo_articles")
-      .select("id,slug,title,excerpt,reading_minutes,published_at,cover_image_url,cover_image_alt,primary_keyword")
+      .select(
+        "id,slug,title,excerpt,reading_minutes,published_at,cover_image_url,cover_image_alt,primary_keyword",
+      )
       .eq("status", "published")
       .order("published_at", { ascending: false })
       .limit(12);
@@ -36,7 +38,10 @@ export const Route = createFileRoute("/embed/blog")({
   head: () => ({
     meta: [
       { title: "Blog Finance You — najnowsze artykuły" },
-      { name: "description", content: "Zanonimizowany embed najnowszych artykułów z bloga Finance You." },
+      {
+        name: "description",
+        content: "Zanonimizowany embed najnowszych artykułów z bloga Finance You.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -112,7 +117,9 @@ function ArticleCard({ article }: { article: Article }) {
       <div className="border-t border-white/5 bg-gradient-to-r from-sky-500/90 via-sky-500/80 to-indigo-500/80 px-4 py-3 sm:px-5">
         <div className="flex items-center justify-between text-sm font-semibold text-white">
           <span>Czytaj artykuł</span>
-          <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+          <span aria-hidden className="transition-transform group-hover:translate-x-1">
+            →
+          </span>
         </div>
       </div>
     </a>

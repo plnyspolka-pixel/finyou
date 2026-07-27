@@ -24,12 +24,17 @@ export function InvestorDescriptionCard({
   const qc = useQueryClient();
   const assistDesc = useServerFn(assistBusinessDescription);
 
-  useEffect(() => { setText(initialText ?? ""); }, [initialText, loanId]);
+  useEffect(() => {
+    setText(initialText ?? "");
+  }, [initialText, loanId]);
 
   const hasDesc = text.trim().length >= 20;
 
   const generate = async (mode: "draft" | "improve" | "expand") => {
-    if (!loanId) { toast.error("Brak wniosku"); return; }
+    if (!loanId) {
+      toast.error("Brak wniosku");
+      return;
+    }
     setAiBusy(true);
     const t = toast.loading("Generuję opis…");
     try {
@@ -38,29 +43,39 @@ export function InvestorDescriptionCard({
       toast.success("Gotowe — sprawdź i popraw wedle uznania.", { id: t });
     } catch (e: any) {
       toast.error(e?.message ?? "Błąd AI", { id: t });
-    } finally { setAiBusy(false); }
+    } finally {
+      setAiBusy(false);
+    }
   };
 
   const save = async () => {
     if (!loanId) return;
-    if (!hasDesc) { toast.error("Opis powinien mieć min. 20 znaków"); return; }
+    if (!hasDesc) {
+      toast.error("Opis powinien mieć min. 20 znaków");
+      return;
+    }
     setSaving(true);
     try {
-      const { error } = await supabase.from("loan_applications")
-        .update({ investor_description: text.trim() }).eq("id", loanId);
+      const { error } = await supabase
+        .from("loan_applications")
+        .update({ investor_description: text.trim() })
+        .eq("id", loanId);
       if (error) throw error;
       toast.success("Opis zapisany");
       void qc.invalidateQueries({ queryKey: ["client-loan-desc", loanId] });
       onSaved?.();
     } catch (e: any) {
       toast.error(e?.message ?? "Błąd zapisu");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="space-y-3">
       <div className="text-xs text-slate-600">
-        2–5 zdań — po co potrzebujesz finansowania i jak je spłacisz. Dobry opis przyciąga lepsze oferty.
+        2–5 zdań — po co potrzebujesz finansowania i jak je spłacisz. Dobry opis przyciąga lepsze
+        oferty.
       </div>
       <Textarea
         rows={5}
@@ -77,7 +92,11 @@ export function InvestorDescriptionCard({
           disabled={aiBusy}
           className="rounded-xl bg-slate-900 font-semibold text-white hover:bg-slate-800"
         >
-          {aiBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+          {aiBusy ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4" />
+          )}
           {text.trim() ? "Popraw opis (AI)" : "Wygeneruj opis (AI)"}
         </Button>
         {text.trim() && (

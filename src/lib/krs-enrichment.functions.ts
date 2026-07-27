@@ -70,7 +70,12 @@ const InputSchema = z.object({
   representationMethodRaw: z.string().trim().max(2000).optional().default(""),
 });
 
-type CandidateFromAI = { fullName: string; function?: string; confidence?: number; source?: string };
+type CandidateFromAI = {
+  fullName: string;
+  function?: string;
+  confidence?: number;
+  source?: string;
+};
 
 function buildCacheKey(d: z.infer<typeof InputSchema>) {
   return [d.krs || "", d.nip || "", d.companyName || "", d.maskedPerson, d.function || ""]
@@ -82,7 +87,8 @@ async function askPerplexity(input: z.infer<typeof InputSchema>): Promise<Candid
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) return [];
 
-  const companyHint = input.companyName || (input.krs ? `KRS ${input.krs}` : input.nip ? `NIP ${input.nip}` : "");
+  const companyHint =
+    input.companyName || (input.krs ? `KRS ${input.krs}` : input.nip ? `NIP ${input.nip}` : "");
   const fnHint = input.function ? ` pełniąca funkcję "${input.function}"` : "";
 
   const prompt =
@@ -102,7 +108,11 @@ async function askPerplexity(input: z.infer<typeof InputSchema>): Promise<Candid
     body: JSON.stringify({
       model: "sonar",
       messages: [
-        { role: "system", content: "Jesteś analitykiem danych rejestrowych w Polsce. Odpowiadaj zwięźle, tylko JSON-em." },
+        {
+          role: "system",
+          content:
+            "Jesteś analitykiem danych rejestrowych w Polsce. Odpowiadaj zwięźle, tylko JSON-em.",
+        },
         { role: "user", content: prompt },
       ],
       temperature: 0.1,
@@ -135,7 +145,11 @@ async function askPerplexity(input: z.infer<typeof InputSchema>): Promise<Candid
   });
 
   if (!res.ok) {
-    console.error("[krs-enrichment] perplexity error", res.status, await res.text().catch(() => ""));
+    console.error(
+      "[krs-enrichment] perplexity error",
+      res.status,
+      await res.text().catch(() => ""),
+    );
     return [];
   }
   const json: any = await res.json();
@@ -175,7 +189,12 @@ export function selectBestRepresentationCandidate(
     const key = norm(c.fullName);
     const prev = counts.get(key);
     let score = 0;
-    if (c.function && functionName && PL_LOWER(c.function).includes(PL_LOWER(functionName).slice(0, 6))) score += 2;
+    if (
+      c.function &&
+      functionName &&
+      PL_LOWER(c.function).includes(PL_LOWER(functionName).slice(0, 6))
+    )
+      score += 2;
     if (typeof c.confidence === "number") score += c.confidence;
     if (prev) {
       prev.n += 1;
@@ -206,8 +225,7 @@ export const companyRepresentationAutoEnrichment = createServerFn({ method: "POS
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<EnrichmentResult> => {
     const fn = data.function || "";
-    const originalValue =
-      data.maskedPerson + (fn ? ` — ${fn}` : "");
+    const originalValue = data.maskedPerson + (fn ? ` — ${fn}` : "");
 
     // Jeśli niezamaskowane — nie ruszamy.
     if (!isMasked(data.maskedPerson)) {
@@ -258,26 +276,24 @@ export const companyRepresentationAutoEnrichment = createServerFn({ method: "POS
     }
 
     // Zapis do cache (na 7 dni); ignorujemy konflikt
-    await supabaseAdmin
-      .from("representation_web_enrichment_cache")
-      .upsert(
-        {
-          cache_key: cacheKey,
-          company_name: data.companyName || null,
-          nip: data.nip || null,
-          krs: data.krs || null,
-          masked_person: data.maskedPerson,
-          function: fn || null,
-          original_value: originalValue,
-          final_display_value: displayValue,
-          full_name: fullName,
-          was_auto_enriched: wasEnriched,
-          raw_internal_results: rawResults as any,
-          fetched_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        { onConflict: "cache_key" },
-      );
+    await supabaseAdmin.from("representation_web_enrichment_cache").upsert(
+      {
+        cache_key: cacheKey,
+        company_name: data.companyName || null,
+        nip: data.nip || null,
+        krs: data.krs || null,
+        masked_person: data.maskedPerson,
+        function: fn || null,
+        original_value: originalValue,
+        final_display_value: displayValue,
+        full_name: fullName,
+        was_auto_enriched: wasEnriched,
+        raw_internal_results: rawResults as any,
+        fetched_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      { onConflict: "cache_key" },
+    );
 
     return {
       success: true,

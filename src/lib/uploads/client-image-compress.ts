@@ -16,7 +16,9 @@ export async function fileToDataUrl(file: Blob): Promise<string> {
 }
 
 /** Jeśli plik to obraz > MAX_DIM lub > 1.5MB, przeskaluj i skompresuj do JPEG. */
-export async function compressImageIfNeeded(file: File): Promise<{ blob: Blob; mimeType: string; fileName: string }> {
+export async function compressImageIfNeeded(
+  file: File,
+): Promise<{ blob: Blob; mimeType: string; fileName: string }> {
   const mime = file.type || "application/octet-stream";
   if (!mime.startsWith("image/") || mime === "image/gif") {
     return { blob: file, mimeType: mime, fileName: file.name };
@@ -44,7 +46,9 @@ export async function compressImageIfNeeded(file: File): Promise<{ blob: Blob; m
       const ctx = canvas.getContext("2d");
       if (!ctx) return { blob: file, mimeType: mime, fileName: file.name };
       ctx.drawImage(img, 0, 0, targetW, targetH);
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", JPEG_QUALITY));
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), "image/jpeg", JPEG_QUALITY),
+      );
       if (!blob) return { blob: file, mimeType: mime, fileName: file.name };
       const newName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
       return { blob, mimeType: "image/jpeg", fileName: newName };

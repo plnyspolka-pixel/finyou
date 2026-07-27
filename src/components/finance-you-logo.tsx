@@ -13,11 +13,7 @@ type Props = {
  * `variant="light"` (na jasnym tle) wyświetla logo bez zmian.
  * `variant="dark"` (na ciemnym tle) odwraca kolory na białe via filter.
  */
-export function FinanceYouLogo({
-  className,
-  variant = "dark",
-  size = "md",
-}: Props) {
+export function FinanceYouLogo({ className, variant = "dark", size = "md" }: Props) {
   const h = size === "sm" ? "h-9" : size === "lg" ? "h-20" : "h-14";
   // logo zostało wygenerowane na jasnym beżowym tle — na dark hero odwracamy
   // jasność, na light tle (header, footer) pokazujemy oryginał.

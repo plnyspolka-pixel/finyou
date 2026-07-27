@@ -42,7 +42,12 @@ const KIND_DEFAULT_TITLE: Record<Kind, string> = {
 };
 
 function ZgodyPage() {
-  const [docs, setDocs] = useState<Record<Kind, Doc | null>>({ privacy: null, marketing: null, terms: null, terms_investor: null });
+  const [docs, setDocs] = useState<Record<Kind, Doc | null>>({
+    privacy: null,
+    marketing: null,
+    terms: null,
+    terms_investor: null,
+  });
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -52,7 +57,12 @@ function ZgodyPage() {
       .select("*")
       .eq("is_active", true)
       .order("version", { ascending: false });
-    const next: Record<Kind, Doc | null> = { privacy: null, marketing: null, terms: null, terms_investor: null };
+    const next: Record<Kind, Doc | null> = {
+      privacy: null,
+      marketing: null,
+      terms: null,
+      terms_investor: null,
+    };
     (data as Doc[] | null)?.forEach((d) => {
       if (!next[d.kind]) next[d.kind] = d;
     });
@@ -60,21 +70,26 @@ function ZgodyPage() {
     setLoading(false);
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold">Treści zgód</h1>
         <p className="text-sm text-muted-foreground">
-          Polityka prywatności, zgody marketingowe oraz dwa regulaminy: dla klientów (pożyczkobiorców) i dla inwestorów. Zaakceptowana wersja jest zapisywana przy użytkowniku.
+          Polityka prywatności, zgody marketingowe oraz dwa regulaminy: dla klientów
+          (pożyczkobiorców) i dla inwestorów. Zaakceptowana wersja jest zapisywana przy użytkowniku.
         </p>
       </div>
 
       <Tabs defaultValue="privacy">
         <TabsList>
           {KINDS.map((k) => (
-            <TabsTrigger key={k} value={k}>{KIND_LABELS[k]}</TabsTrigger>
+            <TabsTrigger key={k} value={k}>
+              {KIND_LABELS[k]}
+            </TabsTrigger>
           ))}
         </TabsList>
 
@@ -88,7 +103,17 @@ function ZgodyPage() {
   );
 }
 
-function ConsentEditor({ kind, doc, loading, onSaved }: { kind: Kind; doc: Doc | null; loading: boolean; onSaved: () => void }) {
+function ConsentEditor({
+  kind,
+  doc,
+  loading,
+  onSaved,
+}: {
+  kind: Kind;
+  doc: Doc | null;
+  loading: boolean;
+  onSaved: () => void;
+}) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -112,10 +137,17 @@ function ConsentEditor({ kind, doc, loading, onSaved }: { kind: Kind; doc: Doc |
     }
     const newVersion = (doc?.version ?? 0) + 1;
     const { error } = await supabase.from("consent_documents").insert({
-      kind, title, content, version: newVersion, is_active: true,
+      kind,
+      title,
+      content,
+      version: newVersion,
+      is_active: true,
     });
     setBusy(false);
-    if (error) { toast.error("Błąd zapisu", { description: error.message }); return; }
+    if (error) {
+      toast.error("Błąd zapisu", { description: error.message });
+      return;
+    }
     toast.success(`Zapisano wersję ${newVersion}`);
     onSaved();
   };
@@ -123,10 +155,15 @@ function ConsentEditor({ kind, doc, loading, onSaved }: { kind: Kind; doc: Doc |
   const updateInPlace = async () => {
     if (!doc) return;
     setBusy(true);
-    const { error } = await supabase.from("consent_documents")
-      .update({ title, content, is_active: isActive }).eq("id", doc.id);
+    const { error } = await supabase
+      .from("consent_documents")
+      .update({ title, content, is_active: isActive })
+      .eq("id", doc.id);
     setBusy(false);
-    if (error) { toast.error("Błąd zapisu", { description: error.message }); return; }
+    if (error) {
+      toast.error("Błąd zapisu", { description: error.message });
+      return;
+    }
     toast.success("Zaktualizowano");
     onSaved();
   };
@@ -136,7 +173,9 @@ function ConsentEditor({ kind, doc, loading, onSaved }: { kind: Kind; doc: Doc |
       <CardHeader>
         <CardTitle>{KIND_LABELS[kind]}</CardTitle>
         <CardDescription>
-          {doc ? `Aktualna aktywna wersja: ${doc.version}` : "Brak zapisanej wersji — utwórz pierwszą."}
+          {doc
+            ? `Aktualna aktywna wersja: ${doc.version}`
+            : "Brak zapisanej wersji — utwórz pierwszą."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -158,7 +197,9 @@ function ConsentEditor({ kind, doc, loading, onSaved }: { kind: Kind; doc: Doc |
           <div className="flex items-center justify-between rounded-md border p-3">
             <div>
               <div className="text-sm font-medium">Aktywna</div>
-              <div className="text-xs text-muted-foreground">Wyłączenie ukryje zgodę w formularzu wniosku.</div>
+              <div className="text-xs text-muted-foreground">
+                Wyłączenie ukryje zgodę w formularzu wniosku.
+              </div>
             </div>
             <Switch checked={isActive} onCheckedChange={setIsActive} />
           </div>

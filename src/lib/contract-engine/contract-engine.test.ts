@@ -20,12 +20,19 @@ import S5 from "./fixtures/scenariusz_05_spolki.json";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const BIB = wczytajBiblioteke();
-const clone = <T,>(o: T): T => structuredClone(o);
+const clone = <T>(o: T): T => structuredClone(o);
 const render = (d: any) => renderuj(clone(d), BIB);
-const plaskiDoc = (doc: any) => doc.sekcje.flatMap((s: any) => s.ustepy.map((u: any) => u.tekst)).join(" ");
+const plaskiDoc = (doc: any) =>
+  doc.sekcje.flatMap((s: any) => s.ustepy.map((u: any) => u.tekst)).join(" ");
 const plaski = (d: any) => plaskiDoc(render(d));
-const bledy = (d: any) => walidujReguly(d).filter((p) => p.poziom === "BLAD").map((p) => p.komunikat);
-const ostrzezenia = (d: any) => walidujReguly(d).filter((p) => p.poziom === "OSTRZEZENIE").map((p) => p.komunikat);
+const bledy = (d: any) =>
+  walidujReguly(d)
+    .filter((p) => p.poziom === "BLAD")
+    .map((p) => p.komunikat);
+const ostrzezenia = (d: any) =>
+  walidujReguly(d)
+    .filter((p) => p.poziom === "OSTRZEZENIE")
+    .map((p) => p.komunikat);
 const tytulSekcji = (d: any, nazwa: string) => {
   for (const s of render(d).sekcje) if (s.nazwa === nazwa) return s.tytul;
   return null;
@@ -42,7 +49,8 @@ describe("A. Ewaluacja warunków", () => {
   it("A6 null", () => expect(ewaluujWarunek("pusty == null", ctx)).toBe(true));
   it("A7 koniunkcja", () => expect(ewaluujWarunek("flaga and a.b == 'x'", ctx)).toBe(true));
   it("A8 negacja", () => expect(ewaluujWarunek("not flaga", ctx)).toBe(false));
-  it("A9 literał + negacja", () => expect(ewaluujWarunek("a.b == 'x' and not pusty", ctx)).toBe(true));
+  it("A9 literał + negacja", () =>
+    expect(ewaluujWarunek("a.b == 'x' and not pusty", ctx)).toBe(true));
   it("A10 literał z podkreśleniami (regresja podmiany tokenów)", () =>
     expect(ewaluujWarunek("m == 'nie_potracana_raty'", { m: "nie_potracana_raty" })).toBe(true));
   it("A11 odrzucenie niebezpiecznego wyrażenia", () =>
@@ -55,13 +63,17 @@ describe("B. Scenariusz prosty", () => {
   const sekcje1 = new Set(d1.sekcje.map((s) => s.nazwa));
   const txt1 = formatuj(d1);
   it("B1 brak sekcji poręczenia", () => expect(sekcje1.has("PORECZENIE")).toBe(false));
-  it("B2 brak warunków zawieszających", () => expect(sekcje1.has("WARUNKI_ZAWIESZAJACE")).toBe(false));
+  it("B2 brak warunków zawieszających", () =>
+    expect(sekcje1.has("WARUNKI_ZAWIESZAJACE")).toBe(false));
   it("B3 dwie strony w komparycji", () => expect(d1.komparycja.strony.length).toBe(2));
   it("B4 trzy załączniki bazowe", () => expect(d1.zalaczniki.length).toBe(3));
-  it("B5 słowo 'Poręczyciel' nie występuje", () => expect(txt1.includes("Poręczyciel")).toBe(false));
+  it("B5 słowo 'Poręczyciel' nie występuje", () =>
+    expect(txt1.includes("Poręczyciel")).toBe(false));
   it("B6 kwota prowizji obecna", () => expect(txt1.includes("13 236,19")).toBe(true));
-  it("B7 model prowizji poprawny", () => expect(txt1.includes("Prowizja nie jest potrącana")).toBe(true));
-  it("B8 brak niepodstawionych pól", () => expect(!txt1.includes("{{") && !txt1.includes("}}")).toBe(true));
+  it("B7 model prowizji poprawny", () =>
+    expect(txt1.includes("Prowizja nie jest potrącana")).toBe(true));
+  it("B8 brak niepodstawionych pól", () =>
+    expect(!txt1.includes("{{") && !txt1.includes("}}")).toBe(true));
   it("B9 ciągła numeracja ustępów", () => {
     for (const s of d1.sekcje) {
       const nry = s.ustepy.filter((u) => u.poziom === "ustep").map((u) => u.numer);
@@ -81,7 +93,8 @@ describe("C. Scenariusz złożony", () => {
   it("C1 sekcja poręczenia", () => expect(sekcje2.has("PORECZENIE")).toBe(true));
   it("C2 warunki zawieszające", () => expect(sekcje2.has("WARUNKI_ZAWIESZAJACE")).toBe(true));
   it("C3 cztery strony", () => expect(d2.komparycja.strony.length).toBe(4));
-  it("C4 brak niepodstawionych pól", () => expect(!txt2.includes("{{") && !txt2.includes("}}")).toBe(true));
+  it("C4 brak niepodstawionych pól", () =>
+    expect(!txt2.includes("{{") && !txt2.includes("}}")).toBe(true));
   it("C5 wiele nieruchomości", () => expect(f2.wiele_nieruchomosci).toBe(true));
   it("C6 opróżnione miejsce", () => expect(f2.ma_oproznione_miejsce).toBe(true));
   it("C7 zrzeczenie", () => expect(f2.ma_zrzeczenia).toBe(true));
@@ -91,7 +104,8 @@ describe("C. Scenariusz złożony", () => {
   it("C11 wpis egzekucyjny", () => expect(f2.ma_obciazenia_egzekucyjne).toBe(true));
   it("C12 art. 101(1)", () => expect(plaski2.includes("art. 101¹")).toBe(true));
   it("C13 art. 37 k.r.o.", () => expect(plaski2.includes("art. 37 § 1 pkt 1 k.r.o.")).toBe(true));
-  it("C14 hipoteka łączna", () => expect(plaski2.toLowerCase().includes("hipoteki mają charakter łączny")).toBe(true));
+  it("C14 hipoteka łączna", () =>
+    expect(plaski2.toLowerCase().includes("hipoteki mają charakter łączny")).toBe(true));
   it("C15 odmiana uprawnionej", () => expect(plaski2.includes("Haliny Wiśniewskiej")).toBe(true));
   it("C16 liczba czasownika (mnoga)", () => expect(plaski2.includes("poddadzą się")).toBe(true));
   it("C17 brak wekslu", () => expect(plaski2.toLowerCase().includes("weksel")).toBe(false));
@@ -102,10 +116,13 @@ describe("C. Scenariusz złożony", () => {
   it("C18d oświadczenie poręczyciela jako klauzula", () =>
     expect(plaski2.includes("rozumie zakres i skutki prawne poręczenia")).toBe(true));
   it("C18b załącznik: zgoda małżonka na poręczenie", () =>
-    expect(d2.zalaczniki.some((z) => z.tytul.includes("Poręczyciela na udzielenie poręczenia"))).toBe(true));
+    expect(
+      d2.zalaczniki.some((z) => z.tytul.includes("Poręczyciela na udzielenie poręczenia")),
+    ).toBe(true));
   it("C19 dwie transze wypłaty", () => expect(f2.wyplata_transze.length).toBe(2));
   it("C20 kwota spłaty wierzyciela", () => expect(plaski2.includes("142 350,00")).toBe(true));
-  it("C21 podstawa zrzeczenia", () => expect(plaski2.includes("art. 910 § 1 w zw. z art. 246 § 1 k.c.")).toBe(true));
+  it("C21 podstawa zrzeczenia", () =>
+    expect(plaski2.includes("art. 910 § 1 w zw. z art. 246 § 1 k.c.")).toBe(true));
   it("C22 prawo trwa do wykreślenia", () =>
     expect(plaski2.includes("do chwili wykreślenia prawo pozostaje w mocy")).toBe(true));
 
@@ -115,20 +132,27 @@ describe("C. Scenariusz złożony", () => {
     .map((u) => u.tekst);
   it("C24a jeden podpunkt o zrzeczeniu", () => expect(podpunktyZrzecz.length).toBe(1));
   it("C24b warunek = przedłożenie aktu notarialnego", () =>
-    expect(podpunktyZrzecz[0].startsWith("przedłożeniu Pożyczkodawcy wypisu aktu notarialnego")).toBe(true));
+    expect(
+      podpunktyZrzecz[0].startsWith("przedłożeniu Pożyczkodawcy wypisu aktu notarialnego"),
+    ).toBe(true));
   it("C24c oświadczenie obejmuje zgodę na wykreślenie", () =>
     expect(plaski2.includes("wraz ze zgodą na wykreślenie tego prawa")).toBe(true));
   it("C24d obowiązek wykreślenia po wypłacie", () =>
     expect(plaski2.includes("doprowadzić do wykreślenia z księgi wieczystej")).toBe(true));
-  it("C24e termin na wykreślenie", () => expect(plaski2.includes("6 miesięcy od dnia wypłaty")).toBe(true));
-  it("C24f sankcja za niewykreślenie", () => expect(plaski2.includes("istotne naruszenie Umowy")).toBe(true));
-  it("C25 brak ścieżki alternatywnej", () => expect(plaski2.includes("odmówi wykreślenia prawa")).toBe(false));
+  it("C24e termin na wykreślenie", () =>
+    expect(plaski2.includes("6 miesięcy od dnia wypłaty")).toBe(true));
+  it("C24f sankcja za niewykreślenie", () =>
+    expect(plaski2.includes("istotne naruszenie Umowy")).toBe(true));
+  it("C25 brak ścieżki alternatywnej", () =>
+    expect(plaski2.includes("odmówi wykreślenia prawa")).toBe(false));
   it("C25b brak art. 913", () => expect(plaski2.includes("art. 913")).toBe(false));
   it("C25c brak odstąpienia", () => expect(plaski2.includes("odstąpić od Umowy")).toBe(false));
 
   it("C26 charakter hipoteki z danych", () => expect(f2.charakter_hipoteki).toBe("laczna"));
-  it("C27 hipoteka łączna przy wielu nieruchomościach", () => expect(f2.hipoteka_laczna).toBe(true));
-  it("C28 stopka w wariancie łącznym", () => expect(plaski2.includes("z każdej z nieruchomości z osobna")).toBe(true));
+  it("C27 hipoteka łączna przy wielu nieruchomościach", () =>
+    expect(f2.hipoteka_laczna).toBe(true));
+  it("C28 stopka w wariancie łącznym", () =>
+    expect(plaski2.includes("z każdej z nieruchomości z osobna")).toBe(true));
   it("C29 KW z wieloma działkami", () => expect(f2.ma_kw_wielodzialkowe).toBe(true));
   it("C30 klauzula o zakresie w obrębie KW", () =>
     expect(plaski2.includes("Obciążenie wybranej działki bez uprzedniego odłączenia")).toBe(true));
@@ -337,21 +361,26 @@ describe("G. Wielu pożyczkobiorców (solidarność)", () => {
   it("G2 flaga wielu", () => expect(f4.wielu_pozyczkobiorcow).toBe(true));
   it("G3 solidarność dłużników", () => expect(f4.dluznicy_solidarni).toBe(true));
   it("G4 art. 366 k.c.", () => expect(p4txt.includes("art. 366 k.c.")).toBe(true));
-  it("G5 treść klauzuli solidarności", () => expect(p4txt.includes("od każdego z osobna")).toBe(true));
+  it("G5 treść klauzuli solidarności", () =>
+    expect(p4txt.includes("od każdego z osobna")).toBe(true));
   const stronyPb = d4.komparycja.strony.filter((s) => s.grupa === "pozyczkobiorca");
   it("G6 obaj w komparycji", () => expect(stronyPb.length).toBe(2));
-  it("G7 rola w liczbie mnogiej", () => expect(stronyPb.every((s) => s.rola === "Pożyczkobiorcami")).toBe(true));
+  it("G7 rola w liczbie mnogiej", () =>
+    expect(stronyPb.every((s) => s.rola === "Pożyczkobiorcami")).toBe(true));
   it("G8 czasownik mnogi", () => expect(p4txt.includes("Pożyczkobiorcy oświadczają")).toBe(true));
   it("G9 orzecznik mnogi", () => expect(p4txt.includes("są przedsiębiorcami")).toBe(true));
   it("G10 zaimek mnogi", () => expect(p4txt.includes("przysługuje im prawo własności")).toBe(true));
-  it("G11 poprawny przypadek zaimka", () => expect(p4txt.includes("ma dla nich charakter zawodowy")).toBe(true));
+  it("G11 poprawny przypadek zaimka", () =>
+    expect(p4txt.includes("ma dla nich charakter zawodowy")).toBe(true));
   it("G12 brak błędów przypadka", () =>
     expect(!p4txt.includes("dla im") && !p4txt.includes("przez niego działalnością")).toBe(true));
-  it("G13 małżonkowie jako współdłużnicy", () => expect(f4.malzonkowie_oboje_pozyczkobiorcami).toBe(true));
+  it("G13 małżonkowie jako współdłużnicy", () =>
+    expect(f4.malzonkowie_oboje_pozyczkobiorcami).toBe(true));
   it("G14 zgoda NIEwymagana", () => expect(f4.wymaga_zgody_malzonka).toBe(false));
   it("G15 brak zbędnego załącznika", () =>
     expect(d4.zalaczniki.some((z) => z.tytul.includes("Zgoda małżonka"))).toBe(false));
-  it("G16 wyjaśnienie w umowie", () => expect(p4txt.includes("nie jest wymagana odrębna zgoda małżonka")).toBe(true));
+  it("G16 wyjaśnienie w umowie", () =>
+    expect(p4txt.includes("nie jest wymagana odrębna zgoda małżonka")).toBe(true));
   it("G17 podstawa", () => expect(p4txt.includes("art. 37 § 1 k.r.o.")).toBe(true));
 
   const d1b = render(S1);
@@ -360,7 +389,8 @@ describe("G. Wielu pożyczkobiorców (solidarność)", () => {
   it("G18 pojedynczy pożyczkobiorca", () => expect(f1b.liczba_pozyczkobiorcow).toBe(1));
   it("G19 brak solidarności", () => expect(f1b.dluznicy_solidarni).toBe(false));
   it("G20 brak klauzuli solidarności", () => expect(p1b.includes("art. 366 k.c.")).toBe(false));
-  it("G21 liczba pojedyncza zachowana", () => expect(p1b.includes("Pożyczkobiorca oświadcza")).toBe(true));
+  it("G21 liczba pojedyncza zachowana", () =>
+    expect(p1b.includes("Pożyczkobiorca oświadcza")).toBe(true));
   it("G22 tablica jednoelementowa = obiekt", () => {
     const z = clone(S1) as any;
     z.pozyczkobiorca = [z.pozyczkobiorca];
@@ -388,25 +418,36 @@ describe("H. Spółki, reprezentacja, uchwały", () => {
   it("H3 dwie uchwały do przedłożenia", () => expect(f5.uchwaly_do_przedlozenia.length).toBe(2));
   it("H4 odmiana funkcji i nazwiska", () =>
     expect(kompar5.includes("prezesa zarządu Mareka Wiśniewskiego")).toBe(true));
-  it("H5 adnotacja o reprezentacji łącznej", () => expect(kompar5.includes("działających łącznie")).toBe(true));
+  it("H5 adnotacja o reprezentacji łącznej", () =>
+    expect(kompar5.includes("działających łącznie")).toBe(true));
   it("H6 brak błędów odmiany", () =>
     expect(!kompar5.includes("zarządua") && !kompar5.includes("Wiśniewskego")).toBe(true));
-  it("H7 spółka jawna: wspólnik", () => expect(kompar5.includes("wspólnika Mareka Wiśniewskiego")).toBe(true));
+  it("H7 spółka jawna: wspólnik", () =>
+    expect(kompar5.includes("wspólnika Mareka Wiśniewskiego")).toBe(true));
   it("H8 art. 230 k.s.h. w warunkach", () => expect(p5.includes("art. 230 k.s.h.")).toBe(true));
-  it("H9 art. 228 pkt 4 k.s.h. w warunkach", () => expect(p5.includes("art. 228 pkt 4 k.s.h.")).toBe(true));
+  it("H9 art. 228 pkt 4 k.s.h. w warunkach", () =>
+    expect(p5.includes("art. 228 pkt 4 k.s.h.")).toBe(true));
   it("H10 wskazano organ", () => expect(p5.includes("zgromadzenia wspólników")).toBe(true));
-  it("H11 wskazano czynność", () => expect(p5.includes("obciążenie nieruchomości hipoteką")).toBe(true));
-  it("H12 klauzula o umocowaniu", () => expect(p5.includes("należycie umocowane do ich reprezentowania")).toBe(true));
+  it("H11 wskazano czynność", () =>
+    expect(p5.includes("obciążenie nieruchomości hipoteką")).toBe(true));
+  it("H12 klauzula o umocowaniu", () =>
+    expect(p5.includes("należycie umocowane do ich reprezentowania")).toBe(true));
   it("H13 klauzula o zgodach korporacyjnych", () =>
     expect(p5.includes("art. 228 i art. 230 Kodeksu spółek handlowych")).toBe(true));
   it("H14 klauzula o reprezentacji łącznej", () =>
-    expect(p5.includes("oświadczenia woli w imieniu tej strony składają wszystkie osoby")).toBe(true));
+    expect(p5.includes("oświadczenia woli w imieniu tej strony składają wszystkie osoby")).toBe(
+      true,
+    ));
 
-  it("H15 dopełniacz -ski", () => expect(odmienDopelniacz("Marek Wiśniewski")).toBe("Mareka Wiśniewskiego"));
-  it("H16 dopełniacz -ska", () => expect(odmienDopelniacz("Halina Wiśniewska")).toBe("Haliny Wiśniewskiej"));
-  it("H17 nazwisko kobiety na spółgłoskę", () => expect(odmienDopelniacz("Anna Kowalczyk")).toBe("Anny Kowalczyk"));
+  it("H15 dopełniacz -ski", () =>
+    expect(odmienDopelniacz("Marek Wiśniewski")).toBe("Mareka Wiśniewskiego"));
+  it("H16 dopełniacz -ska", () =>
+    expect(odmienDopelniacz("Halina Wiśniewska")).toBe("Haliny Wiśniewskiej"));
+  it("H17 nazwisko kobiety na spółgłoskę", () =>
+    expect(odmienDopelniacz("Anna Kowalczyk")).toBe("Anny Kowalczyk"));
   it("H18 biernik", () => expect(odmienBiernik("Anna Kowalczyk")).toBe("Annę Kowalczyk"));
-  it("H19 nazwisko mężczyzny", () => expect(odmienDopelniacz("Marek Kowalczyk")).toBe("Mareka Kowalczyka"));
+  it("H19 nazwisko mężczyzny", () =>
+    expect(odmienDopelniacz("Marek Kowalczyk")).toBe("Mareka Kowalczyka"));
 
   it("D28 spółka cywilna bez wspólników", () => {
     const z = clone(S5) as any;
@@ -520,12 +561,17 @@ describe("H. Spółki, reprezentacja, uchwały", () => {
     expect(kSc.includes("JAN KOWALSKI") && kSc.includes("PIOTR KOWALSKI")).toBe(true);
     expect(pSc.includes("art. 864 k.c.")).toBe(true);
   });
-  it("H25 stara forma reprezentacji (obiekt) poprawna", () => expect(walidujSchemat(S1)).toEqual([]));
+  it("H25 stara forma reprezentacji (obiekt) poprawna", () =>
+    expect(walidujSchemat(S1)).toEqual([]));
   it("H26 obiekt i tablica jednoelementowa równoważne", () => {
     const z = clone(S1) as any;
     z.pozyczkodawca.reprezentacja = [z.pozyczkodawca.reprezentacja];
-    const kA = render(S1).komparycja.strony.map((x) => x.opis).join(" | ");
-    const kB = render(z).komparycja.strony.map((x) => x.opis).join(" | ");
+    const kA = render(S1)
+      .komparycja.strony.map((x) => x.opis)
+      .join(" | ");
+    const kB = render(z)
+      .komparycja.strony.map((x) => x.opis)
+      .join(" | ");
     expect(kA).toBe(kB);
   });
 });
@@ -554,9 +600,12 @@ describe("I. Regresja — usunięte zabezpieczenia", () => {
       expect(!t.includes("weksel") && !t.includes("wekslow") && !t.includes("polisy")).toBe(true);
     }
   });
-  it("I7 brak wariantu ułamkowego w bibliotece", () => expect(bibBlob.includes("ulamkowa")).toBe(false));
+  it("I7 brak wariantu ułamkowego w bibliotece", () =>
+    expect(bibBlob.includes("ulamkowa")).toBe(false));
   it("I8 brak klauzuli o zgodzie współwłaścicieli", () =>
-    expect(!bibBlob.includes("wspolwlascicieli") && !bibBlob.includes("współwłaścicieli")).toBe(true));
+    expect(!bibBlob.includes("wspolwlascicieli") && !bibBlob.includes("współwłaścicieli")).toBe(
+      true,
+    ));
   it("I9 brak art. 199 k.c.", () => expect(bibBlob.includes("art. 199 k.c.")).toBe(false));
   it("I10 schemat odrzuca współwłasność ułamkową", () => {
     const z = clone(S2) as any;
@@ -596,7 +645,9 @@ describe("J. Zmiany szablonu generatora", () => {
     const z = clone(S1) as any;
     z.nieruchomosci[0].roszczenie_oproznione_miejsce = true;
     const p = plaski(z);
-    expect(p.includes("roszczenie o przeniesienie hipoteki ustanowionej zgodnie z ust. 1")).toBe(true);
+    expect(p.includes("roszczenie o przeniesienie hipoteki ustanowionej zgodnie z ust. 1")).toBe(
+      true,
+    );
     expect(p.includes("art. 101¹ ustawy z dnia 6 lipca 1982")).toBe(true);
     expect(walidujSchemat(z)).toEqual([]);
   });

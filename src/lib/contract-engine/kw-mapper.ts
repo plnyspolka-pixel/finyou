@@ -36,12 +36,15 @@ function klasyfikujDzialIII(rodzajTekst: string | null | undefined): string {
   const t = (rodzajTekst ?? "").toUpperCase();
   if (!t) return "inne";
   if (t.includes("DOŻYWOC") || t.includes("DOZYWOC")) return "dozywocie";
-  if (t.includes("SŁUŻEBNOŚĆ OSOBISTA") || t.includes("SLUZEBNOSC OSOBISTA")) return "sluzebnosc_osobista";
+  if (t.includes("SŁUŻEBNOŚĆ OSOBISTA") || t.includes("SLUZEBNOSC OSOBISTA"))
+    return "sluzebnosc_osobista";
   if (t.includes("SŁUŻEBNOŚĆ") || t.includes("SLUZEBNOSC")) return "sluzebnosc_gruntowa";
   if (t.includes("ADMINISTRACYJN")) return "egzekucja_administracyjna";
-  if (t.includes("EGZEKUC") || t.includes("ZAJĘCI") || t.includes("ZAJECI")) return "egzekucja_sadowa";
+  if (t.includes("EGZEKUC") || t.includes("ZAJĘCI") || t.includes("ZAJECI"))
+    return "egzekucja_sadowa";
   if (t.includes("ROSZCZENIE")) return "roszczenie";
-  if (t.includes("NAJEM") || t.includes("DZIERŻAW") || t.includes("DZIERZAW")) return "najem_dzierzawa";
+  if (t.includes("NAJEM") || t.includes("DZIERŻAW") || t.includes("DZIERZAW"))
+    return "najem_dzierzawa";
   if (t.includes("ZAKAZ ZBY")) return "zakaz_zbywania";
   if (t.includes("HIPOTEKA PRZYMUSOWA")) return "hipoteka_przymusowa";
   return "inne";
@@ -58,7 +61,12 @@ function klasyfikujRodzajNieruchomosci(kw: KwExtraction): string {
   const typ = (kw.typKsiegi ?? "").toUpperCase();
   const prz = (kw.dzial1o?.przeznaczenie ?? "").toUpperCase();
   if (typ.includes("LOKAL") || prz.includes("LOKAL MIESZKALN")) return "lokal";
-  if (prz.includes("USŁUGOW") || prz.includes("USLUGOW") || prz.includes("UŻYTKOW") || prz.includes("UZYTKOW"))
+  if (
+    prz.includes("USŁUGOW") ||
+    prz.includes("USLUGOW") ||
+    prz.includes("UŻYTKOW") ||
+    prz.includes("UZYTKOW")
+  )
     return "lokal_uzytkowy";
   if (prz.includes("ROLN") || prz.includes("R-GRUNTY")) return "grunt_rolny";
   if (prz.includes("BUDOWLAN") || prz.includes("ZABUDOW")) return "dzialka_budowlana";
@@ -67,7 +75,10 @@ function klasyfikujRodzajNieruchomosci(kw: KwExtraction): string {
 }
 
 function imieNazwiskoWlasciciela(o: KwExtractionOwner): string {
-  return [o.imiePierwsze, o.imieDrugie, o.nazwisko].map((x) => (x ?? "").trim()).filter(Boolean).join(" ");
+  return [o.imiePierwsze, o.imieDrugie, o.nazwisko]
+    .map((x) => (x ?? "").trim())
+    .filter(Boolean)
+    .join(" ");
 }
 
 function opisNieruchomosci(kw: KwExtraction): string {
@@ -152,13 +163,17 @@ export function mapujKwDoNieruchomosci(kw: KwExtraction, ctx: KwMapContext): KwM
       sposob_usuniecia: "brak", // NIE wyprowadzalne z KW — operator/AI ustawia
     });
     if (rodzaj === "inne" && w.rodzaj)
-      ostrzezenia.push(`Nierozpoznany rodzaj wpisu działu III ("${w.rodzaj}") — zmapowano na 'inne'.`);
+      ostrzezenia.push(
+        `Nierozpoznany rodzaj wpisu działu III ("${w.rodzaj}") — zmapowano na 'inne'.`,
+      );
   }
   for (const hip of kw.dzial4?.hipoteki ?? []) {
     if (!hip) continue;
     const waluta = (hip.walutaSumy ?? "").toUpperCase().replace(/\s/g, "");
     if (waluta && waluta !== "ZŁ" && waluta !== "ZL" && waluta !== "PLN")
-      ostrzezenia.push(`Hipoteka w walucie ${hip.walutaSumy} — silnik zakłada PLN, zweryfikuj kwotę.`);
+      ostrzezenia.push(
+        `Hipoteka w walucie ${hip.walutaSumy} — silnik zakłada PLN, zweryfikuj kwotę.`,
+      );
     obciazenia.push({
       dzial: "IV",
       rodzaj: klasyfikujHipoteke(hip.rodzaj),
@@ -168,7 +183,11 @@ export function mapujKwDoNieruchomosci(kw: KwExtraction, ctx: KwMapContext): KwM
       sposob_usuniecia: "brak", // NIE wyprowadzalne z KW — operator/AI ustawia
     });
   }
-  if (obciazenia.some((o) => ["egzekucja_administracyjna", "dozywocie", "hipoteka_przymusowa"].includes(o.rodzaj)))
+  if (
+    obciazenia.some((o) =>
+      ["egzekucja_administracyjna", "dozywocie", "hipoteka_przymusowa"].includes(o.rodzaj),
+    )
+  )
     ostrzezenia.push(
       "Wpisy ryzykowne (egzekucja administracyjna / dożywocie / hipoteka przymusowa) mają sposob_usuniecia='brak' — " +
         "walidator ostrzeże, dopóki operator nie ustawi sposobu neutralizacji.",
@@ -190,7 +209,9 @@ export function mapujKwDoNieruchomosci(kw: KwExtraction, ctx: KwMapContext): KwM
   if (!kw.kwNumber) ostrzezenia.push("Brak numeru KW — uzupełnij nr_kw.");
   if (!kw.sadRejonowy) ostrzezenia.push("Brak sądu rejonowego — uzupełnij sad.");
   if (dzialki_w_kw.length > 1)
-    ostrzezenia.push(`KW obejmuje ${dzialki_w_kw.length} działek — hipoteka obciąży wszystkie (art. 65 u.k.w.h.).`);
+    ostrzezenia.push(
+      `KW obejmuje ${dzialki_w_kw.length} działek — hipoteka obciąży wszystkie (art. 65 u.k.w.h.).`,
+    );
 
   return { odrzucona: false, nieruchomosc, ostrzezenia };
 }

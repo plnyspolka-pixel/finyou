@@ -4,7 +4,13 @@
 
 import { computeLoanProgress, type ProgressInput, type ProgressResult } from "./loan-progress";
 
-export type MissingSection = "kontakt" | "zabezpieczenie" | "nieruchomosc" | "dokumenty" | "opis" | "warunki";
+export type MissingSection =
+  | "kontakt"
+  | "zabezpieczenie"
+  | "nieruchomosc"
+  | "dokumenty"
+  | "opis"
+  | "warunki";
 
 export interface MissingItem {
   kind: string;
@@ -48,7 +54,13 @@ function kindToMissingItem(kind: string, label: string): MissingItem {
     case "kw_number":
       return { kind, label, section: "dokumenty", ctaHref: DOCS_HREF, ctaLabel: "Dodaj numer KW" };
     case "usable_area":
-      return { kind, label, section: "nieruchomosc", ctaHref: DOCS_HREF, ctaLabel: "Uzupełnij powierzchnię" };
+      return {
+        kind,
+        label,
+        section: "nieruchomosc",
+        ctaHref: DOCS_HREF,
+        ctaLabel: "Uzupełnij powierzchnię",
+      };
     case "mpzp":
     case "land_registry":
     case "photos_exterior":
@@ -72,7 +84,8 @@ export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): En
     next_step = {
       section: "zabezpieczenie",
       title: "Rozpocznij wniosek",
-      description: "Wypełnij krótki wniosek krok po kroku — wybierzesz kwotę, okres i zabezpieczenie.",
+      description:
+        "Wypełnij krótki wniosek krok po kroku — wybierzesz kwotę, okres i zabezpieczenie.",
       ctaHref: WNIOSEK_HREF,
       ctaLabel: "Rozpocznij wniosek",
     };
@@ -80,7 +93,8 @@ export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): En
     next_step = {
       section: "kontakt",
       title: "Uzupełnij dane kontaktowe",
-      description: "Potrzebujemy Twojego imienia, telefonu i e-maila, żebyśmy mogli się z Tobą skontaktować.",
+      description:
+        "Potrzebujemy Twojego imienia, telefonu i e-maila, żebyśmy mogli się z Tobą skontaktować.",
       ctaHref: "/klient/profil",
       ctaLabel: "Uzupełnij dane",
     };
@@ -103,7 +117,10 @@ export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): En
   } else if (missing.length > 0) {
     next_step = {
       section: "dokumenty",
-      title: missing.length === 1 ? `Wgraj: ${missing[0].label}` : `Brakuje ${missing.length} dokumentów`,
+      title:
+        missing.length === 1
+          ? `Wgraj: ${missing[0].label}`
+          : `Brakuje ${missing.length} dokumentów`,
       description:
         missing.length === 1
           ? "To ostatni dokument, którego potrzebujemy do tego typu nieruchomości."
@@ -123,7 +140,8 @@ export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): En
     next_step = {
       section: "gotowe",
       title: "Wniosek kompletny",
-      description: "Twój wniosek jest pełny i czeka na ocenę przez inwestorów. Powiadomimy Cię o postępach.",
+      description:
+        "Twój wniosek jest pełny i czeka na ocenę przez inwestorów. Powiadomimy Cię o postępach.",
       ctaHref: "/klient",
       ctaLabel: "Zobacz wniosek",
     };

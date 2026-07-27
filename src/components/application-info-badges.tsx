@@ -58,12 +58,7 @@ type Props = {
  * Pokazuje: startup, działalność, formę prawną, NIP (zweryfikowany), dokumenty dochodowe,
  * raport BIK, weryfikację rachunku bankowego i telefonu.
  */
-export function ApplicationInfoBadges({
-  app,
-  client,
-  loanApplicationId,
-  variant = "full",
-}: Props) {
+export function ApplicationInfoBadges({ app, client, loanApplicationId, variant = "full" }: Props) {
   const [incomeDocsCount, setIncomeDocsCount] = useState<number | null>(null);
   const [fetchedClient, setFetchedClient] = useState<ClientBadgeData | null>(null);
 
@@ -76,7 +71,9 @@ export function ApplicationInfoBadges({
         .eq("loan_application_id", loanApplicationId);
       const rows = data ?? [];
       const incomes = rows.filter((d) =>
-        /doch[oó]d|income|pit|zaświadczen|wyciag|wyciąg/i.test(String((d as any).document_type ?? "")),
+        /doch[oó]d|income|pit|zaświadczen|wyciag|wyciąg/i.test(
+          String((d as any).document_type ?? ""),
+        ),
       );
       setIncomeDocsCount(incomes.length);
 
@@ -129,7 +126,10 @@ export function ApplicationInfoBadges({
       chips.push({
         key: "startup-dep",
         node: (
-          <Badge variant="outline" className="gap-1 border-amber-500 text-amber-700 dark:text-amber-400">
+          <Badge
+            variant="outline"
+            className="gap-1 border-amber-500 text-amber-700 dark:text-amber-400"
+          >
             <AlertCircle className="h-3 w-3" />
             Start uzależniony od finansowania
           </Badge>
@@ -151,7 +151,6 @@ export function ApplicationInfoBadges({
       ),
     });
   }
-
 
   // Rachunek bankowy
   if (c.bank_account_verified_at) {

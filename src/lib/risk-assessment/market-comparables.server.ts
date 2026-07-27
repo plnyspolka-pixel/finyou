@@ -10,7 +10,6 @@ import type { MarketComparablesResult, MarketCompRecord, MarketCompStatus } from
 
 export type { MarketComparablesResult, MarketCompRecord, MarketCompStatus } from "./types";
 
-
 const EMPTY = (status: MarketCompStatus, message: string, query = ""): MarketComparablesResult => ({
   status,
   message,
@@ -30,8 +29,22 @@ const EMPTY = (status: MarketCompStatus, message: string, query = ""): MarketCom
 });
 
 function slugPl(s: string): string {
-  const map: Record<string, string> = { ą: "a", ć: "c", ę: "e", ł: "l", ń: "n", ó: "o", ś: "s", ź: "z", ż: "z" };
-  return s.toLowerCase().replace(/[ąćęłńóśźż]/g, (c) => map[c] ?? c).replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const map: Record<string, string> = {
+    ą: "a",
+    ć: "c",
+    ę: "e",
+    ł: "l",
+    ń: "n",
+    ó: "o",
+    ś: "s",
+    ź: "z",
+    ż: "z",
+  };
+  return s
+    .toLowerCase()
+    .replace(/[ąćęłńóśźż]/g, (c) => map[c] ?? c)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 function parsePricePln(text: string): number | null {
@@ -56,7 +69,12 @@ function parseAreaM2(text: string): number | null {
 const PRICE_PER_M2_RE = /([\d][\d\s.,]{2,})\s*(?:zł|pln)\s*\/?\s*m\s*(?:²|2)/gi;
 
 function normalizePpm2(raw: string): number | null {
-  const n = Number(raw.replace(/[\s.]/g, "").replace(",", ".").replace(/\.\d{1,2}$/, ""));
+  const n = Number(
+    raw
+      .replace(/[\s.]/g, "")
+      .replace(",", ".")
+      .replace(/\.\d{1,2}$/, ""),
+  );
   if (!Number.isFinite(n) || n < 10 || n > 100_000) return null;
   return Math.round(n);
 }
@@ -133,13 +151,19 @@ async function firecrawlScrape(apiKey: string, url: string): Promise<string | nu
 
 // Parsowanie tabeli transakcji z markdown deweloperuch.pl. Rekordy w tabeli mają
 // format: data | adres | m² użytk. | m² zabudowy | działka | cena.
-function parseDeweloperuchTransactions(markdown: string, streetFilter?: string | null): MarketCompRecord[] {
+function parseDeweloperuchTransactions(
+  markdown: string,
+  streetFilter?: string | null,
+): MarketCompRecord[] {
   const out: MarketCompRecord[] = [];
   const lines = markdown.split("\n");
   const streetLc = streetFilter ? streetFilter.toLowerCase() : null;
   for (const line of lines) {
     if (!line.includes("|")) continue;
-    const cells = line.split("|").map((c) => c.trim()).filter(Boolean);
+    const cells = line
+      .split("|")
+      .map((c) => c.trim())
+      .filter(Boolean);
     if (cells.length < 3) continue;
     // Szukaj daty i ceny w komórkach.
     const dateCell = cells.find((c) => /^\d{2}\.\d{2}\.\d{4}$/.test(c));
@@ -170,27 +194,36 @@ function parseDeweloperuchTransactions(markdown: string, streetFilter?: string |
 // Strona statystyk deweloperuch — gotowa mediana transakcyjna dla miasta.
 // Zwraca pojedynczy rekord-kotwicę (mediana zł/m² z RCN), gdy tabela transakcji milczy.
 function parseDeweloperuchStats(markdown: string, citySlug: string): MarketCompRecord[] {
-  const median = markdown.match(/median\w*[^0-9]{0,60}?([\d][\d\s.,]{2,})\s*(?:zł|pln)\s*\/?\s*m\s*(?:²|2)/i);
+  const median = markdown.match(
+    /median\w*[^0-9]{0,60}?([\d][\d\s.,]{2,})\s*(?:zł|pln)\s*\/?\s*m\s*(?:²|2)/i,
+  );
   const ppm2 = median ? normalizePpm2(median[1]) : null;
   if (ppm2 == null) return [];
   const txCountM = markdown.match(/(\d{1,5})\s+transakcj/i);
-  return [{
-    source: "deweloperuch.pl",
-    kind: "transaction",
-    url: null,
-    title: `mediana transakcyjna (statystyki${txCountM ? `, ${txCountM[1]} transakcji` : ""})`,
-    address: citySlug,
-    pricePln: null,
-    areaM2: null,
-    pricePerM2: ppm2,
-    date: null,
-  }];
+  return [
+    {
+      source: "deweloperuch.pl",
+      kind: "transaction",
+      url: null,
+      title: `mediana transakcyjna (statystyki${txCountM ? `, ${txCountM[1]} transakcji` : ""})`,
+      address: citySlug,
+      pricePln: null,
+      areaM2: null,
+      pricePerM2: ppm2,
+      date: null,
+    },
+  ];
 }
 
 // Deweloperuch: scraping miasto/miejscowość + rodzaj (tylko „domy" i „mieszkania").
 // Realne ścieżki serwisu: /ceny-transakcyjne/{miasto}/{rodzaj} (tabela transakcji)
 // oraz /statystyki/ceny-transakcyjne/{rodzaj}/{miasto} (mediana z RCN).
-async function scrapeDeweloperuch(apiKey: string, city: string, street: string | null, kind: "domy" | "mieszkania"): Promise<MarketCompRecord[]> {
+async function scrapeDeweloperuch(
+  apiKey: string,
+  city: string,
+  street: string | null,
+  kind: "domy" | "mieszkania",
+): Promise<MarketCompRecord[]> {
   const citySlug = slugPl(city);
   // Deweloperuch nie ma stabilnej ścieżki dla ulicy — zaczynamy od widoku miasta i filtrujemy po adresie.
   const tableUrls = [
@@ -204,7 +237,10 @@ async function scrapeDeweloperuch(apiKey: string, city: string, street: string |
     if (rows.length > 0) return rows;
   }
   // Fallback: strona statystyk z medianą transakcyjną dla miasta.
-  const statsMd = await firecrawlScrape(apiKey, `https://deweloperuch.pl/statystyki/ceny-transakcyjne/${kind}/${citySlug}`);
+  const statsMd = await firecrawlScrape(
+    apiKey,
+    `https://deweloperuch.pl/statystyki/ceny-transakcyjne/${kind}/${citySlug}`,
+  );
   if (statsMd && statsMd.length >= 200) return parseDeweloperuchStats(statsMd, citySlug);
   return [];
 }
@@ -214,11 +250,21 @@ async function scrapeDeweloperuch(apiKey: string, city: string, street: string |
 // wiele cen zł/m² naraz, strony ofert („/oferta/") — pojedynczą cenę + metraż.
 // UWAGA: bez ulicy w zapytaniu — dla małych miejscowości zawężenie do ulicy
 // praktycznie zawsze daje 0 wyników; ulica służy tylko do filtrowania tabel.
-async function scrapeOtodomOffers(apiKey: string, city: string, voivodeship: string | null, label: string, limit = 15): Promise<MarketCompRecord[]> {
+async function scrapeOtodomOffers(
+  apiKey: string,
+  city: string,
+  voivodeship: string | null,
+  label: string,
+  limit = 15,
+): Promise<MarketCompRecord[]> {
   let items = await firecrawlSearch(apiKey, `${label} na sprzedaż ${city} site:otodom.pl`, limit);
   if (!items.some((it: any) => /otodom\.pl/.test(it?.url ?? ""))) {
     // Fallback: bez operatora site: (bywa ignorowany), z województwem dla jednoznaczności.
-    items = await firecrawlSearch(apiKey, `otodom ${label} na sprzedaż ${city}${voivodeship ? " " + voivodeship : ""}`, limit);
+    items = await firecrawlSearch(
+      apiKey,
+      `otodom ${label} na sprzedaż ${city}${voivodeship ? " " + voivodeship : ""}`,
+      limit,
+    );
   }
   const out: MarketCompRecord[] = [];
   for (const it of items) {
@@ -233,8 +279,15 @@ async function scrapeOtodomOffers(apiKey: string, city: string, voivodeship: str
       // Strona z listą ofert — zbierz wszystkie ceny zł/m² (do 10 z jednej strony).
       for (const ppm2 of parseAllPricesPerM2(md.slice(0, 12_000))) {
         out.push({
-          source: "otodom.pl", kind: "offer", url, title: title.slice(0, 200),
-          address: null, pricePln: null, areaM2: null, pricePerM2: ppm2, date: null,
+          source: "otodom.pl",
+          kind: "offer",
+          url,
+          title: title.slice(0, 200),
+          address: null,
+          pricePln: null,
+          areaM2: null,
+          pricePerM2: ppm2,
+          date: null,
         });
       }
       continue;
@@ -275,10 +328,13 @@ function otodomLabel(propertyType: string): string | null {
 // wspólnej mediany, korygujemy je w dół i dajemy transakcjom większą wagę, żeby
 // wycena kotwiczyła się w rzeczywistych cenach zawarcia, nie w cenach wywoławczych.
 const OFFER_TO_TRANSACTION_FACTOR = 0.95; // −5% na ofertach otodom
-const TRANSACTION_WEIGHT = 3;             // 1 transakcja ≈ 3 oferty w medianie
+const TRANSACTION_WEIGHT = 3; // 1 transakcja ≈ 3 oferty w medianie
 const OFFER_WEIGHT = 1;
 
-interface WeightedPpm2 { value: number; weight: number }
+interface WeightedPpm2 {
+  value: number;
+  weight: number;
+}
 
 // Kwantyl ważony (mediana = q 0.5): sortuje po wartości i szuka miejsca, w którym
 // skumulowana waga przekracza q·(suma wag).
@@ -319,7 +375,8 @@ export interface PreferredPpm2Stats {
  * skorygowanymi w dół i transakcjami o większej wadze. Testowalna bez sieci.
  */
 export function computePreferredPpm2(txRaw: number[], offerRaw: number[]): PreferredPpm2Stats {
-  const clean = (arr: number[]) => filterIqrOutliers(arr.filter((v) => v != null && v > 10 && v < 100_000));
+  const clean = (arr: number[]) =>
+    filterIqrOutliers(arr.filter((v) => v != null && v > 10 && v < 100_000));
   const txPpm2 = clean(txRaw);
   const offerPpm2 = clean(offerRaw).map((v) => Math.round(v * OFFER_TO_TRANSACTION_FACTOR));
   const weighted: WeightedPpm2[] = [
@@ -345,7 +402,9 @@ export interface MarketComparablesInput {
   voivodeship: string | null;
 }
 
-export async function fetchMarketComparables(input: MarketComparablesInput): Promise<MarketComparablesResult> {
+export async function fetchMarketComparables(
+  input: MarketComparablesInput,
+): Promise<MarketComparablesResult> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) return EMPTY("error", "Brak FIRECRAWL_API_KEY.");
   if (!input.city) return EMPTY("skipped", "brak miasta/miejscowości — pomijam scraping rynku.");
@@ -360,9 +419,10 @@ export async function fetchMarketComparables(input: MarketComparablesInput): Pro
 
   try {
     // 1) deweloperuch.pl — wyłącznie domy i mieszkania (rzeczywiste transakcje).
-    const deweloperuchP = (isDom || isMieszkanie)
-      ? scrapeDeweloperuch(apiKey, input.city, input.street, isDom ? "domy" : "mieszkania")
-      : Promise.resolve<MarketCompRecord[]>([]);
+    const deweloperuchP =
+      isDom || isMieszkanie
+        ? scrapeDeweloperuch(apiKey, input.city, input.street, isDom ? "domy" : "mieszkania")
+        : Promise.resolve<MarketCompRecord[]>([]);
     // 2) otodom.pl — mieszkania, domy i działki (aktywne oferty).
     const otodomP = label
       ? scrapeOtodomOffers(apiKey, input.city, input.voivodeship, label)
@@ -377,7 +437,8 @@ export async function fetchMarketComparables(input: MarketComparablesInput): Pro
   // Statystyki z preferencją transakcji: oferty otodom korygowane w dół
   // (przestrzeń negocjacyjna), transakcje deweloperuch o większej wadze.
   const asPpm2 = (kind: MarketCompRecord["kind"]) =>
-    records.filter((r) => r.kind === kind)
+    records
+      .filter((r) => r.kind === kind)
       .map((r) => r.pricePerM2)
       .filter((v): v is number => v != null);
   const txRaw = asPpm2("transaction");
@@ -389,13 +450,15 @@ export async function fetchMarketComparables(input: MarketComparablesInput): Pro
   const status: MarketCompStatus =
     records.length === 0 ? "no_data" : stats.count >= 3 ? "success" : "partial";
 
-  const basisNote = txRaw.length > 0
-    ? `preferencja transakcji (${transactionsCount} tx ×${TRANSACTION_WEIGHT}, oferty −${Math.round((1 - OFFER_TO_TRANSACTION_FACTOR) * 100)}%)`
-    : `wyłącznie oferty (−${Math.round((1 - OFFER_TO_TRANSACTION_FACTOR) * 100)}%)`;
-  const summaryLine = status === "success" || status === "partial"
-    ? `Rynek porównawczy: mediana ${median ? median.toLocaleString("pl-PL") + " zł/m²" : "—"} (${transactionsCount} transakcji deweloperuch, ${offersCount} ofert otodom; ${basisNote})` +
-      (input.street ? ` w rejonie ${input.street}, ${input.city}` : ` w ${input.city}`)
-    : `Rynek porównawczy (deweloperuch/otodom): brak danych w ${input.city}${input.street ? `, ${input.street}` : ""}.`;
+  const basisNote =
+    txRaw.length > 0
+      ? `preferencja transakcji (${transactionsCount} tx ×${TRANSACTION_WEIGHT}, oferty −${Math.round((1 - OFFER_TO_TRANSACTION_FACTOR) * 100)}%)`
+      : `wyłącznie oferty (−${Math.round((1 - OFFER_TO_TRANSACTION_FACTOR) * 100)}%)`;
+  const summaryLine =
+    status === "success" || status === "partial"
+      ? `Rynek porównawczy: mediana ${median ? median.toLocaleString("pl-PL") + " zł/m²" : "—"} (${transactionsCount} transakcji deweloperuch, ${offersCount} ofert otodom; ${basisNote})` +
+        (input.street ? ` w rejonie ${input.street}, ${input.city}` : ` w ${input.city}`)
+      : `Rynek porównawczy (deweloperuch/otodom): brak danych w ${input.city}${input.street ? `, ${input.street}` : ""}.`;
 
   return {
     status,

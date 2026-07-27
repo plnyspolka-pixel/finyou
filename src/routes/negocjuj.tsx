@@ -31,9 +31,16 @@ export const Route = createFileRoute("/negocjuj")({
   head: () => ({
     meta: [
       { title: "Negocjuj propozycję pożyczki — Finance You" },
-      { name: "description", content: "Kalkulator inwestora z limitami ustawowymi. Wygeneruj harmonogram spłat i zapisz kontrofertę dla klienta." },
+      {
+        name: "description",
+        content:
+          "Kalkulator inwestora z limitami ustawowymi. Wygeneruj harmonogram spłat i zapisz kontrofertę dla klienta.",
+      },
       { property: "og:title", content: "Negocjuj propozycję pożyczki — Finance You" },
-      { property: "og:description", content: "Wygeneruj harmonogram i zapisz kontrofertę dla klienta." },
+      {
+        property: "og:description",
+        content: "Wygeneruj harmonogram i zapisz kontrofertę dla klienta.",
+      },
     ],
   }),
   component: NegocjujPage,
@@ -103,10 +110,16 @@ function NegocjujPage() {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
         <div className="flex items-center justify-between gap-2">
-          <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4" /> Wróć na stronę główną
           </Link>
-          <Link to="/propozycje" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            to="/propozycje"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
             <ListChecks className="h-4 w-4" /> Wszystkie propozycje
           </Link>
         </div>
@@ -114,11 +127,16 @@ function NegocjujPage() {
         <FancyShell>
           <div className="flex items-center gap-2">
             <Handshake className="h-6 w-6 text-white" />
-            <p className="text-xs font-bold uppercase tracking-widest text-white/80">Inwestor — kontroferta</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-white/80">
+              Inwestor — kontroferta
+            </p>
           </div>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-white md:text-3xl">Negocjuj propozycję pożyczki</h1>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-white md:text-3xl">
+            Negocjuj propozycję pożyczki
+          </h1>
           <p className="mt-1 max-w-2xl text-sm text-white/85">
-            Ustaw parametry w kalkulatorze (z limitami ustawowymi), uzupełnij dane klienta i zapisz propozycję — wygenerowany harmonogram zostanie zachowany razem z ofertą.
+            Ustaw parametry w kalkulatorze (z limitami ustawowymi), uzupełnij dane klienta i zapisz
+            propozycję — wygenerowany harmonogram zostanie zachowany razem z ofertą.
           </p>
         </FancyShell>
 
@@ -129,43 +147,72 @@ function NegocjujPage() {
           initialAnnualRate={search.rate}
         />
 
-
         <Card>
           <CardHeader>
             <CardTitle>Dane klienta i zapis propozycji</CardTitle>
-            <CardDescription>Dane potrzebne, żeby wysłać klientowi konkretną ofertę z harmonogramem.</CardDescription>
+            <CardDescription>
+              Dane potrzebne, żeby wysłać klientowi konkretną ofertę z harmonogramem.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
                 <Label htmlFor="cname">Imię i nazwisko klienta</Label>
-                <Input id="cname" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Jan Kowalski" />
+                <Input
+                  id="cname"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="Jan Kowalski"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="cmail">E-mail klienta</Label>
-                <Input id="cmail" type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="jan@example.com" />
+                <Input
+                  id="cmail"
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  placeholder="jan@example.com"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="cphone">Telefon klienta</Label>
-                <Input id="cphone" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="+48 ..." />
+                <Input
+                  id="cphone"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  placeholder="+48 ..."
+                />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="note">Notatka / komentarz do oferty</Label>
-              <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Np. propozycja po rozmowie z 24.06 — gotowi negocjować oprocentowanie do 12%." />
+              <Textarea
+                id="note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                placeholder="Np. propozycja po rozmowie z 24.06 — gotowi negocjować oprocentowanie do 12%."
+              />
             </div>
 
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={isPublic} onCheckedChange={(v) => setIsPublic(v === true)} />
-              <span>Widoczna publicznie na liście propozycji (każdy może zobaczyć parametry i harmonogram).</span>
+              <span>
+                Widoczna publicznie na liście propozycji (każdy może zobaczyć parametry i
+                harmonogram).
+              </span>
             </label>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <Button onClick={() => void handleSave()} disabled={saving || !calc}>
                 {saving ? "Zapisuję..." : "Zapisz propozycję dla klienta"}
               </Button>
-              <Link to="/propozycje" className="text-sm text-muted-foreground hover:text-foreground">
+              <Link
+                to="/propozycje"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
                 Zobacz wszystkie propozycje →
               </Link>
             </div>

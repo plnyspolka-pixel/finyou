@@ -99,7 +99,10 @@ export function buildScheduleTableXml(schedule: ScheduleRow[]): string {
  * Gdy placeholdera nie ma albo brak harmonogramu — zwraca XML bez zmian.
  * Placeholder musi być już „sklejony" (po normalizePlaceholders).
  */
-export function injectScheduleTable(xml: string, schedule: ScheduleRow[] | null | undefined): string {
+export function injectScheduleTable(
+  xml: string,
+  schedule: ScheduleRow[] | null | undefined,
+): string {
   if (!schedule || schedule.length === 0) return xml;
   if (!xml.includes("[HARMONOGRAM]")) return xml;
   const table = buildScheduleTableXml(schedule);

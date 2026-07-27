@@ -8,33 +8,67 @@ import { Facebook, Linkedin, Twitter, Link2, Mail, MessageCircle, Check } from "
 import { useState } from "react";
 import { BlogCover } from "@/components/blog/BlogCover";
 
-const FAVICON_URL = "https://financeyou.pl/__l5e/assets-v1/73e2df85-6890-4ae6-a18a-debbc0970e07/favicon-mark.png";
-const WORDMARK_URL = "https://financeyou.pl/__l5e/assets-v1/f4352ffd-618d-446b-a632-fc3a5abb0bdd/financeyou-wordmark.png";
+const FAVICON_URL =
+  "https://financeyou.pl/__l5e/assets-v1/73e2df85-6890-4ae6-a18a-debbc0970e07/favicon-mark.png";
+const WORDMARK_URL =
+  "https://financeyou.pl/__l5e/assets-v1/f4352ffd-618d-446b-a632-fc3a5abb0bdd/financeyou-wordmark.png";
 
 function ShareBar({ url, title }: { url: string; title: string }) {
   const [copied, setCopied] = useState(false);
   const enc = encodeURIComponent;
   const links = [
-    { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}` },
-    { label: "X / Twitter", icon: Twitter, href: `https://twitter.com/intent/tweet?url=${enc(url)}&text=${enc(title)}` },
-    { label: "LinkedIn", icon: Linkedin, href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}` },
-    { label: "WhatsApp", icon: MessageCircle, href: `https://wa.me/?text=${enc(title + " " + url)}` },
+    {
+      label: "Facebook",
+      icon: Facebook,
+      href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`,
+    },
+    {
+      label: "X / Twitter",
+      icon: Twitter,
+      href: `https://twitter.com/intent/tweet?url=${enc(url)}&text=${enc(title)}`,
+    },
+    {
+      label: "LinkedIn",
+      icon: Linkedin,
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`,
+    },
+    {
+      label: "WhatsApp",
+      icon: MessageCircle,
+      href: `https://wa.me/?text=${enc(title + " " + url)}`,
+    },
     { label: "E-mail", icon: Mail, href: `mailto:?subject=${enc(title)}&body=${enc(url)}` },
   ];
   const copy = async () => {
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {}
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {}
   };
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs uppercase tracking-wide text-muted-foreground mr-1">Udostępnij:</span>
+      <span className="text-xs uppercase tracking-wide text-muted-foreground mr-1">
+        Udostępnij:
+      </span>
       {links.map((l) => (
-        <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" aria-label={`Udostępnij na ${l.label}`}
-           className="inline-flex h-9 w-9 items-center justify-center rounded-full border bg-background hover:bg-muted transition-colors">
+        <a
+          key={l.label}
+          href={l.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Udostępnij na ${l.label}`}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border bg-background hover:bg-muted transition-colors"
+        >
           <l.icon className="h-4 w-4" />
         </a>
       ))}
-      <button type="button" onClick={copy} aria-label="Skopiuj link"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border bg-background hover:bg-muted transition-colors">
+      <button
+        type="button"
+        onClick={copy}
+        aria-label="Skopiuj link"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border bg-background hover:bg-muted transition-colors"
+      >
         {copied ? <Check className="h-4 w-4 text-primary" /> : <Link2 className="h-4 w-4" />}
       </button>
     </div>
@@ -50,9 +84,17 @@ function BrandHeader() {
           <img src={WORDMARK_URL} alt="Finance You" className="h-5 hidden sm:block" />
         </a>
         <nav className="flex items-center gap-4 text-sm">
-          <Link to="/blog" className="text-muted-foreground hover:text-foreground">Blog</Link>
-          <a href="https://financeyou.pl" className="text-muted-foreground hover:text-foreground">financeyou.pl</a>
-          <Button asChild size="sm"><a href="https://financeyou.pl" target="_blank" rel="noopener">Finance You</a></Button>
+          <Link to="/blog" className="text-muted-foreground hover:text-foreground">
+            Blog
+          </Link>
+          <a href="https://financeyou.pl" className="text-muted-foreground hover:text-foreground">
+            financeyou.pl
+          </a>
+          <Button asChild size="sm">
+            <a href="https://financeyou.pl" target="_blank" rel="noopener">
+              Finance You
+            </a>
+          </Button>
         </nav>
       </div>
     </header>
@@ -61,7 +103,12 @@ function BrandHeader() {
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: async ({ params }) => {
-    const { data } = await supabase.from("ai_seo_articles").select("*").eq("slug", params.slug).eq("status", "published").maybeSingle();
+    const { data } = await supabase
+      .from("ai_seo_articles")
+      .select("*")
+      .eq("slug", params.slug)
+      .eq("status", "published")
+      .maybeSingle();
     if (!data) throw notFound();
     return { article: data };
   },
@@ -84,7 +131,10 @@ export const Route = createFileRoute("/blog/$slug")({
         ...(keywords.length ? [{ name: "keywords", content: keywords.join(", ") }] : []),
         ...(a.primary_keyword ? [{ name: "news_keywords", content: a.primary_keyword }] : []),
         { name: "author", content: "Finance You" },
-        { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
+        {
+          name: "robots",
+          content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+        },
         { name: "article:section", content: section },
         { name: "article:published_time", content: a.published_at ?? "" },
         { name: "article:modified_time", content: a.updated_at ?? a.published_at ?? "" },
@@ -97,19 +147,25 @@ export const Route = createFileRoute("/blog/$slug")({
         { property: "og:locale", content: "pl_PL" },
         { property: "article:publisher", content: "https://financeyou.pl" },
         { property: "article:section", content: section },
-        ...(a.published_at ? [{ property: "article:published_time", content: a.published_at }] : []),
-        ...(a.updated_at || a.published_at ? [{ property: "article:modified_time", content: a.updated_at ?? a.published_at }] : []),
+        ...(a.published_at
+          ? [{ property: "article:published_time", content: a.published_at }]
+          : []),
+        ...(a.updated_at || a.published_at
+          ? [{ property: "article:modified_time", content: a.updated_at ?? a.published_at }]
+          : []),
         ...keywords.map((k) => ({ property: "article:tag", content: k })),
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
         { name: "twitter:site", content: "@financeyou_pl" },
-        ...(a.cover_image_url ? [
-          { property: "og:image", content: a.cover_image_url },
-          { property: "og:image:alt", content: a.cover_image_alt || title },
-          { name: "twitter:image", content: a.cover_image_url },
-          { name: "twitter:image:alt", content: a.cover_image_alt || title },
-        ] : []),
+        ...(a.cover_image_url
+          ? [
+              { property: "og:image", content: a.cover_image_url },
+              { property: "og:image:alt", content: a.cover_image_alt || title },
+              { name: "twitter:image", content: a.cover_image_url },
+              { name: "twitter:image:alt", content: a.cover_image_alt || title },
+            ]
+          : []),
         { name: "audience", content: audienceType },
       ],
       links: [
@@ -158,7 +214,11 @@ export const Route = createFileRoute("/blog/$slug")({
                 ? "Inwestowanie w pożyczki pod zastaw nieruchomości"
                 : "Pożyczka pod zastaw nieruchomości",
               url: ctaUrl,
-              provider: { "@type": "Organization", name: "Finance You", url: "https://financeyou.pl" },
+              provider: {
+                "@type": "Organization",
+                name: "Finance You",
+                url: "https://financeyou.pl",
+              },
             },
             isAccessibleForFree: true,
           }),
@@ -169,8 +229,18 @@ export const Route = createFileRoute("/blog/$slug")({
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Finance You", item: "https://financeyou.pl" },
-              { "@type": "ListItem", position: 2, name: "Blog", item: "https://financeyou.pl/blog" },
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Finance You",
+                item: "https://financeyou.pl",
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: "Blog",
+                item: "https://financeyou.pl/blog",
+              },
               { "@type": "ListItem", position: 3, name: a.title, item: url },
             ],
           }),
@@ -179,8 +249,14 @@ export const Route = createFileRoute("/blog/$slug")({
     };
   },
   component: ArticlePage,
-  notFoundComponent: () => <div className="grid min-h-screen place-items-center text-muted-foreground">Artykuł nie istnieje.</div>,
-  errorComponent: ({ error }) => <div className="grid min-h-screen place-items-center text-destructive">{error.message}</div>,
+  notFoundComponent: () => (
+    <div className="grid min-h-screen place-items-center text-muted-foreground">
+      Artykuł nie istnieje.
+    </div>
+  ),
+  errorComponent: ({ error }) => (
+    <div className="grid min-h-screen place-items-center text-destructive">{error.message}</div>
+  ),
 });
 
 function ArticlePage() {
@@ -194,7 +270,8 @@ function ArticlePage() {
   const ctaSub = isInvestor
     ? "Zabezpieczenie hipoteczne, prognozowana stopa zwrotu, pełna transparentność ofert."
     : "Sprawdź warunki w 2 minuty — bez BIK, decyzja w 24h.";
-  const ctaLabel = article.cta_label || (isInvestor ? "Zostań inwestorem" : "Złóż wniosek o pożyczkę");
+  const ctaLabel =
+    article.cta_label || (isInvestor ? "Zostań inwestorem" : "Złóż wniosek o pożyczkę");
   const ctaMicro = isInvestor
     ? "Dostęp do panelu inwestora • realne oferty • wypłata w 24h"
     : "Bez BIK • decyzja w 24h • wypłata tego samego dnia";
@@ -203,7 +280,9 @@ function ArticlePage() {
     <div className="min-h-screen bg-background">
       <BrandHeader />
       <div className="mx-auto max-w-3xl px-4 py-12">
-        <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground">← Wróć do bloga</Link>
+        <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Wróć do bloga
+        </Link>
         <header className="mt-6 mb-8 space-y-4">
           <h1 className="text-3xl md:text-4xl font-bold leading-tight">{article.title}</h1>
           <div className="text-xs text-muted-foreground">
@@ -211,7 +290,11 @@ function ArticlePage() {
             {article.published_at ? ` • ${formatDate(article.published_at)}` : null}
           </div>
           {article.cover_image_url && (
-            <BlogCover src={article.cover_image_url} alt={article.cover_image_alt || article.title} rounded />
+            <BlogCover
+              src={article.cover_image_url}
+              alt={article.cover_image_alt || article.title}
+              rounded
+            />
           )}
           <ShareBar url={shareUrl} title={article.title} />
         </header>
@@ -225,9 +308,13 @@ function ArticlePage() {
               "radial-gradient(120% 140% at 0% 0%, rgba(56,120,255,0.35) 0%, transparent 55%), radial-gradient(120% 140% at 100% 100%, rgba(201,168,76,0.28) 0%, transparent 60%), linear-gradient(135deg, #0b1330 0%, #101a4a 100%)",
           }}
         >
-          <div className="pointer-events-none absolute inset-0 opacity-40" style={{
-            background: "conic-gradient(from 220deg at 50% 50%, rgba(255,255,255,0.06), rgba(255,255,255,0.0) 30%, rgba(201,168,76,0.10) 60%, rgba(255,255,255,0.0) 100%)",
-          }} />
+          <div
+            className="pointer-events-none absolute inset-0 opacity-40"
+            style={{
+              background:
+                "conic-gradient(from 220deg at 50% 50%, rgba(255,255,255,0.06), rgba(255,255,255,0.0) 30%, rgba(201,168,76,0.10) 60%, rgba(255,255,255,0.0) 100%)",
+            }}
+          />
           <div className="relative space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-white/80">
               {isInvestor ? "Dla inwestora" : "Dla pożyczkobiorcy"}
@@ -255,8 +342,12 @@ function ArticlePage() {
             <span>© Finance You</span>
           </a>
           <div className="flex gap-3">
-            <Link to="/blog" className="hover:text-foreground">Blog</Link>
-            <a href="mailto:kontakt@app.financeyou.pl" className="hover:text-foreground">Kontakt</a>
+            <Link to="/blog" className="hover:text-foreground">
+              Blog
+            </Link>
+            <a href="mailto:kontakt@app.financeyou.pl" className="hover:text-foreground">
+              Kontakt
+            </a>
           </div>
         </footer>
       </div>

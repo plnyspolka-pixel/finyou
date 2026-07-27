@@ -19,7 +19,9 @@ export function NextStepCard({ progress }: Props) {
           {done ? "Wniosek kompletny" : "Co dalej?"}
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl md:text-3xl font-bold leading-tight">{progress.next_step.title}</h2>
+          <h2 className="text-2xl md:text-3xl font-bold leading-tight">
+            {progress.next_step.title}
+          </h2>
           <p className="text-muted-foreground max-w-xl">{progress.next_step.description}</p>
         </div>
 

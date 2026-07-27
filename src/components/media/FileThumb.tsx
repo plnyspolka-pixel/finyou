@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { FileText, FileSpreadsheet, FileImage, File as FileIcon, Music, Video, Loader2 } from "lucide-react";
+import {
+  FileText,
+  FileSpreadsheet,
+  FileImage,
+  File as FileIcon,
+  Music,
+  Video,
+  Loader2,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { backfillPdfThumbnail } from "@/lib/uploads/unified-upload";
@@ -79,7 +87,11 @@ function badgeFor(name: string, mime?: string | null): string {
   if (isAudio(name, mime)) return "AUDIO";
   if (isVideo(name, mime)) return "VIDEO";
   const dot = name.lastIndexOf(".");
-  if (dot > 0) return name.slice(dot + 1).toUpperCase().slice(0, 4);
+  if (dot > 0)
+    return name
+      .slice(dot + 1)
+      .toUpperCase()
+      .slice(0, 4);
   return "FILE";
 }
 
@@ -159,7 +171,7 @@ export function FileThumb({
 
   const Icon = iconFor(typeName, mimeType);
   const badge = badgeFor(typeName, mimeType);
-  const src = imgFailed ? null : thumbUrl ?? url;
+  const src = imgFailed ? null : (thumbUrl ?? url);
 
   return (
     <button
@@ -179,7 +191,13 @@ export function FileThumb({
         </div>
       ) : src ? (
         <>
-          <img src={src} alt={displayName} className="h-full w-full object-cover" loading="lazy" onError={() => setImgFailed(true)} />
+          <img
+            src={src}
+            alt={displayName}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            onError={() => setImgFailed(true)}
+          />
           {!isImage(typeName, mimeType) && (
             <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
               {badge}

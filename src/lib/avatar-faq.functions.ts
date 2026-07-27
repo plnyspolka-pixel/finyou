@@ -3,10 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function assertAdmin(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId);
+  const { data } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
   if (!(data ?? []).some((r) => r.role === "administrator")) {
     throw new Error("Brak uprawnień");
   }
@@ -40,27 +37,21 @@ export type PublicAvatarFaq = {
 };
 
 // PUBLIC — landing page
-export const listPublishedAvatarFaqs = createServerFn({ method: "GET" }).handler(
-  async () => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const sb = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_PUBLISHABLE_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
-    const { data, error } = await sb
-      .from("avatar_faqs")
-      .select(
-        "id, question, answer_text, sort_order, is_intro, video_url, thumbnail_url",
-      )
-      .eq("is_published", true)
-      .not("video_url", "is", null)
-      .order("is_intro", { ascending: false })
-      .order("sort_order", { ascending: true });
-    if (error) throw new Error(error.message);
-    return (data ?? []) as PublicAvatarFaq[];
-  },
-);
+export const listPublishedAvatarFaqs = createServerFn({ method: "GET" }).handler(async () => {
+  const { createClient } = await import("@supabase/supabase-js");
+  const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await sb
+    .from("avatar_faqs")
+    .select("id, question, answer_text, sort_order, is_intro, video_url, thumbnail_url")
+    .eq("is_published", true)
+    .not("video_url", "is", null)
+    .order("is_intro", { ascending: false })
+    .order("sort_order", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PublicAvatarFaq[];
+});
 
 // ADMIN — list all
 export const listAllAvatarFaqs = createServerFn({ method: "GET" })
@@ -109,10 +100,7 @@ export const upsertAvatarFaq = createServerFn({ method: "POST" })
     if (data.is_intro !== undefined) row.is_intro = data.is_intro;
     if (data.voice_id) row.voice_id = data.voice_id;
     if (data.id) {
-      const { error } = await supabaseAdmin
-        .from("avatar_faqs")
-        .update(row)
-        .eq("id", data.id);
+      const { error } = await supabaseAdmin.from("avatar_faqs").update(row).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
@@ -145,10 +133,7 @@ export const deleteAvatarFaq = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
-      .from("avatar_faqs")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("avatar_faqs").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -160,11 +145,8 @@ export const startAvatarFaqGeneration = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const {
-      ttsElevenLabs,
-      uploadAudioToHeygen,
-      createHeygenVideoFromAudio,
-    } = await import("./avatar-faq.server");
+    const { ttsElevenLabs, uploadAudioToHeygen, createHeygenVideoFromAudio } =
+      await import("./avatar-faq.server");
 
     const { data: row, error: rErr } = await supabaseAdmin
       .from("avatar_faqs")
@@ -239,9 +221,7 @@ export const pollAvatarFaqStatus = createServerFn({ method: "POST" })
     } else if (status.status === "failed") {
       update.video_status = "failed";
       update.last_error =
-        typeof status.error === "string"
-          ? status.error
-          : JSON.stringify(status.error ?? {});
+        typeof status.error === "string" ? status.error : JSON.stringify(status.error ?? {});
     } else {
       update.video_status = status.status === "processing" ? "rendering" : status.status;
     }

@@ -11,8 +11,14 @@ const ALLOWED_MODELS = [
   "claude-3-5-haiku-latest",
 ] as const;
 
-async function assertAdmin(ctx: { supabase: { rpc: (n: string, p: unknown) => Promise<{ data: unknown; error: unknown }> }; userId: string }) {
-  const { data, error } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "administrator" });
+async function assertAdmin(ctx: {
+  supabase: { rpc: (n: string, p: unknown) => Promise<{ data: unknown; error: unknown }> };
+  userId: string;
+}) {
+  const { data, error } = await ctx.supabase.rpc("has_role", {
+    _user_id: ctx.userId,
+    _role: "administrator",
+  });
   if (error) throw new Error("Brak uprawnień: " + (error as Error).message);
   if (!data) throw new Error("Tylko administrator może używać AI Administratora");
 }
@@ -21,7 +27,11 @@ export const getAiSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context as never);
-    const { data, error } = await context.supabase.from("ai_admin_settings").select("*").limit(1).maybeSingle();
+    const { data, error } = await context.supabase
+      .from("ai_admin_settings")
+      .select("*")
+      .limit(1)
+      .maybeSingle();
     if (error) throw new Error(error.message);
     return { settings: data };
   });
@@ -40,11 +50,14 @@ export const updateAiSettings = createServerFn({ method: "POST" })
         max_tokens: z.number().int().min(500).max(16000),
         temperature: z.number().min(0).max(1),
       })
-      .parse(d)
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
-    const { error } = await context.supabase.from("ai_admin_settings").update(data).eq("singleton", true);
+    const { error } = await context.supabase
+      .from("ai_admin_settings")
+      .update(data)
+      .eq("singleton", true);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -81,7 +94,10 @@ export const deleteConversation = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
-    const { error } = await context.supabase.from("ai_admin_conversations").delete().eq("id", data.id);
+    const { error } = await context.supabase
+      .from("ai_admin_conversations")
+      .delete()
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -104,7 +120,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
         message: z.string().min(1).max(500000),
         attachments: z.array(attachmentSchema).max(20).optional(),
       })
-      .parse(d)
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
@@ -142,11 +158,16 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       convId = ins.id;
     } else {
-      await supabaseAdmin.from("ai_admin_conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+      await supabaseAdmin
+        .from("ai_admin_conversations")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", convId);
     }
 
     // Append user message (z notką o załącznikach, surowych danych nie trzymamy w DB)
-    const attList = (data.attachments ?? []).map((a) => `${a.name} (${a.kind}, ${a.size} B)`).join(", ");
+    const attList = (data.attachments ?? [])
+      .map((a) => `${a.name} (${a.kind}, ${a.size} B)`)
+      .join(", ");
     const persistedContent = attList
       ? `${data.message}\n\n📎 Załączniki: ${attList}`
       : data.message;
@@ -155,7 +176,6 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       role: "user",
       content: persistedContent,
     });
-
 
     // Load full history → Anthropic format
     const { data: history, error: hErr } = await supabaseAdmin
@@ -178,14 +198,30 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       } else if (mm.role === "assistant") {
         const parts: AnthropicMessage["content"] = [];
         if (mm.content) parts.push({ type: "text", text: mm.content });
-        const tc = (mm.tool_calls as Array<{ id: string; name: string; input: Record<string, unknown> }> | null) ?? [];
-        for (const t of tc) parts.push({ type: "tool_use", id: t.id, name: t.name, input: t.input });
+        const tc =
+          (mm.tool_calls as Array<{
+            id: string;
+            name: string;
+            input: Record<string, unknown>;
+          }> | null) ?? [];
+        for (const t of tc)
+          parts.push({ type: "tool_use", id: t.id, name: t.name, input: t.input });
         messages.push({ role: "assistant", content: parts.length ? parts : mm.content });
       } else if (mm.role === "tool") {
-        const tr = (mm.tool_results as Array<{ tool_use_id: string; content: string; is_error?: boolean }> | null) ?? [];
+        const tr =
+          (mm.tool_results as Array<{
+            tool_use_id: string;
+            content: string;
+            is_error?: boolean;
+          }> | null) ?? [];
         messages.push({
           role: "user",
-          content: tr.map((r) => ({ type: "tool_result", tool_use_id: r.tool_use_id, content: r.content, is_error: r.is_error })),
+          content: tr.map((r) => ({
+            type: "tool_result",
+            tool_use_id: r.tool_use_id,
+            content: r.content,
+            is_error: r.is_error,
+          })),
         });
       }
     }
@@ -230,7 +266,6 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       }
     }
 
-
     // Agentic loop — max 8 tool rounds
     let totalIn = 0;
     let totalOut = 0;
@@ -245,7 +280,10 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       totalIn += resp.usage.input_tokens;
       totalOut += resp.usage.output_tokens;
 
-      const textBlocks = resp.content.filter((b) => b.type === "text") as { type: "text"; text: string }[];
+      const textBlocks = resp.content.filter((b) => b.type === "text") as {
+        type: "text";
+        text: string;
+      }[];
       const toolBlocks = resp.content.filter((b) => b.type === "tool_use") as {
         type: "tool_use";
         id: string;
@@ -253,7 +291,10 @@ export const sendAdminChat = createServerFn({ method: "POST" })
         input: Record<string, unknown>;
       }[];
 
-      const assistantText = textBlocks.map((b) => b.text).join("\n").trim();
+      const assistantText = textBlocks
+        .map((b) => b.text)
+        .join("\n")
+        .trim();
       const toolCalls = toolBlocks.map((b) => ({ id: b.id, name: b.name, input: b.input }));
 
       await supabaseAdmin.from("ai_admin_messages").insert({
@@ -281,7 +322,12 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       for (const tc of toolBlocks) {
         const r = await runTool(
           { name: tc.name, input: tc.input },
-          { enableDbRead: s.enable_db_read, enableDbWrite: s.enable_db_write, enableFileRead: s.enable_file_read, enableFileWrite: s.enable_file_write }
+          {
+            enableDbRead: s.enable_db_read,
+            enableDbWrite: s.enable_db_write,
+            enableFileRead: s.enable_file_read,
+            enableFileWrite: s.enable_file_write,
+          },
         );
         const content = r.ok
           ? typeof r.output === "string"
@@ -309,11 +355,21 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       });
       messages.push({
         role: "user",
-        content: results.map((r) => ({ type: "tool_result" as const, tool_use_id: r.tool_use_id, content: r.content, is_error: r.is_error })),
+        content: results.map((r) => ({
+          type: "tool_result" as const,
+          tool_use_id: r.tool_use_id,
+          content: r.content,
+          is_error: r.is_error,
+        })),
       });
     }
 
-    return { conversation_id: convId, ok: true, tokens: { input: totalIn, output: totalOut }, note: "Limit rund narzędzi osiągnięty" };
+    return {
+      conversation_id: convId,
+      ok: true,
+      tokens: { input: totalIn, output: totalOut },
+      note: "Limit rund narzędzi osiągnięty",
+    };
   });
 
 /** Transkrypcja głosówki dla AI Administratora (ElevenLabs scribe_v2). */

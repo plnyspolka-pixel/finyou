@@ -41,9 +41,9 @@ function ConnectPage() {
             Podłącz Finance You do swojego asystenta AI
           </h1>
           <p className="text-muted-foreground">
-            Po podłączeniu Twój asystent (ChatGPT lub Claude) może w Twoim imieniu
-            pracować z leadami, wnioskami, ofertami inwestorów i wiadomościami
-            Finance You. Widzi tylko to, do czego Ty masz uprawnienia.
+            Po podłączeniu Twój asystent (ChatGPT lub Claude) może w Twoim imieniu pracować z
+            leadami, wnioskami, ofertami inwestorów i wiadomościami Finance You. Widzi tylko to, do
+            czego Ty masz uprawnienia.
           </p>
         </header>
 
@@ -69,8 +69,8 @@ function ConnectPage() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Ten adres podajesz asystentowi. Logujesz się swoim kontem Finance You
-              — asystent działa dokładnie z Twoimi uprawnieniami.
+              Ten adres podajesz asystentowi. Logujesz się swoim kontem Finance You — asystent
+              działa dokładnie z Twoimi uprawnieniami.
             </p>
           </CardContent>
         </Card>
@@ -92,20 +92,19 @@ function ConnectPage() {
                   ustawienia konektorów ChatGPT
                   <ExternalLink className="h-3 w-3" />
                 </a>{" "}
-                i włącz <strong>Developer mode</strong> (zapoznaj się z
-                ostrzeżeniem, które tam zobaczysz).
+                i włącz <strong>Developer mode</strong> (zapoznaj się z ostrzeżeniem, które tam
+                zobaczysz).
               </li>
               <li>
-                W oknie czatu kliknij <strong>„+”</strong> w polu wiadomości i
-                włącz tam <strong>Developer mode</strong>.
+                W oknie czatu kliknij <strong>„+”</strong> w polu wiadomości i włącz tam{" "}
+                <strong>Developer mode</strong>.
               </li>
               <li>
-                Wybierz <strong>„Add sources”</strong>, a następnie{" "}
-                <strong>„Connect more”</strong>.
+                Wybierz <strong>„Add sources”</strong>, a następnie <strong>„Connect more”</strong>.
               </li>
               <li>
-                Nadaj konektorowi nazwę (np. <em>Finance You</em>) i wklej
-                skopiowany wyżej adres serwera MCP.
+                Nadaj konektorowi nazwę (np. <em>Finance You</em>) i wklej skopiowany wyżej adres
+                serwera MCP.
               </li>
               <li>Zaloguj się swoim kontem Finance You i zatwierdź dostęp.</li>
               <li>Poproś ChatGPT, żeby skorzystał z Finance You.</li>
@@ -133,14 +132,11 @@ function ConnectPage() {
                 .
               </li>
               <li>
-                Nadaj konektorowi nazwę (np. <em>Finance You</em>) i wklej
-                skopiowany wyżej adres serwera MCP.
+                Nadaj konektorowi nazwę (np. <em>Finance You</em>) i wklej skopiowany wyżej adres
+                serwera MCP.
               </li>
               <li>Zaloguj się swoim kontem Finance You i zatwierdź dostęp.</li>
-              <li>
-                Włącz konektor w oknie czatu i poproś Claude, żeby skorzystał z
-                Finance You.
-              </li>
+              <li>Włącz konektor w oknie czatu i poproś Claude, żeby skorzystał z Finance You.</li>
             </ol>
           </CardContent>
         </Card>

@@ -53,7 +53,8 @@ function fmt(x: number): string {
 export function walidujReguly(d: any): Problem[] {
   const P: Problem[] = [];
   const blad = (sc: string, k: string) => P.push({ poziom: "BLAD", sciezka: sc, komunikat: k });
-  const ostrz = (sc: string, k: string) => P.push({ poziom: "OSTRZEZENIE", sciezka: sc, komunikat: k });
+  const ostrz = (sc: string, k: string) =>
+    P.push({ poziom: "OSTRZEZENIE", sciezka: sc, komunikat: k });
 
   const nier: any[] = d.nieruchomosci ?? [];
   const por = d.porecziciel ?? null;
@@ -63,11 +64,13 @@ export function walidujReguly(d: any): Problem[] {
 
   // R1: unikalność ID
   const ids = nier.map((n) => n.id);
-  if (ids.length !== new Set(ids).size) blad("nieruchomosci", "Zduplikowane identyfikatory nieruchomości");
+  if (ids.length !== new Set(ids).size)
+    blad("nieruchomosci", "Zduplikowane identyfikatory nieruchomości");
 
   // R2: unikalność numerów KW
   const kws = nier.map((n) => n.nr_kw);
-  if (kws.length !== new Set(kws).size) blad("nieruchomosci", "Ta sama księga wieczysta wskazana wielokrotnie");
+  if (kws.length !== new Set(kws).size)
+    blad("nieruchomosci", "Ta sama księga wieczysta wskazana wielokrotnie");
 
   nier.forEach((n, i) => {
     const sc = `nieruchomosci[${i}]`;
@@ -84,9 +87,14 @@ export function walidujReguly(d: any): Problem[] {
     const hip = n.hipoteka ?? {};
     if (hip.pierwszenstwo === "oproznione_miejsce") {
       if (!hip.oproznione_miejsce_po)
-        blad(`${sc}.hipoteka`, "pierwszenstwo='oproznione_miejsce' wymaga pola oproznione_miejsce_po");
+        blad(
+          `${sc}.hipoteka`,
+          "pierwszenstwo='oproznione_miejsce' wymaga pola oproznione_miejsce_po",
+        );
       const usuwane = (n.obciazenia ?? []).filter((o: any) =>
-        ["wykreslenie_przed_wyplata", "wykreslenie_ze_srodkow_pozyczki"].includes(o.sposob_usuniecia),
+        ["wykreslenie_przed_wyplata", "wykreslenie_ze_srodkow_pozyczki"].includes(
+          o.sposob_usuniecia,
+        ),
       );
       if (usuwane.length === 0)
         blad(
@@ -98,7 +106,9 @@ export function walidujReguly(d: any): Problem[] {
     // R6
     if (hip.pierwszenstwo === "pierwsze") {
       const pozostajace = (n.obciazenia ?? []).filter(
-        (o: any) => o.dzial === "IV" && ["brak", "pozostaje_akceptowane"].includes(o.sposob_usuniecia ?? "brak"),
+        (o: any) =>
+          o.dzial === "IV" &&
+          ["brak", "pozostaje_akceptowane"].includes(o.sposob_usuniecia ?? "brak"),
       );
       if (pozostajace.length)
         blad(
@@ -143,23 +153,33 @@ export function walidujReguly(d: any): Problem[] {
 
       // R7
       if (sposob === "zrzeczenie_uprawnionego" && !o.uprawniony_do_zrzeczenia)
-        blad(osc, "sposob_usuniecia='zrzeczenie_uprawnionego' wymaga wypełnienia uprawniony_do_zrzeczenia");
+        blad(
+          osc,
+          "sposob_usuniecia='zrzeczenie_uprawnionego' wymaga wypełnienia uprawniony_do_zrzeczenia",
+        );
 
       // R8
       if (sposob === "wykreslenie_ze_srodkow_pozyczki") {
         if (!o.kwota_splaty) blad(osc, "Spłata ze środków pożyczki wymaga podania kwota_splaty");
-        if (!o.wierzyciel_rachunek) ostrz(osc, "Brak rachunku wierzyciela — w umowie pojawi się placeholder");
+        if (!o.wierzyciel_rachunek)
+          ostrz(osc, "Brak rachunku wierzyciela — w umowie pojawi się placeholder");
       }
 
       // R9
-      if (["egzekucja_administracyjna", "hipoteka_przymusowa"].includes(o.rodzaj) && ["brak", "pozostaje_akceptowane"].includes(sposob))
+      if (
+        ["egzekucja_administracyjna", "hipoteka_przymusowa"].includes(o.rodzaj) &&
+        ["brak", "pozostaje_akceptowane"].includes(sposob)
+      )
         ostrz(
           osc,
           "Wpis egzekucyjny/hipoteka przymusowa pozostaje na nieruchomości. Należności publicznoprawne mogą mieć pierwszeństwo przed hipoteką umowną — rozważ warunek wykreślenia przed wypłatą",
         );
 
       // R10
-      if (["dozywocie", "sluzebnosc_osobista"].includes(o.rodzaj) && ["brak", "pozostaje_akceptowane"].includes(sposob))
+      if (
+        ["dozywocie", "sluzebnosc_osobista"].includes(o.rodzaj) &&
+        ["brak", "pozostaje_akceptowane"].includes(sposob)
+      )
         ostrz(
           osc,
           "Służebność osobista/dożywocie pozostaje na nieruchomości — istotnie obniża wartość egzekucyjną zabezpieczenia",
@@ -293,19 +313,31 @@ export function walidujReguly(d: any): Problem[] {
           "Spółka cywilna nie ma podmiotowości prawnej — stroną Umowy są wszyscy wspólnicy. Wypełnij wspolnicy_sc, inaczej umowa zostanie zawarta z podmiotem, który nie istnieje w obrocie prawnym",
         );
       if (o.krs)
-        ostrz(`${etykieta}.krs`, "Spółka cywilna nie podlega wpisowi do KRS — sprawdź, czy nie chodzi o spółkę jawną");
+        ostrz(
+          `${etykieta}.krs`,
+          "Spółka cywilna nie podlega wpisowi do KRS — sprawdź, czy nie chodzi o spółkę jawną",
+        );
     }
 
     // R24: reprezentacja
     const rep = o.reprezentacja;
     const repLista: any[] = Array.isArray(rep) ? rep : rep ? [rep] : [];
     if (forma !== "spolka_cywilna" && repLista.length === 0)
-      blad(`${etykieta}.reprezentacja`, "Podmiot niebędący osobą fizyczną wymaga wskazania osób reprezentujących");
+      blad(
+        `${etykieta}.reprezentacja`,
+        "Podmiot niebędący osobą fizyczną wymaga wskazania osób reprezentujących",
+      );
     if (o.reprezentacja_laczna && repLista.length < 2)
-      blad(`${etykieta}.reprezentacja_laczna`, "Zadeklarowano reprezentację łączną, ale wskazano mniej niż dwie osoby");
+      blad(
+        `${etykieta}.reprezentacja_laczna`,
+        "Zadeklarowano reprezentację łączną, ale wskazano mniej niż dwie osoby",
+      );
     for (const r of repLista) {
       if (r && ["pełnomocnik", "prokurent"].includes(r.funkcja) && !r.podstawa)
-        ostrz(`${etykieta}.reprezentacja`, `${r.funkcja} bez wskazania podstawy umocowania — notariusz zażąda dokumentu`);
+        ostrz(
+          `${etykieta}.reprezentacja`,
+          `${r.funkcja} bez wskazania podstawy umocowania — notariusz zażąda dokumentu`,
+        );
     }
 
     // R25: kapitał zakładowy a próg z art. 230 k.s.h.
@@ -366,7 +398,10 @@ export function walidujReguly(d: any): Problem[] {
   // R12: poddanie się egzekucji przez podmioty, których nie ma
   const poddaje: string[] = zab.egzekucja_777?.poddaje_sie ?? [];
   if (poddaje.includes("porecziciel") && por === null)
-    blad("zabezpieczenia.egzekucja_777", "Poręczyciel wskazany w poddaje_sie, ale nie zdefiniowano poręczyciela");
+    blad(
+      "zabezpieczenia.egzekucja_777",
+      "Poręczyciel wskazany w poddaje_sie, ale nie zdefiniowano poręczyciela",
+    );
   if (poddaje.includes("wlasciciel_osoba_trzecia")) {
     if (!nier.some((n) => n.wlasciciel_ref === "osoba_trzecia"))
       blad(
@@ -396,11 +431,17 @@ export function walidujReguly(d: any): Problem[] {
     blad("warunki.harmonogram", "Harmonogram balonowy wymaga podania kwota_raty_koncowej");
   if ((h.liczba_rat ?? 0) > 0 && Array.isArray(h.raty) && h.raty.length > 0) {
     if (h.raty.length !== h.liczba_rat)
-      blad("warunki.harmonogram.raty", `Zadeklarowano ${h.liczba_rat} rat, a tabela zawiera ${h.raty.length}`);
+      blad(
+        "warunki.harmonogram.raty",
+        `Zadeklarowano ${h.liczba_rat} rat, a tabela zawiera ${h.raty.length}`,
+      );
   }
 
   // R17: stan cywilny vs ustrój majątkowy
-  const osoby: [string, any][] = pbLista.map((o, i) => [pbLista.length > 1 ? `pozyczkobiorca[${i}]` : "pozyczkobiorca", o]);
+  const osoby: [string, any][] = pbLista.map((o, i) => [
+    pbLista.length > 1 ? `pozyczkobiorca[${i}]` : "pozyczkobiorca",
+    o,
+  ]);
   osoby.push(["porecziciel", por]);
   for (const [etykieta, osoba] of osoby) {
     if (osoba && osoba.typ === "osoba_fizyczna") {

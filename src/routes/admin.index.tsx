@@ -40,11 +40,14 @@ const PHASES: { label: string; statuses: string[] }[] = [
 const HEADLINE: { key: string; label: string; href: string }[] = [
   { key: "nowy_lead", label: "Nowe leady", href: "/admin/klienci" },
   { key: "brak_kontaktu", label: "Brak kontaktu", href: "/admin/klienci" },
-  { key: "kompletowanie_danych", label: "Kompletowanie danych", href: "/admin/wnioski-niekompletne" },
+  {
+    key: "kompletowanie_danych",
+    label: "Kompletowanie danych",
+    href: "/admin/wnioski-niekompletne",
+  },
   { key: "szukamy_inwestora", label: "Szukamy inwestora", href: "/admin/dystrybucja" },
   { key: "warunki_zaakceptowane", label: "Warunki zaakceptowane", href: "/admin/klienci" },
 ];
-
 
 const QUICK_LINKS: { to: string; label: string; icon: typeof Users }[] = [
   { to: "/admin/klienci", label: "Klienci", icon: Users },

@@ -44,7 +44,9 @@ function SzkoleniaAdmin() {
       let filePath: string | null = null;
       if (file) {
         const path = `videos/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-        const { error: upErr } = await supabase.storage.from("training-videos").upload(path, file, { upsert: false });
+        const { error: upErr } = await supabase.storage
+          .from("training-videos")
+          .upload(path, file, { upsert: false });
         if (upErr) throw upErr;
         filePath = path;
       }
@@ -85,11 +87,23 @@ function SzkoleniaAdmin() {
         </CardHeader>
         <CardContent className="space-y-3">
           <Input placeholder="Tytuł" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <Textarea placeholder="Opis (opcjonalnie)" value={description} onChange={(e) => setDescription(e.target.value)} />
-          <Input placeholder="Link YouTube / Vimeo (alternatywa do pliku)" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} />
+          <Textarea
+            placeholder="Opis (opcjonalnie)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <Input
+            placeholder="Link YouTube / Vimeo (alternatywa do pliku)"
+            value={externalUrl}
+            onChange={(e) => setExternalUrl(e.target.value)}
+          />
           <div>
             <label className="text-sm text-muted-foreground">Plik wideo (MP4) — opcjonalnie</label>
-            <Input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <Input
+              type="file"
+              accept="video/*"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
           </div>
           <Button onClick={handleSave} disabled={uploading}>
             <Plus className="mr-2 h-4 w-4" />
@@ -104,7 +118,10 @@ function SzkoleniaAdmin() {
         </CardHeader>
         <CardContent className="space-y-3">
           {videos.map((v) => (
-            <div key={v.id} className="flex items-start justify-between gap-3 rounded-md border p-3">
+            <div
+              key={v.id}
+              className="flex items-start justify-between gap-3 rounded-md border p-3"
+            >
               {v.thumbnail_url && (
                 <img
                   src={v.thumbnail_url}
@@ -115,12 +132,16 @@ function SzkoleniaAdmin() {
               )}
               <div className="flex-1">
                 <div className="font-medium">{v.title}</div>
-                {v.description && <div className="text-sm text-muted-foreground">{v.description}</div>}
+                {v.description && (
+                  <div className="text-sm text-muted-foreground">{v.description}</div>
+                )}
                 <div className="mt-1 flex flex-wrap gap-2">
                   {v.file_path && <Badge variant="secondary">Plik</Badge>}
                   {v.external_url && <Badge variant="secondary">Link</Badge>}
                   {v.thumbnail_url && <Badge variant="secondary">Okładka</Badge>}
-                  <Badge variant={v.is_published ? "default" : "outline"}>{v.is_published ? "Publiczny" : "Ukryty"}</Badge>
+                  <Badge variant={v.is_published ? "default" : "outline"}>
+                    {v.is_published ? "Publiczny" : "Ukryty"}
+                  </Badge>
                 </div>
               </div>
               <Button variant="ghost" size="icon" onClick={() => void remove(v.id, v.file_path)}>
@@ -128,7 +149,9 @@ function SzkoleniaAdmin() {
               </Button>
             </div>
           ))}
-          {videos.length === 0 && <div className="text-sm text-muted-foreground">Brak materiałów.</div>}
+          {videos.length === 0 && (
+            <div className="text-sm text-muted-foreground">Brak materiałów.</div>
+          )}
         </CardContent>
       </Card>
     </div>

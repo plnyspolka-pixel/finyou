@@ -24,7 +24,9 @@ function loadGoogleMaps(): Promise<void> {
     const existing = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
     if (existing) {
       existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("Nie udało się załadować Google Maps")));
+      existing.addEventListener("error", () =>
+        reject(new Error("Nie udało się załadować Google Maps")),
+      );
       return;
     }
     const s = document.createElement("script");
@@ -45,7 +47,13 @@ interface PropertyMapProps {
   height?: number;
 }
 
-export function PropertyMap({ latitude, longitude, label, zoom = 16, height = 320 }: PropertyMapProps) {
+export function PropertyMap({
+  latitude,
+  longitude,
+  label,
+  zoom = 16,
+  height = 320,
+}: PropertyMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
@@ -86,5 +94,11 @@ export function PropertyMap({ latitude, longitude, label, zoom = 16, height = 32
     };
   }, [latitude, longitude, zoom, label]);
 
-  return <div ref={containerRef} style={{ width: "100%", height }} className="rounded border overflow-hidden bg-muted" />;
+  return (
+    <div
+      ref={containerRef}
+      style={{ width: "100%", height }}
+      className="rounded border overflow-hidden bg-muted"
+    />
+  );
 }

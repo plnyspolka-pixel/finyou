@@ -9,9 +9,14 @@ async function run({ request }: { request: Request }) {
   if (denied) return denied;
   try {
     const out = await syncAllAccounting();
-    return new Response(JSON.stringify({ ok: true, ...out }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ok: true, ...out }), {
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: (e as Error).message }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ok: false, error: (e as Error).message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 

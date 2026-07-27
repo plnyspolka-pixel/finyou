@@ -17,8 +17,16 @@ const MAX_OUTBOUND = FOLLOWUP_OFFSETS_HOURS.length + 1; // initial + 8 follow-up
 const SUPPORTED_CHANNELS = ["messenger", "instagram"] as const;
 type Channel = (typeof SUPPORTED_CHANNELS)[number];
 const TERMINAL_STATUSES = new Set([
-  "zamkniety", "closed", "won", "lost", "odrzucony", "rezygnacja",
-  "wyplacony", "spłacony", "do_not_contact", "blacklist",
+  "zamkniety",
+  "closed",
+  "won",
+  "lost",
+  "odrzucony",
+  "rezygnacja",
+  "wyplacony",
+  "spłacony",
+  "do_not_contact",
+  "blacklist",
 ]);
 
 export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
@@ -51,7 +59,13 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         try {
           const { runScheduledMessengerBackfill } = await import("@/lib/messenger-backfill.server");
           const bf = await runScheduledMessengerBackfill();
-          if (bf.namesFromMeta || bf.namesFromText || bf.namesFromOcr || bf.namesFromKw || bf.attachmentsRun) {
+          if (
+            bf.namesFromMeta ||
+            bf.namesFromText ||
+            bf.namesFromOcr ||
+            bf.namesFromKw ||
+            bf.attachmentsRun
+          ) {
             console.log("[follow-up-tick] messenger backfill", JSON.stringify(bf));
           }
         } catch (e) {
@@ -70,7 +84,6 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           console.error("[follow-up-tick] plan error", e);
         }
 
-
         const now = Date.now();
         const cutoff = new Date(now - 31 * 24 * 3600_000).toISOString();
 
@@ -82,24 +95,31 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           .gte("created_at", cutoff)
           .order("created_at", { ascending: false })
           .limit(5000);
-        if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
+        if (error)
+          return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
 
         // 2) Pogrupuj po (lead_id, channel) i policz step + last outbound + last inbound.
         type Key = string;
-        const groups = new Map<Key, {
-          leadId: string;
-          channel: Channel;
-          outboundCount: number;
-          lastOutboundAt: number;
-          lastInboundAt: number;
-        }>();
+        const groups = new Map<
+          Key,
+          {
+            leadId: string;
+            channel: Channel;
+            outboundCount: number;
+            lastOutboundAt: number;
+            lastInboundAt: number;
+          }
+        >();
         for (const c of comms ?? []) {
           if (!c.lead_id) continue;
           if (!SUPPORTED_CHANNELS.includes(c.channel as Channel)) continue;
           const key = `${c.lead_id}::${c.channel}`;
           const g = groups.get(key) ?? {
-            leadId: c.lead_id, channel: c.channel as Channel,
-            outboundCount: 0, lastOutboundAt: 0, lastInboundAt: 0,
+            leadId: c.lead_id,
+            channel: c.channel as Channel,
+            outboundCount: 0,
+            lastOutboundAt: 0,
+            lastInboundAt: 0,
           };
           const t = new Date(c.created_at).getTime();
           if (c.direction === "outbound") {
@@ -128,12 +148,16 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         // 4) Pobierz statusy leadów hurtowo, żeby pominąć "zamknięte".
         const leadIds = Array.from(new Set(candidates.map((c) => c.leadId)));
         const { data: leadsRows } = await supabaseAdmin
-          .from("leads").select("id, status, email, messenger_psid, instagram_igsid, application_data, loan_application_id")
+          .from("leads")
+          .select(
+            "id, status, email, messenger_psid, instagram_igsid, application_data, loan_application_id",
+          )
           .in("id", leadIds);
         const leadMap = new Map<string, any>();
         for (const l of leadsRows ?? []) leadMap.set(l.id, l);
 
-        let sent = 0; let processed = 0;
+        let sent = 0;
+        let processed = 0;
         for (const g of candidates) {
           processed += 1;
           const lead = leadMap.get(g.leadId);
@@ -145,11 +169,14 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           if (lead.loan_application_id) continue;
 
           // Dokładny step: licz outboundy PO ostatnim inboundzie (lub wszystkie, jeśli inboundu nie było).
-          const sinceIso = g.lastInboundAt > 0 ? new Date(g.lastInboundAt).toISOString() : "1970-01-01T00:00:00Z";
+          const sinceIso =
+            g.lastInboundAt > 0 ? new Date(g.lastInboundAt).toISOString() : "1970-01-01T00:00:00Z";
           const { count: outSince } = await supabaseAdmin
             .from("lead_communications")
             .select("id", { count: "exact", head: true })
-            .eq("lead_id", g.leadId).eq("channel", g.channel).eq("direction", "outbound")
+            .eq("lead_id", g.leadId)
+            .eq("channel", g.channel)
+            .eq("direction", "outbound")
             .gt("created_at", sinceIso);
           const step = outSince ?? 1; // liczba dotychczasowych outboundów w bieżącej serii
           if (step >= MAX_OUTBOUND) continue;
@@ -195,17 +222,31 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           // 6) Wyślij właściwym kanałem (tylko Messenger/Instagram — e-mail obsługuje
           //    wyłącznie brandowany drip loan-reminder-emails, żeby nie było dwóch
           //    różnych „scenariuszy" mailowych do tego samego klienta).
-          let sendOk = false; let sendId: string | null = null; let sendErr: string | null = null;
+          let sendOk = false;
+          let sendId: string | null = null;
+          let sendErr: string | null = null;
           if (g.channel === "messenger") {
             const psid = lead.messenger_psid;
             if (!psid) continue;
-            const r = await sendMetaMessage({ recipientId: psid, text: replyText, platform: "messenger" });
-            sendOk = r.ok; sendId = r.messageId ?? null; sendErr = r.error ?? null;
+            const r = await sendMetaMessage({
+              recipientId: psid,
+              text: replyText,
+              platform: "messenger",
+            });
+            sendOk = r.ok;
+            sendId = r.messageId ?? null;
+            sendErr = r.error ?? null;
           } else if (g.channel === "instagram") {
             const igsid = lead.instagram_igsid;
             if (!igsid) continue;
-            const r = await sendMetaMessage({ recipientId: igsid, text: replyText, platform: "instagram" });
-            sendOk = r.ok; sendId = r.messageId ?? null; sendErr = r.error ?? null;
+            const r = await sendMetaMessage({
+              recipientId: igsid,
+              text: replyText,
+              platform: "instagram",
+            });
+            sendOk = r.ok;
+            sendId = r.messageId ?? null;
+            sendErr = r.error ?? null;
           }
 
           await logLeadCommunication({

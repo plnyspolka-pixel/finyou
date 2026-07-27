@@ -165,7 +165,8 @@ export const listLoanLenders = createServerFn({ method: "GET" })
       .limit(1000);
 
     const investors: LenderOption[] = (data ?? []).map((inv: any) => {
-      const name = (inv.company_name ?? "").trim() || fullName(inv.first_name, inv.last_name) || "Inwestor";
+      const name =
+        (inv.company_name ?? "").trim() || fullName(inv.first_name, inv.last_name) || "Inwestor";
       const bits = [
         inv.investor_type === "instytucjonalny" ? "inwestor instytucjonalny" : "inwestor prywatny",
         inv.city ? String(inv.city).trim() : "",
@@ -216,7 +217,11 @@ async function loadTemplateText(
   let dlErr: { message: string } | null = null;
   for (const bucket of [CLIENT_FILES_BUCKET, "documents"]) {
     const res = await supabase.storage.from(bucket).download(tpl.template_file_path);
-    if (!res.error && res.data) { file = res.data as Blob; dlErr = null; break; }
+    if (!res.error && res.data) {
+      file = res.data as Blob;
+      dlErr = null;
+      break;
+    }
     dlErr = res.error ?? { message: "brak pliku" };
   }
   if (!file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);

@@ -124,8 +124,7 @@ export async function createDiditSession(input: {
   }
   return {
     sessionId,
-    sessionNumber:
-      typeof json.session_number === "number" ? (json.session_number as number) : null,
+    sessionNumber: typeof json.session_number === "number" ? (json.session_number as number) : null,
     url,
     status: (json.status as string) ?? "Not Started",
     workflowId: (json.workflow_id as string) ?? input.workflowId,

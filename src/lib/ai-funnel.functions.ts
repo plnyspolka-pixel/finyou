@@ -4,21 +4,35 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabase as publicClient } from "@/integrations/supabase/client";
 
 export const trackFunnelEvent = createServerFn({ method: "POST" })
-  .inputValidator((i) => z.object({
-    session_id: z.string().min(8).max(80),
-    landing_id: z.string().uuid().optional().nullable(),
-    step: z.string().min(1).max(80),
-    step_order: z.number().int().min(0).max(50).default(0),
-    event_type: z.enum(["pageview", "click", "form_start", "form_submit", "scroll", "conversion", "purchase"]).default("pageview"),
-    value: z.number().min(0).max(10_000_000).optional().nullable(),
-    source: z.string().max(80).optional().nullable(),
-    medium: z.string().max(80).optional().nullable(),
-    campaign: z.string().max(120).optional().nullable(),
-    referrer: z.string().max(500).optional().nullable(),
-    country: z.string().max(8).optional().nullable(),
-    device: z.enum(["mobile", "tablet", "desktop"]).optional().nullable(),
-    metadata: z.record(z.string(), z.any()).optional().nullable(),
-  }).parse(i))
+  .inputValidator((i) =>
+    z
+      .object({
+        session_id: z.string().min(8).max(80),
+        landing_id: z.string().uuid().optional().nullable(),
+        step: z.string().min(1).max(80),
+        step_order: z.number().int().min(0).max(50).default(0),
+        event_type: z
+          .enum([
+            "pageview",
+            "click",
+            "form_start",
+            "form_submit",
+            "scroll",
+            "conversion",
+            "purchase",
+          ])
+          .default("pageview"),
+        value: z.number().min(0).max(10_000_000).optional().nullable(),
+        source: z.string().max(80).optional().nullable(),
+        medium: z.string().max(80).optional().nullable(),
+        campaign: z.string().max(120).optional().nullable(),
+        referrer: z.string().max(500).optional().nullable(),
+        country: z.string().max(8).optional().nullable(),
+        device: z.enum(["mobile", "tablet", "desktop"]).optional().nullable(),
+        metadata: z.record(z.string(), z.any()).optional().nullable(),
+      })
+      .parse(i),
+  )
   .handler(async ({ data }) => {
     const { error } = await publicClient.from("ai_funnel_events").insert({
       session_id: data.session_id,
@@ -41,10 +55,14 @@ export const trackFunnelEvent = createServerFn({ method: "POST" })
 
 export const getFunnelStats = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i) => z.object({
-    landing_id: z.string().uuid().optional().nullable(),
-    days: z.number().int().min(1).max(365).default(30),
-  }).parse(i))
+  .inputValidator((i) =>
+    z
+      .object({
+        landing_id: z.string().uuid().optional().nullable(),
+        days: z.number().int().min(1).max(365).default(30),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const from = new Date(Date.now() - data.days * 86400_000).toISOString();
@@ -55,10 +73,19 @@ export const getFunnelStats = createServerFn({ method: "POST" })
 
     const evs = events ?? [];
     // Aggregate by step+order
-    const stepMap = new Map<string, { step: string; order: number; sessions: Set<string>; total: number; value: number }>();
+    const stepMap = new Map<
+      string,
+      { step: string; order: number; sessions: Set<string>; total: number; value: number }
+    >();
     for (const e of evs) {
       const key = `${e.step_order}::${e.step}`;
-      const cur = stepMap.get(key) ?? { step: e.step, order: e.step_order, sessions: new Set(), total: 0, value: 0 };
+      const cur = stepMap.get(key) ?? {
+        step: e.step,
+        order: e.step_order,
+        sessions: new Set(),
+        total: 0,
+        value: 0,
+      };
       cur.sessions.add(e.session_id);
       cur.total++;
       cur.value += Number(e.value ?? 0);
@@ -66,20 +93,33 @@ export const getFunnelStats = createServerFn({ method: "POST" })
     }
     const steps = Array.from(stepMap.values())
       .sort((a, b) => a.order - b.order)
-      .map((s) => ({ step: s.step, order: s.order, unique_sessions: s.sessions.size, total_events: s.total, value: s.value }));
+      .map((s) => ({
+        step: s.step,
+        order: s.order,
+        unique_sessions: s.sessions.size,
+        total_events: s.total,
+        value: s.value,
+      }));
 
     // Drop-off rates relative to first step
     const firstCount = steps[0]?.unique_sessions ?? 0;
     const stepsWithRates = steps.map((s, i) => ({
       ...s,
-      conversion_rate: firstCount ? +(s.unique_sessions / firstCount * 100).toFixed(2) : 0,
-      drop_off_rate: i > 0 && steps[i - 1].unique_sessions
-        ? +((1 - s.unique_sessions / steps[i - 1].unique_sessions) * 100).toFixed(2) : 0,
+      conversion_rate: firstCount ? +((s.unique_sessions / firstCount) * 100).toFixed(2) : 0,
+      drop_off_rate:
+        i > 0 && steps[i - 1].unique_sessions
+          ? +((1 - s.unique_sessions / steps[i - 1].unique_sessions) * 100).toFixed(2)
+          : 0,
     }));
 
     // Source attribution (first-touch per session)
-    const sessionFirstTouch = new Map<string, { source: string; medium: string; campaign: string }>();
-    const sortedEvs = [...evs].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const sessionFirstTouch = new Map<
+      string,
+      { source: string; medium: string; campaign: string }
+    >();
+    const sortedEvs = [...evs].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
     for (const e of sortedEvs) {
       if (!sessionFirstTouch.has(e.session_id)) {
         sessionFirstTouch.set(e.session_id, {
@@ -89,13 +129,24 @@ export const getFunnelStats = createServerFn({ method: "POST" })
         });
       }
     }
-    const sourceMap = new Map<string, { source: string; medium: string; sessions: number; conversions: number; revenue: number }>();
+    const sourceMap = new Map<
+      string,
+      { source: string; medium: string; sessions: number; conversions: number; revenue: number }
+    >();
     for (const [sid, attr] of sessionFirstTouch) {
       const key = `${attr.source}/${attr.medium}`;
-      const cur = sourceMap.get(key) ?? { source: attr.source, medium: attr.medium, sessions: 0, conversions: 0, revenue: 0 };
+      const cur = sourceMap.get(key) ?? {
+        source: attr.source,
+        medium: attr.medium,
+        sessions: 0,
+        conversions: 0,
+        revenue: 0,
+      };
       cur.sessions++;
       const sessEvs = evs.filter((e) => e.session_id === sid);
-      const conv = sessEvs.find((e) => e.event_type === "conversion" || e.event_type === "purchase");
+      const conv = sessEvs.find(
+        (e) => e.event_type === "conversion" || e.event_type === "purchase",
+      );
       if (conv) {
         cur.conversions++;
         cur.revenue += Number(conv.value ?? 0);
@@ -106,7 +157,7 @@ export const getFunnelStats = createServerFn({ method: "POST" })
       .sort((a, b) => b.sessions - a.sessions)
       .map((s) => ({
         ...s,
-        conversion_rate: s.sessions ? +(s.conversions / s.sessions * 100).toFixed(2) : 0,
+        conversion_rate: s.sessions ? +((s.conversions / s.sessions) * 100).toFixed(2) : 0,
       }));
 
     // Device split
@@ -116,7 +167,10 @@ export const getFunnelStats = createServerFn({ method: "POST" })
       if (!sessionDevice.has(e.session_id) && e.device) sessionDevice.set(e.session_id, e.device);
     }
     for (const d of sessionDevice.values()) deviceMap.set(d, (deviceMap.get(d) ?? 0) + 1);
-    const devices = Array.from(deviceMap.entries()).map(([device, sessions]) => ({ device, sessions }));
+    const devices = Array.from(deviceMap.entries()).map(([device, sessions]) => ({
+      device,
+      sessions,
+    }));
 
     const totalSessions = sessionFirstTouch.size;
     const totalConversions = sources.reduce((s, x) => s + x.conversions, 0);
@@ -130,7 +184,7 @@ export const getFunnelStats = createServerFn({ method: "POST" })
         sessions: totalSessions,
         conversions: totalConversions,
         revenue: totalRevenue,
-        conversion_rate: totalSessions ? +(totalConversions / totalSessions * 100).toFixed(2) : 0,
+        conversion_rate: totalSessions ? +((totalConversions / totalSessions) * 100).toFixed(2) : 0,
       },
       period_from: from,
       period_to: new Date().toISOString(),
@@ -139,10 +193,14 @@ export const getFunnelStats = createServerFn({ method: "POST" })
 
 export const generateFunnelInsights = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i) => z.object({
-    landing_id: z.string().uuid().optional().nullable(),
-    days: z.number().int().min(1).max(365).default(30),
-  }).parse(i))
+  .inputValidator((i) =>
+    z
+      .object({
+        landing_id: z.string().uuid().optional().nullable(),
+        days: z.number().int().min(1).max(365).default(30),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -164,7 +222,8 @@ export const generateFunnelInsights = createServerFn({ method: "POST" })
       cur.sessions.add(e.session_id);
       stepMap.set(key, cur);
     }
-    const steps = Array.from(stepMap.values()).sort((a, b) => a.order - b.order)
+    const steps = Array.from(stepMap.values())
+      .sort((a, b) => a.order - b.order)
       .map((s) => ({ step: s.step, order: s.order, sessions: s.sessions.size }));
 
     const sourceCounts: Record<string, number> = {};
@@ -180,7 +239,10 @@ ETAPY LEJKA (unique sessions):
 ${steps.map((s) => `${s.order}. ${s.step}: ${s.sessions}`).join("\n")}
 
 ŹRÓDŁA RUCHU (events):
-${Object.entries(sourceCounts).slice(0, 15).map(([k, v]) => `${k}: ${v}`).join("\n")}
+${Object.entries(sourceCounts)
+  .slice(0, 15)
+  .map(([k, v]) => `${k}: ${v}`)
+  .join("\n")}
 
 Wygeneruj JSON:
 {
@@ -209,18 +271,26 @@ Wygeneruj JSON:
     const json = await res.json();
     const content = json?.choices?.[0]?.message?.content ?? "{}";
     let parsed: any = {};
-    try { parsed = JSON.parse(content); } catch { parsed = { summary: content, bottlenecks: [], recommendations: [] }; }
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = { summary: content, bottlenecks: [], recommendations: [] };
+    }
 
-    const { data: insight, error } = await supabase.from("ai_funnel_insights").insert({
-      user_id: userId,
-      landing_id: data.landing_id ?? null,
-      period_from: from,
-      period_to: new Date().toISOString(),
-      summary: String(parsed.summary ?? "").slice(0, 4000),
-      bottlenecks: Array.isArray(parsed.bottlenecks) ? parsed.bottlenecks : [],
-      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
-      metrics: { steps, source_counts: sourceCounts },
-    }).select().single();
+    const { data: insight, error } = await supabase
+      .from("ai_funnel_insights")
+      .insert({
+        user_id: userId,
+        landing_id: data.landing_id ?? null,
+        period_from: from,
+        period_to: new Date().toISOString(),
+        summary: String(parsed.summary ?? "").slice(0, 4000),
+        bottlenecks: Array.isArray(parsed.bottlenecks) ? parsed.bottlenecks : [],
+        recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
+        metrics: { steps, source_counts: sourceCounts },
+      })
+      .select()
+      .single();
     if (error) throw new Error(error.message);
     return { insight };
   });

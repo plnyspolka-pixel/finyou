@@ -12,7 +12,11 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ status, limit }, ctx: ToolContext) => {
-    try { requireAuth(ctx); } catch (e) { return fail((e as Error).message); }
+    try {
+      requireAuth(ctx);
+    } catch (e) {
+      return fail((e as Error).message);
+    }
     let q = userClient(ctx)
       .from("wind_collection_cases")
       .select("*")

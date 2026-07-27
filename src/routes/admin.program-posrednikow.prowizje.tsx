@@ -7,14 +7,45 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Coins, Download, CheckCircle2, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { formatPLN } from "@/lib/labels";
-import { commissionStatusLabels, commissionStatusColors, settlementTypeLabels, basisTypeLabels } from "@/lib/affiliate/labels";
-import { adminListCommissions, adminApproveCommission, adminBlockCommission, exportAffiliateCsv } from "@/lib/affiliate/admin.functions";
+import {
+  commissionStatusLabels,
+  commissionStatusColors,
+  settlementTypeLabels,
+  basisTypeLabels,
+} from "@/lib/affiliate/labels";
+import {
+  adminListCommissions,
+  adminApproveCommission,
+  adminBlockCommission,
+  exportAffiliateCsv,
+} from "@/lib/affiliate/admin.functions";
 
 export const Route = createFileRoute("/admin/program-posrednikow/prowizje")({
   component: ProwizjePage,
@@ -55,7 +86,13 @@ function ProwizjePage() {
 
   const q = useQuery({
     queryKey: ["admin-affiliate-commissions", status, settlementType],
-    queryFn: () => listFn({ data: { status: status === "all" ? undefined : status, settlementType: settlementType === "all" ? undefined : settlementType } }),
+    queryFn: () =>
+      listFn({
+        data: {
+          status: status === "all" ? undefined : status,
+          settlementType: settlementType === "all" ? undefined : settlementType,
+        },
+      }),
   });
   const rows = (q.data as any[]) ?? [];
 
@@ -83,30 +120,50 @@ function ProwizjePage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Coins className="h-6 w-6" /> Prowizje</h1>
-          <p className="text-sm text-muted-foreground">Zatwierdzanie i blokowanie prowizji naliczonych od zdarzeń gospodarczych.</p>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Coins className="h-6 w-6" /> Prowizje
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Zatwierdzanie i blokowanie prowizji naliczonych od zdarzeń gospodarczych.
+          </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => doExport("b2b_commissions")}><Download className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Prowizje B2B</span></Button>
-          <Button variant="outline" size="sm" onClick={() => doExport("full_report")}><Download className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Pełny raport</span></Button>
+          <Button variant="outline" size="sm" onClick={() => doExport("b2b_commissions")}>
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Prowizje B2B</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => doExport("full_report")}>
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Pełny raport</span>
+          </Button>
         </div>
       </div>
 
       <Card className="p-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie statusy</SelectItem>
-              {COMMISSION_STATUSES.map((s) => <SelectItem key={s} value={s}>{commissionStatusLabels[s] ?? s}</SelectItem>)}
+              {COMMISSION_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {commissionStatusLabels[s] ?? s}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={settlementType} onValueChange={setSettlementType}>
-            <SelectTrigger><SelectValue placeholder="Forma rozliczenia" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Forma rozliczenia" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie formy</SelectItem>
               <SelectItem value="b2b">{settlementTypeLabels.b2b}</SelectItem>
-              <SelectItem value="unregistered_activity">{settlementTypeLabels.unregistered_activity}</SelectItem>
+              <SelectItem value="unregistered_activity">
+                {settlementTypeLabels.unregistered_activity}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -128,26 +185,67 @@ function ProwizjePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {q.isLoading && <TableRow><TableCell colSpan={8} className="p-6 text-center text-muted-foreground">Ładowanie…</TableCell></TableRow>}
-              {!q.isLoading && rows.length === 0 && <TableRow><TableCell colSpan={8} className="p-6 text-center text-muted-foreground">Brak prowizji.</TableCell></TableRow>}
+              {q.isLoading && (
+                <TableRow>
+                  <TableCell colSpan={8} className="p-6 text-center text-muted-foreground">
+                    Ładowanie…
+                  </TableCell>
+                </TableRow>
+              )}
+              {!q.isLoading && rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8} className="p-6 text-center text-muted-foreground">
+                    Brak prowizji.
+                  </TableCell>
+                </TableRow>
+              )}
               {rows.map((c) => {
-                const canApprove = !["approved", "payable", "paid", "blocked", "cancelled"].includes(c.status);
+                const canApprove = ![
+                  "approved",
+                  "payable",
+                  "paid",
+                  "blocked",
+                  "cancelled",
+                ].includes(c.status);
                 const canBlock = !["paid", "blocked", "cancelled"].includes(c.status);
                 return (
                   <TableRow key={c.id}>
                     <TableCell>
                       <div className="font-medium">{c.partner_name ?? "—"}</div>
-                      {c.requires_invoice ? <div className="text-[11px] text-amber-700">wymaga faktury</div> : null}
+                      {c.requires_invoice ? (
+                        <div className="text-[11px] text-amber-700">wymaga faktury</div>
+                      ) : null}
                     </TableCell>
-                    <TableCell><Badge variant="outline">P{c.network_level}</Badge></TableCell>
-                    <TableCell className="text-xs">{settlementTypeLabels[c.settlement_type] ?? c.settlement_type}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{basisTypeLabels[c.basis_type] ?? c.basis_type}</TableCell>
-                    <TableCell className="text-right tabular-nums font-semibold">{formatPLN(c.gross_amount)}</TableCell>
-                    <TableCell className="text-xs">Q{c.tax_quarter} {c.tax_year}</TableCell>
-                    <TableCell><Badge className={commissionStatusColors[c.status] ?? "bg-slate-100"} variant="secondary">{commissionStatusLabels[c.status] ?? c.status}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant="outline">P{c.network_level}</Badge>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {settlementTypeLabels[c.settlement_type] ?? c.settlement_type}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {basisTypeLabels[c.basis_type] ?? c.basis_type}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums font-semibold">
+                      {formatPLN(c.gross_amount)}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      Q{c.tax_quarter} {c.tax_year}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={commissionStatusColors[c.status] ?? "bg-slate-100"}
+                        variant="secondary"
+                      >
+                        {commissionStatusLabels[c.status] ?? c.status}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {canApprove && <Button variant="outline" size="sm" onClick={() => doApprove(c.id)}><CheckCircle2 className="h-4 w-4" /></Button>}
+                        {canApprove && (
+                          <Button variant="outline" size="sm" onClick={() => doApprove(c.id)}>
+                            <CheckCircle2 className="h-4 w-4" />
+                          </Button>
+                        )}
                         {canBlock && <BlockDialog id={c.id} />}
                       </div>
                     </TableCell>
@@ -188,19 +286,30 @@ function BlockDialog({ id }: { id: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-rose-700"><Ban className="h-4 w-4" /></Button>
+        <Button variant="outline" size="sm" className="text-rose-700">
+          <Ban className="h-4 w-4" />
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Zablokuj prowizję</DialogTitle>
-          <DialogDescription>Blokada wstrzymuje wypłatę. Powód jest wymagany i zapisywany w audycie.</DialogDescription>
+          <DialogDescription>
+            Blokada wstrzymuje wypłatę. Powód jest wymagany i zapisywany w audycie.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-1">
           <Label>Powód blokady</Label>
-          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder="np. zwrot środków, brak wymaganej faktury, podejrzenie nadużycia" />
+          <Textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            placeholder="np. zwrot środków, brak wymaganej faktury, podejrzenie nadużycia"
+          />
         </div>
         <DialogFooter>
-          <Button variant="destructive" onClick={submit} disabled={busy}>{busy ? "Blokowanie…" : "Zablokuj"}</Button>
+          <Button variant="destructive" onClick={submit} disabled={busy}>
+            {busy ? "Blokowanie…" : "Zablokuj"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

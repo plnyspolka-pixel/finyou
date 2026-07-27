@@ -17,15 +17,26 @@ interface ParticlesProps {
 
 function hexToRgb(hex: string): number[] {
   hex = hex.replace("#", "");
-  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  if (hex.length === 3)
+    hex = hex
+      .split("")
+      .map((c) => c + c)
+      .join("");
   const n = parseInt(hex, 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
 type Circle = {
-  x: number; y: number; translateX: number; translateY: number;
-  size: number; alpha: number; targetAlpha: number;
-  dx: number; dy: number; magnetism: number;
+  x: number;
+  y: number;
+  translateX: number;
+  translateY: number;
+  size: number;
+  alpha: number;
+  targetAlpha: number;
+  dx: number;
+  dy: number;
+  magnetism: number;
 };
 
 export const Particles: React.FC<ParticlesProps> = ({
@@ -69,7 +80,9 @@ export const Particles: React.FC<ParticlesProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [color]);
 
-  useEffect(() => { init(); /* eslint-disable-next-line */ }, [refresh]);
+  useEffect(() => {
+    init(); /* eslint-disable-next-line */
+  }, [refresh]);
 
   const resize = () => {
     if (!canvasContainerRef.current || !canvasRef.current || !ctxRef.current) return;
@@ -87,9 +100,13 @@ export const Particles: React.FC<ParticlesProps> = ({
     const x = Math.floor(Math.random() * canvasSize.current.w);
     const y = Math.floor(Math.random() * canvasSize.current.h);
     return {
-      x, y, translateX: 0, translateY: 0,
+      x,
+      y,
+      translateX: 0,
+      translateY: 0,
       size: Math.floor(Math.random() * 2) + size,
-      alpha: 0, targetAlpha: parseFloat((Math.random() * 0.6 + 0.1).toFixed(1)),
+      alpha: 0,
+      targetAlpha: parseFloat((Math.random() * 0.6 + 0.1).toFixed(1)),
       dx: (Math.random() - 0.5) * 0.1,
       dy: (Math.random() - 0.5) * 0.1,
       magnetism: 0.1 + Math.random() * 4,
@@ -123,15 +140,27 @@ export const Particles: React.FC<ParticlesProps> = ({
     mouse.current.x += (mouseTarget.current.x - mouse.current.x) / ease;
     mouse.current.y += (mouseTarget.current.y - mouse.current.y) / ease;
     circles.current.forEach((c, i) => {
-      const edge = [c.x + c.translateX, canvasSize.current.w - c.x - c.translateX, c.y + c.translateY, canvasSize.current.h - c.y - c.translateY];
+      const edge = [
+        c.x + c.translateX,
+        canvasSize.current.w - c.x - c.translateX,
+        c.y + c.translateY,
+        canvasSize.current.h - c.y - c.translateY,
+      ];
       const closest = Math.min(...edge);
       const a = parseFloat((closest / 20).toFixed(2));
-      if (a > 1) c.alpha += 0.02; else c.alpha = c.targetAlpha * a;
-      c.x += c.dx + vx; c.y += c.dy + vy;
+      if (a > 1) c.alpha += 0.02;
+      else c.alpha = c.targetAlpha * a;
+      c.x += c.dx + vx;
+      c.y += c.dy + vy;
       c.translateX += (mouse.current.x / (staticity / c.magnetism) - c.translateX) / ease;
       c.translateY += (mouse.current.y / (staticity / c.magnetism) - c.translateY) / ease;
       drawCircle(c, true);
-      if (c.x < -c.size || c.x > canvasSize.current.w + c.size || c.y < -c.size || c.y > canvasSize.current.h + c.size) {
+      if (
+        c.x < -c.size ||
+        c.x > canvasSize.current.w + c.size ||
+        c.y < -c.size ||
+        c.y > canvasSize.current.h + c.size
+      ) {
         circles.current.splice(i, 1);
         drawCircle(createCircle());
       }

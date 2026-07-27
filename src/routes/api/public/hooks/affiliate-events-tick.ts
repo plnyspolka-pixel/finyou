@@ -25,10 +25,12 @@ async function run() {
     try {
       const res = await calculateNetworkCommissions(db, id);
       created += res.created;
-      await db.from("affiliate_commission_events").update({ processed_at: new Date().toISOString() }).eq("id", id);
+      await db
+        .from("affiliate_commission_events")
+        .update({ processed_at: new Date().toISOString() })
+        .eq("id", id);
       processed += 1;
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("[affiliate-events-tick] calc failed", id, (err as Error)?.message);
     }
   }

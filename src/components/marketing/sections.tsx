@@ -141,18 +141,40 @@ export function RoleCard({ icon3d, badge, title, desc, cta, href, accent }: Role
         }}
       />
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-        {icon3d ? (
-          <Icon3D name={icon3d} size={72} style={{ margin: "-6px 0 -8px -8px" }} />
-        ) : null}
+        {icon3d ? <Icon3D name={icon3d} size={72} style={{ margin: "-6px 0 -8px -8px" }} /> : null}
         <MktBadge variant={badge.v}>{badge.t}</MktBadge>
       </div>
       <h3 style={{ marginTop: "1.1rem", fontSize: "1.35rem", fontWeight: 800 }}>{title}</h3>
-      <p style={{ marginTop: "0.5rem", flex: 1, fontSize: "0.92rem", lineHeight: 1.55, color: "var(--muted-foreground)" }}>
+      <p
+        style={{
+          marginTop: "0.5rem",
+          flex: 1,
+          fontSize: "0.92rem",
+          lineHeight: 1.55,
+          color: "var(--muted-foreground)",
+        }}
+      >
         {desc}
       </p>
-      <span style={{ marginTop: "1.1rem", display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, color: accent }}>
+      <span
+        style={{
+          marginTop: "1.1rem",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          fontWeight: 700,
+          color: accent,
+        }}
+      >
         {cta}{" "}
-        <span style={{ transform: h ? "translateX(3px)" : "none", transition: "transform var(--duration-base)" }}>→</span>
+        <span
+          style={{
+            transform: h ? "translateX(3px)" : "none",
+            transition: "transform var(--duration-base)",
+          }}
+        >
+          →
+        </span>
       </span>
     </a>
   );
@@ -187,7 +209,14 @@ function FeatureItem({ it, icon3d }: { it: FeatureItemData; icon3d?: boolean }) 
         <h3 style={{ fontSize: "1rem", fontWeight: 700 }}>{it.t}</h3>
       </div>
       {it.d && (
-        <p style={{ marginTop: "0.55rem", fontSize: "0.88rem", lineHeight: 1.55, color: "var(--muted-foreground)" }}>
+        <p
+          style={{
+            marginTop: "0.55rem",
+            fontSize: "0.88rem",
+            lineHeight: 1.55,
+            color: "var(--muted-foreground)",
+          }}
+        >
           {it.d}
         </p>
       )}
@@ -205,7 +234,10 @@ export function FeatureGrid({
   icon3d?: boolean;
 }) {
   return (
-    <div className="fy-grid" style={{ display: "grid", gap: "1rem", gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+    <div
+      className="fy-grid"
+      style={{ display: "grid", gap: "1rem", gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+    >
       {items.map((it) => (
         <FeatureItem key={it.t} it={it} icon3d={icon3d} />
       ))}
@@ -217,7 +249,10 @@ export function FeatureGrid({
 
 export function ModuleGrid({ items }: { items: { icon: Icon3DName; t: string }[] }) {
   return (
-    <div className="fy-modules" style={{ display: "grid", gap: "0.7rem", gridTemplateColumns: "repeat(5, 1fr)" }}>
+    <div
+      className="fy-modules"
+      style={{ display: "grid", gap: "0.7rem", gridTemplateColumns: "repeat(5, 1fr)" }}
+    >
       {items.map((m) => (
         <div
           key={m.t}
@@ -244,11 +279,21 @@ export function ModuleGrid({ items }: { items: { icon: Icon3DName; t: string }[]
 
 /* --------------------------- Process steps ------------------------------ */
 
-export function ProcessSteps({ steps, cols }: { steps: { t: string; d?: string }[]; cols?: number }) {
+export function ProcessSteps({
+  steps,
+  cols,
+}: {
+  steps: { t: string; d?: string }[];
+  cols?: number;
+}) {
   return (
     <div
       className="fy-steps"
-      style={{ display: "grid", gap: "1.1rem", gridTemplateColumns: `repeat(${cols || Math.min(steps.length, 3)}, 1fr)` }}
+      style={{
+        display: "grid",
+        gap: "1.1rem",
+        gridTemplateColumns: `repeat(${cols || Math.min(steps.length, 3)}, 1fr)`,
+      }}
     >
       {steps.map((s, i) => (
         <div
@@ -278,7 +323,18 @@ export function ProcessSteps({ steps, cols }: { steps: { t: string; d?: string }
             {i + 1}
           </div>
           <h3 style={{ marginTop: "0.9rem", fontSize: "0.98rem", fontWeight: 700 }}>{s.t}</h3>
-          {s.d && <p style={{ marginTop: "0.3rem", fontSize: "0.85rem", lineHeight: 1.5, color: "var(--muted-foreground)" }}>{s.d}</p>}
+          {s.d && (
+            <p
+              style={{
+                marginTop: "0.3rem",
+                fontSize: "0.85rem",
+                lineHeight: 1.5,
+                color: "var(--muted-foreground)",
+              }}
+            >
+              {s.d}
+            </p>
+          )}
         </div>
       ))}
     </div>
@@ -297,12 +353,40 @@ export function ComparisonTable({
   rows: [string, string][];
 }) {
   return (
-    <div className="fy-compare" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-      <div style={{ borderRadius: "var(--radius-2xl)", border: "1px solid var(--border)", background: "var(--card)", padding: "1.5rem" }}>
-        <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--muted-foreground)" }}>{left}</h3>
-        <ul style={{ marginTop: "1rem", padding: 0, listStyle: "none", display: "grid", gap: "0.7rem" }}>
+    <div
+      className="fy-compare"
+      style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}
+    >
+      <div
+        style={{
+          borderRadius: "var(--radius-2xl)",
+          border: "1px solid var(--border)",
+          background: "var(--card)",
+          padding: "1.5rem",
+        }}
+      >
+        <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--muted-foreground)" }}>
+          {left}
+        </h3>
+        <ul
+          style={{
+            marginTop: "1rem",
+            padding: 0,
+            listStyle: "none",
+            display: "grid",
+            gap: "0.7rem",
+          }}
+        >
           {rows.map((r) => (
-            <li key={r[0]} style={{ display: "flex", gap: 10, fontSize: "0.88rem", color: "var(--muted-foreground)" }}>
+            <li
+              key={r[0]}
+              style={{
+                display: "flex",
+                gap: 10,
+                fontSize: "0.88rem",
+                color: "var(--muted-foreground)",
+              }}
+            >
               <span
                 style={{
                   flexShrink: 0,
@@ -331,10 +415,31 @@ export function ComparisonTable({
           boxShadow: "var(--shadow-md)",
         }}
       >
-        <h3 style={{ fontSize: "1.05rem", fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>{rightLabel}</h3>
-        <ul style={{ marginTop: "1rem", padding: 0, listStyle: "none", display: "grid", gap: "0.7rem" }}>
+        <h3
+          style={{
+            fontSize: "1.05rem",
+            fontWeight: 800,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          {rightLabel}
+        </h3>
+        <ul
+          style={{
+            marginTop: "1rem",
+            padding: 0,
+            listStyle: "none",
+            display: "grid",
+            gap: "0.7rem",
+          }}
+        >
           {rows.map((r) => (
-            <li key={r[1]} style={{ display: "flex", gap: 10, fontSize: "0.88rem", fontWeight: 500 }}>
+            <li
+              key={r[1]}
+              style={{ display: "flex", gap: 10, fontSize: "0.88rem", fontWeight: 500 }}
+            >
               <span style={{ flexShrink: 0, marginTop: 1 }}>
                 <BrandIcon name="check" size={18} />
               </span>
@@ -381,7 +486,15 @@ export function PricingCard({
       }}
     >
       <div style={{ background: "var(--gradient-brand)", color: "#fff", padding: "1.5rem" }}>
-        <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.85 }}>
+        <div
+          style={{
+            fontSize: "0.7rem",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            opacity: 0.85,
+          }}
+        >
           {eyebrow}
         </div>
         <h3 style={{ marginTop: "0.4rem", fontSize: "1.5rem", fontWeight: 800 }}>{title}</h3>
@@ -402,7 +515,18 @@ export function PricingCard({
         <MktButton variant="cta" href={href} style={{ width: "100%", marginTop: "1.4rem" }}>
           {cta}
         </MktButton>
-        {note && <p style={{ margin: "0.8rem 0 0", textAlign: "center", fontSize: "0.72rem", color: "var(--muted-foreground)" }}>{note}</p>}
+        {note && (
+          <p
+            style={{
+              margin: "0.8rem 0 0",
+              textAlign: "center",
+              fontSize: "0.72rem",
+              color: "var(--muted-foreground)",
+            }}
+          >
+            {note}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -458,7 +582,15 @@ export function FAQ({ items }: { items: { q: string; a: string }[] }) {
             </span>
           </button>
           {open === i && (
-            <p style={{ margin: 0, padding: "0 1.4rem 1.2rem", fontSize: "0.9rem", lineHeight: 1.65, color: "var(--muted-foreground)" }}>
+            <p
+              style={{
+                margin: 0,
+                padding: "0 1.4rem 1.2rem",
+                fontSize: "0.9rem",
+                lineHeight: 1.65,
+                color: "var(--muted-foreground)",
+              }}
+            >
               {f.a}
             </p>
           )}
@@ -470,7 +602,13 @@ export function FAQ({ items }: { items: { q: string; a: string }[] }) {
 
 /* --------------------------- Compliance note ---------------------------- */
 
-export function ComplianceNote({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+export function ComplianceNote({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: CSSProperties;
+}) {
   return (
     <div
       style={{
@@ -487,7 +625,16 @@ export function ComplianceNote({ children, style }: { children: ReactNode; style
       }}
     >
       <BrandIcon name="shield" size={18} />
-      <p style={{ margin: 0, fontSize: "0.78rem", lineHeight: 1.55, color: "var(--muted-foreground)" }}>{children}</p>
+      <p
+        style={{
+          margin: 0,
+          fontSize: "0.78rem",
+          lineHeight: 1.55,
+          color: "var(--muted-foreground)",
+        }}
+      >
+        {children}
+      </p>
     </div>
   );
 }
@@ -524,10 +671,47 @@ export function CTASection({
             "radial-gradient(circle at 18% 25%, oklch(0.40 0.25 268 / .5), transparent 55%), radial-gradient(circle at 82% 75%, oklch(0.65 0.13 235 / .4), transparent 55%)",
         }}
       />
-      <div style={{ position: "relative", maxWidth: "60rem", margin: "0 auto", padding: "5rem 1.5rem", textAlign: "center" }}>
-        <h2 style={{ fontSize: "clamp(1.9rem, 3.4vw, 2.7rem)", fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{title}</h2>
-        {sub && <p style={{ marginTop: "1rem", fontSize: "1.05rem", color: "rgba(255,255,255,.8)", maxWidth: "40rem", marginInline: "auto" }}>{sub}</p>}
-        <div style={{ marginTop: "2rem", display: "flex", gap: "0.8rem", justifyContent: "center", flexWrap: "wrap" }}>
+      <div
+        style={{
+          position: "relative",
+          maxWidth: "60rem",
+          margin: "0 auto",
+          padding: "5rem 1.5rem",
+          textAlign: "center",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: "clamp(1.9rem, 3.4vw, 2.7rem)",
+            fontWeight: 800,
+            letterSpacing: "-0.02em",
+            lineHeight: 1.1,
+          }}
+        >
+          {title}
+        </h2>
+        {sub && (
+          <p
+            style={{
+              marginTop: "1rem",
+              fontSize: "1.05rem",
+              color: "rgba(255,255,255,.8)",
+              maxWidth: "40rem",
+              marginInline: "auto",
+            }}
+          >
+            {sub}
+          </p>
+        )}
+        <div
+          style={{
+            marginTop: "2rem",
+            display: "flex",
+            gap: "0.8rem",
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
           {buttons.map((b, i) =>
             b.img ? (
               <a key={b.label} href={b.href} className="fy-imgbtn">
@@ -539,7 +723,15 @@ export function CTASection({
                 variant={single || i === 0 ? "cta" : "outline"}
                 size={single ? "cta" : "lg"}
                 href={b.href}
-                style={single || i === 0 ? {} : { background: "rgba(255,255,255,.08)", borderColor: "rgba(255,255,255,.3)", color: "#fff" }}
+                style={
+                  single || i === 0
+                    ? {}
+                    : {
+                        background: "rgba(255,255,255,.08)",
+                        borderColor: "rgba(255,255,255,.3)",
+                        color: "#fff",
+                      }
+                }
               >
                 {b.label}
               </MktButton>

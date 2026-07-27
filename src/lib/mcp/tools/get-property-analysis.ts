@@ -9,7 +9,11 @@ export default defineTool({
   inputSchema: { property_id: z.string().uuid() },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ property_id }, ctx: ToolContext) => {
-    try { requireAuth(ctx); } catch (e) { return fail((e as Error).message); }
+    try {
+      requireAuth(ctx);
+    } catch (e) {
+      return fail((e as Error).message);
+    }
     const { data, error } = await userClient(ctx)
       .from("property_analyses")
       .select("*")

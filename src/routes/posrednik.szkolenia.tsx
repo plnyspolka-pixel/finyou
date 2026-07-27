@@ -69,7 +69,9 @@ function SzkoleniaPosrednik() {
       />
       {Object.entries(grouped).map(([category, list]) => (
         <div key={category} className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{category}</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            {category}
+          </h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {list.map((v) => {
               const url = urls[v.id] ?? null;
@@ -81,7 +83,9 @@ function SzkoleniaPosrednik() {
                   </CardHeader>
                   <CardContent className="space-y-3 flex flex-col flex-1">
                     {v.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">{v.description}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
+                        {v.description}
+                      </p>
                     )}
                     <div className="mt-auto">
                       {url ? (

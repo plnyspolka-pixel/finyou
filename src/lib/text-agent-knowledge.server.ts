@@ -24,7 +24,10 @@ export async function embedText(input: string): Promise<number[]> {
   return json?.data?.[0]?.embedding ?? [];
 }
 
-export async function retrieveKnowledge(query: string, k = 4): Promise<Array<{ title: string; content: string; similarity: number }>> {
+export async function retrieveKnowledge(
+  query: string,
+  k = 4,
+): Promise<Array<{ title: string; content: string; similarity: number }>> {
   try {
     const s = admin();
     // sprawdź czy mamy w ogóle jakieś wiedzowe wpisy z embeddingami

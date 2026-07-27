@@ -14,7 +14,9 @@ export const Route = createFileRoute("/api/public/hooks/meta-leads-pull")({
           return Response.json({ ok: true, ...summary });
         } catch (e: any) {
           console.error("[meta-leads-pull] error", e?.message);
-          return new Response(JSON.stringify({ ok: false, error: e?.message ?? String(e) }), { status: 500 });
+          return new Response(JSON.stringify({ ok: false, error: e?.message ?? String(e) }), {
+            status: 500,
+          });
         }
       },
     },

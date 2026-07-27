@@ -18,7 +18,8 @@ export function odmienBiernik(imieNazwisko: string): string {
     .map((w, idx) => {
       const low = w.toLowerCase();
       if (low.endsWith("ski") || low.endsWith("cki") || low.endsWith("dzki")) return w + "ego";
-      if (low.endsWith("ska") || low.endsWith("cka") || low.endsWith("dzka")) return w.slice(0, -1) + "ą";
+      if (low.endsWith("ska") || low.endsWith("cka") || low.endsWith("dzka"))
+        return w.slice(0, -1) + "ą";
       if (low.endsWith("a")) return w.slice(0, -1) + "ę";
       if (CONSONANT_END.test(low)) return kobieta && idx > 0 ? w : w + "a";
       return w;
@@ -33,7 +34,8 @@ export function odmienDopelniacz(imieNazwisko: string): string {
     .map((w, idx) => {
       const low = w.toLowerCase();
       if (low.endsWith("ski") || low.endsWith("cki") || low.endsWith("dzki")) return w + "ego";
-      if (low.endsWith("ska") || low.endsWith("cka") || low.endsWith("dzka")) return w.slice(0, -1) + "iej";
+      if (low.endsWith("ska") || low.endsWith("cka") || low.endsWith("dzka"))
+        return w.slice(0, -1) + "iej";
       if (low.endsWith("a")) return w.slice(0, -1) + "y";
       if (CONSONANT_END.test(low)) return kobieta && idx > 0 ? w : w + "a";
       return w;
@@ -118,7 +120,10 @@ export function oznaczenieStrony(s: any, pelne = true): string {
     if (!pelne) return String(s.imie_nazwisko).toUpperCase();
     czesci.push(`adres: ${s.adres}`);
     const ident: string[] = [`PESEL ${s.pesel}`];
-    for (const [k, etykieta] of [["nip", "NIP"], ["regon", "REGON"]] as const) {
+    for (const [k, etykieta] of [
+      ["nip", "NIP"],
+      ["regon", "REGON"],
+    ] as const) {
       if (s[k]) ident.push(`${etykieta} ${s[k]}`);
     }
     if (s.dokument_tozsamosci) ident.push(s.dokument_tozsamosci);
@@ -147,7 +152,11 @@ export function oznaczenieStrony(s: any, pelne = true): string {
   if (repTxt) czesci.push(repTxt);
   czesci.push(`adres: ${s.adres}`);
   const ident: string[] = [];
-  for (const [k, etykieta] of [["krs", "KRS"], ["nip", "NIP"], ["regon", "REGON"]] as const) {
+  for (const [k, etykieta] of [
+    ["krs", "KRS"],
+    ["nip", "NIP"],
+    ["regon", "REGON"],
+  ] as const) {
     if (s[k]) ident.push(`${etykieta} ${s[k]}`);
   }
   if (ident.length) czesci.push(ident.join(", "));
@@ -282,8 +291,12 @@ export function zbudujFakty(d: any): Record<string, any> {
     }
   }
   f.obciazenia_wszystkie = obcAll;
-  f.obciazenia_wykreslenie_przed = obcAll.filter((o) => o.sposob_usuniecia === "wykreslenie_przed_wyplata");
-  f.obciazenia_splata_ze_srodkow = obcAll.filter((o) => o.sposob_usuniecia === "wykreslenie_ze_srodkow_pozyczki");
+  f.obciazenia_wykreslenie_przed = obcAll.filter(
+    (o) => o.sposob_usuniecia === "wykreslenie_przed_wyplata",
+  );
+  f.obciazenia_splata_ze_srodkow = obcAll.filter(
+    (o) => o.sposob_usuniecia === "wykreslenie_ze_srodkow_pozyczki",
+  );
   f.obciazenia_zrzeczenie = obcAll.filter((o) => o.sposob_usuniecia === "zrzeczenie_uprawnionego");
   f.ma_wykreslenia_przed_wyplata = f.obciazenia_wykreslenie_przed.length > 0;
   f.ma_splaty_wierzycieli = f.obciazenia_splata_ze_srodkow.length > 0;
@@ -303,9 +316,7 @@ export function zbudujFakty(d: any): Record<string, any> {
     const wl = wlascicielObiekt(d, n);
     if (wl && wl.typ === "osoba_fizyczna" && wl.ustroj_majatkowy === "wspolnosc_ustawowa") {
       const ok =
-        w &&
-        w.rodzaj === "laczna_malzenska" &&
-        isSubset(peselSet(w.wspolwlasciciele), peseleP);
+        w && w.rodzaj === "laczna_malzenska" && isSubset(peselSet(w.wspolwlasciciele), peseleP);
       if (!ok) wymagaMalzonka = true;
     }
   }
@@ -393,7 +404,8 @@ export function zbudujFakty(d: any): Record<string, any> {
   const roleWlascicieli = new Set<string>();
   for (const n of nier) {
     let r = ROLA_NAZWA[n.wlasciciel_ref];
-    if (n.wlasciciel_ref === "pozyczkobiorca" && f.wielu_pozyczkobiorcow) r = "Pożyczkobiorcy (mn.)";
+    if (n.wlasciciel_ref === "pozyczkobiorca" && f.wielu_pozyczkobiorcow)
+      r = "Pożyczkobiorcy (mn.)";
     roleWlascicieli.add(r);
   }
   const mnogaWl = roleWlascicieli.size > 1 || roleWlascicieli.has("Pożyczkobiorcy (mn.)");

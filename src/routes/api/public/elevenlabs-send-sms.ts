@@ -102,8 +102,7 @@ async function generateAutoLoginLink(input: {
   );
 
   // Zbuduj URL docelowy
-  const nextPath =
-    input.next && /^\/[a-z0-9/_-]+$/i.test(input.next) ? input.next : "/klient";
+  const nextPath = input.next && /^\/[a-z0-9/_-]+$/i.test(input.next) ? input.next : "/klient";
   const ret = new URL(nextPath, SITE_URL);
   if (input.amount) ret.searchParams.set("amount", String(input.amount));
   if (input.months) ret.searchParams.set("months", String(input.months));
@@ -122,7 +121,6 @@ async function generateAutoLoginLink(input: {
   return { ok: true, url: link.properties.action_link };
 }
 
-
 export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
   server: {
     handlers: {
@@ -137,8 +135,7 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
         }),
       POST: async ({ request }) => {
         const expected =
-          process.env.ELEVENLABS_WEBHOOK_SECRET ||
-          process.env.FINANCEYOU_WEBHOOK_SECRET;
+          process.env.ELEVENLABS_WEBHOOK_SECRET || process.env.FINANCEYOU_WEBHOOK_SECRET;
         const provided = request.headers.get("x-webhook-secret");
 
         console.log("[elevenlabs-send-sms] hit", {
@@ -164,7 +161,10 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
         const parsed = BodySchema.safeParse(raw);
         if (!parsed.success) {
           return json(
-            { ok: false, error: "Invalid input: " + JSON.stringify(parsed.error.flatten().fieldErrors) },
+            {
+              ok: false,
+              error: "Invalid input: " + JSON.stringify(parsed.error.flatten().fieldErrors),
+            },
             400,
           );
         }
@@ -189,8 +189,7 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
 
         const name = first_name ? ` ${first_name}` : "";
         const body =
-          message ||
-          `Finance You: Cześć${name}! Tu Ania. Wejdź na ${url} i dokończ wniosek.`;
+          message || `Finance You: Cześć${name}! Tu Ania. Wejdź na ${url} i dokończ wniosek.`;
 
         const result = await sendSmsInternal({
           phone,

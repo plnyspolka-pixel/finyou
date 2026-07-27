@@ -32,7 +32,8 @@ export async function fetchGusAuxiliaryBenchmark(args: {
   areaSqm?: number | null;
   landAreaHa?: number | null;
 }): Promise<GovBenchmark> {
-  const areaHa = args.landAreaHa ?? (args.areaSqm ? Math.round((args.areaSqm / 10_000) * 1000) / 1000 : null);
+  const areaHa =
+    args.landAreaHa ?? (args.areaSqm ? Math.round((args.areaSqm / 10_000) * 1000) / 1000 : null);
   const soilCategory = classifySoil(args.soilClass);
   const isLand = args.propertyType === "grunt_rolny";
 
@@ -81,7 +82,8 @@ export async function fetchGusAuxiliaryBenchmark(args: {
     base.fallbackUsed = !!gus.diagnostics.fallbackUsed;
     base.warnings.push(...(gus.diagnostics.warnings ?? []));
     if (isLand && gus.stats.pricePerHaByClass) {
-      base.gusPricePerHa = gus.stats.pricePerHaByClass[soilCategory] ?? gus.stats.pricePerHaByClass.ogolem ?? null;
+      base.gusPricePerHa =
+        gus.stats.pricePerHaByClass[soilCategory] ?? gus.stats.pricePerHaByClass.ogolem ?? null;
     }
     base.gusPricePerM2Median = gus.stats.pricePerM2Median ?? null;
     base.pricePerM2Average = gus.stats.pricePerM2Average ?? null;
@@ -96,14 +98,20 @@ export async function fetchGusAuxiliaryBenchmark(args: {
   base.primarySource = base.available ? "GUS BDL" : "brak";
 
   if (isLand) {
-    base.landValuePln = base.pricePerHa != null && areaHa != null ? Math.round(base.pricePerHa * areaHa) : null;
+    base.landValuePln =
+      base.pricePerHa != null && areaHa != null ? Math.round(base.pricePerHa * areaHa) : null;
   } else if (args.propertyType === "mieszkanie" || args.propertyType === "dom") {
-    base.dwellingValuePln = base.pricePerM2Median != null && args.areaSqm != null ? Math.round(base.pricePerM2Median * args.areaSqm) : null;
+    base.dwellingValuePln =
+      base.pricePerM2Median != null && args.areaSqm != null
+        ? Math.round(base.pricePerM2Median * args.areaSqm)
+        : null;
   }
 
   const parts: string[] = [];
-  if (base.pricePerHa != null) parts.push(`${base.pricePerHa.toLocaleString("pl-PL")} zł/ha (klasa: ${soilCategory})`);
-  if (base.pricePerM2Median != null) parts.push(`${base.pricePerM2Median.toLocaleString("pl-PL")} zł/m²`);
+  if (base.pricePerHa != null)
+    parts.push(`${base.pricePerHa.toLocaleString("pl-PL")} zł/ha (klasa: ${soilCategory})`);
+  if (base.pricePerM2Median != null)
+    parts.push(`${base.pricePerM2Median.toLocaleString("pl-PL")} zł/m²`);
   if (base.unitName) parts.push(base.unitName);
   base.summaryLine = base.available
     ? `GUS BDL (pomocniczo${isLand ? " — podstawa dla gruntu rolnego" : ""}): ${parts.join(", ")}${base.period ? `, ${base.period}` : ""}.`
@@ -125,7 +133,8 @@ export async function fetchGovBenchmark(args: {
   latitude?: number | null;
   longitude?: number | null;
 }): Promise<GovBenchmark> {
-  const areaHa = args.landAreaHa ?? (args.areaSqm ? Math.round((args.areaSqm / 10_000) * 1000) / 1000 : null);
+  const areaHa =
+    args.landAreaHa ?? (args.areaSqm ? Math.round((args.areaSqm / 10_000) * 1000) / 1000 : null);
   const soilCategory = classifySoil(args.soilClass);
 
   const base: GovBenchmark = {
@@ -166,7 +175,10 @@ export async function fetchGovBenchmark(args: {
   let geocodedFromAddress = false;
   if ((lat == null || lng == null) && args.address) {
     const query = [args.address, args.city, args.voivodeship, "Polska"].filter(Boolean).join(", ");
-    const geo = await geocode(query, { expectedCity: args.city, expectedVoivodeship: args.voivodeship }).catch(() => null);
+    const geo = await geocode(query, {
+      expectedCity: args.city,
+      expectedVoivodeship: args.voivodeship,
+    }).catch(() => null);
     if (geo) {
       lat = geo.lat;
       lng = geo.lng;
@@ -196,13 +208,16 @@ export async function fetchGovBenchmark(args: {
   let rcnPricePerM2: number | null = null;
   if (rcn) {
     base.rcnStatus = rcn.diagnostics.status;
-    base.rcnStatusMessage = rcnStatusMessage(rcn.diagnostics.status)
-      + (geocodedFromAddress ? " (współrzędne z geokodowania adresu KW)" : "");
+    base.rcnStatusMessage =
+      rcnStatusMessage(rcn.diagnostics.status) +
+      (geocodedFromAddress ? " (współrzędne z geokodowania adresu KW)" : "");
     base.rcnRadiusKm = rcn.radiusKm;
     base.rcnTransactions = rcn.transactionsCount ?? 0;
     if (rcn.stats) {
-      if (rcn.stats.unit === "pln_per_ha") rcnPricePerHa = rcn.stats.median ?? rcn.stats.average ?? null;
-      if (rcn.stats.unit === "pln_per_m2") rcnPricePerM2 = rcn.stats.median ?? rcn.stats.average ?? null;
+      if (rcn.stats.unit === "pln_per_ha")
+        rcnPricePerHa = rcn.stats.median ?? rcn.stats.average ?? null;
+      if (rcn.stats.unit === "pln_per_m2")
+        rcnPricePerM2 = rcn.stats.median ?? rcn.stats.average ?? null;
     }
     base.rcnAvailable = rcnPricePerHa != null || rcnPricePerM2 != null;
     base.rcnPricePerHa = rcnPricePerHa;
@@ -210,7 +225,8 @@ export async function fetchGovBenchmark(args: {
   } else if (lat == null || lng == null) {
     if (args.address) {
       base.rcnStatus = "geocoding_failed";
-      base.rcnStatusMessage = "RCN nieodpytany — nie udało się zgeokodować adresu z KW do współrzędnych.";
+      base.rcnStatusMessage =
+        "RCN nieodpytany — nie udało się zgeokodować adresu z KW do współrzędnych.";
     } else {
       base.rcnStatus = "missing_coordinates";
       base.rcnStatusMessage = "RCN nieodpytany — brak adresu/współrzędnych nieruchomości.";
@@ -230,7 +246,8 @@ export async function fetchGovBenchmark(args: {
     base.fallbackUsed = !!gus.diagnostics.fallbackUsed;
     warnings.push(...(gus.diagnostics.warnings ?? []));
     if (args.propertyType === "grunt_rolny" && gus.stats.pricePerHaByClass) {
-      gusPricePerHa = gus.stats.pricePerHaByClass[soilCategory] ?? gus.stats.pricePerHaByClass.ogolem ?? null;
+      gusPricePerHa =
+        gus.stats.pricePerHaByClass[soilCategory] ?? gus.stats.pricePerHaByClass.ogolem ?? null;
     }
     gusPricePerM2Median = gus.stats.pricePerM2Median ?? null;
     gusPricePerM2Average = gus.stats.pricePerM2Average ?? null;
@@ -249,7 +266,11 @@ export async function fetchGovBenchmark(args: {
   const rcnDroveHa = isLand && rcnPricePerHa != null;
   const rcnDroveM2 = !isLand && rcnPricePerM2 != null;
   const primarySource: GovBenchmark["primarySource"] =
-    rcnDroveHa || rcnDroveM2 ? "RCN" : chosenPerHa != null || chosenPerM2 != null ? "GUS BDL" : "brak";
+    rcnDroveHa || rcnDroveM2
+      ? "RCN"
+      : chosenPerHa != null || chosenPerM2 != null
+        ? "GUS BDL"
+        : "brak";
 
   base.pricePerHa = chosenPerHa;
   base.pricePerM2Median = chosenPerM2;
@@ -258,14 +279,19 @@ export async function fetchGovBenchmark(args: {
   base.source = base.rcnAvailable ? "RCN + GUS BDL" : "GUS BDL";
 
   if (isLand) {
-    base.landValuePln = chosenPerHa != null && areaHa != null ? Math.round(chosenPerHa * areaHa) : null;
+    base.landValuePln =
+      chosenPerHa != null && areaHa != null ? Math.round(chosenPerHa * areaHa) : null;
   } else if (args.propertyType === "mieszkanie" || args.propertyType === "dom") {
-    base.dwellingValuePln = chosenPerM2 != null && args.areaSqm != null ? Math.round(chosenPerM2 * args.areaSqm) : null;
+    base.dwellingValuePln =
+      chosenPerM2 != null && args.areaSqm != null ? Math.round(chosenPerM2 * args.areaSqm) : null;
   }
 
   base.warnings = warnings;
   const parts: string[] = [];
-  if (primarySource === "RCN") parts.push(`RCN (${base.rcnTransactions} transakcji${base.rcnRadiusKm ? `, r=${base.rcnRadiusKm} km` : ""})`);
+  if (primarySource === "RCN")
+    parts.push(
+      `RCN (${base.rcnTransactions} transakcji${base.rcnRadiusKm ? `, r=${base.rcnRadiusKm} km` : ""})`,
+    );
   if (chosenPerHa != null) parts.push(`${chosenPerHa.toLocaleString("pl-PL")} zł/ha`);
   if (chosenPerM2 != null) parts.push(`${chosenPerM2.toLocaleString("pl-PL")} zł/m²`);
   if (base.unitName) parts.push(base.unitName);

@@ -17,7 +17,11 @@ const InputSchema = z.object({
 
 type Place = { name?: string; vicinity?: string; types?: string[]; distance?: number };
 
-function normalizeAddress(parts: { propertyAddress?: string | null; city?: string | null; postalCode?: string | null }) {
+function normalizeAddress(parts: {
+  propertyAddress?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+}) {
   const joined = [parts.propertyAddress, parts.postalCode, parts.city, "Polska"]
     .filter(Boolean)
     .map((s) => String(s).trim())
@@ -54,7 +58,9 @@ async function gmFetch(path: string, init?: RequestInit) {
 }
 
 async function geocode(address: string) {
-  const res = await gmFetch(`/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=pl&language=pl`);
+  const res = await gmFetch(
+    `/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=pl&language=pl`,
+  );
   if (!res.ok) throw new Error("GOOGLE_MAPS_API_ERROR");
   const data = await res.json();
   if (data.status !== "OK" || !data.results?.[0]) return null;
@@ -67,7 +73,12 @@ async function geocode(address: string) {
   };
 }
 
-async function nearby(lat: number, lng: number, radius: number, includedTypes: string[]): Promise<Place[]> {
+async function nearby(
+  lat: number,
+  lng: number,
+  radius: number,
+  includedTypes: string[],
+): Promise<Place[]> {
   const res = await gmFetch(`/places/v1/places:searchNearby`, {
     method: "POST",
     headers: {
@@ -89,7 +100,9 @@ async function nearby(lat: number, lng: number, radius: number, includedTypes: s
     name: p.displayName?.text,
     vicinity: p.formattedAddress,
     types: p.types,
-    distance: p.location ? haversine(lat, lng, p.location.latitude, p.location.longitude) : undefined,
+    distance: p.location
+      ? haversine(lat, lng, p.location.latitude, p.location.longitude)
+      : undefined,
   }));
 }
 
@@ -123,7 +136,7 @@ function classify(score: number) {
 }
 
 function computeScore(r1000: Record<string, Place[]>, r3000: Record<string, Place[]>) {
-  const n = (k: string, r = r1000) => (r[k]?.length ?? 0);
+  const n = (k: string, r = r1000) => r[k]?.length ?? 0;
 
   const infra = Math.min(
     25,
@@ -135,7 +148,9 @@ function computeScore(r1000: Record<string, Place[]>, r3000: Record<string, Plac
   const transport = Math.min(20, Math.min(n("publicTransport"), 10) * 2);
   const attractiveness = Math.min(
     20,
-    Math.min(n("parks"), 4) * 2 + Math.min(n("restaurants"), 8) * 1 + Math.min(n("shopping", r3000), 3) * 2,
+    Math.min(n("parks"), 4) * 2 +
+      Math.min(n("restaurants"), 8) * 1 +
+      Math.min(n("shopping", r3000), 3) * 2,
   );
   const liquidity = Math.min(
     20,
@@ -160,7 +175,9 @@ function buildOfferText(category: string, counts: Record<string, number>) {
   const hasInfra = counts.groceryStoresWithin1000m > 0 && counts.pharmaciesWithin1000m > 0;
   const hasTransport = counts.publicTransportWithin1000m > 0;
   const locationSummary = `Nieruchomość położona jest w lokalizacji ocenionej jako ${category}. W najbliższym otoczeniu ${
-    hasInfra ? "znajdują się punkty handlowe i usługowe oraz placówki medyczne" : "dostęp do podstawowej infrastruktury jest ograniczony"
+    hasInfra
+      ? "znajdują się punkty handlowe i usługowe oraz placówki medyczne"
+      : "dostęp do podstawowej infrastruktury jest ograniczony"
   }${hasTransport ? ", a dostępność komunikacji publicznej wspiera atrakcyjność lokalizacji" : ""}.`;
   const liquidityComment = hasInfra
     ? "Charakterystyka otoczenia może pozytywnie wpływać na płynność potencjalnej sprzedaży zabezpieczenia."
@@ -177,7 +194,11 @@ export const analyzePropertyLocation = createServerFn({ method: "POST" })
     try {
       const address = (data.propertyAddress ?? "").trim();
       if (!address && !data.city) {
-        return { success: false, errorCode: "MISSING_ADDRESS", message: "Brak adresu nieruchomości do analizy lokalizacji." };
+        return {
+          success: false,
+          errorCode: "MISSING_ADDRESS",
+          message: "Brak adresu nieruchomości do analizy lokalizacji.",
+        };
       }
       const normalized = normalizeAddress({
         propertyAddress: data.propertyAddress,
@@ -201,9 +222,15 @@ export const analyzePropertyLocation = createServerFn({ method: "POST" })
         }
       }
 
-      const geo = await geocode([address, data.postalCode, data.city, "Polska"].filter(Boolean).join(", "));
+      const geo = await geocode(
+        [address, data.postalCode, data.city, "Polska"].filter(Boolean).join(", "),
+      );
       if (!geo) {
-        return { success: false, errorCode: "GEOCODING_FAILED", message: "Nie udało się ustalić lokalizacji nieruchomości na mapie." };
+        return {
+          success: false,
+          errorCode: "GEOCODING_FAILED",
+          message: "Nie udało się ustalić lokalizacji nieruchomości na mapie.",
+        };
       }
 
       const [r500, r1000, r3000] = await Promise.all([
@@ -218,8 +245,7 @@ export const analyzePropertyLocation = createServerFn({ method: "POST" })
         pharmaciesWithin1000m: r1000.pharmacies.length,
         publicTransportWithin1000m: r1000.publicTransport.length,
         parksWithin1000m: r1000.parks.length,
-        servicesWithin1000m:
-          r1000.restaurants.length + r1000.banks.length + r1000.shopping.length,
+        servicesWithin1000m: r1000.restaurants.length + r1000.banks.length + r1000.shopping.length,
       };
 
       const locationScore = computeScore(r1000, r3000);
@@ -267,9 +293,17 @@ export const analyzePropertyLocation = createServerFn({ method: "POST" })
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown";
       if (msg === "GOOGLE_MAPS_API_KEY_MISSING") {
-        return { success: false, errorCode: "GOOGLE_MAPS_API_KEY_MISSING", message: "Integracja Google Maps nie została skonfigurowana." };
+        return {
+          success: false,
+          errorCode: "GOOGLE_MAPS_API_KEY_MISSING",
+          message: "Integracja Google Maps nie została skonfigurowana.",
+        };
       }
       console.error("property-location-analysis error:", e);
-      return { success: false, errorCode: "GOOGLE_MAPS_API_ERROR", message: "Nie udało się pobrać danych lokalizacyjnych." };
+      return {
+        success: false,
+        errorCode: "GOOGLE_MAPS_API_ERROR",
+        message: "Nie udało się pobrać danych lokalizacyjnych.",
+      };
     }
   });

@@ -18,7 +18,7 @@ function slugify(s: string): string {
 }
 
 async function ensureUniqueSlug(base: string): Promise<string> {
-  let slug = base;
+  const slug = base;
   let i = 0;
   while (true) {
     const candidate = i === 0 ? slug : `${slug}-${i}`;
@@ -50,8 +50,9 @@ async function pickNextKind(): Promise<PostKind> {
     .order("published_at", { ascending: false })
     .limit(1);
   const lastRow: any = data?.[0];
-  const last: PostKind | undefined = lastRow?.raw_ai_output?.post_kind
-    ?? (lastRow ? (lastRow.audience === "investor" ? "investor_news" : "borrower_news") : undefined);
+  const last: PostKind | undefined =
+    lastRow?.raw_ai_output?.post_kind ??
+    (lastRow ? (lastRow.audience === "investor" ? "investor_news" : "borrower_news") : undefined);
   if (last === "borrower_news") return "investor_news";
   if (last === "investor_news") return "legal_market_monitor";
   if (last === "legal_market_monitor") return "investor_review";
@@ -94,7 +95,8 @@ async function fetchFreshNewsBrief(pplxKey: string, kind: PostKind): Promise<New
     },
     body: JSON.stringify({
       model: "sonar",
-      search_recency_filter: kind === "investor_review" ? "month" : kind === "legal_market_monitor" ? "week" : "day",
+      search_recency_filter:
+        kind === "investor_review" ? "month" : kind === "legal_market_monitor" ? "week" : "day",
       messages: [
         { role: "system", content: b.sys },
         { role: "user", content: b.user },
@@ -106,11 +108,11 @@ async function fetchFreshNewsBrief(pplxKey: string, kind: PostKind): Promise<New
   }
   const json: any = await res.json();
   const summary: string = json.choices?.[0]?.message?.content ?? "";
-  const rawCitations: string[] = json.citations ?? json.search_results?.map((r: any) => r.url) ?? [];
+  const rawCitations: string[] =
+    json.citations ?? json.search_results?.map((r: any) => r.url) ?? [];
   const citations = rawCitations.slice(0, 8).map((url) => ({ url }));
   return { summary, citations };
 }
-
 
 interface RelatedArticle {
   slug: string;
@@ -155,16 +157,19 @@ async function writeArticleFromNews(
   const audience = audienceOf(kind);
 
   const internalList = internal
-    .map((a) => `- [${a.title}](/blog/${a.slug})${a.primary_keyword ? ` — kw: ${a.primary_keyword}` : ""}`)
+    .map(
+      (a) =>
+        `- [${a.title}](/blog/${a.slug})${a.primary_keyword ? ` — kw: ${a.primary_keyword}` : ""}`,
+    )
     .join("\n");
   const externalList = brief.citations.map((c) => `- ${c.url}`).join("\n");
 
-  const structureHint = kind === "investor_review"
-    ? "Markdown, 1100-1700 słów. Struktura: krótki lead (problem inwestora), H2 'Porównywane klasy aktywów' (lista), H2 'Tabela porównawcza' (markdown table z kolumnami: Klasa aktywów | Oczekiwana stopa zwrotu netto | Min. ticket | Horyzont | Płynność | Ryzyko 1-5 | Zabezpieczenie | Podatek), H2 'Analiza' (po jednym akapicie na każdą klasę z LICZBAMI z briefingu), H2 'Dla kogo która opcja', H2 'Wnioski i rekomendacja dywersyfikacji', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. ZAWSZE podawaj liczby z briefingu, NIGDY nie wymyślaj."
-    : kind === "legal_market_monitor"
-    ? "Markdown, 1000-1500 słów. Format PRZEGLĄDU TYGODNIA. Struktura: krótki lead (1 akapit — co najważniejszego wydarzyło się w minionym tygodniu na styku prawa, sądów i rynku nieruchomości w PL), H2 'Legislacja i regulatorzy' (Sejm/Senat/MS/MF/KNF/UOKiK — pod-punkty z datą + źródło + 'Możliwy wpływ:'), H2 'Sądy i orzecznictwo' (SN/TSUE/apelacyjne — j.w.), H2 'Komornicy i egzekucja z nieruchomości', H2 'Notariat, adwokatura i radcowie prawni', H2 'Rynek nieruchomości w Polsce' (dane z GUS/AMRON/Otodom — liczby, miasta), H2 'Świat → Polska' (FED/EBC/USD/EUR/surowce — wyłącznie z konkretnym mechanizmem przełożenia na PL), H2 'Podsumowanie tygodnia — co to zmienia dla właściciela nieruchomości i pożyczkobiorcy' (2-3 akapity), H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. KAŻDA teza musi mieć źródło z briefingu — NIE dopisuj zdarzeń spoza briefingu. Jeżeli w danej sekcji brief mówi 'brak zdarzeń', napisz to jawnie."
-    : "Markdown, 700-1100 słów. Struktura: krótki lead, H2 'Co się stało', H2 'Co to znaczy dla inwestora', H2 'Co to znaczy dla osób z nieruchomością', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ naturalnie 2-3 linki wewnętrzne z podanej listy. NA KOŃCU 'Linki i źródła' wymień zewnętrzne źródła.";
-
+  const structureHint =
+    kind === "investor_review"
+      ? "Markdown, 1100-1700 słów. Struktura: krótki lead (problem inwestora), H2 'Porównywane klasy aktywów' (lista), H2 'Tabela porównawcza' (markdown table z kolumnami: Klasa aktywów | Oczekiwana stopa zwrotu netto | Min. ticket | Horyzont | Płynność | Ryzyko 1-5 | Zabezpieczenie | Podatek), H2 'Analiza' (po jednym akapicie na każdą klasę z LICZBAMI z briefingu), H2 'Dla kogo która opcja', H2 'Wnioski i rekomendacja dywersyfikacji', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. ZAWSZE podawaj liczby z briefingu, NIGDY nie wymyślaj."
+      : kind === "legal_market_monitor"
+        ? "Markdown, 1000-1500 słów. Format PRZEGLĄDU TYGODNIA. Struktura: krótki lead (1 akapit — co najważniejszego wydarzyło się w minionym tygodniu na styku prawa, sądów i rynku nieruchomości w PL), H2 'Legislacja i regulatorzy' (Sejm/Senat/MS/MF/KNF/UOKiK — pod-punkty z datą + źródło + 'Możliwy wpływ:'), H2 'Sądy i orzecznictwo' (SN/TSUE/apelacyjne — j.w.), H2 'Komornicy i egzekucja z nieruchomości', H2 'Notariat, adwokatura i radcowie prawni', H2 'Rynek nieruchomości w Polsce' (dane z GUS/AMRON/Otodom — liczby, miasta), H2 'Świat → Polska' (FED/EBC/USD/EUR/surowce — wyłącznie z konkretnym mechanizmem przełożenia na PL), H2 'Podsumowanie tygodnia — co to zmienia dla właściciela nieruchomości i pożyczkobiorcy' (2-3 akapity), H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. KAŻDA teza musi mieć źródło z briefingu — NIE dopisuj zdarzeń spoza briefingu. Jeżeli w danej sekcji brief mówi 'brak zdarzeń', napisz to jawnie."
+        : "Markdown, 700-1100 słów. Struktura: krótki lead, H2 'Co się stało', H2 'Co to znaczy dla inwestora', H2 'Co to znaczy dla osób z nieruchomością', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ naturalnie 2-3 linki wewnętrzne z podanej listy. NA KOŃCU 'Linki i źródła' wymień zewnętrzne źródła.";
 
   let audienceBrief: string;
   if (kind === "investor_review") {
@@ -179,16 +184,18 @@ async function writeArticleFromNews(
 
   const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
 
-  const briefLabel = kind === "investor_review"
-    ? "BRIEFING (dane do przeglądu porównawczego, ostatnie 30 dni):"
-    : kind === "legal_market_monitor"
-    ? "BRIEFING (monitoring zmian w prawie i na rynku, ostatnie 7 dni):"
-    : "BRIEFING (świeże wiadomości z ostatnich 24h):";
-  const taskLabel = kind === "investor_review"
-    ? "Napisz dogłębny PRZEGLĄD INWESTYCYJNY porównujący klasy aktywów. Tytuł musi być porównawczy (np. zawierać 'vs', 'porównanie', 'ranking', 'co się bardziej opłaca')."
-    : kind === "legal_market_monitor"
-    ? "Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia', datę tygodnia, 'Co zmieniło się w prawie i na rynku nieruchomości') — bez clickbaitu."
-    : `Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
+  const briefLabel =
+    kind === "investor_review"
+      ? "BRIEFING (dane do przeglądu porównawczego, ostatnie 30 dni):"
+      : kind === "legal_market_monitor"
+        ? "BRIEFING (monitoring zmian w prawie i na rynku, ostatnie 7 dni):"
+        : "BRIEFING (świeże wiadomości z ostatnich 24h):";
+  const taskLabel =
+    kind === "investor_review"
+      ? "Napisz dogłębny PRZEGLĄD INWESTYCYJNY porównujący klasy aktywów. Tytuł musi być porównawczy (np. zawierać 'vs', 'porównanie', 'ranking', 'co się bardziej opłaca')."
+      : kind === "legal_market_monitor"
+        ? "Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia', datę tygodnia, 'Co zmieniło się w prawie i na rynku nieruchomości') — bez clickbaitu."
+        : `Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
 
   const userMsg = `${briefLabel}
 ${brief.summary}
@@ -217,7 +224,17 @@ Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt",
       cover_prompt: { type: "string" },
       cover_alt: { type: "string" },
     },
-    required: ["title", "meta_title", "meta_description", "excerpt", "primary_keyword", "keywords", "content_md", "cover_prompt", "cover_alt"],
+    required: [
+      "title",
+      "meta_title",
+      "meta_description",
+      "excerpt",
+      "primary_keyword",
+      "keywords",
+      "content_md",
+      "cover_prompt",
+      "cover_alt",
+    ],
   };
 
   const pplxKey = process.env.PERPLEXITY_API_KEY;
@@ -238,10 +255,15 @@ Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt",
       },
     }),
   });
-  if (!res.ok) throw new Error(`Perplexity writer ${res.status}: ${await res.text().catch(() => "")}`);
+  if (!res.ok)
+    throw new Error(`Perplexity writer ${res.status}: ${await res.text().catch(() => "")}`);
   const json: any = await res.json();
   const raw: string = json.choices?.[0]?.message?.content ?? "";
-  const cleaned = raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "");
+  const cleaned = raw
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/i, "");
   let parsed: any;
   try {
     parsed = JSON.parse(cleaned);
@@ -270,7 +292,6 @@ function pickCover(kind: PostKind): { url: string; alt: string } {
   const photo = pickStockPhoto(audience, kind === "investor_review");
   return { url: photo.url, alt: photo.alt };
 }
-
 
 export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<{
   ok: boolean;
@@ -307,7 +328,8 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
   const slug = await ensureUniqueSlug(slugify(draft.title));
   const wordCount = (draft.content_md.match(/\S+/g) ?? []).length;
 
-  const ctaUrl = audience === "investor" ? "https://financeyou.pl/inwestor" : "https://financeyou.pl/klient";
+  const ctaUrl =
+    audience === "investor" ? "https://financeyou.pl/inwestor" : "https://financeyou.pl/klient";
   const ctaLabel = audience === "investor" ? "Zostań inwestorem" : "Złóż wniosek o pożyczkę";
 
   const { data: inserted, error } = await supabaseAdmin
@@ -347,7 +369,12 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
     action: "daily_autopost",
     status: "ok",
     summary: `[${kind}] ${draft.title}`,
-    payload: { article_id: inserted.id, slug: inserted.slug, kind, sources: brief.citations.length },
+    payload: {
+      article_id: inserted.id,
+      slug: inserted.slug,
+      kind,
+      sources: brief.citations.length,
+    },
   });
 
   return { ok: true, slug: inserted.slug, id: inserted.id };

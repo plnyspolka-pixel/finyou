@@ -14,7 +14,9 @@ function verifySig(body: string, signature: string | null, secret: string): bool
     const a = Buffer.from(signature);
     const b = Buffer.from(expected);
     return a.length === b.length && timingSafeEqual(a, b);
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 export const Route = createFileRoute("/api/public/meta-messenger-webhook")({
@@ -52,7 +54,11 @@ export const Route = createFileRoute("/api/public/meta-messenger-webhook")({
           return new Response("Forbidden", { status: 403 });
         }
         let body: any;
-        try { body = JSON.parse(raw); } catch { return new Response("Bad JSON", { status: 400 }); }
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          return new Response("Bad JSON", { status: 400 });
+        }
 
         await handleMetaMessagingBody(body);
         return new Response("ok", { status: 200 });

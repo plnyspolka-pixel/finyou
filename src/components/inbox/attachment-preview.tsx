@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Paperclip, FileText, Image as ImageIcon, Download, Eye, File as FileIcon } from "lucide-react";
+import {
+  Paperclip,
+  FileText,
+  Image as ImageIcon,
+  Download,
+  Eye,
+  File as FileIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -21,9 +28,11 @@ function pick(a: Att, i: number) {
   const name = a?.name ?? a?.filename ?? `załącznik-${i + 1}`;
   const mime = (a?.content_type ?? a?.mime_type ?? a?.type ?? "").toLowerCase();
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  const isImage = mime.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "gif", "avif"].includes(ext);
+  const isImage =
+    mime.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "gif", "avif"].includes(ext);
   const isPdf = mime === "application/pdf" || ext === "pdf";
-  const isText = mime.startsWith("text/") || ["txt", "md", "csv", "json", "xml", "html"].includes(ext);
+  const isText =
+    mime.startsWith("text/") || ["txt", "md", "csv", "json", "xml", "html"].includes(ext);
   return { url, name, mime, ext, isImage, isPdf, isText };
 }
 
@@ -61,12 +70,7 @@ export function AttachmentPreview({ attachments }: { attachments: Att[] }) {
                 disabled={!url}
               >
                 {isImage && url ? (
-                  <img
-                    src={url}
-                    alt={name}
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
+                  <img src={url} alt={name} loading="lazy" className="h-full w-full object-cover" />
                 ) : isPdf ? (
                   <div className="flex flex-col items-center gap-1 text-muted-foreground">
                     <FileText className="h-8 w-8" />
@@ -92,7 +96,9 @@ export function AttachmentPreview({ attachments }: { attachments: Att[] }) {
               <div className="p-2 flex items-center gap-2 min-w-0">
                 <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium truncate" title={name}>{name}</div>
+                  <div className="text-xs font-medium truncate" title={name}>
+                    {name}
+                  </div>
                   {size && <div className="text-[10px] text-muted-foreground">{size}</div>}
                 </div>
                 {url && (
@@ -117,7 +123,11 @@ export function AttachmentPreview({ attachments }: { attachments: Att[] }) {
         <DialogContent className="max-w-5xl w-[95vw] p-0">
           <DialogHeader className="p-4 pb-2">
             <DialogTitle className="text-sm font-medium truncate flex items-center gap-2">
-              {active?.isImage ? <ImageIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+              {active?.isImage ? (
+                <ImageIcon className="h-4 w-4" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
               <span className="truncate">{active?.name}</span>
               {active?.url && (
                 <Button asChild size="sm" variant="outline" className="ml-auto">
@@ -131,7 +141,11 @@ export function AttachmentPreview({ attachments }: { attachments: Att[] }) {
           <div className="px-4 pb-4">
             {active?.url ? (
               active.isImage ? (
-                <img src={active.url} alt={active.name} className="max-h-[75vh] w-full object-contain rounded" />
+                <img
+                  src={active.url}
+                  alt={active.name}
+                  className="max-h-[75vh] w-full object-contain rounded"
+                />
               ) : active.isPdf ? (
                 <iframe
                   src={active.url}

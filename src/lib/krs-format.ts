@@ -49,11 +49,15 @@ export function formatBoardMember(p: KrsPerson | Record<string, any>): string {
 export const formatProxy = formatBoardMember;
 export const formatRepresentationPerson = formatBoardMember;
 
-export function formatShareholder(w: {
-  name?: unknown;
-  share?: unknown;
-  sharesCount?: unknown;
-} | Record<string, any>): string {
+export function formatShareholder(
+  w:
+    | {
+        name?: unknown;
+        share?: unknown;
+        sharesCount?: unknown;
+      }
+    | Record<string, any>,
+): string {
   const name = asText(w.name) || joinName((w as any).firstName, (w as any).lastName);
   if (!name) return FALLBACK;
   const share = asText(w.share);

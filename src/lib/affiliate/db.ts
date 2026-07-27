@@ -15,7 +15,11 @@ export async function getUserRoles(db: SupabaseClient, userId: string): Promise<
   return (data ?? []).map((r: { role: string }) => r.role);
 }
 
-export async function assertRole(db: SupabaseClient, userId: string, allowed: AppRoleName[]): Promise<string[]> {
+export async function assertRole(
+  db: SupabaseClient,
+  userId: string,
+  allowed: AppRoleName[],
+): Promise<string[]> {
   const roles = await getUserRoles(db, userId);
   if (!allowed.some((r) => roles.includes(r))) {
     throw new Error("Brak uprawnień do tej operacji.");
@@ -64,13 +68,17 @@ export async function logAffiliateAudit(
     });
   } catch (e) {
     // Audyt nie może wywrócić operacji głównej.
-    // eslint-disable-next-line no-console
+
     console.error("[affiliate] audit log failed", (e as Error)?.message);
   }
 }
 
 /** Resolves the affiliate_partners.id for an authenticated user, or null. */
 export async function resolvePartnerId(db: SupabaseClient, userId: string): Promise<string | null> {
-  const { data } = await db.from("affiliate_partners").select("id").eq("user_id", userId).maybeSingle();
+  const { data } = await db
+    .from("affiliate_partners")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
   return (data as { id: string } | null)?.id ?? null;
 }

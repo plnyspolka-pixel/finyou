@@ -15,7 +15,10 @@ export const Route = createFileRoute("/embed/leady")({
   head: () => ({
     meta: [
       { title: "Ostatnie okazje inwestycyjne — Finance You" },
-      { name: "description", content: "Zanonimizowana lista ostatnich okazji inwestycyjnych Finance You." },
+      {
+        name: "description",
+        content: "Zanonimizowana lista ostatnich okazji inwestycyjnych Finance You.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -59,12 +62,18 @@ function LeadCard({ lead }: { lead: import("@/lib/public-leads.functions").Publi
       <div className="flex items-start justify-between gap-3 p-4 sm:p-5">
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/20 via-indigo-500/15 to-emerald-400/10 ring-1 ring-white/10 shadow-[0_6px_20px_-6px_rgba(56,189,248,0.55)]">
-            <img src={icon} alt="" className="h-14 w-14 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" />
+            <img
+              src={icon}
+              alt=""
+              className="h-14 w-14 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]"
+            />
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-base font-bold text-white sm:text-lg">{label}</h3>
             {lead.first_name && (
-              <p className="mt-0.5 truncate text-xs text-slate-300">Klient: <span className="font-semibold text-white">{lead.first_name}</span></p>
+              <p className="mt-0.5 truncate text-xs text-slate-300">
+                Klient: <span className="font-semibold text-white">{lead.first_name}</span>
+              </p>
             )}
             <p className="mt-0.5 truncate font-mono text-[11px] text-slate-400">{subtitle}</p>
           </div>
@@ -93,7 +102,9 @@ function LeadCard({ lead }: { lead: import("@/lib/public-leads.functions").Publi
       <div className="border-t border-white/5 bg-gradient-to-r from-sky-500/90 via-sky-500/80 to-indigo-500/80 px-4 py-3 sm:px-5">
         <div className="flex items-center justify-between text-sm font-semibold text-white">
           <span>Oferta szuka inwestora</span>
-          <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+          <span aria-hidden className="transition-transform group-hover:translate-x-1">
+            →
+          </span>
         </div>
       </div>
     </article>
@@ -120,7 +131,13 @@ export function ScoreRow({ score, grade }: { score: number; grade: string }) {
       <div className="flex items-center gap-4">
         <div className="relative shrink-0" style={{ width: size, height: size }}>
           <svg width={size} height={size} className="-rotate-90">
-            <circle cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke} className="fill-none stroke-white/10" />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              strokeWidth={stroke}
+              className="fill-none stroke-white/10"
+            />
             <circle
               cx={size / 2}
               cy={size / 2}
@@ -134,14 +151,19 @@ export function ScoreRow({ score, grade }: { score: number; grade: string }) {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-black leading-none" style={{ color }}>{grade}</span>
+            <span className="text-2xl font-black leading-none" style={{ color }}>
+              {grade}
+            </span>
             <span className="mt-0.5 text-[11px] font-bold tabular-nums text-white">
-              {pct}<span className="text-[9px] text-slate-400">/100</span>
+              {pct}
+              <span className="text-[9px] text-slate-400">/100</span>
             </span>
           </div>
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Ocena ryzyka</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Ocena ryzyka
+          </p>
           <p className="mt-1 text-sm font-semibold text-white">Klasa {grade}</p>
           <p className="mt-0.5 text-[11px] text-slate-400">Skala 0–100 · A–E</p>
         </div>
@@ -149,8 +171,6 @@ export function ScoreRow({ score, grade }: { score: number; grade: string }) {
     </div>
   );
 }
-
-
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (

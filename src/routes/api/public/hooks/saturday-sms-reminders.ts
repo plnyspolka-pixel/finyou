@@ -13,13 +13,18 @@ function admin() {
 
 function warsawHour(now: Date = new Date()): number {
   const p = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Warsaw", hour: "2-digit", hour12: false,
+    timeZone: "Europe/Warsaw",
+    hour: "2-digit",
+    hour12: false,
   }).formatToParts(now);
   return parseInt(p.find((x) => x.type === "hour")?.value ?? "0", 10);
 }
 function warsawWeekday(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Warsaw", weekday: "short" })
-    .formatToParts(now).find((x) => x.type === "weekday")?.value ?? "";
+  return (
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Warsaw", weekday: "short" })
+      .formatToParts(now)
+      .find((x) => x.type === "weekday")?.value ?? ""
+  );
 }
 
 async function runBatch() {
@@ -40,15 +45,16 @@ async function runBatch() {
 
   const { data: loans } = await s
     .from("loan_applications")
-    .select(`
+    .select(
+      `
       id, status, return_link_token, reminder_sms_count, reminder_sms_last_sent_at, created_at,
       client:clients!inner(first_name, phone_normalized, phone, do_not_sms)
-    `)
+    `,
+    )
     .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
     .lte("created_at", sevenDaysAgo)
     .order("reminder_sms_last_sent_at", { ascending: true, nullsFirst: true })
     .limit(500);
-
 
   let candidates = (loans ?? []).filter((l: any) => {
     if (l.client?.do_not_sms === true) return false;
@@ -62,7 +68,9 @@ async function runBatch() {
   // Wyklucz numery „wokół rozmowy": z zaplanowaną/trwającą rozmową (przed)
   // albo z rozmową z ostatnich 7 dni (po). Źródłem prawdy jest call_queue.
   const phones = Array.from(
-    new Set(candidates.map((l: any) => l.client?.phone_normalized || l.client?.phone).filter(Boolean)),
+    new Set(
+      candidates.map((l: any) => l.client?.phone_normalized || l.client?.phone).filter(Boolean),
+    ),
   ) as string[];
   if (phones.length) {
     const callWeekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
@@ -73,9 +81,10 @@ async function runBatch() {
     const blocked = new Set<string>();
     for (const c of (calls ?? []) as any[]) {
       const st = String(c.status ?? "");
-      const upcoming = st === "oczekuje" || st === "w_trakcie";           // przed rozmową
-      const recent = (c.created_at && c.created_at >= callWeekAgo)         // po rozmowie
-        || (c.scheduled_at && c.scheduled_at >= callWeekAgo);
+      const upcoming = st === "oczekuje" || st === "w_trakcie"; // przed rozmową
+      const recent =
+        (c.created_at && c.created_at >= callWeekAgo) || // po rozmowie
+        (c.scheduled_at && c.scheduled_at >= callWeekAgo);
       if (upcoming || recent) blocked.add(c.phone_normalized);
     }
     if (blocked.size) {
@@ -85,8 +94,8 @@ async function runBatch() {
     }
   }
 
-
-  let sent = 0, errors = 0;
+  let sent = 0,
+    errors = 0;
   const results: any[] = [];
   for (const loan of candidates as any[]) {
     const phone = loan.client.phone_normalized || loan.client.phone;
@@ -98,10 +107,13 @@ async function runBatch() {
     const r = await sendSmsInternal({ phone, body, source: "saturday_reminder" });
     if (r.ok) {
       sent++;
-      await s.from("loan_applications").update({
-        reminder_sms_count: (loan.reminder_sms_count ?? 0) + 1,
-        reminder_sms_last_sent_at: new Date().toISOString(),
-      }).eq("id", loan.id);
+      await s
+        .from("loan_applications")
+        .update({
+          reminder_sms_count: (loan.reminder_sms_count ?? 0) + 1,
+          reminder_sms_last_sent_at: new Date().toISOString(),
+        })
+        .eq("id", loan.id);
     } else {
       errors++;
     }

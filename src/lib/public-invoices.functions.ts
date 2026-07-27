@@ -26,7 +26,9 @@ export const fetchPublicInvoices = createServerFn({ method: "GET" }).handler(asy
   const entityIds = (entities ?? []).map((e: any) => e.id);
   let q = supabaseAdmin
     .from("accounting_documents")
-    .select("id, invoice_number, issue_date, net_amount, gross_amount, currency, counterparty_name, counterparty_nip, items")
+    .select(
+      "id, invoice_number, issue_date, net_amount, gross_amount, currency, counterparty_name, counterparty_nip, items",
+    )
     .eq("direction", "sales")
     .order("issue_date", { ascending: false, nullsFirst: false })
     .limit(25);

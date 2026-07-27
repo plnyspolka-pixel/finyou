@@ -35,7 +35,7 @@ export const sendLoanScheduleToClient = createServerFn({ method: "POST" })
         html: z.string().min(1).max(200_000),
         text: z.string().min(1).max(50_000),
       })
-      .parse(i)
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     await requireBrokerOrStaff(context.userId);

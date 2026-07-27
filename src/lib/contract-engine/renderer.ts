@@ -11,12 +11,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ewaluujWarunek, pobierzSciezke, type Ctx } from "./conditions";
-import {
-  listaPozyczkobiorcow,
-  oznaczenieStrony,
-  ROLA_NAZWA,
-  zbudujFakty,
-} from "./facts";
+import { listaPozyczkobiorcow, oznaczenieStrony, ROLA_NAZWA, zbudujFakty } from "./facts";
 import biblioteka from "./clauses.json";
 
 export interface Ustep {
@@ -87,9 +82,7 @@ export function renderuj(dane: any, bib: any = biblioteka): Dokument {
   const klauzule: any[] = bib.klauzule;
 
   const wynikSekcje: Sekcja[] = [];
-  const posortowaneSekcje = Object.entries(sekcjeDef).sort(
-    (a, b) => a[1].order - b[1].order,
-  );
+  const posortowaneSekcje = Object.entries(sekcjeDef).sort((a, b) => a[1].order - b[1].order);
 
   for (const [nazwaSekcji, meta] of posortowaneSekcje) {
     if (!ewaluujWarunek(meta.warunek ?? true, ctx)) continue;
@@ -158,11 +151,23 @@ function renderujKlauzule(kl: any, ctx: Ctx, fakty: Record<string, any>): Ustep[
     if (kl.id === "ZAB_01_hipoteka") {
       if (kolekcja.length === 1) {
         const n = kolekcja[0];
-        out.push({ poziom: "ustep", tekst: podstaw(kl.tekst_pojedyncza, ctx, { n }), zrodlo: kl.id });
+        out.push({
+          poziom: "ustep",
+          tekst: podstaw(kl.tekst_pojedyncza, ctx, { n }),
+          zrodlo: kl.id,
+        });
       } else {
-        out.push({ poziom: "ustep", tekst: podstaw(kl.tekst_wielokrotna_naglowek, ctx), zrodlo: kl.id });
+        out.push({
+          poziom: "ustep",
+          tekst: podstaw(kl.tekst_wielokrotna_naglowek, ctx),
+          zrodlo: kl.id,
+        });
         for (const n of kolekcja) {
-          out.push({ poziom: "podpunkt", tekst: podstaw(kl.tekst_wielokrotna_pozycja, ctx, { n }), zrodlo: kl.id });
+          out.push({
+            poziom: "podpunkt",
+            tekst: podstaw(kl.tekst_wielokrotna_pozycja, ctx, { n }),
+            zrodlo: kl.id,
+          });
         }
         const stopka =
           fakty.charakter_hipoteki === "laczna"
@@ -179,7 +184,11 @@ function renderujKlauzule(kl: any, ctx: Ctx, fakty: Record<string, any>): Ustep[
     else kluczLokalny = "n";
 
     for (const el of kolekcja) {
-      out.push({ poziom, tekst: podstaw(kl.tekst_pozycja, ctx, { [kluczLokalny]: el }), zrodlo: kl.id });
+      out.push({
+        poziom,
+        tekst: podstaw(kl.tekst_pozycja, ctx, { [kluczLokalny]: el }),
+        zrodlo: kl.id,
+      });
     }
     return out;
   }

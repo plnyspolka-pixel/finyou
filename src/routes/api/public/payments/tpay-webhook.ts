@@ -19,7 +19,9 @@ export const Route = createFileRoute("/api/public/payments/tpay-webhook")({
           } else {
             const text = await request.text();
             const params = new URLSearchParams(text);
-            params.forEach((v, k) => { body[k] = v; });
+            params.forEach((v, k) => {
+              body[k] = v;
+            });
           }
 
           const { handleTpayNotification } = await import("@/lib/access/webhook-core.server");

@@ -3,12 +3,12 @@
 // kalkulator postępu wniosku / przypomnienia dla voicebota.
 
 export type DocRequirementKind =
-  | "kw_number"        // numer księgi wieczystej (pole tekstowe)
-  | "photos_exterior"  // zdjęcia z zewnątrz
-  | "photos_interior"  // zdjęcia każdego pomieszczenia
-  | "mpzp"             // MPZP / warunki zabudowy
-  | "land_registry"    // wypis z rejestru gruntów
-  | "usable_area";     // powierzchnia użytkowa (pole liczbowe)
+  | "kw_number" // numer księgi wieczystej (pole tekstowe)
+  | "photos_exterior" // zdjęcia z zewnątrz
+  | "photos_interior" // zdjęcia każdego pomieszczenia
+  | "mpzp" // MPZP / warunki zabudowy
+  | "land_registry" // wypis z rejestru gruntów
+  | "usable_area"; // powierzchnia użytkowa (pole liczbowe)
 
 export interface DocRequirement {
   kind: DocRequirementKind;
@@ -46,9 +46,7 @@ export const REQUIREMENTS_BY_TYPE: Record<string, DocRequirement[]> = {
     { kind: "kw_number", label: "Numer księgi wieczystej" },
     { kind: "photos_exterior", label: "Zdjęcia z zewnątrz" },
   ],
-  inna: [
-    { kind: "kw_number", label: "Numer księgi wieczystej" },
-  ],
+  inna: [{ kind: "kw_number", label: "Numer księgi wieczystej" }],
 };
 
 export const PROPERTY_TYPE_LABELS: Record<string, string> = {
@@ -63,7 +61,10 @@ export const PROPERTY_TYPE_LABELS: Record<string, string> = {
 
 // Mapowanie keywordów dokumentów wgranych do kategorii wymagań.
 // Dopasowujemy do `document_type` / nazwy pliku.
-export function classifyDocument(doc: { document_type?: string | null; file_name?: string | null }): DocRequirementKind | null {
+export function classifyDocument(doc: {
+  document_type?: string | null;
+  file_name?: string | null;
+}): DocRequirementKind | null {
   const t = `${doc.document_type ?? ""} ${doc.file_name ?? ""}`.toLowerCase();
   if (/(mpzp|warunki zabudowy|wz_)/.test(t)) return "mpzp";
   if (/(rejestr.gruntow|wypis|ewidencja.grunt)/.test(t)) return "land_registry";

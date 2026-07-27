@@ -72,17 +72,22 @@ async function handler() {
     if (row.loan_application_id) {
       const { data: app } = await supabaseAdmin
         .from("loan_applications")
-        .select("id, status, loan_amount, completeness_percent, missing_fields, return_link, return_link_token, situation_description")
+        .select(
+          "id, status, loan_amount, completeness_percent, missing_fields, return_link, return_link_token, situation_description",
+        )
         .eq("id", row.loan_application_id)
         .maybeSingle();
       if (app) {
         dynamicVariables.loan_application_id = app.id;
         dynamicVariables.status = String(app.status ?? "");
-        dynamicVariables.loan_amount = app.loan_amount ? String(Math.round(Number(app.loan_amount))) : "";
+        dynamicVariables.loan_amount = app.loan_amount
+          ? String(Math.round(Number(app.loan_amount)))
+          : "";
         dynamicVariables.loan_purpose = app.situation_description ?? "";
         dynamicVariables.completion_percent = String(app.completeness_percent ?? 0);
         const missing = Array.isArray(app.missing_fields) ? app.missing_fields : [];
-        dynamicVariables.missing_documents = missing.length > 0 ? missing.join(", ") : "wszystko skompletowane";
+        dynamicVariables.missing_documents =
+          missing.length > 0 ? missing.join(", ") : "wszystko skompletowane";
         dynamicVariables.return_link = "https://financeyou.pl";
       }
     }
@@ -104,7 +109,9 @@ async function handler() {
         .update({
           status: result.ok ? "wykonane" : "blad",
           finished_at: new Date().toISOString(),
-          result_summary: result.ok ? `dispatched ${result.conversationId ?? ""}`.trim() : (result.error ?? "error"),
+          result_summary: result.ok
+            ? `dispatched ${result.conversationId ?? ""}`.trim()
+            : (result.error ?? "error"),
           conversation_id: result.conversationId ?? null,
         })
         .eq("id", row.id);

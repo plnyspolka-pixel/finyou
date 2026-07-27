@@ -98,7 +98,8 @@ function OperatorInvitesPage() {
         <div>
           <h1 className="text-xl font-bold">Operatorzy wewnętrzni</h1>
           <p className="text-sm text-muted-foreground">
-            Konta operatorów zakładane wyłącznie z linku zapraszającego. Generuj i wysyłaj indywidualnie.
+            Konta operatorów zakładane wyłącznie z linku zapraszającego. Generuj i wysyłaj
+            indywidualnie.
           </p>
         </div>
       </div>
