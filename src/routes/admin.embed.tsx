@@ -389,10 +389,7 @@ function InvoicesInlinePreview() {
           {data.map((inv) => (
             <li key={inv.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <span className="truncate font-mono">{inv.invoice_number ?? "—"}</span>
-                </div>
-                <div className="mt-0.5 truncate text-sm text-slate-200">{inv.item_label}</div>
+                <div className="truncate text-sm text-slate-200">{inv.item_label}</div>
                 <div className="mt-0.5 truncate text-xs text-slate-400">
                   Nabywca: <span className="text-slate-300">{inv.buyer_label}</span>
                 </div>

@@ -53,7 +53,7 @@ function KsiegowoscDokumenty() {
     mutationFn: async () => syncKsefFn({ data: {} }),
     onSuccess: (r: any) => {
       const total = (r?.results ?? []).reduce((s: number, x: any) => s + (x.count || 0), 0);
-      toast.success(`KSeF: zsynchronizowano ${total} dokumentów`);
+      toast.success(`KSeF + Fakturowo: zsynchronizowano ${total} dokumentów`);
       qc.invalidateQueries({ queryKey: ["accounting-documents"] });
       qc.invalidateQueries({ queryKey: ["accounting-sync-status"] });
     },

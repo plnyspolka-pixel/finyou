@@ -5,12 +5,17 @@ import { formatPLN } from "@/lib/labels";
 import { fetchPublicInvoices } from "@/lib/public-invoices.functions";
 
 // Publiczny embed z anonimizowaną listą faktur sprzedaży Finance You.
-// Pokazuje wyłącznie: data, numer, opis pozycji, kwota brutto — kupujący anonimowo.
+// Pokazuje wyłącznie: opis pozycji i kwotę brutto — kupujący anonimowo, BEZ dat
+// i numerów faktur (numeracja zdradzałaby daty wystawienia).
+// Lista odświeża się sama co minutę — nowe faktury (KSeF + Fakturowo, sync co godzinę
+// cronem) pojawiają się bez przeładowania strony.
 
 const invoicesQO = queryOptions({
   queryKey: ["embed", "public-invoices"],
   queryFn: () => fetchPublicInvoices(),
-  staleTime: 5 * 60 * 1000,
+  staleTime: 60 * 1000,
+  refetchInterval: 60 * 1000,
+  refetchIntervalInBackground: true,
 });
 
 export const Route = createFileRoute("/embed/faktury")({
@@ -59,11 +64,7 @@ function EmbedInvoices() {
                 className="rounded-xl border border-white/10 bg-white/[0.04] backdrop-blur px-3 py-3 sm:px-4 sm:py-3 flex items-center gap-3 hover:bg-white/[0.07] transition"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <span className="truncate font-mono">{inv.invoice_number ?? "—"}</span>
-                  </div>
-
-                  <div className="mt-0.5 truncate text-sm">
+                  <div className="truncate text-sm">
                     <span className="text-slate-200">{inv.item_label}</span>
                   </div>
                   <div className="mt-0.5 truncate text-xs text-slate-400">
@@ -74,7 +75,7 @@ function EmbedInvoices() {
                   <div className="text-sm sm:text-base font-semibold tabular-nums text-emerald-300">
                     {formatPLN(inv.gross_amount)}
                   </div>
-                  <div className="text-[10px] uppercase tracking-wider text-slate-500">netto / brutto</div>
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500">brutto</div>
                 </div>
               </li>
             ))}
