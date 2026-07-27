@@ -66,6 +66,7 @@ type EntityForm = {
   ksef_environment: "disabled" | "test" | "demo" | "prod";
   ksef_nip: string;
   ksef_token: string;
+  fakturowo_api_id: string;
 };
 
 const EMPTY: EntityForm = {
@@ -87,6 +88,7 @@ const EMPTY: EntityForm = {
   ksef_environment: "disabled",
   ksef_nip: "",
   ksef_token: "",
+  fakturowo_api_id: "",
 };
 
 function PodmiotyPage() {
@@ -124,6 +126,7 @@ function PodmiotyPage() {
       ksef_environment: e.ksef_environment ?? "disabled",
       ksef_nip: e.ksef_nip ?? "",
       ksef_token: "",
+      fakturowo_api_id: "",
     });
     setOpen(true);
   }
@@ -154,6 +157,7 @@ function PodmiotyPage() {
           ksef_environment: form.ksef_environment,
           ksef_nip: form.ksef_nip || null,
           ksef_token: form.ksef_token || undefined,
+          fakturowo_api_id: form.fakturowo_api_id || undefined,
         },
       });
       toast.success("Podmiot zapisany");
@@ -238,6 +242,10 @@ function PodmiotyPage() {
                   {KSEF_LABELS[e.ksef_environment] ?? e.ksef_environment}
                   {e.has_ksef_token ? " · token ✓" : ""}
                 </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Fakturowo</span>
+                <span>{e.has_fakturowo_api_id ? "klucz API ✓" : "klucz z env / brak"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Numeracja</span>
@@ -406,6 +414,15 @@ function PodmiotyPage() {
                     value={form.ksef_token}
                     onChange={(e) => set("ksef_token")(e.target.value)}
                     placeholder='wpisz, aby ustawić; „mock:..." = tryb testowy'
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label>Klucz API Fakturowo.pl (zostanie zaszyfrowany)</Label>
+                  <Input
+                    type="password"
+                    value={form.fakturowo_api_id}
+                    onChange={(e) => set("fakturowo_api_id")(e.target.value)}
+                    placeholder="wpisz, aby ustawić — faktury sprzedaży z Fakturowo zaciągną się automatycznie"
                   />
                 </div>
               </>

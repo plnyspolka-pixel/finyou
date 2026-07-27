@@ -13,8 +13,12 @@ import { encryptSensitive } from "@/lib/affiliate/crypto";
 import { issueSalesInvoice } from "./issue";
 
 function stripSecrets(e: any) {
-  const { ksef_token_encrypted, ...rest } = e;
-  return { ...rest, has_ksef_token: Boolean(ksef_token_encrypted) };
+  const { ksef_token_encrypted, fakturowo_api_id_encrypted, ...rest } = e;
+  return {
+    ...rest,
+    has_ksef_token: Boolean(ksef_token_encrypted),
+    has_fakturowo_api_id: Boolean(fakturowo_api_id_encrypted),
+  };
 }
 
 async function actorRole(userId: string): Promise<string> {
@@ -59,6 +63,7 @@ const EntityInput = z.object({
   ksef_environment: z.enum(["disabled", "test", "demo", "prod"]).default("disabled"),
   ksef_nip: z.string().optional().nullable(),
   ksef_token: z.string().optional(), // jawny token — zaszyfrujemy
+  fakturowo_api_id: z.string().optional(), // jawny klucz API Fakturowo — zaszyfrujemy
 });
 
 export const upsertAccountingEntity = createServerFn({ method: "POST" })
@@ -86,6 +91,8 @@ export const upsertAccountingEntity = createServerFn({ method: "POST" })
       ksef_nip: data.ksef_nip ?? data.nip ?? null,
     };
     if (data.ksef_token) row.ksef_token_encrypted = encryptSensitive(data.ksef_token);
+    if (data.fakturowo_api_id)
+      row.fakturowo_api_id_encrypted = encryptSensitive(data.fakturowo_api_id);
 
     let id = data.id;
     if (id) {

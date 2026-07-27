@@ -117,7 +117,7 @@ function KsiegowoscIndex() {
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Jeden rejestr wszystkich faktur — sprzedaż i koszty, ze wszystkich podmiotów.
-              Automatyczna synchronizacja z KSeF.
+              Automatyczna synchronizacja z KSeF i Fakturowo.pl.
             </p>
             <Button asChild size="sm">
               <Link to="/admin/ksiegowosc/dokumenty">Otwórz rejestr FV</Link>

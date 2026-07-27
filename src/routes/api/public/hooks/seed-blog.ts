@@ -6,7 +6,7 @@ import { requireCronSecret } from "@/lib/cron-auth.server";
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const IMAGE_URL = "https://ai.gateway.lovable.dev/v1/images/generations";
-const CTA_URL = "https://app.financeyou.pl/embed/wniosek";
+const CTA_URL = "https://financeyou.pl/dla-klienta";
 
 function slugify(s: string): string {
   return s
@@ -170,7 +170,7 @@ async function seed(count: number) {
       };
       const a: any = await aiJSON(
         key,
-        `Jesteś senior copywriterem SEO dla Finance You. Po polsku, konkretnie, bez "AI-słów". H2/H3, listy, krótkie akapity. Naturalnie umieść słowo kluczowe (3-6 razy). NIE wymyślaj liczb. Wpleć 1-2 razy CTA "[złóż wniosek online](${CTA_URL})".`,
+        `Jesteś senior copywriterem SEO dla Finance You. Po polsku, konkretnie, bez "AI-słów". H2/H3, listy, krótkie akapity. Naturalnie umieść słowo kluczowe (3-6 razy). NIE wymyślaj liczb. Wpleć 1-2 razy CTA "[złóż bezpłatny wniosek](${CTA_URL})". ZGODNOŚĆ Z SERWISEM: Finance You nie gwarantuje finansowania ani zysku — zaznacz, że kalkulacje są orientacyjne, a decyzja należy do finansujących. ZAKAZANE frazy: "gwarantowany zysk/zwrot", "pewny zysk", "bez ryzyka". Linki do serwisu wyłącznie: https://financeyou.pl/dla-klienta, https://financeyou.pl/dla-inwestora, https://financeyou.pl/oferty (nigdy /klient ani /inwestor).`,
         `Napisz artykuł SEO.
 Tytuł (H1 punkt wyjścia): ${t.title}
 Słowo kluczowe główne: ${t.primary_keyword}
@@ -199,7 +199,7 @@ Notatki: ${t.notes ?? "brak"}`,
           reading_minutes: Math.max(1, Math.round(words / 200)),
           status: "published",
           cta_url: CTA_URL,
-          cta_label: "Złóż wniosek",
+          cta_label: "Sprawdź możliwości bezpłatnie",
           source: "ai_autopilot",
           raw_ai_output: a,
           published_at: new Date().toISOString(),

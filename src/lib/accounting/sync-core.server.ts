@@ -1,12 +1,14 @@
-// Wspólny rdzeń synchronizacji KSeF (2.0), wywoływany zarówno z
+// Wspólny rdzeń synchronizacji księgowości (KSeF 2.0 + Fakturowo.pl), wywoływany zarówno z
 // createServerFn (UI "Synchronizuj teraz"), jak i z hooka cron /api/public/hooks/sync-accounting.
 import { createHash } from "node:crypto";
 import { accountingDb } from "./db";
+import { decryptSensitive } from "@/lib/affiliate/crypto";
 import type { KsefEntity } from "@/lib/ksef/client";
 import { openKsefSession, closeKsefSession, type KsefSession } from "@/lib/ksef/session";
 
 type SyncResult = {
   entity: string;
+  source: "ksef" | "fakturowo";
   direction: "sales" | "purchase";
   ok: boolean;
   count: number;
@@ -20,7 +22,7 @@ const XML_FETCH_DELAY_MS = 250;
 
 async function upsertSyncStatus(
   entityId: string,
-  source: "ksef",
+  source: "ksef" | "fakturowo",
   direction: "sales" | "purchase",
   ok: boolean,
   message: string | null,
@@ -78,6 +80,14 @@ function pickDate(o: InvoiceMeta, ...keys: string[]): string | null {
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// Duplikaty w jednej paczce (ten sam external_id) wywalają upsert błędem
+// "ON CONFLICT DO UPDATE command cannot affect row a second time" — zostawiamy ostatni wpis.
+function dedupeByExternalId(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+  const byId = new Map<string, Record<string, unknown>>();
+  for (const r of rows) byId.set(String(r.external_id), r);
+  return Array.from(byId.values());
+}
 
 // Fetch z obsługą limitu zapytań KSeF (429/503): ponawia z backoffem, szanuje Retry-After.
 async function ksefFetch(url: string, init: RequestInit, attempts = 6): Promise<Response> {
@@ -206,11 +216,12 @@ async function syncKsefWithSession(
     let saved = 0;
     if (rows.length) {
       // Zapis wsadowy — jeden upsert zamiast N (unika przekroczenia limitu czasu funkcji).
+      const unique = dedupeByExternalId(rows);
       const { error } = await accountingDb
         .from("accounting_documents")
-        .upsert(rows, { onConflict: "entity_id,source,direction,external_id" });
+        .upsert(unique, { onConflict: "entity_id,source,direction,external_id" });
       if (error) return { ok: false, count: 0, message: `Zapis do bazy: ${error.message}` };
-      saved = rows.length;
+      saved = unique.length;
     }
     // Drugi przebieg: pobierz źródłowy XML dla faktur, które go jeszcze nie mają.
     const xmlRes = await fetchMissingInvoiceXml(entity.id, direction, s);
@@ -297,16 +308,169 @@ async function fetchMissingInvoiceXml(
   return { fetched, tried: list.length, diagnostics };
 }
 
+// ---------------- Fakturowo.pl ----------------
+// API: https://www.fakturowo.pl/pomoc/api-podstawowe-funkcje — zadanie api_zadanie=3 (lista dokumentów).
+// Odpowiedź tekstowa: wiersz 1 = wynik (1/0), wiersz 2 = liczba stron (lub opis błędu przy 0),
+// kolejne wiersze (do 100 na stronę, paginacja parametrem p) to pola rozdzielone średnikami:
+// api_numer;dokument_rodzaj;dokument_numer;data_wystawienia;data_sprzedazy;waluta;netto;vat;brutto;
+// sprzedawca_nazwa;sprzedawca_adres;sprzedawca_nip;nabywca_nazwa;nabywca_adres;nabywca_nip;status;zaplata;termin
+
+const FAKTUROWO_API_URL = "https://www.fakturowo.pl/api";
+const FAKTUROWO_MAX_PAGES = 30;
+
+function fakturowoApiId(entity: any): string | null {
+  const own = decryptSensitive(entity.fakturowo_api_id_encrypted);
+  if (own) return own;
+  const name = String(entity.legal_name ?? entity.name ?? "").toLowerCase();
+  const shared = process.env.FAKTUROWO_API_ID ?? process.env.FAKTUROWO_API_KEY ?? null;
+  if (name.includes("finance you")) return process.env.FAKTUROWO_API_ID_FINANCE_YOU ?? shared;
+  if (name.includes("pieczak")) return process.env.FAKTUROWO_API_ID_FUNDACJA_IM_PIECZAKA ?? shared;
+  return shared;
+}
+
+/** Data Fakturowo (DD-MM-YYYY lub YYYY-MM-DD) → ISO YYYY-MM-DD. */
+function fakturowoDate(s: string | undefined): string | null {
+  const v = (s ?? "").trim();
+  const dmy = /^(\d{2})-(\d{2})-(\d{4})$/.exec(v);
+  if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+  return /^(\d{4})-(\d{2})-(\d{2})/.exec(v)?.[0] ?? null;
+}
+
+function fakturowoAmount(s: string | undefined): number {
+  const n = Number((s ?? "").replace(/\s/g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function fakturowoCurrency(s: string | undefined): string {
+  const v = (s ?? "").trim();
+  if (/^[A-Za-z]{3}$/.test(v)) return v.toUpperCase();
+  return "PLN"; // kody liczbowe: 0 = PLN (domyślna waluta konta)
+}
+
+const onlyDigits = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "");
+
+async function fakturowoFetchPage(
+  apiId: string,
+  page: number,
+  sellerNip: string | null,
+): Promise<string[]> {
+  const body = new URLSearchParams({ api_id: apiId, api_zadanie: "3", p: String(page) });
+  if (sellerNip) body.set("dokument_sprzedawca", sellerNip);
+  const res = await fetch(FAKTUROWO_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "text/plain" },
+    body: body.toString(),
+  });
+  if (!res.ok) throw new Error(`Fakturowo HTTP ${res.status}`);
+  const text = await res.text();
+  const lines = text.split("\n").map((l) => l.replace(/\r$/, ""));
+  if ((lines[0] ?? "").trim() !== "1") {
+    throw new Error(`Fakturowo: ${(lines[0] ?? "").trim()}\n${(lines[1] ?? "").trim()}`.trim());
+  }
+  return lines;
+}
+
+// Pobiera pełną listę faktur SPRZEDAŻY z Fakturowo (pracownicy wystawiają tam ręcznie)
+// i zapisuje do accounting_documents — dzięki temu publiczna lista i rejestr FV
+// aktualizują się automatycznie razem z cronem, bez klikania.
+async function syncFakturowoSales(
+  entity: any,
+): Promise<{ ok: boolean; count: number; message: string | null }> {
+  try {
+    const apiId = fakturowoApiId(entity);
+    if (!apiId) {
+      return {
+        ok: false,
+        count: 0,
+        message:
+          "Brak klucza API Fakturowo (kolumna fakturowo_api_id_encrypted lub env FAKTUROWO_API_ID).",
+      };
+    }
+    const sellerNip = onlyDigits(entity.nip) || null;
+    const rows: Record<string, unknown>[] = [];
+    let pages = 1;
+    for (let p = 1; p <= Math.min(pages, FAKTUROWO_MAX_PAGES); p += 1) {
+      if (p > 1) await sleep(300);
+      const lines = await fakturowoFetchPage(apiId, p, sellerNip);
+      const declaredPages = Number((lines[1] ?? "").trim());
+      if (Number.isFinite(declaredPages) && declaredPages > 0) pages = declaredPages;
+      for (const line of lines.slice(2)) {
+        if (!line.trim()) continue;
+        const f = line.split(";");
+        const externalId = (f[0] ?? "").trim();
+        if (!/^\d+$/.test(externalId)) continue;
+        // Filtr sprzedawcy po stronie API + weryfikacja lokalna (gdy API zwróci szerzej).
+        const rowSellerNip = onlyDigits(f[11]);
+        if (sellerNip && rowSellerNip && rowSellerNip !== sellerNip) continue;
+        const issueDate = fakturowoDate(f[3]);
+        rows.push({
+          entity_id: entity.id,
+          direction: "sales",
+          source: "fakturowo",
+          external_id: externalId,
+          invoice_number: (f[2] ?? "").trim() || null,
+          issue_date: issueDate,
+          sale_date: fakturowoDate(f[4]) ?? issueDate,
+          counterparty_name: (f[12] ?? "").trim() || null,
+          counterparty_nip: onlyDigits(f[14]) || null,
+          currency: fakturowoCurrency(f[5]),
+          net_amount: fakturowoAmount(f[6]),
+          vat_amount: fakturowoAmount(f[7]),
+          gross_amount: fakturowoAmount(f[8]) || fakturowoAmount(f[6]),
+          raw_payload: {
+            dokument_id: externalId,
+            dokument_rodzaj: (f[1] ?? "").trim(),
+            dokument_numer: (f[2] ?? "").trim(),
+            dokument_data_wystawienia: (f[3] ?? "").trim(),
+            dokument_data_sprzedazy: (f[4] ?? "").trim(),
+            dokument_waluta: (f[5] ?? "").trim(),
+            dokument_wartosc_netto: (f[6] ?? "").trim(),
+            dokument_wartosc_vat: (f[7] ?? "").trim(),
+            dokument_wartosc_brutto: (f[8] ?? "").trim(),
+            sprzedawca_nazwa: (f[9] ?? "").trim(),
+            sprzedawca_ulica: (f[10] ?? "").trim(),
+            sprzedawca_nip: rowSellerNip,
+            nabywca_nazwa: (f[12] ?? "").trim(),
+            nabywca_ulica: (f[13] ?? "").trim(),
+            nabywca_nip: onlyDigits(f[14]),
+            dokument_status: (f[15] ?? "").trim(),
+            dokument_zaplata: (f[16] ?? "").trim(),
+            dokument_termin: (f[17] ?? "").trim(),
+          },
+        });
+      }
+    }
+    let saved = 0;
+    if (rows.length) {
+      const unique = dedupeByExternalId(rows);
+      const { error } = await accountingDb
+        .from("accounting_documents")
+        .upsert(unique, { onConflict: "entity_id,source,direction,external_id" });
+      if (error) return { ok: false, count: 0, message: `Zapis do bazy: ${error.message}` };
+      saved = unique.length;
+    }
+    return { ok: true, count: saved, message: null };
+  } catch (e) {
+    return { ok: false, count: 0, message: (e as Error).message };
+  }
+}
+
 // ---------------- Orkiestrator ----------------
 
 export async function syncAllAccounting(): Promise<{ results: SyncResult[] }> {
-  // Cała bieżąca księgowość idzie przez KSeF.
+  // Bieżąca księgowość: KSeF (sprzedaż + koszty) oraz Fakturowo.pl (sprzedaż wystawiana ręcznie).
   const { data: entities } = await accountingDb
     .from("accounting_entities")
     .select("*")
     .eq("active", true)
     .order("created_at", { ascending: true });
   const results: SyncResult[] = [];
+  for (const e of (entities ?? []) as any[]) {
+    // Fakturowo — tylko sprzedaż (tam pracownicy wystawiają faktury ręcznie).
+    const rFak = await syncFakturowoSales(e);
+    await upsertSyncStatus(e.id, "fakturowo", "sales", rFak.ok, rFak.message, rFak.count);
+    results.push({ entity: e.name, source: "fakturowo", direction: "sales", ...rFak });
+  }
   for (const e of (entities ?? []) as any[]) {
     // Jedna sesja KSeF na podmiot dla obu kierunków (mniej wywołań auth → mniej 429).
     let session: KsefSession | null = null;
@@ -317,6 +481,7 @@ export async function syncAllAccounting(): Promise<{ results: SyncResult[] }> {
         await upsertSyncStatus(e.id, "ksef", dir, false, (err as Error).message, 0);
         results.push({
           entity: e.name,
+          source: "ksef",
           direction: dir,
           ok: false,
           count: 0,
@@ -330,7 +495,7 @@ export async function syncAllAccounting(): Promise<{ results: SyncResult[] }> {
       for (const dir of ["sales", "purchase"] as const) {
         const rKsef = await syncKsefWithSession(e, dir, session);
         await upsertSyncStatus(e.id, "ksef", dir, rKsef.ok, rKsef.message, rKsef.count);
-        results.push({ entity: e.name, direction: dir, ...rKsef });
+        results.push({ entity: e.name, source: "ksef", direction: dir, ...rKsef });
         await sleep(700); // odstęp między kierunkami
       }
     } finally {
