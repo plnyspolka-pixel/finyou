@@ -9,7 +9,7 @@ import { MktButton } from "./primitives";
  * the public pages and never leaks into the authenticated app.
  */
 
-export type MarketingPage = "home" | "klient" | "inwestor" | "posrednik";
+export type MarketingPage = "home" | "klient" | "inwestor" | "posrednik" | "blog";
 
 const CONTACT = { phone: "+48 732 059 898", email: "kontakt@financeyou.pl" };
 
@@ -18,6 +18,7 @@ const PAGE_PATH: Record<MarketingPage, string> = {
   klient: "/dla-klienta",
   inwestor: "/dla-inwestora",
   posrednik: "/dla-posrednika",
+  blog: "/blog",
 };
 
 const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
@@ -25,6 +26,7 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   klient: { label: "Złóż wniosek", href: "/rejestracja?role=klient" },
   inwestor: { label: "Dołącz do klubu", href: "/rejestracja?role=inwestor" },
   posrednik: { label: "Dołącz jako pośrednik", href: "/rejestracja?role=posrednik" },
+  blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
 };
 
 export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
@@ -35,7 +37,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
     { label: "Pośrednik", href: PAGE_PATH.posrednik, key: "posrednik" as const },
     { label: "Jak działa", href: page === "home" ? "#jak-dziala" : "/#jak-dziala", key: "jak" },
     { label: "Blog", href: "/blog", key: "blog" },
-    { label: "FAQ", href: "#faq", key: "faq" },
+    { label: "FAQ", href: page === "blog" ? "/dla-klienta#faq" : "#faq", key: "faq" },
   ];
   const cta = HEADER_CTA[page];
   return (

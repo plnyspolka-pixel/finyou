@@ -134,6 +134,44 @@ async function pickInternalLinks(): Promise<RelatedArticle[]> {
   return list.slice(0, 3);
 }
 
+/**
+ * Wspólne zasady stylu, SEO i zgodności z serwisem dla KAŻDEGO artykułu
+ * generowanego na blog. Komunikacja zwrotów: realne stopy zwrotu inwestorów
+ * na rynku prywatnych pożyczek pod zastaw nieruchomości komunikujemy jako
+ * przedział od kilkunastu do nawet kilkudziesięciu procent rocznie — bez
+ * gwarantowania wyniku i zawsze z zastrzeżeniem ryzyka.
+ */
+const STYLE_GUIDE = `ZASADY STYLU, SEO I ZGODNOŚCI Z SERWISEM (obowiązkowe):
+- Ton jak w serwisie financeyou.pl: rzeczowy, ekspercki, konkretny; bez wykrzykników i sensacji; akapity 2-3 zdania; struktura H2/H3; listy tam, gdzie poprawiają skanowalność.
+- SEO: fraza główna (primary_keyword) w tytule, w pierwszym akapicie i w co najmniej jednym H2; meta_title do 60 znaków z frazą główną; meta_description 140-155 znaków z frazą główną i konkretną korzyścią; excerpt 1-2 zdania.
+- LINKI WEWNĘTRZNE: wpleć 2-3 linki do podanych artykułów bloga oraz dokładnie 1 CTA do strony ścieżki. Używaj WYŁĄCZNIE tych adresów serwisu: https://financeyou.pl/dla-klienta (finansowanie dla klienta), https://financeyou.pl/dla-inwestora (Klub Inwestorów Hipotecznych), https://financeyou.pl/oferty (aktualne oferty pożyczek), https://financeyou.pl/blog/... (artykuły). NIGDY nie linkuj do /klient ani /inwestor — to panele wymagające logowania.
+- ZWROTY Z INWESTYCJI (spójna komunikacja Finance You): realne stopy zwrotu inwestorów na rynku prywatnych pożyczek pod zastaw nieruchomości komunikujemy jako OD KILKUNASTU DO NAWET KILKUDZIESIĘCIU PROCENT ROCZNIE — używaj tego przedziału, gdy piszesz o zwrotach z tej klasy aktywów. Inne liczby (oprocentowanie lokat, obligacji, najmu itd.) przytaczaj wyłącznie ze źródeł briefingu z podanym źródłem. NIE przedstawiaj zwrotu jako pewnego ani gwarantowanego: ZAKAZANE "gwarantowany zysk/zwrot", "pewny zysk", "bez ryzyka", "zarobisz X%". Zawsze zaznacz, że wynik zależy od parametrów konkretnej transakcji.
+- W artykułach inwestorskich zaznacz, że inwestowanie wiąże się z ryzykiem, w tym utraty części lub całości kapitału, a decyzja należy do inwestora. W artykułach pożyczkowych zaznacz, że kalkulacje są orientacyjne, zgłoszenie jest bezpłatne, a decyzja o finansowaniu należy do finansujących.`;
+
+/**
+ * Frazy niedozwolone w opublikowanym artykule — niespójne z komunikacją
+ * serwisu (serwis nie gwarantuje zysku ani finansowania). Wykrycie nie
+ * blokuje publikacji (na stronie artykułu i tak renderujemy notę prawną),
+ * ale zostawia ostrzeżenie w ai_growth_action_log do ręcznego przeglądu.
+ */
+const BANNED_CLAIMS: RegExp[] = [
+  /gwarantowan\w*\s+(zysk|zwrot|stop\w*|oprocentowani\w*)/i,
+  /(zysk|zwrot)\s+gwarantowan\w*/i,
+  /pewn\w*\s+zysk/i,
+  /bez\s+(żadnego\s+)?ryzyka/i,
+  /zarobisz\s+\d/i,
+  /gwarancj\w*\s+(zysku|zwrotu)/i,
+];
+
+export function findBannedClaims(md: string): string[] {
+  const found: string[] = [];
+  for (const re of BANNED_CLAIMS) {
+    const m = md.match(re);
+    if (m) found.push(m[0]);
+  }
+  return found;
+}
+
 interface ArticleDraft {
   title: string;
   meta_title: string;
@@ -168,16 +206,16 @@ async function writeArticleFromNews(
 
   let audienceBrief: string;
   if (kind === "investor_review") {
-    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY (HNW, 100k–2M PLN kapitału) szukający OBIEKTYWNEGO PRZEGLĄDU I PORÓWNANIA klas aktywów. Pisz analitycznie, jak rzetelny analityk inwestycyjny — nie sprzedażowo. Pożyczki pod zastaw nieruchomości pokaż jako JEDNĄ z opcji, z plusami I minusami. CTA do "[zobacz ofertę inwestorską Finance You](https://financeyou.pl/inwestor)" wpleć dyskretnie 1 raz na końcu sekcji wniosków.`;
+    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY (HNW, 100k–2M PLN kapitału) szukający OBIEKTYWNEGO PRZEGLĄDU I PORÓWNANIA klas aktywów. Pisz analitycznie, jak rzetelny analityk inwestycyjny — nie sprzedażowo. Pożyczki pod zastaw nieruchomości pokaż jako JEDNĄ z opcji, z plusami I minusami. CTA do "[poznaj Klub Inwestorów Hipotecznych Finance You](https://financeyou.pl/dla-inwestora)" wpleć dyskretnie 1 raz na końcu sekcji wniosków.`;
   } else if (kind === "legal_market_monitor") {
-    audienceBrief = `GRUPA DOCELOWA: WŁAŚCICIEL NIERUCHOMOŚCI, POŻYCZKOBIORCA, PROFESJONALIŚCI RYNKU (pośrednicy, doradcy, prawnicy) śledzący zmiany w prawie i sytuację rynkową. Styl newsroom / przegląd prawny — rzeczowo, bez sensacji, KAŻDA teza z datą i źródłem, KAŻDA sekcja kończy się zdaniem "Możliwy wpływ:" z konkretnym mechanizmem przełożenia na rynek nieruchomości / rynek pożyczek pod zastaw. Pisz tak, żeby czytelnik po lekturze wiedział, czy sytuacja jest dla niego korzystna, neutralna czy niekorzystna i dlaczego. CTA do "[porozmawiaj z ekspertem Finance You o Twojej sytuacji](https://financeyou.pl/klient)" wpleć dyskretnie 1 raz w podsumowaniu.`;
+    audienceBrief = `GRUPA DOCELOWA: WŁAŚCICIEL NIERUCHOMOŚCI, POŻYCZKOBIORCA, PROFESJONALIŚCI RYNKU (pośrednicy, doradcy, prawnicy) śledzący zmiany w prawie i sytuację rynkową. Styl newsroom / przegląd prawny — rzeczowo, bez sensacji, KAŻDA teza z datą i źródłem, KAŻDA sekcja kończy się zdaniem "Możliwy wpływ:" z konkretnym mechanizmem przełożenia na rynek nieruchomości / rynek pożyczek pod zastaw. Pisz tak, żeby czytelnik po lekturze wiedział, czy sytuacja jest dla niego korzystna, neutralna czy niekorzystna i dlaczego. CTA do "[sprawdź bezpłatnie możliwości finansowania](https://financeyou.pl/dla-klienta)" wpleć dyskretnie 1 raz w podsumowaniu.`;
   } else if (audience === "investor") {
-    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań inwestorem Finance You](https://financeyou.pl/inwestor)" wpleć 1 raz.`;
+    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, realne stopy zwrotu od kilkunastu do nawet kilkudziesięciu procent rocznie, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[poznaj Klub Inwestorów Hipotecznych Finance You](https://financeyou.pl/dla-inwestora)" wpleć 1 raz.`;
   } else {
-    audienceBrief = `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż wniosek o pożyczkę pod zastaw](https://financeyou.pl/klient)" wpleć 1-2 razy.`;
+    audienceBrief = `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
   }
 
-  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
+  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\n${STYLE_GUIDE}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
 
   const briefLabel = kind === "investor_review"
     ? "BRIEFING (dane do przeglądu porównawczego, ostatnie 30 dni):"
@@ -307,8 +345,8 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
   const slug = await ensureUniqueSlug(slugify(draft.title));
   const wordCount = (draft.content_md.match(/\S+/g) ?? []).length;
 
-  const ctaUrl = audience === "investor" ? "https://financeyou.pl/inwestor" : "https://financeyou.pl/klient";
-  const ctaLabel = audience === "investor" ? "Zostań inwestorem" : "Złóż wniosek o pożyczkę";
+  const ctaUrl = audience === "investor" ? "https://financeyou.pl/dla-inwestora" : "https://financeyou.pl/dla-klienta";
+  const ctaLabel = audience === "investor" ? "Poznaj Klub Inwestorów" : "Sprawdź możliwości bezpłatnie";
 
   const { data: inserted, error } = await supabaseAdmin
     .from("ai_seo_articles")
@@ -349,6 +387,20 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
     summary: `[${kind}] ${draft.title}`,
     payload: { article_id: inserted.id, slug: inserted.slug, kind, sources: brief.citations.length },
   });
+
+  // Strażnik spójności z serwisem: serwis nie obiecuje zysków, więc artykuł
+  // też nie może. Wykryte frazy nie blokują publikacji (strona artykułu
+  // renderuje notę prawną), ale zostawiają ostrzeżenie do ręcznego przeglądu.
+  const banned = findBannedClaims(`${draft.title}\n${draft.excerpt}\n${draft.content_md}`);
+  if (banned.length > 0) {
+    await supabaseAdmin.from("ai_growth_action_log").insert({
+      module: "seo_content_engine",
+      action: "compliance_warning",
+      status: "warning",
+      summary: `Artykuł ${inserted.slug} zawiera frazy niezgodne z komunikacją serwisu: ${banned.join("; ")}`,
+      payload: { article_id: inserted.id, slug: inserted.slug, banned_phrases: banned },
+    });
+  }
 
   return { ok: true, slug: inserted.slug, id: inserted.id };
 }
