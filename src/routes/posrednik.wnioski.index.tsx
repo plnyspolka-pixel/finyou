@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
+import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
 import {
   isShowablePropertyPhoto,
   isPropertyPhotoDocument,
@@ -317,9 +318,16 @@ export function MojeWnioski() {
                     <span className="truncate">{r.preferred_period_months ?? "—"} mies.</span>
                   </div>
                   {p?.land_register_number && (
-                    <div className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 font-mono text-[11px] font-semibold text-primary max-w-full">
-                      <Hash className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{p.land_register_number}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 font-mono text-[11px] font-semibold text-primary max-w-full">
+                        <Hash className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{p.land_register_number}</span>
+                      </div>
+                      <KwPotentialBadge
+                        applicationId={r.id}
+                        kwNumber={p.land_register_number}
+                        propertyType={p.property_type}
+                      />
                     </div>
                   )}
                   <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">

@@ -33,6 +33,7 @@ import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessm
 import { KwContentSection } from "@/components/kw-content-section";
 import { KwAnalysisSection } from "@/components/kw-analysis/kw-analysis-section";
 import { LocationScoringSection } from "@/components/location-scoring/location-scoring-section";
+import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FileThumb } from "@/components/media/FileThumb";
 import { ClientFilesManager } from "@/components/media/ClientFilesManager";
@@ -425,14 +426,23 @@ function WniosekDetail() {
                   onSaved={load}
                 />
                 {p ? (
-                  <EditableField
-                    label="Numer KW"
-                    value={p.land_register_number}
-                    table="properties"
-                    rowId={p.id}
-                    column="land_register_number"
-                    onSaved={load}
-                  />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <EditableField
+                      label="Numer KW"
+                      value={p.land_register_number}
+                      table="properties"
+                      rowId={p.id}
+                      column="land_register_number"
+                      onSaved={load}
+                    />
+                    {p.land_register_number && (
+                      <KwPotentialBadge
+                        applicationId={id}
+                        kwNumber={p.land_register_number}
+                        propertyType={p.property_type}
+                      />
+                    )}
+                  </div>
                 ) : (
                   <div>
                     <span className="text-muted-foreground">Numer KW:</span> —
@@ -494,14 +504,23 @@ function WniosekDetail() {
                     display={(v) => formatPLN(v as number)}
                     onSaved={load}
                   />
-                  <EditableField
-                    label="Numer KW"
-                    value={p.land_register_number}
-                    table="properties"
-                    rowId={p.id}
-                    column="land_register_number"
-                    onSaved={load}
-                  />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <EditableField
+                      label="Numer KW"
+                      value={p.land_register_number}
+                      table="properties"
+                      rowId={p.id}
+                      column="land_register_number"
+                      onSaved={load}
+                    />
+                    {p.land_register_number && (
+                      <KwPotentialBadge
+                        applicationId={id}
+                        kwNumber={p.land_register_number}
+                        propertyType={p.property_type}
+                      />
+                    )}
+                  </div>
                   <EditableField
                     label="Hipoteka"
                     value={p.has_mortgage}

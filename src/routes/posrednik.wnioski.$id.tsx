@@ -52,6 +52,7 @@ import { toDisplayableImageUrl } from "@/lib/heic-preview";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { EditableField } from "@/components/admin/EditableField";
+import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/posrednik/wnioski/$id")({
@@ -489,14 +490,23 @@ export function BrokerApplicationDetail({
         <FancyCard tone="light" title="Nieruchomość i KW" icon={<Landmark className="h-4 w-4" />}>
           {p?.id ? (
             <div className="space-y-3 text-sm">
-              <EditableField
-                label="Numer KW"
-                value={p.land_register_number ?? ""}
-                table="properties"
-                rowId={p.id}
-                column="land_register_number"
-                onSaved={() => void load(true)}
-              />
+              <div className="flex items-center gap-2 flex-wrap">
+                <EditableField
+                  label="Numer KW"
+                  value={p.land_register_number ?? ""}
+                  table="properties"
+                  rowId={p.id}
+                  column="land_register_number"
+                  onSaved={() => void load(true)}
+                />
+                {p.land_register_number && (
+                  <KwPotentialBadge
+                    applicationId={row.id}
+                    kwNumber={p.land_register_number}
+                    propertyType={p.property_type}
+                  />
+                )}
+              </div>
               <EditableField
                 label="Powierzchnia (m²)"
                 value={p.area_sqm ?? ""}

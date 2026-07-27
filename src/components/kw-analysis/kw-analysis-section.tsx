@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { runKwLandRegisterAnalysis } from "@/lib/kw-analysis.functions";
+import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
 import type {
   FindingStatus,
   KwAnalysisResult,
@@ -243,6 +244,7 @@ export function KwAnalysisReport({ result }: { result: KwAnalysisResult }) {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Scale className="h-5 w-5" /> Analiza KW {result.kwNumber}
+                <KwPotentialBadge kwNumber={result.kwNumber} />
               </CardTitle>
               <CardDescription>
                 Pobrano: {new Date(result.fetchedAt).toLocaleString("pl-PL")} · reguły{" "}

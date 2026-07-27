@@ -38,6 +38,7 @@ import {
   Code2,
 } from "lucide-react";
 import { sanitizeHtml } from "@/lib/sanitize-html";
+import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
 
 const channelLabel: Record<string, string> = {
   voicebot_call: "Rozmowa voicebot",
@@ -320,11 +321,19 @@ export function LeadDetailView({
               value={lead.status}
               onSave={(v) => mUpdate.mutate({ status: v })}
             />
-            <Field
-              label="Numer KW"
-              value={lead.kw_number}
-              onSave={(v) => mUpdate.mutate({ kw_number: v })}
-            />
+            <div className="flex items-center gap-2 flex-wrap">
+              <Field
+                label="Numer KW"
+                value={lead.kw_number}
+                onSave={(v) => mUpdate.mutate({ kw_number: v })}
+              />
+              {lead.kw_number && (
+                <KwPotentialBadge
+                  applicationId={lead.loan_application_id ?? undefined}
+                  kwNumber={lead.kw_number}
+                />
+              )}
+            </div>
             <div className="md:col-span-2">
               <label className="text-xs text-muted-foreground">Notatki wewnętrzne</label>
               <Textarea
@@ -714,7 +723,10 @@ function ExtractedFactsCard({ lead }: { lead: any }) {
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
               Numery KW
             </div>
-            <div className="font-mono">{kw.join(", ")}</div>
+            <div className="font-mono flex items-center gap-2 flex-wrap">
+              {kw.join(", ")}
+              <KwPotentialBadge kwNumber={kw[0]} />
+            </div>
           </div>
         )}
         {amount != null && (

@@ -472,6 +472,107 @@ export const getLocationScoring = createServerFn({ method: "POST" })
     return { found: Boolean(row), result: row ?? null };
   });
 
+// Zwięzła plakietka potencjału (do pokazania wszędzie, gdzie widać numer KW).
+export type LocationPotentialBadgeData = {
+  score: number | null; // potencjał 0–100
+  confidence: number | null; // pewność 0–100
+  priority: string | null; // decyzja/priorytet
+  lowConfidence: boolean;
+  scope: "application" | "prefix"; // czy dla konkretnego wniosku, czy typowy dla wydziału
+} | null;
+
+async function isStaff(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  return (roles ?? []).some((r) => r.role === "administrator" || r.role === "operator");
+}
+
+/**
+ * Rozwiązuje plakietkę potencjału lokalizacyjnego dla wniosku LUB numeru KW.
+ * TOLERANCYJNA: dla użytkownika bez uprawnień lub braku danych zwraca puste
+ * wartości (nie rzuca) — komponent po prostu nic nie renderuje. Narzędzie
+ * wewnętrzne (spec §18): dane widzi tylko administrator/operator.
+ */
+export const getLocationPotentialBadge = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) =>
+    z
+      .object({
+        applicationId: z.string().uuid().nullish(),
+        kwNumber: z.string().nullish(),
+        propertyType: z.string().nullish(),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }): Promise<{ badge: LocationPotentialBadgeData }> => {
+    const { supabase, userId } = context;
+    if (!(await isStaff(supabase, userId))) return { badge: null };
+    const db = supabase as unknown as SupabaseClient;
+
+    // 1) Najdokładniej: wynik przypięty do konkretnego wniosku.
+    if (data.applicationId) {
+      const { data: app } = await db
+        .from("loan_applications")
+        .select("location_potential_score, location_confidence_score, location_analysis_priority")
+        .eq("id", data.applicationId)
+        .maybeSingle();
+      if (app && app.location_potential_score != null) {
+        const confidence =
+          app.location_confidence_score != null ? Number(app.location_confidence_score) : null;
+        return {
+          badge: {
+            score: Number(app.location_potential_score),
+            confidence,
+            priority: (app.location_analysis_priority as string) ?? null,
+            lowConfidence: confidence != null && confidence < 50,
+            scope: "application",
+          },
+        };
+      }
+    }
+
+    // 2) Orientacyjnie dla wydziału KW (prefiks) — gdy nie ma wyniku wniosku.
+    if (data.kwNumber) {
+      const parsed = parseKwNumber(data.kwNumber);
+      if (parsed.prefix) {
+        const pt =
+          data.propertyType === "apartment" ||
+          data.propertyType === "house" ||
+          data.propertyType === "plot"
+            ? data.propertyType
+            : toScoringPropertyType(data.propertyType);
+        let q = db
+          .from("location_scoring_results")
+          .select("expected_location_attractiveness, confidence_score, decision, calculated_at")
+          .eq("kw_prefix", parsed.prefix)
+          .order("calculated_at", { ascending: false })
+          .limit(20);
+        if (pt) q = q.eq("property_type", pt);
+        const { data: rows } = await q;
+        const valid = (rows ?? []).filter((r) => r.expected_location_attractiveness != null);
+        if (valid.length > 0) {
+          const score = Math.round(
+            valid.reduce((s, r) => s + Number(r.expected_location_attractiveness), 0) /
+              valid.length,
+          );
+          const confidence = Math.round(
+            valid.reduce((s, r) => s + Number(r.confidence_score ?? 0), 0) / valid.length,
+          );
+          return {
+            badge: {
+              score,
+              confidence,
+              priority: (valid[0].decision as string) ?? null,
+              lowConfidence: confidence < 50,
+              scope: "prefix",
+            },
+          };
+        }
+      }
+    }
+
+    return { badge: null };
+  });
+
 /** Zapisuje obserwację po pełnej analizie KW (uczenie estymacji) — spec §10. */
 export const recordLocationObservation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

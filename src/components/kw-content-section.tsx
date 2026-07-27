@@ -17,6 +17,7 @@ import { getKwForApplication, fetchKwForApplication } from "@/lib/kw-content.fun
 import { ensureKwReady } from "@/lib/kw-ensure";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import { KwPasteSlotsDialog } from "@/components/kw-paste-slots";
+import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
 
 const MAX_UPLOAD_FILES = 12;
 const MAX_UPLOAD_BYTES = 6_500_000;
@@ -214,6 +215,9 @@ export function KwContentSection({
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              {showKwNumber && (
+                <KwPotentialBadge applicationId={applicationId} kwNumber={kwNumber} />
+              )}
               {ready && <Badge variant="secondary">Gotowe</Badge>}
               {processing && (
                 <Badge variant="outline" className="gap-1">
