@@ -715,7 +715,7 @@ function BrandIcon({
     sphere: `url(#${sphereId})`,
     goldSphere: `url(#${goldSphereId})`
   };
-  return /*#__PURE__*/React.createElement("svg", _extends({
+  return /*#__PURE__*/React.createElement("svg", {
     width: size,
     height: size,
     viewBox: "0 0 24 24",
@@ -727,8 +727,9 @@ function BrandIcon({
       verticalAlign: "middle",
       ...style
     },
-    "aria-hidden": "true"
-  }, rest), /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
+    "aria-hidden": "true",
+    ...rest
+  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
     id: navId,
     gradientUnits: "userSpaceOnUse",
     x1: "4",
