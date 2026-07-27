@@ -30,12 +30,13 @@ type EntityForm = {
   active: boolean; invoice_prefix: string; vat_payer: boolean; default_vat_rate: string;
   provider: "manual" | "ksef";
   ksef_environment: "disabled" | "test" | "demo" | "prod"; ksef_nip: string; ksef_token: string;
+  fakturowo_api_id: string;
 };
 
 const EMPTY: EntityForm = {
   name: "", legal_name: "", nip: "", regon: "", address_street: "", address_postal_code: "", address_city: "",
   bank_account: "", email: "", phone: "", active: true, invoice_prefix: "FV", vat_payer: true, default_vat_rate: "23",
-  provider: "manual", ksef_environment: "disabled", ksef_nip: "", ksef_token: "",
+  provider: "manual", ksef_environment: "disabled", ksef_nip: "", ksef_token: "", fakturowo_api_id: "",
 };
 
 function PodmiotyPage() {
@@ -58,7 +59,7 @@ function PodmiotyPage() {
       address_street: e.address_street ?? "", address_postal_code: e.address_postal_code ?? "", address_city: e.address_city ?? "",
       bank_account: e.bank_account ?? "", email: e.email ?? "", phone: e.phone ?? "", active: e.active ?? true,
       invoice_prefix: e.invoice_prefix ?? "FV", vat_payer: e.vat_payer ?? true, default_vat_rate: e.default_vat_rate ?? "23",
-      provider: e.provider ?? "manual", ksef_environment: e.ksef_environment ?? "disabled", ksef_nip: e.ksef_nip ?? "", ksef_token: "",
+      provider: e.provider ?? "manual", ksef_environment: e.ksef_environment ?? "disabled", ksef_nip: e.ksef_nip ?? "", ksef_token: "", fakturowo_api_id: "",
     });
     setOpen(true);
   }
@@ -74,6 +75,7 @@ function PodmiotyPage() {
         active: form.active, invoice_prefix: form.invoice_prefix, vat_payer: form.vat_payer, default_vat_rate: form.default_vat_rate,
         provider: form.provider,
         ksef_environment: form.ksef_environment, ksef_nip: form.ksef_nip || null, ksef_token: form.ksef_token || undefined,
+        fakturowo_api_id: form.fakturowo_api_id || undefined,
       } });
       toast.success("Podmiot zapisany");
       setOpen(false);
@@ -115,6 +117,7 @@ function PodmiotyPage() {
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Wystawianie</span><b>{PROVIDER_LABELS[e.provider] ?? e.provider}</b></div>
               <div className="flex justify-between"><span className="text-muted-foreground">KSeF</span><span className="flex items-center gap-1"><ShieldCheck className={`h-3.5 w-3.5 ${e.ksef_environment !== "disabled" ? "text-emerald-600" : "text-muted-foreground"}`} /> {KSEF_LABELS[e.ksef_environment] ?? e.ksef_environment}{e.has_ksef_token ? " · token ✓" : ""}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Fakturowo</span><span>{e.has_fakturowo_api_id ? "klucz API ✓" : "klucz z env / brak"}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Numeracja</span><b>{e.invoice_prefix}/{new Date().getFullYear()}/{String(e.invoice_next_number).padStart(4, "0")}</b></div>
               <div className="flex gap-2 pt-2">
                 <Button size="sm" variant="outline" onClick={() => edit(e)}><Pencil className="mr-2 h-3.5 w-3.5" /> Edytuj</Button>
@@ -184,6 +187,7 @@ function PodmiotyPage() {
                 </div>
                 <div className="space-y-1"><Label>NIP do KSeF</Label><Input value={form.ksef_nip} onChange={(e) => set("ksef_nip")(e.target.value)} placeholder={form.nip} /></div>
                 <div className="space-y-1 sm:col-span-2"><Label>Token KSeF (zostanie zaszyfrowany)</Label><Input type="password" value={form.ksef_token} onChange={(e) => set("ksef_token")(e.target.value)} placeholder='wpisz, aby ustawić; „mock:..." = tryb testowy' /></div>
+                <div className="space-y-1 sm:col-span-2"><Label>Klucz API Fakturowo.pl (zostanie zaszyfrowany)</Label><Input type="password" value={form.fakturowo_api_id} onChange={(e) => set("fakturowo_api_id")(e.target.value)} placeholder="wpisz, aby ustawić — faktury sprzedaży z Fakturowo zaciągną się automatycznie" /></div>
               </>
             )}
             <div className="flex items-center gap-2"><Switch checked={form.vat_payer} onCheckedChange={set("vat_payer")} /><Label>Płatnik VAT</Label></div>

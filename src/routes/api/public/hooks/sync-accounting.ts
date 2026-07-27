@@ -1,4 +1,4 @@
-// Cron: automatyczne pobieranie faktur z KSeF do accounting_documents.
+// Cron: automatyczne pobieranie faktur z KSeF i Fakturowo.pl do accounting_documents.
 // Uruchamiany co godzinę przez pg_cron. Bez klikania w UI.
 import { createFileRoute } from "@tanstack/react-router";
 import { syncAllAccounting } from "@/lib/accounting/sync-core.server";
