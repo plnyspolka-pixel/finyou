@@ -496,20 +496,40 @@ export async function runLocationScoringTick(
   db: SupabaseClient,
   limit = 40,
 ): Promise<{ processed: number; scored: number; skipped: number }> {
+  // Dwustopniowo (bez embed FK, odporne na nazwę relacji): nieruchomości z KW,
+  // a następnie statusy ich wniosków.
   const { data: props } = await db
     .from("properties")
-    .select(
-      "loan_application_id, land_register_number, property_type, loan_applications!inner(location_scoring_status)",
-    )
+    .select("loan_application_id, land_register_number, property_type")
     .not("land_register_number", "is", null)
     .neq("land_register_number", "")
-    .limit(500);
+    .not("loan_application_id", "is", null)
+    .limit(1000);
 
+  const appIds = Array.from(
+    new Set((props ?? []).map((p) => p.loan_application_id as string).filter(Boolean)),
+  );
+  if (appIds.length === 0) return { processed: 0, scored: 0, skipped: 0 };
+
+  const { data: apps } = await db
+    .from("loan_applications")
+    .select("id, location_scoring_status")
+    .in("id", appIds);
+  const statusById = new Map(
+    (apps ?? []).map((a) => [a.id as string, a.location_scoring_status as string | null]),
+  );
+
+  const seen = new Set<string>();
   const pending = (props ?? [])
     .filter((p) => {
-      const st = (p.loan_applications as { location_scoring_status?: string } | null)
-        ?.location_scoring_status;
-      return (st == null || st === "PENDING") && p.loan_application_id;
+      const appId = p.loan_application_id as string;
+      if (!appId || seen.has(appId)) return false;
+      const st = statusById.get(appId);
+      if (st == null || st === "PENDING") {
+        seen.add(appId);
+        return true;
+      }
+      return false;
     })
     .slice(0, limit);
 
