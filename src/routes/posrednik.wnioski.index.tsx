@@ -24,11 +24,8 @@ import {
 import { formatPLN } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
 import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
-import {
-  isShowablePropertyPhoto,
-  isPropertyPhotoDocument,
-  signStoragePath,
-} from "@/lib/property-photos";
+import { collectClientFileRefs, resolveClientFilesHero, plikiLabel } from "@/lib/property-photos";
+import { toDisplayableImageUrl } from "@/lib/heic-preview";
 import {
   getMyBrokerOfferUsage,
   softDeleteMyApplication,
@@ -55,6 +52,7 @@ type Row = {
   documents: Array<{
     id: string;
     file_path?: string | null;
+    file_url?: string | null;
     document_type?: string | null;
     file_name?: string | null;
   }>;
@@ -106,7 +104,7 @@ export function MojeWnioski() {
     let query = supabase
       .from("loan_applications")
       .select(
-        "id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number), documents(id, file_path, document_type, file_name)",
+        "id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number), documents(id, file_path, file_url, document_type, file_name)",
       )
       .order("created_at", { ascending: false });
     query = isExternalBroker
@@ -148,20 +146,17 @@ export function MojeWnioski() {
     void (async () => {
       const all = (await load()) ?? [];
 
-      // Miniaturka (hero) per wniosek: pierwsze faktyczne zdjęcie nieruchomości,
-      // podpisane w Storage. Fallback: zdjęcie z tabeli `documents`.
+      // Miniaturka (hero) per wniosek: wszystkie pliki klienta to jeden worek
+      // (properties.photos + tabela documents) — bierzemy pierwszy obrazek,
+      // a gdy go brak, miniaturę pierwszego PDF-a. HEIC konwertujemy w locie.
       const heroes: Record<string, string> = {};
       await Promise.all(
         all.map(async (r) => {
           const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
-          const photoPaths: string[] = Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : [];
-          const firstPhoto = photoPaths.find(isShowablePropertyPhoto);
-          const fallbackDoc =
-            (r.documents ?? []).find(isPropertyPhotoDocument)?.file_path ?? undefined;
-          const candidate = firstPhoto ?? fallbackDoc;
-          if (!candidate) return;
-          const url = await signStoragePath(candidate, 60 * 60);
-          if (url) heroes[r.id] = url;
+          const files = collectClientFileRefs(p?.photos, r.documents);
+          if (!files.length) return;
+          const hero = await resolveClientFilesHero(files, 60 * 60);
+          if (hero) heroes[r.id] = await toDisplayableImageUrl(hero.url, hero.name);
         }),
       );
       setHeroByApp(heroes);
@@ -234,8 +229,8 @@ export function MojeWnioski() {
 
       {!loading && rows.length === 0 ? (
         <Card className="py-10 text-center text-sm text-muted-foreground">
-          Brak wniosków ze statusem „szukamy inwestora". Gdy wniosek skompletuje KW i
-          zdjęcia/dokumenty, pojawi się tutaj automatycznie.
+          Brak wniosków ze statusem „szukamy inwestora". Gdy wniosek skompletuje KW i pliki klienta,
+          pojawi się tutaj automatycznie.
         </Card>
       ) : !loading && visible.length === 0 ? (
         <Card className="py-10 text-center text-sm text-muted-foreground">
@@ -246,13 +241,10 @@ export function MojeWnioski() {
           {visible.map((r) => {
             const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
             const city = p?.city ?? r.client?.city ?? "—";
-            const photoCount = (Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : []).filter(
-              isShowablePropertyPhoto,
-            ).length;
+            const fileCount = collectClientFileRefs(p?.photos, r.documents).length;
             const clientName =
               [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "Klient";
             const hero = heroByApp[r.id];
-            const docCount = r.documents?.length ?? 0;
 
             return (
               <div
@@ -275,9 +267,9 @@ export function MojeWnioski() {
                       {loanStatusLabels[r.status as keyof typeof loanStatusLabels] ?? r.status}
                     </Badge>
                     <div className="flex items-center gap-1">
-                      {photoCount > 1 && (
+                      {fileCount > 1 && (
                         <Badge className="bg-black/60 text-white border-0 backdrop-blur-sm">
-                          +{photoCount - 1} zdj.
+                          +{fileCount - 1}
                         </Badge>
                       )}
                       {isExternalBroker && (
@@ -332,7 +324,7 @@ export function MojeWnioski() {
                   )}
                   <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
                     <span className="inline-flex items-center gap-1">
-                      <FileText className="h-3.5 w-3.5" /> {docCount} dok.
+                      <FileText className="h-3.5 w-3.5" /> {fileCount} {plikiLabel(fileCount)}
                     </span>
                     <span>{new Date(r.created_at).toLocaleDateString("pl-PL")}</span>
                   </div>
