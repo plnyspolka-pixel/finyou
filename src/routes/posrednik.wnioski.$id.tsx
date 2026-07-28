@@ -18,14 +18,10 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ArrowLeft,
-  FileText,
-  Image as ImageIcon,
   Home,
   Wallet,
   CalendarClock,
-  MapPin,
   Landmark,
-  Ruler,
   User,
   Building2,
   UserRound,
@@ -34,9 +30,7 @@ import {
   Calculator,
   Send,
   ArrowRight,
-  Upload,
 } from "lucide-react";
-import { uploadFile } from "@/lib/uploads/unified-upload";
 import { formatPLN } from "@/lib/loan-math";
 import {
   LOAN_STATUS_ORDER,
@@ -44,11 +38,9 @@ import {
   loanStatusLabel,
   normalizeLoanStatus,
 } from "@/lib/loan-status";
-import { IMAGE_EXT, signStoragePath } from "@/lib/property-photos";
-import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
-import { FileThumb } from "@/components/media/FileThumb";
+import { useAuth } from "@/hooks/use-auth";
 import { ClientFilesManager } from "@/components/media/ClientFilesManager";
-import { toDisplayableImageUrl } from "@/lib/heic-preview";
+import { ClientCommsPreview } from "@/components/comms/ClientCommsPreview";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { EditableField } from "@/components/admin/EditableField";
@@ -90,73 +82,37 @@ type Row = {
   }>;
 };
 
-type Doc = {
-  id: string;
-  document_type: string | null;
-  file_name: string | null;
-  file_path: string | null;
-  file_url: string | null;
-  created_at: string;
-};
-
-// Jeden worek na wszystko: zdjęcia z properties.photos + wpisy z tabeli
-// documents, każdy plik jako miniatura z podglądem.
-type ClientFile = { key: string; name: string; path: string | null; externalUrl: string | null };
-
-function collectClientFiles(photoPaths: string[], docs: Doc[]): ClientFile[] {
-  const seen = new Set<string>();
-  const out: ClientFile[] = [];
-  const push = (key: string, name: string, src: string | null) => {
-    if (!src || seen.has(src)) return;
-    seen.add(src);
-    const external = /^https?:\/\//i.test(src);
-    out.push({ key, name, path: external ? null : src, externalUrl: external ? src : null });
-  };
-  photoPaths.forEach((p, i) => push(`photo:${i}`, p?.split("/").pop() ?? `zdjęcie-${i + 1}`, p));
-  docs.forEach((d) => {
-    const src = d.file_path ?? d.file_url;
-    push(`doc:${d.id}`, d.file_name ?? src?.split("/").pop() ?? "plik", src ?? null);
-  });
-  return out;
-}
-
 export function BrokerApplicationDetail({
   showInternalOffer = false,
 }: { showInternalOffer?: boolean } = {}) {
   const { id } = useParams({ strict: false }) as { id: string };
   const base = usePanelBase();
+  const { roles } = useAuth();
   const [row, setRow] = useState<Row | null>(null);
-  const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendOpen, setSendOpen] = useState<null | "instytucjonalny" | "indywidualny">(null);
   const [calcOpen, setCalcOpen] = useState(false);
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
-  const [uploading, setUploading] = useState(false);
+
+  // Historia komunikacji wisi na leadach — RLS udostępnia ją tylko personelowi
+  // wewnętrznemu, więc pośrednikowi zewnętrznemu sekcji nie pokazujemy.
+  const canSeeComms = roles.includes("operator") || roles.includes("administrator");
 
   const load = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
-      const [{ data: app }, { data: d }] = await Promise.all([
-        supabase
-          .from("loan_applications")
-          .select(
-            "id, status, broker_notes, loan_amount, preferred_period_months, created_at, client:clients(id,first_name,last_name,city,phone,email), properties(id,property_type,address,street,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)",
-          )
-          .eq("id", id)
-          .maybeSingle(),
-        supabase
-          .from("documents")
-          .select("id, document_type, file_name, file_path, file_url, created_at")
-          .eq("loan_application_id", id)
-          .order("created_at", { ascending: false }),
-      ]);
+      const { data: app } = await supabase
+        .from("loan_applications")
+        .select(
+          "id, status, broker_notes, loan_amount, preferred_period_months, created_at, client:clients(id,first_name,last_name,city,phone,email), properties(id,property_type,address,street,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)",
+        )
+        .eq("id", id)
+        .maybeSingle();
       const appRow = (app as any) ?? null;
       setRow(appRow);
       setNotes(appRow?.broker_notes ?? "");
-      setDocs((d as any) ?? []);
       if (!silent) setLoading(false);
     },
     [id],
@@ -165,65 +121,6 @@ export function BrokerApplicationDetail({
   useEffect(() => {
     void load();
   }, [load]);
-
-  // Operator dosyła pliki klienta (np. zdjęcia utracone przy migracji storage).
-  // Wgrywamy do bucketu `pliki-klienta` (prefiks property/<appId>/…) i dopinamy
-  // ścieżki do properties.photos, żeby weszły do sekcji „Pliki klienta".
-  const addFiles = async (files: FileList | null) => {
-    if (!files || !files.length || !row) return;
-    setUploading(true);
-    try {
-      const paths: string[] = [];
-      for (const file of Array.from(files)) {
-        const res = await uploadFile(file, { context: "property", applicationId: row.id });
-        paths.push(res.path);
-      }
-      const prop = Array.isArray(row.properties) ? row.properties[0] : (row.properties as any);
-      if (prop?.id) {
-        const existing = Array.isArray(prop.photos) ? (prop.photos as string[]) : [];
-        const { error } = await supabase
-          .from("properties")
-          .update({ photos: [...existing, ...paths] } as any)
-          .eq("id", prop.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("properties")
-          .insert({ loan_application_id: row.id, property_type: "inna", photos: paths } as any);
-        if (error) throw error;
-      }
-      toast.success(`Dodano ${paths.length} plik(ów)`);
-      await load(true);
-    } catch (e: any) {
-      toast.error("Nie udało się wgrać plików", { description: e?.message ?? String(e) });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // Wszystkie pliki klienta w jednym worku (zdjęcia + wpisy z tabeli documents).
-  const clientFiles = useMemo(() => {
-    const p = row
-      ? Array.isArray(row.properties)
-        ? row.properties[0]
-        : (row.properties as any)
-      : null;
-    const photoPaths = Array.isArray(p?.photos) ? (p!.photos as string[]) : [];
-    return collectClientFiles(photoPaths, docs);
-  }, [row, docs]);
-
-  const openClientFile = async (f: ClientFile) => {
-    const url = f.externalUrl ?? (f.path ? await signStoragePath(f.path, 3600) : null);
-    if (!url) {
-      toast.error("Nie udało się otworzyć pliku");
-      return;
-    }
-    if (IMAGE_EXT.test(f.name) || IMAGE_EXT.test(f.path ?? "")) {
-      setLightboxUrl(await toDisplayableImageUrl(url, f.name));
-    } else {
-      window.open(url, "_blank", "noopener");
-    }
-  };
 
   const saveNotes = async () => {
     if (!row) return;
@@ -485,6 +382,11 @@ export function BrokerApplicationDetail({
         <ClientFilesManager loanApplicationId={row.id} onChanged={() => void load(true)} />
       </FancyCard>
 
+      {/* Podgląd komunikacji z klientem (voicebot / SMS / e-mail / Messenger / notatki) */}
+      {canSeeComms && (
+        <ClientCommsPreview loanApplicationId={row.id} clientId={row.client?.id ?? null} />
+      )}
+
       {/* Nieruchomość + klient */}
       <div className="grid gap-4 lg:grid-cols-2">
         <FancyCard tone="light" title="Nieruchomość i KW" icon={<Landmark className="h-4 w-4" />}>
@@ -623,21 +525,6 @@ export function BrokerApplicationDetail({
           </DialogContent>
         </Dialog>
       )}
-
-      {/* Lightbox */}
-      <Dialog open={lightboxUrl !== null} onOpenChange={(o) => !o && setLightboxUrl(null)}>
-        <DialogContent className="max-w-5xl border-0 bg-black/95 p-2">
-          {lightboxUrl && (
-            <div className="flex items-center justify-center">
-              <img
-                src={lightboxUrl}
-                alt="Podgląd pliku"
-                className="max-h-[85vh] w-auto rounded-lg object-contain"
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -894,27 +781,5 @@ function EditableStatCard({
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function InfoRow({
-  icon,
-  label,
-  value,
-  mono,
-}: {
-  icon?: React.ReactNode;
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div className={`text-right font-medium ${mono ? "font-mono text-xs" : ""}`}>{value}</div>
-    </div>
   );
 }

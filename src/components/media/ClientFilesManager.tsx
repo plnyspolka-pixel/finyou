@@ -324,7 +324,7 @@ export function ClientFilesManager({
         <div className="rounded-xl border border-dashed py-14 text-center text-sm text-muted-foreground">
           {canManage && !loanApplicationId
             ? "Lead nie ma jeszcze wniosku — pliki dodasz po jego utworzeniu."
-            : `Brak plików.${canManage && loanApplicationId ? " Użyj „Dodaj pliki”, aby wgrać zdjęcia/dokumenty." : ""}`}
+            : `Brak plików.${canManage && loanApplicationId ? " Użyj „Dodaj pliki”, aby wgrać pliki klienta." : ""}`}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
