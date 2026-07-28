@@ -191,7 +191,7 @@ function BrokerMarketingPage() {
       </Card>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Audience)}>
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           {AUDIENCES.map((a) => {
             const count = items.filter((i) => i.audience === a.value).length;
             return (

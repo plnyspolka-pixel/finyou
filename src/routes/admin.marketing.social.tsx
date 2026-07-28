@@ -204,10 +204,16 @@ function SocialAdmin() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="ai">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="ai">AI Generator</TabsTrigger>
-                <TabsTrigger value="content">Treść</TabsTrigger>
-                <TabsTrigger value="schedule">Publikacja</TabsTrigger>
+              <TabsList className="grid h-auto w-full grid-cols-3">
+                <TabsTrigger value="ai" className="whitespace-normal leading-tight">
+                  AI Generator
+                </TabsTrigger>
+                <TabsTrigger value="content" className="whitespace-normal leading-tight">
+                  Treść
+                </TabsTrigger>
+                <TabsTrigger value="schedule" className="whitespace-normal leading-tight">
+                  Publikacja
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="ai" className="space-y-3 pt-4">

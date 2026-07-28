@@ -73,9 +73,13 @@ function UstawieniaPage() {
       </div>
 
       <Tabs defaultValue="reguly" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-flex">
-          <TabsTrigger value="reguly">Reguły prowizji</TabsTrigger>
-          <TabsTrigger value="limity">Limity nierejestrowanej</TabsTrigger>
+        <TabsList className="grid h-auto w-full grid-cols-2 sm:w-auto sm:inline-flex">
+          <TabsTrigger value="reguly" className="whitespace-normal leading-tight">
+            Reguły prowizji
+          </TabsTrigger>
+          <TabsTrigger value="limity" className="whitespace-normal leading-tight">
+            Limity nierejestrowanej
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="reguly" className="mt-0">
           <RulesTab />

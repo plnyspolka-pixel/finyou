@@ -28,7 +28,7 @@ function AdminProjects() {
         </p>
       </div>
       <Tabs defaultValue="users">
-        <TabsList className="flex-wrap">
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="users">Użytkownicy</TabsTrigger>
           <TabsTrigger value="projects">Projekty</TabsTrigger>
           <TabsTrigger value="assignments">Przypisania</TabsTrigger>

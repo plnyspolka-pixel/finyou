@@ -252,10 +252,10 @@ function WindykacjaDashboard() {
 
           {/* Filtr + lista spraw */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+            <CardHeader className="flex flex-col items-start gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-base">Sprawy ({filtered.length})</CardTitle>
               <Select value={pathFilter} onValueChange={setPathFilter}>
-                <SelectTrigger className="w-[220px] h-9">
+                <SelectTrigger className="h-9 w-full sm:w-[220px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

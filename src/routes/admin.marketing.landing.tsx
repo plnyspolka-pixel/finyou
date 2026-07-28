@@ -324,7 +324,7 @@ function EditorDialog({
         </DialogHeader>
 
         <Tabs defaultValue="basics">
-          <TabsList>
+          <TabsList className="h-auto flex-wrap">
             <TabsTrigger value="basics">Podstawy</TabsTrigger>
             <TabsTrigger value="content">Treść</TabsTrigger>
             <TabsTrigger value="form">Formularz</TabsTrigger>

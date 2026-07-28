@@ -85,7 +85,7 @@ function ZgodyPage() {
       </div>
 
       <Tabs defaultValue="privacy">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           {KINDS.map((k) => (
             <TabsTrigger key={k} value={k}>
               {KIND_LABELS[k]}

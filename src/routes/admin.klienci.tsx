@@ -241,9 +241,13 @@ function KlienciPage() {
       </header>
 
       <Tabs defaultValue="lista" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-flex">
-          <TabsTrigger value="lista">Lista klientów</TabsTrigger>
-          <TabsTrigger value="reminders">Przypomnienia voicebota</TabsTrigger>
+        <TabsList className="grid h-auto w-full grid-cols-2 sm:w-auto sm:inline-flex">
+          <TabsTrigger value="lista" className="whitespace-normal leading-tight">
+            Lista klientów
+          </TabsTrigger>
+          <TabsTrigger value="reminders" className="whitespace-normal leading-tight">
+            Przypomnienia voicebota
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="lista" className="space-y-4 mt-0">
