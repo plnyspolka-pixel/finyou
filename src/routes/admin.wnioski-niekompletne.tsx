@@ -35,6 +35,8 @@ import { resolveShowablePhotoUrls } from "@/lib/property-photos";
 import {
   evaluateApplicationCore,
   missingLabels,
+  classifyApplication,
+  COMPLETE_STATUSES,
   type CompletenessResult,
 } from "@/lib/application-completeness";
 import {
@@ -84,14 +86,6 @@ const INCOMPLETE_STATUSES = [
   "kontakt",
   "kompletowanie_danych",
 ];
-const COMPLETE_STATUSES = [
-  "szukamy_inwestora",
-  "warunki_zaakceptowane",
-  "dokumenty_przygotowanie_umowy",
-  "notariusz",
-  "zamkniete",
-];
-
 // Ocena kompletności podstawowych danych wniosku — jedyne źródło prawdy w
 // src/lib/application-completeness.ts (używane też przez panel klienta,
 // marketplace inwestora i migrację czyszczącą dane).
@@ -515,16 +509,15 @@ function ApplicationsPage() {
 
   const applications = useMemo(() => rows.filter(isApplication), [rows]);
 
-  // Klasyfikacja wg DANYCH, nie tylko statusu:
-  //  - "complete"   — status kompletny I komplet podstawowych danych,
-  //  - "attention"  — status kompletny, ale BRAKUJE danych (do korekty),
-  //  - "incomplete" — wniosek jeszcze w kompletowaniu.
-  const classify = (r: Row): "complete" | "attention" | "incomplete" => {
-    if (COMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))) {
-      return coreOf(r).complete ? "complete" : "attention";
-    }
-    return "incomplete";
-  };
+  // Klasyfikacja wg DANYCH, nie tylko statusu — wspólna definicja
+  // w src/lib/application-completeness.ts (używana też na liście operatora).
+  const classify = (r: Row) =>
+    classifyApplication(r.status, {
+      loan_amount: r.loan_amount,
+      client: r.client,
+      properties: r.properties ?? [],
+      docCount: r.docCount ?? 0,
+    });
 
   const counts = useMemo(() => {
     const c = { all: applications.length, incomplete: 0, complete: 0, attention: 0 };

@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   FilePlus2,
   ImageOff,
@@ -27,6 +28,13 @@ import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-bad
 import { collectClientFileRefs, resolveClientFilesHero, plikiLabel } from "@/lib/property-photos";
 import { toDisplayableImageUrl } from "@/lib/heic-preview";
 import {
+  classifyApplication,
+  evaluateApplicationCore,
+  missingLabels,
+  APPLICATION_CLASS_LABELS,
+  type ApplicationClass,
+} from "@/lib/application-completeness";
+import {
   getMyBrokerOfferUsage,
   softDeleteMyApplication,
   type BrokerOfferUsage,
@@ -42,7 +50,13 @@ type Row = {
   loan_amount: number | null;
   preferred_period_months: number | null;
   created_at: string;
-  client: { first_name?: string; last_name?: string; city?: string } | null;
+  client: {
+    first_name?: string;
+    last_name?: string;
+    city?: string;
+    phone?: string | null;
+    email?: string | null;
+  } | null;
   properties: Array<{
     city?: string;
     property_type?: string;
@@ -90,11 +104,13 @@ export function MojeWnioski() {
   const [heroByApp, setHeroByApp] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"all" | ApplicationClass>("all");
   const [usage, setUsage] = useState<BrokerOfferUsage | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Zewnętrzny pośrednik widzi wyłącznie własne oferty (wszystkie statusy);
-  // personel wewnętrzny — pulę „szukamy inwestora" jak dotąd.
+  // personel wewnętrzny — wszystkie wnioski, z klasyfikacją kompletności
+  // jak w panelu admina (kompletne / niekompletne / do korekty).
   const isExternalBroker =
     roles.includes("posrednik") && !roles.includes("operator") && !roles.includes("administrator");
 
@@ -104,12 +120,10 @@ export function MojeWnioski() {
     let query = supabase
       .from("loan_applications")
       .select(
-        "id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number), documents(id, file_path, file_url, document_type, file_name)",
+        "id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city, phone, email), properties(city, property_type, photos, land_register_number), documents(id, file_path, file_url, document_type, file_name)",
       )
       .order("created_at", { ascending: false });
-    query = isExternalBroker
-      ? (query as any).eq("created_by_partner_user_id", user.id)
-      : query.eq("status", "szukamy_inwestora");
+    if (isExternalBroker) query = (query as any).eq("created_by_partner_user_id", user.id);
     const { data } = await query;
     const all = (data as any as Row[]) ?? [];
     setRows(all);
@@ -163,10 +177,27 @@ export function MojeWnioski() {
     })();
   }, [user]);
 
+  // Klasyfikacja kompletności jak w panelu admina — wspólna definicja
+  // w src/lib/application-completeness.ts.
+  const classify = (r: Row): ApplicationClass =>
+    classifyApplication(r.status, {
+      loan_amount: r.loan_amount,
+      client: r.client,
+      properties: r.properties ?? [],
+      docCount: r.documents?.length ?? 0,
+    });
+
+  const counts = useMemo(() => {
+    const c = { all: rows.length, complete: 0, attention: 0, incomplete: 0 };
+    for (const r of rows) c[classify(r)]++;
+    return c;
+  }, [rows]);
+
   const visible = useMemo(() => {
+    const byTab = tab === "all" ? rows : rows.filter((r) => classify(r) === tab);
     const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => {
+    if (!q) return byTab;
+    return byTab.filter((r) => {
       const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
       const hay = [
         r.client?.first_name,
@@ -176,6 +207,7 @@ export function MojeWnioski() {
         p?.land_register_number,
         p?.property_type,
         loanStatusLabels[r.status as keyof typeof loanStatusLabels] ?? r.status,
+        APPLICATION_CLASS_LABELS[classify(r)],
         String(r.loan_amount ?? ""),
       ]
         .filter(Boolean)
@@ -183,17 +215,17 @@ export function MojeWnioski() {
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [rows, search]);
+  }, [rows, search, tab]);
 
   return (
     <div className="space-y-6">
       <FancyPageHeader
-        eyebrow={isExternalBroker ? "Moje oferty" : "Szukamy inwestora"}
-        title={isExternalBroker ? "Moje oferty" : "Wnioski szukające inwestora"}
+        eyebrow={isExternalBroker ? "Moje oferty" : "Wnioski"}
+        title={isExternalBroker ? "Moje oferty" : "Wnioski klientów"}
         subtitle={
           isExternalBroker
             ? "Twoje oferty wprowadzone do Finance You. Usunięcie oferty zwalnia miejsce w limicie darmowego konta."
-            : "Wszystkie kompletne wnioski ze statusem „szukamy inwestora” — gotowe do przedstawienia inwestorom."
+            : "Wszystkie wnioski — od kompletowania danych po gotowe dla inwestorów. „Kompletny” = imię i nazwisko, kontakt, kwota, poprawny numer KW i pliki klienta; kompletny mimo braków trafia do „Do korekty”."
         }
         actions={
           <div className="flex items-center gap-3">
@@ -213,6 +245,23 @@ export function MojeWnioski() {
       />
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="shrink-0">
+          <TabsList>
+            <TabsTrigger value="all">Wszystkie ({counts.all})</TabsTrigger>
+            <TabsTrigger value="complete">Kompletne ({counts.complete})</TabsTrigger>
+            <TabsTrigger value="incomplete">Niekompletne ({counts.incomplete})</TabsTrigger>
+            <TabsTrigger
+              value="attention"
+              className={
+                counts.attention > 0
+                  ? "text-amber-600 data-[state=active]:text-amber-700"
+                  : undefined
+              }
+            >
+              Do korekty ({counts.attention})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -229,12 +278,11 @@ export function MojeWnioski() {
 
       {!loading && rows.length === 0 ? (
         <Card className="py-10 text-center text-sm text-muted-foreground">
-          Brak wniosków ze statusem „szukamy inwestora". Gdy wniosek skompletuje KW i pliki klienta,
-          pojawi się tutaj automatycznie.
+          Brak wniosków. Nowe wnioski pojawią się tutaj automatycznie.
         </Card>
       ) : !loading && visible.length === 0 ? (
         <Card className="py-10 text-center text-sm text-muted-foreground">
-          Brak wyników dla „{search}".
+          {search.trim() ? `Brak wyników dla „${search}".` : "Brak wniosków w tej zakładce."}
         </Card>
       ) : (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
@@ -245,6 +293,19 @@ export function MojeWnioski() {
             const clientName =
               [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "Klient";
             const hero = heroByApp[r.id];
+            const cls = classify(r);
+            const missing = evaluateApplicationCore({
+              loan_amount: r.loan_amount,
+              client: r.client,
+              properties: r.properties ?? [],
+              docCount: r.documents?.length ?? 0,
+            }).missing;
+            const clsBadgeClass =
+              cls === "complete"
+                ? "bg-emerald-600/90"
+                : cls === "attention"
+                  ? "bg-amber-500/90"
+                  : "bg-slate-500/80";
 
             return (
               <div
@@ -263,9 +324,21 @@ export function MojeWnioski() {
                     className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2">
-                    <Badge className="bg-black/60 text-white border-0 backdrop-blur-sm">
-                      {loanStatusLabels[r.status as keyof typeof loanStatusLabels] ?? r.status}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Badge className="bg-black/60 text-white border-0 backdrop-blur-sm">
+                        {loanStatusLabels[r.status as keyof typeof loanStatusLabels] ?? r.status}
+                      </Badge>
+                      <Badge
+                        className={`${clsBadgeClass} text-white border-0 backdrop-blur-sm`}
+                        title={
+                          missing.length
+                            ? `Brakuje: ${missingLabels(missing).join(", ")}`
+                            : undefined
+                        }
+                      >
+                        {APPLICATION_CLASS_LABELS[cls]}
+                      </Badge>
+                    </div>
                     <div className="flex items-center gap-1">
                       {fileCount > 1 && (
                         <Badge className="bg-black/60 text-white border-0 backdrop-blur-sm">

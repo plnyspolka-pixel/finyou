@@ -12,6 +12,7 @@
 // tej logiki w SQL znajduje się w migracji czyszczącej dane.
 
 import { containsValidKw } from "./kw";
+import { normalizeLoanStatus } from "./loan-status";
 
 /**
  * Placeholdery, którymi system wypełnia dane klienta powstałego ze stuba leada
@@ -134,4 +135,37 @@ export function isApplicationCoreComplete(input: CompletenessInput): boolean {
 /** Zamienia klucze braków na czytelne etykiety. */
 export function missingLabels(missing: MissingKey[]): string[] {
   return missing.map((k) => MISSING_LABELS[k]);
+}
+
+/** Statusy, w których wniosek procesowo uchodzi za skompletowany
+ *  (jest dalej niż kompletowanie danych). */
+export const COMPLETE_STATUSES: readonly string[] = [
+  "szukamy_inwestora",
+  "warunki_zaakceptowane",
+  "dokumenty_przygotowanie_umowy",
+  "notariusz",
+  "zamkniete",
+];
+
+export type ApplicationClass = "complete" | "attention" | "incomplete";
+
+/** Etykiety klasyfikacji do badge'y na listach wniosków. */
+export const APPLICATION_CLASS_LABELS: Record<ApplicationClass, string> = {
+  complete: "Kompletny",
+  attention: "Do korekty",
+  incomplete: "Niekompletny",
+};
+
+/**
+ * Klasyfikacja wniosku wg DANYCH, nie tylko statusu (jak w panelu admina):
+ *  - "complete"   — status kompletny I komplet podstawowych danych,
+ *  - "attention"  — status kompletny, ale BRAKUJE danych (do korekty),
+ *  - "incomplete" — wniosek jeszcze w kompletowaniu.
+ */
+export function classifyApplication(
+  status: string | null | undefined,
+  input: CompletenessInput,
+): ApplicationClass {
+  if (!COMPLETE_STATUSES.includes(normalizeLoanStatus(status))) return "incomplete";
+  return isApplicationCoreComplete(input) ? "complete" : "attention";
 }
