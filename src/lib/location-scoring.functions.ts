@@ -355,6 +355,119 @@ const runInputSchema = z.object({
  * Nigdy nie blokuje wniosku — dla złego numeru zwraca INVALID_KW, dla braku
  * danych NEEDS_DATA; wynik zawsze jest zapisywany (spec §17).
  */
+/**
+ * Rdzeń scoringu dla wniosku — używany przez server fn (runLocationScoring) ORAZ
+ * przez automat (cron tick). Nie zawiera autoryzacji; wywołujący dostarcza klienta
+ * DB (RLS-owany dla operatora albo service_role dla cronu). Nigdy nie blokuje —
+ * dla złego numeru/braku danych ustawia status terminalny i zwraca ok:true.
+ */
+export async function scoreApplicationCore(
+  db: SupabaseClient,
+  input: { applicationId?: string | null; kwNumber: string; propertyType: string },
+  createdBy: string | null,
+): Promise<{
+  ok: boolean;
+  status?: string;
+  message?: string;
+  analysisId?: string | null;
+  result?: LocationScoringResult;
+}> {
+  const propertyType: PropertyType | null =
+    input.propertyType === "apartment" ||
+    input.propertyType === "house" ||
+    input.propertyType === "plot"
+      ? (input.propertyType as PropertyType)
+      : toScoringPropertyType(input.propertyType);
+
+  const parsed = parseKwNumber(input.kwNumber);
+  const config = await loadActiveConfig(db);
+
+  // Rodzaj nieruchomości nieobsługiwany — status terminalny, by nie przetwarzać w kółko.
+  if (!propertyType) {
+    if (input.applicationId) {
+      await db
+        .from("loan_applications")
+        .update({
+          location_scoring_status: "NEEDS_DATA",
+          location_scored_at: new Date().toISOString(),
+        })
+        .eq("id", input.applicationId);
+    }
+    return {
+      ok: false,
+      status: "unsupported_property_type",
+      message: "Rodzaj nieruchomości nieobsługiwany (tylko mieszkanie/dom/działka).",
+    };
+  }
+
+  if (input.applicationId) {
+    await db
+      .from("loan_applications")
+      .update({ location_scoring_status: "PROCESSING" })
+      .eq("id", input.applicationId);
+  }
+
+  const court = await loadCourt(db, parsed.prefix);
+  const dataVersion = (await resolveDataVersion(db)) ?? "n/a";
+
+  let candidates: LocationCandidate[] = [];
+  let observations: ObservationAggregate | null = null;
+  let serialSignal = buildSerialSignal(null, config.serialSignalMinSample);
+  if (parsed.formatValid && dataVersion !== "n/a") {
+    candidates = await loadCandidates(db, parsed.prefix, propertyType, dataVersion);
+    observations = await loadObservations(db, parsed.prefix, propertyType);
+    if (Number.isFinite(parsed.serialNumber)) {
+      serialSignal = await loadSerialSignal(
+        db,
+        parsed.prefix,
+        propertyType,
+        parsed.serialNumber,
+        config.serialSignalMinSample,
+      );
+    }
+  }
+
+  const ctx: ScoringContext = {
+    parsedKw: parsed,
+    propertyType,
+    court,
+    candidates,
+    observations,
+    serialSignal,
+    config,
+  };
+
+  const result = scoreLocation(ctx, { dataVersion });
+  result.applicationId = input.applicationId ?? "";
+
+  const contextParams = {
+    config,
+    dataVersion,
+    candidateCount: candidates.length,
+    observationSample: observations?.sampleCount ?? 0,
+    serialApplied: serialSignal?.applied ?? false,
+    courtMapped: Boolean(court),
+  };
+
+  let analysisId: string | null = null;
+  try {
+    analysisId = await persistResult(db, {
+      loanApplicationId: input.applicationId ?? null,
+      parsed,
+      propertyType,
+      result,
+      dataVersion,
+      contextParams,
+      userId: createdBy ?? "",
+      status: "" as never,
+    });
+  } catch (e) {
+    console.error(`[location-scoring] persist failed for ${maskKwNumber(parsed)}:`, e);
+  }
+
+  return { ok: true, analysisId, result };
+}
+
 export const runLocationScoring = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => runInputSchema.parse(i))
@@ -362,96 +475,66 @@ export const runLocationScoring = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await requireOperator(supabase, userId);
     const db = supabase as unknown as SupabaseClient;
-
-    const propertyType: PropertyType | null =
-      data.propertyType === "apartment" ||
-      data.propertyType === "house" ||
-      data.propertyType === "plot"
-        ? (data.propertyType as PropertyType)
-        : toScoringPropertyType(data.propertyType);
-
-    const parsed = parseKwNumber(data.kwNumber);
-    const config = await loadActiveConfig(db);
-
-    // Rodzaj nieruchomości nieobsługiwany (np. lokal usługowy/udział) — nie scorujemy.
-    if (!propertyType) {
-      return {
-        ok: false as const,
-        status: "unsupported_property_type" as const,
-        message:
-          "Rodzaj nieruchomości nieobsługiwany przez moduł lokalizacyjny (tylko mieszkanie/dom/działka).",
-      };
-    }
-
-    // Oznacz PROCESSING (nieblokująco).
-    if (data.applicationId) {
-      await db
-        .from("loan_applications")
-        .update({ location_scoring_status: "PROCESSING" })
-        .eq("id", data.applicationId);
-    }
-
-    const court = await loadCourt(db, parsed.prefix);
-    const dataVersion = (await resolveDataVersion(db)) ?? "n/a";
-
-    let candidates: LocationCandidate[] = [];
-    let observations: ObservationAggregate | null = null;
-    let serialSignal = buildSerialSignal(null, config.serialSignalMinSample);
-    if (parsed.formatValid && dataVersion !== "n/a") {
-      candidates = await loadCandidates(db, parsed.prefix, propertyType, dataVersion);
-      observations = await loadObservations(db, parsed.prefix, propertyType);
-      if (Number.isFinite(parsed.serialNumber)) {
-        serialSignal = await loadSerialSignal(
-          db,
-          parsed.prefix,
-          propertyType,
-          parsed.serialNumber,
-          config.serialSignalMinSample,
-        );
-      }
-    }
-
-    const ctx: ScoringContext = {
-      parsedKw: parsed,
-      propertyType,
-      court,
-      candidates,
-      observations,
-      serialSignal,
-      config,
-    };
-
-    const result = scoreLocation(ctx, { dataVersion });
-    result.applicationId = data.applicationId ?? "";
-
-    const contextParams = {
-      config,
-      dataVersion,
-      candidateCount: candidates.length,
-      observationSample: observations?.sampleCount ?? 0,
-      serialApplied: serialSignal?.applied ?? false,
-      courtMapped: Boolean(court),
-    };
-
-    let analysisId: string | null = null;
-    try {
-      analysisId = await persistResult(db, {
-        loanApplicationId: data.applicationId ?? null,
-        parsed,
-        propertyType,
-        result,
-        dataVersion,
-        contextParams,
-        userId,
-        status: "" as never,
-      });
-    } catch (e) {
-      // Błąd persystencji nie może blokować procesu — logujemy zamaskowany numer.
-      console.error(`[location-scoring] persist failed for ${maskKwNumber(parsed)}:`, e);
-    }
-
-    return { ok: true as const, analysisId, result };
+    return scoreApplicationCore(
+      db,
+      {
+        applicationId: data.applicationId ?? null,
+        kwNumber: data.kwNumber,
+        propertyType: data.propertyType,
+      },
+      userId,
+    );
   });
+
+/**
+ * Automat (cron tick): scoruje wnioski oczekujące (status NULL/PENDING) z numerem
+ * KW. Idempotentny — po przetworzeniu status jest terminalny (COMPLETED/FAILED/
+ * NEEDS_DATA), więc kolejne uruchomienia nie przeliczają w kółko. Używa
+ * service_role (poza RLS) — wyłącznie po stronie serwera.
+ */
+export async function runLocationScoringTick(
+  db: SupabaseClient,
+  limit = 40,
+): Promise<{ processed: number; scored: number; skipped: number }> {
+  const { data: props } = await db
+    .from("properties")
+    .select(
+      "loan_application_id, land_register_number, property_type, loan_applications!inner(location_scoring_status)",
+    )
+    .not("land_register_number", "is", null)
+    .neq("land_register_number", "")
+    .limit(500);
+
+  const pending = (props ?? [])
+    .filter((p) => {
+      const st = (p.loan_applications as { location_scoring_status?: string } | null)
+        ?.location_scoring_status;
+      return (st == null || st === "PENDING") && p.loan_application_id;
+    })
+    .slice(0, limit);
+
+  let scored = 0;
+  let skipped = 0;
+  for (const p of pending) {
+    try {
+      const res = await scoreApplicationCore(
+        db,
+        {
+          applicationId: p.loan_application_id as string,
+          kwNumber: p.land_register_number as string,
+          propertyType: (p.property_type as string) ?? "",
+        },
+        null,
+      );
+      if (res.ok) scored++;
+      else skipped++;
+    } catch (e) {
+      skipped++;
+      console.error(`[location-scoring-tick] failed for app ${p.loan_application_id}:`, e);
+    }
+  }
+  return { processed: pending.length, scored, skipped };
+}
 
 /** Zwraca najnowszy wynik scoringu dla wniosku. */
 export const getLocationScoring = createServerFn({ method: "POST" })

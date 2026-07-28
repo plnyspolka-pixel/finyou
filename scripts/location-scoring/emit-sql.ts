@@ -10,7 +10,7 @@
  *
  *   bun run scripts/location-scoring/emit-sql.ts > /tmp/loc-seed.sql
  */
-import { ROWS, terytFor, DATA_VERSION, JUR_LABEL, buildDataset } from "./real-dataset";
+import { ROWS, areaTerytsFor, DATA_VERSION, JUR_LABEL, buildDataset } from "./real-dataset";
 
 function sqlStr(s: string): string {
   return "'" + s.replace(/'/g, "''") + "'";
@@ -67,22 +67,25 @@ out.push(
   `INSERT INTO public.kw_jurisdiction_areas (department_id,teryt,jurisdiction_role,confidence,source)\n` +
     `SELECT d.id, t.teryt, 'current', t.conf, 'SEED-REAL'\n` +
     `FROM (VALUES\n` +
-    ROWS.map((r) => `(${sqlStr(r.prefix)},${sqlStr(terytFor(r))},${r.conf})`).join(",\n") +
+    ROWS.flatMap((r) =>
+      areaTerytsFor(r).map((teryt) => `(${sqlStr(r.prefix)},${sqlStr(teryt)},${r.conf})`),
+    ).join(",\n") +
     `\n) t(prefix,teryt,conf)\n` +
     `JOIN public.kw_court_departments d ON d.prefix=t.prefix\n` +
     `JOIN public.kw_jurisdiction_versions v ON v.id=d.jurisdiction_version_id AND v.version_label=${sqlStr(JUR_LABEL)}\n` +
     `ON CONFLICT (department_id,teryt,jurisdiction_role,valid_from) DO NOTHING;`,
 );
 
-// 6) wagi rodzaju (jeden set-based INSERT). Prefiks→teryt jego wydziału.
-const prefixTeryt = new Map(ROWS.map((r) => [r.prefix, terytFor(r)]));
+// 6) wagi rodzaju (jeden set-based INSERT). Prefiks→wszystkie obszary wydziału
+// (rdzeń + strefy podmiejskie) — rozkład rozkłada się na gminy okoliczne.
 const weightVals: string[] = [];
 for (const r of ROWS) {
-  const teryt = prefixTeryt.get(r.prefix)!;
-  for (const w of weights.filter((x) => x.teryt === teryt)) {
-    weightVals.push(
-      `(${sqlStr(r.prefix)},${sqlStr(w.property_type)},${sqlStr(teryt)},${w.weight},${sqlStr(w.source_quality)},${sqlStr(DATA_VERSION)})`,
-    );
+  for (const teryt of areaTerytsFor(r)) {
+    for (const w of weights.filter((x) => x.teryt === teryt)) {
+      weightVals.push(
+        `(${sqlStr(r.prefix)},${sqlStr(w.property_type)},${sqlStr(teryt)},${w.weight},${sqlStr(w.source_quality)},${sqlStr(DATA_VERSION)})`,
+      );
+    }
   }
 }
 
@@ -94,5 +97,4 @@ if (weightVals.length > 0) {
   );
 }
 
-// eslint-disable-next-line no-console
 console.log(out.join("\n"));

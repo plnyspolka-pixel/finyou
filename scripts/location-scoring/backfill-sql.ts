@@ -8,18 +8,24 @@
  *
  *   bun run scripts/location-scoring/backfill-sql.ts > /tmp/loc-backfill.sql
  */
-import { ROWS, terytFor, DATA_VERSION, JUR_LABEL, buildDataset } from "./real-dataset";
+import { ROWS, areaTerytsFor, DATA_VERSION, JUR_LABEL, buildDataset } from "./real-dataset";
 import {
   scoreLocation,
   DEFAULT_LOCATION_SCORING_CONFIG,
   MODEL_VERSION,
   type AreaMetrics,
+  type LocationCandidate,
   type PropertyType,
   type ScoringContext,
 } from "../../src/lib/location-scoring/index";
 
-const { metricsByTeryt, units } = buildDataset();
+const { metricsByTeryt, units, weights } = buildDataset();
 const unitByTeryt = new Map(units.map((u) => [u.teryt, u]));
+
+function weightFor(teryt: string, pt: PropertyType): number {
+  const w = weights.find((x) => x.teryt === teryt && x.property_type === pt);
+  return w ? w.weight : 0;
+}
 
 function areaFor(teryt: string): AreaMetrics {
   const m = metricsByTeryt.get(teryt)!;
@@ -48,8 +54,12 @@ const TYPES: PropertyType[] = ["apartment", "house", "plot"];
 
 function scoreFor(prefix: string) {
   const r = ROWS.find((x) => x.prefix === prefix)!;
-  const teryt = terytFor(r);
+  const teryts = areaTerytsFor(r);
   return (pt: PropertyType) => {
+    // Rozkład na wszystkie obszary wydziału (rdzeń + strefy podmiejskie).
+    const candidates: LocationCandidate[] = teryts
+      .map((teryt) => ({ area: areaFor(teryt), weight: weightFor(teryt, pt) }))
+      .filter((c) => c.weight > 0);
     const ctx: ScoringContext = {
       parsedKw: {
         raw: prefix,
@@ -64,7 +74,7 @@ function scoreFor(prefix: string) {
       },
       propertyType: pt,
       court: { prefix, name: r.court, jurisdictionVersion: JUR_LABEL, mappingConfidence: r.conf },
-      candidates: [{ area: areaFor(teryt), weight: 1 }],
+      candidates: candidates.length ? candidates : [{ area: areaFor(teryts[0]), weight: 1 }],
       observations: null,
       serialSignal: null,
       config: DEFAULT_LOCATION_SCORING_CONFIG,
@@ -144,5 +154,4 @@ for (const c of combos) {
   );
 }
 
-// eslint-disable-next-line no-console
 console.log(out.join("\n"));
