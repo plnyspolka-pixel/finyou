@@ -140,6 +140,7 @@ const groups: Group[] = [
       { to: "/admin/integracje", label: "Integracje", icon: Plug },
       { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
       { to: "/admin/operatorzy", label: "Operatorzy wewnętrzni", icon: ShieldCheck },
+      { to: "/admin/zespol-aktywnosc", label: "Zespół i aktywność", icon: Eye },
       { to: "/admin/zgody", label: "Treści zgód", icon: FileCheck },
       { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },
     ],
