@@ -478,3 +478,89 @@ describe("Agregacja statusu globalnego", () => {
     expect(res.overallStatus).toBe("STOP");
   });
 });
+
+// ── Rzeczywisty układ tabelaryczny EKW (przypadek rzeczywistej KW z wydziału LD1M (dane zanonimizowane)). ────────
+// Surowe strony EKW: nagłówek każdego działu zawiera numer KW i tytuł działu
+// („DZIAŁ IV - HIPOTEKA"), a pusty dział IV z samym komentarzem migracyjnym
+// NIE zawiera frazy „BRAK WPISÓW". Właściciele w podrubryce „Osoba fizyczna
+// (Imię pierwsze nazwisko, imię ojca, imię matki, PESEL)".
+describe("Układ tabelaryczny EKW — pusty dział IV z komentarzem migracji", () => {
+  const PESEL_M = PESEL_B;
+  const PESEL_F = PESEL_C;
+  const header = (dzial: string) =>
+    `TREŚĆ KSIĘGI WIECZYSTEJ NR LD1M/00012345/9 , STAN Z DNIA 2026-07-29 17:18 ` +
+    `prowadzonej przez SĄD REJONOWY DLA ŁODZI-ŚRÓDMIEŚCIA W ŁODZI, XVI WYDZIAŁ ` +
+    `KSIĄG WIECZYSTYCH - LD1M NIERUCHOMOŚĆ GRUNTOWA ${dzial}`;
+  const ekwSections: KwDocumentSections = {
+    kwNumber: "LD1M000123459",
+    okladka: "",
+    dzial_1o:
+      header("DZIAŁ I-O - OZNACZENIE NIERUCHOMOŚCI") +
+      " Nr podstawy wpisu Numer bieżący nieruchomości 1 1, 2 Działki ewidencyjne Lp. 1. --- " +
+      "Nr podstawy wpisu Numer działki 498 1, 2 Położenie (numer porządkowy / miejscowość) " +
+      "Lp. 1. 1 ANDRESPOL Ulica FREDRY 53 Sposób korzystania DZIAŁKA GRUNTU " +
+      "Nr podstawy wpisu Obszar całej nieruchomości 0,0491 HA 1, 2 Powrót",
+    dzial_1s: "",
+    dzial_2:
+      header("DZIAŁ II - WŁASNOŚĆ") +
+      " Właściciele Lp. 1. --- Nr podstawy wpisu Lista wskazań udziałów w prawie " +
+      "(numer udziału w prawie/ wielkość udziału/rodzaj wspólności) Lp. 1. 3 1 /1 " +
+      "WSPÓLNOŚĆ USTAWOWA MAJĄTKOWA MAŁŻEŃSKA 26 Osoba fizyczna " +
+      `(Imię pierwsze nazwisko, imię ojca, imię matki, PESEL) OLEH PETRENKO , IWAN, HALYNA, ${PESEL_M} ` +
+      "Lp. 2. --- Nr podstawy wpisu Lista wskazań udziałów w prawie " +
+      "(numer udziału w prawie/ wielkość udziału/rodzaj wspólności) Lp. 1. 3 1 /1 " +
+      "WSPÓLNOŚĆ USTAWOWA MAJĄTKOWA MAŁŻEŃSKA 26 Osoba fizyczna " +
+      `(Imię pierwsze nazwisko, imię ojca, imię matki, PESEL) MARIIA PETRENKO , OLEKSANDR, OKSANA, ${PESEL_F} Powrót`,
+    dzial_3:
+      header("DZIAŁ III - PRAWA, ROSZCZENIA I OGRANICZENIA") + " BRAK WPISÓW Powrót",
+    dzial_4:
+      header("DZIAŁ IV - HIPOTEKA") +
+      " Komentarz do migracji Nr podstawy wpisu Ostatni numer aktualnego lub wykreślonego " +
+      "wpisu w danym dziale w dotychczasowej księdze wieczystej 2 --- Powrót",
+    fetchedAt: "2026-07-29T15:18:56.555Z",
+  };
+
+  it("nie wykrywa hipoteki z nagłówka działu IV (komentarz migracyjny ≠ wpis)", () => {
+    const res = runKwAnalysis(
+      baseInput({ kwNumber: "LD1M/00012345/9" }),
+      ekwSections,
+    );
+    expect(res.computedFrom.mortgagesCount).toBe(0);
+    expect(res.priority.expectedInvestorRank).toBe(1);
+    expect(statusesOf(res.findings, "R-SECOND-RANK-CERT")).toHaveLength(0);
+    expect(statusesOf(res.findings, "R-MORTGAGE-DEPENDENCIES")).toHaveLength(0);
+  });
+
+  it("rozpoznaje oboje właścicieli z podrubryki Osoba fizyczna wraz z PESEL", () => {
+    const res = runKwAnalysis(
+      baseInput({
+        kwNumber: "LD1M/00012345/9",
+        borrower: party("BORROWER", {
+          firstName: "MARIIA",
+          lastName: "PETRENKO",
+          pesel: PESEL_F,
+        }),
+        declaredCollateralProviders: [
+          party("COLLATERAL_PROVIDER", {
+            firstName: "OLEH",
+            lastName: "PETRENKO",
+            pesel: PESEL_M,
+          }),
+          party("COLLATERAL_PROVIDER", {
+            firstName: "MARIIA",
+            lastName: "PETRENKO",
+            pesel: PESEL_F,
+          }),
+        ],
+      }),
+      ekwSections,
+    );
+    expect(res.computedFrom.ownersCount).toBe(2);
+    // Pożyczkobiorczyni jest właścicielką (PESEL zgodny) — brak alertu tożsamości.
+    expect(
+      res.findings.some((f) => f.title.includes("Pożyczkobiorca nie jest właścicielem")),
+    ).toBe(false);
+    // Oboje małżonkowie zadeklarowani — współwłasność warunkowo dopuszczalna, nie STOP.
+    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("WARUNKOWO_DOPUSZCZALNE");
+  });
+});

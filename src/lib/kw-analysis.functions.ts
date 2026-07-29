@@ -145,9 +145,35 @@ export const runKwLandRegisterAnalysis = createServerFn({ method: "POST" })
     }
 
     const fetchedAt = loaded.fetchedAt ?? new Date().toISOString();
-    const borrower: Party = data.borrower
+    let borrower: Party = data.borrower
       ? toParty(data.borrower, "BORROWER")
       : { role: "BORROWER", firstName: null, lastName: null, pesel: null };
+    // UI analizy nie zna stron transakcji — bez tego uzupełnienia silnik
+    // porównywał pustą stronę z Działem II i zawsze raportował
+    // „pożyczkobiorca nie jest właścicielem". Dane klienta wniosku są
+    // domyślnym pożyczkobiorcą.
+    if (!data.borrower && data.loanApplicationId) {
+      const { data: app } = await supabase
+        .from("loan_applications")
+        .select("client_id")
+        .eq("id", data.loanApplicationId)
+        .maybeSingle();
+      if (app?.client_id) {
+        const { data: c } = await supabase
+          .from("clients")
+          .select("first_name, last_name, pesel")
+          .eq("id", app.client_id)
+          .maybeSingle();
+        if (c && (c.first_name || c.last_name || c.pesel)) {
+          borrower = {
+            role: "BORROWER",
+            firstName: c.first_name ?? null,
+            lastName: c.last_name ?? null,
+            pesel: c.pesel ?? null,
+          };
+        }
+      }
+    }
 
     const input: KwAnalysisInput = {
       caseId: data.caseId ?? data.loanApplicationId ?? compact,

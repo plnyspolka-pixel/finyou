@@ -116,6 +116,17 @@ export function extractKwOwnerPersons(dzial2: string | null | undefined): KwOwne
   };
 
   const TOKEN = "[A-ZĄĆĘŁŃÓŚŹŻ][\\p{L}-]+";
+  // Układ tabelaryczny EKW: etykieta w nawiasie, wartości po niej rozdzielone
+  // przecinkami — "Osoba fizyczna (Imię pierwsze nazwisko, imię ojca, imię
+  // matki, PESEL) ANATOLII SLAVINSKYI, PETRO, JEWDOKIJA, 73063017816".
+  for (const m of text.matchAll(
+    new RegExp(
+      `[Oo]soba\\s+fizyczna\\s*\\([^)]{0,160}\\)\\s*(${TOKEN})\\s+(${TOKEN})\\s*,`,
+      "gu",
+    ),
+  )) {
+    push(m[1], m[2]);
+  }
   // "Imię: JAN … Nazwisko: KOWALSKI"
   for (const m of text.matchAll(
     new RegExp(
@@ -170,12 +181,20 @@ export function extractKwOwnerPesels(dzial2: string | null | undefined): KwOwner
   if (!text) return [];
   const out: KwOwnerPesel[] = [];
   const seen = new Set<string>();
-  for (const m of text.matchAll(/pesel[^0-9]{0,30}(\d{11})/gi)) {
+  // Luka do 90 znaków: w układzie tabelarycznym EKW między etykietą „PESEL"
+  // (w nawiasie) a numerem stoją wartości imion i nazwisk rodziców —
+  // "…PESEL) ANATOLII SLAVINSKYI, PETRO, JEWDOKIJA, 73063017816". Przed
+  // fałszywymi trafieniami chroni walidacja sumy kontrolnej PESEL.
+  for (const m of text.matchAll(/pesel[^0-9]{0,90}?(\d{11})(?!\d)/gi)) {
     const pesel = m[1];
     if (seen.has(pesel) || !parsePesel(pesel).valid) continue;
     seen.add(pesel);
-    // W EKW pola imienia/nazwiska poprzedzają pole PESEL w tej samej podrubryce.
-    const before = text.slice(Math.max(0, (m.index ?? 0) - 400), m.index ?? 0);
+    // Imię i nazwisko stoją przed polem PESEL (układ etykietowany) albo między
+    // etykietą „PESEL" a numerem (układ tabelaryczny „Osoba fizyczna (…)
+    // JAN KOWALSKI, ojciec, matka, 8906…") — okno obejmuje oba przypadki,
+    // kończąc się tuż przed cyframi numeru.
+    const digitsIdx = (m.index ?? 0) + m[0].length - 11;
+    const before = text.slice(Math.max(0, (m.index ?? 0) - 400), digitsIdx);
     const persons = extractKwOwnerPersons(before);
     const nearest = persons.length ? persons[persons.length - 1] : null;
     out.push({ pesel, ownerName: nearest ? `${nearest.firstName} ${nearest.lastName}` : null });
@@ -301,7 +320,7 @@ export function parseFloorInfo(dzial1o: string | null | undefined): {
 
 // Granica wartości pola działu I-O — lookahead na kolejną etykietę EKW lub koniec.
 const IO_FIELD_BOUNDARY =
-  "(?=\\s+(?:przeznaczenie|obszar|kondygnacj|liczba|numer|obr[eę]b|spos[óo]b|pole|powierzchni|imi[eę]|nazwisk|dzia[łl]|po[łl]o[żz]|umiejscowieni|informacj|wpis|ulica|budynk|lokal\\b|opis|odr[eę]bno|przy[łl][aą]czeni)|[.;]|$)";
+  "(?=\\s+(?:przeznaczenie|obszar|kondygnacj|liczba|numer|nr\\b|obr[eę]b|spos[óo]b|pole|powierzchni|imi[eę]|nazwisk|dzia[łl]|po[łl]o[żz]|umiejscowieni|informacj|wpis|ulica|budynk|lokal\\b|opis|odr[eę]bno|przy[łl][aą]czeni)|[.;]|$)";
 
 // Parsuje liczbę w formacie PL („45,50" / „1 250,00" / „0,0450") na Number.
 function parsePlNumber(raw: string): number | null {
@@ -342,8 +361,9 @@ export function parseKwPropertyParams(dzial1o: string | null | undefined): KwPro
   // Obszar: „45,50 M2" (lokal/budynek) lub „0,0450 HA" (działka).
   let landAreaHa: number | null = null;
   let landAreaM2: number | null = null;
-  const obszarHa = low.match(/obszar[^0-9]{0,20}(\d[\d\s.]*(?:,\d+)?)\s*ha\b/);
-  const obszarM2 = low.match(/obszar[^0-9]{0,20}(\d[\d\s.]*(?:,\d+)?)\s*m\s*(?:²|2)\b/);
+  // Luka do 40 znaków: pełna etykieta EKW to „Obszar całej nieruchomości".
+  const obszarHa = low.match(/obszar[^0-9]{0,40}(\d[\d\s.]*(?:,\d+)?)\s*ha\b/);
+  const obszarM2 = low.match(/obszar[^0-9]{0,40}(\d[\d\s.]*(?:,\d+)?)\s*m\s*(?:²|2)\b/);
   if (obszarHa) landAreaHa = parsePlNumber(obszarHa[1]);
   if (obszarM2) {
     const v = parsePlNumber(obszarM2[1]);
@@ -468,8 +488,27 @@ function extractMortgageCreditor(block: string): string | null {
   return null;
 }
 
+// Boilerplate strony EKW wokół treści działu IV: nagłówek („TREŚĆ KSIĘGI … DZIAŁ
+// IV - HIPOTEKA") zawiera słowo HIPOTEKA i numer własnej KW, a tabela „Komentarz
+// do migracji" występuje też w księgach BEZ żadnego wpisu hipoteki (EKW nie
+// drukuje wtedy „BRAK WPISÓW"). Bez odcięcia heurystyka fragmentów tworzyła
+// fałszywą hipotekę z samego nagłówka.
+function stripSectionFourChrome(text: string): string {
+  return text
+    .replace(/^[\s\S]{0,600}?DZIA[ŁL]\s+IV\s*[-–—]?\s*HIPOTEKA/i, " ")
+    .replace(/\bPowr[óo]t\b\s*$/i, " ")
+    .replace(
+      /komentarz\s+do\s+migracji[\s\S]{0,400}?ostatni\s+numer\s+aktualnego\s+lub\s+wykre[śs]lonego\s+wpisu\s+w\s+danym\s+dziale\s+w\s+dotychczasowej\s+ksi[ęe]dze\s+wieczystej\s*\d*\s*(?:-{2,3})?/gi,
+      " ",
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function parseMortgages(dzial4: string | null | undefined): KwLegalAnalysis["mortgages"] {
-  const text = stripHtml(dzial4);
+  const raw = stripHtml(dzial4);
+  if (!raw) return [];
+  const text = stripSectionFourChrome(raw);
   if (!text) return [];
 
   const hasEntryMarkers = MORTGAGE_ENTRY_RE.test(text);
