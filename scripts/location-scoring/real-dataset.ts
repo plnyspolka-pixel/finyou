@@ -389,24 +389,68 @@ export const ROWS: Row[] = [
     suburbs: [{ city: "Chełmża", lat: 53.18, lng: 18.6, pop: 14000 }],
   },
   {
+    // Zweryfikowane (ekw.plus/sady/WA1N): SR w Nowym Dworze Mazowieckim, IV Wydział KW.
     prefix: "WA1N",
-    court: "Sąd Rejonowy dla Warszawy (wydział do potwierdzenia)",
-    city: "Warszawa",
-    lat: 52.2297,
-    lng: 21.0122,
-    pop: 1800000,
-    conf: 0.55,
-    fua: "core",
+    court: "Sąd Rejonowy w Nowym Dworze Mazowieckim, IV Wydział Ksiąg Wieczystych",
+    city: "Nowy Dwór Mazowiecki",
+    lat: 52.4304,
+    lng: 20.7104,
+    pop: 28500,
+    conf: 0.85,
+    fua: "commuting_zone",
     fuaCode: "PL001",
+    suburbs: [{ city: "Zakroczym", lat: 52.426, lng: 20.611, pop: 3100 }],
   },
   {
+    // Zweryfikowane (ekw.plus/sady/SW2K): SR w Kłodzku, VII Zamiejscowy Wydział KW
+    // z siedzibą w Nowej Rudzie (poprzednio błędnie: Suwałki).
     prefix: "SW2K",
-    court: "Sąd Rejonowy w Suwałkach",
-    city: "Suwałki",
-    lat: 54.1113,
-    lng: 22.9309,
-    pop: 69000,
-    conf: 0.7,
+    court: "Sąd Rejonowy w Kłodzku, VII Zamiejscowy Wydział KW w Nowej Rudzie",
+    city: "Nowa Ruda",
+    lat: 50.5769,
+    lng: 16.5013,
+    pop: 22000,
+    conf: 0.85,
+    suburbs: [{ city: "Radków", lat: 50.503, lng: 16.395, pop: 8500 }],
+  },
+  {
+    // Zweryfikowane: SR dla Łodzi-Śródmieścia w Łodzi, XVI Wydział KW.
+    // Geograficznie tożsame z LD1Y (Łódź) — obszary dzielone przez oba prefiksy.
+    prefix: "LD1M",
+    court: "Sąd Rejonowy dla Łodzi-Śródmieścia w Łodzi, XVI Wydział Ksiąg Wieczystych",
+    city: "Łódź",
+    lat: 51.7592,
+    lng: 19.4559,
+    pop: 670000,
+    conf: 0.85,
+    fua: "core",
+    fuaCode: "PL003",
+    suburbs: [
+      { city: "Pabianice", lat: 51.66, lng: 19.35, pop: 63000 },
+      { city: "Zgierz", lat: 51.86, lng: 19.4, pop: 56000 },
+      { city: "Aleksandrów Łódzki", lat: 51.82, lng: 19.3, pop: 22000 },
+    ],
+  },
+  {
+    // Zweryfikowane (ekw.plus/sady/PL1O): SR w Sochaczewie, V Wydział KW.
+    prefix: "PL1O",
+    court: "Sąd Rejonowy w Sochaczewie, V Wydział Ksiąg Wieczystych",
+    city: "Sochaczew",
+    lat: 52.2297,
+    lng: 20.2378,
+    pop: 34000,
+    conf: 0.85,
+  },
+  {
+    // Wariant z literówką występujący w danych wniosków (cyfra 0 zamiast litery O).
+    // Mapowany jak PL1O (Sochaczew) z niską pewnością — analogicznie do K01B.
+    prefix: "PL10",
+    court: "Sąd Rejonowy w Sochaczewie (prawdopodobna literówka prefiksu PL1O)",
+    city: "Sochaczew",
+    lat: 52.2297,
+    lng: 20.2378,
+    pop: 34000,
+    conf: 0.35,
   },
 ];
 
