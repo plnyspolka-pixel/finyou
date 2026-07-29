@@ -282,6 +282,76 @@ function LocationCell({
   );
 }
 
+// Wspólne dane pochodne wiersza — używane przez widok tabeli (desktop)
+// i widok kart (mobile), żeby nie duplikować logiki źródeł/kompletności.
+// Źródło danych POGŁĘBIONYCH (kwota, KW, zdjęcia) obliczane per pole na
+// podstawie faktów z bazy: dokumenty z Messengera, maile z załącznikami,
+// EKW, uploader z panelu itd. Meta Lead Ads nie może dostarczyć tych pól,
+// więc ikonka pokazuje PRAWDZIWE źródło (np. Messenger, mail, ręcznie).
+function deriveRow(r: Row, ctx: EnrichmentContext) {
+  const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
+  const kwNums = (r.properties ?? [])
+    .map((p) => p.land_register_number)
+    .filter((x): x is string => !!x && x.trim().length > 0);
+  const allPhotos = (r.properties ?? []).flatMap((p) => (Array.isArray(p.photos) ? p.photos : []));
+  const canonStatus = normalizeLoanStatus(r.status);
+  const isComplete = COMPLETE_STATUSES.includes(canonStatus);
+  const core = coreOf(r);
+  const needsFix = isComplete && !core.complete;
+  const appSource = r.source;
+  const clientSource = r.client?.source ?? appSource;
+  const clientId = r.client?.id ?? null;
+  const amountSrc: FieldSource | null = inferAmountSource(
+    r.id,
+    r.loan_amount,
+    appSource,
+    clientId,
+    ctx,
+  );
+  const mediaSrc: FieldSource | null = inferMediaSource(
+    r.id,
+    allPhotos.length + (r.docCount ?? 0) > 0,
+    appSource,
+    ctx,
+  );
+  return {
+    name,
+    kwNums,
+    allPhotos,
+    canonStatus,
+    isComplete,
+    core,
+    needsFix,
+    appSource,
+    clientSource,
+    clientId,
+    amountSrc,
+    mediaSrc,
+  };
+}
+
+type DerivedRow = ReturnType<typeof deriveRow>;
+
+function StatusBadge({ d }: { d: DerivedRow }) {
+  return (
+    <Badge
+      variant={
+        d.needsFix
+          ? "outline"
+          : d.isComplete
+            ? "default"
+            : d.canonStatus === "nowy_lead"
+              ? "secondary"
+              : "outline"
+      }
+      className={`whitespace-normal text-[11px] leading-tight ${d.needsFix ? "border-amber-400 text-amber-700" : ""}`}
+    >
+      {d.needsFix && <AlertTriangle className="h-3 w-3 mr-1 inline shrink-0" />}
+      {LOAN_STATUS_SHORT_LABELS[d.canonStatus]}
+    </Badge>
+  );
+}
+
 function ApplicationsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [ctx, setCtx] = useState<EnrichmentContext>(() => ({
@@ -629,9 +699,47 @@ function ApplicationsPage() {
     return out;
   }, [applications, q, sort, tab, locFilter]);
 
+  // Przyciski akcji wiersza — identyczne w tabeli (desktop) i na karcie (mobile).
+  const rowActions = (r: Row, d: DerivedRow) => (
+    <div className="flex items-center justify-end gap-0.5">
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0"
+        onClick={() => setPreview({ id: r.id, paths: d.allPhotos, name: d.name })}
+        title="Podgląd"
+      >
+        <Eye className="h-3.5 w-3.5" />
+      </Button>
+      <Button asChild size="sm" variant="ghost" className="h-8 px-2">
+        <Link to="/admin/wnioski/$id" params={{ id: r.id }}>
+          Otwórz
+        </Link>
+      </Button>
+      {d.needsFix && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+          onClick={() => void demote([r.id])}
+          title="Cofnij do kompletowania danych"
+        >
+          <Undo2 className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {r.return_link && (
+        <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
+          <a href={r.return_link} target="_blank" rel="noreferrer" title="Link zwrotny">
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </Button>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">Wnioski</h1>
           <p className="text-sm text-muted-foreground">
@@ -699,7 +807,122 @@ function ApplicationsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table className="w-full table-fixed text-sm [&_th]:text-xs">
+          {/* Mobile: karty zamiast tabeli — 10 kolumn nie mieści się na ekranie telefonu. */}
+          <div className="md:hidden space-y-3">
+            {loading && (
+              <div className="py-8 text-center text-sm text-muted-foreground">Ładowanie…</div>
+            )}
+            {!loading && filtered.length === 0 && (
+              <div className="py-8 text-center text-sm text-muted-foreground">Brak wniosków.</div>
+            )}
+            {!loading &&
+              filtered.map((r) => {
+                const d = deriveRow(r, ctx);
+                return (
+                  <div
+                    key={r.id}
+                    className={`rounded-lg border p-3 space-y-2 ${d.needsFix ? "bg-amber-50/60" : "bg-card"}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1 font-medium" title={d.name}>
+                          <SourceIcon
+                            source={d.clientSource}
+                            title={`Imię i nazwisko — źródło: ${leadSourceLabel(d.clientSource)}`}
+                          />
+                          <span className="truncate">{d.name}</span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          {leadSourceLabel(d.appSource)}
+                          {r.current_form_step != null ? ` · krok ${r.current_form_step}` : ""}
+                        </div>
+                      </div>
+                      <div className="shrink-0">
+                        <StatusBadge d={d} />
+                      </div>
+                    </div>
+
+                    <div className="text-xs space-y-0.5">
+                      <div className="truncate" title={r.client?.email ?? ""}>
+                        {r.client?.email ?? "—"}
+                      </div>
+                      <div className="text-muted-foreground truncate" title={r.client?.phone ?? ""}>
+                        {r.client?.phone ?? "—"}
+                      </div>
+                    </div>
+
+                    {d.core.complete ? (
+                      <div className="text-[11px] text-emerald-600">komplet</div>
+                    ) : (
+                      <div className="flex flex-wrap gap-0.5">
+                        {missingLabels(d.core.missing).map((label) => (
+                          <Badge
+                            key={label}
+                            variant="outline"
+                            className="text-[10px] text-muted-foreground border-muted-foreground/30 px-1 py-0 font-normal"
+                          >
+                            {label}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                      <span className="inline-flex items-center gap-1 text-sm font-semibold tabular-nums">
+                        {d.amountSrc && (
+                          <SourceIcon source={d.amountSrc.key} title={d.amountSrc.title} />
+                        )}
+                        {fmtPLN(r.loan_amount)}
+                      </span>
+                      <LocationCell
+                        score={r.location_potential_score}
+                        confidence={r.location_confidence_score}
+                        priority={r.location_analysis_priority}
+                      />
+                    </div>
+
+                    {d.kwNums.length > 0 && (
+                      <div className="flex flex-col gap-0.5 text-xs">
+                        {d.kwNums.map((k, i) => {
+                          const s = inferKwSource(r.id, k, d.appSource, d.clientId, ctx);
+                          return (
+                            <span key={i} className="flex items-center gap-1 font-mono" title={k}>
+                              {s && <SourceIcon source={s.key} title={s.title} />}
+                              <span className="truncate">{k}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1">
+                      {d.mediaSrc && (
+                        <SourceIcon source={d.mediaSrc.key} title={d.mediaSrc.title} />
+                      )}
+                      <MediaThumbs
+                        photoPaths={d.allPhotos}
+                        docCount={r.docCount ?? 0}
+                        onOpen={() => setPreview({ id: r.id, paths: d.allPhotos, name: d.name })}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 border-t pt-2">
+                      <span
+                        className="text-[11px] text-muted-foreground"
+                        title={`Utworzono: ${fmtDate(r.created_at)}`}
+                      >
+                        {fmtDate(r.updated_at)}
+                      </span>
+                      {rowActions(r, d)}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          {/* Desktop: pełna tabela; min-w wymusza poziomy scroll zamiast miażdżenia
+              kolumn, gdy kontener jest węższy (wrapper Table ma overflow-auto). */}
+          <Table className="hidden md:table w-full table-fixed min-w-[1000px] text-sm [&_th]:text-xs">
             <TableHeader>
               <TableRow>
                 <SortHeader
@@ -766,54 +989,22 @@ function ApplicationsPage() {
                 </TableRow>
               )}
               {filtered.map((r) => {
-                const name =
-                  [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
-                const kwNums = (r.properties ?? [])
-                  .map((p) => p.land_register_number)
-                  .filter((x): x is string => !!x && x.trim().length > 0);
-                const allPhotos = (r.properties ?? []).flatMap((p) =>
-                  Array.isArray(p.photos) ? p.photos : [],
-                );
-                const canonStatus = normalizeLoanStatus(r.status);
-                const isComplete = COMPLETE_STATUSES.includes(canonStatus);
-                const core = coreOf(r);
-                const needsFix = isComplete && !core.complete;
-                // Źródło danych POGŁĘBIONYCH (kwota, KW, zdjęcia) obliczane
-                // per pole na podstawie faktów z bazy: dokumenty z Messengera,
-                // maile z załącznikami, EKW, uploader z panelu itd. Meta Lead
-                // Ads nie może dostarczyć tych pól, więc ikonka będzie
-                // pokazywać PRAWDZIWE źródło (np. Messenger, mail, ręcznie).
-                const appSource = r.source;
-                const clientSource = r.client?.source ?? appSource;
-                const clientId = r.client?.id ?? null;
-                const amountSrc: FieldSource | null = inferAmountSource(
-                  r.id,
-                  r.loan_amount,
-                  appSource,
-                  clientId,
-                  ctx,
-                );
-                const mediaSrc: FieldSource | null = inferMediaSource(
-                  r.id,
-                  allPhotos.length + (r.docCount ?? 0) > 0,
-                  appSource,
-                  ctx,
-                );
+                const d = deriveRow(r, ctx);
                 return (
-                  <TableRow key={r.id} className={needsFix ? "bg-amber-50/60" : undefined}>
+                  <TableRow key={r.id} className={d.needsFix ? "bg-amber-50/60" : undefined}>
                     <TableCell className="font-medium align-top">
-                      <div className="flex items-center gap-1 truncate" title={name}>
+                      <div className="flex items-center gap-1 truncate" title={d.name}>
                         <SourceIcon
-                          source={clientSource}
-                          title={`Imię i nazwisko — źródło: ${leadSourceLabel(clientSource)}`}
+                          source={d.clientSource}
+                          title={`Imię i nazwisko — źródło: ${leadSourceLabel(d.clientSource)}`}
                         />
-                        <span className="truncate">{name}</span>
+                        <span className="truncate">{d.name}</span>
                       </div>
                       <div
                         className="text-[10px] text-muted-foreground truncate"
-                        title={leadSourceLabel(appSource)}
+                        title={leadSourceLabel(d.appSource)}
                       >
-                        {leadSourceLabel(appSource)}
+                        {leadSourceLabel(d.appSource)}
                         {r.current_form_step != null ? ` · krok ${r.current_form_step}` : ""}
                       </div>
                     </TableCell>
@@ -824,8 +1015,8 @@ function ApplicationsPage() {
                       >
                         {r.client?.email && (
                           <SourceIcon
-                            source={clientSource}
-                            title={`E-mail — źródło: ${leadSourceLabel(clientSource)}`}
+                            source={d.clientSource}
+                            title={`E-mail — źródło: ${leadSourceLabel(d.clientSource)}`}
                           />
                         )}
                         <span className="truncate">{r.client?.email ?? "—"}</span>
@@ -836,36 +1027,22 @@ function ApplicationsPage() {
                       >
                         {r.client?.phone && (
                           <SourceIcon
-                            source={clientSource}
-                            title={`Telefon — źródło: ${leadSourceLabel(clientSource)}`}
+                            source={d.clientSource}
+                            title={`Telefon — źródło: ${leadSourceLabel(d.clientSource)}`}
                           />
                         )}
                         <span className="truncate">{r.client?.phone ?? "—"}</span>
                       </div>
                     </TableCell>
                     <TableCell className="align-top">
-                      <Badge
-                        variant={
-                          needsFix
-                            ? "outline"
-                            : isComplete
-                              ? "default"
-                              : canonStatus === "nowy_lead"
-                                ? "secondary"
-                                : "outline"
-                        }
-                        className={`whitespace-normal text-[11px] leading-tight ${needsFix ? "border-amber-400 text-amber-700" : ""}`}
-                      >
-                        {needsFix && <AlertTriangle className="h-3 w-3 mr-1 inline shrink-0" />}
-                        {LOAN_STATUS_SHORT_LABELS[canonStatus]}
-                      </Badge>
+                      <StatusBadge d={d} />
                     </TableCell>
                     <TableCell className="align-top">
-                      {core.complete ? (
+                      {d.core.complete ? (
                         <span className="text-[11px] text-emerald-600">komplet</span>
                       ) : (
                         <div className="flex flex-wrap gap-0.5">
-                          {missingLabels(core.missing).map((label) => (
+                          {missingLabels(d.core.missing).map((label) => (
                             <Badge
                               key={label}
                               variant="outline"
@@ -879,19 +1056,21 @@ function ApplicationsPage() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums align-top">
                       <div className="inline-flex items-center gap-1">
-                        {amountSrc && <SourceIcon source={amountSrc.key} title={amountSrc.title} />}
-                        <span>{fmtPLN(r.loan_amount as any)}</span>
+                        {d.amountSrc && (
+                          <SourceIcon source={d.amountSrc.key} title={d.amountSrc.title} />
+                        )}
+                        <span>{fmtPLN(r.loan_amount)}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-xs align-top">
-                      {kwNums.length === 0 ? (
+                      {d.kwNums.length === 0 ? (
                         <Badge variant="outline" className="text-muted-foreground">
                           brak
                         </Badge>
                       ) : (
                         <div className="flex flex-col gap-0.5">
-                          {kwNums.map((k, i) => {
-                            const s = inferKwSource(r.id, k, appSource, clientId, ctx);
+                          {d.kwNums.map((k, i) => {
+                            const s = inferKwSource(r.id, k, d.appSource, d.clientId, ctx);
                             return (
                               <span
                                 key={i}
@@ -915,11 +1094,13 @@ function ApplicationsPage() {
                     </TableCell>
                     <TableCell className="align-top">
                       <div className="flex items-center gap-1">
-                        {mediaSrc && <SourceIcon source={mediaSrc.key} title={mediaSrc.title} />}
+                        {d.mediaSrc && (
+                          <SourceIcon source={d.mediaSrc.key} title={d.mediaSrc.title} />
+                        )}
                         <MediaThumbs
-                          photoPaths={allPhotos}
+                          photoPaths={d.allPhotos}
                           docCount={r.docCount ?? 0}
-                          onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })}
+                          onOpen={() => setPreview({ id: r.id, paths: d.allPhotos, name: d.name })}
                         />
                       </div>
                     </TableCell>
@@ -929,47 +1110,7 @@ function ApplicationsPage() {
                     >
                       {fmtDate(r.updated_at)}
                     </TableCell>
-                    <TableCell className="text-right align-top">
-                      <div className="flex items-center justify-end gap-0.5">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                          onClick={() => setPreview({ id: r.id, paths: allPhotos, name })}
-                          title="Podgląd"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button asChild size="sm" variant="ghost" className="h-8 px-2">
-                          <Link to="/admin/wnioski/$id" params={{ id: r.id }}>
-                            Otwórz
-                          </Link>
-                        </Button>
-                        {needsFix && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
-                            onClick={() => void demote([r.id])}
-                            title="Cofnij do kompletowania danych"
-                          >
-                            <Undo2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {r.return_link && (
-                          <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <a
-                              href={r.return_link}
-                              target="_blank"
-                              rel="noreferrer"
-                              title="Link zwrotny"
-                            >
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+                    <TableCell className="text-right align-top">{rowActions(r, d)}</TableCell>
                   </TableRow>
                 );
               })}
