@@ -515,7 +515,7 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                       <span className="text-xs text-white/70">{timeAgo(it.created_at)}</span>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
+                    <div className="mt-3 flex flex-wrap justify-between gap-3 text-sm">
                       <div>
                         <div className="text-[11px] uppercase tracking-wide text-white/60">
                           Kwota

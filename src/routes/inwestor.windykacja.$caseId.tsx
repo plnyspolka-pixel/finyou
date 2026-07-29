@@ -406,10 +406,10 @@ function WindykacjaCaseCard() {
         {/* LEWA — oś czasu */}
         <div className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+            <CardHeader className="flex flex-col items-start gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-base">Oś czasu zdarzeń</CardTitle>
               <Select value={eventFilter} onValueChange={setEventFilter}>
-                <SelectTrigger className="w-[160px] h-8">
+                <SelectTrigger className="h-8 w-full sm:w-[160px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -167,7 +167,9 @@ export function TwoColSlider({ slides }: { slides: TwoColSlide[] }) {
         style={{
           marginTop: "2rem",
           display: "grid",
-          gridTemplateColumns: `repeat(${n}, 1fr)`,
+          // auto-fit zamiast repeat(n, 1fr): na telefonie kafelki zawijają się
+          // do 2 kolumn zamiast ściskać etykiety do jednej litery w wierszu.
+          gridTemplateColumns: "repeat(auto-fit, minmax(7.5rem, 1fr))",
           gap: "0.6rem",
         }}
       >
@@ -434,7 +436,8 @@ export function SmartOfferSlider({
         style={{
           marginTop: "clamp(1.4rem, 2.6vw, 2rem)",
           display: "grid",
-          gridTemplateColumns: `repeat(${n}, 1fr)`,
+          // auto-fit zamiast repeat(n, 1fr) — patrz TwoColSlider wyżej.
+          gridTemplateColumns: "repeat(auto-fit, minmax(7.5rem, 1fr))",
           gap: "0.6rem",
         }}
       >

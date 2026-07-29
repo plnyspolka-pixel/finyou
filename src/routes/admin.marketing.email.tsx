@@ -690,7 +690,7 @@ function CampaignEditor({
             <Label>Preview (tekst pod tematem)</Label>
             <Input value={preview} onChange={(e) => setPreview(e.target.value)} />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <Label>Nadawca (imię)</Label>
               <Input value={fromName} onChange={(e) => setFromName(e.target.value)} />
