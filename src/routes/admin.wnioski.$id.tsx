@@ -34,6 +34,7 @@ import { KwContentSection } from "@/components/kw-content-section";
 import { KwAnalysisSection } from "@/components/kw-analysis/kw-analysis-section";
 import { LocationScoringSection } from "@/components/location-scoring/location-scoring-section";
 import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
+import { OwnerBusinessActivitySection } from "@/components/admin/OwnerBusinessActivitySection";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FileThumb } from "@/components/media/FileThumb";
 import { ClientFilesManager } from "@/components/media/ClientFilesManager";
@@ -285,6 +286,7 @@ function WniosekDetail() {
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>
           <TabsTrigger value="analiza-kw">Analiza KW</TabsTrigger>
+          <TabsTrigger value="dzialalnosc">Działalność gospodarcza</TabsTrigger>
           <TabsTrigger value="lokalizacja">Lokalizacja</TabsTrigger>
           <TabsTrigger value="ryzyko">Ocena ryzyka</TabsTrigger>
           <TabsTrigger value="dokumenty">
@@ -559,6 +561,10 @@ function WniosekDetail() {
             defaultPropertyValue={p?.estimated_value ?? null}
             defaultLoanExposure={app.loan_amount ?? null}
           />
+        </TabsContent>
+
+        <TabsContent value="dzialalnosc" className="space-y-4">
+          <OwnerBusinessActivitySection applicationId={id} />
         </TabsContent>
 
         <TabsContent value="lokalizacja" className="space-y-4">

@@ -8,7 +8,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parsePesel, type PeselInfo } from "./pesel";
 import { estimateLifeExpectancy } from "./life-expectancy";
 import { extractKwOwnerPesels } from "./kw-parser.server";
-import { lookupCeidgActivity, emptyCeidg } from "./ceidg-lookup.server";
+import { emptyCeidg } from "./ceidg-lookup.server";
 import type { OwnerProfile, KwLegalAnalysis } from "./types";
 
 function normalizeName(s: string): string {
@@ -169,19 +169,11 @@ export async function analyzeOwner(args: {
     );
   }
 
-  // CEIDG — czy właściciel jest już przedsiębiorcą (JDG). Aktywna działalność obniża ryzyko.
-  const businessActivity = await lookupCeidgActivity({
-    firstName: client.first_name ?? null,
-    lastName: client.last_name ?? null,
-    nip: (client as any).nip ?? null,
-    city: args.city ?? (client as any).city ?? null,
-    voivodeship: args.voivodeship ?? null,
-  }).catch((e: any) => emptyCeidg(`Błąd sprawdzenia CEIDG: ${e?.message ?? "nieznany"}.`));
-  if (businessActivity.isEntrepreneur) {
-    notes.push(
-      `Właściciel jest przedsiębiorcą (aktywny wpis w CEIDG${businessActivity.company?.startDate ? `, od ${businessActivity.company.startDate}` : ""}) — czynnik obniżający ryzyko.`,
-    );
-  }
+  // CEIDG — sprawdzenie działalności przeniesione do osobnej zakładki wniosku
+  // („Działalność gospodarcza", owner-business-check) — tu tylko pusty placeholder.
+  const businessActivity = emptyCeidg(
+    "Sprawdzenie działalności gospodarczej przeniesione do osobnej zakładki wniosku.",
+  );
 
   return {
     fullName,
