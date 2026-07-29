@@ -30,6 +30,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { leadSourceLabel } from "@/lib/lead-source";
 
 import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
+import { CoOwnersSection } from "@/components/coowners/coowners-section";
 import { KwContentSection } from "@/components/kw-content-section";
 import { KwAnalysisSection } from "@/components/kw-analysis/kw-analysis-section";
 import { LocationScoringSection } from "@/components/location-scoring/location-scoring-section";
@@ -285,6 +286,7 @@ function WniosekDetail() {
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>
           <TabsTrigger value="analiza-kw">Analiza KW</TabsTrigger>
+          <TabsTrigger value="wspolwlasciciele">Współwłaściciele</TabsTrigger>
           <TabsTrigger value="lokalizacja">Lokalizacja</TabsTrigger>
           <TabsTrigger value="ryzyko">Ocena ryzyka</TabsTrigger>
           <TabsTrigger value="dokumenty">
@@ -559,6 +561,10 @@ function WniosekDetail() {
             defaultPropertyValue={p?.estimated_value ?? null}
             defaultLoanExposure={app.loan_amount ?? null}
           />
+        </TabsContent>
+
+        <TabsContent value="wspolwlasciciele" className="space-y-4">
+          <CoOwnersSection applicationId={id} />
         </TabsContent>
 
         <TabsContent value="lokalizacja" className="space-y-4">
