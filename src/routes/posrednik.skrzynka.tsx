@@ -19,11 +19,13 @@ import {
   Download,
   Reply,
   PenSquare,
+  History,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox/compose-email";
 import { AttachmentPreview } from "@/components/inbox/attachment-preview";
+import { CorrespondenceHistoryDialog } from "@/components/inbox/correspondence-history";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 import { FancyShell } from "@/components/landing/fancy-shell";
@@ -57,6 +59,7 @@ export function SkrzynkaPosrednika() {
   const [viewMode, setViewMode] = useState<"html" | "text">("html");
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeInitial, setComposeInitial] = useState<ComposeEmailInitial | undefined>(undefined);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -336,6 +339,17 @@ export function SkrzynkaPosrednika() {
                       Odpowiedz
                     </Button>
                   )}
+                  {selected.email && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                      onClick={() => setHistoryOpen(true)}
+                    >
+                      <History className="h-4 w-4 mr-2" />
+                      Historia
+                    </Button>
+                  )}
                   {selected.lead_id && (
                     <Button
                       asChild
@@ -435,6 +449,12 @@ export function SkrzynkaPosrednika() {
           setTab("outbound");
           refetch();
         }}
+      />
+
+      <CorrespondenceHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        email={selected?.email ?? null}
       />
     </div>
   );
