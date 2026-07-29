@@ -62,13 +62,26 @@ function matchNumber(text: string, label: string): string | null {
 
 /** Fallback: parsowanie po etykietach EKW z czystego tekstu (bez struktury tabeli). */
 function parseFromText(text: string): Omit<KwAddress, "fullAddress"> {
+  // Grunty: „Położenie (numer porządkowy / miejscowość) Lp. 1. 1 ANDRESPOL" —
+  // brak etykiety „Miejscowość", nazwa stoi po liczbie porządkowej.
+  const polozenieM = text.match(
+    new RegExp(
+      `[Pp]o[łl]o[żz]eni\\w*\\s*\\([^)]*miejscowo[śs][ćc][^)]*\\)\\s*(?:Lp\\.?\\s*\\d+\\.?\\s*)?(?:\\d+\\s+)?(${CAPS_SEQ})`,
+    ),
+  );
+  // „Ulica FREDRY 53" — numer budynku bywa doklejony do wartości ulicy,
+  // bez osobnej etykiety „Numer budynku".
+  const streetWithNoM = text.match(
+    new RegExp(`[Uu]lica\\s+(?:\\([^)]*\\)\\s*)?(${CAPS_SEQ})\\s+(\\d+[A-Za-z]?)\\b`),
+  );
   return {
     voivodeship: matchCaps(text, "[Ww]ojew[óo]dztwo"),
     powiat: matchCaps(text, "[Pp]owiat"),
     gmina: matchCaps(text, "[Gg]mina"),
-    city: matchCaps(text, "[Mm]iejscowo[śs][ćc]"),
+    city: matchCaps(text, "[Mm]iejscowo[śs][ćc]") ?? (polozenieM ? polozenieM[1] : null),
     street: matchCaps(text, "[Uu]lica"),
-    buildingNumber: matchNumber(text, "[Nn]umer budynku"),
+    buildingNumber:
+      matchNumber(text, "[Nn]umer budynku") ?? (streetWithNoM ? streetWithNoM[2] : null),
     unitNumber: matchNumber(text, "[Nn]umer lokalu"),
   };
 }
