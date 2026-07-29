@@ -425,3 +425,127 @@ describe("wersjonowanie i konfiguracja", () => {
     }
   });
 });
+
+// ── 8. „Dobra lokalizacja" = okolica większego skupiska (≥ ~20–30 tys.) ──────
+describe("probabilityGoodLocation — okolica skupiska ludzkiego", () => {
+  it("miasto ≥30 tys. i strefa podmiejska liczą się jako okolica skupiska", () => {
+    const r = scoreLocation(
+      ctx({
+        candidates: [
+          { area: bigCityCore, weight: 0.5 },
+          { area: suburb, weight: 0.5 },
+        ],
+      }),
+      { now: NOW },
+    );
+    expect(r.probabilityGoodLocation).toBe(1);
+  });
+
+  it("miasteczko ~25 tys. w promieniu 10 km kwalifikuje się mimo braku flag miejskich", () => {
+    const smallTownArea = area({
+      geoUnitId: "0601",
+      name: "Gmina przy mieście ~25 tys.",
+      populationWithin10Km: 26_000, // ≥ próg 25 000 → okolica skupiska
+      populationWithin25Km: 60_000,
+      populationWithin45Km: 150_000,
+      densityPerKm2: 120,
+      fuaRole: "none",
+    });
+    const r = scoreLocation(ctx({ candidates: [{ area: smallTownArea, weight: 1 }] }), {
+      now: NOW,
+    });
+    expect(r.probabilityGoodLocation).toBe(1);
+  });
+
+  it("odległa gmina bez skupiska w zasięgu NIE kwalifikuje się", () => {
+    const r = scoreLocation(ctx({ candidates: [{ area: remoteVillage, weight: 1 }] }), {
+      now: NOW,
+    });
+    expect(r.probabilityGoodLocation).toBe(0);
+  });
+
+  it("mieszany rozkład: szansa = masa prawdopodobieństwa obszarów przy skupisku", () => {
+    const r = scoreLocation(
+      ctx({
+        candidates: [
+          { area: bigCityCore, weight: 0.6 },
+          { area: remoteVillage, weight: 0.4 },
+        ],
+      }),
+      { now: NOW },
+    );
+    expect(r.probabilityGoodLocation).toBeCloseTo(0.6, 4);
+  });
+
+  it("próg ludności 10 km jest konfigurowalny", () => {
+    const nearTown = area({
+      geoUnitId: "0602",
+      name: "Gmina z 22 tys. w 10 km",
+      populationWithin10Km: 22_000,
+      populationWithin25Km: 40_000,
+      populationWithin45Km: 90_000,
+      densityPerKm2: 90,
+    });
+    const strict = mergeConfig({ nearSettlement: { minPopulationWithin10Km: 30_000 } });
+    const lenient = mergeConfig({ nearSettlement: { minPopulationWithin10Km: 20_000 } });
+    const rStrict = scoreLocation(
+      ctx({ candidates: [{ area: nearTown, weight: 1 }], config: strict }),
+      { now: NOW },
+    );
+    const rLenient = scoreLocation(
+      ctx({ candidates: [{ area: nearTown, weight: 1 }], config: lenient }),
+      { now: NOW },
+    );
+    expect(rStrict.probabilityGoodLocation).toBe(0);
+    expect(rLenient.probabilityGoodLocation).toBe(1);
+  });
+});
+
+// ── 9. Scoring bez rodzaju nieruchomości (propertyType="any") ────────────────
+describe("scoreLocation — rodzaj nieruchomości pomocniczy (any)", () => {
+  it("działa bez rodzaju: pełny wynik + zaznaczone ograniczenie", () => {
+    const r = scoreLocation(
+      ctx({
+        propertyType: "any",
+        candidates: [
+          { area: bigCityCore, weight: 0.7 },
+          { area: suburb, weight: 0.3 },
+        ],
+      }),
+      { now: NOW },
+    );
+    expect(r.decision).not.toBe("INSUFFICIENT_DATA");
+    expect(r.propertyType).toBe("any");
+    expect(r.probabilityGoodLocation).toBe(1);
+    expect(r.expectedLocationAttractiveness).toBeGreaterThan(60);
+    expect(r.explanation.limitations.join(" ")).toContain("Rodzaj nieruchomości nieokreślony");
+  });
+
+  it("wynik dla 'any' mieści się między wynikami rodzajów (rozkład zagregowany)", () => {
+    // Zagregowane wagi (suma po rodzajach) — tak buduje kandydatów warstwa
+    // serwerowa dla "any": rozkład ogólny, bez doprecyzowania rodzajem.
+    const perType = {
+      apartment: [
+        { area: bigCityCore, weight: 0.9 },
+        { area: remoteVillage, weight: 0.1 },
+      ],
+      plot: [
+        { area: bigCityCore, weight: 0.2 },
+        { area: remoteVillage, weight: 0.8 },
+      ],
+    };
+    const aggregated = [
+      { area: bigCityCore, weight: 0.9 + 0.2 },
+      { area: remoteVillage, weight: 0.1 + 0.8 },
+    ];
+    const apt = scoreLocation(ctx({ propertyType: "apartment", candidates: perType.apartment }), {
+      now: NOW,
+    });
+    const plot = scoreLocation(ctx({ propertyType: "plot", candidates: perType.plot }), {
+      now: NOW,
+    });
+    const any = scoreLocation(ctx({ propertyType: "any", candidates: aggregated }), { now: NOW });
+    expect(any.probabilityGoodLocation).toBeGreaterThan(plot.probabilityGoodLocation);
+    expect(any.probabilityGoodLocation).toBeLessThan(apt.probabilityGoodLocation);
+  });
+});

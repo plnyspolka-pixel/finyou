@@ -17,6 +17,13 @@
 
 export type PropertyType = "apartment" | "house" | "plot";
 
+/**
+ * Rodzaj nieruchomości w scoringu. Rodzaj jest POMOCNICZY (doprecyzowuje
+ * rozkład lokalizacji) — gdy jest nieznany/nieobsługiwany, scoring działa
+ * dalej na rozkładzie zagregowanym po wszystkich rodzajach ("any").
+ */
+export type ScoringPropertyType = PropertyType | "any";
+
 export type PlotType = "building" | "agricultural" | "commercial" | "unknown";
 
 /** Wejście modułu. Pola „declared*" są opcjonalne (rozszerzenie przyszłościowe). */
@@ -126,7 +133,7 @@ export type CourtDepartmentInfo = {
 /** Wejście do czystego rdzenia scoringowego (wszystko już wczytane z DB/ETL). */
 export type ScoringContext = {
   parsedKw: ParsedKwNumber;
-  propertyType: PropertyType;
+  propertyType: ScoringPropertyType;
   court: CourtDepartmentInfo | null;
   candidates: LocationCandidate[]; // możliwe lokalizacje z wagami
   observations: ObservationAggregate | null; // historia dla prefiks×rodzaj
@@ -145,7 +152,7 @@ export type LocationScoringResult = {
   applicationId: string;
   normalizedKwNumber: string; // ZAMASKOWANY numer (dane wrażliwe)
   kwPrefix: string;
-  propertyType: PropertyType;
+  propertyType: ScoringPropertyType;
 
   // Prawdopodobieństwa 0–1 (w UI pokazywane jako procenty).
   probabilityUrbanCore: number;

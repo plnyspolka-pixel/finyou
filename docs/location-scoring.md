@@ -7,15 +7,25 @@ zakresu analizy** — nie odrzuca definitywnie żadnego wniosku.
 
 ## Co robi
 
-Dla poprawnego numeru KW + rodzaju nieruchomości (mieszkanie / dom / działka)
-moduł szacuje:
+Dla poprawnego numeru KW moduł szacuje:
 
 1. prawdopodobny obszar położenia nieruchomości (rozkład prefiks × rodzaj),
-2. prawdopodobieństwo atrakcyjnego skupiska ludności,
-3. potencjał lokalizacyjny 0–100,
+2. **szansę, że nieruchomość leży w okolicy większego skupiska ludzkiego**
+   (`probability_good_location`) — to główna wielkość biznesowa; minimalna
+   akceptowalna granica skupiska to **~20–30 tys. mieszkańców** (miasto ≥30 tys.,
+   jego sąsiedztwo, FUA, klaster miejski lub ≥25 tys. ludności w promieniu 10 km;
+   próg konfigurowalny: `nearSettlement.minPopulationWithin10Km`),
+3. potencjał lokalizacyjny 0–100 (pomocniczy ranking),
 4. priorytet skierowania do automatycznej pełnej analizy,
 
 wraz ze wskaźnikiem pewności (`confidenceScore`) i przedziałem P10–mediana–P90.
+
+**Rodzaj nieruchomości jest pomocniczy.** Gdy jest znany (mieszkanie / dom /
+działka), doprecyzowuje rozkład lokalizacji. Gdy jest nieznany lub inny
+(lokal usługowy, udział, „inna", brak), scoring działa dalej na rozkładzie
+zagregowanym po wszystkich rodzajach — wynik zapisywany z
+`property_type='any'` (od migracji `20260729100000`). Sygnał repertoryjny
+(kalibrowany per prefiks × rodzaj) jest wtedy pomijany.
 
 Strefy podmiejskie, gminy graniczące z miastami i funkcjonalne obszary miejskie
 (FUA) są oceniane wysoko — dom/działka „na wsi”, ale kilka km od dużego miasta,

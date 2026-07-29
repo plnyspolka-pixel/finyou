@@ -17,6 +17,7 @@ export { logNormalize, computeBaseAttractiveness, clusterScore } from "./base-at
 export {
   computeDistribution,
   normalizeDistribution,
+  isNearSettlement,
   type DistributionResult,
 } from "./distribution";
 export { applyBayesianSmoothing, type BayesianAdjustment } from "./bayesian";
