@@ -36,9 +36,11 @@ function EmbedLeads() {
             Brak okazji do wyświetlenia.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden pb-3 [scrollbar-width:thin]">
             {data.map((l) => (
-              <LeadCard key={l.id} lead={l} />
+              <div key={l.id} className="w-[300px] shrink-0 snap-start sm:w-[340px]">
+                <LeadCard lead={l} />
+              </div>
             ))}
           </div>
         )}

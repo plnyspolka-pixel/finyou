@@ -1,11 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
   Section,
   SectionHead,
   FeatureGrid,
-  ComparisonTable,
   PricingCard,
   FAQ,
   ComplianceNote,
@@ -238,16 +236,6 @@ const WINDYKACJA: TwoColSlide[] = [
   },
 ];
 
-const COMPARE: [string, string][] = [
-  ["Chaos w dokumentach", "Uporządkowany proces"],
-  ["Brak procedury", "Gotowe wzory dokumentów"],
-  ["Ręczna analiza", "Szkolenia i baza wiedzy"],
-  ["Samodzielne szukanie klientów", "Dostęp do zgłoszeń klientów"],
-  ["Trudna windykacja", "AI do komunikacji i przypomnień"],
-  ["Kosztowna obsługa", "Statusy spraw i rejestr działań"],
-  ["Brak CRM", "Wsparcie compliance"],
-];
-
 const AI: FeatureItemData[] = [
   {
     icon: "updates",
@@ -442,17 +430,6 @@ function InvestorLanding() {
         <SectionHead eyebrow="Co otrzymujesz" title="Wszystko, czego potrzebuje inwestor" />
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={GET} icon3d />
-        </div>
-      </Section>
-
-      <Section tint>
-        <SectionHead center eyebrow="Porównanie" title="Samodzielnie vs Finance You" />
-        <div style={{ marginTop: "2.5rem", maxWidth: "60rem", marginInline: "auto" }}>
-          <ComparisonTable
-            left="Samodzielnie"
-            rightLabel={<FinanceYouLogo variant="dark" size="sm" />}
-            rows={COMPARE}
-          />
         </div>
       </Section>
 
