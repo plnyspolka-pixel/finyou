@@ -19,6 +19,7 @@ import {
   Download,
   Reply,
   PenSquare,
+  History,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -26,6 +27,7 @@ import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox/compose-email";
 import { AttachmentPreview } from "@/components/inbox/attachment-preview";
+import { CorrespondenceHistoryDialog } from "@/components/inbox/correspondence-history";
 
 export const Route = createFileRoute("/admin/skrzynka")({
   component: SkrzynkaPage,
@@ -51,6 +53,7 @@ function SkrzynkaPage() {
   const [viewMode, setViewMode] = useState<"html" | "text">("html");
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeInitial, setComposeInitial] = useState<ComposeEmailInitial | undefined>(undefined);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const qc = useQueryClient();
   const refetchBodyFn = useServerFn(refetchInboundEmailBody);
   const refetchBody = useMutation({
@@ -273,6 +276,12 @@ function SkrzynkaPage() {
                       Odpowiedz
                     </Button>
                   )}
+                  {selected.email && (
+                    <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>
+                      <History className="h-4 w-4 mr-2" />
+                      Historia
+                    </Button>
+                  )}
                   {selected.lead_id && (
                     <Button asChild variant="outline" size="sm">
                       <Link to="/admin/klienci/$id" params={{ id: selected.lead_id }}>
@@ -365,6 +374,12 @@ function SkrzynkaPage() {
           setTab("outbound");
           refetch();
         }}
+      />
+
+      <CorrespondenceHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        email={selected?.email ?? null}
       />
     </div>
   );
