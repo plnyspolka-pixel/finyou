@@ -169,7 +169,6 @@ function WniosekDetail() {
   }, [id]);
 
   const changeStatus = async (newStatus: string) => {
-    const prev = app?.status;
     const { error } = await supabase
       .from("loan_applications")
       .update({ status: newStatus as any })
@@ -178,13 +177,8 @@ function WniosekDetail() {
       toast.error("Błąd", { description: error.message });
       return;
     }
-    await supabase.from("audit_logs").insert({
-      object_type: "loan_application",
-      object_id: id,
-      action: "status_change",
-      previous_value: { status: prev },
-      new_value: { status: newStatus },
-    });
+    // Wpis do audit_logs tworzy teraz trigger trg_audit_loan_status
+    // (z prawidłowym user_id) — ręczny insert dublował zdarzenie.
     toast.success("Zmieniono status");
     void load();
   };
