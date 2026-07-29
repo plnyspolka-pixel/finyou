@@ -301,10 +301,12 @@ function LocationScoringConfigPage() {
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field
-            label="Próg dobrej lokalizacji"
-            value={config.goodLocationThreshold}
-            onChange={(v) => setConfig({ ...config, goodLocationThreshold: v })}
-            step="1"
+            label="Okolica skupiska: min. ludność w 10 km"
+            value={config.nearSettlement.minPopulationWithin10Km}
+            onChange={(v) =>
+              setConfig({ ...config, nearSettlement: { minPopulationWithin10Km: v } })
+            }
+            step="1000"
           />
           <Field
             label="AUTO_HIGH: score"

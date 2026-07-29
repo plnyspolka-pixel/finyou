@@ -28,6 +28,7 @@ import {
   type LocationScoringConfig,
   type ObservationAggregate,
   type PropertyType,
+  type ScoringPropertyType,
   type ScoringContext,
   type LocationScoringResult,
   type EvalPair,
@@ -152,19 +153,46 @@ async function loadCourt(db: SupabaseClient, prefix: string) {
 }
 
 // ── Ładowanie kandydatów (wagi rodzaju × agregaty obszaru) ───────────────────
+// Dla propertyType="any" (rodzaj nieznany — sygnał pomocniczy) wagi są SUMOWANE
+// po wszystkich rodzajach per obszar: rozkład ogólny „gdzie leżą nieruchomości
+// tego wydziału", bez doprecyzowania rodzajem.
 async function loadCandidates(
   db: SupabaseClient,
   prefix: string,
-  propertyType: PropertyType,
+  propertyType: ScoringPropertyType,
   dataVersion: string,
 ): Promise<LocationCandidate[]> {
-  const { data: weights } = await db
+  let q = db
     .from("property_type_location_weights")
     .select("teryt, weight, source_quality")
     .eq("prefix", prefix)
-    .eq("property_type", propertyType)
     .eq("data_version", dataVersion);
-  if (!weights || weights.length === 0) return [];
+  if (propertyType !== "any") q = q.eq("property_type", propertyType);
+  const { data: rawWeights } = await q;
+  if (!rawWeights || rawWeights.length === 0) return [];
+
+  // Agregacja per teryt (dla "any" ten sam obszar występuje raz na rodzaj):
+  // waga = suma, jakość = najgorsza z łączonych.
+  const qualityRank = { high: 0, medium: 1, low: 2 } as const;
+  const byTeryt = new Map<string, { weight: number; source_quality: string }>();
+  for (const w of rawWeights) {
+    const teryt = w.teryt as string;
+    const prev = byTeryt.get(teryt);
+    const wq = (w.source_quality as keyof typeof qualityRank) ?? "medium";
+    if (!prev) {
+      byTeryt.set(teryt, { weight: Number(w.weight ?? 0), source_quality: wq });
+    } else {
+      prev.weight += Number(w.weight ?? 0);
+      if (qualityRank[wq] > qualityRank[prev.source_quality as keyof typeof qualityRank]) {
+        prev.source_quality = wq;
+      }
+    }
+  }
+  const weights = Array.from(byTeryt.entries()).map(([teryt, v]) => ({
+    teryt,
+    weight: v.weight,
+    source_quality: v.source_quality,
+  }));
 
   const teryts = weights.map((w) => w.teryt as string);
   const [{ data: metrics }, { data: units }] = await Promise.all([
@@ -218,16 +246,19 @@ async function loadCandidates(
 }
 
 // ── Agregacja obserwacji historycznych (prefiks × rodzaj) ────────────────────
+// Dla "any" bierzemy empirię CAŁEGO prefiksu (wszystkie rodzaje) — obserwacje
+// są zapisywane zawsze z konkretnym rodzajem, więc filtr znika.
 async function loadObservations(
   db: SupabaseClient,
   prefix: string,
-  propertyType: PropertyType,
+  propertyType: ScoringPropertyType,
 ): Promise<ObservationAggregate | null> {
-  const { data } = await db
+  let q = db
     .from("kw_location_observations")
     .select("real_attractiveness, good_location")
-    .eq("kw_prefix", prefix)
-    .eq("property_type", propertyType);
+    .eq("kw_prefix", prefix);
+  if (propertyType !== "any") q = q.eq("property_type", propertyType);
+  const { data } = await q;
   if (!data || data.length === 0) return null;
   const withAttr = data.filter((o) => o.real_attractiveness != null);
   const sampleCount = withAttr.length;
@@ -275,7 +306,7 @@ async function persistResult(
   args: {
     loanApplicationId: string | null;
     parsed: ReturnType<typeof parseKwNumber>;
-    propertyType: PropertyType;
+    propertyType: ScoringPropertyType;
     result: LocationScoringResult;
     dataVersion: string;
     contextParams: Record<string, unknown>;
@@ -346,8 +377,9 @@ async function persistResult(
 const runInputSchema = z.object({
   applicationId: z.string().uuid().nullish(),
   kwNumber: z.string().min(3),
-  // Akceptujemy zarówno typ scoringowy, jak i enum bazy (mapowany).
-  propertyType: z.string().min(2),
+  // Akceptujemy typ scoringowy, enum bazy (mapowany) LUB brak — rodzaj jest
+  // pomocniczy; bez niego scoring działa na rozkładzie "any".
+  propertyType: z.string().nullish(),
 });
 
 /**
@@ -363,7 +395,7 @@ const runInputSchema = z.object({
  */
 export async function scoreApplicationCore(
   db: SupabaseClient,
-  input: { applicationId?: string | null; kwNumber: string; propertyType: string },
+  input: { applicationId?: string | null; kwNumber: string; propertyType?: string | null },
   createdBy: string | null,
 ): Promise<{
   ok: boolean;
@@ -372,33 +404,21 @@ export async function scoreApplicationCore(
   analysisId?: string | null;
   result?: LocationScoringResult;
 }> {
-  const propertyType: PropertyType | null =
+  // Rodzaj nieruchomości jest POMOCNICZY: znany → doprecyzowuje rozkład;
+  // nieznany/nieobsługiwany (lokal usługowy, udział, inna, brak) → scoring
+  // działa dalej na rozkładzie zagregowanym po wszystkich rodzajach ("any").
+  // Celem modułu jest szansa okolicy większego skupiska ludzkiego, a ta nie
+  // wymaga rodzaju nieruchomości.
+  const mapped =
     input.propertyType === "apartment" ||
     input.propertyType === "house" ||
     input.propertyType === "plot"
       ? (input.propertyType as PropertyType)
       : toScoringPropertyType(input.propertyType);
+  const propertyType: ScoringPropertyType = mapped ?? "any";
 
   const parsed = parseKwNumber(input.kwNumber);
   const config = await loadActiveConfig(db);
-
-  // Rodzaj nieruchomości nieobsługiwany — status terminalny, by nie przetwarzać w kółko.
-  if (!propertyType) {
-    if (input.applicationId) {
-      await db
-        .from("loan_applications")
-        .update({
-          location_scoring_status: "NEEDS_DATA",
-          location_scored_at: new Date().toISOString(),
-        })
-        .eq("id", input.applicationId);
-    }
-    return {
-      ok: false,
-      status: "unsupported_property_type",
-      message: "Rodzaj nieruchomości nieobsługiwany (tylko mieszkanie/dom/działka).",
-    };
-  }
 
   if (input.applicationId) {
     await db
@@ -416,7 +436,8 @@ export async function scoreApplicationCore(
   if (parsed.formatValid && dataVersion !== "n/a") {
     candidates = await loadCandidates(db, parsed.prefix, propertyType, dataVersion);
     observations = await loadObservations(db, parsed.prefix, propertyType);
-    if (Number.isFinite(parsed.serialNumber)) {
+    // Sygnał repertoryjny jest kalibrowany per prefiks×rodzaj — bez rodzaju pomijamy.
+    if (propertyType !== "any" && Number.isFinite(parsed.serialNumber)) {
       serialSignal = await loadSerialSignal(
         db,
         parsed.prefix,

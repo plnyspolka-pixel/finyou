@@ -9,7 +9,7 @@
 export const MODEL_VERSION = "loc-scoring-1.0.0";
 
 /** Wersja domyślnej konfiguracji (parametry). */
-export const DEFAULT_CONFIG_VERSION = "cfg-default-1";
+export const DEFAULT_CONFIG_VERSION = "cfg-default-2";
 
 export type LocationScoringConfig = {
   version: string;
@@ -39,13 +39,26 @@ export type LocationScoringConfig = {
     other: number;
   };
 
-  // Próg uznania lokalizacji za „dobrą" (base_location_attractiveness >= …).
+  // (Legacy) Próg atrakcyjności — zachowany dla zgodności zapisanych konfiguracji.
+  // Od cfg-default-2 „dobra lokalizacja" = okolica większego skupiska ludzkiego
+  // (patrz nearSettlement), nie próg atrakcyjności.
   goodLocationThreshold: number;
 
-  // Wagi finalnego priorytetu.
+  // Definicja „okolicy większego skupiska ludzkiego" — GŁÓWNE kryterium biznesowe:
+  // szansa, że nieruchomość leży w/przy skupisku o minimalnej akceptowalnej
+  // wielkości ~20–30 tys. mieszkańców. Obszar kwalifikuje się, gdy:
+  //   miasto ≥30 tys. LUB sąsiaduje z takim miastem LUB rdzeń/strefa FUA
+  //   LUB klaster miejski LUB ludność w promieniu 10 km ≥ minPopulationWithin10Km.
+  nearSettlement: {
+    /** Dolna granica „okolicy skupiska" po ludności w promieniu 10 km (środek pasma 20–30 tys.). */
+    minPopulationWithin10Km: number; // 25_000
+  };
+
+  // Wagi finalnego priorytetu. Szansa okolicy skupiska jest składnikiem
+  // DOMINUJĄCYM (cel modułu); atrakcyjność doprecyzowuje ranking.
   priorityWeights: {
-    expectedAttractiveness: number; // 0.70
-    probabilityGoodLocation: number; // 0.30
+    expectedAttractiveness: number; // 0.40
+    probabilityGoodLocation: number; // 0.60
   };
 
   // Progi decyzyjne (konfigurowalne).
@@ -86,9 +99,12 @@ export const DEFAULT_LOCATION_SCORING_CONFIG: LocationScoringConfig = {
     other: 0.15,
   },
   goodLocationThreshold: 60,
+  nearSettlement: {
+    minPopulationWithin10Km: 25_000,
+  },
   priorityWeights: {
-    expectedAttractiveness: 0.7,
-    probabilityGoodLocation: 0.3,
+    expectedAttractiveness: 0.4,
+    probabilityGoodLocation: 0.6,
   },
   decisionThresholds: {
     autoHighScore: 75,
@@ -114,6 +130,7 @@ export function mergeConfig(
     populationBounds: { ...base.populationBounds, ...partial.populationBounds },
     clusterScores: { ...base.clusterScores, ...partial.clusterScores },
     goodLocationThreshold: partial.goodLocationThreshold ?? base.goodLocationThreshold,
+    nearSettlement: { ...base.nearSettlement, ...partial.nearSettlement },
     priorityWeights: { ...base.priorityWeights, ...partial.priorityWeights },
     decisionThresholds: { ...base.decisionThresholds, ...partial.decisionThresholds },
     bayesianLambda: partial.bayesianLambda ?? base.bayesianLambda,

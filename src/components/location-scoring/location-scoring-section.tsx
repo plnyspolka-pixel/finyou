@@ -96,10 +96,12 @@ export function LocationScoringSection({
   const [running, setRunning] = useState(false);
 
   // Bieżące wejście (prefiks KW + typ scoringowy) — do wykrycia zmiany numeru/rodzaju.
+  // Rodzaj nieruchomości jest POMOCNICZY: bez niego scoring działa na rozkładzie
+  // zagregowanym ("any") — wystarczy poprawny numer KW.
   const parsed = kwNumber ? parseKwNumber(kwNumber) : null;
   const currentPrefix = parsed?.formatValid ? parsed.prefix : null;
-  const currentScoringType = toScoringPropertyType(propertyType);
-  const inputsScorable = Boolean(currentPrefix && currentScoringType);
+  const currentScoringType = toScoringPropertyType(propertyType) ?? "any";
+  const inputsScorable = Boolean(currentPrefix);
 
   const load = async () => {
     setLoading(true);
@@ -199,7 +201,8 @@ export function LocationScoringSection({
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Brak wyniku. Uruchom scoring po wpisaniu numeru KW i wskazaniu rodzaju nieruchomości.
+            Brak wyniku. Uruchom scoring po wpisaniu numeru KW (rodzaj nieruchomości jest opcjonalny
+            — doprecyzowuje wynik).
           </AlertDescription>
         </Alert>
       ) : (
@@ -214,7 +217,7 @@ export function LocationScoringSection({
             />
             <Metric
               icon={<Building2 className="h-4 w-4" />}
-              label="Prawdop. atrakcyjnego obszaru"
+              label="Szansa okolicy skupiska ≥20–30 tys."
               value={pct(row.probability_good_location)}
             />
             <Metric
@@ -286,7 +289,10 @@ export function LocationScoringSection({
                     v={row.probability_urban_or_suburban}
                   />
                   <ProbRow label="Funkcjonalny obszar miejski (FUA)" v={row.probability_fua} />
-                  <ProbRow label="Atrakcyjny obszar" v={row.probability_good_location} />
+                  <ProbRow
+                    label="Okolica skupiska ludzkiego (≥ ~20–30 tys.)"
+                    v={row.probability_good_location}
+                  />
                   <ProbRow label="Obszar peryferyjny" v={row.probability_remote_area} />
                   <Separator />
                   <Row

@@ -1,17 +1,18 @@
 // Budowa uzasadnienia wyniku (spec §14, §18). Tekst po polsku, dla operatora.
 
-import type { CourtDepartmentInfo, LocationScoringExplanation, PropertyType } from "./types";
+import type { CourtDepartmentInfo, LocationScoringExplanation, ScoringPropertyType } from "./types";
 import type { DistributionResult } from "./distribution";
 
-const PROPERTY_LABEL: Record<PropertyType, string> = {
+const PROPERTY_LABEL: Record<ScoringPropertyType, string> = {
   apartment: "mieszkań",
   house: "domów",
   plot: "działek",
+  any: "nieruchomości (rodzaj nieokreślony)",
 };
 
 export function buildExplanation(args: {
   court: CourtDepartmentInfo | null;
-  propertyType: PropertyType;
+  propertyType: ScoringPropertyType;
   distribution: DistributionResult;
   expectedAttractiveness: number;
   probabilityGoodLocation: number;
@@ -51,9 +52,7 @@ export function buildExplanation(args: {
 
   const reasons: string[] = [];
   reasons.push(
-    `Prawdopodobieństwo atrakcyjnego obszaru: ${goodPct}% (próg atrakcyjności ${Math.round(
-      expectedAttractiveness,
-    )}).`,
+    `Szansa okolicy większego skupiska ludzkiego (min. ~20–30 tys. mieszkańców): ${goodPct}%.`,
   );
   if (top.length) {
     reasons.push(
@@ -86,6 +85,11 @@ export function buildExplanation(args: {
   }
 
   const limitations: string[] = [...limitationsExtra];
+  if (propertyType === "any") {
+    limitations.push(
+      "Rodzaj nieruchomości nieokreślony — rozkład lokalizacji uśredniony po wszystkich rodzajach (rodzaj jest sygnałem pomocniczym; wskazanie go doprecyzuje wynik).",
+    );
+  }
   if (confidenceScore < 50) {
     limitations.push(
       "Niska pewność oszacowania — rozkład możliwych lokalizacji jest szeroki (od centrum miasta po odległą gminę). Wynik ma charakter wyłącznie preselekcyjny.",

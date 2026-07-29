@@ -52,6 +52,25 @@ export function normalizeDistribution(
   }));
 }
 
+/**
+ * Czy obszar liczy się jako „okolica większego skupiska ludzkiego" —
+ * GŁÓWNE kryterium biznesowe modułu. Minimalna akceptowalna granica
+ * skupiska to ~20–30 tys. mieszkańców: łapiemy miasta ≥30 tys., ich
+ * bezpośrednie sąsiedztwo, obszary funkcjonalne (FUA), klastry miejskie
+ * oraz obszary z ludnością ≥ progu w promieniu 10 km (pokrywa miasta
+ * ~20–30 tys. i zwarte wielogminne skupiska).
+ */
+export function isNearSettlement(area: AreaMetrics, config: LocationScoringConfig): boolean {
+  return (
+    area.isCityAbove30k ||
+    area.isAdjacentToCityAbove30k ||
+    area.fuaRole === "core" ||
+    area.fuaRole === "commuting_zone" ||
+    area.isUrbanCluster ||
+    area.populationWithin10Km >= config.nearSettlement.minPopulationWithin10Km
+  );
+}
+
 /** Percentyl rozkładu atrakcyjności (interpolacja po posortowanym CDF). */
 function weightedPercentile(sorted: NormalizedLocation[], p: number): number {
   if (sorted.length === 0) return 0;
@@ -78,9 +97,11 @@ export function computeDistribution(
     0,
   );
 
-  const good = config.goodLocationThreshold;
+  // „Dobra lokalizacja" = okolica większego skupiska ludzkiego (≥ ~20–30 tys.
+  // mieszkańców) — to jest szansa, o którą chodzi biznesowo; atrakcyjność
+  // 0–100 jest wielkością pomocniczą (ranking wewnątrz dobrych/słabych).
   const probabilityGoodLocation = locations
-    .filter((l) => l.baseAttractiveness >= good)
+    .filter((l) => isNearSettlement(l.area, config))
     .reduce((s, l) => s + l.probability, 0);
 
   const probabilityUrbanCore = locations
