@@ -10,7 +10,6 @@
 // prefiks, numer repertoryjny (liczba) i HMAC znormalizowanego numeru (solony).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { createHmac } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
@@ -96,9 +95,12 @@ async function requireOperator(supabase: SupabaseClient, userId: string): Promis
 }
 
 // ── HMAC pełnego znormalizowanego numeru KW (deduplikacja bez PII) ───────────
-function kwHmac(normalizedFull: string): string | null {
+// Dynamiczny import node:crypto — plik trafia też do grafu klienta (importy
+// server functions z komponentów), a statyczny import wywala build przeglądarkowy.
+async function kwHmac(normalizedFull: string): Promise<string | null> {
   const secret = process.env.LOCATION_SCORING_HMAC_SECRET;
   if (!secret) return null; // brak sekretu → nie zapisujemy pseudonimu (świadomie)
+  const { createHmac } = await import("node:crypto");
   return createHmac("sha256", secret).update(normalizedFull).digest("hex");
 }
 
@@ -328,7 +330,7 @@ async function persistResult(
       loan_application_id: args.loanApplicationId,
       kw_prefix: parsed.prefix,
       serial_number: Number.isFinite(parsed.serialNumber) ? parsed.serialNumber : null,
-      kw_hmac: parsed.isValid ? kwHmac(parsed.normalized) : null,
+      kw_hmac: parsed.isValid ? await kwHmac(parsed.normalized) : null,
       masked_kw_number: result.normalizedKwNumber,
       property_type: args.propertyType,
       probability_urban_core: result.probabilityUrbanCore,
@@ -720,7 +722,7 @@ export const recordLocationObservation = createServerFn({ method: "POST" })
 
     const parsed = parseKwNumber(data.kwNumber);
     if (!parsed.formatValid) throw new Error("Nieprawidłowy numer KW.");
-    const hmac = kwHmac(parsed.normalized);
+    const hmac = await kwHmac(parsed.normalized);
     if (!hmac) {
       throw new Error(
         "Brak LOCATION_SCORING_HMAC_SECRET — obserwacja nie może zostać zapseudonimizowana.",
