@@ -6238,6 +6238,8 @@ export type Database = {
       leads: {
         Row: {
           application_data: Json
+          application_started_at: string | null
+          application_started_source: string | null
           assigned_to: string | null
           broker_notes: string | null
           client_id: string | null
@@ -6285,6 +6287,8 @@ export type Database = {
         }
         Insert: {
           application_data?: Json
+          application_started_at?: string | null
+          application_started_source?: string | null
           assigned_to?: string | null
           broker_notes?: string | null
           client_id?: string | null
@@ -6332,6 +6336,8 @@ export type Database = {
         }
         Update: {
           application_data?: Json
+          application_started_at?: string | null
+          application_started_source?: string | null
           assigned_to?: string | null
           broker_notes?: string | null
           client_id?: string | null

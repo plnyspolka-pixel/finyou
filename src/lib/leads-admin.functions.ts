@@ -6,13 +6,17 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 // Pula leadów Finance You to narzędzie premium: personel wewnętrzny ma dostęp
 // operacyjny, a zewnętrzny pośrednik (rola 'posrednik' albo historyczny
 // 'operator' powiązany z partnerem) wyłącznie z aktywnym płatnym pakietem.
-async function assertAdmin(_supabase: any, userId: string) {
-  const { brokerHasPaidAccess } = await import("@/lib/access/guards.server");
-  if (!(await brokerHasPaidAccess(userId))) {
+// Partner widzi przy tym wyłącznie otwartą pulę (bez rozpoczętych wniosków)
+// — egzekwują to polityki RLS, a `staff` pozwala zdublować filtr w zapytaniu.
+async function assertAdmin(_supabase: any, userId: string): Promise<{ staff: boolean }> {
+  const { brokerHasPaidAccess, isInternalStaff } = await import("@/lib/access/guards.server");
+  const staff = await isInternalStaff(userId);
+  if (!staff && !(await brokerHasPaidAccess(userId))) {
     throw new Error(
       "PAYWALL_BROKER: Leady Finance You są dostępne w pełnym (płatnym) pakiecie pośrednika.",
     );
   }
+  return { staff };
 }
 
 export const listLeads = createServerFn({ method: "GET" })
@@ -29,7 +33,7 @@ export const listLeads = createServerFn({ method: "GET" })
       .parse(i ?? {}),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    const { staff } = await assertAdmin(context.supabase, context.userId);
 
     // "Moje leady" = leady, do których ja (jako pośrednik) dzwoniłem albo zapisałem notatkę.
     let assignedLeadIds: string[] | null = null;
@@ -63,6 +67,9 @@ export const listLeads = createServerFn({ method: "GET" })
       )
       .order("created_at", { ascending: false })
       .limit(500);
+    // Partner zewnętrzny: tylko otwarta pula — lead z rozpoczętym wnioskiem
+    // (application_started_at) jest sprawą klienta FY, nie towarem.
+    if (!staff) q = q.is("application_started_at", null);
     if (assignedLeadIds) q = q.in("id", assignedLeadIds);
     if (data.type !== "all") q = q.eq("type", data.type);
     if (data.source) q = q.eq("source", data.source);
@@ -468,7 +475,7 @@ export const getLead = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    const { staff } = await assertAdmin(context.supabase, context.userId);
     // Auto-provision stub loan_application dla leada, żeby sekwencja maili
     // startowała już od momentu pojawienia się leada (a nie dopiero po wniosku).
     try {
@@ -477,11 +484,12 @@ export const getLead = createServerFn({ method: "GET" })
     } catch (e) {
       console.error("[getLead] ensureLoanApplicationForLead", e);
     }
-    const { data: lead, error } = await context.supabase
-      .from("leads")
-      .select("*")
-      .eq("id", data.id)
-      .maybeSingle();
+    // RLS sesji partnera i tak ukrywa leady z rozpoczętym wnioskiem — jawny
+    // filtr utrzymuje tę samą regułę, gdyby zapytanie kiedyś przeszło na
+    // service-role.
+    let leadQuery = context.supabase.from("leads").select("*").eq("id", data.id);
+    if (!staff) leadQuery = leadQuery.is("application_started_at", null);
+    const { data: lead, error } = await leadQuery.maybeSingle();
     if (error) throw new Error(error.message);
     if (!lead) throw new Error("Lead nie istnieje");
 

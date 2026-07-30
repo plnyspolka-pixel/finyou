@@ -418,6 +418,17 @@ async function executeTool(
       topLevel.phone_normalized = normPhone(patch.phone);
     }
     await s.from("leads").update(topLevel).eq("id", leadId);
+    // Bot zbiera merytorykę wniosku (kwota/KW/nieruchomość/cel) = klient
+    // rozpoczął wniosek w rozmowie — lead schodzi z puli pośredników.
+    try {
+      const { patchStartsApplication } = await import("./leads-split");
+      if (patchStartsApplication(patch)) {
+        const { markLeadApplicationStarted } = await import("./leads-split.server");
+        await markLeadApplicationStarted(leadId, `bot:${channel}`);
+      }
+    } catch (e) {
+      console.error("[el-text-agent] markLeadApplicationStarted", e);
+    }
     // Dane od bota mogą właśnie skompletować wniosek (KW + kwota + załączniki)
     // — spróbuj promocji od razu, nie dopiero przy kolejnej wiadomości.
     try {

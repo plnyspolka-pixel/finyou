@@ -277,6 +277,24 @@ export async function enrichLeadFromInbound(opts: {
       .eq("id", leadId);
   }
 
+  // Klient w toku rozmowy podał merytorykę wniosku (KW / kwotę / wartość)
+  // — to rozpoczęcie wniosku i zejście leada z puli pośredników. Warunek
+  // wcześniejszego outboundu odsiewa pierwszą wiadomość powitalną z reklamy
+  // (blok formularza Meta), która nie jest jeszcze rozmową o wniosku.
+  const substantiveFacts =
+    facts.kwNumbers.length > 0 || facts.loanAmount != null || facts.propertyValue != null;
+  if (substantiveFacts) {
+    try {
+      const { markLeadApplicationStarted, leadHasOutboundCommunication } =
+        await import("./leads-split.server");
+      if (await leadHasOutboundCommunication(leadId)) {
+        await markLeadApplicationStarted(leadId, "rozmowa_inbound");
+      }
+    } catch (e) {
+      console.error("[lead-enrichment] markLeadApplicationStarted", e);
+    }
+  }
+
   // Jeśli lead ma już wniosek, dopisz nowe KW / kwotę bezpośrednio do niego.
   if (lead.loan_application_id) {
     await backfillApplicationFromFacts(lead.loan_application_id, appData, facts);
@@ -460,7 +478,9 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
   const { error: pErr } = await s.from("properties").insert(propRows as any);
   if (pErr) console.error("[lead-enrichment] properties insert error", pErr);
 
-  // 4) Link lead → wniosek/klient
+  // 4) Link lead → wniosek/klient. Status 'wniosek' ustawia w bazie także
+  //    application_started_at (trigger leads_application_started) — lead
+  //    znika z puli sprzedażowej pośredników.
   await s
     .from("leads")
     .update({ loan_application_id: loan.id, client_id: clientId, status: "wniosek" as any })

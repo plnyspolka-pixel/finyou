@@ -135,8 +135,16 @@ export const claimLoanApplication = createServerFn({ method: "POST" })
 
     if (!leadClient) return { ok: false, reason: "lead_client_missing" as const };
 
+    // Klient wchodzi do panelu po linku powrotnym = rozpoczęty wniosek —
+    // powiązany lead znika z puli sprzedażowej pośredników.
+    const markStarted = async () => {
+      const { markLeadApplicationStartedByLoan } = await import("./leads-split.server");
+      await markLeadApplicationStartedByLoan(loan.id, "panel_klienta");
+    };
+
     // 3a) Już zclaimowany przez tego użytkownika — nic do roboty
     if (leadClient.user_id === userId) {
+      await markStarted();
       return { ok: true, alreadyClaimed: true, loanId: loan.id };
     }
 
@@ -161,6 +169,7 @@ export const claimLoanApplication = createServerFn({ method: "POST" })
           .eq("id", myClient.id)
           .is("email", null);
 
+        await markStarted();
         return { ok: true, claimed: true, loanId: loan.id };
       }
 
@@ -170,6 +179,7 @@ export const claimLoanApplication = createServerFn({ method: "POST" })
         .update({ user_id: userId })
         .eq("id", leadClient.id);
       if (ce) throw new Error(ce.message);
+      await markStarted();
       return { ok: true, claimed: true, loanId: loan.id };
     }
 
