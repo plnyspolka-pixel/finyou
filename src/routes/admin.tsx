@@ -61,6 +61,7 @@ const groups: Group[] = [
       { to: "/admin/skrzynka", label: "Skrzynka mailowa", icon: Mail },
       { to: "/admin/messenger", label: "Messenger / Instagram DM", icon: Mail },
       { to: "/admin/wnioski-niekompletne", label: "Wnioski (wszystkie)", icon: FileText },
+      { to: "/admin/follow-up-braki", label: "Follow-up braków", icon: Send },
       { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
       { to: "/admin/potencjal-lokalizacyjny", label: "Potencjał lokalizacyjny", icon: MapPinned },
       { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },

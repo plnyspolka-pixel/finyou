@@ -113,6 +113,7 @@ import { Route as AdminKreatorDokumentowRouteImport } from './routes/admin.kreat
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
+import { Route as AdminFollowUpBrakiRouteImport } from './routes/admin.follow-up-braki'
 import { Route as AdminFacebookConnectRouteImport } from './routes/admin.facebook-connect'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
@@ -201,6 +202,7 @@ import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/
 import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes/api/public/hooks/saturday-sms-reminders'
 import { Route as ApiPublicHooksProjectAssignmentsTickRouteImport } from './routes/api/public/hooks/project-assignments-tick'
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
+import { Route as ApiPublicHooksMissingInfoFollowUpTickRouteImport } from './routes/api/public/hooks/missing-info-follow-up-tick'
 import { Route as ApiPublicHooksMetaLeadsPullRouteImport } from './routes/api/public/hooks/meta-leads-pull'
 import { Route as ApiPublicHooksMessengerSyncForceRouteImport } from './routes/api/public/hooks/messenger-sync-force'
 import { Route as ApiPublicHooksLocationScoringTickRouteImport } from './routes/api/public/hooks/location-scoring-tick'
@@ -741,6 +743,11 @@ const AdminIntegracjeRoute = AdminIntegracjeRouteImport.update({
   path: '/integracje',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFollowUpBrakiRoute = AdminFollowUpBrakiRouteImport.update({
+  id: '/follow-up-braki',
+  path: '/follow-up-braki',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFacebookConnectRoute = AdminFacebookConnectRouteImport.update({
   id: '/facebook-connect',
   path: '/facebook-connect',
@@ -1216,6 +1223,12 @@ const ApiPublicHooksProcessScheduledCallsRoute =
     path: '/api/public/hooks/process-scheduled-calls',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksMissingInfoFollowUpTickRoute =
+  ApiPublicHooksMissingInfoFollowUpTickRouteImport.update({
+    id: '/api/public/hooks/missing-info-follow-up-tick',
+    path: '/api/public/hooks/missing-info-follow-up-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksMetaLeadsPullRoute =
   ApiPublicHooksMetaLeadsPullRouteImport.update({
     id: '/api/public/hooks/meta-leads-pull',
@@ -1344,6 +1357,7 @@ export interface FileRoutesByFullPath {
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
+  '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
@@ -1498,6 +1512,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
+  '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -1548,6 +1563,7 @@ export interface FileRoutesByTo {
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
+  '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
@@ -1697,6 +1713,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
+  '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -1753,6 +1770,7 @@ export interface FileRoutesById {
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
+  '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
@@ -1907,6 +1925,7 @@ export interface FileRoutesById {
   '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
+  '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -1964,6 +1983,7 @@ export interface FileRouteTypes {
     | '/admin/dystrybucja'
     | '/admin/embed'
     | '/admin/facebook-connect'
+    | '/admin/follow-up-braki'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
@@ -2118,6 +2138,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
+    | '/api/public/hooks/missing-info-follow-up-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
@@ -2168,6 +2189,7 @@ export interface FileRouteTypes {
     | '/admin/dystrybucja'
     | '/admin/embed'
     | '/admin/facebook-connect'
+    | '/admin/follow-up-braki'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
@@ -2317,6 +2339,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
+    | '/api/public/hooks/missing-info-follow-up-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
@@ -2372,6 +2395,7 @@ export interface FileRouteTypes {
     | '/admin/dystrybucja'
     | '/admin/embed'
     | '/admin/facebook-connect'
+    | '/admin/follow-up-braki'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
@@ -2526,6 +2550,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
+    | '/api/public/hooks/missing-info-follow-up-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
@@ -2612,6 +2637,7 @@ export interface RootRouteChildren {
   ApiPublicHooksLocationScoringTickRoute: typeof ApiPublicHooksLocationScoringTickRoute
   ApiPublicHooksMessengerSyncForceRoute: typeof ApiPublicHooksMessengerSyncForceRoute
   ApiPublicHooksMetaLeadsPullRoute: typeof ApiPublicHooksMetaLeadsPullRoute
+  ApiPublicHooksMissingInfoFollowUpTickRoute: typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
   ApiPublicHooksProjectAssignmentsTickRoute: typeof ApiPublicHooksProjectAssignmentsTickRoute
   ApiPublicHooksSaturdaySmsRemindersRoute: typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -3357,6 +3383,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIntegracjeRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/follow-up-braki': {
+      id: '/admin/follow-up-braki'
+      path: '/follow-up-braki'
+      fullPath: '/admin/follow-up-braki'
+      preLoaderRoute: typeof AdminFollowUpBrakiRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/facebook-connect': {
       id: '/admin/facebook-connect'
       path: '/facebook-connect'
@@ -3973,6 +4006,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessScheduledCallsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/missing-info-follow-up-tick': {
+      id: '/api/public/hooks/missing-info-follow-up-tick'
+      path: '/api/public/hooks/missing-info-follow-up-tick'
+      fullPath: '/api/public/hooks/missing-info-follow-up-tick'
+      preLoaderRoute: typeof ApiPublicHooksMissingInfoFollowUpTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/meta-leads-pull': {
       id: '/api/public/hooks/meta-leads-pull'
       path: '/api/public/hooks/meta-leads-pull'
@@ -4119,6 +4159,7 @@ interface AdminRouteChildren {
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
   AdminFacebookConnectRoute: typeof AdminFacebookConnectRoute
+  AdminFollowUpBrakiRoute: typeof AdminFollowUpBrakiRoute
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
   AdminKlienciRoute: typeof AdminKlienciRouteWithChildren
@@ -4182,6 +4223,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminEmbedRoute: AdminEmbedRoute,
   AdminFacebookConnectRoute: AdminFacebookConnectRoute,
+  AdminFollowUpBrakiRoute: AdminFollowUpBrakiRoute,
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
   AdminKlienciRoute: AdminKlienciRouteWithChildren,
@@ -4537,6 +4579,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksLocationScoringTickRoute,
   ApiPublicHooksMessengerSyncForceRoute: ApiPublicHooksMessengerSyncForceRoute,
   ApiPublicHooksMetaLeadsPullRoute: ApiPublicHooksMetaLeadsPullRoute,
+  ApiPublicHooksMissingInfoFollowUpTickRoute:
+    ApiPublicHooksMissingInfoFollowUpTickRoute,
   ApiPublicHooksProcessScheduledCallsRoute:
     ApiPublicHooksProcessScheduledCallsRoute,
   ApiPublicHooksProjectAssignmentsTickRoute:

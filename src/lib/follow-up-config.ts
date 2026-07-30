@@ -30,7 +30,7 @@ export const LEAD_TERMINAL_STATUSES = [
   "blacklist",
 ] as const;
 
-export type FollowUpChannel = "email" | "sms" | "call";
+export type FollowUpChannel = "email" | "sms" | "call" | "messenger";
 
 export type FollowUpEngine = {
   key: string;
@@ -55,6 +55,21 @@ export type FollowUpEngine = {
 
 /** Rejestr wszystkich silników follow-up — to widzi admin na Pulpicie. */
 export const FOLLOW_UP_ENGINES: FollowUpEngine[] = [
+  {
+    key: "missing-info",
+    name: "Follow-up braków (wnioski niekompletne / do korekty)",
+    purpose:
+      "Dopytuje klienta o KONKRETNE braki wniosku: dane podstawowe, dokumenty wg typu nieruchomości i otwarte pytania z analizy KW (dług na hipotece, zgody współwłaścicieli).",
+    trigger:
+      "Wniosek po kontakcie z brakami danych/dokumentów albo z nierozwiązanymi znaleziskami analizy KW (statusy: brak_kwoty, brak_kw, brak_zdjec_dokumentow, kontakt, kompletowanie_danych, szukamy_inwestora „do korekty”)",
+    cadence:
+      "start od razu, potem +2/+3/+4/+7/+7/+14/+14/+30… dni, maks. 12 prób; pauza 24 h po odpowiedzi klienta",
+    channels: ["email", "sms", "messenger"],
+    window: "7:00–21:00 pon–sob (SMS 8:00–20:00), Europe/Warsaw; Messenger tylko w oknie 24 h Meta",
+    table: "missing_info_follow_ups",
+    tickEndpoint: "/api/public/hooks/missing-info-follow-up-tick",
+    manageHref: "/admin/follow-up-braki",
+  },
   {
     key: "lead-nurture",
     name: "Sekwencja Ania (nurture leada)",
