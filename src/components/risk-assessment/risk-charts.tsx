@@ -5,8 +5,18 @@
 // Kolor NA KOŃCU: pasma statusu z etykietami liczbowymi (nigdy sam kolor) dla ocen,
 // jeden odcień wartości + czerwona linia odniesienia dla kwoty pożyczki.
 import {
-  BarChart, Bar, Cell, XAxis, YAxis, LabelList, ResponsiveContainer, Tooltip,
-  RadialBarChart, RadialBar, PolarAngleAxis, ReferenceLine,
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  LabelList,
+  ResponsiveContainer,
+  Tooltip,
+  RadialBarChart,
+  RadialBar,
+  PolarAngleAxis,
+  ReferenceLine,
 } from "recharts";
 import type { RiskComponentScores } from "@/lib/risk-assessment/types";
 
@@ -38,14 +48,31 @@ export function InvestmentScoreGauge({ score, grade }: { score: number; grade: s
   return (
     <div className="relative" style={{ width: 150, height: 150 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <RadialBarChart data={data} innerRadius="72%" outerRadius="100%" startAngle={90} endAngle={-270}>
+        <RadialBarChart
+          data={data}
+          innerRadius="72%"
+          outerRadius="100%"
+          startAngle={90}
+          endAngle={-270}
+        >
           <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
-          <RadialBar background={{ fill: GRID }} dataKey="value" cornerRadius={12} fill={color} angleAxisId={0} />
+          <RadialBar
+            background={{ fill: GRID }}
+            dataKey="value"
+            cornerRadius={12}
+            fill={color}
+            angleAxisId={0}
+          />
         </RadialBarChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold leading-none" style={{ color }}>{grade}</span>
-        <span className="text-lg font-semibold leading-tight">{score}<span className="text-xs text-muted-foreground">/100</span></span>
+        <span className="text-3xl font-bold leading-none" style={{ color }}>
+          {grade}
+        </span>
+        <span className="text-lg font-semibold leading-tight">
+          {score}
+          <span className="text-xs text-muted-foreground">/100</span>
+        </span>
         <span className="text-[10px] text-muted-foreground">ocena inwestycji</span>
       </div>
     </div>
@@ -72,7 +99,12 @@ export function ComponentScoresChart({ scores }: { scores: RiskComponentScores }
   const height = data.length * 34 + 16;
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} layout="vertical" margin={{ top: 4, right: 44, bottom: 4, left: 8 }} barCategoryGap={8}>
+      <BarChart
+        data={data}
+        layout="vertical"
+        margin={{ top: 4, right: 44, bottom: 4, left: 8 }}
+        barCategoryGap={8}
+      >
         <XAxis type="number" domain={[0, 100]} hide />
         <YAxis
           type="category"
@@ -84,12 +116,29 @@ export function ComponentScoresChart({ scores }: { scores: RiskComponentScores }
         />
         <Tooltip
           cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
-          contentStyle={{ background: "hsl(var(--popover))", border: `1px solid ${GRID}`, borderRadius: 8, fontSize: 12, color: "hsl(var(--popover-foreground))" }}
+          contentStyle={{
+            background: "hsl(var(--popover))",
+            border: `1px solid ${GRID}`,
+            borderRadius: 8,
+            fontSize: 12,
+            color: "hsl(var(--popover-foreground))",
+          }}
           formatter={(v: any) => [`${v}/100`, "Ocena"]}
         />
-        <Bar dataKey="value" radius={[4, 4, 4, 4]} isAnimationActive={false} background={{ fill: GRID, radius: 4 } as any}>
-          {data.map((d) => <Cell key={d.key} fill={scoreColor(d.value)} />)}
-          <LabelList dataKey="value" position="right" style={{ fontSize: 12, fontWeight: 600, fill: "hsl(var(--foreground))" }} />
+        <Bar
+          dataKey="value"
+          radius={[4, 4, 4, 4]}
+          isAnimationActive={false}
+          background={{ fill: GRID, radius: 4 } as any}
+        >
+          {data.map((d) => (
+            <Cell key={d.key} fill={scoreColor(d.value)} />
+          ))}
+          <LabelList
+            dataKey="value"
+            position="right"
+            style={{ fontSize: 12, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+          />
         </Bar>
       </BarChart>
     </ResponsiveContainer>
@@ -111,7 +160,10 @@ export function ValuationLadderChart({ input }: { input: ValuationChartInput }) 
     { name: "I licytacja (¾)", value: input.firstAuctionPln },
     { name: "II licytacja (⅔)", value: input.secondAuctionPln },
     { name: "Odzysk (dolny)", value: input.expectedLowPln },
-  ].filter((r) => r.value != null && Number.isFinite(r.value)) as Array<{ name: string; value: number }>;
+  ].filter((r) => r.value != null && Number.isFinite(r.value)) as Array<{
+    name: string;
+    value: number;
+  }>;
 
   if (rows.length === 0) return null;
   const loan = input.loanAmountPln;
@@ -119,12 +171,30 @@ export function ValuationLadderChart({ input }: { input: ValuationChartInput }) 
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 84, bottom: 4, left: 8 }} barCategoryGap={10}>
+      <BarChart
+        data={rows}
+        layout="vertical"
+        margin={{ top: 4, right: 84, bottom: 4, left: 8 }}
+        barCategoryGap={10}
+      >
         <XAxis type="number" domain={[0, "dataMax"]} hide />
-        <YAxis type="category" dataKey="name" width={120} tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: AXIS }} />
+        <YAxis
+          type="category"
+          dataKey="name"
+          width={120}
+          tickLine={false}
+          axisLine={false}
+          tick={{ fontSize: 12, fill: AXIS }}
+        />
         <Tooltip
           cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
-          contentStyle={{ background: "hsl(var(--popover))", border: `1px solid ${GRID}`, borderRadius: 8, fontSize: 12, color: "hsl(var(--popover-foreground))" }}
+          contentStyle={{
+            background: "hsl(var(--popover))",
+            border: `1px solid ${GRID}`,
+            borderRadius: 8,
+            fontSize: 12,
+            color: "hsl(var(--popover-foreground))",
+          }}
           formatter={(v: any) => [fmtPlnCompact(Number(v)), "Kwota"]}
         />
         {loan != null && Number.isFinite(loan) && (
@@ -133,11 +203,21 @@ export function ValuationLadderChart({ input }: { input: ValuationChartInput }) 
             stroke={LOAN_HUE}
             strokeWidth={2}
             strokeDasharray="4 3"
-            label={{ value: `pożyczka ${fmtPlnCompact(loan)}`, position: "top", fill: LOAN_HUE, fontSize: 11 }}
+            label={{
+              value: `pożyczka ${fmtPlnCompact(loan)}`,
+              position: "top",
+              fill: LOAN_HUE,
+              fontSize: 11,
+            }}
           />
         )}
         <Bar dataKey="value" radius={[4, 4, 4, 4]} fill={VALUE_HUE} isAnimationActive={false}>
-          <LabelList dataKey="value" position="right" formatter={(v: any) => fmtPlnCompact(Number(v))} style={{ fontSize: 11, fontWeight: 600, fill: "hsl(var(--foreground))" }} />
+          <LabelList
+            dataKey="value"
+            position="right"
+            formatter={(v: any) => fmtPlnCompact(Number(v))}
+            style={{ fontSize: 11, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+          />
         </Bar>
       </BarChart>
     </ResponsiveContainer>

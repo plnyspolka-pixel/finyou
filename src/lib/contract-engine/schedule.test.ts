@@ -3,29 +3,43 @@
  * Każda mutacja psująca niezmiennik musi dać błąd blokujący.
  */
 import { describe, it, expect } from "vitest";
-import {
-  walidujHarmonogram,
-  payloadDoRaty,
-  formatKwotaPL,
-  parseKwota,
-} from "./schedule";
+import { walidujHarmonogram, payloadDoRaty, formatKwotaPL, parseKwota } from "./schedule";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const clone = <T,>(o: T): T => structuredClone(o);
+const clone = <T>(o: T): T => structuredClone(o);
 
 // poprawny harmonogram w modelu silnika: K=1000, prowizja=100, 2 raty
 function warunkiOk(): any {
   return {
     kwota_pozyczki: { cyframi: "1 000,00", slownie: "tysiąc złotych 00/100" },
-    prowizja: { kwota: { cyframi: "100,00", slownie: "sto złotych 00/100" }, model: "nie_potracana_raty" },
+    prowizja: {
+      kwota: { cyframi: "100,00", slownie: "sto złotych 00/100" },
+      model: "nie_potracana_raty",
+    },
     harmonogram: {
       liczba_rat: 2,
       typ: "rowne_raty",
       data_pierwszej_raty: "15.02.2026",
       dzien_miesiaca: 15,
       raty: [
-        { nr: 1, termin: "15.02.2026", kapital: "500,00", odsetki: "10,00", prowizja: "50,00", rata_razem: "560,00", saldo: "500,00" },
-        { nr: 2, termin: "15.03.2026", kapital: "500,00", odsetki: "5,00", prowizja: "50,00", rata_razem: "555,00", saldo: "0,00" },
+        {
+          nr: 1,
+          termin: "15.02.2026",
+          kapital: "500,00",
+          odsetki: "10,00",
+          prowizja: "50,00",
+          rata_razem: "560,00",
+          saldo: "500,00",
+        },
+        {
+          nr: 2,
+          termin: "15.03.2026",
+          kapital: "500,00",
+          odsetki: "5,00",
+          prowizja: "50,00",
+          rata_razem: "555,00",
+          saldo: "0,00",
+        },
       ],
     },
   };
@@ -120,7 +134,15 @@ describe("Adapter LoanCalcPayload → raty", () => {
   it("mapuje pola i dolicza prowizję jako łączną kwotę", () => {
     const raty = payloadDoRaty(payload, 100);
     expect(raty).toHaveLength(2);
-    expect(raty[0]).toMatchObject({ nr: 1, termin: "15.02.2026", kapital: "500,00", odsetki: "10,00", prowizja: "50,00", rata_razem: "560,00", saldo: "500,00" });
+    expect(raty[0]).toMatchObject({
+      nr: 1,
+      termin: "15.02.2026",
+      kapital: "500,00",
+      odsetki: "10,00",
+      prowizja: "50,00",
+      rata_razem: "560,00",
+      saldo: "500,00",
+    });
     expect(raty[1].prowizja).toBe("50,00");
   });
 

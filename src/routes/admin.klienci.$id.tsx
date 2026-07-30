@@ -12,7 +12,10 @@ function LeadDetailPage() {
   return (
     <div className="space-y-4">
       <Link to="/admin/klienci">
-        <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Wróć do listy</Button>
+        <Button variant="ghost" size="sm">
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Wróć do listy
+        </Button>
       </Link>
       <LeadDetailView id={id} />
     </div>

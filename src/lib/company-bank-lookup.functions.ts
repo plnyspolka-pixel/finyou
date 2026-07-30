@@ -43,11 +43,28 @@ export const companyBankAccountLookup = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<CompanyBankLookupResult> => {
     const apiKey = process.env.PERPLEXITY_API_KEY;
     if (!apiKey) {
-      return { success: false, account: null, normalized: null, bankName: null, sources: [], rationale: "", message: "Brak PERPLEXITY_API_KEY." };
+      return {
+        success: false,
+        account: null,
+        normalized: null,
+        bankName: null,
+        sources: [],
+        rationale: "",
+        message: "Brak PERPLEXITY_API_KEY.",
+      };
     }
-    const companyHint = data.companyName || (data.krs ? `KRS ${data.krs}` : data.nip ? `NIP ${data.nip}` : "");
+    const companyHint =
+      data.companyName || (data.krs ? `KRS ${data.krs}` : data.nip ? `NIP ${data.nip}` : "");
     if (!companyHint) {
-      return { success: false, account: null, normalized: null, bankName: null, sources: [], rationale: "", message: "Brak danych identyfikujących firmę." };
+      return {
+        success: false,
+        account: null,
+        normalized: null,
+        bankName: null,
+        sources: [],
+        rationale: "",
+        message: "Brak danych identyfikujących firmę.",
+      };
     }
 
     const prompt =
@@ -67,7 +84,11 @@ export const companyBankAccountLookup = createServerFn({ method: "POST" })
         body: JSON.stringify({
           model: "sonar",
           messages: [
-            { role: "system", content: "Jesteś analitykiem danych rejestrowych w Polsce. Odpowiadasz wyłącznie poprawnym JSON-em." },
+            {
+              role: "system",
+              content:
+                "Jesteś analitykiem danych rejestrowych w Polsce. Odpowiadasz wyłącznie poprawnym JSON-em.",
+            },
             { role: "user", content: prompt },
           ],
           temperature: 0.1,
@@ -75,7 +96,15 @@ export const companyBankAccountLookup = createServerFn({ method: "POST" })
         }),
       });
       if (!res.ok) {
-        return { success: false, account: null, normalized: null, bankName: null, sources: [], rationale: "", message: `Perplexity HTTP ${res.status}` };
+        return {
+          success: false,
+          account: null,
+          normalized: null,
+          bankName: null,
+          sources: [],
+          rationale: "",
+          message: `Perplexity HTTP ${res.status}`,
+        };
       }
       const json: any = await res.json();
       const content: string = json?.choices?.[0]?.message?.content ?? "";
@@ -85,7 +114,9 @@ export const companyBankAccountLookup = createServerFn({ method: "POST" })
       try {
         const m = content.match(/\{[\s\S]*\}/);
         parsed = m ? JSON.parse(m[0]) : null;
-      } catch { parsed = null; }
+      } catch {
+        parsed = null;
+      }
 
       let candidate: string | null = parsed?.account ? String(parsed.account) : null;
       if (!candidate) {
@@ -95,7 +126,10 @@ export const companyBankAccountLookup = createServerFn({ method: "POST" })
       }
       if (!candidate) {
         return {
-          success: false, account: null, normalized: null, bankName: null,
+          success: false,
+          account: null,
+          normalized: null,
+          bankName: null,
           sources: citations.slice(0, 5),
           rationale: String(parsed?.rationale ?? "").slice(0, 500),
           message: "Nie znaleziono numeru rachunku.",
@@ -105,7 +139,10 @@ export const companyBankAccountLookup = createServerFn({ method: "POST" })
       const detected = detectPolishBankAccount(candidate);
       if (!detected.success) {
         return {
-          success: false, account: candidate, normalized: null, bankName: null,
+          success: false,
+          account: candidate,
+          normalized: null,
+          bankName: null,
           sources: (Array.isArray(parsed?.sources) ? parsed.sources : citations).slice(0, 5),
           rationale: String(parsed?.rationale ?? "").slice(0, 500),
           message: "Znaleziony numer nie przeszedł walidacji NRB.",
@@ -117,10 +154,21 @@ export const companyBankAccountLookup = createServerFn({ method: "POST" })
         account: candidate,
         normalized: detected.normalized,
         bankName: detected.bankName ?? (parsed?.bankName ? String(parsed.bankName) : null),
-        sources: (Array.isArray(parsed?.sources) && parsed.sources.length ? parsed.sources : citations).slice(0, 5),
+        sources: (Array.isArray(parsed?.sources) && parsed.sources.length
+          ? parsed.sources
+          : citations
+        ).slice(0, 5),
         rationale: String(parsed?.rationale ?? "").slice(0, 500),
       };
     } catch (e: any) {
-      return { success: false, account: null, normalized: null, bankName: null, sources: [], rationale: "", message: e?.message ?? "Błąd Perplexity." };
+      return {
+        success: false,
+        account: null,
+        normalized: null,
+        bankName: null,
+        sources: [],
+        rationale: "",
+        message: e?.message ?? "Błąd Perplexity.",
+      };
     }
   });

@@ -83,10 +83,14 @@ const emptyForm = (): FormState => ({
   meta_description: "",
   sections: JSON.stringify(
     [
-      { type: "features", title: "Co zyskujesz", items: [{ title: "Szybko", description: "Decyzja w 48h" }] },
+      {
+        type: "features",
+        title: "Co zyskujesz",
+        items: [{ title: "Szybko", description: "Decyzja w 48h" }],
+      },
     ],
     null,
-    2
+    2,
   ),
   form_fields: JSON.stringify(
     [
@@ -95,7 +99,7 @@ const emptyForm = (): FormState => ({
       { name: "phone", label: "Telefon", type: "tel", required: false },
     ],
     null,
-    2
+    2,
   ),
   thank_you_message: "Dziękujemy! Skontaktujemy się w ciągu 24h.",
   redirect_url: "",
@@ -166,7 +170,9 @@ function LandingAdmin() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Landing Pages</h1>
-          <p className="text-sm text-muted-foreground">Twórz strony docelowe z formularzami zapisu. Leady trafiają też do email marketingu.</p>
+          <p className="text-sm text-muted-foreground">
+            Twórz strony docelowe z formularzami zapisu. Leady trafiają też do email marketingu.
+          </p>
         </div>
         <Button onClick={() => setEditor(emptyForm())}>
           <Plus className="mr-2 h-4 w-4" /> Nowy landing
@@ -184,7 +190,8 @@ function LandingAdmin() {
       ) : (
         <div className="grid gap-3">
           {pages.map((p) => {
-            const cvr = p.view_count > 0 ? ((p.conversion_count / p.view_count) * 100).toFixed(1) : "0";
+            const cvr =
+              p.view_count > 0 ? ((p.conversion_count / p.view_count) * 100).toFixed(1) : "0";
             return (
               <Card key={p.id}>
                 <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
@@ -199,15 +206,21 @@ function LandingAdmin() {
                     </div>
                     <div className="text-sm text-muted-foreground">/l/{p.slug}</div>
                     <div className="mt-1 flex gap-4 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1"><Eye className="h-3 w-3" /> {p.view_count}</span>
-                      <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" /> {p.conversion_count} leadów</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Eye className="h-3 w-3" /> {p.view_count}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Users className="h-3 w-3" /> {p.conversion_count} leadów
+                      </span>
                       <span>CVR: {cvr}%</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     {p.published && (
                       <a href={`/l/${p.slug}`} target="_blank" rel="noreferrer">
-                        <Button variant="outline" size="sm"><ExternalLink className="mr-1 h-3 w-3" /> Otwórz</Button>
+                        <Button variant="outline" size="sm">
+                          <ExternalLink className="mr-1 h-3 w-3" /> Otwórz
+                        </Button>
                       </a>
                     )}
                     <Button variant="outline" size="sm" onClick={() => setLeadsFor(p)}>
@@ -243,7 +256,8 @@ function LandingAdmin() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        if (confirm(`Usunąć "${p.title}"? Razem ze wszystkimi leadami.`)) delMut.mutate(p.id);
+                        if (confirm(`Usunąć "${p.title}"? Razem ze wszystkimi leadami.`))
+                          delMut.mutate(p.id);
                       }}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -299,7 +313,8 @@ function EditorDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const set = (k: keyof FormState, v: string | boolean) => setForm({ ...form, [k]: v } as FormState);
+  const set = (k: keyof FormState, v: string | boolean) =>
+    setForm({ ...form, [k]: v } as FormState);
 
   return (
     <Dialog open onOpenChange={(o) => !o && setForm(null)}>
@@ -309,7 +324,7 @@ function EditorDialog({
         </DialogHeader>
 
         <Tabs defaultValue="basics">
-          <TabsList>
+          <TabsList className="h-auto flex-wrap">
             <TabsTrigger value="basics">Podstawy</TabsTrigger>
             <TabsTrigger value="content">Treść</TabsTrigger>
             <TabsTrigger value="form">Formularz</TabsTrigger>
@@ -327,7 +342,9 @@ function EditorDialog({
                 <Label>Slug (URL: /l/...)</Label>
                 <Input
                   value={form.slug}
-                  onChange={(e) => set("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+                  onChange={(e) =>
+                    set("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))
+                  }
                   placeholder="pozyczka-pod-nieruchomosc"
                 />
               </div>
@@ -343,7 +360,11 @@ function EditorDialog({
             </div>
             <div>
               <Label>OG image URL (social)</Label>
-              <Input value={form.og_image_url} onChange={(e) => set("og_image_url", e.target.value)} placeholder="https://..." />
+              <Input
+                value={form.og_image_url}
+                onChange={(e) => set("og_image_url", e.target.value)}
+                placeholder="https://..."
+              />
             </div>
             <div className="flex items-center gap-3 pt-2">
               <Switch checked={form.published} onCheckedChange={(v) => set("published", v)} />
@@ -354,20 +375,32 @@ function EditorDialog({
           <TabsContent value="content" className="space-y-3 pt-4">
             <div>
               <Label>Nagłówek (H1)</Label>
-              <Textarea value={form.headline} onChange={(e) => set("headline", e.target.value)} rows={2} />
+              <Textarea
+                value={form.headline}
+                onChange={(e) => set("headline", e.target.value)}
+                rows={2}
+              />
             </div>
             <div>
               <Label>Podnagłówek</Label>
-              <Textarea value={form.subheadline} onChange={(e) => set("subheadline", e.target.value)} rows={2} />
+              <Textarea
+                value={form.subheadline}
+                onChange={(e) => set("subheadline", e.target.value)}
+                rows={2}
+              />
             </div>
             <div>
               <Label>Obrazek hero (URL)</Label>
-              <Input value={form.hero_image_url} onChange={(e) => set("hero_image_url", e.target.value)} />
+              <Input
+                value={form.hero_image_url}
+                onChange={(e) => set("hero_image_url", e.target.value)}
+              />
             </div>
             <div>
               <Label>Sekcje (JSON)</Label>
               <p className="mb-1 text-xs text-muted-foreground">
-                Typy: features, stats, text, testimonial, cta. Skorzystaj z zakładki AI Copy, żeby wygenerować.
+                Typy: features, stats, text, testimonial, cta. Skorzystaj z zakładki AI Copy, żeby
+                wygenerować.
               </p>
               <Textarea
                 value={form.sections}
@@ -397,11 +430,19 @@ function EditorDialog({
             </div>
             <div>
               <Label>Komunikat po wysłaniu</Label>
-              <Textarea value={form.thank_you_message} onChange={(e) => set("thank_you_message", e.target.value)} rows={2} />
+              <Textarea
+                value={form.thank_you_message}
+                onChange={(e) => set("thank_you_message", e.target.value)}
+                rows={2}
+              />
             </div>
             <div>
               <Label>Albo przekieruj na URL (opcjonalnie)</Label>
-              <Input value={form.redirect_url} onChange={(e) => set("redirect_url", e.target.value)} placeholder="https://..." />
+              <Input
+                value={form.redirect_url}
+                onChange={(e) => set("redirect_url", e.target.value)}
+                placeholder="https://..."
+              />
             </div>
           </TabsContent>
 
@@ -409,11 +450,19 @@ function EditorDialog({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Kolor akcentu</Label>
-                <Input type="color" value={form.primary} onChange={(e) => set("primary", e.target.value)} />
+                <Input
+                  type="color"
+                  value={form.primary}
+                  onChange={(e) => set("primary", e.target.value)}
+                />
               </div>
               <div>
                 <Label>Kolor tła</Label>
-                <Input type="color" value={form.background} onChange={(e) => set("background", e.target.value)} />
+                <Input
+                  type="color"
+                  value={form.background}
+                  onChange={(e) => set("background", e.target.value)}
+                />
               </div>
             </div>
           </TabsContent>
@@ -433,14 +482,19 @@ function EditorDialog({
               {aiMut.isPending ? "Generuję…" : "Wygeneruj treść"}
             </Button>
             <p className="text-xs text-muted-foreground">
-              AI uzupełni nagłówek, podnagłówek, CTA, meta description i sekcje. Pola formularza i kolory zostawia w spokoju.
+              AI uzupełni nagłówek, podnagłówek, CTA, meta description i sekcje. Pola formularza i
+              kolory zostawia w spokoju.
             </p>
           </TabsContent>
         </Tabs>
 
         <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => setForm(null)}>Anuluj</Button>
-          <Button onClick={onSave} disabled={saving}>{saving ? "Zapisuję…" : "Zapisz"}</Button>
+          <Button variant="outline" onClick={() => setForm(null)}>
+            Anuluj
+          </Button>
+          <Button onClick={onSave} disabled={saving}>
+            {saving ? "Zapisuję…" : "Zapisz"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -466,7 +520,11 @@ function LeadsDialog({ page, onClose }: { page: Page; onClose: () => void }) {
     const headers = ["created_at", "email", "name", "phone"];
     const lines = [headers.join(",")];
     for (const l of leads) {
-      lines.push([l.created_at, l.email, l.name ?? "", l.phone ?? ""].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
+      lines.push(
+        [l.created_at, l.email, l.name ?? "", l.phone ?? ""]
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .join(","),
+      );
     }
     return lines.join("\n");
   }, [leads]);

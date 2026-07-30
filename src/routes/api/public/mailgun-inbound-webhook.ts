@@ -16,12 +16,16 @@ import { shouldSkipAutoReply } from "@/lib/email-guard.server";
 function verifyMailgun(timestamp: string, token: string, signature: string): boolean {
   const key = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
   if (!key) return false;
-  const expected = createHmac("sha256", key).update(timestamp + token).digest("hex");
+  const expected = createHmac("sha256", key)
+    .update(timestamp + token)
+    .digest("hex");
   try {
     const a = Buffer.from(signature);
     const b = Buffer.from(expected);
     return a.length === b.length && timingSafeEqual(a, b);
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 function parseFromHeader(from: string): { email: string | null; name: string | null } {
@@ -78,8 +82,12 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
             const buf = new Uint8Array(await f.arrayBuffer());
             const safeName = f.name.replace(/[^\w.\-]+/g, "_");
             const path = `leads/${leadId}/${Date.now()}-${safeName}`;
-            const { error } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET)
-              .upload(path, buf, { contentType: f.type || "application/octet-stream", upsert: false });
+            const { error } = await supabaseAdmin.storage
+              .from(CLIENT_FILES_BUCKET)
+              .upload(path, buf, {
+                contentType: f.type || "application/octet-stream",
+                upsert: false,
+              });
             if (!error) stored.push({ name: safeName, mime: f.type, size: buf.byteLength, path });
           }
         }
@@ -96,11 +104,15 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
                 url: a.url,
                 filename: a.name,
                 mime: a["content-type"],
-                authHeader: apiKey ? { Authorization: "Basic " + Buffer.from(`api:${apiKey}`).toString("base64") } : undefined,
+                authHeader: apiKey
+                  ? { Authorization: "Basic " + Buffer.from(`api:${apiKey}`).toString("base64") }
+                  : undefined,
               });
               if (s) stored.push(s);
             }
-          } catch { /* noop */ }
+          } catch {
+            /* noop */
+          }
         }
 
         // Log inbound
@@ -116,17 +128,28 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
           metadata: { from_name: name, in_reply_to: inReplyTo, references },
         });
         if (stored.length && inboundLogId) {
-          await supabaseAdmin.from("lead_communications").update({ attachments: stored as any }).eq("id", inboundLogId);
+          await supabaseAdmin
+            .from("lead_communications")
+            .update({ attachments: stored as any })
+            .eq("id", inboundLogId);
           try {
             await attachStoredToClientDocuments({ leadId, stored, sourceLabel: "email" });
-          } catch (e) { console.error("[mailgun-inbound] attach to client docs", e); }
+          } catch (e) {
+            console.error("[mailgun-inbound] attach to client docs", e);
+          }
         }
 
         // Wyciągnij KW/kwotę z treści maila i (jeśli komplet) awansuj do wniosku
         try {
           const enrichText = [subject, text].filter(Boolean).join("\n");
-          await enrichLeadFromInbound({ leadId, text: enrichText, hasAttachments: stored.length > 0 });
-        } catch (e) { console.error("[mailgun-inbound] enrichment error", e); }
+          await enrichLeadFromInbound({
+            leadId,
+            text: enrichText,
+            hasAttachments: stored.length > 0,
+          });
+        } catch (e) {
+          console.error("[mailgun-inbound] enrichment error", e);
+        }
 
         // OCHRONA PRZED PĘTLAMI — sprawdź nagłówki/suppression/rate-limit/pętle
         const mgHeaders: Record<string, string> = {
@@ -143,6 +166,8 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
           fromEmail,
           headers: mgHeaders,
           threadIds: [messageId, inReplyTo, references].filter(Boolean) as string[],
+          subject,
+          bodyText: text,
         });
         if (skip.skip) {
           console.warn(`[mailgun-inbound] skip auto-reply: ${skip.reason} (${fromEmail})`);

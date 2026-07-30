@@ -11,17 +11,34 @@ function UstawieniaPage() {
   return (
     <div className="space-y-6 max-w-3xl">
       <h1 className="text-2xl font-bold">Ustawienia</h1>
-      <Card><CardHeader><CardTitle>Konto</CardTitle></CardHeader>
+      <Card>
+        <CardHeader>
+          <CardTitle>Konto</CardTitle>
+        </CardHeader>
         <CardContent className="text-sm space-y-1">
-          <div><span className="text-muted-foreground">E-mail:</span> {user?.email}</div>
-          <div><span className="text-muted-foreground">ID:</span> <code className="text-xs">{user?.id}</code></div>
-          <div><span className="text-muted-foreground">Role:</span> {roles.join(", ") || "—"}</div>
+          <div>
+            <span className="text-muted-foreground">E-mail:</span> {user?.email}
+          </div>
+          <div>
+            <span className="text-muted-foreground">ID:</span>{" "}
+            <code className="text-xs">{user?.id}</code>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Role:</span> {roles.join(", ") || "—"}
+          </div>
         </CardContent>
       </Card>
-      <Card><CardHeader><CardTitle>Moduły systemowe</CardTitle></CardHeader>
+      <Card>
+        <CardHeader>
+          <CardTitle>Moduły systemowe</CardTitle>
+        </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-1">
-          <div>Moduł AI selekcji: <b className="text-foreground">Wyłączony</b> (placeholder)</div>
-          <div>Auto-wysyłka do inwestorów: <b className="text-foreground">Manualna</b></div>
+          <div>
+            Moduł AI selekcji: <b className="text-foreground">Wyłączony</b> (placeholder)
+          </div>
+          <div>
+            Auto-wysyłka do inwestorów: <b className="text-foreground">Manualna</b>
+          </div>
           <div>Integracje: zarządzaj w sekcji „Integracje”.</div>
         </CardContent>
       </Card>

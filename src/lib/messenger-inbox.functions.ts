@@ -10,10 +10,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const sendMessengerReply = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      leadId: z.string().uuid(),
-      body: z.string().min(1).max(1900),
-    }).parse(input),
+    z
+      .object({
+        leadId: z.string().uuid(),
+        body: z.string().min(1).max(1900),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const [{ data: isAdmin }, { data: isOperator }] = await Promise.all([
@@ -37,10 +39,11 @@ export const sendMessengerReply = createServerFn({ method: "POST" })
     const platform: "messenger" | "instagram" = lead.messenger_psid
       ? "messenger"
       : lead.instagram_igsid
-      ? "instagram"
-      : "messenger";
+        ? "instagram"
+        : "messenger";
     const recipientId = lead.messenger_psid ?? lead.instagram_igsid;
-    if (!recipientId) throw new Error("Ten lead nie ma zapisanego identyfikatora Messenger/Instagram.");
+    if (!recipientId)
+      throw new Error("Ten lead nie ma zapisanego identyfikatora Messenger/Instagram.");
 
     const send = await sendMetaMessage({ recipientId, text: data.body, platform });
 
@@ -80,18 +83,30 @@ export const backfillMessengerData = createServerFn({ method: "POST" })
 
     const { backfillLeadNames, backfillOrphanAttachments, markAttachmentsBackfillDone } =
       await import("./messenger-backfill.server");
-    const { syncMessengerConversations, backfillGraphSyncAttachments } = await import("./messenger-sync.server");
+    const { syncMessengerConversations, backfillGraphSyncAttachments } =
+      await import("./messenger-sync.server");
 
     let sync = {
       conversationsSeen: 0,
       messagesNew: 0,
       leadsCreated: 0,
       errors: [] as string[],
-      webhook: [] as Array<{ page: string; subscribed: boolean; fields: string[]; note: string | null }>,
+      webhook: [] as Array<{
+        page: string;
+        subscribed: boolean;
+        fields: string[];
+        note: string | null;
+      }>,
     };
     try {
       const r = await syncMessengerConversations({ platform: "both" });
-      sync = { conversationsSeen: r.conversationsSeen, messagesNew: r.messagesNew, leadsCreated: r.leadsCreated, errors: r.errors, webhook: r.webhook };
+      sync = {
+        conversationsSeen: r.conversationsSeen,
+        messagesNew: r.messagesNew,
+        leadsCreated: r.leadsCreated,
+        errors: r.errors,
+        webhook: r.webhook,
+      };
     } catch (e: any) {
       console.warn("[backfill] messenger conversation sync error", e);
       sync.errors.push(String(e?.message ?? e));
@@ -100,7 +115,12 @@ export const backfillMessengerData = createServerFn({ method: "POST" })
     let docSync = { messagesProcessed: 0, attachmentsDownloaded: 0, ocrProcessed: 0, kwFound: 0 };
     try {
       const r = await backfillGraphSyncAttachments();
-      docSync = { messagesProcessed: r.messagesProcessed, attachmentsDownloaded: r.attachmentsDownloaded, ocrProcessed: r.ocrProcessed, kwFound: r.kwFound };
+      docSync = {
+        messagesProcessed: r.messagesProcessed,
+        attachmentsDownloaded: r.attachmentsDownloaded,
+        ocrProcessed: r.ocrProcessed,
+        kwFound: r.kwFound,
+      };
       if (r.errors.length) sync.errors.push(...r.errors.slice(0, 3));
     } catch (e: any) {
       console.warn("[backfill] messenger attachment sync error", e);
@@ -109,7 +129,9 @@ export const backfillMessengerData = createServerFn({ method: "POST" })
 
     const names = await backfillLeadNames({ force: true });
     const atts = await backfillOrphanAttachments();
-    try { await markAttachmentsBackfillDone(); } catch (e) {
+    try {
+      await markAttachmentsBackfillDone();
+    } catch (e) {
       console.warn("[backfill] marker upload error", e);
     }
 

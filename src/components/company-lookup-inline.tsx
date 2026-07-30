@@ -95,7 +95,9 @@ export function CompanyLookupInline({
         phone: c.contact?.phone || "",
       };
       onResolved(resolved);
-      toast.success(krsFound ? "Dane z GUS + KRS zaciągnięte" : "Dane z GUS zaciągnięte", { id: t });
+      toast.success(krsFound ? "Dane z GUS + KRS zaciągnięte" : "Dane z GUS zaciągnięte", {
+        id: t,
+      });
 
       // Doczytaj CRBR (best-effort) — cache 90 dni po stronie serwera.
       if (showCrbr && resolved.nip) {
@@ -116,43 +118,51 @@ export function CompanyLookupInline({
 
   return (
     <div className="space-y-2">
-    <div className={compact ? "flex flex-wrap items-end gap-2" : "grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"}>
-      <div className="space-y-1">
-        <label className="text-[11px] text-muted-foreground">NIP</label>
-        <Input
-          value={value.nip ?? ""}
-          onChange={(e) => onChange({ ...value, nip: e.target.value })}
-          placeholder="10 cyfr"
-          inputMode="numeric"
-        />
-      </div>
-      {showRegon && (
+      <div
+        className={
+          compact ? "flex flex-wrap items-end gap-2" : "grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"
+        }
+      >
         <div className="space-y-1">
-          <label className="text-[11px] text-muted-foreground">REGON</label>
+          <label className="text-[11px] text-muted-foreground">NIP</label>
           <Input
-            value={value.regon ?? ""}
-            onChange={(e) => onChange({ ...value, regon: e.target.value })}
-            placeholder="9 lub 14 cyfr"
-            inputMode="numeric"
-          />
-        </div>
-      )}
-      {showKrs && (
-        <div className="space-y-1">
-          <label className="text-[11px] text-muted-foreground">KRS</label>
-          <Input
-            value={value.krs ?? ""}
-            onChange={(e) => onChange({ ...value, krs: e.target.value })}
+            value={value.nip ?? ""}
+            onChange={(e) => onChange({ ...value, nip: e.target.value })}
             placeholder="10 cyfr"
             inputMode="numeric"
           />
         </div>
-      )}
-      <Button type="button" variant="secondary" onClick={run} disabled={busy}>
-        {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-        Pobierz z GUS/KRS
-      </Button>
-    </div>
+        {showRegon && (
+          <div className="space-y-1">
+            <label className="text-[11px] text-muted-foreground">REGON</label>
+            <Input
+              value={value.regon ?? ""}
+              onChange={(e) => onChange({ ...value, regon: e.target.value })}
+              placeholder="9 lub 14 cyfr"
+              inputMode="numeric"
+            />
+          </div>
+        )}
+        {showKrs && (
+          <div className="space-y-1">
+            <label className="text-[11px] text-muted-foreground">KRS</label>
+            <Input
+              value={value.krs ?? ""}
+              onChange={(e) => onChange({ ...value, krs: e.target.value })}
+              placeholder="10 cyfr"
+              inputMode="numeric"
+            />
+          </div>
+        )}
+        <Button type="button" variant="secondary" onClick={run} disabled={busy}>
+          {busy ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Search className="mr-2 h-4 w-4" />
+          )}
+          Pobierz z GUS/KRS
+        </Button>
+      </div>
       {showCrbr && lastNip && crbrData && (
         <CrbrBeneficiariesCard nip={lastNip} initialData={crbrData} />
       )}

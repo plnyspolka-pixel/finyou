@@ -5,7 +5,8 @@ import { publicClient, ok, fail } from "../_helpers";
 export default defineTool({
   name: "list_faqs",
   title: "List FAQ / avatar questions",
-  description: "Publiczna lista pytań i odpowiedzi FAQ Finance You (te same, które prezentuje awatar).",
+  description:
+    "Publiczna lista pytań i odpowiedzi FAQ Finance You (te same, które prezentuje awatar).",
   inputSchema: { limit: z.number().int().min(1).max(100).optional() },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async ({ limit }) => {

@@ -23,7 +23,13 @@ type Section = {
   type: "text" | "features" | "stats" | "testimonial" | "cta";
   title?: string;
   content?: string;
-  items?: Array<{ title?: string; description?: string; label?: string; value?: string; icon?: string }>;
+  items?: Array<{
+    title?: string;
+    description?: string;
+    label?: string;
+    value?: string;
+    icon?: string;
+  }>;
   author?: string;
   role?: string;
 };
@@ -109,7 +115,9 @@ function LandingPage() {
         {/* Hero */}
         <div className="grid items-center gap-10 md:grid-cols-2">
           <div>
-            <h1 className="text-balance text-3xl font-bold leading-tight md:text-5xl">{page.headline}</h1>
+            <h1 className="text-balance text-3xl font-bold leading-tight md:text-5xl">
+              {page.headline}
+            </h1>
             {page.subheadline && (
               <p className="mt-4 text-lg text-muted-foreground">{page.subheadline}</p>
             )}
@@ -160,7 +168,9 @@ function SectionView({ section, primary }: { section: Section; primary: string }
             <div key={i} className="rounded-xl border bg-card p-5">
               <div className="mb-2 h-1 w-10 rounded" style={{ background: primary }} />
               <div className="font-semibold">{it.title}</div>
-              {it.description && <p className="mt-1 text-sm text-muted-foreground">{it.description}</p>}
+              {it.description && (
+                <p className="mt-1 text-sm text-muted-foreground">{it.description}</p>
+              )}
             </div>
           ))}
         </div>
@@ -174,7 +184,9 @@ function SectionView({ section, primary }: { section: Section; primary: string }
         <div className="grid gap-4 md:grid-cols-3">
           {(section.items ?? []).map((it, i) => (
             <div key={i} className="rounded-xl border bg-card p-6 text-center">
-              <div className="text-3xl font-bold" style={{ color: primary }}>{it.value}</div>
+              <div className="text-3xl font-bold" style={{ color: primary }}>
+                {it.value}
+              </div>
               <div className="mt-1 text-sm text-muted-foreground">{it.label}</div>
             </div>
           ))}
@@ -195,11 +207,16 @@ function SectionView({ section, primary }: { section: Section; primary: string }
   }
   if (section.type === "cta") {
     return (
-      <section className="rounded-2xl p-8 text-center" style={{ background: primary, color: "#fff" }}>
+      <section
+        className="rounded-2xl p-8 text-center"
+        style={{ background: primary, color: "#fff" }}
+      >
         {section.title && <h2 className="text-2xl font-bold md:text-3xl">{section.title}</h2>}
         {section.content && <p className="mt-2 opacity-90">{section.content}</p>}
         <a href="#zapis" className="mt-5 inline-block">
-          <Button size="lg" variant="secondary">Przejdź do formularza</Button>
+          <Button size="lg" variant="secondary">
+            Przejdź do formularza
+          </Button>
         </a>
       </section>
     );
@@ -208,7 +225,9 @@ function SectionView({ section, primary }: { section: Section; primary: string }
   return (
     <section>
       {section.title && <h2 className="mb-4 text-2xl font-bold md:text-3xl">{section.title}</h2>}
-      {section.content && <p className="whitespace-pre-line text-muted-foreground">{section.content}</p>}
+      {section.content && (
+        <p className="whitespace-pre-line text-muted-foreground">{section.content}</p>
+      )}
     </section>
   );
 }
@@ -223,7 +242,8 @@ function LeadForm({ page, primary }: { page: PublicPage; primary: string }) {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const emailField = fields.find((f) => f.type === "email") ?? fields.find((f) => f.name === "email");
+    const emailField =
+      fields.find((f) => f.type === "email") ?? fields.find((f) => f.name === "email");
     const email = emailField ? values[emailField.name] : values["email"];
     if (!email || !/.+@.+\..+/.test(email)) {
       toast.error("Podaj poprawny email");
@@ -309,7 +329,9 @@ function LeadForm({ page, primary }: { page: PublicPage; primary: string }) {
             >
               <option value="">— wybierz —</option>
               {(f.options ?? []).map((o) => (
-                <option key={o} value={o}>{o}</option>
+                <option key={o} value={o}>
+                  {o}
+                </option>
               ))}
             </select>
           ) : (
@@ -324,7 +346,13 @@ function LeadForm({ page, primary }: { page: PublicPage; primary: string }) {
           )}
         </div>
       ))}
-      <Button type="submit" disabled={submitting} className="w-full" size="lg" style={{ background: primary, color: "#fff" }}>
+      <Button
+        type="submit"
+        disabled={submitting}
+        className="w-full"
+        size="lg"
+        style={{ background: primary, color: "#fff" }}
+      >
         {submitting ? "Wysyłam…" : page.cta_text}
       </Button>
     </form>

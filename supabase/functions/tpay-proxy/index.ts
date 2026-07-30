@@ -113,10 +113,10 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("[tpay-proxy]", e instanceof Error ? e.message : e);
-    return new Response(
-      JSON.stringify({ error: "proxy error" }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "proxy error" }), {
+      status: 502,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } finally {
     clearTimeout(timeout);
   }

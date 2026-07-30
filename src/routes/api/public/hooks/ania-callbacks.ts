@@ -28,8 +28,14 @@ function warsawParts(now: Date = new Date()) {
 
 // Statusy "nie odebrał" — call_queue.result_summary lub call_outcome z webhooka.
 const NO_PICKUP_OUTCOMES = new Set([
-  "nieodebrana", "poczta_glosowa", "zajety", "blad",
-  "no_answer", "voicemail", "busy", "failed",
+  "nieodebrana",
+  "poczta_glosowa",
+  "zajety",
+  "blad",
+  "no_answer",
+  "voicemail",
+  "busy",
+  "failed",
 ]);
 
 const SMS_BODY = "Cześć, tu Ania z FinanceYou.pl. Proszę o kontakt w sprawie pożyczki.";
@@ -53,10 +59,12 @@ async function runBatch(force: boolean) {
   // Kandydaci: aktywne wnioski z numerem telefonu, nie pauzowane, nie do_not_call.
   const { data: loans } = await s
     .from("loan_applications")
-    .select(`
+    .select(
+      `
       id, status, reminder_paused, last_reminder_at,
       client:clients!inner(id, first_name, last_name, phone_normalized, phone, do_not_call)
-    `)
+    `,
+    )
     .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
     .eq("reminder_paused", false)
     .limit(200);
@@ -72,7 +80,9 @@ async function runBatch(force: boolean) {
   }
 
   // Pobierz ostatnią rozmowę per numer — w jednym zapytaniu.
-  const phones = Array.from(new Set(candidates.map((l: any) => l.client.phone_normalized || l.client.phone)));
+  const phones = Array.from(
+    new Set(candidates.map((l: any) => l.client.phone_normalized || l.client.phone)),
+  );
   const { data: lastCalls } = await s
     .from("call_queue")
     .select("phone_normalized, created_at, started_at, status, result_summary, conversation_id")
@@ -86,7 +96,10 @@ async function runBatch(force: boolean) {
     if (!lastByPhone.has(c.phone_normalized)) lastByPhone.set(c.phone_normalized, c);
   }
 
-  let called = 0, skipped = 0, smsSent = 0, smsErrors = 0;
+  let called = 0,
+    skipped = 0,
+    smsSent = 0,
+    smsErrors = 0;
   const results: any[] = [];
 
   for (const loan of candidates as any[]) {
@@ -141,7 +154,18 @@ async function runBatch(force: boolean) {
     });
   }
 
-  return { ok: true, weekday, hour, minute, candidates: candidates.length, called, skipped, smsSent, smsErrors, results };
+  return {
+    ok: true,
+    weekday,
+    hour,
+    minute,
+    candidates: candidates.length,
+    called,
+    skipped,
+    smsSent,
+    smsErrors,
+    results,
+  };
 }
 
 export const Route = createFileRoute("/api/public/hooks/ania-callbacks")({

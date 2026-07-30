@@ -8,11 +8,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Mail, Search, Paperclip, RefreshCw, ExternalLink, Inbox, Send, Download, Reply, PenSquare } from "lucide-react";
+import {
+  Mail,
+  Search,
+  Paperclip,
+  RefreshCw,
+  ExternalLink,
+  Inbox,
+  Send,
+  Download,
+  Reply,
+  PenSquare,
+  History,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox/compose-email";
 import { AttachmentPreview } from "@/components/inbox/attachment-preview";
+import { CorrespondenceHistoryDialog } from "@/components/inbox/correspondence-history";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 import { FancyShell } from "@/components/landing/fancy-shell";
@@ -22,7 +35,6 @@ export const Route = createFileRoute("/posrednik/skrzynka")({
   validateSearch: (s: Record<string, unknown>) => ({ compose: s.compose ? 1 : undefined }),
   component: SkrzynkaPosrednika,
 });
-
 
 type Msg = {
   id: string;
@@ -47,6 +59,7 @@ export function SkrzynkaPosrednika() {
   const [viewMode, setViewMode] = useState<"html" | "text">("html");
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeInitial, setComposeInitial] = useState<ComposeEmailInitial | undefined>(undefined);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -83,7 +96,9 @@ export function SkrzynkaPosrednika() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lead_communications")
-        .select("id, lead_id, email, direction, subject, content, attachments, created_at, metadata, thread_external_id")
+        .select(
+          "id, lead_id, email, direction, subject, content, attachments, created_at, metadata, thread_external_id",
+        )
         .eq("channel", "email")
         .eq("direction", tab)
         .order("created_at", { ascending: false })
@@ -106,7 +121,7 @@ export function SkrzynkaPosrednika() {
     );
   }, [data, q]);
 
-  const selected = selectedId ? filtered.find((m) => m.id === selectedId) ?? null : null;
+  const selected = selectedId ? (filtered.find((m) => m.id === selectedId) ?? null) : null;
 
   const autoFetched = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -120,9 +135,10 @@ export function SkrzynkaPosrednika() {
       return true;
     });
     if (!needsFetch.length) return;
-    const prioritized = selected && needsFetch.some((m) => m.id === selected.id)
-      ? [selected, ...needsFetch.filter((m) => m.id !== selected.id)]
-      : needsFetch;
+    const prioritized =
+      selected && needsFetch.some((m) => m.id === selected.id)
+        ? [selected, ...needsFetch.filter((m) => m.id !== selected.id)]
+        : needsFetch;
     const batch = prioritized.slice(0, 5);
     for (const m of batch) {
       autoFetched.current.add(m.id);
@@ -141,7 +157,10 @@ export function SkrzynkaPosrednika() {
           <Button
             size="sm"
             className="h-8 px-2.5"
-            onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
+            onClick={() => {
+              setComposeInitial(undefined);
+              setComposeOpen(true);
+            }}
           >
             <PenSquare className="h-3.5 w-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Nowa</span>
@@ -163,7 +182,10 @@ export function SkrzynkaPosrednika() {
           variant={tab === "inbound" ? "default" : "outline"}
           size="sm"
           className="h-8 text-xs"
-          onClick={() => { setTab("inbound"); setSelectedId(null); }}
+          onClick={() => {
+            setTab("inbound");
+            setSelectedId(null);
+          }}
         >
           <Inbox className="h-3.5 w-3.5 mr-1.5" />
           Odebrane
@@ -172,7 +194,10 @@ export function SkrzynkaPosrednika() {
           variant={tab === "outbound" ? "default" : "outline"}
           size="sm"
           className="h-8 text-xs"
-          onClick={() => { setTab("outbound"); setSelectedId(null); }}
+          onClick={() => {
+            setTab("outbound");
+            setSelectedId(null);
+          }}
         >
           <Send className="h-3.5 w-3.5 mr-1.5" />
           Wysłane
@@ -223,14 +248,21 @@ export function SkrzynkaPosrednika() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                          <div className="text-[11px] font-semibold truncate min-w-0 text-white">{m.email ?? "—"}</div>
+                          <div className="text-[11px] font-semibold truncate min-w-0 text-white">
+                            {m.email ?? "—"}
+                          </div>
                           <div className="text-[10px] text-white/60 whitespace-nowrap shrink-0">
-                            {formatDistanceToNow(new Date(m.created_at), { addSuffix: true, locale: pl })}
+                            {formatDistanceToNow(new Date(m.created_at), {
+                              addSuffix: true,
+                              locale: pl,
+                            })}
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div className="text-[13px] font-medium truncate mt-1 text-white/95">{m.subject || "(bez tematu)"}</div>
+                    <div className="text-[13px] font-medium truncate mt-1 text-white/95">
+                      {m.subject || "(bez tematu)"}
+                    </div>
                     <div className="text-[11px] text-white/60 truncate">
                       {(m.content ?? "").slice(0, 80)}
                     </div>
@@ -243,7 +275,9 @@ export function SkrzynkaPosrednika() {
                           </Badge>
                         )}
                         {m.lead_id && (
-                          <Badge className="text-[10px] h-4 border-emerald-300/40 bg-emerald-500/20 text-emerald-100">lead</Badge>
+                          <Badge className="text-[10px] h-4 border-emerald-300/40 bg-emerald-500/20 text-emerald-100">
+                            lead
+                          </Badge>
                         )}
                       </div>
                     )}
@@ -253,7 +287,6 @@ export function SkrzynkaPosrednika() {
             </div>
           </ScrollArea>
         </FancyShell>
-
 
         <FancyShell motion={false} innerClassName="!p-3 sm:!p-4 h-full flex flex-col min-w-0">
           {!selected && (
@@ -272,7 +305,9 @@ export function SkrzynkaPosrednika() {
                     {selected.subject || "(bez tematu)"}
                   </div>
                   <div className="text-sm text-white/70 mt-1 break-all">
-                    <span className="font-medium text-white/90">{tab === "inbound" ? "Od:" : "Do:"}</span>{" "}
+                    <span className="font-medium text-white/90">
+                      {tab === "inbound" ? "Od:" : "Do:"}
+                    </span>{" "}
                     {selected.email ?? "—"}
                   </div>
                   <div className="text-xs text-white/60">
@@ -289,7 +324,12 @@ export function SkrzynkaPosrednika() {
                         setComposeInitial({
                           to: selected.email ?? "",
                           subject: subj.toLowerCase().startsWith("re:") ? subj : `Re: ${subj}`,
-                          body: `\n\n---\nW dniu ${new Date(selected.created_at).toLocaleString("pl-PL")} ${selected.email} napisał:\n${(selected.content ?? "").split("\n").map((l) => "> " + l).join("\n")}`,
+                          body: `\n\n---\nW dniu ${new Date(selected.created_at).toLocaleString("pl-PL")} ${selected.email} napisał:\n${(
+                            selected.content ?? ""
+                          )
+                            .split("\n")
+                            .map((l) => "> " + l)
+                            .join("\n")}`,
                           replyToCommunicationId: selected.id,
                         });
                         setComposeOpen(true);
@@ -299,8 +339,24 @@ export function SkrzynkaPosrednika() {
                       Odpowiedz
                     </Button>
                   )}
+                  {selected.email && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                      onClick={() => setHistoryOpen(true)}
+                    >
+                      <History className="h-4 w-4 mr-2" />
+                      Historia
+                    </Button>
+                  )}
                   {selected.lead_id && (
-                    <Button asChild variant="outline" size="sm" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                    >
                       <Link to={`${base}/leady/${selected.lead_id}` as any}>
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Otwórz lead
@@ -310,11 +366,9 @@ export function SkrzynkaPosrednika() {
                 </div>
               </div>
 
-
               {Array.isArray(selected.attachments) && selected.attachments.length > 0 && (
                 <AttachmentPreview attachments={selected.attachments as any[]} />
               )}
-
 
               {(() => {
                 const meta = (selected.metadata ?? {}) as Record<string, any>;
@@ -366,16 +420,18 @@ export function SkrzynkaPosrednika() {
                             onClick={() => refetchBody.mutate(selected.id)}
                             disabled={refetchBody.isPending}
                           >
-                            <Download className={`h-4 w-4 mr-2 ${refetchBody.isPending ? "animate-pulse" : ""}`} />
+                            <Download
+                              className={`h-4 w-4 mr-2 ${refetchBody.isPending ? "animate-pulse" : ""}`}
+                            />
                             Pobierz treść
                           </Button>
                         ) : tab === "inbound" ? (
                           <div className="text-xs text-white/60">
-                            Stara wiadomość bez identyfikatora — nie da się pobrać treści. Nowe wiadomości będą zapisywane z pełną treścią.
+                            Stara wiadomość bez identyfikatora — nie da się pobrać treści. Nowe
+                            wiadomości będą zapisywane z pełną treścią.
                           </div>
                         ) : null}
                       </div>
-
                     )}
                   </div>
                 );
@@ -389,7 +445,16 @@ export function SkrzynkaPosrednika() {
         open={composeOpen}
         onOpenChange={setComposeOpen}
         initial={composeInitial}
-        onSent={() => { setTab("outbound"); refetch(); }}
+        onSent={() => {
+          setTab("outbound");
+          refetch();
+        }}
+      />
+
+      <CorrespondenceHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        email={selected?.email ?? null}
       />
     </div>
   );

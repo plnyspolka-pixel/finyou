@@ -25,7 +25,6 @@ export type ExtractedFacts = {
 const KW_RE =
   /\b([A-ZŁŃŚŻŹĄĆĘÓ0-9]{2}\d)[\s\/\\.-]?([A-Z0-9])[\s\/\\.-]{0,3}(\d{7,8})[\s\/\\.-]{0,3}(\d)\b/g;
 
-
 // Fragmenty, w których cyfry na pewno nie są kwotą — maile przychodzą często
 // jako surowy HTML/CSS (kolory hex typu #951246), a adresy e-mail i linki
 // zawierają liczby, które regex brałby za kwoty.
@@ -82,14 +81,32 @@ function normalizePhone(p: string): string | null {
 
 // Słowa, które pasują do wzorca, ale nie są imieniem.
 const NAME_STOPWORDS = new Set([
-  "Serdecznie", "Cieplutko", "Gorąco", "Państwa", "Pana", "Panią", "Pani",
-  "Was", "Ciebie", "Cię", "Bardzo", "Wszystkich", "Zainteresowany", "Zainteresowana",
+  "Serdecznie",
+  "Cieplutko",
+  "Gorąco",
+  "Państwa",
+  "Pana",
+  "Panią",
+  "Pani",
+  "Was",
+  "Ciebie",
+  "Cię",
+  "Bardzo",
+  "Wszystkich",
+  "Zainteresowany",
+  "Zainteresowana",
 ]);
 
 export function extractInboundFacts(rawText: string | null | undefined): ExtractedFacts {
   const out: ExtractedFacts = {
-    kwNumbers: [], loanAmount: null, propertyValue: null, city: null,
-    firstName: null, lastName: null, email: null, phone: null,
+    kwNumbers: [],
+    loanAmount: null,
+    propertyValue: null,
+    city: null,
+    firstName: null,
+    lastName: null,
+    email: null,
+    phone: null,
   };
   if (!rawText) return out;
 
@@ -116,7 +133,9 @@ export function extractInboundFacts(rawText: string | null | undefined): Extract
       out.phone = trimmed;
     } else {
       const ctx =
-        /(?:tel\.?|telefon\p{L}*|numer\p{L}*|kontakt\p{L}*|dzwoni[ćc]|zadzwo[ńn]\p{L}*)[^\d\n]{0,20}((?:\+?48[\s-]?)?\d{3}[\s-]?\d{3}[\s-]?\d{3})(?!\d)/iu.exec(text);
+        /(?:tel\.?|telefon\p{L}*|numer\p{L}*|kontakt\p{L}*|dzwoni[ćc]|zadzwo[ńn]\p{L}*)[^\d\n]{0,20}((?:\+?48[\s-]?)?\d{3}[\s-]?\d{3}[\s-]?\d{3})(?!\d)/iu.exec(
+          text,
+        );
       const pref = /(\+48[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{3})(?!\d)/.exec(text);
       if (ctx) out.phone = ctx[1].trim();
       else if (pref) out.phone = pref[1].trim();
@@ -132,7 +151,6 @@ export function extractInboundFacts(rawText: string | null | undefined): Extract
       out.kwNumbers.push(norm);
     }
   }
-
 
   // Pozycje słów "wartość/wycena/wart" — kwota do ~40 znaków za takim słowem
   // to wartość nieruchomości, nie kwota pożyczki.
@@ -209,12 +227,14 @@ export async function enrichLeadFromInbound(opts: {
 
   const { data: lead } = await s
     .from("leads")
-    .select("id, first_name, last_name, email, phone_normalized, phone_raw, source, client_id, loan_application_id, application_data")
+    .select(
+      "id, first_name, last_name, email, phone_normalized, phone_raw, source, client_id, loan_application_id, application_data",
+    )
     .eq("id", leadId)
     .maybeSingle();
   if (!lead) return { updated: false, promoted: null };
 
-  const appData = { ...(lead.application_data as Record<string, any> ?? {}) };
+  const appData = { ...((lead.application_data as Record<string, any>) ?? {}) };
   const existingKw: string[] = Array.isArray(appData.kw_numbers) ? [...appData.kw_numbers] : [];
   const beforeKwLen = existingKw.length;
   for (const k of facts.kwNumbers) if (!existingKw.includes(k)) existingKw.push(k);
@@ -251,7 +271,10 @@ export async function enrichLeadFromInbound(opts: {
 
   if (touched) {
     appData.enriched_at = new Date().toISOString();
-    await s.from("leads").update({ ...namePatch, application_data: appData as any }).eq("id", leadId);
+    await s
+      .from("leads")
+      .update({ ...namePatch, application_data: appData as any })
+      .eq("id", leadId);
   }
 
   // Jeśli lead ma już wniosek, dopisz nowe KW / kwotę bezpośrednio do niego.
@@ -322,8 +345,16 @@ export function mapPropertyType(raw: unknown): string {
   if (!t) return "mieszkanie";
   if (t.includes("dom")) return "dom";
   if (t.includes("mieszk")) return "mieszkanie";
-  if (t.includes("lokal") || t.includes("usług") || t.includes("uslug") || t.includes("użytk") || t.includes("uzytk")) return "lokal_uslugowy";
-  if (t.includes("działk") || t.includes("dzialk") || t.includes("budowlan")) return "dzialka_budowlana";
+  if (
+    t.includes("lokal") ||
+    t.includes("usług") ||
+    t.includes("uslug") ||
+    t.includes("użytk") ||
+    t.includes("uzytk")
+  )
+    return "lokal_uslugowy";
+  if (t.includes("działk") || t.includes("dzialk") || t.includes("budowlan"))
+    return "dzialka_budowlana";
   if (t.includes("grunt") || t.includes("rolny") || t.includes("rolna")) return "grunt_rolny";
   if (t.includes("udział") || t.includes("udzial")) return "udzial_w_nieruchomosci";
   return "inna";
@@ -338,7 +369,9 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
   const s = admin();
   const { data: lead } = await s
     .from("leads")
-    .select("id, first_name, last_name, email, phone_normalized, phone_raw, source, client_id, loan_application_id, application_data")
+    .select(
+      "id, first_name, last_name, email, phone_normalized, phone_raw, source, client_id, loan_application_id, application_data",
+    )
     .eq("id", leadId)
     .maybeSingle();
   if (!lead || lead.loan_application_id) return null;
@@ -364,8 +397,8 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
     .from("lead_communications")
     .select("id, attachments")
     .eq("lead_id", leadId);
-  const hasCommAtts = (commsWithAtts ?? []).some((c: any) =>
-    Array.isArray(c.attachments) && c.attachments.length > 0,
+  const hasCommAtts = (commsWithAtts ?? []).some(
+    (c: any) => Array.isArray(c.attachments) && c.attachments.length > 0,
   );
   if (!hasCommAtts) return null;
 
@@ -445,7 +478,9 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
   //    wniosku) → rekordy documents, żeby były widoczne we wniosku.
   const attRows: Record<string, any>[] = [];
   for (const c of commsWithAtts ?? []) {
-    for (const a of (Array.isArray((c as any).attachments) ? (c as any).attachments : []) as any[]) {
+    for (const a of (Array.isArray((c as any).attachments)
+      ? (c as any).attachments
+      : []) as any[]) {
       if (!a?.path) continue;
       attRows.push({
         loan_application_id: loan.id,
@@ -462,7 +497,10 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
     const { data: existingDocs } = await s
       .from("documents")
       .select("file_path")
-      .in("file_path", attRows.map((r) => r.file_path));
+      .in(
+        "file_path",
+        attRows.map((r) => r.file_path),
+      );
     const seenPaths = new Set((existingDocs ?? []).map((d: any) => d.file_path));
     const fresh = attRows.filter((r) => !seenPaths.has(r.file_path));
     if (fresh.length > 0) {

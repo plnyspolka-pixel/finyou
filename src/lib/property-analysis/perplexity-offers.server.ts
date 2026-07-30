@@ -49,7 +49,11 @@ const PROPERTY_LABELS: Record<string, string> = {
 };
 
 function domainOf(url: string): string {
-  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
 }
 
 function numOrNull(v: any): number | null {
@@ -75,7 +79,9 @@ function buildPrompt(p: PerplexityOffersParams): string {
   const typeLabel = PROPERTY_LABELS[String(p.propertyType)] ?? "nieruchomość";
   const loc = [p.district, p.city, p.voivodeship].filter(Boolean).join(", ") || "Polska";
   const radius = p.radiusKm ?? 10;
-  const areaHint = p.areaM2 ? ` Podobna powierzchnia do ~${p.areaM2} m² jest preferowana, ale nie wymagana.` : "";
+  const areaHint = p.areaM2
+    ? ` Podobna powierzchnia do ~${p.areaM2} m² jest preferowana, ale nie wymagana.`
+    : "";
 
   return `Jesteś analitykiem rynku nieruchomości w Polsce. Znajdź AKTUALNE, aktywne ogłoszenia SPRZEDAŻY typu „${typeLabel}" w okolicy (promień ok. ${radius} km od: ${loc}).${areaHint}
 
@@ -101,7 +107,11 @@ Zwróć do 12 najbardziej reprezentatywnych ofert w polu "offers". Liczby (total
 function tryParseJson(s: string): any | null {
   const m = s.match(/\{[\s\S]*\}/);
   if (!m) return null;
-  try { return JSON.parse(m[0]); } catch { return null; }
+  try {
+    return JSON.parse(m[0]);
+  } catch {
+    return null;
+  }
 }
 
 function emptyResult(status: "no_data" | "error", message?: string): PerplexityOffersResult {
@@ -117,10 +127,13 @@ function emptyResult(status: "no_data" | "error", message?: string): PerplexityO
   };
 }
 
-export async function perplexityLocalOffers(p: PerplexityOffersParams): Promise<PerplexityOffersResult> {
+export async function perplexityLocalOffers(
+  p: PerplexityOffersParams,
+): Promise<PerplexityOffersResult> {
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) return emptyResult("error", "Brak PERPLEXITY_API_KEY.");
-  if (!p.city && !p.district) return emptyResult("no_data", "Brak lokalizacji — nie wyszukano ofert.");
+  if (!p.city && !p.district)
+    return emptyResult("no_data", "Brak lokalizacji — nie wyszukano ofert.");
 
   try {
     const res = await fetch("https://api.perplexity.ai/chat/completions", {
@@ -129,13 +142,22 @@ export async function perplexityLocalOffers(p: PerplexityOffersParams): Promise<
       body: JSON.stringify({
         model: "sonar-pro",
         messages: [
-          { role: "system", content: "Jesteś analitykiem rynku nieruchomości w Polsce. Odpowiadasz wyłącznie poprawnym JSON-em, bez komentarzy ani backticków." },
+          {
+            role: "system",
+            content:
+              "Jesteś analitykiem rynku nieruchomości w Polsce. Odpowiadasz wyłącznie poprawnym JSON-em, bez komentarzy ani backticków.",
+          },
           { role: "user", content: buildPrompt(p) },
         ],
         temperature: 0.2,
         search_recency_filter: "month",
         search_domain_filter: [
-          "otodom.pl", "olx.pl", "domiporta.pl", "gratka.pl", "morizon.pl", "nieruchomosci-online.pl",
+          "otodom.pl",
+          "olx.pl",
+          "domiporta.pl",
+          "gratka.pl",
+          "morizon.pl",
+          "nieruchomosci-online.pl",
         ],
       }),
     });
@@ -149,18 +171,26 @@ export async function perplexityLocalOffers(p: PerplexityOffersParams): Promise<
     const content: string = json?.choices?.[0]?.message?.content ?? "";
     const citations: string[] = Array.isArray(json?.citations) ? json.citations : [];
     const parsed = tryParseJson(content);
-    if (!parsed) return { ...emptyResult("no_data", "Nie udało się sparsować odpowiedzi Perplexity."), citations };
+    if (!parsed)
+      return {
+        ...emptyResult("no_data", "Nie udało się sparsować odpowiedzi Perplexity."),
+        citations,
+      };
 
     const rawOffers: any[] = Array.isArray(parsed.offers) ? parsed.offers : [];
     const offers: PerplexityOffer[] = rawOffers.slice(0, 12).map((o) => {
       const url = typeof o?.url === "string" ? o.url : "";
       const pricePln = numOrNull(o?.pricePln);
       const areaM2 = numOrNull(o?.areaM2);
-      const pricePerM2 = numOrNull(o?.pricePerM2) ?? (pricePln && areaM2 ? Math.round(pricePln / areaM2) : null);
+      const pricePerM2 =
+        numOrNull(o?.pricePerM2) ?? (pricePln && areaM2 ? Math.round(pricePln / areaM2) : null);
       return {
         title: typeof o?.title === "string" ? o.title.slice(0, 200) : "",
         url,
-        source: typeof o?.source === "string" && o.source ? o.source.replace(/^www\./, "") : domainOf(url),
+        source:
+          typeof o?.source === "string" && o.source
+            ? o.source.replace(/^www\./, "")
+            : domainOf(url),
         postedBy: classifyPostedBy(o?.postedBy),
         pricePln,
         pricePerM2: pricePerM2 && pricePerM2 > 500 && pricePerM2 < 200_000 ? pricePerM2 : null,
@@ -169,8 +199,10 @@ export async function perplexityLocalOffers(p: PerplexityOffersParams): Promise<
 
     // Liczniki: preferuj podane przez model; gdy brak — policz z próbki.
     const total = numOrNull(parsed.totalActiveListings) ?? offers.length;
-    const agency = numOrNull(parsed.agencyListings) ?? offers.filter((o) => o.postedBy === "agency").length;
-    const priv = numOrNull(parsed.privateListings) ?? offers.filter((o) => o.postedBy === "private").length;
+    const agency =
+      numOrNull(parsed.agencyListings) ?? offers.filter((o) => o.postedBy === "agency").length;
+    const priv =
+      numOrNull(parsed.privateListings) ?? offers.filter((o) => o.postedBy === "private").length;
 
     const ppm2FromOffers = offers.map((o) => o.pricePerM2).filter((v): v is number => v != null);
     const medianPricePerM2 = numOrNull(parsed.medianPricePerM2) ?? median(ppm2FromOffers);

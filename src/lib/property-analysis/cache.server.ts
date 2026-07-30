@@ -14,23 +14,46 @@ export async function getCached<T>(table: CacheTable, key: string): Promise<T | 
   return data.payload as T;
 }
 
-export async function setCached<T>(table: CacheTable, key: string, payload: T, ttlDays = 30): Promise<void> {
+export async function setCached<T>(
+  table: CacheTable,
+  key: string,
+  payload: T,
+  ttlDays = 30,
+): Promise<void> {
   const expires = new Date(Date.now() + ttlDays * 24 * 3600 * 1000).toISOString();
   await supabaseAdmin.from(table).upsert(
-    { cache_key: key, payload: payload as never, fetched_at: new Date().toISOString(), expires_at: expires },
+    {
+      cache_key: key,
+      payload: payload as never,
+      fetched_at: new Date().toISOString(),
+      expires_at: expires,
+    },
     { onConflict: "cache_key" },
   );
 }
 
-export async function withCache<T>(table: CacheTable, key: string, ttlDays: number, fetcher: () => Promise<T>): Promise<T> {
+export async function withCache<T>(
+  table: CacheTable,
+  key: string,
+  ttlDays: number,
+  fetcher: () => Promise<T>,
+): Promise<T> {
   const hit = await getCached<T>(table, key);
   if (hit != null) return hit;
   const fresh = await fetcher();
-  try { await setCached(table, key, fresh, ttlDays); } catch { /* ignore cache write errors */ }
+  try {
+    await setCached(table, key, fresh, ttlDays);
+  } catch {
+    /* ignore cache write errors */
+  }
   return fresh;
 }
 
-export function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 15_000): Promise<Response> {
+export function fetchWithTimeout(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs = 15_000,
+): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
@@ -61,5 +84,5 @@ export function filterIqrOutliers(values: number[]): number[] {
   const iqr = q3 - q1;
   const lo = q1 - 1.5 * iqr;
   const hi = q3 + 1.5 * iqr;
-  return values.filter(v => v >= lo && v <= hi);
+  return values.filter((v) => v >= lo && v <= hi);
 }

@@ -25,7 +25,10 @@ function extractAmountPln(text: string): { amount: number | null; currency: stri
   // Najpierw preferuj kwoty z jednostką waluty.
   const m = text.match(/([\d][\d\s.]*,\d{2}|\d[\d\s]{2,})\s*(z[łl]|pln|eur|chf|usd)/i);
   if (m) {
-    const raw = m[1].replace(/\s/g, "").replace(/\.(?=\d{3})/g, "").replace(",", ".");
+    const raw = m[1]
+      .replace(/\s/g, "")
+      .replace(/\.(?=\d{3})/g, "")
+      .replace(",", ".");
     const n = Number(raw);
     const curRaw = m[2].toLowerCase();
     const currency = /z[łl]|pln/.test(curRaw) ? "PLN" : curRaw.toUpperCase();
@@ -44,11 +47,43 @@ function splitEntries(text: string): string[] {
 
 // Słowa, które nie są imieniem/nazwiskiem — odsiewają fałszywe dopasowania.
 const NAME_STOPWORDS = new Set([
-  "wlasciciel", "wspolwlasciciel", "udzial", "prawo", "dzial", "ksiega", "wieczysta",
-  "hipoteka", "wpis", "wzmianka", "numer", "data", "rodzaj", "tresc", "podstawa",
-  "nieruchomosc", "lokal", "budynek", "dzialka", "wartosc", "kwota", "lista", "osoba",
-  "fizyczna", "prawna", "imie", "imiona", "nazwisko", "pesel", "regon", "skarb", "panstwa",
-  "gmina", "miasto", "wojewodztwo", "sad", "rejonowy",
+  "wlasciciel",
+  "wspolwlasciciel",
+  "udzial",
+  "prawo",
+  "dzial",
+  "ksiega",
+  "wieczysta",
+  "hipoteka",
+  "wpis",
+  "wzmianka",
+  "numer",
+  "data",
+  "rodzaj",
+  "tresc",
+  "podstawa",
+  "nieruchomosc",
+  "lokal",
+  "budynek",
+  "dzialka",
+  "wartosc",
+  "kwota",
+  "lista",
+  "osoba",
+  "fizyczna",
+  "prawna",
+  "imie",
+  "imiona",
+  "nazwisko",
+  "pesel",
+  "regon",
+  "skarb",
+  "panstwa",
+  "gmina",
+  "miasto",
+  "wojewodztwo",
+  "sad",
+  "rejonowy",
 ]);
 
 function norm(s: string): string {
@@ -81,26 +116,51 @@ export function extractKwOwnerPersons(dzial2: string | null | undefined): KwOwne
   };
 
   const TOKEN = "[A-ZĄĆĘŁŃÓŚŹŻ][\\p{L}-]+";
+  // Układ tabelaryczny EKW: etykieta w nawiasie, wartości po niej rozdzielone
+  // przecinkami — "Osoba fizyczna (Imię pierwsze nazwisko, imię ojca, imię
+  // matki, PESEL) ANATOLII SLAVINSKYI, PETRO, JEWDOKIJA, 73063017816".
+  for (const m of text.matchAll(
+    new RegExp(
+      `[Oo]soba\\s+fizyczna\\s*\\([^)]{0,160}\\)\\s*(${TOKEN})\\s+(${TOKEN})\\s*,`,
+      "gu",
+    ),
+  )) {
+    push(m[1], m[2]);
+  }
   // "Imię: JAN … Nazwisko: KOWALSKI"
-  for (const m of text.matchAll(new RegExp(`imi[eę][^:]{0,20}:\\s*(${TOKEN})[\\s\\S]{0,60}?nazwisk[^:]{0,20}:\\s*(${TOKEN})`, "giu"))) {
+  for (const m of text.matchAll(
+    new RegExp(
+      `imi[eę][^:]{0,20}:\\s*(${TOKEN})[\\s\\S]{0,60}?nazwisk[^:]{0,20}:\\s*(${TOKEN})`,
+      "giu",
+    ),
+  )) {
     push(m[1], m[2]);
   }
   // "Nazwisko: KOWALSKI … Imię: JAN"
-  for (const m of text.matchAll(new RegExp(`nazwisk[^:]{0,20}:\\s*(${TOKEN})[\\s\\S]{0,60}?imi[eę][^:]{0,20}:\\s*(${TOKEN})`, "giu"))) {
+  for (const m of text.matchAll(
+    new RegExp(
+      `nazwisk[^:]{0,20}:\\s*(${TOKEN})[\\s\\S]{0,60}?imi[eę][^:]{0,20}:\\s*(${TOKEN})`,
+      "giu",
+    ),
+  )) {
     push(m[2], m[1]);
   }
   // Układ EKW bez dwukropków: "Imię pierwsze JAN … Nazwisko / pierwszy człon
   // nazwiska złożonego SZPAK" — etykiety pisane normalnie, wartości WERSALIKAMI.
   const CAPS = "[A-ZĄĆĘŁŃÓŚŹŻ][A-ZĄĆĘŁŃÓŚŹŻ-]+";
   for (const m of text.matchAll(
-    new RegExp(`[Ii]mi[eę]\\s+pierwsze\\s+(${CAPS})[\\s\\S]{0,140}?[Nn]azwisko[^A-ZĄĆĘŁŃÓŚŹŻ]{0,80}(${CAPS})`, "gu"),
+    new RegExp(
+      `[Ii]mi[eę]\\s+pierwsze\\s+(${CAPS})[\\s\\S]{0,140}?[Nn]azwisko[^A-ZĄĆĘŁŃÓŚŹŻ]{0,80}(${CAPS})`,
+      "gu",
+    ),
   )) {
     push(m[1], m[2]);
   }
   if (out.length > 0) return out.slice(0, 6);
 
   // Fallback: "Jan Kowalski" (mieszana wielkość liter → kolejność imię-nazwisko)
-  const personRe = /\b([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)?)\b/gu;
+  const personRe =
+    /\b([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)?)\b/gu;
   let m: RegExpExecArray | null;
   while ((m = personRe.exec(text)) !== null) push(m[1], m[2]);
   return out.slice(0, 6);
@@ -121,12 +181,20 @@ export function extractKwOwnerPesels(dzial2: string | null | undefined): KwOwner
   if (!text) return [];
   const out: KwOwnerPesel[] = [];
   const seen = new Set<string>();
-  for (const m of text.matchAll(/pesel[^0-9]{0,30}(\d{11})/gi)) {
+  // Luka do 90 znaków: w układzie tabelarycznym EKW między etykietą „PESEL"
+  // (w nawiasie) a numerem stoją wartości imion i nazwisk rodziców —
+  // "…PESEL) ANATOLII SLAVINSKYI, PETRO, JEWDOKIJA, 73063017816". Przed
+  // fałszywymi trafieniami chroni walidacja sumy kontrolnej PESEL.
+  for (const m of text.matchAll(/pesel[^0-9]{0,90}?(\d{11})(?!\d)/gi)) {
     const pesel = m[1];
     if (seen.has(pesel) || !parsePesel(pesel).valid) continue;
     seen.add(pesel);
-    // W EKW pola imienia/nazwiska poprzedzają pole PESEL w tej samej podrubryce.
-    const before = text.slice(Math.max(0, (m.index ?? 0) - 400), m.index ?? 0);
+    // Imię i nazwisko stoją przed polem PESEL (układ etykietowany) albo między
+    // etykietą „PESEL" a numerem (układ tabelaryczny „Osoba fizyczna (…)
+    // JAN KOWALSKI, ojciec, matka, 8906…") — okno obejmuje oba przypadki,
+    // kończąc się tuż przed cyframi numeru.
+    const digitsIdx = (m.index ?? 0) + m[0].length - 11;
+    const before = text.slice(Math.max(0, (m.index ?? 0) - 400), digitsIdx);
     const persons = extractKwOwnerPersons(before);
     const nearest = persons.length ? persons[persons.length - 1] : null;
     out.push({ pesel, ownerName: nearest ? `${nearest.firstName} ${nearest.lastName}` : null });
@@ -149,7 +217,8 @@ export function parseOwners(dzial2: string | null | undefined): string[] {
   //    z treści wpisów i sztucznie mnoży liczbę właścicieli).
   let m: RegExpExecArray | null;
   if (owners.size === 0) {
-    const personRe = /\b([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+)?)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+)?)(?:\s+([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+))?\b/gu;
+    const personRe =
+      /\b([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+)?)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+)?)(?:\s+([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+))?\b/gu;
     while ((m = personRe.exec(text)) !== null) {
       const tokens = [m[1], m[2], m[3]].filter(Boolean) as string[];
       if (tokens.some((t) => NAME_STOPWORDS.has(norm(t)))) continue;
@@ -159,7 +228,8 @@ export function parseOwners(dzial2: string | null | undefined): string[] {
   }
 
   // 3) Osoby prawne / instytucje.
-  const orgRe = /((?:Sp[óo]ł?ka|Sp\.\s*z\s*o\.o\.|S\.A\.|Bank|Gmina|Skarb Pa[ńn]stwa|Wsp[óo]lnota)[^.,;]{0,60})/gi;
+  const orgRe =
+    /((?:Sp[óo]ł?ka|Sp\.\s*z\s*o\.o\.|S\.A\.|Bank|Gmina|Skarb Pa[ńn]stwa|Wsp[óo]lnota)[^.,;]{0,60})/gi;
   while ((m = orgRe.exec(text)) !== null) {
     const o = m[1].trim();
     if (o.length > 3) owners.add(o);
@@ -167,11 +237,39 @@ export function parseOwners(dzial2: string | null | undefined): string[] {
   return [...owners].slice(0, 12);
 }
 
-const ENFORCEMENT_KEYWORDS = ["egzekucj", "komornik", "zajęci", "zajecie", "wszczęci", "wszczecie", "licytacj"];
-const USUFRUCT_KEYWORDS = ["służebno", "sluzebno", "dożywoci", "dozywoci", "użytkowani", "uzytkowani doz"];
-const CLAIM_KEYWORDS = ["roszczeni", "ostrzeżeni", "ostrzezeni", "zakaz zbywani", "prawo pierwokupu", "dzierżaw", "najem", "wpis warunkowy"];
+const ENFORCEMENT_KEYWORDS = [
+  "egzekucj",
+  "komornik",
+  "zajęci",
+  "zajecie",
+  "wszczęci",
+  "wszczecie",
+  "licytacj",
+];
+const USUFRUCT_KEYWORDS = [
+  "służebno",
+  "sluzebno",
+  "dożywoci",
+  "dozywoci",
+  "użytkowani",
+  "uzytkowani doz",
+];
+const CLAIM_KEYWORDS = [
+  "roszczeni",
+  "ostrzeżeni",
+  "ostrzezeni",
+  "zakaz zbywani",
+  "prawo pierwokupu",
+  "dzierżaw",
+  "najem",
+  "wpis warunkowy",
+];
 
-export function parseEncumbrances(dzial3: string | null | undefined): { encumbrances: string[]; hasEnforcement: boolean; hasUsufruct: boolean } {
+export function parseEncumbrances(dzial3: string | null | undefined): {
+  encumbrances: string[];
+  hasEnforcement: boolean;
+  hasUsufruct: boolean;
+} {
   const text = stripHtml(dzial3);
   const entries = splitEntries(text);
   const low = text.toLowerCase();
@@ -191,7 +289,10 @@ export function parseEncumbrances(dzial3: string | null | undefined): { encumbra
 }
 
 // Dział I-O: kondygnacja lokalu + liczba kondygnacji budynku.
-export function parseFloorInfo(dzial1o: string | null | undefined): { kondygnacja: number | null; floorsInBuilding: number | null } {
+export function parseFloorInfo(dzial1o: string | null | undefined): {
+  kondygnacja: number | null;
+  floorsInBuilding: number | null;
+} {
   const text = stripHtml(dzial1o);
   if (!text) return { kondygnacja: null, floorsInBuilding: null };
   const low = text.toLowerCase();
@@ -219,11 +320,16 @@ export function parseFloorInfo(dzial1o: string | null | undefined): { kondygnacj
 
 // Granica wartości pola działu I-O — lookahead na kolejną etykietę EKW lub koniec.
 const IO_FIELD_BOUNDARY =
-  "(?=\\s+(?:przeznaczenie|obszar|kondygnacj|liczba|numer|obr[eę]b|spos[óo]b|pole|powierzchni|imi[eę]|nazwisk|dzia[łl]|po[łl]o[żz]|umiejscowieni|informacj|wpis|ulica|budynk|lokal\\b|opis|odr[eę]bno|przy[łl][aą]czeni)|[.;]|$)";
+  "(?=\\s+(?:przeznaczenie|obszar|kondygnacj|liczba|numer|nr\\b|obr[eę]b|spos[óo]b|pole|powierzchni|imi[eę]|nazwisk|dzia[łl]|po[łl]o[żz]|umiejscowieni|informacj|wpis|ulica|budynk|lokal\\b|opis|odr[eę]bno|przy[łl][aą]czeni)|[.;]|$)";
 
 // Parsuje liczbę w formacie PL („45,50" / „1 250,00" / „0,0450") na Number.
 function parsePlNumber(raw: string): number | null {
-  const n = Number(raw.replace(/\s/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", "."));
+  const n = Number(
+    raw
+      .replace(/\s/g, "")
+      .replace(/\.(?=\d{3}\b)/g, "")
+      .replace(",", "."),
+  );
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
@@ -232,7 +338,12 @@ function parsePlNumber(raw: string): number | null {
 // (renderowanego do tabel HTML działów), robustnie po etykietach.
 export function parseKwPropertyParams(dzial1o: string | null | undefined): KwPropertyParams {
   const empty: KwPropertyParams = {
-    kind: null, usableAreaM2: null, landAreaM2: null, landAreaHa: null, roomCount: null, landUse: null,
+    kind: null,
+    usableAreaM2: null,
+    landAreaM2: null,
+    landAreaHa: null,
+    roomCount: null,
+    landUse: null,
   };
   const text = stripHtml(dzial1o);
   if (!text) return empty;
@@ -242,14 +353,17 @@ export function parseKwPropertyParams(dzial1o: string | null | undefined): KwPro
   // użytkowej lokalu wraz z powierzchnią pomieszczeń przynależnych 64,5100 M2" —
   // stąd luka do 80 znaków; bezpieczna, bo wartość musi kończyć się jednostką m².
   let usableAreaM2: number | null = null;
-  const puM = low.match(/(?:pole\s+powierzchni\s+u[żz]ytkowej[^0-9]{0,80}|powierzchni[ai]\s+u[żz]ytkow\w*[^0-9]{0,80})(\d[\d\s.]*(?:,\d+)?)\s*m\s*(?:²|2)\b/);
+  const puM = low.match(
+    /(?:pole\s+powierzchni\s+u[żz]ytkowej[^0-9]{0,80}|powierzchni[ai]\s+u[żz]ytkow\w*[^0-9]{0,80})(\d[\d\s.]*(?:,\d+)?)\s*m\s*(?:²|2)\b/,
+  );
   if (puM) usableAreaM2 = parsePlNumber(puM[1]);
 
   // Obszar: „45,50 M2" (lokal/budynek) lub „0,0450 HA" (działka).
   let landAreaHa: number | null = null;
   let landAreaM2: number | null = null;
-  const obszarHa = low.match(/obszar[^0-9]{0,20}(\d[\d\s.]*(?:,\d+)?)\s*ha\b/);
-  const obszarM2 = low.match(/obszar[^0-9]{0,20}(\d[\d\s.]*(?:,\d+)?)\s*m\s*(?:²|2)\b/);
+  // Luka do 40 znaków: pełna etykieta EKW to „Obszar całej nieruchomości".
+  const obszarHa = low.match(/obszar[^0-9]{0,40}(\d[\d\s.]*(?:,\d+)?)\s*ha\b/);
+  const obszarM2 = low.match(/obszar[^0-9]{0,40}(\d[\d\s.]*(?:,\d+)?)\s*m\s*(?:²|2)\b/);
   if (obszarHa) landAreaHa = parsePlNumber(obszarHa[1]);
   if (obszarM2) {
     const v = parsePlNumber(obszarM2[1]);
@@ -280,17 +394,33 @@ export function parseKwPropertyParams(dzial1o: string | null | undefined): KwPro
   // Rodzaj / przeznaczenie nieruchomości lub lokalu. Wartość wyłuskujemy leniwie
   // aż do kolejnej etykiety EKW (pola I-O bywają CAPS lub mieszane).
   let kind: string | null = null;
-  const kindM = text.match(new RegExp(`(?:przeznaczenie|rodzaj)\\s+(?:lokalu|nieruchomo[śs]ci|budynku)\\s*(?:\\([^)]*\\))?[:\\s]{0,4}([\\s\\S]{2,60}?)${IO_FIELD_BOUNDARY}`, "i"));
+  const kindM = text.match(
+    new RegExp(
+      `(?:przeznaczenie|rodzaj)\\s+(?:lokalu|nieruchomo[śs]ci|budynku)\\s*(?:\\([^)]*\\))?[:\\s]{0,4}([\\s\\S]{2,60}?)${IO_FIELD_BOUNDARY}`,
+      "i",
+    ),
+  );
   if (kindM) {
-    const v = kindM[1].trim().replace(/\s+/g, " ").replace(/[.,;]+$/, "");
+    const v = kindM[1]
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/[.,;]+$/, "");
     if (v && !/^brak\b/i.test(v)) kind = v.toLowerCase();
   }
 
   // Sposób korzystania z gruntu (dla działek), np. „B - tereny mieszkaniowe".
   let landUse: string | null = null;
-  const useM = text.match(new RegExp(`spos[óo]b\\s+korzystania\\s*(?:\\([^)]*\\))?[:\\s]{0,4}([\\s\\S]{1,60}?)${IO_FIELD_BOUNDARY}`, "i"));
+  const useM = text.match(
+    new RegExp(
+      `spos[óo]b\\s+korzystania\\s*(?:\\([^)]*\\))?[:\\s]{0,4}([\\s\\S]{1,60}?)${IO_FIELD_BOUNDARY}`,
+      "i",
+    ),
+  );
   if (useM) {
-    const v = useM[1].trim().replace(/\s+/g, " ").replace(/[.,;]+$/, "");
+    const v = useM[1]
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/[.,;]+$/, "");
     if (v && !/^brak\b/i.test(v)) landUse = v;
   }
 
@@ -315,12 +445,20 @@ const MORTGAGE_ENTRY_RE =
 // polu „Waluta sumy", więc nie wymagamy jednostki tuż za liczbą.
 function extractMortgageAmount(block: string): { amount: number | null; currency: string | null } {
   const direct = extractAmountPln(block);
-  const sumaM = block.match(/suma(?!\s*s[łl]ownie)(?:\s*\([^)]*\))?[^0-9]{0,30}(\d[\d\s.]*(?:,\d{1,2})?)/i);
+  const sumaM = block.match(
+    /suma(?!\s*s[łl]ownie)(?:\s*\([^)]*\))?[^0-9]{0,30}(\d[\d\s.]*(?:,\d{1,2})?)/i,
+  );
   if (sumaM) {
-    const raw = sumaM[1].trim().replace(/\s/g, "").replace(/\.(?=\d{3})/g, "").replace(",", ".");
+    const raw = sumaM[1]
+      .trim()
+      .replace(/\s/g, "")
+      .replace(/\.(?=\d{3})/g, "")
+      .replace(",", ".");
     const n = Number(raw);
     if (Number.isFinite(n) && n > 0) {
-      const walutaM = block.match(/waluta(?:\s+sumy)?[^a-ząćęłńóśźż0-9]{0,10}(z[łl]|pln|eur|chf|usd)/i);
+      const walutaM = block.match(
+        /waluta(?:\s+sumy)?[^a-ząćęłńóśźż0-9]{0,10}(z[łl]|pln|eur|chf|usd)/i,
+      );
       const cur = (walutaM?.[1] ?? direct.currency ?? "zł").toLowerCase();
       return { amount: Math.round(n), currency: /z[łl]|pln/.test(cur) ? "PLN" : cur.toUpperCase() };
     }
@@ -336,9 +474,13 @@ function extractMortgageCreditor(block: string): string | null {
   const wIdx = block.search(/wierzyciel/i);
   if (wIdx >= 0) {
     const rest = block.slice(wIdx);
-    const nazwaM = rest.match(/nazwa(?:\s*\([^)]*\))?\s+([A-ZĄĆĘŁŃÓŚŹŻ][^;]{2,80}?)(?=\s+(?:siedziba|regon|kraj|lp\b|numer|tre[śs][ćc]|$))/i);
+    const nazwaM = rest.match(
+      /nazwa(?:\s*\([^)]*\))?\s+([A-ZĄĆĘŁŃÓŚŹŻ][^;]{2,80}?)(?=\s+(?:siedziba|regon|kraj|lp\b|numer|tre[śs][ćc]|$))/i,
+    );
     if (nazwaM) return nazwaM[1].trim();
-    const orgM = rest.match(/((?:bank|sp[óo][łl]dzielcz\w+|kasa|fundusz|towarzystwo|sp[óo][łl]ka|s\.a\.|sp\.\s*z\s*o\.o\.|skarb pa[ńn]stwa)[^.,;]{0,60})/i);
+    const orgM = rest.match(
+      /((?:bank|sp[óo][łl]dzielcz\w+|kasa|fundusz|towarzystwo|sp[óo][łl]ka|s\.a\.|sp\.\s*z\s*o\.o\.|skarb pa[ńn]stwa)[^.,;]{0,60})/i,
+    );
     if (orgM) return orgM[1].trim();
     const persons = extractKwOwnerPersons(rest.slice(0, 400));
     if (persons.length) return `${persons[0].firstName} ${persons[0].lastName}`;
@@ -346,8 +488,27 @@ function extractMortgageCreditor(block: string): string | null {
   return null;
 }
 
+// Boilerplate strony EKW wokół treści działu IV: nagłówek („TREŚĆ KSIĘGI … DZIAŁ
+// IV - HIPOTEKA") zawiera słowo HIPOTEKA i numer własnej KW, a tabela „Komentarz
+// do migracji" występuje też w księgach BEZ żadnego wpisu hipoteki (EKW nie
+// drukuje wtedy „BRAK WPISÓW"). Bez odcięcia heurystyka fragmentów tworzyła
+// fałszywą hipotekę z samego nagłówka.
+function stripSectionFourChrome(text: string): string {
+  return text
+    .replace(/^[\s\S]{0,600}?DZIA[ŁL]\s+IV\s*[-–—]?\s*HIPOTEKA/i, " ")
+    .replace(/\bPowr[óo]t\b\s*$/i, " ")
+    .replace(
+      /komentarz\s+do\s+migracji[\s\S]{0,400}?ostatni\s+numer\s+aktualnego\s+lub\s+wykre[śs]lonego\s+wpisu\s+w\s+danym\s+dziale\s+w\s+dotychczasowej\s+ksi[ęe]dze\s+wieczystej\s*\d*\s*(?:-{2,3})?/gi,
+      " ",
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function parseMortgages(dzial4: string | null | undefined): KwLegalAnalysis["mortgages"] {
-  const text = stripHtml(dzial4);
+  const raw = stripHtml(dzial4);
+  if (!raw) return [];
+  const text = stripSectionFourChrome(raw);
   if (!text) return [];
 
   const hasEntryMarkers = MORTGAGE_ENTRY_RE.test(text);
@@ -360,7 +521,9 @@ export function parseMortgages(dzial4: string | null | undefined): KwLegalAnalys
   if (hasEntryMarkers) {
     // Rozbij na bloki per hipoteka — każdy wpis EKW zaczyna się polem „Numer
     // hipoteki (roszczenia) N" (fallback: „Rodzaj hipoteki").
-    const splitter = /numer\s+hipoteki/i.test(text) ? /(?=[Nn]umer\s+hipoteki)/ : /(?=[Rr]odzaj\s+hipoteki)/;
+    const splitter = /numer\s+hipoteki/i.test(text)
+      ? /(?=[Nn]umer\s+hipoteki)/
+      : /(?=[Rr]odzaj\s+hipoteki)/;
     let blocks = text.split(splitter).filter((b) => MORTGAGE_ENTRY_RE.test(b));
     if (blocks.length === 0) blocks = [text];
     for (const b of blocks.slice(0, 10)) {

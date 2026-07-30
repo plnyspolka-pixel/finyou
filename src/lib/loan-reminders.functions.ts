@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createClient } from "@supabase/supabase-js";
-import { loadLoanLeadData, ELIGIBLE_STATUSES_FOR_REMINDERS, computeNextReminder, loadHourAnswerScores } from "./loan-progress.server";
+import {
+  loadLoanLeadData,
+  ELIGIBLE_STATUSES_FOR_REMINDERS,
+  computeNextReminder,
+  loadHourAnswerScores,
+} from "./loan-progress.server";
 import { placeOutboundCallInternal } from "./voicebot.functions";
 
 function admin() {
@@ -35,10 +40,12 @@ export const getLoanLeadProgress = createServerFn({ method: "POST" })
 export const listReminderDashboard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
-    z.object({
-      onlyActive: z.boolean().default(true),
-      limit: z.number().int().min(1).max(200).default(100),
-    }).parse(i)
+    z
+      .object({
+        onlyActive: z.boolean().default(true),
+        limit: z.number().int().min(1).max(200).default(100),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     await requireStaff(context.userId);
@@ -46,7 +53,7 @@ export const listReminderDashboard = createServerFn({ method: "POST" })
     let q = s
       .from("loan_applications")
       .select(
-        "id,status,current_form_step,loan_amount,reminder_attempts,next_reminder_at,first_reminder_at,last_reminder_at,reminder_paused,missing_documents_snapshot,created_at,client_id"
+        "id,status,current_form_step,loan_amount,reminder_attempts,next_reminder_at,first_reminder_at,last_reminder_at,reminder_paused,missing_documents_snapshot,created_at,client_id",
       )
       .order("next_reminder_at", { ascending: true, nullsFirst: false })
       .limit(data.limit);
@@ -54,11 +61,16 @@ export const listReminderDashboard = createServerFn({ method: "POST" })
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
 
-    const clientIds = Array.from(new Set((rows ?? []).map((r: any) => r.client_id).filter(Boolean)));
+    const clientIds = Array.from(
+      new Set((rows ?? []).map((r: any) => r.client_id).filter(Boolean)),
+    );
     const propsMap: Record<string, any> = {};
     const clientsMap: Record<string, any> = {};
     if (clientIds.length) {
-      const { data: cl } = await s.from("clients").select("id,first_name,last_name,phone_normalized,phone").in("id", clientIds);
+      const { data: cl } = await s
+        .from("clients")
+        .select("id,first_name,last_name,phone_normalized,phone")
+        .in("id", clientIds);
       for (const c of cl ?? []) clientsMap[c.id] = c;
     }
     const loanIds = (rows ?? []).map((r: any) => r.id);
@@ -71,7 +83,7 @@ export const listReminderDashboard = createServerFn({ method: "POST" })
     }
     return (rows ?? []).map((r: any) => ({
       ...r,
-      client: r.client_id ? clientsMap[r.client_id] ?? null : null,
+      client: r.client_id ? (clientsMap[r.client_id] ?? null) : null,
       property: propsMap[r.id] ?? null,
     }));
   });
@@ -89,7 +101,7 @@ export const triggerReminderCall = createServerFn({ method: "POST" })
 export const setReminderPaused = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
-    z.object({ loanApplicationId: z.string().uuid(), paused: z.boolean() }).parse(i)
+    z.object({ loanApplicationId: z.string().uuid(), paused: z.boolean() }).parse(i),
   )
   .handler(async ({ data, context }) => {
     await requireStaff(context.userId);
@@ -105,7 +117,7 @@ export const setReminderPaused = createServerFn({ method: "POST" })
 /** Wewnętrzny worker — używany przez cron i ręczny trigger. */
 export async function placeReminderCall(
   loanApplicationId: string,
-  source: string
+  source: string,
 ): Promise<{ ok: boolean; error?: string; skipped?: string; conversationId?: string }> {
   const full = await loadLoanLeadData(loanApplicationId);
   if (!full) return { ok: false, error: "Wniosek nie znaleziony" };
@@ -124,7 +136,6 @@ export async function placeReminderCall(
   }
   const phone = full.client?.phone_normalized ?? full.client?.phone;
   if (!phone) return { ok: false, error: "Brak numeru telefonu klienta" };
-
 
   const result = await placeOutboundCallInternal({
     phone,

@@ -6,12 +6,14 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const assistBusinessDescription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      currentText: z.string().max(5000).optional().default(""),
-      hint: z.string().max(2000).optional().default(""),
-      mode: z.enum(["draft", "improve", "expand"]).default("improve"),
-      loanId: z.string().uuid().optional().nullable(),
-    }).parse(input),
+    z
+      .object({
+        currentText: z.string().max(5000).optional().default(""),
+        hint: z.string().max(2000).optional().default(""),
+        mode: z.enum(["draft", "improve", "expand"]).default("improve"),
+        loanId: z.string().uuid().optional().nullable(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -23,7 +25,9 @@ export const assistBusinessDescription = createServerFn({ method: "POST" })
       const { supabase } = context;
       const { data: loan } = await supabase
         .from("loan_applications")
-        .select("loan_amount, preferred_period_months, max_monthly_payment, annual_investor_rate, business_status, nip")
+        .select(
+          "loan_amount, preferred_period_months, max_monthly_payment, annual_investor_rate, business_status, nip",
+        )
         .eq("id", data.loanId)
         .maybeSingle();
       const { data: prop } = await supabase
@@ -33,12 +37,20 @@ export const assistBusinessDescription = createServerFn({ method: "POST" })
         .maybeSingle();
 
       const fmtPln = (v: number | null | undefined) =>
-        v == null ? null : new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN", maximumFractionDigits: 0 }).format(v);
+        v == null
+          ? null
+          : new Intl.NumberFormat("pl-PL", {
+              style: "currency",
+              currency: "PLN",
+              maximumFractionDigits: 0,
+            }).format(v);
       const facts: string[] = [];
       if (loan?.loan_amount) facts.push(`kwota pożyczki: ${fmtPln(Number(loan.loan_amount))}`);
       if (loan?.preferred_period_months) facts.push(`okres: ${loan.preferred_period_months} mies.`);
-      if (loan?.max_monthly_payment) facts.push(`maks. rata miesięczna: ${fmtPln(Number(loan.max_monthly_payment))}`);
-      if (loan?.annual_investor_rate) facts.push(`oprocentowanie roczne: ${loan.annual_investor_rate}%`);
+      if (loan?.max_monthly_payment)
+        facts.push(`maks. rata miesięczna: ${fmtPln(Number(loan.max_monthly_payment))}`);
+      if (loan?.annual_investor_rate)
+        facts.push(`oprocentowanie roczne: ${loan.annual_investor_rate}%`);
       if (loan?.business_status) facts.push(`status działalności: ${loan.business_status}`);
       if (loan?.nip) facts.push(`NIP: ${loan.nip}`);
       if (prop?.property_type) facts.push(`zabezpieczenie: ${prop.property_type}`);

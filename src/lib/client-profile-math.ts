@@ -62,9 +62,7 @@ export interface ScheduleInput extends OfferData {}
  * Wynagrodzenie inwestora jest teraz **wyprowadzane** (odsetki + prowizja),
  * a nie zadawane osobnym parametrem.
  */
-export function buildDirectorSchedule(
-  offer: ScheduleInput,
-): ScheduleData | null {
+export function buildDirectorSchedule(offer: ScheduleInput): ScheduleData | null {
   const kwotaPozyczki = Number(offer.netAmountToClient ?? 0);
   const prowizja = Number(offer.creditedCommission ?? 0);
   const maxPayment = Number(offer.maxMonthlyPaymentByClient ?? 0);
@@ -100,16 +98,21 @@ export function buildDirectorSchedule(
   const monthlyInterestAmount = months > 0 ? round2(eng.totalInterest / months) : 0;
   const totalInvestorProfit = round2(eng.totalInterest + prowizja);
   const expectedMonthlyInvestorReturn = months > 0 ? round2(totalInvestorProfit / months) : 0;
-  const annualizedInvestorProfitAmount = months > 0 ? round2((totalInvestorProfit / months) * 12) : 0;
+  const annualizedInvestorProfitAmount =
+    months > 0 ? round2((totalInvestorProfit / months) * 12) : 0;
   const annualizedInvestorProfitPercent =
     kwotaPozyczki > 0 ? round2((annualizedInvestorProfitAmount / kwotaPozyczki) * 100) : 0;
 
   const infos: string[] = [
     "Pożyczkobiorca otrzymuje pełną Kwotę Pożyczki; prowizja nie jest potrącana z wypłaty, lecz rozłożona na raty (KWO_02).",
   ];
-  if (eng.balloon > 0) infos.push("Nadwyżka kapitału ponad pułap raty rozliczana jest w racie balonowej (ostatnia z rat).");
+  if (eng.balloon > 0)
+    infos.push(
+      "Nadwyżka kapitału ponad pułap raty rozliczana jest w racie balonowej (ostatnia z rat).",
+    );
   const warnings = [...eng.warnings];
-  if (prowizja <= 0) warnings.push("Brak prowizji — sprawdź pole „Prowizja”, jeśli miała zostać naliczona.");
+  if (prowizja <= 0)
+    warnings.push("Brak prowizji — sprawdź pole „Prowizja”, jeśli miała zostać naliczona.");
 
   return {
     rows,
@@ -186,24 +189,40 @@ export interface CompletionResult {
   criticalMissing: string[];
 }
 
-const COMMON_REQUIRED: Array<{ label: string; check: (p: ClientProfile) => boolean; critical?: boolean }> = [
+const COMMON_REQUIRED: Array<{
+  label: string;
+  check: (p: ClientProfile) => boolean;
+  critical?: boolean;
+}> = [
   { label: "Cel pożyczki", check: (p) => !!p.borrowerData.loanPurpose },
   { label: "Telefon klienta", check: (p) => !!p.borrowerData.phone },
   { label: "E-mail klienta", check: (p) => !!p.borrowerData.email },
   { label: "Typ nieruchomości", check: (p) => !!p.propertyData.type, critical: true },
   { label: "Numer KW", check: (p) => !!p.propertyData.landRegisterNumber, critical: true },
   { label: "Wartość nieruchomości", check: (p) => !!p.propertyData.estimatedValue, critical: true },
-  { label: "Zdjęcia / dokumenty nieruchomości", check: (p) => p.uploadedPhotos.length + p.uploadedDocuments.length > 0 },
-  { label: "Dane inwestora", check: (p) => !!(p.investorData.fullName || p.investorData.companyName) },
+  {
+    label: "Zdjęcia / dokumenty nieruchomości",
+    check: (p) => p.uploadedPhotos.length + p.uploadedDocuments.length > 0,
+  },
+  {
+    label: "Dane inwestora",
+    check: (p) => !!(p.investorData.fullName || p.investorData.companyName),
+  },
   { label: "Rachunek inwestora", check: (p) => !!p.investorData.bankAccount },
   { label: "Kwota dla klienta", check: (p) => !!p.offerData.netAmountToClient, critical: true },
-  { label: "Maksymalna miesięczna rata klienta", check: (p) => !!p.offerData.maxMonthlyPaymentByClient, critical: true },
+  {
+    label: "Maksymalna miesięczna rata klienta",
+    check: (p) => !!p.offerData.maxMonthlyPaymentByClient,
+    critical: true,
+  },
   { label: "Okres pożyczki", check: (p) => !!p.offerData.loanTermMonths, critical: true },
   { label: "Data wypłaty", check: (p) => !!p.offerData.payoutDate, critical: true },
-  { label: "Oczekiwane wynagrodzenie inwestora", check: (p) =>
-    p.offerData.investorMonthlyReturnType === "percent"
-      ? !!p.offerData.investorMonthlyReturnPercent
-      : !!p.offerData.investorMonthlyReturnAmount,
+  {
+    label: "Oczekiwane wynagrodzenie inwestora",
+    check: (p) =>
+      p.offerData.investorMonthlyReturnType === "percent"
+        ? !!p.offerData.investorMonthlyReturnPercent
+        : !!p.offerData.investorMonthlyReturnAmount,
     critical: true,
   },
   { label: "Kwota hipoteki", check: (p) => !!p.securityData.mortgageAmount, critical: true },
@@ -218,20 +237,47 @@ const JDG_REQUIRED = [
   { label: "REGON", check: (p: ClientProfile) => !!p.borrowerData.regon },
   { label: "PESEL", check: (p: ClientProfile) => !!p.borrowerData.pesel },
   { label: "Adres działalności", check: (p: ClientProfile) => !!p.borrowerData.businessAddress },
-  { label: "Rodzaj dokumentu tożsamości", check: (p: ClientProfile) => !!p.borrowerData.idDocument?.type },
-  { label: "Numer dokumentu tożsamości", check: (p: ClientProfile) => !!p.borrowerData.idDocument?.number },
+  {
+    label: "Rodzaj dokumentu tożsamości",
+    check: (p: ClientProfile) => !!p.borrowerData.idDocument?.type,
+  },
+  {
+    label: "Numer dokumentu tożsamości",
+    check: (p: ClientProfile) => !!p.borrowerData.idDocument?.number,
+  },
 ];
 
 const COMPANY_REQUIRED = [
-  { label: "Pełna nazwa spółki", check: (p: ClientProfile) => !!p.borrowerData.companyName, critical: true },
+  {
+    label: "Pełna nazwa spółki",
+    check: (p: ClientProfile) => !!p.borrowerData.companyName,
+    critical: true,
+  },
   { label: "NIP spółki", check: (p: ClientProfile) => !!p.borrowerData.nip, critical: true },
   { label: "REGON spółki", check: (p: ClientProfile) => !!p.borrowerData.regon },
   { label: "Adres siedziby", check: (p: ClientProfile) => !!p.borrowerData.registeredAddress },
-  { label: "Sposób reprezentacji", check: (p: ClientProfile) => !!p.borrowerData.representationDescription },
-  { label: "Imię osoby podpisującej", check: (p: ClientProfile) => !!p.representativeData?.firstName, critical: true },
-  { label: "Nazwisko osoby podpisującej", check: (p: ClientProfile) => !!p.representativeData?.lastName, critical: true },
-  { label: "Funkcja osoby podpisującej", check: (p: ClientProfile) => !!p.representativeData?.role },
-  { label: "Dokument tożsamości reprezentanta", check: (p: ClientProfile) => !!p.representativeData?.idDocument?.number },
+  {
+    label: "Sposób reprezentacji",
+    check: (p: ClientProfile) => !!p.borrowerData.representationDescription,
+  },
+  {
+    label: "Imię osoby podpisującej",
+    check: (p: ClientProfile) => !!p.representativeData?.firstName,
+    critical: true,
+  },
+  {
+    label: "Nazwisko osoby podpisującej",
+    check: (p: ClientProfile) => !!p.representativeData?.lastName,
+    critical: true,
+  },
+  {
+    label: "Funkcja osoby podpisującej",
+    check: (p: ClientProfile) => !!p.representativeData?.role,
+  },
+  {
+    label: "Dokument tożsamości reprezentanta",
+    check: (p: ClientProfile) => !!p.representativeData?.idDocument?.number,
+  },
 ];
 
 export function calculateProfileCompletion(profile: ClientProfile): CompletionResult {

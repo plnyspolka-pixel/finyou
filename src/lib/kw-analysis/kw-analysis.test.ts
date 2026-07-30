@@ -327,8 +327,8 @@ describe("Scenariusz 16 — hipoteka tylko na udziale", () => {
   });
 });
 
-describe("Scenariusz 17 — kilku współwłaścicieli obejmujących całość", () => {
-  it("WARUNKOWO_DOPUSZCZALNE gdy wszyscy dają zabezpieczenie", () => {
+describe("Scenariusz 17 — kilku współwłaścicieli", () => {
+  it("KORZYSTNE — możliwość przystąpienia wszystkich do pożyczki", () => {
     const ext = baseExtraction({
       dzial2: {
         wlasciciele: [
@@ -346,10 +346,10 @@ describe("Scenariusz 17 — kilku współwłaścicieli obejmujących całość",
       }),
       sections(ext),
     );
-    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("WARUNKOWO_DOPUSZCZALNE");
+    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("KORZYSTNE");
   });
 
-  it("STOP gdy nie wszyscy współwłaściciele obejmują całość", () => {
+  it("KORZYSTNE także gdy nie wszyscy współwłaściciele są zadeklarowani", () => {
     const ext = baseExtraction({
       dzial2: {
         wlasciciele: [
@@ -364,7 +364,8 @@ describe("Scenariusz 17 — kilku współwłaścicieli obejmujących całość",
       }),
       sections(ext),
     );
-    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("STOP");
+    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("KORZYSTNE");
+    expect(statusesOf(res.findings, "R-COOWNERS")).not.toContain("STOP");
   });
 });
 
@@ -398,7 +399,7 @@ describe("Scenariusz 19/20 — rozbieżność nazwisko/PESEL", () => {
 });
 
 describe("Scenariusz 21 — pożyczkobiorca inny niż właściciel", () => {
-  it("WARUNKOWO_DOPUSZCZALNE gdy właściciel daje zabezpieczenie", () => {
+  it("brak znaleziska — pożyczkobiorca spoza Działu II nie jest oceniany", () => {
     const res = runKwAnalysis(
       baseInput({
         borrower: party("BORROWER", { firstName: "MAREK", lastName: "WISNIEWSKI", pesel: PESEL_B }),
@@ -408,8 +409,43 @@ describe("Scenariusz 21 — pożyczkobiorca inny niż właściciel", () => {
       }),
       sections(baseExtraction()),
     );
-    const f = res.findings.find((x) => x.title.includes("Pożyczkobiorca nie jest właścicielem"));
-    expect(f?.status).toBe("WARUNKOWO_DOPUSZCZALNE");
+    expect(res.findings.some((f) => f.title.includes("Pożyczkobiorca nie jest właścicielem"))).toBe(
+      false,
+    );
+  });
+});
+
+describe("R-CLTV — dane o zadłużeniu tylko przy obciążonym Dziale IV", () => {
+  it("czysty Dział IV + brak wartości ⇒ prosimy tylko o wycenę, bez danych o zadłużeniu", () => {
+    const res = runKwAnalysis(
+      baseInput({ acceptedPropertyValue: null }),
+      sections(baseExtraction()),
+    );
+    const f = res.findings.find((x) => x.ruleId === "R-CLTV");
+    expect(f?.status).toBe("WSTRZYMANE");
+    expect(f?.requestedDocuments.map((d) => d.code)).toEqual(["VALUATION"]);
+    expect(f?.clientMessage).not.toContain("zadłużeniu");
+  });
+
+  it("hipoteka w Dziale IV + brak danych ⇒ prosimy o wycenę i saldo", () => {
+    const ext = baseExtraction({
+      dzial4: {
+        brakWpisu: false,
+        hipoteki: [
+          {
+            rodzaj: "HIPOTEKA UMOWNA",
+            sumaKwota: 250_000,
+            walutaSumy: "ZŁ",
+            wierzyciel: "BANK TESTOWY S.A.",
+            tresc: "Hipoteka umowna na rzecz banku.",
+          },
+        ],
+      },
+    });
+    const res = runKwAnalysis(baseInput({ acceptedPropertyValue: null }), sections(ext));
+    const f = res.findings.find((x) => x.ruleId === "R-CLTV");
+    expect(f?.status).toBe("WSTRZYMANE");
+    expect(f?.requestedDocuments.map((d) => d.code)).toContain("SENIOR_CERT");
   });
 });
 
@@ -476,5 +512,87 @@ describe("Agregacja statusu globalnego", () => {
     // Jest też KORZYSTNE (pierwsze miejsce), ale globalnie musi być STOP.
     expect(res.findings.some((f) => f.status === "KORZYSTNE")).toBe(true);
     expect(res.overallStatus).toBe("STOP");
+  });
+});
+
+// ── Rzeczywisty układ tabelaryczny EKW (przypadek rzeczywistej KW z wydziału LD1M (dane zanonimizowane)). ────────
+// Surowe strony EKW: nagłówek każdego działu zawiera numer KW i tytuł działu
+// („DZIAŁ IV - HIPOTEKA"), a pusty dział IV z samym komentarzem migracyjnym
+// NIE zawiera frazy „BRAK WPISÓW". Właściciele w podrubryce „Osoba fizyczna
+// (Imię pierwsze nazwisko, imię ojca, imię matki, PESEL)".
+describe("Układ tabelaryczny EKW — pusty dział IV z komentarzem migracji", () => {
+  const PESEL_M = PESEL_B;
+  const PESEL_F = PESEL_C;
+  const header = (dzial: string) =>
+    `TREŚĆ KSIĘGI WIECZYSTEJ NR LD1M/00012345/9 , STAN Z DNIA 2026-07-29 17:18 ` +
+    `prowadzonej przez SĄD REJONOWY DLA ŁODZI-ŚRÓDMIEŚCIA W ŁODZI, XVI WYDZIAŁ ` +
+    `KSIĄG WIECZYSTYCH - LD1M NIERUCHOMOŚĆ GRUNTOWA ${dzial}`;
+  const ekwSections: KwDocumentSections = {
+    kwNumber: "LD1M000123459",
+    okladka: "",
+    dzial_1o:
+      header("DZIAŁ I-O - OZNACZENIE NIERUCHOMOŚCI") +
+      " Nr podstawy wpisu Numer bieżący nieruchomości 1 1, 2 Działki ewidencyjne Lp. 1. --- " +
+      "Nr podstawy wpisu Numer działki 498 1, 2 Położenie (numer porządkowy / miejscowość) " +
+      "Lp. 1. 1 ANDRESPOL Ulica FREDRY 53 Sposób korzystania DZIAŁKA GRUNTU " +
+      "Nr podstawy wpisu Obszar całej nieruchomości 0,0491 HA 1, 2 Powrót",
+    dzial_1s: "",
+    dzial_2:
+      header("DZIAŁ II - WŁASNOŚĆ") +
+      " Właściciele Lp. 1. --- Nr podstawy wpisu Lista wskazań udziałów w prawie " +
+      "(numer udziału w prawie/ wielkość udziału/rodzaj wspólności) Lp. 1. 3 1 /1 " +
+      "WSPÓLNOŚĆ USTAWOWA MAJĄTKOWA MAŁŻEŃSKA 26 Osoba fizyczna " +
+      `(Imię pierwsze nazwisko, imię ojca, imię matki, PESEL) OLEH PETRENKO , IWAN, HALYNA, ${PESEL_M} ` +
+      "Lp. 2. --- Nr podstawy wpisu Lista wskazań udziałów w prawie " +
+      "(numer udziału w prawie/ wielkość udziału/rodzaj wspólności) Lp. 1. 3 1 /1 " +
+      "WSPÓLNOŚĆ USTAWOWA MAJĄTKOWA MAŁŻEŃSKA 26 Osoba fizyczna " +
+      `(Imię pierwsze nazwisko, imię ojca, imię matki, PESEL) MARIIA PETRENKO , OLEKSANDR, OKSANA, ${PESEL_F} Powrót`,
+    dzial_3: header("DZIAŁ III - PRAWA, ROSZCZENIA I OGRANICZENIA") + " BRAK WPISÓW Powrót",
+    dzial_4:
+      header("DZIAŁ IV - HIPOTEKA") +
+      " Komentarz do migracji Nr podstawy wpisu Ostatni numer aktualnego lub wykreślonego " +
+      "wpisu w danym dziale w dotychczasowej księdze wieczystej 2 --- Powrót",
+    fetchedAt: "2026-07-29T15:18:56.555Z",
+  };
+
+  it("nie wykrywa hipoteki z nagłówka działu IV (komentarz migracyjny ≠ wpis)", () => {
+    const res = runKwAnalysis(baseInput({ kwNumber: "LD1M/00012345/9" }), ekwSections);
+    expect(res.computedFrom.mortgagesCount).toBe(0);
+    expect(res.priority.expectedInvestorRank).toBe(1);
+    expect(statusesOf(res.findings, "R-SECOND-RANK-CERT")).toHaveLength(0);
+    expect(statusesOf(res.findings, "R-MORTGAGE-DEPENDENCIES")).toHaveLength(0);
+  });
+
+  it("rozpoznaje oboje właścicieli z podrubryki Osoba fizyczna wraz z PESEL", () => {
+    const res = runKwAnalysis(
+      baseInput({
+        kwNumber: "LD1M/00012345/9",
+        borrower: party("BORROWER", {
+          firstName: "MARIIA",
+          lastName: "PETRENKO",
+          pesel: PESEL_F,
+        }),
+        declaredCollateralProviders: [
+          party("COLLATERAL_PROVIDER", {
+            firstName: "OLEH",
+            lastName: "PETRENKO",
+            pesel: PESEL_M,
+          }),
+          party("COLLATERAL_PROVIDER", {
+            firstName: "MARIIA",
+            lastName: "PETRENKO",
+            pesel: PESEL_F,
+          }),
+        ],
+      }),
+      ekwSections,
+    );
+    expect(res.computedFrom.ownersCount).toBe(2);
+    // Pożyczkobiorczyni jest właścicielką (PESEL zgodny) — brak alertu tożsamości.
+    expect(res.findings.some((f) => f.title.includes("Pożyczkobiorca nie jest właścicielem"))).toBe(
+      false,
+    );
+    // Współwłasność małżeńska — atut (możliwe przystąpienie obojga do pożyczki).
+    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("KORZYSTNE");
   });
 });

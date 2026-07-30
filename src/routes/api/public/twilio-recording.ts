@@ -47,7 +47,10 @@ export const Route = createFileRoute("/api/public/twilio-recording")({
         const durationStr = String(form.get("RecordingDuration") ?? "");
         const duration = durationStr ? Number(durationStr) : null;
 
-        const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+        const supabase = createClient(
+          process.env.SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        );
 
         // 1) Pobierz nagranie przez connector gateway Twilio (auth robi gateway).
         let transcript: string | null = null;
@@ -70,7 +73,11 @@ export const Route = createFileRoute("/api/public/twilio-recording")({
                 const blob = new Blob([buf], { type: "audio/mpeg" });
                 transcript = await transcribeAudio(blob, `${recordingSid}.mp3`);
               } else {
-                console.error("[twilio-recording] fetch audio failed", audioResp.status, await audioResp.text().catch(() => ""));
+                console.error(
+                  "[twilio-recording] fetch audio failed",
+                  audioResp.status,
+                  await audioResp.text().catch(() => ""),
+                );
               }
             } catch (e) {
               console.error("[twilio-recording] fetch audio error", e);
@@ -93,7 +100,11 @@ export const Route = createFileRoute("/api/public/twilio-recording")({
             .maybeSingle();
 
           if (existing?.id) {
-            const meta = { ...(existing.metadata as any ?? {}), recording_sid: recordingSid, has_transcript: !!transcript };
+            const meta = {
+              ...((existing.metadata as any) ?? {}),
+              recording_sid: recordingSid,
+              has_transcript: !!transcript,
+            };
             await supabase
               .from("lead_communications")
               .update({

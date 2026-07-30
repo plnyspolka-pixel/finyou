@@ -17,9 +17,14 @@ export const listMetaLeadForms = createServerFn({ method: "GET" })
     const [{ data: forms }, { data: roles }, { data: profiles }] = await Promise.all([
       supabaseAdmin
         .from("meta_lead_forms")
-        .select("id, meta_form_id, form_name, page_name, is_enabled, voicebot_enabled, assigned_user_id, assigned_role, last_lead_at, total_leads_pulled")
+        .select(
+          "id, meta_form_id, form_name, page_name, is_enabled, voicebot_enabled, assigned_user_id, assigned_role, last_lead_at, total_leads_pulled",
+        )
         .order("form_name", { ascending: true }),
-      supabaseAdmin.from("user_roles").select("user_id, role").in("role", ["administrator", "operator"]),
+      supabaseAdmin
+        .from("user_roles")
+        .select("user_id, role")
+        .in("role", ["administrator", "operator"]),
       supabaseAdmin.from("profiles").select("user_id, first_name, last_name, email"),
     ]);
     const profMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
@@ -68,7 +73,6 @@ export const setMetaLeadFormRole = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-
 // Backfill: dla wszystkich klientów ze źródła meta_lead (lub starych meta_leads) —
 // załóż konto auth (rola: klient) jeśli jeszcze go nie ma. Magic linki generowane są
 // dopiero przy wysyłce follow-upów (świeży link = nie wygasa).
@@ -88,21 +92,32 @@ export const backfillMetaLeadAccounts = createServerFn({ method: "POST" })
       .limit(2000);
     if (error) throw new Error(error.message);
 
-    let created = 0, linked = 0, failed = 0;
+    let created = 0,
+      linked = 0,
+      failed = 0;
     const errors: string[] = [];
     for (const c of clients ?? []) {
       const email = (c.email ?? "").trim();
       if (!email) continue;
       const r = await ensureKlientAccountAndMagicLink(email, {
-        firstName: c.first_name, lastName: c.last_name, source: "meta_lead_backfill",
+        firstName: c.first_name,
+        lastName: c.last_name,
+        source: "meta_lead_backfill",
       });
       if (r.userId) {
         await supabaseAdmin.from("clients").update({ user_id: r.userId }).eq("id", c.id);
-        if (r.created) created++; else linked++;
+        if (r.created) created++;
+        else linked++;
       } else {
         failed++;
         if (r.error) errors.push(`${email}: ${r.error}`);
       }
     }
-    return { processed: clients?.length ?? 0, created, linked_existing: linked, failed, errors: errors.slice(0, 20) };
+    return {
+      processed: clients?.length ?? 0,
+      created,
+      linked_existing: linked,
+      failed,
+      errors: errors.slice(0, 20),
+    };
   });

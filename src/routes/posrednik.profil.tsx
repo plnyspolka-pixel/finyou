@@ -80,7 +80,9 @@ export function BrokerProfile() {
         setAvatarPreview(null);
         return;
       }
-      const { data } = await supabase.storage.from("avatars").createSignedUrl(form.avatar_url, 3600);
+      const { data } = await supabase.storage
+        .from("avatars")
+        .createSignedUrl(form.avatar_url, 3600);
       if (!cancelled) setAvatarPreview(data?.signedUrl ?? null);
     })();
     return () => {
@@ -112,7 +114,10 @@ export function BrokerProfile() {
     }
     // Usuń stare zdjęcie (best-effort)
     if (form.avatar_url && form.avatar_url !== path) {
-      supabase.storage.from("avatars").remove([form.avatar_url]).catch(() => {});
+      supabase.storage
+        .from("avatars")
+        .remove([form.avatar_url])
+        .catch(() => {});
     }
     setForm((f) => ({ ...f, avatar_url: path }));
     // Zapisz od razu ścieżkę w profilu
@@ -139,7 +144,8 @@ export function BrokerProfile() {
     }
   };
 
-  const initials = `${(form.first_name || "").charAt(0)}${(form.last_name || "").charAt(0)}`.toUpperCase() || "FY";
+  const initials =
+    `${(form.first_name || "").charAt(0)}${(form.last_name || "").charAt(0)}`.toUpperCase() || "FY";
 
   return (
     <div className="space-y-4 max-w-3xl">
@@ -165,9 +171,15 @@ export function BrokerProfile() {
                 <div className="grid h-28 w-28 place-items-center overflow-hidden rounded-full border border-white/20 bg-white/10 shadow-lg shadow-primary/20">
                   {avatarPreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarPreview} alt="Twoje zdjęcie" className="h-full w-full object-cover" />
+                    <img
+                      src={avatarPreview}
+                      alt="Twoje zdjęcie"
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
-                    <span className="text-2xl font-bold text-white/80">{initials || <UserIcon className="h-8 w-8" />}</span>
+                    <span className="text-2xl font-bold text-white/80">
+                      {initials || <UserIcon className="h-8 w-8" />}
+                    </span>
                   )}
                 </div>
                 <button
@@ -177,7 +189,11 @@ export function BrokerProfile() {
                   aria-label="Zmień zdjęcie"
                   className="absolute -bottom-1 -right-1 grid h-9 w-9 place-items-center rounded-full border border-white/25 bg-primary text-white shadow-md transition hover:scale-105 disabled:opacity-60"
                 >
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
                 </button>
                 <input
                   ref={fileInputRef}
@@ -204,10 +220,23 @@ export function BrokerProfile() {
 
             {/* Dane */}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Imię" value={form.first_name} onChange={(v) => setForm({ ...form, first_name: v })} />
-              <Field label="Nazwisko" value={form.last_name} onChange={(v) => setForm({ ...form, last_name: v })} />
+              <Field
+                label="Imię"
+                value={form.first_name}
+                onChange={(v) => setForm({ ...form, first_name: v })}
+              />
+              <Field
+                label="Nazwisko"
+                value={form.last_name}
+                onChange={(v) => setForm({ ...form, last_name: v })}
+              />
               <Field label="E-mail" value={form.email} onChange={() => {}} disabled />
-              <Field label="Telefon" placeholder="+48 500 000 000" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
+              <Field
+                label="Telefon"
+                placeholder="+48 500 000 000"
+                value={form.phone}
+                onChange={(v) => setForm({ ...form, phone: v })}
+              />
             </div>
 
             <div className="flex justify-end">
@@ -216,7 +245,11 @@ export function BrokerProfile() {
                 disabled={saving}
                 className="bg-white text-slate-900 hover:bg-white/90"
               >
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {saving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
                 Zapisz zmiany
               </Button>
             </div>
@@ -242,7 +275,9 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-semibold uppercase tracking-wider text-white/70">{label}</Label>
+      <Label className="text-xs font-semibold uppercase tracking-wider text-white/70">
+        {label}
+      </Label>
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}

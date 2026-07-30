@@ -8,13 +8,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Mail, Search, Paperclip, RefreshCw, ExternalLink, Inbox, Send, Download, Reply, PenSquare } from "lucide-react";
+import {
+  Mail,
+  Search,
+  Paperclip,
+  RefreshCw,
+  ExternalLink,
+  Inbox,
+  Send,
+  Download,
+  Reply,
+  PenSquare,
+  History,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox/compose-email";
 import { AttachmentPreview } from "@/components/inbox/attachment-preview";
+import { CorrespondenceHistoryDialog } from "@/components/inbox/correspondence-history";
 
 export const Route = createFileRoute("/admin/skrzynka")({
   component: SkrzynkaPage,
@@ -40,6 +53,7 @@ function SkrzynkaPage() {
   const [viewMode, setViewMode] = useState<"html" | "text">("html");
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeInitial, setComposeInitial] = useState<ComposeEmailInitial | undefined>(undefined);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const qc = useQueryClient();
   const refetchBodyFn = useServerFn(refetchInboundEmailBody);
   const refetchBody = useMutation({
@@ -56,7 +70,9 @@ function SkrzynkaPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lead_communications")
-        .select("id, lead_id, email, direction, subject, content, attachments, created_at, metadata, thread_external_id")
+        .select(
+          "id, lead_id, email, direction, subject, content, attachments, created_at, metadata, thread_external_id",
+        )
         .eq("channel", "email")
         .eq("direction", tab)
         .order("created_at", { ascending: false })
@@ -95,9 +111,10 @@ function SkrzynkaPage() {
     });
     if (!needsFetch.length) return;
     // Priorytet: aktualnie zaznaczona, potem do 5 najnowszych w tle.
-    const prioritized = selected && needsFetch.some((m) => m.id === selected.id)
-      ? [selected, ...needsFetch.filter((m) => m.id !== selected.id)]
-      : needsFetch;
+    const prioritized =
+      selected && needsFetch.some((m) => m.id === selected.id)
+        ? [selected, ...needsFetch.filter((m) => m.id !== selected.id)]
+        : needsFetch;
     const batch = prioritized.slice(0, 5);
     for (const m of batch) {
       autoFetched.current.add(m.id);
@@ -113,7 +130,13 @@ function SkrzynkaPage() {
           <h1 className="text-2xl font-semibold">Skrzynka mailowa</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setComposeInitial(undefined);
+              setComposeOpen(true);
+            }}
+          >
             <PenSquare className="h-4 w-4 mr-2" />
             Nowa wiadomość
           </Button>
@@ -128,7 +151,10 @@ function SkrzynkaPage() {
         <Button
           variant={tab === "inbound" ? "default" : "outline"}
           size="sm"
-          onClick={() => { setTab("inbound"); setSelectedId(null); }}
+          onClick={() => {
+            setTab("inbound");
+            setSelectedId(null);
+          }}
         >
           <Inbox className="h-4 w-4 mr-2" />
           Odebrane
@@ -136,7 +162,10 @@ function SkrzynkaPage() {
         <Button
           variant={tab === "outbound" ? "default" : "outline"}
           size="sm"
-          onClick={() => { setTab("outbound"); setSelectedId(null); }}
+          onClick={() => {
+            setTab("outbound");
+            setSelectedId(null);
+          }}
         >
           <Send className="h-4 w-4 mr-2" />
           Wysłane
@@ -174,7 +203,10 @@ function SkrzynkaPage() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-xs font-medium truncate">{m.email ?? "—"}</div>
                       <div className="text-[10px] text-muted-foreground whitespace-nowrap">
-                        {formatDistanceToNow(new Date(m.created_at), { addSuffix: true, locale: pl })}
+                        {formatDistanceToNow(new Date(m.created_at), {
+                          addSuffix: true,
+                          locale: pl,
+                        })}
                       </div>
                     </div>
                     <div className="text-sm truncate mt-0.5">{m.subject || "(bez tematu)"}</div>
@@ -189,7 +221,9 @@ function SkrzynkaPage() {
                         </Badge>
                       )}
                       {m.lead_id && (
-                        <Badge variant="outline" className="text-[10px] h-4">lead</Badge>
+                        <Badge variant="outline" className="text-[10px] h-4">
+                          lead
+                        </Badge>
                       )}
                     </div>
                   </button>
@@ -227,7 +261,12 @@ function SkrzynkaPage() {
                         setComposeInitial({
                           to: selected.email ?? "",
                           subject: subj.toLowerCase().startsWith("re:") ? subj : `Re: ${subj}`,
-                          body: `\n\n---\nW dniu ${new Date(selected.created_at).toLocaleString("pl-PL")} ${selected.email} napisał:\n${(selected.content ?? "").split("\n").map((l) => "> " + l).join("\n")}`,
+                          body: `\n\n---\nW dniu ${new Date(selected.created_at).toLocaleString("pl-PL")} ${selected.email} napisał:\n${(
+                            selected.content ?? ""
+                          )
+                            .split("\n")
+                            .map((l) => "> " + l)
+                            .join("\n")}`,
                           replyToCommunicationId: selected.id,
                         });
                         setComposeOpen(true);
@@ -235,6 +274,12 @@ function SkrzynkaPage() {
                     >
                       <Reply className="h-4 w-4 mr-2" />
                       Odpowiedz
+                    </Button>
+                  )}
+                  {selected.email && (
+                    <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>
+                      <History className="h-4 w-4 mr-2" />
+                      Historia
                     </Button>
                   )}
                   {selected.lead_id && (
@@ -300,12 +345,15 @@ function SkrzynkaPage() {
                             onClick={() => refetchBody.mutate(selected.id)}
                             disabled={refetchBody.isPending}
                           >
-                            <Download className={`h-4 w-4 mr-2 ${refetchBody.isPending ? "animate-pulse" : ""}`} />
+                            <Download
+                              className={`h-4 w-4 mr-2 ${refetchBody.isPending ? "animate-pulse" : ""}`}
+                            />
                             Pobierz treść z Resend
                           </Button>
                         ) : tab === "inbound" ? (
                           <div className="text-xs text-muted-foreground">
-                            Stara wiadomość bez <code>email_id</code> — nie da się pobrać treści z Resend. Nowe wiadomości będą zapisywane z pełną treścią.
+                            Stara wiadomość bez <code>email_id</code> — nie da się pobrać treści z
+                            Resend. Nowe wiadomości będą zapisywane z pełną treścią.
                           </div>
                         ) : null}
                       </div>
@@ -322,7 +370,16 @@ function SkrzynkaPage() {
         open={composeOpen}
         onOpenChange={setComposeOpen}
         initial={composeInitial}
-        onSent={() => { setTab("outbound"); refetch(); }}
+        onSent={() => {
+          setTab("outbound");
+          refetch();
+        }}
+      />
+
+      <CorrespondenceHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        email={selected?.email ?? null}
       />
     </div>
   );

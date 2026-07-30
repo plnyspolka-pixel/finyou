@@ -1,5 +1,8 @@
 // Normalizacja polskich numerów telefonów
-export function normalizePolishPhone(raw: string | null | undefined): { normalized: string | null; valid: boolean } {
+export function normalizePolishPhone(raw: string | null | undefined): {
+  normalized: string | null;
+  valid: boolean;
+} {
   if (!raw) return { normalized: null, valid: false };
   const digits = raw.replace(/[^\d+]/g, "");
   let n = digits;

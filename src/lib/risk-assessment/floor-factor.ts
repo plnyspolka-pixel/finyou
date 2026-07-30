@@ -32,12 +32,18 @@ function clamp(n: number, lo: number, hi: number): number {
 
 function baseByPietro(pietro: number): number {
   switch (pietro) {
-    case 0: return 58;  // parter
-    case 1: return 100; // 1. piętro — optymalne
-    case 2: return 88;
-    case 3: return 76;
-    case 4: return 64;
-    default: return 60; // 5+ (wymaga windy)
+    case 0:
+      return 58; // parter
+    case 1:
+      return 100; // 1. piętro — optymalne
+    case 2:
+      return 88;
+    case 3:
+      return 76;
+    case 4:
+      return 64;
+    default:
+      return 60; // 5+ (wymaga windy)
   }
 }
 
@@ -51,22 +57,34 @@ function labelFromScore(score: number): string {
 
 export function assessFloor(input: FloorFactorInput): FloorFactorResult {
   const empty: FloorFactorResult = {
-    available: false, floorPietro: null, totalFloors: input.totalFloors ?? null,
-    kondygnacja: input.kondygnacja ?? null, hasElevatorAssumed: null,
-    score: 60, label: "brak danych o kondygnacji", note: "Brak informacji o piętrze — czynnik pominięty.",
+    available: false,
+    floorPietro: null,
+    totalFloors: input.totalFloors ?? null,
+    kondygnacja: input.kondygnacja ?? null,
+    hasElevatorAssumed: null,
+    score: 60,
+    label: "brak danych o kondygnacji",
+    note: "Brak informacji o piętrze — czynnik pominięty.",
   };
 
   // Wyznacz piętro (nad parterem).
   let pietro: number | null = null;
-  if (input.floorPietro != null && Number.isFinite(input.floorPietro)) pietro = Math.max(0, Math.round(input.floorPietro));
-  else if (input.kondygnacja != null && Number.isFinite(input.kondygnacja)) pietro = Math.max(0, Math.round(input.kondygnacja) - 1);
+  if (input.floorPietro != null && Number.isFinite(input.floorPietro))
+    pietro = Math.max(0, Math.round(input.floorPietro));
+  else if (input.kondygnacja != null && Number.isFinite(input.kondygnacja))
+    pietro = Math.max(0, Math.round(input.kondygnacja) - 1);
   if (pietro == null) return empty;
 
-  const totalFloors = input.totalFloors != null && Number.isFinite(input.totalFloors) ? Math.max(0, Math.round(input.totalFloors)) : null;
+  const totalFloors =
+    input.totalFloors != null && Number.isFinite(input.totalFloors)
+      ? Math.max(0, Math.round(input.totalFloors))
+      : null;
 
   // Winda: znana lub szacowana (budynki > 4 pięter zwykle z windą; do 4 pięter — bez).
   const hasElevatorAssumed = input.hasElevator ?? (totalFloors != null ? totalFloors >= 5 : null);
-  const noLift = hasElevatorAssumed === false || (hasElevatorAssumed === null && totalFloors != null && totalFloors <= 4);
+  const noLift =
+    hasElevatorAssumed === false ||
+    (hasElevatorAssumed === null && totalFloors != null && totalFloors <= 4);
 
   let score = baseByPietro(pietro);
   const notes: string[] = [];
@@ -98,7 +116,7 @@ export function assessFloor(input: FloorFactorInput): FloorFactorResult {
     available: true,
     floorPietro: pietro,
     totalFloors,
-    kondygnacja: input.kondygnacja ?? (pietro + 1),
+    kondygnacja: input.kondygnacja ?? pietro + 1,
     hasElevatorAssumed,
     score,
     label: labelFromScore(score),

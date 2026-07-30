@@ -61,11 +61,13 @@ function EmbedPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Wniosek do osadzenia</h1>
         <p className="text-sm text-muted-foreground">
-          Wklej poniższy kod HTML na swoją stronę — formularz wniosku o pożyczkę pojawi się jako iframe.
+          Wklej poniższy kod HTML na swoją stronę — formularz wniosku o pożyczkę pojawi się jako
+          iframe.
         </p>
         {currentOrigin !== PROD_ORIGIN && (
           <p className="mt-2 text-xs text-amber-600">
-            Generowany kod używa produkcyjnego adresu <code>{PROD_ORIGIN}</code>, niezależnie od tego gdzie otwierasz panel (preview wymaga logowania do Lovable).
+            Generowany kod używa produkcyjnego adresu <code>{PROD_ORIGIN}</code>, niezależnie od
+            tego gdzie otwierasz panel (preview wymaga logowania do Lovable).
           </p>
         )}
       </div>
@@ -78,11 +80,19 @@ function EmbedPage() {
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>Źródło (tag analityczny)</Label>
-            <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="np. strona-www" />
+            <Input
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              placeholder="np. strona-www"
+            />
           </div>
           <div className="space-y-2">
             <Label>Wysokość iframe</Label>
-            <Input value={height} onChange={(e) => setHeight(e.target.value)} placeholder="np. 100% lub 900" />
+            <Input
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              placeholder="np. 100% lub 900"
+            />
           </div>
         </CardContent>
       </Card>
@@ -129,28 +139,36 @@ function EmbedPage() {
           {showFormPreview ? (
             <>
               <iframe
-                src={(() => { const u = new URL("/embed/wniosek", currentOrigin); if (source.trim()) u.searchParams.set("source", source.trim()); return u.toString(); })()}
+                src={(() => {
+                  const u = new URL("/embed/wniosek", currentOrigin);
+                  if (source.trim()) u.searchParams.set("source", source.trim());
+                  return u.toString();
+                })()}
                 width="100%"
                 height={/^\d+$/.test(height) ? Number(height) : 900}
                 style={{ border: 0 }}
                 title="Podgląd wniosku"
               />
               {currentOrigin !== PROD_ORIGIN && (
-                <p className="mt-2 text-xs text-amber-600">Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na produkcję — zadziała po opublikowaniu.</p>
+                <p className="mt-2 text-xs text-amber-600">
+                  Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na
+                  produkcję — zadziała po opublikowaniu.
+                </p>
               )}
             </>
           ) : (
-            <p className="text-xs text-muted-foreground">Podgląd jest wyłączony, żeby uniknąć przeładowań przy edycji ustawień.</p>
+            <p className="text-xs text-muted-foreground">
+              Podgląd jest wyłączony, żeby uniknąć przeładowań przy edycji ustawień.
+            </p>
           )}
-
         </CardContent>
       </Card>
-
 
       <div className="pt-6">
         <h2 className="text-xl font-bold text-foreground">Faktury sprzedaży (anonimowo)</h2>
         <p className="text-sm text-muted-foreground">
-          Zanonimizowana lista ostatnich faktur sprzedaży Finance You — do wklejenia na stronę jako dowód aktywnej sprzedaży.
+          Zanonimizowana lista ostatnich faktur sprzedaży Finance You — do wklejenia na stronę jako
+          dowód aktywnej sprzedaży.
         </p>
       </div>
 
@@ -160,7 +178,11 @@ function EmbedPage() {
             <CardTitle>Kod HTML (iframe)</CardTitle>
             <CardDescription>Wklej w dowolne miejsce strony.</CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={() => copy(invoicesIframe, "Kod iframe faktur")}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => copy(invoicesIframe, "Kod iframe faktur")}
+          >
             <Copy className="mr-2 h-4 w-4" /> Kopiuj
           </Button>
         </CardHeader>
@@ -184,7 +206,10 @@ function EmbedPage() {
             <p className="text-xs text-muted-foreground">Podgląd jest wyłączony domyślnie.</p>
           )}
           {showInvoicesPreview && currentOrigin !== PROD_ORIGIN && (
-            <p className="mt-2 text-xs text-amber-600">Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na produkcję — zadziała po opublikowaniu.</p>
+            <p className="mt-2 text-xs text-amber-600">
+              Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na
+              produkcję — zadziała po opublikowaniu.
+            </p>
           )}
         </CardContent>
       </Card>
@@ -192,7 +217,8 @@ function EmbedPage() {
       <div className="pt-6">
         <h2 className="text-xl font-bold text-foreground">Ostatnie wnioski (anonimowo)</h2>
         <p className="text-sm text-muted-foreground">
-          Zanonimizowana lista ostatnich zgłoszeń pożyczkowych — dowód aktywnego ruchu na formularzu.
+          Zanonimizowana lista ostatnich zgłoszeń pożyczkowych — dowód aktywnego ruchu na
+          formularzu.
         </p>
       </div>
 
@@ -202,7 +228,11 @@ function EmbedPage() {
             <CardTitle>Kod HTML (iframe)</CardTitle>
             <CardDescription>Wklej w dowolne miejsce strony.</CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={() => copy(leadsIframe, "Kod iframe wniosków")}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => copy(leadsIframe, "Kod iframe wniosków")}
+          >
             <Copy className="mr-2 h-4 w-4" /> Kopiuj
           </Button>
         </CardHeader>
@@ -226,7 +256,10 @@ function EmbedPage() {
             <p className="text-xs text-muted-foreground">Podgląd jest wyłączony domyślnie.</p>
           )}
           {showLeadsPreview && currentOrigin !== PROD_ORIGIN && (
-            <p className="mt-2 text-xs text-amber-600">Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na produkcję — zadziała po opublikowaniu.</p>
+            <p className="mt-2 text-xs text-amber-600">
+              Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na
+              produkcję — zadziała po opublikowaniu.
+            </p>
           )}
         </CardContent>
       </Card>
@@ -274,24 +307,40 @@ function EmbedPage() {
             <p className="text-xs text-muted-foreground">Podgląd jest wyłączony domyślnie.</p>
           )}
           {showBlogPreview && currentOrigin !== PROD_ORIGIN && (
-            <p className="mt-2 text-xs text-amber-600">Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na produkcję — zadziała po opublikowaniu.</p>
+            <p className="mt-2 text-xs text-amber-600">
+              Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na
+              produkcję — zadziała po opublikowaniu.
+            </p>
           )}
         </CardContent>
       </Card>
-
     </div>
   );
 }
 
 function LeadsInlinePreview() {
-  const { data = [], isLoading, error } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["admin", "embed", "public-leads-preview"],
     queryFn: () => fetchPublicLeads(),
     staleTime: 2 * 60 * 1000,
   });
 
-  if (isLoading) return <div className="rounded-xl border bg-muted/30 p-6 text-sm text-muted-foreground">Ładowanie wniosków…</div>;
-  if (error) return <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">Nie udało się wczytać podglądu wniosków.</div>;
+  if (isLoading)
+    return (
+      <div className="rounded-xl border bg-muted/30 p-6 text-sm text-muted-foreground">
+        Ładowanie wniosków…
+      </div>
+    );
+  if (error)
+    return (
+      <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+        Nie udało się wczytać podglądu wniosków.
+      </div>
+    );
 
   return (
     <div className="rounded-2xl bg-[#0a1030] p-4 sm:p-6">
@@ -305,46 +354,70 @@ function LeadsInlinePreview() {
             const icon = property3dIcon(l.property_type);
             const label = propertyLabel(l.property_type);
             const subtitle = l.kw_masked ?? "KW w przygotowaniu";
-            const dateStr = new Date(l.created_at).toLocaleDateString("pl-PL", { day: "2-digit", month: "short" });
+            const dateStr = new Date(l.created_at).toLocaleDateString("pl-PL", {
+              day: "2-digit",
+              month: "short",
+            });
             return (
-            <article key={l.id} className="group relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-[#0f1846] via-[#0c1338] to-[#0a1030] shadow-[0_8px_30px_-12px_rgba(56,189,248,0.35)]">
-              <div className="flex items-start justify-between gap-3 p-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/20 via-indigo-500/15 to-emerald-400/10 ring-1 ring-white/10">
-                    <img src={icon} alt="" className="h-14 w-14 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" />
+              <article
+                key={l.id}
+                className="group relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-[#0f1846] via-[#0c1338] to-[#0a1030] shadow-[0_8px_30px_-12px_rgba(56,189,248,0.35)]"
+              >
+                <div className="flex items-start justify-between gap-3 p-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/20 via-indigo-500/15 to-emerald-400/10 ring-1 ring-white/10">
+                      <img
+                        src={icon}
+                        alt=""
+                        className="h-14 w-14 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-base font-bold text-white">{label}</h3>
+                      {l.first_name && (
+                        <p className="mt-0.5 truncate text-xs text-slate-300">
+                          Klient: <span className="font-semibold text-white">{l.first_name}</span>
+                        </p>
+                      )}
+                      <p className="mt-0.5 truncate font-mono text-[11px] text-slate-400">
+                        {subtitle}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="truncate text-base font-bold text-white">{label}</h3>
-                    {l.first_name && (
-                      <p className="mt-0.5 truncate text-xs text-slate-300">Klient: <span className="font-semibold text-white">{l.first_name}</span></p>
-                    )}
-                    <p className="mt-0.5 truncate font-mono text-[11px] text-slate-400">{subtitle}</p>
+                  {l.is_new ? (
+                    <span className="shrink-0 rounded-full bg-amber-500/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-900">
+                      Nowa oferta
+                    </span>
+                  ) : (
+                    <span className="shrink-0 rounded-full border border-sky-400/40 bg-sky-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-sky-300">
+                      Szuka inwestora
+                    </span>
+                  )}
+                </div>
+                <ScoreRow score={l.score} grade={l.grade} />
+                <div className="grid grid-cols-2 gap-2 border-t border-white/5 px-4 py-4">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                      Kwota
+                    </p>
+                    <p className="mt-1 text-sm font-bold tabular-nums text-white">
+                      {formatPLN(l.loan_amount ?? 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                      Dodano
+                    </p>
+                    <p className="mt-1 text-sm font-bold tabular-nums text-white">{dateStr}</p>
                   </div>
                 </div>
-                {l.is_new ? (
-                  <span className="shrink-0 rounded-full bg-amber-500/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-900">Nowa oferta</span>
-                ) : (
-                  <span className="shrink-0 rounded-full border border-sky-400/40 bg-sky-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-sky-300">Szuka inwestora</span>
-                )}
-              </div>
-              <ScoreRow score={l.score} grade={l.grade} />
-              <div className="grid grid-cols-2 gap-2 border-t border-white/5 px-4 py-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Kwota</p>
-                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{formatPLN(l.loan_amount ?? 0)}</p>
+                <div className="border-t border-white/5 bg-gradient-to-r from-sky-500/90 via-sky-500/80 to-indigo-500/80 px-4 py-3">
+                  <div className="flex items-center justify-between text-sm font-semibold text-white">
+                    <span>Oferta szuka inwestora</span>
+                    <span aria-hidden>→</span>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Dodano</p>
-                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{dateStr}</p>
-                </div>
-              </div>
-              <div className="border-t border-white/5 bg-gradient-to-r from-sky-500/90 via-sky-500/80 to-indigo-500/80 px-4 py-3">
-                <div className="flex items-center justify-between text-sm font-semibold text-white">
-                  <span>Oferta szuka inwestora</span>
-                  <span aria-hidden>→</span>
-                </div>
-              </div>
-            </article>
+              </article>
             );
           })}
         </div>
@@ -353,18 +426,30 @@ function LeadsInlinePreview() {
   );
 }
 
-
-
 function InvoicesInlinePreview() {
-  const { data = [], isLoading, error } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["admin", "embed", "public-invoices-preview"],
     queryFn: () => fetchPublicInvoices(),
     staleTime: 5 * 60 * 1000,
   });
   const total = data.reduce((acc, r) => acc + r.gross_amount, 0);
 
-  if (isLoading) return <div className="rounded-xl border bg-muted/30 p-6 text-sm text-muted-foreground">Ładowanie faktur…</div>;
-  if (error) return <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">Nie udało się wczytać podglądu faktur.</div>;
+  if (isLoading)
+    return (
+      <div className="rounded-xl border bg-muted/30 p-6 text-sm text-muted-foreground">
+        Ładowanie faktur…
+      </div>
+    );
+  if (error)
+    return (
+      <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+        Nie udało się wczytać podglądu faktur.
+      </div>
+    );
 
   return (
     <div className="rounded-2xl border border-slate-700 bg-slate-950 p-4 text-slate-100 sm:p-6">
@@ -372,7 +457,9 @@ function InvoicesInlinePreview() {
         <div>
           <p className="text-[11px] uppercase tracking-widest text-sky-300/80">Finance You</p>
           <h3 className="text-xl font-semibold">Faktury sprzedaży</h3>
-          <p className="mt-1 text-xs text-slate-400">Dane zanonimizowane — najnowsze {data.length} pozycji.</p>
+          <p className="mt-1 text-xs text-slate-400">
+            Dane zanonimizowane — najnowsze {data.length} pozycji.
+          </p>
         </div>
         <div className="text-right">
           <p className="text-[11px] uppercase tracking-widest text-slate-400">Suma brutto</p>
@@ -387,18 +474,20 @@ function InvoicesInlinePreview() {
       ) : (
         <ul className="max-h-[560px] space-y-2 overflow-auto pr-1">
           {data.map((inv) => (
-            <li key={inv.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
+            <li
+              key={inv.id}
+              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3"
+            >
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <span className="truncate font-mono">{inv.invoice_number ?? "—"}</span>
-                </div>
-                <div className="mt-0.5 truncate text-sm text-slate-200">{inv.item_label}</div>
+                <div className="truncate text-sm text-slate-200">{inv.item_label}</div>
                 <div className="mt-0.5 truncate text-xs text-slate-400">
                   Nabywca: <span className="text-slate-300">{inv.buyer_label}</span>
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="text-sm font-semibold tabular-nums text-emerald-300 sm:text-base">{formatPLN(inv.gross_amount)}</div>
+                <div className="text-sm font-semibold tabular-nums text-emerald-300 sm:text-base">
+                  {formatPLN(inv.gross_amount)}
+                </div>
                 <div className="text-[10px] uppercase tracking-wider text-slate-500">brutto</div>
               </div>
             </li>

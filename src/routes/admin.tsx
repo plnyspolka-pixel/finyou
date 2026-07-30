@@ -2,7 +2,45 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles, Link2, TrendingDown, Eye, Bot, FileCheck, Menu, FileSignature, Image as ImageIcon, Network, Coins, Share2, Wallet, Building2, MessageCircle } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  FolderOpen,
+  PhoneCall,
+  Briefcase,
+  Send,
+  Tag,
+  Plug,
+  Settings,
+  LogOut,
+  ShieldCheck,
+  Mic,
+  GraduationCap,
+  Code2,
+  Wand2,
+  Receipt,
+  BookOpen,
+  Facebook,
+  Mail,
+  Search,
+  Sparkles,
+  Link2,
+  TrendingDown,
+  Eye,
+  Bot,
+  FileCheck,
+  Menu,
+  FileSignature,
+  Image as ImageIcon,
+  Network,
+  Coins,
+  Share2,
+  Wallet,
+  Building2,
+  MapPinned,
+  MessageCircle,
+} from "lucide-react";
 
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -26,6 +64,7 @@ const groups: Group[] = [
       { to: "/admin/czat", label: "Czat na stronie", icon: MessageCircle },
       { to: "/admin/wnioski-niekompletne", label: "Wnioski (wszystkie)", icon: FileText },
       { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
+      { to: "/admin/potencjal-lokalizacyjny", label: "Potencjał lokalizacyjny", icon: MapPinned },
       { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },
       { to: "/admin/kreator-dokumentow", label: "Kreator dokumentów B2B", icon: FileSignature },
       { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
@@ -52,8 +91,16 @@ const groups: Group[] = [
       { to: "/admin/program-posrednikow/zdarzenia", label: "Zdarzenia prowizyjne", icon: Send },
       { to: "/admin/program-posrednikow/prowizje", label: "Prowizje", icon: Coins },
       { to: "/admin/program-posrednikow/wyplaty", label: "Paczki wypłat", icon: Wallet },
-      { to: "/admin/program-posrednikow/rozliczenia", label: "Rozliczenia B2B / nierejestrowana", icon: FileCheck },
-      { to: "/admin/program-posrednikow/ustawienia", label: "Stawki, limity, reguły", icon: Settings },
+      {
+        to: "/admin/program-posrednikow/rozliczenia",
+        label: "Rozliczenia B2B / nierejestrowana",
+        icon: FileCheck,
+      },
+      {
+        to: "/admin/program-posrednikow/ustawienia",
+        label: "Stawki, limity, reguły",
+        icon: Settings,
+      },
     ],
   },
   {
@@ -91,11 +138,11 @@ const groups: Group[] = [
   {
     label: "Konfiguracja",
     items: [
-      
       { to: "/admin/embed", label: "Wniosek do osadzenia", icon: Code2 },
       { to: "/admin/integracje", label: "Integracje", icon: Plug },
       { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
       { to: "/admin/operatorzy", label: "Operatorzy wewnętrzni", icon: ShieldCheck },
+      { to: "/admin/zespol-aktywnosc", label: "Zespół i aktywność", icon: Eye },
       { to: "/admin/zgody", label: "Treści zgód", icon: FileCheck },
       { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },
     ],
@@ -110,7 +157,11 @@ const accountingGroups: Group[] = [
     items: [
       { to: "/admin/ksiegowosc/faktury", label: "Faktury sprzedaży", icon: FileText },
       { to: "/admin/ksiegowosc/podmioty", label: "Podmioty gospodarcze", icon: Building2 },
-      { to: "/admin/program-posrednikow/rozliczenia", label: "Rozliczenia B2B / nierejestrowana", icon: FileCheck },
+      {
+        to: "/admin/program-posrednikow/rozliczenia",
+        label: "Rozliczenia B2B / nierejestrowana",
+        icon: FileCheck,
+      },
     ],
   },
 ];
@@ -124,7 +175,6 @@ function AdminLayout() {
       title={isStaff ? "Panel administratora" : "Panel księgowości"}
       allow={["administrator", "ksiegowosc"]}
       groups={isStaff ? groups : isAccountant ? accountingGroups : groups}
-      
     />
   );
 }

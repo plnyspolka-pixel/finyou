@@ -3,7 +3,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { analyzeFloodRisk, floodRiskInvestorText, type FloodAnalysisOutput } from "./flood-risk.server";
+import {
+  analyzeFloodRisk,
+  floodRiskInvestorText,
+  type FloodAnalysisOutput,
+} from "./flood-risk.server";
 
 const Input = z.object({
   applicationId: z.string().uuid().optional(),
@@ -43,8 +47,13 @@ export const runFloodRiskAnalysis = createServerFn({ method: "POST" })
     }
 
     const out: FloodAnalysisOutput = await analyzeFloodRisk({
-      latitude, longitude, address, city, voivodeship,
-      geometry: data.geometry, propertyId: propertyId ?? null,
+      latitude,
+      longitude,
+      address,
+      city,
+      voivodeship,
+      geometry: data.geometry,
+      propertyId: propertyId ?? null,
     });
 
     const investorText = floodRiskInvestorText(out.floodRisk, out.success);
@@ -53,12 +62,19 @@ export const runFloodRiskAnalysis = createServerFn({ method: "POST" })
       ...out,
       investmentOfferText: investorText,
       warnings: out.success ? [] : [out.message ?? "Niedostępne dane MZP/MRP."],
-      dataSourcesUsed: [{
-        source: "ISOK / Wody Polskie MZP/MRP",
-        used: out.success,
-        purpose: "weryfikacja zagrożenia powodziowego",
-        dataLevel: out.property.geometryUsed === "parcel_geometry" ? "geometria działki" : "punkt",
-        status: out.success ? (out.errorCode === "NO_FLOOD_DATA" ? "no_data" : "success") : "error",
-      }],
+      dataSourcesUsed: [
+        {
+          source: "ISOK / Wody Polskie MZP/MRP",
+          used: out.success,
+          purpose: "weryfikacja zagrożenia powodziowego",
+          dataLevel:
+            out.property.geometryUsed === "parcel_geometry" ? "geometria działki" : "punkt",
+          status: out.success
+            ? out.errorCode === "NO_FLOOD_DATA"
+              ? "no_data"
+              : "success"
+            : "error",
+        },
+      ],
     };
   });

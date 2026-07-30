@@ -168,7 +168,9 @@ describe("extractInboundFacts — formularz reklamy FB", () => {
   });
 
   it("radzi sobie z samym imieniem w formularzu", () => {
-    const f = extractInboundFacts("Full name: Marzena\nPhone number: 511 834 349\nEmail: kontakt.amd@wp.pl");
+    const f = extractInboundFacts(
+      "Full name: Marzena\nPhone number: 511 834 349\nEmail: kontakt.amd@wp.pl",
+    );
     expect(f.firstName).toBe("Marzena");
     expect(f.lastName).toBeNull();
     expect(f.email).toBe("kontakt.amd@wp.pl");

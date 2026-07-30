@@ -17,9 +17,13 @@ import {
 import { formatWarsawDate, type AccessProduct } from "@/lib/access/core";
 
 export const Route = createFileRoute("/inwestor/abonament")({
-  validateSearch: (search: Record<string, unknown>): { tpay?: string; payment?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tpay?: string; payment?: string; product?: string } => ({
     tpay: typeof search.tpay === "string" ? search.tpay : undefined,
     payment: typeof search.payment === "string" ? search.payment : undefined,
+    // Deep-link ze strony marketingowej: preselekcja pakietu do zakupu.
+    product: typeof search.product === "string" ? search.product : undefined,
   }),
   component: InwestorAbonament,
 });
@@ -39,7 +43,7 @@ const FEATURES: Record<number, string[]> = {
 };
 
 function InwestorAbonament() {
-  const { tpay, payment } = useSearch({ from: "/inwestor/abonament" });
+  const { tpay, payment, product } = useSearch({ from: "/inwestor/abonament" });
   const stateFn = useServerFn(getMyAccessState);
   const productsFn = useServerFn(listAccessProducts);
 
@@ -54,6 +58,11 @@ function InwestorAbonament() {
     ]);
     setState(s);
     setProducts(p);
+    // Deep-link ?product=<code> ze strony marketingowej → od razu otwórz płatność.
+    if (product) {
+      const match = p.find((x) => x.code === product && x.active);
+      if (match) setSelected(match);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

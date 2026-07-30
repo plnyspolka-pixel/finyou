@@ -28,7 +28,9 @@ export const Route = createFileRoute("/api/public/hooks/elevenlabs-conversation-
 
 function normalizePhone(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  let s = String(raw).trim().replace(/[\s\-()]/g, "");
+  let s = String(raw)
+    .trim()
+    .replace(/[\s\-()]/g, "");
   if (!s) return null;
   if (s.startsWith("00")) s = "+" + s.slice(2);
   if (s.startsWith("+")) return s;
@@ -154,7 +156,7 @@ async function handler({ request }: { request: Request }) {
       const { data: app } = await supabaseAdmin
         .from("loan_applications")
         .select(
-          "id, status, loan_amount, completeness_percent, missing_fields, missing_documents_snapshot, return_link, return_link_token, situation_description, current_form_step, max_monthly_payment, preferred_period_months, admin_decision, decision_reason"
+          "id, status, loan_amount, completeness_percent, missing_fields, missing_documents_snapshot, return_link, return_link_token, situation_description, current_form_step, max_monthly_payment, preferred_period_months, admin_decision, decision_reason",
         )
         .eq("client_id", client.id)
         .order("updated_at", { ascending: false })
@@ -172,7 +174,9 @@ async function handler({ request }: { request: Request }) {
         dyn.current_step = Number(app.current_form_step ?? 0);
         dyn.step_label = STEP_LABELS[Number(app.current_form_step ?? 0)] ?? "";
         dyn.client_repayment_comment = app.situation_description ?? "";
-        dyn.max_monthly_payment = app.max_monthly_payment ? Math.round(Number(app.max_monthly_payment)) : 0;
+        dyn.max_monthly_payment = app.max_monthly_payment
+          ? Math.round(Number(app.max_monthly_payment))
+          : 0;
         dyn.max_monthly_loan_cost = dyn.max_monthly_payment; // alias — koszt = rata
         dyn.preferred_repayment_period = Number(app.preferred_period_months ?? 0);
 
@@ -192,7 +196,8 @@ async function handler({ request }: { request: Request }) {
         if (prop) {
           dyn.property_type = String(prop.property_type ?? "");
           dyn.property_type_label =
-            PROPERTY_TYPE_LABELS[String(prop.property_type ?? "")] ?? String(prop.property_type ?? "");
+            PROPERTY_TYPE_LABELS[String(prop.property_type ?? "")] ??
+            String(prop.property_type ?? "");
           dyn.property_city = prop.city ?? "";
         }
 
@@ -222,11 +227,15 @@ async function handler({ request }: { request: Request }) {
 
         // Etykiety potrzebne dla agenta — czytelne, po polsku
         const propPhotoLabel =
-          ptype === "dzialka" ? "zdjęcia działki"
-            : ptype === "lokal_uzytkowy" ? "zdjęcia lokalu"
-            : ptype === "dom" ? "zdjęcia domu"
-            : ptype === "mieszkanie" ? "zdjęcia mieszkania"
-            : "zdjęcia nieruchomości";
+          ptype === "dzialka"
+            ? "zdjęcia działki"
+            : ptype === "lokal_uzytkowy"
+              ? "zdjęcia lokalu"
+              : ptype === "dom"
+                ? "zdjęcia domu"
+                : ptype === "mieszkanie"
+                  ? "zdjęcia mieszkania"
+                  : "zdjęcia nieruchomości";
 
         const contextual: string[] = [];
         if (ptype) {
@@ -242,7 +251,8 @@ async function handler({ request }: { request: Request }) {
 
         // Złącz z brakami zapisanymi w bazie (priorytet: kontekstowe + DB)
         const allMissing = [...new Set([...contextual, ...missing, ...missingDocs])];
-        dyn.missing_documents = allMissing.length > 0 ? allMissing.join(", ") : "wszystko skompletowane";
+        dyn.missing_documents =
+          allMissing.length > 0 ? allMissing.join(", ") : "wszystko skompletowane";
         dyn.missing_documents_count = allMissing.length;
         dyn.missing_step = allMissing[0] ?? "";
 

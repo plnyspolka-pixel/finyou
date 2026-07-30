@@ -29,7 +29,12 @@ import { logAffiliateAudit } from "./db";
 // ---------------------------------------------------------------------
 export async function findCommissionRule(
   db: SupabaseClient,
-  input: { eventType: string; networkLevel: number; settlementType: string; productId?: string | null },
+  input: {
+    eventType: string;
+    networkLevel: number;
+    settlementType: string;
+    productId?: string | null;
+  },
 ): Promise<any | null> {
   const { data } = await db
     .from("affiliate_commission_rules")
@@ -112,7 +117,10 @@ async function loadPartner(db: SupabaseClient, id: string): Promise<PartnerLike 
   return (data as PartnerLike | null) ?? null;
 }
 
-async function loadNetworkMap(db: SupabaseClient, directPartnerId: string): Promise<Record<string, PartnerLike>> {
+async function loadNetworkMap(
+  db: SupabaseClient,
+  directPartnerId: string,
+): Promise<Record<string, PartnerLike>> {
   const map: Record<string, PartnerLike> = {};
   let cursor: string | null | undefined = directPartnerId;
   let guard = 0;
@@ -133,7 +141,11 @@ export async function calculateNetworkCommissions(
   db: SupabaseClient,
   eventId: string,
 ): Promise<{ created: number; skipped: number }> {
-  const { data: event } = await db.from("affiliate_commission_events").select("*").eq("id", eventId).maybeSingle();
+  const { data: event } = await db
+    .from("affiliate_commission_events")
+    .select("*")
+    .eq("id", eventId)
+    .maybeSingle();
   if (!event) throw new Error("Nie znaleziono zdarzenia prowizyjnego.");
 
   // Nie naliczamy prowizji od zwróconych / cofniętych / fraudowych zdarzeń.
@@ -163,7 +175,11 @@ export async function calculateNetworkCommissions(
         entityType: "commission_event",
         entityId: eventId,
         action: "commission_skipped_partner_inactive",
-        after: { partnerId: recipient.partnerId, level: recipient.level, status: partner?.status ?? null },
+        after: {
+          partnerId: recipient.partnerId,
+          level: recipient.level,
+          status: partner?.status ?? null,
+        },
       });
       continue;
     }
@@ -240,7 +256,12 @@ export async function calculateNetworkCommissions(
       entityType: "commission",
       entityId: (event as any).id,
       action: "commission_created",
-      after: { partnerId: partner.id, level: recipient.level, grossAmount, status: decision.status },
+      after: {
+        partnerId: partner.id,
+        level: recipient.level,
+        grossAmount,
+        status: decision.status,
+      },
     });
   }
 
@@ -306,7 +327,8 @@ export async function createCommissionEvent(
     .select("id")
     .single();
 
-  if (error || !inserted) throw new Error(`Nie udało się utworzyć zdarzenia prowizyjnego: ${error?.message}`);
+  if (error || !inserted)
+    throw new Error(`Nie udało się utworzyć zdarzenia prowizyjnego: ${error?.message}`);
 
   const eventId = (inserted as { id: string }).id;
   const res = await calculateNetworkCommissions(db, eventId);
@@ -318,9 +340,19 @@ export async function createCommissionEvent(
 // ---------------------------------------------------------------------
 export async function setEventStatus(
   db: SupabaseClient,
-  input: { eventId: string; status: string; reason?: string; actorUserId?: string; actorRole?: string },
+  input: {
+    eventId: string;
+    status: string;
+    reason?: string;
+    actorUserId?: string;
+    actorRole?: string;
+  },
 ): Promise<void> {
-  const { data: before } = await db.from("affiliate_commission_events").select("*").eq("id", input.eventId).maybeSingle();
+  const { data: before } = await db
+    .from("affiliate_commission_events")
+    .select("*")
+    .eq("id", input.eventId)
+    .maybeSingle();
   const nowIso = new Date().toISOString();
   const cancelling = !isPayableEvent(input.status);
 
@@ -343,7 +375,11 @@ export async function setEventStatus(
       const next = (c as any).status === "paid" ? "clawback" : "cancelled";
       await db
         .from("affiliate_commissions")
-        .update({ status: next, cancelled_at: nowIso, cancellation_reason: input.reason ?? "Korekta zdarzenia" })
+        .update({
+          status: next,
+          cancelled_at: nowIso,
+          cancellation_reason: input.reason ?? "Korekta zdarzenia",
+        })
         .eq("id", (c as any).id);
     }
   }
@@ -367,7 +403,11 @@ export async function approveCommission(
   db: SupabaseClient,
   input: { commissionId: string; adminUserId: string; actorRole?: string },
 ): Promise<void> {
-  const { data: commission } = await db.from("affiliate_commissions").select("*").eq("id", input.commissionId).maybeSingle();
+  const { data: commission } = await db
+    .from("affiliate_commissions")
+    .select("*")
+    .eq("id", input.commissionId)
+    .maybeSingle();
   if (!commission) throw new Error("Nie znaleziono prowizji.");
   const c = commission as any;
 
@@ -389,13 +429,19 @@ export async function approveCommission(
         .from("affiliate_commissions")
         .update({ status: "requires_business_registration", requires_business_registration: true })
         .eq("id", input.commissionId);
-      throw new Error("Limit działalności nierejestrowanej został przekroczony lub może zostać przekroczony.");
+      throw new Error(
+        "Limit działalności nierejestrowanej został przekroczony lub może zostać przekroczony.",
+      );
     }
   }
 
   await db
     .from("affiliate_commissions")
-    .update({ status: "approved", approved_at: new Date().toISOString(), approved_by: input.adminUserId })
+    .update({
+      status: "approved",
+      approved_at: new Date().toISOString(),
+      approved_by: input.adminUserId,
+    })
     .eq("id", input.commissionId);
 
   await logAffiliateAudit(db, {
@@ -413,8 +459,15 @@ export async function blockCommission(
   db: SupabaseClient,
   input: { commissionId: string; reason: string; adminUserId: string; actorRole?: string },
 ): Promise<void> {
-  const { data: before } = await db.from("affiliate_commissions").select("status").eq("id", input.commissionId).maybeSingle();
-  await db.from("affiliate_commissions").update({ status: "blocked", cancellation_reason: input.reason }).eq("id", input.commissionId);
+  const { data: before } = await db
+    .from("affiliate_commissions")
+    .select("status")
+    .eq("id", input.commissionId)
+    .maybeSingle();
+  await db
+    .from("affiliate_commissions")
+    .update({ status: "blocked", cancellation_reason: input.reason })
+    .eq("id", input.commissionId);
   await logAffiliateAudit(db, {
     actorUserId: input.adminUserId,
     actorRole: input.actorRole,
@@ -449,7 +502,13 @@ export async function rebuildClosure(db: SupabaseClient): Promise<void> {
 
 export async function assignSponsor(
   db: SupabaseClient,
-  input: { partnerId: string; sponsorId: string | null; adminUserId: string; note: string; actorRole?: string },
+  input: {
+    partnerId: string;
+    sponsorId: string | null;
+    adminUserId: string;
+    note: string;
+    actorRole?: string;
+  },
 ): Promise<void> {
   if (!input.note || !input.note.trim()) {
     throw new Error("Zmiana sponsora wymaga obowiązkowej notatki.");
@@ -465,7 +524,10 @@ export async function assignSponsor(
   }
 
   const before = map[input.partnerId]?.sponsor_partner_id ?? null;
-  await db.from("affiliate_partners").update({ sponsor_partner_id: input.sponsorId }).eq("id", input.partnerId);
+  await db
+    .from("affiliate_partners")
+    .update({ sponsor_partner_id: input.sponsorId })
+    .eq("id", input.partnerId);
   await rebuildClosure(db);
 
   await logAffiliateAudit(db, {
@@ -482,9 +544,19 @@ export async function assignSponsor(
 
 export async function setPartnerStatus(
   db: SupabaseClient,
-  input: { partnerId: string; status: string; adminUserId: string; reason?: string; actorRole?: string },
+  input: {
+    partnerId: string;
+    status: string;
+    adminUserId: string;
+    reason?: string;
+    actorRole?: string;
+  },
 ): Promise<void> {
-  const { data: before } = await db.from("affiliate_partners").select("status").eq("id", input.partnerId).maybeSingle();
+  const { data: before } = await db
+    .from("affiliate_partners")
+    .select("status")
+    .eq("id", input.partnerId)
+    .maybeSingle();
   const patch: Record<string, unknown> = { status: input.status };
   if (input.status === "active") {
     patch.approved_at = new Date().toISOString();
@@ -510,7 +582,10 @@ export async function createPayoutBatch(
   db: SupabaseClient,
   input: { partnerIds?: string[]; createdBy: string; name?: string; actorRole?: string },
 ): Promise<{ batchId: string; total: number; count: number; skipped: any[] }> {
-  let query = db.from("affiliate_commissions").select("id,partner_id,gross_amount").eq("status", "approved");
+  let query = db
+    .from("affiliate_commissions")
+    .select("id,partner_id,gross_amount")
+    .eq("status", "approved");
   if (input.partnerIds && input.partnerIds.length) query = query.in("partner_id", input.partnerIds);
   const { data: commissions } = await query;
 
@@ -578,10 +653,19 @@ export async function markPayoutBatchPaid(
   input: { batchId: string; paidBy: string; actorRole?: string },
 ): Promise<void> {
   const nowIso = new Date().toISOString();
-  const { data: items } = await db.from("affiliate_payout_items").select("id,commission_id").eq("payout_batch_id", input.batchId);
+  const { data: items } = await db
+    .from("affiliate_payout_items")
+    .select("id,commission_id")
+    .eq("payout_batch_id", input.batchId);
   for (const it of items ?? []) {
-    await db.from("affiliate_payout_items").update({ status: "paid", paid_at: nowIso }).eq("id", (it as any).id);
-    await db.from("affiliate_commissions").update({ status: "paid", paid_at: nowIso }).eq("id", (it as any).commission_id);
+    await db
+      .from("affiliate_payout_items")
+      .update({ status: "paid", paid_at: nowIso })
+      .eq("id", (it as any).id);
+    await db
+      .from("affiliate_commissions")
+      .update({ status: "paid", paid_at: nowIso })
+      .eq("id", (it as any).commission_id);
   }
   await db
     .from("affiliate_payout_batches")

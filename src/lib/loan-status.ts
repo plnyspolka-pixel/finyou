@@ -82,7 +82,8 @@ export const LOAN_STATUS_LABELS: Record<string, string> = {
   brak_kontaktu: "Brak kontaktu — brakuje imienia, nazwiska, telefonu lub e-maila",
   brak_kwoty: "Brak kwoty pożyczki — mamy dane kontaktowe, czekamy na wskazanie kwoty",
   brak_kw: "Brak numeru KW — mamy dane kontaktowe, czekamy na numer księgi wieczystej",
-  brak_zdjec_dokumentow: "Brak zdjęć / dokumentów — potrzebujemy zdjęć nieruchomości lub innych dokumentów",
+  brak_zdjec_dokumentow:
+    "Brak zdjęć / dokumentów — potrzebujemy zdjęć nieruchomości lub innych dokumentów",
   kontakt: "W kontakcie — pośrednik prowadzi rozmowę",
   kompletowanie_danych: "Kompletowanie danych i dokumentów",
   szukamy_inwestora: "Szukamy inwestora — wniosek w dystrybucji / oczekujemy na ofertę",
@@ -127,7 +128,8 @@ export function describeLoanStatusForAgent(status: string): {
     case "brak_kw":
       return {
         status_label: label,
-        status_message: "Mamy Twoje dane kontaktowe. Czekamy na numer księgi wieczystej nieruchomości.",
+        status_message:
+          "Mamy Twoje dane kontaktowe. Czekamy na numer księgi wieczystej nieruchomości.",
         client_action: "Uzupełnij numer KW w panelu klienta.",
         is_decision_available: false,
         is_completed: false,
@@ -192,8 +194,7 @@ export function describeLoanStatusForAgent(status: string): {
     case "notariusz":
       return {
         status_label: label,
-        status_message:
-          "Umowa jest u notariusza — trwa podpisanie i ustanowienie zabezpieczeń.",
+        status_message: "Umowa jest u notariusza — trwa podpisanie i ustanowienie zabezpieczeń.",
         client_action: "Stawić się u notariusza w umówionym terminie.",
         is_decision_available: true,
         is_completed: false,

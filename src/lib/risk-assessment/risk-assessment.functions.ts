@@ -14,7 +14,11 @@ import { fetchAndStoreKw, normalizeKwNumber } from "@/lib/kw-fetch.server";
 import { analyzeKwLegal } from "./kw-parser.server";
 import { analyzeOwner } from "./owner-analysis.server";
 import { analyzeCorrespondence } from "./correspondence-intel.server";
-import { analyzeSaleability, applyFloorToSaleability, applyPlotBuildabilityToSaleability } from "./saleability.server";
+import {
+  analyzeSaleability,
+  applyFloorToSaleability,
+  applyPlotBuildabilityToSaleability,
+} from "./saleability.server";
 import { assessFloor } from "./floor-factor";
 import { assessPlotBuildability } from "./plot-buildability";
 import { estimateForcedSale } from "./forced-sale";
@@ -60,24 +64,31 @@ function emptyGovBenchmark(propertyType: string): GovBenchmark {
     unitLevel: null,
     period: null,
     fallbackUsed: false,
-    summaryLine: "GUS BDL (pomocniczo): brak danych — wycena bazuje na scrapingu rynku (deweloperuch + otodom).",
+    summaryLine:
+      "GUS BDL (pomocniczo): brak danych — wycena bazuje na scrapingu rynku (deweloperuch + otodom).",
     warnings: [],
   };
 }
 
 async function assertAdminOrOperator(supabase: SupabaseLike, userId: string) {
   const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  const allowed = (roles ?? []).some((r: { role: string }) => r.role === "administrator" || r.role === "operator");
+  const allowed = (roles ?? []).some(
+    (r: { role: string }) => r.role === "administrator" || r.role === "operator",
+  );
   if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator/operator).");
 }
 
 export const runInvestmentRiskAssessment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ applicationId: z.string().uuid(), force: z.boolean().optional() }).parse(d))
+  .inputValidator((d) =>
+    z.object({ applicationId: z.string().uuid(), force: z.boolean().optional() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as unknown as SupabaseLike;
     await assertAdminOrOperator(supabase, context.userId);
-    return runInvestmentRiskAssessmentCore(supabase, data.applicationId, { force: data.force ?? false });
+    return runInvestmentRiskAssessmentCore(supabase, data.applicationId, {
+      force: data.force ?? false,
+    });
   });
 
 /**
@@ -139,8 +150,10 @@ export async function runInvestmentRiskAssessmentCore(
     const reason =
       kwFetch.status === "processing"
         ? "pobieranie treści KW nadal trwa — spróbuj ponownie za chwilę"
-        : kwFetch.error ?? `status: ${kwFetch.status}`;
-    throw new Error(`Ocena przerwana: nie udało się poprawnie pobrać treści KW ${kwNumber} z KW Engine (${reason}).`);
+        : (kwFetch.error ?? `status: ${kwFetch.status}`);
+    throw new Error(
+      `Ocena przerwana: nie udało się poprawnie pobrać treści KW ${kwNumber} z KW Engine (${reason}).`,
+    );
   }
 
   // 1a) Stan prawny KW — dział I-O daje też adres i parametry nieruchomości,
@@ -170,7 +183,13 @@ export async function runInvestmentRiskAssessmentCore(
   if (property && (kwAddr || kwAreaSqm != null)) {
     // Uzupełnij puste pola rekordu nieruchomości (dane z KW są urzędowe) —
     // dzięki temu widzi je też analiza zabezpieczenia i diagnostyka RCN.
-    const patch: { address?: string; street?: string; city?: string; voivodeship?: string; area_sqm?: number } = {};
+    const patch: {
+      address?: string;
+      street?: string;
+      city?: string;
+      voivodeship?: string;
+      area_sqm?: number;
+    } = {};
     if (!property.address && kwAddr?.fullAddress) patch.address = kwAddr.fullAddress;
     if (!property.street && kwAddr?.street) patch.street = kwAddr.street;
     if (!property.city && kwAddr?.city) patch.city = kwAddr.city;
@@ -178,7 +197,8 @@ export async function runInvestmentRiskAssessmentCore(
     if (property.area_sqm == null && kwAreaSqm != null) patch.area_sqm = kwAreaSqm;
     if (Object.keys(patch).length > 0) {
       const { error: patchError } = await db.from("properties").update(patch).eq("id", property.id);
-      if (patchError) console.error("[risk-assessment] property KW backfill failed:", patchError.message);
+      if (patchError)
+        console.error("[risk-assessment] property KW backfill failed:", patchError.message);
       else Object.assign(property, patch);
     }
   }
@@ -223,14 +243,26 @@ export async function runInvestmentRiskAssessmentCore(
 
   // 4) Właściciel — potrzebuje wyników KW do porównania nazwiska; PESEL
   //    zapasowo odczytywany z działu II KW, gdy brak w rekordzie klienta.
-  const owner = await analyzeOwner({ clientId, loanTermYears, kwLegal, kwNumber: kwLegal.kwNumber, city: effCity, voivodeship: effVoivodeship });
-  warnings.push(...owner.notes.filter((n) => /nieprawidłowy|niezgod|brak PESEL|brak powiązanego/i.test(n)));
+  const owner = await analyzeOwner({
+    clientId,
+    loanTermYears,
+    kwLegal,
+    kwNumber: kwLegal.kwNumber,
+    city: effCity,
+    voivodeship: effVoivodeship,
+  });
+  warnings.push(
+    ...owner.notes.filter((n) => /nieprawidłowy|niezgod|brak PESEL|brak powiązanego/i.test(n)),
+  );
 
   // 5) Czynnik kondygnacji (mieszkania) — 1. piętro najlepiej, ostatnie w niskim
   //    budynku bez windy najgorzej. Kondygnacja z działu I-O KW.
   const saleabilityFloor =
     property?.property_type === "mieszkanie"
-      ? applyFloorToSaleability(saleabilityRaw, assessFloor({ kondygnacja: kwLegal.kondygnacja, totalFloors: kwLegal.floorsInBuilding }))
+      ? applyFloorToSaleability(
+          saleabilityRaw,
+          assessFloor({ kondygnacja: kwLegal.kondygnacja, totalFloors: kwLegal.floorsInBuilding }),
+        )
       : saleabilityRaw;
 
   // 5b) Prawo zabudowy działki (RM/siedlisko/grunt rolny) — ograniczony krąg nabywców
@@ -276,10 +308,12 @@ export async function runInvestmentRiskAssessmentCore(
 
   // 6) Deterministyczna wycena rynkowa — mediana zł/m² ze scrapingu × powierzchnia
   //    z KW; grunt rolny: ceny GUS zł/ha × ha. Bez udziału LLM.
-  const isPlotType = /dzialka|działka|grunt|siedlisk/.test((property?.property_type ?? "").toLowerCase());
+  const isPlotType = /dzialka|działka|grunt|siedlisk/.test(
+    (property?.property_type ?? "").toLowerCase(),
+  );
   const areaM2 = isPlotType
-    ? kwParams.landAreaM2 ?? property?.area_sqm ?? null
-    : kwParams.usableAreaM2 ?? property?.area_sqm ?? null;
+    ? (kwParams.landAreaM2 ?? property?.area_sqm ?? null)
+    : (kwParams.usableAreaM2 ?? property?.area_sqm ?? null);
   const master = computeMarketValuation({
     propertyType: property?.property_type ?? "inna",
     areaM2,
@@ -293,20 +327,28 @@ export async function runInvestmentRiskAssessmentCore(
     saleabilityScore: saleability.available ? saleability.score : null,
     onlyFarmerCanBuild: plotBuildability.applicable ? plotBuildability.onlyFarmerCanBuild : false,
   });
-  if (master.status !== "success") warnings.push(`Wycena rynkowa (deweloperuch/otodom + GUS): ${master.errorMessage ?? "brak danych"}.`);
-
+  if (master.status !== "success")
+    warnings.push(
+      `Wycena rynkowa (deweloperuch/otodom + GUS): ${master.errorMessage ?? "brak danych"}.`,
+    );
 
   // 7) Cena sprzedaży i wymuszonej sprzedaży (licytacje komornicze).
   //    Podstawa: mediana wyceny nadrzędnej → wycena zabezpieczenia → wartość deklarowana.
   const collateralMid =
     collateral?.valuationBenchmark?.estimatedValueMedianPln ??
-    (collateral?.perplexityValuation?.estimatedValueLowPln && collateral?.perplexityValuation?.estimatedValueHighPln
-      ? Math.round((collateral.perplexityValuation.estimatedValueLowPln + collateral.perplexityValuation.estimatedValueHighPln) / 2)
+    (collateral?.perplexityValuation?.estimatedValueLowPln &&
+    collateral?.perplexityValuation?.estimatedValueHighPln
+      ? Math.round(
+          (collateral.perplexityValuation.estimatedValueLowPln +
+            collateral.perplexityValuation.estimatedValueHighPln) /
+            2,
+        )
       : null);
   // Dla gruntu rolnego podstawą wyceny są ceny gruntów rolnych GUS (zł/ha × ha) —
   // wycena rynkowa (master) liczy to samo, ale zostawiamy jawny priorytet.
   const govLandValue = property?.property_type === "grunt_rolny" ? govBenchmark.landValuePln : null;
-  const basisValue = govLandValue ?? master.estimatedValueMidPln ?? collateralMid ?? declaredValue ?? null;
+  const basisValue =
+    govLandValue ?? master.estimatedValueMidPln ?? collateralMid ?? declaredValue ?? null;
   const basisSource = govLandValue
     ? "GUS BDL (ceny gruntów rolnych)"
     : master.estimatedValueMidPln
@@ -322,40 +364,69 @@ export async function runInvestmentRiskAssessmentCore(
     propertyType: property?.property_type ?? null,
     requestedLoanPln: loanAmount,
     saleabilityScore: saleability.available ? saleability.score : null,
-    marketLowPln: master.estimatedValueLowPln ?? collateral?.valuationBenchmark?.conservativeLowPln ?? null,
+    marketLowPln:
+      master.estimatedValueLowPln ?? collateral?.valuationBenchmark?.conservativeLowPln ?? null,
     marketMidPln: basisValue,
-    marketHighPln: master.estimatedValueHighPln ?? collateral?.valuationBenchmark?.conservativeHighPln ?? null,
+    marketHighPln:
+      master.estimatedValueHighPln ?? collateral?.valuationBenchmark?.conservativeHighPln ?? null,
   });
   if (forcedSale.loanToForcedSalePercent != null && forcedSale.loanToForcedSalePercent > 100) {
-    warnings.push("Kwota pożyczki przekracza spodziewany odzysk z licytacji komorniczej (II licytacja) — bardzo wysokie ryzyko.");
+    warnings.push(
+      "Kwota pożyczki przekracza spodziewany odzysk z licytacji komorniczej (II licytacja) — bardzo wysokie ryzyko.",
+    );
   }
   if (forcedSale.residentialAuctionBlock.blocked) {
     warnings.push(forcedSale.residentialAuctionBlock.message);
   }
 
   // 8) Zbiorczy scoring.
-  const combined = combineRiskAssessment({ collateral, owner, kwLegal, correspondence, ocr, saleability, plotBuildability, master });
+  const combined = combineRiskAssessment({
+    collateral,
+    owner,
+    kwLegal,
+    correspondence,
+    ocr,
+    saleability,
+    plotBuildability,
+    master,
+  });
 
   // 9) Rejestr wykorzystanych źródeł danych.
-  const dataSources = buildDataSources({ ocr, kwLegal, owner, correspondence, saleability, govBenchmark, collateral, master, marketComparables });
-
+  const dataSources = buildDataSources({
+    ocr,
+    kwLegal,
+    owner,
+    correspondence,
+    saleability,
+    govBenchmark,
+    collateral,
+    master,
+    marketComparables,
+  });
 
   // 9) Executive summary.
   const valueStr = master.estimatedValueMidPln
     ? `${master.estimatedValueLowPln?.toLocaleString("pl-PL") ?? "—"}–${master.estimatedValueHighPln?.toLocaleString("pl-PL") ?? "—"} PLN`
-    : (collateral?.valuationBenchmark?.conservativeLowPln
-        ? `${collateral.valuationBenchmark.conservativeLowPln.toLocaleString("pl-PL")}–${collateral.valuationBenchmark.conservativeHighPln?.toLocaleString("pl-PL") ?? "—"} PLN`
-        : "brak wiarygodnej wyceny");
+    : collateral?.valuationBenchmark?.conservativeLowPln
+      ? `${collateral.valuationBenchmark.conservativeLowPln.toLocaleString("pl-PL")}–${collateral.valuationBenchmark.conservativeHighPln?.toLocaleString("pl-PL") ?? "—"} PLN`
+      : "brak wiarygodnej wyceny";
   const forcedStr = forcedSale.secondAuctionOpeningPln
     ? `Wymuszona sprzedaż (komornik): I licytacja od ${forcedSale.firstAuctionOpeningPln?.toLocaleString("pl-PL")} PLN, II licytacja od ${forcedSale.secondAuctionOpeningPln.toLocaleString("pl-PL")} PLN. `
     : "";
-  const saleStr = saleability.available ? `Prognozowana łatwość sprzedaży: ${saleability.score}/100. ` : "";
+  const saleStr = saleability.available
+    ? `Prognozowana łatwość sprzedaży: ${saleability.score}/100. `
+    : "";
   const executiveSummary =
     `Ocena inwestycji: ${combined.investmentScore}/100 (klasa ${combined.riskGrade}) — ${recommendationLabel(combined.recommendation)}. ` +
     `Szacowana wartość nieruchomości: ${valueStr}. ` +
-    saleStr + forcedStr +
-    (master.suggestedMaxLoanAmountPln ? `Kwota odpowiadająca pułapowi LTV do ${master.suggestedLtvCapPercent ?? "—"}%: ${master.suggestedMaxLoanAmountPln.toLocaleString("pl-PL")} PLN (wskaźnik analityczny). ` : "") +
-    (combined.keyRisks.length ? `Główne ryzyka: ${combined.keyRisks.slice(0, 3).join("; ")}.` : "Nie zidentyfikowano krytycznych ryzyk.");
+    saleStr +
+    forcedStr +
+    (master.suggestedMaxLoanAmountPln
+      ? `Kwota odpowiadająca pułapowi LTV do ${master.suggestedLtvCapPercent ?? "—"}%: ${master.suggestedMaxLoanAmountPln.toLocaleString("pl-PL")} PLN (wskaźnik analityczny). `
+      : "") +
+    (combined.keyRisks.length
+      ? `Główne ryzyka: ${combined.keyRisks.slice(0, 3).join("; ")}.`
+      : "Nie zidentyfikowano krytycznych ryzyk.");
 
   const result: InvestmentRiskAssessment = {
     success: true,
@@ -427,22 +498,37 @@ function buildDataSources(a: {
   master: InvestmentRiskAssessment["masterValuation"];
   marketComparables?: InvestmentRiskAssessment["marketComparables"];
 }): DataSourceUsage[] {
-
   const sources: DataSourceUsage[] = [];
 
   // PODSTAWA WYCENY: scraping rynku (Firecrawl) — deweloperuch + otodom.
   const mc = a.marketComparables;
   sources.push({
-    source: "Rynek porównawczy — deweloperuch.pl (transakcje domów/mieszkań) + otodom.pl (oferty mieszkań/domów/działek)",
+    source:
+      "Rynek porównawczy — deweloperuch.pl (transakcje domów/mieszkań) + otodom.pl (oferty mieszkań/domów/działek)",
     used: !!mc && (mc.status === "success" || mc.status === "partial"),
-    purpose: "PODSTAWA WYCENY: twarde zł/m² ze scrapingu rynku (Firecrawl) — miasto/miejscowość + rodzaj nieruchomości",
+    purpose:
+      "PODSTAWA WYCENY: twarde zł/m² ze scrapingu rynku (Firecrawl) — miasto/miejscowość + rodzaj nieruchomości",
     dataLevel: mc
-      ? [mc.pricePerM2Median != null ? `mediana ${mc.pricePerM2Median.toLocaleString("pl-PL")} zł/m²` : null,
-         `${mc.transactionsCount} transakcji`, `${mc.offersCount} ofert`,
-         mc.street ? `rejon: ${mc.street}` : mc.city ? mc.city : null].filter(Boolean).join(", ")
+      ? [
+          mc.pricePerM2Median != null
+            ? `mediana ${mc.pricePerM2Median.toLocaleString("pl-PL")} zł/m²`
+            : null,
+          `${mc.transactionsCount} transakcji`,
+          `${mc.offersCount} ofert`,
+          mc.street ? `rejon: ${mc.street}` : mc.city ? mc.city : null,
+        ]
+          .filter(Boolean)
+          .join(", ")
       : "—",
     period: "aktualne / ostatnie 12–24 mies.",
-    status: mc?.status === "success" ? "success" : mc?.status === "partial" ? "partial" : mc?.status === "error" ? "error" : "no_data",
+    status:
+      mc?.status === "success"
+        ? "success"
+        : mc?.status === "partial"
+          ? "partial"
+          : mc?.status === "error"
+            ? "error"
+            : "no_data",
     note: mc && mc.status !== "success" ? mc.message : undefined,
   });
 
@@ -451,15 +537,22 @@ function buildDataSources(a: {
   sources.push({
     source: "GUS BDL — ceny gruntów rolnych / przeciętne ceny lokali (dane rządowe, pomocniczo)",
     used: gb.gusPricePerHa != null || gb.gusPricePerM2Median != null,
-    purpose: "dane pomocnicze — dla gruntów rolnych podstawa wyceny (zł/ha wg klasy), dla pozostałych typów fallback",
-    dataLevel: [gb.gusPricePerHa != null ? `${gb.gusPricePerHa.toLocaleString("pl-PL")} zł/ha` : null,
-         gb.gusPricePerM2Median != null ? `${gb.gusPricePerM2Median.toLocaleString("pl-PL")} zł/m²` : null,
-         gb.unitName].filter(Boolean).join(", ") || "—",
+    purpose:
+      "dane pomocnicze — dla gruntów rolnych podstawa wyceny (zł/ha wg klasy), dla pozostałych typów fallback",
+    dataLevel:
+      [
+        gb.gusPricePerHa != null ? `${gb.gusPricePerHa.toLocaleString("pl-PL")} zł/ha` : null,
+        gb.gusPricePerM2Median != null
+          ? `${gb.gusPricePerM2Median.toLocaleString("pl-PL")} zł/m²`
+          : null,
+        gb.unitName,
+      ]
+        .filter(Boolean)
+        .join(", ") || "—",
     period: gb.period ?? "",
-    status: (gb.gusPricePerHa != null || gb.gusPricePerM2Median != null) ? "success" : "no_data",
+    status: gb.gusPricePerHa != null || gb.gusPricePerM2Median != null ? "success" : "no_data",
     note: gb.fallbackUsed ? `dane zastępcze: ${gb.unitLevel ?? ""}` : undefined,
   });
-
 
   sources.push({
     source: "Skany dokumentów (OCR — Gemini)",
@@ -472,10 +565,15 @@ function buildDataSources(a: {
   sources.push({
     source: "Księga wieczysta (EKW / CMD KW Engine)",
     used: a.kwLegal.available,
-    purpose: "stan prawny: adres (dz. I-O), własność (dz. II), obciążenia (dz. III), hipoteki (dz. IV)",
-    dataLevel: [a.kwLegal.kwNumber ? `KW ${a.kwLegal.kwNumber}` : null, a.kwLegal.address?.fullAddress ?? null]
-      .filter(Boolean)
-      .join(" · ") || "—",
+    purpose:
+      "stan prawny: adres (dz. I-O), własność (dz. II), obciążenia (dz. III), hipoteki (dz. IV)",
+    dataLevel:
+      [
+        a.kwLegal.kwNumber ? `KW ${a.kwLegal.kwNumber}` : null,
+        a.kwLegal.address?.fullAddress ?? null,
+      ]
+        .filter(Boolean)
+        .join(" · ") || "—",
     period: "",
     status: a.kwLegal.available ? "success" : "no_data",
   });
@@ -483,7 +581,10 @@ function buildDataSources(a: {
     source: "Analiza właściciela (PESEL + tablice trwania życia GUS)",
     used: a.owner.peselValid,
     purpose: "wiek/płeć właściciela i aktuarialne ryzyko dożycia/sukcesji",
-    dataLevel: a.owner.age != null ? `wiek ${a.owner.age}, e(x) ${a.owner.lifeExpectancy.remainingYears ?? "—"} lat` : "brak PESEL",
+    dataLevel:
+      a.owner.age != null
+        ? `wiek ${a.owner.age}, e(x) ${a.owner.lifeExpectancy.remainingYears ?? "—"} lat`
+        : "brak PESEL",
     period: "GUS 2022",
     status: a.owner.peselValid ? "success" : "no_data",
   });
@@ -493,7 +594,9 @@ function buildDataSources(a: {
     purpose: "czy właściciel jest przedsiębiorcą (JDG) — czynnik obniżający ryzyko",
     dataLevel: a.owner.businessActivity?.isEntrepreneur
       ? `przedsiębiorca (${a.owner.businessActivity.status}, dopasowanie: ${a.owner.businessActivity.matchConfidence})`
-      : a.owner.businessActivity?.available ? "brak aktywnej działalności" : "—",
+      : a.owner.businessActivity?.available
+        ? "brak aktywnej działalności"
+        : "—",
     period: "",
     status: a.owner.businessActivity?.available ? "success" : "no_data",
     note: a.owner.businessActivity?.note,
@@ -504,14 +607,21 @@ function buildDataSources(a: {
     purpose: "analiza behawioralna, sygnały ostrzegawcze i niespójności",
     dataLevel: `${a.correspondence.messagesAnalyzed} wiadomości${a.correspondence.channels.length ? " (" + a.correspondence.channels.join(", ") + ")" : ""}`,
     period: "",
-    status: a.correspondence.available ? "success" : a.correspondence.messagesAnalyzed > 0 ? "partial" : "no_data",
+    status: a.correspondence.available
+      ? "success"
+      : a.correspondence.messagesAnalyzed > 0
+        ? "partial"
+        : "no_data",
   });
 
   sources.push({
     source: "Prognoza łatwości sprzedaży (Perplexity: popyt z otoczenia 20/50 km)",
     used: a.saleability.available,
-    purpose: "zaludnienie, większe miasto, zbiornik wodny, kurort, sanatorium, atrakcje, dostępność",
-    dataLevel: a.saleability.available ? `${a.saleability.score}/100 (${a.saleability.band.replace(/_/g, " ")})` : "—",
+    purpose:
+      "zaludnienie, większe miasto, zbiornik wodny, kurort, sanatorium, atrakcje, dostępność",
+    dataLevel: a.saleability.available
+      ? `${a.saleability.score}/100 (${a.saleability.band.replace(/_/g, " ")})`
+      : "—",
     period: "ostatnie 12 mies.",
     status: a.saleability.available ? "success" : "no_data",
   });
@@ -535,11 +645,20 @@ function buildDataSources(a: {
   sources.push({
     source: "Wycena rynkowa (deterministyczna) — deweloperuch + otodom, GUS pomocniczo",
     used: a.master.status === "success",
-    purpose: "wyliczenie wartości low/mid/high z mediany zł/m² × powierzchnia z KW (grunt rolny: GUS zł/ha × ha)",
+    purpose:
+      "wyliczenie wartości low/mid/high z mediany zł/m² × powierzchnia z KW (grunt rolny: GUS zł/ha × ha)",
     dataLevel: a.master.basisSource ?? "—",
     period: "aktualne dane rynkowe",
-    status: a.master.status === "success" ? "success" : a.master.status === "no_data" ? "no_data" : "error",
-    note: a.master.status === "success" ? recommendationLabel(a.master.recommendation) : a.master.errorMessage,
+    status:
+      a.master.status === "success"
+        ? "success"
+        : a.master.status === "no_data"
+          ? "no_data"
+          : "error",
+    note:
+      a.master.status === "success"
+        ? recommendationLabel(a.master.recommendation)
+        : a.master.errorMessage,
   });
 
   return sources;
@@ -662,13 +781,15 @@ export const diagnoseRcnForApplication = createServerFn({ method: "POST" })
   .handler(async () => {
     return {
       ok: false as const,
-      message: "Moduł RCN/GUS został wyłączony — bazujemy na rynku porównawczym (deweloperuch + otodom).",
+      message:
+        "Moduł RCN/GUS został wyłączony — bazujemy na rynku porównawczym (deweloperuch + otodom).",
     };
   });
 
-
 /** Buduje bezpieczny (bez PII) podzbiór dla inwestora z pełnego dossier. */
-export function buildInvestorValuationSummary(r: InvestmentRiskAssessment): InvestorValuationSummary {
+export function buildInvestorValuationSummary(
+  r: InvestmentRiskAssessment,
+): InvestorValuationSummary {
   const mv = r.masterValuation;
   const cb = r.collateralAnalysis?.valuationBenchmark ?? null;
   return {
@@ -703,7 +824,11 @@ export function buildInvestorValuationSummary(r: InvestmentRiskAssessment): Inve
       medianPricePerM2: r.saleability.localMarketOffers.medianPricePerM2,
       reasonableMarket: r.saleability.reasonableMarket,
       floor: r.saleability.floorFactor
-        ? { available: r.saleability.floorFactor.available, floorPietro: r.saleability.floorFactor.floorPietro, label: r.saleability.floorFactor.label }
+        ? {
+            available: r.saleability.floorFactor.available,
+            floorPietro: r.saleability.floorFactor.floorPietro,
+            label: r.saleability.floorFactor.label,
+          }
         : null,
     },
     buildability: r.plotBuildability?.applicable

@@ -4,9 +4,21 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, Play, RefreshCw, User as UserIcon, Bot, ExternalLink } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Play,
+  RefreshCw,
+  User as UserIcon,
+  Bot,
+  ExternalLink,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { getVoicebotConversation, enrichOneVoicebotConversation, getVoicebotAudio } from "@/lib/voicebot.functions";
+import {
+  getVoicebotConversation,
+  enrichOneVoicebotConversation,
+  getVoicebotAudio,
+} from "@/lib/voicebot.functions";
 import { toast } from "sonner";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -85,15 +97,22 @@ export function VoicebotConversationCard({ row, onChanged }: { row: any; onChang
   };
 
   const outcomeColor =
-    row.call_outcome === "answered" ? "bg-green-600 text-white" :
-    row.call_outcome === "no_answer" || row.call_outcome === "busy" ? "bg-amber-500 text-white" :
-    row.call_outcome === "voicemail" ? "bg-blue-500 text-white" :
-    row.call_outcome === "failed" ? "bg-red-600 text-white" : "";
+    row.call_outcome === "answered"
+      ? "bg-green-600 text-white"
+      : row.call_outcome === "no_answer" || row.call_outcome === "busy"
+        ? "bg-amber-500 text-white"
+        : row.call_outcome === "voicemail"
+          ? "bg-blue-500 text-white"
+          : row.call_outcome === "failed"
+            ? "bg-red-600 text-white"
+            : "";
 
   const statusBadgeVariant: "default" | "destructive" | "secondary" | "outline" =
-    row.status === "blad" ? "destructive" :
-    row.status === "wykonane" || row.status === "zakonczona" ? "default" :
-    "secondary";
+    row.status === "blad"
+      ? "destructive"
+      : row.status === "wykonane" || row.status === "zakonczona"
+        ? "default"
+        : "secondary";
 
   const detail = q.data as { queue: any; comm: any } | undefined;
   const turns: any[] = detail?.comm?.metadata?.transcript_full || detail?.comm?.transcript || [];
@@ -111,12 +130,16 @@ export function VoicebotConversationCard({ row, onChanged }: { row: any; onChang
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium">{row.phone_normalized}</span>
-            <Badge variant="outline" className="text-[10px]">{SOURCE_LABELS[row.source] ?? row.source ?? "—"}</Badge>
+            <Badge variant="outline" className="text-[10px]">
+              {SOURCE_LABELS[row.source] ?? row.source ?? "—"}
+            </Badge>
             {row.call_outcome_label && (
               <Badge className={`text-[10px] ${outcomeColor}`}>{row.call_outcome_label}</Badge>
             )}
             {row.duration_seconds != null && (
-              <span className="text-xs text-muted-foreground">{fmtDuration(row.duration_seconds)}</span>
+              <span className="text-xs text-muted-foreground">
+                {fmtDuration(row.duration_seconds)}
+              </span>
             )}
             {row.cost_credits != null && (
               <span className="text-xs text-muted-foreground">{fmtCost(row.cost_credits)}</span>
@@ -140,15 +163,25 @@ export function VoicebotConversationCard({ row, onChanged }: { row: any; onChang
         <div className="border-t p-3 space-y-3 bg-muted/20">
           <div className="flex items-center gap-2 flex-wrap text-xs">
             {row.conversation_id && (
-              <span className="text-muted-foreground">conv: <code>{row.conversation_id}</code></span>
+              <span className="text-muted-foreground">
+                conv: <code>{row.conversation_id}</code>
+              </span>
             )}
             {row.lead_id && (
-              <Link to="/admin/klienci/$id" params={{ id: row.lead_id }} className="text-primary inline-flex items-center gap-1">
+              <Link
+                to="/admin/klienci/$id"
+                params={{ id: row.lead_id }}
+                className="text-primary inline-flex items-center gap-1"
+              >
                 <ExternalLink className="h-3 w-3" /> Karta klienta
               </Link>
             )}
             {row.loan_application_id && (
-              <Link to="/admin/wnioski/$id" params={{ id: row.loan_application_id }} className="text-primary inline-flex items-center gap-1">
+              <Link
+                to="/admin/wnioski/$id"
+                params={{ id: row.loan_application_id }}
+                className="text-primary inline-flex items-center gap-1"
+              >
                 <ExternalLink className="h-3 w-3" /> Wniosek
               </Link>
             )}
@@ -157,7 +190,10 @@ export function VoicebotConversationCard({ row, onChanged }: { row: any; onChang
               variant="outline"
               className="ml-auto h-7"
               disabled={!row.conversation_id || mEnrich.isPending}
-              onClick={(e) => { e.stopPropagation(); mEnrich.mutate(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                mEnrich.mutate();
+              }}
             >
               <RefreshCw className={`h-3 w-3 mr-1 ${mEnrich.isPending ? "animate-spin" : ""}`} />
               Odśwież
@@ -178,7 +214,12 @@ export function VoicebotConversationCard({ row, onChanged }: { row: any; onChang
               {audioSrc ? (
                 <audio controls src={audioSrc} className="w-full" />
               ) : (
-                <Button size="sm" variant="outline" onClick={handleLoadAudio} disabled={loadingAudio}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleLoadAudio}
+                  disabled={loadingAudio}
+                >
                   <Play className="h-3 w-3 mr-1" />
                   {loadingAudio ? "Pobieram nagranie…" : "Odtwórz nagranie"}
                 </Button>
@@ -188,16 +229,21 @@ export function VoicebotConversationCard({ row, onChanged }: { row: any; onChang
 
           {turnsArr.length > 0 && (
             <div className="space-y-1 max-h-96 overflow-y-auto bg-background rounded p-2 border">
-              <div className="text-xs text-muted-foreground mb-1">Transkrypt ({turnsArr.length} wypowiedzi)</div>
+              <div className="text-xs text-muted-foreground mb-1">
+                Transkrypt ({turnsArr.length} wypowiedzi)
+              </div>
               {turnsArr.map((t: any, i: number) => {
                 const role = String(t.role ?? t.speaker ?? "agent").toLowerCase();
-                const isUser = role.includes("user") || role.includes("client") || role.includes("caller");
+                const isUser =
+                  role.includes("user") || role.includes("client") || role.includes("caller");
                 const msg = t.message ?? t.text ?? t.content ?? "";
                 if (!msg) return null;
                 return (
                   <div key={i} className={`flex gap-2 ${isUser ? "justify-end" : "justify-start"}`}>
                     {!isUser && <Bot className="h-3 w-3 mt-1 text-muted-foreground shrink-0" />}
-                    <div className={`text-xs rounded-lg px-2 py-1 max-w-[80%] whitespace-pre-wrap ${isUser ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                    <div
+                      className={`text-xs rounded-lg px-2 py-1 max-w-[80%] whitespace-pre-wrap ${isUser ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                    >
                       {msg}
                     </div>
                     {isUser && <UserIcon className="h-3 w-3 mt-1 text-muted-foreground shrink-0" />}
@@ -209,8 +255,12 @@ export function VoicebotConversationCard({ row, onChanged }: { row: any; onChang
 
           {analysis?.evaluation_criteria_results && (
             <details className="text-xs">
-              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Kryteria oceny rozmowy</summary>
-              <pre className="mt-1 whitespace-pre-wrap bg-background border rounded p-2">{JSON.stringify(analysis.evaluation_criteria_results, null, 2)}</pre>
+              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                Kryteria oceny rozmowy
+              </summary>
+              <pre className="mt-1 whitespace-pre-wrap bg-background border rounded p-2">
+                {JSON.stringify(analysis.evaluation_criteria_results, null, 2)}
+              </pre>
             </details>
           )}
         </div>

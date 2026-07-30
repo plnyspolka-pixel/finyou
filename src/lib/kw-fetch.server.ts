@@ -11,7 +11,6 @@ export function normalizeKwNumber(raw: string): string | null {
   return `${m[1]}${m[2]}${m[3]}`; // CMD API uses compact 13-char form
 }
 
-
 export function hasCmdConfig(): boolean {
   return Boolean(process.env.CMD_KW_USER && process.env.CMD_KW_PASSWORD);
 }

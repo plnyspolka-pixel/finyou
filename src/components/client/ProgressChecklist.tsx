@@ -19,7 +19,6 @@ interface Props {
   hideMissing?: boolean;
 }
 
-
 interface GroupItem {
   done: boolean;
   label: string;
@@ -54,7 +53,8 @@ export function ProgressChecklist({
   hasBikReport = false,
   hideMissing = false,
 }: Props) {
-  void hasIncomeDocs; void hasBankAccount;
+  void hasIncomeDocs;
+  void hasBankAccount;
 
   const missingByLabel = new Map<string, MissingItem>(progress.missing.map((m) => [m.label, m]));
   const uploadedLabels = new Set(progress.uploaded_documents);
@@ -102,7 +102,7 @@ export function ProgressChecklist({
           done,
           label: r.label,
           ctaHref: m?.ctaHref ?? "/klient",
-          ctaLabel: done ? "Zarządzaj" : m?.ctaLabel ?? "Dodaj",
+          ctaLabel: done ? "Zarządzaj" : (m?.ctaLabel ?? "Dodaj"),
         };
       }),
     });
@@ -153,12 +153,16 @@ export function ProgressChecklist({
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base text-emerald-700 dark:text-emerald-400">
               <CheckCircle2 className="h-5 w-5" /> Co już mamy
-              <span className="ml-auto text-xs font-normal text-muted-foreground">{haveItems.length}</span>
+              <span className="ml-auto text-xs font-normal text-muted-foreground">
+                {haveItems.length}
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {haveItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Jeszcze nic — uzupełnij pierwszy krok, a tu pojawią się ✓.</p>
+              <p className="text-sm text-muted-foreground">
+                Jeszcze nic — uzupełnij pierwszy krok, a tu pojawią się ✓.
+              </p>
             ) : (
               <ul className="space-y-1.5 text-sm">
                 {haveItems.map((it) => (
@@ -177,21 +181,33 @@ export function ProgressChecklist({
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
                 <Circle className="h-5 w-5" /> Czego jeszcze potrzebujemy
-                <span className="ml-auto text-xs font-normal text-muted-foreground">{missingItems.length}</span>
+                <span className="ml-auto text-xs font-normal text-muted-foreground">
+                  {missingItems.length}
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               {missingItems.length === 0 ? (
-                <p className="text-sm text-emerald-700 dark:text-emerald-400">Wszystko gotowe — wniosek kompletny.</p>
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                  Wszystko gotowe — wniosek kompletny.
+                </p>
               ) : (
                 <ul className="space-y-2">
                   {missingItems.map((it) => (
-                    <li key={it.label} className="flex flex-col gap-2 rounded-md border bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                    <li
+                      key={it.label}
+                      className="flex flex-col gap-2 rounded-md border bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                    >
                       <div className="flex items-center gap-2 min-w-0">
                         <Circle className="h-4 w-4 shrink-0 text-amber-500" />
                         <span className="truncate text-sm font-medium">{it.label}</span>
                       </div>
-                      <Button asChild size="sm" variant="outline" className="w-full sm:w-auto shrink-0">
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="w-full sm:w-auto shrink-0"
+                      >
                         <Link to={it.ctaHref}>
                           {it.ctaLabel} <ArrowRight className="ml-1 h-3.5 w-3.5" />
                         </Link>
@@ -210,16 +226,22 @@ export function ProgressChecklist({
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base text-violet-700 dark:text-violet-300">
             <Sparkles className="h-5 w-5" /> Zwiększ swoje szanse na sukces
-            <span className="ml-auto text-xs font-normal text-muted-foreground">{boostDone} / {boostItems.length}</span>
+            <span className="ml-auto text-xs font-normal text-muted-foreground">
+              {boostDone} / {boostItems.length}
+            </span>
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Te elementy nie są wymagane do złożenia wniosku — ale każdy z nich realnie zwiększa szansę, że inwestor wybierze właśnie Twój projekt.
+            Te elementy nie są wymagane do złożenia wniosku — ale każdy z nich realnie zwiększa
+            szansę, że inwestor wybierze właśnie Twój projekt.
           </p>
         </CardHeader>
         <CardContent>
           <ul className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
             {boostItems.map((it) => (
-              <li key={it.label} className={`relative overflow-hidden flex flex-col gap-2 rounded-md border bg-card p-3 ${it.done ? "" : "ring-1 ring-violet-300/60 dark:ring-violet-700/60 shadow-[0_0_0_4px_rgba(167,139,250,0.08)]"}`}>
+              <li
+                key={it.label}
+                className={`relative overflow-hidden flex flex-col gap-2 rounded-md border bg-card p-3 ${it.done ? "" : "ring-1 ring-violet-300/60 dark:ring-violet-700/60 shadow-[0_0_0_4px_rgba(167,139,250,0.08)]"}`}
+              >
                 <div className="flex items-center gap-2">
                   {it.done ? (
                     <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
@@ -229,7 +251,12 @@ export function ProgressChecklist({
                   <span className="text-sm font-semibold">{it.label}</span>
                 </div>
                 {it.hint && <p className="text-xs text-muted-foreground">{it.hint}</p>}
-                <Button asChild size="sm" variant={it.done ? "outline" : "secondary"} className="mt-auto self-start">
+                <Button
+                  asChild
+                  size="sm"
+                  variant={it.done ? "outline" : "secondary"}
+                  className="mt-auto self-start"
+                >
                   <Link to={it.ctaHref}>
                     {it.ctaLabel} <ArrowRight className="ml-1 h-3.5 w-3.5" />
                   </Link>

@@ -62,24 +62,49 @@ async function toDataUrl(url: string): Promise<{ dataUrl: string; isImage: boole
 function tryParseJson(s: string): any | null {
   const m = s.match(/\{[\s\S]*\}/);
   if (!m) return null;
-  try { return JSON.parse(m[0]); } catch { return null; }
+  try {
+    return JSON.parse(m[0]);
+  } catch {
+    return null;
+  }
 }
 
-async function ocrOne(doc: { id: string; url?: string | null; type?: string | null; name?: string | null }, apiKey: string): Promise<OcrDocumentResult> {
+async function ocrOne(
+  doc: { id: string; url?: string | null; type?: string | null; name?: string | null },
+  apiKey: string,
+): Promise<OcrDocumentResult> {
   const fileName = doc.name ?? null;
   const fallbackKind = inferDocKind(doc.name ?? "", doc.type);
   if (!doc.url) {
-    return { documentId: doc.id, fileName, docKind: fallbackKind, status: "no_data", fields: {}, rawTextSnippet: null };
+    return {
+      documentId: doc.id,
+      fileName,
+      docKind: fallbackKind,
+      status: "no_data",
+      fields: {},
+      rawTextSnippet: null,
+    };
   }
   // Pobierz plik i zbuduj data URL (obraz lub PDF).
   const payload = await toDataUrl(doc.url);
   if (!payload) {
-    return { documentId: doc.id, fileName, docKind: fallbackKind, status: "error", fields: {}, rawTextSnippet: null };
+    return {
+      documentId: doc.id,
+      fileName,
+      docKind: fallbackKind,
+      status: "error",
+      fields: {},
+      rawTextSnippet: null,
+    };
   }
 
   const userContent: unknown[] = [{ type: "text", text: USER_PROMPT }];
   if (payload.isImage) userContent.push({ type: "image_url", image_url: { url: payload.dataUrl } });
-  else userContent.push({ type: "file", file: { filename: fileName ?? "document.pdf", file_data: payload.dataUrl } });
+  else
+    userContent.push({
+      type: "file",
+      file: { filename: fileName ?? "document.pdf", file_data: payload.dataUrl },
+    });
 
   try {
     const resp = await fetch(AI_GATEWAY, {
@@ -95,32 +120,67 @@ async function ocrOne(doc: { id: string; url?: string | null; type?: string | nu
       }),
     });
     if (!resp.ok) {
-      return { documentId: doc.id, fileName, docKind: fallbackKind, status: "error", fields: {}, rawTextSnippet: null };
+      return {
+        documentId: doc.id,
+        fileName,
+        docKind: fallbackKind,
+        status: "error",
+        fields: {},
+        rawTextSnippet: null,
+      };
     }
     const json: any = await resp.json();
     const content = json?.choices?.[0]?.message?.content ?? "";
     const parsed = tryParseJson(content);
     if (!parsed) {
-      return { documentId: doc.id, fileName, docKind: fallbackKind, status: "partial", fields: {}, rawTextSnippet: content.slice(0, 300) };
+      return {
+        documentId: doc.id,
+        fileName,
+        docKind: fallbackKind,
+        status: "partial",
+        fields: {},
+        rawTextSnippet: content.slice(0, 300),
+      };
     }
     const docKind = typeof parsed.docKind === "string" ? parsed.docKind : fallbackKind;
-    const rawTextSnippet = typeof parsed.rawTextSnippet === "string" ? parsed.rawTextSnippet.slice(0, 300) : null;
+    const rawTextSnippet =
+      typeof parsed.rawTextSnippet === "string" ? parsed.rawTextSnippet.slice(0, 300) : null;
 
     // Zapis do cache.
-    await supabaseAdmin.from("property_document_extractions").upsert(
-      {
-        document_id: doc.id,
-        doc_kind: docKind,
-        extracted_json: parsed,
-        raw_text: rawTextSnippet,
-        model: MODEL,
-      },
-      { onConflict: "document_id" },
-    ).then(() => {}, () => {});
+    await supabaseAdmin
+      .from("property_document_extractions")
+      .upsert(
+        {
+          document_id: doc.id,
+          doc_kind: docKind,
+          extracted_json: parsed,
+          raw_text: rawTextSnippet,
+          model: MODEL,
+        },
+        { onConflict: "document_id" },
+      )
+      .then(
+        () => {},
+        () => {},
+      );
 
-    return { documentId: doc.id, fileName, docKind, status: "success", fields: parsed, rawTextSnippet };
+    return {
+      documentId: doc.id,
+      fileName,
+      docKind,
+      status: "success",
+      fields: parsed,
+      rawTextSnippet,
+    };
   } catch {
-    return { documentId: doc.id, fileName, docKind: fallbackKind, status: "error", fields: {}, rawTextSnippet: null };
+    return {
+      documentId: doc.id,
+      fileName,
+      docKind: fallbackKind,
+      status: "error",
+      fields: {},
+      rawTextSnippet: null,
+    };
   }
 }
 
@@ -158,9 +218,12 @@ export async function ocrDocuments(args: {
     }
     if (!apiKey) {
       results.push({
-        documentId: doc.id, fileName: doc.name ?? null,
+        documentId: doc.id,
+        fileName: doc.name ?? null,
         docKind: inferDocKind(doc.name ?? "", doc.type),
-        status: "no_data", fields: {}, rawTextSnippet: null,
+        status: "no_data",
+        fields: {},
+        rawTextSnippet: null,
       });
       continue;
     }
@@ -169,6 +232,12 @@ export async function ocrDocuments(args: {
 
   const anySuccess = results.some((r) => r.status === "success");
   const allNoData = results.every((r) => r.status === "no_data");
-  const status: SourceStatus = anySuccess ? (results.every((r) => r.status === "success") ? "success" : "partial") : allNoData ? "no_data" : "error";
+  const status: SourceStatus = anySuccess
+    ? results.every((r) => r.status === "success")
+      ? "success"
+      : "partial"
+    : allNoData
+      ? "no_data"
+      : "error";
   return { status, documentsProcessed: results.length, documents: results };
 }

@@ -16,7 +16,8 @@ const doc = {
   dzial_1o:
     "<table>DZIAŁ I-O OZNACZENIE NIERUCHOMOŚCI Numer działki 145/2 Obręb Kalinówka Województwo LUBELSKIE Miejscowość LUBLIN Ulica POLNA Sposób korzystania B - tereny mieszkaniowe Obszar 0,0450 HA</table>",
   dzial_2: `<table>DZIAŁ II WŁAŚCICIEL Imię pierwsze JAN Nazwisko KOWALSKI PESEL ${PESEL} Udział 1/1</table>`,
-  dzial_3: "<table>DZIAŁ III SŁUŻEBNOŚĆ OSOBISTA na rzecz Anny Nowak dożywotnie prawo mieszkania.</table>",
+  dzial_3:
+    "<table>DZIAŁ III SŁUŻEBNOŚĆ OSOBISTA na rzecz Anny Nowak dożywotnie prawo mieszkania.</table>",
   dzial_4:
     "<table>DZIAŁ IV Numer hipoteki 1 Rodzaj hipoteki HIPOTEKA UMOWNA Suma 142 350,00 Waluta sumy ZŁ Wierzyciel hipoteczny Nazwa BANK SPÓŁDZIELCZY W LUBLINIE</table>",
 };
@@ -31,7 +32,11 @@ describe("kwDocumentToExtraction (3.3.1)", () => {
     expect(kw.typKsiegi).toBe("NIERUCHOMOŚĆ GRUNTOWA");
   });
   it("wyciąga właściciela z PESEL-em (dział II)", () => {
-    expect(kw.dzial2?.wlasciciele?.[0]).toMatchObject({ imiePierwsze: "JAN", nazwisko: "KOWALSKI", pesel: PESEL });
+    expect(kw.dzial2?.wlasciciele?.[0]).toMatchObject({
+      imiePierwsze: "JAN",
+      nazwisko: "KOWALSKI",
+      pesel: PESEL,
+    });
   });
   it("wyciąga działki i lokalizację (dział I-O)", () => {
     expect(kw.dzial1o?.dzialki).toEqual([{ numer: "145/2" }]);
@@ -49,10 +54,16 @@ describe("kwDocumentToExtraction (3.3.1)", () => {
 describe("łańcuch most → mapper (3.3.1 + 3.3.2)", () => {
   it("produkuje poprawną nieruchomość silnika", () => {
     const kw = kwDocumentToExtraction(doc);
-    const res = mapujKwDoNieruchomosci(kw, { id: "N1", pozyczkobiorcaPesele: [PESEL], poreczicielPesel: null });
+    const res = mapujKwDoNieruchomosci(kw, {
+      id: "N1",
+      pozyczkobiorcaPesele: [PESEL],
+      poreczicielPesel: null,
+    });
     expect(res.odrzucona).toBe(false);
     expect(res.nieruchomosc.wlasciciel_ref).toBe("pozyczkobiorca");
-    const dzialy = res.nieruchomosc.obciazenia.map((o: { dzial: string; rodzaj: string }) => `${o.dzial}:${o.rodzaj}`);
+    const dzialy = res.nieruchomosc.obciazenia.map(
+      (o: { dzial: string; rodzaj: string }) => `${o.dzial}:${o.rodzaj}`,
+    );
     expect(dzialy).toContain("III:sluzebnosc_osobista");
     expect(dzialy).toContain("IV:hipoteka_umowna");
   });

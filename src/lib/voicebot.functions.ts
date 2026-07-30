@@ -18,7 +18,6 @@ export function normalizePhoneForVoicebot(input: string): string {
   return normalizePhone(input);
 }
 
-
 function admin() {
   const url = process.env.SUPABASE_URL!;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -40,8 +39,12 @@ function fmtWarsaw(d: Date | string): string {
   const dt = typeof d === "string" ? new Date(d) : d;
   const s = new Intl.DateTimeFormat("pl-PL", {
     timeZone: "Europe/Warsaw",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   }).format(dt);
   return `${s} (Europe/Warsaw)`;
 }
@@ -71,8 +74,12 @@ export function getCallingWindow(now: Date = new Date()): {
     const dtf = new Intl.DateTimeFormat("en-US", {
       timeZone: "Europe/Warsaw",
       hour12: false,
-      year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
     const p = Object.fromEntries(dtf.formatToParts(at).map((x) => [x.type, x.value]));
     const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
@@ -83,8 +90,11 @@ export function getCallingWindow(now: Date = new Date()): {
     for (let i = 0; i < 8; i++) {
       const off = warsawOffsetMinutes(cursor);
       const local = new Date(cursor.getTime() + off * 60000);
-      const ly = local.getUTCFullYear(), lm = local.getUTCMonth(), ld = local.getUTCDate();
-      const lh = local.getUTCHours(), ldow = local.getUTCDay();
+      const ly = local.getUTCFullYear(),
+        lm = local.getUTCMonth(),
+        ld = local.getUTCDate();
+      const lh = local.getUTCHours(),
+        ldow = local.getUTCDay();
       let candidate = new Date(Date.UTC(ly, lm, ld, 8, 0, 0) - off * 60000);
       if (ldow !== 0 && lh < 8 && candidate.getTime() > from.getTime()) return candidate;
       const tomorrowDow = (ldow + 1) % 7;
@@ -173,10 +183,9 @@ export async function sendSmsInternal(opts: {
   }
 }
 
-
 async function maybeSendSms(
   trigger: "before_call" | "after_call" | "on_failure",
-  ctx: { phone: string; source: string; firstName?: string | null }
+  ctx: { phone: string; source: string; firstName?: string | null },
 ) {
   const settings = await loadSettings();
   if (!settings?.sms_enabled) return;
@@ -279,22 +288,31 @@ export async function placeOutboundCallInternal(opts: {
       automation_type: "elevenlabs_outbound_call",
       status: "skipped",
       sent_payload: { phone, source: opts.source },
-      response_payload: { quiet_hours: true, reason: window.reason, hour: window.hour, weekday: window.weekday, next_allowed_at: nextIso },
+      response_payload: {
+        quiet_hours: true,
+        reason: window.reason,
+        hour: window.hour,
+        weekday: window.weekday,
+        next_allowed_at: nextIso,
+      },
     });
     return { ok: false, error: `Quiet hours — połączenie zaplanowano na ${fmtWarsaw(nextIso)}` };
   }
-
 
   // Wybór agenta: jeśli rozmowa dotyczy konkretnego wniosku (przypomnienie o
   // dokumentach), używamy osobnego agenta `document_reminder_agent_id`.
   // W przeciwnym razie domyślny `agent_id`.
   const effectiveAgentId =
-    (opts.loanApplicationId && (settings as any).document_reminder_agent_id)
-      ? (settings as any).document_reminder_agent_id as string
+    opts.loanApplicationId && (settings as any).document_reminder_agent_id
+      ? ((settings as any).document_reminder_agent_id as string)
       : settings.agent_id;
 
   // SMS before call (jeśli włączone)
-  await maybeSendSms("before_call", { phone, source: opts.source, firstName: opts.firstName }).catch(() => {});
+  await maybeSendSms("before_call", {
+    phone,
+    source: opts.source,
+    firstName: opts.firstName,
+  }).catch(() => {});
 
   // Wpis do kolejki — status w_trakcie
   const { data: queueRow } = await s
@@ -341,7 +359,9 @@ export async function placeOutboundCallInternal(opts: {
       sent_payload: { phone, source: opts.source, agent_id: effectiveAgentId },
 
       response_payload: json,
-      error_message: res.ok ? null : (json?.detail?.message ?? json?.message ?? `HTTP ${res.status}`),
+      error_message: res.ok
+        ? null
+        : (json?.detail?.message ?? json?.message ?? `HTTP ${res.status}`),
     });
 
     if (!res.ok || json?.success === false) {
@@ -356,7 +376,11 @@ export async function placeOutboundCallInternal(opts: {
           })
           .eq("id", queueRow.id);
       }
-      await maybeSendSms("on_failure", { phone, source: opts.source, firstName: opts.firstName }).catch(() => {});
+      await maybeSendSms("on_failure", {
+        phone,
+        source: opts.source,
+        firstName: opts.firstName,
+      }).catch(() => {});
       return {
         ok: false,
         error: json?.message ?? json?.detail?.message ?? `ElevenLabs HTTP ${res.status}`,
@@ -394,7 +418,6 @@ export async function placeOutboundCallInternal(opts: {
       console.error("[voicebot] log init failed", e);
     }
     return { ok: true, conversationId, callSid };
-
   } catch (e: any) {
     if (queueRow) {
       await s
@@ -420,7 +443,7 @@ export const captureLeadFromApplication = createServerFn({ method: "POST" })
         phone: z.string().min(5),
         firstName: z.string().optional().nullable(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -469,11 +492,13 @@ export const testOutboundCall = createServerFn({ method: "POST" })
 export const testSms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      phone: z.string().min(5),
-      body: z.string().min(1).max(1000).optional(),
-      firstName: z.string().optional().nullable(),
-    }).parse(input)
+    z
+      .object({
+        phone: z.string().min(5),
+        body: z.string().min(1).max(1000).optional(),
+        firstName: z.string().optional().nullable(),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const settings = await loadSettings();
@@ -513,7 +538,7 @@ export const updateVoicebotSettings = createServerFn({ method: "POST" })
         sms_delay_seconds: z.number().int().min(0).max(86400).optional(),
         sms_trigger: z.enum(["before_call", "after_call", "on_failure", "off"]).optional(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
@@ -549,14 +574,16 @@ export const listVoicebotConversations = createServerFn({ method: "POST" })
         dateTo: z.string().optional(),
         limit: z.number().int().min(1).max(200).default(100),
       })
-      .parse(input ?? {})
+      .parse(input ?? {}),
   )
   .handler(async ({ data, context }) => {
     await requireAdminOrOperator(context.supabase, context.userId);
     const s = admin();
     let q = s
       .from("call_queue")
-      .select("id, phone_normalized, status, source, attempts, created_at, started_at, finished_at, scheduled_at, conversation_id, result_summary, client_id, loan_application_id, agent_id")
+      .select(
+        "id, phone_normalized, status, source, attempts, created_at, started_at, finished_at, scheduled_at, conversation_id, result_summary, client_id, loan_application_id, agent_id",
+      )
       .order("created_at", { ascending: false })
       .limit(data.limit);
     if (data.status && data.status !== "all") q = q.eq("status", data.status);
@@ -566,7 +593,9 @@ export const listVoicebotConversations = createServerFn({ method: "POST" })
     if (data.search) {
       const search = data.search.trim();
       if (search) {
-        q = q.or(`phone_normalized.ilike.%${search}%,transcript.ilike.%${search}%,result_summary.ilike.%${search}%,conversation_id.ilike.%${search}%`);
+        q = q.or(
+          `phone_normalized.ilike.%${search}%,transcript.ilike.%${search}%,result_summary.ilike.%${search}%,conversation_id.ilike.%${search}%`,
+        );
       }
     }
     const { data: rows, error } = await q;
@@ -603,7 +632,11 @@ export const getVoicebotConversation = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireAdminOrOperator(context.supabase, context.userId);
     const s = admin();
-    const { data: row, error } = await s.from("call_queue").select("*").eq("id", data.id).maybeSingle();
+    const { data: row, error } = await s
+      .from("call_queue")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Not found");
     let comm: any = null;

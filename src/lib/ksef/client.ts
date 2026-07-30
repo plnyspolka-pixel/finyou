@@ -25,11 +25,7 @@ function pickEnvToken(entity: KsefEntity): string | null {
   if (name.includes("finance you")) return process.env.KSEF_TOKEN_FINANCE_YOU ?? null;
   if (name.includes("pieczak")) return process.env.KSEF_TOKEN_FUNDACJA_IM_PIECZAKA ?? null;
   // Fallback: spróbuj kolejno (Finance You jako główny podmiot operacyjny).
-  return (
-    process.env.KSEF_TOKEN_FINANCE_YOU ??
-    process.env.KSEF_TOKEN_FUNDACJA_IM_PIECZAKA ??
-    null
-  );
+  return process.env.KSEF_TOKEN_FINANCE_YOU ?? process.env.KSEF_TOKEN_FUNDACJA_IM_PIECZAKA ?? null;
 }
 
 export type KsefResult = {
@@ -86,7 +82,13 @@ export async function ksefSubmitInvoice(entity: KsefEntity, faXml: string): Prom
   if (isMock(token)) {
     const ref = `MOCK-KSEF-${entity.ksef_nip ?? "NIP"}-${hash.slice(0, 10).replace(/[^A-Za-z0-9]/g, "")}`;
     const upo = `<?xml version="1.0" encoding="UTF-8"?><UPO><Symulacja>true</Symulacja><NumerReferencyjny>${ref}</NumerReferencyjny></UPO>`;
-    return { status: "accepted", referenceNumber: ref, elementReference: ref, upoXml: upo, message: "Tryb testowy (mock) — faktura nie została wysłana do realnego KSeF." };
+    return {
+      status: "accepted",
+      referenceNumber: ref,
+      elementReference: ref,
+      upoXml: upo,
+      message: "Tryb testowy (mock) — faktura nie została wysłana do realnego KSeF.",
+    };
   }
 
   const base = ksefBaseUrl(effectiveEnv);
@@ -106,7 +108,13 @@ export async function ksefSubmitInvoice(entity: KsefEntity, faXml: string): Prom
 // SymmetricKeyEncryption). Zamiast wysyłać niepoprawnie, zwracamy 'pending'
 // z jasnym komunikatem — flow księgowy zapisuje fakturę i można ją potem wypchnąć
 // ręcznie, kiedy wdrożymy pełne szyfrowanie payloadu.
-async function ksefRealSubmit(_base: string, entity: KsefEntity, _token: string, _faXml: string, _hash: string): Promise<KsefResult> {
+async function ksefRealSubmit(
+  _base: string,
+  entity: KsefEntity,
+  _token: string,
+  _faXml: string,
+  _hash: string,
+): Promise<KsefResult> {
   const { openKsefSession, closeKsefSession } = await import("./session");
   try {
     const session = await openKsefSession(entity);

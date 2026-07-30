@@ -12,7 +12,11 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ thread_id, limit }, ctx: ToolContext) => {
-    try { requireAuth(ctx); } catch (e) { return fail((e as Error).message); }
+    try {
+      requireAuth(ctx);
+    } catch (e) {
+      return fail((e as Error).message);
+    }
     const { data, error } = await userClient(ctx)
       .from("chat_messages")
       .select("id, sender_role, body, blocked, created_at")

@@ -42,9 +42,13 @@ export function buildCalcFieldValues(
     let val: string | null = null;
     if (f.semantic === "amount" || f.semantic === "amountWords") {
       if (/hipotek/.test(k)) {
-        val = f.semantic === "amountWords" ? amountToWordsPLN(p.mortgageAmount) : plNum(p.mortgageAmount);
+        val =
+          f.semantic === "amountWords"
+            ? amountToWordsPLN(p.mortgageAmount)
+            : plNum(p.mortgageAmount);
       } else if (/777/.test(k)) {
-        val = f.semantic === "amountWords" ? amountToWordsPLN(p.art777Amount) : plNum(p.art777Amount);
+        val =
+          f.semantic === "amountWords" ? amountToWordsPLN(p.art777Amount) : plNum(p.art777Amount);
       } else {
         val = calculatorValueForField(f, outputs);
       }

@@ -138,7 +138,7 @@ function toArr<T>(v: T | T[] | undefined | null): T[] {
 
 function mapCitizenship(c: any): string[] {
   return toArr(c)
-    .map((x: any) => (typeof x === "string" ? x : x?.Nazwa ?? x?.Kod))
+    .map((x: any) => (typeof x === "string" ? x : (x?.Nazwa ?? x?.Kod)))
     .filter(Boolean);
 }
 
@@ -195,7 +195,11 @@ function mapRepresentative(z: any): CrbrRepresentative {
     firstName: [z?.PierwszeImie, z?.KolejneImiona].filter(Boolean).join(" "),
     lastName: z?.Nazwisko ?? "",
     pesel: z?.PESEL ?? null,
-    function: funcs.map((f: any) => f?.Opis).filter(Boolean).join(", ") || null,
+    function:
+      funcs
+        .map((f: any) => f?.Opis)
+        .filter(Boolean)
+        .join(", ") || null,
     citizenships: mapCitizenship(z?.Obywatelstwo),
     countryOfResidence: z?.KrajZamieszkania?.Nazwa ?? null,
   };
@@ -204,11 +208,7 @@ function mapRepresentative(z: any): CrbrRepresentative {
 // ---------- cache ----------
 
 async function readFromCache(nip: string): Promise<CrbrLookupResult | null> {
-  const { data } = await supabaseAdmin
-    .from("crbr_cache")
-    .select("*")
-    .eq("nip", nip)
-    .maybeSingle();
+  const { data } = await supabaseAdmin.from("crbr_cache").select("*").eq("nip", nip).maybeSingle();
   if (!data) return null;
   const expired = new Date(data.expires_at as string).getTime() < Date.now();
   if (expired) return null;
@@ -277,10 +277,7 @@ async function writeCache(
 async function callCrbr(
   field: "NIP" | "KRS" | "Nazwa",
   value: string,
-): Promise<
-  | { ok: true; parsed: any }
-  | { ok: false; code: string; message: string }
-> {
+): Promise<{ ok: true; parsed: any } | { ok: false; code: string; message: string }> {
   const body = buildSoap(field, value);
   let res: Response;
   try {
@@ -312,8 +309,7 @@ async function callCrbr(
 
   const fault = parsed?.Envelope?.Body?.Fault;
   if (fault) {
-    const reason =
-      fault?.Reason?.Text ?? fault?.faultstring ?? fault?.Code?.Value ?? "SOAP Fault";
+    const reason = fault?.Reason?.Text ?? fault?.faultstring ?? fault?.Code?.Value ?? "SOAP Fault";
     // Formalne błędy (np. zły NIP) mogą przychodzić jako fault
     return {
       ok: false,

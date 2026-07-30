@@ -110,7 +110,7 @@ function SocialAdmin() {
 
   const filtered = useMemo(
     () => (filter === "all" ? posts : posts.filter((p) => p.status === filter)),
-    [posts, filter]
+    [posts, filter],
   );
 
   const save = useMutation({
@@ -127,9 +127,7 @@ function SocialAdmin() {
           hashtags,
           image_url: form.image_url || "",
           link_url: form.link_url || "",
-          scheduled_at: form.scheduled_at
-            ? new Date(form.scheduled_at).toISOString()
-            : "",
+          scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : "",
           status: form.status,
           campaign: form.campaign || undefined,
           ai_prompt: form.ai_prompt || undefined,
@@ -206,10 +204,16 @@ function SocialAdmin() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="ai">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="ai">AI Generator</TabsTrigger>
-                <TabsTrigger value="content">Treść</TabsTrigger>
-                <TabsTrigger value="schedule">Publikacja</TabsTrigger>
+              <TabsList className="grid h-auto w-full grid-cols-3">
+                <TabsTrigger value="ai" className="whitespace-normal leading-tight">
+                  AI Generator
+                </TabsTrigger>
+                <TabsTrigger value="content" className="whitespace-normal leading-tight">
+                  Treść
+                </TabsTrigger>
+                <TabsTrigger value="schedule" className="whitespace-normal leading-tight">
+                  Publikacja
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="ai" className="space-y-3 pt-4">
@@ -219,10 +223,14 @@ function SocialAdmin() {
                     value={form.platform}
                     onValueChange={(v) => setForm({ ...form, platform: v as Platform })}
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {Object.entries(PLATFORM_LABELS).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                        <SelectItem key={k} value={k}>
+                          {v}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -267,7 +275,7 @@ function SocialAdmin() {
                     onClick={() =>
                       genImage.mutate(
                         form.ai_prompt ||
-                          `Professional financial brand visual, ${PLATFORM_LABELS[form.platform]} post about real-estate loans`
+                          `Professional financial brand visual, ${PLATFORM_LABELS[form.platform]} post about real-estate loans`,
                       )
                     }
                     disabled={genImage.isPending}
@@ -286,9 +294,7 @@ function SocialAdmin() {
                     value={form.content}
                     onChange={(e) => setForm({ ...form, content: e.target.value })}
                   />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {form.content.length} znaków
-                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{form.content.length} znaków</p>
                 </div>
                 <div>
                   <Label>Hashtagi (oddziel spacją lub przecinkiem)</Label>
@@ -333,7 +339,9 @@ function SocialAdmin() {
                     value={form.status}
                     onValueChange={(v) => setForm({ ...form, status: v as Status })}
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="draft">Szkic</SelectItem>
                       <SelectItem value="scheduled">Zaplanowany</SelectItem>
@@ -350,7 +358,8 @@ function SocialAdmin() {
                     onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })}
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Publikacja automatyczna wymaga połączenia z API platformy — na razie kalendarz służy do planowania ręcznej publikacji.
+                    Publikacja automatyczna wymaga połączenia z API platformy — na razie kalendarz
+                    służy do planowania ręcznej publikacji.
                   </p>
                 </div>
               </TabsContent>
@@ -358,7 +367,9 @@ function SocialAdmin() {
 
             <div className="mt-6 flex justify-end gap-2">
               {form.id && (
-                <Button variant="ghost" onClick={() => setForm(empty())}>Anuluj</Button>
+                <Button variant="ghost" onClick={() => setForm(empty())}>
+                  Anuluj
+                </Button>
               )}
               <Button
                 onClick={() => save.mutate()}
@@ -376,7 +387,9 @@ function SocialAdmin() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Posty</CardTitle>
             <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Wszystkie</SelectItem>
                 <SelectItem value="draft">Szkice</SelectItem>
@@ -389,7 +402,9 @@ function SocialAdmin() {
           <CardContent className="space-y-3">
             {isLoading && <p className="text-sm text-muted-foreground">Ładowanie…</p>}
             {!isLoading && filtered.length === 0 && (
-              <p className="text-sm text-muted-foreground">Brak postów. Zacznij od AI Generatora obok.</p>
+              <p className="text-sm text-muted-foreground">
+                Brak postów. Zacznij od AI Generatora obok.
+              </p>
             )}
             {filtered.map((p) => (
               <div key={p.id} className="rounded-md border p-3">
@@ -444,7 +459,7 @@ function SocialAdmin() {
                     size="sm"
                     onClick={() => {
                       void navigator.clipboard.writeText(
-                        `${p.content}\n\n${(p.hashtags ?? []).join(" ")}`.trim()
+                        `${p.content}\n\n${(p.hashtags ?? []).join(" ")}`.trim(),
                       );
                       toast.success("Skopiowano do schowka");
                     }}

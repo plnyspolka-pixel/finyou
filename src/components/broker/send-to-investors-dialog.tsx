@@ -22,7 +22,14 @@ import { buildInvestorDistributionDraft } from "@/lib/broker-distribution.functi
 import { usePanelBase } from "@/lib/panel-base";
 
 type Audience = "instytucjonalny" | "indywidualny";
-type Investor = { id: string; company_name: string | null; first_name: string | null; last_name: string | null; email: string | null; city: string | null };
+type Investor = {
+  id: string;
+  company_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  city: string | null;
+};
 
 export function SendToInvestorsDialog({
   open,
@@ -58,7 +65,10 @@ export function SendToInvestorsDialog({
         const key = (r.email ?? "").trim().toLowerCase();
         if (!key) continue;
         const prev = byEmail.get(key);
-        if (!prev) { byEmail.set(key, r); continue; }
+        if (!prev) {
+          byEmail.set(key, r);
+          continue;
+        }
         const score = (i: Investor) => (i.company_name?.length ?? 0) + (i.city ? 5 : 0);
         if (score(r) > score(prev)) byEmail.set(key, r);
       }
@@ -124,7 +134,10 @@ export function SendToInvestorsDialog({
   });
 
   const buildForSelected = () => {
-    const emails = investors.filter((i) => selected.has(i.id)).map((i) => i.email!).filter(Boolean);
+    const emails = investors
+      .filter((i) => selected.has(i.id))
+      .map((i) => i.email!)
+      .filter(Boolean);
     if (!emails.length) return;
     mut.mutate(emails);
   };
@@ -145,13 +158,19 @@ export function SendToInvestorsDialog({
             Draft do inwestorów {label}
           </DialogTitle>
           <DialogDescription>
-            Zaznacz odbiorców — utworzę draft w skrzynce (KW, kwota, zdjęcia, dokumenty, Twoja stopka). Nic nie wyślę bez Twojego kliknięcia.
+            Zaznacz odbiorców — utworzę draft w skrzynce (KW, kwota, zdjęcia, dokumenty, Twoja
+            stopka). Nic nie wyślę bez Twojego kliknięcia.
           </DialogDescription>
         </DialogHeader>
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Szukaj…" className="pl-9" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Szukaj…"
+            className="pl-9"
+          />
         </div>
 
         <div className="flex items-center justify-between text-xs">
@@ -167,15 +186,22 @@ export function SendToInvestorsDialog({
           {isLoading ? (
             <div className="p-4 text-sm text-muted-foreground">Ładowanie…</div>
           ) : filtered.length === 0 ? (
-            <div className="p-4 text-sm text-muted-foreground">Brak inwestorów z adresem e-mail.</div>
+            <div className="p-4 text-sm text-muted-foreground">
+              Brak inwestorów z adresem e-mail.
+            </div>
           ) : (
             <ul className="divide-y">
               {filtered.map((i) => {
-                const name = i.company_name || [i.first_name, i.last_name].filter(Boolean).join(" ") || "—";
+                const name =
+                  i.company_name || [i.first_name, i.last_name].filter(Boolean).join(" ") || "—";
                 return (
                   <li key={i.id} className="flex items-center gap-3 p-3 hover:bg-muted/40">
                     <Checkbox checked={selected.has(i.id)} onCheckedChange={() => toggle(i.id)} />
-                    <button type="button" onClick={() => toggle(i.id)} className="flex-1 min-w-0 text-left">
+                    <button
+                      type="button"
+                      onClick={() => toggle(i.id)}
+                      className="flex-1 min-w-0 text-left"
+                    >
                       <div className="truncate text-sm font-medium">{name}</div>
                       <div className="truncate text-xs text-muted-foreground">
                         {i.email}
@@ -193,7 +219,11 @@ export function SendToInvestorsDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mut.isPending}>
             Anuluj
           </Button>
-          <Button variant="secondary" onClick={buildForAll} disabled={mut.isPending || investors.length === 0}>
+          <Button
+            variant="secondary"
+            onClick={buildForAll}
+            disabled={mut.isPending || investors.length === 0}
+          >
             Draft dla wszystkich ({investors.length})
           </Button>
           <Button onClick={buildForSelected} disabled={mut.isPending || selected.size === 0}>

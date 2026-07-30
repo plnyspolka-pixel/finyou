@@ -12,9 +12,7 @@ import { z } from "zod";
 // ── typy pierwotne ─────────────────────────────────────────────
 export const kwotaSchema = z
   .object({
-    cyframi: z
-      .string()
-      .regex(/^\d{1,3}( \d{3})*,\d{2}$/, "Format polski, np. '50 000,00'"),
+    cyframi: z.string().regex(/^\d{1,3}( \d{3})*,\d{2}$/, "Format polski, np. '50 000,00'"),
     slownie: z.string().min(3),
   })
   .strict();
@@ -23,9 +21,21 @@ const dataPl = z.string().regex(/^\d{2}\.\d{2}\.\d{4}$/, "DD.MM.RRRR");
 
 const nullableStr = z.string().nullable().optional();
 const pesel = z.string().regex(/^\d{11}$/);
-const nip = z.string().regex(/^\d{10}$/).nullable().optional();
-const regon = z.string().regex(/^\d{9}(\d{5})?$/).nullable().optional();
-const krs = z.string().regex(/^\d{10}$/).nullable().optional();
+const nip = z
+  .string()
+  .regex(/^\d{10}$/)
+  .nullable()
+  .optional();
+const regon = z
+  .string()
+  .regex(/^\d{9}(\d{5})?$/)
+  .nullable()
+  .optional();
+const krs = z
+  .string()
+  .regex(/^\d{10}$/)
+  .nullable()
+  .optional();
 
 const stanCywilny = z
   .enum(["kawaler_panna", "zonaty_zamezna", "rozwiedziony", "wdowiec"])
@@ -129,10 +139,7 @@ const podmiotBase = {
 
 export const podmiotGospodarczy = z.object(podmiotBase).strict();
 
-export const strona = z.discriminatedUnion("typ", [
-  osobaFizyczna,
-  podmiotGospodarczy,
-]);
+export const strona = z.discriminatedUnion("typ", [osobaFizyczna, podmiotGospodarczy]);
 
 // ── poręczyciel (osoba fizyczna / podmiot) — dodatkowe pola ─────
 const zgodaMalzonka = z
@@ -140,9 +147,7 @@ const zgodaMalzonka = z
   .strict()
   .nullable()
   .optional();
-const zakresOdp = z
-  .enum(["rzeczowa", "rzeczowa_i_osobista"])
-  .optional();
+const zakresOdp = z.enum(["rzeczowa", "rzeczowa_i_osobista"]).optional();
 
 const poreczicielOsoba = z
   .object({
@@ -158,9 +163,7 @@ const poreczicielPodmiot = z
     zgoda_malzonka: zgodaMalzonka,
   })
   .strict();
-const porecziciel = z
-  .union([poreczicielOsoba, poreczicielPodmiot, z.null()])
-  .optional();
+const porecziciel = z.union([poreczicielOsoba, poreczicielPodmiot, z.null()]).optional();
 
 // ── obciążenia / nieruchomość ──────────────────────────────────
 const obciazenie = z

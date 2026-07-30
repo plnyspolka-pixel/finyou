@@ -7,10 +7,7 @@ import { createCommissionEvent } from "@/lib/affiliate/engine";
 let _supabase: ReturnType<typeof createClient> | null = null;
 function getSupabase() {
   if (!_supabase) {
-    _supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    _supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   }
   return _supabase;
 }
@@ -30,9 +27,8 @@ const PLAN_TO_DB: Record<string, string> = {
 async function handleCheckoutCompleted(session: any) {
   const userId: string | undefined = session.metadata?.userId;
   const plan: string | undefined = session.metadata?.plan;
-  const stripeCustomerId: string | undefined = typeof session.customer === "string"
-    ? session.customer
-    : session.customer?.id;
+  const stripeCustomerId: string | undefined =
+    typeof session.customer === "string" ? session.customer : session.customer?.id;
 
   if (!userId || !plan || !PLAN_DURATION_DAYS[plan]) {
     console.error("Webhook: missing metadata", { userId, plan });
@@ -101,7 +97,9 @@ async function handleCheckoutCompleted(session: any) {
   try {
     const grossAmount = typeof session.amount_total === "number" ? session.amount_total / 100 : 0;
     if (grossAmount > 0) {
-      const planLabel = PLAN_TO_DB[plan] ? `Dostęp inwestora Finance You — ${PLAN_TO_DB[plan]}` : "Dostęp inwestora Finance You";
+      const planLabel = PLAN_TO_DB[plan]
+        ? `Dostęp inwestora Finance You — ${PLAN_TO_DB[plan]}`
+        : "Dostęp inwestora Finance You";
       await createInvoiceFromPayment(supabase as any, {
         paymentId: session.id,
         grossAmount,
@@ -140,7 +138,8 @@ async function handleCheckoutCompleted(session: any) {
           .eq("external_ref", session.id)
           .maybeSingle();
         if (!existingEv) {
-          const grossAmount = typeof session.amount_total === "number" ? session.amount_total / 100 : 0;
+          const grossAmount =
+            typeof session.amount_total === "number" ? session.amount_total / 100 : 0;
           await createCommissionEvent(supabase as any, {
             eventType: "investor_account_paid",
             directPartnerId: partnerId,

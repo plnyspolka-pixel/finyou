@@ -3,7 +3,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const formFieldSchema = z.object({
-  name: z.string().min(1).max(50).regex(/^[a-z_][a-z0-9_]*$/i),
+  name: z
+    .string()
+    .min(1)
+    .max(50)
+    .regex(/^[a-z_][a-z0-9_]*$/i),
   label: z.string().min(1).max(120),
   type: z.enum(["text", "email", "tel", "textarea", "select"]),
   required: z.boolean().default(false),
@@ -23,7 +27,7 @@ const sectionSchema = z.object({
         label: z.string().max(120).optional(),
         value: z.string().max(120).optional(),
         icon: z.string().max(60).optional(),
-      })
+      }),
     )
     .max(20)
     .optional(),
@@ -33,7 +37,11 @@ const sectionSchema = z.object({
 
 const landingSchema = z.object({
   id: z.string().uuid().optional(),
-  slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/, "tylko małe litery, cyfry i myślniki"),
+  slug: z
+    .string()
+    .min(2)
+    .max(80)
+    .regex(/^[a-z0-9-]+$/, "tylko małe litery, cyfry i myślniki"),
   title: z.string().min(1).max(200),
   headline: z.string().min(1).max(300),
   subheadline: z.string().max(500).optional(),
@@ -47,8 +55,14 @@ const landingSchema = z.object({
   redirect_url: z.string().url().optional().or(z.literal("")),
   theme: z
     .object({
-      primary: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#0ea5e9"),
-      background: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#ffffff"),
+      primary: z
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/)
+        .default("#0ea5e9"),
+      background: z
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/)
+        .default("#ffffff"),
     })
     .default({ primary: "#0ea5e9", background: "#ffffff" }),
   published: z.boolean().default(false),
@@ -77,10 +91,7 @@ export const saveLandingPage = createServerFn({ method: "POST" })
       redirect_url: row.redirect_url || null,
     };
     if (id) {
-      const { error } = await context.supabase
-        .from("landing_pages")
-        .update(payload)
-        .eq("id", id);
+      const { error } = await context.supabase.from("landing_pages").update(payload).eq("id", id);
       if (error) throw new Error(error.message);
       return { id };
     }
@@ -97,10 +108,7 @@ export const deleteLandingPage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("landing_pages")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("landing_pages").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -134,7 +142,9 @@ export const getPublicLandingPage = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: page, error } = await supabaseAdmin
       .from("landing_pages")
-      .select("id,slug,title,headline,subheadline,cta_text,hero_image_url,og_image_url,meta_description,sections,form_fields,thank_you_message,redirect_url,theme,published")
+      .select(
+        "id,slug,title,headline,subheadline,cta_text,hero_image_url,og_image_url,meta_description,sections,form_fields,thank_you_message,redirect_url,theme,published",
+      )
       .eq("slug", data.slug)
       .eq("published", true)
       .maybeSingle();
@@ -172,7 +182,7 @@ export const submitLandingLead = createServerFn({ method: "POST" })
           })
           .optional(),
       })
-      .parse(d)
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -209,19 +219,17 @@ export const submitLandingLead = createServerFn({ method: "POST" })
     // Also push into email_subscribers if table exists
     try {
       const parts = (data.name ?? "").trim().split(/\s+/);
-      await supabaseAdmin
-        .from("email_subscribers")
-        .upsert(
-          {
-            email: data.email.toLowerCase().trim(),
-            first_name: parts[0] || null,
-            last_name: parts.slice(1).join(" ") || null,
-            source: "landing",
-            source_id: data.landing_page_id,
-            tags: ["landing"],
-          },
-          { onConflict: "email", ignoreDuplicates: true }
-        );
+      await supabaseAdmin.from("email_subscribers").upsert(
+        {
+          email: data.email.toLowerCase().trim(),
+          first_name: parts[0] || null,
+          last_name: parts.slice(1).join(" ") || null,
+          source: "landing",
+          source_id: data.landing_page_id,
+          tags: ["landing"],
+        },
+        { onConflict: "email", ignoreDuplicates: true },
+      );
     } catch {
       /* ignore — email_subscribers may not exist */
     }
@@ -235,7 +243,10 @@ export const submitLandingLead = createServerFn({ method: "POST" })
         .maybeSingle();
       await supabaseAdmin
         .from("landing_pages")
-        .update({ conversion_count: ((cur as { conversion_count?: number } | null)?.conversion_count ?? 0) + 1 } as never)
+        .update({
+          conversion_count:
+            ((cur as { conversion_count?: number } | null)?.conversion_count ?? 0) + 1,
+        } as never)
         .eq("id", data.landing_page_id);
     } catch {
       /* ignore */

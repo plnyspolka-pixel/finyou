@@ -25,6 +25,9 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
 import { Route as InwestorRouteImport } from './routes/inwestor'
+import { Route as DlaPosrednikaRouteImport } from './routes/dla-posrednika'
+import { Route as DlaKlientaRouteImport } from './routes/dla-klienta'
+import { Route as DlaInwestoraRouteImport } from './routes/dla-inwestora'
 import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -86,7 +89,7 @@ import { Route as EmbedBlogRouteImport } from './routes/embed.blog'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AdminZgodyRouteImport } from './routes/admin.zgody'
-import { Route as AdminKwRouteImport } from './routes/admin.kw'
+import { Route as AdminZespolAktywnoscRouteImport } from './routes/admin.zespol-aktywnosc'
 import { Route as AdminWnioskiNiekompletneRouteImport } from './routes/admin.wnioski-niekompletne'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
@@ -96,6 +99,7 @@ import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
 import { Route as AdminProjektyRouteImport } from './routes/admin.projekty'
+import { Route as AdminPotencjalLokalizacyjnyRouteImport } from './routes/admin.potencjal-lokalizacyjny'
 import { Route as AdminPlatnosciDostepRouteImport } from './routes/admin.platnosci-dostep'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
 import { Route as AdminOperatorzyRouteImport } from './routes/admin.operatorzy'
@@ -105,6 +109,7 @@ import { Route as AdminMessengerRouteImport } from './routes/admin.messenger'
 import { Route as AdminCzatRouteImport } from './routes/admin.czat'
 import { Route as AdminMaterialyRouteImport } from './routes/admin.materialy'
 import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
+import { Route as AdminKwRouteImport } from './routes/admin.kw'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
 import { Route as AdminKreatorDokumentowRouteImport } from './routes/admin.kreator-dokumentow'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
@@ -201,6 +206,7 @@ import { Route as ApiPublicHooksProjectAssignmentsTickRouteImport } from './rout
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
 import { Route as ApiPublicHooksMetaLeadsPullRouteImport } from './routes/api/public/hooks/meta-leads-pull'
 import { Route as ApiPublicHooksMessengerSyncForceRouteImport } from './routes/api/public/hooks/messenger-sync-force'
+import { Route as ApiPublicHooksLocationScoringTickRouteImport } from './routes/api/public/hooks/location-scoring-tick'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
 import { Route as ApiPublicHooksLoanReminderEmailsTickRouteImport } from './routes/api/public/hooks/loan-reminder-emails-tick'
 import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/api/public/hooks/loan-reminder-emails'
@@ -292,6 +298,21 @@ const KlientRoute = KlientRouteImport.update({
 const InwestorRoute = InwestorRouteImport.update({
   id: '/inwestor',
   path: '/inwestor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DlaPosrednikaRoute = DlaPosrednikaRouteImport.update({
+  id: '/dla-posrednika',
+  path: '/dla-posrednika',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DlaKlientaRoute = DlaKlientaRouteImport.update({
+  id: '/dla-klienta',
+  path: '/dla-klienta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DlaInwestoraRoute = DlaInwestoraRouteImport.update({
+  id: '/dla-inwestora',
+  path: '/dla-inwestora',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConnectRoute = ConnectRouteImport.update({
@@ -601,9 +622,9 @@ const AdminZgodyRoute = AdminZgodyRouteImport.update({
   path: '/zgody',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminKwRoute = AdminKwRouteImport.update({
-  id: '/kw',
-  path: '/kw',
+const AdminZespolAktywnoscRoute = AdminZespolAktywnoscRouteImport.update({
+  id: '/zespol-aktywnosc',
+  path: '/zespol-aktywnosc',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminWnioskiNiekompletneRoute =
@@ -652,6 +673,12 @@ const AdminProjektyRoute = AdminProjektyRouteImport.update({
   path: '/projekty',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPotencjalLokalizacyjnyRoute =
+  AdminPotencjalLokalizacyjnyRouteImport.update({
+    id: '/potencjal-lokalizacyjny',
+    path: '/potencjal-lokalizacyjny',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminPlatnosciDostepRoute = AdminPlatnosciDostepRouteImport.update({
   id: '/platnosci-dostep',
   path: '/platnosci-dostep',
@@ -695,6 +722,11 @@ const AdminMaterialyRoute = AdminMaterialyRouteImport.update({
 const AdminMailingRoute = AdminMailingRouteImport.update({
   id: '/mailing',
   path: '/mailing',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminKwRoute = AdminKwRouteImport.update({
+  id: '/kw',
+  path: '/kw',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminKreatorPozyczkiRoute = AdminKreatorPozyczkiRouteImport.update({
@@ -1214,6 +1246,12 @@ const ApiPublicHooksMessengerSyncForceRoute =
     path: '/api/public/hooks/messenger-sync-force',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksLocationScoringTickRoute =
+  ApiPublicHooksLocationScoringTickRouteImport.update({
+    id: '/api/public/hooks/location-scoring-tick',
+    path: '/api/public/hooks/location-scoring-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksLoanRemindersRoute =
   ApiPublicHooksLoanRemindersRouteImport.update({
     id: '/api/public/hooks/loan-reminders',
@@ -1290,6 +1328,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
+  '/dla-inwestora': typeof DlaInwestoraRoute
+  '/dla-klienta': typeof DlaKlientaRoute
+  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1326,6 +1367,7 @@ export interface FileRoutesByFullPath {
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
@@ -1335,6 +1377,7 @@ export interface FileRoutesByFullPath {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1344,8 +1387,8 @@ export interface FileRoutesByFullPath {
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
+  '/admin/zespol-aktywnosc': typeof AdminZespolAktywnoscRoute
   '/admin/zgody': typeof AdminZgodyRoute
-  '/admin/kw': typeof AdminKwRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
@@ -1473,6 +1516,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -1495,6 +1539,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
+  '/dla-inwestora': typeof DlaInwestoraRoute
+  '/dla-klienta': typeof DlaKlientaRoute
+  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
   '/negocjuj': typeof NegocjujRoute
@@ -1527,6 +1574,7 @@ export interface FileRoutesByTo {
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
@@ -1536,6 +1584,7 @@ export interface FileRoutesByTo {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1545,8 +1594,8 @@ export interface FileRoutesByTo {
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
+  '/admin/zespol-aktywnosc': typeof AdminZespolAktywnoscRoute
   '/admin/zgody': typeof AdminZgodyRoute
-  '/admin/kw': typeof AdminKwRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
@@ -1669,6 +1718,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -1693,6 +1743,9 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
+  '/dla-inwestora': typeof DlaInwestoraRoute
+  '/dla-klienta': typeof DlaKlientaRoute
+  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1729,6 +1782,7 @@ export interface FileRoutesById {
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
@@ -1738,6 +1792,7 @@ export interface FileRoutesById {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1747,8 +1802,8 @@ export interface FileRoutesById {
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
+  '/admin/zespol-aktywnosc': typeof AdminZespolAktywnoscRoute
   '/admin/zgody': typeof AdminZgodyRoute
-  '/admin/kw': typeof AdminKwRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
@@ -1876,6 +1931,7 @@ export interface FileRoutesById {
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -1901,6 +1957,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/connect'
+    | '/dla-inwestora'
+    | '/dla-klienta'
+    | '/dla-posrednika'
     | '/inwestor'
     | '/klient'
     | '/logowanie'
@@ -1937,6 +1996,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
+    | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
@@ -1946,6 +2006,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/potencjal-lokalizacyjny'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -1955,8 +2016,8 @@ export interface FileRouteTypes {
     | '/admin/ustawienia'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
+    | '/admin/zespol-aktywnosc'
     | '/admin/zgody'
-    | '/admin/kw'
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/blog'
@@ -2084,6 +2145,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
@@ -2106,6 +2168,9 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/connect'
+    | '/dla-inwestora'
+    | '/dla-klienta'
+    | '/dla-posrednika'
     | '/logowanie'
     | '/mcp'
     | '/negocjuj'
@@ -2138,6 +2203,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
+    | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
@@ -2147,6 +2213,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/potencjal-lokalizacyjny'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -2156,8 +2223,8 @@ export interface FileRouteTypes {
     | '/admin/ustawienia'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
+    | '/admin/zespol-aktywnosc'
     | '/admin/zgody'
-    | '/admin/kw'
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/blog'
@@ -2280,6 +2347,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
@@ -2303,6 +2371,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/connect'
+    | '/dla-inwestora'
+    | '/dla-klienta'
+    | '/dla-posrednika'
     | '/inwestor'
     | '/klient'
     | '/logowanie'
@@ -2339,6 +2410,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
+    | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
@@ -2348,6 +2420,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/potencjal-lokalizacyjny'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -2357,8 +2430,8 @@ export interface FileRouteTypes {
     | '/admin/ustawienia'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
+    | '/admin/zespol-aktywnosc'
     | '/admin/zgody'
-    | '/admin/kw'
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/blog'
@@ -2486,6 +2559,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
@@ -2510,6 +2584,9 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
   ConnectRoute: typeof ConnectRoute
+  DlaInwestoraRoute: typeof DlaInwestoraRoute
+  DlaKlientaRoute: typeof DlaKlientaRoute
+  DlaPosrednikaRoute: typeof DlaPosrednikaRoute
   InwestorRoute: typeof InwestorRouteWithChildren
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
@@ -2569,6 +2646,7 @@ export interface RootRouteChildren {
   ApiPublicHooksLoanReminderEmailsRoute: typeof ApiPublicHooksLoanReminderEmailsRoute
   ApiPublicHooksLoanReminderEmailsTickRoute: typeof ApiPublicHooksLoanReminderEmailsTickRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
+  ApiPublicHooksLocationScoringTickRoute: typeof ApiPublicHooksLocationScoringTickRoute
   ApiPublicHooksMessengerSyncForceRoute: typeof ApiPublicHooksMessengerSyncForceRoute
   ApiPublicHooksMetaLeadsPullRoute: typeof ApiPublicHooksMetaLeadsPullRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -2698,6 +2776,27 @@ declare module '@tanstack/react-router' {
       path: '/inwestor'
       fullPath: '/inwestor'
       preLoaderRoute: typeof InwestorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dla-posrednika': {
+      id: '/dla-posrednika'
+      path: '/dla-posrednika'
+      fullPath: '/dla-posrednika'
+      preLoaderRoute: typeof DlaPosrednikaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dla-klienta': {
+      id: '/dla-klienta'
+      path: '/dla-klienta'
+      fullPath: '/dla-klienta'
+      preLoaderRoute: typeof DlaKlientaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dla-inwestora': {
+      id: '/dla-inwestora'
+      path: '/dla-inwestora'
+      fullPath: '/dla-inwestora'
+      preLoaderRoute: typeof DlaInwestoraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/connect': {
@@ -3120,18 +3219,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/kw': {
-      id: '/admin/kw'
-      path: '/kw'
-      fullPath: '/admin/kw'
-      preLoaderRoute: typeof AdminKwRouteImport
-      parentRoute: typeof AdminRouteImport
-    }
     '/admin/zgody': {
       id: '/admin/zgody'
       path: '/zgody'
       fullPath: '/admin/zgody'
       preLoaderRoute: typeof AdminZgodyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/zespol-aktywnosc': {
+      id: '/admin/zespol-aktywnosc'
+      path: '/zespol-aktywnosc'
+      fullPath: '/admin/zespol-aktywnosc'
+      preLoaderRoute: typeof AdminZespolAktywnoscRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/wnioski-niekompletne': {
@@ -3197,6 +3296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProjektyRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/potencjal-lokalizacyjny': {
+      id: '/admin/potencjal-lokalizacyjny'
+      path: '/potencjal-lokalizacyjny'
+      fullPath: '/admin/potencjal-lokalizacyjny'
+      preLoaderRoute: typeof AdminPotencjalLokalizacyjnyRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/platnosci-dostep': {
       id: '/admin/platnosci-dostep'
       path: '/platnosci-dostep'
@@ -3258,6 +3364,13 @@ declare module '@tanstack/react-router' {
       path: '/mailing'
       fullPath: '/admin/mailing'
       preLoaderRoute: typeof AdminMailingRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/kw': {
+      id: '/admin/kw'
+      path: '/kw'
+      fullPath: '/admin/kw'
+      preLoaderRoute: typeof AdminKwRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/kreator-pozyczki': {
@@ -3932,6 +4045,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksMessengerSyncForceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/location-scoring-tick': {
+      id: '/api/public/hooks/location-scoring-tick'
+      path: '/api/public/hooks/location-scoring-tick'
+      fullPath: '/api/public/hooks/location-scoring-tick'
+      preLoaderRoute: typeof ApiPublicHooksLocationScoringTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/loan-reminders': {
       id: '/api/public/hooks/loan-reminders'
       path: '/api/public/hooks/loan-reminders'
@@ -4062,6 +4182,7 @@ interface AdminRouteChildren {
   AdminKlienciRoute: typeof AdminKlienciRouteWithChildren
   AdminKreatorDokumentowRoute: typeof AdminKreatorDokumentowRoute
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
+  AdminKwRoute: typeof AdminKwRoute
   AdminMailingRoute: typeof AdminMailingRoute
   AdminMaterialyRoute: typeof AdminMaterialyRoute
   AdminMessengerRoute: typeof AdminMessengerRoute
@@ -4071,6 +4192,7 @@ interface AdminRouteChildren {
   AdminOperatorzyRoute: typeof AdminOperatorzyRoute
   AdminPixeleRoute: typeof AdminPixeleRoute
   AdminPlatnosciDostepRoute: typeof AdminPlatnosciDostepRoute
+  AdminPotencjalLokalizacyjnyRoute: typeof AdminPotencjalLokalizacyjnyRoute
   AdminProjektyRoute: typeof AdminProjektyRoute
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
@@ -4080,8 +4202,8 @@ interface AdminRouteChildren {
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
   AdminVoicebotRoute: typeof AdminVoicebotRoute
   AdminWnioskiNiekompletneRoute: typeof AdminWnioskiNiekompletneRoute
+  AdminZespolAktywnoscRoute: typeof AdminZespolAktywnoscRoute
   AdminZgodyRoute: typeof AdminZgodyRoute
-  AdminKwRoute: typeof AdminKwRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminFbAdsKreatorRoute: typeof AdminFbAdsKreatorRoute
   AdminGoogleAdsKreatorRoute: typeof AdminGoogleAdsKreatorRoute
@@ -4124,6 +4246,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminKlienciRoute: AdminKlienciRouteWithChildren,
   AdminKreatorDokumentowRoute: AdminKreatorDokumentowRoute,
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
+  AdminKwRoute: AdminKwRoute,
   AdminMailingRoute: AdminMailingRoute,
   AdminMaterialyRoute: AdminMaterialyRoute,
   AdminMessengerRoute: AdminMessengerRoute,
@@ -4133,6 +4256,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminOperatorzyRoute: AdminOperatorzyRoute,
   AdminPixeleRoute: AdminPixeleRoute,
   AdminPlatnosciDostepRoute: AdminPlatnosciDostepRoute,
+  AdminPotencjalLokalizacyjnyRoute: AdminPotencjalLokalizacyjnyRoute,
   AdminProjektyRoute: AdminProjektyRoute,
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
@@ -4142,8 +4266,8 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminUstawieniaRoute: AdminUstawieniaRoute,
   AdminVoicebotRoute: AdminVoicebotRoute,
   AdminWnioskiNiekompletneRoute: AdminWnioskiNiekompletneRoute,
+  AdminZespolAktywnoscRoute: AdminZespolAktywnoscRoute,
   AdminZgodyRoute: AdminZgodyRoute,
-  AdminKwRoute: AdminKwRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminFbAdsKreatorRoute: AdminFbAdsKreatorRoute,
   AdminGoogleAdsKreatorRoute: AdminGoogleAdsKreatorRoute,
@@ -4406,6 +4530,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
   ConnectRoute: ConnectRoute,
+  DlaInwestoraRoute: DlaInwestoraRoute,
+  DlaKlientaRoute: DlaKlientaRoute,
+  DlaPosrednikaRoute: DlaPosrednikaRoute,
   InwestorRoute: InwestorRouteWithChildren,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
@@ -4469,6 +4596,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksLoanReminderEmailsTickRoute:
     ApiPublicHooksLoanReminderEmailsTickRoute,
   ApiPublicHooksLoanRemindersRoute: ApiPublicHooksLoanRemindersRoute,
+  ApiPublicHooksLocationScoringTickRoute:
+    ApiPublicHooksLocationScoringTickRoute,
   ApiPublicHooksMessengerSyncForceRoute: ApiPublicHooksMessengerSyncForceRoute,
   ApiPublicHooksMetaLeadsPullRoute: ApiPublicHooksMetaLeadsPullRoute,
   ApiPublicHooksProcessScheduledCallsRoute:

@@ -64,13 +64,12 @@ async function getAccessToken(): Promise<string> {
   return data.access_token;
 }
 
-
 export type TpayCreateInput = {
-  amount: number;            // PLN
+  amount: number; // PLN
   description: string;
   email: string;
   name: string;
-  crc: string;               // wewnętrzny UUID płatności (access_payments.id); legacy: `${userId}|${plan}`
+  crc: string; // wewnętrzny UUID płatności (access_payments.id); legacy: `${userId}|${plan}`
   notifyUrl: string;
   successUrl: string;
   errorUrl: string;
@@ -82,7 +81,9 @@ export type TpayCreatedTransaction = {
   title: string;
 };
 
-export async function createTpayTransaction(input: TpayCreateInput): Promise<TpayCreatedTransaction> {
+export async function createTpayTransaction(
+  input: TpayCreateInput,
+): Promise<TpayCreatedTransaction> {
   const token = await getAccessToken();
   const res = await tpayFetch(`${TPAY_API_BASE}/transactions`, {
     method: "POST",
@@ -125,7 +126,7 @@ export async function createTpayTransaction(input: TpayCreateInput): Promise<Tpa
 
 export type TpayTransactionStatus = {
   transactionId: string;
-  status: string;        // "correct" when paid
+  status: string; // "correct" when paid
   amount: number;
   hiddenDescription?: string;
   payer?: { email?: string; name?: string };
@@ -133,9 +134,12 @@ export type TpayTransactionStatus = {
 
 export async function getTpayTransaction(transactionId: string): Promise<TpayTransactionStatus> {
   const token = await getAccessToken();
-  const res = await tpayFetch(`${TPAY_API_BASE}/transactions/${encodeURIComponent(transactionId)}`, {
-    headers: { ...COMMON_HEADERS, Authorization: `Bearer ${token}` },
-  });
+  const res = await tpayFetch(
+    `${TPAY_API_BASE}/transactions/${encodeURIComponent(transactionId)}`,
+    {
+      headers: { ...COMMON_HEADERS, Authorization: `Bearer ${token}` },
+    },
+  );
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`Tpay getTransaction failed: ${res.status} ${body}`);

@@ -34,7 +34,6 @@ const Schema = z.object({
   source: z.string().max(120).optional().nullable(),
 });
 
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -141,7 +140,11 @@ export const Route = createFileRoute("/api/public/loan-application")({
           // komunikat ogólny, aby nie ujawniać wewnętrznych szczegółów.
           if (e instanceof z.ZodError) {
             return new Response(
-              JSON.stringify({ ok: false, error: "Nieprawidłowe dane formularza.", issues: e.issues }),
+              JSON.stringify({
+                ok: false,
+                error: "Nieprawidłowe dane formularza.",
+                issues: e.issues,
+              }),
               { status: 400, headers: corsHeaders },
             );
           }

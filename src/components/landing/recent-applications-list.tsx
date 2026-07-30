@@ -1,6 +1,16 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, MapPin, ArrowRight, Home, Building2, Trees, Store, Search, X } from "lucide-react";
+import {
+  CheckCircle2,
+  MapPin,
+  ArrowRight,
+  Home,
+  Building2,
+  Trees,
+  Store,
+  Search,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
@@ -16,11 +26,14 @@ const PROPERTY_VISUAL: Record<string, { Icon: typeof Home; gradient: string }> =
   commercial: { Icon: Store, gradient: "from-violet-500/15 via-violet-500/5 to-transparent" },
 };
 
-
-
-
 // ---- Calculator-equivalent math (mirrors offer-calculator-panel.tsx) -------
-type ScheduleRow = { n: number | "balon"; payment: number; interest: number; principal: number; balance: number };
+type ScheduleRow = {
+  n: number | "balon";
+  payment: number;
+  interest: number;
+  principal: number;
+  balance: number;
+};
 type OfferFigures = {
   feePct: number;
   fee: number;
@@ -32,7 +45,11 @@ type OfferFigures = {
   schedule: ScheduleRow[];
 };
 
-function computeOfferFigures(amount: number, months: number, annualRatePercent: number): OfferFigures {
+function computeOfferFigures(
+  amount: number,
+  months: number,
+  annualRatePercent: number,
+): OfferFigures {
   const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
   const FY_FEE_PCT = Math.round((10 - feeT * 6) * 10) / 10;
   const fee = Math.round((amount * FY_FEE_PCT) / 100);
@@ -95,27 +112,83 @@ export type RecentLoanApplicationItem = {
   photo_url: string;
 };
 
-
 const FIRST_NAMES = [
-  "Filip", "Andrzej", "Małgorzata", "Katarzyna", "Piotr", "Tomasz", "Anna",
-  "Marek", "Joanna", "Krzysztof", "Magdalena", "Łukasz", "Ewa", "Paweł",
-  "Agnieszka", "Michał", "Dorota", "Robert", "Beata", "Adam", "Wojciech",
-  "Iwona", "Sławomir", "Halina", "Janusz",
+  "Filip",
+  "Andrzej",
+  "Małgorzata",
+  "Katarzyna",
+  "Piotr",
+  "Tomasz",
+  "Anna",
+  "Marek",
+  "Joanna",
+  "Krzysztof",
+  "Magdalena",
+  "Łukasz",
+  "Ewa",
+  "Paweł",
+  "Agnieszka",
+  "Michał",
+  "Dorota",
+  "Robert",
+  "Beata",
+  "Adam",
+  "Wojciech",
+  "Iwona",
+  "Sławomir",
+  "Halina",
+  "Janusz",
 ];
 
 // Mniejsze miejscowości — powiatowe i mniejsze
 const CITIES = [
-  "Mińsk Mazowiecki", "Sochaczew", "Otwock", "Płońsk", "Kutno", "Konin",
-  "Piła", "Inowrocław", "Słupsk", "Tczew", "Malbork", "Ełk", "Suwałki",
-  "Zamość", "Chełm", "Mielec", "Stalowa Wola", "Nysa", "Brzeg", "Bolesławiec",
-  "Świdnica", "Sanok", "Krosno", "Jasło", "Ciechanów", "Skierniewice",
-  "Łowicz", "Sieradz", "Wieluń", "Bełchatów", "Tomaszów Mazowiecki",
-  "Pabianice", "Grudziądz", "Lębork", "Kościerzyna", "Starogard Gdański",
-  "Ostrów Wielkopolski", "Jarosław", "Przemyśl", "Zgorzelec",
+  "Mińsk Mazowiecki",
+  "Sochaczew",
+  "Otwock",
+  "Płońsk",
+  "Kutno",
+  "Konin",
+  "Piła",
+  "Inowrocław",
+  "Słupsk",
+  "Tczew",
+  "Malbork",
+  "Ełk",
+  "Suwałki",
+  "Zamość",
+  "Chełm",
+  "Mielec",
+  "Stalowa Wola",
+  "Nysa",
+  "Brzeg",
+  "Bolesławiec",
+  "Świdnica",
+  "Sanok",
+  "Krosno",
+  "Jasło",
+  "Ciechanów",
+  "Skierniewice",
+  "Łowicz",
+  "Sieradz",
+  "Wieluń",
+  "Bełchatów",
+  "Tomaszów Mazowiecki",
+  "Pabianice",
+  "Grudziądz",
+  "Lębork",
+  "Kościerzyna",
+  "Starogard Gdański",
+  "Ostrów Wielkopolski",
+  "Jarosław",
+  "Przemyśl",
+  "Zgorzelec",
 ];
 
 const PROPERTY_TYPES: (keyof typeof PROPERTY_TYPE_LABELS)[] = [
-  "apartment", "house", "plot_building", "commercial",
+  "apartment",
+  "house",
+  "plot_building",
+  "commercial",
 ];
 
 function mulberry32(seed: number) {
@@ -153,17 +226,17 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       amount = Math.round((40_000 + rand() * 160_000) / 5_000) * 5_000; // 40–200k
     }
     // Dłuższe okresy bardziej prawdopodobne → niższe raty (bliżej minimum)
-    const period = amount > 400_000
-      ? pick([24, 30, 36])               // powyżej 400k max 36 mies.
-      : pick([36, 48, 60, 60, 72, 72]);  // do 400k preferujemy długie okresy
+    const period =
+      amount > 400_000
+        ? pick([24, 30, 36]) // powyżej 400k max 36 mies.
+        : pick([36, 48, 60, 60, 72, 72]); // do 400k preferujemy długie okresy
     // Stopa zwrotu w okolicy minimum z kalkulatora
-    const rate = period <= 36
-      ? Math.round((24 + rand() * 2) * 2) / 2     // 24% – 26%
-      : Math.round((15 + rand() * 3) * 2) / 2;    // 15% – 18%
+    const rate =
+      period <= 36
+        ? Math.round((24 + rand() * 2) * 2) / 2 // 24% – 26%
+        : Math.round((15 + rand() * 3) * 2) / 2; // 15% – 18%
     const figures = computeOfferFigures(amount, period, rate);
-    const minutesAgo = i < 3
-      ? Math.floor(rand() * 180) + 3
-      : Math.floor(rand() * 60 * 24 * 7) + 60;
+    const minutesAgo = i < 3 ? Math.floor(rand() * 180) + 3 : Math.floor(rand() * 60 * 24 * 7) + 60;
     const formRoll = rand();
     const business_legal_form: "jdg" | "sp_zoo" | "sa" =
       formRoll < 0.7 ? "jdg" : formRoll < 0.92 ? "sp_zoo" : "sa";
@@ -194,7 +267,6 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
   return items;
 }
 
-
 function timeAgo(iso: string): string {
   const d = new Date(iso).getTime();
   const diff = Math.max(0, Date.now() - d);
@@ -220,7 +292,6 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
 
   const allItems = useMemo(() => (seed == null ? [] : generateOffers(seed, 28)), [seed]);
 
-
   // ---- Wyszukiwarka / filtry --------------------------------------------
   const [q, setQ] = useState("");
   const [propType, setPropType] = useState<keyof typeof PROPERTY_TYPE_LABELS | "all">("all");
@@ -230,23 +301,35 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
 
   const items = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return allItems.filter((it) =>
-      (needle === "" || it.city.toLowerCase().includes(needle) || it.first_name.toLowerCase().includes(needle)) &&
-      (propType === "all" || it.property_type === propType) &&
-      it.loan_amount <= amountMax &&
-      it.preferred_period_months <= periodMax &&
-      it.annual_investor_rate >= minRate,
+    return allItems.filter(
+      (it) =>
+        (needle === "" ||
+          it.city.toLowerCase().includes(needle) ||
+          it.first_name.toLowerCase().includes(needle)) &&
+        (propType === "all" || it.property_type === propType) &&
+        it.loan_amount <= amountMax &&
+        it.preferred_period_months <= periodMax &&
+        it.annual_investor_rate >= minRate,
     );
   }, [allItems, q, propType, amountMax, periodMax, minRate]);
 
-  const filtersActive = q !== "" || propType !== "all" || amountMax !== 900_000 || periodMax !== 72 || minRate !== 15;
-  const resetFilters = () => { setQ(""); setPropType("all"); setAmountMax(900_000); setPeriodMax(72); setMinRate(15); };
+  const filtersActive =
+    q !== "" || propType !== "all" || amountMax !== 900_000 || periodMax !== 72 || minRate !== 15;
+  const resetFilters = () => {
+    setQ("");
+    setPropType("all");
+    setAmountMax(900_000);
+    setPeriodMax(72);
+    setMinRate(15);
+  };
 
   return (
     <section id="ostatnie-oferty" className="border-t border-border bg-secondary/30 scroll-mt-20">
       <div className="mx-auto max-w-5xl px-4 py-12 md:px-6 md:py-16">
         <FancyShell>
-          <p className="text-xs font-bold uppercase tracking-widest text-white/80">Ostatnie oferty</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-white/80">
+            Ostatnie oferty
+          </p>
           <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-white md:text-3xl">
             Oferty pożyczek pod zastaw nieruchomości
           </h2>
@@ -268,7 +351,12 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
               />
             </div>
             {filtersActive && (
-              <Button variant="ghost" size="sm" onClick={resetFilters} className="self-end md:self-auto">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetFilters}
+                className="self-end md:self-auto"
+              >
                 <X className="mr-1 h-3.5 w-3.5" /> Wyczyść
               </Button>
             )}
@@ -299,27 +387,65 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
 
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-muted-foreground">Maks. kwota: <b className="text-foreground tabular-nums">{formatPLN(amountMax)}</b></span>
-              <input type="range" min={40_000} max={900_000} step={10_000} value={amountMax} onChange={(e) => setAmountMax(Number(e.target.value))} className="accent-primary" />
+              <span className="text-muted-foreground">
+                Maks. kwota: <b className="text-foreground tabular-nums">{formatPLN(amountMax)}</b>
+              </span>
+              <input
+                type="range"
+                min={40_000}
+                max={900_000}
+                step={10_000}
+                value={amountMax}
+                onChange={(e) => setAmountMax(Number(e.target.value))}
+                className="accent-primary"
+              />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-muted-foreground">Maks. okres: <b className="text-foreground tabular-nums">{periodMax} mies.</b></span>
-              <input type="range" min={12} max={72} step={6} value={periodMax} onChange={(e) => setPeriodMax(Number(e.target.value))} className="accent-primary" />
+              <span className="text-muted-foreground">
+                Maks. okres: <b className="text-foreground tabular-nums">{periodMax} mies.</b>
+              </span>
+              <input
+                type="range"
+                min={12}
+                max={72}
+                step={6}
+                value={periodMax}
+                onChange={(e) => setPeriodMax(Number(e.target.value))}
+                className="accent-primary"
+              />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-muted-foreground">Min. stopa zwrotu: <b className="text-emerald-600 tabular-nums">{minRate}%</b></span>
-              <input type="range" min={15} max={36} step={0.5} value={minRate} onChange={(e) => setMinRate(Number(e.target.value))} className="accent-primary" />
+              <span className="text-muted-foreground">
+                Min. stopa zwrotu: <b className="text-emerald-600 tabular-nums">{minRate}%</b>
+              </span>
+              <input
+                type="range"
+                min={15}
+                max={36}
+                step={0.5}
+                value={minRate}
+                onChange={(e) => setMinRate(Number(e.target.value))}
+                className="accent-primary"
+              />
             </label>
           </div>
 
           <div className="mt-3 text-xs text-muted-foreground">
-            Znaleziono <b className="text-foreground tabular-nums">{items.length}</b> z {allItems.length} ofert
+            Znaleziono <b className="text-foreground tabular-nums">{items.length}</b> z{" "}
+            {allItems.length} ofert
           </div>
         </div>
 
         {items.length === 0 && allItems.length > 0 && (
           <div className="mt-8 rounded-2xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
-            Żadna oferta nie spełnia filtrów. Rozluźnij kryteria lub <button onClick={resetFilters} className="font-semibold text-primary underline-offset-2 hover:underline">wyczyść filtry</button>.
+            Żadna oferta nie spełnia filtrów. Rozluźnij kryteria lub{" "}
+            <button
+              onClick={resetFilters}
+              className="font-semibold text-primary underline-offset-2 hover:underline"
+            >
+              wyczyść filtry
+            </button>
+            .
           </div>
         )}
 
@@ -339,12 +465,18 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                   <span
                     aria-hidden
                     className="pointer-events-none absolute -left-10 top-24 h-40 w-40 rounded-full blur-3xl"
-                    style={{ background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.55), transparent 70%)" }}
+                    style={{
+                      background:
+                        "radial-gradient(circle, oklch(0.55 0.22 268 / 0.55), transparent 70%)",
+                    }}
                   />
                   <span
                     aria-hidden
                     className="pointer-events-none absolute -right-12 bottom-10 h-44 w-44 rounded-full blur-3xl"
-                    style={{ background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.45), transparent 70%)" }}
+                    style={{
+                      background:
+                        "radial-gradient(circle, oklch(0.68 0.16 235 / 0.45), transparent 70%)",
+                    }}
                   />
                   {(() => {
                     const v = PROPERTY_VISUAL[it.property_type] ?? PROPERTY_VISUAL.house;
@@ -383,23 +515,32 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                       <span className="text-xs text-white/70">{timeAgo(it.created_at)}</span>
                     </div>
 
-
-
-                    <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
+                    <div className="mt-3 flex flex-wrap justify-between gap-3 text-sm">
                       <div>
-                        <div className="text-[11px] uppercase tracking-wide text-white/60">Kwota</div>
-                        <div className="tabular-nums font-bold text-white">{formatPLN(it.loan_amount)}</div>
+                        <div className="text-[11px] uppercase tracking-wide text-white/60">
+                          Kwota
+                        </div>
+                        <div className="tabular-nums font-bold text-white">
+                          {formatPLN(it.loan_amount)}
+                        </div>
                       </div>
                       <div>
-                        <div className="text-[11px] uppercase tracking-wide text-white/60">Okres</div>
-                        <div className="tabular-nums font-bold text-white">{it.preferred_period_months} mies.</div>
+                        <div className="text-[11px] uppercase tracking-wide text-white/60">
+                          Okres
+                        </div>
+                        <div className="tabular-nums font-bold text-white">
+                          {it.preferred_period_months} mies.
+                        </div>
                       </div>
                       <div>
-                        <div className="text-[11px] uppercase tracking-wide text-white/60">Rata</div>
-                        <div className="tabular-nums font-bold text-white">{formatPLN(f.monthly)}</div>
+                        <div className="text-[11px] uppercase tracking-wide text-white/60">
+                          Rata
+                        </div>
+                        <div className="tabular-nums font-bold text-white">
+                          {formatPLN(f.monthly)}
+                        </div>
                       </div>
                     </div>
-
 
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       <Button asChild size="sm" className="bg-white text-primary hover:bg-white/90">
@@ -407,22 +548,28 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                           Inwestuję <ArrowRight className="ml-1 h-4 w-4" />
                         </Link>
                       </Button>
-                      <Button asChild size="sm" variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white">
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                      >
                         <Link
                           to="/negocjuj"
-                          search={{
-                            app: it.id,
-                            client: it.first_name,
-                            amount: it.loan_amount,
-                            months: it.preferred_period_months,
-                            rate: it.annual_investor_rate,
-                          } as never}
+                          search={
+                            {
+                              app: it.id,
+                              client: it.first_name,
+                              amount: it.loan_amount,
+                              months: it.preferred_period_months,
+                              rate: it.annual_investor_rate,
+                            } as never
+                          }
                         >
                           Negocjuję
                         </Link>
                       </Button>
                     </div>
-
                   </div>
                 </li>
               );

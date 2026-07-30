@@ -46,7 +46,12 @@ export async function analyzeKwLegal(args: {
   hasMortgageFlag?: boolean | null;
 }): Promise<KwLegalAnalysis> {
   const emptyParams: KwPropertyParams = {
-    kind: null, usableAreaM2: null, landAreaM2: null, landAreaHa: null, roomCount: null, landUse: null,
+    kind: null,
+    usableAreaM2: null,
+    landAreaM2: null,
+    landAreaHa: null,
+    roomCount: null,
+    landUse: null,
   };
   const empty: KwLegalAnalysis = {
     available: false,
@@ -68,7 +73,9 @@ export async function analyzeKwLegal(args: {
   };
   if (args.hasMortgageFlag) {
     // Deklaracja z wniosku musi być widoczna nawet bez treści KW.
-    empty.warnings.push("We wniosku zadeklarowano hipotekę — treść działu IV KW niedostępna, obciążenie wymaga weryfikacji.");
+    empty.warnings.push(
+      "We wniosku zadeklarowano hipotekę — treść działu IV KW niedostępna, obciążenie wymaga weryfikacji.",
+    );
     empty.legalRiskScore = 45;
   }
 
@@ -121,9 +128,18 @@ export async function analyzeKwLegal(args: {
         ? "We wniosku zadeklarowano hipotekę, ale nie rozpoznano wpisów w dziale IV KW — zweryfikuj treść działu IV ręcznie."
         : "We wniosku zadeklarowano hipotekę, a dział IV KW jest pusty/nieodczytany — obciążenie przyjęto ostrożnościowo.",
     );
-  if (hasEnforcement) warnings.push("W dziale III KW występują wpisy o egzekucji/zajęciu — bardzo wysokie ryzyko prawne.");
-  if (hasUsufruct) warnings.push("W dziale III KW występuje służebność/dożywocie — ograniczenie zbywalności/wartości.");
-  if (owners.length > 1) warnings.push(`Wielu właścicieli w dziale II KW (${owners.length}) — wymagana zgoda współwłaścicieli.`);
+  if (hasEnforcement)
+    warnings.push(
+      "W dziale III KW występują wpisy o egzekucji/zajęciu — bardzo wysokie ryzyko prawne.",
+    );
+  if (hasUsufruct)
+    warnings.push(
+      "W dziale III KW występuje służebność/dożywocie — ograniczenie zbywalności/wartości.",
+    );
+  if (owners.length > 1)
+    warnings.push(
+      `Wielu właścicieli w dziale II KW (${owners.length}) — wymagana zgoda współwłaścicieli.`,
+    );
 
   const summary =
     `Dział II: ${owners.length ? owners.length + " podmiotów (" + owners.slice(0, 3).join(", ") + (owners.length > 3 ? "…" : "") + ")" : "brak rozpoznanych właścicieli"}. ` +
@@ -147,6 +163,9 @@ export async function analyzeKwLegal(args: {
     soilClass,
     legalRiskScore,
     warnings,
-    summary: kondygnacja != null ? `${summary} Kondygnacja lokalu: ${kondygnacja} (${kondygnacja <= 1 ? "parter" : (kondygnacja - 1) + ". piętro"}).` : summary,
+    summary:
+      kondygnacja != null
+        ? `${summary} Kondygnacja lokalu: ${kondygnacja} (${kondygnacja <= 1 ? "parter" : kondygnacja - 1 + ". piętro"}).`
+        : summary,
   };
 }

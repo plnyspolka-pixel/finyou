@@ -37,15 +37,13 @@ export const saveTextAgentSettings = createServerFn({ method: "POST" })
     const isAdmin = (roles ?? []).some((r) => r.role === "administrator");
     if (!isAdmin) throw new Error("Brak uprawnień");
 
-    const { error } = await supabaseAdmin
-      .from("text_agent_settings")
-      .upsert({
-        id: 1,
-        system_prompt: data.systemPrompt ?? "",
-        first_message: data.firstMessage ?? null,
-        updated_at: new Date().toISOString(),
-        updated_by: context.userId,
-      });
+    const { error } = await supabaseAdmin.from("text_agent_settings").upsert({
+      id: 1,
+      system_prompt: data.systemPrompt ?? "",
+      first_message: data.firstMessage ?? null,
+      updated_at: new Date().toISOString(),
+      updated_by: context.userId,
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

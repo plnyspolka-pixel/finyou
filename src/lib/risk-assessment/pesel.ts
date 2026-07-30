@@ -50,7 +50,13 @@ function validChecksum(digits: number[]): boolean {
 export function parsePesel(raw: string | null | undefined, referenceDate?: Date): PeselInfo {
   const s = (raw ?? "").replace(/\s+/g, "");
   if (!/^\d{11}$/.test(s)) {
-    return { valid: false, birthDate: null, sex: null, age: null, error: "PESEL musi mieć 11 cyfr." };
+    return {
+      valid: false,
+      birthDate: null,
+      sex: null,
+      age: null,
+      error: "PESEL musi mieć 11 cyfr.",
+    };
   }
   const digits = s.split("").map((c) => Number(c));
 
@@ -60,14 +66,32 @@ export function parsePesel(raw: string | null | undefined, referenceDate?: Date)
 
   const century = decodeCentury(monthField);
   if (!century) {
-    return { valid: false, birthDate: null, sex: null, age: null, error: "Nieprawidłowe kodowanie miesiąca/stulecia." };
+    return {
+      valid: false,
+      birthDate: null,
+      sex: null,
+      age: null,
+      error: "Nieprawidłowe kodowanie miesiąca/stulecia.",
+    };
   }
   const year = century.century + yy;
   if (!isRealDate(year, century.month, day)) {
-    return { valid: false, birthDate: null, sex: null, age: null, error: "Zakodowana data urodzenia nie istnieje." };
+    return {
+      valid: false,
+      birthDate: null,
+      sex: null,
+      age: null,
+      error: "Zakodowana data urodzenia nie istnieje.",
+    };
   }
   if (!validChecksum(digits)) {
-    return { valid: false, birthDate: null, sex: null, age: null, error: "Błędna cyfra kontrolna." };
+    return {
+      valid: false,
+      birthDate: null,
+      sex: null,
+      age: null,
+      error: "Błędna cyfra kontrolna.",
+    };
   }
 
   // 10. cyfra (indeks 9): nieparzysta → mężczyzna, parzysta → kobieta.

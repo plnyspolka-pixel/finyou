@@ -12,7 +12,11 @@ function verifySvix(req: Request, body: string): boolean {
   if (!id || !ts || !sigHeader) return false;
   const keyB64 = secret.startsWith("whsec_") ? secret.slice(6) : secret;
   let keyBuf: Buffer;
-  try { keyBuf = Buffer.from(keyB64, "base64"); } catch { return false; }
+  try {
+    keyBuf = Buffer.from(keyB64, "base64");
+  } catch {
+    return false;
+  }
   const signed = `${id}.${ts}.${body}`;
   const expected = createHmac("sha256", keyBuf).update(signed).digest("base64");
   for (const part of sigHeader.split(" ")) {
@@ -22,7 +26,9 @@ function verifySvix(req: Request, body: string): boolean {
       const a = Buffer.from(sig);
       const b = Buffer.from(expected);
       if (a.length === b.length && timingSafeEqual(a, b)) return true;
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   }
   return false;
 }

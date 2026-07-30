@@ -23,10 +23,12 @@ export const rescoreLead = createServerFn({ method: "POST" })
 export const markBadLead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
-    z.object({
-      leadId: z.string().uuid(),
-      reason: z.string().min(1).max(500),
-    }).parse(i)
+    z
+      .object({
+        leadId: z.string().uuid(),
+        reason: z.string().min(1).max(500),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);

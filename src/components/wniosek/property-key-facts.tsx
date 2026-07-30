@@ -41,9 +41,7 @@ export function PropertyKeyFacts({
           {propertyTypeLabels[propertyType] ?? propertyType}
         </Badge>
       )}
-      {periodMonths && (
-        <span className="text-muted-foreground">{periodMonths} mies.</span>
-      )}
+      {periodMonths && <span className="text-muted-foreground">{periodMonths} mies.</span>}
       {kwNumber && (
         <Badge variant="secondary" className="gap-1" title="Numer księgi wieczystej">
           <Hash className="h-3 w-3" />

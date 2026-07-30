@@ -55,8 +55,8 @@ export function RemindersPanel() {
       <div>
         <h2 className="text-lg font-semibold">Przypomnienia voicebota</h2>
         <p className="text-xs sm:text-sm text-muted-foreground">
-          Voicebot dzwoni automatycznie: po 2h, 24h, 72h, potem co 5 dni — maks. 30 dni od pierwszego przypomnienia.
-          Możesz w każdej chwili zadzwonić ręcznie lub wstrzymać.
+          Voicebot dzwoni automatycznie: po 2h, 24h, 72h, potem co 5 dni — maks. 30 dni od
+          pierwszego przypomnienia. Możesz w każdej chwili zadzwonić ręcznie lub wstrzymać.
         </p>
       </div>
 
@@ -69,19 +69,31 @@ export function RemindersPanel() {
         {(q.data ?? []).map((r: any) => {
           const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
           const phone = r.client?.phone_normalized ?? r.client?.phone ?? "—";
-          const missing: string[] = Array.isArray(r.missing_documents_snapshot) ? r.missing_documents_snapshot : [];
+          const missing: string[] = Array.isArray(r.missing_documents_snapshot)
+            ? r.missing_documents_snapshot
+            : [];
           return (
             <Card key={r.id} className="p-4">
               <div className="flex flex-wrap items-start gap-3">
                 <div className="flex-1 min-w-[200px]">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium">{name}</span>
-                    <Badge variant="outline" className="text-[10px]">{r.status}</Badge>
-                    <Badge variant="secondary" className="text-[10px]">Krok {r.current_form_step}/5</Badge>
+                    <Badge variant="outline" className="text-[10px]">
+                      {r.status}
+                    </Badge>
+                    <Badge variant="secondary" className="text-[10px]">
+                      Krok {r.current_form_step}/5
+                    </Badge>
                     {r.property?.property_type && (
-                      <Badge variant="outline" className="text-[10px]">{r.property.property_type}</Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        {r.property.property_type}
+                      </Badge>
                     )}
-                    {r.reminder_paused && <Badge variant="destructive" className="text-[10px]">WSTRZYMANE</Badge>}
+                    {r.reminder_paused && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        WSTRZYMANE
+                      </Badge>
+                    )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     📞 {phone} {r.property?.city ? `· ${r.property.city}` : ""}
@@ -89,9 +101,13 @@ export function RemindersPanel() {
                   </div>
                 </div>
                 <div className="text-xs text-right space-y-0.5 min-w-[180px]">
-                  <div>Prób: <b>{r.reminder_attempts ?? 0}</b></div>
+                  <div>
+                    Prób: <b>{r.reminder_attempts ?? 0}</b>
+                  </div>
                   <div className="text-muted-foreground">Ost.: {fmtDate(r.last_reminder_at)}</div>
-                  <div className="text-muted-foreground">Następne: {fmtDate(r.next_reminder_at)}</div>
+                  <div className="text-muted-foreground">
+                    Następne: {fmtDate(r.next_reminder_at)}
+                  </div>
                 </div>
               </div>
 
@@ -105,7 +121,8 @@ export function RemindersPanel() {
                 </div>
               ) : (
                 <div className="mt-3 flex items-center gap-2 text-xs text-emerald-600">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Snapshot: nic nie brakuje (zaktualizuje się przy kolejnym przypomnieniu)
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Snapshot: nic nie brakuje (zaktualizuje
+                  się przy kolejnym przypomnieniu)
                 </div>
               )}
 
@@ -119,9 +136,13 @@ export function RemindersPanel() {
                   onClick={() => mPause.mutate({ id: r.id, paused: !r.reminder_paused })}
                 >
                   {r.reminder_paused ? (
-                    <><Play className="h-3.5 w-3.5 mr-1" /> Wznów</>
+                    <>
+                      <Play className="h-3.5 w-3.5 mr-1" /> Wznów
+                    </>
                   ) : (
-                    <><Pause className="h-3.5 w-3.5 mr-1" /> Wstrzymaj</>
+                    <>
+                      <Pause className="h-3.5 w-3.5 mr-1" /> Wstrzymaj
+                    </>
                   )}
                 </Button>
                 <Link to="/admin/klienci/$id" params={{ id: r.id }}>
@@ -129,7 +150,11 @@ export function RemindersPanel() {
                     <ExternalLink className="h-3.5 w-3.5 mr-1" /> Szczegóły leada
                   </Button>
                 </Link>
-                <Button size="sm" variant="ghost" onClick={() => setOpenId(openId === r.id ? null : r.id)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setOpenId(openId === r.id ? null : r.id)}
+                >
                   {openId === r.id ? "Ukryj zmienne" : "Pokaż zmienne dla ElevenLabs"}
                 </Button>
               </div>
@@ -139,7 +164,9 @@ export function RemindersPanel() {
           );
         })}
         {q.data && q.data.length === 0 && (
-          <Card className="p-6 text-center text-muted-foreground">Brak aktywnych leadów do przypomnienia.</Card>
+          <Card className="p-6 text-center text-muted-foreground">
+            Brak aktywnych leadów do przypomnienia.
+          </Card>
         )}
       </div>
     </div>
@@ -156,8 +183,12 @@ function VariablesPreview({ loanId }: { loanId: string }) {
   if (!q.data) return null;
   return (
     <div className="mt-3 rounded border bg-muted/40 p-3">
-      <div className="text-xs font-semibold mb-2">Zmienne dynamiczne wysyłane do agenta ElevenLabs:</div>
-      <pre className="text-[11px] overflow-x-auto whitespace-pre-wrap">{JSON.stringify(q.data.variables, null, 2)}</pre>
+      <div className="text-xs font-semibold mb-2">
+        Zmienne dynamiczne wysyłane do agenta ElevenLabs:
+      </div>
+      <pre className="text-[11px] overflow-x-auto whitespace-pre-wrap">
+        {JSON.stringify(q.data.variables, null, 2)}
+      </pre>
     </div>
   );
 }

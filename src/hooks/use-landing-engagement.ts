@@ -43,7 +43,10 @@ export function useLandingEngagement({ landingId, variantId, source }: Args) {
       if (!target) return;
       const tag = target.tagName.toLowerCase();
       const id = target.id || null;
-      const cls = (target.className && typeof target.className === "string") ? target.className.slice(0, 100) : null;
+      const cls =
+        target.className && typeof target.className === "string"
+          ? target.className.slice(0, 100)
+          : null;
       const text = (target.innerText || "").slice(0, 80);
       const role = target.getAttribute("role");
       const href = (target.closest("a") as HTMLAnchorElement | null)?.href ?? null;
@@ -52,21 +55,42 @@ export function useLandingEngagement({ landingId, variantId, source }: Args) {
       const y = Math.round(e.clientY + window.scrollY);
       const xPct = Math.round((x / Math.max(1, document.documentElement.clientWidth)) * 100);
       const yPct = Math.round((y / Math.max(1, document.documentElement.scrollHeight)) * 100);
-      record("click", { tag, id, cls, role, text, href, x, y, xPct, yPct, vw: window.innerWidth, vh: window.innerHeight });
+      record("click", {
+        tag,
+        id,
+        cls,
+        role,
+        text,
+        href,
+        x,
+        y,
+        xPct,
+        yPct,
+        vw: window.innerWidth,
+        vh: window.innerHeight,
+      });
     };
 
     const flushTime = () => {
       const sec = Math.round((Date.now() - startedAt) / 1000);
       if (sec < 2) return;
-      const data = JSON.stringify([{
-        landing_id: landingId, variant_id: variantId, event_type: "time_on_page", source,
-        meta: { seconds: sec, max_scroll: Math.max(0, ...Array.from(reached)) },
-      }]);
+      const data = JSON.stringify([
+        {
+          landing_id: landingId,
+          variant_id: variantId,
+          event_type: "time_on_page",
+          source,
+          meta: { seconds: sec, max_scroll: Math.max(0, ...Array.from(reached)) },
+        },
+      ]);
       try {
         // sendBeacon for reliability on unload
         const url = `${(import.meta as any).env.VITE_SUPABASE_URL}/rest/v1/ai_landing_events`;
         const blob = new Blob([data], { type: "application/json" });
-        const ok = navigator.sendBeacon?.(`${url}?apikey=${(import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY}`, blob);
+        const ok = navigator.sendBeacon?.(
+          `${url}?apikey=${(import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          blob,
+        );
         if (!ok) record("time_on_page", { seconds: sec });
       } catch {
         record("time_on_page", { seconds: sec });

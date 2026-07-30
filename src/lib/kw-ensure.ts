@@ -33,7 +33,9 @@ export async function ensureKwReady(
       opts.onStatus?.("ready");
       return { ok: true, kwNumber: null };
     }
-  } catch { /* ignore, spróbujemy zlecić poniżej */ }
+  } catch {
+    /* ignore, spróbujemy zlecić poniżej */
+  }
 
   let lastKwNumber: string | null = null;
   // Główna pętla: zlecamy pobranie (każde wywołanie pollingu ~45 s), potem
@@ -71,16 +73,30 @@ export async function ensureKwReady(
         }
         if (st === "not_found") {
           opts.onStatus?.("not_found");
-          return { ok: false, status: "not_found", message: "Księga wieczysta nie została odnaleziona w EKW." };
+          return {
+            ok: false,
+            status: "not_found",
+            message: "Księga wieczysta nie została odnaleziona w EKW.",
+          };
         }
         if (st === "error") {
           opts.onStatus?.("error");
-          return { ok: false, status: "error", message: (cur as any)?.document?.last_error ?? "Błąd pobierania KW." };
+          return {
+            ok: false,
+            status: "error",
+            message: (cur as any)?.document?.last_error ?? "Błąd pobierania KW.",
+          };
         }
         opts.onStatus?.(st === "processing" ? "processing" : "unknown");
-      } catch { /* ignore, spróbujemy w kolejnej iteracji */ }
+      } catch {
+        /* ignore, spróbujemy w kolejnej iteracji */
+      }
     }
   }
 
-  return { ok: false, status: "timeout", message: "Przekroczono czas oczekiwania na pobranie treści KW." };
+  return {
+    ok: false,
+    status: "timeout",
+    message: "Przekroczono czas oczekiwania na pobranie treści KW.",
+  };
 }

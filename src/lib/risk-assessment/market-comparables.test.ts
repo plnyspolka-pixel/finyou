@@ -27,7 +27,15 @@ describe("computePreferredPpm2 — preferencja transakcji nad ofertami", () => {
 
   it("pusta próbka → same null", () => {
     const stats = computePreferredPpm2([], []);
-    expect(stats).toMatchObject({ median: null, average: null, min: null, max: null, p25: null, p75: null, count: 0 });
+    expect(stats).toMatchObject({
+      median: null,
+      average: null,
+      min: null,
+      max: null,
+      p25: null,
+      p75: null,
+      count: 0,
+    });
   });
 
   it("odfiltrowuje wartości spoza zakresu (śmieci)", () => {
@@ -41,7 +49,7 @@ describe("computePreferredPpm2 — preferencja transakcji nad ofertami", () => {
     const stats = computePreferredPpm2([4_000, 5_000], [8_000, 9_000, 10_000, 11_000]);
     expect(stats.p25).not.toBeNull();
     expect(stats.p75).not.toBeNull();
-    expect((stats.p25 as number)).toBeLessThanOrEqual(stats.median as number);
-    expect((stats.median as number)).toBeLessThanOrEqual(stats.p75 as number);
+    expect(stats.p25 as number).toBeLessThanOrEqual(stats.median as number);
+    expect(stats.median as number).toBeLessThanOrEqual(stats.p75 as number);
   });
 });

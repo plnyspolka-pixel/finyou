@@ -14,7 +14,10 @@ export async function sendMailgunEmail(opts: {
   const connKey = process.env.MAILGUN_API_KEY;
   const domain = process.env.MAILGUN_DOMAIN;
   if (!lovableKey || !connKey || !domain) {
-    return { ok: false, error: "Mailgun env missing (LOVABLE_API_KEY / MAILGUN_API_KEY / MAILGUN_DOMAIN)" };
+    return {
+      ok: false,
+      error: "Mailgun env missing (LOVABLE_API_KEY / MAILGUN_API_KEY / MAILGUN_DOMAIN)",
+    };
   }
   const subject = (opts.subject ?? "").trim();
   if (!subject) {

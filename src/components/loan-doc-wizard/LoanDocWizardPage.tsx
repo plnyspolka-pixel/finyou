@@ -53,7 +53,9 @@ const FINANCE_YOU_ID = "finance_you";
 function pickDefaultTemplate(templates: DocTemplate[]): DocTemplate | null {
   const loan = templates.find((t) => {
     const s = `${t.slug} ${t.name}`.toLowerCase();
-    return s.includes("umowa-pozyczki") || s.includes("umowa pożyczki") || s.includes("umowa pozyczki");
+    return (
+      s.includes("umowa-pozyczki") || s.includes("umowa pożyczki") || s.includes("umowa pozyczki")
+    );
   });
   return loan ?? templates[0] ?? null;
 }
@@ -332,16 +334,28 @@ export function LoanDocWizardPage() {
               <Calculator className="h-3.5 w-3.5 text-primary" />
               {calc ? (
                 <span className="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" /> Wczytano kalkulację ({calc.schedule.length} rat) — dane finansowe i harmonogram uzupełniane bez AI.
+                  <CheckCircle2 className="h-3 w-3" /> Wczytano kalkulację ({calc.schedule.length}{" "}
+                  rat) — dane finansowe i harmonogram uzupełniane bez AI.
                 </span>
               ) : handoffReady ? (
-                <span className="text-primary">Wykryto kalkulację z kalkulatora — wczytaj dane finansowe i harmonogram.</span>
+                <span className="text-primary">
+                  Wykryto kalkulację z kalkulatora — wczytaj dane finansowe i harmonogram.
+                </span>
               ) : (
-                <span>W kalkulatorze inwestora kliknij „Wyślij do kreatora”, aby zaciągnąć dane finansowe.</span>
+                <span>
+                  W kalkulatorze inwestora kliknij „Wyślij do kreatora”, aby zaciągnąć dane
+                  finansowe.
+                </span>
               )}
             </div>
-            <Button size="sm" variant={calc ? "outline" : "default"} onClick={() => void loadFromCalculator()} disabled={!handoffReady || thinking || bootLoading}>
-              <Calculator className="mr-2 h-4 w-4" /> {calc ? "Wczytaj ponownie" : "Wczytaj z kalkulatora"}
+            <Button
+              size="sm"
+              variant={calc ? "outline" : "default"}
+              onClick={() => void loadFromCalculator()}
+              disabled={!handoffReady || thinking || bootLoading}
+            >
+              <Calculator className="mr-2 h-4 w-4" />{" "}
+              {calc ? "Wczytaj ponownie" : "Wczytaj z kalkulatora"}
             </Button>
           </div>
         </CardContent>

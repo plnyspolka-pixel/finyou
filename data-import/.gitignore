@@ -1,0 +1,5 @@
+# Katalog na duże, ręcznie dostarczane pliki źródłowe importu GUS/TERYT/NSP.
+# Pliki danych NIE trafiają do repozytorium (rozmiar, licencje źródeł).
+# Instrukcja pozyskania: scripts/location-scoring/README-import.md
+*
+!.gitignore

@@ -2,7 +2,8 @@
 
 const PLATFORM_GUIDE: Record<string, string> = {
   facebook: "ton: rzeczowy, zaangażowany, do 80 słów, 2-3 emoji, 3-5 hashtagów na końcu",
-  instagram: "ton: lifestyle/visual storytelling, krótkie akapity, emoji w treści, 8-15 hashtagów na końcu",
+  instagram:
+    "ton: lifestyle/visual storytelling, krótkie akapity, emoji w treści, 8-15 hashtagów na końcu",
   linkedin: "ton: ekspercki B2B, 100-200 słów, bez emoji albo bardzo oszczędnie, 3-5 hashtagów",
   x: "do 270 znaków, mocny hook, 1-2 hashtagi, bez clickbaitu",
   tiktok: "ton: konwersacyjny, hook w 1. zdaniu, 5-8 hashtagów (#fyp opcjonalnie)",
@@ -42,7 +43,9 @@ Zwracaj WYŁĄCZNIE JSON: {"content":"...","hashtags":["#tag1","#tag2"],"image_p
   const parsed = JSON.parse(body.choices?.[0]?.message?.content ?? "{}");
   return {
     content: typeof parsed.content === "string" ? parsed.content : "",
-    hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.filter((h: unknown) => typeof h === "string") : [],
+    hashtags: Array.isArray(parsed.hashtags)
+      ? parsed.hashtags.filter((h: unknown) => typeof h === "string")
+      : [],
     image_prompt: typeof parsed.image_prompt === "string" ? parsed.image_prompt : "",
   };
 }

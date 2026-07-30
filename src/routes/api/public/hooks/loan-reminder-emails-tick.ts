@@ -31,23 +31,44 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails-tic
         if (cfg && !(cfg as any).sample_sent_at) {
           await s.from("reminder_email_schedule").update({ sample_sent_at: nowIso }).eq("id", 1);
           try {
-            const { EMAIL_FOLLOW_UPS, renderFollowUp, buildFollowUpVars } = await import("@/lib/follow-up-templates");
+            const { EMAIL_FOLLOW_UPS, renderFollowUp, buildFollowUpVars } =
+              await import("@/lib/follow-up-templates");
             const { sendResendEmail } = await import("@/lib/resend-send.server");
             const to = process.env.FOLLOWUP_SAMPLE_RECIPIENT || "plnyspolka@gmail.com";
-            const vars = buildFollowUpVars({ firstName: "Test", link: "https://financeyou.pl", loanAmount: "150 000 zł" });
+            const vars = buildFollowUpVars({
+              firstName: "Test",
+              link: "https://financeyou.pl",
+              loanAmount: "150 000 zł",
+            });
             const n = Math.min(10, EMAIL_FOLLOW_UPS.length);
             const sample: Array<{ i: number; ok: boolean; error?: string }> = [];
             for (let i = 0; i < n; i++) {
               const tpl = EMAIL_FOLLOW_UPS[i];
               const subject = `[${i + 1}/${n}] ${renderFollowUp(tpl.subject, vars)}`
-                .replace(/\{\{[^}]+\}\}/g, "").replace(/\s{2,}/g, " ").trim();
+                .replace(/\{\{[^}]+\}\}/g, "")
+                .replace(/\s{2,}/g, " ")
+                .trim();
               const html = renderFollowUp(tpl.body, vars);
-              const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-              const r = await sendResendEmail({ to, subject, text, html, fromName: "Ania z Finance You" });
+              const text = html
+                .replace(/<[^>]+>/g, " ")
+                .replace(/\s+/g, " ")
+                .trim();
+              const r = await sendResendEmail({
+                to,
+                subject,
+                text,
+                html,
+                fromName: "Ania z Finance You",
+              });
               sample.push({ i: i + 1, ok: r.ok, error: r.error });
             }
-            await s.from("reminder_email_schedule")
-              .update({ last_result: { deploy_sample: { to, sent: sample.filter((x) => x.ok).length, sample } } as any })
+            await s
+              .from("reminder_email_schedule")
+              .update({
+                last_result: {
+                  deploy_sample: { to, sent: sample.filter((x) => x.ok).length, sample },
+                } as any,
+              })
               .eq("id", 1);
           } catch (e: any) {
             console.error("[loan-reminder-emails-tick] deploy sample error", e?.message);
@@ -63,7 +84,9 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails-tic
 
         // Czy zgodnie z cronem powinniśmy odpalić batch w okresie od ostatniego ticka do teraz?
         const tz = cfg.timezone || "Europe/Warsaw";
-        const lastTick = cfg.last_tick_at ? new Date(cfg.last_tick_at) : new Date(Date.now() - 90 * 1000);
+        const lastTick = cfg.last_tick_at
+          ? new Date(cfg.last_tick_at)
+          : new Date(Date.now() - 90 * 1000);
         let due = false;
         try {
           const { CronExpressionParser } = await import("cron-parser");
@@ -74,7 +97,10 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails-tic
           const next = it.next().toDate();
           if (next.getTime() <= Date.now()) due = true;
         } catch (e: any) {
-          return Response.json({ ok: false, skipped: "invalid_cron", error: e?.message }, { status: 400 });
+          return Response.json(
+            { ok: false, skipped: "invalid_cron", error: e?.message },
+            { status: 400 },
+          );
         }
 
         if (!due) {

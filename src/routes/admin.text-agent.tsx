@@ -12,7 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Pencil } from "lucide-react";
 import { getTextAgentSettings, saveTextAgentSettings } from "@/lib/text-agent-settings.functions";
-import { listKnowledge, upsertKnowledge, deleteKnowledge } from "@/lib/text-agent-knowledge.functions";
+import {
+  listKnowledge,
+  upsertKnowledge,
+  deleteKnowledge,
+} from "@/lib/text-agent-knowledge.functions";
 
 export const Route = createFileRoute("/admin/text-agent")({
   component: TextAgentSettingsPage,
@@ -32,8 +36,12 @@ function TextAgentSettingsPage() {
           <TabsTrigger value="prompt">Prompt systemowy</TabsTrigger>
           <TabsTrigger value="knowledge">Baza wiedzy (RAG)</TabsTrigger>
         </TabsList>
-        <TabsContent value="prompt" className="mt-4"><PromptTab /></TabsContent>
-        <TabsContent value="knowledge" className="mt-4"><KnowledgeTab /></TabsContent>
+        <TabsContent value="prompt" className="mt-4">
+          <PromptTab />
+        </TabsContent>
+        <TabsContent value="knowledge" className="mt-4">
+          <KnowledgeTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -77,25 +85,39 @@ function PromptTab() {
       <CardHeader>
         <CardTitle>Prompt systemowy</CardTitle>
         <CardDescription>
-          Tools: <code>update_lead_data</code>, <code>send_application_link</code>, <code>mark_ready_for_human</code>.
-          Pusty prompt = używany jest domyślny. Cache 5 min.
+          Tools: <code>update_lead_data</code>, <code>send_application_link</code>,{" "}
+          <code>mark_ready_for_human</code>. Pusty prompt = używany jest domyślny. Cache 5 min.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
           <Label htmlFor="prompt">System prompt</Label>
-          <Textarea id="prompt" value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)}
-            rows={20} placeholder="Jesteś agentem Finance You..." disabled={loading}
-            className="font-mono text-sm mt-2" />
+          <Textarea
+            id="prompt"
+            value={systemPrompt}
+            onChange={(e) => setSystemPrompt(e.target.value)}
+            rows={20}
+            placeholder="Jesteś agentem Finance You..."
+            disabled={loading}
+            className="font-mono text-sm mt-2"
+          />
         </div>
         <div>
           <Label htmlFor="first">Pierwsza wiadomość (opcjonalnie)</Label>
-          <Input id="first" value={firstMessage} onChange={(e) => setFirstMessage(e.target.value)}
-            placeholder="Cześć! Tu Finance You — w czym mogę pomóc?" disabled={loading} className="mt-2" />
+          <Input
+            id="first"
+            value={firstMessage}
+            onChange={(e) => setFirstMessage(e.target.value)}
+            placeholder="Cześć! Tu Finance You — w czym mogę pomóc?"
+            disabled={loading}
+            className="mt-2"
+          />
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
-            {updatedAt ? `Ostatnio zapisano: ${formatDateTime(updatedAt)}` : "Brak zapisanych zmian"}
+            {updatedAt
+              ? `Ostatnio zapisano: ${formatDateTime(updatedAt)}`
+              : "Brak zapisanych zmian"}
           </span>
           <Button onClick={onSave} disabled={saving || loading}>
             {saving ? "Zapisywanie..." : "Zapisz"}
@@ -106,7 +128,13 @@ function PromptTab() {
   );
 }
 
-type KItem = { id: string; title: string; content: string; updated_at: string; has_embedding: boolean };
+type KItem = {
+  id: string;
+  title: string;
+  content: string;
+  updated_at: string;
+  has_embedding: boolean;
+};
 
 function KnowledgeTab() {
   const list = useServerFn(listKnowledge);
@@ -114,7 +142,9 @@ function KnowledgeTab() {
   const remove = useServerFn(deleteKnowledge);
   const [items, setItems] = useState<KItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<{ id?: string; title: string; content: string } | null>(null);
+  const [editing, setEditing] = useState<{ id?: string; title: string; content: string } | null>(
+    null,
+  );
   const [saving, setSaving] = useState(false);
 
   const reload = useCallback(async () => {
@@ -129,7 +159,9 @@ function KnowledgeTab() {
     }
   }, [list]);
 
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   const onSave = async () => {
     if (!editing || !editing.title.trim() || !editing.content.trim()) {
@@ -139,7 +171,11 @@ function KnowledgeTab() {
     setSaving(true);
     try {
       const res: any = await upsert({ data: editing });
-      toast.success(res.embedded ? "Zapisano (z embeddingiem)" : "Zapisano (bez embeddingu — sprawdź LOVABLE_API_KEY)");
+      toast.success(
+        res.embedded
+          ? "Zapisano (z embeddingiem)"
+          : "Zapisano (bez embeddingu — sprawdź LOVABLE_API_KEY)",
+      );
       setEditing(null);
       reload();
     } catch (e: any) {
@@ -166,8 +202,8 @@ function KnowledgeTab() {
         <div>
           <CardTitle>Baza wiedzy (RAG)</CardTitle>
           <CardDescription>
-            Wpisy są automatycznie embeddowane (openai/text-embedding-3-small) i podpinane do
-            rozmów na podstawie podobieństwa semantycznego do pytania klienta (top 4, próg 0.5).
+            Wpisy są automatycznie embeddowane (openai/text-embedding-3-small) i podpinane do rozmów
+            na podstawie podobieństwa semantycznego do pytania klienta (top 4, próg 0.5).
           </CardDescription>
         </div>
         <Button onClick={() => setEditing({ title: "", content: "" })} size="sm">
@@ -180,17 +216,30 @@ function KnowledgeTab() {
             <CardContent className="p-4 space-y-3">
               <div>
                 <Label>Tytuł</Label>
-                <Input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })}
-                  placeholder="Np. Maksymalna kwota pożyczki dla osób fizycznych" className="mt-2" />
+                <Input
+                  value={editing.title}
+                  onChange={(e) => setEditing({ ...editing, title: e.target.value })}
+                  placeholder="Np. Maksymalna kwota pożyczki dla osób fizycznych"
+                  className="mt-2"
+                />
               </div>
               <div>
                 <Label>Treść</Label>
-                <Textarea value={editing.content} onChange={(e) => setEditing({ ...editing, content: e.target.value })}
-                  rows={8} placeholder="Treść którą agent może wykorzystać w odpowiedzi..." className="mt-2 text-sm" />
+                <Textarea
+                  value={editing.content}
+                  onChange={(e) => setEditing({ ...editing, content: e.target.value })}
+                  rows={8}
+                  placeholder="Treść którą agent może wykorzystać w odpowiedzi..."
+                  className="mt-2 text-sm"
+                />
               </div>
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setEditing(null)} disabled={saving}>Anuluj</Button>
-                <Button onClick={onSave} disabled={saving}>{saving ? "Zapisywanie..." : "Zapisz"}</Button>
+                <Button variant="outline" onClick={() => setEditing(null)} disabled={saving}>
+                  Anuluj
+                </Button>
+                <Button onClick={onSave} disabled={saving}>
+                  {saving ? "Zapisywanie..." : "Zapisz"}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -199,7 +248,9 @@ function KnowledgeTab() {
         {loading ? (
           <p className="text-sm text-muted-foreground">Ładowanie...</p>
         ) : items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Brak wpisów. Dodaj pierwszy aby agent mógł korzystać z wiedzy.</p>
+          <p className="text-sm text-muted-foreground">
+            Brak wpisów. Dodaj pierwszy aby agent mógł korzystać z wiedzy.
+          </p>
         ) : (
           <div className="space-y-2">
             {items.map((it) => (
@@ -207,7 +258,11 @@ function KnowledgeTab() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium truncate">{it.title}</h4>
-                    {!it.has_embedding && <Badge variant="destructive" className="text-[10px]">brak embeddingu</Badge>}
+                    {!it.has_embedding && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        brak embeddingu
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{it.content}</p>
                   <p className="text-xs text-muted-foreground mt-1">

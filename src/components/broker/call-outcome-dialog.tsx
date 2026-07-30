@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Phone, PhoneOff, Mic, MicOff, Loader2, Check } from "lucide-react";
@@ -58,11 +64,12 @@ export function CallOutcomeDialog({ open, onOpenChange, leadId, leadName, onSave
     } else {
       stopMic();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const stopMic = () => {
-    try { recRef.current?.stop?.(); } catch {}
+    try {
+      recRef.current?.stop?.();
+    } catch {}
     recRef.current = null;
     setListening(false);
   };
@@ -76,7 +83,10 @@ export function CallOutcomeDialog({ open, onOpenChange, leadId, leadName, onSave
     try {
       // Request permission early on browsers that need explicit gesture.
       if (navigator.mediaDevices?.getUserMedia) {
-        await navigator.mediaDevices.getUserMedia({ audio: true }).then((s) => s.getTracks().forEach((t) => t.stop())).catch(() => {});
+        await navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then((s) => s.getTracks().forEach((t) => t.stop()))
+          .catch(() => {});
       }
       baseRef.current = note ? note.trim() + " " : "";
       const rec = new Ctor();
@@ -96,7 +106,8 @@ export function CallOutcomeDialog({ open, onOpenChange, leadId, leadName, onSave
       };
       rec.onerror = (e: any) => {
         if (e?.error === "not-allowed") toast.error("Brak dostępu do mikrofonu");
-        else if (e?.error && e.error !== "aborted" && e.error !== "no-speech") toast.error(`Mikrofon: ${e.error}`);
+        else if (e?.error && e.error !== "aborted" && e.error !== "no-speech")
+          toast.error(`Mikrofon: ${e.error}`);
         setListening(false);
       };
       rec.onend = () => setListening(false);
@@ -125,7 +136,11 @@ export function CallOutcomeDialog({ open, onOpenChange, leadId, leadName, onSave
         <DialogHeader>
           <DialogTitle>
             {step === "outcome" ? "Wynik rozmowy" : "Notatka z rozmowy"}
-            {leadName && <span className="block text-sm font-normal text-muted-foreground mt-1">{leadName}</span>}
+            {leadName && (
+              <span className="block text-sm font-normal text-muted-foreground mt-1">
+                {leadName}
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -169,19 +184,48 @@ export function CallOutcomeDialog({ open, onOpenChange, leadId, leadName, onSave
                   variant={listening ? "default" : "outline"}
                   size="sm"
                   onClick={listening ? stopMic : startMic}
-                  className={listening ? "bg-rose-600 hover:bg-rose-700 text-white animate-pulse" : ""}
+                  className={
+                    listening ? "bg-rose-600 hover:bg-rose-700 text-white animate-pulse" : ""
+                  }
                 >
-                  {listening ? <><MicOff className="h-4 w-4 mr-1.5" /> Zatrzymaj</> : <><Mic className="h-4 w-4 mr-1.5" /> Dyktuj</>}
+                  {listening ? (
+                    <>
+                      <MicOff className="h-4 w-4 mr-1.5" /> Zatrzymaj
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="h-4 w-4 mr-1.5" /> Dyktuj
+                    </>
+                  )}
                 </Button>
               ) : (
-                <span className="text-xs text-muted-foreground">Dyktowanie niedostępne w tej przeglądarce.</span>
+                <span className="text-xs text-muted-foreground">
+                  Dyktowanie niedostępne w tej przeglądarce.
+                </span>
               )}
               {listening && <span className="text-xs text-rose-600">● nagrywam…</span>}
             </div>
             <DialogFooter className="gap-2 sm:gap-2">
-              <Button type="button" variant="ghost" onClick={() => setStep("outcome")} disabled={save.isPending}>Wstecz</Button>
-              <Button type="button" onClick={handleSaveNote} disabled={save.isPending || !note.trim()}>
-                {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Zapisz</>}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setStep("outcome")}
+                disabled={save.isPending}
+              >
+                Wstecz
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveNote}
+                disabled={save.isPending || !note.trim()}
+              >
+                {save.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-1.5" /> Zapisz
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </div>

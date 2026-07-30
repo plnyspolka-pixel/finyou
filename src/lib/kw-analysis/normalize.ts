@@ -151,9 +151,9 @@ function parseProperties(doc: KwDocumentSections): NormalizedProperty[] {
   const addr = parseKwAddress(doc.dzial_1o);
   const parcels: string[] = [];
   const seen = new Set<string>();
-  for (const m of text.matchAll(
-    /(?:numer\s+dzia[łl]ki|dzia[łl]ki\s+ewidencyjne)[^0-9]{0,40}(\d{1,4}(?:\/\d{1,4})?)/gi,
-  )) {
+  // Tylko etykieta „Numer działki" — nagłówek „Działki ewidencyjne" sąsiaduje
+  // z „Lp. 1." i łapał liczbę porządkową jako numer działki.
+  for (const m of text.matchAll(/numer\s+dzia[łl]ki[^0-9]{0,40}(\d{1,4}(?:\/\d{1,4})?)/gi)) {
     if (!seen.has(m[1])) {
       seen.add(m[1]);
       parcels.push(m[1]);
@@ -162,7 +162,8 @@ function parseProperties(doc: KwDocumentSections): NormalizedProperty[] {
   const kindM = text.match(
     /(?:przeznaczenie|rodzaj)\s+(?:lokalu|nieruchomo[śs]ci|budynku)[:\s]{0,4}([\s\S]{2,50}?)(?=\s+(?:obszar|numer|pole|kondygnacj|imi[eę]|dzia[łl]|wpis)|[.;]|$)/i,
   );
-  const areaM = text.match(/obszar[^0-9]{0,20}(\d[\d\s.]*(?:,\d+)?)\s*(ha|m)/i);
+  // Luka do 40 znaków: pełna etykieta EKW to „Obszar całej nieruchomości".
+  const areaM = text.match(/obszar[^0-9]{0,40}(\d[\d\s.]*(?:,\d+)?)\s*(ha|m)/i);
   let areaM2: number | null = null;
   if (areaM) {
     const n = Number(
@@ -175,7 +176,7 @@ function parseProperties(doc: KwDocumentSections): NormalizedProperty[] {
       areaM2 = /ha/i.test(areaM[2]) ? Math.round(n * 10_000) : Math.round(n);
   }
   const useM = text.match(
-    /spos[óo]b\s+korzystania[:\s]{0,4}([\s\S]{1,50}?)(?=\s+(?:obszar|numer|pole|wpis|dzia[łl])|[.;]|$)/i,
+    /spos[óo]b\s+korzystania[:\s]{0,4}([\s\S]{1,50}?)(?=\s+(?:obszar|numer|nr\b|pole|wpis|dzia[łl])|[.;]|$)/i,
   );
 
   return [

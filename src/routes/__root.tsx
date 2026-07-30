@@ -53,12 +53,18 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={() => { router.invalidate(); reset(); }}
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
           >
             Spróbuj ponownie
           </button>
-          <a href="/" className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent">
+          <a
+            href="/"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+          >
             Wróć do strony głównej
           </a>
         </div>
@@ -79,21 +85,39 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "google-site-verification", content: "d6rVA0W-j2dnMAaXoxXJbkOo71EwtTo6xvtHjfmjVGE" },
-      ...(loaderData?.fbAppId
-        ? [{ property: "fb:app_id", content: loaderData.fbAppId }]
-        : []),
+      ...(loaderData?.fbAppId ? [{ property: "fb:app_id", content: loaderData.fbAppId }] : []),
       { title: "Finance You — pożyczki pod zastaw nieruchomości" },
-      { name: "description", content: "Finance You pomaga uzyskać finansowanie pod zastaw nieruchomości z indywidualnymi warunkami i szybkim wnioskiem online." },
+      {
+        name: "description",
+        content:
+          "Finance You pomaga uzyskać finansowanie pod zastaw nieruchomości z indywidualnymi warunkami i szybkim wnioskiem online.",
+      },
       { property: "og:title", content: "Finance You — pożyczki pod zastaw nieruchomości" },
       { name: "twitter:title", content: "Finance You — pożyczki pod zastaw nieruchomości" },
-      { property: "og:description", content: "Finansowanie pod zastaw nieruchomości, szybki wniosek online i dobór warunków do sytuacji klienta." },
-      { name: "twitter:description", content: "Finansowanie pod zastaw nieruchomości, szybki wniosek online i dobór warunków do sytuacji klienta." },
-      { property: "og:image", content: "https://financeyou.pl/__l5e/assets-v1/e36c4fc3-f4ad-4970-a5b3-5af904ce2b7f/financeyou-og-1200x630.png" },
+      {
+        property: "og:description",
+        content:
+          "Finansowanie pod zastaw nieruchomości, szybki wniosek online i dobór warunków do sytuacji klienta.",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Finansowanie pod zastaw nieruchomości, szybki wniosek online i dobór warunków do sytuacji klienta.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://financeyou.pl/__l5e/assets-v1/e36c4fc3-f4ad-4970-a5b3-5af904ce2b7f/financeyou-og-1200x630.png",
+      },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { property: "og:image:type", content: "image/png" },
       { property: "og:image:alt", content: "Finance You — pożyczki pod zastaw nieruchomości" },
-      { name: "twitter:image", content: "https://financeyou.pl/__l5e/assets-v1/e36c4fc3-f4ad-4970-a5b3-5af904ce2b7f/financeyou-og-1200x630.png" },
+      {
+        name: "twitter:image",
+        content:
+          "https://financeyou.pl/__l5e/assets-v1/e36c4fc3-f4ad-4970-a5b3-5af904ce2b7f/financeyou-og-1200x630.png",
+      },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
@@ -102,7 +126,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", href: faviconAsset.url },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
     ],
   }),
@@ -115,8 +142,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pl">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
     </html>
   );
 }
@@ -136,7 +168,7 @@ function RootComponent() {
       </QueryClientProvider>
     );
   }
-  
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -159,4 +191,3 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
-

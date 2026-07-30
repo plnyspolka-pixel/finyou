@@ -48,7 +48,12 @@ export interface PropertyAnalysisInput {
   soilClass?: string | null;
   declaredPropertyValuePln?: number | null;
   requestedLoanAmountPln?: number | null;
-  documents?: Array<{ id: string; url?: string | null; type?: string | null; name?: string | null }>;
+  documents?: Array<{
+    id: string;
+    url?: string | null;
+    type?: string | null;
+    name?: string | null;
+  }>;
   photos?: string[];
 }
 
@@ -144,7 +149,6 @@ export interface InvestmentOfferText {
   floodRiskSummary?: string;
 }
 
-
 export interface PropertyAnalysisResult {
   success: boolean;
   property: {
@@ -190,7 +194,6 @@ export interface PropertyAnalysisResult {
     errorMessage?: string;
   } | null;
 
-
   warnings: string[];
   raw: Record<string, any>;
 }
@@ -222,7 +225,6 @@ export interface GusBenchmarkDiagnostics {
   warnings: string[];
   summaryLine: string;
 }
-
 
 export interface RcnStats {
   count: number;
@@ -261,7 +263,6 @@ export type RcnStatus =
   | "features_found_but_filtered_out"
   | "success";
 
-
 export interface RcnDiagnostics {
   status: RcnStatus;
   statusMessage: string;
@@ -279,22 +280,27 @@ export interface RcnDiagnostics {
     success: boolean;
     error: string;
   }>;
-  propertyTypeMapping: { applicationType: string | null; keywords: string[]; matchedLayerKeywords: string[] };
+  propertyTypeMapping: {
+    applicationType: string | null;
+    keywords: string[];
+    matchedLayerKeywords: string[];
+  };
   queryBbox: { minX: number; minY: number; maxX: number; maxY: number; crs: string } | null;
   radiusM: number | null;
   radiiTried: number[];
   featuresRawCount: number;
   featuresFilteredCount: number;
   filtersApplied: string[];
-  periodCounts: { countAllDates: number; countLast12Months: number; countLast24Months: number; countLast36Months: number };
+  periodCounts: {
+    countAllDates: number;
+    countLast12Months: number;
+    countLast24Months: number;
+    countLast36Months: number;
+  };
   sampleFeature: Record<string, any> | null;
   rawResponseSnippet: string | null;
   errorTechnical: string | null;
 }
-
-
-
-
 
 export interface GusStats {
   pricePerM2Median: number | null;

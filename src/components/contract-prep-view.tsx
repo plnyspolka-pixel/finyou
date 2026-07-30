@@ -9,10 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Check, AlertCircle, Loader2 } from "lucide-react";
-import {
-  getContractStatus,
-  saveContractPartyData,
-} from "@/lib/contract-prep.functions";
+import { getContractStatus, saveContractPartyData } from "@/lib/contract-prep.functions";
 
 type Side = "client" | "investor";
 
@@ -45,7 +42,11 @@ const CLIENT_FORM_FIELDS: FieldDef[] = [
   { path: "propertyData.landRegisterNumber", label: "Numer KW nieruchomości" },
   { path: "propertyData.address", label: "Adres nieruchomości" },
   { path: "propertyData.city", label: "Miasto nieruchomości" },
-  { path: "propertyData.estimatedValue", label: "Szacunkowa wartość nieruchomości (PLN)", type: "number" },
+  {
+    path: "propertyData.estimatedValue",
+    label: "Szacunkowa wartość nieruchomości (PLN)",
+    type: "number",
+  },
 ];
 
 const INVESTOR_FORM_FIELDS: FieldDef[] = [
@@ -63,7 +64,15 @@ function getByPath(obj: any, path: string): any {
   return path.split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
 }
 
-export function ContractPrepView({ offerId, side, backTo }: { offerId: string; side: Side; backTo: string }) {
+export function ContractPrepView({
+  offerId,
+  side,
+  backTo,
+}: {
+  offerId: string;
+  side: Side;
+  backTo: string;
+}) {
   const navigate = useNavigate();
   const fetchStatus = useServerFn(getContractStatus);
   const saveData = useServerFn(saveContractPartyData);
@@ -92,7 +101,9 @@ export function ContractPrepView({ offerId, side, backTo }: { offerId: string; s
     }
   };
 
-  useEffect(() => { void load(); /* eslint-disable-next-line */ }, [offerId, side]);
+  useEffect(() => {
+    void load(); /* eslint-disable-next-line */
+  }, [offerId, side]);
 
   const save = async () => {
     setSaving(true);
@@ -114,7 +125,12 @@ export function ContractPrepView({ offerId, side, backTo }: { offerId: string; s
   };
 
   if (loading) {
-    return <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Ładowanie…</div>;
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Ładowanie…
+      </div>
+    );
   }
   if (!status) return <div>Brak danych.</div>;
 
@@ -127,7 +143,9 @@ export function ContractPrepView({ offerId, side, backTo }: { offerId: string; s
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Dane do umowy pożyczki</h1>
-        <Button variant="ghost" onClick={() => void navigate({ to: backTo })}>← Wróć</Button>
+        <Button variant="ghost" onClick={() => void navigate({ to: backTo })}>
+          ← Wróć
+        </Button>
       </div>
 
       {status.ready && (
@@ -135,8 +153,12 @@ export function ContractPrepView({ offerId, side, backTo }: { offerId: string; s
           <CardContent className="pt-6 text-sm flex items-center gap-2">
             <Check className="h-5 w-5 text-emerald-600" />
             <div>
-              <p className="font-medium text-emerald-700 dark:text-emerald-300">Wszystkie dane uzupełnione — umowa gotowa do podpisu.</p>
-              <p className="text-muted-foreground mt-1">Operator skontaktuje się aby uzgodnić termin podpisania.</p>
+              <p className="font-medium text-emerald-700 dark:text-emerald-300">
+                Wszystkie dane uzupełnione — umowa gotowa do podpisu.
+              </p>
+              <p className="text-muted-foreground mt-1">
+                Operator skontaktuje się aby uzgodnić termin podpisania.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -150,7 +172,9 @@ export function ContractPrepView({ offerId, side, backTo }: { offerId: string; s
               <Badge variant={myPct === 100 ? "default" : "secondary"}>{myPct}%</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent><Progress value={myPct} /></CardContent>
+          <CardContent>
+            <Progress value={myPct} />
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
@@ -188,21 +212,40 @@ export function ContractPrepView({ offerId, side, backTo }: { offerId: string; s
                   >
                     <option value="">— wybierz —</option>
                     {f.options?.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
                     ))}
                   </select>
                 ) : (
                   <Input
                     type={f.type === "number" ? "number" : "text"}
                     value={form[f.path] ?? ""}
-                    onChange={(e) => setForm((p) => ({ ...p, [f.path]: f.type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({
+                        ...p,
+                        [f.path]:
+                          f.type === "number"
+                            ? e.target.value === ""
+                              ? ""
+                              : Number(e.target.value)
+                            : e.target.value,
+                      }))
+                    }
                   />
                 )}
               </div>
             ))}
           </div>
           <Button onClick={() => void save()} disabled={saving}>
-            {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Zapisywanie…</> : "Zapisz dane"}
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Zapisywanie…
+              </>
+            ) : (
+              "Zapisz dane"
+            )}
           </Button>
         </CardContent>
       </Card>

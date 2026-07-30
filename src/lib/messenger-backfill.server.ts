@@ -64,8 +64,14 @@ export async function backfillLeadNames(opts?: { force?: boolean }): Promise<Nam
       if (userId) {
         const profile = await fetchMetaUserProfile({ userId, platform });
         if (profile) {
-          if (profile.firstName && !firstName) { firstName = profile.firstName; source = "meta"; }
-          if (profile.lastName && !lastName) { lastName = profile.lastName; source = "meta"; }
+          if (profile.firstName && !firstName) {
+            firstName = profile.firstName;
+            source = "meta";
+          }
+          if (profile.lastName && !lastName) {
+            lastName = profile.lastName;
+            source = "meta";
+          }
         }
       }
     } catch (e) {
@@ -77,7 +83,10 @@ export async function backfillLeadNames(opts?: { force?: boolean }): Promise<Nam
     if (!firstName || !lastName) {
       try {
         const ocr = await ocrLeadAttachmentsAndEnrich({ leadId: lead.id });
-        if (ocr.nameFilled) { source = source ?? "ocr"; namesFromOcr += 1; }
+        if (ocr.nameFilled) {
+          source = source ?? "ocr";
+          namesFromOcr += 1;
+        }
       } catch (e) {
         console.warn("[backfill] attachment ocr error", lead.id, e);
       }
@@ -101,7 +110,9 @@ export async function backfillLeadNames(opts?: { force?: boolean }): Promise<Nam
       .maybeSingle();
     if (freshLead?.first_name) firstName = firstName ?? freshLead.first_name;
     if (freshLead?.last_name) lastName = lastName ?? freshLead.last_name;
-    const appData = { ...(((freshLead?.application_data ?? lead.application_data) as Record<string, any>) ?? {}) };
+    const appData = {
+      ...(((freshLead?.application_data ?? lead.application_data) as Record<string, any>) ?? {}),
+    };
 
     // d) Fallback — treść wiadomości przychodzących
     if (!firstName || !lastName) {
@@ -114,17 +125,28 @@ export async function backfillLeadNames(opts?: { force?: boolean }): Promise<Nam
         .limit(100);
       for (const msg of inbound ?? []) {
         const facts = extractInboundFacts(msg.content);
-        if (facts.firstName && !firstName) { firstName = facts.firstName; source = source ?? "text"; }
-        if (facts.lastName && !lastName) { lastName = facts.lastName; source = source ?? "text"; }
+        if (facts.firstName && !firstName) {
+          firstName = facts.firstName;
+          source = source ?? "text";
+        }
+        if (facts.lastName && !lastName) {
+          lastName = facts.lastName;
+          source = source ?? "text";
+        }
         if (firstName && lastName) break;
       }
     }
 
     appData.name_backfill_at = new Date(now).toISOString();
     const patch: Record<string, any> = { application_data: appData };
-    if (firstName && firstName !== (freshLead?.first_name ?? lead.first_name)) patch.first_name = firstName;
-    if (lastName && lastName !== (freshLead?.last_name ?? lead.last_name)) patch.last_name = lastName;
-    await supabaseAdmin.from("leads").update(patch as any).eq("id", lead.id);
+    if (firstName && firstName !== (freshLead?.first_name ?? lead.first_name))
+      patch.first_name = firstName;
+    if (lastName && lastName !== (freshLead?.last_name ?? lead.last_name))
+      patch.last_name = lastName;
+    await supabaseAdmin
+      .from("leads")
+      .update(patch as any)
+      .eq("id", lead.id);
     if (patch.first_name || patch.last_name) {
       if (source === "meta") namesFromMeta += 1;
       else if (source === "text") namesFromText += 1;
@@ -143,7 +165,9 @@ export async function backfillOrphanAttachments(): Promise<AttachmentBackfillRes
   let attachmentsLinked = 0;
   let filesSkipped = 0;
 
-  const { data: leadFolders } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET).list("leads", { limit: 1000 });
+  const { data: leadFolders } = await supabaseAdmin.storage
+    .from(CLIENT_FILES_BUCKET)
+    .list("leads", { limit: 1000 });
 
   for (const folder of leadFolders ?? []) {
     const leadId = folder.name;
@@ -180,8 +204,11 @@ export async function backfillOrphanAttachments(): Promise<AttachmentBackfillRes
 
       // Nazwa pliku zaczyna się od Date.now() z chwili odebrania wiadomości
       const tsMatch = f.name.match(/^(\d{13})-/);
-      const fileTs = tsMatch ? Number(tsMatch[1]) : (f.created_at ? Date.parse(f.created_at) : NaN);
-      if (!Number.isFinite(fileTs)) { filesSkipped += 1; continue; }
+      const fileTs = tsMatch ? Number(tsMatch[1]) : f.created_at ? Date.parse(f.created_at) : NaN;
+      if (!Number.isFinite(fileTs)) {
+        filesSkipped += 1;
+        continue;
+      }
 
       // Najbliższa czasowo wiadomość przychodząca (max 24h różnicy)
       let best: { id: string; diff: number } | null = null;
@@ -189,7 +216,10 @@ export async function backfillOrphanAttachments(): Promise<AttachmentBackfillRes
         const diff = Math.abs(Date.parse(c.created_at) - fileTs);
         if (!best || diff < best.diff) best = { id: c.id, diff };
       }
-      if (!best || best.diff > 24 * 3600_000) { filesSkipped += 1; continue; }
+      if (!best || best.diff > 24 * 3600_000) {
+        filesSkipped += 1;
+        continue;
+      }
 
       const list = toAppend.get(best.id) ?? [];
       list.push({
@@ -217,7 +247,9 @@ export async function backfillOrphanAttachments(): Promise<AttachmentBackfillRes
 }
 
 async function attachmentsBackfillDone(): Promise<boolean> {
-  const { data } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET).list("system", { limit: 100 });
+  const { data } = await supabaseAdmin.storage
+    .from(CLIENT_FILES_BUCKET)
+    .list("system", { limit: 100 });
   const markerName = ATTACH_MARKER_PATH.split("/").pop()!;
   return (data ?? []).some((f) => f.name === markerName);
 }
@@ -237,11 +269,12 @@ export async function markAttachmentsBackfillDone(): Promise<void> {
  * Błędy nie mogą wywrócić ticka — łapane u wołającego.
  */
 export async function runScheduledMessengerBackfill(): Promise<
-  NameBackfillResult & Partial<AttachmentBackfillResult> & { attachmentsRun: boolean } & {
-    enrichLeadsScanned: number;
-    enrichLeadsUpdated: number;
-    enrichPromoted: number;
-  }
+  NameBackfillResult &
+    Partial<AttachmentBackfillResult> & { attachmentsRun: boolean } & {
+      enrichLeadsScanned: number;
+      enrichLeadsUpdated: number;
+      enrichPromoted: number;
+    }
 > {
   const names = await backfillLeadNames({ force: false });
   const enrich = await backfillLeadEnrichmentFromMessages();
@@ -292,7 +325,10 @@ export async function backfillLeadEnrichmentFromMessages(opts?: { limit?: number
       .order("created_at", { ascending: true })
       .limit(500);
     if (!inbound?.length) continue;
-    const text = inbound.map((m: any) => m.content).filter(Boolean).join("\n");
+    const text = inbound
+      .map((m: any) => m.content)
+      .filter(Boolean)
+      .join("\n");
     if (!text.trim()) continue;
 
     scanned += 1;

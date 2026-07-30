@@ -24,7 +24,11 @@ function verifySvix(req: Request, body: string): boolean {
   if (!id || !ts || !sigHeader) return false;
   const keyB64 = secret.startsWith("whsec_") ? secret.slice(6) : secret;
   let keyBuf: Buffer;
-  try { keyBuf = Buffer.from(keyB64, "base64"); } catch { return false; }
+  try {
+    keyBuf = Buffer.from(keyB64, "base64");
+  } catch {
+    return false;
+  }
   const signed = `${id}.${ts}.${body}`;
   const expected = createHmac("sha256", keyBuf).update(signed).digest("base64");
   for (const part of sigHeader.split(" ")) {
@@ -34,7 +38,9 @@ function verifySvix(req: Request, body: string): boolean {
       const a = Buffer.from(sig);
       const b = Buffer.from(expected);
       if (a.length === b.length && timingSafeEqual(a, b)) return true;
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   }
   return false;
 }
@@ -64,8 +70,15 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
           return new Response("Forbidden", { status: 403 });
         }
         let evt: any;
-        try { evt = JSON.parse(raw); } catch { return new Response("bad json", { status: 400 }); }
-        if (evt?.type && !["email.received", "email.inbound", "inbound.email.received"].includes(evt.type)) {
+        try {
+          evt = JSON.parse(raw);
+        } catch {
+          return new Response("bad json", { status: 400 });
+        }
+        if (
+          evt?.type &&
+          !["email.received", "email.inbound", "inbound.email.received"].includes(evt.type)
+        ) {
           return new Response("ignored", { status: 200 });
         }
         const meta = evt?.data ?? evt;
@@ -83,10 +96,19 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
         let data: any = meta;
         if (emailId && LOVABLE_API_KEY && RESEND_API_KEY) {
           try {
-            const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}`, { headers: resendHeaders });
+            const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}`, {
+              headers: resendHeaders,
+            });
             if (r.ok) data = { ...meta, ...(await r.json()) };
-            else console.error("[resend-inbound] fetch email failed", r.status, await r.text().catch(() => ""));
-          } catch (e) { console.error("[resend-inbound] fetch email error", e); }
+            else
+              console.error(
+                "[resend-inbound] fetch email failed",
+                r.status,
+                await r.text().catch(() => ""),
+              );
+          } catch (e) {
+            console.error("[resend-inbound] fetch email error", e);
+          }
         }
 
         const fromHdr = pickFirstAddr(data.from ?? data.From);
@@ -100,12 +122,21 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
             const m = html.match(/^data:([^;,]+)(;base64)?,(.*)$/);
             if (m) {
               const isB64 = !!m[2];
-              const body = isB64 ? Buffer.from(m[3], "base64").toString("utf8") : decodeURIComponent(m[3]);
+              const body = isB64
+                ? Buffer.from(m[3], "base64").toString("utf8")
+                : decodeURIComponent(m[3]);
               html = body;
             }
-          } catch { /* noop */ }
+          } catch {
+            /* noop */
+          }
         }
-        if (!text && html) text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 8000);
+        if (!text && html)
+          text = html
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 8000);
         const messageId = String(data.message_id ?? data.messageId ?? data["Message-Id"] ?? "");
         const inReplyTo = String(data.in_reply_to ?? data["In-Reply-To"] ?? "") || null;
         const references = String(data.references ?? data.References ?? "") || null;
@@ -129,7 +160,9 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
         const stored: any[] = [];
         if (emailId && LOVABLE_API_KEY && RESEND_API_KEY) {
           try {
-            const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}/attachments`, { headers: resendHeaders });
+            const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}/attachments`, {
+              headers: resendHeaders,
+            });
             if (r.ok) {
               const list = await r.json();
               const items: any[] = Array.isArray(list?.data) ? list.data : [];
@@ -142,14 +175,23 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
                 }
               }
             } else {
-              console.error("[resend-inbound] fetch attachments failed", r.status, await r.text().catch(() => ""));
+              console.error(
+                "[resend-inbound] fetch attachments failed",
+                r.status,
+                await r.text().catch(() => ""),
+              );
             }
-          } catch (e) { console.error("[resend-inbound] fetch attachments error", e); }
+          } catch (e) {
+            console.error("[resend-inbound] fetch attachments error", e);
+          }
         }
 
-
-
-        const plainFromHtml = html ? html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "";
+        const plainFromHtml = html
+          ? html
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+          : "";
         const finalText = text || plainFromHtml.slice(0, 8000);
         const inboundLogId = await logLeadCommunication({
           leadId,
@@ -170,16 +212,27 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
           },
         });
         if (stored.length && inboundLogId) {
-          await supabaseAdmin.from("lead_communications").update({ attachments: stored as any }).eq("id", inboundLogId);
+          await supabaseAdmin
+            .from("lead_communications")
+            .update({ attachments: stored as any })
+            .eq("id", inboundLogId);
           try {
             await attachStoredToClientDocuments({ leadId, stored, sourceLabel: "email" });
-          } catch (e) { console.error("[resend-inbound] attach to client docs", e); }
+          } catch (e) {
+            console.error("[resend-inbound] attach to client docs", e);
+          }
         }
 
         try {
           const enrichText = [subject, finalText].filter(Boolean).join("\n");
-          await enrichLeadFromInbound({ leadId, text: enrichText, hasAttachments: stored.length > 0 });
-        } catch (e) { console.error("[resend-inbound] enrichment error", e); }
+          await enrichLeadFromInbound({
+            leadId,
+            text: enrichText,
+            hasAttachments: stored.length > 0,
+          });
+        } catch (e) {
+          console.error("[resend-inbound] enrichment error", e);
+        }
 
         // OCHRONA PRZED PĘTLAMI — sprawdź zanim auto-agent odpowie
         const inboundHeaders = normalizeHeaders(data.headers ?? data.Headers);
@@ -188,6 +241,8 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
           fromEmail,
           headers: inboundHeaders,
           threadIds: [messageId, inReplyTo, references].filter(Boolean) as string[],
+          subject,
+          bodyText: finalText,
         });
         if (skip.skip) {
           console.warn(`[resend-inbound] skip auto-reply: ${skip.reason} (${fromEmail})`);

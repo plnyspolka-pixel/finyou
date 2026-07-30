@@ -21,7 +21,12 @@ export type KwAddress = {
   fullAddress: string | null;
 };
 
-const stripTags = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim();
+const stripTags = (s: string) =>
+  s
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 /** Wyciąga treść komórek następujących po podanej etykiecie w danych tabeli KW. */
 function cellsAfter(html: string, labelRegex: RegExp, count: number): string[] {
@@ -57,13 +62,26 @@ function matchNumber(text: string, label: string): string | null {
 
 /** Fallback: parsowanie po etykietach EKW z czystego tekstu (bez struktury tabeli). */
 function parseFromText(text: string): Omit<KwAddress, "fullAddress"> {
+  // Grunty: „Położenie (numer porządkowy / miejscowość) Lp. 1. 1 ANDRESPOL" —
+  // brak etykiety „Miejscowość", nazwa stoi po liczbie porządkowej.
+  const polozenieM = text.match(
+    new RegExp(
+      `[Pp]o[łl]o[żz]eni\\w*\\s*\\([^)]*miejscowo[śs][ćc][^)]*\\)\\s*(?:Lp\\.?\\s*\\d+\\.?\\s*)?(?:\\d+\\s+)?(${CAPS_SEQ})`,
+    ),
+  );
+  // „Ulica FREDRY 53" — numer budynku bywa doklejony do wartości ulicy,
+  // bez osobnej etykiety „Numer budynku".
+  const streetWithNoM = text.match(
+    new RegExp(`[Uu]lica\\s+(?:\\([^)]*\\)\\s*)?(${CAPS_SEQ})\\s+(\\d+[A-Za-z]?)\\b`),
+  );
   return {
     voivodeship: matchCaps(text, "[Ww]ojew[óo]dztwo"),
     powiat: matchCaps(text, "[Pp]owiat"),
     gmina: matchCaps(text, "[Gg]mina"),
-    city: matchCaps(text, "[Mm]iejscowo[śs][ćc]"),
+    city: matchCaps(text, "[Mm]iejscowo[śs][ćc]") ?? (polozenieM ? polozenieM[1] : null),
     street: matchCaps(text, "[Uu]lica"),
-    buildingNumber: matchNumber(text, "[Nn]umer budynku"),
+    buildingNumber:
+      matchNumber(text, "[Nn]umer budynku") ?? (streetWithNoM ? streetWithNoM[2] : null),
     unitNumber: matchNumber(text, "[Nn]umer lokalu"),
   };
 }
@@ -80,8 +98,16 @@ export function parseKwAddress(dzial1o: string | null | undefined): KwAddress {
   let city: string | null = null;
   const locCell = posCells.find((c) => /,/.test(c) && !/^Lp\.?/i.test(c) && !/^\d+$/.test(c));
   if (locCell) {
-    const parts = locCell.split(",").map((p) => p.trim()).filter(Boolean);
-    [voivodeship, powiat, gmina, city] = [parts[0] ?? null, parts[1] ?? null, parts[2] ?? null, parts[3] ?? null];
+    const parts = locCell
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    [voivodeship, powiat, gmina, city] = [
+      parts[0] ?? null,
+      parts[1] ?? null,
+      parts[2] ?? null,
+      parts[3] ?? null,
+    ];
   }
 
   // "Numer lokalu" (ostatnia z trzech etykiet w wierszu) — kolejne 3 komórki to Ulica, Nr bud., Nr lok.

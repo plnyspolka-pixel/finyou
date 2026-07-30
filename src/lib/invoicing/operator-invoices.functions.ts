@@ -33,7 +33,9 @@ export const listInvoiceEntities = createServerFn({ method: "GET" })
     await assertRole(accountingDb, context.userId, [...INVOICING_ROLES]);
     const { data } = await accountingDb
       .from("accounting_entities")
-      .select("id,name,legal_name,nip,regon,address_street,address_postal_code,address_city,address_country,bank_account,email,phone,invoice_prefix,default_vat_rate,is_default,active")
+      .select(
+        "id,name,legal_name,nip,regon,address_street,address_postal_code,address_city,address_country,bank_account,email,phone,invoice_prefix,default_vat_rate,is_default,active",
+      )
       .eq("active", true)
       .order("is_default", { ascending: false })
       .order("name");
@@ -47,7 +49,9 @@ export const listInstitutionalPartners = createServerFn({ method: "GET" })
     await assertRole(accountingDb, context.userId, [...INVOICING_ROLES]);
     const { data } = await accountingDb
       .from("investors")
-      .select("id,company_name,first_name,last_name,nip,regon,krs,street,postal_code,city,email,phone,investor_type")
+      .select(
+        "id,company_name,first_name,last_name,nip,regon,krs,street,postal_code,city,email,phone,investor_type",
+      )
       .eq("investor_type", "instytucjonalny")
       .eq("is_active", true)
       .order("company_name", { ascending: true });
@@ -169,7 +173,7 @@ export const createOperatorInvoice = createServerFn({ method: "POST" })
     const id = (ins as any).id;
     await logAccountingAudit(accountingDb, {
       actorUserId: context.userId,
-      actorRole: roles.includes("operator") ? "operator" : roles[0] ?? "operator",
+      actorRole: roles.includes("operator") ? "operator" : (roles[0] ?? "operator"),
       entityType: "sales_invoice",
       entityId: id,
       action: "invoice_issued_operator",
@@ -187,16 +191,23 @@ export const listMyOperatorInvoices = createServerFn({ method: "GET" })
     const seeAll = roles.includes("administrator") || roles.includes("ksiegowosc");
     let q = accountingDb
       .from("sales_invoices")
-      .select("id, invoice_number, buyer_name, buyer_nip, gross_amount, currency, status, issue_date, entity_id, created_by, items")
+      .select(
+        "id, invoice_number, buyer_name, buyer_nip, gross_amount, currency, status, issue_date, entity_id, created_by, items",
+      )
       .order("created_at", { ascending: false })
       .limit(500);
     if (!seeAll) q = q.eq("created_by", context.userId);
     const { data } = await q;
 
-    const entityIds = Array.from(new Set((data ?? []).map((i: any) => i.entity_id).filter(Boolean)));
+    const entityIds = Array.from(
+      new Set((data ?? []).map((i: any) => i.entity_id).filter(Boolean)),
+    );
     const names: Record<string, string> = {};
     if (entityIds.length) {
-      const { data: ents } = await accountingDb.from("accounting_entities").select("id,name").in("id", entityIds);
+      const { data: ents } = await accountingDb
+        .from("accounting_entities")
+        .select("id,name")
+        .in("id", entityIds);
       for (const e of ents ?? []) names[(e as any).id] = (e as any).name;
     }
     return (data ?? []).map((i: any) => {
@@ -223,15 +234,22 @@ export const listMyOperatorInvoices = createServerFn({ method: "GET" })
 // Oznacza, że pożyczka została wypłacona — aktywuje prowizję wewnętrzną operatora.
 export const setLoanPaidOut = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i) => z.object({ id: z.string().uuid(), paidOut: z.boolean().default(true) }).parse(i))
+  .inputValidator((i) =>
+    z.object({ id: z.string().uuid(), paidOut: z.boolean().default(true) }).parse(i),
+  )
   .handler(async ({ data, context }) => {
     const roles = await assertRole(accountingDb, context.userId, [...INVOICING_ROLES]);
     const seeAll = roles.includes("administrator") || roles.includes("ksiegowosc");
 
-    const { data: invRow } = await accountingDb.from("sales_invoices").select("items, created_by").eq("id", data.id).maybeSingle();
+    const { data: invRow } = await accountingDb
+      .from("sales_invoices")
+      .select("items, created_by")
+      .eq("id", data.id)
+      .maybeSingle();
     if (!invRow) throw new Error("Nie znaleziono faktury.");
     const inv = invRow as any;
-    if (!seeAll && inv.created_by !== context.userId) throw new Error("Brak dostępu do tej faktury.");
+    if (!seeAll && inv.created_by !== context.userId)
+      throw new Error("Brak dostępu do tej faktury.");
 
     const items = Array.isArray(inv.items) && inv.items.length ? inv.items : [{ meta: {} }];
     items[0] = { ...items[0], meta: { ...(items[0]?.meta ?? {}), loanPaidOut: data.paidOut } };
@@ -244,18 +262,25 @@ export const setLoanPaidOut = createServerFn({ method: "POST" })
 export const setInvoiceDeal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
-    z.object({
-      id: z.string().uuid(),
-      deal: DealContext,
-    }).parse(i),
+    z
+      .object({
+        id: z.string().uuid(),
+        deal: DealContext,
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     const roles = await assertRole(accountingDb, context.userId, [...INVOICING_ROLES]);
     const seeAll = roles.includes("administrator") || roles.includes("ksiegowosc");
-    const { data: invRow } = await accountingDb.from("sales_invoices").select("items, created_by").eq("id", data.id).maybeSingle();
+    const { data: invRow } = await accountingDb
+      .from("sales_invoices")
+      .select("items, created_by")
+      .eq("id", data.id)
+      .maybeSingle();
     if (!invRow) throw new Error("Nie znaleziono faktury.");
     const inv = invRow as any;
-    if (!seeAll && inv.created_by !== context.userId) throw new Error("Brak dostępu do tej faktury.");
+    if (!seeAll && inv.created_by !== context.userId)
+      throw new Error("Brak dostępu do tej faktury.");
     const items = Array.isArray(inv.items) && inv.items.length ? inv.items : [{ meta: {} }];
     items[0] = { ...items[0], meta: { ...(items[0]?.meta ?? {}), deal: data.deal } };
     await accountingDb.from("sales_invoices").update({ items }).eq("id", data.id);
@@ -267,7 +292,11 @@ export const getInvoiceForPrint = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { data: invRow } = await accountingDb.from("sales_invoices").select("*").eq("id", data.id).maybeSingle();
+    const { data: invRow } = await accountingDb
+      .from("sales_invoices")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
     if (!invRow) throw new Error("Nie znaleziono faktury.");
     const invoice = invRow as any;
 
@@ -284,7 +313,9 @@ export const getInvoiceForPrint = createServerFn({ method: "GET" })
 
     const { data: entRow } = await accountingDb
       .from("accounting_entities")
-      .select("id,name,legal_name,nip,regon,address_street,address_postal_code,address_city,address_country,bank_account,email,phone")
+      .select(
+        "id,name,legal_name,nip,regon,address_street,address_postal_code,address_city,address_country,bank_account,email,phone",
+      )
       .eq("id", invoice.entity_id)
       .maybeSingle();
 

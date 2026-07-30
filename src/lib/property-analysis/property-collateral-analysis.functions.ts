@@ -4,8 +4,13 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type {
-  DataSourceUsage, LegalRiskResult, LocationScoreResult, MarketLiquidityResult,
-  PropertyAnalysisInput, PropertyAnalysisResult, ValuationBenchmark,
+  DataSourceUsage,
+  LegalRiskResult,
+  LocationScoreResult,
+  MarketLiquidityResult,
+  PropertyAnalysisInput,
+  PropertyAnalysisResult,
+  ValuationBenchmark,
 } from "./types";
 import { geocode, locationScore } from "./location-score.server";
 import { extractDocuments } from "./document-extraction.server";
@@ -13,7 +18,6 @@ import { analyzeFloodRisk } from "./flood-risk.server";
 import { perplexityValuation, perplexityToRcnStats } from "./perplexity-valuation.server";
 import { calculateCollateralScore, classifyLtv } from "./scoring";
 import { buildAnalysisResult, generateOfferText } from "./offer-text";
-
 
 const Input = z.object({ applicationId: z.string().uuid() });
 
@@ -36,14 +40,19 @@ export interface CollateralAnalysisOpts {
   };
 }
 
-export async function runPropertyCollateralAnalysisCore(applicationId: string, opts: CollateralAnalysisOpts = {}) {
+export async function runPropertyCollateralAnalysisCore(
+  applicationId: string,
+  opts: CollateralAnalysisOpts = {},
+) {
   {
-
     // Załaduj wniosek + property + dokumenty
     const [{ data: app }, { data: props }, { data: docs }] = await Promise.all([
       supabaseAdmin.from("loan_applications").select("*").eq("id", applicationId).maybeSingle(),
       supabaseAdmin.from("properties").select("*").eq("loan_application_id", applicationId),
-      supabaseAdmin.from("documents").select("id, file_name, document_type, file_url").eq("loan_application_id", applicationId),
+      supabaseAdmin
+        .from("documents")
+        .select("id, file_name, document_type, file_url")
+        .eq("loan_application_id", applicationId),
     ]);
     if (!app) throw new Error("Wniosek nie znaleziony");
     const property = props?.[0] ?? null;
@@ -65,7 +74,12 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string, o
       soilClass: null,
       declaredPropertyValuePln: property?.estimated_value ?? null,
       requestedLoanAmountPln: app.loan_amount ?? null,
-      documents: (docs ?? []).map(d => ({ id: d.id, url: d.file_url, type: d.document_type, name: d.file_name })),
+      documents: (docs ?? []).map((d) => ({
+        id: d.id,
+        url: d.file_url,
+        type: d.document_type,
+        name: d.file_name,
+      })),
     };
 
     // Parametry z KW mają pierwszeństwo — wycena ma dotyczyć nieruchomości
@@ -85,26 +99,38 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string, o
     const sourcesUsed: DataSourceUsage[] = [];
 
     // 1) Ekstrakcja dokumentów
-    const docExtraction = await extractDocuments({ applicationId, documents: input.documents ?? [] });
+    const docExtraction = await extractDocuments({
+      applicationId,
+      documents: input.documents ?? [],
+    });
     sourcesUsed.push({
-      source: "Dokumenty z wniosku", used: docExtraction.extractions.length > 0,
-      purpose: "stan prawny i parametry nieruchomości", dataLevel: "dokumenty klienta", period: "",
+      source: "Dokumenty z wniosku",
+      used: docExtraction.extractions.length > 0,
+      purpose: "stan prawny i parametry nieruchomości",
+      dataLevel: "dokumenty klienta",
+      period: "",
       status: docExtraction.status,
     });
 
     // 2) Geokodowanie — z walidacją zgodności z deklarowanym miastem/województwem,
     //    żeby Google nie podstawił nam losowej miejscowości o podobnej nazwie ulicy.
-    const geo = input.latitude && input.longitude
-      ? { lat: input.latitude, lng: input.longitude }
-      : input.address
-        ? await geocode(
-            [input.address, input.city, input.voivodeship, "Polska"].filter(Boolean).join(", "),
-            { expectedCity: input.city, expectedVoivodeship: input.voivodeship }
-          )
-        : null;
-    if (geo) { input.latitude = geo.lat; input.longitude = geo.lng; }
+    const geo =
+      input.latitude && input.longitude
+        ? { lat: input.latitude, lng: input.longitude }
+        : input.address
+          ? await geocode(
+              [input.address, input.city, input.voivodeship, "Polska"].filter(Boolean).join(", "),
+              { expectedCity: input.city, expectedVoivodeship: input.voivodeship },
+            )
+          : null;
+    if (geo) {
+      input.latitude = geo.lat;
+      input.longitude = geo.lng;
+    }
     if (!geo && input.address) {
-      warnings.push(`Geokodowanie odrzuciło wynik niezgodny z miastem "${input.city ?? "—"}". Sprawdź adres nieruchomości.`);
+      warnings.push(
+        `Geokodowanie odrzuciło wynik niezgodny z miastem "${input.city ?? "—"}". Sprawdź adres nieruchomości.`,
+      );
     }
 
     // Normalizacja Warszawy (alias dzielnic/gmin) — wymusza city = Warszawa, county = m.st. Warszawa.
@@ -140,24 +166,34 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string, o
       dataLevel: input.city ? `lokalnie: ${input.city}` : "Polska",
       period: "ostatnie 12 mies.",
       status: pplx.status,
-      note: pplx.status === "success"
-        ? `${pplx.comparablesFound} porównań, trend: ${pplx.marketTrend}${pplx.citations.length ? `, źródeł: ${pplx.citations.length}` : ""}`
-        : pplx.errorMessage,
+      note:
+        pplx.status === "success"
+          ? `${pplx.comparablesFound} porównań, trend: ${pplx.marketTrend}${pplx.citations.length ? `, źródeł: ${pplx.citations.length}` : ""}`
+          : pplx.errorMessage,
     });
     if (pplx.status === "error") {
-      warnings.push(`Perplexity nie zwróciła wyceny: ${pplx.errorMessage ?? "błąd"}. Wymagana ręczna wycena.`);
+      warnings.push(
+        `Perplexity nie zwróciła wyceny: ${pplx.errorMessage ?? "błąd"}. Wymagana ręczna wycena.`,
+      );
     } else if (pplx.status === "no_data") {
-      warnings.push("Perplexity nie znalazła wystarczających danych porównawczych — wymagana ręczna weryfikacja.");
+      warnings.push(
+        "Perplexity nie znalazła wystarczających danych porównawczych — wymagana ręczna weryfikacja.",
+      );
     }
 
     // 4) Lokalizacja
     const loc: LocationScoreResult = await locationScore({
-      lat: input.latitude ?? null, lng: input.longitude ?? null, address: input.address, city: input.city,
+      lat: input.latitude ?? null,
+      lng: input.longitude ?? null,
+      address: input.address,
+      city: input.city,
     });
     sourcesUsed.push({
-      source: "Google Maps Platform", used: input.latitude != null,
+      source: "Google Maps Platform",
+      used: input.latitude != null,
       purpose: "lokalizacja i infrastruktura",
-      dataLevel: input.latitude != null ? "współrzędne" : "—", period: "",
+      dataLevel: input.latitude != null ? "współrzędne" : "—",
+      period: "",
       status: input.latitude != null ? "success" : "no_data",
     });
 
@@ -170,45 +206,63 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string, o
     const pricePerM2Average = pplx.pricePerM2Average;
     const pricePerHa = pplx.pricePerHa;
     const mainSource = pplx.status === "success" ? "Perplexity (analiza rynkowa)" : "Brak danych";
-    const supporting: string[] = pplx.status === "success" && pplx.citations.length > 0
-      ? [`${pplx.citations.length} źródeł online`]
-      : [];
+    const supporting: string[] =
+      pplx.status === "success" && pplx.citations.length > 0
+        ? [`${pplx.citations.length} źródeł online`]
+        : [];
 
-    if (input.declaredPropertyValuePln && (pplx.estimatedValueLowPln || pplx.estimatedValueHighPln)) {
+    if (
+      input.declaredPropertyValuePln &&
+      (pplx.estimatedValueLowPln || pplx.estimatedValueHighPln)
+    ) {
       const lo = pplx.estimatedValueLowPln ?? 0;
       const hi = pplx.estimatedValueHighPln ?? Infinity;
       if (input.declaredPropertyValuePln < lo * 0.7 || input.declaredPropertyValuePln > hi * 1.3) {
-        warnings.push(`Wartość deklarowana (${input.declaredPropertyValuePln.toLocaleString("pl-PL")} PLN) istotnie odbiega od oszacowania rynkowego (${lo.toLocaleString("pl-PL")}–${(pplx.estimatedValueHighPln ?? 0).toLocaleString("pl-PL")} PLN).`);
+        warnings.push(
+          `Wartość deklarowana (${input.declaredPropertyValuePln.toLocaleString("pl-PL")} PLN) istotnie odbiega od oszacowania rynkowego (${lo.toLocaleString("pl-PL")}–${(pplx.estimatedValueHighPln ?? 0).toLocaleString("pl-PL")} PLN).`,
+        );
       }
     }
 
-
-
-
     const estMedian = isLand
-      ? (pricePerHa && areaHa ? pricePerHa * areaHa : null)
-      : (pricePerM2Median && areaM2 ? pricePerM2Median * areaM2 : null);
+      ? pricePerHa && areaHa
+        ? pricePerHa * areaHa
+        : null
+      : pricePerM2Median && areaM2
+        ? pricePerM2Median * areaM2
+        : null;
     const estAverage = isLand
-      ? (pricePerHa && areaHa ? pricePerHa * areaHa : null)
-      : (pricePerM2Average && areaM2 ? pricePerM2Average * areaM2 : null);
+      ? pricePerHa && areaHa
+        ? pricePerHa * areaHa
+        : null
+      : pricePerM2Average && areaM2
+        ? pricePerM2Average * areaM2
+        : null;
     const conservativeLow = estMedian != null ? Math.round(estMedian * 0.85) : null;
     const conservativeHigh = estMedian != null ? Math.round(estMedian * 1.05) : null;
     const declared = input.declaredPropertyValuePln ?? null;
     const variance = declared && estMedian ? ((declared - estMedian) / estMedian) * 100 : null;
 
     const valuation: ValuationBenchmark = {
-      mainSource, supportingSources: supporting,
-      pricePerM2Median, pricePerM2Average, pricePerHa,
-      estimatedValueMedianPln: estMedian, estimatedValueAveragePln: estAverage,
-      conservativeLowPln: conservativeLow, conservativeHighPln: conservativeHigh,
-      declaredValuePln: declared, varianceFromDeclaredValuePercent: variance,
+      mainSource,
+      supportingSources: supporting,
+      pricePerM2Median,
+      pricePerM2Average,
+      pricePerHa,
+      estimatedValueMedianPln: estMedian,
+      estimatedValueAveragePln: estAverage,
+      conservativeLowPln: conservativeLow,
+      conservativeHighPln: conservativeHigh,
+      declaredValuePln: declared,
+      varianceFromDeclaredValuePercent: variance,
     };
 
     // 8) LTV
     const estValue = estMedian ?? declared ?? null;
-    const ltvPercent = estValue && input.requestedLoanAmountPln
-      ? Math.round((input.requestedLoanAmountPln / estValue) * 100)
-      : null;
+    const ltvPercent =
+      estValue && input.requestedLoanAmountPln
+        ? Math.round((input.requestedLoanAmountPln / estValue) * 100)
+        : null;
     const ltv = {
       requestedLoanAmountPln: input.requestedLoanAmountPln ?? null,
       estimatedValuePln: estValue,
@@ -224,19 +278,25 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string, o
 
     const syntheticRcn = perplexityToRcnStats(pplx, isLand);
     const comparablesCount = pplx.comparablesFound;
-    const marketSummary = pplx.status === "success"
-      ? (pplx.liquidityComment || `Perplexity zidentyfikowała ${comparablesCount} porównań w tej lokalizacji.`)
-      : (pplx.errorMessage ?? "Brak danych porównawczych z Perplexity.");
+    const marketSummary =
+      pplx.status === "success"
+        ? pplx.liquidityComment ||
+          `Perplexity zidentyfikowała ${comparablesCount} porównań w tej lokalizacji.`
+        : (pplx.errorMessage ?? "Brak danych porównawczych z Perplexity.");
     const market: MarketLiquidityResult = {
-      score: comparablesCount >= 10 ? 80 : comparablesCount >= 5 ? 60 : comparablesCount >= 2 ? 40 : 20,
+      score:
+        comparablesCount >= 10 ? 80 : comparablesCount >= 5 ? 60 : comparablesCount >= 2 ? 40 : 20,
       summary: marketSummary,
       transactionsCount: comparablesCount,
     };
 
     // 7) Ryzyko powodziowe ISOK/Wody Polskie
     const flood = await analyzeFloodRisk({
-      latitude: input.latitude, longitude: input.longitude,
-      address: input.address, city: input.city, voivodeship: input.voivodeship,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      address: input.address,
+      city: input.city,
+      voivodeship: input.voivodeship,
       propertyId: property?.id ?? null,
     });
     sourcesUsed.push({
@@ -247,8 +307,13 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string, o
       period: "",
       status: flood.success ? "success" : "error",
     });
-    if (!flood.success) warnings.push(flood.message ?? "Ryzyko powodziowe wymaga ręcznej weryfikacji.");
-    if (flood.success && flood.floodRisk.riskLevel !== "none" && flood.floodRisk.riskLevel !== "unknown") {
+    if (!flood.success)
+      warnings.push(flood.message ?? "Ryzyko powodziowe wymaga ręcznej weryfikacji.");
+    if (
+      flood.success &&
+      flood.floodRisk.riskLevel !== "none" &&
+      flood.floodRisk.riskLevel !== "unknown"
+    ) {
       warnings.push(...flood.alerts);
     }
     const floodRiskForScoring = {
@@ -258,34 +323,68 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string, o
 
     // 8) Scoring
     const docsPresent = {
-      kw: !!input.kwNumber || docExtraction.extractions.some(e => e.docKind === "kw"),
-      mpzpOrWz: docExtraction.extractions.some(e => e.docKind === "mpzp"),
-      landRegistry: docExtraction.extractions.some(e => e.docKind === "wypis_rejestr_gruntow"),
-      appraisal: docExtraction.extractions.some(e => e.docKind === "operat"),
+      kw: !!input.kwNumber || docExtraction.extractions.some((e) => e.docKind === "kw"),
+      mpzpOrWz: docExtraction.extractions.some((e) => e.docKind === "mpzp"),
+      landRegistry: docExtraction.extractions.some((e) => e.docKind === "wypis_rejestr_gruntow"),
+      appraisal: docExtraction.extractions.some((e) => e.docKind === "operat"),
       photos: (property?.photos?.length ?? 0) > 0,
     };
     const collateralScore = calculateCollateralScore({
-      input, valuation, ltv, location: loc, legal, market,
-      rcn: syntheticRcn, gus: null, nbp: null,
-      documents: docExtraction.extractions, documentsPresent: docsPresent,
+      input,
+      valuation,
+      ltv,
+      location: loc,
+      legal,
+      market,
+      rcn: syntheticRcn,
+      gus: null,
+      nbp: null,
+      documents: docExtraction.extractions,
+      documentsPresent: docsPresent,
       floodRisk: floodRiskForScoring,
     });
 
     // 9) Teksty oferty
     const weakData = pplx.status !== "success" || comparablesCount < 2;
-    if (weakData) warnings.push("Dostępność danych porównawczych jest ograniczona — wymagana ręczna weryfikacja.");
+    if (weakData)
+      warnings.push(
+        "Dostępność danych porównawczych jest ograniczona — wymagana ręczna weryfikacja.",
+      );
     const offerText = generateOfferText({
-      input, valuation, location: loc, legal, collateralScore, sourcesUsed,
-      rcnCount: comparablesCount, rcnRadiusKm: null, weakData,
-      floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
+      input,
+      valuation,
+      location: loc,
+      legal,
+      collateralScore,
+      sourcesUsed,
+      rcnCount: comparablesCount,
+      rcnRadiusKm: null,
+      weakData,
+      floodRisk: {
+        ...flood.floodRisk,
+        available: flood.success,
+        geometryUsed: flood.property.geometryUsed,
+      },
       floodAvailable: flood.success,
     });
 
     const result: PropertyAnalysisResult = buildAnalysisResult({
-      input, valuation, ltv, location: loc, legal, market,
-      collateralScore, sourcesUsed, warnings, offerText,
+      input,
+      valuation,
+      ltv,
+      location: loc,
+      legal,
+      market,
+      collateralScore,
+      sourcesUsed,
+      warnings,
+      offerText,
       raw: { perplexity: pplx, loc, flood: flood.raw },
-      floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
+      floodRisk: {
+        ...flood.floodRisk,
+        available: flood.success,
+        geometryUsed: flood.property.geometryUsed,
+      },
       floodAlerts: flood.alerts,
     });
     result.perplexityValuation = {
@@ -305,27 +404,30 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string, o
       errorMessage: pplx.errorMessage,
     };
 
-
     // 10) Zapis
-    const { data: saved } = await supabaseAdmin.from("property_analyses").upsert({
-      application_id: applicationId,
-      property_id: property?.id ?? null,
-      status: "done",
-      result_json: result as never,
-      collateral_score: collateralScore.total,
-      collateral_category: collateralScore.category,
-      ltv_percent: ltv.ltvPercent,
-      estimated_value_pln: estValue,
-      main_source: mainSource,
-      sources_used: sourcesUsed as never,
-      warnings: warnings as never,
-    }).select("id").single();
+    const { data: saved } = await supabaseAdmin
+      .from("property_analyses")
+      .upsert({
+        application_id: applicationId,
+        property_id: property?.id ?? null,
+        status: "done",
+        result_json: result as never,
+        collateral_score: collateralScore.total,
+        collateral_category: collateralScore.category,
+        ltv_percent: ltv.ltvPercent,
+        estimated_value_pln: estValue,
+        main_source: mainSource,
+        sources_used: sourcesUsed as never,
+        warnings: warnings as never,
+      })
+      .select("id")
+      .single();
 
     await supabaseAdmin.from("property_analysis_logs").insert({
       application_id: applicationId,
       property_id: property?.id ?? null,
       analysis_id: saved?.id ?? null,
-      sources_used: sourcesUsed.map(s => s.source) as never,
+      sources_used: sourcesUsed.map((s) => s.source) as never,
       rcn_status: pplx.status === "success" ? "success" : "no_data",
       gus_bdl_status: "no_data",
       nbp_status: "no_data",
@@ -334,13 +436,11 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string, o
       collateral_score: collateralScore.total,
     });
 
-
     return result;
   }
 }
 
 export const getPropertyAnalysis = createServerFn({ method: "GET" })
-
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {

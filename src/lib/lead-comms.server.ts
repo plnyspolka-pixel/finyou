@@ -25,11 +25,23 @@ export async function findLeadId(opts: {
     if (data?.id) return data.id;
   }
   if (opts.phoneNormalized) {
-    const { data } = await s.from("leads").select("id").eq("phone_normalized", opts.phoneNormalized).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data } = await s
+      .from("leads")
+      .select("id")
+      .eq("phone_normalized", opts.phoneNormalized)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     if (data?.id) return data.id;
   }
   if (opts.email) {
-    const { data } = await s.from("leads").select("id").eq("email", opts.email).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data } = await s
+      .from("leads")
+      .select("id")
+      .eq("email", opts.email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     if (data?.id) return data.id;
   }
   return null;
@@ -150,7 +162,8 @@ export async function upsertLeadFromSource(opts: {
     // tylko ustawiamy pola które przyszły niepuste (merge nieinwazyjny)
     const upd: Record<string, any> = {};
     for (const [k, v] of Object.entries(payload)) {
-      if (v !== null && v !== undefined && !(typeof v === "object" && Object.keys(v).length === 0)) upd[k] = v;
+      if (v !== null && v !== undefined && !(typeof v === "object" && Object.keys(v).length === 0))
+        upd[k] = v;
     }
     if (Object.keys(upd).length > 0) {
       await s.from("leads").update(upd).eq("id", existingId);
@@ -164,8 +177,11 @@ export async function upsertLeadFromSource(opts: {
   }
   const leadId = data?.id ?? null;
   if (leadId) {
-    try { await ensureLoanApplicationForLead(leadId); }
-    catch (e) { console.error("[lead-comms] ensureLoanApplicationForLead error", e); }
+    try {
+      await ensureLoanApplicationForLead(leadId);
+    } catch (e) {
+      console.error("[lead-comms] ensureLoanApplicationForLead error", e);
+    }
   }
   return leadId;
 }
@@ -179,7 +195,9 @@ export async function ensureLoanApplicationForLead(leadId: string): Promise<stri
   const s = admin();
   const { data: lead } = await s
     .from("leads")
-    .select("id, loan_application_id, client_id, first_name, last_name, email, phone_normalized, phone_raw, source, consent_rodo, consent_marketing, consent_email")
+    .select(
+      "id, loan_application_id, client_id, first_name, last_name, email, phone_normalized, phone_raw, source, consent_rodo, consent_marketing, consent_email",
+    )
     .eq("id", leadId)
     .maybeSingle();
   if (!lead) return null;
@@ -191,37 +209,57 @@ export async function ensureLoanApplicationForLead(leadId: string): Promise<stri
   let clientId: string | null = (lead.client_id as string | null) ?? null;
   if (!clientId) {
     const { data: existingClient } = await s
-      .from("clients").select("id").eq("email", lead.email).maybeSingle();
+      .from("clients")
+      .select("id")
+      .eq("email", lead.email)
+      .maybeSingle();
     if (existingClient?.id) {
       clientId = existingClient.id as string;
     } else {
-      const { data: newClient, error: cErr } = await s.from("clients").insert({
-        first_name: lead.first_name ?? "Lead",
-        last_name: lead.last_name ?? "—",
-        email: lead.email,
-        phone: lead.phone_raw ?? null,
-        phone_normalized: lead.phone_normalized ?? null,
-        source: lead.source ?? "lead",
-        consent_rodo: !!lead.consent_rodo,
-        consent_marketing: !!lead.consent_marketing,
-        consent_email: !!lead.consent_email,
-      }).select("id").maybeSingle();
-      if (cErr) { console.error("[ensureLoanApp] client insert error", cErr); return null; }
+      const { data: newClient, error: cErr } = await s
+        .from("clients")
+        .insert({
+          first_name: lead.first_name ?? "Lead",
+          last_name: lead.last_name ?? "—",
+          email: lead.email,
+          phone: lead.phone_raw ?? null,
+          phone_normalized: lead.phone_normalized ?? null,
+          source: lead.source ?? "lead",
+          consent_rodo: !!lead.consent_rodo,
+          consent_marketing: !!lead.consent_marketing,
+          consent_email: !!lead.consent_email,
+        })
+        .select("id")
+        .maybeSingle();
+      if (cErr) {
+        console.error("[ensureLoanApp] client insert error", cErr);
+        return null;
+      }
       clientId = newClient?.id ?? null;
     }
   }
   if (!clientId) return null;
 
-  const { data: la, error: laErr } = await s.from("loan_applications").insert({
-    client_id: clientId,
-    status: "nowy_lead",
-    current_form_step: 1,
-    source: lead.source ?? "lead",
-  }).select("id").maybeSingle();
-  if (laErr) { console.error("[ensureLoanApp] loan_applications insert error", laErr); return null; }
+  const { data: la, error: laErr } = await s
+    .from("loan_applications")
+    .insert({
+      client_id: clientId,
+      status: "nowy_lead",
+      current_form_step: 1,
+      source: lead.source ?? "lead",
+    })
+    .select("id")
+    .maybeSingle();
+  if (laErr) {
+    console.error("[ensureLoanApp] loan_applications insert error", laErr);
+    return null;
+  }
   const loanId = la?.id ?? null;
   if (!loanId) return null;
 
-  await s.from("leads").update({ loan_application_id: loanId, client_id: clientId }).eq("id", leadId);
+  await s
+    .from("leads")
+    .update({ loan_application_id: loanId, client_id: clientId })
+    .eq("id", leadId);
   return loanId;
 }

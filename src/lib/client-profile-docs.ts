@@ -3,8 +3,17 @@
 // pobrania jako .txt albo wydruku.
 
 import type { ClientProfile, ScheduleData } from "./client-profile-types";
-import { borrowerTypeLabels, propertyTypeLabels, idDocumentTypeLabels } from "./client-profile-types";
-import { borrowerDisplayName, formatDate, formatPLN, recommendSecurity } from "./client-profile-math";
+import {
+  borrowerTypeLabels,
+  propertyTypeLabels,
+  idDocumentTypeLabels,
+} from "./client-profile-types";
+import {
+  borrowerDisplayName,
+  formatDate,
+  formatPLN,
+  recommendSecurity,
+} from "./client-profile-math";
 
 function line(label: string, value: string | number | undefined | null): string {
   return `${label}: ${value === undefined || value === null || value === "" ? "—" : value}`;
@@ -34,7 +43,10 @@ export function generateApplicationDoc(p: ClientProfile): string {
     header("Warunki finansowe wnioskowane"),
     line("Kwota wypłacana klientowi", formatPLN(p.offerData.netAmountToClient)),
     line("Okres", p.offerData.loanTermMonths ? `${p.offerData.loanTermMonths} mies.` : "—"),
-    line("Maksymalna miesięczna rata akceptowana przez klienta", formatPLN(p.offerData.maxMonthlyPaymentByClient)),
+    line(
+      "Maksymalna miesięczna rata akceptowana przez klienta",
+      formatPLN(p.offerData.maxMonthlyPaymentByClient),
+    ),
     line("Planowana data wypłaty", formatDate(p.offerData.payoutDate)),
     header("Nieruchomość zabezpieczająca"),
     line("Typ", p.propertyData.type ? propertyTypeLabels[p.propertyData.type] : undefined),
@@ -80,7 +92,10 @@ export function generateContractDoc(p: ClientProfile, schedule: ScheduleData | n
     `Pożyczkodawca udziela Pożyczkobiorcy pożyczki na warunkach określonych w niniejszej umowie. Pożyczka jest udzielana w związku z prowadzoną przez Pożyczkobiorcę działalnością gospodarczą i nie ma charakteru konsumenckiego.`,
 
     header("§ 2. Warunki finansowe"),
-    line("Kwota Pożyczki (pełna wypłata)", formatPLN(schedule?.nominalLoanAmount ?? o.netAmountToClient ?? 0)),
+    line(
+      "Kwota Pożyczki (pełna wypłata)",
+      formatPLN(schedule?.nominalLoanAmount ?? o.netAmountToClient ?? 0),
+    ),
     line("Prowizja (rozłożona na raty)", formatPLN(o.creditedCommission)),
     line("Oprocentowanie roczne", `${o.annualInterestPercent ?? 0}%`),
     line("Prowizja miesięcznie", formatPLN(schedule?.monthlyCommissionAmount)),
@@ -124,20 +139,31 @@ export function generateContractDoc(p: ClientProfile, schedule: ScheduleData | n
 }
 
 export function generateScheduleDoc(p: ClientProfile, schedule: ScheduleData | null): string {
-  if (!schedule) return "Załącznik nr 1 — Harmonogram spłat\n\nBrak danych do wygenerowania harmonogramu.";
+  if (!schedule)
+    return "Załącznik nr 1 — Harmonogram spłat\n\nBrak danych do wygenerowania harmonogramu.";
   const head = `Załącznik nr 1 do umowy pożyczki — HARMONOGRAM SPŁAT\nPożyczkobiorca: ${borrowerDisplayName(p)}\nKwota Pożyczki: ${formatPLN(schedule.nominalLoanAmount)}\nOprocentowanie roczne: ${p.offerData.annualInterestPercent ?? 0}%\nProwizja miesięcznie: ${schedule.monthlyCommissionPercent.toFixed(4)}%\n`;
-  const cols = ["Lp.", "Data raty", "Kwota raty", "Kapitał", "Odsetki", "Prowizja", "Kapitał pozostały"];
+  const cols = [
+    "Lp.",
+    "Data raty",
+    "Kwota raty",
+    "Kapitał",
+    "Odsetki",
+    "Prowizja",
+    "Kapitał pozostały",
+  ];
   const lines = [cols.join("\t")];
   for (const r of schedule.rows) {
-    lines.push([
-      String(r.index),
-      formatDate(r.date),
-      formatPLN(r.paymentAmount),
-      formatPLN(r.capital),
-      formatPLN(r.interest),
-      formatPLN(r.commission),
-      formatPLN(r.remainingCapital),
-    ].join("\t"));
+    lines.push(
+      [
+        String(r.index),
+        formatDate(r.date),
+        formatPLN(r.paymentAmount),
+        formatPLN(r.capital),
+        formatPLN(r.interest),
+        formatPLN(r.commission),
+        formatPLN(r.remainingCapital),
+      ].join("\t"),
+    );
   }
   return `${head}\n${lines.join("\n")}`;
 }
@@ -153,7 +179,10 @@ export function generateProtocolDoc(p: ClientProfile, schedule: ScheduleData | n
     line("Maksymalna miesięczna rata klienta", formatPLN(o.maxMonthlyPaymentByClient)),
     line("Okres pożyczki", o.loanTermMonths ? `${o.loanTermMonths} mies.` : "—"),
     line("Prowizja (rozłożona na raty)", formatPLN(o.creditedCommission)),
-    line("Wynagrodzenie inwestora (miesięcznie)", formatPLN(schedule?.expectedMonthlyInvestorReturn)),
+    line(
+      "Wynagrodzenie inwestora (miesięcznie)",
+      formatPLN(schedule?.expectedMonthlyInvestorReturn),
+    ),
     line("Oprocentowanie roczne", `${o.annualInterestPercent ?? 0}%`),
     line("Prowizja miesięcznie", formatPLN(schedule?.monthlyCommissionAmount)),
     line("Rata balonowa", formatPLN(schedule?.balloonPayment)),
@@ -161,7 +190,10 @@ export function generateProtocolDoc(p: ClientProfile, schedule: ScheduleData | n
     line("Zabezpieczenia — art. 777 k.p.c.", formatPLN(p.securityData.art777Amount)),
     line("Rekomendowana data końcowa art. 777", formatDate(sec?.recommended777Deadline)),
     line("Data wypłaty", formatDate(o.payoutDate)),
-    line("Sposób wypłaty środków", p.investorData.bankAccount ? `Przelew na rachunek ${p.investorData.bankAccount}` : "—"),
+    line(
+      "Sposób wypłaty środków",
+      p.investorData.bankAccount ? `Przelew na rachunek ${p.investorData.bankAccount}` : "—",
+    ),
     ``,
     `..................................          ..................................`,
     `       Pożyczkodawca                                Pożyczkobiorca`,

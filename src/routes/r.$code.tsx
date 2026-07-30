@@ -22,7 +22,9 @@ export const Route = createFileRoute("/r/$code")({
         referrer: ref,
         device: /Mobi|Android/i.test(ua ?? "") ? "mobile" : "desktop",
       });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     const url = new URL(c.target_url);
     if (c.utm_source) url.searchParams.set("utm_source", c.utm_source);
@@ -36,5 +38,7 @@ export const Route = createFileRoute("/r/$code")({
     }
     throw redirect({ to: "/" });
   },
-  component: () => <div className="grid min-h-screen place-items-center text-muted-foreground">Przekierowuję…</div>,
+  component: () => (
+    <div className="grid min-h-screen place-items-center text-muted-foreground">Przekierowuję…</div>
+  ),
 });

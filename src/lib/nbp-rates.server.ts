@@ -3,12 +3,12 @@
 // (publiczny, bez klucza; ten sam plik, który zasila stronę nbp.pl/stopy-procentowe).
 
 export interface NbpRates {
-  referenceRate: number;        // stopa referencyjna NBP (%)
-  lombardRate: number | null;   // stopa lombardowa (%)
-  depositRate: number | null;   // stopa depozytowa (%)
+  referenceRate: number; // stopa referencyjna NBP (%)
+  lombardRate: number | null; // stopa lombardowa (%)
+  depositRate: number | null; // stopa depozytowa (%)
   rediscountRate: number | null;
   effectiveFrom: string | null; // data obowiązywania (ISO)
-  fetchedAt: string;            // kiedy pobraliśmy
+  fetchedAt: string; // kiedy pobraliśmy
   source: "nbp" | "fallback";
   citations: string[];
 }
@@ -18,7 +18,7 @@ const FALLBACK: NbpRates = {
   referenceRate: 3.75,
   lombardRate: 4.25,
   depositRate: 3.25,
-  rediscountRate: 3.80,
+  rediscountRate: 3.8,
   effectiveFrom: null,
   fetchedAt: new Date(0).toISOString(),
   source: "fallback",

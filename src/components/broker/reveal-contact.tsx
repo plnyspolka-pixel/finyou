@@ -39,7 +39,11 @@ export function RevealContact({
     return (
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); setShown(true); m.mutate(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          setShown(true);
+          m.mutate();
+        }}
         className="inline-flex items-center gap-1 rounded-md bg-white/10 border border-white/20 hover:bg-white/20 text-white px-2 py-1 text-xs"
         title={`Odsłoń ${label}`}
       >
@@ -50,7 +54,10 @@ export function RevealContact({
   return (
     <a
       href={href(value)}
-      onClick={(e) => { e.stopPropagation(); onUse?.(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onUse?.();
+      }}
       className="inline-flex items-center gap-1 rounded-md bg-emerald-500/25 border border-emerald-300/40 hover:bg-emerald-500/40 text-emerald-50 px-2 py-1 text-xs underline-offset-2 hover:underline max-w-full break-all"
     >
       <Icon className="h-3 w-3 shrink-0" /> <span className="break-all">{value}</span>
@@ -64,11 +71,13 @@ export function RevealsList({
   reveals?: { phone: RevealEntry[]; email: RevealEntry[]; messenger: RevealEntry[] };
 }) {
   if (!reveals) return null;
-  const groups = ([
-    { field: "phone", items: reveals.phone ?? [] },
-    { field: "email", items: reveals.email ?? [] },
-    { field: "messenger", items: reveals.messenger ?? [] },
-  ] as { field: Field; items: RevealEntry[] }[]).filter((g) => g.items.length > 0);
+  const groups = (
+    [
+      { field: "phone", items: reveals.phone ?? [] },
+      { field: "email", items: reveals.email ?? [] },
+      { field: "messenger", items: reveals.messenger ?? [] },
+    ] as { field: Field; items: RevealEntry[] }[]
+  ).filter((g) => g.items.length > 0);
   if (groups.length === 0) return null;
   return (
     <div className="text-[11px] mt-1 flex flex-wrap gap-1">

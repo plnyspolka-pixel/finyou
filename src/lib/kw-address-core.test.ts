@@ -31,7 +31,8 @@ describe("parseKwAddress — dział I-O KW", () => {
   });
 
   it("obsługuje miejscowości wieloczłonowe i brak ulicy", () => {
-    const html = "Województwo LUBUSKIE Powiat NOWOSOLSKI Gmina NOWA SÓL Miejscowość NOWA SÓL Numer budynku 7";
+    const html =
+      "Województwo LUBUSKIE Powiat NOWOSOLSKI Gmina NOWA SÓL Miejscowość NOWA SÓL Numer budynku 7";
     const a = parseKwAddress(html);
     expect(a.city).toBe("Nowa Sól");
     expect(a.street).toBeNull();

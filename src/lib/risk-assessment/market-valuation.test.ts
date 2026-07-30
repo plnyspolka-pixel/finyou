@@ -18,7 +18,17 @@ function mc(over: Partial<MarketComparablesResult> = {}): MarketComparablesResul
     pricePerM2P25: 9_000,
     pricePerM2P75: 11_500,
     sample: [
-      { source: "otodom.pl", kind: "offer", url: "https://www.otodom.pl/pl/oferta/x", title: "Oferta", address: null, pricePln: 500_000, areaM2: 50, pricePerM2: 10_000, date: null },
+      {
+        source: "otodom.pl",
+        kind: "offer",
+        url: "https://www.otodom.pl/pl/oferta/x",
+        title: "Oferta",
+        address: null,
+        pricePln: 500_000,
+        areaM2: 50,
+        pricePerM2: 10_000,
+        date: null,
+      },
     ],
     summaryLine: "",
     ...over,
@@ -67,7 +77,12 @@ function baseInput(over: Partial<MarketValuationInput> = {}): MarketValuationInp
     requestedLoanPln: null,
     marketComparables: mc(),
     govBenchmark: null,
-    kwLegal: { hasEnforcement: false, hasUsufruct: false, totalMortgageAmountPln: null, mortgages: [] },
+    kwLegal: {
+      hasEnforcement: false,
+      hasUsufruct: false,
+      totalMortgageAmountPln: null,
+      mortgages: [],
+    },
     ownerMatchesKw: true,
     saleabilityScore: 70,
     ...over,
@@ -88,13 +103,15 @@ describe("computeMarketValuation", () => {
   });
 
   it("grunt rolny: podstawą są ceny GUS zł/ha × ha (scraping tylko pomocniczo)", () => {
-    const v = computeMarketValuation(baseInput({
-      propertyType: "grunt_rolny",
-      areaM2: 20_000,
-      landAreaHa: 2,
-      govBenchmark: gov(),
-      marketComparables: mc({ pricePerM2Median: 25 }),
-    }));
+    const v = computeMarketValuation(
+      baseInput({
+        propertyType: "grunt_rolny",
+        areaM2: 20_000,
+        landAreaHa: 2,
+        govBenchmark: gov(),
+        marketComparables: mc({ pricePerM2Median: 25 }),
+      }),
+    );
     expect(v.status).toBe("success");
     expect(v.estimatedValueMidPln).toBe(120_000); // 60 000 zł/ha × 2 ha
     expect(v.basisSource).toContain("GUS");
@@ -102,10 +119,18 @@ describe("computeMarketValuation", () => {
   });
 
   it("fallback GUS zł/m², gdy scraping bez danych (nie-rolne)", () => {
-    const v = computeMarketValuation(baseInput({
-      marketComparables: mc({ status: "no_data", pricePerM2Median: null }),
-      govBenchmark: gov({ propertyType: "mieszkanie", pricePerHa: null, gusPricePerHa: null, pricePerM2Median: 8_000, gusPricePerM2Median: 8_000 }),
-    }));
+    const v = computeMarketValuation(
+      baseInput({
+        marketComparables: mc({ status: "no_data", pricePerM2Median: null }),
+        govBenchmark: gov({
+          propertyType: "mieszkanie",
+          pricePerHa: null,
+          gusPricePerHa: null,
+          pricePerM2Median: 8_000,
+          gusPricePerM2Median: 8_000,
+        }),
+      }),
+    );
     expect(v.status).toBe("success");
     expect(v.estimatedValueMidPln).toBe(400_000);
     expect(v.basisSource).toContain("GUS BDL — przeciętne");
@@ -113,7 +138,9 @@ describe("computeMarketValuation", () => {
   });
 
   it("no_data bez rynku i GUS; oraz bez powierzchni", () => {
-    const noMarket = computeMarketValuation(baseInput({ marketComparables: null, govBenchmark: null }));
+    const noMarket = computeMarketValuation(
+      baseInput({ marketComparables: null, govBenchmark: null }),
+    );
     expect(noMarket.status).toBe("no_data");
     expect(noMarket.recommendation).toBe("do_weryfikacji");
 
@@ -123,9 +150,16 @@ describe("computeMarketValuation", () => {
   });
 
   it("egzekucja obniża pułap LTV i zaostrza klasyfikację", () => {
-    const v = computeMarketValuation(baseInput({
-      kwLegal: { hasEnforcement: true, hasUsufruct: false, totalMortgageAmountPln: 200_000, mortgages: [{ text: "hipoteka", amount: 200_000, currency: "PLN", creditor: "Bank" }] },
-    }));
+    const v = computeMarketValuation(
+      baseInput({
+        kwLegal: {
+          hasEnforcement: true,
+          hasUsufruct: false,
+          totalMortgageAmountPln: 200_000,
+          mortgages: [{ text: "hipoteka", amount: 200_000, currency: "PLN", creditor: "Bank" }],
+        },
+      }),
+    );
     expect(v.suggestedLtvCapPercent).toBe(55); // 65 − 10 (egzekucja)
     expect(v.recommendation).toBe("warunkowa");
     expect(v.keyRisks.join(" ")).toMatch(/Egzekucja/);
@@ -133,7 +167,9 @@ describe("computeMarketValuation", () => {
   });
 
   it("flaguje rozjazd wartości deklarowanej i przekroczenie kwoty przy pułapie LTV", () => {
-    const v = computeMarketValuation(baseInput({ declaredValuePln: 900_000, requestedLoanPln: 400_000 }));
+    const v = computeMarketValuation(
+      baseInput({ declaredValuePln: 900_000, requestedLoanPln: 400_000 }),
+    );
     expect(v.keyRisks.join(" ")).toMatch(/deklarowana/);
     expect(v.keyRisks.join(" ")).toMatch(/przekracza/);
   });

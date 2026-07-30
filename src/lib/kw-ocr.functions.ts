@@ -12,9 +12,11 @@ const KW_REGEX = /\b[A-Z]{2}\d[A-Z0-9]\/\d{8}\/\d\b/g;
 export const detectKwNumbers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      loanApplicationId: z.string().uuid(),
-    }).parse(input),
+    z
+      .object({
+        loanApplicationId: z.string().uuid(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
@@ -50,11 +52,18 @@ export const detectKwNumbers = createServerFn({ method: "POST" })
           body: JSON.stringify({
             model: "google/gemini-2.5-flash",
             messages: [
-              { role: "system", content: "Wyodrębnij z obrazu wszystkie numery ksiąg wieczystych w formacie AA1A/00000000/0. Zwróć WYŁĄCZNIE listę numerów, każdy w osobnej linii." },
-              { role: "user", content: [
-                { type: "text", text: "Znajdź numery KW." },
-                { type: "image_url", image_url: { url: signed.signedUrl } },
-              ] },
+              {
+                role: "system",
+                content:
+                  "Wyodrębnij z obrazu wszystkie numery ksiąg wieczystych w formacie AA1A/00000000/0. Zwróć WYŁĄCZNIE listę numerów, każdy w osobnej linii.",
+              },
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: "Znajdź numery KW." },
+                  { type: "image_url", image_url: { url: signed.signedUrl } },
+                ],
+              },
             ],
           }),
         });
@@ -78,11 +87,13 @@ export const detectKwNumbers = createServerFn({ method: "POST" })
 export const extractKwFromUpload = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      dataUrl: z.string().min(20).max(15_000_000), // ~11MB base64
-      mimeType: z.string().min(3).max(100),
-      fileName: z.string().max(200).optional(),
-    }).parse(input),
+    z
+      .object({
+        dataUrl: z.string().min(20).max(15_000_000), // ~11MB base64
+        mimeType: z.string().min(3).max(100),
+        fileName: z.string().max(200).optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -95,7 +106,10 @@ export const extractKwFromUpload = createServerFn({ method: "POST" })
     }
 
     const userContent: unknown[] = [
-      { type: "text", text: "Wyodrębnij z dokumentu wszystkie numery ksiąg wieczystych w polskim formacie AA1A/00000000/0 (np. WA1M/00012345/6). Zwróć WYŁĄCZNIE listę numerów, każdy w osobnej linii. Jeśli nie ma żadnego, zwróć pusty tekst." },
+      {
+        type: "text",
+        text: "Wyodrębnij z dokumentu wszystkie numery ksiąg wieczystych w polskim formacie AA1A/00000000/0 (np. WA1M/00012345/6). Zwróć WYŁĄCZNIE listę numerów, każdy w osobnej linii. Jeśli nie ma żadnego, zwróć pusty tekst.",
+      },
     ];
     if (isImage) {
       userContent.push({ type: "image_url", image_url: { url: data.dataUrl } });
@@ -117,12 +131,17 @@ export const extractKwFromUpload = createServerFn({ method: "POST" })
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [
-            { role: "system", content: "Jesteś asystentem OCR specjalizującym się w polskich dokumentach nieruchomościowych." },
+            {
+              role: "system",
+              content:
+                "Jesteś asystentem OCR specjalizującym się w polskich dokumentach nieruchomościowych.",
+            },
             { role: "user", content: userContent },
           ],
         }),
       });
-      if (resp.status === 429) return { found: false, numbers: [], reason: "rate_limited" as const };
+      if (resp.status === 429)
+        return { found: false, numbers: [], reason: "rate_limited" as const };
       if (resp.status === 402) return { found: false, numbers: [], reason: "ai_quota" as const };
       if (!resp.ok) return { found: false, numbers: [], reason: "ai_error" as const };
       const json = await resp.json();
@@ -131,7 +150,7 @@ export const extractKwFromUpload = createServerFn({ method: "POST" })
       return { found: false, numbers: [], reason: "ai_error" as const };
     }
 
-    const matches = Array.from(new Set((text.toUpperCase().match(KW_REGEX) ?? [])));
+    const matches = Array.from(new Set(text.toUpperCase().match(KW_REGEX) ?? []));
     if (matches.length === 0) {
       return { found: false, numbers: [], reason: "not_found" as const };
     }

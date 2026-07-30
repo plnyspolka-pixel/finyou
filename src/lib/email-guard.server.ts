@@ -1,15 +1,31 @@
 // Ochrona przed pętlami mailowymi i niechcianymi adresatami.
 // Używane PRZED każdą odpowiedzią auto-agenta i (opcjonalnie) przed wysyłką maila.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  looksLikeAutoMessage,
+  isAutoReplySubject,
+  isRepetitiveInbound,
+} from "@/lib/bot-detection";
 
 function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
 const SYSTEM_PREFIXES = [
-  "noreply@", "no-reply@", "no_reply@", "donotreply@", "do-not-reply@",
-  "mailer-daemon@", "postmaster@", "bounce@", "bounces@", "notifications@",
-  "notification@", "auto-reply@", "autoreply@", "support-noreply@",
+  "noreply@",
+  "no-reply@",
+  "no_reply@",
+  "donotreply@",
+  "do-not-reply@",
+  "mailer-daemon@",
+  "postmaster@",
+  "bounce@",
+  "bounces@",
+  "notifications@",
+  "notification@",
+  "auto-reply@",
+  "autoreply@",
+  "support-noreply@",
 ];
 
 /** Zwraca lowercased headers map z dowolnego inputu (Headers/object/array) */
@@ -63,13 +79,16 @@ export async function isSuppressed(email: string | null | undefined): Promise<bo
   return !!data;
 }
 
-export async function addSuppression(email: string, reason: string, metadata: Record<string, any> = {}): Promise<void> {
+export async function addSuppression(
+  email: string,
+  reason: string,
+  metadata: Record<string, any> = {},
+): Promise<void> {
   if (!email) return;
   const s = admin();
-  await s.from("suppressed_emails").upsert(
-    { email: email.toLowerCase(), reason, metadata },
-    { onConflict: "email" },
-  );
+  await s
+    .from("suppressed_emails")
+    .upsert({ email: email.toLowerCase(), reason, metadata }, { onConflict: "email" });
 }
 
 /** Liczba wiadomości wychodzących do leada w ostatnich 24h */
@@ -104,18 +123,56 @@ export async function threadCountSince(opts: {
   return count ?? 0;
 }
 
+/** Ostatnie wiadomości przychodzące (e-mail) od leada z ostatnich 24h. */
+async function recentInboundEmails(leadId: string, limit = 10): Promise<string[]> {
+  const s = admin();
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await s
+    .from("lead_communications")
+    .select("content")
+    .eq("lead_id", leadId)
+    .eq("channel", "email")
+    .eq("direction", "inbound")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []).map((r) => r.content ?? "");
+}
+
 /** Łączny test — czy wolno odpowiedzieć autoresponderem na ten mail. */
 export async function shouldSkipAutoReply(params: {
   leadId: string;
   fromEmail: string | null;
   headers: Record<string, string>;
   threadIds?: (string | null | undefined)[];
+  subject?: string | null;
+  bodyText?: string | null;
 }): Promise<{ skip: boolean; reason?: string }> {
-  const { leadId, fromEmail, headers, threadIds = [] } = params;
+  const { leadId, fromEmail, headers, threadIds = [], subject, bodyText } = params;
   if (isSystemSender(fromEmail)) return { skip: true, reason: "system_sender" };
   if (isAutoReplyHeaders(headers)) return { skip: true, reason: "auto_reply_headers" };
+
+  // Rozpoznanie automatu po temacie/treści — nagłówki nie zawsze są ustawione
+  // (wiele botów i autoresponderów ich nie wysyła).
+  if (isAutoReplySubject(subject)) return { skip: true, reason: "auto_reply_subject" };
+  const signal = looksLikeAutoMessage(bodyText);
+  if (signal) return { skip: true, reason: `bot_content:${signal}` };
+
   if (await isSuppressed(fromEmail)) return { skip: true, reason: "suppressed" };
   if ((await outboundCount24h(leadId)) >= 10) return { skip: true, reason: "rate_limit_24h" };
+
+  // Ta sama treść przychodzi w kółko — pętla z botem, którego nie zdradzają
+  // ani nagłówki, ani sygnatury w treści.
+  const inbound = await recentInboundEmails(leadId);
+  if (isRepetitiveInbound(inbound)) {
+    if (fromEmail) {
+      await addSuppression(fromEmail, "repeated_content", {
+        lead_id: leadId,
+        detected_at: new Date().toISOString(),
+      });
+    }
+    return { skip: true, reason: "repeated_content" };
+  }
 
   // Wykrywanie pętli: >=3 wiadomości w tym samym wątku w 5 minut
   if (threadIds.filter(Boolean).length > 0) {

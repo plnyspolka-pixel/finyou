@@ -13,10 +13,16 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ partner_id, status, limit }, ctx: ToolContext) => {
-    try { requireAuth(ctx); } catch (e) { return fail((e as Error).message); }
+    try {
+      requireAuth(ctx);
+    } catch (e) {
+      return fail((e as Error).message);
+    }
     let q = userClient(ctx)
       .from("affiliate_commissions")
-      .select("id, partner_id, status, gross_amount, currency, network_level, settlement_type, approved_at, paid_at, created_at")
+      .select(
+        "id, partner_id, status, gross_amount, currency, network_level, settlement_type, approved_at, paid_at, created_at",
+      )
       .order("created_at", { ascending: false })
       .limit(limit ?? 25);
     if (partner_id) q = q.eq("partner_id", partner_id);

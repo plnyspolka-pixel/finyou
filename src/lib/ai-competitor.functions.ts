@@ -6,48 +6,67 @@ function normalizeDomain(input: string) {
   try {
     const u = new URL(input.includes("://") ? input : `https://${input}`);
     return u.hostname.replace(/^www\./, "").toLowerCase();
-  } catch { return input.trim().replace(/^www\./, "").toLowerCase(); }
+  } catch {
+    return input
+      .trim()
+      .replace(/^www\./, "")
+      .toLowerCase();
+  }
 }
 
 async function sha256Hex(input: string) {
   const buf = new TextEncoder().encode(input);
   const hash = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export const addCompetitor = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i) => z.object({
-    name: z.string().min(1).max(150),
-    domain: z.string().min(3).max(200),
-    urls: z.array(z.string().url()).min(1).max(20),
-    notes: z.string().max(2000).optional().nullable(),
-    tags: z.array(z.string().max(40)).max(20).default([]),
-  }).parse(i))
+  .inputValidator((i) =>
+    z
+      .object({
+        name: z.string().min(1).max(150),
+        domain: z.string().min(3).max(200),
+        urls: z.array(z.string().url()).min(1).max(20),
+        notes: z.string().max(2000).optional().nullable(),
+        tags: z.array(z.string().max(40)).max(20).default([]),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: row, error } = await supabase.from("ai_competitors").insert({
-      user_id: userId,
-      name: data.name,
-      domain: normalizeDomain(data.domain),
-      urls: data.urls,
-      notes: data.notes ?? null,
-      tags: data.tags,
-    }).select().single();
+    const { data: row, error } = await supabase
+      .from("ai_competitors")
+      .insert({
+        user_id: userId,
+        name: data.name,
+        domain: normalizeDomain(data.domain),
+        urls: data.urls,
+        notes: data.notes ?? null,
+        tags: data.tags,
+      })
+      .select()
+      .single();
     if (error) throw new Error(error.message);
     return { competitor: row };
   });
 
 export const updateCompetitor = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i) => z.object({
-    id: z.string().uuid(),
-    name: z.string().min(1).max(150).optional(),
-    urls: z.array(z.string().url()).max(20).optional(),
-    notes: z.string().max(2000).nullable().optional(),
-    tags: z.array(z.string().max(40)).max(20).optional(),
-    is_active: z.boolean().optional(),
-  }).parse(i))
+  .inputValidator((i) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        name: z.string().min(1).max(150).optional(),
+        urls: z.array(z.string().url()).max(20).optional(),
+        notes: z.string().max(2000).nullable().optional(),
+        tags: z.array(z.string().max(40)).max(20).optional(),
+        is_active: z.boolean().optional(),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }) => {
     const { id, ...patch } = data;
     const { error } = await context.supabase.from("ai_competitors").update(patch).eq("id", id);
@@ -121,7 +140,10 @@ Zwróć JSON:
   const json = await res.json();
   try {
     const parsed = JSON.parse(json?.choices?.[0]?.message?.content ?? "{}");
-    return { summary: String(parsed.summary ?? "Zmiana wykryta.").slice(0, 1000), analysis: parsed };
+    return {
+      summary: String(parsed.summary ?? "Zmiana wykryta.").slice(0, 1000),
+      analysis: parsed,
+    };
   } catch {
     return { summary: "Zmiana wykryta.", analysis: {} };
   }
@@ -133,7 +155,10 @@ export const scanCompetitor = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: comp, error: cErr } = await supabase
-      .from("ai_competitors").select("*").eq("id", data.competitor_id).single();
+      .from("ai_competitors")
+      .select("*")
+      .eq("id", data.competitor_id)
+      .single();
     if (cErr || !comp) throw new Error("Nie znaleziono konkurenta.");
 
     let changedCount = 0;
@@ -146,9 +171,12 @@ export const scanCompetitor = createServerFn({ method: "POST" })
         const contentHash = await sha256Hex(scraped.markdown);
 
         const { data: prev } = await supabase
-          .from("ai_competitor_snapshots").select("*")
-          .eq("url", url).eq("competitor_id", comp.id)
-          .order("checked_at", { ascending: false }).limit(1);
+          .from("ai_competitor_snapshots")
+          .select("*")
+          .eq("url", url)
+          .eq("competitor_id", comp.id)
+          .order("checked_at", { ascending: false })
+          .limit(1);
         const prevSnap = prev?.[0];
         const changed = !!prevSnap && prevSnap.content_hash !== contentHash;
 
@@ -162,18 +190,22 @@ export const scanCompetitor = createServerFn({ method: "POST" })
           change_summary = "Pierwszy snapshot.";
         }
 
-        const { data: snap } = await supabase.from("ai_competitor_snapshots").insert({
-          competitor_id: comp.id,
-          user_id: userId,
-          url,
-          title: scraped.title,
-          description: scraped.description,
-          content_hash: contentHash,
-          content: scraped.markdown.slice(0, 50000),
-          changed,
-          change_summary,
-          ai_analysis,
-        }).select().single();
+        const { data: snap } = await supabase
+          .from("ai_competitor_snapshots")
+          .insert({
+            competitor_id: comp.id,
+            user_id: userId,
+            url,
+            title: scraped.title,
+            description: scraped.description,
+            content_hash: contentHash,
+            content: scraped.markdown.slice(0, 50000),
+            changed,
+            change_summary,
+            ai_analysis,
+          })
+          .select()
+          .single();
 
         scanned++;
         if (changed) changedCount++;
@@ -184,6 +216,9 @@ export const scanCompetitor = createServerFn({ method: "POST" })
       }
     }
 
-    await supabase.from("ai_competitors").update({ last_checked_at: new Date().toISOString() }).eq("id", comp.id);
+    await supabase
+      .from("ai_competitors")
+      .update({ last_checked_at: new Date().toISOString() })
+      .eq("id", comp.id);
     return { scanned, changed: changedCount, results };
   });

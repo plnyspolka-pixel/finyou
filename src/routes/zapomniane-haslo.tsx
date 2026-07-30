@@ -4,13 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/zapomniane-haslo")({
@@ -19,8 +13,7 @@ export const Route = createFileRoute("/zapomniane-haslo")({
       { title: "Finance You — Reset hasła" },
       {
         name: "description",
-        content:
-          "Zresetuj hasło do panelu Finance You. Wyślemy link do ustawienia nowego hasła.",
+        content: "Zresetuj hasło do panelu Finance You. Wyślemy link do ustawienia nowego hasła.",
       },
       { property: "og:title", content: "Finance You — Reset hasła" },
       {
@@ -62,8 +55,7 @@ function ForgotPasswordPage() {
         <CardHeader>
           <CardTitle>Reset hasła</CardTitle>
           <CardDescription>
-            Podaj adres e-mail powiązany z kontem. Wyślemy link do ustawienia
-            nowego hasła.
+            Podaj adres e-mail powiązany z kontem. Wyślemy link do ustawienia nowego hasła.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -71,8 +63,8 @@ function ForgotPasswordPage() {
             <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
               <p className="font-medium">Sprawdź skrzynkę e-mail.</p>
               <p className="mt-1">
-                Jeżeli konto istnieje, wysłaliśmy na {email.trim()} link do
-                ustawienia nowego hasła. Link jest ważny przez 1 godzinę.
+                Jeżeli konto istnieje, wysłaliśmy na {email.trim()} link do ustawienia nowego hasła.
+                Link jest ważny przez 1 godzinę.
               </p>
             </div>
           ) : (

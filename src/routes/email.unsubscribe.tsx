@@ -15,7 +15,10 @@ const unsubscribeFn = createServerFn({ method: "POST" })
     if (!row?.loan_application_id) return { ok: false };
     await s
       .from("loan_applications")
-      .update({ reminder_email_unsubscribed: true, reminder_email_unsubscribed_at: new Date().toISOString() })
+      .update({
+        reminder_email_unsubscribed: true,
+        reminder_email_unsubscribed_at: new Date().toISOString(),
+      })
       .eq("id", row.loan_application_id);
     return { ok: true, email: row.recipient_email };
   });
@@ -34,12 +37,26 @@ export const Route = createFileRoute("/email/unsubscribe")({
 function UnsubPage() {
   const { ok, email } = Route.useLoaderData();
   return (
-    <div style={{ maxWidth: 560, margin: "80px auto", padding: 24, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div
+      style={{
+        maxWidth: 560,
+        margin: "80px auto",
+        padding: 24,
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      }}
+    >
       <h1 style={{ fontSize: 24, marginBottom: 12 }}>Finance You — przypomnienia mailowe</h1>
       {ok ? (
-        <p>Wypisaliśmy <strong>{email}</strong> z przypomnień o wniosku. Nie będziemy już wysyłać wiadomości. Jeśli to pomyłka — po prostu wróć do wniosku i kontynuuj, automatycznie cię ponownie zapiszemy.</p>
+        <p>
+          Wypisaliśmy <strong>{email}</strong> z przypomnień o wniosku. Nie będziemy już wysyłać
+          wiadomości. Jeśli to pomyłka — po prostu wróć do wniosku i kontynuuj, automatycznie cię
+          ponownie zapiszemy.
+        </p>
       ) : (
-        <p>Nie udało się zidentyfikować adresu. Link mógł wygasnąć — napisz na kontakt@financeyou.pl, a wypiszemy cię ręcznie.</p>
+        <p>
+          Nie udało się zidentyfikować adresu. Link mógł wygasnąć — napisz na kontakt@financeyou.pl,
+          a wypiszemy cię ręcznie.
+        </p>
       )}
     </div>
   );

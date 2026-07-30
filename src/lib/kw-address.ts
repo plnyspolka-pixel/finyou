@@ -14,7 +14,10 @@ export type { KwAddress };
 export function useKwAddress(kwNumber?: string | null): KwAddress | null {
   const [addr, setAddr] = useState<KwAddress | null>(null);
   useEffect(() => {
-    if (!kwNumber) { setAddr(null); return; }
+    if (!kwNumber) {
+      setAddr(null);
+      return;
+    }
     let cancelled = false;
     void (async () => {
       const normalized = normalizeKwNumber(kwNumber);
@@ -27,7 +30,9 @@ export function useKwAddress(kwNumber?: string | null): KwAddress | null {
       if (cancelled) return;
       setAddr(data?.dzial_1o ? parseKwAddress(data.dzial_1o) : null);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [kwNumber]);
   return addr;
 }

@@ -23,57 +23,135 @@ const VAR_LAND_AGRI_AVG = "217230";
 // Klucz: znormalizowana nazwa miasta. Wartość: BDL unitId (12-znakowy kod TERYT-BDL).
 // Te ID są stabilne i służą jako twarde rozpoznanie dużych miast bez polegania
 // na pierwszym wyniku z /units/search.
-const KNOWN_CITY_UNITS: Record<string, { unitId: string; unitName: string; level: 6; voivodeship: string }> = {
-  "warszawa":   { unitId: "011412011000", unitName: "Powiat m.st. Warszawa",      level: 6, voivodeship: "mazowieckie"   },
-  "krakow":     { unitId: "021261011000", unitName: "Powiat m. Kraków",           level: 6, voivodeship: "małopolskie"   },
-  "lodz":       { unitId: "031061011000", unitName: "Powiat m. Łódź",             level: 6, voivodeship: "łódzkie"       },
-  "wroclaw":    { unitId: "020264011000", unitName: "Powiat m. Wrocław",          level: 6, voivodeship: "dolnośląskie"  },
-  "poznan":     { unitId: "153064011000", unitName: "Powiat m. Poznań",           level: 6, voivodeship: "wielkopolskie" },
-  "gdansk":     { unitId: "062261011000", unitName: "Powiat m. Gdańsk",           level: 6, voivodeship: "pomorskie"     },
-  "gdynia":     { unitId: "062263011000", unitName: "Powiat m. Gdynia",           level: 6, voivodeship: "pomorskie"     },
-  "szczecin":   { unitId: "132262011000", unitName: "Powiat m. Szczecin",         level: 6, voivodeship: "zachodniopomorskie" },
-  "bydgoszcz":  { unitId: "040461011000", unitName: "Powiat m. Bydgoszcz",        level: 6, voivodeship: "kujawsko-pomorskie" },
-  "lublin":     { unitId: "060663011000", unitName: "Powiat m. Lublin",           level: 6, voivodeship: "lubelskie"     },
-  "katowice":   { unitId: "142469011000", unitName: "Powiat m. Katowice",         level: 6, voivodeship: "śląskie"       },
-  "bialystok":  { unitId: "100261011000", unitName: "Powiat m. Białystok",        level: 6, voivodeship: "podlaskie"     },
-  "rzeszow":    { unitId: "091063011000", unitName: "Powiat m. Rzeszów",          level: 6, voivodeship: "podkarpackie"  },
-  "olsztyn":    { unitId: "112861011000", unitName: "Powiat m. Olsztyn",          level: 6, voivodeship: "warmińsko-mazurskie" },
-  "kielce":     { unitId: "122661011000", unitName: "Powiat m. Kielce",           level: 6, voivodeship: "świętokrzyskie" },
-  "torun":      { unitId: "040463011000", unitName: "Powiat m. Toruń",            level: 6, voivodeship: "kujawsko-pomorskie" },
+const KNOWN_CITY_UNITS: Record<
+  string,
+  { unitId: string; unitName: string; level: 6; voivodeship: string }
+> = {
+  warszawa: {
+    unitId: "011412011000",
+    unitName: "Powiat m.st. Warszawa",
+    level: 6,
+    voivodeship: "mazowieckie",
+  },
+  krakow: {
+    unitId: "021261011000",
+    unitName: "Powiat m. Kraków",
+    level: 6,
+    voivodeship: "małopolskie",
+  },
+  lodz: { unitId: "031061011000", unitName: "Powiat m. Łódź", level: 6, voivodeship: "łódzkie" },
+  wroclaw: {
+    unitId: "020264011000",
+    unitName: "Powiat m. Wrocław",
+    level: 6,
+    voivodeship: "dolnośląskie",
+  },
+  poznan: {
+    unitId: "153064011000",
+    unitName: "Powiat m. Poznań",
+    level: 6,
+    voivodeship: "wielkopolskie",
+  },
+  gdansk: {
+    unitId: "062261011000",
+    unitName: "Powiat m. Gdańsk",
+    level: 6,
+    voivodeship: "pomorskie",
+  },
+  gdynia: {
+    unitId: "062263011000",
+    unitName: "Powiat m. Gdynia",
+    level: 6,
+    voivodeship: "pomorskie",
+  },
+  szczecin: {
+    unitId: "132262011000",
+    unitName: "Powiat m. Szczecin",
+    level: 6,
+    voivodeship: "zachodniopomorskie",
+  },
+  bydgoszcz: {
+    unitId: "040461011000",
+    unitName: "Powiat m. Bydgoszcz",
+    level: 6,
+    voivodeship: "kujawsko-pomorskie",
+  },
+  lublin: {
+    unitId: "060663011000",
+    unitName: "Powiat m. Lublin",
+    level: 6,
+    voivodeship: "lubelskie",
+  },
+  katowice: {
+    unitId: "142469011000",
+    unitName: "Powiat m. Katowice",
+    level: 6,
+    voivodeship: "śląskie",
+  },
+  bialystok: {
+    unitId: "100261011000",
+    unitName: "Powiat m. Białystok",
+    level: 6,
+    voivodeship: "podlaskie",
+  },
+  rzeszow: {
+    unitId: "091063011000",
+    unitName: "Powiat m. Rzeszów",
+    level: 6,
+    voivodeship: "podkarpackie",
+  },
+  olsztyn: {
+    unitId: "112861011000",
+    unitName: "Powiat m. Olsztyn",
+    level: 6,
+    voivodeship: "warmińsko-mazurskie",
+  },
+  kielce: {
+    unitId: "122661011000",
+    unitName: "Powiat m. Kielce",
+    level: 6,
+    voivodeship: "świętokrzyskie",
+  },
+  torun: {
+    unitId: "040463011000",
+    unitName: "Powiat m. Toruń",
+    level: 6,
+    voivodeship: "kujawsko-pomorskie",
+  },
 };
 
 // Identyfikatory jednostek województw (poziom 2 w BDL = województwo).
 // Trzymane jako fallback. Niepełne — uzupełniane w razie potrzeby.
 const KNOWN_VOIVODESHIP_UNITS: Record<string, { unitId: string; unitName: string }> = {
-  "mazowieckie":        { unitId: "010000000000", unitName: "MAZOWIECKIE" },
-  "dolnoslaskie":       { unitId: "020000000000", unitName: "DOLNOŚLĄSKIE" },
-  "lodzkie":            { unitId: "030000000000", unitName: "ŁÓDZKIE" },
+  mazowieckie: { unitId: "010000000000", unitName: "MAZOWIECKIE" },
+  dolnoslaskie: { unitId: "020000000000", unitName: "DOLNOŚLĄSKIE" },
+  lodzkie: { unitId: "030000000000", unitName: "ŁÓDZKIE" },
   "kujawsko-pomorskie": { unitId: "040000000000", unitName: "KUJAWSKO-POMORSKIE" },
-  "lubuskie":           { unitId: "050000000000", unitName: "LUBUSKIE" },
-  "lubelskie":          { unitId: "060000000000", unitName: "LUBELSKIE" },
-  "malopolskie":        { unitId: "020000000000", unitName: "MAŁOPOLSKIE" },
-  "opolskie":           { unitId: "080000000000", unitName: "OPOLSKIE" },
-  "podkarpackie":       { unitId: "090000000000", unitName: "PODKARPACKIE" },
-  "podlaskie":          { unitId: "100000000000", unitName: "PODLASKIE" },
-  "pomorskie":          { unitId: "110000000000", unitName: "POMORSKIE" },
-  "slaskie":            { unitId: "120000000000", unitName: "ŚLĄSKIE" },
-  "swietokrzyskie":     { unitId: "130000000000", unitName: "ŚWIĘTOKRZYSKIE" },
-  "warminsko-mazurskie":{ unitId: "140000000000", unitName: "WARMIŃSKO-MAZURSKIE" },
-  "wielkopolskie":      { unitId: "150000000000", unitName: "WIELKOPOLSKIE" },
-  "zachodniopomorskie": { unitId: "160000000000", unitName: "ZACHODNIOPOMORSKIE" },
+  lubuskie: { unitId: "050000000000", unitName: "LUBUSKIE" },
+  lubelskie: { unitId: "060000000000", unitName: "LUBELSKIE" },
+  malopolskie: { unitId: "020000000000", unitName: "MAŁOPOLSKIE" },
+  opolskie: { unitId: "080000000000", unitName: "OPOLSKIE" },
+  podkarpackie: { unitId: "090000000000", unitName: "PODKARPACKIE" },
+  podlaskie: { unitId: "100000000000", unitName: "PODLASKIE" },
+  pomorskie: { unitId: "110000000000", unitName: "POMORSKIE" },
+  slaskie: { unitId: "120000000000", unitName: "ŚLĄSKIE" },
+  swietokrzyskie: { unitId: "130000000000", unitName: "ŚWIĘTOKRZYSKIE" },
+  "warminsko-mazurskie": { unitId: "140000000000", unitName: "WARMIŃSKO-MAZURSKIE" },
+  wielkopolskie: { unitId: "150000000000", unitName: "WIELKOPOLSKIE" },
+  zachodniopomorskie: { unitId: "160000000000", unitName: "ZACHODNIOPOMORSKIE" },
 };
 
 const COUNTRY_UNIT = { unitId: "000000000000", unitName: "POLSKA", level: 1 as const };
 
 // Progi sanity-check (zł/m²) — wartość mniejsza oznacza wynik podejrzany.
 const CITY_SANITY_MIN_PLN_M2: Record<string, number> = {
-  "warszawa": 12000,
-  "krakow":   10000,
-  "wroclaw":   9000,
-  "gdansk":    9000,
-  "poznan":    8000,
-  "lodz":      6000,
-  "katowice":  6000,
+  warszawa: 12000,
+  krakow: 10000,
+  wroclaw: 9000,
+  gdansk: 9000,
+  poznan: 8000,
+  lodz: 6000,
+  katowice: 6000,
 };
 
 // BdlLevelLabel imported from ./types
@@ -106,17 +184,22 @@ export interface ResolvedBdlUnit {
   fallbackLevel: BdlLevelLabel | null;
 }
 
-async function searchUnit(name: string, level?: number): Promise<{ id: string; name: string; level: number } | null> {
+async function searchUnit(
+  name: string,
+  level?: number,
+): Promise<{ id: string; name: string; level: number } | null> {
   const url = `${BDL_BASE}/units/search?name=${encodeURIComponent(name)}${level ? `&level=${level}` : ""}&format=json&page-size=10`;
   try {
     const res = await fetchWithTimeout(url, { headers: headers() }, 12_000);
     if (!res.ok) return null;
-    const json = (await res.json()) as { results?: Array<{ id: string; name: string; level: number }> };
+    const json = (await res.json()) as {
+      results?: Array<{ id: string; name: string; level: number }>;
+    };
     const list = json.results ?? [];
     if (!list.length) return null;
     // Najpierw exact match (bez ogonków), potem cokolwiek z requested level.
     const target = norm(name);
-    const exact = list.find(u => norm(u.name) === target || norm(u.name).includes(target));
+    const exact = list.find((u) => norm(u.name) === target || norm(u.name).includes(target));
     return exact ?? list[0];
   } catch {
     return null;
@@ -211,9 +294,18 @@ interface BdlValuePoint {
 
 async function fetchVarMeta(varId: string): Promise<{ name: string; unit: string | null } | null> {
   try {
-    const res = await fetchWithTimeout(`${BDL_BASE}/variables/${varId}?format=json`, { headers: headers() }, 10_000);
+    const res = await fetchWithTimeout(
+      `${BDL_BASE}/variables/${varId}?format=json`,
+      { headers: headers() },
+      10_000,
+    );
     if (!res.ok) return null;
-    const j = (await res.json()) as { n1?: string; n2?: string; n3?: string; measureUnitName?: string };
+    const j = (await res.json()) as {
+      n1?: string;
+      n2?: string;
+      n3?: string;
+      measureUnitName?: string;
+    };
     const name = [j.n1, j.n2, j.n3].filter(Boolean).join(" — ");
     return { name: name || `Wskaźnik BDL ${varId}`, unit: j.measureUnitName ?? null };
   } catch {
@@ -235,7 +327,7 @@ async function fetchValueForUnit(varId: string, unitId: string): Promise<BdlValu
     if (!values.length) return null;
     // Posortuj po roku malejąco; pierwszy z liczbą = najnowszy.
     const sorted = values
-      .filter(v => typeof v.val === "number")
+      .filter((v) => typeof v.val === "number")
       .sort((a, b) => Number(b.year ?? 0) - Number(a.year ?? 0));
     const top = sorted[0];
     if (!top) return null;
@@ -280,7 +372,6 @@ export function validateResidentialPricePerM2SanityCheck(
 
 // GusBenchmarkDiagnostics imported from ./types
 
-
 export interface GusBenchmarkArgs {
   propertyType: string;
   city?: string | null;
@@ -289,7 +380,9 @@ export interface GusBenchmarkArgs {
   soilClass?: string | null;
 }
 
-export function classifySoil(soilClass: string | null | undefined): "dobre" | "srednie" | "slabe" | "ogolem" {
+export function classifySoil(
+  soilClass: string | null | undefined,
+): "dobre" | "srednie" | "slabe" | "ogolem" {
   if (!soilClass) return "ogolem";
   const s = soilClass.trim().toUpperCase();
   if (["I", "II", "IIIA", "III A"].includes(s)) return "dobre";
@@ -310,7 +403,8 @@ async function fetchWithUnitFallback(
 ): Promise<{ value: BdlValuePoint | null; unit: ResolvedBdlUnit; fallbackUsed: boolean }> {
   // Próbuj na poziomie powiatu/miasta:
   let v = await fetchValueForUnit(varId, primaryUnit.unitId);
-  if (v && v.value != null) return { value: v, unit: primaryUnit, fallbackUsed: primaryUnit.fallbackUsed };
+  if (v && v.value != null)
+    return { value: v, unit: primaryUnit, fallbackUsed: primaryUnit.fallbackUsed };
 
   // Fallback do województwa:
   const voKey = norm(voivodeship);
@@ -356,18 +450,30 @@ async function fetchWithUnitFallback(
 
 export async function gusBenchmark(args: GusBenchmarkArgs): Promise<GusBenchmarkResult> {
   const warnings: string[] = [];
-  const unit = await resolveBdlUnit({ city: args.city, county: args.county, voivodeship: args.voivodeship });
+  const unit = await resolveBdlUnit({
+    city: args.city,
+    county: args.county,
+    voivodeship: args.voivodeship,
+  });
 
   // Walidacja: jeżeli miasto = Warszawa, jednostka MUSI zawierać "Warszawa".
   if (norm(args.city) === "warszawa" && !/warszaw/i.test(unit.unitName)) {
-    warnings.push("Benchmark GUS BDL odrzucony: jednostka terytorialna nie odpowiada lokalizacji nieruchomości.");
+    warnings.push(
+      "Benchmark GUS BDL odrzucony: jednostka terytorialna nie odpowiada lokalizacji nieruchomości.",
+    );
     return {
       stats: null,
       diagnostics: {
-        inputLocation: { city: args.city ?? null, county: args.county ?? null, voivodeship: args.voivodeship ?? null },
+        inputLocation: {
+          city: args.city ?? null,
+          county: args.county ?? null,
+          voivodeship: args.voivodeship ?? null,
+        },
         resolvedLocation: {
-          bdlUnitId: unit.unitId, bdlUnitName: unit.unitName,
-          bdlUnitLevel: unit.levelLabel, source: unit.source,
+          bdlUnitId: unit.unitId,
+          bdlUnitName: unit.unitName,
+          bdlUnitLevel: unit.levelLabel,
+          source: unit.source,
         },
         bdlVariable: null,
         period: { year: null, quarter: null, label: "" },
@@ -406,40 +512,62 @@ export async function gusBenchmark(args: GusBenchmarkArgs): Promise<GusBenchmark
       const pricePerM2 = pickedPoint?.value ?? null;
       const sanity = validateResidentialPricePerM2SanityCheck(args.city, pricePerM2);
       if (sanity.status === "suspicious") {
-        warnings.push(`Cena GUS BDL wygląda nietypowo nisko dla tej lokalizacji. Sprawdź jednostkę BDL, okres i zmienną. ${sanity.reason ?? ""}`.trim());
+        warnings.push(
+          `Cena GUS BDL wygląda nietypowo nisko dla tej lokalizacji. Sprawdź jednostkę BDL, okres i zmienną. ${sanity.reason ?? ""}`.trim(),
+        );
       }
       if (sanity.status === "rejected") {
-        warnings.push(`Benchmark GUS BDL odrzucony jako rażąco zaniżony. ${sanity.reason ?? ""}`.trim());
+        warnings.push(
+          `Benchmark GUS BDL odrzucony jako rażąco zaniżony. ${sanity.reason ?? ""}`.trim(),
+        );
       }
       if (finalUnit.fallbackUsed) {
-        warnings.push(`Użyto danych zastępczych na poziomie ${finalUnit.levelLabel}, ponieważ brak danych dla powiatu.`);
+        warnings.push(
+          `Użyto danych zastępczych na poziomie ${finalUnit.levelLabel}, ponieważ brak danych dla powiatu.`,
+        );
       }
 
       const periodLabel = pickedPoint?.year ?? "";
       const summaryLine = `GUS BDL: ${finalUnit.unitName}, ${finalUnit.levelLabel}${periodLabel ? `, ${periodLabel}` : ""}, ${pickedVarName}`;
 
-      const stats: GusStats | null = pricePerM2 != null && sanity.status !== "rejected"
-        ? {
-            pricePerM2Median: medRes.value?.value ?? null,
-            pricePerM2Average: avgRes.value?.value ?? null,
-            transactionsCount: null,
-            period: periodLabel,
-            level: finalUnit.level === 6 ? "powiat" : finalUnit.level === 2 ? "wojewodztwo" : "krajowy",
-          }
-        : null;
+      const stats: GusStats | null =
+        pricePerM2 != null && sanity.status !== "rejected"
+          ? {
+              pricePerM2Median: medRes.value?.value ?? null,
+              pricePerM2Average: avgRes.value?.value ?? null,
+              transactionsCount: null,
+              period: periodLabel,
+              level:
+                finalUnit.level === 6
+                  ? "powiat"
+                  : finalUnit.level === 2
+                    ? "wojewodztwo"
+                    : "krajowy",
+            }
+          : null;
 
       const diagnostics: GusBenchmarkDiagnostics = {
-        inputLocation: { city: args.city ?? null, county: args.county ?? null, voivodeship: args.voivodeship ?? null },
+        inputLocation: {
+          city: args.city ?? null,
+          county: args.county ?? null,
+          voivodeship: args.voivodeship ?? null,
+        },
         resolvedLocation: {
-          bdlUnitId: finalUnit.unitId, bdlUnitName: finalUnit.unitName,
-          bdlUnitLevel: finalUnit.levelLabel, source: finalUnit.source,
+          bdlUnitId: finalUnit.unitId,
+          bdlUnitName: finalUnit.unitName,
+          bdlUnitLevel: finalUnit.levelLabel,
+          source: finalUnit.source,
         },
         bdlVariable: {
           variableId: pickedVarId,
           variableName: pickedVarName,
           unit: pickedMeta?.unit ?? "zł/m²",
         },
-        period: { year: pickedPoint?.year ?? null, quarter: pickedPoint?.quarter ?? null, label: periodLabel },
+        period: {
+          year: pickedPoint?.year ?? null,
+          quarter: pickedPoint?.quarter ?? null,
+          label: periodLabel,
+        },
         value: pricePerM2,
         fallbackUsed: finalUnit.fallbackUsed,
         fallbackLevel: finalUnit.fallbackUsed ? finalUnit.levelLabel : null,
@@ -462,9 +590,22 @@ export async function gusBenchmark(args: GusBenchmarkArgs): Promise<GusBenchmark
         return {
           stats: null,
           diagnostics: {
-            inputLocation: { city: args.city ?? null, county: args.county ?? null, voivodeship: args.voivodeship ?? null },
-            resolvedLocation: { bdlUnitId: unit.unitId, bdlUnitName: unit.unitName, bdlUnitLevel: unit.levelLabel, source: unit.source },
-            bdlVariable: { variableId: VAR_LAND_AGRI_AVG, variableName: meta?.name ?? "Średnia cena gruntów rolnych za 1 ha", unit: meta?.unit ?? "zł/ha" },
+            inputLocation: {
+              city: args.city ?? null,
+              county: args.county ?? null,
+              voivodeship: args.voivodeship ?? null,
+            },
+            resolvedLocation: {
+              bdlUnitId: unit.unitId,
+              bdlUnitName: unit.unitName,
+              bdlUnitLevel: unit.levelLabel,
+              source: unit.source,
+            },
+            bdlVariable: {
+              variableId: VAR_LAND_AGRI_AVG,
+              variableName: meta?.name ?? "Średnia cena gruntów rolnych za 1 ha",
+              unit: meta?.unit ?? "zł/ha",
+            },
             period: { year: null, quarter: null, label: "" },
             value: null,
             fallbackUsed: false,
@@ -477,7 +618,9 @@ export async function gusBenchmark(args: GusBenchmarkArgs): Promise<GusBenchmark
         };
       }
       if (res.unit.fallbackUsed) {
-        warnings.push(`Użyto danych zastępczych na poziomie ${res.unit.levelLabel}, ponieważ brak danych dla powiatu.`);
+        warnings.push(
+          `Użyto danych zastępczych na poziomie ${res.unit.levelLabel}, ponieważ brak danych dla powiatu.`,
+        );
       }
       const stats: GusStats = {
         pricePerM2Median: null,
@@ -486,18 +629,31 @@ export async function gusBenchmark(args: GusBenchmarkArgs): Promise<GusBenchmark
         period: res.value.year ?? "",
         level: res.unit.level === 6 ? "powiat" : res.unit.level === 2 ? "wojewodztwo" : "krajowy",
         pricePerHaByClass: {
-          dobre:   res.value.value * 1.2,
+          dobre: res.value.value * 1.2,
           srednie: res.value.value,
-          slabe:   res.value.value * 0.7,
-          ogolem:  res.value.value,
+          slabe: res.value.value * 0.7,
+          ogolem: res.value.value,
         },
       };
       return {
         stats,
         diagnostics: {
-          inputLocation: { city: args.city ?? null, county: args.county ?? null, voivodeship: args.voivodeship ?? null },
-          resolvedLocation: { bdlUnitId: res.unit.unitId, bdlUnitName: res.unit.unitName, bdlUnitLevel: res.unit.levelLabel, source: res.unit.source },
-          bdlVariable: { variableId: VAR_LAND_AGRI_AVG, variableName: meta?.name ?? "Średnia cena gruntów rolnych za 1 ha", unit: meta?.unit ?? "zł/ha" },
+          inputLocation: {
+            city: args.city ?? null,
+            county: args.county ?? null,
+            voivodeship: args.voivodeship ?? null,
+          },
+          resolvedLocation: {
+            bdlUnitId: res.unit.unitId,
+            bdlUnitName: res.unit.unitName,
+            bdlUnitLevel: res.unit.levelLabel,
+            source: res.unit.source,
+          },
+          bdlVariable: {
+            variableId: VAR_LAND_AGRI_AVG,
+            variableName: meta?.name ?? "Średnia cena gruntów rolnych za 1 ha",
+            unit: meta?.unit ?? "zł/ha",
+          },
           period: { year: res.value.year, quarter: null, label: res.value.year ?? "" },
           value: res.value.value,
           fallbackUsed: res.unit.fallbackUsed,
@@ -514,8 +670,17 @@ export async function gusBenchmark(args: GusBenchmarkArgs): Promise<GusBenchmark
   return {
     stats: null,
     diagnostics: {
-      inputLocation: { city: args.city ?? null, county: args.county ?? null, voivodeship: args.voivodeship ?? null },
-      resolvedLocation: { bdlUnitId: unit.unitId, bdlUnitName: unit.unitName, bdlUnitLevel: unit.levelLabel, source: unit.source },
+      inputLocation: {
+        city: args.city ?? null,
+        county: args.county ?? null,
+        voivodeship: args.voivodeship ?? null,
+      },
+      resolvedLocation: {
+        bdlUnitId: unit.unitId,
+        bdlUnitName: unit.unitName,
+        bdlUnitLevel: unit.levelLabel,
+        source: unit.source,
+      },
       bdlVariable: null,
       period: { year: null, quarter: null, label: "" },
       value: null,
@@ -523,7 +688,9 @@ export async function gusBenchmark(args: GusBenchmarkArgs): Promise<GusBenchmark
       fallbackLevel: null,
       sanityCheckStatus: "ok",
       sanityCheckReason: null,
-      warnings: [`GUS BDL: brak dedykowanego wskaźnika dla typu nieruchomości "${args.propertyType}".`],
+      warnings: [
+        `GUS BDL: brak dedykowanego wskaźnika dla typu nieruchomości "${args.propertyType}".`,
+      ],
       summaryLine: `GUS BDL: brak wskaźnika dla typu ${args.propertyType}`,
     },
   };

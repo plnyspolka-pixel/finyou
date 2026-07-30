@@ -37,7 +37,10 @@ const isExternalUrl = (path: string) => /^https?:\/\//i.test(path);
 
 /** Czy ścieżka to pokazywalne zdjęcie nieruchomości (obrazek, nie skan dokumentu)? */
 export function isShowablePropertyPhoto(path: string): boolean {
-  return IMAGE_EXT.test(path) && !/\/(ownership_deed|kw|documents?|dokumenty|akt|ksiega|księga)\//i.test(path);
+  return (
+    IMAGE_EXT.test(path) &&
+    !/\/(ownership_deed|kw|documents?|dokumenty|akt|ksiega|księga)\//i.test(path)
+  );
 }
 
 /** Czy wiersz z tabeli `documents` to faktyczne zdjęcie nieruchomości (a nie np. akt notarialny)? */
@@ -64,6 +67,57 @@ export async function signStoragePath(path: string, expiresIn = 3600): Promise<s
   return null;
 }
 
+/** Jeden wpis „pliku klienta" — bez podziału na zdjęcia i dokumenty. */
+export type ClientFileRef = { src: string; name: string };
+
+/** Łączy `properties.photos` i wiersze z tabeli `documents` w jedną,
+ *  zdeduplikowaną listę plików klienta (kolejność: photos, potem documents). */
+export function collectClientFileRefs(
+  photoPaths: string[] | null | undefined,
+  docs:
+    | Array<{ file_path?: string | null; file_url?: string | null; file_name?: string | null }>
+    | null
+    | undefined,
+): ClientFileRef[] {
+  const seen = new Set<string>();
+  const out: ClientFileRef[] = [];
+  const push = (src: string | null | undefined, name?: string | null) => {
+    if (!src || seen.has(src)) return;
+    seen.add(src);
+    out.push({ src, name: name ?? src.split("/").pop() ?? "plik" });
+  };
+  (photoPaths ?? []).filter(Boolean).forEach((p) => push(p));
+  (docs ?? []).forEach((d) => push(d.file_path ?? d.file_url, d.file_name));
+  return out;
+}
+
+/** Miniatura wniosku na listach: pierwszy obrazek z plików klienta, a gdy go
+ *  brak — miniatura pierwszego PDF-a (konwencja `<ścieżka>.thumb.png`). */
+export async function resolveClientFilesHero(
+  files: ClientFileRef[],
+  expiresIn = 3600,
+): Promise<{ url: string; name: string } | null> {
+  const image = files.find((f) => IMAGE_EXT.test(f.name) || IMAGE_EXT.test(f.src));
+  if (image) {
+    const url = await signStoragePath(image.src, expiresIn);
+    if (url) return { url, name: image.name };
+  }
+  const pdf = files.find((f) => /\.pdf$/i.test(f.name) || /\.pdf$/i.test(f.src));
+  if (pdf && !isExternalUrl(pdf.src)) {
+    const url = await signStoragePath(`${pdf.src}.thumb.png`, expiresIn);
+    if (url) return { url, name: `${pdf.name}.thumb.png` };
+  }
+  return null;
+}
+
+/** Polska odmiana słowa „plik" dla liczników w UI. */
+export function plikiLabel(n: number): string {
+  if (n === 1) return "plik";
+  const d = n % 10;
+  const h = n % 100;
+  return d >= 2 && d <= 4 && (h < 12 || h > 14) ? "pliki" : "plików";
+}
+
 /** Podpisuje WSZYSTKIE ścieżki (bez filtra „pokazywalne"), próbując po kolei
  *  bucketów — zwraca mapę ścieżka→URL. Do podglądu załączników, gdzie chcemy
  *  pokazać też skany dokumentów/akty, a pliki bywają w starych bucketach.
@@ -81,9 +135,11 @@ export async function signStoragePathsMap(
   for (const bucket of PHOTO_BUCKETS) {
     if (remaining.length === 0) break;
     const { data } = await supabase.storage.from(bucket).createSignedUrls(remaining, expiresIn);
-    (data ?? []).forEach((s: { path?: string | null; signedUrl?: string | null; error?: unknown }) => {
-      if (s?.path && s?.signedUrl && !s.error) map.set(s.path, s.signedUrl);
-    });
+    (data ?? []).forEach(
+      (s: { path?: string | null; signedUrl?: string | null; error?: unknown }) => {
+        if (s?.path && s?.signedUrl && !s.error) map.set(s.path, s.signedUrl);
+      },
+    );
     remaining = remaining.filter((p) => !map.has(p));
   }
   return map;
@@ -103,9 +159,11 @@ export async function resolveShowablePhotoUrls(
   for (const bucket of PHOTO_BUCKETS) {
     if (remaining.length === 0) break;
     const { data } = await supabase.storage.from(bucket).createSignedUrls(remaining, expiresIn);
-    (data ?? []).forEach((s: { path?: string | null; signedUrl?: string | null; error?: unknown }) => {
-      if (s?.path && s?.signedUrl && !s.error) urlByPath.set(s.path, s.signedUrl);
-    });
+    (data ?? []).forEach(
+      (s: { path?: string | null; signedUrl?: string | null; error?: unknown }) => {
+        if (s?.path && s?.signedUrl && !s.error) urlByPath.set(s.path, s.signedUrl);
+      },
+    );
     remaining = remaining.filter((p) => !urlByPath.has(p));
   }
 

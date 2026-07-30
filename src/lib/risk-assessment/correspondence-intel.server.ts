@@ -55,7 +55,10 @@ function coerceTranscript(transcript: unknown): string {
   return "";
 }
 
-async function gatherMessages(applicationId: string, clientId: string | null): Promise<GatheredMessage[]> {
+async function gatherMessages(
+  applicationId: string,
+  clientId: string | null,
+): Promise<GatheredMessage[]> {
   // 1) Znajdź leady powiązane z wnioskiem lub klientem.
   const leadIds = new Set<string>();
   const { data: byApp } = await supabaseAdmin
@@ -64,7 +67,10 @@ async function gatherMessages(applicationId: string, clientId: string | null): P
     .eq("loan_application_id", applicationId);
   (byApp ?? []).forEach((l) => leadIds.add(l.id));
   if (clientId) {
-    const { data: byClient } = await supabaseAdmin.from("leads").select("id").eq("client_id", clientId);
+    const { data: byClient } = await supabaseAdmin
+      .from("leads")
+      .select("id")
+      .eq("client_id", clientId);
     (byClient ?? []).forEach((l) => leadIds.add(l.id));
   }
   if (leadIds.size === 0) return [];
@@ -90,9 +96,14 @@ async function gatherMessages(applicationId: string, clientId: string | null): P
     .filter((m) => m.text.length > 2);
 }
 
-function buildPrompt(messages: GatheredMessage[], context: { declaredValue: number | null; loanAmount: number | null; city: string | null }): string {
+function buildPrompt(
+  messages: GatheredMessage[],
+  context: { declaredValue: number | null; loanAmount: number | null; city: string | null },
+): string {
   const convo = messages
-    .map((m, i) => `[${i + 1}] (${CHANNEL_LABELS[m.channel] ?? m.channel}, ${m.direction}) ${m.text}`)
+    .map(
+      (m, i) => `[${i + 1}] (${CHANNEL_LABELS[m.channel] ?? m.channel}, ${m.direction}) ${m.text}`,
+    )
     .join("\n");
   return `Jesteś analitykiem ryzyka w firmie pożyczkowej zabezpieczonej nieruchomością. Z poniższej korespondencji z klientem wyciągnij WYŁĄCZNIE TWARDE FAKTY.
 
@@ -126,7 +137,11 @@ ODPOWIEDŹ — wyłącznie poprawny JSON, bez markdown ani backticków:
 function tryParseJson(s: string): any | null {
   const m = s.match(/\{[\s\S]*\}/);
   if (!m) return null;
-  try { return JSON.parse(m[0]); } catch { return null; }
+  try {
+    return JSON.parse(m[0]);
+  } catch {
+    return null;
+  }
 }
 
 export async function analyzeCorrespondence(args: {
@@ -144,7 +159,9 @@ export async function analyzeCorrespondence(args: {
 
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) {
-    const r = emptyResult(`Zebrano ${messages.length} wiadomości (${channels.join(", ")}), ale brak LOVABLE_API_KEY — ekstrakcja faktów pominięta.`);
+    const r = emptyResult(
+      `Zebrano ${messages.length} wiadomości (${channels.join(", ")}), ale brak LOVABLE_API_KEY — ekstrakcja faktów pominięta.`,
+    );
     r.messagesAnalyzed = messages.length;
     r.channels = channels;
     return r;
@@ -157,15 +174,28 @@ export async function analyzeCorrespondence(args: {
       body: JSON.stringify({
         model: MODEL,
         messages: [
-          { role: "system", content: "Jesteś analitykiem ryzyka. Wyciągasz wyłącznie twarde fakty (bez ocen zaangażowania czy sentymentu). Odpowiadasz wyłącznie poprawnym JSON-em." },
-          { role: "user", content: buildPrompt(messages, { declaredValue: args.declaredValue ?? null, loanAmount: args.loanAmount ?? null, city: args.city ?? null }) },
+          {
+            role: "system",
+            content:
+              "Jesteś analitykiem ryzyka. Wyciągasz wyłącznie twarde fakty (bez ocen zaangażowania czy sentymentu). Odpowiadasz wyłącznie poprawnym JSON-em.",
+          },
+          {
+            role: "user",
+            content: buildPrompt(messages, {
+              declaredValue: args.declaredValue ?? null,
+              loanAmount: args.loanAmount ?? null,
+              city: args.city ?? null,
+            }),
+          },
         ],
         temperature: 0.1,
       }),
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
-      const r = emptyResult(`Ekstrakcja faktów z korespondencji nie powiodła się (HTTP ${res.status}: ${txt.slice(0, 120)}).`);
+      const r = emptyResult(
+        `Ekstrakcja faktów z korespondencji nie powiodła się (HTTP ${res.status}: ${txt.slice(0, 120)}).`,
+      );
       r.messagesAnalyzed = messages.length;
       r.channels = channels;
       return r;
@@ -174,14 +204,20 @@ export async function analyzeCorrespondence(args: {
     const content = json?.choices?.[0]?.message?.content ?? "";
     const parsed = tryParseJson(content);
     if (!parsed) {
-      const r = emptyResult(`Nie udało się sparsować ekstrakcji faktów (${messages.length} wiadomości).`);
+      const r = emptyResult(
+        `Nie udało się sparsować ekstrakcji faktów (${messages.length} wiadomości).`,
+      );
       r.messagesAnalyzed = messages.length;
       r.channels = channels;
       return r;
     }
 
-    const statedFacts = Array.isArray(parsed.statedFacts) ? parsed.statedFacts.map(String).slice(0, 12) : [];
-    const inconsistencies = Array.isArray(parsed.inconsistencies) ? parsed.inconsistencies.map(String).slice(0, 12) : [];
+    const statedFacts = Array.isArray(parsed.statedFacts)
+      ? parsed.statedFacts.map(String).slice(0, 12)
+      : [];
+    const inconsistencies = Array.isArray(parsed.inconsistencies)
+      ? parsed.inconsistencies.map(String).slice(0, 12)
+      : [];
     const redFlags = Array.isArray(parsed.redFlags) ? parsed.redFlags.map(String).slice(0, 12) : [];
 
     return {
@@ -191,7 +227,10 @@ export async function analyzeCorrespondence(args: {
       statedFacts,
       inconsistencies,
       redFlags,
-      summary: String(parsed.factSummary ?? `Wyodrębniono fakty z ${messages.length} wiadomości (kanały: ${channels.join(", ")}).`),
+      summary: String(
+        parsed.factSummary ??
+          `Wyodrębniono fakty z ${messages.length} wiadomości (kanały: ${channels.join(", ")}).`,
+      ),
     };
   } catch (e: any) {
     const r = emptyResult(`Błąd ekstrakcji faktów z korespondencji: ${e?.message ?? "nieznany"}.`);

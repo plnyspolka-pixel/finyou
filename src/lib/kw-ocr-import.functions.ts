@@ -38,7 +38,10 @@ ${text}
 --- KONIEC ---`;
 
 async function assertAdmin(userId: string) {
-  const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
+  const { data: roles } = await supabaseAdmin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
   const allowed = (roles ?? []).some((r) => r.role === "administrator");
   if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator).");
 }
@@ -63,11 +66,15 @@ function tryParseJson(raw: string): any | null {
   if (!raw) return null;
   let s = raw.trim();
   s = s.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
-  try { return JSON.parse(s); } catch {}
+  try {
+    return JSON.parse(s);
+  } catch {}
   const first = s.indexOf("{");
   const last = s.lastIndexOf("}");
   if (first >= 0 && last > first) {
-    try { return JSON.parse(s.slice(first, last + 1)); } catch {}
+    try {
+      return JSON.parse(s.slice(first, last + 1));
+    } catch {}
   }
   return null;
 }
@@ -104,7 +111,8 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
         response_format: { type: "json_object" },
       }),
     });
-    if (r.status === 429) throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
+    if (r.status === 429)
+      throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
     if (r.status === 402) throw new Error("Wyczerpany budżet AI (Lovable) — doładuj konto.");
     if (!r.ok) {
       const body = await r.text().catch(() => "");
@@ -129,10 +137,14 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
 
     const warnings: string[] = [];
     let kw = data.kwNumber ? normalizeKwNumber(data.kwNumber) : null;
-    const parsedKw = parsed.kw_number ? normalizeKwNumber(String(parsed.kw_number)) : extractKwNumberFromText(data.text);
+    const parsedKw = parsed.kw_number
+      ? normalizeKwNumber(String(parsed.kw_number))
+      : extractKwNumberFromText(data.text);
     if (!kw) kw = parsedKw;
     else if (parsedKw && parsedKw !== kw) {
-      warnings.push(`Numer KW z tekstu (${parsedKw}) różni się od podanego (${kw}) — zapisano pod podanym numerem.`);
+      warnings.push(
+        `Numer KW z tekstu (${parsedKw}) różni się od podanego (${kw}) — zapisano pod podanym numerem.`,
+      );
     }
 
     let propertyId: string | null = null;
@@ -145,13 +157,20 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
         .limit(1)
         .maybeSingle();
       propertyId = prop?.id ?? null;
-      const propKw = prop?.land_register_number ? normalizeKwNumber(prop.land_register_number) : null;
+      const propKw = prop?.land_register_number
+        ? normalizeKwNumber(prop.land_register_number)
+        : null;
       if (!kw) kw = propKw;
       else if (propKw && propKw !== kw) {
-        warnings.push(`Numer KW z importu (${kw}) różni się od numeru na nieruchomości wniosku (${propKw}).`);
+        warnings.push(
+          `Numer KW z importu (${kw}) różni się od numeru na nieruchomości wniosku (${propKw}).`,
+        );
       }
     }
-    if (!kw) throw new Error("Nie udało się ustalić numeru KW — podaj numer ręcznie w polu KW na nieruchomości.");
+    if (!kw)
+      throw new Error(
+        "Nie udało się ustalić numeru KW — podaj numer ręcznie w polu KW na nieruchomości.",
+      );
 
     const sections = {
       okladka: wrapSection("OKŁADKA", parsed.okladka),
@@ -195,9 +214,16 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
     if (upsertError) throw new Error(`Nie udało się zapisać treści KW: ${upsertError.message}`);
 
     if (propertyId) {
-      const { data: prop } = await supabaseAdmin.from("properties").select("land_register_number").eq("id", propertyId).maybeSingle();
+      const { data: prop } = await supabaseAdmin
+        .from("properties")
+        .select("land_register_number")
+        .eq("id", propertyId)
+        .maybeSingle();
       if (prop && !prop.land_register_number) {
-        await supabaseAdmin.from("properties").update({ land_register_number: kw }).eq("id", propertyId);
+        await supabaseAdmin
+          .from("properties")
+          .update({ land_register_number: kw })
+          .eq("id", propertyId);
         warnings.push("Numer KW z importu zapisano na nieruchomości wniosku.");
       }
     }

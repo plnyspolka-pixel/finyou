@@ -145,9 +145,34 @@ export const runKwLandRegisterAnalysis = createServerFn({ method: "POST" })
     }
 
     const fetchedAt = loaded.fetchedAt ?? new Date().toISOString();
-    const borrower: Party = data.borrower
+    let borrower: Party = data.borrower
       ? toParty(data.borrower, "BORROWER")
       : { role: "BORROWER", firstName: null, lastName: null, pesel: null };
+    // UI analizy nie zna stron transakcji — dane klienta wniosku są domyślnym
+    // pożyczkobiorcą, dzięki czemu dopasowanie tożsamości do Działu II
+    // (potwierdzenia, literówki, rozbieżności PESEL) działa na realnych danych.
+    if (!data.borrower && data.loanApplicationId) {
+      const { data: app } = await supabase
+        .from("loan_applications")
+        .select("client_id")
+        .eq("id", data.loanApplicationId)
+        .maybeSingle();
+      if (app?.client_id) {
+        const { data: c } = await supabase
+          .from("clients")
+          .select("first_name, last_name, pesel")
+          .eq("id", app.client_id)
+          .maybeSingle();
+        if (c && (c.first_name || c.last_name || c.pesel)) {
+          borrower = {
+            role: "BORROWER",
+            firstName: c.first_name ?? null,
+            lastName: c.last_name ?? null,
+            pesel: c.pesel ?? null,
+          };
+        }
+      }
+    }
 
     const input: KwAnalysisInput = {
       caseId: data.caseId ?? data.loanApplicationId ?? compact,

@@ -18,7 +18,7 @@ function slugify(s: string): string {
 }
 
 async function ensureUniqueSlug(base: string): Promise<string> {
-  let slug = base;
+  const slug = base;
   let i = 0;
   while (true) {
     const candidate = i === 0 ? slug : `${slug}-${i}`;
@@ -50,8 +50,9 @@ async function pickNextKind(): Promise<PostKind> {
     .order("published_at", { ascending: false })
     .limit(1);
   const lastRow: any = data?.[0];
-  const last: PostKind | undefined = lastRow?.raw_ai_output?.post_kind
-    ?? (lastRow ? (lastRow.audience === "investor" ? "investor_news" : "borrower_news") : undefined);
+  const last: PostKind | undefined =
+    lastRow?.raw_ai_output?.post_kind ??
+    (lastRow ? (lastRow.audience === "investor" ? "investor_news" : "borrower_news") : undefined);
   if (last === "borrower_news") return "investor_news";
   if (last === "investor_news") return "legal_market_monitor";
   if (last === "legal_market_monitor") return "investor_review";
@@ -94,7 +95,8 @@ async function fetchFreshNewsBrief(pplxKey: string, kind: PostKind): Promise<New
     },
     body: JSON.stringify({
       model: "sonar",
-      search_recency_filter: kind === "investor_review" ? "month" : kind === "legal_market_monitor" ? "week" : "day",
+      search_recency_filter:
+        kind === "investor_review" ? "month" : kind === "legal_market_monitor" ? "week" : "day",
       messages: [
         { role: "system", content: b.sys },
         { role: "user", content: b.user },
@@ -106,11 +108,11 @@ async function fetchFreshNewsBrief(pplxKey: string, kind: PostKind): Promise<New
   }
   const json: any = await res.json();
   const summary: string = json.choices?.[0]?.message?.content ?? "";
-  const rawCitations: string[] = json.citations ?? json.search_results?.map((r: any) => r.url) ?? [];
+  const rawCitations: string[] =
+    json.citations ?? json.search_results?.map((r: any) => r.url) ?? [];
   const citations = rawCitations.slice(0, 8).map((url) => ({ url }));
   return { summary, citations };
 }
-
 
 interface RelatedArticle {
   slug: string;
@@ -134,6 +136,44 @@ async function pickInternalLinks(): Promise<RelatedArticle[]> {
   return list.slice(0, 3);
 }
 
+/**
+ * Wspólne zasady stylu, SEO i zgodności z serwisem dla KAŻDEGO artykułu
+ * generowanego na blog. Komunikacja zwrotów: realne stopy zwrotu inwestorów
+ * na rynku prywatnych pożyczek pod zastaw nieruchomości komunikujemy jako
+ * przedział od kilkunastu do nawet kilkudziesięciu procent rocznie — bez
+ * gwarantowania wyniku i zawsze z zastrzeżeniem ryzyka.
+ */
+const STYLE_GUIDE = `ZASADY STYLU, SEO I ZGODNOŚCI Z SERWISEM (obowiązkowe):
+- Ton jak w serwisie financeyou.pl: rzeczowy, ekspercki, konkretny; bez wykrzykników i sensacji; akapity 2-3 zdania; struktura H2/H3; listy tam, gdzie poprawiają skanowalność.
+- SEO: fraza główna (primary_keyword) w tytule, w pierwszym akapicie i w co najmniej jednym H2; meta_title do 60 znaków z frazą główną; meta_description 140-155 znaków z frazą główną i konkretną korzyścią; excerpt 1-2 zdania.
+- LINKI WEWNĘTRZNE: wpleć 2-3 linki do podanych artykułów bloga oraz dokładnie 1 CTA do strony ścieżki. Używaj WYŁĄCZNIE tych adresów serwisu: https://financeyou.pl/dla-klienta (finansowanie dla klienta), https://financeyou.pl/dla-inwestora (Klub Inwestorów Hipotecznych), https://financeyou.pl/oferty (aktualne oferty pożyczek), https://financeyou.pl/blog/... (artykuły). NIGDY nie linkuj do /klient ani /inwestor — to panele wymagające logowania.
+- ZWROTY Z INWESTYCJI (spójna komunikacja Finance You): realne stopy zwrotu inwestorów na rynku prywatnych pożyczek pod zastaw nieruchomości komunikujemy jako OD KILKUNASTU DO NAWET KILKUDZIESIĘCIU PROCENT ROCZNIE — używaj tego przedziału, gdy piszesz o zwrotach z tej klasy aktywów. Inne liczby (oprocentowanie lokat, obligacji, najmu itd.) przytaczaj wyłącznie ze źródeł briefingu z podanym źródłem. NIE przedstawiaj zwrotu jako pewnego ani gwarantowanego: ZAKAZANE "gwarantowany zysk/zwrot", "pewny zysk", "bez ryzyka", "zarobisz X%". Zawsze zaznacz, że wynik zależy od parametrów konkretnej transakcji.
+- W artykułach inwestorskich zaznacz, że inwestowanie wiąże się z ryzykiem, w tym utraty części lub całości kapitału, a decyzja należy do inwestora. W artykułach pożyczkowych zaznacz, że kalkulacje są orientacyjne, zgłoszenie jest bezpłatne, a decyzja o finansowaniu należy do finansujących.`;
+
+/**
+ * Frazy niedozwolone w opublikowanym artykule — niespójne z komunikacją
+ * serwisu (serwis nie gwarantuje zysku ani finansowania). Wykrycie nie
+ * blokuje publikacji (na stronie artykułu i tak renderujemy notę prawną),
+ * ale zostawia ostrzeżenie w ai_growth_action_log do ręcznego przeglądu.
+ */
+const BANNED_CLAIMS: RegExp[] = [
+  /gwarantowan\w*\s+(zysk|zwrot|stop\w*|oprocentowani\w*)/i,
+  /(zysk|zwrot)\s+gwarantowan\w*/i,
+  /pewn\w*\s+zysk/i,
+  /bez\s+(żadnego\s+)?ryzyka/i,
+  /zarobisz\s+\d/i,
+  /gwarancj\w*\s+(zysku|zwrotu)/i,
+];
+
+export function findBannedClaims(md: string): string[] {
+  const found: string[] = [];
+  for (const re of BANNED_CLAIMS) {
+    const m = md.match(re);
+    if (m) found.push(m[0]);
+  }
+  return found;
+}
+
 interface ArticleDraft {
   title: string;
   meta_title: string;
@@ -155,40 +195,45 @@ async function writeArticleFromNews(
   const audience = audienceOf(kind);
 
   const internalList = internal
-    .map((a) => `- [${a.title}](/blog/${a.slug})${a.primary_keyword ? ` — kw: ${a.primary_keyword}` : ""}`)
+    .map(
+      (a) =>
+        `- [${a.title}](/blog/${a.slug})${a.primary_keyword ? ` — kw: ${a.primary_keyword}` : ""}`,
+    )
     .join("\n");
   const externalList = brief.citations.map((c) => `- ${c.url}`).join("\n");
 
-  const structureHint = kind === "investor_review"
-    ? "Markdown, 1100-1700 słów. Struktura: krótki lead (problem inwestora), H2 'Porównywane klasy aktywów' (lista), H2 'Tabela porównawcza' (markdown table z kolumnami: Klasa aktywów | Oczekiwana stopa zwrotu netto | Min. ticket | Horyzont | Płynność | Ryzyko 1-5 | Zabezpieczenie | Podatek), H2 'Analiza' (po jednym akapicie na każdą klasę z LICZBAMI z briefingu), H2 'Dla kogo która opcja', H2 'Wnioski i rekomendacja dywersyfikacji', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. ZAWSZE podawaj liczby z briefingu, NIGDY nie wymyślaj."
-    : kind === "legal_market_monitor"
-    ? "Markdown, 1000-1500 słów. Format PRZEGLĄDU TYGODNIA. Struktura: krótki lead (1 akapit — co najważniejszego wydarzyło się w minionym tygodniu na styku prawa, sądów i rynku nieruchomości w PL), H2 'Legislacja i regulatorzy' (Sejm/Senat/MS/MF/KNF/UOKiK — pod-punkty z datą + źródło + 'Możliwy wpływ:'), H2 'Sądy i orzecznictwo' (SN/TSUE/apelacyjne — j.w.), H2 'Komornicy i egzekucja z nieruchomości', H2 'Notariat, adwokatura i radcowie prawni', H2 'Rynek nieruchomości w Polsce' (dane z GUS/AMRON/Otodom — liczby, miasta), H2 'Świat → Polska' (FED/EBC/USD/EUR/surowce — wyłącznie z konkretnym mechanizmem przełożenia na PL), H2 'Podsumowanie tygodnia — co to zmienia dla właściciela nieruchomości i pożyczkobiorcy' (2-3 akapity), H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. KAŻDA teza musi mieć źródło z briefingu — NIE dopisuj zdarzeń spoza briefingu. Jeżeli w danej sekcji brief mówi 'brak zdarzeń', napisz to jawnie."
-    : "Markdown, 700-1100 słów. Struktura: krótki lead, H2 'Co się stało', H2 'Co to znaczy dla inwestora', H2 'Co to znaczy dla osób z nieruchomością', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ naturalnie 2-3 linki wewnętrzne z podanej listy. NA KOŃCU 'Linki i źródła' wymień zewnętrzne źródła.";
-
+  const structureHint =
+    kind === "investor_review"
+      ? "Markdown, 1100-1700 słów. Struktura: krótki lead (problem inwestora), H2 'Porównywane klasy aktywów' (lista), H2 'Tabela porównawcza' (markdown table z kolumnami: Klasa aktywów | Oczekiwana stopa zwrotu netto | Min. ticket | Horyzont | Płynność | Ryzyko 1-5 | Zabezpieczenie | Podatek), H2 'Analiza' (po jednym akapicie na każdą klasę z LICZBAMI z briefingu), H2 'Dla kogo która opcja', H2 'Wnioski i rekomendacja dywersyfikacji', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. ZAWSZE podawaj liczby z briefingu, NIGDY nie wymyślaj."
+      : kind === "legal_market_monitor"
+        ? "Markdown, 1000-1500 słów. Format PRZEGLĄDU TYGODNIA. Struktura: krótki lead (1 akapit — co najważniejszego wydarzyło się w minionym tygodniu na styku prawa, sądów i rynku nieruchomości w PL), H2 'Legislacja i regulatorzy' (Sejm/Senat/MS/MF/KNF/UOKiK — pod-punkty z datą + źródło + 'Możliwy wpływ:'), H2 'Sądy i orzecznictwo' (SN/TSUE/apelacyjne — j.w.), H2 'Komornicy i egzekucja z nieruchomości', H2 'Notariat, adwokatura i radcowie prawni', H2 'Rynek nieruchomości w Polsce' (dane z GUS/AMRON/Otodom — liczby, miasta), H2 'Świat → Polska' (FED/EBC/USD/EUR/surowce — wyłącznie z konkretnym mechanizmem przełożenia na PL), H2 'Podsumowanie tygodnia — co to zmienia dla właściciela nieruchomości i pożyczkobiorcy' (2-3 akapity), H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. KAŻDA teza musi mieć źródło z briefingu — NIE dopisuj zdarzeń spoza briefingu. Jeżeli w danej sekcji brief mówi 'brak zdarzeń', napisz to jawnie."
+        : "Markdown, 700-1100 słów. Struktura: krótki lead, H2 'Co się stało', H2 'Co to znaczy dla inwestora', H2 'Co to znaczy dla osób z nieruchomością', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ naturalnie 2-3 linki wewnętrzne z podanej listy. NA KOŃCU 'Linki i źródła' wymień zewnętrzne źródła.";
 
   let audienceBrief: string;
   if (kind === "investor_review") {
-    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY (HNW, 100k–2M PLN kapitału) szukający OBIEKTYWNEGO PRZEGLĄDU I PORÓWNANIA klas aktywów. Pisz analitycznie, jak rzetelny analityk inwestycyjny — nie sprzedażowo. Pożyczki pod zastaw nieruchomości pokaż jako JEDNĄ z opcji, z plusami I minusami. CTA do "[zobacz ofertę inwestorską Finance You](https://financeyou.pl/inwestor)" wpleć dyskretnie 1 raz na końcu sekcji wniosków.`;
+    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY (HNW, 100k–2M PLN kapitału) szukający OBIEKTYWNEGO PRZEGLĄDU I PORÓWNANIA klas aktywów. Pisz analitycznie, jak rzetelny analityk inwestycyjny — nie sprzedażowo. Pożyczki pod zastaw nieruchomości pokaż jako JEDNĄ z opcji, z plusami I minusami. CTA do "[poznaj Klub Inwestorów Hipotecznych Finance You](https://financeyou.pl/dla-inwestora)" wpleć dyskretnie 1 raz na końcu sekcji wniosków.`;
   } else if (kind === "legal_market_monitor") {
-    audienceBrief = `GRUPA DOCELOWA: WŁAŚCICIEL NIERUCHOMOŚCI, POŻYCZKOBIORCA, PROFESJONALIŚCI RYNKU (pośrednicy, doradcy, prawnicy) śledzący zmiany w prawie i sytuację rynkową. Styl newsroom / przegląd prawny — rzeczowo, bez sensacji, KAŻDA teza z datą i źródłem, KAŻDA sekcja kończy się zdaniem "Możliwy wpływ:" z konkretnym mechanizmem przełożenia na rynek nieruchomości / rynek pożyczek pod zastaw. Pisz tak, żeby czytelnik po lekturze wiedział, czy sytuacja jest dla niego korzystna, neutralna czy niekorzystna i dlaczego. CTA do "[porozmawiaj z ekspertem Finance You o Twojej sytuacji](https://financeyou.pl/klient)" wpleć dyskretnie 1 raz w podsumowaniu.`;
+    audienceBrief = `GRUPA DOCELOWA: WŁAŚCICIEL NIERUCHOMOŚCI, POŻYCZKOBIORCA, PROFESJONALIŚCI RYNKU (pośrednicy, doradcy, prawnicy) śledzący zmiany w prawie i sytuację rynkową. Styl newsroom / przegląd prawny — rzeczowo, bez sensacji, KAŻDA teza z datą i źródłem, KAŻDA sekcja kończy się zdaniem "Możliwy wpływ:" z konkretnym mechanizmem przełożenia na rynek nieruchomości / rynek pożyczek pod zastaw. Pisz tak, żeby czytelnik po lekturze wiedział, czy sytuacja jest dla niego korzystna, neutralna czy niekorzystna i dlaczego. CTA do "[sprawdź bezpłatnie możliwości finansowania](https://financeyou.pl/dla-klienta)" wpleć dyskretnie 1 raz w podsumowaniu.`;
   } else if (audience === "investor") {
-    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań inwestorem Finance You](https://financeyou.pl/inwestor)" wpleć 1 raz.`;
+    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, realne stopy zwrotu od kilkunastu do nawet kilkudziesięciu procent rocznie, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[poznaj Klub Inwestorów Hipotecznych Finance You](https://financeyou.pl/dla-inwestora)" wpleć 1 raz.`;
   } else {
-    audienceBrief = `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż wniosek o pożyczkę pod zastaw](https://financeyou.pl/klient)" wpleć 1-2 razy.`;
+    audienceBrief = `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
   }
 
-  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
+  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\n${STYLE_GUIDE}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
 
-  const briefLabel = kind === "investor_review"
-    ? "BRIEFING (dane do przeglądu porównawczego, ostatnie 30 dni):"
-    : kind === "legal_market_monitor"
-    ? "BRIEFING (monitoring zmian w prawie i na rynku, ostatnie 7 dni):"
-    : "BRIEFING (świeże wiadomości z ostatnich 24h):";
-  const taskLabel = kind === "investor_review"
-    ? "Napisz dogłębny PRZEGLĄD INWESTYCYJNY porównujący klasy aktywów. Tytuł musi być porównawczy (np. zawierać 'vs', 'porównanie', 'ranking', 'co się bardziej opłaca')."
-    : kind === "legal_market_monitor"
-    ? "Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia', datę tygodnia, 'Co zmieniło się w prawie i na rynku nieruchomości') — bez clickbaitu."
-    : `Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
+  const briefLabel =
+    kind === "investor_review"
+      ? "BRIEFING (dane do przeglądu porównawczego, ostatnie 30 dni):"
+      : kind === "legal_market_monitor"
+        ? "BRIEFING (monitoring zmian w prawie i na rynku, ostatnie 7 dni):"
+        : "BRIEFING (świeże wiadomości z ostatnich 24h):";
+  const taskLabel =
+    kind === "investor_review"
+      ? "Napisz dogłębny PRZEGLĄD INWESTYCYJNY porównujący klasy aktywów. Tytuł musi być porównawczy (np. zawierać 'vs', 'porównanie', 'ranking', 'co się bardziej opłaca')."
+      : kind === "legal_market_monitor"
+        ? "Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia', datę tygodnia, 'Co zmieniło się w prawie i na rynku nieruchomości') — bez clickbaitu."
+        : `Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
 
   const userMsg = `${briefLabel}
 ${brief.summary}
@@ -217,7 +262,17 @@ Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt",
       cover_prompt: { type: "string" },
       cover_alt: { type: "string" },
     },
-    required: ["title", "meta_title", "meta_description", "excerpt", "primary_keyword", "keywords", "content_md", "cover_prompt", "cover_alt"],
+    required: [
+      "title",
+      "meta_title",
+      "meta_description",
+      "excerpt",
+      "primary_keyword",
+      "keywords",
+      "content_md",
+      "cover_prompt",
+      "cover_alt",
+    ],
   };
 
   const pplxKey = process.env.PERPLEXITY_API_KEY;
@@ -238,10 +293,15 @@ Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt",
       },
     }),
   });
-  if (!res.ok) throw new Error(`Perplexity writer ${res.status}: ${await res.text().catch(() => "")}`);
+  if (!res.ok)
+    throw new Error(`Perplexity writer ${res.status}: ${await res.text().catch(() => "")}`);
   const json: any = await res.json();
   const raw: string = json.choices?.[0]?.message?.content ?? "";
-  const cleaned = raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "");
+  const cleaned = raw
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/i, "");
   let parsed: any;
   try {
     parsed = JSON.parse(cleaned);
@@ -270,7 +330,6 @@ function pickCover(kind: PostKind): { url: string; alt: string } {
   const photo = pickStockPhoto(audience, kind === "investor_review");
   return { url: photo.url, alt: photo.alt };
 }
-
 
 export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<{
   ok: boolean;
@@ -307,8 +366,12 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
   const slug = await ensureUniqueSlug(slugify(draft.title));
   const wordCount = (draft.content_md.match(/\S+/g) ?? []).length;
 
-  const ctaUrl = audience === "investor" ? "https://financeyou.pl/inwestor" : "https://financeyou.pl/klient";
-  const ctaLabel = audience === "investor" ? "Zostań inwestorem" : "Złóż wniosek o pożyczkę";
+  const ctaUrl =
+    audience === "investor"
+      ? "https://financeyou.pl/dla-inwestora"
+      : "https://financeyou.pl/dla-klienta";
+  const ctaLabel =
+    audience === "investor" ? "Poznaj Klub Inwestorów" : "Sprawdź możliwości bezpłatnie";
 
   const { data: inserted, error } = await supabaseAdmin
     .from("ai_seo_articles")
@@ -347,8 +410,27 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
     action: "daily_autopost",
     status: "ok",
     summary: `[${kind}] ${draft.title}`,
-    payload: { article_id: inserted.id, slug: inserted.slug, kind, sources: brief.citations.length },
+    payload: {
+      article_id: inserted.id,
+      slug: inserted.slug,
+      kind,
+      sources: brief.citations.length,
+    },
   });
+
+  // Strażnik spójności z serwisem: serwis nie obiecuje zysków, więc artykuł
+  // też nie może. Wykryte frazy nie blokują publikacji (strona artykułu
+  // renderuje notę prawną), ale zostawiają ostrzeżenie do ręcznego przeglądu.
+  const banned = findBannedClaims(`${draft.title}\n${draft.excerpt}\n${draft.content_md}`);
+  if (banned.length > 0) {
+    await supabaseAdmin.from("ai_growth_action_log").insert({
+      module: "seo_content_engine",
+      action: "compliance_warning",
+      status: "warning",
+      summary: `Artykuł ${inserted.slug} zawiera frazy niezgodne z komunikacją serwisu: ${banned.join("; ")}`,
+      payload: { article_id: inserted.id, slug: inserted.slug, banned_phrases: banned },
+    });
+  }
 
   return { ok: true, slug: inserted.slug, id: inserted.id };
 }

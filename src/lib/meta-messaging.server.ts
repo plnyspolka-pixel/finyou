@@ -12,6 +12,7 @@ import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { replyToCommentPublic, sendPrivateReplyToComment } from "@/lib/meta-comments.server";
 import { fetchMetaUserProfile } from "@/lib/meta-profile.server";
 import { ocrLeadAttachmentsAndEnrich, fillLeadNameFromKw } from "@/lib/lead-doc-intel.server";
+import { shouldSkipMessengerAutoReply } from "@/lib/bot-loop-guard.server";
 
 async function findOrCreateLeadByPsid(opts: {
   senderId: string;
@@ -20,7 +21,10 @@ async function findOrCreateLeadByPsid(opts: {
   const col = opts.platform === "messenger" ? "messenger_psid" : "instagram_igsid";
   // 1) Istniejący lead z tym PSID/IGSID
   const { data: existing } = await supabaseAdmin
-    .from("leads").select("id").eq(col, opts.senderId).maybeSingle();
+    .from("leads")
+    .select("id")
+    .eq(col, opts.senderId)
+    .maybeSingle();
   if (existing?.id) return existing.id;
 
   // 2) Spróbuj scalić z istniejącym leadem po imieniu i nazwisku (np. Meta ad
@@ -42,10 +46,14 @@ async function findOrCreateLeadByPsid(opts: {
         .limit(1)
         .maybeSingle();
       if (match?.id) {
-        const patch = col === "messenger_psid"
-          ? { messenger_psid: opts.senderId }
-          : { instagram_igsid: opts.senderId };
-        await supabaseAdmin.from("leads").update(patch as any).eq("id", match.id);
+        const patch =
+          col === "messenger_psid"
+            ? { messenger_psid: opts.senderId }
+            : { instagram_igsid: opts.senderId };
+        await supabaseAdmin
+          .from("leads")
+          .update(patch as any)
+          .eq("id", match.id);
         return match.id;
       }
     }
@@ -59,9 +67,10 @@ async function findOrCreateLeadByPsid(opts: {
     applicationData: { [col]: opts.senderId },
   }).then(async (id) => {
     if (id) {
-      const patch = (col === "messenger_psid"
-        ? { messenger_psid: opts.senderId }
-        : { instagram_igsid: opts.senderId });
+      const patch =
+        col === "messenger_psid"
+          ? { messenger_psid: opts.senderId }
+          : { instagram_igsid: opts.senderId };
       await supabaseAdmin.from("leads").update(patch).eq("id", id);
     }
     return id;
@@ -79,7 +88,10 @@ async function ensureLeadNameFromMetaProfile(opts: {
   platform: "messenger" | "instagram";
 }): Promise<void> {
   const { data: lead } = await supabaseAdmin
-    .from("leads").select("first_name, last_name").eq("id", opts.leadId).maybeSingle();
+    .from("leads")
+    .select("first_name, last_name")
+    .eq("id", opts.leadId)
+    .maybeSingle();
   if (lead?.first_name && lead?.last_name) return;
 
   const profile = await fetchMetaUserProfile({ userId: opts.senderId, platform: opts.platform });
@@ -89,7 +101,10 @@ async function ensureLeadNameFromMetaProfile(opts: {
   if (profile.firstName && !lead?.first_name) patch.first_name = profile.firstName;
   if (profile.lastName && !lead?.last_name) patch.last_name = profile.lastName;
   if (Object.keys(patch).length > 0) {
-    await supabaseAdmin.from("leads").update(patch as any).eq("id", opts.leadId);
+    await supabaseAdmin
+      .from("leads")
+      .update(patch as any)
+      .eq("id", opts.leadId);
   }
 }
 
@@ -135,7 +150,9 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
   // 0) Imię i nazwisko z profilu Meta — od razu podpisujemy leada klientem
   try {
     await ensureLeadNameFromMetaProfile({ leadId, senderId, platform });
-  } catch (e) { console.error("[messenger] profile name error", e); }
+  } catch (e) {
+    console.error("[messenger] profile name error", e);
+  }
 
   // 1) Załączniki
   const stored: any[] = [];
@@ -170,21 +187,42 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     // Aktualizacja po id wstawionego rekordu — update po external_id gubił
     // załączniki, gdy Meta nie przysłała `mid`.
     if (commId) {
-      await supabaseAdmin.from("lead_communications").update({ attachments: stored as any })
+      await supabaseAdmin
+        .from("lead_communications")
+        .update({ attachments: stored as any })
         .eq("id", commId);
     } else if (msg.mid) {
-      await supabaseAdmin.from("lead_communications").update({ attachments: stored as any })
+      await supabaseAdmin
+        .from("lead_communications")
+        .update({ attachments: stored as any })
         .eq("external_id", msg.mid);
     }
     try {
       await attachStoredToClientDocuments({ leadId, stored, sourceLabel: platform });
-    } catch (e) { console.error("[messenger] attach to client docs", e); }
+    } catch (e) {
+      console.error("[messenger] attach to client docs", e);
+    }
   }
   try {
     await enrichLeadFromInbound({ leadId, text: userText, hasAttachments: stored.length > 0 });
-  } catch (e) { console.error("[messenger] enrichment error", e); }
+  } catch (e) {
+    console.error("[messenger] enrichment error", e);
+  }
 
   if (!userText && !stored.length) return;
+
+  // 2.5) OCHRONA PRZED PĘTLAMI BOT-BOT — wiadomość jest już zalogowana
+  //      (operator widzi ją w skrzynce), ale agent nie odpowiada automatowi.
+  const guard = await shouldSkipMessengerAutoReply({
+    leadId,
+    senderId,
+    platform,
+    text: userText,
+  });
+  if (guard.skip) {
+    console.warn(`[messenger] skip auto-reply: ${guard.reason} (psid=${senderId})`);
+    return;
+  }
 
   // 3) Odpowiedź agenta
   const agent = await runAgentTurn({
@@ -220,11 +258,15 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
   if (stored.length) {
     try {
       await ocrLeadAttachmentsAndEnrich({ leadId, attachments: stored });
-    } catch (e) { console.error("[messenger] attachment ocr error", e); }
+    } catch (e) {
+      console.error("[messenger] attachment ocr error", e);
+    }
   }
   try {
     await fillLeadNameFromKw({ leadId, allowOrder: false });
-  } catch (e) { console.error("[messenger] kw name error", e); }
+  } catch (e) {
+    console.error("[messenger] kw name error", e);
+  }
 }
 
 // Obsługa komentarzy pod postami fanpage'a (event: changes[].field === "feed").
@@ -246,13 +288,19 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
 
   if (fromName) {
     const { data: existing } = await supabaseAdmin
-      .from("leads").select("first_name, last_name").eq("id", leadId).maybeSingle();
+      .from("leads")
+      .select("first_name, last_name")
+      .eq("id", leadId)
+      .maybeSingle();
     const parts = fromName.trim().split(/\s+/);
     const patch: Record<string, string> = {};
     if (!existing?.first_name && parts[0]) patch.first_name = parts[0];
     if (!existing?.last_name && parts.length > 1) patch.last_name = parts.slice(1).join(" ");
     if (Object.keys(patch).length > 0) {
-      await supabaseAdmin.from("leads").update(patch as any).eq("id", leadId);
+      await supabaseAdmin
+        .from("leads")
+        .update(patch as any)
+        .eq("id", leadId);
     }
   }
 
@@ -262,11 +310,31 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
     direction: "inbound",
     content: text || "[pusty komentarz]",
     externalId: commentId,
-    metadata: { platform: "messenger", kind: "fb_comment", comment_id: commentId, post_id: postId, from_id: fromId, from_name: fromName },
+    metadata: {
+      platform: "messenger",
+      kind: "fb_comment",
+      comment_id: commentId,
+      post_id: postId,
+      from_id: fromId,
+      from_name: fromName,
+    },
     status: "received",
   });
 
   if (!text) return;
+
+  // OCHRONA PRZED PĘTLAMI — komentujący bot (albo inna strona-automat) nie
+  // powinien dostawać publicznej odpowiedzi + PM za każdym razem.
+  const guard = await shouldSkipMessengerAutoReply({
+    leadId,
+    senderId: fromId,
+    platform: "messenger",
+    text,
+  });
+  if (guard.skip) {
+    console.warn(`[fb-comment] skip auto-reply: ${guard.reason} (from=${fromId})`);
+    return;
+  }
 
   const agent = await runAgentTurn({
     leadId,
@@ -290,7 +358,12 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
     direction: "outbound",
     content: publicAck,
     externalId: pub.id ?? null,
-    metadata: { platform: "messenger", kind: "fb_comment_reply", comment_id: commentId, post_id: postId },
+    metadata: {
+      platform: "messenger",
+      kind: "fb_comment_reply",
+      comment_id: commentId,
+      post_id: postId,
+    },
     status: pub.ok ? "sent" : "error",
     errorMessage: pub.ok ? null : pub.error,
   });
@@ -302,7 +375,13 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
     direction: "outbound",
     content: fullReply,
     externalId: pm.messageId ?? null,
-    metadata: { platform: "messenger", kind: "fb_comment_private_reply", comment_id: commentId, post_id: postId, tool_calls: agent.toolCalls },
+    metadata: {
+      platform: "messenger",
+      kind: "fb_comment_private_reply",
+      comment_id: commentId,
+      post_id: postId,
+      tool_calls: agent.toolCalls,
+    },
     status: pm.ok ? "sent" : "error",
     errorMessage: pm.ok ? null : pm.error,
     agentId: process.env.ELEVENLABS_TEXT_AGENT_ID ?? null,

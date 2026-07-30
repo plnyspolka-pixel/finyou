@@ -8,7 +8,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, Send, RefreshCw, Search, Bot, User as UserIcon, Paperclip, Download, FileText, Loader2, Wand2 } from "lucide-react";
+import {
+  MessageCircle,
+  Send,
+  RefreshCw,
+  Search,
+  Bot,
+  User as UserIcon,
+  Paperclip,
+  Download,
+  FileText,
+  Loader2,
+  Wand2,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { toast } from "sonner";
@@ -44,7 +56,9 @@ type Lead = {
 
 function isImageAtt(att: Attachment): boolean {
   const name = att.name ?? att.path;
-  return (att.mime ?? "").startsWith("image/") || /\.(jpe?g|png|gif|webp|heic|bmp|avif)$/i.test(name);
+  return (
+    (att.mime ?? "").startsWith("image/") || /\.(jpe?g|png|gif|webp|heic|bmp|avif)$/i.test(name)
+  );
 }
 
 /**
@@ -84,7 +98,12 @@ function CommAttachment({ att }: { att: Attachment }) {
     return (
       <div className="group/att relative w-fit">
         <a href={url} target="_blank" rel="noreferrer" title={name}>
-          <img src={url} alt={name} className="max-h-56 max-w-full rounded-lg border object-cover" loading="lazy" />
+          <img
+            src={url}
+            alt={name}
+            className="max-h-56 max-w-full rounded-lg border object-cover"
+            loading="lazy"
+          />
         </a>
         <a
           href={downloadUrl}
@@ -99,11 +118,21 @@ function CommAttachment({ att }: { att: Attachment }) {
   return (
     <div className="flex items-center gap-2 rounded-lg border bg-background/60 px-2.5 py-1.5">
       <FileText className="h-4 w-4 shrink-0 opacity-70" />
-      <a href={url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-xs font-medium hover:underline" title={name}>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="min-w-0 flex-1 truncate text-xs font-medium hover:underline"
+        title={name}
+      >
         {name}
       </a>
       {sizeLabel && <span className="whitespace-nowrap text-[10px] opacity-60">{sizeLabel}</span>}
-      <a href={downloadUrl} title={`Pobierz ${name}`} className="shrink-0 opacity-70 hover:opacity-100">
+      <a
+        href={downloadUrl}
+        title={`Pobierz ${name}`}
+        className="shrink-0 opacity-70 hover:opacity-100"
+      >
         <Download className="h-3.5 w-3.5" />
       </a>
     </div>
@@ -122,7 +151,10 @@ type MessengerInboxProps = {
  * Używana zarówno w panelu administratora, jak i operatora — operator widzi
  * rozmowy i może odpowiadać jako Strona (przez Meta Graph API).
  */
-export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadLink }: MessengerInboxProps) {
+export function MessengerInbox({
+  title = "Messenger / Instagram DM",
+  renderLeadLink,
+}: MessengerInboxProps) {
   const qc = useQueryClient();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -141,7 +173,9 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
           (r.filesSkipped ? `, pominięto ${r.filesSkipped} plików bez dopasowania` : ""),
       );
       if (r.errors?.length) {
-        toast.error(`Meta zgłosiła ${r.errors.length} błąd(ów) przy pobieraniu rozmów: ${r.errors[0]}`);
+        toast.error(
+          `Meta zgłosiła ${r.errors.length} błąd(ów) przy pobieraniu rozmów: ${r.errors[0]}`,
+        );
       }
       qc.invalidateQueries({ queryKey: ["messenger-inbox"] });
       qc.invalidateQueries({ queryKey: ["messenger-inbox-leads"] });
@@ -149,12 +183,18 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
     onError: (e: any) => toast.error(e?.message ?? "Backfill nie powiódł się"),
   });
 
-  const { data: messages, refetch, isFetching } = useQuery({
+  const {
+    data: messages,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ["messenger-inbox"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lead_communications")
-        .select("id, lead_id, direction, content, created_at, metadata, status, attachments, thread_external_id")
+        .select(
+          "id, lead_id, direction, content, created_at, metadata, status, attachments, thread_external_id",
+        )
         .eq("channel", "messenger")
         .order("created_at", { ascending: false })
         .limit(2000);
@@ -188,16 +228,38 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
   // Klucz konwersacji: lead_id jeśli jest, w przeciwnym razie PSID/IGSID
   // z metadata / thread_external_id — pokazujemy też rozmowy bez podpiętego leada.
   const conversations = useMemo(() => {
-    const byKey = new Map<string, { key: string; leadId: string | null; lastAt: string; last: Msg; count: number; platform: string; extId: string | null }>();
+    const byKey = new Map<
+      string,
+      {
+        key: string;
+        leadId: string | null;
+        lastAt: string;
+        last: Msg;
+        count: number;
+        platform: string;
+        extId: string | null;
+      }
+    >();
     for (const m of (messages ?? []) as (Msg & { thread_external_id: string | null })[]) {
       const meta = (m.metadata ?? {}) as Record<string, any>;
       const psid = meta.psid ?? meta.sender_id ?? meta.recipient_id ?? null;
       const igsid = meta.igsid ?? null;
       const extId = m.thread_external_id ?? null;
-      const key = m.lead_id ?? (igsid ? `ig:${igsid}` : psid ? `msg:${psid}` : extId ? `ext:${extId}` : `orphan:${m.id}`);
+      const key =
+        m.lead_id ??
+        (igsid ? `ig:${igsid}` : psid ? `msg:${psid}` : extId ? `ext:${extId}` : `orphan:${m.id}`);
       const platform = igsid || meta.platform === "instagram" ? "Instagram" : "Messenger";
       const cur = byKey.get(key);
-      if (!cur) byKey.set(key, { key, leadId: m.lead_id, lastAt: m.created_at, last: m, count: 1, platform, extId });
+      if (!cur)
+        byKey.set(key, {
+          key,
+          leadId: m.lead_id,
+          lastAt: m.created_at,
+          last: m,
+          count: 1,
+          platform,
+          extId,
+        });
       else {
         cur.count += 1;
         if (m.created_at > cur.lastAt) {
@@ -207,7 +269,15 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
       }
     }
     return Array.from(byKey.values())
-      .map((v) => ({ leadId: v.leadId, key: v.key, lastAt: v.lastAt, last: v.last, count: v.count, platform: v.platform, lead: v.leadId ? leadMap.get(v.leadId) : undefined }))
+      .map((v) => ({
+        leadId: v.leadId,
+        key: v.key,
+        lastAt: v.lastAt,
+        last: v.last,
+        count: v.count,
+        platform: v.platform,
+        lead: v.leadId ? leadMap.get(v.leadId) : undefined,
+      }))
       .sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
   }, [messages, leadMap]);
 
@@ -238,7 +308,15 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
         const psid = meta.psid ?? meta.sender_id ?? meta.recipient_id ?? null;
         const igsid = meta.igsid ?? null;
         const extId = m.thread_external_id ?? null;
-        const key = m.lead_id ?? (igsid ? `ig:${igsid}` : psid ? `msg:${psid}` : extId ? `ext:${extId}` : `orphan:${m.id}`);
+        const key =
+          m.lead_id ??
+          (igsid
+            ? `ig:${igsid}`
+            : psid
+              ? `msg:${psid}`
+              : extId
+                ? `ext:${extId}`
+                : `orphan:${m.id}`);
         return key === selectedKey;
       })
       .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
@@ -249,7 +327,11 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
   }, [thread.length, selectedKey]);
 
   const selectedLead = selectedLeadId ? leadMap.get(selectedLeadId) : null;
-  const canReply = !!(selectedLeadId && selectedLead && (selectedLead.messenger_psid || selectedLead.instagram_igsid));
+  const canReply = !!(
+    selectedLeadId &&
+    selectedLead &&
+    (selectedLead.messenger_psid || selectedLead.instagram_igsid)
+  );
 
   const sendMut = useMutation({
     mutationFn: (body: string) => sendFn({ data: { leadId: selectedLeadId!, body } }),
@@ -290,7 +372,12 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
         <Card className="p-3">
           <div className="relative mb-3">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Szukaj konwersacji…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-8" />
+            <Input
+              placeholder="Szukaj konwersacji…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-8"
+            />
           </div>
           <ScrollArea className="h-[calc(100vh-280px)]">
             <div className="space-y-1">
@@ -299,7 +386,9 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
               )}
               {filteredConvs.map((c) => {
                 const active = c.key === selectedKey;
-                const name = `${c.lead?.first_name ?? ""} ${c.lead?.last_name ?? ""}`.trim() || "Nieznany klient";
+                const name =
+                  `${c.lead?.first_name ?? ""} ${c.lead?.last_name ?? ""}`.trim() ||
+                  "Nieznany klient";
                 const platform = c.platform;
                 return (
                   <button
@@ -322,9 +411,17 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                       <span className="truncate">{(c.last.content ?? "").slice(0, 80) || "—"}</span>
                     </div>
                     <div className="flex items-center gap-1 mt-1">
-                      <Badge variant="secondary" className="text-[10px] h-4">{platform}</Badge>
-                      <Badge variant="outline" className="text-[10px] h-4">{c.count} wiad.</Badge>
-                      {!c.leadId && <Badge variant="outline" className="text-[10px] h-4">bez leada</Badge>}
+                      <Badge variant="secondary" className="text-[10px] h-4">
+                        {platform}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] h-4">
+                        {c.count} wiad.
+                      </Badge>
+                      {!c.leadId && (
+                        <Badge variant="outline" className="text-[10px] h-4">
+                          bez leada
+                        </Badge>
+                      )}
                     </div>
                   </button>
                 );
@@ -334,16 +431,23 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
         </Card>
 
         <Card className="p-4 flex flex-col">
-          {!selectedKey && <div className="text-sm text-muted-foreground">Wybierz konwersację po lewej.</div>}
+          {!selectedKey && (
+            <div className="text-sm text-muted-foreground">Wybierz konwersację po lewej.</div>
+          )}
           {selectedKey && (
             <>
               <div className="flex items-center justify-between border-b pb-3 mb-3">
                 <div>
                   <div className="text-lg font-semibold">
-                    {`${selectedLead?.first_name ?? ""} ${selectedLead?.last_name ?? ""}`.trim() || "Nieznany klient"}
+                    {`${selectedLead?.first_name ?? ""} ${selectedLead?.last_name ?? ""}`.trim() ||
+                      "Nieznany klient"}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {selectedLead?.instagram_igsid ? `Instagram IGSID: ${selectedLead.instagram_igsid}` : selectedLead?.messenger_psid ? `Messenger PSID: ${selectedLead.messenger_psid}` : "brak ID"}
+                    {selectedLead?.instagram_igsid
+                      ? `Instagram IGSID: ${selectedLead.instagram_igsid}`
+                      : selectedLead?.messenger_psid
+                        ? `Messenger PSID: ${selectedLead.messenger_psid}`
+                        : "brak ID"}
                   </div>
                 </div>
                 {selectedLeadId && renderLeadLink?.(selectedLeadId)}
@@ -356,16 +460,27 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                     const meta = (m.metadata ?? {}) as Record<string, any>;
                     const isBot = !inbound && !meta.sent_by;
                     return (
-                      <div key={m.id} className={`flex ${inbound ? "justify-start" : "justify-end"}`}>
-                        <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
-                          inbound
-                            ? "bg-muted"
-                            : isBot
-                            ? "bg-blue-500/10 border border-blue-500/30"
-                            : "bg-primary text-primary-foreground"
-                        }`}>
+                      <div
+                        key={m.id}
+                        className={`flex ${inbound ? "justify-start" : "justify-end"}`}
+                      >
+                        <div
+                          className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
+                            inbound
+                              ? "bg-muted"
+                              : isBot
+                                ? "bg-blue-500/10 border border-blue-500/30"
+                                : "bg-primary text-primary-foreground"
+                          }`}
+                        >
                           <div className="flex items-center gap-1 text-[10px] opacity-70 mb-1">
-                            {inbound ? <UserIcon className="h-3 w-3" /> : isBot ? <Bot className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+                            {inbound ? (
+                              <UserIcon className="h-3 w-3" />
+                            ) : isBot ? (
+                              <Bot className="h-3 w-3" />
+                            ) : (
+                              <Send className="h-3 w-3" />
+                            )}
                             <span>{inbound ? "Klient" : isBot ? "Bot" : "Operator"}</span>
                             <span>·</span>
                             <span>{new Date(m.created_at).toLocaleString("pl-PL")}</span>
@@ -406,7 +521,9 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                       }}
                     />
                     <div className="flex items-center justify-between">
-                      <div className="text-[10px] text-muted-foreground">Cmd/Ctrl + Enter — wyślij</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        Cmd/Ctrl + Enter — wyślij
+                      </div>
                       <Button
                         size="sm"
                         onClick={() => sendMut.mutate(reply.trim())}

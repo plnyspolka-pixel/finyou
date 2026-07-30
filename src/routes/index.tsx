@@ -1,13 +1,20 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Phone, Menu, X } from "lucide-react";
-import { FinanceYouLogo } from "@/components/finance-you-logo";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
 import { LandingWizardForm } from "@/components/landing/landing-wizard-form";
 import { ChatWidget } from "@/components/landing/chat-widget";
-
-
+import { MarketingShell } from "@/components/marketing/shell";
+import {
+  Section,
+  SectionHead,
+  RoleCard,
+  ModuleGrid,
+  ProcessSteps,
+  CTASection,
+  type RoleCardProps,
+} from "@/components/marketing/sections";
+import { BrandIcon } from "@/components/marketing/brand-icon";
+import type { Icon3DName } from "@/components/marketing/icon-3d";
 
 export const PHONE_DISPLAY = "+48 732 059 898";
 export const PHONE_HREF = "+48732059898";
@@ -22,7 +29,11 @@ export const Route = createFileRoute("/")({
         content:
           "Pożyczka pod zastaw nieruchomości w Polsce do 1 000 000 zł. Decyzja w 24 godziny. Wypełnij wniosek online — wybierz typ nieruchomości, kwotę, okres i dołącz dokumenty.",
       },
-      { name: "keywords", content: "pożyczka pod zastaw nieruchomości, pożyczka pod hipotekę, pożyczka prywatna, pożyczka pozabankowa, zastaw nieruchomości, pożyczka pod mieszkanie, pożyczka pod dom, pożyczka pod działkę" },
+      {
+        name: "keywords",
+        content:
+          "pożyczka pod zastaw nieruchomości, pożyczka pod hipotekę, pożyczka prywatna, pożyczka pozabankowa, zastaw nieruchomości, pożyczka pod mieszkanie, pożyczka pod dom, pożyczka pod działkę",
+      },
       { property: "og:title", content: "Pożyczka pod zastaw nieruchomości — Finance You" },
       { property: "og:description", content: "Do 1 mln zł. Decyzja w 24 h. Złóż wniosek online." },
       { property: "og:url", content: "https://financeyou.pl/" },
@@ -49,127 +60,262 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
+const ROLES: RoleCardProps[] = [
+  {
+    icon3d: "calculator",
+    accent: "var(--accent)",
+    badge: { v: "accent", t: "Klient" },
+    title: "Dla klientów",
+    desc: "Sprawdź bezpłatnie możliwości finansowania pod zabezpieczenie nieruchomości.",
+    cta: "Złóż wniosek",
+    href: "/dla-klienta",
+  },
+  {
+    icon3d: "growth",
+    accent: "var(--cyan-500)",
+    badge: { v: "secondary", t: "Inwestor" },
+    title: "Dla inwestorów",
+    desc: "Uzyskaj dostęp do spraw klientów szukających finansowania i ucz się inwestowania w pożyczki zabezpieczone nieruchomościami.",
+    cta: "Dołącz do klubu",
+    href: "/dla-inwestora",
+  },
+  {
+    icon3d: "handshake",
+    accent: "var(--gold-600)",
+    badge: { v: "gold", t: "Pośrednik" },
+    title: "Dla pośredników",
+    desc: "Zarabiaj na obsłudze klientów z gotowym CRM-em, szkoleniem, AI i bazą inwestorów.",
+    cta: "Zostań partnerem",
+    href: "/dla-posrednika",
+  },
+];
+
+const MODULES: { icon: Icon3DName; t: string }[] = [
+  { icon: "crm", t: "CRM" },
+  { icon: "kalkulator", t: "Kalkulator" },
+  { icon: "application", t: "Wnioski" },
+  { icon: "investors", t: "Baza inwestorów" },
+  { icon: "documents", t: "Dokumenty" },
+  { icon: "academy", t: "Akademia" },
+  { icon: "ai", t: "AI" },
+  { icon: "automation", t: "Automatyzacja" },
+  { icon: "status", t: "Statusy spraw" },
+  { icon: "compliance", t: "Compliance" },
+];
+
+const FLOW = [
+  {
+    t: "Klient lub pośrednik dodaje sprawę",
+    d: "Numer KW i podstawowe informacje o nieruchomości.",
+  },
+  { t: "System porządkuje dane", d: "Sprawa zostaje ustrukturyzowana i opisana." },
+  { t: "Trafia do finansujących", d: "Inwestorzy i partnerzy finansowi widzą okazję." },
+  { t: "Pośrednik prowadzi proces", d: "Obsługa w CRM z pełną historią kontaktu." },
+  { t: "Inwestor analizuje", d: "LTV, typ nieruchomości, dokumenty w jednym miejscu." },
+  { t: "Platforma wspiera obsługę", d: "Dokumentacja, komunikacja i monitoring." },
+];
+
+function Hero() {
+  return (
+    <section className="fy-hero" style={{ color: "#fff", borderBottom: "1px solid var(--border)" }}>
+      <div aria-hidden className="fy-hero-fx" />
+      <div
+        className="fy-hero-grid"
+        style={{
+          position: "relative",
+          maxWidth: "80rem",
+          margin: "0 auto",
+          padding: "4.5rem 1.5rem 5rem",
+          alignItems: "start",
+        }}
+      >
+        <div>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,.2)",
+              background: "rgba(255,255,255,.1)",
+              backdropFilter: "blur(6px)",
+              padding: "0.35rem 0.9rem",
+              fontSize: "0.7rem",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+            }}
+          >
+            <BrandIcon name="shield" size={16} /> Platforma prywatnego finansowania
+          </span>
+          <h1
+            style={{
+              marginTop: "1.3rem",
+              fontSize: "clamp(2.2rem, 4.4vw, 3.4rem)",
+              fontWeight: 900,
+              lineHeight: 1.05,
+              letterSpacing: "-0.025em",
+            }}
+          >
+            Jedna platforma dla klientów, inwestorów i pośredników na rynku pożyczek pod{" "}
+            <span
+              style={{
+                background: "linear-gradient(95deg,#f0c667,#f6dc9c 34%,#5fa2f6 82%)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+              }}
+            >
+              nieruchomości
+            </span>
+          </h1>
+          <p
+            style={{
+              marginTop: "1.1rem",
+              maxWidth: "34rem",
+              fontSize: "1.05rem",
+              lineHeight: 1.6,
+              color: "rgba(255,255,255,.82)",
+            }}
+          >
+            Finance You łączy klientów szukających finansowania, prywatnych inwestorów i pośredników
+            w jednym systemie: z CRM-em, AI, dokumentacją, szkoleniami i automatyzacją procesu.
+          </p>
+          <div
+            style={{
+              marginTop: "1.8rem",
+              display: "flex",
+              gap: "0.7rem",
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            <a href="/dla-klienta" className="fy-imgbtn" style={{ lineHeight: 0 }}>
+              <img src="/marketing/buttons/pozyczam.png" alt="Pożyczam" />
+            </a>
+            <a href="/dla-inwestora" className="fy-imgbtn" style={{ lineHeight: 0 }}>
+              <img src="/marketing/buttons/inwestuje.png" alt="Inwestuję" />
+            </a>
+            <a href="/dla-posrednika" className="fy-imgbtn" style={{ lineHeight: 0 }}>
+              <img src="/marketing/buttons/posrednicze.png" alt="Pośredniczę" />
+            </a>
+          </div>
+          <div
+            style={{
+              marginTop: "2rem",
+              display: "flex",
+              gap: "1.6rem",
+              flexWrap: "wrap",
+              fontSize: "0.8rem",
+              color: "rgba(255,255,255,.7)",
+            }}
+          >
+            {["CRM + AI", "Baza inwestorów", "Dokumenty i compliance", "Akademia"].map((t) => (
+              <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <BrandIcon name="check" size={16} /> {t}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div style={{ position: "relative" }}>
+          <LandingWizardForm />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Landing() {
   const { user, roles, loading } = useAuth();
   const panelHref = user ? defaultPathForRoles(roles) : null;
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
 
-  const isAdmin = roles.includes("administrator") || roles.includes("operator") || roles.includes("ksiegowosc");
+  const isAdmin =
+    roles.includes("administrator") || roles.includes("operator") || roles.includes("ksiegowosc");
   useEffect(() => {
     if (!loading && user && panelHref && !isAdmin) {
       navigate({ to: panelHref, replace: true });
     }
   }, [loading, user, panelHref, navigate, isAdmin]);
 
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top bar */}
-      <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-2 md:px-6 md:py-3">
-          <Link to="/" className="shrink-0">
-            <FinanceYouLogo variant="light" size="lg" />
-          </Link>
+    <MarketingShell page="home">
+      <Hero />
 
-          {/* Desktop actions */}
-          <div className="hidden items-center gap-2 md:flex">
-            <Button asChild size="sm" className="bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:brightness-110 transition">
-              <a href={`tel:${PHONE_HREF}`} aria-label={`Zadzwoń ${PHONE_DISPLAY}`}>
-                <Phone className="h-4 w-4 mr-2" />
-                {PHONE_DISPLAY}
-              </a>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link to={panelHref ?? "/auth"}>{panelHref ? "Panel" : "Zaloguj"}</Link>
-            </Button>
-          </div>
-
-          {/* Mobile hamburger */}
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label={menuOpen ? "Zamknij menu" : "Otwórz menu"}
-            aria-expanded={menuOpen}
-            className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-card text-foreground md:hidden"
-          >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+      <Section id="sciezki">
+        <SectionHead
+          eyebrow="Wybierz ścieżkę"
+          title="Trzy role, jeden system"
+          sub="Każda ścieżka prowadzi do osobnego, dopasowanego procesu w platformie Finance You."
+        />
+        <div
+          className="fy-steps"
+          style={{
+            marginTop: "2.5rem",
+            display: "grid",
+            gridTemplateColumns: "repeat(3,1fr)",
+            gap: "1.1rem",
+          }}
+        >
+          {ROLES.map((r) => (
+            <RoleCard key={r.title} {...r} />
+          ))}
         </div>
+      </Section>
 
-        {/* Mobile menu panel */}
-        {menuOpen && (
-          <div className="border-t border-border bg-background/95 backdrop-blur md:hidden">
-            <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-3">
-              <Button asChild size="sm" className="justify-center bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30">
-                <a href={`tel:${PHONE_HREF}`} aria-label={`Zadzwoń ${PHONE_DISPLAY}`}>
-                  <Phone className="h-4 w-4 mr-2" />
-                  {PHONE_DISPLAY}
-                </a>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="justify-center">
-                <Link to={panelHref ?? "/auth"} onClick={() => setMenuOpen(false)}>
-                  {panelHref ? "Panel" : "Zaloguj"}
-                </Link>
-              </Button>
-            </div>
-          </div>
-        )}
-      </header>
-
-      {/* Wniosek */}
-      <section className="border-b border-border bg-gradient-to-b from-[oklch(0.98_0.01_265)] to-background dark:from-[oklch(0.18_0.04_265)]">
-        <div className="mx-auto max-w-3xl px-4 pt-4 pb-8 md:px-6 md:pt-8 md:pb-12">
-          <LandingWizardForm />
+      <Section tint>
+        <SectionHead
+          eyebrow="Platforma, nie pośrednik"
+          title="Nie kolejny pośrednik. Cały system do obsługi rynku prywatnego finansowania."
+          sub="Wszystko, czego potrzebuje rynek prywatnych pożyczek hipotecznych — w jednym, uporządkowanym miejscu."
+        />
+        <div style={{ marginTop: "2.5rem" }}>
+          <ModuleGrid items={MODULES} />
         </div>
-      </section>
+      </Section>
 
-
-
-
-
-      {/* Footer */}
-      <footer className="border-t border-border bg-card">
-        <div className="mx-auto max-w-5xl px-4 py-10 md:px-6">
-          <div className="grid gap-8 md:grid-cols-[1.2fr_1fr_1fr]">
-            <div>
-              <FinanceYouLogo variant="light" size="md" />
-              <p className="mt-3 text-sm font-semibold text-foreground">Finance You sp. z o.o.</p>
-              <address className="mt-1 not-italic text-sm leading-relaxed text-muted-foreground">
-                ul. Nowogrodzka 31<br />00-511 Warszawa
-              </address>
-              <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
-                <div className="flex gap-2"><dt className="font-semibold text-foreground/80">KRS:</dt><dd>0000635207</dd></div>
-                <div className="flex gap-2"><dt className="font-semibold text-foreground/80">NIP:</dt><dd>7010611803</dd></div>
-                <div className="flex gap-2"><dt className="font-semibold text-foreground/80">REGON:</dt><dd>365350668</dd></div>
-              </dl>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Kontakt</h3>
-              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                <li><a href={`tel:${PHONE_HREF}`} className="hover:text-foreground">{PHONE_DISPLAY}</a></li>
-                <li><a href={`mailto:${EMAIL}`} className="hover:text-foreground">{EMAIL}</a></li>
-                <li>pn–pt 9:00–17:00</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Informacje</h3>
-              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/blog" className="hover:text-foreground">Blog</Link></li>
-                <li><a href="/polityka-prywatnosci" className="hover:text-foreground">Polityka prywatności</a></li>
-                <li><a href="/regulamin" className="hover:text-foreground">Regulamin serwisu</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-8 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center">
-            <span>© {new Date().getFullYear()} Finance You sp. z o.o. Wszelkie prawa zastrzeżone.</span>
-            <span>Prywatne pożyczki zabezpieczone hipoteką na nieruchomości w Polsce.</span>
-          </div>
+      <Section id="jak-dziala">
+        <SectionHead eyebrow="Jak to działa" title="Od zgłoszenia sprawy do finansowania" />
+        <div style={{ marginTop: "2.5rem" }}>
+          <ProcessSteps steps={FLOW} cols={3} />
         </div>
-      </footer>
+      </Section>
+
+      <Section id="blog" tint>
+        <SectionHead
+          eyebrow="Blog"
+          title="Wiedza o prywatnym finansowaniu"
+          sub="Praktyczne artykuły o pożyczkach pod nieruchomości, inwestowaniu i pracy pośrednika."
+        />
+        <div
+          style={{
+            marginTop: "2.5rem",
+            borderRadius: "var(--radius-2xl)",
+            overflow: "hidden",
+            border: "1px solid var(--border)",
+          }}
+        >
+          <iframe
+            src="https://app.financeyou.pl/embed/blog"
+            style={{ border: 0, width: "100%", minHeight: 700, height: 900, display: "block" }}
+            loading="lazy"
+            title="Blog Finance You"
+          />
+        </div>
+      </Section>
+
+      <CTASection
+        title="Wybierz swoją ścieżkę w Finance You."
+        sub="Trzy role, jeden system operacyjny. Zacznij tam, gdzie jesteś."
+        buttons={[
+          { label: "Pożyczam", href: "/dla-klienta" },
+          { label: "Inwestuję", href: "/dla-inwestora" },
+          { label: "Pośredniczę", href: "/dla-posrednika" },
+        ]}
+      />
 
       {/* Czat z asystentem — kanał komunikacji przychodzącej "chat" */}
       <ChatWidget source="landing" />
-    </div>
+    </MarketingShell>
   );
 }

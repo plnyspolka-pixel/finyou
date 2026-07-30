@@ -3,74 +3,172 @@ import { formatDate } from "@/lib/labels";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Facebook, Linkedin, Twitter, Link2, Mail, MessageCircle, Check } from "lucide-react";
 import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { BlogCover } from "@/components/blog/BlogCover";
+import { MarketingShell } from "@/components/marketing/shell";
+import { ComplianceNote, Section } from "@/components/marketing/sections";
+import { MktBadge, Eyebrow } from "@/components/marketing/primitives";
 
-const FAVICON_URL = "https://financeyou.pl/__l5e/assets-v1/73e2df85-6890-4ae6-a18a-debbc0970e07/favicon-mark.png";
-const WORDMARK_URL = "https://financeyou.pl/__l5e/assets-v1/f4352ffd-618d-446b-a632-fc3a5abb0bdd/financeyou-wordmark.png";
+type RelatedRow = {
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  reading_minutes: number | null;
+  published_at: string | null;
+  cover_image_url: string | null;
+  cover_image_alt: string | null;
+  audience: string | null;
+};
+
+/**
+ * Normalizuje linki w treści markdown artykułów:
+ * - absolutne linki do financeyou.pl stają się względne (SPA-friendly),
+ * - historyczne CTA `/inwestor` i `/klient` (panele wymagające logowania)
+ *   są mapowane na publiczne strony marketingowe `/dla-inwestora` i `/dla-klienta`,
+ * - CTA do formularza embed prowadzi na stronę dla klienta.
+ */
+function normalizeHref(raw?: string): { href: string; external: boolean } {
+  if (!raw) return { href: "#", external: false };
+  let href = raw.trim();
+  if (href.startsWith("https://app.financeyou.pl/embed/wniosek")) href = "/dla-klienta";
+  href = href.replace(/^https?:\/\/(www\.)?financeyou\.pl/, "") || "/";
+  if (/^\/inwestor(?:[/?#]|$)/.test(href)) href = "/dla-inwestora";
+  if (/^\/klient(?:[/?#]|$)/.test(href)) href = "/dla-klienta";
+  return { href, external: /^https?:\/\//.test(href) };
+}
+
+function MarkdownLink({ href, children }: { href?: string; children?: ReactNode }) {
+  const { href: normalized, external } = normalizeHref(href);
+  if (external) {
+    return (
+      <a href={normalized} target="_blank" rel="nofollow noopener noreferrer">
+        {children}
+      </a>
+    );
+  }
+  return <a href={normalized}>{children}</a>;
+}
 
 function ShareBar({ url, title }: { url: string; title: string }) {
   const [copied, setCopied] = useState(false);
   const enc = encodeURIComponent;
   const links = [
-    { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}` },
-    { label: "X / Twitter", icon: Twitter, href: `https://twitter.com/intent/tweet?url=${enc(url)}&text=${enc(title)}` },
-    { label: "LinkedIn", icon: Linkedin, href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}` },
-    { label: "WhatsApp", icon: MessageCircle, href: `https://wa.me/?text=${enc(title + " " + url)}` },
+    {
+      label: "Facebook",
+      icon: Facebook,
+      href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`,
+    },
+    {
+      label: "X / Twitter",
+      icon: Twitter,
+      href: `https://twitter.com/intent/tweet?url=${enc(url)}&text=${enc(title)}`,
+    },
+    {
+      label: "LinkedIn",
+      icon: Linkedin,
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`,
+    },
+    {
+      label: "WhatsApp",
+      icon: MessageCircle,
+      href: `https://wa.me/?text=${enc(title + " " + url)}`,
+    },
     { label: "E-mail", icon: Mail, href: `mailto:?subject=${enc(title)}&body=${enc(url)}` },
   ];
   const copy = async () => {
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {}
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {}
+  };
+  const itemStyle: CSSProperties = {
+    display: "inline-flex",
+    height: "2.4rem",
+    width: "2.4rem",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "50%",
+    border: "1px solid var(--border)",
+    background: "var(--card)",
+    color: "var(--muted-foreground)",
+    cursor: "pointer",
+    transition:
+      "background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out)",
   };
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs uppercase tracking-wide text-muted-foreground mr-1">Udostępnij:</span>
+    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" }}>
+      <span
+        style={{
+          fontSize: "0.68rem",
+          textTransform: "uppercase",
+          letterSpacing: "var(--tracking-widest)",
+          color: "var(--muted-foreground)",
+          marginRight: 4,
+        }}
+      >
+        Udostępnij:
+      </span>
       {links.map((l) => (
-        <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" aria-label={`Udostępnij na ${l.label}`}
-           className="inline-flex h-9 w-9 items-center justify-center rounded-full border bg-background hover:bg-muted transition-colors">
-          <l.icon className="h-4 w-4" />
+        <a
+          key={l.label}
+          href={l.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Udostępnij na ${l.label}`}
+          style={itemStyle}
+        >
+          <l.icon size={16} />
         </a>
       ))}
-      <button type="button" onClick={copy} aria-label="Skopiuj link"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border bg-background hover:bg-muted transition-colors">
-        {copied ? <Check className="h-4 w-4 text-primary" /> : <Link2 className="h-4 w-4" />}
+      <button type="button" onClick={copy} aria-label="Skopiuj link" style={itemStyle}>
+        {copied ? <Check size={16} color="var(--gold-600)" /> : <Link2 size={16} />}
       </button>
     </div>
   );
 }
 
-function BrandHeader() {
-  return (
-    <header className="border-b bg-background/80 backdrop-blur sticky top-0 z-40">
-      <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
-        <a href="https://financeyou.pl" className="flex items-center gap-2">
-          <img src={FAVICON_URL} alt="Finance You" className="h-7 w-7" />
-          <img src={WORDMARK_URL} alt="Finance You" className="h-5 hidden sm:block" />
-        </a>
-        <nav className="flex items-center gap-4 text-sm">
-          <Link to="/blog" className="text-muted-foreground hover:text-foreground">Blog</Link>
-          <a href="https://financeyou.pl" className="text-muted-foreground hover:text-foreground">financeyou.pl</a>
-          <Button asChild size="sm"><a href="https://financeyou.pl" target="_blank" rel="noopener">Finance You</a></Button>
-        </nav>
-      </div>
-    </header>
-  );
-}
-
 export const Route = createFileRoute("/blog/$slug")({
   loader: async ({ params }) => {
-    const { data } = await supabase.from("ai_seo_articles").select("*").eq("slug", params.slug).eq("status", "published").maybeSingle();
+    const { data } = await supabase
+      .from("ai_seo_articles")
+      .select("*")
+      .eq("slug", params.slug)
+      .eq("status", "published")
+      .maybeSingle();
     if (!data) throw notFound();
-    return { article: data };
+
+    // Powiązane artykuły do linkowania wewnętrznego: najpierw te, do których
+    // artykuł linkuje w treści, potem najnowsze dla tej samej grupy odbiorców.
+    const { data: relRaw } = await supabase
+      .from("ai_seo_articles")
+      .select(
+        "slug,title,excerpt,reading_minutes,published_at,cover_image_url,cover_image_alt,audience",
+      )
+      .eq("status", "published")
+      .neq("slug", params.slug)
+      .order("published_at", { ascending: false })
+      .limit(12);
+    const pool = (relRaw ?? []) as RelatedRow[];
+    const linked: string[] = Array.isArray((data as any).internal_link_slugs)
+      ? (data as any).internal_link_slugs
+      : [];
+    const score = (r: RelatedRow) =>
+      linked.includes(r.slug) ? 0 : r.audience === (data as any).audience ? 1 : 2;
+    const related = [...pool].sort((a, b) => score(a) - score(b)).slice(0, 3);
+
+    return { article: data, related };
   },
   head: ({ params, loaderData }) => {
     const a: any = loaderData?.article;
     if (!a) return { meta: [], links: [], scripts: [] };
     const url = `https://financeyou.pl/blog/${params.slug}`;
     const isInvestor = a.audience === "investor";
-    const ctaUrl = isInvestor ? "https://financeyou.pl/inwestor" : "https://financeyou.pl/klient";
+    const ctaUrl = isInvestor
+      ? "https://financeyou.pl/dla-inwestora"
+      : "https://financeyou.pl/dla-klienta";
     const audienceType = isInvestor ? "Investor" : "Borrower";
     const section = isInvestor ? "Inwestowanie" : "Pożyczki pod zastaw";
     const title = a.meta_title || a.title;
@@ -84,7 +182,10 @@ export const Route = createFileRoute("/blog/$slug")({
         ...(keywords.length ? [{ name: "keywords", content: keywords.join(", ") }] : []),
         ...(a.primary_keyword ? [{ name: "news_keywords", content: a.primary_keyword }] : []),
         { name: "author", content: "Finance You" },
-        { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
+        {
+          name: "robots",
+          content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+        },
         { name: "article:section", content: section },
         { name: "article:published_time", content: a.published_at ?? "" },
         { name: "article:modified_time", content: a.updated_at ?? a.published_at ?? "" },
@@ -97,19 +198,25 @@ export const Route = createFileRoute("/blog/$slug")({
         { property: "og:locale", content: "pl_PL" },
         { property: "article:publisher", content: "https://financeyou.pl" },
         { property: "article:section", content: section },
-        ...(a.published_at ? [{ property: "article:published_time", content: a.published_at }] : []),
-        ...(a.updated_at || a.published_at ? [{ property: "article:modified_time", content: a.updated_at ?? a.published_at }] : []),
+        ...(a.published_at
+          ? [{ property: "article:published_time", content: a.published_at }]
+          : []),
+        ...(a.updated_at || a.published_at
+          ? [{ property: "article:modified_time", content: a.updated_at ?? a.published_at }]
+          : []),
         ...keywords.map((k) => ({ property: "article:tag", content: k })),
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
         { name: "twitter:site", content: "@financeyou_pl" },
-        ...(a.cover_image_url ? [
-          { property: "og:image", content: a.cover_image_url },
-          { property: "og:image:alt", content: a.cover_image_alt || title },
-          { name: "twitter:image", content: a.cover_image_url },
-          { name: "twitter:image:alt", content: a.cover_image_alt || title },
-        ] : []),
+        ...(a.cover_image_url
+          ? [
+              { property: "og:image", content: a.cover_image_url },
+              { property: "og:image:alt", content: a.cover_image_alt || title },
+              { name: "twitter:image", content: a.cover_image_url },
+              { name: "twitter:image:alt", content: a.cover_image_alt || title },
+            ]
+          : []),
         { name: "audience", content: audienceType },
       ],
       links: [
@@ -121,7 +228,7 @@ export const Route = createFileRoute("/blog/$slug")({
           type: "application/ld+json",
           children: JSON.stringify({
             "@context": "https://schema.org",
-            "@type": "NewsArticle",
+            "@type": "BlogPosting",
             headline: a.title,
             alternativeHeadline: a.meta_title || undefined,
             description,
@@ -158,7 +265,11 @@ export const Route = createFileRoute("/blog/$slug")({
                 ? "Inwestowanie w pożyczki pod zastaw nieruchomości"
                 : "Pożyczka pod zastaw nieruchomości",
               url: ctaUrl,
-              provider: { "@type": "Organization", name: "Finance You", url: "https://financeyou.pl" },
+              provider: {
+                "@type": "Organization",
+                name: "Finance You",
+                url: "https://financeyou.pl",
+              },
             },
             isAccessibleForFree: true,
           }),
@@ -169,8 +280,18 @@ export const Route = createFileRoute("/blog/$slug")({
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Finance You", item: "https://financeyou.pl" },
-              { "@type": "ListItem", position: 2, name: "Blog", item: "https://financeyou.pl/blog" },
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Finance You",
+                item: "https://financeyou.pl",
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: "Blog",
+                item: "https://financeyou.pl/blog",
+              },
               { "@type": "ListItem", position: 3, name: a.title, item: url },
             ],
           }),
@@ -179,87 +300,310 @@ export const Route = createFileRoute("/blog/$slug")({
     };
   },
   component: ArticlePage,
-  notFoundComponent: () => <div className="grid min-h-screen place-items-center text-muted-foreground">Artykuł nie istnieje.</div>,
-  errorComponent: ({ error }) => <div className="grid min-h-screen place-items-center text-destructive">{error.message}</div>,
+  notFoundComponent: () => (
+    <MarketingShell page="blog">
+      <Section>
+        <p style={{ textAlign: "center", color: "var(--muted-foreground)" }}>
+          Artykuł nie istnieje. <Link to="/blog">Wróć do bloga</Link>.
+        </p>
+      </Section>
+    </MarketingShell>
+  ),
+  errorComponent: ({ error }) => (
+    <MarketingShell page="blog">
+      <Section>
+        <p style={{ textAlign: "center", color: "var(--muted-foreground)" }}>{error.message}</p>
+      </Section>
+    </MarketingShell>
+  ),
 });
 
+function RelatedCard({ r }: { r: RelatedRow }) {
+  return (
+    <Link
+      to="/blog/$slug"
+      params={{ slug: r.slug }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        textDecoration: "none",
+        color: "inherit",
+        background: "var(--card)",
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-2xl)",
+        overflow: "hidden",
+        boxShadow: "var(--shadow-sm)",
+        transition:
+          "border-color var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = "var(--accent)";
+        e.currentTarget.style.transform = "translateY(-3px)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = "var(--border)";
+        e.currentTarget.style.transform = "none";
+      }}
+    >
+      {r.cover_image_url && (
+        <BlogCover src={r.cover_image_url} alt={r.cover_image_alt || r.title} />
+      )}
+      <div style={{ padding: "1rem 1.1rem 1.1rem" }}>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: "0.95rem",
+            fontWeight: 700,
+            lineHeight: 1.4,
+            color: "var(--foreground)",
+          }}
+        >
+          {r.title}
+        </h3>
+        <div style={{ marginTop: "0.5rem", fontSize: "0.72rem", color: "var(--muted-foreground)" }}>
+          {r.reading_minutes ? `${r.reading_minutes} min czytania` : null}
+          {r.reading_minutes && r.published_at ? " • " : null}
+          {r.published_at ? formatDate(r.published_at) : null}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function ArticlePage() {
-  const { article } = Route.useLoaderData();
+  const { article, related } = Route.useLoaderData();
   const shareUrl = `https://financeyou.pl/blog/${article.slug}`;
   const isInvestor = article.audience === "investor";
-  const ctaHref = isInvestor ? "/inwestor" : "/klient";
+  const ctaHref = isInvestor ? "/dla-inwestora" : "/dla-klienta";
   const ctaHeading = isInvestor
-    ? "Zainwestuj w pożyczki pod zastaw nieruchomości"
-    : "Potrzebujesz pożyczki pod zastaw?";
+    ? "Inwestuj w pożyczki zabezpieczone nieruchomościami"
+    : "Szukasz finansowania pod zabezpieczenie nieruchomości?";
   const ctaSub = isInvestor
-    ? "Zabezpieczenie hipoteczne, prognozowana stopa zwrotu, pełna transparentność ofert."
-    : "Sprawdź warunki w 2 minuty — bez BIK, decyzja w 24h.";
-  const ctaLabel = article.cta_label || (isInvestor ? "Zostań inwestorem" : "Złóż wniosek o pożyczkę");
+    ? "Inwestorzy na rynku pożyczek zabezpieczonych nieruchomościami realnie osiągają od kilkunastu do nawet kilkudziesięciu procent rocznie. W Klubie Inwestorów Hipotecznych: dostęp do spraw klientów, Akademia inwestora, wzory dokumentów, narzędzia AI i wsparcie compliance."
+    : "Złóż bezpłatny wniosek — jedno zgłoszenie trafia do wielu prywatnych inwestorów i partnerów finansowych. Bez zobowiązań.";
+  const ctaLabel = isInvestor ? "Poznaj Klub Inwestorów" : "Sprawdź możliwości bezpłatnie";
   const ctaMicro = isInvestor
-    ? "Dostęp do panelu inwestora • realne oferty • wypłata w 24h"
-    : "Bez BIK • decyzja w 24h • wypłata tego samego dnia";
+    ? "Realne stopy zwrotu: kilkanaście–kilkadziesiąt % rocznie • dostęp do zgłoszeń klientów • decyzja należy do Ciebie"
+    : "Bezpłatne zgłoszenie • bez zobowiązań • liczy się nieruchomość, nie sam scoring";
+  const disclaimer = isInvestor
+    ? "Przywoływane stopy zwrotu odzwierciedlają wyniki osiągane na rynku pożyczek zabezpieczonych nieruchomościami i mają charakter informacyjny — nie stanowią gwarancji przyszłych wyników, oferty ani doradztwa inwestycyjnego. Wynik zależy od parametrów konkretnej transakcji, a inwestowanie wiąże się z ryzykiem, w tym utraty części lub całości kapitału."
+    : "Materiał ma charakter informacyjny i nie stanowi oferty. Finance You nie gwarantuje finansowania — decyzja należy do finansujących. Kwoty, koszty i kalkulacje przywoływane w artykule mają charakter orientacyjny.";
 
   return (
-    <div className="min-h-screen bg-background">
-      <BrandHeader />
-      <div className="mx-auto max-w-3xl px-4 py-12">
-        <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground">← Wróć do bloga</Link>
-        <header className="mt-6 mb-8 space-y-4">
-          <h1 className="text-3xl md:text-4xl font-bold leading-tight">{article.title}</h1>
-          <div className="text-xs text-muted-foreground">
+    <MarketingShell page="blog">
+      <div style={{ maxWidth: "48rem", margin: "0 auto", padding: "3rem 1.5rem 0" }}>
+        <nav
+          aria-label="Okruszki"
+          style={{
+            fontSize: "0.78rem",
+            color: "var(--muted-foreground)",
+            display: "flex",
+            gap: 6,
+            flexWrap: "wrap",
+          }}
+        >
+          <a href="/" style={{ color: "inherit", textDecoration: "none" }}>
+            Finance You
+          </a>
+          <span aria-hidden>/</span>
+          <Link to="/blog" style={{ color: "inherit", textDecoration: "none" }}>
+            Blog
+          </Link>
+          <span aria-hidden>/</span>
+          <span style={{ color: "var(--foreground)" }}>{article.title}</span>
+        </nav>
+
+        <header style={{ margin: "1.6rem 0 2rem", display: "grid", gap: "1rem" }}>
+          <div>
+            {isInvestor ? (
+              <MktBadge variant="gold">Dla inwestora</MktBadge>
+            ) : (
+              <MktBadge variant="accent">Dla klienta</MktBadge>
+            )}
+          </div>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "clamp(1.8rem, 3.4vw, 2.6rem)",
+              fontWeight: 900,
+              lineHeight: 1.12,
+              letterSpacing: "-0.02em",
+              color: "var(--foreground)",
+            }}
+          >
+            {article.title}
+          </h1>
+          <div style={{ fontSize: "0.78rem", color: "var(--muted-foreground)" }}>
             {article.reading_minutes ? `${article.reading_minutes} min czytania` : null}
-            {article.published_at ? ` • ${formatDate(article.published_at)}` : null}
+            {article.reading_minutes && article.published_at ? " • " : null}
+            {article.published_at ? formatDate(article.published_at) : null}
           </div>
           {article.cover_image_url && (
-            <BlogCover src={article.cover_image_url} alt={article.cover_image_alt || article.title} rounded />
+            <BlogCover
+              src={article.cover_image_url}
+              alt={article.cover_image_alt || article.title}
+              rounded
+            />
           )}
           <ShareBar url={shareUrl} title={article.title} />
         </header>
-        <article className="prose prose-neutral dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-a:text-primary">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.content_md}</ReactMarkdown>
+
+        <article className="fy-article">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: MarkdownLink }}>
+            {article.content_md}
+          </ReactMarkdown>
         </article>
+
         <div
-          className="relative mt-14 overflow-hidden rounded-2xl border border-white/10 p-8 md:p-10 text-center text-white shadow-[0_30px_80px_-30px_rgba(9,14,40,0.65)]"
           style={{
+            position: "relative",
+            marginTop: "3.5rem",
+            overflow: "hidden",
+            borderRadius: "var(--radius-3xl)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            padding: "2.5rem 2rem",
+            textAlign: "center",
+            color: "#fff",
+            boxShadow: "var(--shadow-xl)",
             background:
               "radial-gradient(120% 140% at 0% 0%, rgba(56,120,255,0.35) 0%, transparent 55%), radial-gradient(120% 140% at 100% 100%, rgba(201,168,76,0.28) 0%, transparent 60%), linear-gradient(135deg, #0b1330 0%, #101a4a 100%)",
           }}
         >
-          <div className="pointer-events-none absolute inset-0 opacity-40" style={{
-            background: "conic-gradient(from 220deg at 50% 50%, rgba(255,255,255,0.06), rgba(255,255,255,0.0) 30%, rgba(201,168,76,0.10) 60%, rgba(255,255,255,0.0) 100%)",
-          }} />
-          <div className="relative space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-white/80">
-              {isInvestor ? "Dla inwestora" : "Dla pożyczkobiorcy"}
+          <div
+            aria-hidden
+            style={{
+              pointerEvents: "none",
+              position: "absolute",
+              inset: 0,
+              opacity: 0.4,
+              background:
+                "conic-gradient(from 220deg at 50% 50%, rgba(255,255,255,0.06), rgba(255,255,255,0.0) 30%, rgba(201,168,76,0.10) 60%, rgba(255,255,255,0.0) 100%)",
+            }}
+          />
+          <div
+            style={{ position: "relative", display: "grid", gap: "1rem", justifyItems: "center" }}
+          >
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.2)",
+                background: "rgba(255,255,255,0.05)",
+                padding: "0.25rem 0.8rem",
+                fontSize: "0.68rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.18em",
+                color: "rgba(255,255,255,0.8)",
+              }}
+            >
+              {isInvestor ? "Dla inwestora" : "Dla klienta"}
             </div>
-            <h3 className="text-2xl md:text-3xl font-bold leading-tight">{ctaHeading}</h3>
-            <p className="text-sm md:text-base text-white/75 max-w-xl mx-auto">{ctaSub}</p>
-            <div className="pt-2">
-              <Link
-                to={ctaHref}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#c9a84c] to-[#f0d78c] px-8 py-3.5 text-sm font-semibold text-[#0b1330] shadow-lg shadow-black/20 transition-transform hover:-translate-y-0.5 hover:shadow-xl"
-              >
-                {ctaLabel}
-                <span aria-hidden>→</span>
-              </Link>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "clamp(1.5rem, 2.8vw, 2rem)",
+                fontWeight: 800,
+                lineHeight: 1.15,
+              }}
+            >
+              {ctaHeading}
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                maxWidth: "36rem",
+                fontSize: "0.95rem",
+                lineHeight: 1.6,
+                color: "rgba(255,255,255,0.75)",
+              }}
+            >
+              {ctaSub}
+            </p>
+            <a
+              href={ctaHref}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                borderRadius: "var(--radius-xl)",
+                background: "linear-gradient(90deg, #c9a84c, #f0d78c)",
+                padding: "0.9rem 2rem",
+                fontSize: "0.9rem",
+                fontWeight: 700,
+                color: "#0b1330",
+                textDecoration: "none",
+                boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
+                transition: "transform var(--duration-base) var(--ease-out)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "none";
+              }}
+            >
+              {ctaLabel}
+              <span aria-hidden>→</span>
+            </a>
+            <div
+              style={{
+                fontSize: "0.66rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+                color: "rgba(255,255,255,0.55)",
+              }}
+            >
+              {ctaMicro}
             </div>
-            <div className="text-[11px] uppercase tracking-[0.16em] text-white/55">{ctaMicro}</div>
           </div>
         </div>
-        <div className="mt-8 flex justify-center">
+
+        <ComplianceNote style={{ marginTop: "1.5rem" }}>{disclaimer}</ComplianceNote>
+
+        <div style={{ marginTop: "2rem", display: "flex", justifyContent: "center" }}>
           <ShareBar url={shareUrl} title={article.title} />
         </div>
-        <footer className="mt-12 pt-6 border-t flex items-center justify-between text-xs text-muted-foreground">
-          <a href="https://financeyou.pl" className="flex items-center gap-2 hover:text-foreground">
-            <img src={FAVICON_URL} alt="" className="h-5 w-5" />
-            <span>© Finance You</span>
-          </a>
-          <div className="flex gap-3">
-            <Link to="/blog" className="hover:text-foreground">Blog</Link>
-            <a href="mailto:kontakt@app.financeyou.pl" className="hover:text-foreground">Kontakt</a>
-          </div>
-        </footer>
       </div>
-    </div>
+
+      {related.length > 0 && (
+        <Section tint style={{ marginTop: "3.5rem" }}>
+          <div style={{ textAlign: "center" }}>
+            <Eyebrow tone="gold" style={{ letterSpacing: "0.24em" }}>
+              Czytaj dalej
+            </Eyebrow>
+            <h2
+              style={{
+                marginTop: "0.5rem",
+                fontSize: "clamp(1.5rem, 2.6vw, 2rem)",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Powiązane artykuły
+            </h2>
+          </div>
+          <div
+            className="fy-grid"
+            style={{
+              marginTop: "2rem",
+              display: "grid",
+              gap: "1.2rem",
+              gridTemplateColumns: "repeat(3, 1fr)",
+            }}
+          >
+            {related.map((r: RelatedRow) => (
+              <RelatedCard key={r.slug} r={r} />
+            ))}
+          </div>
+          <div style={{ marginTop: "1.8rem", textAlign: "center" }}>
+            <Link to="/blog" style={{ fontSize: "0.9rem", fontWeight: 600 }}>
+              ← Wszystkie artykuły na blogu
+            </Link>
+          </div>
+        </Section>
+      )}
+    </MarketingShell>
   );
 }

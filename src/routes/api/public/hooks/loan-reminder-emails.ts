@@ -12,7 +12,9 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails")({
         const force = url.searchParams.get("force") === "1";
         const onlyLoanId = url.searchParams.get("loan_id") || undefined;
         const result = await runDailyReminderEmailsBatch({ force, onlyLoanId });
-        return new Response(JSON.stringify(result), { headers: { "content-type": "application/json" } });
+        return new Response(JSON.stringify(result), {
+          headers: { "content-type": "application/json" },
+        });
       },
     },
   },

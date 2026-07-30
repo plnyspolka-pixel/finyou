@@ -16,9 +16,11 @@ import {
   ImageIcon,
   Video as VideoIcon,
 } from "lucide-react";
-import { generateMaterialDescription, ensureMyReferralCode } from "@/lib/marketing-materials.functions";
+import {
+  generateMaterialDescription,
+  ensureMyReferralCode,
+} from "@/lib/marketing-materials.functions";
 import { MarketingComplianceNotice } from "@/components/affiliate/compliance-notice";
-
 
 export const Route = createFileRoute("/posrednik/marketing")({
   component: BrokerMarketingPage,
@@ -62,8 +64,6 @@ function copy(text: string) {
   toast.success("Skopiowano do schowka");
 }
 
-
-
 function BrokerMarketingPage() {
   const [items, setItems] = useState<Material[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
@@ -91,7 +91,9 @@ function BrokerMarketingPage() {
     const signed: Record<string, string> = {};
     await Promise.all(
       list.map(async (m) => {
-        const { data: s } = await supabase.storage.from(BUCKET).createSignedUrl(m.storage_path, 3600);
+        const { data: s } = await supabase.storage
+          .from(BUCKET)
+          .createSignedUrl(m.storage_path, 3600);
         if (s?.signedUrl) signed[m.id] = s.signedUrl;
       }),
     );
@@ -101,7 +103,9 @@ function BrokerMarketingPage() {
 
   useEffect(() => {
     load();
-    ensureCode({}).then((r) => setRefCode(r.code)).catch(() => {});
+    ensureCode({})
+      .then((r) => setRefCode(r.code))
+      .catch(() => {});
   }, []);
 
   const handleGenerate = async (m: Material) => {
@@ -115,7 +119,9 @@ function BrokerMarketingPage() {
           userDescription: m.description ?? undefined,
         },
       });
-      setItems((prev) => prev.map((x) => (x.id === m.id ? { ...x, ai_description: r.ai_description } : x)));
+      setItems((prev) =>
+        prev.map((x) => (x.id === m.id ? { ...x, ai_description: r.ai_description } : x)),
+      );
       toast.success("Opis wygenerowany");
     } catch (e: any) {
       toast.error(e.message ?? "Błąd AI");
@@ -128,9 +134,21 @@ function BrokerMarketingPage() {
 
   const links = refCode
     ? [
-        { role: "klient" as const, label: "Reflink — klient (pożyczkobiorca)", url: refLink("klient", refCode) },
-        { role: "inwestor" as const, label: "Reflink — inwestor", url: refLink("inwestor", refCode) },
-        { role: "posrednik" as const, label: "Reflink — pośrednik (poleć kolegę)", url: refLink("posrednik", refCode) },
+        {
+          role: "klient" as const,
+          label: "Reflink — klient (pożyczkobiorca)",
+          url: refLink("klient", refCode),
+        },
+        {
+          role: "inwestor" as const,
+          label: "Reflink — inwestor",
+          url: refLink("inwestor", refCode),
+        },
+        {
+          role: "posrednik" as const,
+          label: "Reflink — pośrednik (poleć kolegę)",
+          url: refLink("posrednik", refCode),
+        },
       ]
     : [];
 
@@ -139,8 +157,8 @@ function BrokerMarketingPage() {
       <div>
         <h1 className="text-2xl font-bold">Materiały marketingowe</h1>
         <p className="text-sm text-muted-foreground">
-          Pobieraj, generuj opisy AI i udostępniaj w social media. Wszystkie kliknięcia z Twoich reflinków
-          przypisują nowych klientów / inwestorów / pośredników do Twojego konta.
+          Pobieraj, generuj opisy AI i udostępniaj w social media. Wszystkie kliknięcia z Twoich
+          reflinków przypisują nowych klientów / inwestorów / pośredników do Twojego konta.
         </p>
       </div>
 
@@ -149,13 +167,17 @@ function BrokerMarketingPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <LinkIcon className="h-4 w-4" /> Twoje reflinki {refCode && <Badge variant="secondary">{refCode}</Badge>}
+            <LinkIcon className="h-4 w-4" /> Twoje reflinki{" "}
+            {refCode && <Badge variant="secondary">{refCode}</Badge>}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {!refCode && <p className="text-sm text-muted-foreground">Generuję kod...</p>}
           {links.map((l) => (
-            <div key={l.role} className="flex items-center gap-2 rounded-md border bg-card px-3 py-2">
+            <div
+              key={l.role}
+              className="flex items-center gap-2 rounded-md border bg-card px-3 py-2"
+            >
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-muted-foreground">{l.label}</p>
                 <p className="font-mono text-sm truncate">{l.url}</p>
@@ -169,12 +191,15 @@ function BrokerMarketingPage() {
       </Card>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Audience)}>
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           {AUDIENCES.map((a) => {
             const count = items.filter((i) => i.audience === a.value).length;
             return (
               <TabsTrigger key={a.value} value={a.value}>
-                {a.label} <Badge variant="secondary" className="ml-2">{count}</Badge>
+                {a.label}{" "}
+                <Badge variant="secondary" className="ml-2">
+                  {count}
+                </Badge>
               </TabsTrigger>
             );
           })}
@@ -191,7 +216,8 @@ function BrokerMarketingPage() {
                   const url = urls[m.id];
                   const shareUrl = refCode ? refLink(tab, refCode) : SITE_BASE;
                   const shareText = m.ai_description || m.description || m.title;
-                  void shareUrl; void shareText;
+                  void shareUrl;
+                  void shareText;
                   return (
                     <Card key={m.id} className="overflow-hidden">
                       <div className="aspect-video bg-black flex items-center justify-center overflow-hidden">
@@ -200,7 +226,13 @@ function BrokerMarketingPage() {
                         ) : m.media_type === "image" ? (
                           <img src={url} alt={m.title} className="w-full h-full object-contain" />
                         ) : (
-                          <video src={url} controls preload="none" playsInline className="w-full h-full object-contain bg-black" />
+                          <video
+                            src={url}
+                            controls
+                            preload="none"
+                            playsInline
+                            className="w-full h-full object-contain bg-black"
+                          />
                         )}
                       </div>
                       <CardContent className="p-4 space-y-3">
@@ -208,7 +240,9 @@ function BrokerMarketingPage() {
                           <div className="min-w-0">
                             <h3 className="font-semibold truncate">{m.title}</h3>
                             {m.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-2">{m.description}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {m.description}
+                              </p>
                             )}
                           </div>
                           <Badge variant="outline" className="shrink-0">
@@ -222,7 +256,9 @@ function BrokerMarketingPage() {
 
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-muted-foreground">Opis do social (AI)</span>
+                            <span className="text-xs font-medium text-muted-foreground">
+                              Opis do social (AI)
+                            </span>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -239,7 +275,9 @@ function BrokerMarketingPage() {
                             value={m.ai_description ?? ""}
                             onChange={(e) =>
                               setItems((prev) =>
-                                prev.map((x) => (x.id === m.id ? { ...x, ai_description: e.target.value } : x)),
+                                prev.map((x) =>
+                                  x.id === m.id ? { ...x, ai_description: e.target.value } : x,
+                                ),
                               )
                             }
                             onBlur={async (e) => {
@@ -252,14 +290,16 @@ function BrokerMarketingPage() {
                             className="text-sm"
                           />
                           {m.ai_description && (
-                            <Button size="sm" variant="outline" className="w-full" onClick={() => copy(m.ai_description!)}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => copy(m.ai_description!)}
+                            >
                               <Copy className="h-3 w-3 mr-1" /> Kopiuj opis
                             </Button>
                           )}
                         </div>
-
-
-
 
                         {url && (
                           <Button asChild size="sm" variant="secondary" className="w-full">

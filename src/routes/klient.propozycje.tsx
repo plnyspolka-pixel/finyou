@@ -53,7 +53,8 @@ function KlientPropozycje() {
       ) : (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Najpierw uzupełnij wniosek w sekcji „Twoja oferta", aby inwestorzy mogli złożyć propozycje.
+            Najpierw uzupełnij wniosek w sekcji „Twoja oferta", aby inwestorzy mogli złożyć
+            propozycje.
           </CardContent>
         </Card>
       )}
@@ -68,7 +69,8 @@ function KlientPropozycje() {
               Dodatkowe weryfikacje — możesz ubiegać się o niższe koszty pożyczki
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Im więcej informacji potwierdzisz, tym śmielej możesz wnioskować o niższe koszty w naszym kalkulatorze — decyzję podejmują inwestorzy.
+              Im więcej informacji potwierdzisz, tym śmielej możesz wnioskować o niższe koszty w
+              naszym kalkulatorze — decyzję podejmują inwestorzy.
             </p>
           </div>
           <VerificationTilesSection clientRow={clientRow} loanId={loanRow.id} />

@@ -1,18 +1,15 @@
-import React, { useImperativeHandle, useLayoutEffect, useRef } from "react"
+import React, { useImperativeHandle, useLayoutEffect, useRef } from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 interface PulsatingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  pulseColor?: string
-  duration?: string
-  distance?: string
-  variant?: "pulse" | "ripple"
+  pulseColor?: string;
+  duration?: string;
+  distance?: string;
+  variant?: "pulse" | "ripple";
 }
 
-export const PulsatingButton = React.forwardRef<
-  HTMLButtonElement,
-  PulsatingButtonProps
->(
+export const PulsatingButton = React.forwardRef<HTMLButtonElement, PulsatingButtonProps>(
   (
     {
       className,
@@ -23,82 +20,77 @@ export const PulsatingButton = React.forwardRef<
       variant = "pulse",
       ...props
     },
-    ref
+    ref,
   ) => {
-    const innerRef = useRef<HTMLButtonElement>(null)
-    useImperativeHandle(ref, () => innerRef.current!)
+    const innerRef = useRef<HTMLButtonElement>(null);
+    useImperativeHandle(ref, () => innerRef.current!);
 
     useLayoutEffect(() => {
-      const button = innerRef.current
-      if (!button) return
+      const button = innerRef.current;
+      if (!button) return;
 
       if (pulseColor) {
-        button.style.removeProperty("--bg")
-        return
+        button.style.removeProperty("--bg");
+        return;
       }
 
-      let animationFrameId = 0
-      let currentBg = ""
+      let animationFrameId = 0;
+      let currentBg = "";
 
       const updateBg = () => {
-        animationFrameId = 0
+        animationFrameId = 0;
 
-        const nextBg = getComputedStyle(button).backgroundColor
-        if (nextBg === currentBg) return
+        const nextBg = getComputedStyle(button).backgroundColor;
+        if (nextBg === currentBg) return;
 
-        currentBg = nextBg
-        button.style.setProperty("--bg", nextBg)
-      }
+        currentBg = nextBg;
+        button.style.setProperty("--bg", nextBg);
+      };
 
       const scheduleBgUpdate = () => {
-        if (animationFrameId) return
-        animationFrameId = window.requestAnimationFrame(updateBg)
-      }
+        if (animationFrameId) return;
+        animationFrameId = window.requestAnimationFrame(updateBg);
+      };
 
-      updateBg()
+      updateBg();
 
-      const themeObserver = new MutationObserver(scheduleBgUpdate)
+      const themeObserver = new MutationObserver(scheduleBgUpdate);
       themeObserver.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ["class"],
-      })
+      });
 
-      const buttonObserver = new MutationObserver(scheduleBgUpdate)
+      const buttonObserver = new MutationObserver(scheduleBgUpdate);
       buttonObserver.observe(button, {
         attributes: true,
-      })
+      });
 
-      const syncEvents = [
-        "blur",
-        "focus",
-        "pointerenter",
-        "pointerleave",
-      ] as const
+      const syncEvents = ["blur", "focus", "pointerenter", "pointerleave"] as const;
 
       for (const eventName of syncEvents) {
-        button.addEventListener(eventName, scheduleBgUpdate)
+        button.addEventListener(eventName, scheduleBgUpdate);
       }
 
       return () => {
         if (animationFrameId) {
-          window.cancelAnimationFrame(animationFrameId)
+          window.cancelAnimationFrame(animationFrameId);
         }
 
-        themeObserver.disconnect()
-        buttonObserver.disconnect()
+        themeObserver.disconnect();
+        buttonObserver.disconnect();
 
         for (const eventName of syncEvents) {
-          button.removeEventListener(eventName, scheduleBgUpdate)
+          button.removeEventListener(eventName, scheduleBgUpdate);
         }
-      }
-    }, [pulseColor])
+      };
+    }, [pulseColor]);
 
     return (
       <button
         ref={innerRef}
         className={cn(
           "bg-primary text-primary-foreground relative flex cursor-pointer items-center justify-center rounded-lg px-4 py-2 text-center",
-          className
+          className,
         )}
         style={
           {
@@ -114,12 +106,12 @@ export const PulsatingButton = React.forwardRef<
           aria-hidden="true"
           className={cn(
             "pointer-events-none absolute inset-0 rounded-[inherit] bg-inherit",
-            variant === "pulse" ? "animate-pulse" : "animate-pulse-ripple"
+            variant === "pulse" ? "animate-pulse" : "animate-pulse-ripple",
           )}
         />
       </button>
-    )
-  }
-)
+    );
+  },
+);
 
-PulsatingButton.displayName = "PulsatingButton"
+PulsatingButton.displayName = "PulsatingButton";

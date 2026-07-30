@@ -45,10 +45,10 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
       const role = pathname.startsWith("/inwestor")
         ? "inwestor"
         : pathname.startsWith("/admin")
-        ? "operator"
-        : pathname.startsWith("/posrednik")
-        ? "posrednik"
-        : "klient";
+          ? "operator"
+          : pathname.startsWith("/posrednik")
+            ? "posrednik"
+            : "klient";
       void navigate({ to: "/logowanie", search: { role, next: pathname } as never });
       return;
     }
@@ -56,7 +56,6 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
       void navigate({ to: "/" });
     }
   }, [loading, user, roles, allow, navigate, pathname]);
-
 
   if (loading || !user) {
     return (
@@ -71,7 +70,9 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
   // nie zobaczą tego ekranu.
   if (allow && !allow.some((r) => roles.includes(r))) {
     return (
-      <div className="grid min-h-screen place-items-center text-muted-foreground">Przekierowywanie…</div>
+      <div className="grid min-h-screen place-items-center text-muted-foreground">
+        Przekierowywanie…
+      </div>
     );
   }
 
@@ -86,7 +87,6 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
       <span className="tracking-tight">{title}</span>
     </div>
   );
-
 
   const nav = (onNavigate?: () => void) => (
     <>
@@ -173,7 +173,9 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
             {title}
           </div>
         </header>
-        <main className={`relative flex-1 overflow-y-auto p-4 md:p-6 ${fancy ? "fy-fancy-main dark isolate text-foreground bg-[oklch(0.10_0.03_265)]" : ""}`}>
+        <main
+          className={`relative flex-1 overflow-y-auto p-4 md:p-6 ${fancy ? "fy-fancy-main dark isolate text-foreground bg-[oklch(0.10_0.03_265)]" : ""}`}
+        >
           {fancy && (
             <>
               <span
@@ -188,7 +190,8 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
                 aria-hidden
                 className="pointer-events-none absolute -top-20 -left-20 -z-10 h-72 w-72 rounded-full blur-3xl"
                 style={{
-                  background: "radial-gradient(circle, oklch(0.32 0.16 268 / 0.30), transparent 70%)",
+                  background:
+                    "radial-gradient(circle, oklch(0.32 0.16 268 / 0.30), transparent 70%)",
                   animation: "fy-panel-drift-a 14s ease-in-out infinite alternate",
                 }}
               />
@@ -196,7 +199,8 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
                 aria-hidden
                 className="pointer-events-none absolute top-10 -right-20 -z-10 h-80 w-80 rounded-full blur-3xl"
                 style={{
-                  background: "radial-gradient(circle, oklch(0.32 0.12 235 / 0.22), transparent 70%)",
+                  background:
+                    "radial-gradient(circle, oklch(0.32 0.12 235 / 0.22), transparent 70%)",
                   animation: "fy-panel-drift-b 17s ease-in-out infinite alternate",
                 }}
               />
@@ -224,7 +228,6 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
               `}</style>
             </>
           )}
-
 
           <Outlet />
         </main>

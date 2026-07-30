@@ -56,7 +56,9 @@ function computeMissing(profile: ClientProfile, fields: Array<{ path: string; la
 async function verifyCallerForOffer(userId: string, offerId: string) {
   const { data: offer, error } = await supabaseAdmin
     .from("investor_offers")
-    .select("id, offer_status, loan_application_id, investor_id, investors!inner(user_id), loan_applications!inner(client_id, clients!inner(user_id))")
+    .select(
+      "id, offer_status, loan_application_id, investor_id, investors!inner(user_id), loan_applications!inner(client_id, clients!inner(user_id))",
+    )
     .eq("id", offerId)
     .single();
   if (error || !offer) throw new Error("Oferta nie została znaleziona");
@@ -70,7 +72,10 @@ async function verifyCallerForOffer(userId: string, offerId: string) {
 
   if (!side) {
     // sprawdź czy admin/operator
-    const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
+    const { data: roles } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
     const isStaff = (roles ?? []).some((r) => r.role === "administrator" || r.role === "operator");
     if (!isStaff) throw new Error("Brak uprawnień do tej oferty");
     side = "client"; // staff może edytować obie sekcje przez osobne wywołania
@@ -87,7 +92,8 @@ async function verifyCallerForOffer(userId: string, offerId: string) {
         .select("proposed_amount")
         .eq("id", offerId)
         .maybeSingle();
-      const { assertFreeInvestorCanConcludeLoan } = await import("@/lib/access/free-investor.functions");
+      const { assertFreeInvestorCanConcludeLoan } =
+        await import("@/lib/access/free-investor.functions");
       await assertFreeInvestorCanConcludeLoan(
         userId,
         Number((offerAmountRow as any)?.proposed_amount ?? 0),
@@ -98,7 +104,9 @@ async function verifyCallerForOffer(userId: string, offerId: string) {
   return { offer, side };
 }
 
-async function buildOrGetProfile(offerId: string): Promise<{ profileId: string; profile: ClientProfile }> {
+async function buildOrGetProfile(
+  offerId: string,
+): Promise<{ profileId: string; profile: ClientProfile }> {
   // Pobierz pełne dane oferty z relacjami
   const { data: offer, error: offerErr } = await supabaseAdmin
     .from("investor_offers")
@@ -131,7 +139,12 @@ async function buildOrGetProfile(offerId: string): Promise<{ profileId: string; 
 
   const sources: Record<string, FieldSource> = { ...(existingProfile?.fieldSources ?? {}) };
   const isManual = (path: string) => sources[path] === "Ręcznie";
-  const setIfAuto = <T,>(path: string, current: T | undefined, value: T | undefined, src: FieldSource): T | undefined => {
+  const setIfAuto = <T>(
+    path: string,
+    current: T | undefined,
+    value: T | undefined,
+    src: FieldSource,
+  ): T | undefined => {
     if (value === undefined || value === null || value === "") return current;
     if (isManual(path)) return current;
     sources[path] = src;
@@ -139,38 +152,109 @@ async function buildOrGetProfile(offerId: string): Promise<{ profileId: string; 
   };
 
   const borrower = { ...(existingProfile?.borrowerData ?? {}) };
-  borrower.firstName = setIfAuto("borrowerData.firstName", borrower.firstName, c.first_name, "Wniosek");
+  borrower.firstName = setIfAuto(
+    "borrowerData.firstName",
+    borrower.firstName,
+    c.first_name,
+    "Wniosek",
+  );
   borrower.lastName = setIfAuto("borrowerData.lastName", borrower.lastName, c.last_name, "Wniosek");
   borrower.email = setIfAuto("borrowerData.email", borrower.email, c.email, "Wniosek");
   borrower.phone = setIfAuto("borrowerData.phone", borrower.phone, c.phone, "Wniosek");
   borrower.nip = setIfAuto("borrowerData.nip", borrower.nip, app.nip, "Wniosek");
-  borrower.loanPurpose = setIfAuto("borrowerData.loanPurpose", borrower.loanPurpose, app.situation_description, "Wniosek");
+  borrower.loanPurpose = setIfAuto(
+    "borrowerData.loanPurpose",
+    borrower.loanPurpose,
+    app.situation_description,
+    "Wniosek",
+  );
 
   const property = { ...(existingProfile?.propertyData ?? {}) };
-  property.type = setIfAuto("propertyData.type", property.type, prop.property_type, "Wniosek") as any;
-  property.landRegisterNumber = setIfAuto("propertyData.landRegisterNumber", property.landRegisterNumber, prop.land_register_number, "Wniosek");
-  const propAddr = [prop.street, prop.city, prop.voivodeship].filter(Boolean).join(", ") || undefined;
+  property.type = setIfAuto(
+    "propertyData.type",
+    property.type,
+    prop.property_type,
+    "Wniosek",
+  ) as any;
+  property.landRegisterNumber = setIfAuto(
+    "propertyData.landRegisterNumber",
+    property.landRegisterNumber,
+    prop.land_register_number,
+    "Wniosek",
+  );
+  const propAddr =
+    [prop.street, prop.city, prop.voivodeship].filter(Boolean).join(", ") || undefined;
   property.address = setIfAuto("propertyData.address", property.address, propAddr, "Wniosek");
   property.city = setIfAuto("propertyData.city", property.city, prop.city, "Wniosek");
-  property.voivodeship = setIfAuto("propertyData.voivodeship", property.voivodeship, prop.voivodeship, "Wniosek");
-  property.estimatedValue = setIfAuto("propertyData.estimatedValue", property.estimatedValue, prop.estimated_value, "Wniosek");
+  property.voivodeship = setIfAuto(
+    "propertyData.voivodeship",
+    property.voivodeship,
+    prop.voivodeship,
+    "Wniosek",
+  );
+  property.estimatedValue = setIfAuto(
+    "propertyData.estimatedValue",
+    property.estimatedValue,
+    prop.estimated_value,
+    "Wniosek",
+  );
   property.hasExistingMortgage = property.hasExistingMortgage ?? !!prop.has_mortgage;
-  property.description = setIfAuto("propertyData.description", property.description, prop.description, "Wniosek");
+  property.description = setIfAuto(
+    "propertyData.description",
+    property.description,
+    prop.description,
+    "Wniosek",
+  );
   property.owner = property.owner ?? { isBorrower: true };
 
   const investorData = { ...(existingProfile?.investorData ?? {}) };
   const invFullName = `${inv.first_name ?? ""} ${inv.last_name ?? ""}`.trim() || undefined;
-  investorData.fullName = setIfAuto("investorData.fullName", investorData.fullName, invFullName, "Wniosek");
-  investorData.companyName = setIfAuto("investorData.companyName", investorData.companyName, inv.company_name, "Wniosek");
+  investorData.fullName = setIfAuto(
+    "investorData.fullName",
+    investorData.fullName,
+    invFullName,
+    "Wniosek",
+  );
+  investorData.companyName = setIfAuto(
+    "investorData.companyName",
+    investorData.companyName,
+    inv.company_name,
+    "Wniosek",
+  );
   investorData.email = setIfAuto("investorData.email", investorData.email, inv.email, "Wniosek");
   investorData.phone = setIfAuto("investorData.phone", investorData.phone, inv.phone, "Wniosek");
 
   const offerData = { ...(existingProfile?.offerData ?? {}) };
-  offerData.netAmountToClient = setIfAuto("offerData.netAmountToClient", offerData.netAmountToClient, Number(offer.proposed_amount ?? app.loan_amount) || undefined, "Wniosek");
-  offerData.loanTermMonths = setIfAuto("offerData.loanTermMonths", offerData.loanTermMonths, offer.period_months ?? app.preferred_period_months, "Wniosek");
-  offerData.maxMonthlyPaymentByClient = setIfAuto("offerData.maxMonthlyPaymentByClient", offerData.maxMonthlyPaymentByClient, (app.max_monthly_payment ?? Number(offer.estimated_monthly_payment)) || undefined, "Wniosek");
-  offerData.annualInterestPercent = setIfAuto("offerData.annualInterestPercent", offerData.annualInterestPercent, Number(offer.expected_yearly_yield) || undefined, "Wniosek");
-  offerData.investorMonthlyReturnAmount = setIfAuto("offerData.investorMonthlyReturnAmount", offerData.investorMonthlyReturnAmount, Number(offer.estimated_monthly_payment) || undefined, "Wniosek");
+  offerData.netAmountToClient = setIfAuto(
+    "offerData.netAmountToClient",
+    offerData.netAmountToClient,
+    Number(offer.proposed_amount ?? app.loan_amount) || undefined,
+    "Wniosek",
+  );
+  offerData.loanTermMonths = setIfAuto(
+    "offerData.loanTermMonths",
+    offerData.loanTermMonths,
+    offer.period_months ?? app.preferred_period_months,
+    "Wniosek",
+  );
+  offerData.maxMonthlyPaymentByClient = setIfAuto(
+    "offerData.maxMonthlyPaymentByClient",
+    offerData.maxMonthlyPaymentByClient,
+    (app.max_monthly_payment ?? Number(offer.estimated_monthly_payment)) || undefined,
+    "Wniosek",
+  );
+  offerData.annualInterestPercent = setIfAuto(
+    "offerData.annualInterestPercent",
+    offerData.annualInterestPercent,
+    Number(offer.expected_yearly_yield) || undefined,
+    "Wniosek",
+  );
+  offerData.investorMonthlyReturnAmount = setIfAuto(
+    "offerData.investorMonthlyReturnAmount",
+    offerData.investorMonthlyReturnAmount,
+    Number(offer.estimated_monthly_payment) || undefined,
+    "Wniosek",
+  );
   offerData.investorMonthlyReturnType = offerData.investorMonthlyReturnType ?? "amount";
 
   const profile: ClientProfile = {
@@ -196,11 +280,18 @@ async function buildOrGetProfile(offerId: string): Promise<{ profileId: string; 
   };
 
   if (existingId) {
-    const { error: upErr } = await supabaseAdmin.from("client_profiles").update(payload).eq("id", existingId);
+    const { error: upErr } = await supabaseAdmin
+      .from("client_profiles")
+      .update(payload)
+      .eq("id", existingId);
     if (upErr) throw new Error(upErr.message);
     return { profileId: existingId, profile };
   }
-  const { data: row, error: insErr } = await supabaseAdmin.from("client_profiles").insert(payload).select("id").single();
+  const { data: row, error: insErr } = await supabaseAdmin
+    .from("client_profiles")
+    .insert(payload)
+    .select("id")
+    .single();
   if (insErr) throw new Error(insErr.message);
   return { profileId: row.id as string, profile };
 }
@@ -225,8 +316,15 @@ export const getContractStatus = createServerFn({ method: "POST" })
 
     const missingClient = computeMissing(profile, CLIENT_REQUIRED_FIELDS);
     const missingInvestor = computeMissing(profile, INVESTOR_REQUIRED_FIELDS);
-    const clientPct = Math.round(((CLIENT_REQUIRED_FIELDS.length - missingClient.length) / CLIENT_REQUIRED_FIELDS.length) * 100);
-    const investorPct = Math.round(((INVESTOR_REQUIRED_FIELDS.length - missingInvestor.length) / INVESTOR_REQUIRED_FIELDS.length) * 100);
+    const clientPct = Math.round(
+      ((CLIENT_REQUIRED_FIELDS.length - missingClient.length) / CLIENT_REQUIRED_FIELDS.length) *
+        100,
+    );
+    const investorPct = Math.round(
+      ((INVESTOR_REQUIRED_FIELDS.length - missingInvestor.length) /
+        INVESTOR_REQUIRED_FIELDS.length) *
+        100,
+    );
 
     return {
       profileId,
@@ -260,19 +358,20 @@ export const saveContractPartyData = createServerFn({ method: "POST" })
 
     const { profileId, profile } = await buildOrGetProfile(data.offerId);
 
-    const allowed = data.side === "client"
-      ? CLIENT_REQUIRED_FIELDS.map((f) => f.path).concat([
-          "borrowerData.idDocument.description",
-          "borrowerData.correspondenceAddress",
-          "propertyData.city",
-          "propertyData.voivodeship",
-          "propertyData.estimatedValue",
-        ])
-      : INVESTOR_REQUIRED_FIELDS.map((f) => f.path).concat([
-          "investorData.companyName",
-          "investorData.nip",
-          "investorData.representativeName",
-        ]);
+    const allowed =
+      data.side === "client"
+        ? CLIENT_REQUIRED_FIELDS.map((f) => f.path).concat([
+            "borrowerData.idDocument.description",
+            "borrowerData.correspondenceAddress",
+            "propertyData.city",
+            "propertyData.voivodeship",
+            "propertyData.estimatedValue",
+          ])
+        : INVESTOR_REQUIRED_FIELDS.map((f) => f.path).concat([
+            "investorData.companyName",
+            "investorData.nip",
+            "investorData.representativeName",
+          ]);
 
     const sources: Record<string, FieldSource> = { ...(profile.fieldSources ?? {}) };
     const next: ClientProfile = JSON.parse(JSON.stringify(profile));
@@ -293,8 +392,15 @@ export const saveContractPartyData = createServerFn({ method: "POST" })
     const missingInvestor = computeMissing(next, INVESTOR_REQUIRED_FIELDS);
     return {
       ok: true,
-      clientPct: Math.round(((CLIENT_REQUIRED_FIELDS.length - missingClient.length) / CLIENT_REQUIRED_FIELDS.length) * 100),
-      investorPct: Math.round(((INVESTOR_REQUIRED_FIELDS.length - missingInvestor.length) / INVESTOR_REQUIRED_FIELDS.length) * 100),
+      clientPct: Math.round(
+        ((CLIENT_REQUIRED_FIELDS.length - missingClient.length) / CLIENT_REQUIRED_FIELDS.length) *
+          100,
+      ),
+      investorPct: Math.round(
+        ((INVESTOR_REQUIRED_FIELDS.length - missingInvestor.length) /
+          INVESTOR_REQUIRED_FIELDS.length) *
+          100,
+      ),
       ready: missingClient.length === 0 && missingInvestor.length === 0,
     };
   });

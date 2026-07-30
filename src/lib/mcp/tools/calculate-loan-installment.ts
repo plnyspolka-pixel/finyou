@@ -9,7 +9,8 @@ import { ok, fail } from "../_helpers";
 export default defineTool({
   name: "calculate_loan_installment",
   title: "Calculate loan installment",
-  description: "Kalkulator raty równej pożyczki Finance You. Zwraca miesięczną ratę i całkowity koszt na podstawie kwoty, okresu i oprocentowania.",
+  description:
+    "Kalkulator raty równej pożyczki Finance You. Zwraca miesięczną ratę i całkowity koszt na podstawie kwoty, okresu i oprocentowania.",
   inputSchema: {
     amount: z.number().positive().describe("Kwota pożyczki w PLN"),
     period_months: z.number().int().min(1).max(120),
@@ -19,9 +20,8 @@ export default defineTool({
   handler: async ({ amount, period_months, yearly_rate_pct }) => {
     if (period_months <= 0) return fail("period_months must be > 0");
     const r = yearly_rate_pct / 100 / 12;
-    const installment = r === 0
-      ? amount / period_months
-      : (amount * r) / (1 - Math.pow(1 + r, -period_months));
+    const installment =
+      r === 0 ? amount / period_months : (amount * r) / (1 - Math.pow(1 + r, -period_months));
     const total = installment * period_months;
     return ok({
       amount,

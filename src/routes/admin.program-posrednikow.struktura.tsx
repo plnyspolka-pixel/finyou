@@ -5,7 +5,11 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Network } from "lucide-react";
-import { settlementTypeLabels, partnerStatusLabels, partnerStatusColors } from "@/lib/affiliate/labels";
+import {
+  settlementTypeLabels,
+  partnerStatusLabels,
+  partnerStatusColors,
+} from "@/lib/affiliate/labels";
 import { adminGetTree } from "@/lib/affiliate/admin.functions";
 
 export const Route = createFileRoute("/admin/program-posrednikow/struktura")({
@@ -54,12 +58,20 @@ function StrukturaPage() {
           className="flex flex-wrap items-center gap-2 py-2 border-b"
           style={{ paddingLeft: `${depth * 1.25}rem` }}
         >
-          <Badge variant="outline" className="text-[10px]">P{depth}</Badge>
+          <Badge variant="outline" className="text-[10px]">
+            P{depth}
+          </Badge>
           <span className="font-medium">{nodeName(n)}</span>
           <span className="text-xs font-mono text-muted-foreground">{n.referral_code}</span>
-          <span className="text-xs text-muted-foreground">· {settlementTypeLabels[n.settlement_type] ?? n.settlement_type}</span>
-          <Badge className={partnerStatusColors[n.status] ?? "bg-slate-100"} variant="secondary">{partnerStatusLabels[n.status] ?? n.status}</Badge>
-          {kids.length > 0 && <span className="text-[11px] text-muted-foreground">({kids.length} podległych)</span>}
+          <span className="text-xs text-muted-foreground">
+            · {settlementTypeLabels[n.settlement_type] ?? n.settlement_type}
+          </span>
+          <Badge className={partnerStatusColors[n.status] ?? "bg-slate-100"} variant="secondary">
+            {partnerStatusLabels[n.status] ?? n.status}
+          </Badge>
+          {kids.length > 0 && (
+            <span className="text-[11px] text-muted-foreground">({kids.length} podległych)</span>
+          )}
         </div>
         {kids.map((c) => renderNode(c, depth + 1))}
       </div>
@@ -69,8 +81,12 @@ function StrukturaPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Network className="h-6 w-6" /> Struktura sieci</h1>
-        <p className="text-sm text-muted-foreground">Pełna hierarchia partnerów programu pośredników (relacje sponsor → poleceni).</p>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Network className="h-6 w-6" /> Struktura sieci
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Pełna hierarchia partnerów programu pośredników (relacje sponsor → poleceni).
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs">
@@ -80,7 +96,9 @@ function StrukturaPage() {
       </div>
 
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Drzewo partnerów</CardTitle></CardHeader>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Drzewo partnerów</CardTitle>
+        </CardHeader>
         <CardContent>
           {q.isLoading ? (
             <p className="text-muted-foreground">Ładowanie…</p>

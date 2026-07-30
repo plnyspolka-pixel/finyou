@@ -103,7 +103,11 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
     let dlErr: { message: string } | null = null;
     for (const bucket of [CLIENT_FILES_BUCKET, "documents"]) {
       const res = await supabase.storage.from(bucket).download(tpl.template_file_path);
-      if (!res.error && res.data) { file = res.data as Blob; dlErr = null; break; }
+      if (!res.error && res.data) {
+        file = res.data as Blob;
+        dlErr = null;
+        break;
+      }
       dlErr = res.error ?? { message: "brak pliku" };
     }
     if (!file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
@@ -185,7 +189,13 @@ export const getDocxTemplateDownloadUrl = createServerFn({ method: "POST" })
       .eq("id", data.templateId)
       .maybeSingle();
     if (tplErr) throw new Error(tplErr.message);
-    if (!tpl?.template_file_path) return { url: null, exists: false, name: tpl?.name ?? null, reason: "Brak przypisanego pliku." };
+    if (!tpl?.template_file_path)
+      return {
+        url: null,
+        exists: false,
+        name: tpl?.name ?? null,
+        reason: "Brak przypisanego pliku.",
+      };
 
     for (const bucket of [CLIENT_FILES_BUCKET, "documents"]) {
       const probe = await context.supabase.storage.from(bucket).download(tpl.template_file_path);
@@ -193,10 +203,16 @@ export const getDocxTemplateDownloadUrl = createServerFn({ method: "POST" })
         const { data: signed } = await context.supabase.storage
           .from(bucket)
           .createSignedUrl(tpl.template_file_path, 300);
-        if (signed?.signedUrl) return { url: signed.signedUrl, exists: true, name: tpl.name, reason: null };
+        if (signed?.signedUrl)
+          return { url: signed.signedUrl, exists: true, name: tpl.name, reason: null };
       }
     }
-    return { url: null, exists: false, name: tpl.name, reason: "Plik nie istnieje w Storage — wgraj ponownie." };
+    return {
+      url: null,
+      exists: false,
+      name: tpl.name,
+      reason: "Plik nie istnieje w Storage — wgraj ponownie.",
+    };
   });
 
 /** Upload / zamiana pliku .docx wzoru (staff). Zapisuje template_file_path. */
@@ -208,11 +224,16 @@ export const uploadDocxTemplate = createServerFn({ method: "POST" })
     const bytes = Uint8Array.from(atob(data.base64), (c) => c.charCodeAt(0));
     const safe = data.fileName.replace(/[^\p{L}\p{N}._-]+/gu, "_");
     const path = `templates/${safe}`;
-    const { error: upErr } = await context.supabase.storage
-      .from(CLIENT_FILES_BUCKET)
-      .upload(path, new Blob([bytes], {
+    const { error: upErr } = await context.supabase.storage.from(CLIENT_FILES_BUCKET).upload(
+      path,
+      new Blob([bytes], {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      }), { upsert: true, contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      }),
+      {
+        upsert: true,
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      },
+    );
     if (upErr) throw new Error(`Upload: ${upErr.message}`);
     const { error: updErr } = await context.supabase
       .from("document_templates")
@@ -245,7 +266,11 @@ export const getDocxTemplatePreview = createServerFn({ method: "POST" })
     let dlErr: { message: string } | null = null;
     for (const bucket of [CLIENT_FILES_BUCKET, "documents"]) {
       const res = await context.supabase.storage.from(bucket).download(tpl.template_file_path);
-      if (!res.error && res.data) { file = res.data as Blob; dlErr = null; break; }
+      if (!res.error && res.data) {
+        file = res.data as Blob;
+        dlErr = null;
+        break;
+      }
       dlErr = res.error ?? { message: "brak pliku" };
     }
     if (!file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);

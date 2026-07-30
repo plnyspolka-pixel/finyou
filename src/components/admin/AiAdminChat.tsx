@@ -11,7 +11,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Bot, X, Send, Trash2, Plus, Loader2, Wrench, Mic, Square, Paperclip, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import {
+  Bot,
+  X,
+  Send,
+  Trash2,
+  Plus,
+  Loader2,
+  Wrench,
+  Mic,
+  Square,
+  Paperclip,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
@@ -30,14 +44,14 @@ type Attachment = {
   size: number;
   mediaType: string;
   kind: AttachmentKind;
-  text?: string;     // dla plików tekstowych
-  data?: string;     // base64 dla binarek (obrazy, PDF, inne)
+  text?: string; // dla plików tekstowych
+  data?: string; // base64 dla binarek (obrazy, PDF, inne)
 };
 
-const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|log|yml|yaml|xml|html|htm|css|scss|js|jsx|ts|tsx|sql|sh|env|ini|toml|conf|py|rb|go|rs|java|kt|swift|php|vue|svelte)$/i;
+const TEXT_EXT =
+  /\.(txt|md|markdown|csv|tsv|json|jsonl|log|yml|yaml|xml|html|htm|css|scss|js|jsx|ts|tsx|sql|sh|env|ini|toml|conf|py|rb|go|rs|java|kt|swift|php|vue|svelte)$/i;
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25 MB / plik (limit Anthropica dla dokumentów)
 const ANTHROPIC_IMAGE_MIME = /^image\/(jpeg|png|gif|webp)$/i;
-
 
 export function AiAdminChat() {
   const [open, setOpen] = useState(true);
@@ -103,7 +117,6 @@ export function AiAdminChat() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
-
 
   const remove = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
@@ -186,23 +199,44 @@ export function AiAdminChat() {
         toast.error(`${f.name}: plik > 25 MB, pominięty`);
         continue;
       }
-      const isText = TEXT_EXT.test(f.name) || f.type.startsWith("text/") || f.type === "application/json";
+      const isText =
+        TEXT_EXT.test(f.name) || f.type.startsWith("text/") || f.type === "application/json";
       const isImage = ANTHROPIC_IMAGE_MIME.test(f.type);
       const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
       try {
         if (isText) {
           const text = await f.text();
-          next.push({ name: f.name, size: f.size, mediaType: f.type || "text/plain", kind: "text", text });
+          next.push({
+            name: f.name,
+            size: f.size,
+            mediaType: f.type || "text/plain",
+            kind: "text",
+            text,
+          });
         } else if (isImage) {
           const data = await fileToBase64(f);
           next.push({ name: f.name, size: f.size, mediaType: f.type, kind: "image", data });
         } else if (isPdf) {
           const data = await fileToBase64(f);
-          next.push({ name: f.name, size: f.size, mediaType: "application/pdf", kind: "pdf", data });
+          next.push({
+            name: f.name,
+            size: f.size,
+            mediaType: "application/pdf",
+            kind: "pdf",
+            data,
+          });
         } else {
           const data = await fileToBase64(f);
-          next.push({ name: f.name, size: f.size, mediaType: f.type || "application/octet-stream", kind: "other", data });
-          toast.info(`${f.name}: typ ${f.type || "binarny"} — przekażę jako załącznik, ale model może go nie odczytać.`);
+          next.push({
+            name: f.name,
+            size: f.size,
+            mediaType: f.type || "application/octet-stream",
+            kind: "other",
+            data,
+          });
+          toast.info(
+            `${f.name}: typ ${f.type || "binarny"} — przekażę jako załącznik, ale model może go nie odczytać.`,
+          );
         }
       } catch (e) {
         toast.error(`${f.name}: nie udało się odczytać (${(e as Error).message})`);
@@ -212,11 +246,12 @@ export function AiAdminChat() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-
   const submit = () => {
     const text = input.trim();
     if ((!text && attachments.length === 0) || send.isPending) return;
-    const labelParts = attachments.map((a) => `${a.name} (${(a.size / 1024).toFixed(0)} KB, ${a.kind})`);
+    const labelParts = attachments.map(
+      (a) => `${a.name} (${(a.size / 1024).toFixed(0)} KB, ${a.kind})`,
+    );
     const userVisible =
       text + (labelParts.length ? `\n\n📎 Załączniki: ${labelParts.join(", ")}` : "");
     qc.setQueryData(["ai-admin-msgs", convId], (old: { messages: Message[] } | undefined) => ({
@@ -235,7 +270,6 @@ export function AiAdminChat() {
     send.mutate({ text: text || "(załączniki)", attachments });
     setAttachments([]);
   };
-
 
   if (!open) {
     return (
@@ -260,9 +294,15 @@ export function AiAdminChat() {
         </div>
         <div className="flex-1">
           <div className="text-sm font-semibold">AI Administrator</div>
-          <div className="text-[11px] text-muted-foreground">Claude · pełny dostęp do bazy i kodu</div>
+          <div className="text-[11px] text-muted-foreground">
+            Claude · pełny dostęp do bazy i kodu
+          </div>
         </div>
-        <Button size="sm" variant="ghost" onClick={() => setView(view === "chat" ? "list" : "chat")}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setView(view === "chat" ? "list" : "chat")}
+        >
           {view === "chat" ? "Historia" : "Czat"}
         </Button>
         <Button size="icon" variant="ghost" onClick={() => setOpen(false)} aria-label="Zwiń">
@@ -319,12 +359,16 @@ export function AiAdminChat() {
                 <ul className="ml-4 mt-2 list-disc space-y-1 text-xs">
                   <li>Odpytać bazę (np. „pokaż 10 ostatnich leadów")</li>
                   <li>Wprowadzić zmiany w danych po Twoim potwierdzeniu</li>
-                  <li>Przeczytać pliki w <code>src/</code></li>
+                  <li>
+                    Przeczytać pliki w <code>src/</code>
+                  </li>
                   <li>Przyjąć dowolne załączniki (tekst, PDF, obrazy, binarki) do 25 MB / plik</li>
                 </ul>
               </div>
             )}
-            {messages.map((m) => <MessageBubble key={m.id} m={m} />)}
+            {messages.map((m) => (
+              <MessageBubble key={m.id} m={m} />
+            ))}
             {send.isPending && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -408,9 +452,16 @@ export function AiAdminChat() {
               <Button
                 size="icon"
                 onClick={submit}
-                disabled={send.isPending || (!input.trim() && attachments.filter((a) => a.text).length === 0)}
+                disabled={
+                  send.isPending ||
+                  (!input.trim() && attachments.filter((a) => a.text).length === 0)
+                }
               >
-                {send.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {send.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>
@@ -425,11 +476,16 @@ function MessageBubble({ m }: { m: Message }) {
     return (
       <div className="space-y-1">
         {(m.tool_results ?? []).map((r, i) => (
-          <details key={i} className="rounded-md border border-dashed bg-muted/40 px-2 py-1 text-xs">
+          <details
+            key={i}
+            className="rounded-md border border-dashed bg-muted/40 px-2 py-1 text-xs"
+          >
             <summary className="cursor-pointer text-muted-foreground">
               {r.is_error ? "❌ wynik narzędzia (błąd)" : "✓ wynik narzędzia"}
             </summary>
-            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all text-[10px]">{r.content}</pre>
+            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all text-[10px]">
+              {r.content}
+            </pre>
           </details>
         ))}
       </div>

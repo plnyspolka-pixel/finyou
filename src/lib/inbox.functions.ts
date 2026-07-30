@@ -7,26 +7,27 @@ import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 export const sendInboxEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      to: z.string().min(3),
-      subject: z.string().min(1).max(300),
-      body: z.string().min(1).max(50000),
-      replyToCommunicationId: z.string().uuid().optional().nullable(),
-      attachments: z
-        .array(
-          z.object({
-            name: z.string().min(1).max(200),
-            path: z.string().max(1000).optional().nullable(),
-            bucket: z.string().max(100).optional().nullable(),
-            url: z.string().max(2000).optional().nullable(),
-            mime: z.string().max(150).optional().nullable(),
-            size: z.number().int().nonnegative().optional().nullable(),
-          }),
-        )
-        .max(15)
-        .optional(),
-    }).parse(input),
-
+    z
+      .object({
+        to: z.string().min(3),
+        subject: z.string().min(1).max(300),
+        body: z.string().min(1).max(50000),
+        replyToCommunicationId: z.string().uuid().optional().nullable(),
+        attachments: z
+          .array(
+            z.object({
+              name: z.string().min(1).max(200),
+              path: z.string().max(1000).optional().nullable(),
+              bucket: z.string().max(100).optional().nullable(),
+              url: z.string().max(2000).optional().nullable(),
+              mime: z.string().max(150).optional().nullable(),
+              size: z.number().int().nonnegative().optional().nullable(),
+            }),
+          )
+          .max(15)
+          .optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     // Skrzynka to narzędzie premium: personel wewnętrzny albo pośrednik
@@ -56,11 +57,15 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
       }
     }
 
-    const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#0f172a;white-space:pre-wrap">${
-      data.body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    }</div>`;
+    const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#0f172a;white-space:pre-wrap">${data.body
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")}</div>`;
 
-    const emails = data.to.split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean);
+    const emails = data.to
+      .split(/[,;\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const invalid = emails.filter((e) => !emailRe.test(e));
     if (!emails.length) throw new Error("Brak odbiorców");
@@ -72,7 +77,8 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
     // Załączniki: pobierz pliki raz (Storage/URL → base64) i dołącz je do maila
     // jako prawdziwe pliki. Jeśli któregoś nie da się pobrać — nie wysyłaj
     // "po cichu" maila bez załącznika, tylko zgłoś błąd nadawcy.
-    let resolvedAttachments: Array<{ filename: string; content: string; contentType?: string }> = [];
+    let resolvedAttachments: Array<{ filename: string; content: string; contentType?: string }> =
+      [];
     const attachmentRefs = data.attachments ?? [];
     if (attachmentRefs.length) {
       const { resolveOutboundAttachments } = await import("./outbound-attachments.server");
@@ -135,8 +141,6 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
     return { ok: true, sent: okCount, total: results.length, results };
   });
 
-
-
 /** Zwraca tymczasowy podpisany URL do pliku w buckecie `pliki-klienta`. Dostępne dla admin / operator. */
 export const getCommAttachmentUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -156,7 +160,6 @@ export const getCommAttachmentUrl = createServerFn({ method: "POST" })
       if (!error && signed?.signedUrl) return { url: signed.signedUrl };
     }
     return { url: null as string | null, missing: true };
-
   });
 
 /**
@@ -214,23 +217,28 @@ export const refetchInboundEmailBody = createServerFn({ method: "POST" })
     }
     const body: any = await r.json();
 
-    let html: string | null =
-      typeof body.html === "string" ? body.html : null;
+    let html: string | null = typeof body.html === "string" ? body.html : null;
     if (html && (body.html_format === "data_uri" || html.startsWith("data:"))) {
       const m = html.match(/^data:([^;,]+)(;base64)?,(.*)$/);
       if (m) {
         const isB64 = !!m[2];
-        html = isB64
-          ? Buffer.from(m[3], "base64").toString("utf8")
-          : decodeURIComponent(m[3]);
+        html = isB64 ? Buffer.from(m[3], "base64").toString("utf8") : decodeURIComponent(m[3]);
       }
     }
     let text: string = typeof body.text === "string" ? body.text : "";
     if (!text && html) {
-      text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 8000);
+      text = html
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 8000);
     }
 
-    const updatedMeta = { ...meta, html: html ?? meta.html ?? null, refetched_at: new Date().toISOString() };
+    const updatedMeta = {
+      ...meta,
+      html: html ?? meta.html ?? null,
+      refetched_at: new Date().toISOString(),
+    };
     const { error: upErr } = await supabaseAdmin
       .from("lead_communications")
       .update({ content: text || row.content || "", metadata: updatedMeta as any })
