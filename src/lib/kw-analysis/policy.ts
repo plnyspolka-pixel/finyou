@@ -27,7 +27,7 @@ export const DEFAULT_RISK_POLICY: RiskPolicy = {
  * Wersja zestawu reguł. Zmieniaj przy każdej zmianie logiki/treści reguł —
  * wynik analizy jest deterministyczny w obrębie (snapshot KW × wersja reguł).
  */
-export const RULESET_VERSION = "kw-analysis@1.0.0";
+export const RULESET_VERSION = "kw-analysis@1.1.0";
 
 export const REPORT_DISCLAIMER =
   "Raport jest automatyczną analizą treści księgi wieczystej według polityki " +

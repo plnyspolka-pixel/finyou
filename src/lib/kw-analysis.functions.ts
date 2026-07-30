@@ -148,10 +148,9 @@ export const runKwLandRegisterAnalysis = createServerFn({ method: "POST" })
     let borrower: Party = data.borrower
       ? toParty(data.borrower, "BORROWER")
       : { role: "BORROWER", firstName: null, lastName: null, pesel: null };
-    // UI analizy nie zna stron transakcji — bez tego uzupełnienia silnik
-    // porównywał pustą stronę z Działem II i zawsze raportował
-    // „pożyczkobiorca nie jest właścicielem". Dane klienta wniosku są
-    // domyślnym pożyczkobiorcą.
+    // UI analizy nie zna stron transakcji — dane klienta wniosku są domyślnym
+    // pożyczkobiorcą, dzięki czemu dopasowanie tożsamości do Działu II
+    // (potwierdzenia, literówki, rozbieżności PESEL) działa na realnych danych.
     if (!data.borrower && data.loanApplicationId) {
       const { data: app } = await supabase
         .from("loan_applications")
