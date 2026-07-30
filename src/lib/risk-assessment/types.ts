@@ -207,6 +207,8 @@ export interface SaleabilityForecast {
   band: SaleabilityBand;
   estimatedDaysOnMarket: number | null;
   localityPopulation: number | null;
+  /** Łączna liczba mieszkańców w promieniu 20 km od nieruchomości. */
+  populationWithin20Km?: number | null;
   populationTrend: "rosnaca" | "stabilna" | "malejaca" | "nieznana";
   /** Rozsądny/sprzedawalny rynek: miasto >20 tys. mieszk. lub grunt rolny (bez ograniczeń). */
   reasonableMarket: boolean;
@@ -233,6 +235,14 @@ export interface SaleabilityForecast {
     medianPricePerM2: number | null;
     radiusKm: number;
     source: string;
+    /** Podaż aktywnych ofert sprzedaży w rosnących promieniach (10/20/30 km). */
+    byRadius?: Array<{
+      radiusKm: number;
+      totalActiveListings: number;
+      agencyListings: number;
+      privateListings: number;
+      medianPricePerM2: number | null;
+    }>;
     sample: Array<{
       title: string;
       url: string;

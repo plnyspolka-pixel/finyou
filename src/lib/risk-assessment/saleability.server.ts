@@ -10,6 +10,8 @@ import type { FloorFactorResult } from "./floor-factor";
 import type { PlotBuildabilityResult } from "./plot-buildability";
 
 const LOCAL_OFFERS_RADIUS_KM = 10;
+// Podaż badamy w rosnących promieniach — Karta oferty pokazuje 10/20/30 km.
+const OFFERS_RADII_KM = [10, 20, 30] as const;
 const OFFERS_SOURCE = "Perplexity (portale ogłoszeniowe)";
 // Próg „rozsądnego/sprzedawalnego" rynku dla nieruchomości innych niż grunt rolny.
 const REASONABLE_POPULATION = 20000;
@@ -37,11 +39,14 @@ function emptyLocalOffers(): LocalOffers {
     medianPricePerM2: null,
     radiusKm: LOCAL_OFFERS_RADIUS_KM,
     source: OFFERS_SOURCE,
+    byRadius: [],
     sample: [],
   };
 }
 
 // ---- Aktywne oferty sprzedaży w okolicy (Perplexity — ceny ofertowe z portali) ----
+// Podaż mierzymy w trzech promieniach (10/20/30 km); wartości główne (scoring,
+// dotychczasowi konsumenci) pochodzą z najmniejszego promienia.
 async function gatherLocalOffers(args: {
   propertyType: string;
   city: string | null;
@@ -50,23 +55,44 @@ async function gatherLocalOffers(args: {
   areaM2: number | null;
 }): Promise<LocalOffers> {
   try {
-    const res = await perplexityLocalOffers({
-      propertyType: args.propertyType,
-      city: args.city,
-      district: args.district,
-      voivodeship: args.voivodeship,
-      areaM2: args.areaM2,
-      radiusKm: LOCAL_OFFERS_RADIUS_KM,
+    const results = await Promise.all(
+      OFFERS_RADII_KM.map((radiusKm) =>
+        perplexityLocalOffers({
+          propertyType: args.propertyType,
+          city: args.city,
+          district: args.district,
+          voivodeship: args.voivodeship,
+          areaM2: args.areaM2,
+          radiusKm,
+        }).catch(() => null),
+      ),
+    );
+    const primary = results[0];
+    if (!primary) return emptyLocalOffers();
+    const byRadius = OFFERS_RADII_KM.flatMap((radiusKm, i) => {
+      const r = results[i];
+      return r
+        ? [
+            {
+              radiusKm,
+              totalActiveListings: r.totalActiveListings,
+              agencyListings: r.agencyListings,
+              privateListings: r.privateListings,
+              medianPricePerM2: r.medianPricePerM2,
+            },
+          ]
+        : [];
     });
     return {
-      available: res.agencyListings > 0,
-      totalActiveListings: res.totalActiveListings,
-      agencyListings: res.agencyListings,
-      privateListings: res.privateListings,
-      medianPricePerM2: res.medianPricePerM2,
+      available: primary.agencyListings > 0,
+      totalActiveListings: primary.totalActiveListings,
+      agencyListings: primary.agencyListings,
+      privateListings: primary.privateListings,
+      medianPricePerM2: primary.medianPricePerM2,
       radiusKm: LOCAL_OFFERS_RADIUS_KM,
       source: OFFERS_SOURCE,
-      sample: res.offers.slice(0, 6).map((l) => ({
+      byRadius,
+      sample: primary.offers.slice(0, 6).map((l) => ({
         title: l.title,
         url: l.url,
         source: l.source,
@@ -86,6 +112,7 @@ function buildPrompt(loc: string, propertyType: string): string {
 
 Przeszukaj aktualne źródła i ustal:
 1. Liczbę mieszkańców miejscowości oraz trend demograficzny (rosnąca/stabilna/malejąca).
+1a. ŁĄCZNĄ liczbę mieszkańców w promieniu 20 km od tej lokalizacji (suma ludności miejscowości/gmin w tym promieniu — oszacuj na podstawie danych GUS).
 2. Najbliższe większe miasto (>50 tys.): nazwa, liczba mieszkańców, odległość w km.
 3. Czy w promieniu 50 km jest duże miasto (>100 tys.).
 4. Czy w promieniu 20 km jest: zbiornik wodny/jezioro/zalew; kurort lub miejscowość uzdrowiskowa; sanatorium; istotna atrakcja turystyczna.
@@ -97,6 +124,7 @@ Przeszukaj aktualne źródła i ustal:
 ODPOWIEDŹ — wyłącznie poprawny JSON, bez markdown:
 {
   "localityPopulation": <liczba lub null>,
+  "populationWithin20Km": <liczba lub null>,
   "populationTrend": "rosnaca|stabilna|malejaca|nieznana",
   "nearestLargeCity": { "name": "<lub null>", "population": <liczba lub null>, "distanceKm": <liczba lub null> },
   "largeCityWithin50km": <true|false>,
@@ -250,6 +278,7 @@ export async function analyzeSaleability(args: {
     band: "nieznana",
     estimatedDaysOnMarket: null,
     localityPopulation: null,
+    populationWithin20Km: null,
     populationTrend: "nieznana",
     nearestLargeCity: { name: null, population: null, distanceKm: null },
     demandDrivers: {
@@ -329,6 +358,7 @@ export async function analyzeSaleability(args: {
       ? parsed.rentalDemand
       : "nieznany";
     const localityPopulation = numOrNull(parsed.localityPopulation);
+    const populationWithin20Km = numOrNull(parsed.populationWithin20Km);
     const nearestDistanceKm = numOrNull(nearest.distanceKm);
 
     const score = computeScore({
@@ -376,6 +406,7 @@ export async function analyzeSaleability(args: {
       band,
       estimatedDaysOnMarket: numOrNull(parsed.estimatedDaysOnMarket),
       localityPopulation,
+      populationWithin20Km,
       populationTrend,
       reasonableMarket,
       floorFactor: null,
