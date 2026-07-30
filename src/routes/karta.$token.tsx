@@ -24,6 +24,13 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
+  Images,
+  FolderOpen,
+  FileText,
+  FileImage,
+  FileSpreadsheet,
+  File as FileIcon,
+  Download,
 } from "lucide-react";
 import { getPublicOfferCard, type PublicOfferCard } from "@/lib/offer-card.functions";
 import { sanitizeHtml } from "@/lib/sanitize-html";
@@ -108,6 +115,24 @@ function OfferCardPage() {
         </p>
       </header>
 
+      {/* Zdjęcia nieruchomości */}
+      {card.media.photos.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Images className="h-5 w-5" /> Zdjęcia nieruchomości
+            </CardTitle>
+            <CardDescription>
+              {card.media.photos.length} {plikiLabel(card.media.photos.length)} — kliknij, aby
+              otworzyć w pełnym rozmiarze.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PhotoGallery photos={card.media.photos} />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Dane wniosku i nieruchomości */}
       <Card>
         <CardHeader>
@@ -179,6 +204,15 @@ function OfferCardPage() {
               }
               strong
             />
+            <Row
+              label="Liczba mieszkańców w promieniu 20 km"
+              value={
+                r.population.populationWithin20Km != null
+                  ? `~${r.population.populationWithin20Km.toLocaleString("pl-PL")}`
+                  : "—"
+              }
+              strong
+            />
             {r.population.populationTrend && (
               <Row label="Trend zaludnienia" value={r.population.populationTrend} />
             )}
@@ -204,41 +238,74 @@ function OfferCardPage() {
               <Building2 className="h-5 w-5" /> Nieruchomości w okolicy
             </CardTitle>
             <CardDescription>
-              Aktywne oferty sprzedaży w promieniu ~{r.nearbyOffers.radiusKm ?? "—"} km:{" "}
-              {r.nearbyOffers.totalActiveListings} (biura: {r.nearbyOffers.agencyListings},
-              prywatne: {r.nearbyOffers.privateListings})
-              {r.nearbyOffers.medianPricePerM2 != null &&
-                ` · mediana ${fmtPln(r.nearbyOffers.medianPricePerM2)}/m²`}
+              {r.nearbyOffers.byRadius.length > 0
+                ? "Aktywne oferty sprzedaży w promieniu 10, 20 i 30 km od nieruchomości."
+                : `Aktywne oferty sprzedaży w promieniu ~${r.nearbyOffers.radiusKm ?? "—"} km: ${r.nearbyOffers.totalActiveListings} (biura: ${r.nearbyOffers.agencyListings}, prywatne: ${r.nearbyOffers.privateListings})${
+                    r.nearbyOffers.medianPricePerM2 != null
+                      ? ` · mediana ${fmtPln(r.nearbyOffers.medianPricePerM2)}/m²`
+                      : ""
+                  }`}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-1.5 text-sm">
-            {r.nearbyOffers.sample.length === 0 && (
-              <p className="text-muted-foreground">Brak przykładowych ofert.</p>
-            )}
-            {r.nearbyOffers.sample.map((l, i) => (
-              <div key={i} className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className="text-[10px]">
-                  {l.postedBy === "agency" ? "biuro" : l.postedBy === "private" ? "prywatna" : "?"}
-                </Badge>
-                {l.url ? (
-                  <a
-                    href={l.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline truncate max-w-[40ch]"
-                  >
-                    {l.title || l.url}
-                  </a>
-                ) : (
-                  <span className="truncate max-w-[40ch]">{l.title ?? "—"}</span>
-                )}
-                <span className="text-muted-foreground whitespace-nowrap text-xs">
-                  {l.pricePln != null ? fmtPln(l.pricePln) : "—"}
-                  {l.pricePerM2 != null ? ` · ${fmtPln(l.pricePerM2)}/m²` : ""}
-                  {l.source ? ` · ${l.source}` : ""}
-                </span>
+          <CardContent className="space-y-3 text-sm">
+            {r.nearbyOffers.byRadius.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {r.nearbyOffers.byRadius.map((b) => (
+                  <div key={b.radiusKm} className="rounded-md border p-3 space-y-0.5">
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      Promień {b.radiusKm} km
+                    </div>
+                    <div className="text-xl font-bold">
+                      {b.totalActiveListings.toLocaleString("pl-PL")}{" "}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        aktywnych ofert
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      biura: {b.agencyListings} · prywatne: {b.privateListings}
+                    </div>
+                    {b.medianPricePerM2 != null && (
+                      <div className="text-xs text-muted-foreground">
+                        mediana {fmtPln(b.medianPricePerM2)}/m²
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+            <div className="space-y-1.5">
+              {r.nearbyOffers.sample.length === 0 && (
+                <p className="text-muted-foreground">Brak przykładowych ofert.</p>
+              )}
+              {r.nearbyOffers.sample.map((l, i) => (
+                <div key={i} className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="text-[10px]">
+                    {l.postedBy === "agency"
+                      ? "biuro"
+                      : l.postedBy === "private"
+                        ? "prywatna"
+                        : "?"}
+                  </Badge>
+                  {l.url ? (
+                    <a
+                      href={l.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline truncate max-w-[40ch]"
+                    >
+                      {l.title || l.url}
+                    </a>
+                  ) : (
+                    <span className="truncate max-w-[40ch]">{l.title ?? "—"}</span>
+                  )}
+                  <span className="text-muted-foreground whitespace-nowrap text-xs">
+                    {l.pricePln != null ? fmtPln(l.pricePln) : "—"}
+                    {l.pricePerM2 != null ? ` · ${fmtPln(l.pricePerM2)}/m²` : ""}
+                    {l.source ? ` · ${l.source}` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -292,6 +359,28 @@ function OfferCardPage() {
                 <b>Stan prawny (KW):</b> {r.kwLegalSummary}
               </p>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Wszystkie pliki klienta */}
+      {card.media.files.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" /> Pliki klienta
+            </CardTitle>
+            <CardDescription>
+              Komplet dokumentów i załączników przekazanych przez klienta —{" "}
+              {card.media.files.length} {plikiLabel(card.media.files.length)}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {card.media.files.map((f, i) => (
+                <FileTile key={i} url={f.url} name={f.name} />
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -366,6 +455,90 @@ function OfferCardPage() {
         oferty w rozumieniu art. 66 KC. Finance You · kontakt@financeyou.pl
       </footer>
     </div>
+  );
+}
+
+/** Polska odmiana słowa „plik" dla liczników. */
+function plikiLabel(n: number): string {
+  if (n === 1) return "plik";
+  const d = n % 10;
+  const h = n % 100;
+  return d >= 2 && d <= 4 && (h < 12 || h > 14) ? "pliki" : "plików";
+}
+
+/** Galeria zdjęć: pierwsze zdjęcie jako duży kadr, reszta w siatce miniatur. */
+function PhotoGallery({ photos }: { photos: Array<{ url: string; name: string }> }) {
+  const [hero, ...rest] = photos;
+  return (
+    <div className="space-y-2">
+      <a
+        href={hero.url}
+        target="_blank"
+        rel="noreferrer"
+        className="group block overflow-hidden rounded-lg border bg-muted"
+      >
+        <img
+          src={hero.url}
+          alt={hero.name}
+          loading="lazy"
+          className="aspect-video w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+        />
+      </a>
+      {rest.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {rest.map((ph, i) => (
+            <a
+              key={i}
+              href={ph.url}
+              target="_blank"
+              rel="noreferrer"
+              className="group block overflow-hidden rounded-md border bg-muted"
+              title={ph.name}
+            >
+              <img
+                src={ph.url}
+                alt={ph.name}
+                loading="lazy"
+                className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const FILE_KIND: Array<{ re: RegExp; icon: typeof FileIcon; badge: string }> = [
+  { re: /\.(jpe?g|png|gif|webp|heic|bmp|avif)$/i, icon: FileImage, badge: "IMG" },
+  { re: /\.pdf$/i, icon: FileText, badge: "PDF" },
+  { re: /\.(docx?|odt|rtf)$/i, icon: FileText, badge: "DOC" },
+  { re: /\.(xlsx?|ods|csv)$/i, icon: FileSpreadsheet, badge: "XLS" },
+];
+
+/** Kafel pliku klienta — ikona typu, nazwa i link do pobrania (signed URL). */
+function FileTile({ url, name }: { url: string; name: string }) {
+  const kind = FILE_KIND.find((k) => k.re.test(name));
+  const Icon = kind?.icon ?? FileIcon;
+  const badge =
+    kind?.badge ?? (name.includes(".") ? name.split(".").pop()!.toUpperCase().slice(0, 4) : "PLIK");
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="group flex items-center gap-3 rounded-md border p-2.5 transition-colors hover:bg-muted/60"
+      title={name}
+    >
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-muted/40">
+        <Icon className="h-4.5 w-4.5 text-muted-foreground" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{name}</span>
+        <span className="text-[11px] text-muted-foreground">{badge}</span>
+      </span>
+      <Download className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+    </a>
   );
 }
 

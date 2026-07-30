@@ -78,6 +78,11 @@ export interface PublicOfferCard {
   } | null;
   /** Adres do osadzenia mapy (Google Maps embed po adresie). */
   mapQuery: string | null;
+  /** Zdjęcia nieruchomości i wszystkie pliki klienta (podpisane URL-e Storage). */
+  media: {
+    photos: Array<{ url: string; name: string }>;
+    files: Array<{ url: string; name: string }>;
+  };
   risk: {
     generatedAt: string | null;
     investmentScore: number | null;
@@ -101,6 +106,7 @@ export interface PublicOfferCard {
     } | null;
     population: {
       localityPopulation: number | null;
+      populationWithin20Km: number | null;
       populationTrend: string | null;
       nearestLargeCity: {
         name: string | null;
@@ -114,6 +120,14 @@ export interface PublicOfferCard {
       agencyListings: number;
       privateListings: number;
       medianPricePerM2: number | null;
+      /** Aktywne oferty sprzedaży w promieniach 10/20/30 km. */
+      byRadius: Array<{
+        radiusKm: number;
+        totalActiveListings: number;
+        agencyListings: number;
+        privateListings: number;
+        medianPricePerM2: number | null;
+      }>;
       sample: Array<{
         title: string | null;
         url: string | null;
@@ -153,7 +167,7 @@ export const getPublicOfferCard = createServerFn({ method: "GET" })
     const { data: app } = await supabaseAdmin
       .from("loan_applications")
       .select(
-        "id, loan_amount, preferred_period_months, deleted_at, client:clients(first_name,last_name), properties(property_type,address,street,city,voivodeship,area_sqm,estimated_value,land_register_number,description,has_mortgage)",
+        "id, loan_amount, preferred_period_months, deleted_at, client:clients(first_name,last_name), properties(property_type,address,street,city,voivodeship,area_sqm,estimated_value,land_register_number,description,has_mortgage,photos)",
       )
       .eq("offer_card_token", data.token)
       .maybeSingle();
@@ -183,6 +197,46 @@ export const getPublicOfferCard = createServerFn({ method: "GET" })
         });
         kw = { fetchedAt: (kwDoc as any).fetched_at ?? null, sections };
       }
+    }
+
+    // Zdjęcia nieruchomości i wszystkie pliki klienta — łączymy properties.photos
+    // z wierszami `documents` i podpisujemy ścieżki Storage po stronie serwera
+    // (bucket jest prywatny, a Karta działa bez logowania).
+    const { data: docRows } = await supabaseAdmin
+      .from("documents")
+      .select("file_path, file_url, file_name")
+      .eq("loan_application_id", (app as any).id)
+      .order("created_at", { ascending: true });
+    const { collectClientFileRefs, isShowablePropertyPhoto, IMAGE_EXT } =
+      await import("@/lib/property-photos");
+    const { CLIENT_FILES_BUCKET } = await import("@/lib/storage-buckets");
+    const refs = collectClientFileRefs((p?.photos as string[] | null) ?? null, docRows ?? []);
+
+    const urlByPath = new Map<string, string>();
+    let unsigned = refs.map((f) => f.src).filter((s) => !/^https?:\/\//i.test(s));
+    refs.forEach((f) => {
+      if (/^https?:\/\//i.test(f.src)) urlByPath.set(f.src, f.src);
+    });
+    // Fallback po legacy bucketach — jak w @/lib/property-photos (PHOTO_BUCKETS).
+    for (const bucket of [CLIENT_FILES_BUCKET, "documents", "property-photos"]) {
+      if (unsigned.length === 0) break;
+      const { data: signed } = await supabaseAdmin.storage
+        .from(bucket)
+        .createSignedUrls(unsigned, 6 * 3600);
+      (signed ?? []).forEach((s: { path?: string | null; signedUrl?: string | null }) => {
+        if (s?.path && s?.signedUrl) urlByPath.set(s.path, s.signedUrl);
+      });
+      unsigned = unsigned.filter((path) => !urlByPath.has(path));
+    }
+
+    const media: PublicOfferCard["media"] = { photos: [], files: [] };
+    for (const f of refs) {
+      const url = urlByPath.get(f.src);
+      if (!url) continue;
+      const isPhoto =
+        (IMAGE_EXT.test(f.name) || IMAGE_EXT.test(f.src)) && isShowablePropertyPhoto(f.src);
+      if (isPhoto) media.photos.push({ url, name: f.name });
+      else media.files.push({ url, name: f.name });
     }
 
     // Analiza ryzyka — zaludnienie, rynek w okolicy, wycena, źródła danych
@@ -222,6 +276,7 @@ export const getPublicOfferCard = createServerFn({ method: "GET" })
           population: r.saleability
             ? {
                 localityPopulation: r.saleability.localityPopulation,
+                populationWithin20Km: r.saleability.populationWithin20Km ?? null,
                 populationTrend: r.saleability.populationTrend ?? null,
                 nearestLargeCity: r.saleability.nearestLargeCity ?? null,
               }
@@ -233,6 +288,13 @@ export const getPublicOfferCard = createServerFn({ method: "GET" })
                 agencyListings: r.saleability.localMarketOffers.agencyListings ?? 0,
                 privateListings: r.saleability.localMarketOffers.privateListings ?? 0,
                 medianPricePerM2: r.saleability.localMarketOffers.medianPricePerM2,
+                byRadius: (r.saleability.localMarketOffers.byRadius ?? []).map((b) => ({
+                  radiusKm: b.radiusKm,
+                  totalActiveListings: b.totalActiveListings ?? 0,
+                  agencyListings: b.agencyListings ?? 0,
+                  privateListings: b.privateListings ?? 0,
+                  medianPricePerM2: b.medianPricePerM2 ?? null,
+                })),
                 sample: (r.saleability.localMarketOffers.sample ?? []).map((l) => ({
                   title: l.title ?? null,
                   url: l.url ?? null,
@@ -281,6 +343,7 @@ export const getPublicOfferCard = createServerFn({ method: "GET" })
         : null,
       kw,
       mapQuery,
+      media,
       risk,
     };
   });
