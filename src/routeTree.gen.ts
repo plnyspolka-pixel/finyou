@@ -69,6 +69,7 @@ import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
+import { Route as KartaTokenRouteImport } from './routes/karta.$token'
 import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windykacja'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
@@ -111,6 +112,7 @@ import { Route as AdminKwRouteImport } from './routes/admin.kw'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
 import { Route as AdminKreatorDokumentowRouteImport } from './routes/admin.kreator-dokumentow'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
+import { Route as AdminKartyOfertRouteImport } from './routes/admin.karty-ofert'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
 import { Route as AdminFacebookConnectRouteImport } from './routes/admin.facebook-connect'
@@ -518,6 +520,11 @@ const KlientPowiadomieniaRoute = KlientPowiadomieniaRouteImport.update({
   path: '/powiadomienia',
   getParentRoute: () => KlientRoute,
 } as any)
+const KartaTokenRoute = KartaTokenRouteImport.update({
+  id: '/karta/$token',
+  path: '/karta/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InwestorWindykacjaRoute = InwestorWindykacjaRouteImport.update({
   id: '/windykacja',
   path: '/windykacja',
@@ -729,6 +736,11 @@ const AdminKreatorDokumentowRoute = AdminKreatorDokumentowRouteImport.update({
 const AdminKlienciRoute = AdminKlienciRouteImport.update({
   id: '/klienci',
   path: '/klienci',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminKartyOfertRoute = AdminKartyOfertRouteImport.update({
+  id: '/karty-ofert',
+  path: '/karty-ofert',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminInwestorzyRoute = AdminInwestorzyRouteImport.update({
@@ -1346,6 +1358,7 @@ export interface FileRoutesByFullPath {
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
+  '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
@@ -1388,6 +1401,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
+  '/karta/$token': typeof KartaTokenRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -1550,6 +1564,7 @@ export interface FileRoutesByTo {
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
+  '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
@@ -1589,6 +1604,7 @@ export interface FileRoutesByTo {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
+  '/karta/$token': typeof KartaTokenRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -1755,6 +1771,7 @@ export interface FileRoutesById {
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
+  '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
@@ -1797,6 +1814,7 @@ export interface FileRoutesById {
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
+  '/karta/$token': typeof KartaTokenRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -1966,6 +1984,7 @@ export interface FileRouteTypes {
     | '/admin/facebook-connect'
     | '/admin/integracje'
     | '/admin/inwestorzy'
+    | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
@@ -2008,6 +2027,7 @@ export interface FileRouteTypes {
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
+    | '/karta/$token'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -2170,6 +2190,7 @@ export interface FileRouteTypes {
     | '/admin/facebook-connect'
     | '/admin/integracje'
     | '/admin/inwestorzy'
+    | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
@@ -2209,6 +2230,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
+    | '/karta/$token'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -2374,6 +2396,7 @@ export interface FileRouteTypes {
     | '/admin/facebook-connect'
     | '/admin/integracje'
     | '/admin/inwestorzy'
+    | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
@@ -2416,6 +2439,7 @@ export interface FileRouteTypes {
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
+    | '/karta/$token'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -2576,6 +2600,7 @@ export interface RootRouteChildren {
   EmbedLeadyRoute: typeof EmbedLeadyRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   FakturaIdRoute: typeof FakturaIdRoute
+  KartaTokenRoute: typeof KartaTokenRoute
   LSlugRoute: typeof LSlugRoute
   PosrednicyRejestracjaRoute: typeof PosrednicyRejestracjaRoute
   PropozycjeIdRoute: typeof PropozycjeIdRoute
@@ -3049,6 +3074,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KlientPowiadomieniaRouteImport
       parentRoute: typeof KlientRoute
     }
+    '/karta/$token': {
+      id: '/karta/$token'
+      path: '/karta/$token'
+      fullPath: '/karta/$token'
+      preLoaderRoute: typeof KartaTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inwestor/windykacja': {
       id: '/inwestor/windykacja'
       path: '/windykacja'
@@ -3341,6 +3373,13 @@ declare module '@tanstack/react-router' {
       path: '/klienci'
       fullPath: '/admin/klienci'
       preLoaderRoute: typeof AdminKlienciRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/karty-ofert': {
+      id: '/admin/karty-ofert'
+      path: '/karty-ofert'
+      fullPath: '/admin/karty-ofert'
+      preLoaderRoute: typeof AdminKartyOfertRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/inwestorzy': {
@@ -4121,6 +4160,7 @@ interface AdminRouteChildren {
   AdminFacebookConnectRoute: typeof AdminFacebookConnectRoute
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
+  AdminKartyOfertRoute: typeof AdminKartyOfertRoute
   AdminKlienciRoute: typeof AdminKlienciRouteWithChildren
   AdminKreatorDokumentowRoute: typeof AdminKreatorDokumentowRoute
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
@@ -4184,6 +4224,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminFacebookConnectRoute: AdminFacebookConnectRoute,
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
+  AdminKartyOfertRoute: AdminKartyOfertRoute,
   AdminKlienciRoute: AdminKlienciRouteWithChildren,
   AdminKreatorDokumentowRoute: AdminKreatorDokumentowRoute,
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
@@ -4497,6 +4538,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmbedLeadyRoute: EmbedLeadyRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   FakturaIdRoute: FakturaIdRoute,
+  KartaTokenRoute: KartaTokenRoute,
   LSlugRoute: LSlugRoute,
   PosrednicyRejestracjaRoute: PosrednicyRejestracjaRoute,
   PropozycjeIdRoute: PropozycjeIdRoute,

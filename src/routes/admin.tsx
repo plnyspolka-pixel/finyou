@@ -39,6 +39,7 @@ import {
   Wallet,
   Building2,
   MapPinned,
+  IdCard,
 } from "lucide-react";
 
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -77,6 +78,7 @@ const groups: Group[] = [
       { to: "/admin/projekty", label: "Projekty inwestycyjne", icon: FolderOpen },
       { to: "/admin/oferty", label: "Oferty", icon: Tag },
       { to: "/admin/dystrybucja", label: "Dystrybucja ofert", icon: Send },
+      { to: "/admin/karty-ofert", label: "Karty ofert", icon: IdCard },
       { to: "/admin/szkolenia", label: "Szkolenia", icon: GraduationCap },
     ],
   },
