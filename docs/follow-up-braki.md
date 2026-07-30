@@ -93,6 +93,26 @@ współwłaściciele / dokument), licznikiem prób i terminem następnej wysyłk
 akcje: pauza/wznowienie, „wyślij teraz", podgląd dokładnych treści e-mail/SMS/
 Messenger i historii wysyłek.
 
+## Agent głosowy „Ania — uzupełnia braki" (ElevenLabs)
+
+Agent Conversational AI `agent_6501kysgcj34ff5byqst6z4b9bfz` (nadpisywalny env
+`VITE_ELEVENLABS_MISSING_INFO_AGENT_ID`) jest osadzony w panelu klienta
+(`/klient`) jako embeddable widget z CDN — komponent
+`src/components/client/missing-info-voice-agent.tsx`. Karta + dymek pokazują
+się TYLKO, gdy brief braków wniosku klienta jest niepusty
+(`getMyMissingInfoBrief` w `missing-info-follow-up.functions.ts`).
+
+Brief trafia do agenta atrybutem `dynamic-variables` w tej samej konwencji
+nazw co telefoniczny webhook `elevenlabs-conversation-init` (`first_name`,
+`missing_documents`, `missing_documents_count`, `missing_step`) plus
+`missing_questions` — pełne pytania punkt po punkcie, więc jeden prompt agenta
+obsługuje i telefon, i widget. Treści follow-upów (e-mail) wspominają
+o możliwości rozmowy z Anią w panelu.
+
+Świadomie użyto widgetu CDN zamiast `@elevenlabs/react`: build produkcyjny
+instaluje zależności bunem z `bun.lock` przypiętym do rejestru Lovable, więc
+dodanie zależności npm bez aktualizacji bun.lock wywróciłoby build.
+
 ## Znane ograniczenia / decyzje
 
 - Messenger poza oknem 24 h Meta jest pomijany (wymagałoby to tagów

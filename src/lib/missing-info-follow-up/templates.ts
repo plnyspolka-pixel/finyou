@@ -63,7 +63,10 @@ export function composeEmailText(brief: MissingInfoBrief, vars: ComposeVars): st
   lines.push("");
   lines.push(`Uzupełnij wniosek tutaj: ${vars.link}`);
   lines.push("");
-  lines.push("Możesz też po prostu odpowiedzieć na tę wiadomość — dopiszemy wszystko za Ciebie.");
+  lines.push(
+    "Możesz też po prostu odpowiedzieć na tę wiadomość — dopiszemy wszystko za Ciebie. " +
+      "A jeśli wolisz rozmowę: w panelu wniosku czeka asystentka głosowa Ania, która przeprowadzi Cię przez braki punkt po punkcie.",
+  );
   lines.push("");
   lines.push("Pozdrawiamy,\nZespół Finance You");
   return lines.join("\n");
@@ -102,7 +105,7 @@ export function composeEmailHtml(brief: MissingInfoBrief, vars: ComposeVars): st
   );
   parts.push(
     P(
-      `Możesz też po prostu <strong>odpowiedzieć na tę wiadomość</strong> — dopiszemy wszystko za Ciebie.`,
+      `Możesz też po prostu <strong>odpowiedzieć na tę wiadomość</strong> — dopiszemy wszystko za Ciebie. A jeśli wolisz rozmowę: w panelu wniosku czeka asystentka głosowa <strong>Ania</strong>, która przeprowadzi Cię przez braki punkt po punkcie.`,
     ),
   );
   parts.push(P("Pozdrawiamy,<br/>Zespół Finance You"));

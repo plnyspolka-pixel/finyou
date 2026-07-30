@@ -14,6 +14,44 @@ async function requireOperator(supabase: SupabaseClient, userId: string): Promis
   if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator/operator).");
 }
 
+/**
+ * Brief braków WŁASNEGO wniosku zalogowanego klienta — dla widgetu głosowego
+ * „Agent Ania — uzupełnia braki" w panelu /klient. Własność wniosku wynika
+ * z zapytań klientem RLS (clients.user_id → loan_applications.client_id);
+ * dopiero potem silnik (service role) liczy pełny brief dla tego id.
+ */
+export const getMyMissingInfoBrief = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const supabase = context.supabase as unknown as SupabaseClient;
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id, first_name")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!client) return { found: false as const };
+    const { data: loan } = await supabase
+      .from("loan_applications")
+      .select("id")
+      .eq("client_id", client.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!loan) return { found: false as const };
+
+    const { buildBriefBundles } = await import("./engine.server");
+    const bundle = (await buildBriefBundles([loan.id])).get(loan.id);
+    if (!bundle) return { found: false as const };
+    return {
+      found: true as const,
+      loanApplicationId: loan.id,
+      firstName: client.first_name ?? null,
+      items: bundle.brief.items,
+    };
+  });
+
 /** Lista wpisów follow-upu braków z danymi wniosku i klienta. */
 export const listMissingInfoFollowUps = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
