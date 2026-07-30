@@ -2,7 +2,6 @@ import { useEffect, type CSSProperties, type MutableRefObject, type ReactNode } 
 import { Check, ChevronRight, Lock } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
 import { computeLoanFigures, formatPLN } from "@/lib/loan-math";
 import { buildEngineSchedule } from "@/lib/contract-engine/loan-schedule";
 
@@ -93,8 +92,6 @@ export type OfferCalculatorPanelProps = {
   months: number;
   setMonths: (v: number) => void;
   maxMonths: number;
-  canExtend: boolean;
-  setCanExtend: (v: boolean) => void;
   annualRate: number;
   setAnnualRate: (v: number) => void;
   rateTouchedRef: MutableRefObject<boolean>;
@@ -112,8 +109,6 @@ export function OfferCalculatorPanel({
   months,
   setMonths,
   maxMonths,
-  canExtend,
-  setCanExtend,
   annualRate,
   setAnnualRate,
   rateTouchedRef,
@@ -130,9 +125,11 @@ export function OfferCalculatorPanel({
   const grossPrincipal = amount;
 
   // Reguły kosztu:
-  // - okres ≤ 36 mies. → min. wynagrodzenie inwestora 24% rocznie, ale klient może płacić tylko odsetki (rata balonowa dopuszczalna)
-  // - okres > 36 mies. → wynagrodzenie inwestora może być niższe (od 15%), ale klient musi płacić pełną ratę kapitałowo-odsetkową
-  const minAnnualRate = months <= 36 ? 24 : 15;
+  // - minimalne wynagrodzenie inwestora: 1,79% miesięcznie (21,48% rocznie)
+  // - okres ≤ 36 mies. → klient może płacić tylko odsetki (rata balonowa dopuszczalna)
+  // - okres > 36 mies. → klient musi płacić pełną ratę kapitałowo-odsetkową
+  const minMonthlyRate = 1.79;
+  const minAnnualRate = minMonthlyRate * 12;
   const allowBalloon = months <= 36;
 
   useEffect(() => {
@@ -221,46 +218,31 @@ export function OfferCalculatorPanel({
               />
             </CalcRow>
 
-            <div className="space-y-3">
-              <CalcRow
-                label="Proponowany okres spłaty"
-                value={`${months} mies.`}
-                minLabel="12 mies."
-                maxLabel={`${maxMonths} mies.`}
-              >
-                <Slider
-                  gradient="brand"
-                  value={[Math.min(Math.max(months, 12), maxMonths)]}
-                  min={12}
-                  max={maxMonths}
-                  step={1}
-                  onValueChange={(v) => setMonths(v[0] ?? months)}
-                />
-              </CalcRow>
-              {months <= 36 && (
-                <label className="flex cursor-pointer items-start gap-2 p-3" style={SUB_PANEL}>
-                  <Checkbox
-                    checked={canExtend}
-                    onCheckedChange={(v) => setCanExtend(v === true)}
-                    className="mt-0.5 border-[rgba(84,124,214,0.6)] data-[state=checked]:border-transparent data-[state=checked]:bg-[#4f8bf0] data-[state=checked]:text-white"
-                  />
-                  <span className="text-xs" style={{ color: FY.ink }}>
-                    <span className="font-semibold">Możliwość przedłużenia pożyczki</span> — chcę
-                    mieć opcję wydłużenia okresu spłaty na zakończenie umowy.
-                  </span>
-                </label>
-              )}
-            </div>
+            <CalcRow
+              label="Proponowany okres spłaty"
+              value={`${months} mies.`}
+              minLabel="12 mies."
+              maxLabel={`${maxMonths} mies.`}
+            >
+              <Slider
+                gradient="brand"
+                value={[Math.min(Math.max(months, 12), maxMonths)]}
+                min={12}
+                max={maxMonths}
+                step={1}
+                onValueChange={(v) => setMonths(v[0] ?? months)}
+              />
+            </CalcRow>
 
             <CalcRow
               label="Proponowane wynagrodzenie inwestora (miesięcznie)"
               value={`${(annualRate / 12).toFixed(2)}%`}
-              minLabel={`${(minAnnualRate / 12).toFixed(2)}% / mies.`}
+              minLabel={`${minMonthlyRate.toFixed(2)}% / mies.`}
               maxLabel={`${(50 / 12).toFixed(2)}% / mies.`}
               hint={
                 allowBalloon
-                  ? `Przy okresie do 36 miesięcy minimalne wynagrodzenie inwestora to ${minAnnualRate}% rocznie (${(minAnnualRate / 12).toFixed(2)}% / mies.).`
-                  : "Powyżej 36 miesięcy wynagrodzenie może być niższe, ale spłacasz pełną ratę kapitałowo-odsetkową."
+                  ? `Minimalne wynagrodzenie inwestora to ${minMonthlyRate.toFixed(2)}% miesięcznie.`
+                  : `Minimalne wynagrodzenie inwestora to ${minMonthlyRate.toFixed(2)}% miesięcznie. Powyżej 36 miesięcy spłacasz pełną ratę kapitałowo-odsetkową.`
               }
             >
               <Slider

@@ -105,7 +105,6 @@ export function InvestorProposalCalculator({
   const [months, setMonths] = useState<number>(24);
   const [annualRate, setAnnualRate] = useState<number>(30);
   const [maxPayment, setMaxPayment] = useState<number>(0);
-  const [canExtend, setCanExtend] = useState<boolean>(false);
   const [propertyType, setPropertyType] = useState<SecurityType | null>(null);
   const [savingPropertyType, setSavingPropertyType] = useState(false);
   const [city, setCity] = useState<string>("");
@@ -380,8 +379,6 @@ export function InvestorProposalCalculator({
               months={months}
               setMonths={setMonths}
               maxMonths={maxMonths}
-              canExtend={canExtend}
-              setCanExtend={setCanExtend}
               annualRate={annualRate}
               setAnnualRate={setAnnualRate}
               rateTouchedRef={rateTouchedRef}

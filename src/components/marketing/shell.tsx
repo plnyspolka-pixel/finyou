@@ -9,7 +9,7 @@ import { MktButton } from "./primitives";
  * the public pages and never leaks into the authenticated app.
  */
 
-export type MarketingPage = "home" | "klient" | "inwestor" | "posrednik" | "blog";
+export type MarketingPage = "home" | "klient" | "inwestor" | "posrednik" | "blog" | "kalkulator";
 
 const CONTACT = { phone: "+48 732 059 898", email: "kontakt@financeyou.pl" };
 
@@ -19,6 +19,7 @@ const PAGE_PATH: Record<MarketingPage, string> = {
   inwestor: "/dla-inwestora",
   posrednik: "/dla-posrednika",
   blog: "/blog",
+  kalkulator: "/kalkulator-pozyczki",
 };
 
 const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
@@ -27,6 +28,7 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   inwestor: { label: "Dołącz do klubu", href: "/rejestracja?role=inwestor" },
   posrednik: { label: "Dołącz jako pośrednik", href: "/rejestracja?role=posrednik" },
   blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
+  kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
 };
 
 export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
@@ -35,6 +37,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
     { label: "Klient", href: PAGE_PATH.klient, key: "klient" as const },
     { label: "Inwestor", href: PAGE_PATH.inwestor, key: "inwestor" as const },
     { label: "Pośrednik", href: PAGE_PATH.posrednik, key: "posrednik" as const },
+    { label: "Kalkulator pożyczki", href: PAGE_PATH.kalkulator, key: "kalkulator" as const },
     { label: "Jak działa", href: page === "home" ? "#jak-dziala" : "/#jak-dziala", key: "jak" },
     { label: "Blog", href: "/blog", key: "blog" },
     { label: "FAQ", href: page === "blog" ? "/dla-klienta#faq" : "#faq", key: "faq" },
@@ -193,6 +196,7 @@ export function SiteFooter() {
     {
       h: "Platforma",
       links: [
+        { t: "Kalkulator pożyczki", href: PAGE_PATH.kalkulator },
         { t: "Jak działa", href: "/#jak-dziala" },
         { t: "Blog", href: "/blog" },
         { t: "FAQ", href: PAGE_PATH.klient + "#faq" },

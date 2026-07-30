@@ -24,6 +24,7 @@ import { Route as NegocjujRouteImport } from './routes/negocjuj'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
+import { Route as KalkulatorPozyczkiRouteImport } from './routes/kalkulator-pozyczki'
 import { Route as InwestorRouteImport } from './routes/inwestor'
 import { Route as DlaPosrednikaRouteImport } from './routes/dla-posrednika'
 import { Route as DlaKlientaRouteImport } from './routes/dla-klienta'
@@ -290,6 +291,11 @@ const LogowanieRoute = LogowanieRouteImport.update({
 const KlientRoute = KlientRouteImport.update({
   id: '/klient',
   path: '/klient',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KalkulatorPozyczkiRoute = KalkulatorPozyczkiRouteImport.update({
+  id: '/kalkulator-pozyczki',
+  path: '/kalkulator-pozyczki',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InwestorRoute = InwestorRouteImport.update({
@@ -1314,6 +1320,7 @@ export interface FileRoutesByFullPath {
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
+  '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
@@ -1521,6 +1528,7 @@ export interface FileRoutesByTo {
   '/dla-inwestora': typeof DlaInwestoraRoute
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
+  '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
   '/negocjuj': typeof NegocjujRoute
@@ -1723,6 +1731,7 @@ export interface FileRoutesById {
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
+  '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
@@ -1934,6 +1943,7 @@ export interface FileRouteTypes {
     | '/dla-klienta'
     | '/dla-posrednika'
     | '/inwestor'
+    | '/kalkulator-pozyczki'
     | '/klient'
     | '/logowanie'
     | '/mcp'
@@ -2141,6 +2151,7 @@ export interface FileRouteTypes {
     | '/dla-inwestora'
     | '/dla-klienta'
     | '/dla-posrednika'
+    | '/kalkulator-pozyczki'
     | '/logowanie'
     | '/mcp'
     | '/negocjuj'
@@ -2342,6 +2353,7 @@ export interface FileRouteTypes {
     | '/dla-klienta'
     | '/dla-posrednika'
     | '/inwestor'
+    | '/kalkulator-pozyczki'
     | '/klient'
     | '/logowanie'
     | '/mcp'
@@ -2552,6 +2564,7 @@ export interface RootRouteChildren {
   DlaKlientaRoute: typeof DlaKlientaRoute
   DlaPosrednikaRoute: typeof DlaPosrednikaRoute
   InwestorRoute: typeof InwestorRouteWithChildren
+  KalkulatorPozyczkiRoute: typeof KalkulatorPozyczkiRoute
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
   McpRoute: typeof McpRoute
@@ -2732,6 +2745,13 @@ declare module '@tanstack/react-router' {
       path: '/klient'
       fullPath: '/klient'
       preLoaderRoute: typeof KlientRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kalkulator-pozyczki': {
+      id: '/kalkulator-pozyczki'
+      path: '/kalkulator-pozyczki'
+      fullPath: '/kalkulator-pozyczki'
+      preLoaderRoute: typeof KalkulatorPozyczkiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inwestor': {
@@ -4472,6 +4492,7 @@ const rootRouteChildren: RootRouteChildren = {
   DlaKlientaRoute: DlaKlientaRoute,
   DlaPosrednikaRoute: DlaPosrednikaRoute,
   InwestorRoute: InwestorRouteWithChildren,
+  KalkulatorPozyczkiRoute: KalkulatorPozyczkiRoute,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
   McpRoute: McpRoute,

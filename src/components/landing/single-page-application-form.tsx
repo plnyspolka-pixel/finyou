@@ -289,7 +289,6 @@ export function SinglePageApplicationForm({
 
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(36);
-  const [canExtend, setCanExtend] = useState(true);
   const [maxPayment, setMaxPayment] = useState(0);
   const [annualRate, setAnnualRate] = useState(30);
   const rateTouchedRef = useRef(false);
@@ -928,8 +927,6 @@ export function SinglePageApplicationForm({
                 months={months}
                 setMonths={setMonths}
                 maxMonths={maxMonths}
-                canExtend={canExtend}
-                setCanExtend={setCanExtend}
                 annualRate={annualRate}
                 setAnnualRate={setAnnualRate}
                 rateTouchedRef={rateTouchedRef}
