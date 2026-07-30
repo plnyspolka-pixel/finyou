@@ -48,6 +48,7 @@ type PhotoItem = {
   storagePath?: string;
   uploadedMime?: string;
   uploadedName?: string;
+  contentHash?: string | null;
   errorMsg?: string;
 };
 
@@ -109,6 +110,7 @@ export function EmbedApplicationForm() {
                 storagePath: res.path,
                 uploadedMime: mimeType,
                 uploadedName: fileName,
+                contentHash: (res as { contentHash?: string | null }).contentHash ?? null,
               }
             : p,
         ),
@@ -206,6 +208,7 @@ export function EmbedApplicationForm() {
           mimeType: p.uploadedMime ?? p.type ?? "application/octet-stream",
           fileName: p.uploadedName ?? p.name,
           bucket: "property_photos",
+          contentHash: p.contentHash ?? null,
         }));
       const res = await submitFn({
         data: {

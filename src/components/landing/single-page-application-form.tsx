@@ -53,6 +53,7 @@ type PhotoItem = {
   storagePath?: string;
   uploadedMime?: string;
   uploadedName?: string;
+  contentHash?: string | null;
   errorMsg?: string;
 };
 
@@ -381,6 +382,7 @@ export function SinglePageApplicationForm({
                 storagePath: res.path,
                 uploadedMime: mimeType,
                 uploadedName: fileName,
+                contentHash: (res as { contentHash?: string | null }).contentHash ?? null,
               }
             : p,
         ),
@@ -500,6 +502,7 @@ export function SinglePageApplicationForm({
                 mimeType: p.uploadedMime || p.type || "application/octet-stream",
                 fileName: p.uploadedName || p.name,
                 bucket: p.bucket,
+                contentHash: p.contentHash ?? null,
               }
             : {
                 dataUrl: await readAsDataUrl(p.file),

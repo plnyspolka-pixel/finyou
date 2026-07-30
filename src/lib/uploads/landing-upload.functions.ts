@@ -7,6 +7,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { sha256Hex } from "@/lib/uploads/file-dedup";
 
 const UploadSchema = z.object({
   dataUrl: z.string().min(20).max(15_000_000), // ~11MB base64
@@ -34,5 +35,9 @@ export const uploadLandingAttachment = createServerFn({ method: "POST" })
       bucket: data.bucket,
       mimeType: data.mimeType || m[1],
       fileName: data.fileName,
+      // Hash treści wraca do formularza i jest odsyłany w submicie — dzięki
+      // temu submitApplicationCore pomija duplikaty bez ponownego pobierania
+      // binarki ze Storage.
+      contentHash: await sha256Hex(bytes),
     };
   });

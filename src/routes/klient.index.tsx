@@ -4,6 +4,7 @@ import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-quer
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadFile, deleteStoragePath } from "@/lib/uploads/unified-upload";
+import { uploadSummaryLabel } from "@/lib/uploads/file-dedup";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { InvestorProposalCalculator } from "@/components/client/InvestorProposalCalculator";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
@@ -203,7 +204,16 @@ function KlientDashboard() {
     setUploading(true);
     const t = toast.loading(`Wysyłam ${files.length} plik(ów)…`);
     try {
+      // Dedup po treści: przy identycznej binarce uploadFile zwraca istniejącą
+      // ścieżkę (deduped) — jeśli plik już jest w wniosku, pomijamy go.
+      const knownPaths = new Set<string>(photoPaths);
+      (documentsList ?? []).forEach((d: any) => {
+        if (d.file_path) knownPaths.add(d.file_path);
+        if (d.file_url) knownPaths.add(d.file_url);
+      });
       const newPhotoPaths: string[] = [];
+      let added = 0;
+      let skippedDuplicates = 0;
       for (const file of Array.from(files)) {
         if (file.size > 20 * 1024 * 1024) {
           toast.error(`${file.name}: za duży (max 20 MB)`);
@@ -213,20 +223,33 @@ function KlientDashboard() {
         try {
           if (isImage) {
             const res = await uploadFile(file, { context: "property", applicationId: loanRow.id });
+            if (res.deduped && knownPaths.has(res.path)) {
+              skippedDuplicates++;
+              continue;
+            }
+            knownPaths.add(res.path);
             newPhotoPaths.push(res.path);
+            added++;
           } else {
             const res = await uploadFile(file, {
               context: "document",
               applicationId: loanRow.id,
               docType: "property_doc",
             });
+            if (res.deduped && knownPaths.has(res.path)) {
+              skippedDuplicates++;
+              continue;
+            }
+            knownPaths.add(res.path);
             await supabase.from("documents").insert({
               loan_application_id: loanRow.id,
               document_type: "property_doc",
               file_name: file.name,
               file_path: res.path,
               uploaded_by: user.id,
+              content_hash: res.contentHash,
             });
+            added++;
           }
         } catch (e: any) {
           toast.error(`${file.name}: ${e?.message ?? "błąd uploadu"}`);
@@ -244,7 +267,8 @@ function KlientDashboard() {
           });
         }
       }
-      toast.success("Wgrano", { id: t });
+      if (skippedDuplicates > 0) toast.info(uploadSummaryLabel(added, skippedDuplicates), { id: t });
+      else toast.success("Wgrano", { id: t });
       void refetchProperty();
       void qc.invalidateQueries({ queryKey: ["client-documents", loanRow.id] });
     } catch (e: any) {

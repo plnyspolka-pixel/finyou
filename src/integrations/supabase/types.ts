@@ -3748,6 +3748,61 @@ export type Database = {
           },
         ]
       }
+      client_file_hashes: {
+        Row: {
+          byte_size: number | null
+          content_hash: string
+          created_at: string
+          file_name: string | null
+          id: string
+          lead_id: string | null
+          loan_application_id: string | null
+          storage_path: string
+        }
+        Insert: {
+          byte_size?: number | null
+          content_hash: string
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          lead_id?: string | null
+          loan_application_id?: string | null
+          storage_path: string
+        }
+        Update: {
+          byte_size?: number | null
+          content_hash?: string
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          lead_id?: string | null
+          loan_application_id?: string | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_file_hashes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_file_hashes_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_file_hashes_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_profiles: {
         Row: {
           borrower_type: string | null
@@ -4270,6 +4325,7 @@ export type Database = {
       }
       documents: {
         Row: {
+          content_hash: string | null
           created_at: string
           document_type: string
           file_name: string
@@ -4285,6 +4341,7 @@ export type Database = {
           visibility_level: Database["public"]["Enums"]["visibility_level"]
         }
         Insert: {
+          content_hash?: string | null
           created_at?: string
           document_type: string
           file_name: string
@@ -4300,6 +4357,7 @@ export type Database = {
           visibility_level?: Database["public"]["Enums"]["visibility_level"]
         }
         Update: {
+          content_hash?: string | null
           created_at?: string
           document_type?: string
           file_name?: string

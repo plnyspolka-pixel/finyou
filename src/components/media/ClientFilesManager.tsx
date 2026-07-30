@@ -6,6 +6,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { FileThumb } from "@/components/media/FileThumb";
 import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 import { uploadFile, deleteStoragePath } from "@/lib/uploads/unified-upload";
+import { uploadSummaryLabel } from "@/lib/uploads/file-dedup";
 import { IMAGE_EXT, signStoragePath } from "@/lib/property-photos";
 import { toDisplayableImageUrl } from "@/lib/heic-preview";
 import { Image as ImageIcon, Upload, Trash2, Loader2, Check } from "lucide-react";
@@ -133,29 +134,47 @@ export function ClientFilesManager({
     if (!list || !list.length || !loanApplicationId) return;
     setUploading(true);
     try {
+      // Dedup po treści: uploadFile przy identycznej binarce zwraca istniejącą
+      // ścieżkę (deduped) — jeśli ta ścieżka już jest widoczna wśród plików
+      // wniosku, pomijamy ją zamiast dublować wpis na liście.
+      const known = new Set<string>();
+      (property?.photos ?? []).forEach((p) => known.add(p));
+      docs.forEach((d) => {
+        if (d.file_path) known.add(d.file_path);
+        if (d.file_url) known.add(d.file_url);
+      });
       const paths: string[] = [];
+      let skipped = 0;
       for (const file of Array.from(list)) {
         const res = await uploadFile(file, {
           context: "property",
           applicationId: loanApplicationId,
         });
+        if (res.deduped && known.has(res.path)) {
+          skipped++;
+          continue;
+        }
+        known.add(res.path);
         paths.push(res.path);
       }
-      if (property?.id) {
-        const { error } = await supabase
-          .from("properties")
-          .update({ photos: [...property.photos, ...paths] } as any)
-          .eq("id", property.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("properties").insert({
-          loan_application_id: loanApplicationId,
-          property_type: "inna",
-          photos: paths,
-        } as any);
-        if (error) throw error;
+      if (paths.length) {
+        if (property?.id) {
+          const { error } = await supabase
+            .from("properties")
+            .update({ photos: [...property.photos, ...paths] } as any)
+            .eq("id", property.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("properties").insert({
+            loan_application_id: loanApplicationId,
+            property_type: "inna",
+            photos: paths,
+          } as any);
+          if (error) throw error;
+        }
       }
-      toast.success(`Dodano ${paths.length} plik(ów)`);
+      if (skipped > 0) toast.info(uploadSummaryLabel(paths.length, skipped));
+      else toast.success(uploadSummaryLabel(paths.length, 0));
       await load();
       onChanged?.();
     } catch (e: any) {

@@ -19,6 +19,7 @@ const PhotoSchema = z
     mimeType: z.string().max(120),
     fileName: z.string().max(200),
     bucket: z.string().max(60), // logiczny typ dokumentu
+    contentHash: z.string().max(64).optional().nullable(), // SHA-256 z uploadLandingAttachment (dedup)
   })
   .refine((v) => !!v.dataUrl || !!v.storagePath, { message: "Wymagany dataUrl lub storagePath" });
 
@@ -197,10 +198,16 @@ async function submitApplicationCore(
     .single();
 
   // Upload plików do bucketu pliki-klienta + rekordy w tabeli documents.
+  // Dedup po treści (SHA-256): ten sam plik dołączony dwa razy w formularzu
+  // dostaje jeden rekord; hashe lądują też w rejestrze client_file_hashes,
+  // więc późniejsze uploady w panelu nie utworzą kolejnej kopii binarki.
+  const { sha256Hex } = await import("@/lib/uploads/file-dedup");
+  const seenHashes = new Set<string>();
   for (const p of data.photos ?? []) {
     try {
       let path: string | null = null;
       let contentType = p.mimeType || "application/octet-stream";
+      let contentHash: string | null = p.contentHash ?? null;
       if (p.storagePath) {
         // Plik został już wgrany osobno (np. przez `uploadLandingAttachment`).
         path = p.storagePath;
@@ -208,6 +215,8 @@ async function submitApplicationCore(
         const m = /^data:([^;]+);base64,(.*)$/.exec(p.dataUrl);
         if (!m) continue;
         const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+        contentHash = (await sha256Hex(bytes)) ?? contentHash;
+        if (contentHash && seenHashes.has(contentHash)) continue; // duplikat — nie wgrywamy binarki
         const safeName = p.fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
         path = `${loan.id}/${p.bucket}/${Date.now()}-${safeName}`;
         contentType = p.mimeType || m[1];
@@ -217,6 +226,10 @@ async function submitApplicationCore(
         if (upErr) continue;
       }
       if (!path) continue;
+      if (contentHash) {
+        if (seenHashes.has(contentHash)) continue; // duplikat w obrębie zgłoszenia
+        seenHashes.add(contentHash);
+      }
       await supabaseAdmin.from("documents").insert({
         loan_application_id: loan.id,
         property_id: property?.id ?? null,
@@ -225,7 +238,17 @@ async function submitApplicationCore(
         file_path: path,
         visibility_level: "pelne",
         status: "received",
+        content_hash: contentHash,
       });
+      if (contentHash) {
+        // Rejestr dedupu — błąd (np. 23505) ignorujemy, wpis jest best-effort.
+        await supabaseAdmin.from("client_file_hashes").insert({
+          loan_application_id: loan.id,
+          content_hash: contentHash,
+          storage_path: path,
+          file_name: p.fileName,
+        });
+      }
     } catch (e) {
       console.error("[landing-application] photo upload failed", e);
     }

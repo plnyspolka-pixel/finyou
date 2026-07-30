@@ -5,6 +5,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { sha256Hex } from "@/lib/uploads/file-dedup";
 
 export const UNIFIED_BUCKET = CLIENT_FILES_BUCKET;
 
@@ -23,6 +24,11 @@ export interface UploadResult {
   mimeType: string;
   size: number;
   fileName: string;
+  /** SHA-256 (hex) treści pliku; null gdy hashowanie się nie powiodło. */
+  contentHash: string | null;
+  /** true = identyczna binarka już istniała w tym wniosku — zwrócono JEJ ścieżkę,
+   *  nic nowego nie wgrano do Storage. */
+  deduped: boolean;
 }
 
 function slugName(name: string): string {
@@ -91,14 +97,60 @@ async function renderPdfFirstPage(file: Blob): Promise<Blob | null> {
   }
 }
 
+/** Zakres deduplikacji: konteksty powiązane z wnioskiem. Awatary/marketing
+ *  nie są plikami klienta i nie podlegają dedupowi. */
+function dedupApplicationId(ctx: UploadContext): string | null {
+  if (ctx.context === "property" || ctx.context === "document") return ctx.applicationId;
+  if (ctx.context === "generated") return ctx.applicationId ?? null;
+  return null;
+}
+
 export async function uploadFile(file: File, ctx: UploadContext): Promise<UploadResult> {
   const path = pathFor(ctx, file.name);
   const mimeType = file.type || "application/octet-stream";
+
+  // Dedup po treści: jeśli identyczna binarka jest już zarejestrowana dla tego
+  // wniosku, zwracamy istniejącą ścieżkę zamiast wgrywać kolejną kopię.
+  const applicationId = dedupApplicationId(ctx);
+  const contentHash = applicationId ? await sha256Hex(file) : null;
+  if (contentHash && applicationId) {
+    const { data: dup } = await supabase
+      .from("client_file_hashes")
+      .select("storage_path")
+      .eq("loan_application_id", applicationId)
+      .eq("content_hash", contentHash)
+      .limit(1)
+      .maybeSingle();
+    if (dup?.storage_path) {
+      return {
+        bucket: UNIFIED_BUCKET,
+        path: dup.storage_path,
+        thumbnailPath: null,
+        mimeType,
+        size: file.size,
+        fileName: file.name,
+        contentHash,
+        deduped: true,
+      };
+    }
+  }
 
   const { error } = await supabase.storage
     .from(UNIFIED_BUCKET)
     .upload(path, file, { upsert: false, contentType: mimeType });
   if (error) throw error;
+
+  if (contentHash && applicationId) {
+    // Rejestracja hasha best-effort — błąd (23505 z wyścigu, RLS) ignorujemy;
+    // supabase-js zwraca go w wyniku zamiast rzucać.
+    await supabase.from("client_file_hashes").insert({
+      loan_application_id: applicationId,
+      content_hash: contentHash,
+      storage_path: path,
+      file_name: file.name,
+      byte_size: file.size,
+    });
+  }
 
   let thumbnailPath: string | null = null;
   if (mimeType === "application/pdf") {
@@ -119,6 +171,8 @@ export async function uploadFile(file: File, ctx: UploadContext): Promise<Upload
     mimeType,
     size: file.size,
     fileName: file.name,
+    contentHash,
+    deduped: false,
   };
 }
 
@@ -156,4 +210,7 @@ export async function deleteStoragePath(path: string): Promise<void> {
       .remove([path, `${path}.thumb.png`])
       .catch(() => {});
   }
+  // Wpis w rejestrze dedupu przestaje być prawdziwy po skasowaniu binarki —
+  // bez tego kolejny upload tego samego pliku wskazywałby nieistniejącą ścieżkę.
+  await supabase.from("client_file_hashes").delete().eq("storage_path", path);
 }
