@@ -8,13 +8,17 @@ import type { SaleabilityForecast, SaleabilityBand } from "./types";
 import { perplexityLocalOffers } from "@/lib/property-analysis/perplexity-offers.server";
 import type { FloorFactorResult } from "./floor-factor";
 import type { PlotBuildabilityResult } from "./plot-buildability";
+import {
+  classifySellability,
+  categoryLabel,
+  REASONABLE_POPULATION,
+  type SellabilityCategoryResult,
+} from "./exit-liquidity";
 
 const LOCAL_OFFERS_RADIUS_KM = 10;
 // Podaż badamy w rosnących promieniach — Karta oferty pokazuje 10/20/30 km.
 const OFFERS_RADII_KM = [10, 20, 30] as const;
 const OFFERS_SOURCE = "Perplexity (portale ogłoszeniowe)";
-// Próg „rozsądnego/sprzedawalnego" rynku dla nieruchomości innych niż grunt rolny.
-const REASONABLE_POPULATION = 20000;
 
 function bandFromScore(score: number): SaleabilityBand {
   if (score >= 80) return "bardzo_latwa";
@@ -170,13 +174,16 @@ export function isReasonableMarket(
   return (localityPopulation ?? 0) >= REASONABLE_POPULATION;
 }
 
-// Scoring 0–100 z sygnałów popytu.
+// Scoring 0–100: GŁÓWNĄ osią jest kategoria zbywalności A–E (typ nieruchomości ×
+// liczba mieszkańców × bliskość dużego miasta) — pozostałe sygnały popytu tylko
+// korygują wynik wokół kotwicy kategorii (maks. ±12 pkt), żeby nie mogły
+// „przegłosować" fundamentu, jakim jest wielkość rynku zbytu.
+const CATEGORY_ADJUSTMENT_CAP = 12;
+
 function computeScore(d: {
   propertyType: string;
-  localityPopulation: number | null;
+  category: SellabilityCategoryResult;
   populationTrend: string;
-  nearestCityDistanceKm: number | null;
-  largeCityWithin50km: boolean;
   waterBodyWithin20km: boolean;
   spaResortWithin20km: boolean;
   sanatoriumWithin20km: boolean;
@@ -185,71 +192,36 @@ function computeScore(d: {
   rentalDemand: string;
   agencyListings: number;
   totalActiveListings: number;
-  liquidType: boolean;
 }): number {
   const agri = isAgriLand(d.propertyType);
 
-  // GRUNT ROLNY: rynek rolny (ceny GUS) jest relatywnie płynny i rządzi się
-  // inną logiką niż mieszkaniowy. Nie stosujemy „miejskich" kar (mała ludność,
-  // oddalenie od miasta, brak ofert biur, „nietypowy typ") — zawyżałyby ryzyko.
-  if (agri) {
-    let sa = 58; // bazowa płynność rynku gruntów rolnych
-    if (d.majorRoadWithin10km) sa += 4; // dojazd/logistyka
-    if (d.waterBodyWithin20km) sa += 2;
-    if (d.largeCityWithin50km) sa += 4; // bliskość rynku zbytu podnosi cenę/płynność
-    if (d.nearestCityDistanceKm != null && d.nearestCityDistanceKm <= 30) sa += 3;
-    if (d.populationTrend === "malejaca") sa -= 2; // słaby wpływ
-    if (d.agencyListings >= 1 || d.totalActiveListings >= 3) sa += 4; // aktywny obrót w okolicy
-    return Math.max(0, Math.min(100, Math.round(sa)));
-  }
-
-  let s = 30; // baza (nieruchomości nierolne)
-  // Zaludnienie miejscowości.
-  const pop = d.localityPopulation ?? 0;
-  if (pop >= 200000) s += 22;
-  else if (pop >= 50000) s += 17;
-  else if (pop >= 20000) s += 12;
-  else if (pop >= 5000) s += 7;
-  else if (pop >= 1000) s += 3;
-  // Próg rozsądnego rynku: >20 tys. = premia, <20 tys. = kara.
-  if (pop >= REASONABLE_POPULATION) s += 6;
-  else if (pop > 0) s -= 14; // miasto poniżej 20 tys. — słaba sprzedawalność
-  // Trend demograficzny.
-  if (d.populationTrend === "rosnaca") s += 6;
-  else if (d.populationTrend === "malejaca") s -= 8;
-  // Położenie względem większego miasta — im bliżej, tym lepsza płynność; duża
-  // odległość od jakiegokolwiek większego ośrodka istotnie obniża sprzedawalność.
-  if (d.largeCityWithin50km) s += 8;
-  if (d.nearestCityDistanceKm != null) {
-    if (d.nearestCityDistanceKm <= 15) s += 10;
-    else if (d.nearestCityDistanceKm <= 30) s += 6;
-    else if (d.nearestCityDistanceKm <= 50) s += 3;
-    else if (d.nearestCityDistanceKm <= 80) s -= 6;
-    else s -= 12; // >80 km od większego miasta — peryferyjna lokalizacja
-  }
+  let adj = 0;
+  // Trend demograficzny — kierunek, w którym rynek zbytu będzie się zmieniał.
+  if (d.populationTrend === "rosnaca") adj += 4;
+  else if (d.populationTrend === "malejaca") adj -= 6;
   // Czynniki turystyczno-rekreacyjne (popyt drugodomowy/sezonowy).
-  if (d.waterBodyWithin20km) s += 5;
-  if (d.spaResortWithin20km) s += 5;
-  if (d.sanatoriumWithin20km) s += 3;
-  if (d.touristAttractionWithin20km) s += 4;
+  if (d.waterBodyWithin20km) adj += 2;
+  if (d.spaResortWithin20km) adj += 3;
+  if (d.sanatoriumWithin20km) adj += 1;
+  if (d.touristAttractionWithin20km) adj += 2;
   // Dostępność komunikacyjna.
-  if (d.majorRoadWithin10km) s += 5;
-  // Popyt na najem (alternatywne wyjście).
-  if (d.rentalDemand === "wysoki") s += 5;
-  else if (d.rentalDemand === "niski") s -= 3;
-  // Aktywne oferty biur w okolicy = płynny, obsługiwany rynek.
-  if (d.agencyListings >= 8) s += 8;
-  else if (d.agencyListings >= 4) s += 5;
-  else if (d.agencyListings >= 1) s += 2;
-  else s -= 5; // brak ofert biur = płytki rynek
-  if (d.totalActiveListings >= 10) s += 2; // aktywna podaż porównywalnych ofert
-  // Typ nieruchomości.
-  if (d.liquidType) s += 4;
-  else s -= 4;
-  return Math.max(0, Math.min(100, Math.round(s)));
-}
+  if (d.majorRoadWithin10km) adj += 2;
+  // Popyt na najem (alternatywne wyjście) — bez znaczenia dla gruntu rolnego.
+  if (!agri) {
+    if (d.rentalDemand === "wysoki") adj += 3;
+    else if (d.rentalDemand === "niski") adj -= 2;
+  }
+  // Aktywne oferty biur w okolicy = płynny, obsługiwany rynek. Dla gruntu
+  // rolnego brak ofert biur nie jest karany (obrót pozaagencyjny).
+  if (d.agencyListings >= 8) adj += 4;
+  else if (d.agencyListings >= 4) adj += 3;
+  else if (d.agencyListings >= 1) adj += 1;
+  else if (!agri) adj -= 4;
+  if (d.totalActiveListings >= 10) adj += 1;
 
-const LIQUID_TYPES = ["mieszkanie", "dom", "dzialka_budowlana", "lokal_uslugowy"];
+  adj = Math.max(-CATEGORY_ADJUSTMENT_CAP, Math.min(CATEGORY_ADJUSTMENT_CAP, adj));
+  return Math.max(0, Math.min(100, Math.round(d.category.baseScore + adj)));
+}
 
 export async function analyzeSaleability(args: {
   propertyType: string;
@@ -261,7 +233,6 @@ export async function analyzeSaleability(args: {
 }): Promise<SaleabilityForecast> {
   const loc =
     [args.address, args.city, args.voivodeship, "Polska"].filter(Boolean).join(", ") || "Polska";
-  const liquidType = LIQUID_TYPES.includes(args.propertyType);
 
   // Aktywne oferty biur w okolicy — równolegle z Perplexity.
   const offersPromise = gatherLocalOffers({
@@ -276,6 +247,7 @@ export async function analyzeSaleability(args: {
     available: false,
     score: 45,
     band: "nieznana",
+    sellabilityCategory: null,
     estimatedDaysOnMarket: null,
     localityPopulation: null,
     populationWithin20Km: null,
@@ -361,16 +333,24 @@ export async function analyzeSaleability(args: {
     const populationWithin20Km = numOrNull(parsed.populationWithin20Km);
     const nearestDistanceKm = numOrNull(nearest.distanceKm);
 
-    const score = computeScore({
+    // GŁÓWNA OŚ SCORINGU: kategoria zbywalności A–E z liczby mieszkańców,
+    // typu nieruchomości i bliskości dużego miasta.
+    const category = classifySellability({
       propertyType: args.propertyType,
       localityPopulation,
-      populationTrend,
+      nearestCityPopulation: numOrNull(nearest.population),
       nearestCityDistanceKm: nearestDistanceKm,
+      largeCityWithin50km: demandDrivers.largeCityWithin50km,
+    });
+
+    const score = computeScore({
+      propertyType: args.propertyType,
+      category,
+      populationTrend,
       ...demandDrivers,
       rentalDemand,
       agencyListings: offers.agencyListings,
       totalActiveListings: offers.totalActiveListings,
-      liquidType,
     });
 
     const band = bandFromScore(score);
@@ -390,6 +370,7 @@ export async function analyzeSaleability(args: {
         : "Miejscowość poniżej 20 tys. mieszkańców — ograniczona sprzedawalność. ";
     const summary =
       `Prognozowana łatwość sprzedaży: ${score}/100 (${band.replace(/_/g, " ")}). ` +
+      `Kategoria zbywalności: ${categoryLabel(category.category)} (${category.label}). ` +
       (localityPopulation
         ? `Miejscowość ~${localityPopulation.toLocaleString("pl-PL")} mieszk. (${populationTrend}). `
         : "") +
@@ -404,6 +385,7 @@ export async function analyzeSaleability(args: {
       available: true,
       score,
       band,
+      sellabilityCategory: category,
       estimatedDaysOnMarket: numOrNull(parsed.estimatedDaysOnMarket),
       localityPopulation,
       populationWithin20Km,

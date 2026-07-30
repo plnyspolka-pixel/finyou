@@ -18,6 +18,7 @@ import {
   MapPinned,
   BookOpenCheck,
   Users,
+  HeartPulse,
   Landmark,
   ShieldAlert,
   Building2,
@@ -195,6 +196,23 @@ function OfferCardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm space-y-1">
+            {r.sellability && (
+              <div className="mb-3 rounded-md border border-primary/40 bg-primary/5 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Kategoria zbywalności
+                </div>
+                <div className="text-lg font-bold text-primary">
+                  {r.sellability.category} · {r.sellability.label}
+                </div>
+                <p className="text-xs text-muted-foreground">{r.sellability.rationale}</p>
+                {r.sellability.score != null && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Prognozowana łatwość sprzedaży: {r.sellability.score}/100
+                    {r.sellability.band ? ` (${r.sellability.band.replace(/_/g, " ")})` : ""}
+                  </p>
+                )}
+              </div>
+            )}
             <Row
               label="Liczba mieszkańców miejscowości"
               value={
@@ -225,6 +243,75 @@ function OfferCardPage() {
                     : ""
                 }`}
               />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Właściciele — wiek i dożycie (analiza PESEL z działu II KW) */}
+      {r && r.owners.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HeartPulse className="h-5 w-5" /> Właściciele — wiek i dożycie
+            </CardTitle>
+            <CardDescription>
+              Analiza PESEL z działu II księgi wieczystej: wiek, płeć i statystyczne dożycie
+              {r.owners.length > 1 ? " każdego ze współwłaścicieli" : " właściciela"}.
+              {r.owners.length > 1
+                ? " Dwoje właścicieli to dwa majątki osobiste, z których można się zaspokoić."
+                : ""}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm">
+            {r.owners.map((o, i) => (
+              <div key={i} className="rounded-md border p-3 space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold">{o.name ?? `Właściciel ${i + 1}`}</span>
+                  {o.isApplicant && (
+                    <Badge variant="outline" className="text-[10px]">
+                      wnioskodawca
+                    </Badge>
+                  )}
+                  {o.longevityBand && o.longevityBand !== "nieznane" && (
+                    <Badge variant="secondary" className="text-[10px]">
+                      ryzyko dożycia: {o.longevityBand.replace(/_/g, " ")}
+                    </Badge>
+                  )}
+                </div>
+                <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
+                  <Row label="Wiek" value={o.age != null ? `${o.age} lat` : "—"} strong />
+                  <Row label="Płeć" value={o.sex ?? "—"} />
+                  <Row
+                    label="Dalsze trwanie życia (GUS)"
+                    value={o.remainingYears != null ? `≈ ${o.remainingYears} lat` : "—"}
+                  />
+                  <Row
+                    label="Przewidywany wiek dożycia"
+                    value={o.projectedAgeAtDeath != null ? `≈ ${o.projectedAgeAtDeath} lat` : "—"}
+                  />
+                </div>
+                {o.survivalByLoanYear.length > 0 && (
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+                      Prawdopodobieństwo dożycia końca pożyczki
+                    </div>
+                    <div className="grid grid-cols-5 gap-1.5 text-center">
+                      {o.survivalByLoanYear.map((s) => (
+                        <div key={s.years} className="rounded-md border p-1.5">
+                          <div className="text-[10px] text-muted-foreground">
+                            {s.years} {s.years === 1 ? "rok" : s.years <= 4 ? "lata" : "lat"}
+                          </div>
+                          <div className="font-semibold">{Math.round(s.probability * 100)}%</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {r.lifeExpectancyDisclaimer && (
+              <p className="text-xs text-muted-foreground">{r.lifeExpectancyDisclaimer}</p>
             )}
           </CardContent>
         </Card>

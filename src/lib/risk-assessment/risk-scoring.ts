@@ -17,15 +17,18 @@ import { gradeFromScore } from "./types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import type { LongevityBand } from "./life-expectancy";
 
-// Wagi komponentów (suma = 1).
+// Wagi komponentów (suma = 1). GŁÓWNYM komponentem jest płynność wyjścia
+// (exitLiquidity) — kategoria zbywalności A–E z liczby mieszkańców i typu
+// nieruchomości (mieszkanie w wielkim mieście = A, dom pod dużym miastem = B…):
+// to, jak szybko da się zabezpieczenie sprzedać, decyduje o ryzyku inwestycji.
 const WEIGHTS: Record<keyof RiskComponentScores, number> = {
-  collateral: 0.24,
-  valuationConfidence: 0.12,
-  legal: 0.22,
-  borrowerLongevity: 0.1,
-  correspondence: 0.09,
+  exitLiquidity: 0.3,
+  legal: 0.2,
+  collateral: 0.18,
+  valuationConfidence: 0.1,
+  borrowerLongevity: 0.09,
+  correspondence: 0.07,
   documentCompleteness: 0.06,
-  exitLiquidity: 0.17,
 };
 
 function longevityToScore(band: LongevityBand): number {
@@ -98,11 +101,20 @@ export interface CombinedResult {
 }
 
 export function combineRiskAssessment(i: CombineInput): CombinedResult {
+  // Dożycie: przy kilku właścicielach z PESEL w KW liczy się NAJKORZYSTNIEJSZE
+  // pasmo — sukcesja zagraża zabezpieczeniu dopiero, gdy dotknie wszystkich
+  // majątków osobistych naraz.
+  const longevityBands = [
+    i.owner.lifeExpectancy.longevityRiskBand,
+    ...i.owner.kwOwnerProfiles.map((p) => p.lifeExpectancy.longevityRiskBand),
+  ];
+  const borrowerLongevity = Math.max(...longevityBands.map(longevityToScore));
+
   const componentScores: RiskComponentScores = {
     collateral: i.collateral?.collateralScore?.total ?? 40,
     valuationConfidence: valuationConfidenceScore(i.collateral, i.master),
     legal: i.kwLegal.available ? i.kwLegal.legalRiskScore : 55,
-    borrowerLongevity: longevityToScore(i.owner.lifeExpectancy.longevityRiskBand),
+    borrowerLongevity,
     correspondence: correspondenceFactsScore(i.correspondence),
     documentCompleteness: documentCompletenessScore(i.ocr),
     exitLiquidity: i.saleability.available ? i.saleability.score : 45,
@@ -120,6 +132,12 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
   if (biz?.isEntrepreneur) {
     const bonus = biz.matchConfidence === "high" ? 8 : biz.matchConfidence === "medium" ? 5 : 3;
     investmentScore = Math.min(100, investmentScore + bonus);
+  }
+
+  // Dwoje (lub więcej) współwłaścicieli z PESEL odczytanym z działu II KW —
+  // dwa majątki osobiste, na których można się zaspokoić: istotny plus.
+  if (i.owner.multipleEstates) {
+    investmentScore = Math.min(100, investmentScore + 5);
   }
 
   // Twarde ograniczenia (hard caps) niezależne od średniej ważonej.
@@ -174,6 +192,9 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     );
   keyRisks.push(...i.correspondence.redFlags.map((r) => `Korespondencja (fakt): ${r}`));
   keyRisks.push(...i.correspondence.inconsistencies.map((r) => `Niespójność: ${r}`));
+  const cat = i.saleability.sellabilityCategory;
+  if (cat && (cat.category === "D" || cat.category === "E"))
+    keyRisks.push(`Kategoria zbywalności ${cat.category} (${cat.label}) — ${cat.rationale}`);
   if (i.saleability.available) {
     if (i.saleability.band === "bardzo_trudna" || i.saleability.band === "trudna")
       keyRisks.push(
@@ -206,10 +227,16 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     keyRisks.push(...i.collateral.collateralScore.mainRisks);
   keyRisks.push(...i.master.keyRisks);
 
+  if (cat && (cat.category === "A" || cat.category === "B"))
+    keyStrengths.push(`Kategoria zbywalności ${cat.category} (${cat.label}) — ${cat.rationale}`);
   if (componentScores.legal >= 80) keyStrengths.push("Czysty stan prawny nieruchomości (KW).");
   if (componentScores.collateral >= 70) keyStrengths.push("Dobra jakość zabezpieczenia.");
   if (i.owner.lifeExpectancy.longevityRiskBand === "niskie")
     keyStrengths.push("Niskie ryzyko dożycia/sukcesji właściciela.");
+  if (i.owner.multipleEstates)
+    keyStrengths.push(
+      `PESEL ${i.owner.kwOwnerProfiles.length === 2 ? "obojga współwłaścicieli" : `${i.owner.kwOwnerProfiles.length} współwłaścicieli`} odczytany z działu II KW — zaspokojenie możliwe z ${i.owner.kwOwnerProfiles.length} majątków osobistych.`,
+    );
   if (i.owner.businessActivity?.isEntrepreneur) {
     const c = i.owner.businessActivity.company;
     keyStrengths.push(
