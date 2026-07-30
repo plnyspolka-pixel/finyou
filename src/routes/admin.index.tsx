@@ -60,6 +60,7 @@ const CHANNEL_META: Record<FollowUpChannel, { label: string; icon: typeof Mail }
   email: { label: "E-mail", icon: Mail },
   sms: { label: "SMS", icon: MessageSquare },
   call: { label: "Telefon", icon: Phone },
+  messenger: { label: "Messenger", icon: MessageSquare },
 };
 
 function AdminDashboard() {

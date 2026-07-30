@@ -37,6 +37,7 @@ import { ClientProfileSections } from "@/components/client/ClientProfileSections
 import { InvestorDescriptionCard } from "@/components/client/InvestorDescriptionCard";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { SinglePageApplicationForm } from "@/components/landing/single-page-application-form";
+import { MissingInfoVoiceAgent } from "@/components/client/missing-info-voice-agent";
 import { evaluateApplicationCore, missingLabels } from "@/lib/application-completeness";
 
 import { toast } from "sonner";
@@ -465,6 +466,7 @@ function KlientDashboard() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {loanRow?.id && <MissingInfoVoiceAgent />}
       {!loanRow?.id && (
         <SinglePageApplicationForm
           prefilledContact={{
