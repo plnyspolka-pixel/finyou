@@ -24,6 +24,7 @@ import { Route as NegocjujRouteImport } from './routes/negocjuj'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
+import { Route as KalkulatorPozyczkiRouteImport } from './routes/kalkulator-pozyczki'
 import { Route as InwestorRouteImport } from './routes/inwestor'
 import { Route as DlaPosrednikaRouteImport } from './routes/dla-posrednika'
 import { Route as DlaKlientaRouteImport } from './routes/dla-klienta'
@@ -62,6 +63,7 @@ import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka
 import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
 import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-leady'
 import { Route as OperatorMessengerRouteImport } from './routes/operator.messenger'
+import { Route as OperatorCzatRouteImport } from './routes/operator.czat'
 import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
 import { Route as OperatorKreatorUdzieleniaRouteImport } from './routes/operator.kreator-udzielenia'
 import { Route as OperatorFakturyRouteImport } from './routes/operator.faktury'
@@ -69,6 +71,7 @@ import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
+import { Route as KartaTokenRouteImport } from './routes/karta.$token'
 import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windykacja'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
@@ -105,12 +108,14 @@ import { Route as AdminOperatorzyRouteImport } from './routes/admin.operatorzy'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminMetaRouteImport } from './routes/admin.meta'
 import { Route as AdminMessengerRouteImport } from './routes/admin.messenger'
+import { Route as AdminCzatRouteImport } from './routes/admin.czat'
 import { Route as AdminMaterialyRouteImport } from './routes/admin.materialy'
 import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
 import { Route as AdminKwRouteImport } from './routes/admin.kw'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
 import { Route as AdminKreatorDokumentowRouteImport } from './routes/admin.kreator-dokumentow'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
+import { Route as AdminKartyOfertRouteImport } from './routes/admin.karty-ofert'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
 import { Route as AdminFollowUpBrakiRouteImport } from './routes/admin.follow-up-braki'
@@ -163,6 +168,7 @@ import { Route as ApiPublicMetaMessengerWebhookRouteImport } from './routes/api/
 import { Route as ApiPublicMetaLeadsWebhookRouteImport } from './routes/api/public/meta-leads-webhook'
 import { Route as ApiPublicMailgunInboundWebhookRouteImport } from './routes/api/public/mailgun-inbound-webhook'
 import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/public/loan-application'
+import { Route as ApiPublicChatWidgetRouteImport } from './routes/api/public/chat-widget'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as ApiPublicElevenlabsSendSmsRouteImport } from './routes/api/public/elevenlabs-send-sms'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
@@ -292,6 +298,11 @@ const LogowanieRoute = LogowanieRouteImport.update({
 const KlientRoute = KlientRouteImport.update({
   id: '/klient',
   path: '/klient',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KalkulatorPozyczkiRoute = KalkulatorPozyczkiRouteImport.update({
+  id: '/kalkulator-pozyczki',
+  path: '/kalkulator-pozyczki',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InwestorRoute = InwestorRouteImport.update({
@@ -479,6 +490,11 @@ const OperatorMojeLeadyRoute = OperatorMojeLeadyRouteImport.update({
   path: '/moje-leady',
   getParentRoute: () => OperatorRoute,
 } as any)
+const OperatorCzatRoute = OperatorCzatRouteImport.update({
+  id: '/czat',
+  path: '/czat',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const OperatorMessengerRoute = OperatorMessengerRouteImport.update({
   id: '/messenger',
   path: '/messenger',
@@ -519,6 +535,11 @@ const KlientPowiadomieniaRoute = KlientPowiadomieniaRouteImport.update({
   id: '/powiadomienia',
   path: '/powiadomienia',
   getParentRoute: () => KlientRoute,
+} as any)
+const KartaTokenRoute = KartaTokenRouteImport.update({
+  id: '/karta/$token',
+  path: '/karta/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const InwestorWindykacjaRoute = InwestorWindykacjaRouteImport.update({
   id: '/windykacja',
@@ -698,6 +719,11 @@ const AdminMetaRoute = AdminMetaRouteImport.update({
   path: '/meta',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCzatRoute = AdminCzatRouteImport.update({
+  id: '/czat',
+  path: '/czat',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMessengerRoute = AdminMessengerRouteImport.update({
   id: '/messenger',
   path: '/messenger',
@@ -731,6 +757,11 @@ const AdminKreatorDokumentowRoute = AdminKreatorDokumentowRouteImport.update({
 const AdminKlienciRoute = AdminKlienciRouteImport.update({
   id: '/klienci',
   path: '/klienci',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminKartyOfertRoute = AdminKartyOfertRouteImport.update({
+  id: '/karty-ofert',
+  path: '/karty-ofert',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminInwestorzyRoute = AdminInwestorzyRouteImport.update({
@@ -998,6 +1029,11 @@ const ApiPublicMailgunInboundWebhookRoute =
     path: '/api/public/mailgun-inbound-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicChatWidgetRoute = ApiPublicChatWidgetRouteImport.update({
+  id: '/api/public/chat-widget',
+  path: '/api/public/chat-widget',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicLoanApplicationRoute =
   ApiPublicLoanApplicationRouteImport.update({
     id: '/api/public/loan-application',
@@ -1327,6 +1363,7 @@ export interface FileRoutesByFullPath {
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
+  '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
@@ -1360,6 +1397,7 @@ export interface FileRoutesByFullPath {
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
+  '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
@@ -1367,6 +1405,7 @@ export interface FileRoutesByFullPath {
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
+  '/admin/czat': typeof AdminCzatRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/operatorzy': typeof AdminOperatorzyRoute
@@ -1402,6 +1441,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
+  '/karta/$token': typeof KartaTokenRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -1410,6 +1450,7 @@ export interface FileRoutesByFullPath {
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
+  '/operator/czat': typeof OperatorCzatRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
@@ -1464,6 +1505,7 @@ export interface FileRoutesByFullPath {
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
@@ -1536,6 +1578,7 @@ export interface FileRoutesByTo {
   '/dla-inwestora': typeof DlaInwestoraRoute
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
+  '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
   '/negocjuj': typeof NegocjujRoute
@@ -1566,6 +1609,7 @@ export interface FileRoutesByTo {
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
+  '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
@@ -1573,6 +1617,7 @@ export interface FileRoutesByTo {
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
+  '/admin/czat': typeof AdminCzatRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/operatorzy': typeof AdminOperatorzyRoute
@@ -1605,6 +1650,7 @@ export interface FileRoutesByTo {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
+  '/karta/$token': typeof KartaTokenRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -1612,6 +1658,7 @@ export interface FileRoutesByTo {
   '/operator/faktury': typeof OperatorFakturyRoute
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/messenger': typeof OperatorMessengerRoute
+  '/operator/czat': typeof OperatorCzatRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
@@ -1665,6 +1712,7 @@ export interface FileRoutesByTo {
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
@@ -1740,6 +1788,7 @@ export interface FileRoutesById {
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
+  '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
@@ -1773,6 +1822,7 @@ export interface FileRoutesById {
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
+  '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
@@ -1780,6 +1830,7 @@ export interface FileRoutesById {
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
+  '/admin/czat': typeof AdminCzatRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/operatorzy': typeof AdminOperatorzyRoute
@@ -1815,6 +1866,7 @@ export interface FileRoutesById {
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
+  '/karta/$token': typeof KartaTokenRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -1823,6 +1875,7 @@ export interface FileRoutesById {
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
+  '/operator/czat': typeof OperatorCzatRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
@@ -1877,6 +1930,7 @@ export interface FileRoutesById {
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
@@ -1953,6 +2007,7 @@ export interface FileRouteTypes {
     | '/dla-klienta'
     | '/dla-posrednika'
     | '/inwestor'
+    | '/kalkulator-pozyczki'
     | '/klient'
     | '/logowanie'
     | '/mcp'
@@ -1986,6 +2041,7 @@ export interface FileRouteTypes {
     | '/admin/follow-up-braki'
     | '/admin/integracje'
     | '/admin/inwestorzy'
+    | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
@@ -1993,6 +2049,7 @@ export interface FileRouteTypes {
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
+    | '/admin/czat'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/operatorzy'
@@ -2028,6 +2085,7 @@ export interface FileRouteTypes {
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
+    | '/karta/$token'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -2036,6 +2094,7 @@ export interface FileRouteTypes {
     | '/operator/kreator-udzielenia'
     | '/operator/leady'
     | '/operator/messenger'
+    | '/operator/czat'
     | '/operator/moje-leady'
     | '/operator/profil'
     | '/operator/skrzynka'
@@ -2090,6 +2149,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/api/public/chat-widget'
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
     | '/api/public/meta-messenger-webhook'
@@ -2162,6 +2222,7 @@ export interface FileRouteTypes {
     | '/dla-inwestora'
     | '/dla-klienta'
     | '/dla-posrednika'
+    | '/kalkulator-pozyczki'
     | '/logowanie'
     | '/mcp'
     | '/negocjuj'
@@ -2192,6 +2253,7 @@ export interface FileRouteTypes {
     | '/admin/follow-up-braki'
     | '/admin/integracje'
     | '/admin/inwestorzy'
+    | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
@@ -2199,6 +2261,7 @@ export interface FileRouteTypes {
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
+    | '/admin/czat'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/operatorzy'
@@ -2231,6 +2294,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
+    | '/karta/$token'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -2238,6 +2302,7 @@ export interface FileRouteTypes {
     | '/operator/faktury'
     | '/operator/kreator-udzielenia'
     | '/operator/messenger'
+    | '/operator/czat'
     | '/operator/moje-leady'
     | '/operator/profil'
     | '/operator/skrzynka'
@@ -2291,6 +2356,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/api/public/chat-widget'
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
     | '/api/public/meta-messenger-webhook'
@@ -2365,6 +2431,7 @@ export interface FileRouteTypes {
     | '/dla-klienta'
     | '/dla-posrednika'
     | '/inwestor'
+    | '/kalkulator-pozyczki'
     | '/klient'
     | '/logowanie'
     | '/mcp'
@@ -2398,6 +2465,7 @@ export interface FileRouteTypes {
     | '/admin/follow-up-braki'
     | '/admin/integracje'
     | '/admin/inwestorzy'
+    | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
@@ -2405,6 +2473,7 @@ export interface FileRouteTypes {
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
+    | '/admin/czat'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/operatorzy'
@@ -2440,6 +2509,7 @@ export interface FileRouteTypes {
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
+    | '/karta/$token'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -2448,6 +2518,7 @@ export interface FileRouteTypes {
     | '/operator/kreator-udzielenia'
     | '/operator/leady'
     | '/operator/messenger'
+    | '/operator/czat'
     | '/operator/moje-leady'
     | '/operator/profil'
     | '/operator/skrzynka'
@@ -2502,6 +2573,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/api/public/chat-widget'
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
     | '/api/public/meta-messenger-webhook'
@@ -2577,6 +2649,7 @@ export interface RootRouteChildren {
   DlaKlientaRoute: typeof DlaKlientaRoute
   DlaPosrednikaRoute: typeof DlaPosrednikaRoute
   InwestorRoute: typeof InwestorRouteWithChildren
+  KalkulatorPozyczkiRoute: typeof KalkulatorPozyczkiRoute
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
   McpRoute: typeof McpRoute
@@ -2601,6 +2674,7 @@ export interface RootRouteChildren {
   EmbedLeadyRoute: typeof EmbedLeadyRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   FakturaIdRoute: typeof FakturaIdRoute
+  KartaTokenRoute: typeof KartaTokenRoute
   LSlugRoute: typeof LSlugRoute
   PosrednicyRejestracjaRoute: typeof PosrednicyRejestracjaRoute
   PropozycjeIdRoute: typeof PropozycjeIdRoute
@@ -2614,6 +2688,7 @@ export interface RootRouteChildren {
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
+  ApiPublicChatWidgetRoute: typeof ApiPublicChatWidgetRoute
   ApiPublicMailgunInboundWebhookRoute: typeof ApiPublicMailgunInboundWebhookRoute
   ApiPublicMetaLeadsWebhookRoute: typeof ApiPublicMetaLeadsWebhookRoute
   ApiPublicMetaMessengerWebhookRoute: typeof ApiPublicMetaMessengerWebhookRoute
@@ -2758,6 +2833,13 @@ declare module '@tanstack/react-router' {
       path: '/klient'
       fullPath: '/klient'
       preLoaderRoute: typeof KlientRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kalkulator-pozyczki': {
+      id: '/kalkulator-pozyczki'
+      path: '/kalkulator-pozyczki'
+      fullPath: '/kalkulator-pozyczki'
+      preLoaderRoute: typeof KalkulatorPozyczkiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inwestor': {
@@ -3019,6 +3101,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorMojeLeadyRouteImport
       parentRoute: typeof OperatorRoute
     }
+    '/operator/czat': {
+      id: '/operator/czat'
+      path: '/czat'
+      fullPath: '/operator/czat'
+      preLoaderRoute: typeof OperatorCzatRouteImport
+      parentRoute: typeof OperatorRoute
+    }
     '/operator/messenger': {
       id: '/operator/messenger'
       path: '/messenger'
@@ -3074,6 +3163,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/klient/powiadomienia'
       preLoaderRoute: typeof KlientPowiadomieniaRouteImport
       parentRoute: typeof KlientRoute
+    }
+    '/karta/$token': {
+      id: '/karta/$token'
+      path: '/karta/$token'
+      fullPath: '/karta/$token'
+      preLoaderRoute: typeof KartaTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/inwestor/windykacja': {
       id: '/inwestor/windykacja'
@@ -3320,6 +3416,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMetaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/czat': {
+      id: '/admin/czat'
+      path: '/czat'
+      fullPath: '/admin/czat'
+      preLoaderRoute: typeof AdminCzatRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/messenger': {
       id: '/admin/messenger'
       path: '/messenger'
@@ -3367,6 +3470,13 @@ declare module '@tanstack/react-router' {
       path: '/klienci'
       fullPath: '/admin/klienci'
       preLoaderRoute: typeof AdminKlienciRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/karty-ofert': {
+      id: '/admin/karty-ofert'
+      path: '/karty-ofert'
+      fullPath: '/admin/karty-ofert'
+      preLoaderRoute: typeof AdminKartyOfertRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/inwestorzy': {
@@ -3724,6 +3834,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/mailgun-inbound-webhook'
       fullPath: '/api/public/mailgun-inbound-webhook'
       preLoaderRoute: typeof ApiPublicMailgunInboundWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/chat-widget': {
+      id: '/api/public/chat-widget'
+      path: '/api/public/chat-widget'
+      fullPath: '/api/public/chat-widget'
+      preLoaderRoute: typeof ApiPublicChatWidgetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/loan-application': {
@@ -4162,6 +4279,7 @@ interface AdminRouteChildren {
   AdminFollowUpBrakiRoute: typeof AdminFollowUpBrakiRoute
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
+  AdminKartyOfertRoute: typeof AdminKartyOfertRoute
   AdminKlienciRoute: typeof AdminKlienciRouteWithChildren
   AdminKreatorDokumentowRoute: typeof AdminKreatorDokumentowRoute
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
@@ -4169,6 +4287,7 @@ interface AdminRouteChildren {
   AdminMailingRoute: typeof AdminMailingRoute
   AdminMaterialyRoute: typeof AdminMaterialyRoute
   AdminMessengerRoute: typeof AdminMessengerRoute
+  AdminCzatRoute: typeof AdminCzatRoute
   AdminMetaRoute: typeof AdminMetaRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
   AdminOperatorzyRoute: typeof AdminOperatorzyRoute
@@ -4226,6 +4345,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminFollowUpBrakiRoute: AdminFollowUpBrakiRoute,
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
+  AdminKartyOfertRoute: AdminKartyOfertRoute,
   AdminKlienciRoute: AdminKlienciRouteWithChildren,
   AdminKreatorDokumentowRoute: AdminKreatorDokumentowRoute,
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
@@ -4233,6 +4353,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMailingRoute: AdminMailingRoute,
   AdminMaterialyRoute: AdminMaterialyRoute,
   AdminMessengerRoute: AdminMessengerRoute,
+  AdminCzatRoute: AdminCzatRoute,
   AdminMetaRoute: AdminMetaRoute,
   AdminOfertyRoute: AdminOfertyRoute,
   AdminOperatorzyRoute: AdminOperatorzyRoute,
@@ -4422,6 +4543,7 @@ interface OperatorRouteChildren {
   OperatorKreatorUdzieleniaRoute: typeof OperatorKreatorUdzieleniaRoute
   OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
   OperatorMessengerRoute: typeof OperatorMessengerRoute
+  OperatorCzatRoute: typeof OperatorCzatRoute
   OperatorMojeLeadyRoute: typeof OperatorMojeLeadyRoute
   OperatorProfilRoute: typeof OperatorProfilRoute
   OperatorSkrzynkaRoute: typeof OperatorSkrzynkaRoute
@@ -4436,6 +4558,7 @@ const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorKreatorUdzieleniaRoute: OperatorKreatorUdzieleniaRoute,
   OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
   OperatorMessengerRoute: OperatorMessengerRoute,
+  OperatorCzatRoute: OperatorCzatRoute,
   OperatorMojeLeadyRoute: OperatorMojeLeadyRoute,
   OperatorProfilRoute: OperatorProfilRoute,
   OperatorSkrzynkaRoute: OperatorSkrzynkaRoute,
@@ -4514,6 +4637,7 @@ const rootRouteChildren: RootRouteChildren = {
   DlaKlientaRoute: DlaKlientaRoute,
   DlaPosrednikaRoute: DlaPosrednikaRoute,
   InwestorRoute: InwestorRouteWithChildren,
+  KalkulatorPozyczkiRoute: KalkulatorPozyczkiRoute,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
   McpRoute: McpRoute,
@@ -4539,6 +4663,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmbedLeadyRoute: EmbedLeadyRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   FakturaIdRoute: FakturaIdRoute,
+  KartaTokenRoute: KartaTokenRoute,
   LSlugRoute: LSlugRoute,
   PosrednicyRejestracjaRoute: PosrednicyRejestracjaRoute,
   PropozycjeIdRoute: PropozycjeIdRoute,
@@ -4552,6 +4677,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
+  ApiPublicChatWidgetRoute: ApiPublicChatWidgetRoute,
   ApiPublicMailgunInboundWebhookRoute: ApiPublicMailgunInboundWebhookRoute,
   ApiPublicMetaLeadsWebhookRoute: ApiPublicMetaLeadsWebhookRoute,
   ApiPublicMetaMessengerWebhookRoute: ApiPublicMetaMessengerWebhookRoute,

@@ -327,8 +327,8 @@ describe("Scenariusz 16 — hipoteka tylko na udziale", () => {
   });
 });
 
-describe("Scenariusz 17 — kilku współwłaścicieli obejmujących całość", () => {
-  it("WARUNKOWO_DOPUSZCZALNE gdy wszyscy dają zabezpieczenie", () => {
+describe("Scenariusz 17 — kilku współwłaścicieli", () => {
+  it("KORZYSTNE — możliwość przystąpienia wszystkich do pożyczki", () => {
     const ext = baseExtraction({
       dzial2: {
         wlasciciele: [
@@ -346,10 +346,10 @@ describe("Scenariusz 17 — kilku współwłaścicieli obejmujących całość",
       }),
       sections(ext),
     );
-    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("WARUNKOWO_DOPUSZCZALNE");
+    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("KORZYSTNE");
   });
 
-  it("STOP gdy nie wszyscy współwłaściciele obejmują całość", () => {
+  it("KORZYSTNE także gdy nie wszyscy współwłaściciele są zadeklarowani", () => {
     const ext = baseExtraction({
       dzial2: {
         wlasciciele: [
@@ -364,7 +364,8 @@ describe("Scenariusz 17 — kilku współwłaścicieli obejmujących całość",
       }),
       sections(ext),
     );
-    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("STOP");
+    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("KORZYSTNE");
+    expect(statusesOf(res.findings, "R-COOWNERS")).not.toContain("STOP");
   });
 });
 
@@ -398,7 +399,7 @@ describe("Scenariusz 19/20 — rozbieżność nazwisko/PESEL", () => {
 });
 
 describe("Scenariusz 21 — pożyczkobiorca inny niż właściciel", () => {
-  it("WARUNKOWO_DOPUSZCZALNE gdy właściciel daje zabezpieczenie", () => {
+  it("brak znaleziska — pożyczkobiorca spoza Działu II nie jest oceniany", () => {
     const res = runKwAnalysis(
       baseInput({
         borrower: party("BORROWER", { firstName: "MAREK", lastName: "WISNIEWSKI", pesel: PESEL_B }),
@@ -408,8 +409,43 @@ describe("Scenariusz 21 — pożyczkobiorca inny niż właściciel", () => {
       }),
       sections(baseExtraction()),
     );
-    const f = res.findings.find((x) => x.title.includes("Pożyczkobiorca nie jest właścicielem"));
-    expect(f?.status).toBe("WARUNKOWO_DOPUSZCZALNE");
+    expect(res.findings.some((f) => f.title.includes("Pożyczkobiorca nie jest właścicielem"))).toBe(
+      false,
+    );
+  });
+});
+
+describe("R-CLTV — dane o zadłużeniu tylko przy obciążonym Dziale IV", () => {
+  it("czysty Dział IV + brak wartości ⇒ prosimy tylko o wycenę, bez danych o zadłużeniu", () => {
+    const res = runKwAnalysis(
+      baseInput({ acceptedPropertyValue: null }),
+      sections(baseExtraction()),
+    );
+    const f = res.findings.find((x) => x.ruleId === "R-CLTV");
+    expect(f?.status).toBe("WSTRZYMANE");
+    expect(f?.requestedDocuments.map((d) => d.code)).toEqual(["VALUATION"]);
+    expect(f?.clientMessage).not.toContain("zadłużeniu");
+  });
+
+  it("hipoteka w Dziale IV + brak danych ⇒ prosimy o wycenę i saldo", () => {
+    const ext = baseExtraction({
+      dzial4: {
+        brakWpisu: false,
+        hipoteki: [
+          {
+            rodzaj: "HIPOTEKA UMOWNA",
+            sumaKwota: 250_000,
+            walutaSumy: "ZŁ",
+            wierzyciel: "BANK TESTOWY S.A.",
+            tresc: "Hipoteka umowna na rzecz banku.",
+          },
+        ],
+      },
+    });
+    const res = runKwAnalysis(baseInput({ acceptedPropertyValue: null }), sections(ext));
+    const f = res.findings.find((x) => x.ruleId === "R-CLTV");
+    expect(f?.status).toBe("WSTRZYMANE");
+    expect(f?.requestedDocuments.map((d) => d.code)).toContain("SENIOR_CERT");
   });
 });
 
@@ -511,8 +547,7 @@ describe("Układ tabelaryczny EKW — pusty dział IV z komentarzem migracji", (
       "(numer udziału w prawie/ wielkość udziału/rodzaj wspólności) Lp. 1. 3 1 /1 " +
       "WSPÓLNOŚĆ USTAWOWA MAJĄTKOWA MAŁŻEŃSKA 26 Osoba fizyczna " +
       `(Imię pierwsze nazwisko, imię ojca, imię matki, PESEL) MARIIA PETRENKO , OLEKSANDR, OKSANA, ${PESEL_F} Powrót`,
-    dzial_3:
-      header("DZIAŁ III - PRAWA, ROSZCZENIA I OGRANICZENIA") + " BRAK WPISÓW Powrót",
+    dzial_3: header("DZIAŁ III - PRAWA, ROSZCZENIA I OGRANICZENIA") + " BRAK WPISÓW Powrót",
     dzial_4:
       header("DZIAŁ IV - HIPOTEKA") +
       " Komentarz do migracji Nr podstawy wpisu Ostatni numer aktualnego lub wykreślonego " +
@@ -521,10 +556,7 @@ describe("Układ tabelaryczny EKW — pusty dział IV z komentarzem migracji", (
   };
 
   it("nie wykrywa hipoteki z nagłówka działu IV (komentarz migracyjny ≠ wpis)", () => {
-    const res = runKwAnalysis(
-      baseInput({ kwNumber: "LD1M/00012345/9" }),
-      ekwSections,
-    );
+    const res = runKwAnalysis(baseInput({ kwNumber: "LD1M/00012345/9" }), ekwSections);
     expect(res.computedFrom.mortgagesCount).toBe(0);
     expect(res.priority.expectedInvestorRank).toBe(1);
     expect(statusesOf(res.findings, "R-SECOND-RANK-CERT")).toHaveLength(0);
@@ -557,10 +589,10 @@ describe("Układ tabelaryczny EKW — pusty dział IV z komentarzem migracji", (
     );
     expect(res.computedFrom.ownersCount).toBe(2);
     // Pożyczkobiorczyni jest właścicielką (PESEL zgodny) — brak alertu tożsamości.
-    expect(
-      res.findings.some((f) => f.title.includes("Pożyczkobiorca nie jest właścicielem")),
-    ).toBe(false);
-    // Oboje małżonkowie zadeklarowani — współwłasność warunkowo dopuszczalna, nie STOP.
-    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("WARUNKOWO_DOPUSZCZALNE");
+    expect(res.findings.some((f) => f.title.includes("Pożyczkobiorca nie jest właścicielem"))).toBe(
+      false,
+    );
+    // Współwłasność małżeńska — atut (możliwe przystąpienie obojga do pożyczki).
+    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("KORZYSTNE");
   });
 });

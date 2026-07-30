@@ -30,6 +30,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { leadSourceLabel } from "@/lib/lead-source";
 
 import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
+import { OfferDistributionPanel } from "@/components/admin/offer-distribution-panel";
+import { OfferCardSection } from "@/components/admin/offer-card-section";
 import { CoOwnersSection } from "@/components/coowners/coowners-section";
 import { KwContentSection } from "@/components/kw-content-section";
 import { KwAnalysisSection } from "@/components/kw-analysis/kw-analysis-section";
@@ -77,7 +79,9 @@ function WniosekDetail() {
   const [tabValue, setTabValue] = useState<string>(() => {
     if (typeof window === "undefined") return "dane";
     try {
-      return sessionStorage.getItem(`wniosek-tab:${id}`) || "dane";
+      const stored = sessionStorage.getItem(`wniosek-tab:${id}`) || "dane";
+      // Zakładka „Selekcja" została usunięta — decyzja jest teraz w „Dystrybucji".
+      return stored === "selekcja" ? "dystrybucja" : stored;
     } catch {
       return "dane";
     }
@@ -295,8 +299,8 @@ function WniosekDetail() {
           <TabsTrigger value="kontakt">
             Historia kontaktu ({contacts.length + comms.length})
           </TabsTrigger>
-          <TabsTrigger value="selekcja">Selekcja</TabsTrigger>
           <TabsTrigger value="dystrybucja">Dystrybucja ({distributions.length})</TabsTrigger>
+          <TabsTrigger value="karta-oferty">Karta oferty</TabsTrigger>
           <TabsTrigger value="oferty">Oferty ({offers.length})</TabsTrigger>
           <TabsTrigger value="automatyzacje">Automatyzacje ({automations.length})</TabsTrigger>
           <TabsTrigger value="historia">Historia zmian ({audit.length})</TabsTrigger>
@@ -702,15 +706,12 @@ function WniosekDetail() {
           </div>
         </TabsContent>
 
-        <TabsContent value="selekcja">
+        <TabsContent value="dystrybucja" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Decyzja administratora</CardTitle>
+              <CardTitle>Kwalifikacja wniosku</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="text-xs text-muted-foreground">
-                Moduł AI selekcji: <Badge variant="outline">Wyłączony (placeholder)</Badge>
-              </div>
               <Label>Uzasadnienie (opcjonalne)</Label>
               <Textarea
                 value={reason}
@@ -742,26 +743,11 @@ function WniosekDetail() {
               )}
             </CardContent>
           </Card>
+          <OfferDistributionPanel applicationId={id} />
         </TabsContent>
 
-        <TabsContent value="dystrybucja">
-          {distributions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Wniosek nie został jeszcze rozesłany.</p>
-          ) : (
-            <div className="space-y-2">
-              {distributions.map((d) => (
-                <Card key={d.id}>
-                  <CardContent className="py-3 text-sm flex items-center justify-between">
-                    <div>
-                      {d.investor?.company_name ??
-                        `${d.investor?.first_name ?? ""} ${d.investor?.last_name ?? ""}`.trim()}
-                    </div>
-                    <Badge variant="secondary">{d.distribution_status}</Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+        <TabsContent value="karta-oferty" className="space-y-4">
+          <OfferCardSection applicationId={id} />
         </TabsContent>
 
         <TabsContent value="oferty">

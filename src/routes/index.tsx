@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
 import { LandingWizardForm } from "@/components/landing/landing-wizard-form";
+import { ChatWidget } from "@/components/landing/chat-widget";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
   Section,
@@ -13,6 +14,7 @@ import {
   type RoleCardProps,
 } from "@/components/marketing/sections";
 import { BrandIcon } from "@/components/marketing/brand-icon";
+import { MktButton } from "@/components/marketing/primitives";
 import type { Icon3DName } from "@/components/marketing/icon-3d";
 
 export const PHONE_DISPLAY = "+48 732 059 898";
@@ -189,15 +191,33 @@ function Hero() {
               alignItems: "center",
             }}
           >
-            <a href="/dla-klienta" className="fy-imgbtn" style={{ lineHeight: 0 }}>
-              <img src="/marketing/buttons/pozyczam.png" alt="Pożyczam" />
-            </a>
-            <a href="/dla-inwestora" className="fy-imgbtn" style={{ lineHeight: 0 }}>
-              <img src="/marketing/buttons/inwestuje.png" alt="Inwestuję" />
-            </a>
-            <a href="/dla-posrednika" className="fy-imgbtn" style={{ lineHeight: 0 }}>
-              <img src="/marketing/buttons/posrednicze.png" alt="Pośredniczę" />
-            </a>
+            <MktButton variant="cta" size="lg" href="/dla-klienta">
+              Pożyczam
+            </MktButton>
+            <MktButton
+              variant="outline"
+              size="lg"
+              href="/dla-inwestora"
+              style={{
+                background: "rgba(255,255,255,.08)",
+                borderColor: "rgba(255,255,255,.3)",
+                color: "#fff",
+              }}
+            >
+              Inwestuję
+            </MktButton>
+            <MktButton
+              variant="outline"
+              size="lg"
+              href="/dla-posrednika"
+              style={{
+                background: "rgba(255,255,255,.08)",
+                borderColor: "rgba(255,255,255,.3)",
+                color: "#fff",
+              }}
+            >
+              Pośredniczę
+            </MktButton>
           </div>
           <div
             style={{
@@ -312,6 +332,9 @@ function Landing() {
           { label: "Pośredniczę", href: "/dla-posrednika" },
         ]}
       />
+
+      {/* Czat z asystentem — kanał komunikacji przychodzącej "chat" */}
+      <ChatWidget source="landing" />
     </MarketingShell>
   );
 }

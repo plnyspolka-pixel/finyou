@@ -12,6 +12,7 @@ import { sendResendEmail } from "@/lib/resend-send.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { shouldSkipAutoReply, normalizeHeaders } from "@/lib/email-guard.server";
+import { routeInboundOfferReply } from "@/lib/offer-replies.server";
 
 // Svix signature: header `svix-signature` = "v1,<base64sig> v1,<base64sig> ..."
 // signed payload: `${svix-id}.${svix-timestamp}.${body}` with HMAC-SHA256 key = base64-decoded secret after `whsec_`.
@@ -143,6 +144,49 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
 
         if (!fromEmail) return new Response("no sender", { status: 200 });
 
+        // ODPOWIEDŹ INWESTORA NA DYSTRYBUCJĘ OFERTY: mail na alias
+        // oferta+<distribution_id>@... (lub wątek naszego maila wychodzącego)
+        // trafia na kartę wniosku — bez ścieżki leadowej i auto-odpowiedzi AI.
+        {
+          const recipientsRaw = [data.to, data.To, data.cc, data.Cc, data.delivered_to]
+            .flatMap((v: any) => (Array.isArray(v) ? v : v ? [v] : []))
+            .map((v: any) => (typeof v === "string" ? v : (v?.email ?? "")))
+            .filter(Boolean);
+          let attachmentUrls: Array<{ name: string; mime?: string | null; url: string }> = [];
+          if (emailId && LOVABLE_API_KEY && RESEND_API_KEY) {
+            try {
+              const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}/attachments`, {
+                headers: resendHeaders,
+              });
+              if (r.ok) {
+                const list = await r.json();
+                attachmentUrls = (Array.isArray(list?.data) ? list.data : [])
+                  .filter((a: any) => a?.download_url)
+                  .map((a: any) => ({
+                    name: a?.filename ?? `plik-${a?.id ?? Date.now()}`,
+                    mime: a?.content_type ?? null,
+                    url: a.download_url,
+                  }));
+              }
+            } catch {
+              /* załączniki best-effort */
+            }
+          }
+          const handled = await routeInboundOfferReply({
+            recipients: recipientsRaw,
+            fromEmail,
+            fromName: name,
+            subject,
+            text,
+            html,
+            messageId: messageId || null,
+            inReplyTo,
+            references,
+            attachments: attachmentUrls,
+          });
+          if (handled) return new Response("ok offer-reply", { status: 200 });
+        }
+
         let leadId = await findLeadId({ email: fromEmail });
         if (!leadId) {
           const parts = (name ?? "").trim().split(/\s+/);
@@ -241,6 +285,8 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
           fromEmail,
           headers: inboundHeaders,
           threadIds: [messageId, inReplyTo, references].filter(Boolean) as string[],
+          subject,
+          bodyText: finalText,
         });
         if (skip.skip) {
           console.warn(`[resend-inbound] skip auto-reply: ${skip.reason} (${fromEmail})`);

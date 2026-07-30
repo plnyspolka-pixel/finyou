@@ -46,6 +46,7 @@ const channelLabel: Record<string, string> = {
   email: "E-mail",
   messenger: "Messenger",
   whatsapp: "WhatsApp",
+  chat: "Czat WWW",
   manual_note: "Notatka",
 };
 
@@ -55,6 +56,7 @@ const channelIcon: Record<string, any> = {
   email: Mail,
   messenger: MessageCircle,
   whatsapp: MessageCircle,
+  chat: MessageCircle,
   manual_note: StickyNote,
 };
 
@@ -149,7 +151,7 @@ export function LeadDetailView({
 
         <TabsContent value="komunikacja" className="space-y-3">
           <Card className="p-3 flex flex-wrap gap-2">
-            {["all", "voicebot_call", "sms", "email", "messenger", "manual_note"].map((f) => (
+            {["all", "voicebot_call", "sms", "email", "messenger", "chat", "manual_note"].map((f) => (
               <Button
                 key={f}
                 size="sm"

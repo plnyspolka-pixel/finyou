@@ -27,6 +27,7 @@ const groups: NavGroup[] = [
       { to: "/operator/faktury", label: "Wystaw fakturę", icon: Receipt },
       { to: "/operator/skrzynka", label: "Skrzynka mailowa", icon: Mail },
       { to: "/operator/messenger", label: "Messenger", icon: MessageCircle },
+      { to: "/operator/czat", label: "Czat na stronie", icon: MessageCircle },
       { to: "/operator/profil", label: "Mój profil", icon: UserCircle },
     ],
   },

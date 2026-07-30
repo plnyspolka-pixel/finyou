@@ -12,6 +12,7 @@ import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-a
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { shouldSkipAutoReply } from "@/lib/email-guard.server";
+import { routeInboundOfferReply } from "@/lib/offer-replies.server";
 
 function verifyMailgun(timestamp: string, token: string, signature: string): boolean {
   const key = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
@@ -57,6 +58,42 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
         const references = String(form.get("References") ?? "") || null;
 
         if (!fromEmail) return new Response("no sender", { status: 200 });
+
+        // ODPOWIEDŹ INWESTORA NA DYSTRYBUCJĘ OFERTY: alias oferta+<uuid>@ lub
+        // wątek naszego maila — trafia na kartę wniosku, bez ścieżki leadowej.
+        {
+          const recipientsRaw = [
+            String(form.get("recipient") ?? ""),
+            String(form.get("To") ?? form.get("to") ?? ""),
+            String(form.get("Cc") ?? form.get("cc") ?? ""),
+          ].filter(Boolean);
+          const replyAttachments: Array<{ name: string; mime?: string | null; buffer: Uint8Array }> =
+            [];
+          const attCount = parseInt(String(form.get("attachment-count") ?? "0"), 10);
+          for (let i = 1; i <= attCount; i++) {
+            const file = form.get(`attachment-${i}`);
+            if (file && typeof (file as any).arrayBuffer === "function") {
+              const f = file as File;
+              replyAttachments.push({
+                name: f.name,
+                mime: f.type || null,
+                buffer: new Uint8Array(await f.arrayBuffer()),
+              });
+            }
+          }
+          const handled = await routeInboundOfferReply({
+            recipients: recipientsRaw,
+            fromEmail,
+            fromName: name,
+            subject,
+            text,
+            messageId: messageId || null,
+            inReplyTo,
+            references,
+            attachments: replyAttachments,
+          });
+          if (handled) return new Response("ok offer-reply", { status: 200 });
+        }
 
         // Match leada po emailu, w razie czego utwórz
         let leadId = await findLeadId({ email: fromEmail });
@@ -166,6 +203,8 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
           fromEmail,
           headers: mgHeaders,
           threadIds: [messageId, inReplyTo, references].filter(Boolean) as string[],
+          subject,
+          bodyText: text,
         });
         if (skip.skip) {
           console.warn(`[mailgun-inbound] skip auto-reply: ${skip.reason} (${fromEmail})`);

@@ -34,10 +34,7 @@ function UstawieniaPage() {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-1">
           <div>
-            Moduł AI selekcji: <b className="text-foreground">Wyłączony</b> (placeholder)
-          </div>
-          <div>
-            Auto-wysyłka do inwestorów: <b className="text-foreground">Manualna</b>
+            Dystrybucja do inwestorów: <b className="text-foreground">E-mail (Karta oferty)</b>
           </div>
           <div>Integracje: zarządzaj w sekcji „Integracje”.</div>
         </CardContent>

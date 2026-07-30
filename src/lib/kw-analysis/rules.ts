@@ -10,7 +10,7 @@
 // Trzymaj logikę i treść komunikatów tutaj, nie w komponentach UI.
 
 import { DOCS, mkFinding, NEUTRAL_MESSAGE } from "./finding";
-import { matchPartyToOwners, type IdentityMatch } from "./identity";
+import type { IdentityMatch } from "./identity";
 import type { RiskPolicy } from "./policy";
 import type {
   KwAnalysisInput,
@@ -208,44 +208,38 @@ const ruleShareOnly: Rule = {
 const ruleCoOwners: Rule = {
   id: "R-COOWNERS",
   version: V,
-  run({ nlr, input }) {
+  run({ nlr }) {
     if (nlr.owners.length <= 1) return [];
-    // Czy wszyscy właściciele są zadeklarowani jako dający zabezpieczenie?
-    const providers = input.declaredCollateralProviders;
-    const allCovered = nlr.owners.every((o) =>
-      providers.some((p) => matchPartyToOwners(p, [o]).kind !== "NO_MATCH"),
-    );
+    // 2+ współwłaścicieli traktujemy jako atut: wszyscy mogą przystąpić do
+    // pożyczki, co daje dodatkową odpowiedzialność osobistą obok hipoteki.
     return [
       mkFinding({
         ruleId: "R-COOWNERS",
         ruleVersion: V,
         category: "OWNERSHIP",
-        status: allCovered ? "WARUNKOWO_DOPUSZCZALNE" : "STOP",
+        status: "KORZYSTNE",
         title: `Nieruchomość ma ${nlr.owners.length} współwłaścicieli`,
-        plainLanguageSummary: allCovered
-          ? "Wszyscy współwłaściciele są zadeklarowani jako ustanawiający hipotekę na całości — dopuszczalne warunkowo."
-          : "Nie wszyscy współwłaściciele ustanawiają hipotekę na całej nieruchomości.",
+        plainLanguageSummary:
+          "Kilku współwłaścicieli to plus — mogą wspólnie przystąpić do pożyczki, co daje podwójne zabezpieczenie na ich majątkach osobistych.",
         source: nlr.owners.flatMap((o) => o.evidence),
         whyItMatters:
-          "Zabezpieczenie musi objąć całą nieruchomość — wymagana zgoda i hipoteka wszystkich współwłaścicieli.",
-        rankImpact: "DIRECT",
-        enforcementImpact: "POSSIBLE",
+          "Przystąpienie wszystkich współwłaścicieli do pożyczki oznacza odpowiedzialność osobistą każdego z nich — dodatkowe zabezpieczenie obok hipoteki na nieruchomości.",
+        rankImpact: "NONE",
+        enforcementImpact: "NONE",
         expectedFromClient:
-          "Zgoda i ustanowienie hipoteki przez wszystkich współwłaścicieli na całości.",
+          "Przystąpienie współwłaścicieli do pożyczki; hipotekę na całej nieruchomości ustanawiają wszyscy.",
         requestedDocuments: [DOCS.ID_DOC],
-        proposedResolution: allCovered
-          ? "Potwierdź, że wszyscy współwłaściciele podpiszą oświadczenie o ustanowieniu hipoteki na całej nieruchomości."
-          : "Uzupełnij listę dających zabezpieczenie o wszystkich współwłaścicieli albo zmień zabezpieczenie.",
+        proposedResolution:
+          "Zaproponuj przystąpienie wszystkich współwłaścicieli do pożyczki jako współpożyczkobiorców; hipotekę na całości podpisują wszyscy.",
         agreementCondition:
           "Hipoteka na całej nieruchomości ustanowiona przez wszystkich współwłaścicieli.",
-        intermediaryMessage: allCovered
-          ? "Jest kilku właścicieli — wszyscy muszą podpisać hipotekę na całości. Zaplanuj podpisy wszystkich."
-          : "Nie wszyscy współwłaściciele obejmują hipoteką całość. Ustal, kto jeszcze musi przystąpić.",
+        intermediaryMessage:
+          "Nieruchomość ma kilku właścicieli — to atut. Zaproponuj, aby wszyscy przystąpili do pożyczki; hipotekę na całości i tak podpisują wszyscy.",
         clientMessage:
-          "Nieruchomość ma kilku właścicieli — hipotekę na całej nieruchomości muszą ustanowić wszyscy z nich.",
-        investorMessage: allCovered
-          ? "Wielu współwłaścicieli — dopuszczalne warunkowo, gdy wszyscy obciążą całość."
-          : "Nie wszyscy współwłaściciele obciążają całość — STOP do uzupełnienia.",
+          "Nieruchomość ma kilku właścicieli. Wspólne przystąpienie do pożyczki wzmacnia wniosek — hipotekę na całej nieruchomości ustanawiają wszyscy właściciele.",
+        investorMessage:
+          "Współwłaściciele (Dział II) — KORZYSTNE: możliwe przystąpienie wszystkich do pożyczki i odpowiedzialność z majątków osobistych obok hipoteki.",
+        confidence: 0.9,
       }),
     ];
   },
@@ -393,36 +387,10 @@ const ruleIdentity: Rule = {
               "Dający zabezpieczenie nie dopasowany do Działu II — WSTRZYMANE do potwierdzenia własności.",
           }),
         );
-      } else if (m.kind === "NO_MATCH" && m.party.role === "BORROWER") {
-        // Pożyczkobiorca nie jest właścicielem — dopuszczalne, jeśli właściciel daje zabezpieczenie.
-        out.push(
-          mkFinding({
-            ruleId: "R-IDENTITY",
-            ruleVersion: V,
-            category: "IDENTITY",
-            status: "WARUNKOWO_DOPUSZCZALNE",
-            title: "Pożyczkobiorca nie jest właścicielem",
-            plainLanguageSummary:
-              "Pożyczkobiorca nie występuje w Dziale II — dopuszczalne, jeśli właściciel świadomie ustanawia hipotekę.",
-            source: src,
-            whyItMatters:
-              "Właściciel (dłużnik rzeczowy) musi ustanowić hipotekę na całej nieruchomości; nie mylić z poręczycielem osobistym.",
-            rankImpact: "POSSIBLE",
-            expectedFromClient:
-              "Zgoda właściciela na obciążenie i ustanowienie hipoteki na całości.",
-            requestedDocuments: [DOCS.ID_DOC],
-            proposedResolution:
-              "Potwierdź, że właściciel z Działu II przejdzie weryfikację i ustanowi hipotekę na całej nieruchomości.",
-            agreementCondition: "Właściciel z Działu II ustanawia hipotekę na całej nieruchomości.",
-            intermediaryMessage:
-              "Pożyczkobiorca nie jest właścicielem. To OK, o ile właściciel zgadza się dać nieruchomość jako zabezpieczenie.",
-            clientMessage:
-              "Skoro pożyczkobiorca nie jest właścicielem, hipotekę ustanawia właściciel nieruchomości. Potrzebna jego zgoda.",
-            investorMessage:
-              "Pożyczkobiorca ≠ właściciel — dopuszczalne warunkowo, gdy właściciel (dłużnik rzeczowy) obciąży całość.",
-          }),
-        );
       }
+      // Pożyczkobiorca spoza Działu II nie generuje znaleziska — hipotekę
+      // ustanawia właściciel (dłużnik rzeczowy) i to jego weryfikują pozostałe
+      // reguły; sam fakt, że pożyczkobiorca nie jest właścicielem, nie jest oceniany.
       // Nieżyjący / małoletni właściciel — dodatkowe znaleziska.
       if (m.party.isDeceased) {
         out.push(
@@ -738,17 +706,26 @@ const ruleSecondRankCertificate: Rule = {
 const ruleCltv: Rule = {
   id: "R-CLTV",
   version: V,
-  run({ ltv, policy }) {
+  run({ ltv, policy, nlr }) {
     if (!ltv.determinable) {
+      // Dane o zadłużeniu (saldo/zaświadczenie) są potrzebne wyłącznie, gdy w
+      // Dziale IV jest hipoteka albo aktywna wzmianka; przy czystym Dziale IV
+      // do LTV brakuje co najwyżej wartości nieruchomości.
+      const hasSectionIvBurden =
+        nlr.mortgages.some((m) => m.isActive) ||
+        nlr.mentions.some((m) => m.isActive && m.section === "IV");
       return [
         mkFinding({
           ruleId: "R-CLTV",
           ruleVersion: V,
           category: "VALUATION",
           status: "WSTRZYMANE",
-          title: "Brak danych do LTV/CLTV",
-          plainLanguageSummary:
-            "Brakuje wartości nieruchomości lub wiarygodnego salda długu — nie pokazujemy pozytywnego LTV.",
+          title: hasSectionIvBurden
+            ? "Brak danych do LTV/CLTV"
+            : "Brak wartości nieruchomości do LTV",
+          plainLanguageSummary: hasSectionIvBurden
+            ? "Brakuje wartości nieruchomości lub wiarygodnego salda długu — nie pokazujemy pozytywnego LTV."
+            : "Brakuje zaakceptowanej wartości nieruchomości — nie pokazujemy pozytywnego LTV.",
           source: [
             {
               section: "IV",
@@ -757,18 +734,28 @@ const ruleCltv: Rule = {
               rawValue: ltv.note,
             },
           ],
-          whyItMatters:
-            "Bez wartości i salda nie da się ocenić bezpieczeństwa łącznego obciążenia.",
+          whyItMatters: hasSectionIvBurden
+            ? "Bez wartości i salda nie da się ocenić bezpieczeństwa łącznego obciążenia."
+            : "Bez wartości nieruchomości nie da się ocenić relacji pożyczki do zabezpieczenia.",
           rankImpact: "POSSIBLE",
-          expectedFromClient: "Zaakceptowana wartość nieruchomości i saldo długu poprzedzającego.",
-          requestedDocuments: [DOCS.VALUATION, DOCS.SENIOR_CERT],
-          proposedResolution:
-            "Uzupełnij wartość nieruchomości i saldo z zaświadczenia; przelicz CLTV.",
-          intermediaryMessage:
-            "Nie mamy pełnych danych do policzenia LTV. Potrzebna wartość nieruchomości i saldo długu.",
-          clientMessage:
-            "Do oceny potrzebujemy wyceny nieruchomości i informacji o obecnym zadłużeniu.",
-          investorMessage: "BRAK DANYCH / WSTRZYMANE — LTV/CLTV nieobliczalne.",
+          expectedFromClient: hasSectionIvBurden
+            ? "Zaakceptowana wartość nieruchomości i saldo długu poprzedzającego."
+            : "Zaakceptowana wartość nieruchomości (operat/wycena).",
+          requestedDocuments: hasSectionIvBurden
+            ? [DOCS.VALUATION, DOCS.SENIOR_CERT]
+            : [DOCS.VALUATION],
+          proposedResolution: hasSectionIvBurden
+            ? "Uzupełnij wartość nieruchomości i saldo z zaświadczenia; przelicz CLTV."
+            : "Uzupełnij zaakceptowaną wartość nieruchomości; przelicz LTV.",
+          intermediaryMessage: hasSectionIvBurden
+            ? "Nie mamy pełnych danych do policzenia LTV. Potrzebna wartość nieruchomości i saldo długu."
+            : "Nie mamy wartości nieruchomości do policzenia LTV. Dział IV jest czysty — wystarczy wycena.",
+          clientMessage: hasSectionIvBurden
+            ? "Do oceny potrzebujemy wyceny nieruchomości i informacji o obecnym zadłużeniu."
+            : "Do oceny potrzebujemy wyceny nieruchomości.",
+          investorMessage: hasSectionIvBurden
+            ? "BRAK DANYCH / WSTRZYMANE — LTV/CLTV nieobliczalne."
+            : "BRAK DANYCH / WSTRZYMANE — LTV nieobliczalne (brak wartości; Dział IV bez obciążeń).",
         }),
       ];
     }

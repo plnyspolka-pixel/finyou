@@ -242,7 +242,7 @@ export async function runInvestmentRiskAssessmentCore(
   ]);
 
   // 4) Właściciel — potrzebuje wyników KW do porównania nazwiska; PESEL
-  //    zapasowo odczytywany z działu II KW, gdy brak w rekordzie klienta.
+  //    zaciągany bezpośrednio z działu II KW (rekord klienta tylko zapasowo).
   const owner = await analyzeOwner({
     clientId,
     loanTermYears,

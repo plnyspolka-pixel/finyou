@@ -39,6 +39,8 @@ import {
   Wallet,
   Building2,
   MapPinned,
+  MessageCircle,
+  IdCard,
 } from "lucide-react";
 
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -60,6 +62,7 @@ const groups: Group[] = [
       { to: "/admin/klienci", label: "Klienci (leady + przypomnienia)", icon: Users },
       { to: "/admin/skrzynka", label: "Skrzynka mailowa", icon: Mail },
       { to: "/admin/messenger", label: "Messenger / Instagram DM", icon: Mail },
+      { to: "/admin/czat", label: "Czat na stronie", icon: MessageCircle },
       { to: "/admin/wnioski-niekompletne", label: "Wnioski (wszystkie)", icon: FileText },
       { to: "/admin/follow-up-braki", label: "Follow-up braków", icon: Send },
       { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
@@ -78,6 +81,7 @@ const groups: Group[] = [
       { to: "/admin/projekty", label: "Projekty inwestycyjne", icon: FolderOpen },
       { to: "/admin/oferty", label: "Oferty", icon: Tag },
       { to: "/admin/dystrybucja", label: "Dystrybucja ofert", icon: Send },
+      { to: "/admin/karty-ofert", label: "Karty ofert", icon: IdCard },
       { to: "/admin/szkolenia", label: "Szkolenia", icon: GraduationCap },
     ],
   },
