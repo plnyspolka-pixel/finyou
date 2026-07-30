@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
-  Lock,
   Home,
   MapPin,
   BookText,
@@ -26,7 +25,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
 import { SecurityTypePicker } from "@/components/security-type-picker";
-import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
@@ -56,14 +54,7 @@ function readAsDataUrl(file: File): Promise<string> {
   });
 }
 
-const STEPS = [
-  { id: 1, shortLabel: "Obiekt", label: "Nieruchomość", icon: Home },
-  { id: 2, shortLabel: "Zdjęcia", label: "Zdjęcia i KW", icon: Upload },
-  { id: 3, shortLabel: "Dane", label: "Dane kontaktowe", icon: UserRound },
-  { id: 4, shortLabel: "Oferta", label: "Kalkulator", icon: Send },
-] as const;
-
-type StepId = 1 | 2 | 3 | 4;
+type StepId = 1 | 2 | 3;
 
 export function LandingWizardForm() {
   const submitFn = useServerFn(submitLandingLoanApplication);
@@ -90,11 +81,11 @@ export function LandingWizardForm() {
   const camRef = useRef<HTMLInputElement>(null);
   const deedRef = useRef<HTMLInputElement>(null);
 
-  // Calculator state
-  const [amount, setAmount] = useState(200_000);
+  // Calculator state (defaults submitted with the application; the interactive
+  // calculator lives on /kalkulator-pozyczki)
+  const [amount] = useState(200_000);
   const [months, setMonths] = useState(36);
-  const [canExtend, setCanExtend] = useState(true);
-  const [maxPayment, setMaxPayment] = useState(0);
+  const [maxPayment] = useState(0);
   const [annualRate, setAnnualRate] = useState(30);
   const rateTouchedRef = useRef(false);
 
@@ -167,7 +158,6 @@ export function LandingWizardForm() {
     1: typeSelected && city.trim().length > 0,
     2: hasPropertyPhotos && kwOk,
     3: contactValid,
-    4: typeSelected && city.trim().length > 0 && hasPropertyPhotos && kwOk && contactValid,
   };
   const allDone = stepDone[1] && stepDone[2] && stepDone[3];
 
@@ -187,20 +177,16 @@ export function LandingWizardForm() {
   };
 
   const goNext = () => {
-    if (!stepDone[step] && step !== 4) {
+    if (!stepDone[step]) {
       const msgs: Record<StepId, string> = {
         1: "Wybierz typ nieruchomości i podaj miejscowość.",
         2: "Dodaj zdjęcia oraz numer księgi wieczystej (lub akt własności).",
         3: "Uzupełnij dane kontaktowe i zaakceptuj zgody.",
-        4: "Uzupełnij wcześniejsze kroki.",
       };
       toast.error(msgs[step]);
       return;
     }
-    if (step === 3) {
-      fireLead();
-    }
-    setStep((s) => Math.min(4, s + 1) as StepId);
+    setStep((s) => Math.min(3, s + 1) as StepId);
   };
   const goBack = () => setStep((s) => Math.max(1, s - 1) as StepId);
 
@@ -219,6 +205,7 @@ export function LandingWizardForm() {
       toast.error("Uzupełnij wszystkie kroki wizarda, aby wysłać wniosek.");
       return;
     }
+    fireLead();
     setSubmitting(true);
     try {
       const photoPayload = await Promise.all(
@@ -288,58 +275,6 @@ export function LandingWizardForm() {
 
   return (
     <div id="landing-wizard-top" className="space-y-6">
-      {/* Stepper */}
-      <FancyShell>
-        <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-2">
-            {STEPS.map((s) => {
-              const done = stepDone[s.id as StepId];
-              const active = step === s.id;
-              const Icon = s.icon;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setStep(s.id as StepId)}
-                  className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2 sm:p-3 text-center transition-all ${
-                    active
-                      ? "border-white/60 bg-white/15 ring-2 ring-white/40"
-                      : done
-                        ? "border-emerald-400/50 bg-emerald-500/10 hover:bg-emerald-500/15"
-                        : "border-white/15 bg-white/[0.04] hover:border-white/30"
-                  }`}
-                >
-                  <span
-                    className={`grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full text-sm font-black ring-1 ${
-                      done
-                        ? "bg-emerald-500/30 text-emerald-100 ring-emerald-300/40"
-                        : active
-                          ? "bg-white text-slate-900 ring-white/60"
-                          : "bg-white/10 text-white/80 ring-white/20"
-                    }`}
-                  >
-                    {done ? (
-                      <Check className="h-4 w-4" strokeWidth={3} />
-                    ) : (
-                      <Icon className="h-4 w-4" />
-                    )}
-                  </span>
-                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white leading-tight whitespace-nowrap">
-                    {s.shortLabel}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
-              style={{ width: `${(Object.values(stepDone).filter(Boolean).length / 4) * 100}%` }}
-            />
-          </div>
-        </div>
-      </FancyShell>
-
       {/* Step 1: Typ nieruchomości + miejscowość */}
       {step === 1 && (
         <FancyShell>
@@ -713,61 +648,6 @@ export function LandingWizardForm() {
         </FancyShell>
       )}
 
-      {/* Step 4: Kalkulator (gold) */}
-      {step === 4 && (
-        <div id="landing-wizard-calc" className="space-y-4">
-          <OfferCalculatorPanel
-            amount={amount}
-            setAmount={setAmount}
-            months={months}
-            setMonths={setMonths}
-            maxMonths={maxMonths}
-            canExtend={canExtend}
-            setCanExtend={setCanExtend}
-            annualRate={annualRate}
-            setAnnualRate={setAnnualRate}
-            rateTouchedRef={rateTouchedRef}
-            maxPayment={maxPayment}
-            setMaxPayment={setMaxPayment}
-            headerLabel="Twoja wstępna oferta"
-            shellVariant="gold"
-          />
-
-          <div
-            className="rounded-2xl p-4 backdrop-blur-sm"
-            style={{
-              border: "1px solid oklch(0.82 0.13 85 / 0.35)",
-              background:
-                "linear-gradient(160deg, rgba(16, 25, 58, 0.72), oklch(0.82 0.13 85 / 0.08))",
-              boxShadow: "0 0 24px rgba(30, 90, 200, 0.25)",
-            }}
-          >
-            <Button
-              type="button"
-              variant="cta"
-              size="lg"
-              onClick={() => void onSubmit()}
-              disabled={submitting || !allDone}
-              className="w-full text-base"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-5 w-5" /> Złóż wniosek
-                </>
-              )}
-            </Button>
-            <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności
-              Finance You.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Nawigacja */}
       <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:border md:bg-card md:p-4">
         <Button
@@ -779,7 +659,7 @@ export function LandingWizardForm() {
         >
           <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
         </Button>
-        {step < 4 && (
+        {step < 3 ? (
           <Button
             type="button"
             variant="cta"
@@ -787,13 +667,24 @@ export function LandingWizardForm() {
             onClick={goNext}
             className="ml-auto flex-1 text-base md:flex-none"
           >
-            {step === 3 ? (
+            Dalej <ChevronRight className="ml-1 h-5 w-5" />
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="cta"
+            size="lg"
+            onClick={() => void onSubmit()}
+            disabled={submitting}
+            className="ml-auto flex-1 text-base md:flex-none"
+          >
+            {submitting ? (
               <>
-                Do kalkulatora <ChevronRight className="ml-1 h-5 w-5" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…
               </>
             ) : (
               <>
-                Dalej <ChevronRight className="ml-1 h-5 w-5" />
+                <Send className="mr-2 h-5 w-5" /> Wyślij wniosek
               </>
             )}
           </Button>

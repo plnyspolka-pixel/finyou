@@ -6477,6 +6477,7 @@ export type Database = {
           next_contact_at: string | null
           next_reminder_at: string | null
           nip: string | null
+          offer_card_token: string | null
           preferred_contact_channel:
             | Database["public"]["Enums"]["contact_channel"]
             | null
@@ -6566,6 +6567,7 @@ export type Database = {
           next_contact_at?: string | null
           next_reminder_at?: string | null
           nip?: string | null
+          offer_card_token?: string | null
           preferred_contact_channel?:
             | Database["public"]["Enums"]["contact_channel"]
             | null
@@ -6655,6 +6657,7 @@ export type Database = {
           next_contact_at?: string | null
           next_reminder_at?: string | null
           nip?: string | null
+          offer_card_token?: string | null
           preferred_contact_channel?:
             | Database["public"]["Enums"]["contact_channel"]
             | null
@@ -7541,11 +7544,94 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_distribution_messages: {
+        Row: {
+          attachments: Json
+          content: string | null
+          created_at: string
+          direction: string
+          distribution_id: string | null
+          from_email: string | null
+          html: string | null
+          id: string
+          in_reply_to: string | null
+          investor_id: string | null
+          loan_application_id: string
+          message_id: string | null
+          subject: string | null
+          to_email: string | null
+        }
+        Insert: {
+          attachments?: Json
+          content?: string | null
+          created_at?: string
+          direction: string
+          distribution_id?: string | null
+          from_email?: string | null
+          html?: string | null
+          id?: string
+          in_reply_to?: string | null
+          investor_id?: string | null
+          loan_application_id: string
+          message_id?: string | null
+          subject?: string | null
+          to_email?: string | null
+        }
+        Update: {
+          attachments?: Json
+          content?: string | null
+          created_at?: string
+          direction?: string
+          distribution_id?: string | null
+          from_email?: string | null
+          html?: string | null
+          id?: string
+          in_reply_to?: string | null
+          investor_id?: string | null
+          loan_application_id?: string
+          message_id?: string | null
+          subject?: string | null
+          to_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_distribution_messages_distribution_id_fkey"
+            columns: ["distribution_id"]
+            isOneToOne: false
+            referencedRelation: "offer_distributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_distribution_messages_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
+            referencedRelation: "investors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_distribution_messages_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_distribution_messages_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offer_distributions: {
         Row: {
           additional_info_request: string | null
           created_at: string
           distribution_status: Database["public"]["Enums"]["distribution_status"]
+          email_error: string | null
+          email_message_id: string | null
+          email_status: string | null
           id: string
           investor_id: string
           loan_application_id: string
@@ -7558,6 +7644,9 @@ export type Database = {
           additional_info_request?: string | null
           created_at?: string
           distribution_status?: Database["public"]["Enums"]["distribution_status"]
+          email_error?: string | null
+          email_message_id?: string | null
+          email_status?: string | null
           id?: string
           investor_id: string
           loan_application_id: string
@@ -7570,6 +7659,9 @@ export type Database = {
           additional_info_request?: string | null
           created_at?: string
           distribution_status?: Database["public"]["Enums"]["distribution_status"]
+          email_error?: string | null
+          email_message_id?: string | null
+          email_status?: string | null
           id?: string
           investor_id?: string
           loan_application_id?: string

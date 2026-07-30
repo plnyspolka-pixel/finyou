@@ -1,8 +1,9 @@
 // Analiza właściciela nieruchomości / kredytobiorcy.
-// Łączy dane z tabeli clients (PESEL, imię, nazwisko) z aktuarialnym
-// trwaniem życia oraz wpisem właściciela w dziale II KW.
-// Gdy klient nie ma PESEL (lub jest błędny), sięgamy po PESEL właściciela
-// wpisany w dziale II KW — i uzupełniamy nim pusty rekord klienta.
+// Łączy dane z tabeli clients (imię, nazwisko) z aktuarialnym trwaniem życia
+// oraz wpisem właściciela w dziale II KW.
+// PESEL zaciągamy PRZEDE WSZYSTKIM bezpośrednio z treści księgi wieczystej
+// (dział II — dane urzędowe); rekord klienta jest tylko źródłem zapasowym.
+// Odczytanym z KW numerem uzupełniamy pusty rekord klienta.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parsePesel, type PeselInfo } from "./pesel";
@@ -113,10 +114,9 @@ export async function analyzeOwner(args: {
   const fullName = [client.first_name, client.last_name].filter(Boolean).join(" ").trim() || null;
   const notes: string[] = [];
 
-  let pesel: PeselInfo = parsePesel(client.pesel);
-
-  // Fallback: PESEL z działu II KW, gdy w rekordzie klienta brak/niepoprawny.
-  if (!pesel.valid && args.kwNumber) {
+  // ŹRÓDŁO PODSTAWOWE: PESEL bezpośrednio z treści księgi wieczystej (dział II).
+  let pesel: PeselInfo = parsePesel(null);
+  if (args.kwNumber) {
     try {
       const kwPesel = await findPeselInKw(args.kwNumber, fullName);
       if (kwPesel) {
@@ -125,9 +125,14 @@ export async function analyzeOwner(args: {
           pesel = parsed;
           notes.push(
             kwPesel.nameMatched
-              ? "PESEL właściciela odczytany z działu II KW (dopasowany po imieniu i nazwisku)."
+              ? "PESEL właściciela odczytany bezpośrednio z działu II KW (dopasowany po imieniu i nazwisku)."
               : "PESEL przyjęty z działu II KW — jedyny właściciel w księdze; zweryfikuj tożsamość klienta.",
           );
+          if (client.pesel && client.pesel !== kwPesel.pesel) {
+            notes.push(
+              "PESEL w rekordzie klienta różni się od PESEL właściciela w dziale II KW — do analizy przyjęto numer z KW; zweryfikuj dane klienta.",
+            );
+          }
           // Uzupełnij pusty rekord klienta (tylko gdy dopasowanie po nazwisku jest pewne).
           if (!client.pesel && kwPesel.nameMatched) {
             const { error } = await supabaseAdmin
@@ -140,6 +145,19 @@ export async function analyzeOwner(args: {
       }
     } catch (e: any) {
       console.error("[owner-analysis] PESEL z KW nieodczytany:", e?.message ?? e);
+    }
+  }
+
+  // Źródło zapasowe: PESEL z rekordu klienta (gdy KW nie dała poprawnego numeru).
+  if (!pesel.valid && client.pesel) {
+    const fromClient = parsePesel(client.pesel);
+    if (fromClient.valid) {
+      pesel = fromClient;
+      notes.push(
+        "PESEL przyjęty z rekordu klienta — w dziale II KW nie odczytano poprawnego numeru.",
+      );
+    } else {
+      pesel = fromClient; // zachowaj błąd walidacji do raportu
     }
   }
 
