@@ -39,6 +39,7 @@ import {
   Wallet,
   Building2,
   MapPinned,
+  MessageCircle,
   IdCard,
 } from "lucide-react";
 
@@ -61,6 +62,7 @@ const groups: Group[] = [
       { to: "/admin/klienci", label: "Klienci (leady + przypomnienia)", icon: Users },
       { to: "/admin/skrzynka", label: "Skrzynka mailowa", icon: Mail },
       { to: "/admin/messenger", label: "Messenger / Instagram DM", icon: Mail },
+      { to: "/admin/czat", label: "Czat na stronie", icon: MessageCircle },
       { to: "/admin/wnioski-niekompletne", label: "Wnioski (wszystkie)", icon: FileText },
       { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
       { to: "/admin/potencjal-lokalizacyjny", label: "Potencjał lokalizacyjny", icon: MapPinned },

@@ -63,6 +63,7 @@ import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka
 import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
 import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-leady'
 import { Route as OperatorMessengerRouteImport } from './routes/operator.messenger'
+import { Route as OperatorCzatRouteImport } from './routes/operator.czat'
 import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
 import { Route as OperatorKreatorUdzieleniaRouteImport } from './routes/operator.kreator-udzielenia'
 import { Route as OperatorFakturyRouteImport } from './routes/operator.faktury'
@@ -107,6 +108,7 @@ import { Route as AdminOperatorzyRouteImport } from './routes/admin.operatorzy'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminMetaRouteImport } from './routes/admin.meta'
 import { Route as AdminMessengerRouteImport } from './routes/admin.messenger'
+import { Route as AdminCzatRouteImport } from './routes/admin.czat'
 import { Route as AdminMaterialyRouteImport } from './routes/admin.materialy'
 import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
 import { Route as AdminKwRouteImport } from './routes/admin.kw'
@@ -165,6 +167,7 @@ import { Route as ApiPublicMetaMessengerWebhookRouteImport } from './routes/api/
 import { Route as ApiPublicMetaLeadsWebhookRouteImport } from './routes/api/public/meta-leads-webhook'
 import { Route as ApiPublicMailgunInboundWebhookRouteImport } from './routes/api/public/mailgun-inbound-webhook'
 import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/public/loan-application'
+import { Route as ApiPublicChatWidgetRouteImport } from './routes/api/public/chat-widget'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as ApiPublicElevenlabsSendSmsRouteImport } from './routes/api/public/elevenlabs-send-sms'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
@@ -485,6 +488,11 @@ const OperatorMojeLeadyRoute = OperatorMojeLeadyRouteImport.update({
   path: '/moje-leady',
   getParentRoute: () => OperatorRoute,
 } as any)
+const OperatorCzatRoute = OperatorCzatRouteImport.update({
+  id: '/czat',
+  path: '/czat',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const OperatorMessengerRoute = OperatorMessengerRouteImport.update({
   id: '/messenger',
   path: '/messenger',
@@ -707,6 +715,11 @@ const AdminOfertyRoute = AdminOfertyRouteImport.update({
 const AdminMetaRoute = AdminMetaRouteImport.update({
   id: '/meta',
   path: '/meta',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCzatRoute = AdminCzatRouteImport.update({
+  id: '/czat',
+  path: '/czat',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminMessengerRoute = AdminMessengerRouteImport.update({
@@ -1009,6 +1022,11 @@ const ApiPublicMailgunInboundWebhookRoute =
     path: '/api/public/mailgun-inbound-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicChatWidgetRoute = ApiPublicChatWidgetRouteImport.update({
+  id: '/api/public/chat-widget',
+  path: '/api/public/chat-widget',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicLoanApplicationRoute =
   ApiPublicLoanApplicationRouteImport.update({
     id: '/api/public/loan-application',
@@ -1373,6 +1391,7 @@ export interface FileRoutesByFullPath {
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
+  '/admin/czat': typeof AdminCzatRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/operatorzy': typeof AdminOperatorzyRoute
@@ -1417,6 +1436,7 @@ export interface FileRoutesByFullPath {
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
+  '/operator/czat': typeof OperatorCzatRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
@@ -1471,6 +1491,7 @@ export interface FileRoutesByFullPath {
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
@@ -1580,6 +1601,7 @@ export interface FileRoutesByTo {
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
+  '/admin/czat': typeof AdminCzatRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/operatorzy': typeof AdminOperatorzyRoute
@@ -1620,6 +1642,7 @@ export interface FileRoutesByTo {
   '/operator/faktury': typeof OperatorFakturyRoute
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/messenger': typeof OperatorMessengerRoute
+  '/operator/czat': typeof OperatorCzatRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
@@ -1673,6 +1696,7 @@ export interface FileRoutesByTo {
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
@@ -1788,6 +1812,7 @@ export interface FileRoutesById {
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
+  '/admin/czat': typeof AdminCzatRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/operatorzy': typeof AdminOperatorzyRoute
@@ -1832,6 +1857,7 @@ export interface FileRoutesById {
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
+  '/operator/czat': typeof OperatorCzatRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
@@ -1886,6 +1912,7 @@ export interface FileRoutesById {
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
@@ -2002,6 +2029,7 @@ export interface FileRouteTypes {
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
+    | '/admin/czat'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/operatorzy'
@@ -2046,6 +2074,7 @@ export interface FileRouteTypes {
     | '/operator/kreator-udzielenia'
     | '/operator/leady'
     | '/operator/messenger'
+    | '/operator/czat'
     | '/operator/moje-leady'
     | '/operator/profil'
     | '/operator/skrzynka'
@@ -2100,6 +2129,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/api/public/chat-widget'
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
     | '/api/public/meta-messenger-webhook'
@@ -2209,6 +2239,7 @@ export interface FileRouteTypes {
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
+    | '/admin/czat'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/operatorzy'
@@ -2249,6 +2280,7 @@ export interface FileRouteTypes {
     | '/operator/faktury'
     | '/operator/kreator-udzielenia'
     | '/operator/messenger'
+    | '/operator/czat'
     | '/operator/moje-leady'
     | '/operator/profil'
     | '/operator/skrzynka'
@@ -2302,6 +2334,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/api/public/chat-widget'
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
     | '/api/public/meta-messenger-webhook'
@@ -2416,6 +2449,7 @@ export interface FileRouteTypes {
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
+    | '/admin/czat'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/operatorzy'
@@ -2460,6 +2494,7 @@ export interface FileRouteTypes {
     | '/operator/kreator-udzielenia'
     | '/operator/leady'
     | '/operator/messenger'
+    | '/operator/czat'
     | '/operator/moje-leady'
     | '/operator/profil'
     | '/operator/skrzynka'
@@ -2514,6 +2549,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/api/public/chat-widget'
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
     | '/api/public/meta-messenger-webhook'
@@ -2627,6 +2663,7 @@ export interface RootRouteChildren {
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
+  ApiPublicChatWidgetRoute: typeof ApiPublicChatWidgetRoute
   ApiPublicMailgunInboundWebhookRoute: typeof ApiPublicMailgunInboundWebhookRoute
   ApiPublicMetaLeadsWebhookRoute: typeof ApiPublicMetaLeadsWebhookRoute
   ApiPublicMetaMessengerWebhookRoute: typeof ApiPublicMetaMessengerWebhookRoute
@@ -3038,6 +3075,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorMojeLeadyRouteImport
       parentRoute: typeof OperatorRoute
     }
+    '/operator/czat': {
+      id: '/operator/czat'
+      path: '/czat'
+      fullPath: '/operator/czat'
+      preLoaderRoute: typeof OperatorCzatRouteImport
+      parentRoute: typeof OperatorRoute
+    }
     '/operator/messenger': {
       id: '/operator/messenger'
       path: '/messenger'
@@ -3344,6 +3388,13 @@ declare module '@tanstack/react-router' {
       path: '/meta'
       fullPath: '/admin/meta'
       preLoaderRoute: typeof AdminMetaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/czat': {
+      id: '/admin/czat'
+      path: '/czat'
+      fullPath: '/admin/czat'
+      preLoaderRoute: typeof AdminCzatRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/messenger': {
@@ -3750,6 +3801,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/mailgun-inbound-webhook'
       fullPath: '/api/public/mailgun-inbound-webhook'
       preLoaderRoute: typeof ApiPublicMailgunInboundWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/chat-widget': {
+      id: '/api/public/chat-widget'
+      path: '/api/public/chat-widget'
+      fullPath: '/api/public/chat-widget'
+      preLoaderRoute: typeof ApiPublicChatWidgetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/loan-application': {
@@ -4188,6 +4246,7 @@ interface AdminRouteChildren {
   AdminMailingRoute: typeof AdminMailingRoute
   AdminMaterialyRoute: typeof AdminMaterialyRoute
   AdminMessengerRoute: typeof AdminMessengerRoute
+  AdminCzatRoute: typeof AdminCzatRoute
   AdminMetaRoute: typeof AdminMetaRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
   AdminOperatorzyRoute: typeof AdminOperatorzyRoute
@@ -4252,6 +4311,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMailingRoute: AdminMailingRoute,
   AdminMaterialyRoute: AdminMaterialyRoute,
   AdminMessengerRoute: AdminMessengerRoute,
+  AdminCzatRoute: AdminCzatRoute,
   AdminMetaRoute: AdminMetaRoute,
   AdminOfertyRoute: AdminOfertyRoute,
   AdminOperatorzyRoute: AdminOperatorzyRoute,
@@ -4441,6 +4501,7 @@ interface OperatorRouteChildren {
   OperatorKreatorUdzieleniaRoute: typeof OperatorKreatorUdzieleniaRoute
   OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
   OperatorMessengerRoute: typeof OperatorMessengerRoute
+  OperatorCzatRoute: typeof OperatorCzatRoute
   OperatorMojeLeadyRoute: typeof OperatorMojeLeadyRoute
   OperatorProfilRoute: typeof OperatorProfilRoute
   OperatorSkrzynkaRoute: typeof OperatorSkrzynkaRoute
@@ -4455,6 +4516,7 @@ const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorKreatorUdzieleniaRoute: OperatorKreatorUdzieleniaRoute,
   OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
   OperatorMessengerRoute: OperatorMessengerRoute,
+  OperatorCzatRoute: OperatorCzatRoute,
   OperatorMojeLeadyRoute: OperatorMojeLeadyRoute,
   OperatorProfilRoute: OperatorProfilRoute,
   OperatorSkrzynkaRoute: OperatorSkrzynkaRoute,
@@ -4573,6 +4635,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
+  ApiPublicChatWidgetRoute: ApiPublicChatWidgetRoute,
   ApiPublicMailgunInboundWebhookRoute: ApiPublicMailgunInboundWebhookRoute,
   ApiPublicMetaLeadsWebhookRoute: ApiPublicMetaLeadsWebhookRoute,
   ApiPublicMetaMessengerWebhookRoute: ApiPublicMetaMessengerWebhookRoute,

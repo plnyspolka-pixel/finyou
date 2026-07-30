@@ -66,7 +66,7 @@ export function clearAgentPromptCache() {
 }
 
 function defaultSystemPrompt(): string {
-  return `Jesteś agentem Finance You odpisującym 24/7 na wiadomości od potencjalnych klientów (Messenger / Instagram DM / email).
+  return `Jesteś agentem Finance You odpisującym 24/7 na wiadomości od potencjalnych klientów (Messenger / Instagram DM / email / czat na stronie financeyou.pl).
 Twoim celem jest:
 1. Życzliwie nawiązać kontakt, wyjaśnić co oferujemy (pożyczki pozabankowe + inwestycje).
 2. Zebrać dane do wniosku: imię i nazwisko, email, telefon, kwota, cel, miasto, dochód, źródło dochodu, PESEL (jeśli sam poda — nie wymuszaj na pierwszej wiadomości).
@@ -157,7 +157,7 @@ export type AgentReply = {
  */
 export async function runAgentTurn(opts: {
   leadId: string;
-  channel: "messenger" | "instagram" | "email";
+  channel: "messenger" | "instagram" | "email" | "chat";
   userMessage: string;
   attachmentsSummary?: string | null;
 }): Promise<AgentReply> {
@@ -169,7 +169,7 @@ export async function runAgentTurn(opts: {
     .from("lead_communications")
     .select("direction, content, created_at, channel")
     .eq("lead_id", opts.leadId)
-    .in("channel", ["messenger", "instagram", "email"])
+    .in("channel", ["messenger", "instagram", "email", "chat"])
     .order("created_at", { ascending: true })
     .limit(40);
 
