@@ -203,6 +203,8 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
           fromEmail,
           headers: mgHeaders,
           threadIds: [messageId, inReplyTo, references].filter(Boolean) as string[],
+          subject,
+          bodyText: text,
         });
         if (skip.skip) {
           console.warn(`[mailgun-inbound] skip auto-reply: ${skip.reason} (${fromEmail})`);

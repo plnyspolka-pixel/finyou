@@ -285,6 +285,8 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
           fromEmail,
           headers: inboundHeaders,
           threadIds: [messageId, inReplyTo, references].filter(Boolean) as string[],
+          subject,
+          bodyText: finalText,
         });
         if (skip.skip) {
           console.warn(`[resend-inbound] skip auto-reply: ${skip.reason} (${fromEmail})`);

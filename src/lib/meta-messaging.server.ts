@@ -12,6 +12,7 @@ import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { replyToCommentPublic, sendPrivateReplyToComment } from "@/lib/meta-comments.server";
 import { fetchMetaUserProfile } from "@/lib/meta-profile.server";
 import { ocrLeadAttachmentsAndEnrich, fillLeadNameFromKw } from "@/lib/lead-doc-intel.server";
+import { shouldSkipMessengerAutoReply } from "@/lib/bot-loop-guard.server";
 
 async function findOrCreateLeadByPsid(opts: {
   senderId: string;
@@ -210,6 +211,19 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
 
   if (!userText && !stored.length) return;
 
+  // 2.5) OCHRONA PRZED PĘTLAMI BOT-BOT — wiadomość jest już zalogowana
+  //      (operator widzi ją w skrzynce), ale agent nie odpowiada automatowi.
+  const guard = await shouldSkipMessengerAutoReply({
+    leadId,
+    senderId,
+    platform,
+    text: userText,
+  });
+  if (guard.skip) {
+    console.warn(`[messenger] skip auto-reply: ${guard.reason} (psid=${senderId})`);
+    return;
+  }
+
   // 3) Odpowiedź agenta
   const agent = await runAgentTurn({
     leadId,
@@ -308,6 +322,19 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
   });
 
   if (!text) return;
+
+  // OCHRONA PRZED PĘTLAMI — komentujący bot (albo inna strona-automat) nie
+  // powinien dostawać publicznej odpowiedzi + PM za każdym razem.
+  const guard = await shouldSkipMessengerAutoReply({
+    leadId,
+    senderId: fromId,
+    platform: "messenger",
+    text,
+  });
+  if (guard.skip) {
+    console.warn(`[fb-comment] skip auto-reply: ${guard.reason} (from=${fromId})`);
+    return;
+  }
 
   const agent = await runAgentTurn({
     leadId,
