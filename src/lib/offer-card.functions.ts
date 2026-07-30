@@ -104,6 +104,31 @@ export interface PublicOfferCard {
       expectedLowPln: number | null;
       expectedHighPln: number | null;
     } | null;
+    /** Kategoria zbywalności A–E (główna oś scoringu łatwości sprzedaży). */
+    sellability: {
+      category: string;
+      label: string;
+      rationale: string;
+      score: number | null;
+      band: string | null;
+    } | null;
+    /**
+     * Analiza PESEL właścicieli z działu II KW — wiek, płeć i dożycie każdego
+     * właściciela (sam numer PESEL nie jest publikowany).
+     */
+    owners: Array<{
+      name: string | null;
+      isApplicant: boolean;
+      age: number | null;
+      sex: string | null;
+      remainingYears: number | null;
+      projectedAgeAtDeath: number | null;
+      longevityBand: string | null;
+      /** P(dożycia) dla pożyczek 1–5 lat. */
+      survivalByLoanYear: Array<{ years: number; probability: number }>;
+    }>;
+    /** Zastrzeżenie do szacunków dożycia (tablice GUS). */
+    lifeExpectancyDisclaimer: string | null;
     population: {
       localityPopulation: number | null;
       populationWithin20Km: number | null;
@@ -147,6 +172,52 @@ export interface PublicOfferCard {
       note: string | null;
     }>;
   } | null;
+}
+
+function sexLabelPl(sex: "M" | "K" | null | undefined): string | null {
+  if (sex === "M") return "mężczyzna";
+  if (sex === "K") return "kobieta";
+  return null;
+}
+
+/**
+ * Analiza PESEL właścicieli do Karty oferty: wiek, płeć i dożycie KAŻDEGO
+ * właściciela z działu II KW; dla starszych ocen (bez kwOwnerProfiles) —
+ * fallback do profilu głównego właściciela. Sam numer PESEL nie wychodzi
+ * poza system.
+ */
+function buildOwnersForCard(
+  r: InvestmentRiskAssessment,
+): NonNullable<PublicOfferCard["risk"]>["owners"] {
+  const profiles = r.owner?.kwOwnerProfiles ?? [];
+  if (profiles.length > 0) {
+    return profiles.map((p) => ({
+      name: p.name,
+      isApplicant: p.isApplicant,
+      age: p.age,
+      sex: sexLabelPl(p.sex),
+      remainingYears: p.lifeExpectancy?.remainingYears ?? null,
+      projectedAgeAtDeath: p.lifeExpectancy?.projectedAgeAtDeath ?? null,
+      longevityBand: p.lifeExpectancy?.longevityRiskBand ?? null,
+      survivalByLoanYear: p.lifeExpectancy?.survivalByLoanYear ?? [],
+    }));
+  }
+  const o = r.owner;
+  if (o && o.age != null) {
+    return [
+      {
+        name: o.fullName,
+        isApplicant: true,
+        age: o.age,
+        sex: sexLabelPl(o.sex),
+        remainingYears: o.lifeExpectancy?.remainingYears ?? null,
+        projectedAgeAtDeath: o.lifeExpectancy?.projectedAgeAtDeath ?? null,
+        longevityBand: o.lifeExpectancy?.longevityRiskBand ?? null,
+        survivalByLoanYear: o.lifeExpectancy?.survivalByLoanYear ?? [],
+      },
+    ];
+  }
+  return [];
 }
 
 const KW_SECTIONS: Array<{ key: string; label: string }> = [
@@ -273,6 +344,20 @@ export const getPublicOfferCard = createServerFn({ method: "GET" })
                 expectedHighPln: r.forcedSale.expectedForcedSaleHighPln,
               }
             : null,
+          sellability: r.saleability?.sellabilityCategory
+            ? {
+                category: r.saleability.sellabilityCategory.category,
+                label: r.saleability.sellabilityCategory.label,
+                rationale: r.saleability.sellabilityCategory.rationale,
+                score: r.saleability.available ? r.saleability.score : null,
+                band: r.saleability.available ? r.saleability.band : null,
+              }
+            : null,
+          owners: buildOwnersForCard(r),
+          lifeExpectancyDisclaimer:
+            r.owner?.lifeExpectancy?.disclaimer ??
+            r.owner?.kwOwnerProfiles?.[0]?.lifeExpectancy?.disclaimer ??
+            null,
           population: r.saleability
             ? {
                 localityPopulation: r.saleability.localityPopulation,

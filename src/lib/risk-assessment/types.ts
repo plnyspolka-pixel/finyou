@@ -10,6 +10,9 @@ import type { KwAddress } from "@/lib/kw-address-core";
 import type { LifeExpectancyResult } from "./life-expectancy";
 import type { FloorFactorResult } from "./floor-factor";
 import type { PlotBuildabilityResult } from "./plot-buildability";
+import type { SellabilityCategoryResult } from "./exit-liquidity";
+
+export type { SellabilityCategory, SellabilityCategoryResult } from "./exit-liquidity";
 
 export type MarketCompStatus = "success" | "partial" | "no_data" | "error" | "skipped";
 export interface MarketCompRecord {
@@ -73,6 +76,22 @@ export interface CeidgActivity {
 }
 
 // ---- Właściciel / kredytobiorca ----
+
+/**
+ * Profil pojedynczego właściciela z działu II KW — cechy wyprowadzone z PESEL
+ * (RODO: sam numer NIE jest przechowywany w JSON-ie oceny).
+ */
+export interface KwOwnerProfile {
+  /** Imię i nazwisko z wpisu w dziale II (jeśli rozpoznane). */
+  name: string | null;
+  birthDate: string | null;
+  sex: "M" | "K" | null;
+  age: number | null;
+  lifeExpectancy: LifeExpectancyResult;
+  /** Czy ten wpis dopasowano do klienta z wniosku. */
+  isApplicant: boolean;
+}
+
 export interface OwnerProfile {
   fullName: string | null;
   /** Wyznaczone z PESEL (nie przechowujemy samego numeru). */
@@ -82,6 +101,16 @@ export interface OwnerProfile {
   peselValid: boolean;
   peselError?: string;
   lifeExpectancy: LifeExpectancyResult;
+  /**
+   * WSZYSCY właściciele z działu II KW z odczytanym PESEL (wnioskodawca
+   * i współwłaściciele) — wiek, płeć i dożycie każdego z nich.
+   */
+  kwOwnerProfiles: KwOwnerProfile[];
+  /**
+   * Dwoje (lub więcej) właścicieli z poprawnym PESEL w KW — dwa majątki
+   * osobiste, z których można się zaspokoić; czynnik OBNIŻAJĄCY ryzyko.
+   */
+  multipleEstates: boolean;
   /** Zgodność właściciela z wpisem w dziale II KW. */
   matchesKwOwner: boolean | null;
   /** Działalność gospodarcza właściciela (CEIDG) — czynnik obniżający ryzyko. */
@@ -205,6 +234,12 @@ export interface SaleabilityForecast {
   available: boolean;
   score: number; // 0–100, wyżej = łatwiej sprzedać
   band: SaleabilityBand;
+  /**
+   * Kategoria zbywalności A–E (GŁÓWNA oś scoringu): typ nieruchomości × liczba
+   * mieszkańców × bliskość dużego miasta, np. mieszkanie w wielkim mieście = A,
+   * dom w okolicach dużego miasta = B.
+   */
+  sellabilityCategory: SellabilityCategoryResult | null;
   estimatedDaysOnMarket: number | null;
   localityPopulation: number | null;
   /** Łączna liczba mieszkańców w promieniu 20 km od nieruchomości. */

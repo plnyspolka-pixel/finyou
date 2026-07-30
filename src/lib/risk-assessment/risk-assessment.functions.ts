@@ -414,7 +414,11 @@ export async function runInvestmentRiskAssessmentCore(
     ? `Wymuszona sprzedaż (komornik): I licytacja od ${forcedSale.firstAuctionOpeningPln?.toLocaleString("pl-PL")} PLN, II licytacja od ${forcedSale.secondAuctionOpeningPln.toLocaleString("pl-PL")} PLN. `
     : "";
   const saleStr = saleability.available
-    ? `Prognozowana łatwość sprzedaży: ${saleability.score}/100. `
+    ? `Prognozowana łatwość sprzedaży: ${saleability.score}/100${
+        saleability.sellabilityCategory
+          ? ` (kategoria ${saleability.sellabilityCategory.category} — ${saleability.sellabilityCategory.label})`
+          : ""
+      }. `
     : "";
   const executiveSummary =
     `Ocena inwestycji: ${combined.investmentScore}/100 (klasa ${combined.riskGrade}) — ${recommendationLabel(combined.recommendation)}. ` +
@@ -577,16 +581,24 @@ function buildDataSources(a: {
     period: "",
     status: a.kwLegal.available ? "success" : "no_data",
   });
+  const ownersWithPesel = a.owner.kwOwnerProfiles?.length ?? 0;
   sources.push({
-    source: "Analiza właściciela (PESEL + tablice trwania życia GUS)",
-    used: a.owner.peselValid,
-    purpose: "wiek/płeć właściciela i aktuarialne ryzyko dożycia/sukcesji",
+    source: "Analiza właścicieli (PESEL z działu II KW + tablice trwania życia GUS)",
+    used: a.owner.peselValid || ownersWithPesel > 0,
+    purpose:
+      "wiek/płeć i aktuarialne ryzyko dożycia/sukcesji KAŻDEGO właściciela; ≥2 właścicieli z PESEL = dwa majątki osobiste (plus)",
     dataLevel:
-      a.owner.age != null
-        ? `wiek ${a.owner.age}, e(x) ${a.owner.lifeExpectancy.remainingYears ?? "—"} lat`
-        : "brak PESEL",
+      ownersWithPesel > 0
+        ? `${ownersWithPesel} właściciel${ownersWithPesel === 1 ? "" : "i"} z PESEL w KW${
+            a.owner.age != null
+              ? `, wnioskodawca: wiek ${a.owner.age}, e(x) ${a.owner.lifeExpectancy.remainingYears ?? "—"} lat`
+              : ""
+          }`
+        : a.owner.age != null
+          ? `wiek ${a.owner.age}, e(x) ${a.owner.lifeExpectancy.remainingYears ?? "—"} lat`
+          : "brak PESEL",
     period: "GUS 2022",
-    status: a.owner.peselValid ? "success" : "no_data",
+    status: a.owner.peselValid || ownersWithPesel > 0 ? "success" : "no_data",
   });
   sources.push({
     source: "CEIDG — działalność gospodarcza właściciela",
@@ -713,6 +725,8 @@ export interface InvestorValuationSummary {
     available: boolean;
     score: number;
     band: string;
+    /** Kategoria zbywalności A–E — główna oś scoringu łatwości sprzedaży. */
+    sellabilityCategory: { category: string; label: string; rationale: string } | null;
     estimatedDaysOnMarket: number | null;
     localityPopulation: number | null;
     populationTrend: string;
@@ -814,6 +828,13 @@ export function buildInvestorValuationSummary(
       available: r.saleability.available,
       score: r.saleability.score,
       band: r.saleability.band,
+      sellabilityCategory: r.saleability.sellabilityCategory
+        ? {
+            category: r.saleability.sellabilityCategory.category,
+            label: r.saleability.sellabilityCategory.label,
+            rationale: r.saleability.sellabilityCategory.rationale,
+          }
+        : null,
       estimatedDaysOnMarket: r.saleability.estimatedDaysOnMarket,
       localityPopulation: r.saleability.localityPopulation,
       populationTrend: r.saleability.populationTrend,

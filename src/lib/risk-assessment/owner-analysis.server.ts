@@ -1,16 +1,18 @@
-// Analiza właściciela nieruchomości / kredytobiorcy.
+// Analiza właścicieli nieruchomości / kredytobiorcy.
 // Łączy dane z tabeli clients (imię, nazwisko) z aktuarialnym trwaniem życia
-// oraz wpisem właściciela w dziale II KW.
-// PESEL zaciągamy PRZEDE WSZYSTKIM bezpośrednio z treści księgi wieczystej
-// (dział II — dane urzędowe); rekord klienta jest tylko źródłem zapasowym.
+// oraz wpisami właścicieli w dziale II KW.
+// PESEL zaciągamy ZAWSZE bezpośrednio z treści księgi wieczystej (dział II —
+// dane urzędowe) — dla KAŻDEGO właściciela, także współwłaścicieli; rekord
+// klienta jest tylko źródłem zapasowym. Dwoje właścicieli z PESEL = dwa majątki
+// osobiste, z których można się zaspokoić (czynnik obniżający ryzyko).
 // Odczytanym z KW numerem uzupełniamy pusty rekord klienta.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parsePesel, type PeselInfo } from "./pesel";
 import { estimateLifeExpectancy } from "./life-expectancy";
-import { extractKwOwnerPesels } from "./kw-parser.server";
+import { extractKwOwnerPesels, type KwOwnerPesel } from "./kw-parser.server";
 import { lookupCeidgActivity, emptyCeidg } from "./ceidg-lookup.server";
-import type { OwnerProfile, KwLegalAnalysis } from "./types";
+import type { OwnerProfile, KwOwnerProfile, KwLegalAnalysis } from "./types";
 
 function normalizeName(s: string): string {
   const COMBINING = new RegExp("[\\u0300-\\u036f]", "g");
@@ -45,26 +47,50 @@ function nameMatchesKwOwners(fullName: string | null, kwOwners: string[]): boole
   return false;
 }
 
+// Dopasowanie po samym nazwisku — słabsze niż namesOverlap (imię+nazwisko),
+// ale wystarczające do wyboru wpisu klienta spośród współwłaścicieli.
+function surnameMatches(fullName: string | null, ownerName: string | null): boolean {
+  if (!fullName || !ownerName) return false;
+  const ta = new Set(
+    normalizeName(fullName)
+      .split(" ")
+      .filter((t) => t.length > 2),
+  );
+  return normalizeName(ownerName)
+    .split(" ")
+    .some((t) => t.length > 2 && ta.has(t));
+}
+
 /**
- * PESEL właściciela z działu II KW — dla klienta bez PESEL w bazie.
- * Wybiera wpis dopasowany po imieniu i nazwisku; gdy w dziale II jest dokładnie
- * jeden PESEL, przyjmuje go jako PESEL jedynego właściciela.
+ * WSZYSTKIE numery PESEL właścicieli z działu II KW (wnioskodawca i każdy
+ * współwłaściciel) — walidowane sumą kontrolną, z przypisanym imieniem
+ * i nazwiskiem wpisu, jeśli udało się je rozpoznać.
  */
-async function findPeselInKw(
-  kwNumber: string,
-  fullName: string | null,
-): Promise<{ pesel: string; ownerName: string | null; nameMatched: boolean } | null> {
+async function findAllPeselsInKw(kwNumber: string): Promise<KwOwnerPesel[]> {
   const { data: row } = await supabaseAdmin
     .from("kw_documents")
     .select("status, dzial_2")
     .eq("kw_number", kwNumber)
     .maybeSingle();
-  if (!row || row.status !== "ready") return null;
-  const candidates = extractKwOwnerPesels(row.dzial_2);
+  if (!row || row.status !== "ready") return [];
+  return extractKwOwnerPesels(row.dzial_2);
+}
+
+/**
+ * Wybiera z listy wpis wnioskodawcy: najpierw pełne dopasowanie (imię+nazwisko),
+ * potem samo nazwisko, na końcu — gdy w księdze jest dokładnie jeden PESEL —
+ * przyjmuje go jako wpis jedynego właściciela (z notą o weryfikacji).
+ */
+function pickApplicantPesel(
+  candidates: KwOwnerPesel[],
+  fullName: string | null,
+): { candidate: KwOwnerPesel; nameMatched: boolean } | null {
   if (candidates.length === 0) return null;
-  const matched = candidates.find((c) => namesOverlap(fullName, c.ownerName));
-  if (matched) return { ...matched, nameMatched: true };
-  if (candidates.length === 1) return { ...candidates[0], nameMatched: false };
+  const full = candidates.find((c) => namesOverlap(fullName, c.ownerName));
+  if (full) return { candidate: full, nameMatched: true };
+  const bySurname = candidates.find((c) => surnameMatches(fullName, c.ownerName));
+  if (bySurname) return { candidate: bySurname, nameMatched: true };
+  if (candidates.length === 1) return { candidate: candidates[0], nameMatched: false };
   return null;
 }
 
@@ -90,6 +116,8 @@ export async function analyzeOwner(args: {
     age: null,
     peselValid: false,
     lifeExpectancy: emptyLE,
+    kwOwnerProfiles: [],
+    multipleEstates: false,
     matchesKwOwner: null,
     businessActivity: emptyCeidg("Nie sprawdzono działalności w CEIDG (brak danych właściciela)."),
     notes: [],
@@ -114,38 +142,74 @@ export async function analyzeOwner(args: {
   const fullName = [client.first_name, client.last_name].filter(Boolean).join(" ").trim() || null;
   const notes: string[] = [];
 
-  // ŹRÓDŁO PODSTAWOWE: PESEL bezpośrednio z treści księgi wieczystej (dział II).
-  let pesel: PeselInfo = parsePesel(null);
+  // ŹRÓDŁO PODSTAWOWE: PESEL-e WSZYSTKICH właścicieli bezpośrednio z treści
+  // księgi wieczystej (dział II) — wnioskodawcy i każdego współwłaściciela.
+  let kwCandidates: KwOwnerPesel[] = [];
   if (args.kwNumber) {
     try {
-      const kwPesel = await findPeselInKw(args.kwNumber, fullName);
-      if (kwPesel) {
-        const parsed = parsePesel(kwPesel.pesel);
-        if (parsed.valid) {
-          pesel = parsed;
-          notes.push(
-            kwPesel.nameMatched
-              ? "PESEL właściciela odczytany bezpośrednio z działu II KW (dopasowany po imieniu i nazwisku)."
-              : "PESEL przyjęty z działu II KW — jedyny właściciel w księdze; zweryfikuj tożsamość klienta.",
-          );
-          if (client.pesel && client.pesel !== kwPesel.pesel) {
-            notes.push(
-              "PESEL w rekordzie klienta różni się od PESEL właściciela w dziale II KW — do analizy przyjęto numer z KW; zweryfikuj dane klienta.",
-            );
-          }
-          // Uzupełnij pusty rekord klienta (tylko gdy dopasowanie po nazwisku jest pewne).
-          if (!client.pesel && kwPesel.nameMatched) {
-            const { error } = await supabaseAdmin
-              .from("clients")
-              .update({ pesel: kwPesel.pesel })
-              .eq("id", args.clientId);
-            if (!error) notes.push("Rekord klienta uzupełniono numerem PESEL z KW.");
-          }
-        }
-      }
+      kwCandidates = await findAllPeselsInKw(args.kwNumber);
     } catch (e: any) {
       console.error("[owner-analysis] PESEL z KW nieodczytany:", e?.message ?? e);
     }
+  }
+
+  const applicantPick = pickApplicantPesel(kwCandidates, fullName);
+
+  let pesel: PeselInfo = parsePesel(null);
+  if (applicantPick) {
+    const parsed = parsePesel(applicantPick.candidate.pesel);
+    if (parsed.valid) {
+      pesel = parsed;
+      notes.push(
+        applicantPick.nameMatched
+          ? "PESEL właściciela odczytany bezpośrednio z działu II KW (dopasowany po nazwisku)."
+          : "PESEL przyjęty z działu II KW — jedyny właściciel w księdze; zweryfikuj tożsamość klienta.",
+      );
+      if (client.pesel && client.pesel !== applicantPick.candidate.pesel) {
+        notes.push(
+          "PESEL w rekordzie klienta różni się od PESEL właściciela w dziale II KW — do analizy przyjęto numer z KW; zweryfikuj dane klienta.",
+        );
+      }
+      // Uzupełnij pusty rekord klienta (tylko gdy dopasowanie po nazwisku jest pewne).
+      if (!client.pesel && applicantPick.nameMatched) {
+        const { error } = await supabaseAdmin
+          .from("clients")
+          .update({ pesel: applicantPick.candidate.pesel })
+          .eq("id", args.clientId);
+        if (!error) notes.push("Rekord klienta uzupełniono numerem PESEL z KW.");
+      }
+    }
+  } else if (kwCandidates.length > 1) {
+    notes.push(
+      `W dziale II KW odczytano ${kwCandidates.length} numery PESEL, ale żadnego nie dopasowano do klienta po nazwisku — zweryfikuj tożsamość wnioskodawcy.`,
+    );
+  }
+
+  // Profile WSZYSTKICH właścicieli z KW (wiek/płeć/dożycie każdego) — RODO:
+  // do JSON-a oceny trafiają wyłącznie cechy wyprowadzone, nie same numery.
+  const kwOwnerProfiles: KwOwnerProfile[] = kwCandidates.flatMap((c) => {
+    const p = parsePesel(c.pesel);
+    if (!p.valid) return [];
+    return [
+      {
+        name: c.ownerName,
+        birthDate: p.birthDate,
+        sex: p.sex,
+        age: p.age,
+        lifeExpectancy: estimateLifeExpectancy({
+          age: p.age,
+          sex: p.sex,
+          loanTermYears: args.loanTermYears ?? null,
+        }),
+        isApplicant: applicantPick?.candidate.pesel === c.pesel,
+      },
+    ];
+  });
+  const multipleEstates = kwOwnerProfiles.length >= 2;
+  if (multipleEstates) {
+    notes.push(
+      `Odczytano PESEL ${kwOwnerProfiles.length === 2 ? "obojga współwłaścicieli" : `${kwOwnerProfiles.length} współwłaścicieli`} z działu II KW — odpowiedzialność rozłożona na ${kwOwnerProfiles.length} majątki osobiste, z których można się zaspokoić (czynnik obniżający ryzyko).`,
+    );
   }
 
   // Źródło zapasowe: PESEL z rekordu klienta (gdy KW nie dała poprawnego numeru).
@@ -209,6 +273,8 @@ export async function analyzeOwner(args: {
     peselValid: pesel.valid,
     peselError: pesel.valid ? undefined : pesel.error,
     lifeExpectancy,
+    kwOwnerProfiles,
+    multipleEstates,
     matchesKwOwner,
     businessActivity,
     notes,
