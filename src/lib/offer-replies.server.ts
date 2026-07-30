@@ -18,9 +18,13 @@ export function offerCardUrl(token: string): string {
 
 const OFFER_ALIAS_RE = /oferta\+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})@/i;
 
-/** Domena odbioru odpowiedzi (MX skonfigurowany w Resend). */
+/**
+ * Domena odbioru odpowiedzi — ta sama, którą mamy w Resend (financeyou.pl,
+ * Receiving włączony). Alias oferta+<uuid>@financeyou.pl łapie każdy adres
+ * na domenie, więc nie trzeba zakładać skrzynek.
+ */
 export function offerReplyDomain(): string {
-  return process.env.OFFER_REPLY_DOMAIN ?? "app.financeyou.pl";
+  return process.env.OFFER_REPLY_DOMAIN ?? process.env.RESEND_FROM_DOMAIN ?? "financeyou.pl";
 }
 
 /** Adres Reply-To dla konkretnej dystrybucji. */
