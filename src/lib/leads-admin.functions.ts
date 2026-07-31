@@ -35,20 +35,36 @@ export const listLeads = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { staff } = await assertAdmin(context.supabase, context.userId);
 
-    // "Moje leady" = leady, do których ja (jako pośrednik) dzwoniłem albo zapisałem notatkę.
+    // "Moje leady" = leady przypięte do mnie (leads.assigned_to — trigger
+    // przypina przy pierwszej akcji roboczej: odsłonięcie telefonu/e-maila/
+    // Messengera, notatka, klik połączenia) + historyczna aktywność, zanim
+    // przydział istniał.
     let assignedLeadIds: string[] | null = null;
     if (data.assignedToMe) {
-      const { data: myActivity, error: callsErr } = await context.supabase
-        .from("lead_communications")
-        .select("lead_id, channel, direction")
-        .eq("created_by", context.userId)
-        .not("lead_id", "is", null);
-      if (callsErr) throw new Error(callsErr.message);
-      const mine = (myActivity ?? []).filter(
+      const [claimedRes, activityRes] = await Promise.all([
+        context.supabase.from("leads").select("id").eq("assigned_to", context.userId),
+        context.supabase
+          .from("lead_communications")
+          .select("lead_id, channel, direction")
+          .eq("created_by", context.userId)
+          .not("lead_id", "is", null),
+      ]);
+      if (claimedRes.error) throw new Error(claimedRes.error.message);
+      if (activityRes.error) throw new Error(activityRes.error.message);
+      const mine = (activityRes.data ?? []).filter(
         (r: any) =>
-          (r.channel === "call" && r.direction === "outbound") || r.channel === "manual_note",
+          (r.channel === "call" && r.direction === "outbound") ||
+          r.channel === "manual_note" ||
+          r.channel === "reveal",
       );
-      assignedLeadIds = Array.from(new Set(mine.map((r: any) => r.lead_id).filter(Boolean)));
+      assignedLeadIds = Array.from(
+        new Set(
+          [
+            ...(claimedRes.data ?? []).map((r: any) => r.id),
+            ...mine.map((r: any) => r.lead_id),
+          ].filter(Boolean),
+        ),
+      );
       if (assignedLeadIds.length === 0) return [];
     }
 
@@ -57,7 +73,7 @@ export const listLeads = createServerFn({ method: "GET" })
       .select(
         `
         id, type, status, source, first_name, last_name, email, phone_normalized,
-        current_form_step, created_at, updated_at, loan_application_id, investor_id, meta_lead_id,
+        assigned_to, current_form_step, created_at, updated_at, loan_application_id, investor_id, meta_lead_id,
         quality_tier, quality_score, marked_bad_lead,
         loan:loan_applications(
           id, status, loan_amount, preferred_period_months, completeness_percent,

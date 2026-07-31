@@ -44,6 +44,24 @@ formularza) nie zdejmuje leada z puli — wymagana jest dwustronna rozmowa.
    pulę dla nie-personelu także jawnie w zapytaniu (obrona w głąb, gdyby
    zapytanie przeszło kiedyś na service-role).
 
+## Przydział leadów („Moje leady")
+
+Lead zostaje **przypięty do partnera** (`leads.assigned_to`) w momencie jego
+pierwszej akcji roboczej na leadzie:
+
+- odsłonięcie numeru telefonu / adresu e-mail / kanału Messenger (`reveal`),
+- zapisanie notatki (`manual_note`),
+- klik połączenia (`call` outbound).
+
+Pierwszy się liczy — przypisania nie nadpisujemy; akcje personelu
+wewnętrznego nie przypinają leada. Egzekwuje to trigger
+`leadcomm_claim_lead` na `lead_communications`
+(`20260731090000_lead_assignment_claim.sql`), więc działa w każdej ścieżce
+zapisu. Zakładka „Moje leady" (`listLeads` z `assignedToMe`) pokazuje leady
+przypięte do mnie + historyczną aktywność sprzed istnienia przydziału.
+Przypięty lead, na którym klient rozpocznie wniosek, znika partnerowi tak
+samo jak z puli (RLS wyżej).
+
 ## Pliki
 
 - `supabase/migrations/20260730170000_leads_wnioski_split.sql` — kolumny,
