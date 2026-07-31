@@ -137,6 +137,28 @@ export function MyBrokerLeads() {
                         {r.source}
                       </Badge>
                     )}
+                    {r.claim_expires_at &&
+                      (new Date(r.claim_expires_at) > new Date() ? (
+                        <Badge
+                          className="bg-emerald-500/25 text-emerald-100 border-emerald-300/30"
+                          title="Kolejna akcja (telefon, notatka, odsłonięcie) przedłuża wyłączność o 2 dni"
+                        >
+                          wyłączność do{" "}
+                          {new Date(r.claim_expires_at).toLocaleString("pl-PL", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          className="bg-amber-500/25 text-amber-100 border-amber-300/30"
+                          title="Bez działania w oknie wyłączności lead wrócił do wspólnej puli — inny partner może go przejąć"
+                        >
+                          wyłączność wygasła — lead w puli
+                        </Badge>
+                      ))}
                   </div>
                   <div className="text-xs text-white/80 mt-1 flex flex-wrap gap-2">
                     <RevealContact

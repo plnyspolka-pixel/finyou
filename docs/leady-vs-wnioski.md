@@ -53,14 +53,25 @@ pierwszej akcji roboczej na leadzie:
 - zapisanie notatki (`manual_note`),
 - klik połączenia (`call` outbound).
 
-Pierwszy się liczy — przypisania nie nadpisujemy; akcje personelu
-wewnętrznego nie przypinają leada. Egzekwuje to trigger
+Przypięcie daje **wyłączność na 2 dni** (`leads.claim_expires_at`):
+
+- lead z aktywną wyłącznością **znika z puli pozostałym partnerom**
+  (RLS `leads_partner_pool_select` + jawny filtr w `listLeads`/`getLead`),
+- każda kolejna akcja robocza posiadacza **odnawia okno o 2 dni**,
+- brak działania w oknie → lead **wraca do wspólnej puli**; pierwszy
+  partner, który wykona akcję, **przejmuje przypięcie** (dotychczasowemu
+  znika z „Moich leadów"),
+- `assigned_to` ustawione ręcznie przez admina bez `claim_expires_at`
+  oznacza trwałe przypisanie — nieprzejmowalne i niewidoczne dla innych
+  partnerów.
+
+Akcje personelu wewnętrznego nie przypinają leada. Egzekwuje to trigger
 `leadcomm_claim_lead` na `lead_communications`
-(`20260731090000_lead_assignment_claim.sql`), więc działa w każdej ścieżce
+(`20260731090000_lead_assignment_claim.sql`,
+`20260731110000_lead_claim_exclusivity.sql`), więc działa w każdej ścieżce
 zapisu. Zakładka „Moje leady" (`listLeads` z `assignedToMe`) pokazuje leady
-przypięte do mnie + historyczną aktywność sprzed istnienia przydziału.
-Przypięty lead, na którym klient rozpocznie wniosek, znika partnerowi tak
-samo jak z puli (RLS wyżej).
+przypięte do mnie (`assigned_to`). Przypięty lead, na którym klient
+rozpocznie wniosek, znika partnerowi tak samo jak z puli (RLS wyżej).
 
 ## Pliki
 

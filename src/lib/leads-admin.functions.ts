@@ -37,34 +37,18 @@ export const listLeads = createServerFn({ method: "GET" })
 
     // "Moje leady" = leady przypięte do mnie (leads.assigned_to — trigger
     // przypina przy pierwszej akcji roboczej: odsłonięcie telefonu/e-maila/
-    // Messengera, notatka, klik połączenia) + historyczna aktywność, zanim
-    // przydział istniał.
+    // Messengera, notatka, klik połączenia; kolejne akcje odnawiają
+    // 2-dniową wyłączność). Po wygaśnięciu okna lead wraca do wspólnej
+    // puli, a przejęcie przez innego partnera przepina assigned_to — więc
+    // celowo NIE doklejamy leadów po samej historycznej aktywności.
     let assignedLeadIds: string[] | null = null;
     if (data.assignedToMe) {
-      const [claimedRes, activityRes] = await Promise.all([
-        context.supabase.from("leads").select("id").eq("assigned_to", context.userId),
-        context.supabase
-          .from("lead_communications")
-          .select("lead_id, channel, direction")
-          .eq("created_by", context.userId)
-          .not("lead_id", "is", null),
-      ]);
-      if (claimedRes.error) throw new Error(claimedRes.error.message);
-      if (activityRes.error) throw new Error(activityRes.error.message);
-      const mine = (activityRes.data ?? []).filter(
-        (r: any) =>
-          (r.channel === "call" && r.direction === "outbound") ||
-          r.channel === "manual_note" ||
-          r.channel === "reveal",
-      );
-      assignedLeadIds = Array.from(
-        new Set(
-          [
-            ...(claimedRes.data ?? []).map((r: any) => r.id),
-            ...mine.map((r: any) => r.lead_id),
-          ].filter(Boolean),
-        ),
-      );
+      const { data: claimedRows, error: claimErr } = await context.supabase
+        .from("leads")
+        .select("id")
+        .eq("assigned_to", context.userId);
+      if (claimErr) throw new Error(claimErr.message);
+      assignedLeadIds = (claimedRows ?? []).map((r: any) => r.id).filter(Boolean);
       if (assignedLeadIds.length === 0) return [];
     }
 
@@ -73,7 +57,7 @@ export const listLeads = createServerFn({ method: "GET" })
       .select(
         `
         id, type, status, source, first_name, last_name, email, phone_normalized,
-        assigned_to, current_form_step, created_at, updated_at, loan_application_id, investor_id, meta_lead_id,
+        assigned_to, claim_expires_at, current_form_step, created_at, updated_at, loan_application_id, investor_id, meta_lead_id,
         quality_tier, quality_score, marked_bad_lead,
         loan:loan_applications(
           id, status, loan_amount, preferred_period_months, completeness_percent,
@@ -84,8 +68,16 @@ export const listLeads = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(500);
     // Partner zewnętrzny: tylko otwarta pula — lead z rozpoczętym wnioskiem
-    // (application_started_at) jest sprawą klienta FY, nie towarem.
-    if (!staff) q = q.is("application_started_at", null);
+    // (application_started_at) jest sprawą klienta FY, nie towarem, a lead
+    // przypięty do innego partnera z aktywną wyłącznością (claim_expires_at)
+    // jest dla pozostałych niewidoczny. Duplikuje reguły RLS (obrona w głąb).
+    if (!staff) {
+      q = q
+        .is("application_started_at", null)
+        .or(
+          `assigned_to.is.null,assigned_to.eq.${context.userId},claim_expires_at.lte.${new Date().toISOString()}`,
+        );
+    }
     if (assignedLeadIds) q = q.in("id", assignedLeadIds);
     if (data.type !== "all") q = q.eq("type", data.type);
     if (data.source) q = q.eq("source", data.source);
@@ -500,11 +492,17 @@ export const getLead = createServerFn({ method: "GET" })
     } catch (e) {
       console.error("[getLead] ensureLoanApplicationForLead", e);
     }
-    // RLS sesji partnera i tak ukrywa leady z rozpoczętym wnioskiem — jawny
-    // filtr utrzymuje tę samą regułę, gdyby zapytanie kiedyś przeszło na
-    // service-role.
+    // RLS sesji partnera i tak ukrywa leady z rozpoczętym wnioskiem oraz
+    // cudzą aktywną wyłączność — jawny filtr utrzymuje tę samą regułę,
+    // gdyby zapytanie kiedyś przeszło na service-role.
     let leadQuery = context.supabase.from("leads").select("*").eq("id", data.id);
-    if (!staff) leadQuery = leadQuery.is("application_started_at", null);
+    if (!staff) {
+      leadQuery = leadQuery
+        .is("application_started_at", null)
+        .or(
+          `assigned_to.is.null,assigned_to.eq.${context.userId},claim_expires_at.lte.${new Date().toISOString()}`,
+        );
+    }
     const { data: lead, error } = await leadQuery.maybeSingle();
     if (error) throw new Error(error.message);
     if (!lead) throw new Error("Lead nie istnieje");

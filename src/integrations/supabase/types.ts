@@ -6242,6 +6242,7 @@ export type Database = {
           application_started_source: string | null
           assigned_to: string | null
           broker_notes: string | null
+          claim_expires_at: string | null
           client_id: string | null
           consent_email: boolean
           consent_marketing: boolean
@@ -6291,6 +6292,7 @@ export type Database = {
           application_started_source?: string | null
           assigned_to?: string | null
           broker_notes?: string | null
+          claim_expires_at?: string | null
           client_id?: string | null
           consent_email?: boolean
           consent_marketing?: boolean
@@ -6340,6 +6342,7 @@ export type Database = {
           application_started_source?: string | null
           assigned_to?: string | null
           broker_notes?: string | null
+          claim_expires_at?: string | null
           client_id?: string | null
           consent_email?: boolean
           consent_marketing?: boolean
