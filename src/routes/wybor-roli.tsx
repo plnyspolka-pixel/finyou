@@ -4,14 +4,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { selectAccountRole } from "@/lib/account-role.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, LineChart, Briefcase } from "lucide-react";
+import { Building2, LineChart } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/wybor-roli")({
   component: RolePickerPage,
 });
 
-type Pick = "klient" | "inwestor" | "posrednik";
+type Pick = "klient" | "inwestor";
 
 function RolePickerPage() {
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ function RolePickerPage() {
   const pick = async (role: Pick) => {
     setSubmitting(role);
     try {
-      // Rolę zapisuje serwer — wybór "pośrednik" nadaje rolę 'posrednik'.
+      // Rolę zapisuje serwer.
       await selectRoleFn({ data: { role } });
       try {
         localStorage.removeItem("pending_role_selection");
@@ -37,7 +37,7 @@ function RolePickerPage() {
       await refreshRoles();
       toast.success("Konto skonfigurowane");
       navigate({
-        to: role === "inwestor" ? "/inwestor" : role === "posrednik" ? "/posrednik" : "/klient",
+        to: role === "inwestor" ? "/inwestor" : "/klient",
       });
     } catch (e) {
       toast.error("Nie udało się zapisać wyboru", {
@@ -72,19 +72,13 @@ function RolePickerPage() {
           <CardTitle>Wybierz typ konta</CardTitle>
           <CardDescription>Określ, w jakiej roli chcesz korzystać z platformy.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
+        <CardContent className="grid gap-4 sm:grid-cols-2">
           {tile("klient", Building2, "Klient", "Złóż wniosek o pożyczkę pod zastaw nieruchomości.")}
           {tile(
             "inwestor",
             LineChart,
             "Inwestor",
             "Przeglądaj oferty i inwestuj w zabezpieczone pożyczki.",
-          )}
-          {tile(
-            "posrednik",
-            Briefcase,
-            "Pośrednik",
-            "Wprowadzaj wnioski klientów i zarabiaj na prowizjach.",
           )}
         </CardContent>
       </Card>
