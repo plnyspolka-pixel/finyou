@@ -8316,11 +8316,13 @@ export type Database = {
           content: string
           created_at: string
           created_by: string | null
+          external_id: string | null
           hashtags: string[] | null
           id: string
           image_url: string | null
           link_url: string | null
           platform: string
+          publish_error: string | null
           published_at: string | null
           scheduled_at: string | null
           status: string
@@ -8333,11 +8335,13 @@ export type Database = {
           content: string
           created_at?: string
           created_by?: string | null
+          external_id?: string | null
           hashtags?: string[] | null
           id?: string
           image_url?: string | null
           link_url?: string | null
           platform: string
+          publish_error?: string | null
           published_at?: string | null
           scheduled_at?: string | null
           status?: string
@@ -8350,11 +8354,13 @@ export type Database = {
           content?: string
           created_at?: string
           created_by?: string | null
+          external_id?: string | null
           hashtags?: string[] | null
           id?: string
           image_url?: string | null
           link_url?: string | null
           platform?: string
+          publish_error?: string | null
           published_at?: string | null
           scheduled_at?: string | null
           status?: string

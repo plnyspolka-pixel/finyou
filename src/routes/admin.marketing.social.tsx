@@ -10,6 +10,7 @@ import {
   deleteSocialPost,
   generateSocialPost,
   generateSocialImageFn,
+  publishSocialPost,
 } from "@/lib/social-posts.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,8 @@ type Post = {
   status: Status;
   campaign: string | null;
   created_at: string;
+  external_id: string | null;
+  publish_error: string | null;
 };
 
 type FormState = {
@@ -98,6 +101,7 @@ function SocialAdmin() {
   const delFn = useServerFn(deleteSocialPost);
   const genFn = useServerFn(generateSocialPost);
   const imgFn = useServerFn(generateSocialImageFn);
+  const publishFn = useServerFn(publishSocialPost);
 
   const { data, isLoading } = useQuery({
     queryKey: ["social-posts"],
@@ -171,6 +175,20 @@ function SocialAdmin() {
       toast.success("Wygenerowano treść");
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+
+  const publish = useMutation({
+    mutationFn: (id: string) => publishFn({ data: { id } }),
+    onSuccess: (r) => {
+      toast.success(
+        r.permalink ? `Opublikowano na Instagramie: ${r.permalink}` : "Opublikowano na Instagramie",
+      );
+      void qc.invalidateQueries({ queryKey: ["social-posts"] });
+    },
+    onError: (e: Error) => {
+      toast.error(e.message);
+      void qc.invalidateQueries({ queryKey: ["social-posts"] });
+    },
   });
 
   const genImage = useMutation({
@@ -358,8 +376,9 @@ function SocialAdmin() {
                     onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })}
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Publikacja automatyczna wymaga połączenia z API platformy — na razie kalendarz
-                    służy do planowania ręcznej publikacji.
+                    Instagram: posty ze statusem „Zaplanowany" publikują się automatycznie po
+                    terminie (wymagana grafika). Pozostałe platformy — kalendarz do publikacji
+                    ręcznej.
                   </p>
                 </div>
               </TabsContent>
@@ -412,14 +431,25 @@ function SocialAdmin() {
                   <Badge variant="outline">{PLATFORM_LABELS[p.platform]}</Badge>
                   <Badge className={STATUS_COLORS[p.status]}>{p.status}</Badge>
                   {p.campaign && <Badge variant="secondary">{p.campaign}</Badge>}
-                  {p.scheduled_at && (
+                  {p.scheduled_at && p.status !== "published" && (
                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <Calendar className="h-3 w-3" />
                       {formatDateTime(p.scheduled_at)}
                     </span>
                   )}
+                  {p.published_at && (
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Send className="h-3 w-3" />
+                      {formatDateTime(p.published_at)}
+                    </span>
+                  )}
                 </div>
                 <p className="whitespace-pre-wrap text-sm">{p.content}</p>
+                {p.status === "failed" && p.publish_error && (
+                  <p className="mt-1 text-xs text-destructive">
+                    Błąd publikacji: {p.publish_error}
+                  </p>
+                )}
                 {p.hashtags && p.hashtags.length > 0 && (
                   <p className="mt-1 text-xs text-primary">{p.hashtags.join(" ")}</p>
                 )}
@@ -431,6 +461,23 @@ function SocialAdmin() {
                   />
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {p.platform === "instagram" && p.status !== "published" && (
+                    <Button
+                      size="sm"
+                      disabled={publish.isPending || !p.image_url}
+                      title={!p.image_url ? "Instagram wymaga grafiki — dodaj obraz" : undefined}
+                      onClick={() => {
+                        if (confirm("Opublikować ten post na Instagramie?")) publish.mutate(p.id);
+                      }}
+                    >
+                      <Send className="mr-1 h-3 w-3" />
+                      {publish.isPending && publish.variables === p.id
+                        ? "Publikuję…"
+                        : p.status === "failed"
+                          ? "Ponów publikację"
+                          : "Publikuj na IG"}
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"

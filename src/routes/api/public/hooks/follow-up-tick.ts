@@ -45,6 +45,15 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           console.error("[follow-up-tick] outbox error", e);
         }
 
+        // Publikacja zaplanowanych postów Instagram (social_posts) — best-effort.
+        try {
+          const { processDueSocialPosts } = await import("@/lib/instagram-publish.server");
+          const sp = await processDueSocialPosts();
+          if (sp.processed) console.log("[follow-up-tick] social publish", JSON.stringify(sp));
+        } catch (e) {
+          console.error("[follow-up-tick] social publish error", e);
+        }
+
         // Uzupełnianie historii Messenger/IG (imiona z Meta/OCR/KW/treści
         // wiadomości, jednorazowa migracja załączników) — best-effort,
         // nie może wywrócić ticka.

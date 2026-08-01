@@ -68,6 +68,52 @@ export const deleteSocialPost = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const publishSocialPost = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: post, error } = await context.supabase
+      .from("social_posts")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (error || !post) throw new Error(error?.message ?? "Post nie istnieje");
+    if (post.platform !== "instagram") {
+      throw new Error("Publikacja z aplikacji działa obecnie tylko dla Instagrama");
+    }
+    if (post.status === "published") throw new Error("Post jest już opublikowany");
+    if (!post.image_url) throw new Error("Instagram wymaga grafiki — dodaj obraz do posta");
+
+    const { publishInstagramImage, buildInstagramCaption } =
+      await import("./instagram-publish.server");
+    const r = await publishInstagramImage({
+      imageUrl: post.image_url,
+      caption: buildInstagramCaption(post.content, post.hashtags),
+    });
+
+    const patch = r.ok
+      ? {
+          status: "published",
+          published_at: new Date().toISOString(),
+          external_id: r.mediaId ?? null,
+          publish_error: null,
+          ...(r.resolvedImageUrl ? { image_url: r.resolvedImageUrl } : {}),
+        }
+      : {
+          status: "failed",
+          publish_error: (r.error ?? "unknown").slice(0, 1000),
+          ...(r.resolvedImageUrl ? { image_url: r.resolvedImageUrl } : {}),
+        };
+    const { error: upErr } = await context.supabase
+      .from("social_posts")
+      .update(patch)
+      .eq("id", data.id);
+    if (upErr) throw new Error(upErr.message);
+
+    if (!r.ok) throw new Error(`Publikacja nie powiodła się: ${r.error}`);
+    return { ok: true, mediaId: r.mediaId, permalink: r.permalink ?? null };
+  });
+
 export const generateSocialPost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
