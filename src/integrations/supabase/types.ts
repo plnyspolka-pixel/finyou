@@ -9025,6 +9025,105 @@ export type Database = {
           },
         ]
       }
+      youtube_integration: {
+        Row: {
+          access_token: string | null
+          access_token_expires_at: string | null
+          channel_id: string | null
+          channel_title: string | null
+          connected_at: string | null
+          created_at: string
+          id: number
+          last_error: string | null
+          oauth_state: string | null
+          oauth_state_expires_at: string | null
+          refresh_token: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          channel_id?: string | null
+          channel_title?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: number
+          last_error?: string | null
+          oauth_state?: string | null
+          oauth_state_expires_at?: string | null
+          refresh_token?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          channel_id?: string | null
+          channel_title?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: number
+          last_error?: string | null
+          oauth_state?: string | null
+          oauth_state_expires_at?: string | null
+          refresh_token?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      youtube_publish_queue: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          last_error: string | null
+          privacy_status: string
+          published_at: string | null
+          scheduled_at: string
+          source_video_url: string
+          status: string
+          tags: string[]
+          title: string
+          updated_at: string
+          youtube_video_id: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          last_error?: string | null
+          privacy_status?: string
+          published_at?: string | null
+          scheduled_at?: string
+          source_video_url: string
+          status?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+          youtube_video_id?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          last_error?: string | null
+          privacy_status?: string
+          published_at?: string | null
+          scheduled_at?: string
+          source_video_url?: string
+          status?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       partner_operator_role_audit: {
