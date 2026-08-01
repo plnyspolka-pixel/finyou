@@ -93,7 +93,7 @@ const AKADEMIA: TwoColSlide[] = [
     etap: "Moduł 1",
     short: "Wprowadzenie",
     title: "Wprowadzenie i strategia",
-    desc: "Poznaj zasady działania rynku prywatnych pożyczek zabezpieczonych na nieruchomościach. Dowiedz się, jak inwestorzy i pośrednicy wyszukują okazje, budują własną strategię, pozyskują klientów oraz wybierają model działania dopasowany do posiadanego kapitału i doświadczenia.",
+    desc: "Poznaj zasady działania rynku prywatnych pożyczek zabezpieczonych na nieruchomościach. Dowiedz się, jak inwestorzy wyszukują okazje, budują własną strategię oraz wybierają model działania dopasowany do posiadanego kapitału i doświadczenia.",
   },
   {
     src: "/marketing/akademia/modul-2.png",
