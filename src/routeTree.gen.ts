@@ -92,6 +92,7 @@ import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AdminZgodyRouteImport } from './routes/admin.zgody'
 import { Route as AdminZespolAktywnoscRouteImport } from './routes/admin.zespol-aktywnosc'
+import { Route as AdminYoutubeShortsRouteImport } from './routes/admin.youtube-shorts'
 import { Route as AdminWnioskiNiekompletneRouteImport } from './routes/admin.wnioski-niekompletne'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
@@ -160,6 +161,7 @@ import { Route as InwestorAmlRyzykoRouteImport } from './routes/inwestor.aml.ryz
 import { Route as InwestorAmlPonadprogoweRouteImport } from './routes/inwestor.aml.ponadprogowe'
 import { Route as InwestorAmlKlienciRouteImport } from './routes/inwestor.aml.klienci'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
+import { Route as ApiPublicYoutubeOauthCallbackRouteImport } from './routes/api/public/youtube-oauth-callback'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio-voice'
 import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/public/twilio-recording'
 import { Route as ApiPublicResendWebhookRouteImport } from './routes/api/public/resend-webhook'
@@ -200,6 +202,7 @@ import { Route as InwestorWindykacjaCaseIdRaportRouteImport } from './routes/inw
 import { Route as InwestorProjektyOfertaAssignmentIdRouteImport } from './routes/inwestor.projekty.oferta.$assignmentId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicPaymentsTpayWebhookRouteImport } from './routes/api/public/payments/tpay-webhook'
+import { Route as ApiPublicHooksYoutubeShortsTickRouteImport } from './routes/api/public/hooks/youtube-shorts-tick'
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
 import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/public/hooks/voicebot-inbound'
 import { Route as ApiPublicHooksVoicebotEnrichTickRouteImport } from './routes/api/public/hooks/voicebot-enrich-tick'
@@ -642,6 +645,11 @@ const AdminZespolAktywnoscRoute = AdminZespolAktywnoscRouteImport.update({
   path: '/zespol-aktywnosc',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminYoutubeShortsRoute = AdminYoutubeShortsRouteImport.update({
+  id: '/youtube-shorts',
+  path: '/youtube-shorts',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminWnioskiNiekompletneRoute =
   AdminWnioskiNiekompletneRouteImport.update({
     id: '/wnioski-niekompletne',
@@ -989,6 +997,12 @@ const EmbedLSlugRoute = EmbedLSlugRouteImport.update({
   path: '/embed/l/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicYoutubeOauthCallbackRoute =
+  ApiPublicYoutubeOauthCallbackRouteImport.update({
+    id: '/api/public/youtube-oauth-callback',
+    path: '/api/public/youtube-oauth-callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTwilioVoiceRoute = ApiPublicTwilioVoiceRouteImport.update({
   id: '/api/public/twilio-voice',
   path: '/api/public/twilio-voice',
@@ -1212,6 +1226,12 @@ const ApiPublicPaymentsTpayWebhookRoute =
     path: '/api/public/payments/tpay-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksYoutubeShortsTickRoute =
+  ApiPublicHooksYoutubeShortsTickRouteImport.update({
+    id: '/api/public/hooks/youtube-shorts-tick',
+    path: '/api/public/hooks/youtube-shorts-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksVoicebotOptOutRoute =
   ApiPublicHooksVoicebotOptOutRouteImport.update({
     id: '/api/public/hooks/voicebot-opt-out',
@@ -1421,6 +1441,7 @@ export interface FileRoutesByFullPath {
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
+  '/admin/youtube-shorts': typeof AdminYoutubeShortsRoute
   '/admin/zespol-aktywnosc': typeof AdminZespolAktywnoscRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -1513,6 +1534,7 @@ export interface FileRoutesByFullPath {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
   '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
@@ -1563,6 +1585,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
+  '/api/public/hooks/youtube-shorts-tick': typeof ApiPublicHooksYoutubeShortsTickRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/inwestor/projekty/oferta/$assignmentId': typeof InwestorProjektyOfertaAssignmentIdRoute
@@ -1633,6 +1656,7 @@ export interface FileRoutesByTo {
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
+  '/admin/youtube-shorts': typeof AdminYoutubeShortsRoute
   '/admin/zespol-aktywnosc': typeof AdminZespolAktywnoscRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -1720,6 +1744,7 @@ export interface FileRoutesByTo {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
   '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
@@ -1770,6 +1795,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
+  '/api/public/hooks/youtube-shorts-tick': typeof ApiPublicHooksYoutubeShortsTickRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/inwestor/projekty/oferta/$assignmentId': typeof InwestorProjektyOfertaAssignmentIdRoute
@@ -1846,6 +1872,7 @@ export interface FileRoutesById {
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
+  '/admin/youtube-shorts': typeof AdminYoutubeShortsRoute
   '/admin/zespol-aktywnosc': typeof AdminZespolAktywnoscRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -1938,6 +1965,7 @@ export interface FileRoutesById {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
   '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
@@ -1988,6 +2016,7 @@ export interface FileRoutesById {
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
+  '/api/public/hooks/youtube-shorts-tick': typeof ApiPublicHooksYoutubeShortsTickRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/inwestor/projekty/oferta/$assignmentId': typeof InwestorProjektyOfertaAssignmentIdRoute
@@ -2065,6 +2094,7 @@ export interface FileRouteTypes {
     | '/admin/ustawienia'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
+    | '/admin/youtube-shorts'
     | '/admin/zespol-aktywnosc'
     | '/admin/zgody'
     | '/blog/$slug'
@@ -2157,6 +2187,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-webhook'
     | '/api/public/twilio-recording'
     | '/api/public/twilio-voice'
+    | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
     | '/inwestor/aml/ponadprogowe'
@@ -2207,6 +2238,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
+    | '/api/public/hooks/youtube-shorts-tick'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
     | '/inwestor/projekty/oferta/$assignmentId'
@@ -2277,6 +2309,7 @@ export interface FileRouteTypes {
     | '/admin/ustawienia'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
+    | '/admin/youtube-shorts'
     | '/admin/zespol-aktywnosc'
     | '/admin/zgody'
     | '/blog/$slug'
@@ -2364,6 +2397,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-webhook'
     | '/api/public/twilio-recording'
     | '/api/public/twilio-voice'
+    | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
     | '/inwestor/aml/ponadprogowe'
@@ -2414,6 +2448,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
+    | '/api/public/hooks/youtube-shorts-tick'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
     | '/inwestor/projekty/oferta/$assignmentId'
@@ -2489,6 +2524,7 @@ export interface FileRouteTypes {
     | '/admin/ustawienia'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
+    | '/admin/youtube-shorts'
     | '/admin/zespol-aktywnosc'
     | '/admin/zgody'
     | '/blog/$slug'
@@ -2581,6 +2617,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-webhook'
     | '/api/public/twilio-recording'
     | '/api/public/twilio-voice'
+    | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
     | '/inwestor/aml/ponadprogowe'
@@ -2631,6 +2668,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
+    | '/api/public/hooks/youtube-shorts-tick'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
     | '/inwestor/projekty/oferta/$assignmentId'
@@ -2696,6 +2734,7 @@ export interface RootRouteChildren {
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   ApiPublicTwilioRecordingRoute: typeof ApiPublicTwilioRecordingRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
+  ApiPublicYoutubeOauthCallbackRoute: typeof ApiPublicYoutubeOauthCallbackRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
@@ -2721,6 +2760,7 @@ export interface RootRouteChildren {
   ApiPublicHooksVoicebotEnrichTickRoute: typeof ApiPublicHooksVoicebotEnrichTickRoute
   ApiPublicHooksVoicebotInboundRoute: typeof ApiPublicHooksVoicebotInboundRoute
   ApiPublicHooksVoicebotOptOutRoute: typeof ApiPublicHooksVoicebotOptOutRoute
+  ApiPublicHooksYoutubeShortsTickRoute: typeof ApiPublicHooksYoutubeShortsTickRoute
   ApiPublicPaymentsTpayWebhookRoute: typeof ApiPublicPaymentsTpayWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -3311,6 +3351,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminZespolAktywnoscRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/youtube-shorts': {
+      id: '/admin/youtube-shorts'
+      path: '/youtube-shorts'
+      fullPath: '/admin/youtube-shorts'
+      preLoaderRoute: typeof AdminYoutubeShortsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/wnioski-niekompletne': {
       id: '/admin/wnioski-niekompletne'
       path: '/wnioski-niekompletne'
@@ -3787,6 +3834,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmbedLSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/youtube-oauth-callback': {
+      id: '/api/public/youtube-oauth-callback'
+      path: '/api/public/youtube-oauth-callback'
+      fullPath: '/api/public/youtube-oauth-callback'
+      preLoaderRoute: typeof ApiPublicYoutubeOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/twilio-voice': {
       id: '/api/public/twilio-voice'
       path: '/api/public/twilio-voice'
@@ -4067,6 +4121,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsTpayWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/youtube-shorts-tick': {
+      id: '/api/public/hooks/youtube-shorts-tick'
+      path: '/api/public/hooks/youtube-shorts-tick'
+      fullPath: '/api/public/hooks/youtube-shorts-tick'
+      preLoaderRoute: typeof ApiPublicHooksYoutubeShortsTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/voicebot-opt-out': {
       id: '/api/public/hooks/voicebot-opt-out'
       path: '/api/public/hooks/voicebot-opt-out'
@@ -4303,6 +4364,7 @@ interface AdminRouteChildren {
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
   AdminVoicebotRoute: typeof AdminVoicebotRoute
   AdminWnioskiNiekompletneRoute: typeof AdminWnioskiNiekompletneRoute
+  AdminYoutubeShortsRoute: typeof AdminYoutubeShortsRoute
   AdminZespolAktywnoscRoute: typeof AdminZespolAktywnoscRoute
   AdminZgodyRoute: typeof AdminZgodyRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -4369,6 +4431,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminUstawieniaRoute: AdminUstawieniaRoute,
   AdminVoicebotRoute: AdminVoicebotRoute,
   AdminWnioskiNiekompletneRoute: AdminWnioskiNiekompletneRoute,
+  AdminYoutubeShortsRoute: AdminYoutubeShortsRoute,
   AdminZespolAktywnoscRoute: AdminZespolAktywnoscRoute,
   AdminZgodyRoute: AdminZgodyRoute,
   AdminIndexRoute: AdminIndexRoute,
@@ -4685,6 +4748,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   ApiPublicTwilioRecordingRoute: ApiPublicTwilioRecordingRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
+  ApiPublicYoutubeOauthCallbackRoute: ApiPublicYoutubeOauthCallbackRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
@@ -4718,6 +4782,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksVoicebotEnrichTickRoute: ApiPublicHooksVoicebotEnrichTickRoute,
   ApiPublicHooksVoicebotInboundRoute: ApiPublicHooksVoicebotInboundRoute,
   ApiPublicHooksVoicebotOptOutRoute: ApiPublicHooksVoicebotOptOutRoute,
+  ApiPublicHooksYoutubeShortsTickRoute: ApiPublicHooksYoutubeShortsTickRoute,
   ApiPublicPaymentsTpayWebhookRoute: ApiPublicPaymentsTpayWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
