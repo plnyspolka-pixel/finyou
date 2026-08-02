@@ -20,6 +20,7 @@ import { Search, MapPin, Ruler, Calendar, Percent, Wallet, TrendingUp, X } from 
 import { formatPLN, propertyTypeLabels, visibilityLabels } from "@/lib/labels";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import {
+  IMAGE_EXT,
   isShowablePropertyPhoto,
   isPropertyPhotoDocument,
   signStoragePath,
@@ -148,10 +149,33 @@ function InwestorList() {
           .from("documents")
           .select("loan_application_id, file_path, file_name, document_type")
           .in("loan_application_id", appIds);
-        (docRows ?? []).filter(isPropertyPhotoDocument).forEach((doc: any) => {
-          const appId = doc.loan_application_id;
-          docsByApp.set(appId, [...(docsByApp.get(appId) ?? []), doc]);
-        });
+        // Widok szczegółu wniosku pokazuje WSZYSTKIE załączniki-obrazki
+        // (klient wgrywa zdjęcia pod różnymi document_type, np. przez czat) —
+        // lista nie może być bardziej restrykcyjna, bo karty zostają szare.
+        // Bierzemy każdy obrazek; typy stricte zdjęciowe idą na początek.
+        type DocRow = {
+          loan_application_id: string | null;
+          file_path: string | null;
+          file_name: string | null;
+          document_type: string | null;
+        };
+        ((docRows ?? []) as DocRow[])
+          .filter((doc) => {
+            const name = String(doc.file_name ?? doc.file_path ?? "");
+            return (
+              Boolean(doc.file_path) &&
+              (IMAGE_EXT.test(name) || IMAGE_EXT.test(String(doc.file_path)))
+            );
+          })
+          .forEach((doc) => {
+            const appId = String(doc.loan_application_id);
+            docsByApp.set(appId, [...(docsByApp.get(appId) ?? []), doc]);
+          });
+        for (const docs of docsByApp.values()) {
+          docs.sort(
+            (x, y) => Number(isPropertyPhotoDocument(y)) - Number(isPropertyPhotoDocument(x)),
+          );
+        }
       }
 
       // Miniatura per wniosek: lista KANDYDATÓW zamiast jednej ścieżki —
@@ -167,13 +191,15 @@ function InwestorList() {
           const docPaths = (docsByApp.get(a.id) ?? [])
             .map((d) => String(d.file_path ?? ""))
             .filter(Boolean);
+          const docNonHeic = docPaths.filter((p) => !/\.heic$/i.test(p));
+          const docHeic = docPaths.filter((p) => /\.heic$/i.test(p));
           const showable = photos.filter(isShowablePropertyPhoto);
           const heic = showable.filter((p) => /\.heic$/i.test(p));
           const nonHeic = showable.filter((p) => !/\.heic$/i.test(p));
           const pdfThumbs = photos
             .filter((p) => /\.pdf$/i.test(p) && !/^https?:\/\//i.test(p))
             .map((p) => `${p}.thumb.png`);
-          const candidates = [...nonHeic, ...docPaths, ...pdfThumbs, ...heic];
+          const candidates = [...nonHeic, ...docNonHeic, ...pdfThumbs, ...heic, ...docHeic];
 
           const urls: string[] = [];
           for (const c of candidates) {
