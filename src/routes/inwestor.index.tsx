@@ -75,6 +75,25 @@ function ModuleGateSection() {
 
 const PROPERTY_TYPES = Object.keys(propertyTypeLabels);
 
+// Miniatura karty z listą zapasowych URL-i: gdy obrazek się nie załaduje
+// (np. wygasły signed URL, nieobsługiwany format), próbujemy kolejnego
+// kandydata zamiast zostawiać pustą szarą kartę.
+function CardPhoto({ urls, alt }: { urls: string[] | undefined; alt: string }) {
+  const [idx, setIdx] = useState(0);
+  if (!urls || idx >= urls.length) {
+    return <div className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20" />;
+  }
+  return (
+    <img
+      src={urls[idx]}
+      alt={alt}
+      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+      loading="lazy"
+      onError={() => setIdx((i) => i + 1)}
+    />
+  );
+}
+
 function maskKw(kw: string): string {
   // Format: XX1X/00123456/7 → zachowujemy kod sądu, maskujemy numer i cyfrę kontrolną
   const parts = kw.trim().toUpperCase().split("/");
@@ -90,7 +109,7 @@ function maskKw(kw: string): string {
 function InwestorList() {
   const { user } = useAuth();
   const [apps, setApps] = useState<any[]>([]);
-  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
 
   const [q, setQ] = useState("");
@@ -135,26 +154,40 @@ function InwestorList() {
         });
       }
 
-      // Resolve first photo per app to a viewable URL (storage paths → signed URLs).
-      // Najpierw properties.photos, potem fallback do tabeli documents (ścieżki mogą być userId/appId/file).
-      const tasks: Array<Promise<void>> = [];
-      const next: Record<string, string> = {};
-      for (const a of list) {
-        const photos: string[] = a.properties?.[0]?.photos ?? [];
-        const first = photos.find(isShowablePropertyPhoto) ?? docsByApp.get(a.id)?.[0]?.file_path;
-        if (!first) continue;
-        if (/^https?:\/\//i.test(first)) {
-          next[a.id] = first;
-          continue;
-        }
-        tasks.push(
-          (async () => {
-            const url = await signStoragePath(first, 3600);
-            if (url) next[a.id] = url;
-          })(),
-        );
-      }
-      await Promise.all(tasks);
+      // Miniatura per wniosek: lista KANDYDATÓW zamiast jednej ścieżki —
+      // pierwsze zdjęcie potrafi być HEIC (przeglądarki go nie renderują),
+      // nie dać się podpisać albo być PDF-em. Kolejność: pokazywalne zdjęcia
+      // (HEIC na końcu), zdjęcia z tabeli documents, miniatury PDF-ów
+      // (konwencja `<ścieżka>.thumb.png` jak na liście pośrednika). Karta
+      // przechodzi do kolejnego kandydata, gdy obrazek się nie załaduje.
+      const next: Record<string, string[]> = {};
+      await Promise.all(
+        list.map(async (a) => {
+          const photos: string[] = a.properties?.[0]?.photos ?? [];
+          const docPaths = (docsByApp.get(a.id) ?? [])
+            .map((d) => String(d.file_path ?? ""))
+            .filter(Boolean);
+          const showable = photos.filter(isShowablePropertyPhoto);
+          const heic = showable.filter((p) => /\.heic$/i.test(p));
+          const nonHeic = showable.filter((p) => !/\.heic$/i.test(p));
+          const pdfThumbs = photos
+            .filter((p) => /\.pdf$/i.test(p) && !/^https?:\/\//i.test(p))
+            .map((p) => `${p}.thumb.png`);
+          const candidates = [...nonHeic, ...docPaths, ...pdfThumbs, ...heic];
+
+          const urls: string[] = [];
+          for (const c of candidates) {
+            if (urls.length >= 3) break; // wystarczą 3 zapasowe URL-e na kartę
+            if (/^https?:\/\//i.test(c)) {
+              urls.push(c);
+              continue;
+            }
+            const url = await signStoragePath(c, 3600);
+            if (url) urls.push(url);
+          }
+          if (urls.length) next[a.id] = urls;
+        }),
+      );
       setPhotoUrls(next);
     })();
   }, [user]);
@@ -369,19 +402,7 @@ function InwestorList() {
               <Link key={a.id} to="/inwestor/wniosek/$id" params={{ id: a.id }} className="group">
                 <Card className="hover:border-primary transition-all hover:shadow-lg cursor-pointer h-full overflow-hidden flex flex-col">
                   <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                    {photoUrls[a.id] ? (
-                      <img
-                        src={photoUrls[a.id]}
-                        alt={p?.city ?? ""}
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20" />
-                    )}
+                    <CardPhoto urls={photoUrls[a.id]} alt={p?.city ?? ""} />
                     {p?.property_type && (
                       <Badge className="absolute top-3 left-3 bg-background/95 text-foreground hover:bg-background backdrop-blur-sm shadow">
                         {propertyTypeLabels[p.property_type]}
