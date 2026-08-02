@@ -385,7 +385,7 @@ export const startModuleKyc = createServerFn({ method: "POST" })
     const session = await createDiditSession({
       workflowId,
       vendorData: `project-module:${userId}`,
-      callback: `${base}/inwestor/projekty?didit=return`,
+      callback: `${base}/inwestor?didit=return`,
       language: "pl",
       contactDetails: profile?.email ? { email: profile.email } : undefined,
       metadata: { module: "investment-projects", user_id: userId },

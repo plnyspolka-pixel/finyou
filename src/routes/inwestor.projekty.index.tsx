@@ -1,9 +1,9 @@
-// Główny ekran zamkniętego modułu projektów: bramka dostępu (kursant →
-// aplikacja → KYC → compliance) albo — dla approved_investor — mobilne karty
-// w stylu Tindera, przycisk „Dobierz projekty dla mnie", statystyki i profil
-// preferencji. Karty pokazują wyłącznie: zdjęcie, kwotę, rodzaj nieruchomości
-// i miejscowość.
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+// Zakładka „Projekty" została scalona z „Dostępne wnioski" (/inwestor) —
+// bramka dostępu (aplikacja → KYC → compliance) żyje tam, a trasa
+// przekierowuje. Komponent (mobilne karty w stylu Tindera, „Dobierz projekty
+// dla mnie", statystyki, profil preferencji) zostaje w kodzie na wypadek
+// powrotu osobnego ekranu projektów.
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -35,6 +35,10 @@ import { InvestorProfileForm } from "@/components/projects/module-forms";
 import { TinderDeck, type DeckDecision } from "@/components/projects/tinder-deck";
 
 export const Route = createFileRoute("/inwestor/projekty/")({
+  // Wszystko w jednej zakładce: bramka i lista wniosków są na /inwestor.
+  beforeLoad: () => {
+    throw redirect({ to: "/inwestor" });
+  },
   component: ProjectsHome,
 });
 
