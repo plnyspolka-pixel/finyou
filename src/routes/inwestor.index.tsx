@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,14 +26,18 @@ import {
 } from "@/lib/property-photos";
 import { useAccessState } from "@/hooks/use-access";
 import { InvestorTeaserList } from "@/components/access/InvestorTeaserList";
+import { getModuleState } from "@/lib/projects/module-access.functions";
+import { ModuleGate, type ModuleStateView } from "@/components/projects/module-gate";
 
 export const Route = createFileRoute("/inwestor/")({
   component: InwestorListGate,
 });
 
-// Bez aktywnego płatnego dostępu inwestor widzi wyłącznie anonimowe zajawki
-// z bezpiecznej funkcji serwerowej (pełne rekordy nie trafiają do przeglądarki;
-// RLS blokuje je niezależnie od UI).
+// Jedna zakładka „Dostępne wnioski": bez aktywnego dostępu inwestor widzi
+// bramkę zamkniętego modułu (aplikacja → KYC → screening → dokumenty →
+// decyzja Finance You) + anonimowe zajawki z bezpiecznej funkcji serwerowej
+// (pełne rekordy nie trafiają do przeglądarki; RLS blokuje je niezależnie od
+// UI). Po aktywacji dostępu — pełna wyszukiwarka wniosków.
 function InwestorListGate() {
   const { loading, hasFullAccess } = useAccessState("investor");
   if (loading) {
@@ -42,14 +48,29 @@ function InwestorListGate() {
       <div className="space-y-6">
         <FancyPageHeader
           eyebrow="Oferty"
-          title="Dostępne oferty inwestycyjne"
-          subtitle="Anonimowe zajawki — pełne dane odblokujesz po wykupieniu dostępu."
+          title="Dostępne wnioski"
+          subtitle="Anonimowe zajawki — pełne dane odblokujesz po aktywacji dostępu do zamkniętego modułu."
         />
+        <ModuleGateSection />
         <InvestorTeaserList />
       </div>
     );
   }
   return <InwestorList />;
+}
+
+// Bramka modułu osadzona w zakładce „Dostępne wnioski".
+function ModuleGateSection() {
+  const stateFn = useServerFn(getModuleState);
+  const stateQ = useQuery({ queryKey: ["projects-module-state"], queryFn: () => stateFn() });
+  const qc = useQueryClient();
+  if (stateQ.isLoading || !stateQ.data) return null;
+  return (
+    <ModuleGate
+      state={stateQ.data as ModuleStateView}
+      onChanged={() => void qc.invalidateQueries({ queryKey: ["projects-module-state"] })}
+    />
+  );
 }
 
 const PROPERTY_TYPES = Object.keys(propertyTypeLabels);

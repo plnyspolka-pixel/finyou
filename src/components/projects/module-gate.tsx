@@ -198,6 +198,7 @@ function KycStep({ state, onChanged }: { state: ModuleStateView; onChanged: () =
   const startFn = useServerFn(startModuleKyc);
   const refreshFn = useServerFn(refreshModuleKyc);
   const [busy, setBusy] = useState(false);
+  const [kycUrl, setKycUrl] = useState<string | null>(null);
 
   const start = async () => {
     setBusy(true);
@@ -208,8 +209,15 @@ function KycStep({ state, onChanged }: { state: ModuleStateView; onChanged: () =
           "Integracja Didit nie jest jeszcze skonfigurowana. Skontaktuj się z Finance You.",
         );
       } else if (res.status === "ok" && res.url) {
-        window.open(res.url, "_blank", "noopener");
-        toast.success("Otwarto weryfikację Didit w nowej karcie.");
+        setKycUrl(res.url);
+        // Przeglądarka może zablokować window.open — wtedy zostaje widoczny
+        // link awaryjny poniżej (klik w <a> nie podlega blokadzie popupów).
+        const win = window.open(res.url, "_blank", "noopener");
+        if (win) {
+          toast.success("Otwarto weryfikację Didit w nowej karcie.");
+        } else {
+          toast.info("Przeglądarka zablokowała nową kartę — użyj linku poniżej.");
+        }
       }
       onChanged();
     } catch (e) {
@@ -246,20 +254,35 @@ function KycStep({ state, onChanged }: { state: ModuleStateView; onChanged: () =
         <Badge variant="secondary">Status: {MODULE_KYC_STATUS_LABELS[state.kycStatus]}</Badge>
       </div>
       {!blocked && (
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button className="flex-1" onClick={() => void start()} disabled={busy}>
-            <ExternalLink className="mr-2 h-4 w-4" />
-            {state.kycStatus === "not_started" ? "Rozpocznij weryfikację" : "Kontynuuj weryfikację"}
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => void refresh()}
-            disabled={busy}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" /> Odśwież status
-          </Button>
-        </div>
+        <>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button className="flex-1" onClick={() => void start()} disabled={busy}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              {state.kycStatus === "not_started"
+                ? "Rozpocznij weryfikację"
+                : "Kontynuuj weryfikację"}
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => void refresh()}
+              disabled={busy}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" /> Odśwież status
+            </Button>
+          </div>
+          {kycUrl && (
+            <a
+              href={kycUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 text-sm text-primary underline underline-offset-4"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Weryfikacja nie otworzyła się? Otwórz Didit w nowej karcie
+            </a>
+          )}
+        </>
       )}
     </StatusCard>
   );
