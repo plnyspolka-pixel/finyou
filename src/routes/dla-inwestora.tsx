@@ -535,7 +535,7 @@ function InvestorLanding() {
           center
           eyebrow="Cennik"
           title="Klub Inwestorów Hipotecznych"
-          sub="Jednorazowa płatność za czasowy dostęp — bez automatycznych odnowień. Konto darmowe (do 5 ofert) masz zawsze bez opłat."
+          sub="Jednorazowa płatność za czasowy dostęp — bez automatycznych odnowień."
         />
         <div style={{ marginTop: "2.5rem" }}>
           <MarketingPricing

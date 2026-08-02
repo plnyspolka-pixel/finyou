@@ -64,9 +64,8 @@ export function InvestorTeaserList() {
           <div className="flex items-center gap-3 text-sm">
             <Lock className="h-5 w-5 text-primary" />
             <span>
-              <b>Konto darmowe:</b> przeglądasz oferty ze zdjęciami i zanonimizowaną treścią KW oraz
-              składasz oferty w ramach limitów (5 ofert / 2 pożyczki rocznie do 255 550 zł; powyżej
-              — bez limitu). Pełne dane, dokumenty i kontakt — w pełnym dostępie.
+              Przeglądasz anonimowe zajawki ofert. Pełne dane, dokumenty, księga wieczysta,
+              składanie ofert i kontakt — po aktywacji pełnego dostępu.
             </span>
           </div>
           <Button onClick={() => setPaywallOpen(true)}>Odblokuj pełny dostęp</Button>

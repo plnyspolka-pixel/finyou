@@ -37,9 +37,9 @@ const fullGroups: NavGroup[] = [
   },
 ];
 
-// Nawigacja konta darmowego: przeglądanie ofert (zdjęcia + zanonimizowana KW),
-// składanie ofert w ramach limitów, kalkulator (tryb darmowy), 3 darmowe
-// lekcje Akademii, zakup, płatności, profil.
+// Nawigacja bez płatnego dostępu: bramka modułu w „Dostępnych wnioskach"
+// (zajawki dopiero po pozytywnym KYC), kalkulator, 3 darmowe lekcje Akademii,
+// zakup, płatności, profil.
 const limitedGroups: NavGroup[] = [
   {
     items: [
@@ -70,7 +70,6 @@ const FREE_PATHS = [
   "/inwestor/oferty",
   "/inwestor/kalkulator",
   "/inwestor/szkolenia",
-  "/inwestor/wniosek", // darmowy widok szczegółu oferty (zdjęcia + zanonimizowana KW)
 ];
 
 function AccessRedirectGate() {

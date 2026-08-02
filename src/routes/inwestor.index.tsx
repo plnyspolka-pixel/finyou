@@ -36,41 +36,49 @@ export const Route = createFileRoute("/inwestor/")({
 
 // Jedna zakładka „Dostępne wnioski": bez aktywnego dostępu inwestor widzi
 // bramkę zamkniętego modułu (aplikacja → KYC → screening → dokumenty →
-// decyzja Finance You) + anonimowe zajawki z bezpiecznej funkcji serwerowej
-// (pełne rekordy nie trafiają do przeglądarki; RLS blokuje je niezależnie od
-// UI). Po aktywacji dostępu — pełna wyszukiwarka wniosków.
+// decyzja Finance You). Anonimowe zajawki pojawiają się DOPIERO po pozytywnej
+// weryfikacji tożsamości (KYC) — wcześniej żadne dane ofert nie są widoczne
+// (funkcja serwerowa egzekwuje to niezależnie od UI). Po aktywacji dostępu —
+// pełna wyszukiwarka wniosków.
 function InwestorListGate() {
   const { loading, hasFullAccess } = useAccessState("investor");
   if (loading) {
     return <div className="py-10 text-center text-muted-foreground">Ładowanie…</div>;
   }
   if (!hasFullAccess) {
-    return (
-      <div className="space-y-6">
-        <FancyPageHeader
-          eyebrow="Oferty"
-          title="Dostępne wnioski"
-          subtitle="Anonimowe zajawki — pełne dane odblokujesz po aktywacji dostępu do zamkniętego modułu."
-        />
-        <ModuleGateSection />
-        <InvestorTeaserList />
-      </div>
-    );
+    return <GatedTeaserSection />;
   }
   return <InwestorList />;
 }
 
-// Bramka modułu osadzona w zakładce „Dostępne wnioski".
-function ModuleGateSection() {
+// Bramka modułu + zajawki (wyłącznie po pozytywnym KYC) w zakładce
+// „Dostępne wnioski".
+function GatedTeaserSection() {
   const stateFn = useServerFn(getModuleState);
   const stateQ = useQuery({ queryKey: ["projects-module-state"], queryFn: () => stateFn() });
   const qc = useQueryClient();
-  if (stateQ.isLoading || !stateQ.data) return null;
+  if (stateQ.isLoading || !stateQ.data) {
+    return <div className="py-10 text-center text-muted-foreground">Ładowanie…</div>;
+  }
+  const state = stateQ.data as ModuleStateView;
+  const verified = state.kycStatus === "approved";
   return (
-    <ModuleGate
-      state={stateQ.data as ModuleStateView}
-      onChanged={() => void qc.invalidateQueries({ queryKey: ["projects-module-state"] })}
-    />
+    <div className="space-y-6">
+      <FancyPageHeader
+        eyebrow="Oferty"
+        title="Dostępne wnioski"
+        subtitle={
+          verified
+            ? "Anonimowe zajawki — pełne dane odblokujesz po aktywacji dostępu do zamkniętego modułu."
+            : "Zajawki ofert zobaczysz po pozytywnej weryfikacji tożsamości (KYC)."
+        }
+      />
+      <ModuleGate
+        state={state}
+        onChanged={() => void qc.invalidateQueries({ queryKey: ["projects-module-state"] })}
+      />
+      {verified && <InvestorTeaserList />}
+    </div>
   );
 }
 

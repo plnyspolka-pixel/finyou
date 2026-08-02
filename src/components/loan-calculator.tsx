@@ -165,10 +165,6 @@ type Props = {
   hideFinanceYouFee?: boolean;
   /** Włącza tryb prowizji wewnętrznej operatora (2–5% jako część prowizji inwestora). */
   internalOperatorMode?: boolean;
-  /** Tryb darmowego konta inwestora: oprocentowanie STAŁE równe odsetkom
-   *  maksymalnym (limit ustawowy z NBP), prowizja inwestora = 0 (zablokowana),
-   *  prowizja Finance You 2× wyższa niż w planie komercyjnym. */
-  freeTierMode?: boolean;
   /** Domyślny e-mail klienta (do wysyłki harmonogramu). */
   clientEmail?: string | null;
   /** Nazwa/nazwisko klienta (nagłówek harmonogramu i maila). */
@@ -206,7 +202,6 @@ export function LoanCalculator({
   investorGuidance = false,
   hideFinanceYouFee = false,
   internalOperatorMode = false,
-  freeTierMode = false,
   clientEmail = null,
   clientName = null,
 }: Props) {
@@ -241,12 +236,11 @@ export function LoanCalculator({
     // Model silnika: PEŁNA WYPŁATA — Pożyczkobiorca otrzymuje całą Kwotę Pożyczki.
     // Prowizja nie jest potrącana z wypłaty (jest rozłożona na raty), więc kwota
     // na rękę = Kwota Pożyczki (brak „ubruttowienia").
-    const fyMultiplier = freeTierMode ? 2 : 1;
     const amt = onHand;
     const t = Math.min(1, Math.max(0, (amt - 20_000) / (1_000_000 - 20_000)));
-    const fyPct = hideFinanceYouFee ? 0 : Math.round((10 - t * 6) * fyMultiplier * 10) / 10;
+    const fyPct = hideFinanceYouFee ? 0 : Math.round((10 - t * 6) * 10) / 10;
     return { amount: amt, financeYouFeePct: fyPct };
-  }, [onHand, hideFinanceYouFee, freeTierMode]);
+  }, [onHand, hideFinanceYouFee]);
 
   const rateTouched = useRef(false);
   const commissionTouched = useRef(false);
@@ -447,21 +441,13 @@ export function LoanCalculator({
   }, [internalOperatorMode, months]);
 
   useEffect(() => {
-    if (freeTierMode || !rateTouched.current) {
-      // Konto darmowe: oprocentowanie STAŁE = odsetki maksymalne (śledzi NBP).
-      const rounded = freeTierMode
-        ? Math.floor(MAX_INTEREST_RATE * 100) / 100
-        : Math.floor(MAX_INTEREST_RATE * 10) / 10;
+    if (!rateTouched.current) {
+      const rounded = Math.floor(MAX_INTEREST_RATE * 10) / 10;
       if (Math.abs(annualRate - rounded) > 1e-9) setAnnualRate(rounded);
     }
-  }, [MAX_INTEREST_RATE, annualRate, freeTierMode]);
+  }, [MAX_INTEREST_RATE, annualRate]);
 
   useEffect(() => {
-    // Konto darmowe: inwestor nie pobiera prowizji.
-    if (freeTierMode) {
-      if (Math.abs(commissionPct) > 1e-9) setCommissionPct(0);
-      return;
-    }
     if (!commissionTouched.current) {
       // Maksymalna prowizja bez wątpliwości prawnych = limit MPKK (% kwoty pożyczki),
       // przycięta do zakresu suwaka (0–30%).
@@ -469,7 +455,7 @@ export function LoanCalculator({
       const rounded = Math.floor(mpkkPct * 2) / 2; // krok 0,5%
       if (Math.abs(commissionPct - rounded) > 1e-9) setCommissionPct(rounded);
     }
-  }, [months, commissionPct, freeTierMode]);
+  }, [months, commissionPct]);
 
   useEffect(() => {
     onChange?.({
@@ -950,17 +936,6 @@ export function LoanCalculator({
               )}
             </div>
 
-            {freeTierMode && (
-              <Alert className="py-2">
-                <AlertDescription className="text-xs">
-                  <b>Konto darmowe inwestora:</b> oprocentowanie stałe w maksymalnej ustawowej
-                  wysokości — 2 × (stopa referencyjna NBP + 3,5 p.p.), aktualnie{" "}
-                  <b>{MAX_INTEREST_RATE.toFixed(2)}%</b> (liczone na bieżąco z danych NBP). Inwestor
-                  nie pobiera prowizji, a prowizja Finance You jest 2× wyższa niż w planie pełnym.
-                </AlertDescription>
-              </Alert>
-            )}
-
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-1.5">
@@ -970,33 +945,26 @@ export function LoanCalculator({
                   )}
                 </Label>
                 <div className="flex items-center gap-2">
-                  {freeTierMode ? (
-                    <b className="tabular-nums">{annualRate.toFixed(2)}</b>
-                  ) : (
-                    <NumberField
-                      step="0.1"
-                      value={annualRate}
-                      onCommit={(n) => setAnnualRateTouched(n || 0)}
-                      className="w-24"
-                    />
-                  )}
+                  <NumberField
+                    step="0.1"
+                    value={annualRate}
+                    onCommit={(n) => setAnnualRateTouched(n || 0)}
+                    className="w-24"
+                  />
                   <span className="text-sm">%</span>
                 </div>
               </div>
               <Slider
-                disabled={freeTierMode}
                 min={0}
                 max={MAX_INTEREST_RATE}
                 step={0.1}
                 value={[Math.min(MAX_INTEREST_RATE, Math.max(0, annualRate))]}
-                onValueChange={(v) => !freeTierMode && setAnnualRateTouched(v[0])}
+                onValueChange={(v) => setAnnualRateTouched(v[0])}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>0%</span>
                 <span className={interestExceeds ? "text-destructive font-medium" : ""}>
-                  {freeTierMode
-                    ? `konto darmowe: oprocentowanie stałe = odsetki maksymalne (${MAX_INTEREST_RATE.toFixed(2)}%)`
-                    : `limit ustawowy: ${MAX_INTEREST_RATE.toFixed(2)}%`}
+                  {`limit ustawowy: ${MAX_INTEREST_RATE.toFixed(2)}%`}
                 </span>
                 <span>{MAX_INTEREST_RATE.toFixed(2)}%</span>
               </div>
@@ -1011,32 +979,25 @@ export function LoanCalculator({
                   )}
                 </Label>
                 <div className="flex items-center gap-2">
-                  {freeTierMode ? (
-                    <b className="tabular-nums">0</b>
-                  ) : (
-                    <NumberField
-                      step="0.5"
-                      value={commissionPct}
-                      onCommit={(n) => setCommissionPctTouched(n || 0)}
-                      className="w-24"
-                    />
-                  )}
+                  <NumberField
+                    step="0.5"
+                    value={commissionPct}
+                    onCommit={(n) => setCommissionPctTouched(n || 0)}
+                    className="w-24"
+                  />
                   <span className="text-sm">% ({formatPLN(commissionPln)})</span>
                 </div>
               </div>
               <Slider
-                disabled={freeTierMode}
                 min={0}
                 max={30}
                 step={0.5}
                 value={[Math.min(30, Math.max(0, commissionPct))]}
-                onValueChange={(v) => !freeTierMode && setCommissionPctTouched(v[0])}
+                onValueChange={(v) => setCommissionPctTouched(v[0])}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>0%</span>
-                {freeTierMode ? (
-                  <span>konto darmowe: inwestor nie pobiera prowizji</span>
-                ) : nonInterestExceeds ? (
+                {nonInterestExceeds ? (
                   <span className="text-destructive font-medium">
                     przekroczono limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}
                   </span>

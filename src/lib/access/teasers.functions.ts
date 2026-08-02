@@ -31,7 +31,7 @@ export const listInvestorTeasers = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db = supabaseAdmin as any;
 
-    // Zajawki są dla kont inwestorskich (aktywnych i nieaktywnych) i personelu.
+    // Zajawki są dla kont inwestorskich i personelu.
     const { data: rolesRows } = await db
       .from("user_roles")
       .select("role")
@@ -39,6 +39,21 @@ export const listInvestorTeasers = createServerFn({ method: "GET" })
     const roles = ((rolesRows ?? []) as { role: string }[]).map((r) => r.role);
     if (!roles.some((r) => ["inwestor", "administrator", "operator"].includes(r))) {
       throw new Error("Brak uprawnień");
+    }
+
+    // Inwestor (bez roli personelu) widzi zajawki DOPIERO po pozytywnej
+    // weryfikacji tożsamości (KYC) w module projektów — wcześniej żadne dane
+    // ofert nie opuszczają serwera, niezależnie od UI.
+    const isStaff = roles.some((r) => ["administrator", "operator"].includes(r));
+    if (!isStaff) {
+      const { data: access } = await db
+        .from("project_module_access")
+        .select("kyc_status")
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      if (access?.kyc_status !== "approved") {
+        throw new Error("Zajawki ofert są dostępne po pozytywnej weryfikacji tożsamości (KYC).");
+      }
     }
 
     const { data: teasers, error } = await db.rpc("investor_offer_teasers");

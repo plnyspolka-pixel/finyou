@@ -9200,7 +9200,6 @@ export type Database = {
       exec_admin_any: { Args: { _sql: string }; Returns: Json }
       exec_admin_select: { Args: { _sql: string }; Returns: Json }
       exec_admin_write: { Args: { _sql: string }; Returns: Json }
-      free_investor_usage: { Args: { _user_id: string }; Returns: Json }
       get_access_state: {
         Args: { _audience: string; _user_id: string }
         Returns: Json
