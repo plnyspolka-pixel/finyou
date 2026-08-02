@@ -1,7 +1,9 @@
 // Ścieżka użytkownika PRZED aktywnym dostępem do modułu projektów:
-// zablokowana karta + „Aplikuj o dostęp" → formularz → statusy aplikacji →
-// KYC (Didit) → analiza compliance + akceptacja dokumentów → decyzja
-// Finance You. Zakup szkolenia nie jest zakupem dostępu do projektów.
+// zablokowana karta + „Aplikuj o dostęp" (jeden klik) → KYC (Didit) →
+// screening sankcyjny/PEP → akceptacja umowy dostępu, NDA i ostrzeżenia
+// o ryzyku → ostateczna decyzja Finance You. Aktywny dostęp otwiera również
+// „Dostępne wnioski" w panelu inwestora. Zakup szkolenia nie jest zakupem
+// dostępu do projektów.
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -30,7 +32,6 @@ import {
   type ModuleKycStatus,
   type AcceptanceKind,
 } from "@/lib/projects/module-types";
-import { ModuleApplicationForm } from "./module-forms";
 
 export interface ModuleStateView {
   status: string;
@@ -55,9 +56,21 @@ export function ModuleGate({
   state: ModuleStateView;
   onChanged: () => void;
 }) {
-  const [showForm, setShowForm] = useState(false);
   const submitFn = useServerFn(submitModuleApplication);
   const [submitting, setSubmitting] = useState(false);
+
+  const apply = async () => {
+    setSubmitting(true);
+    try {
+      await submitFn({});
+      toast.success("Aplikacja została złożona. Kolejny krok: weryfikacja tożsamości (KYC).");
+      onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się złożyć aplikacji.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (state.status === "course_user" || state.status === "module_application_rejected") {
     return (
@@ -83,35 +96,17 @@ export function ModuleGate({
             </div>
             <CardTitle>Zamknięty moduł projektów</CardTitle>
             <CardDescription>
-              Dostęp do projektów pożyczkowych mają wyłącznie imiennie zweryfikowani i indywidualnie
-              zatwierdzeni inwestorzy. Zakup szkolenia nie daje dostępu do modułu projektów —
-              wymagane są: aplikacja, weryfikacja tożsamości (KYC), screening sankcyjny/PEP,
-              akceptacja umowy dostępu, NDA i ostrzeżeń o ryzyku oraz ostateczna decyzja Finance
-              You.
+              Dostęp do projektów pożyczkowych i dostępnych wniosków mają wyłącznie imiennie
+              zweryfikowani i indywidualnie zatwierdzeni inwestorzy. Zakup szkolenia nie daje
+              dostępu do modułu projektów — wymagane są: weryfikacja tożsamości (KYC), screening
+              sankcyjny/PEP, akceptacja umowy dostępu, NDA i ostrzeżeń o ryzyku oraz ostateczna
+              decyzja Finance You.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {showForm ? (
-              <ModuleApplicationForm
-                submitting={submitting}
-                onSubmit={async (values) => {
-                  setSubmitting(true);
-                  try {
-                    await submitFn({ data: values });
-                    toast.success("Aplikacja została złożona.");
-                    onChanged();
-                  } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Nie udało się złożyć aplikacji.");
-                  } finally {
-                    setSubmitting(false);
-                  }
-                }}
-              />
-            ) : (
-              <Button className="w-full" onClick={() => setShowForm(true)}>
-                Aplikuj o dostęp
-              </Button>
-            )}
+            <Button className="w-full" onClick={() => void apply()} disabled={submitting}>
+              {submitting ? "Wysyłanie…" : "Aplikuj o dostęp"}
+            </Button>
           </CardContent>
         </Card>
       </div>

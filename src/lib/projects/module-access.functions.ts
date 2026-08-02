@@ -1,6 +1,7 @@
 // Server functions przepływu dostępu do zamkniętego modułu projektów:
-// aplikacja → kwalifikacja warunkowa (admin) → KYC Didit → screening Dilisense
-// → akceptacje dokumentów → aktywacja przez Finance You (admin.functions.ts).
+// aplikacja (jeden klik) → KYC Didit → screening Dilisense (sankcje/PEP)
+// → akceptacja umowy dostępu, NDA i ostrzeżenia o ryzyku → ostateczna
+// aktywacja przez Finance You (admin.functions.ts).
 //
 // Zakup szkolenia NIE daje dostępu. Pozytywne KYC NIE aktywuje dostępu
 // automatycznie. Każda zmiana zostawia wpis w nieusuwalnym logu audytowym.
@@ -255,39 +256,16 @@ export const getModuleState = createServerFn({ method: "GET" })
     };
   });
 
-const applicationSchema = z.object({
-  declaredCapital: z.number().min(0),
-  minInvestment: z.number().min(0),
-  maxInvestment: z.number().min(0),
-  preferredPeriodMonthsMin: z.number().int().min(1).max(360),
-  preferredPeriodMonthsMax: z.number().int().min(1).max(360),
-  maxLtvPercent: z.number().min(1).max(100),
-  propertyTypes: z.array(z.string()).min(1),
-  locations: z.array(z.string()).min(1),
-  expectedReturnPercent: z.number().min(0).max(100),
-  acceptedSecurities: z.array(z.string()).min(1),
-  experience: z.string().min(1).max(4000),
-  riskAppetite: z.string().min(1).max(200),
-  independentDecisionConfirmed: z.literal(true),
-  applicantNote: z.string().max(4000).optional(),
-});
-
 /**
- * Złożenie aplikacji o dostęp do modułu. Nie gwarantuje dostępu — decyzję
- * podejmuje administrator Finance You.
+ * Uproszczona aplikacja o dostęp do modułu — bez formularza preferencji.
+ * Złożenie od razu otwiera ścieżkę: KYC (Didit) → screening sankcyjny/PEP →
+ * akceptacja umowy dostępu, NDA i ostrzeżenia o ryzyku → ostateczna decyzja
+ * Finance You (aktywacja w admin.functions.ts). Nie gwarantuje dostępu.
  */
 export const submitModuleApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i) => applicationSchema.parse(i))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ context }) => {
     const userId = context.userId as string;
-
-    if (data.minInvestment > data.maxInvestment) {
-      throw new Error("Minimalna kwota inwestycji nie może przekraczać maksymalnej.");
-    }
-    if (data.preferredPeriodMonthsMin > data.preferredPeriodMonthsMax) {
-      throw new Error("Minimalny okres nie może przekraczać maksymalnego.");
-    }
 
     const access = await getModuleAccessRow(userId);
     if (access && !["course_user", "module_application_rejected"].includes(access.status)) {
@@ -298,21 +276,11 @@ export const submitModuleApplication = createServerFn({ method: "POST" })
       .from("project_module_applications")
       .insert({
         user_id: userId,
-        status: "pending",
-        declared_capital: data.declaredCapital,
-        min_investment: data.minInvestment,
-        max_investment: data.maxInvestment,
-        preferred_period_months_min: data.preferredPeriodMonthsMin,
-        preferred_period_months_max: data.preferredPeriodMonthsMax,
-        max_ltv_percent: data.maxLtvPercent,
-        property_types: data.propertyTypes,
-        locations: data.locations,
-        expected_return_percent: data.expectedReturnPercent,
-        accepted_securities: data.acceptedSecurities,
-        experience: data.experience,
-        risk_appetite: data.riskAppetite,
-        independent_decision_confirmed: true,
-        applicant_note: data.applicantNote ?? null,
+        // Automatyczna kwalifikacja do KYC — ostateczna decyzja pozostaje po
+        // stronie Finance You przy aktywacji dostępu.
+        status: "conditionally_qualified",
+        decided_at: new Date().toISOString(),
+        decision_reason: "Kwalifikacja automatyczna — uproszczony proces aplikacji.",
       })
       .select("id")
       .single();
@@ -321,7 +289,7 @@ export const submitModuleApplication = createServerFn({ method: "POST" })
     const { error: upErr } = await db.from("project_module_access").upsert(
       {
         user_id: userId,
-        status: "module_application_pending",
+        status: "kyc_pending",
         application_id: app.id,
       },
       { onConflict: "user_id" },
@@ -335,7 +303,7 @@ export const submitModuleApplication = createServerFn({ method: "POST" })
       entityId: app.id,
       action: "application_submitted",
       previousStatus: access?.status ?? "course_user",
-      newStatus: "module_application_pending",
+      newStatus: "kyc_pending",
     });
 
     return { ok: true as const, applicationId: app.id };

@@ -166,20 +166,13 @@ export type AcceptanceKind =
   | "independent_decision"
   | "no_account_sharing";
 
+// Uproszczony komplet wymagany do aktywacji: umowa dostępu, NDA i ostrzeżenie
+// o ryzyku. Pozostałe rodzaje (typ AcceptanceKind i CHECK w bazie) zostają dla
+// historycznych akceptacji.
 export const ACCEPTANCE_KINDS: { kind: AcceptanceKind; label: string }[] = [
   { kind: "access_agreement", label: "Umowa dostępu do zamkniętego modułu" },
   { kind: "nda", label: "Umowa o zachowaniu poufności (NDA)" },
-  { kind: "confidentiality", label: "Zasady poufności" },
-  {
-    kind: "data_processing",
-    label: "Zasady przetwarzania i wykorzystywania udostępnionych informacji",
-  },
   { kind: "risk_warning", label: "Ostrzeżenie o ryzyku inwestycyjnym" },
-  {
-    kind: "independent_decision",
-    label: "Oświadczenie o samodzielnym podejmowaniu decyzji inwestycyjnych",
-  },
-  { kind: "no_account_sharing", label: "Zakaz udostępniania konta osobom trzecim" },
 ];
 
 /** Bieżące wersje dokumentów modułu — podbijamy przy każdej zmianie treści. */

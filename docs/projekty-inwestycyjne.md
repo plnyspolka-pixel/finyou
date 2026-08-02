@@ -40,16 +40,26 @@ nakłada dynamiczny znak wodny (imię i nazwisko inwestora, ID konta, data).
 
 ## Statusy użytkownika w module (`project_module_access.status`)
 
-`course_user` → `module_application_pending` → (`module_application_rejected`)
-→ `kyc_pending` → `compliance_review` → `approved_investor`
+`course_user` → (aplikacja jednym klikiem) → `kyc_pending` →
+`compliance_review` → `approved_investor`
 → (`access_suspended` / `access_revoked`)
+
+Uproszczony proces aplikacji: „Aplikuj o dostęp” nie ma formularza preferencji
+— złożenie aplikacji od razu przenosi użytkownika do KYC. Statusy
+`module_application_pending` / `module_application_rejected` pozostają w
+schemacie dla historycznych aplikacji oraz decyzji `needs_more_info` /
+`additional_review` / `rejected` administratora.
 
 - Zakup szkolenia / płatny abonament inwestora **nie** daje dostępu do modułu.
 - Pozytywne KYC samo w sobie **nie** aktywuje dostępu — ostateczną decyzję
   podejmuje administrator Finance You po komplecie: KYC (Didit) + screening
-  (Dilisense) + akceptacje dokumentów (umowa dostępu, NDA, poufność,
-  przetwarzanie danych, ostrzeżenie o ryzyku, samodzielność decyzji, zakaz
-  udostępniania konta).
+  sankcyjny/PEP (Dilisense) + akceptacje dokumentów (umowa dostępu, NDA,
+  ostrzeżenie o ryzyku).
+- Aktywny status `approved_investor` daje również pełny dostęp inwestora do
+  „Dostępnych wniosków” w panelu `/inwestor` (funkcja
+  `investor_module_access_active` włączona do `investor_has_full_access` —
+  migracja `20260802120000_module_access_full_investor.sql`). Relacja odwrotna
+  nadal nie zachodzi: płatny abonament nie otwiera modułu projektów.
 - Dostęp jest imienny; admin może go zawiesić lub cofnąć (z powodem, z wpisem
   audytowym).
 
@@ -79,7 +89,7 @@ nakłada dynamiczny znak wodny (imię i nazwisko inwestora, ID konta, data).
 |---|---|
 | `project_module_settings` | jednowierszowa konfiguracja (limity kart, godziny 24/12/48, próg odrzuceń, progi LTV) |
 | `project_module_access` | status użytkownika w module + metadane KYC/screeningu/aktywacji |
-| `project_module_applications` | formularz aplikacyjny + decyzja administratora |
+| `project_module_applications` | aplikacja o dostęp (uproszczona, bez formularza preferencji) + decyzja administratora |
 | `project_module_screenings` | wyniki Dilisense (tylko personel) |
 | `project_module_acceptances` | wersjonowane akceptacje dokumentów |
 | `project_module_audit_log` | nieusuwalny log audytowy (trigger blokuje UPDATE/DELETE) |

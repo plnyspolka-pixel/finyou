@@ -29,6 +29,6 @@ export function useAccessState(audience: AccessAudience) {
     void refresh();
   }, [refresh]);
 
-  const hasFullAccess = Boolean(state?.hasPaidAccess || state?.isBypass);
+  const hasFullAccess = Boolean(state?.hasPaidAccess || state?.isBypass || state?.hasModuleAccess);
   return { state, loading, refresh, hasFullAccess };
 }
