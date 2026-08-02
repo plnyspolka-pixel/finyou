@@ -61,8 +61,14 @@ transakcji rozpoczętych przed wdrożeniem.
 
 Inwestor bez dostępu widzi wyłącznie zajawki z funkcji SQL
 `investor_offer_teasers()` (tylko dozwolone pola; zdjęcie główne podpisywane
-serwerowo). Publiczne osadzenia korzystają z widoku kolumnowego
-`public_loan_teasers` (poprzednie polityki `anon` na pełnych tabelach usunięte).
+serwerowo) — i to DOPIERO po pozytywnej weryfikacji tożsamości (KYC) w module
+projektów (`project_module_access.kyc_status = 'approved'`); wcześniej server
+function nie zwraca żadnych danych ofert. Publiczne osadzenia korzystają
+z widoku kolumnowego `public_loan_teasers` (poprzednie polityki `anon` na
+pełnych tabelach usunięte). Dawne „darmowe konto inwestora" (składanie ofert
+z oprocentowaniem = odsetki maksymalne, bez prowizji inwestora, z prowizją
+Finance You 2×) zostało wycofane — składanie ofert i pełne dane wymagają
+pełnego dostępu.
 
 ## Pośrednik
 

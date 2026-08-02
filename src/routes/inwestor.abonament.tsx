@@ -132,18 +132,13 @@ function InwestorAbonament() {
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-1">
             <p>
-              • przeglądanie ofert ze zdjęciami i <b>zanonimizowaną treścią księgi wieczystej</b>,
-            </p>
-            <p>
-              • do <b>5 ofert</b> i maks. <b>2 zawarte pożyczki</b> w ciągu roku dla kwot do{" "}
-              <b>255 550 zł</b> każda — kwoty powyżej progu bez limitu liczby,
-            </p>
-            <p>
-              • oprocentowanie stałe w maksymalnej ustawowej wysokości (2 × (stopa ref. NBP + 3,5
-              p.p.), liczone na bieżąco), bez prowizji inwestora; prowizja Finance You 2× wyższa niż
-              w planie pełnym,
+              • anonimowe zajawki ofert — po pozytywnej <b>weryfikacji tożsamości (KYC)</b>,
             </p>
             <p>• kalkulator pożyczki oraz 3 darmowe lekcje Akademii Inwestora.</p>
+            <p>
+              Pełne dane ofert, dokumenty, księga wieczysta i składanie ofert wymagają pełnego
+              dostępu.
+            </p>
           </CardContent>
         </Card>
       )}

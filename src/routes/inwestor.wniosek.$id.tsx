@@ -17,6 +17,7 @@ import {
   Eye,
   AlertTriangle,
   FolderOpen,
+  Lock,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
@@ -37,7 +38,6 @@ import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { useAccessState } from "@/hooks/use-access";
-import { FreeOfferDetail } from "@/components/access/FreeOfferDetail";
 
 // Reguły z kalkulatora na /klient: max okres maleje wraz z kwotą.
 function maxMonthsForAmount(amount: number): number {
@@ -51,16 +51,35 @@ export const Route = createFileRoute("/inwestor/wniosek/$id")({
   component: InwestorWniosekGate,
 });
 
-// Darmowe konto inwestora dostaje bezpieczny widok (zdjęcia + zanonimizowana
-// treść KW + oferta w ramach limitów); pełny widok wymaga płatnego dostępu.
+// Szczegół wniosku wymaga aktywnego pełnego dostępu inwestora — bez niego
+// pokazujemy zamkniętą kartę (layout i tak przekierowuje na /inwestor/abonament).
 function InwestorWniosekGate() {
-  const { id } = Route.useParams();
   const { loading, hasFullAccess } = useAccessState("investor");
   if (loading) {
     return <div className="py-10 text-center text-muted-foreground">Ładowanie…</div>;
   }
   if (!hasFullAccess) {
-    return <FreeOfferDetail applicationId={id} />;
+    return (
+      <div className="mx-auto max-w-2xl py-10">
+        <Card>
+          <CardHeader className="items-center text-center">
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-muted">
+              <Lock className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <CardTitle>Szczegóły wniosku wymagają pełnego dostępu</CardTitle>
+            <CardDescription>
+              Pełne dane wniosku, dokumenty, księga wieczysta i składanie ofert są dostępne po
+              aktywacji pełnego dostępu inwestora.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Button asChild>
+              <Link to="/inwestor/abonament">Zobacz pakiety dostępu</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
   return <InwestorWniosek />;
 }
