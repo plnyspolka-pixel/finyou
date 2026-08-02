@@ -69,6 +69,7 @@ const groups: Group[] = [
       { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
       { to: "/admin/potencjal-lokalizacyjny", label: "Potencjał lokalizacyjny", icon: MapPinned },
       { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },
+      { to: "/admin/generator-umowy", label: "Generator umowy pożyczki", icon: FileCheck },
       { to: "/admin/kreator-dokumentow", label: "Kreator dokumentów B2B", icon: FileSignature },
       { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
       { to: "/admin/avatar-faq", label: "Awatar FAQ (Filip)", icon: Bot },

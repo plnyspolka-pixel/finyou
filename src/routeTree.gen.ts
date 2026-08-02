@@ -113,6 +113,7 @@ import { Route as AdminMaterialyRouteImport } from './routes/admin.materialy'
 import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
 import { Route as AdminKwRouteImport } from './routes/admin.kw'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
+import { Route as AdminGeneratorUmowyRouteImport } from './routes/admin.generator-umowy'
 import { Route as AdminKreatorDokumentowRouteImport } from './routes/admin.kreator-dokumentow'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminKartyOfertRouteImport } from './routes/admin.karty-ofert'
@@ -750,6 +751,11 @@ const AdminKwRoute = AdminKwRouteImport.update({
 const AdminKreatorPozyczkiRoute = AdminKreatorPozyczkiRouteImport.update({
   id: '/kreator-pozyczki',
   path: '/kreator-pozyczki',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminGeneratorUmowyRoute = AdminGeneratorUmowyRouteImport.update({
+  id: '/generator-umowy',
+  path: '/generator-umowy',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminKreatorDokumentowRoute = AdminKreatorDokumentowRouteImport.update({
@@ -1422,6 +1428,7 @@ export interface FileRoutesByFullPath {
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
@@ -1637,6 +1644,7 @@ export interface FileRoutesByTo {
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
@@ -1853,6 +1861,7 @@ export interface FileRoutesById {
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
@@ -2075,6 +2084,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
+    | '/admin/generator-umowy'
     | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
@@ -2290,6 +2300,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
+    | '/admin/generator-umowy'
     | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
@@ -2505,6 +2516,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
+    | '/admin/generator-umowy'
     | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
@@ -3491,6 +3503,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminKwRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/generator-umowy': {
+      id: '/admin/generator-umowy'
+      path: '/generator-umowy'
+      fullPath: '/admin/generator-umowy'
+      preLoaderRoute: typeof AdminGeneratorUmowyRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/kreator-pozyczki': {
       id: '/admin/kreator-pozyczki'
       path: '/kreator-pozyczki'
@@ -4345,6 +4364,7 @@ interface AdminRouteChildren {
   AdminKlienciRoute: typeof AdminKlienciRouteWithChildren
   AdminKreatorDokumentowRoute: typeof AdminKreatorDokumentowRoute
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
+  AdminGeneratorUmowyRoute: typeof AdminGeneratorUmowyRoute
   AdminKwRoute: typeof AdminKwRoute
   AdminMailingRoute: typeof AdminMailingRoute
   AdminMaterialyRoute: typeof AdminMaterialyRoute
@@ -4412,6 +4432,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminKlienciRoute: AdminKlienciRouteWithChildren,
   AdminKreatorDokumentowRoute: AdminKreatorDokumentowRoute,
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
+  AdminGeneratorUmowyRoute: AdminGeneratorUmowyRoute,
   AdminKwRoute: AdminKwRoute,
   AdminMailingRoute: AdminMailingRoute,
   AdminMaterialyRoute: AdminMaterialyRoute,
