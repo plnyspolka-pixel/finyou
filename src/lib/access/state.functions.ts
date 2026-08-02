@@ -13,6 +13,8 @@ export interface AccessStateResult {
   activeUntil: string | null;
   daysLeft: number;
   isBypass: boolean;
+  /** Aktywny dostęp do zamkniętego modułu projektów (approved_investor) — daje pełny dostęp inwestora. */
+  hasModuleAccess: boolean;
 }
 
 export const getMyAccessState = createServerFn({ method: "GET" })
@@ -33,6 +35,7 @@ export const getMyAccessState = createServerFn({ method: "GET" })
       activeUntil: (s.activeUntil as string | null) ?? null,
       daysLeft: Number(s.daysLeft ?? 0),
       isBypass: Boolean(s.isBypass),
+      hasModuleAccess: Boolean(s.hasModuleAccess),
     };
   });
 
