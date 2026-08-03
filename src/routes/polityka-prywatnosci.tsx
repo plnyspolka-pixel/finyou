@@ -11,6 +11,7 @@ export const Route = createFileRoute("/polityka-prywatnosci")({
           "Polityka prywatności serwisu Finance You — zasady przetwarzania danych osobowych zgodnie z RODO.",
       },
     ],
+    links: [{ rel: "canonical", href: "https://financeyou.pl/polityka-prywatnosci" }],
   }),
 });
 

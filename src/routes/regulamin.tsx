@@ -11,6 +11,7 @@ export const Route = createFileRoute("/regulamin")({
           "Regulamin korzystania z serwisu Finance You — zasady składania wniosków o pożyczkę zabezpieczoną nieruchomością.",
       },
     ],
+    links: [{ rel: "canonical", href: "https://financeyou.pl/regulamin" }],
   }),
 });
 
