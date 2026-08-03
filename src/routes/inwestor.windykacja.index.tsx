@@ -2,6 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import {
   listWindDashboard,
   createWindCase,
@@ -42,7 +45,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ContractScanField } from "@/components/inwestor/wind-smart-scan";
+import {
+  ContractScanField,
+  PaymentScansField,
+  type PaymentScan,
+} from "@/components/inwestor/wind-smart-scan";
 import { formatPLN, formatDate } from "@/lib/labels";
 import {
   Gavel,
@@ -351,8 +358,12 @@ function NewCaseDialog({
   onCreated: (caseId: string) => void;
   createCase: ReturnType<typeof useServerFn<typeof createWindCase>>;
 }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const [payments, setPayments] = useState<PaymentScan[]>([]);
   const [f, setF] = useState({
     imie_nazwisko: "",
     typ: "osoba_fizyczna" as "osoba_fizyczna" | "firma",
@@ -373,13 +384,45 @@ function NewCaseDialog({
   });
   const upd = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
+  // Automatyczne wyliczenie należności: kwota do zwrotu − suma wpłat.
+  const sumaWplat = payments.reduce((s, p) => s + (Number(p.kwota) || 0), 0);
+  const naleznoscBazowa = Number(f.kwota_calkowita) || Number(f.kwota_pozyczki) || 0;
+  const wyliczonaZaleglosc = Math.max(0, naleznoscBazowa - sumaWplat);
+
+  const uploadToStorage = async (file: File, label: string): Promise<string | null> => {
+    if (!user?.id) return null;
+    const safe = file.name.replace(/[^\w.-]+/g, "_");
+    const path = `windykacja/${user.id}/nowa/${Date.now()}_${label}_${safe}`;
+    const { error } = await supabase.storage.from(CLIENT_FILES_BUCKET).upload(path, file, {
+      upsert: false,
+      contentType: file.type || "application/octet-stream",
+    });
+    if (error) {
+      toast.error(`Upload (${label}): ${error.message}`);
+      return null;
+    }
+    return path;
+  };
+
   const submit = async () => {
     if (!f.imie_nazwisko.trim()) {
-      toast.error("Podaj dłużnika");
+      setShowDetails(true);
+      toast.error("Podaj dłużnika (wgraj umowę albo wpisz ręcznie)");
       return;
     }
     setBusy(true);
     try {
+      // 1) Skan umowy + potwierdzenia przelewów → Storage (dowody w aktach).
+      const umowaUrl = contractFile ? await uploadToStorage(contractFile, "umowa") : null;
+      const wplaty: Array<{ kwota: number; data: string; zalacznik_url?: string | null }> = [];
+      for (const p of payments) {
+        const kwota = Number(p.kwota) || 0;
+        if (kwota <= 0) continue;
+        const url = await uploadToStorage(p.file, "wplata");
+        wplaty.push({ kwota, data: p.data, zalacznik_url: url });
+      }
+
+      // 2) Utworzenie sprawy — system sam liczy należność z umowy i wpłat.
       const res = await createCase({
         data: {
           imie_nazwisko: f.imie_nazwisko,
@@ -410,9 +453,11 @@ function NewCaseDialog({
                   ? "wypowiedzenie"
                   : "ocena_przeslanek",
           priorytet: f.priorytet,
+          umowa_url: umowaUrl,
+          wplaty,
         },
       });
-      toast.success("Utworzono sprawę");
+      toast.success("Utworzono sprawę — należność wyliczona z umowy i wpłat");
       setOpen(false);
       onCreated(res.caseId);
     } catch (e) {
@@ -433,10 +478,12 @@ function NewCaseDialog({
         <DialogHeader>
           <DialogTitle>Nowa sprawa windykacyjna</DialogTitle>
           <DialogDescription>
-            Wgraj umowę, a dane wypełnią się same — albo wpisz je ręcznie.
+            Krok 1: wgraj umowę pożyczki. Krok 2: wgraj potwierdzenia przelewów otrzymanych od
+            klienta. System sam wyliczy należność.
           </DialogDescription>
         </DialogHeader>
         <ContractScanField
+          onFile={setContractFile}
           onExtract={(d) =>
             setF((p) => ({
               ...p,
@@ -458,7 +505,45 @@ function NewCaseDialog({
             }))
           }
         />
-        <div className="grid sm:grid-cols-2 gap-3">
+
+        {/* KROK 2: potwierdzenia przelewów → system liczy należność. */}
+        <PaymentScansField payments={payments} onChange={setPayments} />
+
+        {/* Automatyczne wyliczenie należności. */}
+        {naleznoscBazowa > 0 && (
+          <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Kwota do zwrotu (z umowy)</span>
+              <span className="tabular-nums">{formatPLN(naleznoscBazowa)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">
+                Wpłaty klienta ({payments.filter((p) => Number(p.kwota) > 0).length})
+              </span>
+              <span className="tabular-nums">− {formatPLN(sumaWplat)}</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between border-t pt-1 font-semibold">
+              <span>Wyliczona należność</span>
+              <span className="tabular-nums">{formatPLN(wyliczonaZaleglosc)}</span>
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Odsetki (kapitałowe i maksymalne za opóźnienie) system doliczy automatycznie w karcie
+              sprawy, na podstawie dat z umowy i wpłat.
+            </p>
+          </div>
+        )}
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="w-full justify-center text-muted-foreground"
+          onClick={() => setShowDetails((s) => !s)}
+        >
+          {showDetails ? "Ukryj dane szczegółowe" : "Sprawdź / popraw dane odczytane z umowy"}
+        </Button>
+
+        <div className={showDetails ? "grid sm:grid-cols-2 gap-3" : "hidden"}>
           <Fld label="Dłużnik / firma" className="sm:col-span-2">
             <Input value={f.imie_nazwisko} onChange={(e) => upd("imie_nazwisko", e.target.value)} />
           </Fld>
@@ -526,10 +611,11 @@ function NewCaseDialog({
               onChange={(e) => upd("termin_splaty", e.target.value)}
             />
           </Fld>
-          <Fld label="Kwota zaległa (zł)">
+          <Fld label="Kwota zaległa (zł) — puste = wyliczona automatycznie">
             <Input
               type="number"
               value={f.kwota_zalegla}
+              placeholder={wyliczonaZaleglosc > 0 ? String(wyliczonaZaleglosc) : ""}
               onChange={(e) => upd("kwota_zalegla", e.target.value)}
             />
           </Fld>

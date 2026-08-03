@@ -96,6 +96,8 @@ export type WindEvent = {
   zalacznik_url: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JSONB; `unknown` łamie ograniczenie serializacji TanStack ServerFn
   metadata: Record<string, any>;
+  /** Opłata windykacyjna naliczona za tę czynność (0 = bez opłaty). */
+  oplata: number;
   autor: string | null;
   created_at: string;
 };
@@ -109,6 +111,12 @@ export type WindDocument = {
   tresc: string | null;
   plik_url: string | null;
   status: "szkic" | "gotowy" | "wyslany";
+  /** Skan potwierdzenia nadania listu poleconego (ścieżka w Storage). */
+  potwierdzenie_nadania_url: string | null;
+  data_nadania: string | null;
+  /** Skan potwierdzenia odbioru / zwrotki (ścieżka w Storage). */
+  potwierdzenie_odbioru_url: string | null;
+  data_odbioru: string | null;
   created_at: string;
 };
 
@@ -121,8 +129,9 @@ const BORROWER_COLS =
 const CASE_COLS =
   "id, loan_id, sciezka, etap, opoznienie_dni, kwota_zalegla, data_otwarcia, data_zamkniecia, wynik, priorytet, osoba_prowadzaca";
 const EVENT_COLS =
-  "id, case_id, typ, kategoria, tytul, tresc, data_zdarzenia, data_doreczenia, status_doreczenia, zalacznik_url, metadata, autor, created_at";
-const DOC_COLS = "id, case_id, event_id, typ, tytul, tresc, plik_url, status, created_at";
+  "id, case_id, typ, kategoria, tytul, tresc, data_zdarzenia, data_doreczenia, status_doreczenia, zalacznik_url, metadata, oplata, autor, created_at";
+const DOC_COLS =
+  "id, case_id, event_id, typ, tytul, tresc, plik_url, status, potwierdzenie_nadania_url, data_nadania, potwierdzenie_odbioru_url, data_odbioru, created_at";
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const emptyToNull = (v: unknown) => (v === "" ? null : v);
@@ -236,6 +245,18 @@ const createSchema = z.object({
   etap: z.string().default("kontakt_wstepny"),
   priorytet: z.enum(["niski", "sredni", "wysoki", "krytyczny"]).default("sredni"),
   osoba_prowadzaca: z.string().optional().nullable(),
+  /** Skan umowy pożyczki (ścieżka w Storage) — zapisywany jako dowód w aktach. */
+  umowa_url: z.string().optional().nullable(),
+  /** Wpłaty otrzymane dotychczas od klienta (z potwierdzeń przelewów). */
+  wplaty: z
+    .array(
+      z.object({
+        kwota: z.coerce.number().positive(),
+        data: z.string().min(1),
+        zalacznik_url: z.string().optional().nullable(),
+      }),
+    )
+    .default([]),
 });
 
 export const createWindCase = createServerFn({ method: "POST" })
@@ -261,7 +282,13 @@ export const createWindCase = createServerFn({ method: "POST" })
       .single();
     if (bErr) throw new Error(bErr.message);
 
-    const saldo = data.kwota_zalegla || data.kwota_calkowita || data.kwota_pozyczki;
+    // Należność wyliczana automatycznie: kwota do zwrotu minus suma wpłat
+    // z potwierdzeń przelewów. Ręcznie podana kwota zaległa ma pierwszeństwo.
+    const wplaty = [...(data.wplaty ?? [])].sort((a, b) => a.data.localeCompare(b.data));
+    const sumaWplat = wplaty.reduce((s, w) => s + w.kwota, 0);
+    const naleznoscBazowa = data.kwota_calkowita || data.kwota_pozyczki;
+    const saldoPoWplatach = Math.max(0, naleznoscBazowa - sumaWplat);
+    const saldo = data.kwota_zalegla || saldoPoWplatach || naleznoscBazowa;
     const { data: loan, error: lErr } = await db
       .from("wind_loans")
       .insert({
@@ -281,7 +308,7 @@ export const createWindCase = createServerFn({ method: "POST" })
         stopa_odsetek_max: data.stopa_odsetek_max,
         status: "w_zwloce",
         saldo_pozostale: saldo,
-        data_ostatniej_wplaty: null,
+        data_ostatniej_wplaty: wplaty.length ? wplaty[wplaty.length - 1].data : null,
       })
       .select("id")
       .single();
@@ -312,7 +339,36 @@ export const createWindCase = createServerFn({ method: "POST" })
       autor: context.claims?.email ?? null,
     });
 
-    return { caseId: kase.id as string };
+    // Skan umowy pożyczki — dowód w aktach sprawy.
+    if (data.umowa_url) {
+      await db.from("wind_events").insert({
+        case_id: kase.id,
+        typ: "notatka",
+        kategoria: "systemowe",
+        tytul: "Umowa pożyczki — skan w aktach",
+        tresc: "Umowa wgrana przy zakładaniu sprawy; dane sprawy odczytane z umowy.",
+        zalacznik_url: data.umowa_url,
+        autor: context.claims?.email ?? null,
+      });
+    }
+
+    // Wpłaty otrzymane dotychczas (z potwierdzeń przelewów) — pełna historia
+    // do wyliczenia odsetek (art. 451 k.c.: koszty → odsetki → kapitał).
+    for (const w of wplaty) {
+      await db.from("wind_events").insert({
+        case_id: kase.id,
+        typ: "wplata",
+        kategoria: "manualne",
+        tytul: "Odnotowano wpłatę",
+        tresc: "Wpłata z potwierdzenia przelewu (przy zakładaniu sprawy).",
+        data_zdarzenia: new Date(`${w.data}T12:00:00`).toISOString(),
+        zalacznik_url: emptyToNull(w.zalacznik_url),
+        metadata: { kwota: w.kwota, sposob: "przelew (potwierdzenie)" },
+        autor: context.claims?.email ?? null,
+      });
+    }
+
+    return { caseId: kase.id as string, kwota_zalegla: data.kwota_zalegla || saldo };
   });
 
 // ── Edycja: borrower / loan / case ───────────────────────────────────
@@ -463,6 +519,7 @@ export const performWindContact = createServerFn({ method: "POST" })
         target: z.string().optional().nullable(),
         subject: z.string().optional().nullable(),
         tresc: z.string().min(1, "Treść jest wymagana"),
+        oplata: z.coerce.number().min(0).default(0),
       })
       .parse(d),
   )
@@ -517,6 +574,7 @@ export const performWindContact = createServerFn({ method: "POST" })
             : null,
         status_doreczenia: status,
         metadata: extra,
+        oplata: data.oplata,
         autor: context.claims?.email ?? null,
       })
       .select(EVENT_COLS)
@@ -537,6 +595,7 @@ export const addWindPismoNadane = createServerFn({ method: "POST" })
         numer_nadania: z.string().optional().nullable(),
         zalacznik_url: z.string().optional().nullable(),
         tresc: z.string().optional().nullable(),
+        oplata: z.coerce.number().min(0).default(0),
       })
       .parse(d),
   )
@@ -554,6 +613,7 @@ export const addWindPismoNadane = createServerFn({ method: "POST" })
         status_doreczenia: "oczekuje",
         zalacznik_url: emptyToNull(data.zalacznik_url),
         metadata: { numer_nadania: data.numer_nadania ?? null },
+        oplata: data.oplata,
         autor: context.claims?.email ?? null,
       })
       .select(EVENT_COLS)
@@ -832,6 +892,75 @@ export const recordWindGeneratedDoc = createServerFn({ method: "POST" })
     if (dErr) throw new Error(dErr.message);
 
     return { document: doc as WindDocument, event: ev as WindEvent };
+  });
+
+// ── Potwierdzenie nadania / odbioru dla pisma z systemu ──────────────
+// Inwestor wgrywa skan dowodu nadania (list polecony) albo zwrotki (ZPO)
+// dla konkretnego pisma wygenerowanego w systemie. Skan zostaje przypięty
+// do dokumentu, a w osi czasu powstaje zdarzenie dowodowe.
+export const attachWindDocProof = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: Record<string, unknown>) =>
+    z
+      .object({
+        caseId: z.string().uuid(),
+        documentId: z.string().uuid(),
+        rodzaj: z.enum(["nadanie", "odbior"]),
+        plik_url: z.string().min(1),
+        data: z.string().min(1),
+        numer_nadania: z.string().optional().nullable(),
+        oplata: z.coerce.number().min(0).default(0),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const db = loose(context.supabase);
+    const { data: doc } = await db
+      .from("wind_documents")
+      .select("id, tytul")
+      .eq("id", data.documentId)
+      .maybeSingle();
+    if (!doc) throw new Error("Pismo nie znalezione");
+
+    const patch =
+      data.rodzaj === "nadanie"
+        ? {
+            potwierdzenie_nadania_url: data.plik_url,
+            data_nadania: data.data,
+            status: "wyslany",
+          }
+        : { potwierdzenie_odbioru_url: data.plik_url, data_odbioru: data.data };
+    const { data: updated, error: uErr } = await db
+      .from("wind_documents")
+      .update(patch)
+      .eq("id", data.documentId)
+      .select(DOC_COLS)
+      .single();
+    if (uErr) throw new Error(uErr.message);
+
+    const isNadanie = data.rodzaj === "nadanie";
+    const { data: ev, error: eErr } = await db
+      .from("wind_events")
+      .insert({
+        case_id: data.caseId,
+        typ: isNadanie ? "pismo_nadane" : "pismo_doreczone",
+        kategoria: "manualne",
+        tytul: isNadanie
+          ? `${doc.tytul} — potwierdzenie nadania`
+          : `${doc.tytul} — potwierdzenie odbioru (zwrotka)`,
+        data_zdarzenia: new Date(`${data.data}T12:00:00`).toISOString(),
+        data_doreczenia: isNadanie ? null : new Date(`${data.data}T12:00:00`).toISOString(),
+        status_doreczenia: isNadanie ? "oczekuje" : "doreczone",
+        zalacznik_url: data.plik_url,
+        metadata: { document_id: data.documentId, numer_nadania: data.numer_nadania ?? null },
+        oplata: data.oplata,
+        autor: context.claims?.email ?? null,
+      })
+      .select(EVENT_COLS)
+      .single();
+    if (eErr) throw new Error(eErr.message);
+
+    return { document: updated as WindDocument, event: ev as WindEvent };
   });
 
 // ── Seed danych demonstracyjnych ─────────────────────────────────────

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,12 +18,16 @@ import {
   generateWindDocument,
   recordWindGeneratedDoc,
   setWindTermination,
+  attachWindDocProof,
   type WindCase,
   type WindLoan,
   type WindBorrower,
   type WindEvent,
   type WindDocument,
 } from "@/lib/windykacja.functions";
+import { placeWindCollectionCall } from "@/lib/windykacja-call.functions";
+import { WIND_FEE_DEFAULTS } from "@/lib/windykacja-fees";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import {
   listDocxTemplates,
   getDocxTemplatePreview,
@@ -124,6 +128,7 @@ type ActionKind =
   | "sms"
   | "email"
   | "telefon"
+  | "botcall"
   | "pismo"
   | "doreczenie"
   | "dokument"
@@ -178,6 +183,8 @@ function WindykacjaCaseCard() {
   const genDocx = useServerFn(generateDocxFromTemplate);
   const recordDoc = useServerFn(recordWindGeneratedDoc);
   const signUrl = useServerFn(getGeneratedDocSignedUrl);
+  const doBotCall = useServerFn(placeWindCollectionCall);
+  const attachProof = useServerFn(attachWindDocProof);
 
   const downloadDoc = async (path: string) => {
     try {
@@ -261,6 +268,13 @@ function WindykacjaCaseCard() {
         paid_on: e.data_zdarzenia.slice(0, 10),
         amount: Number((e.metadata as { kwota?: number })?.kwota ?? 0),
       }));
+    // Opłaty za czynności windykacyjne — doliczane do zadłużenia jako koszty.
+    const actionFees = events
+      .filter((e) => Number(e.oplata) > 0)
+      .map((e) => ({
+        action_date: e.data_zdarzenia.slice(0, 10),
+        fee: Number(e.oplata),
+      }));
     const { bearing, investorCommission } = splitInvestorPrincipal(loan);
     return calculateDebt({
       // Część oprocentowana = kwota na rękę + prowizja Finance You.
@@ -277,7 +291,7 @@ function WindykacjaCaseCard() {
       overdueInstallmentsAmount: Number(kase.kwota_zalegla || 0),
       surcharges: Number(loan.kwota_doplat || 0),
       payments,
-      actionFees: [],
+      actionFees,
       asOf: todayISO(),
     });
   }, [loan, kase, events, terminated]);
@@ -426,7 +440,7 @@ function WindykacjaCaseCard() {
               ) : (
                 <ol className="relative border-l ml-3 space-y-4">
                   {filteredEvents.map((e) => (
-                    <TimelineItem key={e.id} e={e} />
+                    <TimelineItem key={e.id} e={e} onOpenAttachment={downloadDoc} />
                   ))}
                 </ol>
               )}
@@ -436,35 +450,29 @@ function WindykacjaCaseCard() {
           {documents.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Pliki klienta ({documents.length})</CardTitle>
+                <CardTitle className="text-base">
+                  Pisma wygenerowane w systemie ({documents.length})
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {documents.map((d) => (
-                  <div
+                  <WindDocRow
                     key={d.id}
-                    className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FileSignature className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="truncate">{d.tytul}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(d.created_at)}
-                      </span>
-                    </div>
-                    {d.plik_url ? (
-                      <Button variant="ghost" size="sm" onClick={() => downloadDoc(d.plik_url!)}>
-                        <Download className="h-4 w-4 mr-1" /> Pobierz DOCX
-                      </Button>
-                    ) : (
-                      <Button variant="ghost" size="sm" onClick={() => setDocPreview(d)}>
-                        <Eye className="h-4 w-4 mr-1" /> Podgląd
-                      </Button>
-                    )}
-                  </div>
+                    d={d}
+                    caseId={caseId}
+                    userId={user?.id}
+                    onDownload={downloadDoc}
+                    onPreview={() => setDocPreview(d)}
+                    attachProof={attachProof}
+                    onAttached={(ev) => refreshAfterEvent(ev)}
+                  />
                 ))}
               </CardContent>
             </Card>
           )}
+
+          {/* REJESTR CZYNNOŚCI WINDYKACYJNYCH I OPŁAT */}
+          <WindActionRegister events={events} />
         </div>
 
         {/* PRAWA — panel sterowania */}
@@ -505,6 +513,45 @@ function WindykacjaCaseCard() {
                 <Settings2 className="h-4 w-4 mr-1" />
                 {advanced ? "Ukryj tryb zaawansowany" : "Tryb zaawansowany (wszystkie działania)"}
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Kontakt windykacyjny — zawsze pod ręką (SMS / telefon AI / e-mail). */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Phone className="h-4 w-4" /> Kontakt windykacyjny
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-start"
+                onClick={() => setAction("sms")}
+              >
+                <MessageSquare className="h-4 w-4 mr-1.5" /> Wyślij SMS windykacyjny
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-start"
+                onClick={() => setAction("botcall")}
+              >
+                <Phone className="h-4 w-4 mr-1.5" /> Zadzwoń (agent AI w Twoim imieniu)
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-start"
+                onClick={() => setAction("email")}
+              >
+                <Mail className="h-4 w-4 mr-1.5" /> Wyślij e-mail
+              </Button>
+              <p className="text-[11px] text-muted-foreground">
+                Każdy kontakt trafia do rejestru czynności — z możliwością naliczenia opłaty
+                windykacyjnej doliczanej do zadłużenia.
+              </p>
             </CardContent>
           </Card>
 
@@ -583,6 +630,9 @@ function WindykacjaCaseCard() {
                   <RowL label="Dopłaty / koszty umowne" value={debt.surchargesOutstanding} />
                 )}
                 <RowL label="Odsetki za opóźnienie (maks.)" value={debt.delayInterest} />
+                {debt.costsOutstanding > 0 && (
+                  <RowL label="Opłaty za czynności windykacyjne" value={debt.costsOutstanding} />
+                )}
                 <Separator className="my-1" />
                 <div className="flex items-center justify-between font-semibold">
                   <span>Razem na dziś</span>
@@ -693,6 +743,7 @@ function WindykacjaCaseCard() {
           borrower={borrower}
           events={events}
           userId={user?.id}
+          debtTotal={debt?.totalDue ?? null}
           fns={{
             doContact,
             doPismo,
@@ -705,6 +756,7 @@ function WindykacjaCaseCard() {
             previewTemplate,
             genDocx,
             recordDoc,
+            doBotCall,
           }}
           onDone={(ev) => {
             setAction(null);
@@ -730,7 +782,13 @@ function WindykacjaCaseCard() {
 }
 
 // ── Pozycja osi czasu ────────────────────────────────────────────────
-function TimelineItem({ e }: { e: WindEvent }) {
+function TimelineItem({
+  e,
+  onOpenAttachment,
+}: {
+  e: WindEvent;
+  onOpenAttachment?: (path: string) => void;
+}) {
   const Icon = EVENT_ICON[e.typ] ?? FileText;
   const meta = e.metadata as { kwota?: number; numer_nadania?: string };
   const delivery = e.status_doreczenia;
@@ -780,10 +838,19 @@ function TimelineItem({ e }: { e: WindEvent }) {
             )}
           </div>
         )}
-        {e.zalacznik_url ? (
-          <div className="mt-1.5 flex items-center gap-1 text-xs text-primary">
-            <Paperclip className="h-3 w-3" /> załącznik
+        {Number(e.oplata) > 0 && (
+          <div className="mt-1 text-[11px] text-muted-foreground">
+            Opłata windykacyjna: <span className="tabular-nums">{formatPLN(Number(e.oplata))}</span>
           </div>
+        )}
+        {e.zalacznik_url ? (
+          <button
+            type="button"
+            className="mt-1.5 flex items-center gap-1 text-xs text-primary hover:underline"
+            onClick={() => onOpenAttachment?.(e.zalacznik_url!)}
+          >
+            <Paperclip className="h-3 w-3" /> załącznik — zobacz
+          </button>
         ) : e.typ.startsWith("pismo") ? (
           <div className="mt-1.5 text-[11px] text-amber-600">
             niekompletne — brak skanu (dowodu)
@@ -1091,6 +1158,7 @@ type Fns = {
   previewTemplate: ReturnType<typeof useServerFn<typeof getDocxTemplatePreview>>;
   genDocx: ReturnType<typeof useServerFn<typeof generateDocxFromTemplate>>;
   recordDoc: ReturnType<typeof useServerFn<typeof recordWindGeneratedDoc>>;
+  doBotCall: ReturnType<typeof useServerFn<typeof placeWindCollectionCall>>;
 };
 
 function ActionDialog({
@@ -1103,6 +1171,7 @@ function ActionDialog({
   borrower,
   events,
   userId,
+  debtTotal,
   fns,
   onDone,
 }: {
@@ -1115,12 +1184,13 @@ function ActionDialog({
   borrower: WindBorrower;
   events: WindEvent[];
   userId?: string;
+  debtTotal?: number | null;
   fns: Fns;
   onDone: (ev?: WindEvent) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [v, setV] = useState<Record<string, string>>(() =>
-    initialValues(kind, kase, loan, borrower, initialDocType),
+    initialValues(kind, kase, loan, borrower, initialDocType, debtTotal),
   );
   const [file, setFile] = useState<File | null>(null);
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
@@ -1144,9 +1214,9 @@ function ActionDialog({
   const uploadScan = async (): Promise<string | null> => {
     if (!file || !userId) return null;
     const safe = file.name.replace(/[^\w.-]+/g, "_");
-    const path = `${userId}/windykacja/${caseId}/${Date.now()}_${safe}`;
+    const path = `windykacja/${userId}/${caseId}/${Date.now()}_${safe}`;
     const { error } = await supabase.storage
-      .from("documents")
+      .from(CLIENT_FILES_BUCKET)
       .upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
     if (error) {
       toast.error(`Upload: ${error.message}`);
@@ -1160,12 +1230,36 @@ function ActionDialog({
     try {
       if (kind === "sms" || kind === "email" || kind === "telefon") {
         const ev = await fns.doContact({
-          data: { caseId, typ: kind, target: v.target, subject: v.subject, tresc: v.tresc },
+          data: {
+            caseId,
+            typ: kind,
+            target: v.target,
+            subject: v.subject,
+            tresc: v.tresc,
+            oplata: Number(v.oplata) || 0,
+          },
         });
         if ((ev.metadata as { ok?: boolean })?.ok === false)
           toast.error("Wysyłka nie powiodła się — zdarzenie zapisane.");
         else toast.success("Zapisano zdarzenie");
         onDone(ev);
+      } else if (kind === "botcall") {
+        if (!v.target?.trim()) {
+          toast.error("Podaj numer telefonu dłużnika");
+          setBusy(false);
+          return;
+        }
+        const res = await fns.doBotCall({
+          data: {
+            caseId,
+            telefon: v.target,
+            kwota: Number(v.kwota) || 0,
+            oplata: Number(v.oplata) || 0,
+          },
+        });
+        if (res.ok) toast.success("Agent AI dzwoni do dłużnika — wynik pojawi się w osi czasu.");
+        else toast.error(res.error ?? "Nie udało się zainicjować połączenia");
+        onDone(res.event as WindEvent);
       } else if (kind === "skan") {
         // Zdjęcie dokumentu → automatyczne rozpoznanie i zapis właściwego zdarzenia.
         if (!file) {
@@ -1245,6 +1339,7 @@ function ActionDialog({
             numer_nadania: v.numer_nadania,
             zalacznik_url: scan,
             tresc: v.tresc,
+            oplata: Number(v.oplata) || 0,
           },
         });
         toast.success("Dodano pismo nadane");
@@ -1355,12 +1450,28 @@ function ActionDialog({
               Wiadomość zostanie wysłana i zapisana w rejestrze dowodowym.
             </DialogDescription>
           )}
+          {kind === "botcall" && (
+            <DialogDescription>
+              Agent AI (ElevenLabs) zadzwoni do dłużnika w Twoim imieniu i przypomni o konieczności
+              uregulowania należności. Kwota zaległości i Twoje imię są przekazywane do rozmowy
+              automatycznie. Połączenie zostanie zapisane w rejestrze czynności.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         <div className="space-y-3">
-          {(kind === "sms" || kind === "telefon") && (
+          {(kind === "sms" || kind === "telefon" || kind === "botcall") && (
             <Fld label="Numer telefonu">
               <Input value={v.target ?? ""} onChange={(e) => set("target", e.target.value)} />
+            </Fld>
+          )}
+          {kind === "botcall" && (
+            <Fld label="Kwota zaległości do zakomunikowania (zł)">
+              <Input
+                type="number"
+                value={v.kwota ?? ""}
+                onChange={(e) => set("kwota", e.target.value)}
+              />
             </Fld>
           )}
           {kind === "email" && (
@@ -1388,6 +1499,27 @@ function ActionDialog({
                 value={v.tresc ?? ""}
                 onChange={(e) => set("tresc", e.target.value)}
               />
+            </Fld>
+          )}
+
+          {/* Opłata windykacyjna za czynność — trafia do rejestru i do zadłużenia. */}
+          {(kind === "sms" ||
+            kind === "email" ||
+            kind === "telefon" ||
+            kind === "botcall" ||
+            kind === "pismo") && (
+            <Fld label="Opłata za czynność windykacyjną (zł) — 0 = bez opłaty">
+              <Input
+                type="number"
+                min={0}
+                value={v.oplata ?? "0"}
+                onChange={(e) => set("oplata", e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Opłata zostanie doliczona do zadłużenia jako koszt windykacji (wpłaty klienta
+                pokrywają najpierw koszty — art. 451 k.c.). Nalicz tylko, jeśli umowa pożyczki
+                przewiduje opłaty za czynności windykacyjne.
+              </p>
             </Fld>
           )}
 
@@ -1631,7 +1763,11 @@ function ActionDialog({
             ) : (
               <Send className="h-4 w-4 mr-1" />
             )}
-            {kind === "sms" || kind === "email" ? "Wyślij" : "Zapisz"}
+            {kind === "sms" || kind === "email"
+              ? "Wyślij"
+              : kind === "botcall"
+                ? "Zadzwoń teraz"
+                : "Zapisz"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1666,6 +1802,7 @@ const TITLES: Record<Exclude<ActionKind, null>, string> = {
   sms: "Wyślij SMS",
   email: "Wyślij e-mail",
   telefon: "Rozmowa telefoniczna",
+  botcall: "Telefon windykacyjny — agent AI",
   pismo: "Dodaj pismo nadane",
   doreczenie: "Aktualizacja doręczenia",
   dokument: "Generuj dokument",
@@ -1681,15 +1818,25 @@ function initialValues(
   loan: WindLoan,
   borrower: WindBorrower,
   initialDocType?: WindDocumentType | null,
+  debtTotal?: number | null,
 ): Record<string, string> {
-  const base: Record<string, string> = { data: todayISO(), data_nadania: todayISO() };
-  if (kind === "sms" || kind === "telefon") base.target = borrower.telefon ?? "";
+  const base: Record<string, string> = { data: todayISO(), data_nadania: todayISO(), oplata: "0" };
+  if (kind === "sms" || kind === "telefon" || kind === "botcall")
+    base.target = borrower.telefon ?? "";
   if (kind === "email") {
     base.target = borrower.email ?? "";
     base.subject = "Finance You — wezwanie do zapłaty";
   }
-  if (kind === "sms")
-    base.tresc = `Przypomnienie: zaległość z umowy ${loan.numer_umowy ?? ""} wynosi ${formatPLN(kase.kwota_zalegla)}. Prosimy o pilną spłatę.`;
+  if (kind === "sms") {
+    base.tresc = `Przypomnienie: zaległość z umowy ${loan.numer_umowy ?? ""} wynosi ${formatPLN(debtTotal ?? kase.kwota_zalegla)}. Prosimy o pilną spłatę. Finance You`;
+    base.oplata = String(WIND_FEE_DEFAULTS.sms);
+  }
+  if (kind === "email") base.oplata = String(WIND_FEE_DEFAULTS.email);
+  if (kind === "botcall") {
+    base.kwota = String(Math.round(Number(debtTotal ?? kase.kwota_zalegla) || 0));
+    base.oplata = String(WIND_FEE_DEFAULTS.telefon);
+  }
+  if (kind === "pismo") base.oplata = String(WIND_FEE_DEFAULTS.pismo);
   if (kind === "doreczenie") base.rodzaj = "doreczone";
   if (kind === "dokument") {
     const allowed = documentsForPath(kase.sciezka);
@@ -1718,5 +1865,234 @@ function Fld({
       <Label className="text-xs">{label}</Label>
       {children}
     </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// PISMO Z SYSTEMU + POTWIERDZENIA NADANIA / ODBIORU
+// Inwestor wgrywa skan dowodu nadania (list polecony) i zwrotki (ZPO)
+// bezpośrednio przy piśmie, do którego należą.
+// ════════════════════════════════════════════════════════════════════
+function WindDocRow({
+  d,
+  caseId,
+  userId,
+  onDownload,
+  onPreview,
+  attachProof,
+  onAttached,
+}: {
+  d: WindDocument;
+  caseId: string;
+  userId?: string;
+  onDownload: (path: string) => void;
+  onPreview: () => void;
+  attachProof: ReturnType<typeof useServerFn<typeof attachWindDocProof>>;
+  onAttached: (ev: WindEvent) => void;
+}) {
+  const nadanieRef = useRef<HTMLInputElement>(null);
+  const odbiorRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<"nadanie" | "odbior" | null>(null);
+
+  const upload = async (rodzaj: "nadanie" | "odbior", file: File | null) => {
+    if (!file || !userId) return;
+    setBusy(rodzaj);
+    try {
+      const safe = file.name.replace(/[^\w.-]+/g, "_");
+      const path = `windykacja/${userId}/${caseId}/${rodzaj}_${d.id}_${Date.now()}_${safe}`;
+      const { error } = await supabase.storage.from(CLIENT_FILES_BUCKET).upload(path, file, {
+        upsert: false,
+        contentType: file.type || "application/octet-stream",
+      });
+      if (error) throw new Error(`Upload: ${error.message}`);
+      const res = await attachProof({
+        data: {
+          caseId,
+          documentId: d.id,
+          rodzaj,
+          plik_url: path,
+          data: new Date().toISOString().slice(0, 10),
+        },
+      });
+      toast.success(
+        rodzaj === "nadanie"
+          ? "Dodano potwierdzenie nadania"
+          : "Dodano potwierdzenie odbioru (zwrotkę)",
+      );
+      onAttached(res.event as WindEvent);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się zapisać potwierdzenia");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const proofChip = (
+    rodzaj: "nadanie" | "odbior",
+    url: string | null,
+    date: string | null,
+    ref: React.RefObject<HTMLInputElement | null>,
+  ) => {
+    const label = rodzaj === "nadanie" ? "nadanie" : "odbiór";
+    if (url) {
+      return (
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-full border border-green-300 bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-800 hover:bg-green-100 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200"
+          onClick={() => onDownload(url)}
+          title={`Zobacz potwierdzenie ${label}`}
+        >
+          <CheckCircle2 className="h-3 w-3" /> {label}
+          {date ? ` ${formatDate(date)}` : ""}
+        </button>
+      );
+    }
+    return (
+      <button
+        type="button"
+        disabled={busy != null}
+        className="inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-50"
+        onClick={() => ref.current?.click()}
+        title={`Wgraj skan potwierdzenia ${label}`}
+      >
+        {busy === rodzaj ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <Paperclip className="h-3 w-3" />
+        )}
+        + {label}
+      </button>
+    );
+  };
+
+  return (
+    <div className="rounded-md border p-2 text-sm space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <FileSignature className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="truncate">{d.tytul}</span>
+          <span className="text-xs text-muted-foreground shrink-0">{formatDate(d.created_at)}</span>
+        </div>
+        {d.plik_url ? (
+          <Button variant="ghost" size="sm" onClick={() => onDownload(d.plik_url!)}>
+            <Download className="h-4 w-4 mr-1" /> DOCX
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" onClick={onPreview}>
+            <Eye className="h-4 w-4 mr-1" /> Podgląd
+          </Button>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] text-muted-foreground">Potwierdzenia:</span>
+        {proofChip("nadanie", d.potwierdzenie_nadania_url, d.data_nadania, nadanieRef)}
+        {proofChip("odbior", d.potwierdzenie_odbioru_url, d.data_odbioru, odbiorRef)}
+        {!d.potwierdzenie_nadania_url && (
+          <span className="text-[11px] text-amber-600">brak dowodu nadania</span>
+        )}
+      </div>
+      <input
+        ref={nadanieRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          void upload("nadanie", e.target.files?.[0] ?? null);
+          e.currentTarget.value = "";
+        }}
+      />
+      <input
+        ref={odbiorRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          void upload("odbior", e.target.files?.[0] ?? null);
+          e.currentTarget.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// REJESTR CZYNNOŚCI WINDYKACYJNYCH I OPŁAT
+// Wszystkie czynności (SMS, telefony, pisma, dokumenty, czynności sądowe)
+// wraz z naliczonymi opłatami dodatkowymi doliczanymi do zadłużenia.
+// ════════════════════════════════════════════════════════════════════
+const REGISTER_EVENT_TYPES = new Set([
+  "sms",
+  "email",
+  "telefon",
+  "pismo_nadane",
+  "dokument_wygenerowany",
+  "czynnosc_sadowa",
+]);
+
+function WindActionRegister({ events }: { events: WindEvent[] }) {
+  const actions = useMemo(
+    () =>
+      events
+        .filter((e) => REGISTER_EVENT_TYPES.has(e.typ) || Number(e.oplata) > 0)
+        .sort((a, b) => b.data_zdarzenia.localeCompare(a.data_zdarzenia)),
+    [events],
+  );
+  const sumaOplat = actions.reduce((s, e) => s + (Number(e.oplata) || 0), 0);
+
+  if (actions.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Gavel className="h-4 w-4" /> Rejestr czynności windykacyjnych i opłat
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-xs text-muted-foreground">
+                <th className="py-1.5 pr-2 font-medium">Data</th>
+                <th className="py-1.5 pr-2 font-medium">Czynność</th>
+                <th className="py-1.5 text-right font-medium">Opłata</th>
+              </tr>
+            </thead>
+            <tbody>
+              {actions.map((e) => (
+                <tr key={e.id} className="border-b last:border-0">
+                  <td className="py-1.5 pr-2 whitespace-nowrap text-xs text-muted-foreground">
+                    {formatDate(e.data_zdarzenia)}
+                  </td>
+                  <td className="py-1.5 pr-2">
+                    <span className="line-clamp-1">{e.tytul}</span>
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums whitespace-nowrap">
+                    {Number(e.oplata) > 0 ? (
+                      formatPLN(Number(e.oplata))
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={2} className="py-2 pr-2 font-semibold">
+                  Suma opłat windykacyjnych
+                </td>
+                <td className="py-2 text-right font-semibold tabular-nums whitespace-nowrap">
+                  {formatPLN(sumaOplat)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Naliczone opłaty są doliczane do zadłużenia jako koszty windykacji i pokrywane z wpłat
+          klienta w pierwszej kolejności (art. 451 k.c.).
+        </p>
+      </CardContent>
+    </Card>
   );
 }

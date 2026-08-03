@@ -102,6 +102,9 @@ function EvidenceReport() {
         paid_on: e.data_zdarzenia.slice(0, 10),
         amount: Number((e.metadata as { kwota?: number })?.kwota ?? 0),
       }));
+    const actionFees = events
+      .filter((e) => Number(e.oplata) > 0)
+      .map((e) => ({ action_date: e.data_zdarzenia.slice(0, 10), fee: Number(e.oplata) }));
     const { bearing, investorCommission } = splitInvestorPrincipal(loan);
     return calculateDebt({
       principalAmount: bearing,
@@ -116,12 +119,22 @@ function EvidenceReport() {
       overdueInstallmentsAmount: Number(kase.kwota_zalegla || 0),
       surcharges: Number(loan.kwota_doplat || 0),
       payments,
-      actionFees: [],
+      actionFees,
       asOf: todayISO(),
     });
   }, [loan, kase, events]);
 
   const attachments = useMemo(() => events.filter((e) => e.zalacznik_url), [events]);
+
+  // Czynności z naliczoną opłatą windykacyjną (do rejestru opłat).
+  const feeEvents = useMemo(
+    () =>
+      events
+        .filter((e) => Number(e.oplata) > 0)
+        .sort((a, b) => a.data_zdarzenia.localeCompare(b.data_zdarzenia)),
+    [events],
+  );
+  const feeSum = feeEvents.reduce((s, e) => s + Number(e.oplata), 0);
 
   if (loading) return <div className="text-muted-foreground">Ładowanie…</div>;
   if (!kase || !loan || !borrower)
@@ -236,6 +249,12 @@ function EvidenceReport() {
                   <th>Odsetki za opóźnienie (maks., {debt.effectiveDelayRate}%)</th>
                   <td>{formatPLN(debt.delayInterest)}</td>
                 </tr>
+                {debt.costsOutstanding > 0 && (
+                  <tr>
+                    <th>Opłaty za czynności windykacyjne</th>
+                    <td>{formatPLN(debt.costsOutstanding)}</td>
+                  </tr>
+                )}
                 <tr>
                   <th>Razem do zapłaty</th>
                   <td className="font-bold">{formatPLN(debt.totalDue)}</td>
@@ -304,6 +323,37 @@ function EvidenceReport() {
             })}
           </tbody>
         </table>
+
+        {/* Rejestr opłat za czynności windykacyjne */}
+        {feeEvents.length > 0 && (
+          <div className="mt-5">
+            <h2 className="text-sm font-bold mb-2">
+              Rejestr opłat za czynności windykacyjne ({feeEvents.length})
+            </h2>
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: "18%" }}>Data</th>
+                  <th>Czynność</th>
+                  <th style={{ width: "18%" }}>Opłata</th>
+                </tr>
+              </thead>
+              <tbody>
+                {feeEvents.map((e) => (
+                  <tr key={e.id}>
+                    <td className="whitespace-nowrap">{formatDate(e.data_zdarzenia)}</td>
+                    <td>{e.tytul}</td>
+                    <td>{formatPLN(Number(e.oplata))}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <th colSpan={2}>Suma opłat</th>
+                  <td className="font-bold">{formatPLN(feeSum)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Załączniki */}
         <div className="mt-5">
