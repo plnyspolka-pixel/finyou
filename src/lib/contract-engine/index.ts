@@ -37,6 +37,8 @@ export { buildEngineSchedule } from "./loan-schedule";
 export type { EngineScheduleInput, EngineSchedule, EngineScheduleRow } from "./loan-schedule";
 export { umowaSchema } from "./schema";
 export type { UmowaData } from "./schema";
+export { listaKlauzul, wszystkieIdKlauzul, bibliotekaBez } from "./clause-select";
+export type { KlauzulaMeta } from "./clause-select";
 export { buildUmowaData, profileToCalcPayload } from "./profile-to-umowa";
 export type { BuildUmowaOptions } from "./profile-to-umowa";
 export { buildUmowaDocx, buildUmowaDocumentXml, harmonogramZUmowy } from "./umowa-docx";

@@ -25,6 +25,7 @@ import { waliduj } from "./validator";
 import { walidujHarmonogram } from "./schedule";
 import { renderuj } from "./renderer";
 import { formatuj } from "./formatter";
+import { bibliotekaBez } from "./clause-select";
 import { buildUmowaDocx, harmonogramZUmowy } from "./umowa-docx";
 import type { Problem } from "./validator";
 
@@ -41,6 +42,8 @@ export interface UmowaGenInput {
   nieruchomosci?: any[];
   /** Głębokie nadpisania pól UmowaData (uzupełnienia operatora). */
   overrides?: Record<string, any>;
+  /** ID klauzul silnika WYŁĄCZONYCH przez operatora — nie wchodzą do umowy. */
+  excludedClauses?: string[];
 }
 
 const inputSchema = z.object({
@@ -51,6 +54,7 @@ const inputSchema = z.object({
   calc: z.any().optional(),
   nieruchomosci: z.array(z.any()).optional(),
   overrides: z.record(z.string(), z.any()).optional(),
+  excludedClauses: z.array(z.string()).optional(),
 });
 
 async function ladujProfil(supabase: any, profileId: string): Promise<ClientProfile> {
@@ -104,7 +108,7 @@ export const previewUmowaFromEngine = createServerFn({ method: "POST" })
     let previewText = "";
     if (umowa && !blocked) {
       try {
-        previewText = formatuj(renderuj(umowa));
+        previewText = formatuj(renderuj(umowa, bibliotekaBez(data.excludedClauses ?? [])));
       } catch (e: any) {
         problemy.push({
           poziom: "BLAD",
@@ -139,7 +143,7 @@ export const generateUmowaFromEngine = createServerFn({ method: "POST" })
     // blokujący, nie jak błąd 500.
     let bytes: Uint8Array;
     try {
-      const doc = renderuj(umowa);
+      const doc = renderuj(umowa, bibliotekaBez(data.excludedClauses ?? []));
       bytes = await buildUmowaDocx(doc, harmonogramZUmowy(umowa));
     } catch (e: any) {
       problemy.push({
