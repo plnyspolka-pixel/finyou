@@ -13,7 +13,12 @@ import {
 import { MktBadge, MktButton, Eyebrow } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
-import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
+import {
+  TwoColSlider,
+  SmartOfferSlider,
+  SmartOfferPanel,
+  type TwoColSlide,
+} from "@/components/marketing/sliders";
 import { MarketingPricing } from "@/components/marketing/pricing";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import type { AccessProduct } from "@/lib/access/core";
@@ -395,7 +400,7 @@ function InvestorLanding() {
       <Hero />
 
       <Section>
-        <SmartOfferSlider>
+        <SmartOfferPanel>
           <Eyebrow tone="gold" style={{ letterSpacing: "0.24em" }}>
             Ostatnie okazje inwestycyjne
           </Eyebrow>
@@ -414,7 +419,7 @@ function InvestorLanding() {
               title="Ostatnie okazje inwestycyjne Finance You"
             />
           </div>
-        </SmartOfferSlider>
+        </SmartOfferPanel>
         <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "center" }}>
           <MktButton variant="outline" href={JOIN}>
             <BrandIcon name="handCoins" size={16} /> Zobacz wszystkie okazje w aplikacji
@@ -424,6 +429,10 @@ function InvestorLanding() {
           Przykładowe okazje o charakterze poglądowym. Dane nie stanowią oferty ani rekomendacji
           inwestycyjnej. Inwestowanie wiąże się z ryzykiem utraty kapitału.
         </ComplianceNote>
+      </Section>
+
+      <Section>
+        <SmartOfferSlider />
       </Section>
 
       <Section>
