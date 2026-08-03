@@ -80,6 +80,23 @@ export const Route = createFileRoute("/api/public/resend-webhook")({
             return new Response("ignored", { status: 200 });
         }
 
+        // Digital PR: zaktualizuj log outreach po resend_id (moduł 4 SEO).
+        try {
+          const prPatch: Record<string, unknown> = { ...patch };
+          // pr_outreach_log nie ma kolumny complained_at — status wystarczy.
+          delete prPatch.complained_at;
+          if (type === "email.delivered") prPatch.status = "delivered";
+          if (type === "email.opened") prPatch.status = "opened";
+          if (type === "email.clicked") prPatch.status = "clicked";
+          if (type === "email.bounced") prPatch.status = "bounced";
+          if (type === "email.complained") prPatch.status = "complained";
+          const untyped =
+            supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient;
+          await untyped.from("pr_outreach_log").update(prPatch).eq("resend_id", resendId);
+        } catch {
+          // tabela PR może nie istnieć przed migracją — ignorujemy
+        }
+
         // Zaktualizuj odbiorcę
         const { data: rec } = await supabaseAdmin
           .from("email_campaign_recipients")

@@ -448,6 +448,28 @@ function ArticlePage() {
           <ShareBar url={shareUrl} title={article.title} />
         </header>
 
+        {(article as { youtube_video_id?: string | null }).youtube_video_id && (
+          <div
+            style={{
+              margin: "0 0 1.5rem",
+              position: "relative",
+              paddingBottom: "56.25%",
+              borderRadius: "var(--radius-2xl)",
+              overflow: "hidden",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${(article as { youtube_video_id?: string | null }).youtube_video_id}`}
+              title={`Wideo: ${article.title}`}
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+            />
+          </div>
+        )}
+
         <article className="fy-article">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: MarkdownLink }}>
             {article.content_md}

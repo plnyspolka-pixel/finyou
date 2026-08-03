@@ -6,6 +6,10 @@ Disallow: /inwestor
 Disallow: /inwestor/
 Disallow: /klient
 Disallow: /klient/
+Disallow: /operator
+Disallow: /operator/
+Disallow: /posrednik
+Disallow: /posrednik/
 Disallow: /api/
 Disallow: /lovable/
 Disallow: /embed/

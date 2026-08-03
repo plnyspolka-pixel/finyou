@@ -14,6 +14,7 @@ import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
+import { Route as RaportLokalizacjeRouteImport } from './routes/raport-lokalizacje'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
 import { Route as OperatorRejestracjaRouteImport } from './routes/operator-rejestracja'
@@ -25,6 +26,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
 import { Route as KalkulatorPozyczkiRouteImport } from './routes/kalkulator-pozyczki'
+import { Route as KalkulatorLtvRouteImport } from './routes/kalkulator-ltv'
 import { Route as InwestorRouteImport } from './routes/inwestor'
 import { Route as DlaPosrednikaRouteImport } from './routes/dla-posrednika'
 import { Route as DlaKlientaRouteImport } from './routes/dla-klienta'
@@ -34,6 +36,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
+import { Route as PozyczkiIndexRouteImport } from './routes/pozyczki.index'
 import { Route as PosrednikIndexRouteImport } from './routes/posrednik.index'
 import { Route as PosrednicyIndexRouteImport } from './routes/posrednicy.index'
 import { Route as OperatorIndexRouteImport } from './routes/operator.index'
@@ -44,6 +47,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
+import { Route as PozyczkiSlugRouteImport } from './routes/pozyczki.$slug'
 import { Route as PosrednikWniosekRouteImport } from './routes/posrednik.wniosek'
 import { Route as PosrednikSzkoleniaRouteImport } from './routes/posrednik.szkolenia'
 import { Route as PosrednikStrukturaRouteImport } from './routes/posrednik.struktura'
@@ -97,6 +101,7 @@ import { Route as AdminZespolAktywnoscRouteImport } from './routes/admin.zespol-
 import { Route as AdminYoutubeShortsRouteImport } from './routes/admin.youtube-shorts'
 import { Route as AdminWnioskiNiekompletneRouteImport } from './routes/admin.wnioski-niekompletne'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
+import { Route as AdminVideoPipelineRouteImport } from './routes/admin.video-pipeline'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
@@ -105,6 +110,7 @@ import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
 import { Route as AdminProjektyRouteImport } from './routes/admin.projekty'
+import { Route as AdminPrMediaRouteImport } from './routes/admin.pr-media'
 import { Route as AdminPotencjalLokalizacyjnyRouteImport } from './routes/admin.potencjal-lokalizacyjny'
 import { Route as AdminPlatnosciDostepRouteImport } from './routes/admin.platnosci-dostep'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
@@ -210,12 +216,16 @@ import { Route as ApiPublicHooksYoutubeShortsTickRouteImport } from './routes/ap
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
 import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/public/hooks/voicebot-inbound'
 import { Route as ApiPublicHooksVoicebotEnrichTickRouteImport } from './routes/api/public/hooks/voicebot-enrich-tick'
+import { Route as ApiPublicHooksVideoPipelineTickRouteImport } from './routes/api/public/hooks/video-pipeline-tick'
 import { Route as ApiPublicHooksSyncAccountingRouteImport } from './routes/api/public/hooks/sync-accounting'
 import { Route as ApiPublicHooksSocialPublishTickRouteImport } from './routes/api/public/hooks/social-publish-tick'
+import { Route as ApiPublicHooksSeoLocationSeedRouteImport } from './routes/api/public/hooks/seo-location-seed'
+import { Route as ApiPublicHooksSeoLocationPublishTickRouteImport } from './routes/api/public/hooks/seo-location-publish-tick'
 import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/hooks/seed-blog'
 import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes/api/public/hooks/saturday-sms-reminders'
 import { Route as ApiPublicHooksProjectAssignmentsTickRouteImport } from './routes/api/public/hooks/project-assignments-tick'
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
+import { Route as ApiPublicHooksPrMonitorTickRouteImport } from './routes/api/public/hooks/pr-monitor-tick'
 import { Route as ApiPublicHooksMissingInfoFollowUpTickRouteImport } from './routes/api/public/hooks/missing-info-follow-up-tick'
 import { Route as ApiPublicHooksMetaLeadsPullRouteImport } from './routes/api/public/hooks/meta-leads-pull'
 import { Route as ApiPublicHooksMessengerSyncForceRouteImport } from './routes/api/public/hooks/messenger-sync-force'
@@ -256,6 +266,11 @@ const RejestracjaRoute = RejestracjaRouteImport.update({
 const RegulaminRoute = RegulaminRouteImport.update({
   id: '/regulamin',
   path: '/regulamin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RaportLokalizacjeRoute = RaportLokalizacjeRouteImport.update({
+  id: '/raport-lokalizacje',
+  path: '/raport-lokalizacje',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosrednikRoute = PosrednikRouteImport.update({
@@ -313,6 +328,11 @@ const KalkulatorPozyczkiRoute = KalkulatorPozyczkiRouteImport.update({
   path: '/kalkulator-pozyczki',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KalkulatorLtvRoute = KalkulatorLtvRouteImport.update({
+  id: '/kalkulator-ltv',
+  path: '/kalkulator-ltv',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InwestorRoute = InwestorRouteImport.update({
   id: '/inwestor',
   path: '/inwestor',
@@ -356,6 +376,11 @@ const IndexRoute = IndexRouteImport.update({
 const PropozycjeIndexRoute = PropozycjeIndexRouteImport.update({
   id: '/propozycje/',
   path: '/propozycje/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PozyczkiIndexRoute = PozyczkiIndexRouteImport.update({
+  id: '/pozyczki/',
+  path: '/pozyczki/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosrednikIndexRoute = PosrednikIndexRouteImport.update({
@@ -406,6 +431,11 @@ const RCodeRoute = RCodeRouteImport.update({
 const PropozycjeIdRoute = PropozycjeIdRouteImport.update({
   id: '/propozycje/$id',
   path: '/propozycje/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PozyczkiSlugRoute = PozyczkiSlugRouteImport.update({
+  id: '/pozyczki/$slug',
+  path: '/pozyczki/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosrednikWniosekRoute = PosrednikWniosekRouteImport.update({
@@ -677,6 +707,11 @@ const AdminVoicebotRoute = AdminVoicebotRouteImport.update({
   path: '/voicebot',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminVideoPipelineRoute = AdminVideoPipelineRouteImport.update({
+  id: '/video-pipeline',
+  path: '/video-pipeline',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminUstawieniaRoute = AdminUstawieniaRouteImport.update({
   id: '/ustawienia',
   path: '/ustawienia',
@@ -715,6 +750,11 @@ const AdminPrzypomnieniaRoute = AdminPrzypomnieniaRouteImport.update({
 const AdminProjektyRoute = AdminProjektyRouteImport.update({
   id: '/projekty',
   path: '/projekty',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPrMediaRoute = AdminPrMediaRouteImport.update({
+  id: '/pr-media',
+  path: '/pr-media',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPotencjalLokalizacyjnyRoute =
@@ -1276,6 +1316,12 @@ const ApiPublicHooksVoicebotEnrichTickRoute =
     path: '/api/public/hooks/voicebot-enrich-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksVideoPipelineTickRoute =
+  ApiPublicHooksVideoPipelineTickRouteImport.update({
+    id: '/api/public/hooks/video-pipeline-tick',
+    path: '/api/public/hooks/video-pipeline-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSyncAccountingRoute =
   ApiPublicHooksSyncAccountingRouteImport.update({
     id: '/api/public/hooks/sync-accounting',
@@ -1286,6 +1332,18 @@ const ApiPublicHooksSocialPublishTickRoute =
   ApiPublicHooksSocialPublishTickRouteImport.update({
     id: '/api/public/hooks/social-publish-tick',
     path: '/api/public/hooks/social-publish-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksSeoLocationSeedRoute =
+  ApiPublicHooksSeoLocationSeedRouteImport.update({
+    id: '/api/public/hooks/seo-location-seed',
+    path: '/api/public/hooks/seo-location-seed',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksSeoLocationPublishTickRoute =
+  ApiPublicHooksSeoLocationPublishTickRouteImport.update({
+    id: '/api/public/hooks/seo-location-publish-tick',
+    path: '/api/public/hooks/seo-location-publish-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksSeedBlogRoute = ApiPublicHooksSeedBlogRouteImport.update({
@@ -1309,6 +1367,12 @@ const ApiPublicHooksProcessScheduledCallsRoute =
   ApiPublicHooksProcessScheduledCallsRouteImport.update({
     id: '/api/public/hooks/process-scheduled-calls',
     path: '/api/public/hooks/process-scheduled-calls',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksPrMonitorTickRoute =
+  ApiPublicHooksPrMonitorTickRouteImport.update({
+    id: '/api/public/hooks/pr-monitor-tick',
+    path: '/api/public/hooks/pr-monitor-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksMissingInfoFollowUpTickRoute =
@@ -1415,6 +1479,7 @@ export interface FileRoutesByFullPath {
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
+  '/kalkulator-ltv': typeof KalkulatorLtvRoute
   '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1426,6 +1491,7 @@ export interface FileRoutesByFullPath {
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
+  '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1465,6 +1531,7 @@ export interface FileRoutesByFullPath {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
+  '/admin/pr-media': typeof AdminPrMediaRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1473,6 +1540,7 @@ export interface FileRoutesByFullPath {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/video-pipeline': typeof AdminVideoPipelineRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/youtube-shorts': typeof AdminYoutubeShortsRoute
@@ -1526,6 +1594,7 @@ export interface FileRoutesByFullPath {
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
+  '/pozyczki/$slug': typeof PozyczkiSlugRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1536,6 +1605,7 @@ export interface FileRoutesByFullPath {
   '/operator/': typeof OperatorIndexRoute
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
+  '/pozyczki/': typeof PozyczkiIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1613,12 +1683,16 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
+  '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
+  '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
+  '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -1638,6 +1712,7 @@ export interface FileRoutesByTo {
   '/dla-inwestora': typeof DlaInwestoraRoute
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
+  '/kalkulator-ltv': typeof KalkulatorLtvRoute
   '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
@@ -1646,6 +1721,7 @@ export interface FileRoutesByTo {
   '/oferty': typeof OfertyRoute
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
+  '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1685,6 +1761,7 @@ export interface FileRoutesByTo {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
+  '/admin/pr-media': typeof AdminPrMediaRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1693,6 +1770,7 @@ export interface FileRoutesByTo {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/video-pipeline': typeof AdminVideoPipelineRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/youtube-shorts': typeof AdminYoutubeShortsRoute
@@ -1741,6 +1819,7 @@ export interface FileRoutesByTo {
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
+  '/pozyczki/$slug': typeof PozyczkiSlugRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1751,6 +1830,7 @@ export interface FileRoutesByTo {
   '/operator': typeof OperatorIndexRoute
   '/posrednicy': typeof PosrednicyIndexRoute
   '/posrednik': typeof PosrednikIndexRoute
+  '/pozyczki': typeof PozyczkiIndexRoute
   '/propozycje': typeof PropozycjeIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1828,12 +1908,16 @@ export interface FileRoutesByTo {
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
+  '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
+  '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
+  '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -1856,6 +1940,7 @@ export interface FileRoutesById {
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
+  '/kalkulator-ltv': typeof KalkulatorLtvRoute
   '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1867,6 +1952,7 @@ export interface FileRoutesById {
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
+  '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1906,6 +1992,7 @@ export interface FileRoutesById {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
+  '/admin/pr-media': typeof AdminPrMediaRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1914,6 +2001,7 @@ export interface FileRoutesById {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/video-pipeline': typeof AdminVideoPipelineRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/youtube-shorts': typeof AdminYoutubeShortsRoute
@@ -1967,6 +2055,7 @@ export interface FileRoutesById {
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
+  '/pozyczki/$slug': typeof PozyczkiSlugRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1977,6 +2066,7 @@ export interface FileRoutesById {
   '/operator/': typeof OperatorIndexRoute
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
+  '/pozyczki/': typeof PozyczkiIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -2054,12 +2144,16 @@ export interface FileRoutesById {
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
+  '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
+  '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
+  '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -2083,6 +2177,7 @@ export interface FileRouteTypes {
     | '/dla-klienta'
     | '/dla-posrednika'
     | '/inwestor'
+    | '/kalkulator-ltv'
     | '/kalkulator-pozyczki'
     | '/klient'
     | '/logowanie'
@@ -2094,6 +2189,7 @@ export interface FileRouteTypes {
     | '/operator-rejestracja'
     | '/polityka-prywatnosci'
     | '/posrednik'
+    | '/raport-lokalizacje'
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
@@ -2133,6 +2229,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
     | '/admin/potencjal-lokalizacyjny'
+    | '/admin/pr-media'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -2141,6 +2238,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
+    | '/admin/video-pipeline'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/youtube-shorts'
@@ -2194,6 +2292,7 @@ export interface FileRouteTypes {
     | '/posrednik/struktura'
     | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
+    | '/pozyczki/$slug'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -2204,6 +2303,7 @@ export interface FileRouteTypes {
     | '/operator/'
     | '/posrednicy/'
     | '/posrednik/'
+    | '/pozyczki/'
     | '/propozycje/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -2281,12 +2381,16 @@ export interface FileRouteTypes {
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/missing-info-follow-up-tick'
+    | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/seo-location-publish-tick'
+    | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/social-publish-tick'
     | '/api/public/hooks/sync-accounting'
+    | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -2306,6 +2410,7 @@ export interface FileRouteTypes {
     | '/dla-inwestora'
     | '/dla-klienta'
     | '/dla-posrednika'
+    | '/kalkulator-ltv'
     | '/kalkulator-pozyczki'
     | '/logowanie'
     | '/mcp'
@@ -2314,6 +2419,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator-rejestracja'
     | '/polityka-prywatnosci'
+    | '/raport-lokalizacje'
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
@@ -2353,6 +2459,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
     | '/admin/potencjal-lokalizacyjny'
+    | '/admin/pr-media'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -2361,6 +2468,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
+    | '/admin/video-pipeline'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/youtube-shorts'
@@ -2409,6 +2517,7 @@ export interface FileRouteTypes {
     | '/posrednik/struktura'
     | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
+    | '/pozyczki/$slug'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -2419,6 +2528,7 @@ export interface FileRouteTypes {
     | '/operator'
     | '/posrednicy'
     | '/posrednik'
+    | '/pozyczki'
     | '/propozycje'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -2496,12 +2606,16 @@ export interface FileRouteTypes {
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/missing-info-follow-up-tick'
+    | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/seo-location-publish-tick'
+    | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/social-publish-tick'
     | '/api/public/hooks/sync-accounting'
+    | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -2523,6 +2637,7 @@ export interface FileRouteTypes {
     | '/dla-klienta'
     | '/dla-posrednika'
     | '/inwestor'
+    | '/kalkulator-ltv'
     | '/kalkulator-pozyczki'
     | '/klient'
     | '/logowanie'
@@ -2534,6 +2649,7 @@ export interface FileRouteTypes {
     | '/operator-rejestracja'
     | '/polityka-prywatnosci'
     | '/posrednik'
+    | '/raport-lokalizacje'
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
@@ -2573,6 +2689,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
     | '/admin/potencjal-lokalizacyjny'
+    | '/admin/pr-media'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -2581,6 +2698,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
+    | '/admin/video-pipeline'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/youtube-shorts'
@@ -2634,6 +2752,7 @@ export interface FileRouteTypes {
     | '/posrednik/struktura'
     | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
+    | '/pozyczki/$slug'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -2644,6 +2763,7 @@ export interface FileRouteTypes {
     | '/operator/'
     | '/posrednicy/'
     | '/posrednik/'
+    | '/pozyczki/'
     | '/propozycje/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -2721,12 +2841,16 @@ export interface FileRouteTypes {
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/missing-info-follow-up-tick'
+    | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/seo-location-publish-tick'
+    | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/social-publish-tick'
     | '/api/public/hooks/sync-accounting'
+    | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -2749,6 +2873,7 @@ export interface RootRouteChildren {
   DlaKlientaRoute: typeof DlaKlientaRoute
   DlaPosrednikaRoute: typeof DlaPosrednikaRoute
   InwestorRoute: typeof InwestorRouteWithChildren
+  KalkulatorLtvRoute: typeof KalkulatorLtvRoute
   KalkulatorPozyczkiRoute: typeof KalkulatorPozyczkiRoute
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
@@ -2760,6 +2885,7 @@ export interface RootRouteChildren {
   OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
+  RaportLokalizacjeRoute: typeof RaportLokalizacjeRoute
   RegulaminRoute: typeof RegulaminRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -2777,11 +2903,13 @@ export interface RootRouteChildren {
   KartaTokenRoute: typeof KartaTokenRoute
   LSlugRoute: typeof LSlugRoute
   PosrednicyRejestracjaRoute: typeof PosrednicyRejestracjaRoute
+  PozyczkiSlugRoute: typeof PozyczkiSlugRoute
   PropozycjeIdRoute: typeof PropozycjeIdRoute
   RCodeRoute: typeof RCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
   PosrednicyIndexRoute: typeof PosrednicyIndexRoute
+  PozyczkiIndexRoute: typeof PozyczkiIndexRoute
   PropozycjeIndexRoute: typeof PropozycjeIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -2814,12 +2942,16 @@ export interface RootRouteChildren {
   ApiPublicHooksMessengerSyncForceRoute: typeof ApiPublicHooksMessengerSyncForceRoute
   ApiPublicHooksMetaLeadsPullRoute: typeof ApiPublicHooksMetaLeadsPullRoute
   ApiPublicHooksMissingInfoFollowUpTickRoute: typeof ApiPublicHooksMissingInfoFollowUpTickRoute
+  ApiPublicHooksPrMonitorTickRoute: typeof ApiPublicHooksPrMonitorTickRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
   ApiPublicHooksProjectAssignmentsTickRoute: typeof ApiPublicHooksProjectAssignmentsTickRoute
   ApiPublicHooksSaturdaySmsRemindersRoute: typeof ApiPublicHooksSaturdaySmsRemindersRoute
   ApiPublicHooksSeedBlogRoute: typeof ApiPublicHooksSeedBlogRoute
+  ApiPublicHooksSeoLocationPublishTickRoute: typeof ApiPublicHooksSeoLocationPublishTickRoute
+  ApiPublicHooksSeoLocationSeedRoute: typeof ApiPublicHooksSeoLocationSeedRoute
   ApiPublicHooksSocialPublishTickRoute: typeof ApiPublicHooksSocialPublishTickRoute
   ApiPublicHooksSyncAccountingRoute: typeof ApiPublicHooksSyncAccountingRoute
+  ApiPublicHooksVideoPipelineTickRoute: typeof ApiPublicHooksVideoPipelineTickRoute
   ApiPublicHooksVoicebotEnrichTickRoute: typeof ApiPublicHooksVoicebotEnrichTickRoute
   ApiPublicHooksVoicebotInboundRoute: typeof ApiPublicHooksVoicebotInboundRoute
   ApiPublicHooksVoicebotOptOutRoute: typeof ApiPublicHooksVoicebotOptOutRoute
@@ -2866,6 +2998,13 @@ declare module '@tanstack/react-router' {
       path: '/regulamin'
       fullPath: '/regulamin'
       preLoaderRoute: typeof RegulaminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/raport-lokalizacje': {
+      id: '/raport-lokalizacje'
+      path: '/raport-lokalizacje'
+      fullPath: '/raport-lokalizacje'
+      preLoaderRoute: typeof RaportLokalizacjeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posrednik': {
@@ -2945,6 +3084,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KalkulatorPozyczkiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/kalkulator-ltv': {
+      id: '/kalkulator-ltv'
+      path: '/kalkulator-ltv'
+      fullPath: '/kalkulator-ltv'
+      preLoaderRoute: typeof KalkulatorLtvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inwestor': {
       id: '/inwestor'
       path: '/inwestor'
@@ -3006,6 +3152,13 @@ declare module '@tanstack/react-router' {
       path: '/propozycje'
       fullPath: '/propozycje/'
       preLoaderRoute: typeof PropozycjeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pozyczki/': {
+      id: '/pozyczki/'
+      path: '/pozyczki'
+      fullPath: '/pozyczki/'
+      preLoaderRoute: typeof PozyczkiIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posrednik/': {
@@ -3076,6 +3229,13 @@ declare module '@tanstack/react-router' {
       path: '/propozycje/$id'
       fullPath: '/propozycje/$id'
       preLoaderRoute: typeof PropozycjeIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pozyczki/$slug': {
+      id: '/pozyczki/$slug'
+      path: '/pozyczki/$slug'
+      fullPath: '/pozyczki/$slug'
+      preLoaderRoute: typeof PozyczkiSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posrednik/wniosek': {
@@ -3449,6 +3609,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminVoicebotRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/video-pipeline': {
+      id: '/admin/video-pipeline'
+      path: '/video-pipeline'
+      fullPath: '/admin/video-pipeline'
+      preLoaderRoute: typeof AdminVideoPipelineRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ustawienia': {
       id: '/admin/ustawienia'
       path: '/ustawienia'
@@ -3503,6 +3670,13 @@ declare module '@tanstack/react-router' {
       path: '/projekty'
       fullPath: '/admin/projekty'
       preLoaderRoute: typeof AdminProjektyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/pr-media': {
+      id: '/admin/pr-media'
+      path: '/pr-media'
+      fullPath: '/admin/pr-media'
+      preLoaderRoute: typeof AdminPrMediaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/potencjal-lokalizacyjny': {
@@ -4240,6 +4414,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksVoicebotEnrichTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/video-pipeline-tick': {
+      id: '/api/public/hooks/video-pipeline-tick'
+      path: '/api/public/hooks/video-pipeline-tick'
+      fullPath: '/api/public/hooks/video-pipeline-tick'
+      preLoaderRoute: typeof ApiPublicHooksVideoPipelineTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-accounting': {
       id: '/api/public/hooks/sync-accounting'
       path: '/api/public/hooks/sync-accounting'
@@ -4252,6 +4433,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/social-publish-tick'
       fullPath: '/api/public/hooks/social-publish-tick'
       preLoaderRoute: typeof ApiPublicHooksSocialPublishTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/seo-location-seed': {
+      id: '/api/public/hooks/seo-location-seed'
+      path: '/api/public/hooks/seo-location-seed'
+      fullPath: '/api/public/hooks/seo-location-seed'
+      preLoaderRoute: typeof ApiPublicHooksSeoLocationSeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/seo-location-publish-tick': {
+      id: '/api/public/hooks/seo-location-publish-tick'
+      path: '/api/public/hooks/seo-location-publish-tick'
+      fullPath: '/api/public/hooks/seo-location-publish-tick'
+      preLoaderRoute: typeof ApiPublicHooksSeoLocationPublishTickRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/seed-blog': {
@@ -4280,6 +4475,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/process-scheduled-calls'
       fullPath: '/api/public/hooks/process-scheduled-calls'
       preLoaderRoute: typeof ApiPublicHooksProcessScheduledCallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/pr-monitor-tick': {
+      id: '/api/public/hooks/pr-monitor-tick'
+      path: '/api/public/hooks/pr-monitor-tick'
+      fullPath: '/api/public/hooks/pr-monitor-tick'
+      preLoaderRoute: typeof ApiPublicHooksPrMonitorTickRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/missing-info-follow-up-tick': {
@@ -4454,6 +4656,7 @@ interface AdminRouteChildren {
   AdminPixeleRoute: typeof AdminPixeleRoute
   AdminPlatnosciDostepRoute: typeof AdminPlatnosciDostepRoute
   AdminPotencjalLokalizacyjnyRoute: typeof AdminPotencjalLokalizacyjnyRoute
+  AdminPrMediaRoute: typeof AdminPrMediaRoute
   AdminProjektyRoute: typeof AdminProjektyRoute
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
@@ -4462,6 +4665,7 @@ interface AdminRouteChildren {
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminTextAgentRoute: typeof AdminTextAgentRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
+  AdminVideoPipelineRoute: typeof AdminVideoPipelineRoute
   AdminVoicebotRoute: typeof AdminVoicebotRoute
   AdminWnioskiNiekompletneRoute: typeof AdminWnioskiNiekompletneRoute
   AdminYoutubeShortsRoute: typeof AdminYoutubeShortsRoute
@@ -4523,6 +4727,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPixeleRoute: AdminPixeleRoute,
   AdminPlatnosciDostepRoute: AdminPlatnosciDostepRoute,
   AdminPotencjalLokalizacyjnyRoute: AdminPotencjalLokalizacyjnyRoute,
+  AdminPrMediaRoute: AdminPrMediaRoute,
   AdminProjektyRoute: AdminProjektyRoute,
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
@@ -4531,6 +4736,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminTextAgentRoute: AdminTextAgentRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
+  AdminVideoPipelineRoute: AdminVideoPipelineRoute,
   AdminVoicebotRoute: AdminVoicebotRoute,
   AdminWnioskiNiekompletneRoute: AdminWnioskiNiekompletneRoute,
   AdminYoutubeShortsRoute: AdminYoutubeShortsRoute,
@@ -4806,6 +5012,7 @@ const rootRouteChildren: RootRouteChildren = {
   DlaKlientaRoute: DlaKlientaRoute,
   DlaPosrednikaRoute: DlaPosrednikaRoute,
   InwestorRoute: InwestorRouteWithChildren,
+  KalkulatorLtvRoute: KalkulatorLtvRoute,
   KalkulatorPozyczkiRoute: KalkulatorPozyczkiRoute,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
@@ -4817,6 +5024,7 @@ const rootRouteChildren: RootRouteChildren = {
   OperatorRejestracjaRoute: OperatorRejestracjaRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
+  RaportLokalizacjeRoute: RaportLokalizacjeRoute,
   RegulaminRoute: RegulaminRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
@@ -4835,11 +5043,13 @@ const rootRouteChildren: RootRouteChildren = {
   KartaTokenRoute: KartaTokenRoute,
   LSlugRoute: LSlugRoute,
   PosrednicyRejestracjaRoute: PosrednicyRejestracjaRoute,
+  PozyczkiSlugRoute: PozyczkiSlugRoute,
   PropozycjeIdRoute: PropozycjeIdRoute,
   RCodeRoute: RCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
   PosrednicyIndexRoute: PosrednicyIndexRoute,
+  PozyczkiIndexRoute: PozyczkiIndexRoute,
   PropozycjeIndexRoute: PropozycjeIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
@@ -4877,6 +5087,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksMetaLeadsPullRoute: ApiPublicHooksMetaLeadsPullRoute,
   ApiPublicHooksMissingInfoFollowUpTickRoute:
     ApiPublicHooksMissingInfoFollowUpTickRoute,
+  ApiPublicHooksPrMonitorTickRoute: ApiPublicHooksPrMonitorTickRoute,
   ApiPublicHooksProcessScheduledCallsRoute:
     ApiPublicHooksProcessScheduledCallsRoute,
   ApiPublicHooksProjectAssignmentsTickRoute:
@@ -4884,8 +5095,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksSaturdaySmsRemindersRoute:
     ApiPublicHooksSaturdaySmsRemindersRoute,
   ApiPublicHooksSeedBlogRoute: ApiPublicHooksSeedBlogRoute,
+  ApiPublicHooksSeoLocationPublishTickRoute:
+    ApiPublicHooksSeoLocationPublishTickRoute,
+  ApiPublicHooksSeoLocationSeedRoute: ApiPublicHooksSeoLocationSeedRoute,
   ApiPublicHooksSocialPublishTickRoute: ApiPublicHooksSocialPublishTickRoute,
   ApiPublicHooksSyncAccountingRoute: ApiPublicHooksSyncAccountingRoute,
+  ApiPublicHooksVideoPipelineTickRoute: ApiPublicHooksVideoPipelineTickRoute,
   ApiPublicHooksVoicebotEnrichTickRoute: ApiPublicHooksVoicebotEnrichTickRoute,
   ApiPublicHooksVoicebotInboundRoute: ApiPublicHooksVoicebotInboundRoute,
   ApiPublicHooksVoicebotOptOutRoute: ApiPublicHooksVoicebotOptOutRoute,

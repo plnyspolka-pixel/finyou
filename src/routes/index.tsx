@@ -16,6 +16,7 @@ import {
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { MktButton } from "@/components/marketing/primitives";
 import type { Icon3DName } from "@/components/marketing/icon-3d";
+import { financialServiceLd } from "@/lib/seo/company";
 
 export const PHONE_DISPLAY = "+48 732 059 898";
 export const PHONE_HREF = "+48732059898";
@@ -44,17 +45,7 @@ export const Route = createFileRoute("/")({
     scripts: [
       {
         type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FinancialService",
-          name: "Finance You — pożyczki pod zastaw nieruchomości",
-          url: "https://financeyou.pl",
-          email: EMAIL,
-          telephone: PHONE_HREF,
-          areaServed: "PL",
-          description:
-            "Prywatne pożyczki pod zastaw nieruchomości w Polsce — decyzja w 24 godziny, do 1 000 000 zł.",
-        }),
+        children: JSON.stringify(financialServiceLd()),
       },
     ],
   }),
