@@ -8556,6 +8556,7 @@ export type Database = {
       }
       text_agent_knowledge: {
         Row: {
+          audience: string
           content: string
           created_at: string
           created_by: string | null
@@ -8565,6 +8566,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audience?: string
           content: string
           created_at?: string
           created_by?: string | null
@@ -8574,6 +8576,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audience?: string
           content?: string
           created_at?: string
           created_by?: string | null
@@ -9459,7 +9462,7 @@ export type Database = {
         }[]
       }
       match_text_agent_knowledge: {
-        Args: { match_count?: number; query_embedding: string }
+        Args: { filter_audience?: string; match_count?: number; query_embedding: string }
         Returns: {
           content: string
           id: string

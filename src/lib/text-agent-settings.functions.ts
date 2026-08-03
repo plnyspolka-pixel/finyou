@@ -1,9 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { AgentVariant } from "@/lib/elevenlabs-text-agent.server";
+
+// id wiersza w text_agent_settings per wariant (CHECK id IN (1,2)).
+const VARIANT_ID: Record<AgentVariant, number> = { klient: 1, inwestor: 2 };
+
+function variantId(variant?: AgentVariant): number {
+  return VARIANT_ID[variant ?? "klient"] ?? 1;
+}
 
 export const getTextAgentSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: { variant?: AgentVariant } | undefined) => d ?? {})
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // gate: must be administrator
     const { data: roles } = await supabaseAdmin
@@ -13,21 +22,21 @@ export const getTextAgentSettings = createServerFn({ method: "GET" })
     const isAdmin = (roles ?? []).some((r) => r.role === "administrator");
     if (!isAdmin) throw new Error("Brak uprawnień");
 
-    const { data } = await supabaseAdmin
+    const { data: row } = await supabaseAdmin
       .from("text_agent_settings")
       .select("system_prompt, first_message, updated_at")
-      .eq("id", 1)
+      .eq("id", variantId(data?.variant))
       .maybeSingle();
     return {
-      systemPrompt: data?.system_prompt ?? "",
-      firstMessage: data?.first_message ?? "",
-      updatedAt: data?.updated_at ?? null,
+      systemPrompt: row?.system_prompt ?? "",
+      firstMessage: row?.first_message ?? "",
+      updatedAt: row?.updated_at ?? null,
     };
   });
 
 export const saveTextAgentSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { systemPrompt: string; firstMessage?: string }) => d)
+  .inputValidator((d: { systemPrompt: string; firstMessage?: string; variant?: AgentVariant }) => d)
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: roles } = await supabaseAdmin
@@ -38,7 +47,7 @@ export const saveTextAgentSettings = createServerFn({ method: "POST" })
     if (!isAdmin) throw new Error("Brak uprawnień");
 
     const { error } = await supabaseAdmin.from("text_agent_settings").upsert({
-      id: 1,
+      id: variantId(data.variant),
       system_prompt: data.systemPrompt ?? "",
       first_message: data.firstMessage ?? null,
       updated_at: new Date().toISOString(),

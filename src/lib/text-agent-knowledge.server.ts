@@ -24,9 +24,12 @@ export async function embedText(input: string): Promise<number[]> {
   return json?.data?.[0]?.embedding ?? [];
 }
 
+export type KnowledgeAudience = "klient" | "inwestor";
+
 export async function retrieveKnowledge(
   query: string,
   k = 4,
+  audience: KnowledgeAudience = "klient",
 ): Promise<Array<{ title: string; content: string; similarity: number }>> {
   try {
     const s = admin();
@@ -39,9 +42,11 @@ export async function retrieveKnowledge(
 
     const emb = await embedText(query);
     if (emb.length === 0) return [];
+    // filter_audience dopasowuje wpisy danego bota + wpisy 'wspolna'.
     const { data, error } = await s.rpc("match_text_agent_knowledge", {
       query_embedding: emb as any,
       match_count: k,
+      filter_audience: audience,
     });
     if (error) {
       console.error("[rag] match error", error);

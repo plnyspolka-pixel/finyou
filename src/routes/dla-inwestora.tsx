@@ -15,6 +15,7 @@ import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
 import { MarketingPricing } from "@/components/marketing/pricing";
+import { ChatWidget } from "@/components/landing/chat-widget";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import type { AccessProduct } from "@/lib/access/core";
 
@@ -580,6 +581,15 @@ function InvestorLanding() {
         single
         title="Zbuduj proces inwestowania w pożyczki hipoteczne z narzędziami, dokumentami i AI."
         buttons={[{ label: "Załóż konto inwestora", href: JOIN }]}
+      />
+
+      <ChatWidget
+        source="dla-inwestora"
+        endpoint="/api/public/investor-chat-widget"
+        storageKey="fy_invest_chat_session_id"
+        greeting="Dzień dobry. Jestem asystentem Finance You dla inwestorów instytucjonalnych. Chętnie opowiem o modelu inwestycji w pożyczki zabezpieczone hipoteką i warunkach współpracy — w czym mogę pomóc?"
+        title="Asystent dla inwestorów"
+        subtitle="Inwestycje instytucjonalne, 24/7"
       />
     </MarketingShell>
   );

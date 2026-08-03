@@ -8,15 +8,15 @@ const STORAGE_KEY = "fy_chat_session_id";
 const GREETING =
   "Cześć! 👋 Jestem asystentem Finance You. Napisz w czym mogę pomóc — pożyczka pod zastaw nieruchomości, kwota, dokumenty? Odpowiem od ręki.";
 
-function getSessionId(): string {
+function getSessionId(storageKey: string): string {
   if (typeof window === "undefined") return "";
-  let id = window.localStorage.getItem(STORAGE_KEY);
+  let id = window.localStorage.getItem(storageKey);
   if (!id) {
     id =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    window.localStorage.setItem(STORAGE_KEY, id);
+    window.localStorage.setItem(storageKey, id);
   }
   return id;
 }
@@ -25,8 +25,26 @@ function getSessionId(): string {
  * Pływający czat na stronie (landing). Rozmawia z tym samym agentem
  * (runAgentTurn) co Messenger / Instagram / e-mail, przez publiczny
  * endpoint /api/public/chat-widget. Kanał komunikacji przychodzącej "chat".
+ *
+ * Przez propsy (endpoint/greeting/storageKey/nagłówek) obsługuje też wariant
+ * dla inwestorów instytucjonalnych (/api/public/investor-chat-widget) — osobna
+ * sesja w localStorage, żeby rozmowy klienta i inwestora się nie mieszały.
  */
-export function ChatWidget({ source = "landing" }: { source?: string }) {
+export function ChatWidget({
+  source = "landing",
+  endpoint = "/api/public/chat-widget",
+  greeting = GREETING,
+  storageKey = STORAGE_KEY,
+  title = "Asystent Finance You",
+  subtitle = "Odpowiadamy od ręki, 24/7",
+}: {
+  source?: string;
+  endpoint?: string;
+  greeting?: string;
+  storageKey?: string;
+  title?: string;
+  subtitle?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -36,8 +54,8 @@ export function ChatWidget({ source = "landing" }: { source?: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setSessionId(getSessionId());
-  }, []);
+    setSessionId(getSessionId(storageKey));
+  }, [storageKey]);
 
   // Historia rozmowy: pobierana przy otwarciu i odświeżana co 10 s,
   // gdy okno jest otwarte — dzięki temu widać też odpowiedzi operatora.
@@ -46,9 +64,7 @@ export function ChatWidget({ source = "landing" }: { source?: string }) {
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await fetch(
-          `/api/public/chat-widget?sessionId=${encodeURIComponent(sessionId)}`,
-        );
+        const res = await fetch(`${endpoint}?sessionId=${encodeURIComponent(sessionId)}`);
         const json = await res.json();
         if (cancelled) return;
         const hist: ChatMsg[] = Array.isArray(json?.messages)
@@ -66,12 +82,12 @@ export function ChatWidget({ source = "landing" }: { source?: string }) {
       cancelled = true;
       clearInterval(iv);
     };
-  }, [open, sessionId]);
+  }, [open, sessionId, endpoint]);
 
   const shown = useMemo<ChatMsg[]>(() => {
     if (messages.length > 0) return messages;
-    return [{ role: "assistant", content: GREETING }];
-  }, [messages]);
+    return [{ role: "assistant", content: greeting }];
+  }, [messages, greeting]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -84,7 +100,7 @@ export function ChatWidget({ source = "landing" }: { source?: string }) {
     setSending(true);
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     try {
-      const res = await fetch("/api/public/chat-widget", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, message: text, source }),
@@ -135,8 +151,8 @@ export function ChatWidget({ source = "landing" }: { source?: string }) {
             <div className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
               <div className="leading-tight">
-                <div className="text-sm font-semibold">Asystent Finance You</div>
-                <div className="text-[11px] opacity-80">Odpowiadamy od ręki, 24/7</div>
+                <div className="text-sm font-semibold">{title}</div>
+                <div className="text-[11px] opacity-80">{subtitle}</div>
               </div>
             </div>
             <button
@@ -164,8 +180,8 @@ export function ChatWidget({ source = "landing" }: { source?: string }) {
                       mine
                         ? "bg-primary text-primary-foreground"
                         : m.role === "staff"
-                        ? "border border-accent/40 bg-accent/10 text-foreground"
-                        : "bg-muted text-foreground"
+                          ? "border border-accent/40 bg-accent/10 text-foreground"
+                          : "bg-muted text-foreground"
                     }`}
                   >
                     {m.content}
@@ -206,7 +222,11 @@ export function ChatWidget({ source = "landing" }: { source?: string }) {
                 disabled={!input.trim() || sending}
                 aria-label="Wyślij"
               >
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {sending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </div>
             <div className="px-1 pt-1 text-[10px] text-muted-foreground">

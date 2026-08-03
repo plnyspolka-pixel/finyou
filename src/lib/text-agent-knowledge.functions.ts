@@ -11,6 +11,9 @@ async function assertAdmin(userId: string) {
   if (!isAdmin) throw new Error("Brak uprawnień");
 }
 
+// Do kogo trafia wpis: bot klientów, bot inwestorów instytucjonalnych, oba.
+export type KnowledgeAudience = "klient" | "inwestor" | "wspolna";
+
 export const listKnowledge = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -18,13 +21,14 @@ export const listKnowledge = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("text_agent_knowledge")
-      .select("id, title, content, updated_at, embedding")
+      .select("id, title, content, audience, updated_at, embedding")
       .order("updated_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []).map((r: any) => ({
       id: r.id,
       title: r.title,
       content: r.content,
+      audience: (r.audience ?? "klient") as KnowledgeAudience,
       updated_at: r.updated_at,
       has_embedding: !!r.embedding,
     }));
@@ -32,7 +36,9 @@ export const listKnowledge = createServerFn({ method: "GET" })
 
 export const upsertKnowledge = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id?: string; title: string; content: string }) => d)
+  .inputValidator(
+    (d: { id?: string; title: string; content: string; audience?: KnowledgeAudience }) => d,
+  )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -49,6 +55,7 @@ export const upsertKnowledge = createServerFn({ method: "POST" })
     const row: any = {
       title: data.title,
       content: data.content,
+      audience: data.audience ?? "klient",
       created_by: context.userId,
       updated_at: new Date().toISOString(),
     };
