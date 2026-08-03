@@ -42,6 +42,7 @@ import {
   MessageCircle,
   IdCard,
   Youtube,
+  Clapperboard,
 } from "lucide-react";
 
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -138,6 +139,7 @@ const groups: Group[] = [
       { to: "/admin/google-ads/kreator", label: "Kreator Google Ads", icon: Search },
       { to: "/admin/pixele", label: "Pixele FB", icon: Facebook },
       { to: "/admin/materialy", label: "Materiały marketingowe", icon: ImageIcon },
+      { to: "/admin/studio-publikacji", label: "Studio publikacji", icon: Clapperboard },
       { to: "/admin/youtube-shorts", label: "YouTube Shorts", icon: Youtube },
     ],
   },

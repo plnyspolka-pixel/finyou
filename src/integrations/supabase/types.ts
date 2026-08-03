@@ -8362,6 +8362,63 @@ export type Database = {
         }
         Relationships: []
       }
+      social_publish_queue: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          created_by: string | null
+          external_post_id: string | null
+          id: string
+          ig_creation_id: string | null
+          image_url: string | null
+          last_error: string | null
+          message: string
+          platform: string
+          published_at: string | null
+          scheduled_at: string
+          status: string
+          title: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          created_by?: string | null
+          external_post_id?: string | null
+          id?: string
+          ig_creation_id?: string | null
+          image_url?: string | null
+          last_error?: string | null
+          message?: string
+          platform: string
+          published_at?: string | null
+          scheduled_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          created_by?: string | null
+          external_post_id?: string | null
+          id?: string
+          ig_creation_id?: string | null
+          image_url?: string | null
+          last_error?: string | null
+          message?: string
+          platform?: string
+          published_at?: string | null
+          scheduled_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       storage_migration_log: {
         Row: {
           created_at: string
@@ -8395,6 +8452,81 @@ export type Database = {
           table_updated?: string | null
           target_bucket?: string
           target_path?: string
+        }
+        Relationships: []
+      }
+      studio_images: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          image_url: string
+          prompt: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url: string
+          prompt: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string
+          prompt?: string
+          storage_path?: string
+        }
+        Relationships: []
+      }
+      studio_video_jobs: {
+        Row: {
+          avatar_id: string
+          created_at: string
+          created_by: string | null
+          heygen_video_id: string | null
+          id: string
+          last_error: string | null
+          prompt: string
+          script: string
+          status: string
+          thumbnail_url: string | null
+          updated_at: string
+          video_url: string | null
+          voice_id: string
+        }
+        Insert: {
+          avatar_id: string
+          created_at?: string
+          created_by?: string | null
+          heygen_video_id?: string | null
+          id?: string
+          last_error?: string | null
+          prompt: string
+          script: string
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_url?: string | null
+          voice_id?: string
+        }
+        Update: {
+          avatar_id?: string
+          created_at?: string
+          created_by?: string | null
+          heygen_video_id?: string | null
+          id?: string
+          last_error?: string | null
+          prompt?: string
+          script?: string
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_url?: string | null
+          voice_id?: string
         }
         Relationships: []
       }
