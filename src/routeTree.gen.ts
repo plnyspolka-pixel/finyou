@@ -79,9 +79,9 @@ import { Route as InwestorProjektyRouteImport } from './routes/inwestor.projekty
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorPlatnosciRouteImport } from './routes/inwestor.platnosci'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
-import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
-import { Route as InwestorKreatorUdzieleniaRouteImport } from './routes/inwestor.kreator-udzielenia'
 import { Route as InwestorKreatorUmowyRouteImport } from './routes/inwestor.kreator-umowy'
+import { Route as InwestorKreatorUdzieleniaRouteImport } from './routes/inwestor.kreator-udzielenia'
+import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
 import { Route as InwestorAmlRouteImport } from './routes/inwestor.aml'
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
@@ -100,6 +100,7 @@ import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
+import { Route as AdminStudioPublikacjiRouteImport } from './routes/admin.studio-publikacji'
 import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
@@ -115,12 +116,12 @@ import { Route as AdminMaterialyRouteImport } from './routes/admin.materialy'
 import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
 import { Route as AdminKwRouteImport } from './routes/admin.kw'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
-import { Route as AdminGeneratorUmowyRouteImport } from './routes/admin.generator-umowy'
 import { Route as AdminKreatorDokumentowRouteImport } from './routes/admin.kreator-dokumentow'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminKartyOfertRouteImport } from './routes/admin.karty-ofert'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
+import { Route as AdminGeneratorUmowyRouteImport } from './routes/admin.generator-umowy'
 import { Route as AdminFollowUpBrakiRouteImport } from './routes/admin.follow-up-braki'
 import { Route as AdminFacebookConnectRouteImport } from './routes/admin.facebook-connect'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
@@ -210,6 +211,7 @@ import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/p
 import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/public/hooks/voicebot-inbound'
 import { Route as ApiPublicHooksVoicebotEnrichTickRouteImport } from './routes/api/public/hooks/voicebot-enrich-tick'
 import { Route as ApiPublicHooksSyncAccountingRouteImport } from './routes/api/public/hooks/sync-accounting'
+import { Route as ApiPublicHooksSocialPublishTickRouteImport } from './routes/api/public/hooks/social-publish-tick'
 import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/hooks/seed-blog'
 import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes/api/public/hooks/saturday-sms-reminders'
 import { Route as ApiPublicHooksProjectAssignmentsTickRouteImport } from './routes/api/public/hooks/project-assignments-tick'
@@ -582,22 +584,21 @@ const InwestorOfertyRoute = InwestorOfertyRouteImport.update({
   path: '/oferty',
   getParentRoute: () => InwestorRoute,
 } as any)
-const InwestorKreatorDokumentowRoute =
-  InwestorKreatorDokumentowRouteImport.update({
-    id: '/kreator-dokumentow',
-    path: '/kreator-dokumentow',
-    getParentRoute: () => InwestorRoute,
-  } as any)
+const InwestorKreatorUmowyRoute = InwestorKreatorUmowyRouteImport.update({
+  id: '/kreator-umowy',
+  path: '/kreator-umowy',
+  getParentRoute: () => InwestorRoute,
+} as any)
 const InwestorKreatorUdzieleniaRoute =
   InwestorKreatorUdzieleniaRouteImport.update({
     id: '/kreator-udzielenia',
     path: '/kreator-udzielenia',
     getParentRoute: () => InwestorRoute,
   } as any)
-const InwestorKreatorUmowyRoute =
-  InwestorKreatorUmowyRouteImport.update({
-    id: '/kreator-umowy',
-    path: '/kreator-umowy',
+const InwestorKreatorDokumentowRoute =
+  InwestorKreatorDokumentowRouteImport.update({
+    id: '/kreator-dokumentow',
+    path: '/kreator-dokumentow',
     getParentRoute: () => InwestorRoute,
   } as any)
 const InwestorKalkulatorRoute = InwestorKalkulatorRouteImport.update({
@@ -691,6 +692,11 @@ const AdminSzkoleniaRoute = AdminSzkoleniaRouteImport.update({
   path: '/szkolenia',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminStudioPublikacjiRoute = AdminStudioPublikacjiRouteImport.update({
+  id: '/studio-publikacji',
+  path: '/studio-publikacji',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSkrzynkaRoute = AdminSkrzynkaRouteImport.update({
   id: '/skrzynka',
   path: '/skrzynka',
@@ -767,11 +773,6 @@ const AdminKreatorPozyczkiRoute = AdminKreatorPozyczkiRouteImport.update({
   path: '/kreator-pozyczki',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminGeneratorUmowyRoute = AdminGeneratorUmowyRouteImport.update({
-  id: '/generator-umowy',
-  path: '/generator-umowy',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminKreatorDokumentowRoute = AdminKreatorDokumentowRouteImport.update({
   id: '/kreator-dokumentow',
   path: '/kreator-dokumentow',
@@ -795,6 +796,11 @@ const AdminInwestorzyRoute = AdminInwestorzyRouteImport.update({
 const AdminIntegracjeRoute = AdminIntegracjeRouteImport.update({
   id: '/integracje',
   path: '/integracje',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminGeneratorUmowyRoute = AdminGeneratorUmowyRouteImport.update({
+  id: '/generator-umowy',
+  path: '/generator-umowy',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminFollowUpBrakiRoute = AdminFollowUpBrakiRouteImport.update({
@@ -1276,6 +1282,12 @@ const ApiPublicHooksSyncAccountingRoute =
     path: '/api/public/hooks/sync-accounting',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSocialPublishTickRoute =
+  ApiPublicHooksSocialPublishTickRouteImport.update({
+    id: '/api/public/hooks/social-publish-tick',
+    path: '/api/public/hooks/social-publish-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSeedBlogRoute = ApiPublicHooksSeedBlogRouteImport.update({
   id: '/api/public/hooks/seed-blog',
   path: '/api/public/hooks/seed-blog',
@@ -1436,13 +1448,13 @@ export interface FileRoutesByFullPath {
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
+  '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
-  '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
@@ -1457,6 +1469,7 @@ export interface FileRoutesByFullPath {
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
+  '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -1604,6 +1617,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
@@ -1654,13 +1668,13 @@ export interface FileRoutesByTo {
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
+  '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
-  '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
@@ -1675,6 +1689,7 @@ export interface FileRoutesByTo {
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
+  '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -1817,6 +1832,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
@@ -1873,13 +1889,13 @@ export interface FileRoutesById {
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
+  '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
-  '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
@@ -1894,6 +1910,7 @@ export interface FileRoutesById {
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
+  '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -2041,6 +2058,7 @@ export interface FileRoutesById {
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
@@ -2098,13 +2116,13 @@ export interface FileRouteTypes {
     | '/admin/embed'
     | '/admin/facebook-connect'
     | '/admin/follow-up-braki'
+    | '/admin/generator-umowy'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
-    | '/admin/generator-umowy'
     | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
@@ -2119,6 +2137,7 @@ export interface FileRouteTypes {
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
+    | '/admin/studio-publikacji'
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
@@ -2266,6 +2285,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/social-publish-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
@@ -2316,13 +2336,13 @@ export interface FileRouteTypes {
     | '/admin/embed'
     | '/admin/facebook-connect'
     | '/admin/follow-up-braki'
+    | '/admin/generator-umowy'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
-    | '/admin/generator-umowy'
     | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
@@ -2337,6 +2357,7 @@ export interface FileRouteTypes {
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
+    | '/admin/studio-publikacji'
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
@@ -2479,6 +2500,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/social-publish-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
@@ -2534,13 +2556,13 @@ export interface FileRouteTypes {
     | '/admin/embed'
     | '/admin/facebook-connect'
     | '/admin/follow-up-braki'
+    | '/admin/generator-umowy'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
-    | '/admin/generator-umowy'
     | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
@@ -2555,6 +2577,7 @@ export interface FileRouteTypes {
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
+    | '/admin/studio-publikacji'
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
@@ -2702,6 +2725,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/social-publish-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
@@ -2794,6 +2818,7 @@ export interface RootRouteChildren {
   ApiPublicHooksProjectAssignmentsTickRoute: typeof ApiPublicHooksProjectAssignmentsTickRoute
   ApiPublicHooksSaturdaySmsRemindersRoute: typeof ApiPublicHooksSaturdaySmsRemindersRoute
   ApiPublicHooksSeedBlogRoute: typeof ApiPublicHooksSeedBlogRoute
+  ApiPublicHooksSocialPublishTickRoute: typeof ApiPublicHooksSocialPublishTickRoute
   ApiPublicHooksSyncAccountingRoute: typeof ApiPublicHooksSyncAccountingRoute
   ApiPublicHooksVoicebotEnrichTickRoute: typeof ApiPublicHooksVoicebotEnrichTickRoute
   ApiPublicHooksVoicebotInboundRoute: typeof ApiPublicHooksVoicebotInboundRoute
@@ -3298,11 +3323,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorOfertyRouteImport
       parentRoute: typeof InwestorRoute
     }
-    '/inwestor/kreator-dokumentow': {
-      id: '/inwestor/kreator-dokumentow'
-      path: '/kreator-dokumentow'
-      fullPath: '/inwestor/kreator-dokumentow'
-      preLoaderRoute: typeof InwestorKreatorDokumentowRouteImport
+    '/inwestor/kreator-umowy': {
+      id: '/inwestor/kreator-umowy'
+      path: '/kreator-umowy'
+      fullPath: '/inwestor/kreator-umowy'
+      preLoaderRoute: typeof InwestorKreatorUmowyRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/inwestor/kreator-udzielenia': {
@@ -3312,11 +3337,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorKreatorUdzieleniaRouteImport
       parentRoute: typeof InwestorRoute
     }
-    '/inwestor/kreator-umowy': {
-      id: '/inwestor/kreator-umowy'
-      path: '/kreator-umowy'
-      fullPath: '/inwestor/kreator-umowy'
-      preLoaderRoute: typeof InwestorKreatorUmowyRouteImport
+    '/inwestor/kreator-dokumentow': {
+      id: '/inwestor/kreator-dokumentow'
+      path: '/kreator-dokumentow'
+      fullPath: '/inwestor/kreator-dokumentow'
+      preLoaderRoute: typeof InwestorKreatorDokumentowRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/inwestor/kalkulator': {
@@ -3445,6 +3470,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSzkoleniaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/studio-publikacji': {
+      id: '/admin/studio-publikacji'
+      path: '/studio-publikacji'
+      fullPath: '/admin/studio-publikacji'
+      preLoaderRoute: typeof AdminStudioPublikacjiRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/skrzynka': {
       id: '/admin/skrzynka'
       path: '/skrzynka'
@@ -3543,13 +3575,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminKwRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/generator-umowy': {
-      id: '/admin/generator-umowy'
-      path: '/generator-umowy'
-      fullPath: '/admin/generator-umowy'
-      preLoaderRoute: typeof AdminGeneratorUmowyRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/kreator-pozyczki': {
       id: '/admin/kreator-pozyczki'
       path: '/kreator-pozyczki'
@@ -3590,6 +3615,13 @@ declare module '@tanstack/react-router' {
       path: '/integracje'
       fullPath: '/admin/integracje'
       preLoaderRoute: typeof AdminIntegracjeRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/generator-umowy': {
+      id: '/admin/generator-umowy'
+      path: '/generator-umowy'
+      fullPath: '/admin/generator-umowy'
+      preLoaderRoute: typeof AdminGeneratorUmowyRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/follow-up-braki': {
@@ -4215,6 +4247,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncAccountingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/social-publish-tick': {
+      id: '/api/public/hooks/social-publish-tick'
+      path: '/api/public/hooks/social-publish-tick'
+      fullPath: '/api/public/hooks/social-publish-tick'
+      preLoaderRoute: typeof ApiPublicHooksSocialPublishTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/seed-blog': {
       id: '/api/public/hooks/seed-blog'
       path: '/api/public/hooks/seed-blog'
@@ -4398,13 +4437,13 @@ interface AdminRouteChildren {
   AdminEmbedRoute: typeof AdminEmbedRoute
   AdminFacebookConnectRoute: typeof AdminFacebookConnectRoute
   AdminFollowUpBrakiRoute: typeof AdminFollowUpBrakiRoute
+  AdminGeneratorUmowyRoute: typeof AdminGeneratorUmowyRoute
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
   AdminKartyOfertRoute: typeof AdminKartyOfertRoute
   AdminKlienciRoute: typeof AdminKlienciRouteWithChildren
   AdminKreatorDokumentowRoute: typeof AdminKreatorDokumentowRoute
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
-  AdminGeneratorUmowyRoute: typeof AdminGeneratorUmowyRoute
   AdminKwRoute: typeof AdminKwRoute
   AdminMailingRoute: typeof AdminMailingRoute
   AdminMaterialyRoute: typeof AdminMaterialyRoute
@@ -4419,6 +4458,7 @@ interface AdminRouteChildren {
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
   AdminSkrzynkaRoute: typeof AdminSkrzynkaRoute
+  AdminStudioPublikacjiRoute: typeof AdminStudioPublikacjiRoute
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminTextAgentRoute: typeof AdminTextAgentRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
@@ -4466,13 +4506,13 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEmbedRoute: AdminEmbedRoute,
   AdminFacebookConnectRoute: AdminFacebookConnectRoute,
   AdminFollowUpBrakiRoute: AdminFollowUpBrakiRoute,
+  AdminGeneratorUmowyRoute: AdminGeneratorUmowyRoute,
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
   AdminKartyOfertRoute: AdminKartyOfertRoute,
   AdminKlienciRoute: AdminKlienciRouteWithChildren,
   AdminKreatorDokumentowRoute: AdminKreatorDokumentowRoute,
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
-  AdminGeneratorUmowyRoute: AdminGeneratorUmowyRoute,
   AdminKwRoute: AdminKwRoute,
   AdminMailingRoute: AdminMailingRoute,
   AdminMaterialyRoute: AdminMaterialyRoute,
@@ -4487,6 +4527,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
   AdminSkrzynkaRoute: AdminSkrzynkaRoute,
+  AdminStudioPublikacjiRoute: AdminStudioPublikacjiRoute,
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminTextAgentRoute: AdminTextAgentRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
@@ -4843,6 +4884,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksSaturdaySmsRemindersRoute:
     ApiPublicHooksSaturdaySmsRemindersRoute,
   ApiPublicHooksSeedBlogRoute: ApiPublicHooksSeedBlogRoute,
+  ApiPublicHooksSocialPublishTickRoute: ApiPublicHooksSocialPublishTickRoute,
   ApiPublicHooksSyncAccountingRoute: ApiPublicHooksSyncAccountingRoute,
   ApiPublicHooksVoicebotEnrichTickRoute: ApiPublicHooksVoicebotEnrichTickRoute,
   ApiPublicHooksVoicebotInboundRoute: ApiPublicHooksVoicebotInboundRoute,
@@ -4857,13 +4899,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
