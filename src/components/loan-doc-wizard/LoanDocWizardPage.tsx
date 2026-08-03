@@ -12,7 +12,7 @@ import {
   getDocxTemplatePreview,
   type DocTemplate,
 } from "@/lib/document-generator.functions";
-import { previewSegments, extractOrderedFields } from "@/lib/document-fields";
+import { previewSegments, extractOrderedFields, splitTrailingSection } from "@/lib/document-fields";
 import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
 import { readCalcHandoff, onCalcHandoffChange } from "@/lib/loan-calc-handoff";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +49,11 @@ type ChatMsg = { role: "user" | "assistant"; content: string };
 
 const FINANCE_YOU_ID = "finance_you";
 
+/** Nagłówek sekcji końcowej wzoru pokazywanej obok podglądu (nie w dokumencie). */
+const UWAGI_HEADING = "Uwagi praktyczne";
+
+export type LoanDocWizardVariant = "operator" | "investor";
+
 /** Domyślny wzór: umowa pożyczki, jeśli jest na liście. */
 function pickDefaultTemplate(templates: DocTemplate[]): DocTemplate | null {
   const loan = templates.find((t) => {
@@ -60,7 +65,10 @@ function pickDefaultTemplate(templates: DocTemplate[]): DocTemplate | null {
   return loan ?? templates[0] ?? null;
 }
 
-export function LoanDocWizardPage() {
+export function LoanDocWizardPage({
+  variant = "operator",
+}: { variant?: LoanDocWizardVariant } = {}) {
+  const isInvestor = variant === "investor";
   const _lenders = useServerFn(listLoanLenders);
   const _templates = useServerFn(listDocxTemplates);
   const _wizard = useServerFn(runLoanDocWizard);
@@ -79,6 +87,8 @@ export function LoanDocWizardPage() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [missing, setMissing] = useState<string[]>([]);
   const [done, setDone] = useState(false);
+  // Nazwa finansującego (dla wersji inwestora — pokazujemy „Ty jako pożyczkodawca").
+  const [lenderName, setLenderName] = useState("");
 
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -119,7 +129,11 @@ export function LoanDocWizardPage() {
     (async () => {
       setBootLoading(true);
       try {
-        const [ls, ts] = await Promise.all([_lenders(), _templates()]);
+        // Inwestor nie wybiera finansującego (jest nim on sam) — nie pobieramy listy.
+        const [ls, ts] = await Promise.all([
+          isInvestor ? Promise.resolve<LenderOption[]>([]) : _lenders(),
+          _templates(),
+        ]);
         if (!alive) return;
         setLenders(ls);
         setTemplates(ts);
@@ -155,12 +169,20 @@ export function LoanDocWizardPage() {
       try {
         const [prev, res] = await Promise.all([
           _preview({ data: { templateId: template.id } }),
-          _wizard({ data: { templateId: template.id, lenderId, messages: [], calc } }),
+          _wizard({
+            data: {
+              templateId: template.id,
+              ...(isInvestor ? { useSelfAsLender: true } : { lenderId }),
+              messages: [],
+              calc,
+            },
+          }),
         ]);
         if (!alive) return;
         setPreviewText(prev.text);
         setValues(res.values);
         setMissing(res.missing);
+        setLenderName(res.lenderName ?? "");
         setMessages([{ role: "assistant", content: res.reply }]);
       } catch (e: any) {
         if (alive) toast.error(e?.message ?? "Błąd inicjalizacji kreatora");
@@ -183,11 +205,17 @@ export function LoanDocWizardPage() {
     setThinking(true);
     try {
       const res = await _wizard({
-        data: { templateId: template.id, lenderId, messages: nextMessages, calc },
+        data: {
+          templateId: template.id,
+          ...(isInvestor ? { useSelfAsLender: true } : { lenderId }),
+          messages: nextMessages,
+          calc,
+        },
       });
       setValues(res.values);
       setMissing(res.missing);
       setDone(res.done);
+      setLenderName(res.lenderName ?? "");
       setMessages([...nextMessages, { role: "assistant", content: res.reply }]);
     } catch (e: any) {
       toast.error(e?.message ?? "Błąd kreatora");
@@ -205,7 +233,13 @@ export function LoanDocWizardPage() {
     setGenerating(true);
     try {
       const res = await _generate({
-        data: { templateId: template.id, values, schedule: calc?.schedule ?? undefined },
+        data: {
+          templateId: template.id,
+          values,
+          schedule: calc?.schedule ?? undefined,
+          // U inwestora sekcja „Uwagi praktyczne" nie trafia do pliku.
+          ...(isInvestor ? { stripSectionFromHeading: UWAGI_HEADING } : {}),
+        },
       });
       const url = await _signedUrl({ data: { path: res.docxPath } });
       window.open(url.url, "_blank");
@@ -232,7 +266,7 @@ export function LoanDocWizardPage() {
       const res = await _wizard({
         data: {
           templateId: template.id,
-          lenderId,
+          ...(isInvestor ? { useSelfAsLender: true } : { lenderId }),
           messages: hasUserTurn ? messages : [],
           calc: h.payload,
         },
@@ -240,6 +274,7 @@ export function LoanDocWizardPage() {
       setValues(res.values);
       setMissing(res.missing);
       setDone(res.done);
+      setLenderName(res.lenderName ?? "");
       if (!hasUserTurn) setMessages([{ role: "assistant", content: res.reply }]);
       toast.success(`Wczytano dane z kalkulatora (${h.payload.schedule.length} rat).`);
     } catch (e: any) {
@@ -251,6 +286,13 @@ export function LoanDocWizardPage() {
 
   const progressPct = fillableCount > 0 ? Math.round((filledCount / fillableCount) * 100) : 0;
 
+  // Wersja inwestora: sekcja „Uwagi praktyczne" wychodzi z treści dokumentu do
+  // osobnego okienka (i nie trafia do generowanego .docx — patrz generate()).
+  const { body: previewBody, notes: practicalNotes } = useMemo(() => {
+    if (isInvestor && previewText) return splitTrailingSection(previewText, UWAGI_HEADING);
+    return { body: previewText, notes: "" };
+  }, [isInvestor, previewText]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-1">
@@ -259,8 +301,10 @@ export function LoanDocWizardPage() {
         </h1>
         <p className="text-sm text-muted-foreground">
           Asystent napędzany <span className="font-medium">Gemini Pro</span> pomoże Ci w oknie czatu
-          przygotować wypełniony komplet do udzielenia pożyczki. Wybierz finansującego i wzór, a
-          resztę opisz w rozmowie.
+          przygotować wypełniony komplet do udzielenia pożyczki.{" "}
+          {isInvestor
+            ? "Twoje dane jako pożyczkodawcy pobieram z Twojego profilu inwestora — wybierz wzór, a resztę opisz w rozmowie."
+            : "Wybierz finansującego i wzór, a resztę opisz w rozmowie."}
         </p>
       </div>
 
@@ -271,39 +315,56 @@ export function LoanDocWizardPage() {
             <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5" /> Finansujący (pożyczkodawca)
             </Label>
-            <Select value={lenderId} onValueChange={setLenderId} disabled={bootLoading}>
-              <SelectTrigger>
-                <SelectValue placeholder="Wybierz finansującego…" />
-              </SelectTrigger>
-              <SelectContent>
-                {financeYou && (
-                  <SelectGroup>
-                    <SelectLabel>Finance You</SelectLabel>
-                    <SelectItem value={financeYou.id}>{financeYou.label}</SelectItem>
-                  </SelectGroup>
+            {isInvestor ? (
+              // Inwestor jest pożyczkodawcą — bez listy, dane z jego profilu.
+              <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+                <UserRound className="h-4 w-4 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">
+                    {lenderName || (bootLoading ? "Wczytywanie…" : "Ty (z profilu inwestora)")}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Pożyczkodawcą jesteś Ty — dane wpisane z Twojego profilu.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Select value={lenderId} onValueChange={setLenderId} disabled={bootLoading}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Wybierz finansującego…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {financeYou && (
+                      <SelectGroup>
+                        <SelectLabel>Finance You</SelectLabel>
+                        <SelectItem value={financeYou.id}>{financeYou.label}</SelectItem>
+                      </SelectGroup>
+                    )}
+                    {investors.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>Inwestorzy prywatni</SelectLabel>
+                        {investors.map((l) => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.label}
+                            {l.sublabel ? ` — ${l.sublabel}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                  </SelectContent>
+                </Select>
+                {selectedLender && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {selectedLender.kind === "finance_you" ? (
+                      <Building2 className="inline h-3 w-3 mr-1" />
+                    ) : (
+                      <UserRound className="inline h-3 w-3 mr-1" />
+                    )}
+                    Dane finansującego zostaną wpisane po stronie pożyczkodawcy.
+                  </p>
                 )}
-                {investors.length > 0 && (
-                  <SelectGroup>
-                    <SelectLabel>Inwestorzy prywatni</SelectLabel>
-                    {investors.map((l) => (
-                      <SelectItem key={l.id} value={l.id}>
-                        {l.label}
-                        {l.sublabel ? ` — ${l.sublabel}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                )}
-              </SelectContent>
-            </Select>
-            {selectedLender && (
-              <p className="text-[11px] text-muted-foreground">
-                {selectedLender.kind === "finance_you" ? (
-                  <Building2 className="inline h-3 w-3 mr-1" />
-                ) : (
-                  <UserRound className="inline h-3 w-3 mr-1" />
-                )}
-                Dane finansującego zostaną wpisane po stronie pożyczkodawcy.
-              </p>
+              </>
             )}
           </div>
 
@@ -461,7 +522,7 @@ export function LoanDocWizardPage() {
                 <Loader2 className="h-5 w-5 animate-spin mr-2" /> Wczytuję wzór…
               </div>
             ) : previewText ? (
-              <PreviewRenderer text={previewText} values={values} />
+              <PreviewRenderer text={previewBody} values={values} />
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">
                 Wybierz wzór, aby zobaczyć podgląd.
@@ -485,6 +546,25 @@ export function LoanDocWizardPage() {
           </div>
         </Card>
       </div>
+
+      {/* Uwagi praktyczne — osobne okienko (nie trafiają do dokumentu inwestora) */}
+      {isInvestor && practicalNotes && (
+        <Card className="border-amber-400/50 bg-amber-50/40 dark:bg-amber-950/10">
+          <CardHeader className="py-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-amber-600" /> Uwagi praktyczne
+              <Badge variant="outline" className="text-[10px] font-normal">
+                nie trafiają do dokumentu
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="whitespace-pre-wrap break-words font-sans text-[13px] leading-relaxed text-muted-foreground">
+              {practicalNotes}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
