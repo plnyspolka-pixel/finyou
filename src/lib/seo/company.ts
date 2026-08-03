@@ -39,9 +39,7 @@ export function financialServiceLd(opts?: { areaServedName?: string; pageUrl?: s
       "@type": "PostalAddress",
       ...COMPANY.address,
     },
-    areaServed: opts?.areaServedName
-      ? { "@type": "City", name: opts.areaServedName }
-      : "PL",
+    areaServed: opts?.areaServedName ? { "@type": "City", name: opts.areaServedName } : "PL",
     description:
       "Prywatne pożyczki pod zastaw nieruchomości w Polsce — decyzja w 24 godziny, do 1 000 000 zł.",
   };
