@@ -11,8 +11,13 @@ async function run(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const limitParam = Number(url.searchParams.get("limit") ?? "");
     const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 200) : 50;
-    const { generateLocationPages } = await import("@/lib/seo-location/server");
-    const result = await generateLocationPages(limit);
+    const { generateLocationPages, generateLocationReport } =
+      await import("@/lib/seo-location/server");
+    const pages = await generateLocationPages(limit);
+    // Przy okazji seedu odświeżamy też publiczny ranking (/raport-lokalizacje) —
+    // 100 miast, snapshot z tych samych tabel referencyjnych.
+    const report = await generateLocationReport(100);
+    const result = { ...pages, report };
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: { "Content-Type": "application/json" },

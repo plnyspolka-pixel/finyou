@@ -209,3 +209,109 @@ export async function publishLocationPagesBatch(
   }
   return { ok: true, published: toPublish.map((d) => d.slug) };
 }
+
+/**
+ * Buduje snapshot publicznego rankingu lokalizacji (/raport-lokalizacje) z
+ * tabel referencyjnych. Ranking: bazowa atrakcyjność lokalizacji (scoring
+ * liczony offline), tie-break ludność w promieniu 25 km. Miasta bez metryk
+ * są pomijane — raport zawiera tylko rekordy z pełnymi danymi.
+ */
+export async function generateLocationReport(
+  limit = 100,
+): Promise<{ ok: boolean; entries: number; skipped: number }> {
+  const { data: units, error: unitsErr } = await db
+    .from("geo_units")
+    .select("teryt, name, population, degurba, is_city_above_30k, data_version")
+    .eq("data_version", GEO_DATA_VERSION)
+    .eq("unit_type", "municipality")
+    .or("degurba.eq.1,is_city_above_30k.eq.true")
+    .order("population", { ascending: false, nullsFirst: false })
+    .limit(limit);
+  if (unitsErr) throw new Error(`geo_units: ${unitsErr.message}`);
+  const cityUnits = units ?? [];
+  if (!cityUnits.length) return { ok: true, entries: 0, skipped: 0 };
+
+  const { data: metricRows, error: mErr } = await db
+    .from("geo_unit_location_metrics")
+    .select(
+      "teryt, population_within_25km, population_within_45km, density_per_km2, fua_role, base_location_attractiveness, data_version",
+    )
+    .eq("data_version", GEO_DATA_VERSION)
+    .in(
+      "teryt",
+      cityUnits.map((u: { teryt: string }) => u.teryt),
+    );
+  if (mErr) throw new Error(`geo_unit_location_metrics: ${mErr.message}`);
+  const metricsByTeryt = new Map(
+    (metricRows ?? []).map((m: { teryt: string }) => [m.teryt, m] as const),
+  );
+
+  const { VOIVODESHIP_NAMES } = await import("./core");
+
+  type ReportRow = {
+    teryt: string;
+    name: string;
+    voivodeship: string;
+    population: number | null;
+    density_per_km2: number | null;
+    population_within_25km: number;
+    population_within_45km: number;
+    attractiveness: number | null;
+    fua_role: string;
+    data_version: string;
+  };
+
+  let skipped = 0;
+  const rows: ReportRow[] = [];
+  for (const u of cityUnits) {
+    const m = metricsByTeryt.get(u.teryt) as
+      | {
+          population_within_25km: number;
+          population_within_45km: number;
+          density_per_km2: number;
+          fua_role: string;
+          base_location_attractiveness: number | null;
+        }
+      | undefined;
+    if (!m || !(m.population_within_25km > 0)) {
+      skipped++;
+      continue;
+    }
+    rows.push({
+      teryt: u.teryt,
+      name: u.name,
+      voivodeship: VOIVODESHIP_NAMES[u.teryt.slice(0, 2)] ?? "—",
+      population: u.population,
+      density_per_km2: m.density_per_km2,
+      population_within_25km: m.population_within_25km,
+      population_within_45km: m.population_within_45km,
+      attractiveness: m.base_location_attractiveness,
+      fua_role: m.fua_role,
+      data_version: GEO_DATA_VERSION,
+    });
+  }
+
+  rows.sort((a, b) => {
+    const av = a.attractiveness ?? -1;
+    const bv = b.attractiveness ?? -1;
+    if (bv !== av) return bv - av;
+    return b.population_within_25km - a.population_within_25km;
+  });
+
+  const ranked = rows.map((r, i) => ({ ...r, rank: i + 1 }));
+  const { error: upsertErr } = await db
+    .from("seo_location_report_entries")
+    .upsert(ranked, { onConflict: "teryt" });
+  if (upsertErr) throw new Error(`seo_location_report_entries: ${upsertErr.message}`);
+
+  // Usuń wpisy, które wypadły z rankingu (np. po zmianie wersji danych).
+  const keepTeryts = ranked.map((r) => r.teryt);
+  if (keepTeryts.length) {
+    await db
+      .from("seo_location_report_entries")
+      .delete()
+      .not("teryt", "in", `(${keepTeryts.map((t) => `"${t}"`).join(",")})`);
+  }
+
+  return { ok: true, entries: ranked.length, skipped };
+}

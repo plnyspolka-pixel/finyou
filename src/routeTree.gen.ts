@@ -14,6 +14,7 @@ import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
+import { Route as RaportLokalizacjeRouteImport } from './routes/raport-lokalizacje'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
 import { Route as OperatorRejestracjaRouteImport } from './routes/operator-rejestracja'
@@ -25,6 +26,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
 import { Route as KalkulatorPozyczkiRouteImport } from './routes/kalkulator-pozyczki'
+import { Route as KalkulatorLtvRouteImport } from './routes/kalkulator-ltv'
 import { Route as InwestorRouteImport } from './routes/inwestor'
 import { Route as DlaPosrednikaRouteImport } from './routes/dla-posrednika'
 import { Route as DlaKlientaRouteImport } from './routes/dla-klienta'
@@ -259,6 +261,11 @@ const RegulaminRoute = RegulaminRouteImport.update({
   path: '/regulamin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RaportLokalizacjeRoute = RaportLokalizacjeRouteImport.update({
+  id: '/raport-lokalizacje',
+  path: '/raport-lokalizacje',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PosrednikRoute = PosrednikRouteImport.update({
   id: '/posrednik',
   path: '/posrednik',
@@ -312,6 +319,11 @@ const KlientRoute = KlientRouteImport.update({
 const KalkulatorPozyczkiRoute = KalkulatorPozyczkiRouteImport.update({
   id: '/kalkulator-pozyczki',
   path: '/kalkulator-pozyczki',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KalkulatorLtvRoute = KalkulatorLtvRouteImport.update({
+  id: '/kalkulator-ltv',
+  path: '/kalkulator-ltv',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InwestorRoute = InwestorRouteImport.update({
@@ -1422,6 +1434,7 @@ export interface FileRoutesByFullPath {
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
+  '/kalkulator-ltv': typeof KalkulatorLtvRoute
   '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1433,6 +1446,7 @@ export interface FileRoutesByFullPath {
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
+  '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1646,6 +1660,7 @@ export interface FileRoutesByTo {
   '/dla-inwestora': typeof DlaInwestoraRoute
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
+  '/kalkulator-ltv': typeof KalkulatorLtvRoute
   '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
@@ -1654,6 +1669,7 @@ export interface FileRoutesByTo {
   '/oferty': typeof OfertyRoute
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
+  '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1865,6 +1881,7 @@ export interface FileRoutesById {
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
+  '/kalkulator-ltv': typeof KalkulatorLtvRoute
   '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1876,6 +1893,7 @@ export interface FileRoutesById {
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
+  '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -2093,6 +2111,7 @@ export interface FileRouteTypes {
     | '/dla-klienta'
     | '/dla-posrednika'
     | '/inwestor'
+    | '/kalkulator-ltv'
     | '/kalkulator-pozyczki'
     | '/klient'
     | '/logowanie'
@@ -2104,6 +2123,7 @@ export interface FileRouteTypes {
     | '/operator-rejestracja'
     | '/polityka-prywatnosci'
     | '/posrednik'
+    | '/raport-lokalizacje'
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
@@ -2317,6 +2337,7 @@ export interface FileRouteTypes {
     | '/dla-inwestora'
     | '/dla-klienta'
     | '/dla-posrednika'
+    | '/kalkulator-ltv'
     | '/kalkulator-pozyczki'
     | '/logowanie'
     | '/mcp'
@@ -2325,6 +2346,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator-rejestracja'
     | '/polityka-prywatnosci'
+    | '/raport-lokalizacje'
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
@@ -2535,6 +2557,7 @@ export interface FileRouteTypes {
     | '/dla-klienta'
     | '/dla-posrednika'
     | '/inwestor'
+    | '/kalkulator-ltv'
     | '/kalkulator-pozyczki'
     | '/klient'
     | '/logowanie'
@@ -2546,6 +2569,7 @@ export interface FileRouteTypes {
     | '/operator-rejestracja'
     | '/polityka-prywatnosci'
     | '/posrednik'
+    | '/raport-lokalizacje'
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
@@ -2762,6 +2786,7 @@ export interface RootRouteChildren {
   DlaKlientaRoute: typeof DlaKlientaRoute
   DlaPosrednikaRoute: typeof DlaPosrednikaRoute
   InwestorRoute: typeof InwestorRouteWithChildren
+  KalkulatorLtvRoute: typeof KalkulatorLtvRoute
   KalkulatorPozyczkiRoute: typeof KalkulatorPozyczkiRoute
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
@@ -2773,6 +2798,7 @@ export interface RootRouteChildren {
   OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
+  RaportLokalizacjeRoute: typeof RaportLokalizacjeRoute
   RegulaminRoute: typeof RegulaminRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -2884,6 +2910,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegulaminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/raport-lokalizacje': {
+      id: '/raport-lokalizacje'
+      path: '/raport-lokalizacje'
+      fullPath: '/raport-lokalizacje'
+      preLoaderRoute: typeof RaportLokalizacjeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/posrednik': {
       id: '/posrednik'
       path: '/posrednik'
@@ -2959,6 +2992,13 @@ declare module '@tanstack/react-router' {
       path: '/kalkulator-pozyczki'
       fullPath: '/kalkulator-pozyczki'
       preLoaderRoute: typeof KalkulatorPozyczkiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kalkulator-ltv': {
+      id: '/kalkulator-ltv'
+      path: '/kalkulator-ltv'
+      fullPath: '/kalkulator-ltv'
+      preLoaderRoute: typeof KalkulatorLtvRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inwestor': {
@@ -4825,6 +4865,7 @@ const rootRouteChildren: RootRouteChildren = {
   DlaKlientaRoute: DlaKlientaRoute,
   DlaPosrednikaRoute: DlaPosrednikaRoute,
   InwestorRoute: InwestorRouteWithChildren,
+  KalkulatorLtvRoute: KalkulatorLtvRoute,
   KalkulatorPozyczkiRoute: KalkulatorPozyczkiRoute,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
@@ -4836,6 +4877,7 @@ const rootRouteChildren: RootRouteChildren = {
   OperatorRejestracjaRoute: OperatorRejestracjaRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
+  RaportLokalizacjeRoute: RaportLokalizacjeRoute,
   RegulaminRoute: RegulaminRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

@@ -112,6 +112,26 @@ export function formatPl(n: number): string {
   return String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
+/** Oficjalne kody TERYT województw (stałe słownikowe, nie dane statystyczne). */
+export const VOIVODESHIP_NAMES: Record<string, string> = {
+  "02": "dolnośląskie",
+  "04": "kujawsko-pomorskie",
+  "06": "lubelskie",
+  "08": "lubuskie",
+  "10": "łódzkie",
+  "12": "małopolskie",
+  "14": "mazowieckie",
+  "16": "opolskie",
+  "18": "podkarpackie",
+  "20": "podlaskie",
+  "22": "pomorskie",
+  "24": "śląskie",
+  "26": "świętokrzyskie",
+  "28": "warmińsko-mazurskie",
+  "30": "wielkopolskie",
+  "32": "zachodniopomorskie",
+};
+
 /** Deterministyczny hash (FNV-1a 32-bit) — wybór wariantów i content_hash. */
 export function fnv1a(input: string): number {
   let h = 0x811c9dc5;
