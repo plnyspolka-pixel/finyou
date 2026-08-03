@@ -100,6 +100,7 @@ import { Route as AdminZespolAktywnoscRouteImport } from './routes/admin.zespol-
 import { Route as AdminYoutubeShortsRouteImport } from './routes/admin.youtube-shorts'
 import { Route as AdminWnioskiNiekompletneRouteImport } from './routes/admin.wnioski-niekompletne'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
+import { Route as AdminVideoPipelineRouteImport } from './routes/admin.video-pipeline'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
@@ -213,6 +214,7 @@ import { Route as ApiPublicHooksYoutubeShortsTickRouteImport } from './routes/ap
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
 import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/public/hooks/voicebot-inbound'
 import { Route as ApiPublicHooksVoicebotEnrichTickRouteImport } from './routes/api/public/hooks/voicebot-enrich-tick'
+import { Route as ApiPublicHooksVideoPipelineTickRouteImport } from './routes/api/public/hooks/video-pipeline-tick'
 import { Route as ApiPublicHooksSyncAccountingRouteImport } from './routes/api/public/hooks/sync-accounting'
 import { Route as ApiPublicHooksSeoLocationSeedRouteImport } from './routes/api/public/hooks/seo-location-seed'
 import { Route as ApiPublicHooksSeoLocationPublishTickRouteImport } from './routes/api/public/hooks/seo-location-publish-tick'
@@ -695,6 +697,11 @@ const AdminWnioskiNiekompletneRoute =
 const AdminVoicebotRoute = AdminVoicebotRouteImport.update({
   id: '/voicebot',
   path: '/voicebot',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminVideoPipelineRoute = AdminVideoPipelineRouteImport.update({
+  id: '/video-pipeline',
+  path: '/video-pipeline',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminUstawieniaRoute = AdminUstawieniaRouteImport.update({
@@ -1296,6 +1303,12 @@ const ApiPublicHooksVoicebotEnrichTickRoute =
     path: '/api/public/hooks/voicebot-enrich-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksVideoPipelineTickRoute =
+  ApiPublicHooksVideoPipelineTickRouteImport.update({
+    id: '/api/public/hooks/video-pipeline-tick',
+    path: '/api/public/hooks/video-pipeline-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSyncAccountingRoute =
   ApiPublicHooksSyncAccountingRouteImport.update({
     id: '/api/public/hooks/sync-accounting',
@@ -1507,6 +1520,7 @@ export interface FileRoutesByFullPath {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/video-pipeline': typeof AdminVideoPipelineRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/youtube-shorts': typeof AdminYoutubeShortsRoute
@@ -1656,6 +1670,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
+  '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -1732,6 +1747,7 @@ export interface FileRoutesByTo {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/video-pipeline': typeof AdminVideoPipelineRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/youtube-shorts': typeof AdminYoutubeShortsRoute
@@ -1876,6 +1892,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
+  '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -1958,6 +1975,7 @@ export interface FileRoutesById {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/video-pipeline': typeof AdminVideoPipelineRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/youtube-shorts': typeof AdminYoutubeShortsRoute
@@ -2107,6 +2125,7 @@ export interface FileRoutesById {
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
+  '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -2190,6 +2209,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
+    | '/admin/video-pipeline'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/youtube-shorts'
@@ -2339,6 +2359,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/sync-accounting'
+    | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -2415,6 +2436,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
+    | '/admin/video-pipeline'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/youtube-shorts'
@@ -2559,6 +2581,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/sync-accounting'
+    | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -2640,6 +2663,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
+    | '/admin/video-pipeline'
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/youtube-shorts'
@@ -2789,6 +2813,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/sync-accounting'
+    | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -2888,6 +2913,7 @@ export interface RootRouteChildren {
   ApiPublicHooksSeoLocationPublishTickRoute: typeof ApiPublicHooksSeoLocationPublishTickRoute
   ApiPublicHooksSeoLocationSeedRoute: typeof ApiPublicHooksSeoLocationSeedRoute
   ApiPublicHooksSyncAccountingRoute: typeof ApiPublicHooksSyncAccountingRoute
+  ApiPublicHooksVideoPipelineTickRoute: typeof ApiPublicHooksVideoPipelineTickRoute
   ApiPublicHooksVoicebotEnrichTickRoute: typeof ApiPublicHooksVoicebotEnrichTickRoute
   ApiPublicHooksVoicebotInboundRoute: typeof ApiPublicHooksVoicebotInboundRoute
   ApiPublicHooksVoicebotOptOutRoute: typeof ApiPublicHooksVoicebotOptOutRoute
@@ -3536,6 +3562,13 @@ declare module '@tanstack/react-router' {
       path: '/voicebot'
       fullPath: '/admin/voicebot'
       preLoaderRoute: typeof AdminVoicebotRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/video-pipeline': {
+      id: '/admin/video-pipeline'
+      path: '/video-pipeline'
+      fullPath: '/admin/video-pipeline'
+      preLoaderRoute: typeof AdminVideoPipelineRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/ustawienia': {
@@ -4329,6 +4362,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksVoicebotEnrichTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/video-pipeline-tick': {
+      id: '/api/public/hooks/video-pipeline-tick'
+      path: '/api/public/hooks/video-pipeline-tick'
+      fullPath: '/api/public/hooks/video-pipeline-tick'
+      preLoaderRoute: typeof ApiPublicHooksVideoPipelineTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-accounting': {
       id: '/api/public/hooks/sync-accounting'
       path: '/api/public/hooks/sync-accounting'
@@ -4565,6 +4605,7 @@ interface AdminRouteChildren {
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminTextAgentRoute: typeof AdminTextAgentRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
+  AdminVideoPipelineRoute: typeof AdminVideoPipelineRoute
   AdminVoicebotRoute: typeof AdminVoicebotRoute
   AdminWnioskiNiekompletneRoute: typeof AdminWnioskiNiekompletneRoute
   AdminYoutubeShortsRoute: typeof AdminYoutubeShortsRoute
@@ -4634,6 +4675,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminTextAgentRoute: AdminTextAgentRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
+  AdminVideoPipelineRoute: AdminVideoPipelineRoute,
   AdminVoicebotRoute: AdminVoicebotRoute,
   AdminWnioskiNiekompletneRoute: AdminWnioskiNiekompletneRoute,
   AdminYoutubeShortsRoute: AdminYoutubeShortsRoute,
@@ -4994,6 +5036,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksSeoLocationPublishTickRoute,
   ApiPublicHooksSeoLocationSeedRoute: ApiPublicHooksSeoLocationSeedRoute,
   ApiPublicHooksSyncAccountingRoute: ApiPublicHooksSyncAccountingRoute,
+  ApiPublicHooksVideoPipelineTickRoute: ApiPublicHooksVideoPipelineTickRoute,
   ApiPublicHooksVoicebotEnrichTickRoute: ApiPublicHooksVoicebotEnrichTickRoute,
   ApiPublicHooksVoicebotInboundRoute: ApiPublicHooksVoicebotInboundRoute,
   ApiPublicHooksVoicebotOptOutRoute: ApiPublicHooksVoicebotOptOutRoute,

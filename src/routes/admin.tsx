@@ -140,6 +140,7 @@ const groups: Group[] = [
       { to: "/admin/pixele", label: "Pixele FB", icon: Facebook },
       { to: "/admin/materialy", label: "Materiały marketingowe", icon: ImageIcon },
       { to: "/admin/youtube-shorts", label: "YouTube Shorts", icon: Youtube },
+      { to: "/admin/video-pipeline", label: "Pipeline YouTube (artykuły)", icon: Youtube },
     ],
   },
   {

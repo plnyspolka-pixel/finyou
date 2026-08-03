@@ -20,6 +20,7 @@ type PageRow = {
   content: LocationPageContent;
   generated_at: string;
   published_at: string | null;
+  youtube_video_id?: string | null;
 };
 
 const db = supabase as unknown as SupabaseClient;
@@ -28,7 +29,9 @@ export const Route = createFileRoute("/pozyczki/$slug")({
   loader: async ({ params }): Promise<{ page: PageRow; publishedNearby: string[] }> => {
     const { data } = await db
       .from("seo_location_pages")
-      .select("slug, name, meta_title, meta_description, content, generated_at, published_at")
+      .select(
+        "slug, name, meta_title, meta_description, content, generated_at, published_at, youtube_video_id",
+      )
       .eq("slug", params.slug)
       .eq("status", "published")
       .maybeSingle();
@@ -160,6 +163,28 @@ function LocationPage() {
             {p}
           </p>
         ))}
+
+        {page.youtube_video_id && (
+          <div
+            style={{
+              margin: "1.5rem 0 0",
+              position: "relative",
+              paddingBottom: "56.25%",
+              borderRadius: "var(--radius-2xl)",
+              overflow: "hidden",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${page.youtube_video_id}`}
+              title={`Wideo: pożyczka pod zastaw — ${page.name}`}
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+            />
+          </div>
+        )}
 
         <h2 style={{ marginTop: "2.5rem", fontSize: "1.4rem", fontWeight: 800 }}>
           {c.market.heading}
