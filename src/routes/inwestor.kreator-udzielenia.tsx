@@ -1,14 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LoanDocWizardPage } from "@/components/loan-doc-wizard/LoanDocWizardPage";
+import { EngineUmowaGenerator } from "@/components/engine-umowa/EngineUmowaGenerator";
 
 /**
- * Kreator udzielenia pożyczki w panelu inwestora.
- *
- * Ta sama logika co w /operator, ale w wariancie „investor”:
- *  - bez listy finansujących — pożyczkodawcą jest zalogowany inwestor
- *    (dane pobierane z jego profilu),
- *  - sekcja „Uwagi praktyczne” nie trafia do dokumentu, tylko do osobnego okienka.
+ * Kreator udzielenia pożyczki w panelu inwestora — umowa składana z silnika
+ * klauzul (model ratalny: prowizja rozliczana w ratach, bez kwoty brutto).
+ * Zastępuje wcześniejszy wzór DOCX „umowa pożyczki z załącznikami REDLINE".
  */
 export const Route = createFileRoute("/inwestor/kreator-udzielenia")({
-  component: () => <LoanDocWizardPage variant="investor" />,
+  component: () => <EngineUmowaGenerator title="Kreator udzielenia pożyczki" />,
 });
