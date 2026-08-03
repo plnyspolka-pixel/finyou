@@ -107,6 +107,7 @@ import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
 import { Route as AdminProjektyRouteImport } from './routes/admin.projekty'
+import { Route as AdminPrMediaRouteImport } from './routes/admin.pr-media'
 import { Route as AdminPotencjalLokalizacyjnyRouteImport } from './routes/admin.potencjal-lokalizacyjny'
 import { Route as AdminPlatnosciDostepRouteImport } from './routes/admin.platnosci-dostep'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
@@ -219,6 +220,7 @@ import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/
 import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes/api/public/hooks/saturday-sms-reminders'
 import { Route as ApiPublicHooksProjectAssignmentsTickRouteImport } from './routes/api/public/hooks/project-assignments-tick'
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
+import { Route as ApiPublicHooksPrMonitorTickRouteImport } from './routes/api/public/hooks/pr-monitor-tick'
 import { Route as ApiPublicHooksMissingInfoFollowUpTickRouteImport } from './routes/api/public/hooks/missing-info-follow-up-tick'
 import { Route as ApiPublicHooksMetaLeadsPullRouteImport } from './routes/api/public/hooks/meta-leads-pull'
 import { Route as ApiPublicHooksMessengerSyncForceRouteImport } from './routes/api/public/hooks/messenger-sync-force'
@@ -728,6 +730,11 @@ const AdminPrzypomnieniaRoute = AdminPrzypomnieniaRouteImport.update({
 const AdminProjektyRoute = AdminProjektyRouteImport.update({
   id: '/projekty',
   path: '/projekty',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPrMediaRoute = AdminPrMediaRouteImport.update({
+  id: '/pr-media',
+  path: '/pr-media',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPotencjalLokalizacyjnyRoute =
@@ -1330,6 +1337,12 @@ const ApiPublicHooksProcessScheduledCallsRoute =
     path: '/api/public/hooks/process-scheduled-calls',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksPrMonitorTickRoute =
+  ApiPublicHooksPrMonitorTickRouteImport.update({
+    id: '/api/public/hooks/pr-monitor-tick',
+    path: '/api/public/hooks/pr-monitor-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksMissingInfoFollowUpTickRoute =
   ApiPublicHooksMissingInfoFollowUpTickRouteImport.update({
     id: '/api/public/hooks/missing-info-follow-up-tick',
@@ -1486,6 +1499,7 @@ export interface FileRoutesByFullPath {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
+  '/admin/pr-media': typeof AdminPrMediaRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1634,6 +1648,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
+  '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -1709,6 +1724,7 @@ export interface FileRoutesByTo {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
+  '/admin/pr-media': typeof AdminPrMediaRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1852,6 +1868,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
+  '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -1933,6 +1950,7 @@ export interface FileRoutesById {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
+  '/admin/pr-media': typeof AdminPrMediaRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -2081,6 +2099,7 @@ export interface FileRoutesById {
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
+  '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -2163,6 +2182,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
     | '/admin/potencjal-lokalizacyjny'
+    | '/admin/pr-media'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -2311,6 +2331,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/missing-info-follow-up-tick'
+    | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
@@ -2386,6 +2407,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
     | '/admin/potencjal-lokalizacyjny'
+    | '/admin/pr-media'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -2529,6 +2551,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/missing-info-follow-up-tick'
+    | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
@@ -2609,6 +2632,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
     | '/admin/potencjal-lokalizacyjny'
+    | '/admin/pr-media'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -2757,6 +2781,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/missing-info-follow-up-tick'
+    | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
@@ -2855,6 +2880,7 @@ export interface RootRouteChildren {
   ApiPublicHooksMessengerSyncForceRoute: typeof ApiPublicHooksMessengerSyncForceRoute
   ApiPublicHooksMetaLeadsPullRoute: typeof ApiPublicHooksMetaLeadsPullRoute
   ApiPublicHooksMissingInfoFollowUpTickRoute: typeof ApiPublicHooksMissingInfoFollowUpTickRoute
+  ApiPublicHooksPrMonitorTickRoute: typeof ApiPublicHooksPrMonitorTickRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
   ApiPublicHooksProjectAssignmentsTickRoute: typeof ApiPublicHooksProjectAssignmentsTickRoute
   ApiPublicHooksSaturdaySmsRemindersRoute: typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -3559,6 +3585,13 @@ declare module '@tanstack/react-router' {
       path: '/projekty'
       fullPath: '/admin/projekty'
       preLoaderRoute: typeof AdminProjektyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/pr-media': {
+      id: '/admin/pr-media'
+      path: '/pr-media'
+      fullPath: '/admin/pr-media'
+      preLoaderRoute: typeof AdminPrMediaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/potencjal-lokalizacyjny': {
@@ -4345,6 +4378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessScheduledCallsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/pr-monitor-tick': {
+      id: '/api/public/hooks/pr-monitor-tick'
+      path: '/api/public/hooks/pr-monitor-tick'
+      fullPath: '/api/public/hooks/pr-monitor-tick'
+      preLoaderRoute: typeof ApiPublicHooksPrMonitorTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/missing-info-follow-up-tick': {
       id: '/api/public/hooks/missing-info-follow-up-tick'
       path: '/api/public/hooks/missing-info-follow-up-tick'
@@ -4517,6 +4557,7 @@ interface AdminRouteChildren {
   AdminPixeleRoute: typeof AdminPixeleRoute
   AdminPlatnosciDostepRoute: typeof AdminPlatnosciDostepRoute
   AdminPotencjalLokalizacyjnyRoute: typeof AdminPotencjalLokalizacyjnyRoute
+  AdminPrMediaRoute: typeof AdminPrMediaRoute
   AdminProjektyRoute: typeof AdminProjektyRoute
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
@@ -4585,6 +4626,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPixeleRoute: AdminPixeleRoute,
   AdminPlatnosciDostepRoute: AdminPlatnosciDostepRoute,
   AdminPotencjalLokalizacyjnyRoute: AdminPotencjalLokalizacyjnyRoute,
+  AdminPrMediaRoute: AdminPrMediaRoute,
   AdminProjektyRoute: AdminProjektyRoute,
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
@@ -4940,6 +4982,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksMetaLeadsPullRoute: ApiPublicHooksMetaLeadsPullRoute,
   ApiPublicHooksMissingInfoFollowUpTickRoute:
     ApiPublicHooksMissingInfoFollowUpTickRoute,
+  ApiPublicHooksPrMonitorTickRoute: ApiPublicHooksPrMonitorTickRoute,
   ApiPublicHooksProcessScheduledCallsRoute:
     ApiPublicHooksProcessScheduledCallsRoute,
   ApiPublicHooksProjectAssignmentsTickRoute:

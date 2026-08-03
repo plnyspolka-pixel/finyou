@@ -128,6 +128,7 @@ const groups: Group[] = [
       { to: "/admin/ai-growth-engine", label: "AI Growth Engine", icon: Sparkles },
       { to: "/admin/ai-seo", label: "AI SEO Content", icon: FileText },
       { to: "/admin/ai-outreach", label: "AI Outreach", icon: Send },
+      { to: "/admin/pr-media", label: "Digital PR (media)", icon: Send },
       { to: "/admin/ai-linkbuilding", label: "AI Link Building", icon: Link2 },
       { to: "/admin/ai-serp", label: "SERP Tracker", icon: Search },
       { to: "/admin/ai-funnel", label: "Funnel Analyzer", icon: TrendingDown },
