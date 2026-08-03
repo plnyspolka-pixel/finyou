@@ -195,6 +195,25 @@ async function resolveLender(lenderId: string): Promise<ResolvedLender> {
   return investorToLender(data as InvestorRow);
 }
 
+/**
+ * Finansującym jest zalogowany inwestor — dane pobierane z JEGO profilu
+ * (investors.user_id = bieżący użytkownik). Używane w wersji kreatora dla
+ * inwestora, gdzie nie ma wyboru z listy: pożyczkodawcą jest zawsze on sam.
+ */
+async function resolveCurrentInvestorLender(userId: string): Promise<ResolvedLender> {
+  const { data, error } = await supabaseAdmin
+    .from("investors")
+    .select(INVESTOR_COLS)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data)
+    throw new Error(
+      "Twoje konto nie jest powiązane z profilem inwestora — uzupełnij dane w zakładce Profil.",
+    );
+  return investorToLender(data as InvestorRow);
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // Wzór: pobranie treści i pól
 // ─────────────────────────────────────────────────────────────────────
@@ -325,13 +344,20 @@ export const runLoanDocWizard = createServerFn({ method: "POST" })
       messages: ChatMsg[];
       /** Kalkulacja z kalkulatora — dane finansowe uzupełniane DETERMINISTYCZNIE (bez AI). */
       calc?: LoanCalcPayload | null;
+      /**
+       * true = pożyczkodawcą jest zalogowany inwestor (dane z jego profilu);
+       * pole `lenderId` jest wtedy ignorowane. Wersja kreatora dla inwestora.
+       */
+      useSelfAsLender?: boolean;
     }) => d,
   )
   .handler(async ({ data, context }): Promise<WizardChatResult> => {
     const { supabase } = context;
     const [{ name: templateName, text }, lender] = await Promise.all([
       loadTemplateText(supabase, data.templateId),
-      resolveLender(data.lenderId),
+      data.useSelfAsLender
+        ? resolveCurrentInvestorLender(context.userId)
+        : resolveLender(data.lenderId),
     ]);
 
     const fields = extractOrderedFields(text);

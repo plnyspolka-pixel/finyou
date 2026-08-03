@@ -80,6 +80,64 @@ export function replaceByOccurrence(normalizedXml: string, values: Record<string
   });
 }
 
+/**
+ * Dzieli tekst wzoru (plain-text) na część główną i sekcję końcową
+ * rozpoczynającą się nagłówkiem `heading` (np. „Uwagi praktyczne"). Sekcją
+ * jest wszystko OD tego nagłówka DO KOŃCA dokumentu. Gdy nagłówka nie ma,
+ * `notes` jest pusty, a `body` = cały tekst.
+ */
+export function splitTrailingSection(
+  text: string,
+  heading: string,
+): { body: string; notes: string } {
+  const want = heading.trim().toLowerCase();
+  if (!want || !text) return { body: text, notes: "" };
+  const lines = text.split("\n");
+  const idx = lines.findIndex((l) => l.trim().toLowerCase().startsWith(want));
+  if (idx < 0) return { body: text, notes: "" };
+  return {
+    body: lines.slice(0, idx).join("\n").replace(/\s+$/, ""),
+    notes: lines.slice(idx).join("\n").trim(),
+  };
+}
+
+/**
+ * Usuwa z XML dokumentu Worda sekcję końcową zaczynającą się akapitem, którego
+ * tekst zaczyna się od `heading` — od tego akapitu do końca ciała dokumentu,
+ * zachowując właściwości sekcji (`<w:sectPr>`), by nie zepsuć układu strony.
+ * Gdy nagłówka nie ma, XML wraca bez zmian.
+ */
+export function stripTrailingSectionXml(xml: string, heading: string): string {
+  const want = heading.trim().toLowerCase();
+  if (!want) return xml;
+  const pRe = /<w:p\b[^>]*>[\s\S]*?<\/w:p>/g;
+  let m: RegExpExecArray | null;
+  let cutStart = -1;
+  while ((m = pRe.exec(xml)) !== null) {
+    const runs = m[0].match(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g) ?? [];
+    const plain = runs
+      .map((t) => t.replace(/<[^>]+>/g, ""))
+      .join("")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .trim()
+      .toLowerCase();
+    if (plain && plain.startsWith(want)) {
+      cutStart = m.index;
+      break;
+    }
+  }
+  if (cutStart < 0) return xml;
+  // Zachowaj końcowe <w:sectPr> (układ strony); inaczej dokument bywa uszkodzony.
+  const sectIdx = xml.lastIndexOf("<w:sectPr");
+  const bodyEnd = xml.lastIndexOf("</w:body>");
+  const cutEnd = sectIdx > cutStart ? sectIdx : bodyEnd > cutStart ? bodyEnd : xml.length;
+  return xml.slice(0, cutStart) + xml.slice(cutEnd);
+}
+
 export interface PreviewSegment {
   text: string;
   isToken: boolean;

@@ -1,6 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { normalizePlaceholders, xmlToPlainText, replaceByOccurrence } from "@/lib/document-fields";
+import {
+  normalizePlaceholders,
+  xmlToPlainText,
+  replaceByOccurrence,
+  stripTrailingSectionXml,
+} from "@/lib/document-fields";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { injectScheduleTable, type ScheduleRow } from "@/lib/schedule-table-docx";
 
@@ -84,6 +89,11 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
       commissionAddedToCosts?: boolean;
       /** Harmonogram spłat — wstawiany jako tabela w miejsce placeholdera [HARMONOGRAM]. */
       schedule?: ScheduleRow[] | null;
+      /**
+       * Gdy podane: usuń z wygenerowanego pliku sekcję końcową zaczynającą się
+       * tym nagłówkiem (np. „Uwagi praktyczne") — treść nie trafia do dokumentu.
+       */
+      stripSectionFromHeading?: string | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -121,7 +131,13 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
 
     // Najpierw sklejamy placeholdery rozbite przez tagi w ciągłe tokeny `[KLUCZ]`,
     // następnie podstawiamy po indeksie wystąpienia (ten sam porządek co podgląd).
-    const normalizedXml = normalizePlaceholders(rawXml);
+    let normalizedXml = normalizePlaceholders(rawXml);
+    // Opcjonalnie wytnij sekcję końcową (np. „Uwagi praktyczne") — zanim
+    // podstawimy wartości, żeby numeracja wystąpień pozostała spójna (sekcja
+    // jest na końcu, więc usuwane są wyłącznie końcowe tokeny).
+    if (data.stripSectionFromHeading) {
+      normalizedXml = stripTrailingSectionXml(normalizedXml, data.stripSectionFromHeading);
+    }
     let filledXml = replaceByOccurrence(normalizedXml, data.values ?? {});
     // Placeholder [HARMONOGRAM] → prawdziwa tabela Worda z harmonogramem spłat.
     filledXml = injectScheduleTable(filledXml, data.schedule ?? null);
