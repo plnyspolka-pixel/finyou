@@ -12,6 +12,7 @@ import {
   Receipt,
   ShieldCheck,
   Sparkles,
+  Bot,
 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 import { useAccessState } from "@/hooks/use-access";
@@ -30,6 +31,7 @@ const fullGroups: NavGroup[] = [
       { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
       { to: "/inwestor/kreator-dokumentow", label: "Kreator dokumentów", icon: FileSignature },
       { to: "/inwestor/kreator-udzielenia", label: "Kreator udzielenia pożyczki", icon: Sparkles },
+      { to: "/inwestor/kreator-umowy", label: "Kreator umowy (AI)", icon: Bot },
       { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
       { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
       { to: "/inwestor/abonament", label: "Dostęp", icon: CreditCard },

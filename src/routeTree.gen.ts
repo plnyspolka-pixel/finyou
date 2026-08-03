@@ -83,6 +83,7 @@ import { Route as InwestorProjektyRouteImport } from './routes/inwestor.projekty
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorPlatnosciRouteImport } from './routes/inwestor.platnosci'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
+import { Route as InwestorKreatorUmowyRouteImport } from './routes/inwestor.kreator-umowy'
 import { Route as InwestorKreatorUdzieleniaRouteImport } from './routes/inwestor.kreator-udzielenia'
 import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
@@ -104,6 +105,7 @@ import { Route as AdminVideoPipelineRouteImport } from './routes/admin.video-pip
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
+import { Route as AdminStudioPublikacjiRouteImport } from './routes/admin.studio-publikacji'
 import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
@@ -216,6 +218,7 @@ import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/
 import { Route as ApiPublicHooksVoicebotEnrichTickRouteImport } from './routes/api/public/hooks/voicebot-enrich-tick'
 import { Route as ApiPublicHooksVideoPipelineTickRouteImport } from './routes/api/public/hooks/video-pipeline-tick'
 import { Route as ApiPublicHooksSyncAccountingRouteImport } from './routes/api/public/hooks/sync-accounting'
+import { Route as ApiPublicHooksSocialPublishTickRouteImport } from './routes/api/public/hooks/social-publish-tick'
 import { Route as ApiPublicHooksSeoLocationSeedRouteImport } from './routes/api/public/hooks/seo-location-seed'
 import { Route as ApiPublicHooksSeoLocationPublishTickRouteImport } from './routes/api/public/hooks/seo-location-publish-tick'
 import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/hooks/seed-blog'
@@ -611,6 +614,11 @@ const InwestorOfertyRoute = InwestorOfertyRouteImport.update({
   path: '/oferty',
   getParentRoute: () => InwestorRoute,
 } as any)
+const InwestorKreatorUmowyRoute = InwestorKreatorUmowyRouteImport.update({
+  id: '/kreator-umowy',
+  path: '/kreator-umowy',
+  getParentRoute: () => InwestorRoute,
+} as any)
 const InwestorKreatorUdzieleniaRoute =
   InwestorKreatorUdzieleniaRouteImport.update({
     id: '/kreator-udzielenia',
@@ -717,6 +725,11 @@ const AdminTextAgentRoute = AdminTextAgentRouteImport.update({
 const AdminSzkoleniaRoute = AdminSzkoleniaRouteImport.update({
   id: '/szkolenia',
   path: '/szkolenia',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminStudioPublikacjiRoute = AdminStudioPublikacjiRouteImport.update({
+  id: '/studio-publikacji',
+  path: '/studio-publikacji',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminSkrzynkaRoute = AdminSkrzynkaRouteImport.update({
@@ -1315,6 +1328,12 @@ const ApiPublicHooksSyncAccountingRoute =
     path: '/api/public/hooks/sync-accounting',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSocialPublishTickRoute =
+  ApiPublicHooksSocialPublishTickRouteImport.update({
+    id: '/api/public/hooks/social-publish-tick',
+    path: '/api/public/hooks/social-publish-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSeoLocationSeedRoute =
   ApiPublicHooksSeoLocationSeedRouteImport.update({
     id: '/api/public/hooks/seo-location-seed',
@@ -1517,6 +1536,7 @@ export interface FileRoutesByFullPath {
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
+  '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -1538,6 +1558,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-udzielenia': typeof InwestorKreatorUdzieleniaRoute
+  '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
@@ -1669,6 +1690,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
+  '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -1744,6 +1766,7 @@ export interface FileRoutesByTo {
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
+  '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -1764,6 +1787,7 @@ export interface FileRoutesByTo {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-udzielenia': typeof InwestorKreatorUdzieleniaRoute
+  '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
@@ -1891,6 +1915,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
+  '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -1972,6 +1997,7 @@ export interface FileRoutesById {
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
+  '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -1993,6 +2019,7 @@ export interface FileRoutesById {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-udzielenia': typeof InwestorKreatorUdzieleniaRoute
+  '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
@@ -2124,6 +2151,7 @@ export interface FileRoutesById {
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
+  '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -2206,6 +2234,7 @@ export interface FileRouteTypes {
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
+    | '/admin/studio-publikacji'
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
@@ -2227,6 +2256,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-udzielenia'
+    | '/inwestor/kreator-umowy'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
@@ -2358,6 +2388,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
+    | '/api/public/hooks/social-publish-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
@@ -2433,6 +2464,7 @@ export interface FileRouteTypes {
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
+    | '/admin/studio-publikacji'
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
@@ -2453,6 +2485,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-udzielenia'
+    | '/inwestor/kreator-umowy'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
@@ -2580,6 +2613,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
+    | '/api/public/hooks/social-publish-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
@@ -2660,6 +2694,7 @@ export interface FileRouteTypes {
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
+    | '/admin/studio-publikacji'
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
@@ -2681,6 +2716,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-udzielenia'
+    | '/inwestor/kreator-umowy'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
@@ -2812,6 +2848,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
+    | '/api/public/hooks/social-publish-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
@@ -2912,6 +2949,7 @@ export interface RootRouteChildren {
   ApiPublicHooksSeedBlogRoute: typeof ApiPublicHooksSeedBlogRoute
   ApiPublicHooksSeoLocationPublishTickRoute: typeof ApiPublicHooksSeoLocationPublishTickRoute
   ApiPublicHooksSeoLocationSeedRoute: typeof ApiPublicHooksSeoLocationSeedRoute
+  ApiPublicHooksSocialPublishTickRoute: typeof ApiPublicHooksSocialPublishTickRoute
   ApiPublicHooksSyncAccountingRoute: typeof ApiPublicHooksSyncAccountingRoute
   ApiPublicHooksVideoPipelineTickRoute: typeof ApiPublicHooksVideoPipelineTickRoute
   ApiPublicHooksVoicebotEnrichTickRoute: typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -3445,6 +3483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorOfertyRouteImport
       parentRoute: typeof InwestorRoute
     }
+    '/inwestor/kreator-umowy': {
+      id: '/inwestor/kreator-umowy'
+      path: '/kreator-umowy'
+      fullPath: '/inwestor/kreator-umowy'
+      preLoaderRoute: typeof InwestorKreatorUmowyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
     '/inwestor/kreator-udzielenia': {
       id: '/inwestor/kreator-udzielenia'
       path: '/kreator-udzielenia'
@@ -3590,6 +3635,13 @@ declare module '@tanstack/react-router' {
       path: '/szkolenia'
       fullPath: '/admin/szkolenia'
       preLoaderRoute: typeof AdminSzkoleniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/studio-publikacji': {
+      id: '/admin/studio-publikacji'
+      path: '/studio-publikacji'
+      fullPath: '/admin/studio-publikacji'
+      preLoaderRoute: typeof AdminStudioPublikacjiRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/skrzynka': {
@@ -4376,6 +4428,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncAccountingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/social-publish-tick': {
+      id: '/api/public/hooks/social-publish-tick'
+      path: '/api/public/hooks/social-publish-tick'
+      fullPath: '/api/public/hooks/social-publish-tick'
+      preLoaderRoute: typeof ApiPublicHooksSocialPublishTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/seo-location-seed': {
       id: '/api/public/hooks/seo-location-seed'
       path: '/api/public/hooks/seo-location-seed'
@@ -4602,6 +4661,7 @@ interface AdminRouteChildren {
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
   AdminSkrzynkaRoute: typeof AdminSkrzynkaRoute
+  AdminStudioPublikacjiRoute: typeof AdminStudioPublikacjiRoute
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminTextAgentRoute: typeof AdminTextAgentRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
@@ -4672,6 +4732,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
   AdminSkrzynkaRoute: AdminSkrzynkaRoute,
+  AdminStudioPublikacjiRoute: AdminStudioPublikacjiRoute,
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminTextAgentRoute: AdminTextAgentRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
@@ -4785,6 +4846,7 @@ interface InwestorRouteChildren {
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
   InwestorKreatorDokumentowRoute: typeof InwestorKreatorDokumentowRoute
   InwestorKreatorUdzieleniaRoute: typeof InwestorKreatorUdzieleniaRoute
+  InwestorKreatorUmowyRoute: typeof InwestorKreatorUmowyRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
   InwestorPlatnosciRoute: typeof InwestorPlatnosciRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
@@ -4803,6 +4865,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorKalkulatorRoute: InwestorKalkulatorRoute,
   InwestorKreatorDokumentowRoute: InwestorKreatorDokumentowRoute,
   InwestorKreatorUdzieleniaRoute: InwestorKreatorUdzieleniaRoute,
+  InwestorKreatorUmowyRoute: InwestorKreatorUmowyRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,
   InwestorPlatnosciRoute: InwestorPlatnosciRoute,
   InwestorProfilRoute: InwestorProfilRoute,
@@ -5035,6 +5098,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksSeoLocationPublishTickRoute:
     ApiPublicHooksSeoLocationPublishTickRoute,
   ApiPublicHooksSeoLocationSeedRoute: ApiPublicHooksSeoLocationSeedRoute,
+  ApiPublicHooksSocialPublishTickRoute: ApiPublicHooksSocialPublishTickRoute,
   ApiPublicHooksSyncAccountingRoute: ApiPublicHooksSyncAccountingRoute,
   ApiPublicHooksVideoPipelineTickRoute: ApiPublicHooksVideoPipelineTickRoute,
   ApiPublicHooksVoicebotEnrichTickRoute: ApiPublicHooksVoicebotEnrichTickRoute,
