@@ -209,12 +209,14 @@ export async function placeOutboundCallInternal(opts: {
   firstName?: string | null;
   /** Zmienne przekazywane do agenta jako conversation_initiation_client_data.dynamic_variables. */
   dynamicVariables?: Record<string, string> | null;
+  /** Konkretny agent ElevenLabs zamiast domyślnego z ustawień (np. windykacja). */
+  agentIdOverride?: string | null;
 }): Promise<{ ok: boolean; conversationId?: string; callSid?: string; error?: string }> {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) return { ok: false, error: "Brak ELEVENLABS_API_KEY" };
 
   const settings = await loadSettings();
-  if (!settings?.agent_id || !settings?.agent_phone_number_id) {
+  if ((!settings?.agent_id && !opts.agentIdOverride) || !settings?.agent_phone_number_id) {
     return { ok: false, error: "Brak konfiguracji voicebota (agent_id / phone_number_id)" };
   }
 
@@ -273,7 +275,7 @@ export async function placeOutboundCallInternal(opts: {
       loan_application_id: opts.loanApplicationId ?? null,
       meta_lead_id: opts.metaLeadId ?? null,
       source: opts.source,
-      agent_id: settings.agent_id,
+      agent_id: opts.agentIdOverride ?? settings.agent_id,
       status: "oczekuje",
       scheduled_at: nextIso,
       result_summary: `Quiet hours (${window.reason}, godzina ${window.hour}:00 Warszawa) — zaplanowano na ${fmtWarsaw(nextIso)}`,
@@ -303,9 +305,10 @@ export async function placeOutboundCallInternal(opts: {
   // dokumentach), używamy osobnego agenta `document_reminder_agent_id`.
   // W przeciwnym razie domyślny `agent_id`.
   const effectiveAgentId =
-    opts.loanApplicationId && (settings as any).document_reminder_agent_id
+    opts.agentIdOverride ??
+    (opts.loanApplicationId && (settings as any).document_reminder_agent_id
       ? ((settings as any).document_reminder_agent_id as string)
-      : settings.agent_id;
+      : settings.agent_id);
 
   // SMS before call (jeśli włączone)
   await maybeSendSms("before_call", {
