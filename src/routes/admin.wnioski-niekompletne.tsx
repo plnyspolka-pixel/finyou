@@ -352,7 +352,13 @@ function StatusBadge({ d }: { d: DerivedRow }) {
   );
 }
 
-function ApplicationsPage() {
+// Współdzielony z panelem operatora (/operator/wnioski) — detailTo wskazuje
+// trasę szczegółów wniosku właściwą dla danego panelu.
+export function ApplicationsPage({
+  detailTo = "/admin/wnioski/$id",
+}: {
+  detailTo?: "/admin/wnioski/$id" | "/operator/wnioski/$id";
+} = {}) {
   const [rows, setRows] = useState<Row[]>([]);
   const [ctx, setCtx] = useState<EnrichmentContext>(() => ({
     docsByLoan: new Map(),
@@ -712,7 +718,7 @@ function ApplicationsPage() {
         <Eye className="h-3.5 w-3.5" />
       </Button>
       <Button asChild size="sm" variant="ghost" className="h-8 px-2">
-        <Link to="/admin/wnioski/$id" params={{ id: r.id }}>
+        <Link to={detailTo} params={{ id: r.id }}>
           Otwórz
         </Link>
       </Button>

@@ -23,7 +23,7 @@ const groups: NavGroup[] = [
       { to: "/operator/moje-leady", label: "Moje leady", icon: UserCheck },
       { to: "/operator/wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
       { to: "/operator/kreator-udzielenia", label: "Kreator pożyczki (AI)", icon: Sparkles },
-      { to: "/operator/wnioski", label: "Moje wnioski", icon: FileText },
+      { to: "/operator/wnioski", label: "Wnioski (wszystkie)", icon: FileText },
       { to: "/operator/faktury", label: "Wystaw fakturę", icon: Receipt },
       { to: "/operator/skrzynka", label: "Skrzynka mailowa", icon: Mail },
       { to: "/operator/messenger", label: "Messenger", icon: MessageCircle },
