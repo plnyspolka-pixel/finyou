@@ -459,7 +459,10 @@
   .fy-academy { grid-template-columns: 1fr !important; }
   .fy-windykacja { grid-template-columns: 1fr !important; }
   .so-grid { grid-template-columns: 1fr !important; }
-  .so-grid img { max-width: 30rem; margin: 0 auto; }
+  /* Cały pasek slidera (strzałki + grafika) ograniczamy zamiast samego <img>,
+     żeby ramka z obwódką nie była szersza od grafiki (rozjazd na tabletach). */
+  .fy-windykacja .fy-slider-nav,
+  .so-grid .fy-slider-nav { width: 100%; max-width: 30rem; margin: 0 auto; }
   .fy-academy img { max-width: 16rem; margin: 0 auto; }
   .fy-grid { grid-template-columns: 1fr 1fr !important; }
   .fy-modules { grid-template-columns: repeat(3, 1fr) !important; }
@@ -473,6 +476,28 @@
 @media (max-width: 560px) {
   .fy-grid, .fy-modules, .fy-steps, .fy-foot { grid-template-columns: 1fr !important; }
   .fy-form-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ——— slidery marketingowe na telefonie ———
+   Strzałki przestają stać obok grafiki (zabierały ~110px szerokości) i są
+   nakładane na jej krawędzie — grafika dostaje pełną szerokość kontenera.
+   !important, bo bazowe style strzałek są inline (arrowStyle/soArrow). */
+@media (max-width: 640px) {
+  .fy-slider-nav { position: relative; }
+  .fy-slider-nav .fy-slider-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 38px !important;
+    height: 38px !important;
+    background: rgba(10, 16, 40, 0.62) !important;
+    border-color: rgba(255, 255, 255, 0.28) !important;
+    color: #fff !important;
+    backdrop-filter: blur(3px);
+  }
+  .fy-slider-arrow--prev { left: 0.5rem; }
+  .fy-slider-arrow--next { right: 0.5rem; }
 }
 
 /* ——— blog: markdown article typography on the dark marketing theme ——— */

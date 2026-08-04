@@ -53,8 +53,16 @@ export function TwoColSlider({ slides }: { slides: TwoColSlide[] }) {
           alignItems: "center",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <button onClick={() => go(-1)} aria-label="Poprzedni" style={arrowStyle()}>
+        <div
+          className="fy-slider-nav"
+          style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
+        >
+          <button
+            onClick={() => go(-1)}
+            aria-label="Poprzedni"
+            className="fy-slider-arrow fy-slider-arrow--prev"
+            style={arrowStyle()}
+          >
             ‹
           </button>
           <div style={{ position: "relative", flex: "1 1 auto" }}>
@@ -92,7 +100,12 @@ export function TwoColSlider({ slides }: { slides: TwoColSlide[] }) {
               />
             </div>
           </div>
-          <button onClick={() => go(1)} aria-label="Następny" style={arrowStyle()}>
+          <button
+            onClick={() => go(1)}
+            aria-label="Następny"
+            className="fy-slider-arrow fy-slider-arrow--next"
+            style={arrowStyle()}
+          >
             ›
           </button>
         </div>
@@ -206,10 +219,14 @@ export function TwoColSlider({ slides }: { slides: TwoColSlide[] }) {
                 {sl.etap}
               </div>
               <div
+                lang="pl"
                 style={{
                   marginTop: 3,
-                  fontSize: "0.8rem",
+                  // clamp + hyphens: długie etykiety ("Księga wieczysta") nie
+                  // łamią się w środku słowa na wąskich kafelkach.
+                  fontSize: "clamp(0.7rem, 3vw, 0.8rem)",
                   fontWeight: 800,
+                  hyphens: "auto",
                   color: on ? "var(--foreground)" : "var(--muted-foreground)",
                   fontVariantNumeric: "tabular-nums",
                 }}
@@ -351,8 +368,16 @@ export function SmartOfferSlider({ style }: { style?: CSSProperties }) {
           alignItems: "center",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
-          <button onClick={() => go(-1)} aria-label="Poprzedni slajd" style={soArrow()}>
+        <div
+          className="fy-slider-nav"
+          style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}
+        >
+          <button
+            onClick={() => go(-1)}
+            aria-label="Poprzedni slajd"
+            className="fy-slider-arrow fy-slider-arrow--prev"
+            style={soArrow()}
+          >
             ‹
           </button>
           <div
@@ -372,7 +397,12 @@ export function SmartOfferSlider({ style }: { style?: CSSProperties }) {
               style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", display: "block" }}
             />
           </div>
-          <button onClick={() => go(1)} aria-label="Następny slajd" style={soArrow()}>
+          <button
+            onClick={() => go(1)}
+            aria-label="Następny slajd"
+            className="fy-slider-arrow fy-slider-arrow--next"
+            style={soArrow()}
+          >
             ›
           </button>
         </div>
@@ -482,10 +512,14 @@ export function SmartOfferSlider({ style }: { style?: CSSProperties }) {
                 {sl.label}
               </div>
               <div
+                lang="pl"
                 style={{
                   marginTop: 3,
-                  fontSize: "0.8rem",
+                  // clamp + hyphens: "Transparentność" nie łamie się w środku
+                  // słowa na wąskich kafelkach mobile.
+                  fontSize: "clamp(0.7rem, 3vw, 0.8rem)",
                   fontWeight: 800,
+                  hyphens: "auto",
                   color: on ? SO.ink : SO.muted,
                 }}
               >
