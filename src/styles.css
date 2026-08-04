@@ -418,6 +418,41 @@
 .fy-marketing input::placeholder,
 .fy-marketing textarea::placeholder { color: rgba(150, 175, 225, 0.6); }
 
+/* ——— header: sub-menu inwestora (desktop hover dropdown) ——— */
+.fy-nav-drop { position: relative; display: flex; align-items: center; }
+.fy-nav-drop-panel {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding-top: 0.6rem;
+  z-index: 60;
+}
+.fy-nav-drop:hover .fy-nav-drop-panel,
+.fy-nav-drop:focus-within .fy-nav-drop-panel { display: block; }
+.fy-nav-drop-panel a {
+  display: block;
+  min-width: 15rem;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  background: rgba(9, 14, 38, 0.97);
+  border: 1px solid rgba(84, 124, 214, 0.25);
+  border-top: none;
+}
+.fy-nav-drop-panel a:first-child {
+  border-top: 1px solid rgba(84, 124, 214, 0.25);
+  border-radius: 10px 10px 0 0;
+}
+.fy-nav-drop-panel a:last-child { border-radius: 0 0 10px 10px; }
+.fy-nav-drop-panel a:hover { color: var(--accent); background: rgba(20, 30, 66, 0.97); }
+
+/* anchors (#akademia, #cennik…) must not hide under the sticky header */
+.fy-marketing section[id] { scroll-margin-top: 5rem; }
+
 /* ——— responsive collapses (mirror the design's site.css) ——— */
 @media (max-width: 900px) {
   .fy-hero-grid { grid-template-columns: 1fr; }
