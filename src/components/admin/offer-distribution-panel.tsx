@@ -16,6 +16,7 @@ import {
   listInstitutionalInvestors,
   sendOfferDistribution,
   getDistributionThreads,
+  sendDistributionReply,
 } from "@/lib/offer-distribution.functions";
 import { distributionStatusLabels, formatDateTime } from "@/lib/labels";
 import { signStoragePath } from "@/lib/property-photos";
@@ -43,6 +44,7 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
   const fetchInvestors = useServerFn(listInstitutionalInvestors);
   const doSend = useServerFn(sendOfferDistribution);
   const fetchThreads = useServerFn(getDistributionThreads);
+  const doReply = useServerFn(sendDistributionReply);
 
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [sendToAll, setSendToAll] = useState(true);
@@ -53,6 +55,10 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
     distributions: [],
     messages: [],
   });
+  // Odpowiedź na wiadomość inwestora — otwarty formularz (id wiadomości) + treść
+  const [replyOpenId, setReplyOpenId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [replySending, setReplySending] = useState(false);
 
   const loadThreads = async () => {
     try {
@@ -102,6 +108,25 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
       toast.error("Wysyłka nie powiodła się", { description: e?.message ?? String(e) });
     } finally {
       setSending(false);
+    }
+  };
+
+  const sendReply = async (distributionId: string) => {
+    if (!replyText.trim()) {
+      toast.error("Wpisz treść odpowiedzi");
+      return;
+    }
+    setReplySending(true);
+    try {
+      await doReply({ data: { distributionId, content: replyText.trim() } });
+      toast.success("Odpowiedź wysłana do inwestora");
+      setReplyOpenId(null);
+      setReplyText("");
+      await loadThreads();
+    } catch (e: any) {
+      toast.error("Nie udało się wysłać odpowiedzi", { description: e?.message ?? String(e) });
+    } finally {
+      setReplySending(false);
     }
   };
 
@@ -213,7 +238,12 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
           )}
           {threads.distributions.map((d) => {
             const msgs = messagesByDistribution.get(d.id) ?? [];
-            const inbound = msgs.filter((m) => m.direction === "inbound");
+            // Wątek: odpowiedzi inwestora + nasze ręczne odpowiedzi (pomijamy
+            // pierwszy mail wychodzący — to pierwotna wysyłka oferty).
+            const firstOutboundId = msgs.find((m) => m.direction === "outbound")?.id;
+            const thread = msgs.filter(
+              (m) => m.direction === "inbound" || m.id !== firstOutboundId,
+            );
             return (
               <div key={d.id} className="border rounded-md p-3 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap text-sm">
@@ -235,13 +265,26 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
                     {d.sent_at ? `Wysłano: ${formatDateTime(d.sent_at)}` : ""}
                   </span>
                 </div>
-                {inbound.length > 0 && (
+                {thread.length > 0 && (
                   <div className="space-y-2">
-                    {inbound.map((m) => (
-                      <div key={m.id} className="rounded-md bg-accent/50 border p-2 text-sm">
+                    {thread.map((m) => (
+                      <div
+                        key={m.id}
+                        className={
+                          m.direction === "inbound"
+                            ? "rounded-md bg-accent/50 border p-2 text-sm"
+                            : "rounded-md bg-primary/5 border p-2 text-sm"
+                        }
+                      >
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Reply className="h-3.5 w-3.5" />
-                          <span>{m.from_email}</span>
+                          {m.direction === "inbound" ? (
+                            <Reply className="h-3.5 w-3.5" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5" />
+                          )}
+                          <span>
+                            {m.direction === "inbound" ? m.from_email : "Nasza odpowiedź"}
+                          </span>
                           <span className="ml-auto">{formatDateTime(m.created_at)}</span>
                         </div>
                         {m.subject && <div className="font-medium mt-1">{m.subject}</div>}
@@ -266,6 +309,58 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
                                 {a?.name ?? `załącznik ${idx + 1}`}
                               </Button>
                             ))}
+                          </div>
+                        )}
+                        {m.direction === "inbound" && (
+                          <div className="mt-2">
+                            {replyOpenId === m.id ? (
+                              <div className="space-y-2">
+                                <Textarea
+                                  autoFocus
+                                  value={replyText}
+                                  onChange={(e) => setReplyText(e.target.value)}
+                                  placeholder="Treść odpowiedzi do inwestora…"
+                                  rows={4}
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => void sendReply(d.id)}
+                                    disabled={replySending}
+                                  >
+                                    {replySending ? (
+                                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <Send className="mr-1 h-3.5 w-3.5" />
+                                    )}
+                                    Wyślij odpowiedź
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={replySending}
+                                    onClick={() => {
+                                      setReplyOpenId(null);
+                                      setReplyText("");
+                                    }}
+                                  >
+                                    Anuluj
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setReplyOpenId(m.id);
+                                  setReplyText("");
+                                }}
+                              >
+                                <Reply className="mr-1 h-3.5 w-3.5" />
+                                Odpowiedz mailem
+                              </Button>
+                            )}
                           </div>
                         )}
                       </div>

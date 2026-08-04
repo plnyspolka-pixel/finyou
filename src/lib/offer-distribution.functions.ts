@@ -247,6 +247,98 @@ export const sendOfferDistribution = createServerFn({ method: "POST" })
     return { sent, failed, skipped, cardUrl };
   });
 
+/**
+ * Odpowiedź admina/operatora na wiadomość inwestora — mail wychodzi w tym samym
+ * wątku (Re: + In-Reply-To/References) i z Reply-To na alias oferta+<uuid>@,
+ * więc kolejna odpowiedź instytucji również wróci na kartę wniosku.
+ */
+export const sendDistributionReply = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        distributionId: z.string().uuid(),
+        content: z.string().trim().min(1).max(10000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase as unknown as SupabaseLike;
+    await assertAdminOrOperator(supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { sendResendEmail } = await import("@/lib/resend-send.server");
+    const { offerReplyAddress } = await import("@/lib/offer-replies.server");
+
+    const { data: dist, error: distErr } = await supabaseAdmin
+      .from("offer_distributions")
+      .select("id, loan_application_id, investor_id, investor:investors(email)")
+      .eq("id", data.distributionId)
+      .maybeSingle();
+    if (distErr || !dist) throw new Error("Nie znaleziono dystrybucji");
+    const investor: any = Array.isArray((dist as any).investor)
+      ? (dist as any).investor[0]
+      : (dist as any).investor;
+    if (!investor?.email) throw new Error("Inwestor nie ma adresu e-mail");
+
+    // Wątek: temat i nagłówki z dotychczasowej korespondencji tej dystrybucji
+    const { data: msgs } = await supabaseAdmin
+      .from("offer_distribution_messages")
+      .select("direction, subject, message_id, created_at")
+      .eq("distribution_id", dist.id)
+      .order("created_at", { ascending: true });
+    const lastInbound = [...(msgs ?? [])].reverse().find((m: any) => m.direction === "inbound");
+    const baseSubject =
+      (lastInbound?.subject as string | null) ||
+      (msgs?.[0]?.subject as string | null) ||
+      "Temat pożyczkowy";
+    const subject = /^\s*re:/i.test(baseSubject) ? baseSubject : `Re: ${baseSubject}`;
+    // In-Reply-To/References tylko z prawdziwych Message-ID (zawierają "@") —
+    // wychodzące wpisy trzymają ID z API Resend, które nie nadaje się do wątku.
+    const inReplyTo =
+      lastInbound?.message_id && String(lastInbound.message_id).includes("@")
+        ? (lastInbound.message_id as string)
+        : null;
+    const references =
+      (msgs ?? [])
+        .map((m: any) => m.message_id)
+        .filter((mid: any): mid is string => typeof mid === "string" && mid.includes("@"))
+        .join(" ") || null;
+
+    const replyTo = offerReplyAddress(dist.id);
+    const html = `
+      <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#0f172a;max-width:640px;white-space:pre-wrap">${escapeHtml(
+        data.content,
+      )}</div>
+    `;
+    const send = await sendResendEmail({
+      to: investor.email,
+      subject,
+      text: data.content,
+      html,
+      replyTo,
+      inReplyTo,
+      references,
+      showReplyHint: true,
+    });
+    if (!send.ok) throw new Error(send.error ?? "Wysyłka nie powiodła się");
+
+    await supabaseAdmin.from("offer_distribution_messages").insert({
+      distribution_id: dist.id,
+      loan_application_id: dist.loan_application_id,
+      investor_id: dist.investor_id,
+      direction: "outbound",
+      subject,
+      content: data.content,
+      html,
+      from_email: replyTo,
+      to_email: investor.email,
+      message_id: send.id ?? null,
+      in_reply_to: inReplyTo,
+    });
+
+    return { ok: true as const };
+  });
+
 /** Dystrybucje wniosku wraz z wątkami korespondencji (odpowiedzi instytucji). */
 export const getDistributionThreads = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
