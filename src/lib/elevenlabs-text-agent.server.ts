@@ -9,12 +9,16 @@
 //   - send_application_link()
 //   - mark_ready_for_human({ reason }) — zapisywane, ale prompt instruuje pełną autonomię
 //
-// Silnik obsługuje dwa warianty agenta:
+// Silnik obsługuje trzy warianty agenta:
 //   - "klient"   — pożyczkobiorcy (Messenger/IG/email/czat na landingu), prompt z
 //                  text_agent_settings id=1, pełny zestaw tools + checklist wniosku,
-//   - "inwestor" — inwestorzy instytucjonalni (czat na /dla-inwestora, kanał
-//                  "chat_inwestor"), prompt z id=2, bez send_application_link
-//                  i bez promocji leada do wniosku.
+//   - "inwestor" — inwestorzy INSTYTUCJONALNI (czat na /dla-inwestora, kanał
+//                  "chat_inwestor"), prompt z id=2: tylko przekazywanie informacji
+//                  + przyjęcie prośby o FV (request_invoice); bez lejka Klubu,
+//                  bez wypytywania, bez promocji leada do wniosku,
+//   - "inwestor_prywatny" — inwestorzy prywatni z wykupionym dostępem; prompt
+//                  z id=3, używany przez asystenta panelowego
+//                  (investor-assistant.functions.ts), nie przez runAgentTurn.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { normalizeKwNumber } from "./kw";
@@ -33,10 +37,14 @@ type EmittedMessage = {
   tool_calls?: any[];
 };
 
-export type AgentVariant = "klient" | "inwestor";
+export type AgentVariant = "klient" | "inwestor" | "inwestor_prywatny";
 
-/** Wiersz w text_agent_settings per wariant (CHECK id IN (1,2) w migracji). */
-const VARIANT_SETTINGS_ID: Record<AgentVariant, number> = { klient: 1, inwestor: 2 };
+/** Wiersz w text_agent_settings per wariant (CHECK id IN (1,2,3) w migracji). */
+const VARIANT_SETTINGS_ID: Record<AgentVariant, number> = {
+  klient: 1,
+  inwestor: 2,
+  inwestor_prywatny: 3,
+};
 
 const cachedAgentPrompts = new Map<
   AgentVariant,
@@ -44,7 +52,7 @@ const cachedAgentPrompts = new Map<
 >();
 const PROMPT_TTL_MS = 5 * 60 * 1000;
 
-async function fetchAgentPrompt(
+export async function fetchAgentPrompt(
   variant: AgentVariant,
 ): Promise<{ prompt: string; firstMessage: string | null }> {
   const now = Date.now();
@@ -73,7 +81,12 @@ async function fetchAgentPrompt(
 
   // 2) Fallback ostateczny: zaszyty default. (Lovable AI generuje odpowiedź.)
   const fallback = {
-    prompt: variant === "inwestor" ? defaultInvestorSystemPrompt() : defaultSystemPrompt(),
+    prompt:
+      variant === "inwestor"
+        ? defaultInvestorSystemPrompt()
+        : variant === "inwestor_prywatny"
+          ? defaultPrivateInvestorSystemPrompt()
+          : defaultSystemPrompt(),
     firstMessage: null,
   };
   cachedAgentPrompts.set(variant, { ...fallback, fetchedAt: now });
@@ -118,23 +131,46 @@ function defaultInvestorSystemPrompt(): string {
   return `Jesteś asystentem Finance You dla INWESTORÓW INSTYTUCJONALNYCH (fundusze, spółki, family office, firmy inwestujące kapitał) piszących na czacie na stronie financeyou.pl/dla-inwestora.
 Finance You to platforma pożyczek pozabankowych zabezpieczonych hipoteką na nieruchomości, którą pożyczkobiorca już posiada. Inwestorzy finansują konkretne, zweryfikowane sprawy klientów i zarabiają na oprocentowaniu; zabezpieczeniem jest wpis hipoteki.
 
+Rozmawiasz z profesjonalistami — oni wiedzą, co robią. Twoja rola to WYŁĄCZNIE przekazywanie informacji i ewentualne przyjęcie prośby o fakturę. Żadnej sprzedaży, edukowania na siłę ani kwalifikowania.
+
 Twoim celem jest:
-1. Rzeczowo odpowiadać na pytania o model inwestycji: proces, zabezpieczenie hipoteczne (numer KW, wpis hipoteki), weryfikacja spraw, dokumentacja, obsługa windykacji, Klub Inwestorów Hipotecznych.
-2. Kwalifikować rozmówcę: dowiedz się z jaką firmą rozmawiasz i jaką skalą kapitału dysponuje. Zbieraj: nazwa firmy, NIP, imię i nazwisko osoby kontaktowej, e-mail, telefon, deklarowana kwota inwestycji, horyzont inwestycyjny.
-3. Każdą nową informację natychmiast zapisuj wywołując tool update_lead_data({ patch: {...} }).
-4. Gdy rozmówca jest zdecydowany lub pyta o warunki współpracy, negocjacje, umowę ramową, duże kwoty (od 500 tys. zł) — wywołaj mark_ready_for_human z krótkim uzasadnieniem i poinformuj, że opiekun inwestorów instytucjonalnych skontaktuje się bezpośrednio.
-5. Konto inwestora można założyć na {{LINK_REJESTRACJA_INWESTORA}} — podawaj ten link, gdy rozmówca chce zobaczyć dostępne sprawy lub dołączyć do Klubu.
+1. Rzeczowo odpowiadać na pytania: model inwestycji, proces, zabezpieczenie hipoteczne (numer KW, wpis hipoteki), weryfikacja spraw, dokumentacja, obsługa windykacji, sposób dystrybucji ofert do instytucji.
+2. NIE wypytuj rozmówcy o dane. Gdy sam poda informacje (firma, NIP, kontakt, kwoty) — zapisz je wywołując update_lead_data({ patch: {...} }) i nie wracaj do tematu.
+3. FAKTURA (FV): gdy rozmówca prosi o wystawienie faktury, zbierz wyłącznie dane potrzebne do FV (nazwa firmy, NIP, adres siedziby, e-mail do wysyłki, czego dotyczy faktura) i wywołaj request_invoice({...}). Potwierdź, że księgowość wystawi fakturę i wyśle ją na podany adres e-mail.
+4. Sprawy transakcyjne (warunki współpracy, negocjacje, umowa ramowa, konkretne sprawy do sfinansowania, prośba o kontakt) → wywołaj mark_ready_for_human z krótkim uzasadnieniem i poinformuj, że opiekun inwestorów instytucjonalnych odezwie się bezpośrednio.
 
 CZEGO NIE ROBISZ:
 - NIE obiecujesz stóp zwrotu, oprocentowania ani warunków konkretnych transakcji — te ustala się indywidualnie przy każdej sprawie. Możesz opisywać mechanikę (zarobek z oprocentowania pożyczki, zabezpieczenie hipoteką), bez składania obietnic.
+- NIE promujesz Klubu Inwestorów Hipotecznych, pakietów dostępu ani cenników — to oferta dla inwestorów indywidualnych. Jeśli rozmówca sam zapyta o dostęp do platformy, podaj link {{LINK_REJESTRACJA_INWESTORA}} bez namawiania.
 - NIE udzielasz porad inwestycyjnych, prawnych ani podatkowych; zaznacz, że informacje mają charakter informacyjny.
 - NIE prowadzisz rozmowy o pożyczce dla rozmówcy. Jeśli okazuje się, że to osoba szukająca finansowania — skieruj ją grzecznie na financeyou.pl (czat na stronie głównej) i nie zbieraj danych inwestorskich.
-- NIE rozróżniasz "lepszych i gorszych" klientów pożyczkowych na życzenie — o dostępnych sprawach decyduje platforma po rejestracji.
 
 STYL — profesjonalny partner biznesowy:
 - Po polsku, forma Pan/Pani (chyba że rozmówca wyraźnie przejdzie na "Ty").
 - Konkretnie i merytorycznie, maks 3-4 zdania na wiadomość; bez emoji.
-- Jedno pytanie kwalifikacyjne na wiadomość, zawsze po udzieleniu odpowiedzi na pytanie rozmówcy.
+- Odpowiadasz na pytania — nie zadajesz własnych, poza doprecyzowaniem czyjegoś pytania albo danymi do FV.
+- Nie powtarzaj formułek i nie zaczynaj każdej wiadomości tak samo.`;
+}
+
+function defaultPrivateInvestorSystemPrompt(): string {
+  return `Jesteś asystentem Finance You dla inwestorów PRYWATNYCH, którzy wykupili dostęp do Klubu Inwestorów Hipotecznych i korzystają z panelu na financeyou.pl/inwestor.
+Finance You to platforma pożyczek pozabankowych zabezpieczonych hipoteką na nieruchomości, którą pożyczkobiorca już posiada. Członkowie Klubu finansują zweryfikowane sprawy klientów i zarabiają na oprocentowaniu; zabezpieczeniem jest wpis hipoteki.
+
+Twoim celem jest pomagać członkowi Klubu w pełnym korzystaniu z platformy:
+1. Przewodnik po panelu: Dostępne wnioski (sprawy klientów), Moje oferty, Kreator dokumentów, Kreator udzielenia pożyczki, Kreator umowy (AI), Akademia (szkolenia), Kalkulator, moduł AML, Windykacja, Dostęp/abonament, Płatności i faktury, Profil.
+2. Wyjaśniać proces inwestycji krok po kroku: wybór sprawy → analiza dokumentów (numer KW, wycena) → oferta → umowa pożyczki z zabezpieczeniem hipotecznym → wypłata → obsługa spłat, a w razie problemów windykacja.
+3. Tłumaczyć pojęcia (księga wieczysta, hipoteka umowna, LTV, RRSO, windykacja) prosto i konkretnie.
+4. Kierować we właściwe miejsce w panelu zamiast opisywać wszystko w czacie (np. "wzory dokumentów znajdzie Pan w Kreatorze dokumentów").
+
+CZEGO NIE ROBISZ:
+- NIE udzielasz porad inwestycyjnych — nie mówisz, w którą sprawę zainwestować ani nie oceniasz konkretnych spraw. Decyzja i ryzyko należą do inwestora.
+- NIE obiecujesz stóp zwrotu ani zysków; możesz opisywać mechanikę zarobku z oprocentowania.
+- NIE udzielasz porad prawnych ani podatkowych; przy takich pytaniach zaznacz, że to informacje edukacyjne i warto skonsultować się ze specjalistą.
+- Spraw indywidualnych (rozliczenia, reklamacje, problemy z płatnością, faktury) nie rozstrzygasz — wskaż zakładkę Płatności i faktury albo kontakt z obsługą Finance You.
+
+STYL:
+- Po polsku, życzliwie i konkretnie, forma Pan/Pani (jeśli rozmówca pisze na "Ty" — przejdź na "Ty").
+- Maks 3-4 zdania na wiadomość; prosty język bez żargonu, chyba że rozmówca jest zaawansowany.
 - Nie powtarzaj formułek i nie zaczynaj każdej wiadomości tak samo.`;
 }
 
@@ -187,16 +223,17 @@ const TOOLS = [
   },
 ];
 
-// Wariant inwestorski: bez send_application_link (link do formularza wniosku
-// jest bez sensu dla inwestora), update_lead_data z kluczami kwalifikacji B2B,
-// mark_ready_for_human używany chętnie (przekazanie opiekunowi inwestorów).
+// Wariant instytucjonalny: bot tylko przekazuje informacje. update_lead_data
+// zapisuje wyłącznie dane podane z własnej inicjatywy rozmówcy (bez wypytywania),
+// request_invoice przyjmuje prośbę o FV dla księgowości, mark_ready_for_human
+// przekazuje sprawy transakcyjne opiekunowi inwestorów.
 const INVESTOR_TOOLS = [
   {
     type: "function",
     function: {
       name: "update_lead_data",
       description:
-        "Zapisz nowe dane inwestora instytucjonalnego. Wywołuj ZAWSZE gdy rozmówca poda jakąkolwiek nową informację. " +
+        "Zapisz dane, które inwestor instytucjonalny podał SAM z własnej inicjatywy — nie wypytuj o nie. " +
         "Używaj kluczy: nazwa_firmy, nip, krs, forma_prawna, first_name, last_name (osoba kontaktowa), email, phone, " +
         "kwota_inwestycji (deklarowany kapitał w zł — liczba), horyzont_inwestycji, city, uwagi.",
       parameters: {
@@ -216,10 +253,31 @@ const INVESTOR_TOOLS = [
   {
     type: "function",
     function: {
+      name: "request_invoice",
+      description:
+        "Przekaż księgowości prośbę inwestora o wystawienie faktury (FV). Wywołaj dopiero gdy masz komplet: " +
+        "nazwa firmy, NIP, e-mail do wysyłki faktury i czego faktura dotyczy. Adres siedziby i kwota — jeśli rozmówca poda.",
+      parameters: {
+        type: "object",
+        properties: {
+          nazwa_firmy: { type: "string" },
+          nip: { type: "string" },
+          adres: { type: "string", description: "Adres siedziby (ulica, kod, miasto)" },
+          email: { type: "string", description: "E-mail do wysyłki faktury" },
+          opis: { type: "string", description: "Czego dotyczy faktura" },
+          kwota: { type: "number", description: "Kwota brutto w zł, jeśli znana" },
+        },
+        required: ["nazwa_firmy", "nip", "email", "opis"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "mark_ready_for_human",
       description:
         "Przekaż rozmowę opiekunowi inwestorów instytucjonalnych. Wywołuj gdy rozmówca chce rozmawiać o warunkach współpracy, " +
-        "negocjacjach, umowie ramowej, deklaruje istotny kapitał albo wprost prosi o kontakt z człowiekiem.",
+        "negocjacjach, umowie ramowej, konkretnych sprawach do sfinansowania albo wprost prosi o kontakt z człowiekiem.",
       parameters: {
         type: "object",
         properties: { reason: { type: "string" } },
@@ -299,7 +357,8 @@ export async function runAgentTurn(opts: {
   // Checklist braków liczona z BAZY (lead + application_data + załączniki),
   // nie z pamięci modelu — bot ma dopytywać tylko o to, czego naprawdę nie mamy,
   // a gdy komplet jest zebrany, lead awansuje na wniosek (maybePromote…).
-  // Wariant inwestorski ma własną checklistę kwalifikacji B2B.
+  // Wariant instytucjonalny NIE kwalifikuje — dostaje tylko przypomnienie,
+  // żeby nie pytać o dane, które już mamy.
   const appData = (lead.application_data ?? {}) as Record<string, any>;
   const known: string[] = [];
   const missing: string[] = [];
@@ -311,11 +370,9 @@ export async function runAgentTurn(opts: {
     mark(!!(lead.first_name && lead.last_name), "imię i nazwisko osoby kontaktowej");
     mark(!!(lead.email || appData.email), "adres e-mail");
     mark(!!(lead.phone_raw || lead.phone_normalized || appData.phone), "numer telefonu");
-    mark(appData.kwota_inwestycji != null, "deklarowana kwota inwestycji");
-    checklistBlock =
-      missing.length === 0
-        ? `\n\n[STAN KWALIFIKACJI — sprawdzony w bazie]\nKOMPLET: mamy wszystkie dane (${known.join(", ")}). Nie dopytuj o nic z tej listy. Jeśli jeszcze tego nie zrobiłeś, wywołaj mark_ready_for_human i poinformuj, że opiekun inwestorów skontaktuje się bezpośrednio.`
-        : `\n\n[STAN KWALIFIKACJI — sprawdzony w bazie]\nMamy już: ${known.length ? known.join(", ") : "nic"}.\nBrakuje: ${missing.join(", ")}.\nNIE pytaj o nic z listy "mamy już". Dopytuj naturalnie o PIERWSZĄ brakującą pozycję (jedno pytanie na wiadomość), najpierw odpowiadając na pytanie rozmówcy. Nie przesłuchuj — kwalifikacja ma iść przy okazji merytorycznej rozmowy.`;
+    checklistBlock = known.length
+      ? `\n\n[DANE W BAZIE]\nMamy już: ${known.join(", ")}. NIE pytaj o nie ponownie (także przy prośbie o FV — dopytaj tylko o brakujące dane faktury). Poza obsługą FV o nic nie wypytuj — przekazujesz informacje.`
+      : `\n\n[DANE W BAZIE]\nNie mamy jeszcze żadnych danych rozmówcy. Nie wypytuj o nie — zapisuj tylko to, co sam poda (a przy prośbie o FV zbierz dane potrzebne do faktury).`;
   } else {
     const { count: attCount } = await s
       .from("lead_communications")
@@ -353,7 +410,11 @@ export async function runAgentTurn(opts: {
   let knowledgeBlock = "";
   try {
     const { retrieveKnowledge } = await import("./text-agent-knowledge.server");
-    const chunks = await retrieveKnowledge(opts.userMessage, 4, variant);
+    const chunks = await retrieveKnowledge(
+      opts.userMessage,
+      4,
+      variant === "klient" ? "klient" : "inwestor",
+    );
     if (chunks.length > 0) {
       knowledgeBlock =
         "\n\n[BAZA WIEDZY — wykorzystaj te informacje gdy są trafne]\n" +
@@ -571,6 +632,41 @@ async function executeTool(
       .update({ status: "wymaga_kontaktu", notes: `[AI] ${args?.reason ?? "eskalacja"}` })
       .eq("id", leadId);
     return { ok: true };
+  }
+  if (name === "request_invoice") {
+    // Prośba o FV od inwestora instytucjonalnego: zapisujemy komplet danych
+    // w application_data i flagujemy leada dla księgowości — samą fakturę
+    // wystawia personel w istniejącym module fakturowania (operator-invoices).
+    const fv = {
+      nazwa_firmy: String(args?.nazwa_firmy ?? "").trim(),
+      nip: String(args?.nip ?? "").trim(),
+      adres: String(args?.adres ?? "").trim() || null,
+      email: String(args?.email ?? "").trim(),
+      opis: String(args?.opis ?? "").trim(),
+      kwota: typeof args?.kwota === "number" ? args.kwota : null,
+      requested_at: new Date().toISOString(),
+    };
+    if (!fv.nazwa_firmy || !fv.nip || !fv.email || !fv.opis) {
+      return { ok: false, error: "Brak kompletu danych do FV (nazwa_firmy, nip, email, opis)." };
+    }
+    const { data: lead } = await s
+      .from("leads")
+      .select("application_data, email")
+      .eq("id", leadId)
+      .maybeSingle();
+    const merged = { ...((lead?.application_data ?? {}) as Record<string, any>), fv_request: fv };
+    const topLevel: Record<string, any> = {
+      application_data: merged,
+      status: "wymaga_kontaktu",
+      notes: `[FV] ${fv.nazwa_firmy}, NIP ${fv.nip} — ${fv.opis}`,
+    };
+    if (!lead?.email) topLevel.email = fv.email;
+    await s.from("leads").update(topLevel).eq("id", leadId);
+    return {
+      ok: true,
+      instruction:
+        "Potwierdź rozmówcy, że prośba o fakturę trafiła do księgowości i FV zostanie wysłana na podany adres e-mail.",
+    };
   }
   return { ok: false, error: `unknown tool ${name}` };
 }

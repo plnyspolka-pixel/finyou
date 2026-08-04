@@ -2,8 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { AgentVariant } from "@/lib/elevenlabs-text-agent.server";
 
-// id wiersza w text_agent_settings per wariant (CHECK id IN (1,2)).
-const VARIANT_ID: Record<AgentVariant, number> = { klient: 1, inwestor: 2 };
+// id wiersza w text_agent_settings per wariant (CHECK id IN (1,2,3)).
+const VARIANT_ID: Record<AgentVariant, number> = { klient: 1, inwestor: 2, inwestor_prywatny: 3 };
 
 function variantId(variant?: AgentVariant): number {
   return VARIANT_ID[variant ?? "klient"] ?? 1;

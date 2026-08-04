@@ -15,6 +15,7 @@ import {
   Bot,
 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
+import { InvestorAssistantWidget } from "@/components/inwestor/assistant-widget";
 import { useAccessState } from "@/hooks/use-access";
 
 export const Route = createFileRoute("/inwestor")({
@@ -102,6 +103,9 @@ function InwestorLayout() {
     <>
       <AccessRedirectGate />
       <PanelShell title="Panel inwestora" allow={["inwestor", "administrator"]} groups={groups} />
+      {/* Asystent Klubu tylko dla inwestorów z wykupionym dostępem
+          (server functions i tak egzekwują to niezależnie). */}
+      {!loading && hasFullAccess && <InvestorAssistantWidget />}
     </>
   );
 }

@@ -587,7 +587,7 @@ function InvestorLanding() {
         source="dla-inwestora"
         endpoint="/api/public/investor-chat-widget"
         storageKey="fy_invest_chat_session_id"
-        greeting="Dzień dobry. Jestem asystentem Finance You dla inwestorów instytucjonalnych. Chętnie opowiem o modelu inwestycji w pożyczki zabezpieczone hipoteką i warunkach współpracy — w czym mogę pomóc?"
+        greeting="Dzień dobry. Jestem asystentem Finance You dla inwestorów instytucjonalnych. Odpowiem na pytania o model inwestycji w pożyczki zabezpieczone hipoteką, przyjmę też prośbę o fakturę. W sprawach współpracy przekażę kontakt opiekunowi. W czym mogę pomóc?"
         title="Asystent dla inwestorów"
         subtitle="Inwestycje instytucjonalne, 24/7"
       />

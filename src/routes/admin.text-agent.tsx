@@ -38,13 +38,15 @@ function TextAgentSettingsPage() {
         <h1 className="text-2xl font-bold">Agenci DM (Messenger / Instagram / Email / Czat)</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Prompty systemowe + wspólna baza wiedzy (RAG) dla agentów odpisujących 24/7: bot klientów
-          (pożyczkobiorcy) i bot inwestorów instytucjonalnych (czat na /dla-inwestora).
+          (pożyczkobiorcy), bot inwestorów instytucjonalnych (czat na /dla-inwestora — tylko
+          informacje + FV) i asystent Klubu dla inwestorów prywatnych z dostępem (panel /inwestor).
         </p>
       </div>
       <Tabs defaultValue="prompt">
         <TabsList>
           <TabsTrigger value="prompt">Prompt — klienci</TabsTrigger>
           <TabsTrigger value="prompt-inwestor">Prompt — inwestorzy instytucjonalni</TabsTrigger>
+          <TabsTrigger value="prompt-inwestor-prywatny">Prompt — asystent Klubu</TabsTrigger>
           <TabsTrigger value="knowledge">Baza wiedzy (RAG)</TabsTrigger>
         </TabsList>
         <TabsContent value="prompt" className="mt-4">
@@ -52,6 +54,9 @@ function TextAgentSettingsPage() {
         </TabsContent>
         <TabsContent value="prompt-inwestor" className="mt-4">
           <PromptTab variant="inwestor" />
+        </TabsContent>
+        <TabsContent value="prompt-inwestor-prywatny" className="mt-4">
+          <PromptTab variant="inwestor_prywatny" />
         </TabsContent>
         <TabsContent value="knowledge" className="mt-4">
           <KnowledgeTab />
@@ -100,14 +105,22 @@ function PromptTab({ variant }: { variant: AgentVariant }) {
         <CardTitle>
           {variant === "inwestor"
             ? "Prompt systemowy — bot inwestorów instytucjonalnych"
-            : "Prompt systemowy — bot klientów"}
+            : variant === "inwestor_prywatny"
+              ? "Prompt systemowy — asystent Klubu (inwestorzy z dostępem)"
+              : "Prompt systemowy — bot klientów"}
         </CardTitle>
         <CardDescription>
           {variant === "inwestor" ? (
             <>
-              Tools: <code>update_lead_data</code>, <code>mark_ready_for_human</code>. Placeholder:{" "}
+              Tylko przekazywanie informacji + FV. Tools: <code>update_lead_data</code>,{" "}
+              <code>request_invoice</code>, <code>mark_ready_for_human</code>. Placeholder:{" "}
               <code>{"{{LINK_REJESTRACJA_INWESTORA}}"}</code>. Pusty prompt = używany jest domyślny.
               Cache 5 min.
+            </>
+          ) : variant === "inwestor_prywatny" ? (
+            <>
+              Asystent w panelu /inwestor dla członków z wykupionym dostępem — przewodnik po
+              platformie, bez tools. Pusty prompt = używany jest domyślny. Cache 5 min.
             </>
           ) : (
             <>
@@ -167,8 +180,8 @@ type KItem = {
 
 const AUDIENCE_LABELS: Record<KnowledgeAudience, string> = {
   klient: "Klienci",
-  inwestor: "Inwestorzy instytucjonalni",
-  wspolna: "Wspólna (oba boty)",
+  inwestor: "Inwestorzy (instytucjonalni + asystent Klubu)",
+  wspolna: "Wspólna (wszystkie boty)",
 };
 
 function KnowledgeTab() {
