@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, ExternalLink, Search } from "lucide-react";
+import { Building2, CreditCard, Loader2, Lock, Search, ShieldCheck, User } from "lucide-react";
 import { toast } from "sonner";
 import { createAccessCheckout } from "@/lib/access/checkout.functions";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
@@ -122,40 +122,79 @@ export function TpayAccessCheckoutForm({ product }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border bg-muted/30 p-4">
-        <div className="text-sm text-muted-foreground">{product.label}</div>
-        <div className="text-3xl font-bold mt-1">{formatGroszPln(product.amount_grosz)} brutto</div>
-        <div className="text-xs text-muted-foreground mt-1">
-          Płatność jednorazowa · dostęp na {product.duration_days} dni. Zostaniesz przeniesiony do
-          bezpiecznej bramki płatności Tpay (BLIK, karta, szybki przelew).
+      {/* Podsumowanie zamówienia — navy w duchu FancyShell */}
+      <div className="relative overflow-hidden rounded-2xl p-5 text-white">
+        <span
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(120% 140% at 0% 0%, oklch(0.30 0.12 265) 0%, oklch(0.18 0.05 265) 55%, oklch(0.13 0.04 265) 100%)",
+          }}
+        />
+        <span
+          aria-hidden
+          className="absolute -right-10 -top-10 h-36 w-36 rounded-full blur-2xl"
+          style={{
+            background: "radial-gradient(circle, oklch(0.60 0.18 250 / 0.5), transparent 70%)",
+          }}
+        />
+        <div className="relative">
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-sky-300/80">
+            Twoje zamówienie
+          </div>
+          <div className="mt-1 text-sm text-white/70">{product.label}</div>
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold tracking-tight">
+              {formatGroszPln(product.amount_grosz)}
+            </span>
+            <span className="text-sm text-white/60">brutto</span>
+          </div>
+          <div className="mt-1 text-xs text-white/60">
+            Płatność jednorazowa · dostęp na {product.duration_days} dni · bez automatycznych
+            odnowień
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {["BLIK", "Karta", "Szybki przelew"].map((m) => (
+              <span
+                key={m}
+                className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[11px] font-medium text-white/85"
+              >
+                {m}
+              </span>
+            ))}
+            <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-white/60">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" /> Bezpieczna bramka Tpay
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="rounded-lg border p-4 space-y-4">
+      <div className="rounded-2xl border bg-card p-4 space-y-4 sm:p-5">
         <div>
           <Label className="text-sm font-medium">Kupuję jako</Label>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setBuyerType("person")}
-              className={`rounded-md border px-3 py-2 text-sm transition ${
+              className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-all ${
                 buyerType === "person"
-                  ? "border-primary bg-primary/10 font-medium"
+                  ? "border-primary bg-primary/10 font-semibold shadow-sm ring-1 ring-primary/30"
                   : "hover:bg-muted"
               }`}
             >
-              Osoba prywatna
+              <User className="h-4 w-4" /> Osoba prywatna
             </button>
             <button
               type="button"
               onClick={() => setBuyerType("company")}
-              className={`rounded-md border px-3 py-2 text-sm transition ${
+              className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-all ${
                 buyerType === "company"
-                  ? "border-primary bg-primary/10 font-medium"
+                  ? "border-primary bg-primary/10 font-semibold shadow-sm ring-1 ring-primary/30"
                   : "hover:bg-muted"
               }`}
             >
-              Firma
+              <Building2 className="h-4 w-4" /> Firma
             </button>
           </div>
         </div>
@@ -264,7 +303,7 @@ export function TpayAccessCheckoutForm({ product }: Props) {
         </div>
       </div>
 
-      <div className="rounded-lg border p-4 space-y-3 text-sm">
+      <div className="rounded-2xl border bg-card p-4 space-y-3 text-sm sm:p-5">
         <label className="flex items-start gap-2 cursor-pointer">
           <Checkbox
             checked={termsAccepted}
@@ -307,7 +346,11 @@ export function TpayAccessCheckoutForm({ product }: Props) {
         </label>
       </div>
 
-      <Button onClick={handlePay} disabled={loading} className="w-full" size="lg">
+      <Button
+        onClick={handlePay}
+        disabled={loading}
+        className="h-12 w-full rounded-xl bg-gradient-to-r from-[oklch(0.50_0.22_268)] via-[oklch(0.55_0.20_255)] to-[oklch(0.62_0.17_240)] text-base font-bold text-white shadow-[0_10px_30px_-10px_oklch(0.55_0.22_260/0.9)] transition-all hover:brightness-110 hover:shadow-[0_14px_40px_-10px_oklch(0.55_0.22_260)]"
+      >
         {loading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -315,11 +358,15 @@ export function TpayAccessCheckoutForm({ product }: Props) {
           </>
         ) : (
           <>
+            <CreditCard className="mr-2 h-5 w-5" />
             Zapłać {formatGroszPln(product.amount_grosz)} przez Tpay
-            <ExternalLink className="ml-2 h-4 w-4" />
           </>
         )}
       </Button>
+      <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+        <Lock className="h-3.5 w-3.5" />
+        Zostaniesz przeniesiony do szyfrowanej bramki płatności Tpay
+      </p>
     </div>
   );
 }

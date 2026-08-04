@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Clock, Gift, Lock, ShieldCheck } from "lucide-react";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { TpayAccessCheckoutForm } from "@/components/access/TpayAccessCheckoutForm";
 import { TpayReturnStatus } from "@/components/access/TpayReturnStatus";
@@ -86,61 +86,90 @@ function InwestorAbonament() {
       )}
 
       {state && hasActive && (
-        <Card className="border-emerald-300">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" /> Twój dostęp jest aktywny
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm space-y-1">
-            <div>
-              <span className="text-muted-foreground">Aktywny do: </span>
-              <b>{formatWarsawDate(state.activeUntil, true)}</b>
+        <div
+          className="relative overflow-hidden rounded-2xl border border-emerald-300/60 p-5 shadow-sm"
+          style={{
+            background:
+              "linear-gradient(120% 140% at 0% 0%, oklch(0.96 0.05 160) 0%, oklch(0.99 0.01 160) 100%)",
+          }}
+        >
+          <span
+            aria-hidden
+            className="absolute -right-10 -top-10 h-36 w-36 rounded-full blur-2xl"
+            style={{
+              background: "radial-gradient(circle, oklch(0.85 0.10 160 / 0.6), transparent 70%)",
+            }}
+          />
+          <div className="relative flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-500/15">
+              <ShieldCheck className="h-5 w-5 text-emerald-600" />
+            </span>
+            <div className="min-w-0 text-sm text-emerald-950">
+              <div className="text-base font-bold">Twój dostęp jest aktywny</div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span>
+                  <span className="text-emerald-900/60">Aktywny do: </span>
+                  <b>{formatWarsawDate(state.activeUntil, true)}</b>
+                </span>
+                <Badge className="bg-emerald-600 hover:bg-emerald-600">
+                  Pozostało {state.daysLeft} dni
+                </Badge>
+              </div>
+              <p className="mt-1.5 text-emerald-900/60">
+                Zakup kolejnego pakietu doliczy dni do końca bieżącego okresu — nic nie przepada.
+              </p>
             </div>
-            <div>
-              <span className="text-muted-foreground">Pozostało: </span>
-              <Badge>{state.daysLeft} dni</Badge>
-            </div>
-            <p className="text-muted-foreground pt-1">
-              Zakup kolejnego pakietu doliczy dni do końca bieżącego okresu — nic nie przepada.
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {state && expired && (
-        <Card className="border-amber-300 bg-amber-50/50">
-          <CardHeader>
-            <CardTitle>Twój pełny dostęp wygasł</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm space-y-1">
-            <div>
-              <span className="text-muted-foreground">Poprzedni dostęp wygasł: </span>
-              <b>{formatWarsawDate(state.activeUntil, true)}</b>
+        <div
+          className="relative overflow-hidden rounded-2xl border border-amber-300/60 p-5 shadow-sm"
+          style={{
+            background:
+              "linear-gradient(120% 140% at 0% 0%, oklch(0.96 0.06 85) 0%, oklch(0.99 0.01 85) 100%)",
+          }}
+        >
+          <div className="relative flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-500/15">
+              <Clock className="h-5 w-5 text-amber-600" />
+            </span>
+            <div className="min-w-0 text-sm text-amber-950">
+              <div className="text-base font-bold">Twój pełny dostęp wygasł</div>
+              <div className="mt-1.5">
+                <span className="text-amber-900/60">Poprzedni dostęp wygasł: </span>
+                <b>{formatWarsawDate(state.activeUntil, true)}</b>
+              </div>
+              <p className="mt-1.5 text-amber-900/60">
+                Dane pozostają bezpiecznie zapisane. Odzyskasz dostęp po opłaceniu kolejnego okresu.
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              Dane pozostają bezpiecznie zapisane. Odzyskasz dostęp po opłaceniu kolejnego okresu.
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {state && !hasActive && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Konto darmowe — masz je zawsze, bez opłat</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-1">
-            <p>
-              • anonimowe zajawki ofert — po pozytywnej <b>weryfikacji tożsamości (KYC)</b>,
-            </p>
-            <p>• kalkulator pożyczki oraz 3 darmowe lekcje Akademii Inwestora.</p>
-            <p>
-              Pełne dane ofert, dokumenty, księga wieczysta i składanie ofert wymagają pełnego
-              dostępu.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="relative overflow-hidden rounded-2xl border bg-card p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-500/10">
+              <Gift className="h-5 w-5 text-sky-600" />
+            </span>
+            <div className="min-w-0 text-sm">
+              <div className="text-base font-bold">Konto darmowe — masz je zawsze, bez opłat</div>
+              <div className="mt-1.5 space-y-1 text-muted-foreground">
+                <p>
+                  • anonimowe zajawki ofert — po pozytywnej <b>weryfikacji tożsamości (KYC)</b>,
+                </p>
+                <p>• kalkulator pożyczki oraz 3 darmowe lekcje Akademii Inwestora.</p>
+                <p>
+                  Pełne dane ofert, dokumenty, księga wieczysta i składanie ofert wymagają pełnego
+                  dostępu.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {!selected && (
@@ -153,14 +182,16 @@ function InwestorAbonament() {
       )}
 
       {selected && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Płatność</CardTitle>
+        <Card className="overflow-hidden rounded-2xl">
+          <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/40">
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-muted-foreground" /> Bezpieczna płatność
+            </CardTitle>
             <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-              Anuluj
+              <ArrowLeft className="mr-1 h-4 w-4" /> Wróć do pakietów
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <TpayAccessCheckoutForm product={selected} />
           </CardContent>
         </Card>

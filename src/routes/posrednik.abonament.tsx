@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ArrowLeft, Lock } from "lucide-react";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { TpayAccessCheckoutForm } from "@/components/access/TpayAccessCheckoutForm";
 import { TpayReturnStatus } from "@/components/access/TpayReturnStatus";
@@ -167,14 +167,16 @@ function PosrednikAbonament() {
       )}
 
       {selected && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Płatność</CardTitle>
+        <Card className="overflow-hidden rounded-2xl">
+          <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/40">
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-muted-foreground" /> Bezpieczna płatność
+            </CardTitle>
             <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-              Anuluj
+              <ArrowLeft className="mr-1 h-4 w-4" /> Wróć do pakietów
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <TpayAccessCheckoutForm product={selected} />
           </CardContent>
         </Card>

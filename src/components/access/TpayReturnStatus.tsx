@@ -1,12 +1,54 @@
 // Status po powrocie z Tpay. Nie ufamy parametrowi `?tpay=success` —
 // odpytujemy własny rekord płatności i pokazujemy potwierdzenie dopiero,
 // gdy webhook Tpay zmieni status na 'paid'.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Clock, XCircle, Loader2 } from "lucide-react";
 import { getAccessPaymentStatus } from "@/lib/access/checkout.functions";
 import { formatWarsawDate } from "@/lib/access/core";
+
+// Baner statusu w "fancy" oprawie: delikatny gradient tła + ikona w pierścieniu.
+function StatusBanner({
+  tone,
+  icon,
+  children,
+}: {
+  tone: "success" | "pending" | "error";
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  const styles = {
+    success: {
+      wrap: "border-emerald-300/60 text-emerald-950",
+      bg: "linear-gradient(120% 140% at 0% 0%, oklch(0.96 0.05 160) 0%, oklch(0.99 0.01 160) 100%)",
+      ring: "bg-emerald-500/15 text-emerald-600",
+    },
+    pending: {
+      wrap: "border-amber-300/60 text-amber-950",
+      bg: "linear-gradient(120% 140% at 0% 0%, oklch(0.96 0.06 85) 0%, oklch(0.99 0.01 85) 100%)",
+      ring: "bg-amber-500/15 text-amber-600",
+    },
+    error: {
+      wrap: "border-red-300/60 text-red-950",
+      bg: "linear-gradient(120% 140% at 0% 0%, oklch(0.95 0.05 25) 0%, oklch(0.99 0.01 25) 100%)",
+      ring: "bg-red-500/15 text-red-600",
+    },
+  }[tone];
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl border shadow-sm ${styles.wrap}`}
+      style={{ background: styles.bg }}
+    >
+      <div className="flex items-start gap-3 p-4 sm:p-5">
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${styles.ring}`}>
+          {icon}
+        </span>
+        <div className="min-w-0 self-center text-sm">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   paymentId: string;
@@ -58,67 +100,59 @@ export function TpayReturnStatus({ paymentId, tpayParam, onPaid }: Props) {
     (!payment || ["created", "pending", "cancelled", "failed"].includes(payment.status))
   ) {
     return (
-      <Card className="border-red-300 bg-red-50">
-        <CardContent className="flex items-center gap-3 py-4 text-red-900">
-          <XCircle className="h-5 w-5 shrink-0" />
-          <div className="text-sm">
-            Płatność nie została ukończona. Dostęp nie został aktywowany.
-          </div>
-        </CardContent>
-      </Card>
+      <StatusBanner tone="error" icon={<XCircle className="h-5 w-5" />}>
+        <span className="font-semibold">Płatność nie została ukończona.</span> Dostęp nie został
+        aktywowany.
+      </StatusBanner>
     );
   }
 
   if (!payment || payment.status === "created" || payment.status === "pending") {
     return (
-      <Card className="border-amber-300 bg-amber-50">
-        <CardContent className="flex items-center gap-3 py-4 text-amber-900">
-          {attempts >= 48 ? (
-            <Clock className="h-5 w-5 shrink-0" />
+      <StatusBanner
+        tone="pending"
+        icon={
+          attempts >= 48 ? (
+            <Clock className="h-5 w-5" />
           ) : (
-            <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
-          )}
-          <div className="text-sm">
-            Płatność została przekazana do weryfikacji. Oczekujemy na potwierdzenie Tpay.
-            {attempts >= 48 &&
-              " Potwierdzenie może chwilę potrwać — status znajdziesz w zakładce „Płatności i faktury”."}
-          </div>
-        </CardContent>
-      </Card>
+            <Loader2 className="h-5 w-5 animate-spin" />
+          )
+        }
+      >
+        <span className="font-semibold">Płatność została przekazana do weryfikacji.</span>{" "}
+        Oczekujemy na potwierdzenie Tpay.
+        {attempts >= 48 &&
+          " Potwierdzenie może chwilę potrwać — status znajdziesz w zakładce „Płatności i faktury”."}
+      </StatusBanner>
     );
   }
 
   if (payment.status === "paid") {
     return (
-      <Card className="border-emerald-300 bg-emerald-50">
-        <CardContent className="flex items-start gap-3 py-4 text-emerald-900">
-          <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
-          <div className="text-sm space-y-1">
-            <div>
-              Płatność potwierdzona. Twój dostęp jest aktywny do:{" "}
-              <b>{formatWarsawDate(payment.grantedUntil, true)}</b>.
-            </div>
-            {payment.invoice ? (
-              <div>
-                Faktura{" "}
-                {payment.invoice.invoice_number ? <b>{payment.invoice.invoice_number}</b> : null}{" "}
-                została wystawiona i wysłana na adres: <b>{payment.buyerEmail}</b>.
-              </div>
-            ) : (
-              <div>Dostęp jest już aktywny. Faktura jest w trakcie przygotowania.</div>
-            )}
+      <StatusBanner tone="success" icon={<CheckCircle2 className="h-5 w-5" />}>
+        <div className="space-y-1">
+          <div>
+            <span className="font-semibold">Płatność potwierdzona.</span> Twój dostęp jest aktywny
+            do: <b>{formatWarsawDate(payment.grantedUntil, true)}</b>.
           </div>
-        </CardContent>
-      </Card>
+          {payment.invoice ? (
+            <div>
+              Faktura{" "}
+              {payment.invoice.invoice_number ? <b>{payment.invoice.invoice_number}</b> : null}{" "}
+              została wystawiona i wysłana na adres: <b>{payment.buyerEmail}</b>.
+            </div>
+          ) : (
+            <div>Dostęp jest już aktywny. Faktura jest w trakcie przygotowania.</div>
+          )}
+        </div>
+      </StatusBanner>
     );
   }
 
   return (
-    <Card className="border-red-300 bg-red-50">
-      <CardContent className="flex items-center gap-3 py-4 text-red-900">
-        <XCircle className="h-5 w-5 shrink-0" />
-        <div className="text-sm">Płatność nie została ukończona. Dostęp nie został aktywowany.</div>
-      </CardContent>
-    </Card>
+    <StatusBanner tone="error" icon={<XCircle className="h-5 w-5" />}>
+      <span className="font-semibold">Płatność nie została ukończona.</span> Dostęp nie został
+      aktywowany.
+    </StatusBanner>
   );
 }
