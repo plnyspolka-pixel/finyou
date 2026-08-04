@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,6 +59,7 @@ import {
 } from "@/components/ui/select";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
+import { getInvestorMarketIndicators } from "@/lib/market-indicators.functions";
 import { sendLoanScheduleToClient } from "@/lib/loan-schedule.functions";
 import { buildLoanCalcPdfBlob, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
 import { buildEngineSchedule } from "@/lib/contract-engine/loan-schedule";
@@ -128,6 +130,10 @@ function maxNonInterestCosts(amount: number, months: number): number {
 function maxInterestRate(refRate: number): number {
   return (refRate + 3.5) * 2;
 }
+
+// Próg transakcji ponadprogowej AML (art. 72 ustawy o przeciwdziałaniu praniu
+// pieniędzy oraz finansowaniu terroryzmu): równowartość 15 000 EUR.
+const AML_THRESHOLD_EUR = 15_000;
 
 export type LoanCalculatorState = {
   amount: number;
@@ -399,6 +405,34 @@ export function LoanCalculator({
   const krotnoscBasis = Math.max(0, disbursedOnHand);
   const krotnoscRepay = totalToRepay;
   const krotnosc = krotnoscBasis > 0 ? krotnoscRepay / krotnoscBasis : 0;
+
+  // Wskaźniki rynkowe (tylko tryb inwestora): inflacja CPI r/r z GUS
+  // oraz kurs EUR NBP do progu AML 15 000 EUR.
+  const fetchIndicators = useServerFn(getInvestorMarketIndicators);
+  const indicatorsQ = useQuery({
+    queryKey: ["investor-market-indicators"],
+    queryFn: () => fetchIndicators(),
+    staleTime: 12 * 60 * 60 * 1000,
+    enabled: investorGuidance,
+  });
+  const inflation = indicatorsQ.data?.inflation ?? null;
+  const cpiYoY = inflation?.cpiYoYPct ?? null;
+  // Realna roczna stopa zwrotu (wzór Fishera) — o ile inwestycja wyprzedza inflację.
+  const realAnnualRoiPct =
+    cpiYoY != null ? ((1 + investorRoiAnnualPct / 100) / (1 + cpiYoY / 100) - 1) * 100 : null;
+  const roiAdvantagePp = cpiYoY != null ? investorRoiAnnualPct - cpiYoY : null;
+  // Utrata siły nabywczej zaangażowanego kapitału przez okres pożyczki
+  // i realny zysk po jej odjęciu.
+  const inflationErosionPln =
+    cpiYoY != null ? investorCashOut * (Math.pow(1 + cpiYoY / 100, months / 12) - 1) : null;
+  const realProfitPln = inflationErosionPln != null ? investorProfit - inflationErosionPln : null;
+  const beatsInflation = realAnnualRoiPct != null && realAnnualRoiPct > 0;
+
+  // Próg AML: wypłata pożyczki jako transakcja ponadprogowa (≥ 15 000 EUR).
+  const eurRate = indicatorsQ.data?.eur?.rate ?? null;
+  const amlThresholdPln = eurRate != null ? AML_THRESHOLD_EUR * eurRate : null;
+  const disbursedEur = eurRate != null ? disbursedOnHand / eurRate : null;
+  const amlAboveThreshold = amlThresholdPln != null && disbursedOnHand + 1e-9 >= amlThresholdPln;
 
   // Proponowane zabezpieczenia: domyślnie dwukrotność sumy wszystkich należności
   // inwestora (łącznej kwoty do spłaty). Edytowalne — override ma pierwszeństwo.
@@ -794,6 +828,16 @@ export function LoanCalculator({
                 zysk <b className="text-white">{formatPLN(investorProfit)}</b> · ROI{" "}
                 <b className="text-white">{investorRoiPct.toFixed(1)}%</b> (
                 {investorRoiAnnualPct.toFixed(1)}% / rok)
+                {investorGuidance && realAnnualRoiPct != null && (
+                  <>
+                    {" "}
+                    · realnie ponad inflację{" "}
+                    <b className={beatsInflation ? "text-white" : "text-rose-300"}>
+                      {realAnnualRoiPct >= 0 ? "+" : ""}
+                      {realAnnualRoiPct.toFixed(1)}% / rok
+                    </b>
+                  </>
+                )}
               </p>
             </div>
 
@@ -1188,6 +1232,7 @@ export function LoanCalculator({
         const okCls = `${baseCls} border-emerald-400/70 bg-emerald-950/80 text-emerald-50 shadow-[0_0_40px_-12px_rgba(16,185,129,0.7)] [&_[data-slot=alert-description]]:!text-emerald-50/95`;
         const warnCls = `${baseCls} border-amber-400/70 bg-amber-950/80 text-amber-50 shadow-[0_0_40px_-12px_rgba(245,158,11,0.7)] [&_[data-slot=alert-description]]:!text-amber-50/95`;
         const dangerCls = `${baseCls} border-rose-400/80 bg-rose-950/80 text-rose-50 shadow-[0_0_40px_-10px_rgba(244,63,94,0.8)] [&_[data-slot=alert-description]]:!text-rose-50/95`;
+        const infoCls = `${baseCls} border-sky-400/70 bg-sky-950/80 text-sky-50 shadow-[0_0_40px_-12px_rgba(56,189,248,0.7)] [&_[data-slot=alert-description]]:!text-sky-50/95`;
         return (
           <div className="space-y-3">
             {/* 1) Odsetki maksymalne (art. 359 §2¹ KC) */}
@@ -1276,6 +1321,70 @@ export function LoanCalculator({
                   <AlertDescription className="text-sm text-emerald-100/90">
                     Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną — poniżej
                     progu 2,0× (art. 304 KK).
+                  </AlertDescription>
+                </Alert>
+              ))}
+
+            {/* 4) AML — rejestr transakcji ponadprogowych (art. 72 ustawy AML) */}
+            {investorGuidance &&
+              (amlAboveThreshold ? (
+                <Alert className={warnCls}>
+                  <ShieldAlert className="h-4 w-4 !text-amber-300" />
+                  <AlertTitle>
+                    AML — transakcja ponadprogowa (≥ 15 000 EUR) przy działalności gospodarczej
+                  </AlertTitle>
+                  <AlertDescription className="text-sm text-amber-100/90">
+                    Wypłata pożyczki <b>{formatPLN(disbursedOnHand)}</b>
+                    {disbursedEur != null && eurRate != null && (
+                      <>
+                        {" "}
+                        (≈ {Math.round(disbursedEur).toLocaleString("pl-PL")} EUR po kursie NBP{" "}
+                        {eurRate.toFixed(4).replace(".", ",")})
+                      </>
+                    )}{" "}
+                    przekracza równowartość <b>15 000 EUR</b>
+                    {amlThresholdPln != null && <> ({formatPLN(amlThresholdPln)})</>}. Jeżeli
+                    udzielasz pożyczek <b>w ramach działalności gospodarczej</b> (a nie z prywatnego
+                    portfela), jesteś instytucją obowiązaną (art. 2 ust. 1 pkt 24 ustawy AML) i masz
+                    obowiązek wpisać tę transakcję do <b>rejestru transakcji ponadprogowych</b> oraz
+                    przekazać informację do GIIF w terminie 7 dni (art. 72 ustawy AML).{" "}
+                    <Link
+                      to="/inwestor/aml/ponadprogowe"
+                      className="font-semibold underline underline-offset-2"
+                    >
+                      Prowadź rejestr w module AML →
+                    </Link>
+                  </AlertDescription>
+                </Alert>
+              ) : amlThresholdPln != null ? (
+                <Alert className={okCls}>
+                  <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
+                  <AlertTitle>AML — wypłata poniżej progu 15 000 EUR</AlertTitle>
+                  <AlertDescription className="text-sm text-emerald-100/90">
+                    Wypłata <b>{formatPLN(disbursedOnHand)}</b> nie przekracza równowartości 15 000
+                    EUR (<b>{formatPLN(amlThresholdPln)}</b> po kursie NBP) — obowiązek wpisu do
+                    rejestru transakcji ponadprogowych nie powstaje. Pamiętaj: przy inwestowaniu
+                    przez działalność gospodarczą każda transakcja ≥ 15 000 EUR wymaga wpisu do
+                    rejestru i zgłoszenia do GIIF w 7 dni (art. 72 ustawy AML); prywatnego portfela
+                    ten obowiązek nie dotyczy.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert className={infoCls}>
+                  <Info className="h-4 w-4 !text-sky-300" />
+                  <AlertTitle>AML — rejestr transakcji ponadprogowych (≥ 15 000 EUR)</AlertTitle>
+                  <AlertDescription className="text-sm text-sky-100/90">
+                    Jeżeli udzielasz pożyczek <b>w ramach działalności gospodarczej</b> (a nie z
+                    prywatnego portfela), jesteś instytucją obowiązaną (art. 2 ust. 1 pkt 24 ustawy
+                    AML): transakcje o równowartości ≥ <b>15 000 EUR</b> wpisujesz do rejestru
+                    transakcji ponadprogowych i zgłaszasz do GIIF w terminie 7 dni (art. 72 ustawy
+                    AML). Kurs EUR NBP chwilowo niedostępny — nie można przeliczyć progu na PLN.{" "}
+                    <Link
+                      to="/inwestor/aml/ponadprogowe"
+                      className="font-semibold underline underline-offset-2"
+                    >
+                      Prowadź rejestr w module AML →
+                    </Link>
                   </AlertDescription>
                 </Alert>
               ))}
@@ -1380,6 +1489,132 @@ export function LoanCalculator({
           </CardContent>
         </Card>
       </FancyShell>
+
+      {investorGuidance && (
+        <FancyShell>
+          <Card className={FANCY_CARD_CLS}>
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" /> Zysk ponad inflację
+              </CardTitle>
+              <CardDescription className="text-white/70">
+                Porównanie rocznej stopy zwrotu z aktualną inflacją CPI
+                {inflation
+                  ? ` — ${inflation.cpiYoYPct.toFixed(1).replace(".", ",")}% r/r, ${inflation.period}, ${
+                      inflation.source === "gus" ? "źródło: GUS" : "dane offline"
+                    }`
+                  : ""}
+                .
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {cpiYoY == null ||
+              realAnnualRoiPct == null ||
+              roiAdvantagePp == null ||
+              inflationErosionPln == null ||
+              realProfitPln == null ? (
+                <p className="text-sm text-white/70">Pobieram aktualny wskaźnik inflacji…</p>
+              ) : (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-white/15 bg-white/[0.05] p-4">
+                      <div className="text-[11px] font-bold uppercase tracking-widest text-white/60">
+                        Inflacja CPI (r/r)
+                      </div>
+                      <div className="mt-1.5 text-2xl font-black tabular-nums text-white">
+                        {cpiYoY.toFixed(1).replace(".", ",")}%
+                      </div>
+                      <div className="mt-0.5 text-xs text-white/60">{inflation?.period}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/15 bg-white/[0.05] p-4">
+                      <div className="text-[11px] font-bold uppercase tracking-widest text-white/60">
+                        Zwrot inwestora (nominalnie)
+                      </div>
+                      <div className="mt-1.5 text-2xl font-black tabular-nums text-white">
+                        {investorRoiAnnualPct.toFixed(1).replace(".", ",")}% / rok
+                      </div>
+                      <div className="mt-0.5 text-xs text-white/60">
+                        przewaga nominalna nad CPI: {roiAdvantagePp >= 0 ? "+" : ""}
+                        {roiAdvantagePp.toFixed(1).replace(".", ",")} p.p.
+                      </div>
+                    </div>
+                    <div
+                      className={`rounded-xl border p-4 ${
+                        beatsInflation
+                          ? "border-emerald-300/40 bg-emerald-400/10"
+                          : "border-rose-300/40 bg-rose-400/10"
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold uppercase tracking-widest text-white/60">
+                        Realnie ponad inflację
+                      </div>
+                      <div
+                        className={`mt-1.5 text-2xl font-black tabular-nums ${
+                          beatsInflation ? "text-emerald-300" : "text-rose-300"
+                        }`}
+                      >
+                        {realAnnualRoiPct >= 0 ? "+" : ""}
+                        {realAnnualRoiPct.toFixed(1).replace(".", ",")}% / rok
+                      </div>
+                      <div className="mt-0.5 text-xs text-white/60">
+                        realna stopa zwrotu (po urealnieniu o CPI)
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border border-white/15 bg-white/[0.05] p-3 text-sm grid gap-1.5 sm:grid-cols-3">
+                    <div className="flex justify-between sm:flex-col sm:gap-0.5">
+                      <span className="text-white/70">Zysk nominalny</span>
+                      <b className="tabular-nums">{formatPLN(investorProfit)}</b>
+                    </div>
+                    <div className="flex justify-between sm:flex-col sm:gap-0.5">
+                      <span className="text-white/70">
+                        Utrata siły nabywczej kapitału ({months} mies.)
+                      </span>
+                      <b className="tabular-nums text-rose-300">
+                        −{formatPLN(inflationErosionPln)}
+                      </b>
+                    </div>
+                    <div className="flex justify-between sm:flex-col sm:gap-0.5">
+                      <span className="text-white/70">Realny zysk ponad inflację</span>
+                      <b
+                        className={`tabular-nums ${realProfitPln >= 0 ? "text-emerald-300" : "text-rose-300"}`}
+                      >
+                        {formatPLN(realProfitPln)}
+                      </b>
+                    </div>
+                  </div>
+
+                  {beatsInflation ? (
+                    <Alert className="py-2 border-emerald-400/60 bg-emerald-950/60 text-emerald-50">
+                      <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
+                      <AlertDescription className="text-xs">
+                        Ta pożyczka wychodzi{" "}
+                        <b>
+                          {realAnnualRoiPct.toFixed(1).replace(".", ",")} p.p. rocznie lepiej niż
+                          inflacja
+                        </b>{" "}
+                        — po urealnieniu o CPI zostaje <b>{formatPLN(realProfitPln)}</b> realnego
+                        zysku (kapitał trzymany w gotówce straciłby w tym okresie{" "}
+                        {formatPLN(inflationErosionPln)} siły nabywczej).
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                      <AlertTriangle className="h-4 w-4 !text-rose-300" />
+                      <AlertDescription className="text-xs">
+                        Zwrot z tej pożyczki <b>nie pokrywa inflacji</b> — realnie tracisz{" "}
+                        {Math.abs(realAnnualRoiPct).toFixed(1).replace(".", ",")}% rocznie. Zwiększ
+                        oprocentowanie lub prowizję, albo skróć okres.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </FancyShell>
+      )}
 
       {investorGuidance && schedule.rows.length > 0 && (
         <FancyShell>
@@ -1765,7 +2000,9 @@ export function LoanCalculator({
           Finance You Sp. z o.o. zaleca konsultację prawną przy niestandardowych strukturach
           pożyczek. Podstawy prawne: art. 359 §2¹ KC (odsetki maksymalne), art. 36a UoKK (MPKK
           ref.), art. 388 KC (wyzysk), art. 304 KK (lichwa), art. 58 §2 KC (zasady współżycia
-          społecznego).
+          społecznego), art. 72 ustawy o przeciwdziałaniu praniu pieniędzy oraz finansowaniu
+          terroryzmu (rejestr transakcji ponadprogowych ≥ 15 000 EUR — dotyczy pożyczek udzielanych
+          w ramach działalności gospodarczej). Wskaźnik inflacji CPI: GUS.
         </p>
       )}
     </div>
