@@ -291,18 +291,15 @@ function soArrow(): CSSProperties {
   };
 }
 
-export function SmartOfferSlider({
+// Panel w stylistyce "smart offer" — używany także dla segmentu okazji
+// inwestycyjnych, żeby oba segmenty wyglądały spójnie.
+export function SmartOfferPanel({
   style,
   children,
 }: {
   style?: CSSProperties;
   children?: ReactNode;
 }) {
-  const [i, setI] = useState(0);
-  const n = SO_SLIDES.length;
-  const s = SO_SLIDES[i];
-  const go = (d: number) => setI((v) => (v + d + n) % n);
-
   return (
     <div
       style={{
@@ -315,6 +312,19 @@ export function SmartOfferSlider({
         ...style,
       }}
     >
+      {children}
+    </div>
+  );
+}
+
+export function SmartOfferSlider({ style }: { style?: CSSProperties }) {
+  const [i, setI] = useState(0);
+  const n = SO_SLIDES.length;
+  const s = SO_SLIDES[i];
+  const go = (d: number) => setI((v) => (v + d + n) % n);
+
+  return (
+    <SmartOfferPanel style={style}>
       <div
         style={{
           display: "flex",
@@ -486,8 +496,6 @@ export function SmartOfferSlider({
         })}
       </div>
 
-      {children ? <div style={{ marginTop: "clamp(1.4rem, 2.6vw, 2rem)" }}>{children}</div> : null}
-
       <div
         style={{
           marginTop: "clamp(1.2rem, 2.4vw, 1.8rem)",
@@ -503,6 +511,6 @@ export function SmartOfferSlider({
       >
         System pokazuje możliwości i ryzyko — Ty wybierasz.
       </div>
-    </div>
+    </SmartOfferPanel>
   );
 }

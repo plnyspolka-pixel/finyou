@@ -31,6 +31,14 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
 };
 
+/** Kotwice podstron inwestora na /dla-inwestora — sub-menu pod pozycją "Inwestor". */
+const INVESTOR_ANCHORS = [
+  { label: "Akademia Inwestora", hash: "#akademia" },
+  { label: "7 warstw ochrony inwestycji", hash: "#ochrona" },
+  { label: "Windykacja AI", hash: "#windykacja-ai" },
+  { label: "Cennik", hash: "#cennik" },
+];
+
 export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   const [open, setOpen] = useState(false);
   const nav = [
@@ -41,6 +49,10 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
     { label: "Blog", href: "/blog", key: "blog" },
     { label: "FAQ", href: page === "blog" ? "/dla-klienta#faq" : "#faq", key: "faq" },
   ];
+  const investorLinks = INVESTOR_ANCHORS.map((a) => ({
+    label: a.label,
+    href: page === "inwestor" ? a.hash : PAGE_PATH.inwestor + a.hash,
+  }));
   const cta = HEADER_CTA[page];
   return (
     <header
@@ -72,20 +84,35 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
           <FinanceYouLogo variant="dark" size="lg" />
         </a>
         <nav className="fy-nav-desktop" style={{ display: "flex", gap: "1.4rem" }}>
-          {nav.map((n) => (
-            <a
-              key={n.key}
-              href={n.href}
-              style={{
-                fontSize: "0.85rem",
-                fontWeight: page === n.key ? 700 : 500,
-                color: page === n.key ? "var(--accent)" : "var(--muted-foreground)",
-                textDecoration: "none",
-              }}
-            >
-              {n.label}
-            </a>
-          ))}
+          {nav.map((n) => {
+            const link = (
+              <a
+                key={n.key}
+                href={n.href}
+                style={{
+                  fontSize: "0.85rem",
+                  fontWeight: page === n.key ? 700 : 500,
+                  color: page === n.key ? "var(--accent)" : "var(--muted-foreground)",
+                  textDecoration: "none",
+                }}
+              >
+                {n.label}
+              </a>
+            );
+            if (n.key !== "inwestor") return link;
+            return (
+              <div key={n.key} className="fy-nav-drop">
+                {link}
+                <div className="fy-nav-drop-panel">
+                  {investorLinks.map((l) => (
+                    <a key={l.label} href={l.href}>
+                      {l.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
         <div
           className="fy-nav-desktop"
@@ -133,10 +160,11 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
             gap: 4,
           }}
         >
-          {nav.map((n) => (
+          {nav.flatMap((n) => [
             <a
               key={n.key}
               href={n.href}
+              onClick={() => setOpen(false)}
               style={{
                 padding: "0.6rem 0",
                 fontSize: "0.9rem",
@@ -147,8 +175,27 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
               }}
             >
               {n.label}
-            </a>
-          ))}
+            </a>,
+            ...(n.key === "inwestor"
+              ? investorLinks.map((l) => (
+                  <a
+                    key={l.label}
+                    href={l.href}
+                    onClick={() => setOpen(false)}
+                    style={{
+                      padding: "0.55rem 0 0.55rem 1.1rem",
+                      fontSize: "0.85rem",
+                      fontWeight: 500,
+                      color: "var(--muted-foreground)",
+                      textDecoration: "none",
+                      borderBottom: "1px solid var(--border)",
+                    }}
+                  >
+                    {l.label}
+                  </a>
+                ))
+              : []),
+          ])}
           <MktButton variant="cta" href={cta.href} style={{ marginTop: 8 }}>
             {cta.label}
           </MktButton>

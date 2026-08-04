@@ -13,7 +13,12 @@ import {
 import { MktBadge, MktButton, Eyebrow } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
-import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
+import {
+  TwoColSlider,
+  SmartOfferSlider,
+  SmartOfferPanel,
+  type TwoColSlide,
+} from "@/components/marketing/sliders";
 import { MarketingPricing } from "@/components/marketing/pricing";
 import { ChatWidget } from "@/components/landing/chat-widget";
 import { listAccessProducts } from "@/lib/access/state.functions";
@@ -396,7 +401,7 @@ function InvestorLanding() {
       <Hero />
 
       <Section>
-        <SmartOfferSlider>
+        <SmartOfferPanel>
           <Eyebrow tone="gold" style={{ letterSpacing: "0.24em" }}>
             Ostatnie okazje inwestycyjne
           </Eyebrow>
@@ -415,7 +420,7 @@ function InvestorLanding() {
               title="Ostatnie okazje inwestycyjne Finance You"
             />
           </div>
-        </SmartOfferSlider>
+        </SmartOfferPanel>
         <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "center" }}>
           <MktButton variant="outline" href={JOIN}>
             <BrandIcon name="handCoins" size={16} /> Zobacz wszystkie okazje w aplikacji
@@ -428,13 +433,17 @@ function InvestorLanding() {
       </Section>
 
       <Section>
+        <SmartOfferSlider />
+      </Section>
+
+      <Section>
         <SectionHead eyebrow="Co otrzymujesz" title="Wszystko, czego potrzebuje inwestor" />
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={GET} icon3d />
         </div>
       </Section>
 
-      <Section>
+      <Section id="akademia">
         <SectionHead
           center
           eyebrow="Akademia inwestora"
@@ -446,7 +455,7 @@ function InvestorLanding() {
         </div>
       </Section>
 
-      <Section tint>
+      <Section tint id="ochrona">
         <SectionHead
           center
           eyebrow="Bezpieczeństwo"
@@ -462,7 +471,7 @@ function InvestorLanding() {
         </ComplianceNote>
       </Section>
 
-      <Section>
+      <Section id="windykacja-ai">
         <SectionHead
           center
           eyebrow="Moduł AI"
@@ -531,7 +540,7 @@ function InvestorLanding() {
         </ComplianceNote>
       </Section>
 
-      <Section tint>
+      <Section tint id="cennik">
         <SectionHead
           center
           eyebrow="Cennik"
