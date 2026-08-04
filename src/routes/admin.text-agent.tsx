@@ -10,13 +10,22 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Trash2, Plus, Pencil } from "lucide-react";
 import { getTextAgentSettings, saveTextAgentSettings } from "@/lib/text-agent-settings.functions";
 import {
   listKnowledge,
   upsertKnowledge,
   deleteKnowledge,
+  type KnowledgeAudience,
 } from "@/lib/text-agent-knowledge.functions";
+import type { AgentVariant } from "@/lib/elevenlabs-text-agent.server";
 
 export const Route = createFileRoute("/admin/text-agent")({
   component: TextAgentSettingsPage,
@@ -26,18 +35,28 @@ function TextAgentSettingsPage() {
   return (
     <div className="p-6 max-w-5xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Agent DM (Messenger / Instagram / Email)</h1>
+        <h1 className="text-2xl font-bold">Agenci DM (Messenger / Instagram / Email / Czat)</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Prompt systemowy + baza wiedzy (RAG) dla agenta odpisującego 24/7.
+          Prompty systemowe + wspólna baza wiedzy (RAG) dla agentów odpisujących 24/7: bot klientów
+          (pożyczkobiorcy), bot inwestorów instytucjonalnych (czat na /dla-inwestora — tylko
+          informacje + FV) i asystent Klubu dla inwestorów prywatnych z dostępem (panel /inwestor).
         </p>
       </div>
       <Tabs defaultValue="prompt">
         <TabsList>
-          <TabsTrigger value="prompt">Prompt systemowy</TabsTrigger>
+          <TabsTrigger value="prompt">Prompt — klienci</TabsTrigger>
+          <TabsTrigger value="prompt-inwestor">Prompt — inwestorzy instytucjonalni</TabsTrigger>
+          <TabsTrigger value="prompt-inwestor-prywatny">Prompt — asystent Klubu</TabsTrigger>
           <TabsTrigger value="knowledge">Baza wiedzy (RAG)</TabsTrigger>
         </TabsList>
         <TabsContent value="prompt" className="mt-4">
-          <PromptTab />
+          <PromptTab variant="klient" />
+        </TabsContent>
+        <TabsContent value="prompt-inwestor" className="mt-4">
+          <PromptTab variant="inwestor" />
+        </TabsContent>
+        <TabsContent value="prompt-inwestor-prywatny" className="mt-4">
+          <PromptTab variant="inwestor_prywatny" />
         </TabsContent>
         <TabsContent value="knowledge" className="mt-4">
           <KnowledgeTab />
@@ -47,7 +66,7 @@ function TextAgentSettingsPage() {
   );
 }
 
-function PromptTab() {
+function PromptTab({ variant }: { variant: AgentVariant }) {
   const load = useServerFn(getTextAgentSettings);
   const save = useServerFn(saveTextAgentSettings);
   const [systemPrompt, setSystemPrompt] = useState("");
@@ -57,7 +76,7 @@ function PromptTab() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    load()
+    load({ data: { variant } })
       .then((d) => {
         setSystemPrompt(d.systemPrompt ?? "");
         setFirstMessage(d.firstMessage ?? "");
@@ -65,12 +84,12 @@ function PromptTab() {
       })
       .catch((e) => toast.error(e?.message ?? "Błąd ładowania"))
       .finally(() => setLoading(false));
-  }, [load]);
+  }, [load, variant]);
 
   const onSave = async () => {
     setSaving(true);
     try {
-      await save({ data: { systemPrompt, firstMessage } });
+      await save({ data: { systemPrompt, firstMessage, variant } });
       toast.success("Zapisano prompt agenta");
       setUpdatedAt(new Date().toISOString());
     } catch (e: any) {
@@ -83,10 +102,32 @@ function PromptTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Prompt systemowy</CardTitle>
+        <CardTitle>
+          {variant === "inwestor"
+            ? "Prompt systemowy — bot inwestorów instytucjonalnych"
+            : variant === "inwestor_prywatny"
+              ? "Prompt systemowy — asystent Klubu (inwestorzy z dostępem)"
+              : "Prompt systemowy — bot klientów"}
+        </CardTitle>
         <CardDescription>
-          Tools: <code>update_lead_data</code>, <code>send_application_link</code>,{" "}
-          <code>mark_ready_for_human</code>. Pusty prompt = używany jest domyślny. Cache 5 min.
+          {variant === "inwestor" ? (
+            <>
+              Tylko przekazywanie informacji + FV. Tools: <code>update_lead_data</code>,{" "}
+              <code>request_invoice</code>, <code>mark_ready_for_human</code>. Placeholder:{" "}
+              <code>{"{{LINK_REJESTRACJA_INWESTORA}}"}</code>. Pusty prompt = używany jest domyślny.
+              Cache 5 min.
+            </>
+          ) : variant === "inwestor_prywatny" ? (
+            <>
+              Asystent w panelu /inwestor dla członków z wykupionym dostępem — przewodnik po
+              platformie, bez tools. Pusty prompt = używany jest domyślny. Cache 5 min.
+            </>
+          ) : (
+            <>
+              Tools: <code>update_lead_data</code>, <code>send_application_link</code>,{" "}
+              <code>mark_ready_for_human</code>. Pusty prompt = używany jest domyślny. Cache 5 min.
+            </>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -132,8 +173,15 @@ type KItem = {
   id: string;
   title: string;
   content: string;
+  audience: KnowledgeAudience;
   updated_at: string;
   has_embedding: boolean;
+};
+
+const AUDIENCE_LABELS: Record<KnowledgeAudience, string> = {
+  klient: "Klienci",
+  inwestor: "Inwestorzy (instytucjonalni + asystent Klubu)",
+  wspolna: "Wspólna (wszystkie boty)",
 };
 
 function KnowledgeTab() {
@@ -142,9 +190,12 @@ function KnowledgeTab() {
   const remove = useServerFn(deleteKnowledge);
   const [items, setItems] = useState<KItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<{ id?: string; title: string; content: string } | null>(
-    null,
-  );
+  const [editing, setEditing] = useState<{
+    id?: string;
+    title: string;
+    content: string;
+    audience: KnowledgeAudience;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
 
   const reload = useCallback(async () => {
@@ -203,10 +254,14 @@ function KnowledgeTab() {
           <CardTitle>Baza wiedzy (RAG)</CardTitle>
           <CardDescription>
             Wpisy są automatycznie embeddowane (openai/text-embedding-3-small) i podpinane do rozmów
-            na podstawie podobieństwa semantycznego do pytania klienta (top 4, próg 0.5).
+            na podstawie podobieństwa semantycznego do pytania klienta (top 4, próg 0.5). Pole
+            „Odbiorcy" decyduje, który bot korzysta z wpisu.
           </CardDescription>
         </div>
-        <Button onClick={() => setEditing({ title: "", content: "" })} size="sm">
+        <Button
+          onClick={() => setEditing({ title: "", content: "", audience: "klient" })}
+          size="sm"
+        >
           <Plus className="w-4 h-4 mr-1" /> Nowy wpis
         </Button>
       </CardHeader>
@@ -233,6 +288,26 @@ function KnowledgeTab() {
                   className="mt-2 text-sm"
                 />
               </div>
+              <div>
+                <Label>Odbiorcy</Label>
+                <Select
+                  value={editing.audience}
+                  onValueChange={(v) =>
+                    setEditing({ ...editing, audience: v as KnowledgeAudience })
+                  }
+                >
+                  <SelectTrigger className="mt-2 w-full sm:w-72">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(AUDIENCE_LABELS) as KnowledgeAudience[]).map((a) => (
+                      <SelectItem key={a} value={a}>
+                        {AUDIENCE_LABELS[a]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setEditing(null)} disabled={saving}>
                   Anuluj
@@ -258,6 +333,9 @@ function KnowledgeTab() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium truncate">{it.title}</h4>
+                    <Badge variant="outline" className="text-[10px]">
+                      {AUDIENCE_LABELS[it.audience] ?? it.audience}
+                    </Badge>
                     {!it.has_embedding && (
                       <Badge variant="destructive" className="text-[10px]">
                         brak embeddingu

@@ -5358,6 +5358,30 @@ export type Database = {
         }
         Relationships: []
       }
+      investor_assistant_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investor_offers: {
         Row: {
           admin_note: string | null
@@ -8556,6 +8580,7 @@ export type Database = {
       }
       text_agent_knowledge: {
         Row: {
+          audience: string
           content: string
           created_at: string
           created_by: string | null
@@ -8565,6 +8590,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audience?: string
           content: string
           created_at?: string
           created_by?: string | null
@@ -8574,6 +8600,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audience?: string
           content?: string
           created_at?: string
           created_by?: string | null
@@ -9459,7 +9486,7 @@ export type Database = {
         }[]
       }
       match_text_agent_knowledge: {
-        Args: { match_count?: number; query_embedding: string }
+        Args: { filter_audience?: string; match_count?: number; query_embedding: string }
         Returns: {
           content: string
           id: string

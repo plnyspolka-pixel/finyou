@@ -61,6 +61,34 @@ function extractDistributionIdFromRecipients(recipients: string[]): string | nul
   return null;
 }
 
+/**
+ * Zapasowe dopasowanie po NADAWCY: inwestor odpisał z pominięciem aliasu
+ * oferta+<uuid>@ i bez nagłówków wątku (nowy mail na ogólny adres, klient
+ * pocztowy ucinający In-Reply-To/References). Bierzemy jego najnowszą
+ * dystrybucję z ostatnich 60 dni — lepiej, żeby wiadomość trafiła na kartę
+ * właściwego wniosku (człowiek zweryfikuje), niż do ścieżki leadowej.
+ */
+async function findDistributionByInvestorEmail(fromEmail: string): Promise<string | null> {
+  if (!fromEmail) return null;
+  const { data: inv } = await supabaseAdmin
+    .from("investors")
+    .select("id")
+    .ilike("email", fromEmail.trim())
+    .limit(1)
+    .maybeSingle();
+  if (!inv) return null;
+  const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await supabaseAdmin
+    .from("offer_distributions")
+    .select("id")
+    .eq("investor_id", inv.id)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
 async function findDistributionByThread(
   inReplyTo: string | null | undefined,
   references: string | null | undefined,
@@ -128,6 +156,9 @@ export async function routeInboundOfferReply(mail: InboundOfferReply): Promise<b
   let distributionId = extractDistributionIdFromRecipients(mail.recipients);
   if (!distributionId) {
     distributionId = await findDistributionByThread(mail.inReplyTo, mail.references);
+  }
+  if (!distributionId) {
+    distributionId = await findDistributionByInvestorEmail(mail.fromEmail);
   }
   if (!distributionId) return false;
 

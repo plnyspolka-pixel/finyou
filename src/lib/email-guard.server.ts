@@ -1,11 +1,7 @@
 // Ochrona przed pętlami mailowymi i niechcianymi adresatami.
 // Używane PRZED każdą odpowiedzią auto-agenta i (opcjonalnie) przed wysyłką maila.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import {
-  looksLikeAutoMessage,
-  isAutoReplySubject,
-  isRepetitiveInbound,
-} from "@/lib/bot-detection";
+import { looksLikeAutoMessage, isAutoReplySubject, isRepetitiveInbound } from "@/lib/bot-detection";
 
 function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -66,6 +62,28 @@ export function isSystemSender(email: string | null | undefined): boolean {
   if (!email) return true;
   const e = email.toLowerCase();
   return SYSTEM_PREFIXES.some((p) => e.startsWith(p) || e.includes(`<${p}`));
+}
+
+/**
+ * Zarejestrowany inwestor (indywidualny lub instytucjonalny) NIGDY nie może
+ * dostać auto-odpowiedzi bota klienckiego (pożyczkowego). Dotyczy maili, które
+ * nie dopasowały się do dystrybucji oferty (routeInboundOfferReply) — np. nowy
+ * wątek na ogólny adres, klient pocztowy bez In-Reply-To/References albo
+ * odpowiedź z innego adresu niż alias oferta+... Takie wiadomości mają czekać
+ * na człowieka.
+ */
+export async function registeredInvestorType(
+  email: string | null | undefined,
+): Promise<string | null> {
+  if (!email) return null;
+  const s = admin();
+  const { data } = await s
+    .from("investors")
+    .select("investor_type")
+    .ilike("email", email.trim())
+    .limit(1)
+    .maybeSingle();
+  return data?.investor_type ?? null;
 }
 
 export async function isSuppressed(email: string | null | undefined): Promise<boolean> {
@@ -151,6 +169,24 @@ export async function shouldSkipAutoReply(params: {
   const { leadId, fromEmail, headers, threadIds = [], subject, bodyText } = params;
   if (isSystemSender(fromEmail)) return { skip: true, reason: "system_sender" };
   if (isAutoReplyHeaders(headers)) return { skip: true, reason: "auto_reply_headers" };
+
+  // Mail od zarejestrowanego inwestora — bot kliencki milczy, sprawę przejmuje
+  // człowiek. Flagujemy leada, żeby wiadomość nie utonęła bez odpowiedzi.
+  const investorType = await registeredInvestorType(fromEmail);
+  if (investorType) {
+    try {
+      await admin()
+        .from("leads")
+        .update({
+          status: "wymaga_kontaktu",
+          notes: `[AI] Mail od zarejestrowanego inwestora (${investorType}) — bez auto-odpowiedzi, do obsługi ręcznej.`,
+        })
+        .eq("id", leadId);
+    } catch (e) {
+      console.error("[email-guard] flag investor lead failed", e);
+    }
+    return { skip: true, reason: `registered_investor:${investorType}` };
+  }
 
   // Rozpoznanie automatu po temacie/treści — nagłówki nie zawsze są ustawione
   // (wiele botów i autoresponderów ich nie wysyła).

@@ -180,6 +180,7 @@ import { Route as ApiPublicMetaMessengerWebhookRouteImport } from './routes/api/
 import { Route as ApiPublicMetaLeadsWebhookRouteImport } from './routes/api/public/meta-leads-webhook'
 import { Route as ApiPublicMailgunInboundWebhookRouteImport } from './routes/api/public/mailgun-inbound-webhook'
 import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/public/loan-application'
+import { Route as ApiPublicInvestorChatWidgetRouteImport } from './routes/api/public/investor-chat-widget'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as ApiPublicElevenlabsSendSmsRouteImport } from './routes/api/public/elevenlabs-send-sms'
 import { Route as ApiPublicChatWidgetRouteImport } from './routes/api/public/chat-widget'
@@ -1115,6 +1116,12 @@ const ApiPublicLoanApplicationRoute =
     path: '/api/public/loan-application',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicInvestorChatWidgetRoute =
+  ApiPublicInvestorChatWidgetRouteImport.update({
+    id: '/api/public/investor-chat-widget',
+    path: '/api/public/investor-chat-widget',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicElevenlabsWebhookRoute =
   ApiPublicElevenlabsWebhookRouteImport.update({
     id: '/api/public/elevenlabs-webhook',
@@ -1632,6 +1639,7 @@ export interface FileRoutesByFullPath {
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
+  '/api/public/investor-chat-widget': typeof ApiPublicInvestorChatWidgetRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
@@ -1857,6 +1865,7 @@ export interface FileRoutesByTo {
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
+  '/api/public/investor-chat-widget': typeof ApiPublicInvestorChatWidgetRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
@@ -2093,6 +2102,7 @@ export interface FileRoutesById {
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
+  '/api/public/investor-chat-widget': typeof ApiPublicInvestorChatWidgetRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
@@ -2330,6 +2340,7 @@ export interface FileRouteTypes {
     | '/api/public/chat-widget'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
+    | '/api/public/investor-chat-widget'
     | '/api/public/loan-application'
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
@@ -2555,6 +2566,7 @@ export interface FileRouteTypes {
     | '/api/public/chat-widget'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
+    | '/api/public/investor-chat-widget'
     | '/api/public/loan-application'
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
@@ -2790,6 +2802,7 @@ export interface FileRouteTypes {
     | '/api/public/chat-widget'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
+    | '/api/public/investor-chat-widget'
     | '/api/public/loan-application'
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
@@ -2916,6 +2929,7 @@ export interface RootRouteChildren {
   ApiPublicChatWidgetRoute: typeof ApiPublicChatWidgetRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
+  ApiPublicInvestorChatWidgetRoute: typeof ApiPublicInvestorChatWidgetRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
   ApiPublicMailgunInboundWebhookRoute: typeof ApiPublicMailgunInboundWebhookRoute
   ApiPublicMetaLeadsWebhookRoute: typeof ApiPublicMetaLeadsWebhookRoute
@@ -4162,6 +4176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicLoanApplicationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/investor-chat-widget': {
+      id: '/api/public/investor-chat-widget'
+      path: '/api/public/investor-chat-widget'
+      fullPath: '/api/public/investor-chat-widget'
+      preLoaderRoute: typeof ApiPublicInvestorChatWidgetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/elevenlabs-webhook': {
       id: '/api/public/elevenlabs-webhook'
       path: '/api/public/elevenlabs-webhook'
@@ -5056,6 +5077,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicChatWidgetRoute: ApiPublicChatWidgetRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
+  ApiPublicInvestorChatWidgetRoute: ApiPublicInvestorChatWidgetRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
   ApiPublicMailgunInboundWebhookRoute: ApiPublicMailgunInboundWebhookRoute,
   ApiPublicMetaLeadsWebhookRoute: ApiPublicMetaLeadsWebhookRoute,
@@ -5114,3 +5136,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
