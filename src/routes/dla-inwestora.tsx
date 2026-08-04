@@ -442,7 +442,7 @@ function InvestorLanding() {
         </div>
       </Section>
 
-      <Section>
+      <Section id="akademia">
         <SectionHead
           center
           eyebrow="Akademia inwestora"
@@ -454,7 +454,7 @@ function InvestorLanding() {
         </div>
       </Section>
 
-      <Section tint>
+      <Section tint id="ochrona">
         <SectionHead
           center
           eyebrow="Bezpieczeństwo"
@@ -470,7 +470,7 @@ function InvestorLanding() {
         </ComplianceNote>
       </Section>
 
-      <Section>
+      <Section id="windykacja-ai">
         <SectionHead
           center
           eyebrow="Moduł AI"
@@ -539,7 +539,7 @@ function InvestorLanding() {
         </ComplianceNote>
       </Section>
 
-      <Section tint>
+      <Section tint id="cennik">
         <SectionHead
           center
           eyebrow="Cennik"
