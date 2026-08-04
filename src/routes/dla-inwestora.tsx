@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
@@ -394,6 +395,39 @@ function Hero() {
   );
 }
 
+// Iframe z okazjami dopasowuje wysokość do treści zgłaszanej przez embed
+// (postMessage z /embed/leady) — karty nie ucinają się na żadnej szerokości.
+function LeadsEmbed() {
+  const [height, setHeight] = useState(430);
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      const d = e.data as { type?: string; height?: number } | null;
+      if (d?.type === "fy:leady-embed:height" && typeof d.height === "number" && d.height > 0) {
+        setHeight(Math.ceil(d.height));
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+  return (
+    <div
+      style={{
+        marginTop: "1.1rem",
+        borderRadius: 18,
+        overflow: "hidden",
+        border: "1px solid rgba(84, 124, 214, 0.2)",
+      }}
+    >
+      <iframe
+        src="https://app.financeyou.pl/embed/leady"
+        style={{ border: 0, width: "100%", minHeight: 340, height, display: "block" }}
+        loading="lazy"
+        title="Ostatnie okazje inwestycyjne Finance You"
+      />
+    </div>
+  );
+}
+
 function InvestorLanding() {
   const { products } = Route.useLoaderData();
   return (
@@ -405,21 +439,7 @@ function InvestorLanding() {
           <Eyebrow tone="gold" style={{ letterSpacing: "0.24em" }}>
             Ostatnie okazje inwestycyjne
           </Eyebrow>
-          <div
-            style={{
-              marginTop: "1.1rem",
-              borderRadius: 18,
-              overflow: "hidden",
-              border: "1px solid rgba(84, 124, 214, 0.2)",
-            }}
-          >
-            <iframe
-              src="https://app.financeyou.pl/embed/leady"
-              style={{ border: 0, width: "100%", minHeight: 340, height: 430, display: "block" }}
-              loading="lazy"
-              title="Ostatnie okazje inwestycyjne Finance You"
-            />
-          </div>
+          <LeadsEmbed />
         </SmartOfferPanel>
         <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "center" }}>
           <MktButton variant="outline" href={JOIN}>

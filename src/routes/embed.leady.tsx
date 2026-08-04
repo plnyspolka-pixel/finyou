@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { formatPLN } from "@/lib/labels";
@@ -28,8 +29,34 @@ export const Route = createFileRoute("/embed/leady")({
 function EmbedLeads() {
   const { data } = useSuspenseQuery(leadsQO);
 
+  // Tło pod treścią (widoczne, zanim iframe dopasuje wysokość) musi być tak
+  // samo ciemne jak karta — inaczej prześwituje jasny motyw aplikacji.
+  useEffect(() => {
+    const prev = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = "#0a1030";
+    return () => {
+      document.body.style.backgroundColor = prev;
+    };
+  }, []);
+
+  // Zgłaszamy rzeczywistą wysokość treści do strony-rodzica (iframe na
+  // landingu), żeby okienko dopasowało się idealnie i karty się nie ucinały.
+  useEffect(() => {
+    if (window.parent === window) return;
+    const post = () => {
+      window.parent.postMessage(
+        { type: "fy:leady-embed:height", height: document.body.scrollHeight },
+        "*",
+      );
+    };
+    post();
+    const ro = new ResizeObserver(post);
+    ro.observe(document.body);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#0a1030] p-4 sm:p-6 text-slate-100">
+    <div className="bg-[#0a1030] p-4 sm:p-6 text-slate-100">
       <div className="mx-auto max-w-6xl">
         {data.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-10 text-center text-sm text-slate-300">
