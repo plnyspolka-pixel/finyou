@@ -231,9 +231,18 @@ function SortHeader({
 }
 
 const LOC_PRIORITY_META: Record<string, { label: string; cls: string }> = {
-  AUTO_ANALYZE_HIGH: { label: "wysoki", cls: "border-emerald-400 text-emerald-700" },
-  AUTO_ANALYZE_STANDARD: { label: "standard", cls: "border-lime-400 text-lime-700" },
-  LIGHT_LOCATION_CHECK: { label: "lekki", cls: "border-amber-300 text-amber-700" },
+  AUTO_ANALYZE_HIGH: {
+    label: "wysoki",
+    cls: "border-emerald-400 text-emerald-700 dark:border-emerald-500/60 dark:text-emerald-400",
+  },
+  AUTO_ANALYZE_STANDARD: {
+    label: "standard",
+    cls: "border-lime-400 text-lime-700 dark:border-lime-500/60 dark:text-lime-400",
+  },
+  LIGHT_LOCATION_CHECK: {
+    label: "lekki",
+    cls: "border-amber-300 text-amber-700 dark:border-amber-500/50 dark:text-amber-400",
+  },
   LOW_PRIORITY: { label: "niski", cls: "text-muted-foreground" },
   INVALID_KW: { label: "błąd KW", cls: "text-muted-foreground" },
   INSUFFICIENT_DATA: { label: "brak danych", cls: "text-muted-foreground" },
@@ -257,11 +266,11 @@ function LocationCell({
     score == null
       ? ""
       : score >= 75
-        ? "text-emerald-600"
+        ? "text-emerald-600 dark:text-emerald-400"
         : score >= 60
-          ? "text-lime-600"
+          ? "text-lime-600 dark:text-lime-400"
           : score >= 40
-            ? "text-amber-600"
+            ? "text-amber-600 dark:text-amber-400"
             : "text-muted-foreground";
   return (
     <div className="flex flex-col gap-0.5">
@@ -344,7 +353,7 @@ function StatusBadge({ d }: { d: DerivedRow }) {
               ? "secondary"
               : "outline"
       }
-      className={`whitespace-normal text-[11px] leading-tight ${d.needsFix ? "border-amber-400 text-amber-700" : ""}`}
+      className={`whitespace-normal text-[11px] leading-tight ${d.needsFix ? "border-amber-400 text-amber-700 dark:border-amber-500/60 dark:text-amber-400" : ""}`}
     >
       {d.needsFix && <AlertTriangle className="h-3 w-3 mr-1 inline shrink-0" />}
       {LOAN_STATUS_SHORT_LABELS[d.canonStatus]}
@@ -352,7 +361,13 @@ function StatusBadge({ d }: { d: DerivedRow }) {
   );
 }
 
-function ApplicationsPage() {
+// Współdzielony z panelem operatora (/operator/wnioski) — detailTo wskazuje
+// trasę szczegółów wniosku właściwą dla danego panelu.
+export function ApplicationsPage({
+  detailTo = "/admin/wnioski/$id",
+}: {
+  detailTo?: "/admin/wnioski/$id" | "/operator/wnioski/$id";
+} = {}) {
   const [rows, setRows] = useState<Row[]>([]);
   const [ctx, setCtx] = useState<EnrichmentContext>(() => ({
     docsByLoan: new Map(),
@@ -712,7 +727,7 @@ function ApplicationsPage() {
         <Eye className="h-3.5 w-3.5" />
       </Button>
       <Button asChild size="sm" variant="ghost" className="h-8 px-2">
-        <Link to="/admin/wnioski/$id" params={{ id: r.id }}>
+        <Link to={detailTo} params={{ id: r.id }}>
           Otwórz
         </Link>
       </Button>
@@ -720,7 +735,7 @@ function ApplicationsPage() {
         <Button
           size="sm"
           variant="ghost"
-          className="h-8 w-8 p-0 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+          className="h-8 w-8 p-0 text-amber-700 hover:text-amber-800 hover:bg-amber-100 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-500/10"
           onClick={() => void demote([r.id])}
           title="Cofnij do kompletowania danych"
         >
@@ -766,7 +781,7 @@ function ApplicationsPage() {
                   value="attention"
                   className={
                     counts.attention > 0
-                      ? "text-amber-600 data-[state=active]:text-amber-700"
+                      ? "text-amber-600 data-[state=active]:text-amber-700 dark:text-amber-400 dark:data-[state=active]:text-amber-300"
                       : undefined
                   }
                 >
@@ -778,7 +793,7 @@ function ApplicationsPage() {
               <Button
                 size="sm"
                 variant="outline"
-                className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                className="text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-500/50 dark:hover:bg-amber-500/10"
                 onClick={() => void demote(filtered.map((r) => r.id))}
               >
                 <Undo2 className="h-4 w-4 mr-2" /> Cofnij wszystkie ({filtered.length}) do
@@ -821,7 +836,7 @@ function ApplicationsPage() {
                 return (
                   <div
                     key={r.id}
-                    className={`rounded-lg border p-3 space-y-2 ${d.needsFix ? "bg-amber-50/60" : "bg-card"}`}
+                    className={`rounded-lg border p-3 space-y-2 ${d.needsFix ? "bg-amber-50/60 dark:bg-amber-500/10" : "bg-card"}`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -852,7 +867,9 @@ function ApplicationsPage() {
                     </div>
 
                     {d.core.complete ? (
-                      <div className="text-[11px] text-emerald-600">komplet</div>
+                      <div className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                        komplet
+                      </div>
                     ) : (
                       <div className="flex flex-wrap gap-0.5">
                         {missingLabels(d.core.missing).map((label) => (
@@ -991,7 +1008,10 @@ function ApplicationsPage() {
               {filtered.map((r) => {
                 const d = deriveRow(r, ctx);
                 return (
-                  <TableRow key={r.id} className={d.needsFix ? "bg-amber-50/60" : undefined}>
+                  <TableRow
+                    key={r.id}
+                    className={d.needsFix ? "bg-amber-50/60 dark:bg-amber-500/10" : undefined}
+                  >
                     <TableCell className="font-medium align-top">
                       <div className="flex items-center gap-1 truncate" title={d.name}>
                         <SourceIcon
@@ -1039,7 +1059,9 @@ function ApplicationsPage() {
                     </TableCell>
                     <TableCell className="align-top">
                       {d.core.complete ? (
-                        <span className="text-[11px] text-emerald-600">komplet</span>
+                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                          komplet
+                        </span>
                       ) : (
                         <div className="flex flex-wrap gap-0.5">
                           {missingLabels(d.core.missing).map((label) => (

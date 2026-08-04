@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,8 +64,14 @@ const commDirectionLabels: Record<string, string> = {
   outbound: "Wychodzący",
 };
 
-function WniosekDetail() {
-  const { id } = Route.useParams();
+// Współdzielony z panelem operatora (/operator/wnioski/$id) — backTo wskazuje
+// listę, do której wraca link „Wróć" w danym panelu.
+export function WniosekDetail({
+  backTo = "/admin/klienci",
+}: {
+  backTo?: "/admin/klienci" | "/operator/wnioski";
+} = {}) {
+  const { id } = useParams({ strict: false }) as { id: string };
   const { roles } = useAuth();
   const isAdmin = roles.includes("administrator");
   const [app, setApp] = useState<any | null>(null);
@@ -246,7 +252,7 @@ function WniosekDetail() {
   return (
     <div className="space-y-6">
       <Link
-        to="/admin/klienci"
+        to={backTo}
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="mr-1 h-4 w-4" /> Wróć
