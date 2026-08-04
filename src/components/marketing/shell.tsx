@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
+import { BrandIcon } from "./brand-icon";
 import { MktButton } from "./primitives";
 
 /**
@@ -10,6 +11,9 @@ import { MktButton } from "./primitives";
  */
 
 export type MarketingPage = "home" | "klient" | "inwestor" | "posrednik" | "blog" | "kalkulator";
+
+/** Nadpisanie danych kontaktowych — np. kopia landinga z telefonem operatora. */
+export type MarketingContact = { phone: string; phoneHref: string };
 
 const CONTACT = { phone: "+48 732 059 898", email: "kontakt@financeyou.pl" };
 
@@ -39,7 +43,13 @@ const INVESTOR_ANCHORS = [
   { label: "Cennik", hash: "#cennik" },
 ];
 
-export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
+export function SiteHeader({
+  page = "home",
+  contact,
+}: {
+  page?: MarketingPage;
+  contact?: MarketingContact;
+}) {
   const [open, setOpen] = useState(false);
   const nav = [
     { label: "Klient", href: PAGE_PATH.klient, key: "klient" as const },
@@ -114,6 +124,23 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
             );
           })}
         </nav>
+        {contact && (
+          <a
+            href={`tel:${contact.phoneHref}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: "0.9rem",
+              fontWeight: 700,
+              color: "var(--accent)",
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <BrandIcon name="phone" size={16} /> {contact.phone}
+          </a>
+        )}
         <div
           className="fy-nav-desktop"
           style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
@@ -229,7 +256,7 @@ export function StickyCTA({ label, href }: { label: string; href: string }) {
   );
 }
 
-export function SiteFooter() {
+export function SiteFooter({ contact }: { contact?: MarketingContact }) {
   const cols = [
     {
       h: "Ścieżki",
@@ -289,7 +316,7 @@ export function SiteFooter() {
           <div
             style={{ marginTop: "0.8rem", fontSize: "0.78rem", color: "var(--muted-foreground)" }}
           >
-            {CONTACT.phone} · {CONTACT.email}
+            {(contact ?? CONTACT).phone} · {CONTACT.email}
           </div>
           <div
             style={{
@@ -361,17 +388,19 @@ export function SiteFooter() {
 export function MarketingShell({
   page = "home",
   sticky,
+  contact,
   children,
 }: {
   page?: MarketingPage;
   sticky?: { label: string; href: string };
+  contact?: MarketingContact;
   children: ReactNode;
 }) {
   return (
     <div className="fy-marketing">
-      <SiteHeader page={page} />
+      <SiteHeader page={page} contact={contact} />
       {children}
-      <SiteFooter />
+      <SiteFooter contact={contact} />
       {sticky ? <StickyCTA label={sticky.label} href={sticky.href} /> : null}
     </div>
   );

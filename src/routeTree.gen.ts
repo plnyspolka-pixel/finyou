@@ -17,6 +17,7 @@ import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as RaportLokalizacjeRouteImport } from './routes/raport-lokalizacje'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
+import { Route as PawelRouteImport } from './routes/pawel'
 import { Route as OperatorRejestracjaRouteImport } from './routes/operator-rejestracja'
 import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as OfertyRouteImport } from './routes/oferty'
@@ -282,6 +283,11 @@ const PosrednikRoute = PosrednikRouteImport.update({
 const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
   id: '/polityka-prywatnosci',
   path: '/polityka-prywatnosci',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PawelRoute = PawelRouteImport.update({
+  id: '/pawel',
+  path: '/pawel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OperatorRejestracjaRoute = OperatorRejestracjaRouteImport.update({
@@ -1496,6 +1502,7 @@ export interface FileRoutesByFullPath {
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/pawel': typeof PawelRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
@@ -1728,6 +1735,7 @@ export interface FileRoutesByTo {
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/pawel': typeof PawelRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
@@ -1959,6 +1967,7 @@ export interface FileRoutesById {
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/pawel': typeof PawelRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
@@ -2197,6 +2206,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
+    | '/pawel'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/raport-lokalizacje'
@@ -2429,6 +2439,7 @@ export interface FileRouteTypes {
     | '/nowe-haslo'
     | '/oferty'
     | '/operator-rejestracja'
+    | '/pawel'
     | '/polityka-prywatnosci'
     | '/raport-lokalizacje'
     | '/regulamin'
@@ -2659,6 +2670,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
+    | '/pawel'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/raport-lokalizacje'
@@ -2896,6 +2908,7 @@ export interface RootRouteChildren {
   OfertyRoute: typeof OfertyRoute
   OperatorRoute: typeof OperatorRouteWithChildren
   OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
+  PawelRoute: typeof PawelRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
   RaportLokalizacjeRoute: typeof RaportLokalizacjeRoute
@@ -3033,6 +3046,13 @@ declare module '@tanstack/react-router' {
       path: '/polityka-prywatnosci'
       fullPath: '/polityka-prywatnosci'
       preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pawel': {
+      id: '/pawel'
+      path: '/pawel'
+      fullPath: '/pawel'
+      preLoaderRoute: typeof PawelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/operator-rejestracja': {
@@ -5043,6 +5063,7 @@ const rootRouteChildren: RootRouteChildren = {
   OfertyRoute: OfertyRoute,
   OperatorRoute: OperatorRouteWithChildren,
   OperatorRejestracjaRoute: OperatorRejestracjaRoute,
+  PawelRoute: PawelRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
   RaportLokalizacjeRoute: RaportLokalizacjeRoute,
@@ -5136,13 +5157,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
