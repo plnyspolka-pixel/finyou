@@ -271,6 +271,12 @@
     overflow-wrap: anywhere;
     word-break: break-word;
   }
+  /* Kwoty i liczby (tabular-nums) nigdy nie łamią się w środku cyfr —
+     np. „125 631 zł" nie może rozpaść się na „125 / 631 / zł" na mobile */
+  .tabular-nums, .tabular-nums * {
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
   /* Media zawsze skalują się do kontenera */
   img, video, canvas {
     max-width: 100%;
