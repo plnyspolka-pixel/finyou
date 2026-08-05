@@ -476,7 +476,7 @@
   .fy-compare { grid-template-columns: 1fr !important; }
   .fy-foot { grid-template-columns: 1fr 1fr !important; }
   .fy-nav-desktop { display: none !important; }
-  .fy-burger { display: inline-flex !important; }
+  .fy-nav-mobile { display: inline-flex !important; }
   .fy-sticky { display: block !important; }
 }
 @media (max-width: 560px) {

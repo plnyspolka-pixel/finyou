@@ -125,29 +125,37 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
             {cta.label}
           </MktButton>
         </div>
-        <button
-          className="fy-burger"
-          onClick={() => setOpen(!open)}
-          aria-label="Menu"
-          style={{
-            display: "none",
-            background: "none",
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            padding: "0.4rem 0.55rem",
-            cursor: "pointer",
-          }}
+        <div
+          className="fy-nav-mobile"
+          style={{ display: "none", gap: "0.5rem", alignItems: "center" }}
         >
-          <span
+          <MktButton size="sm" variant="ghost" href="/logowanie">
+            Panel
+          </MktButton>
+          <button
+            className="fy-burger"
+            onClick={() => setOpen(!open)}
+            aria-label="Menu"
             style={{
-              display: "block",
-              width: 18,
-              height: 2,
-              background: "var(--foreground)",
-              boxShadow: "0 6px 0 var(--foreground), 0 -6px 0 var(--foreground)",
+              display: "inline-flex",
+              background: "none",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              padding: "0.4rem 0.55rem",
+              cursor: "pointer",
             }}
-          />
-        </button>
+          >
+            <span
+              style={{
+                display: "block",
+                width: 18,
+                height: 2,
+                background: "var(--foreground)",
+                boxShadow: "0 6px 0 var(--foreground), 0 -6px 0 var(--foreground)",
+              }}
+            />
+          </button>
+        </div>
       </div>
       {open && (
         <div
@@ -196,6 +204,9 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
                 ))
               : []),
           ])}
+          <MktButton variant="ghost" href="/logowanie" style={{ marginTop: 8 }}>
+            Zaloguj się do panelu
+          </MktButton>
           <MktButton variant="cta" href={cta.href} style={{ marginTop: 8 }}>
             {cta.label}
           </MktButton>
