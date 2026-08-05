@@ -8508,6 +8508,8 @@ export type Database = {
       }
       studio_video_jobs: {
         Row: {
+          auto_publish_platforms: string[]
+          auto_published_at: string | null
           avatar_id: string
           created_at: string
           created_by: string | null
@@ -8515,6 +8517,9 @@ export type Database = {
           id: string
           last_error: string | null
           prompt: string
+          publish_description: string
+          publish_privacy: string
+          publish_title: string
           script: string
           status: string
           thumbnail_url: string | null
@@ -8523,6 +8528,8 @@ export type Database = {
           voice_id: string
         }
         Insert: {
+          auto_publish_platforms?: string[]
+          auto_published_at?: string | null
           avatar_id: string
           created_at?: string
           created_by?: string | null
@@ -8530,6 +8537,9 @@ export type Database = {
           id?: string
           last_error?: string | null
           prompt: string
+          publish_description?: string
+          publish_privacy?: string
+          publish_title?: string
           script: string
           status?: string
           thumbnail_url?: string | null
@@ -8538,6 +8548,8 @@ export type Database = {
           voice_id?: string
         }
         Update: {
+          auto_publish_platforms?: string[]
+          auto_published_at?: string | null
           avatar_id?: string
           created_at?: string
           created_by?: string | null
@@ -8545,6 +8557,9 @@ export type Database = {
           id?: string
           last_error?: string | null
           prompt?: string
+          publish_description?: string
+          publish_privacy?: string
+          publish_title?: string
           script?: string
           status?: string
           thumbnail_url?: string | null

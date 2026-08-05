@@ -4,7 +4,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getStudioStatus,
   listSocialQueue,
@@ -18,6 +18,8 @@ import {
   listStudioVoices,
   generateStudioScript,
   startStudioVideo,
+  enqueueStudioVideoBatch,
+  processStudioVideoQueueNow,
   pollStudioVideoJob,
   deleteStudioVideoJob,
   generateStudioPrompts,
@@ -44,6 +46,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
@@ -94,11 +97,20 @@ const STATUS_LABELS: Record<
 
 const VIDEO_STATUS_LABELS: Record<string, string> = {
   pending: "Oczekuje",
+  queued: "W kolejce",
+  generating_script: "Generuję scenariusz…",
   generating_audio: "Generuję lektora…",
   uploading: "Wysyłam audio…",
   rendering: "Renderowanie w HeyGen…",
   ready: "Gotowe",
   failed: "Błąd",
+};
+
+const AUTO_PLATFORM_SHORT: Record<string, string> = {
+  youtube: "YouTube",
+  facebook_reels: "FB Reels",
+  instagram_reels: "IG Reels",
+  facebook_post: "Post FB",
 };
 
 function externalUrl(platform: string, externalId: string | null): string | null {
@@ -124,6 +136,8 @@ function StudioPage() {
   const voicesFn = useServerFn(listStudioVoices);
   const genScriptFn = useServerFn(generateStudioScript);
   const startVideoFn = useServerFn(startStudioVideo);
+  const batchFn = useServerFn(enqueueStudioVideoBatch);
+  const processQueueFn = useServerFn(processStudioVideoQueueNow);
   const pollVideoFn = useServerFn(pollStudioVideoJob);
   const deleteVideoFn = useServerFn(deleteStudioVideoJob);
   const genPromptsFn = useServerFn(generateStudioPrompts);
@@ -176,6 +190,32 @@ function StudioPage() {
     }, 15_000);
     return () => clearInterval(t);
   }, [videoJobs, pollVideoFn, qc]);
+
+  // Otwarty panel napędza kolejkę wsadową (joby 'queued') — jeden job na raz,
+  // sekwencyjnie. Przy zamkniętym panelu kolejkę i tak przetworzy cron tick.
+  const queueDriverBusy = useRef(false);
+  const queuedCount = videoJobs.filter((j) => j.status === "queued").length;
+  useEffect(() => {
+    if (!queuedCount || queueDriverBusy.current) return;
+    queueDriverBusy.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        for (let i = 0; i < 30 && !cancelled; i++) {
+          const r = await processQueueFn();
+          qc.invalidateQueries({ queryKey: ["studio-video-jobs"] });
+          if (!r.remaining) break;
+        }
+      } catch {
+        // Błąd pojedynczego joba jest zapisany w jego last_error.
+      } finally {
+        queueDriverBusy.current = false;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [queuedCount, processQueueFn, qc]);
 
   // ── Publikacja ─────────────────────────────────────────────────────────────
   const [platforms, setPlatforms] = useState<StudioPlatform[]>([]);
@@ -240,10 +280,26 @@ function StudioPage() {
   const [avatarId, setAvatarId] = useState(HEYGEN_AVATARS[0].id);
   const [voiceId, setVoiceId] = useState(FILIP_VOICE_ID);
 
+  // ── Auto-publikacja po wygenerowaniu ───────────────────────────────────────
+  const [autoPublishOn, setAutoPublishOn] = useState(false);
+  const [autoPlatforms, setAutoPlatforms] = useState<StudioPlatform[]>(["youtube"]);
+  const [autoPrivacy, setAutoPrivacy] = useState<"public" | "unlisted" | "private">("public");
+  const toggleAutoPlatform = (p: StudioPlatform) =>
+    setAutoPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+  const effectiveAutoPlatforms = autoPublishOn ? autoPlatforms : [];
+
   // ── Baza 250 pytań do shortów ──────────────────────────────────────────────
   const [bankCategory, setBankCategory] = useState<"all" | ShortsCategory>("all");
   const [bankSection, setBankSection] = useState("all");
   const [bankSearch, setBankSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const toggleSelected = (id: number) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   // Prompt z prefiksem "#N · " oznacza pytanie z bazy — wtedy scenariusz
   // dostaje obowiązkowe otwarcie rolki (znacznik kategorii).
@@ -308,14 +364,62 @@ function StudioPage() {
   const startVideoM = useMutation({
     mutationFn: () =>
       startVideoFn({
-        data: { prompt: videoPrompt, script, avatar_id: avatarId, voice_id: voiceId },
+        data: {
+          prompt: videoPrompt,
+          script,
+          avatar_id: avatarId,
+          voice_id: voiceId,
+          auto_publish_platforms: effectiveAutoPlatforms,
+          publish_privacy: autoPrivacy,
+          publish_title: title,
+          publish_description: message,
+        },
       }),
     onSuccess: () => {
-      toast.success("Generacja wideo uruchomiona — status w tabeli poniżej");
+      toast.success(
+        effectiveAutoPlatforms.length
+          ? "Generacja uruchomiona — po wyrenderowaniu wideo trafi do publikacji"
+          : "Generacja wideo uruchomiona — status w tabeli poniżej",
+      );
       qc.invalidateQueries({ queryKey: ["studio-video-jobs"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const batchM = useMutation({
+    mutationFn: () =>
+      batchFn({
+        data: {
+          question_ids: [...selectedIds],
+          avatar_id: avatarId,
+          voice_id: voiceId,
+          auto_publish_platforms: effectiveAutoPlatforms,
+          publish_privacy: autoPrivacy,
+        },
+      }),
+    onSuccess: (r) => {
+      toast.success(
+        `Dodano ${r.queued} pytań do kolejki generowania` +
+          (r.skipped ? `, pominięto ${r.skipped} (mają już wideo)` : ""),
+      );
+      setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ["studio-video-jobs"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Zaznacza kolejne (do 5) pytania bez wideo z aktualnie przefiltrowanej listy.
+  const selectNextUnproduced = () => {
+    const next = bankQuestions
+      .filter((q) => !doneQuestionIds.has(q.id) && !selectedIds.has(q.id))
+      .slice(0, 5)
+      .map((q) => q.id);
+    if (!next.length) {
+      toast.info("Wszystkie przefiltrowane pytania mają już wideo lub są zaznaczone.");
+      return;
+    }
+    setSelectedIds((prev) => new Set([...prev, ...next]));
+  };
   const deleteVideoM = useMutation({
     mutationFn: (id: string) => deleteVideoFn({ data: { id } }),
     onSuccess: () => {
@@ -746,6 +850,34 @@ function StudioPage() {
                 </div>
               </div>
 
+              <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 p-2">
+                <Button
+                  size="sm"
+                  onClick={() => batchM.mutate()}
+                  disabled={batchM.isPending || selectedIds.size === 0}
+                >
+                  {batchM.isPending ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Video className="mr-1 h-4 w-4" />
+                  )}
+                  Generuj zaznaczone ({selectedIds.size})
+                </Button>
+                <Button variant="outline" size="sm" onClick={selectNextUnproduced}>
+                  Zaznacz 5 kolejnych bez wideo
+                </Button>
+                {selectedIds.size > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                    Wyczyść zaznaczenie
+                  </Button>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  Seria używa wybranego niżej awatara, głosu i ustawień auto-publikacji; scenariusze
+                  powstają automatycznie.
+                  {queuedCount > 0 && ` W kolejce: ${queuedCount}.`}
+                </span>
+              </div>
+
               <div className="max-h-96 space-y-2 overflow-y-auto rounded-md border p-2">
                 {bankQuestions.length === 0 ? (
                   <p className="p-2 text-sm text-muted-foreground">Brak pytań dla tych filtrów.</p>
@@ -757,6 +889,11 @@ function StudioPage() {
                         selectedQuestionId === q.id ? "border-primary bg-primary/5" : ""
                       }`}
                     >
+                      <Checkbox
+                        className="mt-1"
+                        checked={selectedIds.has(q.id)}
+                        onCheckedChange={() => toggleSelected(q.id)}
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline">#{q.id}</Badge>
@@ -792,6 +929,59 @@ function StudioPage() {
                 zgodnie ze schematem rolki. Zielony znaczek = dla pytania istnieje już wygenerowane
                 wideo w bibliotece poniżej.
               </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-lg">
+                <span className="flex items-center gap-2">
+                  <Send className="h-5 w-5" /> Auto-publikacja po wygenerowaniu
+                </span>
+                <Switch checked={autoPublishOn} onCheckedChange={setAutoPublishOn} />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {autoPublishOn ? (
+                <>
+                  <div className="flex flex-wrap gap-4">
+                    {(["youtube", "instagram_reels", "facebook_reels"] as const).map((p) => (
+                      <label key={p} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={autoPlatforms.includes(p)}
+                          onCheckedChange={() => toggleAutoPlatform(p)}
+                        />
+                        {PLATFORM_LABELS[p]}
+                      </label>
+                    ))}
+                    <div className="flex items-center gap-2 text-sm">
+                      <Label className="text-sm font-normal">Widoczność (YouTube):</Label>
+                      <select
+                        className="rounded-md border bg-background p-1.5 text-sm"
+                        value={autoPrivacy}
+                        onChange={(e) => setAutoPrivacy(e.target.value as typeof autoPrivacy)}
+                      >
+                        <option value="public">Publiczny</option>
+                        <option value="unlisted">Niepubliczny (unlisted)</option>
+                        <option value="private">Prywatny</option>
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Gdy render w HeyGen się skończy, wideo trafi automatycznie do kolejek publikacji
+                    zaznaczonych platform (tytuł i opis generuje AI razem ze scenariuszem). Działa
+                    też przy zamkniętej przeglądarce — dogląda tego cron co 10 minut.
+                    {autoPublishOn &&
+                      !autoPlatforms.length &&
+                      " Zaznacz co najmniej jedną platformę."}
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Wyłączona — gotowe wideo poczeka w bibliotece, publikujesz ręcznie przyciskiem
+                  „Publikuj".
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -946,6 +1136,16 @@ function StudioPage() {
                             {new Date(j.created_at).toLocaleString("pl-PL")}
                             {avatar ? ` • ${avatar.name}` : ""}
                             {voice ? ` • głos: ${voice.name}` : ""}
+                            {j.auto_publish_platforms.length > 0 &&
+                              ` • auto: ${j.auto_publish_platforms
+                                .map((p) => AUTO_PLATFORM_SHORT[p] ?? p)
+                                .join(", ")}${
+                                j.auto_published_at
+                                  ? ` (wysłano do publikacji ${new Date(
+                                      j.auto_published_at,
+                                    ).toLocaleString("pl-PL")})`
+                                  : ""
+                              }`}
                           </p>
                           {j.last_error && (
                             <p className="break-all text-xs text-destructive">{j.last_error}</p>

@@ -101,6 +101,25 @@ Zakładki panelu:
    Publikacja. Biblioteka wygenerowanych wideo pokazuje miniatury oraz
    użyty awatar i głos.
 
+   **Generowanie wsadowe** — w bazie pytań zaznacz checkboxami kilka pytań
+   (albo „Zaznacz 5 kolejnych bez wideo") i kliknij „Generuj zaznaczone".
+   Pytania trafiają jako joby `queued` (maks. 25 na serię; pytania z już
+   istniejącym wideo są pomijane). Kolejkę przetwarza otwarty panel
+   (sekwencyjnie, 1 job na raz — logika w
+   `src/lib/studio-video-queue.server.ts`) oraz cron `social-publish-tick`
+   (2 joby na przebieg co 10 min), więc działa też po zamknięciu
+   przeglądarki. Scenariusze, tytuły i opisy generuje AI automatycznie.
+
+   **Auto-publikacja po wygenerowaniu** — przełącznik on/off nad
+   generatorem. Gdy włączony, wybierasz platformy (YouTube / IG Reels /
+   FB Reels) i widoczność YouTube; każde wideo (pojedyncze i z serii) po
+   zakończeniu renderu trafia automatycznie do kolejek publikacji z tytułem
+   i opisem od AI (kolumny `auto_publish_platforms`, `publish_*` w
+   `studio_video_jobs`; migracja `20260805120000_studio_video_batch.sql`).
+   Auto-publikację domyka polling panelu lub cron tick — znacznik
+   `auto_published_at` chroni przed dublami. W bibliotece wideo widać
+   „auto: …" z platformami i godziną wysłania do kolejek.
+
    Regeneracja bazy pytań po zmianie pliku źródłowego:
    `bun run scripts/generate-shorts-question-bank.ts`.
 
