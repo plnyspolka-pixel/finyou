@@ -10,6 +10,8 @@ export function MicrosoftClarity() {
       c[a] =
         c[a] ||
         function () {
+          // Vendorowy snippet Microsoft Clarity — kolejka oczekuje obiektu `arguments`.
+          // eslint-disable-next-line prefer-rest-params
           (c[a].q = c[a].q || []).push(arguments);
         };
       const t = l.createElement(r) as HTMLScriptElement;

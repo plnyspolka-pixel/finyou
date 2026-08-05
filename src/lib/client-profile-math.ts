@@ -47,7 +47,7 @@ export function maskPesel(p?: string): string {
 // HARMONOGRAM — model „Dyrektor Finansowy"
 // ────────────────────────────────────────────────────────────────────
 
-export interface ScheduleInput extends OfferData {}
+export type ScheduleInput = OfferData;
 
 /**
  * Harmonogram „Dyrektor Finansowy" — w modelu silnika (jedno źródło prawdy,
