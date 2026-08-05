@@ -480,8 +480,12 @@
   .fy-sticky { display: block !important; }
 }
 @media (max-width: 560px) {
-  .fy-grid, .fy-modules, .fy-steps, .fy-foot { grid-template-columns: 1fr !important; }
+  .fy-grid, .fy-steps, .fy-foot { grid-template-columns: 1fr !important; }
   .fy-form-grid { grid-template-columns: 1fr !important; }
+  /* Kafelki modułów: 2 kolumny zamiast ściany pełnoekranowych kart — 1 kolumna
+     wymuszała bardzo długie przewijanie na telefonie (10 modułów pod sobą). */
+  .fy-modules { grid-template-columns: repeat(2, 1fr) !important; }
+  .fy-modules > div { padding: 1rem 0.5rem 0.9rem !important; }
 }
 
 /* ——— slidery marketingowe na telefonie ———

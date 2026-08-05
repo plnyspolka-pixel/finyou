@@ -77,7 +77,7 @@ const MODULES: { icon: Icon3DName; t: string }[] = [
   { icon: "crm", t: "CRM" },
   { icon: "kalkulator", t: "Kalkulator" },
   { icon: "application", t: "Wnioski" },
-  { icon: "investors", t: "Baza inwestorów" },
+  { icon: "investors", t: "Baza inwestorów i klientów" },
   { icon: "documents", t: "Dokumenty" },
   { icon: "academy", t: "Akademia" },
   { icon: "ai", t: "AI" },
@@ -199,11 +199,13 @@ function Hero() {
               color: "rgba(255,255,255,.7)",
             }}
           >
-            {["CRM + AI", "Baza inwestorów", "Dokumenty i compliance", "Akademia"].map((t) => (
-              <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <BrandIcon name="check" size={16} /> {t}
-              </span>
-            ))}
+            {["CRM + AI", "Baza inwestorów i klientów", "Dokumenty i compliance", "Akademia"].map(
+              (t) => (
+                <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <BrandIcon name="check" size={16} /> {t}
+                </span>
+              ),
+            )}
           </div>
         </div>
         <div style={{ position: "relative" }}>
