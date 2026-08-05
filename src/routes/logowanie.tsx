@@ -42,7 +42,7 @@ export const Route = createFileRoute("/logowanie")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { claim, next, role } = useSearch({ from: "/logowanie" });
+  const { claim, next } = useSearch({ from: "/logowanie" });
 
   // Zapisz token claim w localStorage, żeby pulpit go „odebrał" po logowaniu
   if (typeof window !== "undefined" && claim) {
@@ -51,15 +51,12 @@ function LoginPage() {
     } catch {}
   }
 
-  const roleTarget =
-    role === "inwestor"
-      ? "/inwestor"
-      : role === "operator"
-        ? "/admin"
-        : role === "posrednik"
-          ? "/posrednik"
-          : "/klient";
-  const target = next && next.startsWith("/") ? next : roleTarget;
+  // Po zalogowaniu o docelowym panelu decydują faktyczne role konta
+  // (/wybor-panelu: jedna rola → od razu panel, kilka ról → wybór).
+  // Jawny deep-link `next` ma pierwszeństwo. Parametr `role` zostaje
+  // w schemacie tylko dla zgodności ze starymi linkami.
+  const nextPath = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+  const target = nextPath ?? "/wybor-panelu";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -133,7 +130,11 @@ function LoginPage() {
             </div>
           ) : (
             <>
-              <SocialSignIn labelPrefix="Zaloguj się" />
+              <SocialSignIn
+                labelPrefix="Zaloguj się"
+                redirectPath={target}
+                onSuccess={() => void navigate({ to: target })}
+              />
               <AuthDivider label="lub e-mailem" />
               <Tabs defaultValue="password" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">

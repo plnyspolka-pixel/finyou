@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
+import { useAuth, defaultPathForRoles, postLoginPathForRoles } from "@/hooks/use-auth";
 import { LandingWizardForm } from "@/components/landing/landing-wizard-form";
 import { ChatWidget } from "@/components/landing/chat-widget";
 import { MarketingShell } from "@/components/marketing/shell";
@@ -222,10 +222,11 @@ function Landing() {
   const isAdmin =
     roles.includes("administrator") || roles.includes("operator") || roles.includes("ksiegowosc");
   useEffect(() => {
-    if (!loading && user && panelHref && !isAdmin) {
-      navigate({ to: panelHref, replace: true });
+    if (!loading && user && !isAdmin) {
+      // Jedna rola → od razu jej panel; kilka ról → ekran wyboru panelu.
+      navigate({ to: postLoginPathForRoles(roles), replace: true });
     }
-  }, [loading, user, panelHref, navigate, isAdmin]);
+  }, [loading, user, roles, navigate, isAdmin]);
 
   return (
     <MarketingShell page="home">
