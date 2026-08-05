@@ -28,7 +28,8 @@ export const runFloodRiskAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => Input.parse(d))
   .handler(async ({ data }) => {
-    let { latitude, longitude, address, city, voivodeship, propertyId } = data;
+    const { latitude, longitude } = data;
+    let { address, city, voivodeship, propertyId } = data;
 
     // jeśli mamy applicationId — uzupełnij lokalizację z bazy
     if (data.applicationId && (!address || (latitude == null && longitude == null))) {

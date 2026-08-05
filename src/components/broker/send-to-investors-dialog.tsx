@@ -99,7 +99,8 @@ export function SendToInvestorsDialog({
 
   const toggle = (id: string) => {
     const next = new Set(selected);
-    next.has(id) ? next.delete(id) : next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     setSelected(next);
   };
   const allSelected = filtered.length > 0 && filtered.every((i) => selected.has(i.id));

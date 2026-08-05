@@ -340,7 +340,8 @@ export const runLoanDocWizard = createServerFn({ method: "POST" })
   .inputValidator(
     (d: {
       templateId: string;
-      lenderId: string;
+      /** Pomijane, gdy `useSelfAsLender` = true. */
+      lenderId?: string;
       messages: ChatMsg[];
       /** Kalkulacja z kalkulatora — dane finansowe uzupełniane DETERMINISTYCZNIE (bez AI). */
       calc?: LoanCalcPayload | null;
@@ -357,7 +358,7 @@ export const runLoanDocWizard = createServerFn({ method: "POST" })
       loadTemplateText(supabase, data.templateId),
       data.useSelfAsLender
         ? resolveCurrentInvestorLender(context.userId)
-        : resolveLender(data.lenderId),
+        : resolveLender(data.lenderId ?? ""),
     ]);
 
     const fields = extractOrderedFields(text);
