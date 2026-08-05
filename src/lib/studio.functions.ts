@@ -280,12 +280,65 @@ export const listStudioVideoJobs = createServerFn({ method: "GET" })
     return (data ?? []) as StudioVideoJob[];
   });
 
+// Głosy ElevenLabs do wyboru w generatorze (dynamicznie z konta,
+// z gwarancją że domyślny Filip zawsze jest na liście).
+export type StudioVoice = { id: string; name: string; description: string };
+
+export const listStudioVoices = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<StudioVoice[]> => {
+    await assertAdmin(context.userId);
+    const { FILIP_VOICE_ID } = await import("./heygen-avatars");
+    const filip: StudioVoice = {
+      id: FILIP_VOICE_ID,
+      name: "Filip (domyślny)",
+      description: "Polski lektor ElevenLabs",
+    };
+    const key = process.env.ELEVENLABS_API_KEY;
+    if (!key) return [filip];
+    try {
+      const res = await fetch("https://api.elevenlabs.io/v1/voices", {
+        headers: { "xi-api-key": key },
+      });
+      if (!res.ok) return [filip];
+      const json = (await res.json()) as {
+        voices?: {
+          voice_id: string;
+          name: string;
+          category?: string;
+          labels?: Record<string, string>;
+        }[];
+      };
+      const voices: StudioVoice[] = (json.voices ?? []).map((v) => ({
+        id: v.voice_id,
+        name: v.voice_id === FILIP_VOICE_ID ? `${v.name} (domyślny)` : v.name,
+        description: [v.labels?.gender, v.labels?.accent, v.labels?.age, v.category]
+          .filter(Boolean)
+          .join(", "),
+      }));
+      if (!voices.some((v) => v.id === FILIP_VOICE_ID)) voices.unshift(filip);
+      else voices.sort((a, b) => (a.id === FILIP_VOICE_ID ? -1 : b.id === FILIP_VOICE_ID ? 1 : 0));
+      return voices;
+    } catch {
+      return [filip];
+    }
+  });
+
 // Krok 1: prompt → scenariusz AI (edytowalny w UI przed startem generacji).
+// Gdy prompt pochodzi z bazy 250 pytań (question_id), scenariusz dostaje
+// obowiązkowe otwarcie rolki i schemat shorta z docs/shorts.
 export const generateStudioScript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { prompt: string }) => d)
+  .inputValidator((d: { prompt: string; question_id?: number }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
+    if (data.question_id != null) {
+      const { findShortsQuestion } = await import("./shorts-question-bank");
+      const q = findShortsQuestion(data.question_id);
+      if (!q) throw new Error(`Nie znaleziono pytania #${data.question_id} w bazie.`);
+      const { generateShortsScript } = await import("./studio-ai.server");
+      return await generateShortsScript(q);
+    }
     if (!data.prompt.trim()) throw new Error("Podaj prompt.");
     const { generateVideoScript } = await import("./studio-ai.server");
     return await generateVideoScript(data.prompt.trim());

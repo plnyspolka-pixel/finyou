@@ -4,7 +4,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getStudioStatus,
   listSocialQueue,
@@ -15,6 +15,7 @@ import {
   publishSocialQueueItemNow,
   listStudioVideoSources,
   listStudioVideoJobs,
+  listStudioVoices,
   generateStudioScript,
   startStudioVideo,
   pollStudioVideoJob,
@@ -28,6 +29,14 @@ import {
 } from "@/lib/studio.functions";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
 import { HEYGEN_AVATARS, FILIP_VOICE_ID } from "@/lib/heygen-avatars";
+import {
+  SHORTS_QUESTIONS,
+  SHORTS_SECTIONS,
+  SHORTS_CATEGORY_LABELS,
+  shortsPromptForQuestion,
+  parseShortsPromptTag,
+  type ShortsCategory,
+} from "@/lib/shorts-question-bank";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,6 +60,8 @@ import {
   Wand2,
   Copy,
   Send,
+  BookOpen,
+  CheckCircle2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/studio-publikacji")({
@@ -110,6 +121,7 @@ function StudioPage() {
   const publishNowFn = useServerFn(publishSocialQueueItemNow);
   const sourcesFn = useServerFn(listStudioVideoSources);
   const videoJobsFn = useServerFn(listStudioVideoJobs);
+  const voicesFn = useServerFn(listStudioVoices);
   const genScriptFn = useServerFn(generateStudioScript);
   const startVideoFn = useServerFn(startStudioVideo);
   const pollVideoFn = useServerFn(pollStudioVideoJob);
@@ -140,6 +152,11 @@ function StudioPage() {
     queryKey: ["studio-video-jobs"],
     queryFn: () => videoJobsFn(),
     refetchInterval: 20_000,
+  });
+  const { data: voices = [] } = useQuery({
+    queryKey: ["studio-voices"],
+    queryFn: () => voicesFn(),
+    staleTime: 5 * 60_000,
   });
   const { data: images = [] } = useQuery({
     queryKey: ["studio-images"],
@@ -221,9 +238,65 @@ function StudioPage() {
   const [videoPrompt, setVideoPrompt] = useState("");
   const [script, setScript] = useState("");
   const [avatarId, setAvatarId] = useState(HEYGEN_AVATARS[0].id);
+  const [voiceId, setVoiceId] = useState(FILIP_VOICE_ID);
+
+  // ── Baza 250 pytań do shortów ──────────────────────────────────────────────
+  const [bankCategory, setBankCategory] = useState<"all" | ShortsCategory>("all");
+  const [bankSection, setBankSection] = useState("all");
+  const [bankSearch, setBankSearch] = useState("");
+
+  // Prompt z prefiksem "#N · " oznacza pytanie z bazy — wtedy scenariusz
+  // dostaje obowiązkowe otwarcie rolki (znacznik kategorii).
+  const selectedQuestionId = parseShortsPromptTag(videoPrompt);
+
+  // Pytania, dla których istnieje już job (żeby nie robić dubli).
+  const doneQuestionIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const j of videoJobs) {
+      const id = parseShortsPromptTag(j.prompt);
+      if (id != null && j.status !== "failed") ids.add(id);
+    }
+    return ids;
+  }, [videoJobs]);
+
+  const bankQuestions = useMemo(() => {
+    const needle = bankSearch.trim().toLowerCase();
+    return SHORTS_QUESTIONS.filter(
+      (q) =>
+        (bankCategory === "all" || q.category === bankCategory) &&
+        (bankSection === "all" || q.section === bankSection) &&
+        (!needle ||
+          q.question.toLowerCase().includes(needle) ||
+          q.thesis.toLowerCase().includes(needle) ||
+          String(q.id) === needle.replace(/^#/, "")),
+    );
+  }, [bankCategory, bankSection, bankSearch]);
+
+  const bankSections = useMemo(
+    () =>
+      bankCategory === "all"
+        ? SHORTS_SECTIONS
+        : [
+            ...new Set(
+              SHORTS_QUESTIONS.filter((q) => q.category === bankCategory).map((q) => q.section),
+            ),
+          ],
+    [bankCategory],
+  );
+
+  const applyBankQuestion = (id: number) => {
+    const q = SHORTS_QUESTIONS.find((x) => x.id === id);
+    if (!q) return;
+    setVideoPrompt(shortsPromptForQuestion(q));
+    setScript("");
+    toast.success(`Pytanie #${q.id} podstawione — wygeneruj scenariusz`);
+  };
 
   const genScriptM = useMutation({
-    mutationFn: () => genScriptFn({ data: { prompt: videoPrompt } }),
+    mutationFn: () =>
+      genScriptFn({
+        data: { prompt: videoPrompt, question_id: selectedQuestionId ?? undefined },
+      }),
     onSuccess: (r) => {
       setScript(r.script);
       if (r.title && !title) setTitle(r.title);
@@ -235,7 +308,7 @@ function StudioPage() {
   const startVideoM = useMutation({
     mutationFn: () =>
       startVideoFn({
-        data: { prompt: videoPrompt, script, avatar_id: avatarId, voice_id: FILIP_VOICE_ID },
+        data: { prompt: videoPrompt, script, avatar_id: avatarId, voice_id: voiceId },
       }),
     onSuccess: () => {
       toast.success("Generacja wideo uruchomiona — status w tabeli poniżej");
@@ -627,6 +700,103 @@ function StudioPage() {
         <TabsContent value="wideo" className="space-y-6">
           <Card>
             <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BookOpen className="h-5 w-5" /> Baza pytań do shortów ({SHORTS_QUESTIONS.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Kategoria</Label>
+                  <select
+                    className="w-full rounded-md border bg-background p-2 text-sm"
+                    value={bankCategory}
+                    onChange={(e) => {
+                      setBankCategory(e.target.value as typeof bankCategory);
+                      setBankSection("all");
+                    }}
+                  >
+                    <option value="all">Wszystkie</option>
+                    <option value="klient">{SHORTS_CATEGORY_LABELS.klient}</option>
+                    <option value="inwestor">{SHORTS_CATEGORY_LABELS.inwestor}</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Sekcja</Label>
+                  <select
+                    className="w-full rounded-md border bg-background p-2 text-sm"
+                    value={bankSection}
+                    onChange={(e) => setBankSection(e.target.value)}
+                  >
+                    <option value="all">Wszystkie</option>
+                    {bankSections.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Szukaj (treść lub nr pytania)</Label>
+                  <Input
+                    value={bankSearch}
+                    onChange={(e) => setBankSearch(e.target.value)}
+                    placeholder="np. hipoteka, LTV, 58…"
+                  />
+                </div>
+              </div>
+
+              <div className="max-h-96 space-y-2 overflow-y-auto rounded-md border p-2">
+                {bankQuestions.length === 0 ? (
+                  <p className="p-2 text-sm text-muted-foreground">Brak pytań dla tych filtrów.</p>
+                ) : (
+                  bankQuestions.map((q) => (
+                    <div
+                      key={q.id}
+                      className={`flex items-start justify-between gap-3 rounded-lg border p-3 ${
+                        selectedQuestionId === q.id ? "border-primary bg-primary/5" : ""
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">#{q.id}</Badge>
+                          <Badge variant={q.category === "klient" ? "secondary" : "default"}>
+                            {q.category === "klient" ? "Klient" : "Inwestor"}
+                          </Badge>
+                          {doneQuestionIds.has(q.id) && (
+                            <Badge variant="outline" className="gap-1 text-emerald-600">
+                              <CheckCircle2 className="h-3 w-3" /> wideo istnieje
+                            </Badge>
+                          )}
+                          <span className="text-sm font-medium">{q.question}</span>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                          {q.thesis}
+                        </p>
+                      </div>
+                      <Button
+                        variant={selectedQuestionId === q.id ? "default" : "outline"}
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => applyBankQuestion(q.id)}
+                      >
+                        <Send className="mr-1 h-4 w-4" /> Użyj
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Pytania z pliku „Pożyczki prywatne — 250 pytań do shortów" (docs/shorts). Scenariusz
+                wygenerowany z pytania zaczyna się obowiązkowym znacznikiem kategorii i kończy CTA
+                zgodnie ze schematem rolki. Zielony znaczek = dla pytania istnieje już wygenerowane
+                wideo w bibliotece poniżej.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle className="text-lg">Wygeneruj wideo HeyGen z promptu</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -638,6 +808,12 @@ function StudioPage() {
                   rows={2}
                   placeholder="np. Dlaczego pożyczka pod nieruchomość bywa szybsza niż kredyt bankowy"
                 />
+                {selectedQuestionId != null && (
+                  <p className="text-xs text-muted-foreground">
+                    Pytanie #{selectedQuestionId} z bazy — scenariusz dostanie obowiązkowe otwarcie
+                    rolki (znacznik kategorii) i CTA.
+                  </p>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => genScriptM.mutate()}
@@ -657,17 +833,48 @@ function StudioPage() {
                 <Textarea value={script} onChange={(e) => setScript(e.target.value)} rows={6} />
               </div>
 
+              <div className="space-y-2">
+                <Label>Awatar (HeyGen)</Label>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                  {HEYGEN_AVATARS.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => setAvatarId(a.id)}
+                      className={`rounded-lg border p-2 text-left transition-colors ${
+                        avatarId === a.id
+                          ? "border-primary ring-2 ring-primary"
+                          : "hover:border-muted-foreground/50"
+                      }`}
+                    >
+                      <img
+                        src={a.previewImage}
+                        alt={a.name}
+                        className="aspect-square w-full rounded-md object-cover"
+                        loading="lazy"
+                      />
+                      <p className="mt-1 truncate text-xs font-medium">{a.name}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">{a.description}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Awatar</Label>
+                  <Label>Głos lektora (ElevenLabs)</Label>
                   <select
                     className="w-full rounded-md border bg-background p-2 text-sm"
-                    value={avatarId}
-                    onChange={(e) => setAvatarId(e.target.value)}
+                    value={voiceId}
+                    onChange={(e) => setVoiceId(e.target.value)}
                   >
-                    {HEYGEN_AVATARS.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} — {a.description}
+                    {(voices.length
+                      ? voices
+                      : [{ id: FILIP_VOICE_ID, name: "Filip (domyślny)", description: "" }]
+                    ).map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                        {v.description ? ` — ${v.description}` : ""}
                       </option>
                     ))}
                   </select>
@@ -695,68 +902,84 @@ function StudioPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Wygenerowane wideo</CardTitle>
+              <CardTitle className="text-lg">
+                Biblioteka wygenerowanych wideo ({videoJobs.length})
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {videoJobs.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Brak wygenerowanych wideo.</p>
               ) : (
                 <div className="space-y-3">
-                  {videoJobs.map((j: StudioVideoJob) => (
-                    <div
-                      key={j.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant={
-                              j.status === "ready"
-                                ? "default"
-                                : j.status === "failed"
-                                  ? "destructive"
-                                  : "outline"
-                            }
-                          >
-                            {VIDEO_STATUS_LABELS[j.status] ?? j.status}
-                          </Badge>
-                          <span className="truncate font-medium">{j.prompt.slice(0, 90)}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(j.created_at).toLocaleString("pl-PL")}
-                        </p>
-                        {j.last_error && (
-                          <p className="break-all text-xs text-destructive">{j.last_error}</p>
+                  {videoJobs.map((j: StudioVideoJob) => {
+                    const avatar = HEYGEN_AVATARS.find((a) => a.id === j.avatar_id);
+                    const voice = voices.find((v) => v.id === j.voice_id);
+                    return (
+                      <div
+                        key={j.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                      >
+                        {j.thumbnail_url && (
+                          <img
+                            src={j.thumbnail_url}
+                            alt=""
+                            className="h-16 w-10 shrink-0 rounded-md object-cover"
+                            loading="lazy"
+                          />
                         )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {j.video_url && (
-                          <>
-                            <a href={j.video_url} target="_blank" rel="noreferrer">
-                              <Button variant="outline" size="sm">
-                                <ExternalLink className="mr-1 h-4 w-4" /> Podgląd
-                              </Button>
-                            </a>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => applyVideoToPublish(j.video_url!)}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                j.status === "ready"
+                                  ? "default"
+                                  : j.status === "failed"
+                                    ? "destructive"
+                                    : "outline"
+                              }
                             >
-                              <Send className="mr-1 h-4 w-4" /> Publikuj
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteVideoM.mutate(j.id)}
-                          disabled={deleteVideoM.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                              {VIDEO_STATUS_LABELS[j.status] ?? j.status}
+                            </Badge>
+                            <span className="truncate font-medium">{j.prompt.slice(0, 90)}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(j.created_at).toLocaleString("pl-PL")}
+                            {avatar ? ` • ${avatar.name}` : ""}
+                            {voice ? ` • głos: ${voice.name}` : ""}
+                          </p>
+                          {j.last_error && (
+                            <p className="break-all text-xs text-destructive">{j.last_error}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {j.video_url && (
+                            <>
+                              <a href={j.video_url} target="_blank" rel="noreferrer">
+                                <Button variant="outline" size="sm">
+                                  <ExternalLink className="mr-1 h-4 w-4" /> Podgląd
+                                </Button>
+                              </a>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => applyVideoToPublish(j.video_url!)}
+                              >
+                                <Send className="mr-1 h-4 w-4" /> Publikuj
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteVideoM.mutate(j.id)}
+                            disabled={deleteVideoM.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
