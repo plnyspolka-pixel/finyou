@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Trash2, Upload, ImageIcon, Video as VideoIcon, Download } from "lucide-react";
+import { unzipMedia, captureVideoThumb } from "@/lib/creative-media";
 
 export const Route = createFileRoute("/admin/materialy")({
   component: MarketingMaterialsPage,
@@ -108,29 +109,60 @@ function MarketingMaterialsPage() {
     let fail = 0;
     try {
       const { data: userData } = await supabase.auth.getUser();
-      for (let i = 0; i < files.length; i++) {
-        const f = files[i];
-        setUploadProgress(`${i + 1}/${files.length} — ${f.name}`);
+      // ZIP-y rozpakowujemy w przeglądarce — każdy plik z archiwum staje się
+      // osobnym materiałem; zwykłe pliki przechodzą bez zmian
+      const expanded: { name: string; blob: Blob; type: string }[] = [];
+      for (const f of files) {
+        if (/\.zip$/i.test(f.name)) {
+          setUploadProgress(`rozpakowywanie ${f.name}…`);
+          try {
+            const entries = await unzipMedia(f);
+            if (!entries.length) toast.error(`${f.name}: brak grafik i wideo w archiwum`);
+            expanded.push(...entries);
+          } catch (err: any) {
+            console.error("unzip failed", f.name, err);
+            toast.error(`Nie udało się rozpakować ${f.name}`);
+            fail++;
+          }
+        } else {
+          expanded.push({ name: f.name, blob: f, type: f.type });
+        }
+      }
+      for (let i = 0; i < expanded.length; i++) {
+        const f = expanded[i];
+        setUploadProgress(`${i + 1}/${expanded.length} — ${f.name}`);
         try {
           const mediaType: MediaType = f.type.startsWith("video/") ? "video" : "image";
           const ext = f.name.split(".").pop() || "bin";
           const path = `${audience}/${crypto.randomUUID()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, f, {
+          const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, f.blob, {
             contentType: f.type,
             upsert: false,
           });
           if (upErr) throw upErr;
+          let thumbnailPath: string | null = null;
+          if (mediaType === "video") {
+            const thumb = await captureVideoThumb(f.blob);
+            if (thumb) {
+              thumbnailPath = `${audience}/${crypto.randomUUID()}-thumb.jpg`;
+              const { error: thErr } = await supabase.storage
+                .from(BUCKET)
+                .upload(thumbnailPath, thumb, { contentType: "image/jpeg" });
+              if (thErr) thumbnailPath = null;
+            }
+          }
           const baseTitle = title.trim() || f.name.replace(/\.[^.]+$/, "");
           const finalTitle =
-            files.length > 1 && title.trim() ? `${baseTitle} (${i + 1})` : baseTitle;
+            expanded.length > 1 && title.trim() ? `${baseTitle} (${i + 1})` : baseTitle;
           const { error: insErr } = await supabase.from("marketing_materials").insert({
             title: finalTitle,
             description: description.trim() || null,
             audience,
             media_type: mediaType,
             storage_path: path,
+            thumbnail_path: thumbnailPath,
             mime_type: f.type,
-            file_size: f.size,
+            file_size: f.blob.size,
             uploaded_by: userData.user?.id ?? null,
           });
           if (insErr) throw insErr;
@@ -216,11 +248,13 @@ function MarketingMaterialsPage() {
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>Pliki (możesz wybrać wiele — zdjęcia i filmy)</Label>
+              <Label>
+                Pliki (możesz wybrać wiele — zdjęcia, filmy lub ZIP, który się rozpakuje)
+              </Label>
               <Input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,video/*"
+                accept="image/*,video/*,.zip"
                 multiple
                 onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
               />

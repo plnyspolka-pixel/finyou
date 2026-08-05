@@ -42,72 +42,30 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Facebook, Plus, Pencil, Trash2, Rocket, Search, Film, ImageIcon } from "lucide-react";
-import { unzip } from "fflate";
+import { mediaKind, mimeFor, captureVideoThumb, unzipMedia } from "@/lib/creative-media";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/fb-ads/kreator")({
   component: FbCreatorPage,
 });
 
-const IMAGE_EXT = /\.(jpe?g|png|webp|gif)$/i;
-const VIDEO_EXT = /\.(mp4|mov|m4v|webm)$/i;
+const MATERIALS_BUCKET = "marketing-materials";
 
-function mediaKind(name: string): "image" | "video" | null {
-  if (IMAGE_EXT.test(name)) return "image";
-  if (VIDEO_EXT.test(name)) return "video";
-  return null;
-}
+const AUDIENCES = [
+  { value: "klient", label: "Klient" },
+  { value: "inwestor", label: "Inwestor" },
+  { value: "posrednik", label: "Pośrednik" },
+] as const;
 
-function mimeFor(name: string): string {
-  const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  const map: Record<string, string> = {
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    png: "image/png",
-    webp: "image/webp",
-    gif: "image/gif",
-    mp4: "video/mp4",
-    m4v: "video/mp4",
-    mov: "video/quicktime",
-    webm: "video/webm",
-  };
-  return map[ext] ?? "application/octet-stream";
-}
-
-function sanitizeName(name: string): string {
-  return name.replace(/[^\w.-]+/g, "_");
-}
-
-function captureVideoThumb(file: File): Promise<Blob | null> {
-  return new Promise((resolve) => {
-    try {
-      const url = URL.createObjectURL(file);
-      const v = document.createElement("video");
-      const cleanup = (b: Blob | null) => {
-        URL.revokeObjectURL(url);
-        resolve(b);
-      };
-      v.preload = "auto";
-      v.muted = true;
-      v.src = url;
-      v.onloadeddata = () => {
-        v.currentTime = Math.min(0.5, (v.duration || 1) / 2);
-      };
-      v.onseeked = () => {
-        const c = document.createElement("canvas");
-        c.width = v.videoWidth;
-        c.height = v.videoHeight;
-        if (!c.width || !c.height) return cleanup(null);
-        c.getContext("2d")?.drawImage(v, 0, 0);
-        c.toBlob((b) => cleanup(b), "image/jpeg", 0.85);
-      };
-      v.onerror = () => cleanup(null);
-      setTimeout(() => cleanup(null), 15_000);
-    } catch {
-      resolve(null);
-    }
-  });
-}
+type LibraryItem = {
+  id: string;
+  title: string;
+  audience: string;
+  kind: "image" | "video";
+  path: string;
+  thumbnail_path: string | null;
+  url: string | null;
+};
 
 function FbCreatorPage() {
   const fetchDrafts = useServerFn(listAdDrafts);
@@ -297,8 +255,11 @@ function FbCreatorDialog({
       primary_text: "",
       description: "",
       media_type: "image",
+      image_path: "",
       image_url: "",
+      video_path: "",
       video_url: "",
+      video_thumbnail_path: "",
       video_thumbnail_url: "",
       cta_type: "SIGN_UP",
     },
@@ -315,8 +276,21 @@ function FbCreatorDialog({
 
   useEffect(() => {
     if (editingId) {
-      getDraft({ data: { id: editingId } }).then((r) => {
-        if (r.draft) setForm(r.draft);
+      getDraft({ data: { id: editingId } }).then(async (r) => {
+        if (!r.draft) return;
+        // Podpisane URL-e wygasają — odśwież podglądy ze ścieżek w buckecie
+        const cr = { ...((r.draft as any).creative ?? {}) };
+        const resign = async (path?: string) => {
+          if (!path) return undefined;
+          const { data } = await supabase.storage
+            .from(MATERIALS_BUCKET)
+            .createSignedUrl(path, 3600);
+          return data?.signedUrl;
+        };
+        cr.image_url = (await resign(cr.image_path)) ?? cr.image_url;
+        cr.video_url = (await resign(cr.video_path)) ?? cr.video_url;
+        cr.video_thumbnail_url = (await resign(cr.video_thumbnail_path)) ?? cr.video_thumbnail_url;
+        setForm({ ...r.draft, creative: cr });
       });
     }
   }, [editingId, getDraft]);
@@ -347,102 +321,138 @@ function FbCreatorDialog({
   };
 
   const [uploading, setUploading] = useState(false);
+  const [uploadAudience, setUploadAudience] =
+    useState<(typeof AUDIENCES)[number]["value"]>("klient");
+  const [libAudience, setLibAudience] = useState<string>("wszystkie");
   const qc = useQueryClient();
 
+  // Biblioteka = moduł "Materiały marketingowe" (podział klient/inwestor/pośrednik)
   const { data: library } = useQuery({
-    queryKey: ["ad-creatives-library"],
+    queryKey: ["fb-creative-library"],
     enabled: step === 4,
-    queryFn: async () => {
-      const { data: files, error } = await supabase.storage
-        .from("ad-creatives")
-        .list("creatives", { limit: 100, sortBy: { column: "created_at", order: "desc" } });
+    queryFn: async (): Promise<LibraryItem[]> => {
+      const { data: rows, error } = await supabase
+        .from("marketing_materials")
+        .select("id, title, audience, media_type, storage_path, thumbnail_path")
+        .order("created_at", { ascending: false })
+        .limit(200);
       if (error) throw new Error(error.message);
-      return (files ?? [])
-        .filter((f) => mediaKind(f.name))
-        .map((f) => ({
-          name: f.name,
-          kind: mediaKind(f.name)!,
-          url: supabase.storage.from("ad-creatives").getPublicUrl(`creatives/${f.name}`).data
-            .publicUrl,
-        }));
+      const paths = (rows ?? []).map((r: any) => r.storage_path);
+      const { data: signed } = paths.length
+        ? await supabase.storage.from(MATERIALS_BUCKET).createSignedUrls(paths, 3600)
+        : { data: [] };
+      const urlByPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+      return (rows ?? []).map((r: any) => ({
+        id: r.id,
+        title: r.title,
+        audience: r.audience,
+        kind: r.media_type === "video" ? "video" : "image",
+        path: r.storage_path,
+        thumbnail_path: r.thumbnail_path,
+        url: urlByPath.get(r.storage_path) ?? null,
+      }));
     },
   });
-
-  const uploadToBucket = async (path: string, body: Blob | File, contentType?: string) => {
-    const { error } = await supabase.storage
-      .from("ad-creatives")
-      .upload(path, body, contentType ? { contentType } : undefined);
-    if (error) throw new Error(error.message);
-    return supabase.storage.from("ad-creatives").getPublicUrl(path).data.publicUrl;
-  };
 
   const setCreative = (patch: Record<string, unknown>) =>
     setForm((prev: any) => ({ ...prev, creative: { ...prev.creative, ...patch } }));
 
-  const uploadImage = async (file: File) => {
-    const url = await uploadToBucket(`creatives/${Date.now()}-${sanitizeName(file.name)}`, file);
-    setCreative({ media_type: "image", image_url: url });
-    toast.success("Zdjęcie zapisane");
+  const signedUrl = async (path: string) => {
+    const { data, error } = await supabase.storage
+      .from(MATERIALS_BUCKET)
+      .createSignedUrl(path, 3600);
+    if (error) throw new Error(error.message);
+    return data.signedUrl;
   };
 
-  const uploadVideo = async (file: File) => {
-    const url = await uploadToBucket(`creatives/${Date.now()}-${sanitizeName(file.name)}`, file);
-    const patch: Record<string, unknown> = { media_type: "video", video_url: url };
-    const thumb = await captureVideoThumb(file);
-    if (thumb) {
-      patch.video_thumbnail_url = await uploadToBucket(
-        `creatives/${Date.now()}-thumb.jpg`,
-        thumb,
-        "image/jpeg",
-      );
-    }
-    setCreative(patch);
-    toast.success(thumb ? "Wideo i miniatura zapisane" : "Wideo zapisane (bez miniatury)");
-  };
+  // Wgrywa jeden plik jako materiał marketingowy; zwraca ścieżki w buckecie
+  const uploadMaterial = async (name: string, blob: Blob, type: string) => {
+    const kind = type.startsWith("video/") ? "video" : "image";
+    const ext = name.split(".").pop() || "bin";
+    const path = `${uploadAudience}/${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from(MATERIALS_BUCKET)
+      .upload(path, blob, { contentType: type, upsert: false });
+    if (upErr) throw new Error(upErr.message);
 
-  const uploadZip = async (file: File) => {
-    const buf = new Uint8Array(await file.arrayBuffer());
-    const entries = await new Promise<Record<string, Uint8Array>>((resolve, reject) => {
-      unzip(buf, (err, data) => (err ? reject(err) : resolve(data)));
-    });
-    const media = Object.entries(entries).filter(([name, data]) => {
-      const base = name.split("/").pop() ?? "";
-      return (
-        data.length > 0 && !name.includes("__MACOSX") && !base.startsWith(".") && mediaKind(base)
-      );
-    });
-    if (!media.length) {
-      toast.error("W ZIP-ie nie znaleziono grafik ani wideo");
-      return;
-    }
-    let done = 0;
-    const toastId = toast.loading(`Rozpakowywanie: 0/${media.length}`);
-    try {
-      const batch = Date.now();
-      for (const [name, data] of media) {
-        const base = sanitizeName(name.split("/").pop()!);
-        await uploadToBucket(
-          `creatives/${batch}${String(done).padStart(3, "0")}-${base}`,
-          new Blob([data as BlobPart], { type: mimeFor(base) }),
-        );
-        done++;
-        toast.loading(`Rozpakowywanie: ${done}/${media.length}`, { id: toastId });
+    let thumbnailPath: string | null = null;
+    if (kind === "video") {
+      const thumb = await captureVideoThumb(blob);
+      if (thumb) {
+        thumbnailPath = `${uploadAudience}/${crypto.randomUUID()}-thumb.jpg`;
+        const { error: thErr } = await supabase.storage
+          .from(MATERIALS_BUCKET)
+          .upload(thumbnailPath, thumb, { contentType: "image/jpeg" });
+        if (thErr) thumbnailPath = null;
       }
-      toast.success(`Wgrano ${done} plików z ZIP-a do biblioteki`, { id: toastId });
-    } catch (e: any) {
-      toast.error(`Wgrano ${done}/${media.length} — błąd: ${e.message}`, { id: toastId });
     }
-    qc.invalidateQueries({ queryKey: ["ad-creatives-library"] });
+
+    const { data: userData } = await supabase.auth.getUser();
+    const { error: insErr } = await supabase.from("marketing_materials").insert({
+      title: name.replace(/\.[^.]+$/, ""),
+      audience: uploadAudience,
+      media_type: kind,
+      storage_path: path,
+      thumbnail_path: thumbnailPath,
+      mime_type: type,
+      file_size: blob.size,
+      uploaded_by: userData.user?.id ?? null,
+    });
+    if (insErr) throw new Error(insErr.message);
+    return { path, thumbnailPath, kind };
+  };
+
+  const useAsCreative = async (
+    kind: "image" | "video",
+    path: string,
+    thumbPath?: string | null,
+  ) => {
+    if (kind === "video") {
+      setCreative({
+        media_type: "video",
+        video_path: path,
+        video_url: await signedUrl(path),
+        video_thumbnail_path: thumbPath ?? "",
+        video_thumbnail_url: thumbPath ? await signedUrl(thumbPath) : "",
+      });
+    } else {
+      setCreative({ media_type: "image", image_path: path, image_url: await signedUrl(path) });
+    }
   };
 
   const onFilePicked = async (file: File) => {
     setUploading(true);
     try {
-      if (/\.zip$/i.test(file.name)) await uploadZip(file);
-      else if (file.type.startsWith("video/") || mediaKind(file.name) === "video")
-        await uploadVideo(file);
-      else await uploadImage(file);
-      qc.invalidateQueries({ queryKey: ["ad-creatives-library"] });
+      if (/\.zip$/i.test(file.name)) {
+        const entries = await unzipMedia(file);
+        if (!entries.length) {
+          toast.error("W ZIP-ie nie znaleziono grafik ani wideo");
+          return;
+        }
+        let done = 0;
+        const toastId = toast.loading(`Rozpakowywanie: 0/${entries.length}`);
+        try {
+          for (const e of entries) {
+            await uploadMaterial(e.name, e.blob, e.type);
+            done++;
+            toast.loading(`Rozpakowywanie: ${done}/${entries.length}`, { id: toastId });
+          }
+          toast.success(`Wgrano ${done} plików do materiałów (${uploadAudience})`, {
+            id: toastId,
+          });
+        } catch (e: any) {
+          toast.error(`Wgrano ${done}/${entries.length} — błąd: ${e.message}`, { id: toastId });
+        }
+      } else {
+        const type =
+          file.type.startsWith("video/") || file.type.startsWith("image/")
+            ? file.type
+            : mimeFor(file.name);
+        const res = await uploadMaterial(file.name, file, type);
+        await useAsCreative(res.kind as "image" | "video", res.path, res.thumbnailPath);
+        toast.success(res.kind === "video" ? "Wideo zapisane" : "Zdjęcie zapisane");
+      }
+      qc.invalidateQueries({ queryKey: ["fb-creative-library"] });
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -450,17 +460,25 @@ function FbCreatorDialog({
     }
   };
 
-  const pickFromLibrary = (item: { url: string; kind: "image" | "video" }) => {
-    if (item.kind === "video") {
-      setCreative({ media_type: "video", video_url: item.url, video_thumbnail_url: "" });
-    } else if (form.creative.media_type === "video" && form.creative.video_url) {
-      setCreative({ video_thumbnail_url: item.url });
-      toast.success("Ustawiono jako miniaturę wideo");
-      return;
-    } else {
-      setCreative({ media_type: "image", image_url: item.url });
+  const pickFromLibrary = async (item: LibraryItem) => {
+    try {
+      if (
+        item.kind === "image" &&
+        form.creative.media_type === "video" &&
+        (form.creative.video_path || form.creative.video_url)
+      ) {
+        setCreative({
+          video_thumbnail_path: item.path,
+          video_thumbnail_url: item.url ?? (await signedUrl(item.path)),
+        });
+        toast.success("Ustawiono jako miniaturę wideo");
+        return;
+      }
+      await useAsCreative(item.kind, item.path, item.thumbnail_path);
+      toast.success("Wybrano z biblioteki");
+    } catch (e: any) {
+      toast.error(e.message);
     }
-    toast.success("Wybrano z biblioteki");
   };
 
   const onSave = async () => {
@@ -768,19 +786,37 @@ function FbCreatorDialog({
             </div>
             <div>
               <Label>Plik kreacji (grafika, wideo lub ZIP z wieloma kreacjami)</Label>
-              <Input
-                type="file"
-                accept="image/*,video/*,.zip"
-                disabled={uploading}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void onFilePicked(f);
-                  e.target.value = "";
-                }}
-              />
+              <div className="flex gap-2">
+                <Select
+                  value={uploadAudience}
+                  onValueChange={(v) => setUploadAudience(v as typeof uploadAudience)}
+                >
+                  <SelectTrigger className="w-40 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AUDIENCES.map((a) => (
+                      <SelectItem key={a.value} value={a.value}>
+                        {a.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="file"
+                  accept="image/*,video/*,.zip"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void onFilePicked(f);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
               <div className="text-xs text-muted-foreground mt-1">
-                Plik trafia bezpośrednio z przeglądarki do Supabase Storage. ZIP rozpakuje się
-                automatycznie, a jego zawartość znajdziesz w bibliotece poniżej.
+                Plik trafia bezpośrednio z przeglądarki do materiałów marketingowych (kategoria
+                obok). ZIP rozpakuje się automatycznie, a jego zawartość znajdziesz w bibliotece
+                poniżej i w module Materiały.
               </div>
               {uploading && <div className="text-xs text-muted-foreground mt-1">Wgrywanie…</div>}
               {form.creative.media_type !== "video" && form.creative.image_url && (
@@ -813,41 +849,65 @@ function FbCreatorDialog({
               )}
             </div>
             <div>
-              <Label>Biblioteka kreacji</Label>
-              {!library?.length ? (
-                <div className="text-xs text-muted-foreground mt-1">
-                  Brak plików. Wgraj grafikę, wideo lub ZIP-a powyżej.
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-1 max-h-64 overflow-y-auto">
-                  {library.map((item) => (
-                    <button
-                      key={item.url}
-                      type="button"
-                      onClick={() => pickFromLibrary(item)}
-                      className={`border rounded overflow-hidden text-left hover:ring-2 hover:ring-primary ${
-                        item.url === form.creative.image_url || item.url === form.creative.video_url
-                          ? "ring-2 ring-primary"
-                          : ""
-                      }`}
-                    >
-                      {item.kind === "video" ? (
-                        <video src={item.url} muted className="h-20 w-full object-cover" />
-                      ) : (
-                        <img src={item.url} alt="" className="h-20 w-full object-cover" />
-                      )}
-                      <div className="flex items-center gap-1 px-1 py-0.5 text-[10px] text-muted-foreground truncate">
-                        {item.kind === "video" ? (
-                          <Film className="h-3 w-3 shrink-0" />
+              <Label>Biblioteka materiałów</Label>
+              <div className="flex gap-1 mt-1 mb-1">
+                {[{ value: "wszystkie", label: "Wszystkie" }, ...AUDIENCES].map((a) => (
+                  <button
+                    key={a.value}
+                    type="button"
+                    onClick={() => setLibAudience(a.value)}
+                    className={`text-xs px-2 py-1 rounded ${
+                      libAudience === a.value ? "bg-primary text-primary-foreground" : "bg-muted"
+                    }`}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+              {(() => {
+                const items = (library ?? []).filter(
+                  (i) => libAudience === "wszystkie" || i.audience === libAudience,
+                );
+                if (!items.length)
+                  return (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Brak plików. Wgraj grafikę, wideo lub ZIP-a powyżej albo w module Materiały.
+                    </div>
+                  );
+                return (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-1 max-h-64 overflow-y-auto">
+                    {items.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => void pickFromLibrary(item)}
+                        className={`border rounded overflow-hidden text-left hover:ring-2 hover:ring-primary ${
+                          item.path === form.creative.image_path ||
+                          item.path === form.creative.video_path
+                            ? "ring-2 ring-primary"
+                            : ""
+                        }`}
+                      >
+                        {!item.url ? (
+                          <div className="h-20 w-full bg-muted" />
+                        ) : item.kind === "video" ? (
+                          <video src={item.url} muted className="h-20 w-full object-cover" />
                         ) : (
-                          <ImageIcon className="h-3 w-3 shrink-0" />
+                          <img src={item.url} alt="" className="h-20 w-full object-cover" />
                         )}
-                        <span className="truncate">{item.name.replace(/^\d+-/, "")}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+                        <div className="flex items-center gap-1 px-1 py-0.5 text-[10px] text-muted-foreground truncate">
+                          {item.kind === "video" ? (
+                            <Film className="h-3 w-3 shrink-0" />
+                          ) : (
+                            <ImageIcon className="h-3 w-3 shrink-0" />
+                          )}
+                          <span className="truncate">{item.title}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
               {form.creative.media_type === "video" && (
                 <div className="text-xs text-muted-foreground mt-1">
                   Wskazówka: przy wybranym wideo kliknięcie grafiki w bibliotece ustawia ją jako

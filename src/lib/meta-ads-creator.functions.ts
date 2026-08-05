@@ -298,12 +298,28 @@ export const publishAdDraft = createServerFn({ method: "POST" })
         locale: "pl_PL",
       });
 
-      // 4) Ad creative — wideo (Meta pobiera plik z URL) albo grafika
-      const isVideo = creative.media_type === "video" && creative.video_url;
+      // 4) Ad creative — wideo (Meta pobiera plik z URL) albo grafika.
+      // Materiały leżą w prywatnym buckecie marketing-materials, więc URL-e
+      // podpisujemy świeżo tutaj; stare szkice mogą mieć tylko *_url (publiczny
+      // bucket ad-creatives) — wtedy używamy ich wprost.
+      const signStorageUrl = async (path?: string | null) => {
+        if (!path) return undefined;
+        const { data: s, error } = await supabaseAdmin.storage
+          .from("marketing-materials")
+          .createSignedUrl(path, 86400);
+        if (error) throw new Error(`Nie udało się podpisać URL pliku ${path}: ${error.message}`);
+        return s.signedUrl;
+      };
+      const imageUrl = (await signStorageUrl(creative.image_path)) ?? creative.image_url;
+      const videoUrl = (await signStorageUrl(creative.video_path)) ?? creative.video_url;
+      const thumbnailUrl =
+        (await signStorageUrl(creative.video_thumbnail_path)) ?? creative.video_thumbnail_url;
+
+      const isVideo = creative.media_type === "video" && videoUrl;
       let objectStorySpec: Record<string, unknown>;
       if (isVideo) {
         const vid = await metaPost(`/${actId}/advideos`, {
-          file_url: creative.video_url,
+          file_url: videoUrl,
           name: `${draft.name} - wideo`,
         });
         // Poczekaj aż Meta przetworzy wideo (bez tego tworzenie kreacji potrafi się wywalić)
@@ -322,7 +338,7 @@ export const publishAdDraft = createServerFn({ method: "POST" })
             );
           await new Promise((r) => setTimeout(r, 5000));
         }
-        let thumb = (creative.video_thumbnail_url ?? creative.image_url) as string | undefined;
+        let thumb = (thumbnailUrl ?? imageUrl) as string | undefined;
         if (!thumb) {
           const th = await metaGet(`/${vid.id}/thumbnails`);
           thumb = (th.data?.find((t: any) => t.is_preferred) ?? th.data?.[0])?.uri;
@@ -351,7 +367,7 @@ export const publishAdDraft = createServerFn({ method: "POST" })
             link: `https://www.facebook.com/${draft.page_id}`,
             name: creative.headline ?? draft.name,
             description: creative.description ?? "",
-            picture: creative.image_url ?? undefined,
+            picture: imageUrl ?? undefined,
             call_to_action: {
               type: creative.cta_type ?? "SIGN_UP",
               value: { lead_gen_form_id: form.id },
