@@ -94,12 +94,17 @@ Zakładki panelu:
      (rozpoznanie po prefiksie promptu — bez zmiany schematu DB).
    - **Własny prompt** — jak dotychczas.
 
-   Dalej: „Wygeneruj scenariusz" (edytowalny) → wybór awatara (kafelki
-   z podglądem) i **głosu lektora** (lista głosów z konta ElevenLabs;
-   fallback: Filip) → „Generuj wideo". Status odświeża się automatycznie;
-   gotowe wideo ma przycisk „Publikuj", który podstawia URL do zakładki
-   Publikacja. Biblioteka wygenerowanych wideo pokazuje miniatury oraz
-   użyty awatar i głos.
+   Dalej: „Wygeneruj scenariusz" (edytowalny) → wybór awatara i głosu →
+   „Generuj wideo". **Awatary** są pobierane na żywo z konta HeyGen
+   (`src/lib/heygen-catalog.server.ts`: grupy użytkownika + talking photos
+   - publiczne awatary; cache 5 min; fallback: sztywna lista
+     `HEYGEN_AVATARS`), z wyszukiwarką i filtrem „Tylko moje". Talking
+     photos dostają przy generacji payload `type: talking_photo`. **Głosy**
+     to pełna lista z konta ElevenLabs (`/v2/voices` z paginacją; własne
+     sklonowane głosy na górze; fallback: Filip). Status odświeża się
+     automatycznie; gotowe wideo ma przycisk „Publikuj", który podstawia URL
+     do zakładki Publikacja. Biblioteka wygenerowanych wideo pokazuje
+     miniatury oraz użyty awatar i głos.
 
    **Generowanie wsadowe** — w bazie pytań zaznacz checkboxami kilka pytań
    (albo „Zaznacz 5 kolejnych bez wideo") i kliknij „Generuj zaznaczone".

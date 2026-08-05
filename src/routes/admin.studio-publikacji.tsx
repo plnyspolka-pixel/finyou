@@ -16,6 +16,7 @@ import {
   listStudioVideoSources,
   listStudioVideoJobs,
   listStudioVoices,
+  listStudioAvatars,
   generateStudioScript,
   startStudioVideo,
   enqueueStudioVideoBatch,
@@ -28,6 +29,7 @@ import {
   deleteStudioImage,
   type StudioPlatform,
   type StudioVideoJob,
+  type StudioAvatar,
 } from "@/lib/studio.functions";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
 import { HEYGEN_AVATARS, FILIP_VOICE_ID } from "@/lib/heygen-avatars";
@@ -134,6 +136,7 @@ function StudioPage() {
   const sourcesFn = useServerFn(listStudioVideoSources);
   const videoJobsFn = useServerFn(listStudioVideoJobs);
   const voicesFn = useServerFn(listStudioVoices);
+  const avatarsFn = useServerFn(listStudioAvatars);
   const genScriptFn = useServerFn(generateStudioScript);
   const startVideoFn = useServerFn(startStudioVideo);
   const batchFn = useServerFn(enqueueStudioVideoBatch);
@@ -170,6 +173,11 @@ function StudioPage() {
   const { data: voices = [] } = useQuery({
     queryKey: ["studio-voices"],
     queryFn: () => voicesFn(),
+    staleTime: 5 * 60_000,
+  });
+  const { data: avatars = [], isLoading: avatarsLoading } = useQuery({
+    queryKey: ["studio-avatars"],
+    queryFn: () => avatarsFn(),
     staleTime: 5 * 60_000,
   });
   const { data: images = [] } = useQuery({
@@ -279,6 +287,26 @@ function StudioPage() {
   const [script, setScript] = useState("");
   const [avatarId, setAvatarId] = useState(HEYGEN_AVATARS[0].id);
   const [voiceId, setVoiceId] = useState(FILIP_VOICE_ID);
+
+  // ── Wybór awatara (katalog HeyGen) ─────────────────────────────────────────
+  const [avatarSearch, setAvatarSearch] = useState("");
+  const [avatarOnlyMine, setAvatarOnlyMine] = useState(true);
+  const hasMineAvatars = useMemo(() => avatars.some((a) => a.mine), [avatars]);
+  const filteredAvatars = useMemo(() => {
+    const needle = avatarSearch.trim().toLowerCase();
+    return avatars.filter(
+      (a) =>
+        (!avatarOnlyMine || !hasMineAvatars || a.mine) &&
+        (!needle ||
+          a.name.toLowerCase().includes(needle) ||
+          (a.group ?? "").toLowerCase().includes(needle)),
+    );
+  }, [avatars, avatarSearch, avatarOnlyMine, hasMineAvatars]);
+  const selectedAvatar: StudioAvatar | undefined = useMemo(
+    () => avatars.find((a) => a.id === avatarId),
+    [avatars, avatarId],
+  );
+  const AVATAR_DISPLAY_CAP = 60;
 
   // ── Auto-publikacja po wygenerowaniu ───────────────────────────────────────
   const [autoPublishOn, setAutoPublishOn] = useState(false);
@@ -1024,30 +1052,85 @@ function StudioPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Awatar (HeyGen)</Label>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                  {HEYGEN_AVATARS.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      onClick={() => setAvatarId(a.id)}
-                      className={`rounded-lg border p-2 text-left transition-colors ${
-                        avatarId === a.id
-                          ? "border-primary ring-2 ring-primary"
-                          : "hover:border-muted-foreground/50"
-                      }`}
-                    >
-                      <img
-                        src={a.previewImage}
-                        alt={a.name}
-                        className="aspect-square w-full rounded-md object-cover"
-                        loading="lazy"
-                      />
-                      <p className="mt-1 truncate text-xs font-medium">{a.name}</p>
-                      <p className="truncate text-[11px] text-muted-foreground">{a.description}</p>
-                    </button>
-                  ))}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label>
+                    Awatar (HeyGen)
+                    {selectedAvatar && (
+                      <span className="ml-2 font-normal text-muted-foreground">
+                        wybrany: {selectedAvatar.name}
+                        {selectedAvatar.group ? ` (${selectedAvatar.group})` : ""}
+                      </span>
+                    )}
+                  </Label>
+                  <div className="flex items-center gap-3">
+                    {hasMineAvatars && (
+                      <label className="flex cursor-pointer items-center gap-2 text-xs">
+                        <Checkbox
+                          checked={avatarOnlyMine}
+                          onCheckedChange={(v) => setAvatarOnlyMine(v === true)}
+                        />
+                        Tylko moje
+                      </label>
+                    )}
+                    <Input
+                      className="h-8 w-48"
+                      value={avatarSearch}
+                      onChange={(e) => setAvatarSearch(e.target.value)}
+                      placeholder="Szukaj awatara…"
+                    />
+                  </div>
                 </div>
+                {avatarsLoading ? (
+                  <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Wczytuję awatary z konta HeyGen…
+                  </p>
+                ) : filteredAvatars.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Brak awatarów dla tych filtrów — zmień wyszukiwanie lub odznacz „Tylko moje".
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid max-h-[420px] grid-cols-2 gap-3 overflow-y-auto rounded-md border p-2 sm:grid-cols-3 lg:grid-cols-5">
+                      {filteredAvatars.slice(0, AVATAR_DISPLAY_CAP).map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => setAvatarId(a.id)}
+                          className={`rounded-lg border p-2 text-left transition-colors ${
+                            avatarId === a.id
+                              ? "border-primary ring-2 ring-primary"
+                              : "hover:border-muted-foreground/50"
+                          }`}
+                        >
+                          {a.preview ? (
+                            <img
+                              src={a.preview}
+                              alt={a.name}
+                              className="aspect-square w-full rounded-md object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex aspect-square w-full items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
+                              brak podglądu
+                            </div>
+                          )}
+                          <p className="mt-1 truncate text-xs font-medium">{a.name}</p>
+                          <p className="truncate text-[11px] text-muted-foreground">
+                            {a.mine ? "Mój" : "Publiczny"}
+                            {a.kind === "talking_photo" ? " • foto" : ""}
+                            {a.group ? ` • ${a.group}` : ""}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                    {filteredAvatars.length > AVATAR_DISPLAY_CAP && (
+                      <p className="text-xs text-muted-foreground">
+                        Pokazuję {AVATAR_DISPLAY_CAP} z {filteredAvatars.length} — zawęź
+                        wyszukiwaniem.
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -1102,7 +1185,9 @@ function StudioPage() {
               ) : (
                 <div className="space-y-3">
                   {videoJobs.map((j: StudioVideoJob) => {
-                    const avatar = HEYGEN_AVATARS.find((a) => a.id === j.avatar_id);
+                    const avatar =
+                      avatars.find((a) => a.id === j.avatar_id) ??
+                      HEYGEN_AVATARS.find((a) => a.id === j.avatar_id);
                     const voice = voices.find((v) => v.id === j.voice_id);
                     return (
                       <div

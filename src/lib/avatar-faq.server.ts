@@ -69,10 +69,13 @@ export async function uploadAudioToHeygen(audio: ArrayBuffer): Promise<string> {
 export async function createHeygenVideoFromAudio(opts: {
   avatarId: string;
   audioAssetId: string;
+  // Talking photo (awatar ze zdjęcia) wymaga innego kształtu payloadu.
+  kind?: "avatar" | "talking_photo";
 }): Promise<string> {
   const payload = {
-    type: "avatar",
-    avatar_id: opts.avatarId,
+    ...(opts.kind === "talking_photo"
+      ? { type: "talking_photo", talking_photo_id: opts.avatarId }
+      : { type: "avatar", avatar_id: opts.avatarId }),
     audio_asset_id: opts.audioAssetId,
     aspect_ratio: "9:16",
     resolution: "720p",

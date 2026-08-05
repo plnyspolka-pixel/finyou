@@ -285,9 +285,44 @@ export const listStudioVideoJobs = createServerFn({ method: "GET" })
     return (data ?? []) as StudioVideoJob[];
   });
 
-// Głosy ElevenLabs do wyboru w generatorze (dynamicznie z konta,
-// z gwarancją że domyślny Filip zawsze jest na liście).
+// Głosy ElevenLabs do wyboru w generatorze — pełna lista z konta przez
+// /v2/voices z paginacją (v1 zwracał tylko część głosów); fallback: Filip.
 export type StudioVoice = { id: string; name: string; description: string };
+
+type ElevenVoice = {
+  voice_id: string;
+  name: string;
+  category?: string;
+  labels?: Record<string, string>;
+};
+
+async function fetchAllElevenVoices(key: string): Promise<ElevenVoice[]> {
+  const all: ElevenVoice[] = [];
+  let pageToken: string | null = null;
+  for (let page = 0; page < 10; page++) {
+    const url = new URL("https://api.elevenlabs.io/v2/voices");
+    url.searchParams.set("page_size", "100");
+    if (pageToken) url.searchParams.set("next_page_token", pageToken);
+    const res = await fetch(url, { headers: { "xi-api-key": key } });
+    if (!res.ok) break;
+    const json = (await res.json()) as {
+      voices?: ElevenVoice[];
+      has_more?: boolean;
+      next_page_token?: string | null;
+    };
+    all.push(...(json.voices ?? []));
+    if (!json.has_more || !json.next_page_token) return all;
+    pageToken = json.next_page_token;
+  }
+  if (all.length) return all;
+  // Fallback: stare v1 (bez paginacji).
+  const res = await fetch("https://api.elevenlabs.io/v1/voices", {
+    headers: { "xi-api-key": key },
+  });
+  if (!res.ok) return [];
+  const json = (await res.json()) as { voices?: ElevenVoice[] };
+  return json.voices ?? [];
+}
 
 export const listStudioVoices = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -302,30 +337,59 @@ export const listStudioVoices = createServerFn({ method: "GET" })
     const key = process.env.ELEVENLABS_API_KEY;
     if (!key) return [filip];
     try {
-      const res = await fetch("https://api.elevenlabs.io/v1/voices", {
-        headers: { "xi-api-key": key },
-      });
-      if (!res.ok) return [filip];
-      const json = (await res.json()) as {
-        voices?: {
-          voice_id: string;
-          name: string;
-          category?: string;
-          labels?: Record<string, string>;
-        }[];
-      };
-      const voices: StudioVoice[] = (json.voices ?? []).map((v) => ({
+      const raw = await fetchAllElevenVoices(key);
+      const voices: StudioVoice[] = raw.map((v) => ({
         id: v.voice_id,
         name: v.voice_id === FILIP_VOICE_ID ? `${v.name} (domyślny)` : v.name,
         description: [v.labels?.gender, v.labels?.accent, v.labels?.age, v.category]
           .filter(Boolean)
           .join(", "),
       }));
+      if (!voices.length) return [filip];
+      // Własne (sklonowane) głosy na górze, Filip zawsze pierwszy.
+      const rank = (v: StudioVoice) =>
+        v.id === FILIP_VOICE_ID ? 0 : /cloned|professional|generated/.test(v.description) ? 1 : 2;
+      voices.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, "pl"));
       if (!voices.some((v) => v.id === FILIP_VOICE_ID)) voices.unshift(filip);
-      else voices.sort((a, b) => (a.id === FILIP_VOICE_ID ? -1 : b.id === FILIP_VOICE_ID ? 1 : 0));
       return voices;
     } catch {
       return [filip];
+    }
+  });
+
+// Awatary HeyGen — pełny katalog z konta (moje grupy + talking photos +
+// publiczne awatary HeyGen); fallback: sztywna lista HEYGEN_AVATARS.
+export type StudioAvatar = {
+  id: string;
+  name: string;
+  preview: string | null;
+  kind: "avatar" | "talking_photo";
+  mine: boolean;
+  group?: string;
+};
+
+export const listStudioAvatars = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<StudioAvatar[]> => {
+    await assertAdmin(context.userId);
+    const { HEYGEN_AVATARS } = await import("./heygen-avatars");
+    const fallback: StudioAvatar[] = HEYGEN_AVATARS.map((a) => ({
+      id: a.id,
+      name: a.name,
+      preview: a.previewImage,
+      kind: "avatar",
+      mine: true,
+    }));
+    if (!process.env.HEYGEN_API_KEY) return fallback;
+    try {
+      const { listHeygenCatalog } = await import("./heygen-catalog.server");
+      const items = await listHeygenCatalog();
+      if (!items.length) return fallback;
+      // Digital twin Filipa oznaczamy jako "mój" nawet gdy API nie zwróci grup.
+      const filipId = HEYGEN_AVATARS[0].id;
+      return items.map((i) => (i.id === filipId ? { ...i, mine: true } : i));
+    } catch {
+      return fallback;
     }
   });
 
@@ -421,9 +485,11 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         .eq("id", job.id);
 
       const assetId = await uploadAudioToHeygen(audio);
+      const { resolveHeygenKind } = await import("./heygen-catalog.server");
       const videoId = await createHeygenVideoFromAudio({
         avatarId: data.avatar_id,
         audioAssetId: assetId,
+        kind: await resolveHeygenKind(data.avatar_id),
       });
 
       await supabaseAdmin
