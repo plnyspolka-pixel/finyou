@@ -14,7 +14,6 @@
  * końcu odwołania i pola.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { xmlToPlainText } from "@/lib/document-fields";
 
 export interface WzorData {
