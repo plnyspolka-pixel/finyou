@@ -298,10 +298,53 @@ export const publishAdDraft = createServerFn({ method: "POST" })
         locale: "pl_PL",
       });
 
-      // 4) Ad creative
-      const cr = await metaPost(`/${actId}/adcreatives`, {
-        name: `${draft.name} - kreacja`,
-        object_story_spec: {
+      // 4) Ad creative — wideo (Meta pobiera plik z URL) albo grafika
+      const isVideo = creative.media_type === "video" && creative.video_url;
+      let objectStorySpec: Record<string, unknown>;
+      if (isVideo) {
+        const vid = await metaPost(`/${actId}/advideos`, {
+          file_url: creative.video_url,
+          name: `${draft.name} - wideo`,
+        });
+        // Poczekaj aż Meta przetworzy wideo (bez tego tworzenie kreacji potrafi się wywalić)
+        const deadline = Date.now() + 150_000;
+        for (;;) {
+          const st = await metaGet(`/${vid.id}`, { fields: "status" });
+          const vs = st.status?.video_status;
+          if (vs === "ready") break;
+          if (vs === "error")
+            throw new Error(
+              "Meta nie przetworzyła wideo — sprawdź format pliku (zalecany MP4 H.264)",
+            );
+          if (Date.now() > deadline)
+            throw new Error(
+              "Przetwarzanie wideo po stronie Meta trwa zbyt długo — spróbuj opublikować ponownie za chwilę",
+            );
+          await new Promise((r) => setTimeout(r, 5000));
+        }
+        let thumb = (creative.video_thumbnail_url ?? creative.image_url) as string | undefined;
+        if (!thumb) {
+          const th = await metaGet(`/${vid.id}/thumbnails`);
+          thumb = (th.data?.find((t: any) => t.is_preferred) ?? th.data?.[0])?.uri;
+        }
+        if (!thumb)
+          throw new Error("Brak miniatury wideo — dodaj zdjęcie w kroku Kreacja jako miniaturę");
+        objectStorySpec = {
+          page_id: draft.page_id,
+          video_data: {
+            video_id: vid.id,
+            image_url: thumb,
+            message: creative.primary_text ?? "",
+            title: creative.headline ?? draft.name,
+            link_description: creative.description ?? "",
+            call_to_action: {
+              type: creative.cta_type ?? "SIGN_UP",
+              value: { lead_gen_form_id: form.id },
+            },
+          },
+        };
+      } else {
+        objectStorySpec = {
           page_id: draft.page_id,
           link_data: {
             message: creative.primary_text ?? "",
@@ -314,7 +357,11 @@ export const publishAdDraft = createServerFn({ method: "POST" })
               value: { lead_gen_form_id: form.id },
             },
           },
-        },
+        };
+      }
+      const cr = await metaPost(`/${actId}/adcreatives`, {
+        name: `${draft.name} - kreacja`,
+        object_story_spec: objectStorySpec,
       });
 
       // 5) Ad

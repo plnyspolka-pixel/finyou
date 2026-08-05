@@ -41,12 +41,73 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Facebook, Plus, Pencil, Trash2, Rocket, Search } from "lucide-react";
+import { Facebook, Plus, Pencil, Trash2, Rocket, Search, Film, ImageIcon } from "lucide-react";
+import { unzip } from "fflate";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/fb-ads/kreator")({
   component: FbCreatorPage,
 });
+
+const IMAGE_EXT = /\.(jpe?g|png|webp|gif)$/i;
+const VIDEO_EXT = /\.(mp4|mov|m4v|webm)$/i;
+
+function mediaKind(name: string): "image" | "video" | null {
+  if (IMAGE_EXT.test(name)) return "image";
+  if (VIDEO_EXT.test(name)) return "video";
+  return null;
+}
+
+function mimeFor(name: string): string {
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    mp4: "video/mp4",
+    m4v: "video/mp4",
+    mov: "video/quicktime",
+    webm: "video/webm",
+  };
+  return map[ext] ?? "application/octet-stream";
+}
+
+function sanitizeName(name: string): string {
+  return name.replace(/[^\w.-]+/g, "_");
+}
+
+function captureVideoThumb(file: File): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    try {
+      const url = URL.createObjectURL(file);
+      const v = document.createElement("video");
+      const cleanup = (b: Blob | null) => {
+        URL.revokeObjectURL(url);
+        resolve(b);
+      };
+      v.preload = "auto";
+      v.muted = true;
+      v.src = url;
+      v.onloadeddata = () => {
+        v.currentTime = Math.min(0.5, (v.duration || 1) / 2);
+      };
+      v.onseeked = () => {
+        const c = document.createElement("canvas");
+        c.width = v.videoWidth;
+        c.height = v.videoHeight;
+        if (!c.width || !c.height) return cleanup(null);
+        c.getContext("2d")?.drawImage(v, 0, 0);
+        c.toBlob((b) => cleanup(b), "image/jpeg", 0.85);
+      };
+      v.onerror = () => cleanup(null);
+      setTimeout(() => cleanup(null), 15_000);
+    } catch {
+      resolve(null);
+    }
+  });
+}
 
 function FbCreatorPage() {
   const fetchDrafts = useServerFn(listAdDrafts);
@@ -235,7 +296,10 @@ function FbCreatorDialog({
       headline: "",
       primary_text: "",
       description: "",
+      media_type: "image",
       image_url: "",
+      video_url: "",
+      video_thumbnail_url: "",
       cta_type: "SIGN_UP",
     },
     lead_form: {
@@ -282,16 +346,121 @@ function FbCreatorDialog({
     });
   };
 
+  const [uploading, setUploading] = useState(false);
+  const qc = useQueryClient();
+
+  const { data: library } = useQuery({
+    queryKey: ["ad-creatives-library"],
+    enabled: step === 4,
+    queryFn: async () => {
+      const { data: files, error } = await supabase.storage
+        .from("ad-creatives")
+        .list("creatives", { limit: 100, sortBy: { column: "created_at", order: "desc" } });
+      if (error) throw new Error(error.message);
+      return (files ?? [])
+        .filter((f) => mediaKind(f.name))
+        .map((f) => ({
+          name: f.name,
+          kind: mediaKind(f.name)!,
+          url: supabase.storage.from("ad-creatives").getPublicUrl(`creatives/${f.name}`).data
+            .publicUrl,
+        }));
+    },
+  });
+
+  const uploadToBucket = async (path: string, body: Blob | File, contentType?: string) => {
+    const { error } = await supabase.storage
+      .from("ad-creatives")
+      .upload(path, body, contentType ? { contentType } : undefined);
+    if (error) throw new Error(error.message);
+    return supabase.storage.from("ad-creatives").getPublicUrl(path).data.publicUrl;
+  };
+
+  const setCreative = (patch: Record<string, unknown>) =>
+    setForm((prev: any) => ({ ...prev, creative: { ...prev.creative, ...patch } }));
+
   const uploadImage = async (file: File) => {
-    const path = `creatives/${Date.now()}-${file.name.replace(/[^\w.-]+/g, "_")}`;
-    const { error } = await supabase.storage.from("ad-creatives").upload(path, file);
-    if (error) {
-      toast.error(error.message);
+    const url = await uploadToBucket(`creatives/${Date.now()}-${sanitizeName(file.name)}`, file);
+    setCreative({ media_type: "image", image_url: url });
+    toast.success("Zdjęcie zapisane");
+  };
+
+  const uploadVideo = async (file: File) => {
+    const url = await uploadToBucket(`creatives/${Date.now()}-${sanitizeName(file.name)}`, file);
+    const patch: Record<string, unknown> = { media_type: "video", video_url: url };
+    const thumb = await captureVideoThumb(file);
+    if (thumb) {
+      patch.video_thumbnail_url = await uploadToBucket(
+        `creatives/${Date.now()}-thumb.jpg`,
+        thumb,
+        "image/jpeg",
+      );
+    }
+    setCreative(patch);
+    toast.success(thumb ? "Wideo i miniatura zapisane" : "Wideo zapisane (bez miniatury)");
+  };
+
+  const uploadZip = async (file: File) => {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const entries = await new Promise<Record<string, Uint8Array>>((resolve, reject) => {
+      unzip(buf, (err, data) => (err ? reject(err) : resolve(data)));
+    });
+    const media = Object.entries(entries).filter(([name, data]) => {
+      const base = name.split("/").pop() ?? "";
+      return (
+        data.length > 0 && !name.includes("__MACOSX") && !base.startsWith(".") && mediaKind(base)
+      );
+    });
+    if (!media.length) {
+      toast.error("W ZIP-ie nie znaleziono grafik ani wideo");
       return;
     }
-    const { data: pub } = supabase.storage.from("ad-creatives").getPublicUrl(path);
-    setForm({ ...form, creative: { ...form.creative, image_url: pub.publicUrl } });
-    toast.success("Zdjęcie zapisane");
+    let done = 0;
+    const toastId = toast.loading(`Rozpakowywanie: 0/${media.length}`);
+    try {
+      const batch = Date.now();
+      for (const [name, data] of media) {
+        const base = sanitizeName(name.split("/").pop()!);
+        await uploadToBucket(
+          `creatives/${batch}${String(done).padStart(3, "0")}-${base}`,
+          new Blob([data as BlobPart], { type: mimeFor(base) }),
+        );
+        done++;
+        toast.loading(`Rozpakowywanie: ${done}/${media.length}`, { id: toastId });
+      }
+      toast.success(`Wgrano ${done} plików z ZIP-a do biblioteki`, { id: toastId });
+    } catch (e: any) {
+      toast.error(`Wgrano ${done}/${media.length} — błąd: ${e.message}`, { id: toastId });
+    }
+    qc.invalidateQueries({ queryKey: ["ad-creatives-library"] });
+  };
+
+  const onFilePicked = async (file: File) => {
+    setUploading(true);
+    try {
+      if (/\.zip$/i.test(file.name)) await uploadZip(file);
+      else if (file.type.startsWith("video/") || mediaKind(file.name) === "video")
+        await uploadVideo(file);
+      else await uploadImage(file);
+      qc.invalidateQueries({ queryKey: ["ad-creatives-library"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const pickFromLibrary = (item: { url: string; kind: "image" | "video" }) => {
+    if (item.kind === "video") {
+      setCreative({ media_type: "video", video_url: item.url, video_thumbnail_url: "" });
+    } else if (form.creative.media_type === "video" && form.creative.video_url) {
+      setCreative({ video_thumbnail_url: item.url });
+      toast.success("Ustawiono jako miniaturę wideo");
+      return;
+    } else {
+      setCreative({ media_type: "image", image_url: item.url });
+    }
+    toast.success("Wybrano z biblioteki");
   };
 
   const onSave = async () => {
@@ -583,17 +752,107 @@ function FbCreatorDialog({
               </Select>
             </div>
             <div>
-              <Label>Zdjęcie reklamy</Label>
+              <Label>Typ kreacji</Label>
+              <Select
+                value={form.creative.media_type ?? "image"}
+                onValueChange={(v) => setCreative({ media_type: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="image">Grafika</SelectItem>
+                  <SelectItem value="video">Wideo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Plik kreacji (grafika, wideo lub ZIP z wieloma kreacjami)</Label>
               <Input
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*,.zip"
+                disabled={uploading}
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) void uploadImage(f);
+                  if (f) void onFilePicked(f);
+                  e.target.value = "";
                 }}
               />
-              {form.creative.image_url && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Plik trafia bezpośrednio z przeglądarki do Supabase Storage. ZIP rozpakuje się
+                automatycznie, a jego zawartość znajdziesz w bibliotece poniżej.
+              </div>
+              {uploading && <div className="text-xs text-muted-foreground mt-1">Wgrywanie…</div>}
+              {form.creative.media_type !== "video" && form.creative.image_url && (
                 <img src={form.creative.image_url} alt="" className="mt-2 max-h-40 rounded" />
+              )}
+              {form.creative.media_type === "video" && form.creative.video_url && (
+                <div className="mt-2 space-y-1">
+                  <video
+                    src={form.creative.video_url}
+                    controls
+                    muted
+                    className="max-h-40 rounded"
+                  />
+                  {form.creative.video_thumbnail_url ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>Miniatura:</span>
+                      <img
+                        src={form.creative.video_thumbnail_url}
+                        alt=""
+                        className="h-10 rounded"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">
+                      Brak miniatury — kliknij grafikę w bibliotece, aby ją ustawić (albo Meta
+                      wygeneruje ją automatycznie).
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div>
+              <Label>Biblioteka kreacji</Label>
+              {!library?.length ? (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Brak plików. Wgraj grafikę, wideo lub ZIP-a powyżej.
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-1 max-h-64 overflow-y-auto">
+                  {library.map((item) => (
+                    <button
+                      key={item.url}
+                      type="button"
+                      onClick={() => pickFromLibrary(item)}
+                      className={`border rounded overflow-hidden text-left hover:ring-2 hover:ring-primary ${
+                        item.url === form.creative.image_url || item.url === form.creative.video_url
+                          ? "ring-2 ring-primary"
+                          : ""
+                      }`}
+                    >
+                      {item.kind === "video" ? (
+                        <video src={item.url} muted className="h-20 w-full object-cover" />
+                      ) : (
+                        <img src={item.url} alt="" className="h-20 w-full object-cover" />
+                      )}
+                      <div className="flex items-center gap-1 px-1 py-0.5 text-[10px] text-muted-foreground truncate">
+                        {item.kind === "video" ? (
+                          <Film className="h-3 w-3 shrink-0" />
+                        ) : (
+                          <ImageIcon className="h-3 w-3 shrink-0" />
+                        )}
+                        <span className="truncate">{item.name.replace(/^\d+-/, "")}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {form.creative.media_type === "video" && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Wskazówka: przy wybranym wideo kliknięcie grafiki w bibliotece ustawia ją jako
+                  miniaturę.
+                </div>
               )}
             </div>
           </div>
