@@ -44,6 +44,7 @@ export function PanelShell({
   const { user, roles, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const pathAllowed =
@@ -65,7 +66,9 @@ export function PanelShell({
           : pathname.startsWith("/posrednik")
             ? "posrednik"
             : "klient";
-      void navigate({ to: "/logowanie", search: { role, next: pathname } as never });
+      // Zachowaj query string w `next`, żeby deep-link z parametrami wrócił po logowaniu.
+      const nextTarget = searchStr ? `${pathname}${searchStr}` : pathname;
+      void navigate({ to: "/logowanie", search: { role, next: nextTarget } as never });
       return;
     }
     if (allow && !allow.some((r) => roles.includes(r))) {
@@ -77,7 +80,7 @@ export function PanelShell({
     if (!pathAllowed && allowByPath && allowByPath.length > 0) {
       void navigate({ to: allowByPath[0] });
     }
-  }, [loading, user, roles, allow, allowByPath, pathAllowed, navigate, pathname]);
+  }, [loading, user, roles, allow, allowByPath, pathAllowed, navigate, pathname, searchStr]);
 
   if (loading || !user) {
     return (

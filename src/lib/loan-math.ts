@@ -50,7 +50,6 @@ export function computeLoanFigures(input: {
 }): LoanFigures {
   const nominal = monthlyPayment(input.amount, input.annualRatePercent, input.months);
   const cap = input.maxPayment && input.maxPayment > 0 ? input.maxPayment : nominal;
-  const monthly = Math.min(nominal || 0, cap || 0);
   // Jedno źródło prawdy: model silnika (pełna wypłata, odsetki od salda,
   // prowizja w ratach, balon = ostatnia z rat).
   const eng = buildEngineSchedule({
@@ -60,6 +59,9 @@ export function computeLoanFigures(input: {
     months: input.months,
     maxMonthlyPayment: cap,
   });
+  // Rata regularna także z silnika — inaczej przy prowizji > 0 `monthly` (annuitet
+  // bez prowizji) rozjeżdżał się z `total`/`balloon` (model z prowizją w ratach).
+  const monthly = eng.regularPayment;
   return {
     nominal,
     monthly,

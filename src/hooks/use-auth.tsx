@@ -102,13 +102,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ? window.localStorage.getItem("pending_role_selection")
           : null;
       if (!pending) return;
+      const isStaffAccount = next.some((r) =>
+        ["administrator", "operator", "ksiegowosc"].includes(r),
+      );
       const needsFix =
-        (pending === "inwestor" && !next.includes("inwestor") && !next.includes("administrator")) ||
-        (pending === "posrednik" &&
-          !next.includes("posrednik") &&
-          !next.includes("operator") &&
-          !next.includes("administrator")) ||
-        (pending === "klient" && next.length > 0 && !next.includes("klient"));
+        !isStaffAccount &&
+        ((pending === "inwestor" && !next.includes("inwestor")) ||
+          (pending === "posrednik" && !next.includes("posrednik")) ||
+          (pending === "klient" && next.length > 0 && !next.includes("klient")));
       const path = typeof window !== "undefined" ? window.location.pathname : "";
       if (
         needsFix &&

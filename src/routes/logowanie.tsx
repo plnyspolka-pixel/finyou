@@ -58,6 +58,14 @@ function LoginPage() {
   const nextPath = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
   const target = nextPath ?? "/wybor-panelu";
 
+  // `target` może zawierać query string (np. deep-link zgody OAuth z ?authorization_id=...).
+  // Router `navigate({ to })` nie parsuje query z `to`, więc dla adresów z „?" robimy
+  // pełną nawigację przeglądarki, żeby parametry nie przepadły.
+  const goToTarget = () => {
+    if (target.includes("?")) window.location.assign(target);
+    else void navigate({ to: target });
+  };
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -80,7 +88,7 @@ function LoginPage() {
       return;
     }
     toast.success("Witaj z powrotem!");
-    void navigate({ to: target });
+    goToTarget();
   };
 
   const submitMagic = async (e: FormEvent) => {
@@ -133,7 +141,7 @@ function LoginPage() {
               <SocialSignIn
                 labelPrefix="Zaloguj się"
                 redirectPath={target}
-                onSuccess={() => void navigate({ to: target })}
+                onSuccess={goToTarget}
               />
               <AuthDivider label="lub e-mailem" />
               <Tabs defaultValue="password" className="w-full">
