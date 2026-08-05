@@ -154,6 +154,13 @@ export function OfferCalculatorPanel({
       : minCap
     : maxCap;
 
+  // Gdy zmiana kwoty/okresu sklampuje wybraną ratę, zapisz ją z powrotem do stanu
+  // rodzica — inaczej autozapis i snapshot akceptacji utrwalałyby nieaktualną wartość
+  // (np. 900 zł) inną niż widoczna dla klienta. Nie ruszamy sentinela 0 (suwak nietknięty).
+  useEffect(() => {
+    if (sliderTouched && chosenPayment !== maxPayment) setMaxPayment(chosenPayment);
+  }, [sliderTouched, chosenPayment, maxPayment, setMaxPayment]);
+
   const eng = buildEngineSchedule({
     kwotaPozyczki: grossPrincipal,
     prowizja: 0,

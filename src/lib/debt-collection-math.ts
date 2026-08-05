@@ -84,6 +84,7 @@ export function splitInvestorPrincipal(loan: {
 export type DelayInterestRegime =
   | "brak" // brak opóźnienia / brak podstawy
   | "zalegle_raty" // umowa niewypowiedziana — tylko zaległe raty
+  | "calosc_po_terminie" // po terminie spłaty (bez wypowiedzenia) — cała należność
   | "calosc_po_wypowiedzeniu"; // umowa wypowiedziana — cała należność
 
 export interface DebtCalcInput {
@@ -267,9 +268,18 @@ export function calculateDebt(input: DebtCalcInput): DebtCalcResult {
           base = principalBal + interestBal + surchargesBal + costsBal;
           regime = "calosc_po_wypowiedzeniu";
         } else {
-          // Umowa niewypowiedziana: tylko zaległe raty (z części oprocentowanej).
-          base = Math.min(overdueInstallments, principalBal + interestBal);
-          regime = base > 0 ? "zalegle_raty" : "brak";
+          // Po terminie spłaty cała oprocentowana należność jest wymagalna.
+          // Gdy operator podał kwotę zaległych rat (> 0), używamy jej jako podstawy
+          // (umowa niewypowiedziana, częściowa zaległość); gdy jej nie podał,
+          // podstawą jest całe saldo — inaczej dług zamarzałby po terminie.
+          const fullDue = principalBal + interestBal;
+          if (overdueInstallments > 0) {
+            base = Math.min(overdueInstallments, fullDue);
+            regime = base > 0 ? "zalegle_raty" : "brak";
+          } else {
+            base = fullDue;
+            regime = base > 0 ? "calosc_po_terminie" : "brak";
+          }
         }
         if (effectiveDelayRate > 0 && base > 0) {
           const inc = (base * effectiveDelayRate) / 100 / 365;

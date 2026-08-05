@@ -647,6 +647,13 @@ function WindykacjaCaseCard() {
                         {formatPLN(debt.delayInterestBase)} (kapitał na rękę + prowizja Finance You
                         + odsetki + dopłaty). Prowizja inwestora jest należna, ale bez odsetek.
                       </>
+                    ) : debt.delayRegime === "calosc_po_terminie" ? (
+                      <>
+                        <span className="font-medium text-foreground">Po terminie spłaty —</span>{" "}
+                        odsetki za opóźnienie od całości oprocentowanej należności:{" "}
+                        {formatPLN(debt.delayInterestBase)} (kapitał na rękę + prowizja Finance You +
+                        odsetki). Prowizja inwestora jest należna, ale bez odsetek.
+                      </>
                     ) : debt.delayRegime === "zalegle_raty" ? (
                       <>
                         <span className="font-medium text-foreground">

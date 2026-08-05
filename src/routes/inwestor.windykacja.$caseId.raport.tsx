@@ -264,9 +264,11 @@ function EvidenceReport() {
             <p className="text-gray-600 mt-1" style={{ fontSize: "11px" }}>
               {debt.delayRegime === "calosc_po_wypowiedzeniu"
                 ? `Umowa wypowiedziana — odsetki za opóźnienie naliczone od całości oprocentowanej należności (${formatPLN(debt.delayInterestBase)}; kapitał na rękę + prowizja Finance You + odsetki + dopłaty) na podstawie art. 481 § 2¹ k.c. Prowizja inwestora jest należna, lecz nieoprocentowana.`
-                : debt.delayRegime === "zalegle_raty"
-                  ? `Umowa niewypowiedziana — odsetki za opóźnienie naliczone wyłącznie od zaległych rat (${formatPLN(debt.delayInterestBase)}).`
-                  : "Brak wymagalnej zaległości — odsetki za opóźnienie nie naliczane."}
+                : debt.delayRegime === "calosc_po_terminie"
+                  ? `Po terminie spłaty — odsetki za opóźnienie naliczone od całości oprocentowanej należności (${formatPLN(debt.delayInterestBase)}; kapitał na rękę + prowizja Finance You + odsetki) na podstawie art. 481 § 2¹ k.c. Prowizja inwestora jest należna, lecz nieoprocentowana.`
+                  : debt.delayRegime === "zalegle_raty"
+                    ? `Umowa niewypowiedziana — odsetki za opóźnienie naliczone wyłącznie od zaległych rat (${formatPLN(debt.delayInterestBase)}).`
+                    : "Brak wymagalnej zaległości — odsetki za opóźnienie nie naliczane."}
             </p>
           </div>
         )}

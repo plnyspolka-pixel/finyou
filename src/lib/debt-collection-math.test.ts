@@ -55,6 +55,20 @@ describe("calculateDebt — reżim odsetek za opóźnienie", () => {
     expect(r.principalOutstanding).toBe(110_000);
   });
 
+  it("po terminie spłaty bez kwoty zaległej: odsetki od całości (dług nie zamarza)", () => {
+    const r = calculateDebt({
+      ...base,
+      terminated: false,
+      overdueInstallmentsAmount: 0, // operator nie wypełnił kwoty zaległej
+      asOf: "2026-07-01", // rok po terminie spłaty (2025-07-01)
+    });
+    expect(r.delayRegime).toBe("calosc_po_terminie");
+    // Podstawa = cała oprocentowana należność (~110 000), nie 0.
+    expect(r.delayInterestBase).toBeGreaterThan(109_000);
+    // ~24,5% od 110 000 przez rok ≈ 27 000 zł — dług narasta, nie zamarza.
+    expect(r.delayInterest).toBeGreaterThan(25_000);
+  });
+
   it("umowa wypowiedziana: odsetki od całości oprocentowanej", () => {
     const r = calculateDebt({
       ...base,
