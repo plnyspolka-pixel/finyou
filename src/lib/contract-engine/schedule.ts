@@ -153,6 +153,11 @@ export function walidujHarmonogram(warunki: any, tolerancja = TOLERANCJA_GROSZOW
   const kwotaPozyczki = parseKwota(warunki?.kwota_pozyczki?.cyframi);
   const kwotaProwizji = parseKwota(warunki?.prowizja?.kwota?.cyframi);
   const near = (a: number, b: number) => Math.abs(a - b) <= tolerancja;
+  // Porównania SUM (Σ kapitał, Σ prowizja) kumulują błędy zaokrągleń per wiersz,
+  // więc dla długich harmonogramów tolerancja musi rosnąć z liczbą rat — inaczej
+  // walidator blokowałby poprawny import 72-ratowy. Kontrole per-wiersz zostają ciasne.
+  const tolerancjaSumy = Math.max(tolerancja, 0.005 * raty.length);
+  const nearSuma = (a: number, b: number) => Math.abs(a - b) <= tolerancjaSumy;
 
   // 1) liczba wierszy = liczba_rat
   if (typeof h.liczba_rat === "number" && raty.length !== h.liczba_rat)
@@ -167,13 +172,13 @@ export function walidujHarmonogram(warunki: any, tolerancja = TOLERANCJA_GROSZOW
   const suma = (a: number[]) => a.reduce((x, y) => x + (Number.isNaN(y) ? 0 : y), 0);
 
   // 2) suma kapitału = Kwota Pożyczki
-  if (!Number.isNaN(kwotaPozyczki) && !near(suma(kap), kwotaPozyczki))
+  if (!Number.isNaN(kwotaPozyczki) && !nearSuma(suma(kap), kwotaPozyczki))
     blad(
       `Suma kapitału z harmonogramu (${formatKwotaPL(suma(kap))}) różni się od Kwoty Pożyczki (${formatKwotaPL(kwotaPozyczki)})`,
     );
 
   // 3) suma prowizji = kwota prowizji z §2
-  if (!Number.isNaN(kwotaProwizji) && !near(suma(prow), kwotaProwizji))
+  if (!Number.isNaN(kwotaProwizji) && !nearSuma(suma(prow), kwotaProwizji))
     blad(
       `Suma prowizji z harmonogramu (${formatKwotaPL(suma(prow))}) różni się od kwoty prowizji z §2 (${formatKwotaPL(kwotaProwizji)})`,
     );

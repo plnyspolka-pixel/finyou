@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useSearch } from "@tanstack/react-router";
 import { useState, FormEvent } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,12 +15,24 @@ import { MktBadge } from "@/components/marketing/primitives";
 type SignupRole = "klient" | "inwestor";
 
 const searchSchema = z.object({
-  // .catch — nieznana rola w URL (np. stare linki ?role=posrednik) nie wywala strony.
-  role: z.enum(["klient", "inwestor"]).optional().catch(undefined),
+  // "posrednik" zachowujemy, by beforeLoad mógł przekierować na rejestrację partnera
+  // (zamiast po cichu degradować do klienta); .catch — inne wartości nie wywalają strony.
+  role: z.enum(["klient", "inwestor", "posrednik"]).optional().catch(undefined),
+  ref: z.string().optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/rejestracja")({
   validateSearch: (s) => searchSchema.parse(s),
+  beforeLoad: ({ search }) => {
+    // Link rekrutacyjny partnera (?role=posrednik) prowadzi do dedykowanej
+    // rejestracji pośrednika, a nie do formularza klienta z rolą zdegradowaną do „klient".
+    if (search.role === "posrednik") {
+      throw redirect({
+        to: "/posrednicy/rejestracja",
+        search: { ref: search.ref ?? "" },
+      });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Finance You — Załóż konto" },
@@ -78,7 +90,7 @@ const HERO_COPY: Record<SignupRole, { title: string; lead: string }> = {
 
 function RegisterPage() {
   const search = useSearch({ from: "/rejestracja" });
-  const [role, setRole] = useState<SignupRole>(search.role ?? "klient");
+  const [role, setRole] = useState<SignupRole>(search.role === "inwestor" ? "inwestor" : "klient");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");

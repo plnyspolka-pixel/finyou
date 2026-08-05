@@ -16,6 +16,12 @@ type PanelShellProps = {
   groups: NavGroup[];
   /** Role uprawnione do panelu. Pominięcie = wystarczy bycie zalogowanym (panel klienta). */
   allow?: AppRole[];
+  /**
+   * Dozwolone prefiksy ścieżek, gdy bieżąca rola ma węższy dostęp niż cały panel
+   * (np. księgowość w panelu admina). Wejście na ścieżkę spoza listy blokuje render
+   * i przekierowuje na pierwszy dozwolony adres — nie wystarczy ukryć linki w nawigacji.
+   */
+  allowByPath?: string[];
   /** Dodatkowy element w obrębie shella (np. pływający czat AI administratora). */
   footer?: ReactNode;
   /** Włącz „fancy" navy aurora backdrop w obszarze głównym. */
@@ -27,11 +33,21 @@ type PanelShellProps = {
  * Jedno źródło prawdy dla: nawigacji desktop + mobilnej (Sheet), brandingu,
  * strażnika ról i wylogowania. Dzięki temu każdy panel jest nawigowalny na telefonie.
  */
-export function PanelShell({ title, groups, allow, footer, fancy = false }: PanelShellProps) {
+export function PanelShell({
+  title,
+  groups,
+  allow,
+  allowByPath,
+  footer,
+  fancy = false,
+}: PanelShellProps) {
   const { user, roles, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const pathAllowed =
+    !allowByPath || allowByPath.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
   useEffect(() => {
     if (loading) return;
@@ -54,8 +70,14 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
     }
     if (allow && !allow.some((r) => roles.includes(r))) {
       void navigate({ to: "/" });
+      return;
     }
-  }, [loading, user, roles, allow, navigate, pathname]);
+    // Rola z węższym dostępem (np. księgowość) na ścieżce spoza białej listy:
+    // odeślij na pierwszy dozwolony adres, żeby URL nie był furtką wokół nawigacji.
+    if (!pathAllowed && allowByPath && allowByPath.length > 0) {
+      void navigate({ to: allowByPath[0] });
+    }
+  }, [loading, user, roles, allow, allowByPath, pathAllowed, navigate, pathname]);
 
   if (loading || !user) {
     return (
@@ -69,6 +91,16 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
   // `loading` jest false dopiero po dociągnięciu ról, więc legalni użytkownicy
   // nie zobaczą tego ekranu.
   if (allow && !allow.some((r) => roles.includes(r))) {
+    return (
+      <div className="grid min-h-screen place-items-center text-muted-foreground">
+        Przekierowywanie…
+      </div>
+    );
+  }
+
+  // Ścieżka spoza białej listy dla węższej roli — nie montuj strony-dziecka
+  // (ani jej loaderów danych), zanim useEffect wykona przekierowanie.
+  if (!pathAllowed) {
     return (
       <div className="grid min-h-screen place-items-center text-muted-foreground">
         Przekierowywanie…

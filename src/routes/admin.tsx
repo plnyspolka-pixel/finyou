@@ -184,6 +184,15 @@ function AdminLayout() {
     <PanelShell
       title={isStaff ? "Panel administratora" : "Panel księgowości"}
       allow={["administrator", "ksiegowosc"]}
+      // Sama księgowość (bez roli administrator/operator) ma dostęp wyłącznie do
+      // modułu księgowego i rozliczeń — reszta /admin/* jest zablokowana także po URL.
+      allowByPath={
+        isStaff
+          ? undefined
+          : isAccountant
+            ? ["/admin/ksiegowosc", "/admin/program-posrednikow/rozliczenia"]
+            : undefined
+      }
       groups={isStaff ? groups : isAccountant ? accountingGroups : groups}
     />
   );
