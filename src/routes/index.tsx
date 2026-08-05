@@ -140,7 +140,7 @@ function Hero() {
               letterSpacing: "-0.025em",
             }}
           >
-            Jedna platforma dla klientów i inwestorów na rynku pożyczek pod{" "}
+            Pożyczki pod zastaw{" "}
             <span
               style={{
                 background: "linear-gradient(95deg,#f0c667,#f6dc9c 34%,#5fa2f6 82%)",
@@ -161,8 +161,9 @@ function Hero() {
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Finance You łączy klientów szukających finansowania i prywatnych inwestorów w jednym
-            systemie: z CRM-em, AI, dokumentacją, szkoleniami i automatyzacją procesu.
+            Pożyczasz czy inwestujesz? Pomagamy klientom szybko pozyskać finansowanie pod
+            zabezpieczenie nieruchomości, a inwestorom — bezpiecznie lokować kapitał w sprawdzone
+            transakcje.
           </p>
           <div
             style={{
