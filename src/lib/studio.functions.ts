@@ -262,6 +262,11 @@ export type StudioVideoJob = {
   video_url: string | null;
   thumbnail_url: string | null;
   last_error: string | null;
+  auto_publish_platforms: string[];
+  publish_privacy: string;
+  publish_title: string;
+  publish_description: string;
+  auto_published_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -280,22 +285,105 @@ export const listStudioVideoJobs = createServerFn({ method: "GET" })
     return (data ?? []) as StudioVideoJob[];
   });
 
+// Głosy ElevenLabs do wyboru w generatorze (dynamicznie z konta,
+// z gwarancją że domyślny Filip zawsze jest na liście).
+export type StudioVoice = { id: string; name: string; description: string };
+
+export const listStudioVoices = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<StudioVoice[]> => {
+    await assertAdmin(context.userId);
+    const { FILIP_VOICE_ID } = await import("./heygen-avatars");
+    const filip: StudioVoice = {
+      id: FILIP_VOICE_ID,
+      name: "Filip (domyślny)",
+      description: "Polski lektor ElevenLabs",
+    };
+    const key = process.env.ELEVENLABS_API_KEY;
+    if (!key) return [filip];
+    try {
+      const res = await fetch("https://api.elevenlabs.io/v1/voices", {
+        headers: { "xi-api-key": key },
+      });
+      if (!res.ok) return [filip];
+      const json = (await res.json()) as {
+        voices?: {
+          voice_id: string;
+          name: string;
+          category?: string;
+          labels?: Record<string, string>;
+        }[];
+      };
+      const voices: StudioVoice[] = (json.voices ?? []).map((v) => ({
+        id: v.voice_id,
+        name: v.voice_id === FILIP_VOICE_ID ? `${v.name} (domyślny)` : v.name,
+        description: [v.labels?.gender, v.labels?.accent, v.labels?.age, v.category]
+          .filter(Boolean)
+          .join(", "),
+      }));
+      if (!voices.some((v) => v.id === FILIP_VOICE_ID)) voices.unshift(filip);
+      else voices.sort((a, b) => (a.id === FILIP_VOICE_ID ? -1 : b.id === FILIP_VOICE_ID ? 1 : 0));
+      return voices;
+    } catch {
+      return [filip];
+    }
+  });
+
 // Krok 1: prompt → scenariusz AI (edytowalny w UI przed startem generacji).
+// Gdy prompt pochodzi z bazy 250 pytań (question_id), scenariusz dostaje
+// obowiązkowe otwarcie rolki i schemat shorta z docs/shorts.
 export const generateStudioScript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { prompt: string }) => d)
+  .inputValidator((d: { prompt: string; question_id?: number }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
+    if (data.question_id != null) {
+      const { findShortsQuestion } = await import("./shorts-question-bank");
+      const q = findShortsQuestion(data.question_id);
+      if (!q) throw new Error(`Nie znaleziono pytania #${data.question_id} w bazie.`);
+      const { generateShortsScript } = await import("./studio-ai.server");
+      return await generateShortsScript(q);
+    }
     if (!data.prompt.trim()) throw new Error("Podaj prompt.");
     const { generateVideoScript } = await import("./studio-ai.server");
     return await generateVideoScript(data.prompt.trim());
   });
 
+// Auto-publikacja: walidacja wspólna dla generacji pojedynczej i wsadowej.
+function sanitizeAutoPublish(d: {
+  auto_publish_platforms?: StudioPlatform[];
+  publish_privacy?: string;
+}): {
+  auto_publish_platforms: StudioPlatform[];
+  publish_privacy: string;
+} {
+  const allowed: StudioPlatform[] = [
+    "youtube",
+    "facebook_post",
+    "facebook_reels",
+    "instagram_reels",
+  ];
+  const platforms = (d.auto_publish_platforms ?? []).filter((p) => allowed.includes(p));
+  const privacy = ["public", "unlisted", "private"].includes(d.publish_privacy ?? "")
+    ? d.publish_privacy!
+    : "public";
+  return { auto_publish_platforms: platforms, publish_privacy: privacy };
+}
+
 // Krok 2: scenariusz → ElevenLabs TTS → HeyGen avatar. Zwraca id joba do pollingu.
 export const startStudioVideo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (d: { prompt: string; script: string; avatar_id: string; voice_id?: string }) => d,
+    (d: {
+      prompt: string;
+      script: string;
+      avatar_id: string;
+      voice_id?: string;
+      auto_publish_platforms?: StudioPlatform[];
+      publish_privacy?: string;
+      publish_title?: string;
+      publish_description?: string;
+    }) => d,
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
@@ -305,6 +393,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       await import("./avatar-faq.server");
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
     const voiceId = data.voice_id || FILIP_VOICE_ID;
+    const autoPub = sanitizeAutoPublish(data);
 
     const { data: job, error: insErr } = await supabaseAdmin
       .from("studio_video_jobs")
@@ -314,6 +403,10 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         avatar_id: data.avatar_id,
         voice_id: voiceId,
         status: "generating_audio",
+        auto_publish_platforms: autoPub.auto_publish_platforms,
+        publish_privacy: autoPub.publish_privacy,
+        publish_title: data.publish_title?.trim() ?? "",
+        publish_description: data.publish_description?.trim() ?? "",
         created_by: context.userId,
       })
       .select("id")
@@ -348,6 +441,80 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     }
   });
 
+// Generowanie wsadowe: pytania z bazy trafiają jako joby 'queued'.
+// Kolejkę przetwarza tick (co 10 min) oraz otwarty panel (processStudioVideoQueueNow).
+export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      question_ids: number[];
+      avatar_id: string;
+      voice_id?: string;
+      auto_publish_platforms?: StudioPlatform[];
+      publish_privacy?: string;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const ids = [...new Set(data.question_ids)];
+    if (!ids.length) throw new Error("Zaznacz co najmniej jedno pytanie.");
+    if (ids.length > 25) throw new Error("Maksymalnie 25 pytań w jednej serii.");
+    const { findShortsQuestion, shortsPromptForQuestion } = await import("./shorts-question-bank");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { FILIP_VOICE_ID } = await import("./heygen-avatars");
+    const autoPub = sanitizeAutoPublish(data);
+
+    // Pomiń pytania, które mają już nie-failowy job (ochrona przed dublami).
+    const { data: existing } = await supabaseAdmin
+      .from("studio_video_jobs")
+      .select("prompt, status")
+      .neq("status", "failed")
+      .limit(1000);
+    const taken = new Set(
+      (existing ?? [])
+        .map((r) => /^#(\d{1,3}) · /.exec(r.prompt)?.[1])
+        .filter(Boolean)
+        .map(Number),
+    );
+
+    const rows = [];
+    let skipped = 0;
+    for (const id of ids) {
+      const q = findShortsQuestion(id);
+      if (!q) throw new Error(`Nie znaleziono pytania #${id} w bazie.`);
+      if (taken.has(id)) {
+        skipped++;
+        continue;
+      }
+      rows.push({
+        prompt: shortsPromptForQuestion(q),
+        script: "",
+        avatar_id: data.avatar_id,
+        voice_id: data.voice_id || FILIP_VOICE_ID,
+        status: "queued",
+        auto_publish_platforms: autoPub.auto_publish_platforms,
+        publish_privacy: autoPub.publish_privacy,
+        publish_title: q.question.slice(0, 92),
+        created_by: context.userId,
+      });
+    }
+    if (rows.length) {
+      const { error } = await supabaseAdmin.from("studio_video_jobs").insert(rows);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true, queued: rows.length, skipped };
+  });
+
+// Przetwarza jeden job z kolejki wsadowej (wołane w pętli przez otwarty panel,
+// żeby nie czekać na cron). Zwraca ile jobów zostało w kolejce.
+export const processStudioVideoQueueNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { processStudioVideoQueue } = await import("./studio-video-queue.server");
+    return await processStudioVideoQueue(1);
+  });
+
 export const pollStudioVideoJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
@@ -358,7 +525,9 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
 
     const { data: row } = await supabaseAdmin
       .from("studio_video_jobs")
-      .select("heygen_video_id")
+      .select(
+        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by",
+      )
       .eq("id", data.id)
       .single();
     if (!row?.heygen_video_id) return { status: "no_video" as const };
@@ -382,6 +551,11 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
       update.status = status.status === "processing" ? "rendering" : status.status;
     }
     await supabaseAdmin.from("studio_video_jobs").update(update).eq("id", data.id);
+
+    if (update.status === "ready" && update.video_url) {
+      const { maybeAutoPublishJob } = await import("./studio-video-queue.server");
+      await maybeAutoPublishJob({ ...row, status: "ready", video_url: update.video_url });
+    }
     return {
       status: status.status,
       video_url: status.video_url,
