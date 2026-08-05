@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ZapomnianeHasloRouteImport } from './routes/zapomniane-haslo'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
+import { Route as WyborPaneluRouteImport } from './routes/wybor-panelu'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
@@ -252,6 +253,11 @@ const ZapomnianeHasloRoute = ZapomnianeHasloRouteImport.update({
 const WyborRoliRoute = WyborRoliRouteImport.update({
   id: '/wybor-roli',
   path: '/wybor-roli',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WyborPaneluRoute = WyborPaneluRouteImport.update({
+  id: '/wybor-panelu',
+  path: '/wybor-panelu',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -1502,6 +1508,7 @@ export interface FileRoutesByFullPath {
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -1733,6 +1740,7 @@ export interface FileRoutesByTo {
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -1965,6 +1973,7 @@ export interface FileRoutesById {
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -2203,6 +2212,7 @@ export interface FileRouteTypes {
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
@@ -2434,6 +2444,7 @@ export interface FileRouteTypes {
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
@@ -2665,6 +2676,7 @@ export interface FileRouteTypes {
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
@@ -2902,6 +2914,7 @@ export interface RootRouteChildren {
   RegulaminRoute: typeof RegulaminRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  WyborPaneluRoute: typeof WyborPaneluRoute
   WyborRoliRoute: typeof WyborRoliRoute
   ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
@@ -2991,6 +3004,13 @@ declare module '@tanstack/react-router' {
       path: '/wybor-roli'
       fullPath: '/wybor-roli'
       preLoaderRoute: typeof WyborRoliRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wybor-panelu': {
+      id: '/wybor-panelu'
+      path: '/wybor-panelu'
+      fullPath: '/wybor-panelu'
+      preLoaderRoute: typeof WyborPaneluRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -5049,6 +5069,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegulaminRoute: RegulaminRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  WyborPaneluRoute: WyborPaneluRoute,
   WyborRoliRoute: WyborRoliRoute,
   ZapomnianeHasloRoute: ZapomnianeHasloRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,

@@ -171,3 +171,58 @@ export function defaultPathForRoles(roles: AppRole[]): string {
   if (roles.includes("inwestor")) return "/inwestor";
   return "/klient";
 }
+
+// ── Panele przypisane do ról ───────────────────────────────────────────────
+export type RolePanel = { role: AppRole; path: string; title: string; desc: string };
+
+export const ROLE_PANELS: RolePanel[] = [
+  {
+    role: "administrator",
+    path: "/admin",
+    title: "Administrator",
+    desc: "Pełne zarządzanie platformą, wnioskami i użytkownikami.",
+  },
+  {
+    role: "operator",
+    path: "/operator/leady",
+    title: "Operator",
+    desc: "Leady, wnioski i codzienna obsługa klientów.",
+  },
+  {
+    role: "ksiegowosc",
+    path: "/admin/ksiegowosc",
+    title: "Księgowość",
+    desc: "Faktury, dokumenty i rozliczenia.",
+  },
+  {
+    role: "posrednik",
+    path: "/posrednik",
+    title: "Pośrednik",
+    desc: "Panel partnera — przekazane wnioski i prowizje.",
+  },
+  {
+    role: "inwestor",
+    path: "/inwestor",
+    title: "Inwestor",
+    desc: "Oferty inwestycyjne i portfel pożyczek.",
+  },
+  {
+    role: "klient",
+    path: "/klient",
+    title: "Klient",
+    desc: "Status wniosku, dokumenty i propozycje finansowania.",
+  },
+];
+
+export function panelsForRoles(roles: AppRole[]): RolePanel[] {
+  return ROLE_PANELS.filter((p) => roles.includes(p.role));
+}
+
+// Ścieżka tuż po zalogowaniu: jedna rola → od razu jej panel; kilka ról →
+// ekran wyboru panelu (za każdym logowaniem); brak roli → wybór typu konta.
+export function postLoginPathForRoles(roles: AppRole[]): string {
+  const panels = panelsForRoles(roles);
+  if (panels.length === 0) return "/wybor-roli";
+  if (panels.length === 1) return panels[0].path;
+  return "/wybor-panelu";
+}

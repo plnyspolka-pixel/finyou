@@ -212,7 +212,19 @@ function RegisterPage() {
                   })}
                 </div>
 
-                <SocialSignIn labelPrefix="Zarejestruj się" />
+                <SocialSignIn
+                  labelPrefix="Zarejestruj się"
+                  onBeforeSignIn={() => {
+                    // Zapamiętaj wybraną rolę — po powrocie z Google trafi do
+                    // /wybor-panelu (0 ról → /wybor-roli), a auto-fix w use-auth
+                    // dopilnuje nadania właściwej roli.
+                    try {
+                      window.localStorage.setItem("pending_role_selection", role);
+                    } catch {
+                      // localStorage niedostępny (np. tryb prywatny) — pomiń
+                    }
+                  }}
+                />
                 <AuthDivider label="lub e-mailem" />
                 <form className="space-y-4" onSubmit={submit}>
                   <div className="grid grid-cols-2 gap-3">
