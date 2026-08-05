@@ -72,14 +72,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadRoles = async (uid: string | undefined) => {
+  const loadRoles = async (uid: string | undefined, allowRedirect = false) => {
     if (!uid) {
       setRoles([]);
       return;
     }
-    const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
+    const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", uid);
+    // Błąd (offline / 5xx / wygasły JWT) nie może udawać „konta bez ról" — inaczej
+    // strażnicy paneli wyrzuciliby użytkownika i wysłali go do wyboru roli, gdzie
+    // mógłby nieświadomie nadpisać sobie rolę. Zostawiamy poprzedni stan.
+    if (error) {
+      console.error("[use-auth] nie udało się wczytać ról:", error);
+      return;
+    }
     const next = ((data ?? []) as { role: AppRole }[]).map((r) => r.role);
     setRoles(next);
+
+    // Auto-fix uruchamiamy tylko przy realnym logowaniu (SIGNED_IN / INITIAL_SESSION),
+    // nie przy cyklicznym TOKEN_REFRESHED — inaczej twardy reload strony mógł
+    // skasować niezapisany formularz w środku sesji.
+    if (!allowRedirect) return;
 
     // Auto-fix: jeśli użytkownik wybrał inną rolę przed zalogowaniem (np. wszedł na /inwestor
     // → /logowanie?role=inwestor i zalogował się przez Google/magic link bez ustawienia roli
@@ -121,9 +133,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // trzymamy `loading = true`, żeby strażnicy paneli nie uznali użytkownika za „bez roli"
       // i nie wyrzucili go (np. z /admin do /klient), zanim role zdążą się wczytać.
       if (event === "SIGNED_IN") setLoading(true);
+      const allowRedirect = event === "SIGNED_IN" || event === "INITIAL_SESSION";
       // Defer to avoid deadlock in onAuthStateChange
       setTimeout(() => {
-        void loadRoles(newSession?.user?.id).finally(() => {
+        void loadRoles(newSession?.user?.id, allowRedirect).finally(() => {
           if (event === "SIGNED_IN") setLoading(false);
         });
       }, 0);
@@ -132,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       setUser(s?.user ?? null);
-      void loadRoles(s?.user?.id).finally(() => setLoading(false));
+      void loadRoles(s?.user?.id, true).finally(() => setLoading(false));
     });
 
     return () => subscription.unsubscribe();
@@ -148,6 +161,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (bypass) {
         setPreviewBypass(false);
         return;
+      }
+      try {
+        window.localStorage.removeItem("pending_role_selection");
+      } catch {
+        /* localStorage niedostępny — pomijamy */
       }
       await supabase.auth.signOut();
     },

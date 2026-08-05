@@ -327,6 +327,7 @@ export function LoanCalculator({
         balloon: 0,
         nominalRata: 0,
         cappedRata: 0,
+        warnings: [] as string[],
       };
     const monthlyRate = annualRate / 100 / 12;
     const nominalRata =
@@ -336,28 +337,34 @@ export function LoanCalculator({
     const monthlyComm = scheduleCommission / months;
     const cap = maxPayment > 0 ? maxPayment : nominalRata + monthlyComm;
 
+    // Pierwsza rata miesiąc od dziś, z clampowaniem do końca miesiąca (31 sty → 28/29 lut),
+    // żeby silnik policzył równe, kolejne terminy zamiast Date.setMonth() (który przeskakuje miesiąc).
+    const now = new Date();
+    const fpTotalMonth = now.getFullYear() * 12 + now.getMonth() + 1;
+    const fpY = Math.floor(fpTotalMonth / 12);
+    const fpM = fpTotalMonth % 12; // 0-based
+    const fpDim = new Date(fpY, fpM + 1, 0).getDate();
+    const fpD = Math.min(now.getDate(), fpDim);
+    const firstPaymentDate = `${fpY}-${String(fpM + 1).padStart(2, "0")}-${String(fpD).padStart(2, "0")}`;
+
     const eng = buildEngineSchedule({
       kwotaPozyczki: grossPrincipal,
       prowizja: scheduleCommission,
       annualRatePercent: annualRate,
       months,
       maxMonthlyPayment: cap,
+      firstPaymentDate,
     });
 
-    const start = new Date();
-    const rows = eng.rows.map((r) => {
-      const d = new Date(start);
-      d.setMonth(d.getMonth() + r.nr);
-      return {
-        idx: r.nr,
-        date: d.toLocaleDateString("pl-PL"),
-        rata: r.rata_razem,
-        kap: r.kapital,
-        ods: r.odsetki,
-        prow: r.prowizja,
-        saldo: r.saldo,
-      };
-    });
+    const rows = eng.rows.map((r) => ({
+      idx: r.nr,
+      date: r.termin,
+      rata: r.rata_razem,
+      kap: r.kapital,
+      ods: r.odsetki,
+      prow: r.prowizja,
+      saldo: r.saldo,
+    }));
     return {
       rows,
       totalRata: eng.totalToRepay,
@@ -365,8 +372,11 @@ export function LoanCalculator({
       totalKap: grossPrincipal,
       totalProw: scheduleCommission,
       balloon: eng.balloon,
-      nominalRata: nominalRata + monthlyComm,
-      cappedRata: Math.min(nominalRata + monthlyComm, cap),
+      // Rata z harmonogramu (jedno źródło prawdy) — nie osobny wzór, który
+      // rozjeżdżał się z tabelą, gdy pułap raty był wyższy od raty nominalnej.
+      nominalRata: eng.regularPayment,
+      cappedRata: eng.regularPayment,
+      warnings: eng.warnings ?? [],
     };
   }, [grossPrincipal, months, annualRate, maxPayment, scheduleCommission]);
 
@@ -896,6 +906,19 @@ export function LoanCalculator({
               </div>
             </div>
           </div>
+
+          {schedule.warnings.length > 0 && (
+            <div className="mt-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-xs text-amber-100">
+              <div className="flex items-center gap-2 font-semibold">
+                <AlertTriangle className="h-4 w-4" /> Uwaga do harmonogramu
+              </div>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                {schedule.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 

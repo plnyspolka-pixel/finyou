@@ -14,7 +14,14 @@ export function useAccessState(audience: AccessAudience) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
+    // Brak użytkownika to stan rozstrzygnięty, nie „wieczne ładowanie" — inaczej
+    // `loading` zostaje true, a panele domyślnie renderują nawigację płatną.
+    if (!user) {
+      setState(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     try {
       setState(await stateFn({ data: { audience } }));
     } catch {
