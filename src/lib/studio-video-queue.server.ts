@@ -116,9 +116,11 @@ async function processClaimedJob(job: JobRow): Promise<void> {
   await supabaseAdmin.from("studio_video_jobs").update({ status: "uploading" }).eq("id", job.id);
 
   const assetId = await uploadAudioToHeygen(audio);
+  const { resolveHeygenKind } = await import("./heygen-catalog.server");
   const videoId = await createHeygenVideoFromAudio({
     avatarId: job.avatar_id,
     audioAssetId: assetId,
+    kind: await resolveHeygenKind(job.avatar_id),
   });
   await supabaseAdmin
     .from("studio_video_jobs")
