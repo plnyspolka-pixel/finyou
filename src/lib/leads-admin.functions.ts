@@ -198,7 +198,11 @@ export const listLeads = createServerFn({ method: "GET" })
       );
     }
     for (const c of chunk(emailsLower, 100)) {
-      const orExpr = c.map((e) => `email.ilike.${e}`).join(",");
+      // Wartości trafiają do składni filtra PostgREST — cytujemy i escapujemy,
+      // żeby e-mail zawierający przecinek/nawias/operator nie rozszerzył `or(...)`.
+      const orExpr = c
+        .map((e) => `email.ilike."${e.replace(/["\\]/g, "\\$&")}"`)
+        .join(",");
       queries.push(
         Promise.resolve(
           supabaseAdmin.from("lead_communications").select(COLS).or(orExpr).limit(20000),

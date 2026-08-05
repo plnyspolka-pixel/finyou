@@ -74,8 +74,10 @@ function pluralPLN(n: number, forms: [string, string, string]): string {
 
 export function amountToWordsPLN(amount: number): string {
   if (!isFinite(amount) || amount < 0) return "";
-  const zl = Math.floor(amount);
-  const gr = Math.round((amount - zl) * 100);
+  // Zaokrąglij raz do groszy — inaczej ułamek ≥ 0,995 dawał "100/100" groszy.
+  const cents = Math.round(amount * 100);
+  const zl = Math.floor(cents / 100);
+  const gr = cents % 100;
 
   const groups: number[] = [];
   let x = zl;

@@ -24,10 +24,15 @@ export const selectAccountRole = createServerFn({ method: "POST" })
       return { ok: true, skipped: "staff_account" };
     }
 
+    // Nadanie nowej roli i (dla inwestora) profil MUSZĄ się powieść, zanim
+    // skasujemy rolę 'klient' — inaczej konto może zostać bez żadnej roli albo
+    // z rolą inwestora bez wiersza w `investors` (panel się wywala).
     if (data.role === "inwestor") {
-      await db
+      const { error: roleErr } = await db
         .from("user_roles")
         .upsert({ user_id: userId, role: "inwestor" }, { onConflict: "user_id,role" });
+      if (roleErr) throw new Error("Nie udało się nadać roli inwestora");
+
       const { data: userRes } = await supabase.auth.getUser();
       const meta = (userRes?.user?.user_metadata ?? {}) as Record<string, string | undefined>;
       const { data: investor } = await db
@@ -36,7 +41,7 @@ export const selectAccountRole = createServerFn({ method: "POST" })
         .eq("user_id", userId)
         .maybeSingle();
       if (!investor) {
-        await db.from("investors").insert({
+        const { error: insErr } = await db.from("investors").insert({
           user_id: userId,
           investor_type: "indywidualny",
           first_name: meta.first_name ?? meta.full_name ?? null,
@@ -44,17 +49,30 @@ export const selectAccountRole = createServerFn({ method: "POST" })
           email: userRes?.user?.email ?? null,
           subscription_status: "nieaktywny",
         });
+        if (insErr) throw new Error("Nie udało się utworzyć profilu inwestora");
       }
-      await db.from("user_roles").delete().eq("user_id", userId).eq("role", "klient");
+      const { error: delErr } = await db
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("role", "klient");
+      if (delErr) console.error("[selectAccountRole] nie usunięto roli klient:", delErr);
     } else if (data.role === "posrednik") {
-      await db
+      const { error: roleErr } = await db
         .from("user_roles")
         .upsert({ user_id: userId, role: "posrednik" } as any, { onConflict: "user_id,role" });
-      await db.from("user_roles").delete().eq("user_id", userId).eq("role", "klient");
+      if (roleErr) throw new Error("Nie udało się nadać roli pośrednika");
+      const { error: delErr } = await db
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("role", "klient");
+      if (delErr) console.error("[selectAccountRole] nie usunięto roli klient:", delErr);
     } else {
-      await db
+      const { error: roleErr } = await db
         .from("user_roles")
         .upsert({ user_id: userId, role: "klient" }, { onConflict: "user_id,role" });
+      if (roleErr) throw new Error("Nie udało się nadać roli klienta");
     }
 
     return { ok: true };

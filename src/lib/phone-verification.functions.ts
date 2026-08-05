@@ -46,12 +46,16 @@ export const sendPhoneOtp = createServerFn({ method: "POST" })
       phone_otp_attempts: 0,
     };
 
-    if (row?.id) {
-      await supabase.from("clients").update(payload).eq("id", row.id);
-    } else {
-      await supabase
-        .from("clients")
-        .insert({ ...payload, user_id: userId, first_name: "", last_name: "" });
+    // Hash kodu MUSI trafić do bazy zanim wyślemy SMS — inaczej klient dostanie
+    // kod, którego weryfikacja zawsze zwróci "no_code", a każda próba to nowy SMS.
+    const { error: saveError } = row?.id
+      ? await supabase.from("clients").update(payload).eq("id", row.id)
+      : await supabase
+          .from("clients")
+          .insert({ ...payload, user_id: userId, first_name: "", last_name: "" });
+    if (saveError) {
+      console.error("[sendPhoneOtp] zapis hasha OTP nie powiódł się:", saveError);
+      return { ok: false as const, reason: "save_failed" as const, error: "save_failed" };
     }
 
     const sms = await sendSmsInternal({

@@ -70,10 +70,13 @@ export function computeProposal(
   const pow = Math.pow(1 + r, params.periodMonths);
   const annuity = r === 0 ? amount / params.periodMonths : (amount * r * pow) / (pow - 1);
 
+  // Pułap raty w trybie rat równych musi zawierać miesięczną część prowizji —
+  // silnik odejmuje prowizję od pułapu i bez niej kapitał nie amortyzuje się w N rat.
+  const monthlyCommission = Math.max(0, params.commission) / params.periodMonths;
   const cap =
     params.repaymentMode === "balon" && params.maxMonthlyPayment && params.maxMonthlyPayment > 0
       ? params.maxMonthlyPayment
-      : Math.ceil(annuity * 100) / 100;
+      : Math.ceil((annuity + monthlyCommission) * 100) / 100;
 
   const schedule = buildEngineSchedule({
     kwotaPozyczki: amount,

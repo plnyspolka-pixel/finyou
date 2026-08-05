@@ -2,7 +2,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   analyzeFloodRisk,
   floodRiskInvestorText,
@@ -27,13 +26,15 @@ const Input = z.object({
 export const runFloodRiskAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => Input.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { latitude, longitude } = data;
     let { address, city, voivodeship, propertyId } = data;
 
-    // jeśli mamy applicationId — uzupełnij lokalizację z bazy
+    // jeśli mamy applicationId — uzupełnij lokalizację z bazy.
+    // Odczyt przez klienta RLS wołającego (polityki properties_* ograniczają dostęp),
+    // by nie ujawniać lokalizacji nieruchomości z cudzych wniosków.
     if (data.applicationId && (!address || (latitude == null && longitude == null))) {
-      const { data: props } = await supabaseAdmin
+      const { data: props } = await context.supabase
         .from("properties")
         .select("id, address, city, voivodeship")
         .eq("loan_application_id", data.applicationId)

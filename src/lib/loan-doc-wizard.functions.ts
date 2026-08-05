@@ -148,7 +148,11 @@ function investorToLender(inv: InvestorRow): ResolvedLender {
 /** Lista finansujących do wyboru: Finance You + aktywni inwestorzy. */
 export const listLoanLenders = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async (): Promise<LenderOption[]> => {
+  .handler(async ({ context }): Promise<LenderOption[]> => {
+    // Lista zawiera dane inwestorów (nazwy, NIP) — dostępna tylko dla personelu
+    // i pośredników generujących dokumenty, nie dla dowolnego zalogowanego konta.
+    const { assertBrokerOrStaff } = await import("@/lib/access/guards.server");
+    await assertBrokerOrStaff(context.userId);
     const fy = financeYouLender();
     const financeYou: LenderOption = {
       id: fy.id,

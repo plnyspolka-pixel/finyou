@@ -24,7 +24,28 @@ const Input = z.object({ applicationId: z.string().uuid() });
 export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => Input.parse(d))
-  .handler(async ({ data }) => runPropertyCollateralAnalysisCore(data.applicationId));
+  .handler(async ({ data, context }) => {
+    // Bramka autoryzacji: analiza zapisuje dane i wywołuje płatne API (LLM, Maps),
+    // więc wolno ją uruchomić tylko personelowi lub właścicielowi wniosku.
+    const { isInternalStaff } = await import("@/lib/access/guards.server");
+    if (!(await isInternalStaff(context.userId))) {
+      const { data: app } = await supabaseAdmin
+        .from("loan_applications")
+        .select("client_id")
+        .eq("id", data.applicationId)
+        .maybeSingle();
+      const { data: owner } = app?.client_id
+        ? await supabaseAdmin
+            .from("clients")
+            .select("id")
+            .eq("id", app.client_id)
+            .eq("user_id", context.userId)
+            .maybeSingle()
+        : { data: null };
+      if (!owner) throw new Error("Brak dostępu do tego wniosku");
+    }
+    return runPropertyCollateralAnalysisCore(data.applicationId);
+  });
 
 // Parametry nieruchomości odczytane z KW (dział I-O) — mają pierwszeństwo w wycenie
 // (pytanie do Perplexity o cenę za m² dla nieruchomości o tych parametrach i lokalizacji).
@@ -404,24 +425,41 @@ export async function runPropertyCollateralAnalysisCore(
       errorMessage: pplx.errorMessage,
     };
 
-    // 10) Zapis
-    const { data: saved } = await supabaseAdmin
+    // 10) Zapis. `application_id` nie ma ograniczenia UNIQUE, więc `upsert`
+    // wpadałby na PK i tworzył nowy wiersz przy każdym uruchomieniu — robimy
+    // jawny update-or-insert kluczowany po application_id.
+    const payload = {
+      application_id: applicationId,
+      property_id: property?.id ?? null,
+      status: "done",
+      result_json: result as never,
+      collateral_score: collateralScore.total,
+      collateral_category: collateralScore.category,
+      ltv_percent: ltv.ltvPercent,
+      estimated_value_pln: estValue,
+      main_source: mainSource,
+      sources_used: sourcesUsed as never,
+      warnings: warnings as never,
+    };
+    const { data: existing } = await supabaseAdmin
       .from("property_analyses")
-      .upsert({
-        application_id: applicationId,
-        property_id: property?.id ?? null,
-        status: "done",
-        result_json: result as never,
-        collateral_score: collateralScore.total,
-        collateral_category: collateralScore.category,
-        ltv_percent: ltv.ltvPercent,
-        estimated_value_pln: estValue,
-        main_source: mainSource,
-        sources_used: sourcesUsed as never,
-        warnings: warnings as never,
-      })
       .select("id")
-      .single();
+      .eq("application_id", applicationId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const { data: saved, error: saveError } = existing?.id
+      ? await supabaseAdmin
+          .from("property_analyses")
+          .update(payload)
+          .eq("id", existing.id)
+          .select("id")
+          .single()
+      : await supabaseAdmin.from("property_analyses").insert(payload).select("id").single();
+    if (saveError) {
+      console.error("[property-analysis] zapis analizy nie powiódł się:", saveError);
+      warnings.push("Nie udało się zapisać analizy — wynik może zniknąć po odświeżeniu.");
+    }
 
     await supabaseAdmin.from("property_analysis_logs").insert({
       application_id: applicationId,
@@ -443,8 +481,10 @@ export async function runPropertyCollateralAnalysisCore(
 export const getPropertyAnalysis = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { data: row } = await supabaseAdmin
+  .handler(async ({ data, context }) => {
+    // Czytamy przez klienta RLS wołającego — polityki pa_client_select /
+    // pa_investor_select / pa_staff_all ograniczają widoczność do uprawnionych.
+    const { data: row } = await context.supabase
       .from("property_analyses")
       .select("*")
       .eq("application_id", data.applicationId)
