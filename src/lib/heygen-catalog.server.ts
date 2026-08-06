@@ -120,12 +120,6 @@ export async function listHeygenCatalog(): Promise<HeygenCatalogItem[]> {
   return items;
 }
 
-// Kind awatara do payloadu generacji: szukamy w katalogu; domyślnie 'avatar'.
-export async function resolveHeygenKind(avatarId: string): Promise<HeygenKind> {
-  try {
-    const items = await listHeygenCatalog();
-    return items.find((i) => i.id === avatarId)?.kind ?? "avatar";
-  } catch {
-    return "avatar";
-  }
-}
+// Uwaga: kind służy wyłącznie do oznaczenia w UI ("foto"). Generacja wideo
+// (API v3) używa dla wszystkich awatarów type 'avatar' z avatar_id —
+// v3 nie zna typu 'talking_photo'.

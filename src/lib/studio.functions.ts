@@ -486,11 +486,9 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         .eq("id", job.id);
 
       const assetId = await uploadAudioToHeygen(audio);
-      const { resolveHeygenKind } = await import("./heygen-catalog.server");
       const videoId = await createHeygenVideoFromAudio({
         avatarId: data.avatar_id,
         audioAssetId: assetId,
-        kind: await resolveHeygenKind(data.avatar_id),
       });
 
       await supabaseAdmin
