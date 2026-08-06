@@ -87,12 +87,14 @@ Zakładki panelu:
 2. **Wideo AI (HeyGen)** — dwie drogi do promptu:
    - **Baza pytań do shortów (250)** — pytania z pliku „Pożyczki prywatne —
      250 pytań do shortów" z filtrami (kategoria klient/inwestor, sekcja,
-     szukajka). „Użyj" podstawia pytanie jako prompt (z prefiksem `#N · `);
-     scenariusz wygenerowany z pytania dostaje obowiązkowe otwarcie rolki
-     (znacznik kategorii + pytanie) i schemat: zasada → wyjątek → praktyka →
-     CTA. Pytania, dla których wideo już istnieje, mają zielony znaczek
-     (rozpoznanie po prefiksie promptu — bez zmiany schematu DB).
-   - **Własny prompt** — jak dotychczas.
+     szukajka). „Użyj" podstawia pytanie jako prompt (z prefiksem `#N · `)
+     oraz **gotowy, sprawdzony scenariusz złożony 1:1 z treści paczki**
+     (znacznik kategorii → pytanie → teza → stałe CTA) — AI niczego nie
+     przepisuje (`src/lib/shorts-script.ts`); tekst pozostaje edytowalny.
+     Tytuł i opis publikacji też pochodzą z paczki (teza + nota „materiał
+     edukacyjny"). Pytania, dla których wideo już istnieje, mają zielony
+     znaczek (rozpoznanie po prefiksie promptu — bez zmiany schematu DB).
+   - **Własny prompt** — scenariusz pisze AI, jak dotychczas.
 
    Dalej: „Wygeneruj scenariusz" (edytowalny) → wybór awatara i głosu →
    „Generuj wideo". **Awatary** są pobierane na żywo z konta HeyGen
@@ -113,7 +115,8 @@ Zakładki panelu:
    (sekwencyjnie, 1 job na raz — logika w
    `src/lib/studio-video-queue.server.ts`) oraz cron `social-publish-tick`
    (2 joby na przebieg co 10 min), więc działa też po zamknięciu
-   przeglądarki. Scenariusze, tytuły i opisy generuje AI automatycznie.
+   przeglądarki. Scenariusze, tytuły i opisy serii brane są z gotowej
+   treści paczki (AI tylko dla jobów z własnym promptem).
 
    **Auto-publikacja po wygenerowaniu** — przełącznik on/off nad
    generatorem. Gdy włączony, wybierasz platformy (YouTube / IG Reels /

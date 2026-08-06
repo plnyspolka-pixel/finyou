@@ -393,9 +393,10 @@ export const listStudioAvatars = createServerFn({ method: "GET" })
     }
   });
 
-// Krok 1: prompt → scenariusz AI (edytowalny w UI przed startem generacji).
-// Gdy prompt pochodzi z bazy 250 pytań (question_id), scenariusz dostaje
-// obowiązkowe otwarcie rolki i schemat shorta z docs/shorts.
+// Krok 1: prompt → scenariusz (edytowalny w UI przed startem generacji).
+// Pytanie z bazy 250 (question_id) dostaje GOTOWY scenariusz złożony 1:1
+// ze sprawdzonej treści paczki (znacznik → pytanie → teza → CTA) — bez AI.
+// AI pisze scenariusz tylko dla własnych, wolnych promptów.
 export const generateStudioScript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { prompt: string; question_id?: number }) => d)
@@ -405,8 +406,8 @@ export const generateStudioScript = createServerFn({ method: "POST" })
       const { findShortsQuestion } = await import("./shorts-question-bank");
       const q = findShortsQuestion(data.question_id);
       if (!q) throw new Error(`Nie znaleziono pytania #${data.question_id} w bazie.`);
-      const { generateShortsScript } = await import("./studio-ai.server");
-      return await generateShortsScript(q);
+      const { buildShortsScript } = await import("./shorts-script");
+      return buildShortsScript(q);
     }
     if (!data.prompt.trim()) throw new Error("Podaj prompt.");
     const { generateVideoScript } = await import("./studio-ai.server");

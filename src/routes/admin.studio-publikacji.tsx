@@ -41,6 +41,7 @@ import {
   parseShortsPromptTag,
   type ShortsCategory,
 } from "@/lib/shorts-question-bank";
+import { buildShortsScript } from "@/lib/shorts-script";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -368,12 +369,17 @@ function StudioPage() {
     [bankCategory],
   );
 
+  // Pytanie z paczki ma gotowy, sprawdzony scenariusz — podstawiamy go
+  // od razu (bez AI); pozostaje edytowalny przed startem generacji.
   const applyBankQuestion = (id: number) => {
     const q = SHORTS_QUESTIONS.find((x) => x.id === id);
     if (!q) return;
+    const gen = buildShortsScript(q);
     setVideoPrompt(shortsPromptForQuestion(q));
-    setScript("");
-    toast.success(`Pytanie #${q.id} podstawione — wygeneruj scenariusz`);
+    setScript(gen.script);
+    if (!title) setTitle(gen.title);
+    if (!message) setMessage([gen.description, gen.hashtags.join(" ")].join("\n\n"));
+    toast.success(`Pytanie #${q.id} — gotowy scenariusz z paczki podstawiony`);
   };
 
   const genScriptM = useMutation({
@@ -901,7 +907,7 @@ function StudioPage() {
                 )}
                 <span className="text-xs text-muted-foreground">
                   Seria używa wybranego niżej awatara, głosu i ustawień auto-publikacji; scenariusze
-                  powstają automatycznie.
+                  to gotowa treść z paczki (bez AI).
                   {queuedCount > 0 && ` W kolejce: ${queuedCount}.`}
                 </span>
               </div>
@@ -952,10 +958,11 @@ function StudioPage() {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Pytania z pliku „Pożyczki prywatne — 250 pytań do shortów" (docs/shorts). Scenariusz
-                wygenerowany z pytania zaczyna się obowiązkowym znacznikiem kategorii i kończy CTA
-                zgodnie ze schematem rolki. Zielony znaczek = dla pytania istnieje już wygenerowane
-                wideo w bibliotece poniżej.
+                Pytania z pliku „Pożyczki prywatne — 250 pytań do shortów" (docs/shorts). „Użyj"
+                podstawia GOTOWY, sprawdzony scenariusz z paczki (znacznik kategorii → pytanie →
+                teza → CTA) — AI nic nie przepisuje; tekst możesz jeszcze ręcznie poprawić przed
+                generacją. Zielony znaczek = dla pytania istnieje już wygenerowane wideo w
+                bibliotece poniżej.
               </p>
             </CardContent>
           </Card>
@@ -1028,8 +1035,8 @@ function StudioPage() {
                 />
                 {selectedQuestionId != null && (
                   <p className="text-xs text-muted-foreground">
-                    Pytanie #{selectedQuestionId} z bazy — scenariusz dostanie obowiązkowe otwarcie
-                    rolki (znacznik kategorii) i CTA.
+                    Pytanie #{selectedQuestionId} z paczki — scenariusz poniżej to gotowa,
+                    sprawdzona treść (bez AI); „Wygeneruj scenariusz" przywraca oryginał z paczki.
                   </p>
                 )}
                 <Button

@@ -5,7 +5,6 @@
 //     (gateway zwraca data-URL base64; Meta/YouTube potrzebują trwałego https).
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { SHORTS_OPENERS, type ShortsQuestion } from "./shorts-question-bank";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const STORAGE_BUCKET = "studio-media";
@@ -64,47 +63,9 @@ Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","descri
   };
 }
 
-// Scenariusz shorta z bazy 250 pytań (docs/shorts) — wymusza obowiązkowe
-// otwarcie (znacznik kategorii + pytanie) i minimalny schemat rolki:
-// znacznik → hook → zasada → wyjątek → praktyka → CTA.
-export async function generateShortsScript(q: ShortsQuestion): Promise<{
-  script: string;
-  title: string;
-  description: string;
-  hashtags: string[];
-}> {
-  const opener = SHORTS_OPENERS[q.category];
-  const audience =
-    q.category === "klient"
-      ? "klient / pożyczkobiorca szukający prywatnej pożyczki pod zastaw nieruchomości"
-      : "inwestor / pożyczkodawca inwestujący w prywatne pożyczki pod zastaw nieruchomości";
-  const parsed = await chatJson(
-    `Jesteś scenarzystą krótkich pionowych wideo (Shorts/Reels) firmy finansowej. ${BRAND_CONTEXT}
-Napisz tekst MÓWIONY dla lektora (20-45 s, 60-120 słów), prosty język, zero didaskaliów, zero emoji — tekst idzie prosto do syntezy mowy.
-Odbiorca: ${audience}.
-Obowiązkowa struktura scenariusza:
-1. Znacznik — scenariusz MUSI zaczynać się dokładnie od: "${opener} ${q.question}"
-2. Zasada — jedna odpowiedź bez żargonu, wierna merytorycznie tezie poniżej.
-3. Wyjątek — jeśli pasuje: krótko zaznacz, że to zależy od reżimu (B2B, konsument, prywatna pożyczka poza działalnością).
-4. Praktyka — jeden dokument lub jedna czynność do sprawdzenia.
-5. CTA — zakończ zdaniem: "Masz konkretną sytuację? Najpierw sprawdź umowę, KW i aktualne saldo."
-Teza odpowiedzi (trzymaj się jej merytorycznie): ${q.thesis}
-To materiał edukacyjny, nie indywidualna porada prawna — nie obiecuj rezultatów.
-Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","description":"opis 1-3 zdania","hashtags":["#tag1","#tag2","#tag3"]}`,
-    q.question,
-  );
-  let script = typeof parsed.script === "string" ? parsed.script.trim() : "";
-  if (!script) throw new Error("AI nie zwróciło scenariusza.");
-  if (!script.startsWith(opener)) script = `${opener} ${q.question} ${script}`;
-  return {
-    script,
-    title: typeof parsed.title === "string" ? parsed.title : q.question.slice(0, 90),
-    description: typeof parsed.description === "string" ? parsed.description : "",
-    hashtags: Array.isArray(parsed.hashtags)
-      ? parsed.hashtags.filter((h: unknown): h is string => typeof h === "string")
-      : [],
-  };
-}
+// Scenariusze dla pytań z paczki 250 NIE przechodzą przez AI — składa je
+// deterministycznie buildShortsScript (src/lib/shorts-script.ts) z gotowej,
+// sprawdzonej treści pliku źródłowego.
 
 export type StudioPromptKind = "video" | "image" | "social";
 
