@@ -1,166 +1,19 @@
-import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import {
-  LayoutDashboard,
-  Users,
-  FileText,
-  FolderOpen,
-  PhoneCall,
-  Briefcase,
-  Send,
-  Tag,
-  Plug,
-  Settings,
-  LogOut,
-  ShieldCheck,
-  Mic,
-  GraduationCap,
-  Code2,
-  Wand2,
-  Receipt,
-  BookOpen,
-  Facebook,
-  Mail,
-  Search,
-  Sparkles,
-  Link2,
-  TrendingDown,
-  Eye,
-  Bot,
-  FileCheck,
-  Menu,
-  FileSignature,
-  Image as ImageIcon,
-  Network,
-  Coins,
-  Share2,
-  Wallet,
-  Building2,
-  MapPinned,
-  MessageCircle,
-  IdCard,
-  Youtube,
-  Clapperboard,
-} from "lucide-react";
-
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { useState } from "react";
-import { PanelShell } from "@/components/layout/panel-shell";
+import { FileText, Receipt, FileCheck, Building2 } from "lucide-react";
+import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
+import { AdminTopBar } from "@/components/admin/admin-top-bar";
+import { AdminSearchDialog, AdminSearchIconTrigger } from "@/components/admin/admin-search";
+import { SectionTabs } from "@/components/admin/section-tabs";
+import { adminSections, type AdminSection } from "@/lib/admin-nav";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-type Item = { to: string; label: string; icon: any; exact?: boolean };
-type Group = { label?: string; items: Item[] };
-
-const groups: Group[] = [
-  { items: [{ to: "/admin", label: "Pulpit", icon: LayoutDashboard, exact: true }] },
-  {
-    label: "Klienci pożyczkowi",
-    items: [
-      { to: "/admin/klienci", label: "Klienci (leady + przypomnienia)", icon: Users },
-      { to: "/admin/skrzynka", label: "Skrzynka mailowa", icon: Mail },
-      { to: "/admin/messenger", label: "Messenger / Instagram DM", icon: Mail },
-      { to: "/admin/czat", label: "Czat na stronie", icon: MessageCircle },
-      { to: "/admin/wnioski-niekompletne", label: "Wnioski (wszystkie)", icon: FileText },
-      { to: "/admin/follow-up-braki", label: "Follow-up braków", icon: Send },
-      { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
-      { to: "/admin/potencjal-lokalizacyjny", label: "Potencjał lokalizacyjny", icon: MapPinned },
-      { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },
-      { to: "/admin/generator-umowy", label: "Generator umowy pożyczki", icon: FileCheck },
-      { to: "/admin/kreator-dokumentow", label: "Kreator dokumentów B2B", icon: FileSignature },
-      { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
-      { to: "/admin/avatar-faq", label: "Awatar FAQ (Filip)", icon: Bot },
-      { to: "/admin/text-agent", label: "Agent DM (Messenger/IG/email)", icon: Bot },
-    ],
-  },
-  {
-    label: "Inwestorzy",
-    items: [
-      { to: "/admin/inwestorzy", label: "Lista inwestorów", icon: Briefcase },
-      { to: "/admin/projekty", label: "Projekty inwestycyjne", icon: FolderOpen },
-      { to: "/admin/oferty", label: "Oferty", icon: Tag },
-      { to: "/admin/dystrybucja", label: "Dystrybucja ofert", icon: Send },
-      { to: "/admin/karty-ofert", label: "Karty ofert", icon: IdCard },
-      { to: "/admin/szkolenia", label: "Szkolenia", icon: GraduationCap },
-    ],
-  },
-  {
-    label: "Program pośredników",
-    items: [
-      { to: "/admin/program-posrednikow", label: "Pulpit programu", icon: Network, exact: true },
-      { to: "/admin/program-posrednikow/partnerzy", label: "Partnerzy", icon: Users },
-      { to: "/admin/program-posrednikow/struktura", label: "Struktura partnerska", icon: Share2 },
-      { to: "/admin/program-posrednikow/zdarzenia", label: "Zdarzenia prowizyjne", icon: Send },
-      { to: "/admin/program-posrednikow/prowizje", label: "Prowizje", icon: Coins },
-      { to: "/admin/program-posrednikow/wyplaty", label: "Paczki wypłat", icon: Wallet },
-      {
-        to: "/admin/program-posrednikow/rozliczenia",
-        label: "Rozliczenia B2B / nierejestrowana",
-        icon: FileCheck,
-      },
-      {
-        to: "/admin/program-posrednikow/ustawienia",
-        label: "Stawki, limity, reguły",
-        icon: Settings,
-      },
-    ],
-  },
-  {
-    label: "Księgowość",
-    items: [
-      { to: "/admin/platnosci-dostep", label: "Płatności za dostęp", icon: Wallet },
-      { to: "/admin/ksiegowosc", label: "Pulpit księgowości", icon: Receipt, exact: true },
-      { to: "/admin/ksiegowosc/faktury", label: "Faktury sprzedaży", icon: FileText },
-      { to: "/admin/ksiegowosc/podmioty", label: "Podmioty gospodarcze", icon: Building2 },
-    ],
-  },
-  {
-    label: "Marketing",
-    items: [
-      { to: "/admin/marketing/tracking", label: "Tracking UTM", icon: Link2 },
-      { to: "/admin/clarity", label: "Clarity (UX & analiza AI)", icon: Eye },
-      { to: "/admin/marketing/email", label: "Email Marketing", icon: Mail },
-      { to: "/admin/marketing/landing", label: "Landing Pages", icon: FileText },
-      { to: "/admin/marketing/social", label: "Social Media AI", icon: Sparkles },
-      { to: "/admin/ai-growth-engine", label: "AI Growth Engine", icon: Sparkles },
-      { to: "/admin/ai-seo", label: "AI SEO Content", icon: FileText },
-      { to: "/admin/ai-outreach", label: "AI Outreach", icon: Send },
-      { to: "/admin/pr-media", label: "Digital PR (media)", icon: Send },
-      { to: "/admin/ai-linkbuilding", label: "AI Link Building", icon: Link2 },
-      { to: "/admin/ai-serp", label: "SERP Tracker", icon: Search },
-      { to: "/admin/ai-funnel", label: "Funnel Analyzer", icon: TrendingDown },
-      { to: "/admin/ai-competitors", label: "Competitor Watch", icon: Eye },
-      { to: "/admin/mailing", label: "Mailing", icon: Mail },
-      { to: "/admin/meta", label: "Meta Ads", icon: Facebook },
-      { to: "/admin/fb-ads/kreator", label: "Kreator FB Ads", icon: Facebook },
-      { to: "/admin/google-ads/kreator", label: "Kreator Google Ads", icon: Search },
-      { to: "/admin/pixele", label: "Pixele FB", icon: Facebook },
-      { to: "/admin/materialy", label: "Materiały marketingowe", icon: ImageIcon },
-      { to: "/admin/studio-publikacji", label: "Studio publikacji", icon: Clapperboard },
-      { to: "/admin/youtube-shorts", label: "YouTube Shorts", icon: Youtube },
-      { to: "/admin/video-pipeline", label: "Pipeline YouTube (artykuły)", icon: Youtube },
-    ],
-  },
-  {
-    label: "Konfiguracja",
-    items: [
-      { to: "/admin/embed", label: "Wniosek do osadzenia", icon: Code2 },
-      { to: "/admin/integracje", label: "Integracje", icon: Plug },
-      { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
-      { to: "/admin/operatorzy", label: "Operatorzy wewnętrzni", icon: ShieldCheck },
-      { to: "/admin/zespol-aktywnosc", label: "Zespół i aktywność", icon: Eye },
-      { to: "/admin/zgody", label: "Treści zgód", icon: FileCheck },
-      { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },
-    ],
-  },
-];
-
 // Widok dla samej księgowości: tylko moduł księgowości + rozliczenia programu.
-const accountingGroups: Group[] = [
+// Musi odpowiadać `accountingAllowedPaths` w src/lib/admin-nav.ts.
+const accountingGroups: NavGroup[] = [
   { items: [{ to: "/admin/ksiegowosc", label: "Pulpit księgowości", icon: Receipt, exact: true }] },
   {
     label: "Księgowość",
@@ -176,15 +29,44 @@ const accountingGroups: Group[] = [
   },
 ];
 
+// Ścieżki dostępne dla roli `ksiegowosc` — zawężają indeks wyszukiwarki.
+const accountingPaths = accountingGroups.flatMap((g) => g.items.map((i) => i.to));
+
+// Widok `ksiegowosc` w stylistyce sekcyjnego sidebara: te same 4 linki co w
+// `accountingGroups`, każdy jako syntetyczna „sekcja" (puste hubPath = link
+// bezpośredni, bez huba). Funkcjonalnie identyczne z widokiem sprzed przebudowy.
+const accountingSections: AdminSection[] = accountingGroups.flatMap((g) =>
+  g.items.map((i) => ({
+    id: `ksiegowosc-${i.to}`,
+    label: i.label,
+    icon: i.icon,
+    hubPath: "",
+    accent: "teal" as const,
+    description: "",
+    items: [
+      { to: i.to, label: i.label, icon: i.icon, description: "", synonyms: [], exact: i.exact },
+    ],
+  })),
+);
+
 function AdminLayout() {
   const { roles } = useAuth();
   const isStaff = roles.includes("administrator") || roles.includes("operator");
   const isAccountant = roles.includes("ksiegowosc");
+  const accountingOnly = !isStaff && isAccountant;
   return (
     <PanelShell
       title={isStaff ? "Panel administratora" : "Panel księgowości"}
       allow={["administrator", "ksiegowosc"]}
-      groups={isStaff ? groups : isAccountant ? accountingGroups : groups}
+      sections={accountingOnly ? accountingSections : adminSections}
+      topBar={
+        <>
+          <AdminTopBar />
+          <SectionTabs />
+        </>
+      }
+      mobileHeaderExtra={<AdminSearchIconTrigger />}
+      footer={<AdminSearchDialog allowedPaths={accountingOnly ? accountingPaths : undefined} />}
     />
   );
 }
