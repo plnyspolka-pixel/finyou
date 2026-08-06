@@ -41,7 +41,7 @@ import {
   parseShortsPromptTag,
   type ShortsCategory,
 } from "@/lib/shorts-question-bank";
-import { buildShortsScript } from "@/lib/shorts-script";
+import { buildShortsScript, joinShortsScript, SHORTS_DYNAMIC_ELEMENTS } from "@/lib/shorts-script";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -285,7 +285,15 @@ function StudioPage() {
 
   // ── Wideo AI ───────────────────────────────────────────────────────────────
   const [videoPrompt, setVideoPrompt] = useState("");
-  const [script, setScript] = useState("");
+  // Scenariusz rozbity na sekcje; lektor czyta sklejkę hook + treść + CTA.
+  const [scriptHook, setScriptHook] = useState("");
+  const [scriptContent, setScriptContent] = useState("");
+  const [scriptCta, setScriptCta] = useState("");
+  const fullScript = joinShortsScript({
+    hook: scriptHook,
+    content: scriptContent,
+    cta: scriptCta,
+  });
   const [avatarId, setAvatarId] = useState(HEYGEN_AVATARS[0].id);
   const [voiceId, setVoiceId] = useState(FILIP_VOICE_ID);
 
@@ -333,6 +341,10 @@ function StudioPage() {
   // Prompt z prefiksem "#N · " oznacza pytanie z bazy — wtedy scenariusz
   // dostaje obowiązkowe otwarcie rolki (znacznik kategorii).
   const selectedQuestionId = parseShortsPromptTag(videoPrompt);
+  const selectedBankQuestion =
+    selectedQuestionId != null
+      ? SHORTS_QUESTIONS.find((q) => q.id === selectedQuestionId)
+      : undefined;
 
   // Pytania, dla których istnieje już job (żeby nie robić dubli).
   const doneQuestionIds = useMemo(() => {
@@ -370,13 +382,15 @@ function StudioPage() {
   );
 
   // Pytanie z paczki ma gotowy, sprawdzony scenariusz — podstawiamy go
-  // od razu (bez AI); pozostaje edytowalny przed startem generacji.
+  // od razu (bez AI) w rozbiciu na sekcje; wszystko edytowalne przed generacją.
   const applyBankQuestion = (id: number) => {
     const q = SHORTS_QUESTIONS.find((x) => x.id === id);
     if (!q) return;
     const gen = buildShortsScript(q);
     setVideoPrompt(shortsPromptForQuestion(q));
-    setScript(gen.script);
+    setScriptHook(gen.hook);
+    setScriptContent(gen.content);
+    setScriptCta(gen.cta);
     if (!title) setTitle(gen.title);
     if (!message) setMessage([gen.description, gen.hashtags.join(" ")].join("\n\n"));
     toast.success(`Pytanie #${q.id} — gotowy scenariusz z paczki podstawiony`);
@@ -388,7 +402,11 @@ function StudioPage() {
         data: { prompt: videoPrompt, question_id: selectedQuestionId ?? undefined },
       }),
     onSuccess: (r) => {
-      setScript(r.script);
+      // Pytanie z paczki: gotowe sekcje 1:1 z pliku; własny prompt: tekst AI
+      // w treści, hook/CTA puste.
+      setScriptHook(r.hook);
+      setScriptContent(r.content);
+      setScriptCta(r.cta);
       if (r.title && !title) setTitle(r.title);
       if (r.description && !message) setMessage([r.description, r.hashtags.join(" ")].join("\n\n"));
       toast.success("Scenariusz gotowy — możesz go edytować przed generacją");
@@ -400,7 +418,7 @@ function StudioPage() {
       startVideoFn({
         data: {
           prompt: videoPrompt,
-          script,
+          script: fullScript,
           avatar_id: avatarId,
           voice_id: voiceId,
           auto_publish_platforms: effectiveAutoPlatforms,
@@ -1053,9 +1071,69 @@ function StudioPage() {
                 </Button>
               </div>
 
-              <div className="space-y-2">
-                <Label>Scenariusz (tekst mówiony — możesz edytować)</Label>
-                <Textarea value={script} onChange={(e) => setScript(e.target.value)} rows={6} />
+              <div className="space-y-3">
+                <Label>Scenariusz (tekst mówiony — możesz edytować każdą sekcję)</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Hook — znacznik kategorii + pytanie (mówione otwarcie rolki)
+                  </Label>
+                  <Textarea
+                    value={scriptHook}
+                    onChange={(e) => setScriptHook(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Treść — teza odpowiedzi (merytoryka rolki)
+                  </Label>
+                  <Textarea
+                    value={scriptContent}
+                    onChange={(e) => setScriptContent(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">CTA — zamknięcie rolki</Label>
+                  <Textarea
+                    value={scriptCta}
+                    onChange={(e) => setScriptCta(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Lektor przeczyta sklejkę: hook → treść → CTA (
+                  {fullScript.trim().split(/\s+/).filter(Boolean).length} słów).
+                </p>
+
+                {selectedBankQuestion && (
+                  <div className="space-y-2 rounded-md border bg-muted/40 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-xs">
+                        Elementy dynamiczne — ekran (lektor ich NIE czyta; do montażu)
+                      </Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            SHORTS_DYNAMIC_ELEMENTS[selectedBankQuestion.category]
+                              .map((e) => `• ${e}`)
+                              .join("\n"),
+                          );
+                          toast.success("Skopiowano elementy dynamiczne");
+                        }}
+                      >
+                        <Copy className="mr-1 h-4 w-4" /> Kopiuj
+                      </Button>
+                    </div>
+                    <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                      {SHORTS_DYNAMIC_ELEMENTS[selectedBankQuestion.category].map((el, i) => (
+                        <li key={i}>{el}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -1162,7 +1240,7 @@ function StudioPage() {
                 <div className="flex items-end">
                   <Button
                     onClick={() => startVideoM.mutate()}
-                    disabled={startVideoM.isPending || !script.trim()}
+                    disabled={startVideoM.isPending || !fullScript.trim()}
                   >
                     {startVideoM.isPending ? (
                       <Loader2 className="mr-1 h-4 w-4 animate-spin" />

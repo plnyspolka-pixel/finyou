@@ -411,7 +411,9 @@ export const generateStudioScript = createServerFn({ method: "POST" })
     }
     if (!data.prompt.trim()) throw new Error("Podaj prompt.");
     const { generateVideoScript } = await import("./studio-ai.server");
-    return await generateVideoScript(data.prompt.trim());
+    const gen = await generateVideoScript(data.prompt.trim());
+    // Spójny kształt z sekcjami: tekst AI ląduje w treści, hook/CTA puste.
+    return { ...gen, hook: "", content: gen.script, cta: "" };
   });
 
 // Auto-publikacja: walidacja wspólna dla generacji pojedynczej i wsadowej.
