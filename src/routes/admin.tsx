@@ -50,6 +50,7 @@ import { useState } from "react";
 import { PanelShell } from "@/components/layout/panel-shell";
 import { AdminTopBar } from "@/components/admin/admin-top-bar";
 import { AdminSearchDialog, AdminSearchIconTrigger } from "@/components/admin/admin-search";
+import { adminSections, type AdminSection } from "@/lib/admin-nav";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -58,6 +59,11 @@ export const Route = createFileRoute("/admin")({
 type Item = { to: string; label: string; icon: any; exact?: boolean };
 type Group = { label?: string; items: Item[] };
 
+/**
+ * @deprecated Stary płaski sidebar — od etapu 2 nawigację administratora/operatora
+ * definiuje `adminSections` w `src/lib/admin-nav.ts`. Zostaje do audytu ścieżek;
+ * sprzątanie w etapie 5.
+ */
 const groups: Group[] = [
   { items: [{ to: "/admin", label: "Pulpit", icon: LayoutDashboard, exact: true }] },
   {
@@ -181,6 +187,21 @@ const accountingGroups: Group[] = [
 // Ścieżki dostępne dla roli `ksiegowosc` — zawężają indeks wyszukiwarki.
 const accountingPaths = accountingGroups.flatMap((g) => g.items.map((i) => i.to));
 
+// Widok `ksiegowosc` w stylistyce sekcyjnego sidebara: te same 4 linki co w
+// `accountingGroups`, każdy jako syntetyczna „sekcja" (puste hubPath = link
+// bezpośredni, bez huba). Funkcjonalnie identyczne z widokiem sprzed przebudowy.
+const accountingSections: AdminSection[] = accountingGroups.flatMap((g) =>
+  g.items.map((i) => ({
+    id: `ksiegowosc-${i.to}`,
+    label: i.label,
+    icon: i.icon,
+    hubPath: "",
+    accent: "teal" as const,
+    description: "",
+    items: [{ to: i.to, label: i.label, icon: i.icon, description: "", synonyms: [], exact: i.exact }],
+  })),
+);
+
 function AdminLayout() {
   const { roles } = useAuth();
   const isStaff = roles.includes("administrator") || roles.includes("operator");
@@ -190,7 +211,7 @@ function AdminLayout() {
     <PanelShell
       title={isStaff ? "Panel administratora" : "Panel księgowości"}
       allow={["administrator", "ksiegowosc"]}
-      groups={accountingOnly ? accountingGroups : groups}
+      sections={accountingOnly ? accountingSections : adminSections}
       topBar={<AdminTopBar />}
       mobileHeaderExtra={<AdminSearchIconTrigger />}
       footer={<AdminSearchDialog allowedPaths={accountingOnly ? accountingPaths : undefined} />}

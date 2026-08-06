@@ -727,19 +727,31 @@ function itemMatches(item: AdminNavItem, pathname: string): boolean {
   return item.exact ? pathname === item.to : pathname.startsWith(item.to);
 }
 
+/**
+ * Czy ścieżka należy do sekcji (hub, dowolny item albo `extraPrefixes`).
+ * Działa też dla sekcji syntetycznych spoza `adminSections` (np. widok księgowości).
+ */
+export function isSectionActive(section: AdminSection, pathname: string): boolean {
+  if (section.id === "pulpit") return pathname === "/admin" || pathname === "/admin/";
+  // Puste hubPath = sekcja syntetyczna (pojedynczy link) — decydują same itemy.
+  if (
+    section.hubPath &&
+    (pathname === section.hubPath || pathname.startsWith(section.hubPath + "/"))
+  ) {
+    return true;
+  }
+  if (sectionItems(section).some((item) => itemMatches(item, pathname))) return true;
+  return (section.extraPrefixes ?? []).some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
 /** Sekcja, do której należy bieżąca ścieżka (aktywna też na podstronach). */
 export function findSectionByPath(pathname: string): AdminSection | undefined {
   if (pathname === "/admin" || pathname === "/admin/") {
     return adminSections.find((s) => s.id === "pulpit");
   }
-  return adminSections.find((section) => {
-    if (section.id === "pulpit") return false;
-    if (pathname === section.hubPath || pathname.startsWith(section.hubPath + "/")) return true;
-    if (sectionItems(section).some((item) => itemMatches(item, pathname))) return true;
-    return (section.extraPrefixes ?? []).some(
-      (p) => pathname === p || pathname.startsWith(p + "/"),
-    );
-  });
+  return adminSections.find(
+    (section) => section.id !== "pulpit" && isSectionActive(section, pathname),
+  );
 }
 
 /** Czy ścieżka to hub sekcji (siatka kafelków, bez zakładek). */

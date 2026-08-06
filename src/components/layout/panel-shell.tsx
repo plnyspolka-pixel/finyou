@@ -5,6 +5,7 @@ import { useAuth, type AppRole } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import brandMark from "@/assets/financeyou-mark-v2.png.asset.json";
+import { accentClasses, isSectionActive, sectionItems, type AdminSection } from "@/lib/admin-nav";
 
 export type NavItem = { to: string; label: string; icon: LucideIcon; exact?: boolean };
 export type NavGroup = { label?: string; items: NavItem[] };
@@ -13,7 +14,12 @@ type PanelShellProps = {
   /** Tytuł panelu obok znaczka „FY". */
   title: string;
   /** Nawigacja — jedna lub wiele grup (grupy mogą mieć nagłówek). */
-  groups: NavGroup[];
+  groups?: NavGroup[];
+  /**
+   * Tryb sekcyjny sidebara (panel /admin): tylko sekcje + zębatka, pozycje żyją
+   * w hubach i zakładkach. Gdy podany, `groups` jest ignorowane.
+   */
+  sections?: AdminSection[];
   /** Role uprawnione do panelu. Pominięcie = wystarczy bycie zalogowanym (panel klienta). */
   allow?: AppRole[];
   /** Dodatkowy element w obrębie shella (np. pływający czat AI administratora). */
@@ -33,7 +39,8 @@ type PanelShellProps = {
  */
 export function PanelShell({
   title,
-  groups,
+  groups = [],
+  sections,
   allow,
   footer,
   topBar,
@@ -131,6 +138,54 @@ export function PanelShell({
     </>
   );
 
+  // TODO etap 3: po utworzeniu route'ów hubów linkować zawsze do section.hubPath.
+  const sectionTarget = (s: AdminSection) =>
+    s.id === "pulpit" ? "/admin" : (sectionItems(s)[0]?.to ?? s.hubPath);
+
+  const sectionRow = (s: AdminSection, onNavigate?: () => void) => {
+    const active = isSectionActive(s, pathname);
+    const accent = accentClasses[s.accent];
+    return (
+      <Link
+        key={s.id}
+        to={sectionTarget(s)}
+        onClick={onNavigate}
+        className={`relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+          active
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            : "hover:bg-sidebar-accent/60"
+        }`}
+      >
+        {active && (
+          <span
+            aria-hidden
+            className={`absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full ${accent.bar}`}
+          />
+        )}
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${accent.iconBg}`}
+        >
+          <s.icon className={`h-4 w-4 ${accent.iconText}`} />
+        </span>
+        <span className="truncate">{s.label}</span>
+      </Link>
+    );
+  };
+
+  const mainSections = (sections ?? []).filter((s) => !s.isSettings);
+  const settingsSections = (sections ?? []).filter((s) => s.isSettings);
+
+  const sectionsNav = (onNavigate?: () => void) => (
+    <div className="space-y-1">{mainSections.map((s) => sectionRow(s, onNavigate))}</div>
+  );
+
+  const settingsNav = (onNavigate?: () => void) =>
+    settingsSections.length > 0 ? (
+      <div className="border-t border-sidebar-border px-2 py-2">
+        {settingsSections.map((s) => sectionRow(s, onNavigate))}
+      </div>
+    ) : null;
+
   const signOutButton = (onNavigate?: () => void) => (
     <Button
       variant="ghost"
@@ -149,7 +204,10 @@ export function PanelShell({
     <div className="flex min-h-screen w-full bg-gradient-to-br from-background via-background to-secondary/30">
       <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
         <div className="px-5 py-5 border-b border-sidebar-border">{brand}</div>
-        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">{nav()}</nav>
+        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+          {sections ? sectionsNav() : nav()}
+        </nav>
+        {sections && settingsNav()}
         <div className="border-t border-sidebar-border p-3">{signOutButton()}</div>
       </aside>
 
@@ -168,8 +226,11 @@ export function PanelShell({
               <SheetTitle className="sr-only">Menu nawigacji</SheetTitle>
               <div className="px-5 py-5 border-b border-sidebar-border">{brand}</div>
               <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
-                {nav(() => setMobileOpen(false))}
+                {sections
+                  ? sectionsNav(() => setMobileOpen(false))
+                  : nav(() => setMobileOpen(false))}
               </nav>
+              {sections && settingsNav(() => setMobileOpen(false))}
               <div className="border-t border-sidebar-border p-3">
                 {signOutButton(() => setMobileOpen(false))}
               </div>
