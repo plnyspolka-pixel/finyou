@@ -8,14 +8,24 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Send, Loader2, Mail, Reply, ExternalLink, RefreshCw } from "lucide-react";
+import { Send, Loader2, Mail, Reply, ExternalLink, RefreshCw, CornerUpLeft } from "lucide-react";
 import {
   listInstitutionalInvestors,
   sendOfferDistribution,
   getDistributionThreads,
+  replyToDistribution,
 } from "@/lib/offer-distribution.functions";
 import { distributionStatusLabels, formatDateTime } from "@/lib/labels";
 import { signStoragePath } from "@/lib/property-photos";
@@ -39,10 +49,99 @@ function investorName(i: {
   );
 }
 
+type ThreadAttachment = { name?: string | null; path?: string | null };
+
+type ThreadMsg = {
+  id: string;
+  distribution_id: string | null;
+  direction: string;
+  subject: string | null;
+  content: string | null;
+  from_email: string | null;
+  to_email: string | null;
+  attachments: unknown;
+  created_at: string;
+};
+
+type DistributionRow = {
+  id: string;
+  investor?: {
+    company_name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+  } | null;
+};
+
+const PREVIEW_LIMIT = 700;
+const QUOTE_LIMIT = 1500;
+
+/** Pojedyncza wiadomość w wątku — nasza po prawej, instytucji po lewej. */
+function ThreadMessage({ m }: { m: ThreadMsg }) {
+  const [expanded, setExpanded] = useState(false);
+  const isInbound = m.direction === "inbound";
+  const text = (m.content ?? "").trim();
+  const isLong = text.length > PREVIEW_LIMIT;
+  const shown = isLong && !expanded ? text.slice(0, PREVIEW_LIMIT) + "…" : text;
+  const attachments = Array.isArray(m.attachments) ? (m.attachments as ThreadAttachment[]) : [];
+
+  return (
+    <div
+      className={`rounded-md border p-2 text-sm ${
+        isInbound ? "bg-accent/50" : "bg-primary/5 border-primary/30"
+      }`}
+    >
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        {isInbound ? (
+          <Reply className="h-3.5 w-3.5 shrink-0" />
+        ) : (
+          <Send className="h-3.5 w-3.5 shrink-0" />
+        )}
+        <span className="truncate">{isInbound ? m.from_email : `My → ${m.to_email ?? "—"}`}</span>
+        <span className="ml-auto whitespace-nowrap">{formatDateTime(m.created_at)}</span>
+      </div>
+      {m.subject && <div className="font-medium mt-1 break-words">{m.subject}</div>}
+      {text && (
+        <div className="whitespace-pre-wrap break-words mt-1 text-muted-foreground">{shown}</div>
+      )}
+      {isLong && (
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto p-0 mt-1 text-xs"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? "Zwiń" : "Pokaż całość"}
+        </Button>
+      )}
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {attachments.map((a, idx) => (
+            <Button
+              key={idx}
+              size="sm"
+              variant="outline"
+              className="max-w-full"
+              onClick={async () => {
+                const url = a?.path ? await signStoragePath(a.path, 3600) : null;
+                if (url) window.open(url, "_blank", "noopener");
+              }}
+            >
+              <ExternalLink className="mr-1 h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{a?.name ?? `załącznik ${idx + 1}`}</span>
+            </Button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function OfferDistributionPanel({ applicationId }: { applicationId: string }) {
   const fetchInvestors = useServerFn(listInstitutionalInvestors);
   const doSend = useServerFn(sendOfferDistribution);
   const fetchThreads = useServerFn(getDistributionThreads);
+  const doReply = useServerFn(replyToDistribution);
 
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [sendToAll, setSendToAll] = useState(true);
@@ -53,6 +152,16 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
     distributions: [],
     messages: [],
   });
+
+  // Odpowiedź w wątku konkretnej instytucji
+  const [reply, setReply] = useState<{
+    distributionId: string;
+    investorName: string;
+    email: string;
+    subject: string;
+    body: string;
+  } | null>(null);
+  const [replying, setReplying] = useState(false);
 
   const loadThreads = async () => {
     try {
@@ -102,6 +211,56 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
       toast.error("Wysyłka nie powiodła się", { description: e?.message ?? String(e) });
     } finally {
       setSending(false);
+    }
+  };
+
+  /** Otwiera okno odpowiedzi z tematem i zacytowaną ostatnią wiadomością wątku. */
+  const openReply = (d: DistributionRow, msgs: ThreadMsg[]) => {
+    const email = d.investor?.email;
+    if (!email) {
+      toast.error("Ta instytucja nie ma zapisanego adresu e-mail");
+      return;
+    }
+    const last =
+      [...msgs].reverse().find((m) => m.direction === "inbound") ?? msgs[msgs.length - 1];
+    const base = last?.subject?.trim() || "Temat pożyczkowy pod zabezpieczenie hipoteczne";
+    const quoted = last
+      ? `\n\n---\nW dniu ${formatDateTime(last.created_at)} ${last.from_email ?? ""} napisał(a):\n` +
+        (last.content ?? "")
+          .slice(0, QUOTE_LIMIT)
+          .split("\n")
+          .map((l) => "> " + l)
+          .join("\n")
+      : "";
+    setReply({
+      distributionId: d.id,
+      investorName: investorName(d.investor ?? {}),
+      email,
+      subject: /^re:/i.test(base) ? base : `Re: ${base}`,
+      body: quoted,
+    });
+  };
+
+  const sendReply = async () => {
+    if (!reply) return;
+    const body = reply.body.trim();
+    const subject = reply.subject.trim();
+    if (!subject || !body) {
+      toast.error("Uzupełnij temat i treść wiadomości");
+      return;
+    }
+    setReplying(true);
+    try {
+      await doReply({ data: { distributionId: reply.distributionId, subject, body } });
+      toast.success(`Odpowiedź wysłana do ${reply.investorName}`, { description: reply.email });
+      setReply(null);
+      await loadThreads();
+    } catch (e) {
+      toast.error("Nie udało się wysłać odpowiedzi", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setReplying(false);
     }
   };
 
@@ -212,13 +371,15 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
             </p>
           )}
           {threads.distributions.map((d) => {
-            const msgs = messagesByDistribution.get(d.id) ?? [];
-            const inbound = msgs.filter((m) => m.direction === "inbound");
+            const msgs = (messagesByDistribution.get(d.id) ?? []) as ThreadMsg[];
+            const inboundCount = msgs.filter((m) => m.direction === "inbound").length;
             return (
               <div key={d.id} className="border rounded-md p-3 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap text-sm">
                   <span className="font-medium">{investorName(d.investor ?? {})}</span>
-                  <span className="text-xs text-muted-foreground">{d.investor?.email}</span>
+                  <span className="text-xs text-muted-foreground break-all">
+                    {d.investor?.email}
+                  </span>
                   <Badge
                     variant={
                       d.distribution_status === "odpowiedz_otrzymana" ? "default" : "secondary"
@@ -231,44 +392,25 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
                       Błąd wysyłki
                     </Badge>
                   )}
-                  <span className="text-xs text-muted-foreground ml-auto">
+                  {inboundCount > 0 && <Badge variant="outline">{inboundCount} odpowiedzi</Badge>}
+                  <span className="text-xs text-muted-foreground sm:ml-auto">
                     {d.sent_at ? `Wysłano: ${formatDateTime(d.sent_at)}` : ""}
                   </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => openReply(d, msgs)}
+                    disabled={!d.investor?.email}
+                  >
+                    <CornerUpLeft className="mr-1 h-3.5 w-3.5" />
+                    Odpowiedz
+                  </Button>
                 </div>
-                {inbound.length > 0 && (
+                {msgs.length > 0 && (
                   <div className="space-y-2">
-                    {inbound.map((m) => (
-                      <div key={m.id} className="rounded-md bg-accent/50 border p-2 text-sm">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Reply className="h-3.5 w-3.5" />
-                          <span>{m.from_email}</span>
-                          <span className="ml-auto">{formatDateTime(m.created_at)}</span>
-                        </div>
-                        {m.subject && <div className="font-medium mt-1">{m.subject}</div>}
-                        {m.content && (
-                          <div className="whitespace-pre-wrap mt-1 text-muted-foreground">
-                            {m.content}
-                          </div>
-                        )}
-                        {Array.isArray(m.attachments) && m.attachments.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {m.attachments.map((a: any, idx: number) => (
-                              <Button
-                                key={idx}
-                                size="sm"
-                                variant="outline"
-                                onClick={async () => {
-                                  const url = a?.path ? await signStoragePath(a.path, 3600) : null;
-                                  if (url) window.open(url, "_blank", "noopener");
-                                }}
-                              >
-                                <ExternalLink className="mr-1 h-3.5 w-3.5" />
-                                {a?.name ?? `załącznik ${idx + 1}`}
-                              </Button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                    {msgs.map((m) => (
+                      <ThreadMessage key={m.id} m={m} />
                     ))}
                   </div>
                 )}
@@ -277,6 +419,54 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
           })}
         </CardContent>
       </Card>
+
+      <Dialog open={!!reply} onOpenChange={(o) => !o && !replying && setReply(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Odpowiedz w wątku</DialogTitle>
+            <DialogDescription className="break-all">
+              {reply ? `${reply.investorName} · ${reply.email}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="reply-subject">Temat</Label>
+              <Input
+                id="reply-subject"
+                value={reply?.subject ?? ""}
+                onChange={(e) => setReply((r) => (r ? { ...r, subject: e.target.value } : r))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="reply-body">Treść</Label>
+              <Textarea
+                id="reply-body"
+                rows={12}
+                value={reply?.body ?? ""}
+                onChange={(e) => setReply((r) => (r ? { ...r, body: e.target.value } : r))}
+                placeholder="Napisz odpowiedź…"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Mail wyjdzie z adresu zwrotnego tej dystrybucji — kolejna odpowiedź instytucji wróci
+              automatycznie na ten wątek.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReply(null)} disabled={replying}>
+              Anuluj
+            </Button>
+            <Button onClick={() => void sendReply()} disabled={replying}>
+              {replying ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Wyślij
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
