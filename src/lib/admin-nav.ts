@@ -88,7 +88,7 @@ export type AdminSection = {
 /** Klasy Tailwind akcentu sekcji — spójne z brandingiem (ciemny brąz + złoto). */
 export const accentClasses: Record<
   AccentKey,
-  { bar: string; iconBg: string; iconText: string; border: string; dot: string }
+  { bar: string; iconBg: string; iconText: string; border: string; dot: string; cardHover: string }
 > = {
   brand: {
     bar: "bg-primary",
@@ -96,6 +96,7 @@ export const accentClasses: Record<
     iconText: "text-primary",
     border: "border-primary/40",
     dot: "bg-primary",
+    cardHover: "group-hover:border-primary/40",
   },
   gold: {
     bar: "bg-amber-500",
@@ -103,6 +104,7 @@ export const accentClasses: Record<
     iconText: "text-amber-600 dark:text-amber-400",
     border: "border-amber-500/40",
     dot: "bg-amber-500",
+    cardHover: "group-hover:border-amber-500/40",
   },
   blue: {
     bar: "bg-sky-600",
@@ -110,6 +112,7 @@ export const accentClasses: Record<
     iconText: "text-sky-600 dark:text-sky-400",
     border: "border-sky-500/40",
     dot: "bg-sky-500",
+    cardHover: "group-hover:border-sky-500/40",
   },
   green: {
     bar: "bg-emerald-600",
@@ -117,6 +120,7 @@ export const accentClasses: Record<
     iconText: "text-emerald-600 dark:text-emerald-400",
     border: "border-emerald-500/40",
     dot: "bg-emerald-500",
+    cardHover: "group-hover:border-emerald-500/40",
   },
   violet: {
     bar: "bg-violet-600",
@@ -124,6 +128,7 @@ export const accentClasses: Record<
     iconText: "text-violet-600 dark:text-violet-400",
     border: "border-violet-500/40",
     dot: "bg-violet-500",
+    cardHover: "group-hover:border-violet-500/40",
   },
   teal: {
     bar: "bg-teal-600",
@@ -131,6 +136,7 @@ export const accentClasses: Record<
     iconText: "text-teal-600 dark:text-teal-400",
     border: "border-teal-500/40",
     dot: "bg-teal-500",
+    cardHover: "group-hover:border-teal-500/40",
   },
   magenta: {
     bar: "bg-fuchsia-600",
@@ -138,6 +144,7 @@ export const accentClasses: Record<
     iconText: "text-fuchsia-600 dark:text-fuchsia-400",
     border: "border-fuchsia-500/40",
     dot: "bg-fuchsia-500",
+    cardHover: "group-hover:border-fuchsia-500/40",
   },
   slate: {
     bar: "bg-slate-500",
@@ -145,6 +152,7 @@ export const accentClasses: Record<
     iconText: "text-slate-600 dark:text-slate-400",
     border: "border-slate-500/40",
     dot: "bg-slate-500",
+    cardHover: "group-hover:border-slate-500/40",
   },
 };
 
@@ -753,6 +761,17 @@ export function findSectionByPath(pathname: string): AdminSection | undefined {
     (section) => section.id !== "pulpit" && isSectionActive(section, pathname),
   );
 }
+
+/**
+ * Ścieżki dostępne dla roli `ksiegowosc` — odpowiadają linkom `accountingGroups`
+ * w `src/routes/admin.tsx`. Zawężają wyszukiwarkę, huby i zakładki tej roli.
+ */
+export const accountingAllowedPaths = [
+  "/admin/ksiegowosc",
+  "/admin/ksiegowosc/faktury",
+  "/admin/ksiegowosc/podmioty",
+  "/admin/program-posrednikow/rozliczenia",
+];
 
 /** Czy ścieżka to hub sekcji (siatka kafelków, bez zakładek). */
 export function isHubPath(pathname: string): boolean {

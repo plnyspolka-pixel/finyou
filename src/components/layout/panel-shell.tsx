@@ -138,9 +138,9 @@ export function PanelShell({
     </>
   );
 
-  // TODO etap 3: po utworzeniu route'ów hubów linkować zawsze do section.hubPath.
-  const sectionTarget = (s: AdminSection) =>
-    s.id === "pulpit" ? "/admin" : (sectionItems(s)[0]?.to ?? s.hubPath);
+  // Link sekcji: hub sekcji; sekcje syntetyczne (puste hubPath) linkują wprost
+  // do swojego jedynego itemu.
+  const sectionTarget = (s: AdminSection) => s.hubPath || (sectionItems(s)[0]?.to ?? "/admin");
 
   const sectionRow = (s: AdminSection, onNavigate?: () => void) => {
     const active = isSectionActive(s, pathname);
