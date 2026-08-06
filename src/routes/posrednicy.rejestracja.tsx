@@ -145,7 +145,10 @@ function RejestracjaPartnera() {
                 </p>
               ) : (
                 <div className="space-y-4">
-                  <SocialSignIn labelPrefix="Zarejestruj się" />
+                  <SocialSignIn
+                    labelPrefix="Zarejestruj się"
+                    redirectPath={`/posrednicy/rejestracja${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`}
+                  />
                   <AuthDivider label="lub e-mailem" />
                   <form onSubmit={sendMagic} className="flex flex-col sm:flex-row gap-2">
                     <Input

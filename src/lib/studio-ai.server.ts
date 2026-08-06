@@ -63,6 +63,10 @@ Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","descri
   };
 }
 
+// Scenariusze dla pytań z paczki 250 NIE przechodzą przez AI — składa je
+// deterministycznie buildShortsScript (src/lib/shorts-script.ts) z gotowej,
+// sprawdzonej treści pliku źródłowego.
+
 export type StudioPromptKind = "video" | "image" | "social";
 
 export async function generatePromptIdeas(args: {

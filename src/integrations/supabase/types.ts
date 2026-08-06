@@ -8393,6 +8393,7 @@ export type Database = {
           created_by: string | null
           external_post_id: string | null
           id: string
+          ig_container_at: string | null
           ig_creation_id: string | null
           image_url: string | null
           last_error: string | null
@@ -8411,6 +8412,7 @@ export type Database = {
           created_by?: string | null
           external_post_id?: string | null
           id?: string
+          ig_container_at?: string | null
           ig_creation_id?: string | null
           image_url?: string | null
           last_error?: string | null
@@ -8429,6 +8431,7 @@ export type Database = {
           created_by?: string | null
           external_post_id?: string | null
           id?: string
+          ig_container_at?: string | null
           ig_creation_id?: string | null
           image_url?: string | null
           last_error?: string | null
@@ -8508,45 +8511,66 @@ export type Database = {
       }
       studio_video_jobs: {
         Row: {
+          auto_publish_platforms: string[]
+          auto_published_at: string | null
           avatar_id: string
+          captions: boolean
           created_at: string
           created_by: string | null
           heygen_video_id: string | null
           id: string
           last_error: string | null
           prompt: string
+          publish_description: string
+          publish_privacy: string
+          publish_title: string
           script: string
           status: string
+          subtitle_url: string | null
           thumbnail_url: string | null
           updated_at: string
           video_url: string | null
           voice_id: string
         }
         Insert: {
+          auto_publish_platforms?: string[]
+          auto_published_at?: string | null
           avatar_id: string
+          captions?: boolean
           created_at?: string
           created_by?: string | null
           heygen_video_id?: string | null
           id?: string
           last_error?: string | null
           prompt: string
+          publish_description?: string
+          publish_privacy?: string
+          publish_title?: string
           script: string
           status?: string
+          subtitle_url?: string | null
           thumbnail_url?: string | null
           updated_at?: string
           video_url?: string | null
           voice_id?: string
         }
         Update: {
+          auto_publish_platforms?: string[]
+          auto_published_at?: string | null
           avatar_id?: string
+          captions?: boolean
           created_at?: string
           created_by?: string | null
           heygen_video_id?: string | null
           id?: string
           last_error?: string | null
           prompt?: string
+          publish_description?: string
+          publish_privacy?: string
+          publish_title?: string
           script?: string
           status?: string
+          subtitle_url?: string | null
           thumbnail_url?: string | null
           updated_at?: string
           video_url?: string | null

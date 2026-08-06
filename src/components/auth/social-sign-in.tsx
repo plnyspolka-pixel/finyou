@@ -6,24 +6,36 @@ import { Loader2 } from "lucide-react";
 
 type Props = {
   redirectUri?: string;
+  // Ścieżka w aplikacji, na którą wraca OAuth (gdy nie podano pełnego redirectUri).
+  // Domyślnie /wybor-panelu — tam routing po zalogowaniu decyduje wg ról.
+  redirectPath?: string;
   className?: string;
   labelPrefix?: string; // "Zaloguj się" | "Kontynuuj"
   variant?: "light" | "dark";
+  // Wywoływane tuż przed startem OAuth (np. zapis wybranej roli do localStorage).
+  onBeforeSignIn?: () => void;
+  // Wywoływane po udanym logowaniu bez przekierowania (flow popup/tokenowy).
+  onSuccess?: () => void;
 };
 
 export function SocialSignIn({
   redirectUri,
+  redirectPath = "/wybor-panelu",
   className,
   labelPrefix = "Kontynuuj",
   variant = "light",
+  onBeforeSignIn,
+  onSuccess,
 }: Props) {
   const [busy, setBusy] = useState<"google" | "apple" | null>(null);
 
   const signIn = async (provider: "google" | "apple") => {
     setBusy(provider);
     try {
+      onBeforeSignIn?.();
       const uri =
-        redirectUri ?? (typeof window !== "undefined" ? window.location.origin : undefined);
+        redirectUri ??
+        (typeof window !== "undefined" ? `${window.location.origin}${redirectPath}` : undefined);
       const result = await lovable.auth.signInWithOAuth(provider, {
         redirect_uri: uri,
       });
@@ -35,7 +47,10 @@ export function SocialSignIn({
               ? (result.error as { message?: string }).message
               : String(result.error),
         });
+        return;
       }
+      // Sesja ustawiona bez przeładowania strony — przenieś użytkownika dalej.
+      onSuccess?.();
     } catch (e: any) {
       toast.error("Błąd logowania", { description: e?.message ?? String(e) });
     } finally {

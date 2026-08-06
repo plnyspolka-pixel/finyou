@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ZapomnianeHasloRouteImport } from './routes/zapomniane-haslo'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
+import { Route as WyborPaneluRouteImport } from './routes/wybor-panelu'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
@@ -106,12 +107,14 @@ import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminStudioPublikacjiRouteImport } from './routes/admin.studio-publikacji'
+import { Route as AdminSprzedazRouteImport } from './routes/admin.sprzedaz'
 import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
 import { Route as AdminProjektyRouteImport } from './routes/admin.projekty'
 import { Route as AdminPrMediaRouteImport } from './routes/admin.pr-media'
 import { Route as AdminPotencjalLokalizacyjnyRouteImport } from './routes/admin.potencjal-lokalizacyjny'
+import { Route as AdminPosrednicyRouteImport } from './routes/admin.posrednicy'
 import { Route as AdminPlatnosciDostepRouteImport } from './routes/admin.platnosci-dostep'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
 import { Route as AdminOperatorzyRouteImport } from './routes/admin.operatorzy'
@@ -123,12 +126,16 @@ import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
 import { Route as AdminKwRouteImport } from './routes/admin.kw'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
 import { Route as AdminKreatorDokumentowRouteImport } from './routes/admin.kreator-dokumentow'
+import { Route as AdminKonfiguracjaRouteImport } from './routes/admin.konfiguracja'
+import { Route as AdminKomunikacjaRouteImport } from './routes/admin.komunikacja'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminKartyOfertRouteImport } from './routes/admin.karty-ofert'
+import { Route as AdminInwestycjeRouteImport } from './routes/admin.inwestycje'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
 import { Route as AdminGeneratorUmowyRouteImport } from './routes/admin.generator-umowy'
 import { Route as AdminFollowUpBrakiRouteImport } from './routes/admin.follow-up-braki'
+import { Route as AdminFinanseRouteImport } from './routes/admin.finanse'
 import { Route as AdminFacebookConnectRouteImport } from './routes/admin.facebook-connect'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
@@ -153,6 +160,7 @@ import { Route as InwestorWindykacjaIndexRouteImport } from './routes/inwestor.w
 import { Route as InwestorProjektyIndexRouteImport } from './routes/inwestor.projekty.index'
 import { Route as InwestorAmlIndexRouteImport } from './routes/inwestor.aml.index'
 import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin.program-posrednikow.index'
+import { Route as AdminMarketingIndexRouteImport } from './routes/admin.marketing.index'
 import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
 import { Route as PosrednikWnioskiIdRouteImport } from './routes/posrednik.wnioski.$id'
 import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
@@ -252,6 +260,11 @@ const ZapomnianeHasloRoute = ZapomnianeHasloRouteImport.update({
 const WyborRoliRoute = WyborRoliRouteImport.update({
   id: '/wybor-roli',
   path: '/wybor-roli',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WyborPaneluRoute = WyborPaneluRouteImport.update({
+  id: '/wybor-panelu',
+  path: '/wybor-panelu',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -733,6 +746,11 @@ const AdminStudioPublikacjiRoute = AdminStudioPublikacjiRouteImport.update({
   path: '/studio-publikacji',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSprzedazRoute = AdminSprzedazRouteImport.update({
+  id: '/sprzedaz',
+  path: '/sprzedaz',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSkrzynkaRoute = AdminSkrzynkaRouteImport.update({
   id: '/skrzynka',
   path: '/skrzynka',
@@ -764,6 +782,11 @@ const AdminPotencjalLokalizacyjnyRoute =
     path: '/potencjal-lokalizacyjny',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminPosrednicyRoute = AdminPosrednicyRouteImport.update({
+  id: '/posrednicy',
+  path: '/posrednicy',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPlatnosciDostepRoute = AdminPlatnosciDostepRouteImport.update({
   id: '/platnosci-dostep',
   path: '/platnosci-dostep',
@@ -819,6 +842,16 @@ const AdminKreatorDokumentowRoute = AdminKreatorDokumentowRouteImport.update({
   path: '/kreator-dokumentow',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminKonfiguracjaRoute = AdminKonfiguracjaRouteImport.update({
+  id: '/konfiguracja',
+  path: '/konfiguracja',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminKomunikacjaRoute = AdminKomunikacjaRouteImport.update({
+  id: '/komunikacja',
+  path: '/komunikacja',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminKlienciRoute = AdminKlienciRouteImport.update({
   id: '/klienci',
   path: '/klienci',
@@ -827,6 +860,11 @@ const AdminKlienciRoute = AdminKlienciRouteImport.update({
 const AdminKartyOfertRoute = AdminKartyOfertRouteImport.update({
   id: '/karty-ofert',
   path: '/karty-ofert',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminInwestycjeRoute = AdminInwestycjeRouteImport.update({
+  id: '/inwestycje',
+  path: '/inwestycje',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminInwestorzyRoute = AdminInwestorzyRouteImport.update({
@@ -847,6 +885,11 @@ const AdminGeneratorUmowyRoute = AdminGeneratorUmowyRouteImport.update({
 const AdminFollowUpBrakiRoute = AdminFollowUpBrakiRouteImport.update({
   id: '/follow-up-braki',
   path: '/follow-up-braki',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFinanseRoute = AdminFinanseRouteImport.update({
+  id: '/finanse',
+  path: '/finanse',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminFacebookConnectRoute = AdminFacebookConnectRouteImport.update({
@@ -972,6 +1015,11 @@ const AdminProgramPosrednikowIndexRoute =
     path: '/program-posrednikow/',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminMarketingIndexRoute = AdminMarketingIndexRouteImport.update({
+  id: '/marketing/',
+  path: '/marketing/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminKsiegowoscIndexRoute = AdminKsiegowoscIndexRouteImport.update({
   id: '/ksiegowosc/',
   path: '/ksiegowosc/',
@@ -1502,6 +1550,7 @@ export interface FileRoutesByFullPath {
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -1520,12 +1569,16 @@ export interface FileRoutesByFullPath {
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
+  '/admin/finanse': typeof AdminFinanseRoute
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
+  '/admin/inwestycje': typeof AdminInwestycjeRoute
   '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
+  '/admin/komunikacja': typeof AdminKomunikacjaRoute
+  '/admin/konfiguracja': typeof AdminKonfiguracjaRoute
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/kw': typeof AdminKwRoute
@@ -1537,12 +1590,14 @@ export interface FileRoutesByFullPath {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/posrednicy': typeof AdminPosrednicyRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/pr-media': typeof AdminPrMediaRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
+  '/admin/sprzedaz': typeof AdminSprzedazRoute
   '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
@@ -1667,6 +1722,7 @@ export interface FileRoutesByFullPath {
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
+  '/admin/marketing/': typeof AdminMarketingIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/aml/': typeof InwestorAmlIndexRoute
   '/inwestor/projekty/': typeof InwestorProjektyIndexRoute
@@ -1733,6 +1789,7 @@ export interface FileRoutesByTo {
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -1751,12 +1808,16 @@ export interface FileRoutesByTo {
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
+  '/admin/finanse': typeof AdminFinanseRoute
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
+  '/admin/inwestycje': typeof AdminInwestycjeRoute
   '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
+  '/admin/komunikacja': typeof AdminKomunikacjaRoute
+  '/admin/konfiguracja': typeof AdminKonfiguracjaRoute
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/kw': typeof AdminKwRoute
@@ -1768,12 +1829,14 @@ export interface FileRoutesByTo {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/posrednicy': typeof AdminPosrednicyRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/pr-media': typeof AdminPrMediaRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
+  '/admin/sprzedaz': typeof AdminSprzedazRoute
   '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
@@ -1893,6 +1956,7 @@ export interface FileRoutesByTo {
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
+  '/admin/marketing': typeof AdminMarketingIndexRoute
   '/admin/program-posrednikow': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/aml': typeof InwestorAmlIndexRoute
   '/inwestor/projekty': typeof InwestorProjektyIndexRoute
@@ -1965,6 +2029,7 @@ export interface FileRoutesById {
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -1983,12 +2048,16 @@ export interface FileRoutesById {
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
+  '/admin/finanse': typeof AdminFinanseRoute
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
+  '/admin/inwestycje': typeof AdminInwestycjeRoute
   '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
+  '/admin/komunikacja': typeof AdminKomunikacjaRoute
+  '/admin/konfiguracja': typeof AdminKonfiguracjaRoute
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/kw': typeof AdminKwRoute
@@ -2000,12 +2069,14 @@ export interface FileRoutesById {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/posrednicy': typeof AdminPosrednicyRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/pr-media': typeof AdminPrMediaRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
+  '/admin/sprzedaz': typeof AdminSprzedazRoute
   '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
@@ -2130,6 +2201,7 @@ export interface FileRoutesById {
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
+  '/admin/marketing/': typeof AdminMarketingIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/aml/': typeof InwestorAmlIndexRoute
   '/inwestor/projekty/': typeof InwestorProjektyIndexRoute
@@ -2203,6 +2275,7 @@ export interface FileRouteTypes {
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
@@ -2221,12 +2294,16 @@ export interface FileRouteTypes {
     | '/admin/dystrybucja'
     | '/admin/embed'
     | '/admin/facebook-connect'
+    | '/admin/finanse'
     | '/admin/follow-up-braki'
     | '/admin/generator-umowy'
     | '/admin/integracje'
     | '/admin/inwestorzy'
+    | '/admin/inwestycje'
     | '/admin/karty-ofert'
     | '/admin/klienci'
+    | '/admin/komunikacja'
+    | '/admin/konfiguracja'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
     | '/admin/kw'
@@ -2238,12 +2315,14 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/posrednicy'
     | '/admin/potencjal-lokalizacyjny'
     | '/admin/pr-media'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
+    | '/admin/sprzedaz'
     | '/admin/studio-publikacji'
     | '/admin/szkolenia'
     | '/admin/text-agent'
@@ -2368,6 +2447,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
+    | '/admin/marketing/'
     | '/admin/program-posrednikow/'
     | '/inwestor/aml/'
     | '/inwestor/projekty/'
@@ -2434,6 +2514,7 @@ export interface FileRouteTypes {
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
@@ -2452,12 +2533,16 @@ export interface FileRouteTypes {
     | '/admin/dystrybucja'
     | '/admin/embed'
     | '/admin/facebook-connect'
+    | '/admin/finanse'
     | '/admin/follow-up-braki'
     | '/admin/generator-umowy'
     | '/admin/integracje'
     | '/admin/inwestorzy'
+    | '/admin/inwestycje'
     | '/admin/karty-ofert'
     | '/admin/klienci'
+    | '/admin/komunikacja'
+    | '/admin/konfiguracja'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
     | '/admin/kw'
@@ -2469,12 +2554,14 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/posrednicy'
     | '/admin/potencjal-lokalizacyjny'
     | '/admin/pr-media'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
+    | '/admin/sprzedaz'
     | '/admin/studio-publikacji'
     | '/admin/szkolenia'
     | '/admin/text-agent'
@@ -2594,6 +2681,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc'
+    | '/admin/marketing'
     | '/admin/program-posrednikow'
     | '/inwestor/aml'
     | '/inwestor/projekty'
@@ -2665,6 +2753,7 @@ export interface FileRouteTypes {
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
@@ -2683,12 +2772,16 @@ export interface FileRouteTypes {
     | '/admin/dystrybucja'
     | '/admin/embed'
     | '/admin/facebook-connect'
+    | '/admin/finanse'
     | '/admin/follow-up-braki'
     | '/admin/generator-umowy'
     | '/admin/integracje'
     | '/admin/inwestorzy'
+    | '/admin/inwestycje'
     | '/admin/karty-ofert'
     | '/admin/klienci'
+    | '/admin/komunikacja'
+    | '/admin/konfiguracja'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
     | '/admin/kw'
@@ -2700,12 +2793,14 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/posrednicy'
     | '/admin/potencjal-lokalizacyjny'
     | '/admin/pr-media'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
+    | '/admin/sprzedaz'
     | '/admin/studio-publikacji'
     | '/admin/szkolenia'
     | '/admin/text-agent'
@@ -2830,6 +2925,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
+    | '/admin/marketing/'
     | '/admin/program-posrednikow/'
     | '/inwestor/aml/'
     | '/inwestor/projekty/'
@@ -2902,6 +2998,7 @@ export interface RootRouteChildren {
   RegulaminRoute: typeof RegulaminRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  WyborPaneluRoute: typeof WyborPaneluRoute
   WyborRoliRoute: typeof WyborRoliRoute
   ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
@@ -2991,6 +3088,13 @@ declare module '@tanstack/react-router' {
       path: '/wybor-roli'
       fullPath: '/wybor-roli'
       preLoaderRoute: typeof WyborRoliRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wybor-panelu': {
+      id: '/wybor-panelu'
+      path: '/wybor-panelu'
+      fullPath: '/wybor-panelu'
+      preLoaderRoute: typeof WyborPaneluRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -3658,6 +3762,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStudioPublikacjiRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/sprzedaz': {
+      id: '/admin/sprzedaz'
+      path: '/sprzedaz'
+      fullPath: '/admin/sprzedaz'
+      preLoaderRoute: typeof AdminSprzedazRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/skrzynka': {
       id: '/admin/skrzynka'
       path: '/skrzynka'
@@ -3698,6 +3809,13 @@ declare module '@tanstack/react-router' {
       path: '/potencjal-lokalizacyjny'
       fullPath: '/admin/potencjal-lokalizacyjny'
       preLoaderRoute: typeof AdminPotencjalLokalizacyjnyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/posrednicy': {
+      id: '/admin/posrednicy'
+      path: '/posrednicy'
+      fullPath: '/admin/posrednicy'
+      preLoaderRoute: typeof AdminPosrednicyRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/platnosci-dostep': {
@@ -3777,6 +3895,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminKreatorDokumentowRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/konfiguracja': {
+      id: '/admin/konfiguracja'
+      path: '/konfiguracja'
+      fullPath: '/admin/konfiguracja'
+      preLoaderRoute: typeof AdminKonfiguracjaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/komunikacja': {
+      id: '/admin/komunikacja'
+      path: '/komunikacja'
+      fullPath: '/admin/komunikacja'
+      preLoaderRoute: typeof AdminKomunikacjaRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/klienci': {
       id: '/admin/klienci'
       path: '/klienci'
@@ -3789,6 +3921,13 @@ declare module '@tanstack/react-router' {
       path: '/karty-ofert'
       fullPath: '/admin/karty-ofert'
       preLoaderRoute: typeof AdminKartyOfertRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/inwestycje': {
+      id: '/admin/inwestycje'
+      path: '/inwestycje'
+      fullPath: '/admin/inwestycje'
+      preLoaderRoute: typeof AdminInwestycjeRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/inwestorzy': {
@@ -3817,6 +3956,13 @@ declare module '@tanstack/react-router' {
       path: '/follow-up-braki'
       fullPath: '/admin/follow-up-braki'
       preLoaderRoute: typeof AdminFollowUpBrakiRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/finanse': {
+      id: '/admin/finanse'
+      path: '/finanse'
+      fullPath: '/admin/finanse'
+      preLoaderRoute: typeof AdminFinanseRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/facebook-connect': {
@@ -3985,6 +4131,13 @@ declare module '@tanstack/react-router' {
       path: '/program-posrednikow'
       fullPath: '/admin/program-posrednikow/'
       preLoaderRoute: typeof AdminProgramPosrednikowIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/marketing/': {
+      id: '/admin/marketing/'
+      path: '/marketing'
+      fullPath: '/admin/marketing/'
+      preLoaderRoute: typeof AdminMarketingIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/ksiegowosc/': {
@@ -4659,12 +4812,16 @@ interface AdminRouteChildren {
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
   AdminFacebookConnectRoute: typeof AdminFacebookConnectRoute
+  AdminFinanseRoute: typeof AdminFinanseRoute
   AdminFollowUpBrakiRoute: typeof AdminFollowUpBrakiRoute
   AdminGeneratorUmowyRoute: typeof AdminGeneratorUmowyRoute
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
+  AdminInwestycjeRoute: typeof AdminInwestycjeRoute
   AdminKartyOfertRoute: typeof AdminKartyOfertRoute
   AdminKlienciRoute: typeof AdminKlienciRouteWithChildren
+  AdminKomunikacjaRoute: typeof AdminKomunikacjaRoute
+  AdminKonfiguracjaRoute: typeof AdminKonfiguracjaRoute
   AdminKreatorDokumentowRoute: typeof AdminKreatorDokumentowRoute
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
   AdminKwRoute: typeof AdminKwRoute
@@ -4676,12 +4833,14 @@ interface AdminRouteChildren {
   AdminOperatorzyRoute: typeof AdminOperatorzyRoute
   AdminPixeleRoute: typeof AdminPixeleRoute
   AdminPlatnosciDostepRoute: typeof AdminPlatnosciDostepRoute
+  AdminPosrednicyRoute: typeof AdminPosrednicyRoute
   AdminPotencjalLokalizacyjnyRoute: typeof AdminPotencjalLokalizacyjnyRoute
   AdminPrMediaRoute: typeof AdminPrMediaRoute
   AdminProjektyRoute: typeof AdminProjektyRoute
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
   AdminSkrzynkaRoute: typeof AdminSkrzynkaRoute
+  AdminSprzedazRoute: typeof AdminSprzedazRoute
   AdminStudioPublikacjiRoute: typeof AdminStudioPublikacjiRoute
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminTextAgentRoute: typeof AdminTextAgentRoute
@@ -4712,6 +4871,7 @@ interface AdminRouteChildren {
   AdminProgramPosrednikowZdarzeniaRoute: typeof AdminProgramPosrednikowZdarzeniaRoute
   AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
   AdminKsiegowoscIndexRoute: typeof AdminKsiegowoscIndexRoute
+  AdminMarketingIndexRoute: typeof AdminMarketingIndexRoute
   AdminProgramPosrednikowIndexRoute: typeof AdminProgramPosrednikowIndexRoute
 }
 
@@ -4730,12 +4890,16 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminEmbedRoute: AdminEmbedRoute,
   AdminFacebookConnectRoute: AdminFacebookConnectRoute,
+  AdminFinanseRoute: AdminFinanseRoute,
   AdminFollowUpBrakiRoute: AdminFollowUpBrakiRoute,
   AdminGeneratorUmowyRoute: AdminGeneratorUmowyRoute,
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
+  AdminInwestycjeRoute: AdminInwestycjeRoute,
   AdminKartyOfertRoute: AdminKartyOfertRoute,
   AdminKlienciRoute: AdminKlienciRouteWithChildren,
+  AdminKomunikacjaRoute: AdminKomunikacjaRoute,
+  AdminKonfiguracjaRoute: AdminKonfiguracjaRoute,
   AdminKreatorDokumentowRoute: AdminKreatorDokumentowRoute,
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
   AdminKwRoute: AdminKwRoute,
@@ -4747,12 +4911,14 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminOperatorzyRoute: AdminOperatorzyRoute,
   AdminPixeleRoute: AdminPixeleRoute,
   AdminPlatnosciDostepRoute: AdminPlatnosciDostepRoute,
+  AdminPosrednicyRoute: AdminPosrednicyRoute,
   AdminPotencjalLokalizacyjnyRoute: AdminPotencjalLokalizacyjnyRoute,
   AdminPrMediaRoute: AdminPrMediaRoute,
   AdminProjektyRoute: AdminProjektyRoute,
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
   AdminSkrzynkaRoute: AdminSkrzynkaRoute,
+  AdminSprzedazRoute: AdminSprzedazRoute,
   AdminStudioPublikacjiRoute: AdminStudioPublikacjiRoute,
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminTextAgentRoute: AdminTextAgentRoute,
@@ -4785,6 +4951,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminProgramPosrednikowZdarzeniaRoute: AdminProgramPosrednikowZdarzeniaRoute,
   AdminWnioskiIdRoute: AdminWnioskiIdRoute,
   AdminKsiegowoscIndexRoute: AdminKsiegowoscIndexRoute,
+  AdminMarketingIndexRoute: AdminMarketingIndexRoute,
   AdminProgramPosrednikowIndexRoute: AdminProgramPosrednikowIndexRoute,
 }
 
@@ -5049,6 +5216,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegulaminRoute: RegulaminRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  WyborPaneluRoute: WyborPaneluRoute,
   WyborRoliRoute: WyborRoliRoute,
   ZapomnianeHasloRoute: ZapomnianeHasloRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,

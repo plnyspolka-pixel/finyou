@@ -91,7 +91,7 @@ export function EngineUmowaGenerator({ title, subtitle }: EngineUmowaGeneratorPr
     queryKey: ["client-profiles"],
     queryFn: () => listFn(),
   });
-  const profiles: ProfileRow[] = (data?.profiles ?? []) as ProfileRow[];
+  const profiles: ProfileRow[] = (data?.profiles ?? []) as unknown as ProfileRow[];
 
   const klauzule = useMemo(() => listaKlauzul(), []);
   const grupy = useMemo(() => grupujKlauzule(klauzule), [klauzule]);

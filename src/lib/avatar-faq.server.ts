@@ -66,11 +66,31 @@ export async function uploadAudioToHeygen(audio: ArrayBuffer): Promise<string> {
   return id;
 }
 
+// Napisy: v3 przyjmuje OBIEKT `caption` (boolean `caption: true` z API v2
+// wywala walidację: „Extra inputs are not permitted"). Styl da się nadpisać
+// sekretem HEYGEN_CAPTION_STYLE, gdyby konto miało własny preset.
+export const HEYGEN_CAPTION_FORMAT = "srt";
+const captionConfig = () => ({
+  file_format: HEYGEN_CAPTION_FORMAT,
+  style: process.env.HEYGEN_CAPTION_STYLE || "default",
+});
+
+export type HeygenVideoResult = {
+  videoId: string;
+  /** Czy render poszedł z napisami (false = HeyGen odrzucił konfigurację). */
+  captioned: boolean;
+};
+
 export async function createHeygenVideoFromAudio(opts: {
   avatarId: string;
   audioAssetId: string;
-}): Promise<string> {
-  const payload = {
+  /** Domyślnie napisy włączone — shorty/rolki ogląda się bez dźwięku. */
+  captions?: boolean;
+}): Promise<HeygenVideoResult> {
+  // Uwaga: API v3 przyjmuje wyłącznie type 'avatar' / 'image' /
+  // 'cinematic_avatar' / 'studio' — awatary "foto" (talking photo) też idą
+  // jako 'avatar' z avatar_id (tak działała dotychczasowa sztywna lista).
+  const base = {
     type: "avatar",
     avatar_id: opts.avatarId,
     audio_asset_id: opts.audioAssetId,
@@ -78,28 +98,43 @@ export async function createHeygenVideoFromAudio(opts: {
     resolution: "720p",
     background: { type: "color", value: "#101728" },
   };
-  const res = await fetch(`${HEYGEN_BASE}/v3/videos`, {
-    method: "POST",
-    headers: {
-      "X-Api-Key": HEYGEN_API_KEY(),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`HeyGen generate failed: ${res.status} ${t}`);
+  const wantCaptions = opts.captions !== false;
+
+  const send = async (payload: Record<string, unknown>) => {
+    const res = await fetch(`${HEYGEN_BASE}/v3/videos`, {
+      method: "POST",
+      headers: {
+        "X-Api-Key": HEYGEN_API_KEY(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    return { ok: res.ok, status: res.status, body: await res.text() };
+  };
+
+  let captioned = wantCaptions;
+  let out = await send(wantCaptions ? { ...base, caption: captionConfig() } : base);
+  // Konto bez napisów w planie (albo zmieniony kontrakt pola) nie może
+  // blokować całej generacji — ponawiamy raz bez napisów i mówimy o tym wprost.
+  if (!out.ok && wantCaptions && /caption|invalid_parameter|not permitted/i.test(out.body)) {
+    console.warn(`[HeyGen] napisy odrzucone (${out.status}) — render bez napisów: ${out.body}`);
+    captioned = false;
+    out = await send(base);
   }
-  const json = (await res.json()) as { data?: { video_id?: string } };
+  if (!out.ok) throw new Error(`HeyGen generate failed: ${out.status} ${out.body}`);
+
+  const json = JSON.parse(out.body || "{}") as { data?: { video_id?: string } };
   const videoId = json?.data?.video_id;
-  if (!videoId) throw new Error(`HeyGen generate: missing video_id ${JSON.stringify(json)}`);
-  return videoId;
+  if (!videoId) throw new Error(`HeyGen generate: missing video_id ${out.body}`);
+  return { videoId, captioned };
 }
 
 export async function getHeygenVideoStatus(videoId: string): Promise<{
   status: string;
   video_url?: string | null;
   thumbnail_url?: string | null;
+  /** Plik napisów (SRT) obok wideo — nazwa pola bywa różna w odpowiedziach. */
+  subtitle_url?: string | null;
   error?: unknown;
 }> {
   const res = await fetch(`${HEYGEN_BASE}/v3/videos/${encodeURIComponent(videoId)}`, {
@@ -114,14 +149,20 @@ export async function getHeygenVideoStatus(videoId: string): Promise<{
       status?: string;
       video_url?: string | null;
       thumbnail_url?: string | null;
+      caption_url?: string | null;
+      subtitle_url?: string | null;
+      srt_url?: string | null;
+      caption?: { url?: string | null } | null;
       failure_code?: string | null;
       failure_message?: string | null;
     };
   };
+  const d = json?.data;
   return {
-    status: json?.data?.status ?? "unknown",
-    video_url: json?.data?.video_url ?? null,
-    thumbnail_url: json?.data?.thumbnail_url ?? null,
-    error: json?.data?.failure_message ?? json?.data?.failure_code,
+    status: d?.status ?? "unknown",
+    video_url: d?.video_url ?? null,
+    thumbnail_url: d?.thumbnail_url ?? null,
+    subtitle_url: d?.caption_url ?? d?.subtitle_url ?? d?.srt_url ?? d?.caption?.url ?? null,
+    error: d?.failure_message ?? d?.failure_code,
   };
 }

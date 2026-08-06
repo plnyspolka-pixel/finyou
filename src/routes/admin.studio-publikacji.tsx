@@ -4,7 +4,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getStudioStatus,
   listSocialQueue,
@@ -15,8 +15,12 @@ import {
   publishSocialQueueItemNow,
   listStudioVideoSources,
   listStudioVideoJobs,
+  listStudioVoices,
+  listStudioAvatars,
   generateStudioScript,
   startStudioVideo,
+  enqueueStudioVideoBatch,
+  processStudioVideoQueueNow,
   pollStudioVideoJob,
   deleteStudioVideoJob,
   generateStudioPrompts,
@@ -25,9 +29,19 @@ import {
   deleteStudioImage,
   type StudioPlatform,
   type StudioVideoJob,
+  type StudioAvatar,
 } from "@/lib/studio.functions";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
 import { HEYGEN_AVATARS, FILIP_VOICE_ID } from "@/lib/heygen-avatars";
+import {
+  SHORTS_QUESTIONS,
+  SHORTS_SECTIONS,
+  SHORTS_CATEGORY_LABELS,
+  shortsPromptForQuestion,
+  parseShortsPromptTag,
+  type ShortsCategory,
+} from "@/lib/shorts-question-bank";
+import { buildShortsScript, joinShortsScript, SHORTS_DYNAMIC_ELEMENTS } from "@/lib/shorts-script";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +49,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
@@ -51,6 +66,9 @@ import {
   Wand2,
   Copy,
   Send,
+  BookOpen,
+  CheckCircle2,
+  Captions,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/studio-publikacji")({
@@ -68,6 +86,10 @@ const PLATFORM_LABELS: Record<string, string> = {
   instagram_reels: "Instagram Reels",
 };
 
+// Zgodne z MAX_ATTEMPTS w src/lib/studio-publishing.server.ts — chwilowe błędy
+// (limity Meta) prób nie zużywają, więc licznik pokazuje realne podejścia.
+const MAX_PUBLISH_ATTEMPTS = 3;
+
 const STATUS_LABELS: Record<
   string,
   { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
@@ -83,11 +105,20 @@ const STATUS_LABELS: Record<
 
 const VIDEO_STATUS_LABELS: Record<string, string> = {
   pending: "Oczekuje",
+  queued: "W kolejce",
+  generating_script: "Generuję scenariusz…",
   generating_audio: "Generuję lektora…",
   uploading: "Wysyłam audio…",
   rendering: "Renderowanie w HeyGen…",
   ready: "Gotowe",
   failed: "Błąd",
+};
+
+const AUTO_PLATFORM_SHORT: Record<string, string> = {
+  youtube: "YouTube",
+  facebook_reels: "FB Reels",
+  instagram_reels: "IG Reels",
+  facebook_post: "Post FB",
 };
 
 function externalUrl(platform: string, externalId: string | null): string | null {
@@ -110,8 +141,12 @@ function StudioPage() {
   const publishNowFn = useServerFn(publishSocialQueueItemNow);
   const sourcesFn = useServerFn(listStudioVideoSources);
   const videoJobsFn = useServerFn(listStudioVideoJobs);
+  const voicesFn = useServerFn(listStudioVoices);
+  const avatarsFn = useServerFn(listStudioAvatars);
   const genScriptFn = useServerFn(generateStudioScript);
   const startVideoFn = useServerFn(startStudioVideo);
+  const batchFn = useServerFn(enqueueStudioVideoBatch);
+  const processQueueFn = useServerFn(processStudioVideoQueueNow);
   const pollVideoFn = useServerFn(pollStudioVideoJob);
   const deleteVideoFn = useServerFn(deleteStudioVideoJob);
   const genPromptsFn = useServerFn(generateStudioPrompts);
@@ -141,6 +176,16 @@ function StudioPage() {
     queryFn: () => videoJobsFn(),
     refetchInterval: 20_000,
   });
+  const { data: voices = [] } = useQuery({
+    queryKey: ["studio-voices"],
+    queryFn: () => voicesFn(),
+    staleTime: 5 * 60_000,
+  });
+  const { data: avatars = [], isLoading: avatarsLoading } = useQuery({
+    queryKey: ["studio-avatars"],
+    queryFn: () => avatarsFn(),
+    staleTime: 5 * 60_000,
+  });
   const { data: images = [] } = useQuery({
     queryKey: ["studio-images"],
     queryFn: () => imagesFn(),
@@ -159,6 +204,32 @@ function StudioPage() {
     }, 15_000);
     return () => clearInterval(t);
   }, [videoJobs, pollVideoFn, qc]);
+
+  // Otwarty panel napędza kolejkę wsadową (joby 'queued') — jeden job na raz,
+  // sekwencyjnie. Przy zamkniętym panelu kolejkę i tak przetworzy cron tick.
+  const queueDriverBusy = useRef(false);
+  const queuedCount = videoJobs.filter((j) => j.status === "queued").length;
+  useEffect(() => {
+    if (!queuedCount || queueDriverBusy.current) return;
+    queueDriverBusy.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        for (let i = 0; i < 30 && !cancelled; i++) {
+          const r = await processQueueFn();
+          qc.invalidateQueries({ queryKey: ["studio-video-jobs"] });
+          if (!r.remaining) break;
+        }
+      } catch {
+        // Błąd pojedynczego joba jest zapisany w jego last_error.
+      } finally {
+        queueDriverBusy.current = false;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [queuedCount, processQueueFn, qc]);
 
   // ── Publikacja ─────────────────────────────────────────────────────────────
   const [platforms, setPlatforms] = useState<StudioPlatform[]>([]);
@@ -219,13 +290,130 @@ function StudioPage() {
 
   // ── Wideo AI ───────────────────────────────────────────────────────────────
   const [videoPrompt, setVideoPrompt] = useState("");
-  const [script, setScript] = useState("");
+  // Scenariusz rozbity na sekcje; lektor czyta sklejkę hook + treść + CTA.
+  const [scriptHook, setScriptHook] = useState("");
+  const [scriptContent, setScriptContent] = useState("");
+  const [scriptCta, setScriptCta] = useState("");
+  const fullScript = joinShortsScript({
+    hook: scriptHook,
+    content: scriptContent,
+    cta: scriptCta,
+  });
   const [avatarId, setAvatarId] = useState(HEYGEN_AVATARS[0].id);
+  const [voiceId, setVoiceId] = useState(FILIP_VOICE_ID);
+  // Shorty i rolki ogląda się bez dźwięku — napisy domyślnie włączone.
+  const [captionsOn, setCaptionsOn] = useState(true);
+
+  // ── Wybór awatara (katalog HeyGen) ─────────────────────────────────────────
+  const [avatarSearch, setAvatarSearch] = useState("");
+  const [avatarOnlyMine, setAvatarOnlyMine] = useState(true);
+  const hasMineAvatars = useMemo(() => avatars.some((a) => a.mine), [avatars]);
+  const filteredAvatars = useMemo(() => {
+    const needle = avatarSearch.trim().toLowerCase();
+    return avatars.filter(
+      (a) =>
+        (!avatarOnlyMine || !hasMineAvatars || a.mine) &&
+        (!needle ||
+          a.name.toLowerCase().includes(needle) ||
+          (a.group ?? "").toLowerCase().includes(needle)),
+    );
+  }, [avatars, avatarSearch, avatarOnlyMine, hasMineAvatars]);
+  const selectedAvatar: StudioAvatar | undefined = useMemo(
+    () => avatars.find((a) => a.id === avatarId),
+    [avatars, avatarId],
+  );
+  const AVATAR_DISPLAY_CAP = 60;
+
+  // ── Auto-publikacja po wygenerowaniu ───────────────────────────────────────
+  const [autoPublishOn, setAutoPublishOn] = useState(false);
+  const [autoPlatforms, setAutoPlatforms] = useState<StudioPlatform[]>(["youtube"]);
+  const [autoPrivacy, setAutoPrivacy] = useState<"public" | "unlisted" | "private">("public");
+  const toggleAutoPlatform = (p: StudioPlatform) =>
+    setAutoPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+  const effectiveAutoPlatforms = autoPublishOn ? autoPlatforms : [];
+
+  // ── Baza 250 pytań do shortów ──────────────────────────────────────────────
+  const [bankCategory, setBankCategory] = useState<"all" | ShortsCategory>("all");
+  const [bankSection, setBankSection] = useState("all");
+  const [bankSearch, setBankSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const toggleSelected = (id: number) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // Prompt z prefiksem "#N · " oznacza pytanie z bazy — wtedy scenariusz
+  // dostaje obowiązkowe otwarcie rolki (znacznik kategorii).
+  const selectedQuestionId = parseShortsPromptTag(videoPrompt);
+  const selectedBankQuestion =
+    selectedQuestionId != null
+      ? SHORTS_QUESTIONS.find((q) => q.id === selectedQuestionId)
+      : undefined;
+
+  // Pytania, dla których istnieje już job (żeby nie robić dubli).
+  const doneQuestionIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const j of videoJobs) {
+      const id = parseShortsPromptTag(j.prompt);
+      if (id != null && j.status !== "failed") ids.add(id);
+    }
+    return ids;
+  }, [videoJobs]);
+
+  const bankQuestions = useMemo(() => {
+    const needle = bankSearch.trim().toLowerCase();
+    return SHORTS_QUESTIONS.filter(
+      (q) =>
+        (bankCategory === "all" || q.category === bankCategory) &&
+        (bankSection === "all" || q.section === bankSection) &&
+        (!needle ||
+          q.question.toLowerCase().includes(needle) ||
+          q.thesis.toLowerCase().includes(needle) ||
+          String(q.id) === needle.replace(/^#/, "")),
+    );
+  }, [bankCategory, bankSection, bankSearch]);
+
+  const bankSections = useMemo(
+    () =>
+      bankCategory === "all"
+        ? SHORTS_SECTIONS
+        : [
+            ...new Set(
+              SHORTS_QUESTIONS.filter((q) => q.category === bankCategory).map((q) => q.section),
+            ),
+          ],
+    [bankCategory],
+  );
+
+  // Pytanie z paczki ma gotowy, sprawdzony scenariusz — podstawiamy go
+  // od razu (bez AI) w rozbiciu na sekcje; wszystko edytowalne przed generacją.
+  const applyBankQuestion = (id: number) => {
+    const q = SHORTS_QUESTIONS.find((x) => x.id === id);
+    if (!q) return;
+    const gen = buildShortsScript(q);
+    setVideoPrompt(shortsPromptForQuestion(q));
+    setScriptHook(gen.hook);
+    setScriptContent(gen.content);
+    setScriptCta(gen.cta);
+    if (!title) setTitle(gen.title);
+    if (!message) setMessage([gen.description, gen.hashtags.join(" ")].join("\n\n"));
+    toast.success(`Pytanie #${q.id} — gotowy scenariusz z paczki podstawiony`);
+  };
 
   const genScriptM = useMutation({
-    mutationFn: () => genScriptFn({ data: { prompt: videoPrompt } }),
+    mutationFn: () =>
+      genScriptFn({
+        data: { prompt: videoPrompt, question_id: selectedQuestionId ?? undefined },
+      }),
     onSuccess: (r) => {
-      setScript(r.script);
+      // Pytanie z paczki: gotowe sekcje 1:1 z pliku; własny prompt: tekst AI
+      // w treści, hook/CTA puste.
+      setScriptHook(r.hook);
+      setScriptContent(r.content);
+      setScriptCta(r.cta);
       if (r.title && !title) setTitle(r.title);
       if (r.description && !message) setMessage([r.description, r.hashtags.join(" ")].join("\n\n"));
       toast.success("Scenariusz gotowy — możesz go edytować przed generacją");
@@ -235,14 +423,64 @@ function StudioPage() {
   const startVideoM = useMutation({
     mutationFn: () =>
       startVideoFn({
-        data: { prompt: videoPrompt, script, avatar_id: avatarId, voice_id: FILIP_VOICE_ID },
+        data: {
+          prompt: videoPrompt,
+          script: fullScript,
+          avatar_id: avatarId,
+          voice_id: voiceId,
+          captions: captionsOn,
+          auto_publish_platforms: effectiveAutoPlatforms,
+          publish_privacy: autoPrivacy,
+          publish_title: title,
+          publish_description: message,
+        },
       }),
     onSuccess: () => {
-      toast.success("Generacja wideo uruchomiona — status w tabeli poniżej");
+      toast.success(
+        effectiveAutoPlatforms.length
+          ? "Generacja uruchomiona — po wyrenderowaniu wideo trafi do publikacji"
+          : "Generacja wideo uruchomiona — status w tabeli poniżej",
+      );
       qc.invalidateQueries({ queryKey: ["studio-video-jobs"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const batchM = useMutation({
+    mutationFn: () =>
+      batchFn({
+        data: {
+          question_ids: [...selectedIds],
+          avatar_id: avatarId,
+          voice_id: voiceId,
+          captions: captionsOn,
+          auto_publish_platforms: effectiveAutoPlatforms,
+          publish_privacy: autoPrivacy,
+        },
+      }),
+    onSuccess: (r) => {
+      toast.success(
+        `Dodano ${r.queued} pytań do kolejki generowania` +
+          (r.skipped ? `, pominięto ${r.skipped} (mają już wideo)` : ""),
+      );
+      setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ["studio-video-jobs"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Zaznacza kolejne (do 5) pytania bez wideo z aktualnie przefiltrowanej listy.
+  const selectNextUnproduced = () => {
+    const next = bankQuestions
+      .filter((q) => !doneQuestionIds.has(q.id) && !selectedIds.has(q.id))
+      .slice(0, 5)
+      .map((q) => q.id);
+    if (!next.length) {
+      toast.info("Wszystkie przefiltrowane pytania mają już wideo lub są zaznaczone.");
+      return;
+    }
+    setSelectedIds((prev) => new Set([...prev, ...next]));
+  };
   const deleteVideoM = useMutation({
     mutationFn: (id: string) => deleteVideoFn({ data: { id } }),
     onSuccess: () => {
@@ -310,10 +548,10 @@ function StudioPage() {
   const needsVideo = platforms.some((p) => p !== "facebook_post");
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex items-center gap-2">
-        <Clapperboard className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-semibold">Studio publikacji</h1>
+        <Clapperboard className="h-6 w-6 shrink-0 text-primary" />
+        <h1 className="text-xl font-semibold sm:text-2xl">Studio publikacji</h1>
       </div>
 
       {status && (
@@ -337,7 +575,9 @@ function StudioPage() {
       )}
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        {/* h-auto + flex-wrap: na telefonie zakładki mają się zawijać,
+            a nie ściskać do nieczytelnych, nachodzących na siebie napisów. */}
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1">
           <TabsTrigger value="publikacja">
             <Send className="mr-1 h-4 w-4" /> Publikacja
           </TabsTrigger>
@@ -495,24 +735,26 @@ function StudioPage() {
                     return (
                       <div
                         key={`yt-${item.id}`}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                        className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:justify-between"
                       >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline">YouTube Short</Badge>
                             <Badge variant={st.variant}>{st.label}</Badge>
-                            <span className="truncate font-medium">{item.title}</span>
                           </div>
+                          <p className="break-words font-medium">{item.title}</p>
                           <p className="text-xs text-muted-foreground">
                             {item.status === "published" && item.published_at
                               ? `Opublikowano ${new Date(item.published_at).toLocaleString("pl-PL")}`
                               : `Plan: ${new Date(item.scheduled_at).toLocaleString("pl-PL")}`}
                           </p>
                           {item.last_error && (
-                            <p className="break-all text-xs text-destructive">{item.last_error}</p>
+                            <p className="break-words text-xs text-destructive">
+                              {item.last_error}
+                            </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1 sm:shrink-0 sm:justify-end">
                           {item.youtube_video_id && (
                             <a
                               href={`https://www.youtube.com/shorts/${item.youtube_video_id}`}
@@ -543,29 +785,34 @@ function StudioPage() {
                     return (
                       <div
                         key={item.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                        className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:justify-between"
                       >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline">
                               {PLATFORM_LABELS[item.platform] ?? item.platform}
                             </Badge>
                             <Badge variant={st.variant}>{st.label}</Badge>
-                            <span className="truncate font-medium">
-                              {item.title || item.message.slice(0, 60) || "(bez tytułu)"}
-                            </span>
                           </div>
+                          <p className="break-words font-medium">
+                            {item.title || item.message.slice(0, 60) || "(bez tytułu)"}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {item.status === "published" && item.published_at
                               ? `Opublikowano ${new Date(item.published_at).toLocaleString("pl-PL")}`
-                              : `Plan: ${new Date(item.scheduled_at).toLocaleString("pl-PL")}`}
-                            {item.attempt_count > 0 && ` • próby: ${item.attempt_count}`}
+                              : `${item.attempt_count > 0 ? "Kolejna próba" : "Plan"}: ${new Date(
+                                  item.scheduled_at,
+                                ).toLocaleString("pl-PL")}`}
+                            {item.attempt_count > 0 &&
+                              ` • próby: ${item.attempt_count}/${MAX_PUBLISH_ATTEMPTS}`}
                           </p>
                           {item.last_error && (
-                            <p className="break-all text-xs text-destructive">{item.last_error}</p>
+                            <p className="break-words text-xs text-destructive">
+                              {item.last_error}
+                            </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1 sm:shrink-0 sm:justify-end">
                           {link && (
                             <a href={link} target="_blank" rel="noreferrer">
                               <Button variant="outline" size="sm">
@@ -593,12 +840,15 @@ function StudioPage() {
                               </Button>
                             </>
                           )}
-                          {(item.status === "failed" || item.status === "cancelled") && (
+                          {(item.status === "failed" ||
+                            item.status === "cancelled" ||
+                            item.status === "processing") && (
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => retryQM.mutate(item.id)}
                               disabled={retryQM.isPending}
+                              title="Ponawia próbę od razu i zeruje licznik prób"
                             >
                               <RefreshCw className="mr-1 h-4 w-4" /> Ponów
                             </Button>
@@ -627,6 +877,188 @@ function StudioPage() {
         <TabsContent value="wideo" className="space-y-6">
           <Card>
             <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BookOpen className="h-5 w-5" /> Baza pytań do shortów ({SHORTS_QUESTIONS.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Kategoria</Label>
+                  <select
+                    className="w-full rounded-md border bg-background p-2 text-sm"
+                    value={bankCategory}
+                    onChange={(e) => {
+                      setBankCategory(e.target.value as typeof bankCategory);
+                      setBankSection("all");
+                    }}
+                  >
+                    <option value="all">Wszystkie</option>
+                    <option value="klient">{SHORTS_CATEGORY_LABELS.klient}</option>
+                    <option value="inwestor">{SHORTS_CATEGORY_LABELS.inwestor}</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Sekcja</Label>
+                  <select
+                    className="w-full rounded-md border bg-background p-2 text-sm"
+                    value={bankSection}
+                    onChange={(e) => setBankSection(e.target.value)}
+                  >
+                    <option value="all">Wszystkie</option>
+                    {bankSections.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Szukaj (treść lub nr pytania)</Label>
+                  <Input
+                    value={bankSearch}
+                    onChange={(e) => setBankSearch(e.target.value)}
+                    placeholder="np. hipoteka, LTV, 58…"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 p-2">
+                <Button
+                  size="sm"
+                  onClick={() => batchM.mutate()}
+                  disabled={batchM.isPending || selectedIds.size === 0}
+                >
+                  {batchM.isPending ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Video className="mr-1 h-4 w-4" />
+                  )}
+                  Generuj zaznaczone ({selectedIds.size})
+                </Button>
+                <Button variant="outline" size="sm" onClick={selectNextUnproduced}>
+                  Zaznacz 5 kolejnych bez wideo
+                </Button>
+                {selectedIds.size > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                    Wyczyść zaznaczenie
+                  </Button>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  Seria używa wybranego niżej awatara, głosu i ustawień auto-publikacji; scenariusze
+                  to gotowa treść z paczki (bez AI).
+                  {queuedCount > 0 && ` W kolejce: ${queuedCount}.`}
+                </span>
+              </div>
+
+              <div className="max-h-96 space-y-2 overflow-y-auto rounded-md border p-2">
+                {bankQuestions.length === 0 ? (
+                  <p className="p-2 text-sm text-muted-foreground">Brak pytań dla tych filtrów.</p>
+                ) : (
+                  bankQuestions.map((q) => (
+                    <div
+                      key={q.id}
+                      className={`flex items-start justify-between gap-3 rounded-lg border p-3 ${
+                        selectedQuestionId === q.id ? "border-primary bg-primary/5" : ""
+                      }`}
+                    >
+                      <Checkbox
+                        className="mt-1"
+                        checked={selectedIds.has(q.id)}
+                        onCheckedChange={() => toggleSelected(q.id)}
+                      />
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">#{q.id}</Badge>
+                          <Badge variant={q.category === "klient" ? "secondary" : "default"}>
+                            {q.category === "klient" ? "Klient" : "Inwestor"}
+                          </Badge>
+                          {doneQuestionIds.has(q.id) && (
+                            <Badge variant="outline" className="gap-1 text-emerald-600">
+                              <CheckCircle2 className="h-3 w-3" /> wideo istnieje
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="break-words text-sm font-medium">{q.question}</p>
+                        <p className="line-clamp-2 text-xs text-muted-foreground">{q.thesis}</p>
+                      </div>
+                      <Button
+                        variant={selectedQuestionId === q.id ? "default" : "outline"}
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => applyBankQuestion(q.id)}
+                      >
+                        <Send className="mr-1 h-4 w-4" /> Użyj
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Pytania z pliku „Pożyczki prywatne — 250 pytań do shortów" (docs/shorts). „Użyj"
+                podstawia GOTOWY, sprawdzony scenariusz z paczki (znacznik kategorii → pytanie →
+                teza → CTA) — AI nic nie przepisuje; tekst możesz jeszcze ręcznie poprawić przed
+                generacją. Zielony znaczek = dla pytania istnieje już wygenerowane wideo w
+                bibliotece poniżej.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-lg">
+                <span className="flex items-center gap-2">
+                  <Send className="h-5 w-5" /> Auto-publikacja po wygenerowaniu
+                </span>
+                <Switch checked={autoPublishOn} onCheckedChange={setAutoPublishOn} />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {autoPublishOn ? (
+                <>
+                  <div className="flex flex-wrap gap-4">
+                    {(["youtube", "instagram_reels", "facebook_reels"] as const).map((p) => (
+                      <label key={p} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={autoPlatforms.includes(p)}
+                          onCheckedChange={() => toggleAutoPlatform(p)}
+                        />
+                        {PLATFORM_LABELS[p]}
+                      </label>
+                    ))}
+                    <div className="flex items-center gap-2 text-sm">
+                      <Label className="text-sm font-normal">Widoczność (YouTube):</Label>
+                      <select
+                        className="rounded-md border bg-background p-1.5 text-sm"
+                        value={autoPrivacy}
+                        onChange={(e) => setAutoPrivacy(e.target.value as typeof autoPrivacy)}
+                      >
+                        <option value="public">Publiczny</option>
+                        <option value="unlisted">Niepubliczny (unlisted)</option>
+                        <option value="private">Prywatny</option>
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Gdy render w HeyGen się skończy, wideo trafi automatycznie do kolejek publikacji
+                    zaznaczonych platform (tytuł i opis generuje AI razem ze scenariuszem). Działa
+                    też przy zamkniętej przeglądarce — dogląda tego cron co 10 minut.
+                    {autoPublishOn &&
+                      !autoPlatforms.length &&
+                      " Zaznacz co najmniej jedną platformę."}
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Wyłączona — gotowe wideo poczeka w bibliotece, publikujesz ręcznie przyciskiem
+                  „Publikuj".
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle className="text-lg">Wygeneruj wideo HeyGen z promptu</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -638,6 +1070,12 @@ function StudioPage() {
                   rows={2}
                   placeholder="np. Dlaczego pożyczka pod nieruchomość bywa szybsza niż kredyt bankowy"
                 />
+                {selectedQuestionId != null && (
+                  <p className="text-xs text-muted-foreground">
+                    Pytanie #{selectedQuestionId} z paczki — scenariusz poniżej to gotowa,
+                    sprawdzona treść (bez AI); „Wygeneruj scenariusz" przywraca oryginał z paczki.
+                  </p>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => genScriptM.mutate()}
@@ -652,111 +1090,309 @@ function StudioPage() {
                 </Button>
               </div>
 
+              <div className="space-y-3">
+                <Label>Scenariusz (tekst mówiony — możesz edytować każdą sekcję)</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Hook — znacznik kategorii + pytanie (mówione otwarcie rolki)
+                  </Label>
+                  <Textarea
+                    value={scriptHook}
+                    onChange={(e) => setScriptHook(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Treść — teza odpowiedzi (merytoryka rolki)
+                  </Label>
+                  <Textarea
+                    value={scriptContent}
+                    onChange={(e) => setScriptContent(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">CTA — zamknięcie rolki</Label>
+                  <Textarea
+                    value={scriptCta}
+                    onChange={(e) => setScriptCta(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Lektor przeczyta sklejkę: hook → treść → CTA (
+                  {fullScript.trim().split(/\s+/).filter(Boolean).length} słów).
+                </p>
+
+                {selectedBankQuestion && (
+                  <div className="space-y-2 rounded-md border bg-muted/40 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-xs">
+                        Elementy dynamiczne — ekran (lektor ich NIE czyta; do montażu)
+                      </Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            SHORTS_DYNAMIC_ELEMENTS[selectedBankQuestion.category]
+                              .map((e) => `• ${e}`)
+                              .join("\n"),
+                          );
+                          toast.success("Skopiowano elementy dynamiczne");
+                        }}
+                      >
+                        <Copy className="mr-1 h-4 w-4" /> Kopiuj
+                      </Button>
+                    </div>
+                    <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                      {SHORTS_DYNAMIC_ELEMENTS[selectedBankQuestion.category].map((el, i) => (
+                        <li key={i}>{el}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
-                <Label>Scenariusz (tekst mówiony — możesz edytować)</Label>
-                <Textarea value={script} onChange={(e) => setScript(e.target.value)} rows={6} />
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label>
+                    Awatar (HeyGen)
+                    {selectedAvatar && (
+                      <span className="ml-2 font-normal text-muted-foreground">
+                        wybrany: {selectedAvatar.name}
+                        {selectedAvatar.group ? ` (${selectedAvatar.group})` : ""}
+                      </span>
+                    )}
+                  </Label>
+                  <div className="flex items-center gap-3">
+                    {hasMineAvatars && (
+                      <label className="flex cursor-pointer items-center gap-2 text-xs">
+                        <Checkbox
+                          checked={avatarOnlyMine}
+                          onCheckedChange={(v) => setAvatarOnlyMine(v === true)}
+                        />
+                        Tylko moje
+                      </label>
+                    )}
+                    <Input
+                      className="h-8 w-48"
+                      value={avatarSearch}
+                      onChange={(e) => setAvatarSearch(e.target.value)}
+                      placeholder="Szukaj awatara…"
+                    />
+                  </div>
+                </div>
+                {avatarsLoading ? (
+                  <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Wczytuję awatary z konta HeyGen…
+                  </p>
+                ) : filteredAvatars.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Brak awatarów dla tych filtrów — zmień wyszukiwanie lub odznacz „Tylko moje".
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid max-h-[420px] grid-cols-2 gap-3 overflow-y-auto rounded-md border p-2 sm:grid-cols-3 lg:grid-cols-5">
+                      {filteredAvatars.slice(0, AVATAR_DISPLAY_CAP).map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => setAvatarId(a.id)}
+                          className={`rounded-lg border p-2 text-left transition-colors ${
+                            avatarId === a.id
+                              ? "border-primary ring-2 ring-primary"
+                              : "hover:border-muted-foreground/50"
+                          }`}
+                        >
+                          {a.preview ? (
+                            <img
+                              src={a.preview}
+                              alt={a.name}
+                              className="aspect-square w-full rounded-md object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex aspect-square w-full items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
+                              brak podglądu
+                            </div>
+                          )}
+                          <p className="mt-1 truncate text-xs font-medium">{a.name}</p>
+                          <p className="truncate text-[11px] text-muted-foreground">
+                            {a.mine ? "Mój" : "Publiczny"}
+                            {a.kind === "talking_photo" ? " • foto" : ""}
+                            {a.group ? ` • ${a.group}` : ""}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                    {filteredAvatars.length > AVATAR_DISPLAY_CAP && (
+                      <p className="text-xs text-muted-foreground">
+                        Pokazuję {AVATAR_DISPLAY_CAP} z {filteredAvatars.length} — zawęź
+                        wyszukiwaniem.
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Awatar</Label>
+                  <Label>Głos lektora (ElevenLabs)</Label>
                   <select
                     className="w-full rounded-md border bg-background p-2 text-sm"
-                    value={avatarId}
-                    onChange={(e) => setAvatarId(e.target.value)}
+                    value={voiceId}
+                    onChange={(e) => setVoiceId(e.target.value)}
                   >
-                    {HEYGEN_AVATARS.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} — {a.description}
+                    {(voices.length
+                      ? voices
+                      : [{ id: FILIP_VOICE_ID, name: "Filip (domyślny)", description: "" }]
+                    ).map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                        {v.description ? ` — ${v.description}` : ""}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div className="flex items-end">
-                  <Button
-                    onClick={() => startVideoM.mutate()}
-                    disabled={startVideoM.isPending || !script.trim()}
-                  >
-                    {startVideoM.isPending ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Video className="mr-1 h-4 w-4" />
-                    )}
-                    Generuj wideo
-                  </Button>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Captions className="h-4 w-4" /> Napisy na wideo
+                  </Label>
+                  <div className="flex h-10 items-center gap-3 rounded-md border bg-muted/40 px-3">
+                    <Switch checked={captionsOn} onCheckedChange={setCaptionsOn} />
+                    <span className="text-sm text-muted-foreground">
+                      {captionsOn ? "Włączone (zalecane)" : "Wyłączone"}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              <Button
+                onClick={() => startVideoM.mutate()}
+                disabled={startVideoM.isPending || !fullScript.trim()}
+              >
+                {startVideoM.isPending ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : (
+                  <Video className="mr-1 h-4 w-4" />
+                )}
+                Generuj wideo
+              </Button>
               <p className="text-xs text-muted-foreground">
-                Pipeline: scenariusz → lektor ElevenLabs → awatar HeyGen (pion 9:16, 720p).
-                Renderowanie trwa zwykle 2-10 minut; status odświeża się automatycznie.
+                Pipeline: scenariusz → lektor ElevenLabs → awatar HeyGen (pion 9:16, 720p, napisy
+                wypalane przez HeyGen). Renderowanie trwa zwykle 2-10 minut; status odświeża się
+                automatycznie. Ustawienie napisów obowiązuje też dla generowania wsadowego.
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Wygenerowane wideo</CardTitle>
+              <CardTitle className="text-lg">
+                Biblioteka wygenerowanych wideo ({videoJobs.length})
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {videoJobs.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Brak wygenerowanych wideo.</p>
               ) : (
                 <div className="space-y-3">
-                  {videoJobs.map((j: StudioVideoJob) => (
-                    <div
-                      key={j.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant={
-                              j.status === "ready"
-                                ? "default"
-                                : j.status === "failed"
-                                  ? "destructive"
-                                  : "outline"
-                            }
-                          >
-                            {VIDEO_STATUS_LABELS[j.status] ?? j.status}
-                          </Badge>
-                          <span className="truncate font-medium">{j.prompt.slice(0, 90)}</span>
+                  {videoJobs.map((j: StudioVideoJob) => {
+                    const avatar =
+                      avatars.find((a) => a.id === j.avatar_id) ??
+                      HEYGEN_AVATARS.find((a) => a.id === j.avatar_id);
+                    const voice = voices.find((v) => v.id === j.voice_id);
+                    return (
+                      <div
+                        key={j.id}
+                        className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:justify-between"
+                      >
+                        <div className="flex min-w-0 flex-1 gap-3">
+                          {j.thumbnail_url && (
+                            <img
+                              src={j.thumbnail_url}
+                              alt=""
+                              className="h-16 w-10 shrink-0 rounded-md object-cover"
+                              loading="lazy"
+                            />
+                          )}
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge
+                                variant={
+                                  j.status === "ready"
+                                    ? "default"
+                                    : j.status === "failed"
+                                      ? "destructive"
+                                      : "outline"
+                                }
+                              >
+                                {VIDEO_STATUS_LABELS[j.status] ?? j.status}
+                              </Badge>
+                              <Badge variant="outline" className="gap-1">
+                                <Captions className="h-3 w-3" />
+                                {j.captions ? "napisy" : "bez napisów"}
+                              </Badge>
+                            </div>
+                            <p className="break-words font-medium">{j.prompt.slice(0, 90)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(j.created_at).toLocaleString("pl-PL")}
+                              {avatar ? ` • ${avatar.name}` : ""}
+                              {voice ? ` • głos: ${voice.name}` : ""}
+                              {j.auto_publish_platforms.length > 0 &&
+                                ` • auto: ${j.auto_publish_platforms
+                                  .map((p) => AUTO_PLATFORM_SHORT[p] ?? p)
+                                  .join(", ")}${
+                                  j.auto_published_at
+                                    ? ` (wysłano do publikacji ${new Date(
+                                        j.auto_published_at,
+                                      ).toLocaleString("pl-PL")})`
+                                    : ""
+                                }`}
+                            </p>
+                            {j.last_error && (
+                              <p className="break-words text-xs text-destructive">{j.last_error}</p>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(j.created_at).toLocaleString("pl-PL")}
-                        </p>
-                        {j.last_error && (
-                          <p className="break-all text-xs text-destructive">{j.last_error}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {j.video_url && (
-                          <>
-                            <a href={j.video_url} target="_blank" rel="noreferrer">
-                              <Button variant="outline" size="sm">
-                                <ExternalLink className="mr-1 h-4 w-4" /> Podgląd
+                        <div className="flex flex-wrap items-center gap-1 sm:shrink-0 sm:justify-end">
+                          {j.video_url && (
+                            <>
+                              <a href={j.video_url} target="_blank" rel="noreferrer">
+                                <Button variant="outline" size="sm">
+                                  <ExternalLink className="mr-1 h-4 w-4" /> Podgląd
+                                </Button>
+                              </a>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => applyVideoToPublish(j.video_url!)}
+                              >
+                                <Send className="mr-1 h-4 w-4" /> Publikuj
+                              </Button>
+                            </>
+                          )}
+                          {j.subtitle_url && (
+                            <a href={j.subtitle_url} target="_blank" rel="noreferrer">
+                              <Button variant="outline" size="sm" title="Plik napisów (SRT)">
+                                <Captions className="mr-1 h-4 w-4" /> SRT
                               </Button>
                             </a>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => applyVideoToPublish(j.video_url!)}
-                            >
-                              <Send className="mr-1 h-4 w-4" /> Publikuj
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteVideoM.mutate(j.id)}
-                          disabled={deleteVideoM.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteVideoM.mutate(j.id)}
+                            disabled={deleteVideoM.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
