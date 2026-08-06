@@ -22,6 +22,7 @@ type JobRow = {
   heygen_video_id: string | null;
   status: string;
   video_url: string | null;
+  captions: boolean;
   auto_publish_platforms: string[];
   publish_privacy: string;
   publish_title: string;
@@ -123,13 +124,14 @@ async function processClaimedJob(job: JobRow): Promise<void> {
   await supabaseAdmin.from("studio_video_jobs").update({ status: "uploading" }).eq("id", job.id);
 
   const assetId = await uploadAudioToHeygen(audio);
-  const videoId = await createHeygenVideoFromAudio({
+  const { videoId, captioned } = await createHeygenVideoFromAudio({
     avatarId: job.avatar_id,
     audioAssetId: assetId,
+    captions: job.captions !== false,
   });
   await supabaseAdmin
     .from("studio_video_jobs")
-    .update({ heygen_video_id: videoId, status: "rendering" })
+    .update({ heygen_video_id: videoId, status: "rendering", captions: captioned })
     .eq("id", job.id);
 }
 
@@ -160,6 +162,7 @@ export async function pollStudioRenderingJobs(): Promise<{
             status: "ready",
             video_url: status.video_url,
             thumbnail_url: status.thumbnail_url ?? null,
+            subtitle_url: status.subtitle_url ?? null,
           })
           .eq("id", job.id);
         completed++;

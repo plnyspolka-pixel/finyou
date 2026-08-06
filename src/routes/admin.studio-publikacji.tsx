@@ -68,6 +68,7 @@ import {
   Send,
   BookOpen,
   CheckCircle2,
+  Captions,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/studio-publikacji")({
@@ -84,6 +85,10 @@ const PLATFORM_LABELS: Record<string, string> = {
   facebook_reels: "Facebook Reels",
   instagram_reels: "Instagram Reels",
 };
+
+// Zgodne z MAX_ATTEMPTS w src/lib/studio-publishing.server.ts — chwilowe błędy
+// (limity Meta) prób nie zużywają, więc licznik pokazuje realne podejścia.
+const MAX_PUBLISH_ATTEMPTS = 3;
 
 const STATUS_LABELS: Record<
   string,
@@ -296,6 +301,8 @@ function StudioPage() {
   });
   const [avatarId, setAvatarId] = useState(HEYGEN_AVATARS[0].id);
   const [voiceId, setVoiceId] = useState(FILIP_VOICE_ID);
+  // Shorty i rolki ogląda się bez dźwięku — napisy domyślnie włączone.
+  const [captionsOn, setCaptionsOn] = useState(true);
 
   // ── Wybór awatara (katalog HeyGen) ─────────────────────────────────────────
   const [avatarSearch, setAvatarSearch] = useState("");
@@ -421,6 +428,7 @@ function StudioPage() {
           script: fullScript,
           avatar_id: avatarId,
           voice_id: voiceId,
+          captions: captionsOn,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
           publish_title: title,
@@ -445,6 +453,7 @@ function StudioPage() {
           question_ids: [...selectedIds],
           avatar_id: avatarId,
           voice_id: voiceId,
+          captions: captionsOn,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
         },
@@ -539,10 +548,10 @@ function StudioPage() {
   const needsVideo = platforms.some((p) => p !== "facebook_post");
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex items-center gap-2">
-        <Clapperboard className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-semibold">Studio publikacji</h1>
+        <Clapperboard className="h-6 w-6 shrink-0 text-primary" />
+        <h1 className="text-xl font-semibold sm:text-2xl">Studio publikacji</h1>
       </div>
 
       {status && (
@@ -566,7 +575,9 @@ function StudioPage() {
       )}
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        {/* h-auto + flex-wrap: na telefonie zakładki mają się zawijać,
+            a nie ściskać do nieczytelnych, nachodzących na siebie napisów. */}
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1">
           <TabsTrigger value="publikacja">
             <Send className="mr-1 h-4 w-4" /> Publikacja
           </TabsTrigger>
@@ -724,24 +735,26 @@ function StudioPage() {
                     return (
                       <div
                         key={`yt-${item.id}`}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                        className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:justify-between"
                       >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline">YouTube Short</Badge>
                             <Badge variant={st.variant}>{st.label}</Badge>
-                            <span className="truncate font-medium">{item.title}</span>
                           </div>
+                          <p className="break-words font-medium">{item.title}</p>
                           <p className="text-xs text-muted-foreground">
                             {item.status === "published" && item.published_at
                               ? `Opublikowano ${new Date(item.published_at).toLocaleString("pl-PL")}`
                               : `Plan: ${new Date(item.scheduled_at).toLocaleString("pl-PL")}`}
                           </p>
                           {item.last_error && (
-                            <p className="break-all text-xs text-destructive">{item.last_error}</p>
+                            <p className="break-words text-xs text-destructive">
+                              {item.last_error}
+                            </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1 sm:shrink-0 sm:justify-end">
                           {item.youtube_video_id && (
                             <a
                               href={`https://www.youtube.com/shorts/${item.youtube_video_id}`}
@@ -772,29 +785,34 @@ function StudioPage() {
                     return (
                       <div
                         key={item.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                        className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:justify-between"
                       >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline">
                               {PLATFORM_LABELS[item.platform] ?? item.platform}
                             </Badge>
                             <Badge variant={st.variant}>{st.label}</Badge>
-                            <span className="truncate font-medium">
-                              {item.title || item.message.slice(0, 60) || "(bez tytułu)"}
-                            </span>
                           </div>
+                          <p className="break-words font-medium">
+                            {item.title || item.message.slice(0, 60) || "(bez tytułu)"}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {item.status === "published" && item.published_at
                               ? `Opublikowano ${new Date(item.published_at).toLocaleString("pl-PL")}`
-                              : `Plan: ${new Date(item.scheduled_at).toLocaleString("pl-PL")}`}
-                            {item.attempt_count > 0 && ` • próby: ${item.attempt_count}`}
+                              : `${item.attempt_count > 0 ? "Kolejna próba" : "Plan"}: ${new Date(
+                                  item.scheduled_at,
+                                ).toLocaleString("pl-PL")}`}
+                            {item.attempt_count > 0 &&
+                              ` • próby: ${item.attempt_count}/${MAX_PUBLISH_ATTEMPTS}`}
                           </p>
                           {item.last_error && (
-                            <p className="break-all text-xs text-destructive">{item.last_error}</p>
+                            <p className="break-words text-xs text-destructive">
+                              {item.last_error}
+                            </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1 sm:shrink-0 sm:justify-end">
                           {link && (
                             <a href={link} target="_blank" rel="noreferrer">
                               <Button variant="outline" size="sm">
@@ -822,12 +840,15 @@ function StudioPage() {
                               </Button>
                             </>
                           )}
-                          {(item.status === "failed" || item.status === "cancelled") && (
+                          {(item.status === "failed" ||
+                            item.status === "cancelled" ||
+                            item.status === "processing") && (
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => retryQM.mutate(item.id)}
                               disabled={retryQM.isPending}
+                              title="Ponawia próbę od razu i zeruje licznik prób"
                             >
                               <RefreshCw className="mr-1 h-4 w-4" /> Ponów
                             </Button>
@@ -946,7 +967,7 @@ function StudioPage() {
                         checked={selectedIds.has(q.id)}
                         onCheckedChange={() => toggleSelected(q.id)}
                       />
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline">#{q.id}</Badge>
                           <Badge variant={q.category === "klient" ? "secondary" : "default"}>
@@ -957,11 +978,9 @@ function StudioPage() {
                               <CheckCircle2 className="h-3 w-3" /> wideo istnieje
                             </Badge>
                           )}
-                          <span className="text-sm font-medium">{q.question}</span>
                         </div>
-                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                          {q.thesis}
-                        </p>
+                        <p className="break-words text-sm font-medium">{q.question}</p>
+                        <p className="line-clamp-2 text-xs text-muted-foreground">{q.thesis}</p>
                       </div>
                       <Button
                         variant={selectedQuestionId === q.id ? "default" : "outline"}
@@ -1237,23 +1256,34 @@ function StudioPage() {
                     ))}
                   </select>
                 </div>
-                <div className="flex items-end">
-                  <Button
-                    onClick={() => startVideoM.mutate()}
-                    disabled={startVideoM.isPending || !fullScript.trim()}
-                  >
-                    {startVideoM.isPending ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Video className="mr-1 h-4 w-4" />
-                    )}
-                    Generuj wideo
-                  </Button>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Captions className="h-4 w-4" /> Napisy na wideo
+                  </Label>
+                  <div className="flex h-10 items-center gap-3 rounded-md border bg-muted/40 px-3">
+                    <Switch checked={captionsOn} onCheckedChange={setCaptionsOn} />
+                    <span className="text-sm text-muted-foreground">
+                      {captionsOn ? "Włączone (zalecane)" : "Wyłączone"}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              <Button
+                onClick={() => startVideoM.mutate()}
+                disabled={startVideoM.isPending || !fullScript.trim()}
+              >
+                {startVideoM.isPending ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : (
+                  <Video className="mr-1 h-4 w-4" />
+                )}
+                Generuj wideo
+              </Button>
               <p className="text-xs text-muted-foreground">
-                Pipeline: scenariusz → lektor ElevenLabs → awatar HeyGen (pion 9:16, 720p).
-                Renderowanie trwa zwykle 2-10 minut; status odświeża się automatycznie.
+                Pipeline: scenariusz → lektor ElevenLabs → awatar HeyGen (pion 9:16, 720p, napisy
+                wypalane przez HeyGen). Renderowanie trwa zwykle 2-10 minut; status odświeża się
+                automatycznie. Ustawienie napisów obowiązuje też dla generowania wsadowego.
               </p>
             </CardContent>
           </Card>
@@ -1277,51 +1307,57 @@ function StudioPage() {
                     return (
                       <div
                         key={j.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                        className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:justify-between"
                       >
-                        {j.thumbnail_url && (
-                          <img
-                            src={j.thumbnail_url}
-                            alt=""
-                            className="h-16 w-10 shrink-0 rounded-md object-cover"
-                            loading="lazy"
-                          />
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant={
-                                j.status === "ready"
-                                  ? "default"
-                                  : j.status === "failed"
-                                    ? "destructive"
-                                    : "outline"
-                              }
-                            >
-                              {VIDEO_STATUS_LABELS[j.status] ?? j.status}
-                            </Badge>
-                            <span className="truncate font-medium">{j.prompt.slice(0, 90)}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(j.created_at).toLocaleString("pl-PL")}
-                            {avatar ? ` • ${avatar.name}` : ""}
-                            {voice ? ` • głos: ${voice.name}` : ""}
-                            {j.auto_publish_platforms.length > 0 &&
-                              ` • auto: ${j.auto_publish_platforms
-                                .map((p) => AUTO_PLATFORM_SHORT[p] ?? p)
-                                .join(", ")}${
-                                j.auto_published_at
-                                  ? ` (wysłano do publikacji ${new Date(
-                                      j.auto_published_at,
-                                    ).toLocaleString("pl-PL")})`
-                                  : ""
-                              }`}
-                          </p>
-                          {j.last_error && (
-                            <p className="break-all text-xs text-destructive">{j.last_error}</p>
+                        <div className="flex min-w-0 flex-1 gap-3">
+                          {j.thumbnail_url && (
+                            <img
+                              src={j.thumbnail_url}
+                              alt=""
+                              className="h-16 w-10 shrink-0 rounded-md object-cover"
+                              loading="lazy"
+                            />
                           )}
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge
+                                variant={
+                                  j.status === "ready"
+                                    ? "default"
+                                    : j.status === "failed"
+                                      ? "destructive"
+                                      : "outline"
+                                }
+                              >
+                                {VIDEO_STATUS_LABELS[j.status] ?? j.status}
+                              </Badge>
+                              <Badge variant="outline" className="gap-1">
+                                <Captions className="h-3 w-3" />
+                                {j.captions ? "napisy" : "bez napisów"}
+                              </Badge>
+                            </div>
+                            <p className="break-words font-medium">{j.prompt.slice(0, 90)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(j.created_at).toLocaleString("pl-PL")}
+                              {avatar ? ` • ${avatar.name}` : ""}
+                              {voice ? ` • głos: ${voice.name}` : ""}
+                              {j.auto_publish_platforms.length > 0 &&
+                                ` • auto: ${j.auto_publish_platforms
+                                  .map((p) => AUTO_PLATFORM_SHORT[p] ?? p)
+                                  .join(", ")}${
+                                  j.auto_published_at
+                                    ? ` (wysłano do publikacji ${new Date(
+                                        j.auto_published_at,
+                                      ).toLocaleString("pl-PL")})`
+                                    : ""
+                                }`}
+                            </p>
+                            {j.last_error && (
+                              <p className="break-words text-xs text-destructive">{j.last_error}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1 sm:shrink-0 sm:justify-end">
                           {j.video_url && (
                             <>
                               <a href={j.video_url} target="_blank" rel="noreferrer">
@@ -1337,6 +1373,13 @@ function StudioPage() {
                                 <Send className="mr-1 h-4 w-4" /> Publikuj
                               </Button>
                             </>
+                          )}
+                          {j.subtitle_url && (
+                            <a href={j.subtitle_url} target="_blank" rel="noreferrer">
+                              <Button variant="outline" size="sm" title="Plik napisów (SRT)">
+                                <Captions className="mr-1 h-4 w-4" /> SRT
+                              </Button>
+                            </a>
                           )}
                           <Button
                             variant="ghost"

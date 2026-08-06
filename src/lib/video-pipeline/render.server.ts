@@ -50,7 +50,7 @@ class HeygenAdapter implements RenderAdapter {
     const avatarId = process.env.VIDEO_PIPELINE_AVATAR_ID ?? HEYGEN_AVATARS[0].id;
     const audio = await ttsElevenLabs({ text: plainScript, voiceId: FILIP_VOICE_ID });
     const audioAssetId = await uploadAudioToHeygen(audio);
-    const videoId = await createHeygenVideoFromAudio({ avatarId, audioAssetId });
+    const { videoId } = await createHeygenVideoFromAudio({ avatarId, audioAssetId });
     return { jobId: videoId, provider: this.name };
   }
 

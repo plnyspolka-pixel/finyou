@@ -17,6 +17,7 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 | Element                                   | Plik                                                                                     |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------- |
 | Publikacja Meta (Graph API)               | `src/lib/studio-publishing.server.ts`                                                    |
+| Klasyfikacja błędów Meta + backoff        | `src/lib/meta-graph-errors.ts` (+ testy `meta-graph-errors.test.ts`)                     |
 | Helpery AI (scenariusz, prompty, grafiki) | `src/lib/studio-ai.server.ts`                                                            |
 | Server functions                          | `src/lib/studio.functions.ts`                                                            |
 | Baza 250 pytań do shortów (generowana)    | `src/lib/shorts-question-bank.ts`                                                        |
@@ -29,10 +30,10 @@ Tabele:
 
 - `social_publish_queue` — kolejka publikacji Meta (`facebook_post`,
   `facebook_reels`, `instagram_reels`). Statusy: `pending → publishing →
-(processing) → published`; `failed` po 3 próbach (retry z odstępem 30 min);
-  `cancelled` ręcznie. Instagram publikuje się dwuetapowo: tick tworzy
-  kontener mediów (status `processing`), a po zakończeniu transkodowania po
-  stronie Meta kolejny tick woła `media_publish`.
+(processing) → published`; `failed` po 3 **realnych** próbach; `cancelled`
+  ręcznie. Instagram publikuje się dwuetapowo: tick tworzy kontener mediów
+  (status `processing`, znacznik czasu w `ig_container_at`), a po zakończeniu
+  transkodowania po stronie Meta kolejny tick woła `media_publish`.
 - `studio_video_jobs` — joby wideo HeyGen z promptu (statusy jak w Awatar FAQ:
   `generating_audio → uploading → rendering → ready/failed`).
 - `studio_images` — wygenerowane grafiki; pliki w publicznym buckecie
@@ -42,10 +43,30 @@ Publikacja na **YouTube** korzysta z istniejącego modułu YouTube Shorts —
 formularz Studia wstawia wpisy do `youtube_publish_queue`
 (patrz `docs/youtube-shorts.md`; OAuth kanału w /admin/youtube-shorts).
 
-Cron `social-publish-tick` (pg_cron co 10 minut) publikuje maks. 3 wymagalne
-wpisy Meta na przebieg i domyka zawieszone publikacje IG. Ręczne wywołanie:
-`GET /api/public/hooks/social-publish-tick?run=1` z nagłówkiem
+Cron `social-publish-tick` (pg_cron co 10 minut) najpierw domyka kontenery IG
+(maks. 5 na przebieg), potem publikuje maks. 3 wymagalne wpisy Meta. Ręczne
+wywołanie: `GET /api/public/hooks/social-publish-tick?run=1` z nagłówkiem
 `x-cron-secret: <CRON_SECRET>` (lub `apikey` z kluczem anon).
+
+### Limity Meta („(#4) Application request limit reached")
+
+Kody `#4`, `#17`, `#32`, `#341`, `#613`, HTTP 429/5xx i błędy sieci to błędy
+**chwilowe** — `src/lib/meta-graph-errors.ts` rozpoznaje je i wtedy:
+
+- próba **nie jest zużywana** (licznik `attempt_count` stoi),
+- kontener IG **nie jest kasowany** — kolejny przebieg dokańcza publikację
+  z tego samego kontenera zamiast tworzyć nowy (mniej wywołań = mniej limitu),
+- wpis wraca do kolejki z odstępem rosnącym wykładniczo (15 → 30 → 60 → …,
+  maks. 6 h; przy limicie minimum 1 h albo tyle, ile Meta poda w nagłówkach
+  `x-business-use-case-usage` / `retry-after`),
+- gdy Meta zgłosi limit, przebieg **przerywa dalsze wywołania** i odracza całą
+  wymagalną kolejkę — zamiast dobijać limit co 10 minut.
+
+Panel pokazuje komunikat po polsku (z oryginałem Meta w nawiasie), licznik
+`próby: n/3` i godzinę kolejnej próby. Przycisk „Ponów" (dostępny też dla
+wpisów w `processing`) zeruje licznik prób i publikuje od ręki. Błędy trwałe
+(wygasły token, zły format wideo) nie są ponawiane w kółko — komunikat mówi,
+co poprawić.
 
 ## Konfiguracja — sekrety środowiska
 
@@ -55,6 +76,7 @@ wpisy Meta na przebieg i domyka zawieszone publikacje IG. Ręczne wywołanie:
 | `META_PAGE_ACCESS_TOKEN` | Token strony (fallback: `META_ACCESS_TOKEN`)             |
 | `META_IG_USER_ID`        | ID konta Instagram **Business** powiązanego ze stroną    |
 | `HEYGEN_API_KEY`         | Generowanie wideo awatara (już używany przez Awatar FAQ) |
+| `HEYGEN_CAPTION_STYLE`   | Opcjonalny styl napisów HeyGen (domyślnie `default`)     |
 | `ELEVENLABS_API_KEY`     | Lektor TTS (już używany)                                 |
 | `LOVABLE_API_KEY`        | AI gateway: scenariusze, prompty, grafiki (już używany)  |
 
@@ -99,6 +121,17 @@ Zakładki panelu:
      edukacyjny"). Pytania, dla których wideo już istnieje, mają zielony
      znaczek (rozpoznanie po prefiksie promptu — bez zmiany schematu DB).
    - **Własny prompt** — scenariusz pisze AI, jak dotychczas.
+
+   **Napisy** — przełącznik „Napisy na wideo" przy wyborze głosu (domyślnie
+   włączony, bo rolki ogląda się bez dźwięku). Render idzie do HeyGen z polem
+   `caption: { file_format: "srt", style: … }` (v3 nie przyjmuje `caption:
+true` z API v2 — walidacja odrzuca boolean). Gdy konto HeyGen nie ma
+   napisów w planie, generacja **nie pada**: ponawiamy render bez napisów
+   i zapisujemy `captions = false`, więc biblioteka pokazuje „bez napisów"
+   zamiast obiecywać coś, czego w pliku nie ma. Zwrócony przez HeyGen plik
+   SRT ląduje w `subtitle_url` (przycisk „SRT" w bibliotece) — przydaje się
+   przy montażu i przy ścieżce napisów na YouTube. Ustawienie obowiązuje
+   też dla generowania wsadowego.
 
    Dalej: „Wygeneruj scenariusz" (edytowalny) → wybór awatara i głosu →
    „Generuj wideo". **Awatary** są pobierane na żywo z konta HeyGen

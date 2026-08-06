@@ -194,11 +194,19 @@ export const retrySocialQueueItem = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Ręczne ponowienie daje pełny budżet prób od nowa (inaczej wpis z
+    // wyczerpanym licznikiem wracał do kolejki tylko po to, żeby od razu
+    // paść). Kontener IG zostaje — jeśli żyje, dokończymy publikację z niego.
     const { error } = await supabaseAdmin
       .from("social_publish_queue")
-      .update({ status: "pending", last_error: null, scheduled_at: new Date().toISOString() })
+      .update({
+        status: "pending",
+        last_error: null,
+        attempt_count: 0,
+        scheduled_at: new Date().toISOString(),
+      })
       .eq("id", data.id)
-      .in("status", ["failed", "cancelled"]);
+      .in("status", ["failed", "cancelled", "processing"]);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -261,6 +269,8 @@ export type StudioVideoJob = {
   status: string;
   video_url: string | null;
   thumbnail_url: string | null;
+  subtitle_url: string | null;
+  captions: boolean;
   last_error: string | null;
   auto_publish_platforms: string[];
   publish_privacy: string;
@@ -446,6 +456,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       script: string;
       avatar_id: string;
       voice_id?: string;
+      captions?: boolean;
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
       publish_title?: string;
@@ -470,6 +481,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         avatar_id: data.avatar_id,
         voice_id: voiceId,
         status: "generating_audio",
+        captions: data.captions !== false,
         auto_publish_platforms: autoPub.auto_publish_platforms,
         publish_privacy: autoPub.publish_privacy,
         publish_title: data.publish_title?.trim() ?? "",
@@ -488,14 +500,15 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         .eq("id", job.id);
 
       const assetId = await uploadAudioToHeygen(audio);
-      const videoId = await createHeygenVideoFromAudio({
+      const { videoId, captioned } = await createHeygenVideoFromAudio({
         avatarId: data.avatar_id,
         audioAssetId: assetId,
+        captions: data.captions !== false,
       });
 
       await supabaseAdmin
         .from("studio_video_jobs")
-        .update({ heygen_video_id: videoId, status: "rendering" })
+        .update({ heygen_video_id: videoId, status: "rendering", captions: captioned })
         .eq("id", job.id);
       return { ok: true, id: job.id as string };
     } catch (e) {
@@ -517,6 +530,7 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       question_ids: number[];
       avatar_id: string;
       voice_id?: string;
+      captions?: boolean;
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
     }) => d,
@@ -559,6 +573,7 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
         avatar_id: data.avatar_id,
         voice_id: data.voice_id || FILIP_VOICE_ID,
         status: "queued",
+        captions: data.captions !== false,
         auto_publish_platforms: autoPub.auto_publish_platforms,
         publish_privacy: autoPub.publish_privacy,
         publish_title: q.question.slice(0, 92),
@@ -593,7 +608,7 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
     const { data: row } = await supabaseAdmin
       .from("studio_video_jobs")
       .select(
-        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by",
+        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, captions, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by",
       )
       .eq("id", data.id)
       .single();
@@ -604,12 +619,14 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
       status?: string;
       video_url?: string | null;
       thumbnail_url?: string | null;
+      subtitle_url?: string | null;
       last_error?: string | null;
     } = {};
     if (status.status === "completed" && status.video_url) {
       update.status = "ready";
       update.video_url = status.video_url;
       update.thumbnail_url = status.thumbnail_url ?? null;
+      update.subtitle_url = status.subtitle_url ?? null;
     } else if (status.status === "failed") {
       update.status = "failed";
       update.last_error =

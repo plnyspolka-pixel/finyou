@@ -171,7 +171,7 @@ export const startAvatarFaqGeneration = createServerFn({ method: "POST" })
         .eq("id", data.id);
 
       const assetId = await uploadAudioToHeygen(audio);
-      const videoId = await createHeygenVideoFromAudio({
+      const { videoId } = await createHeygenVideoFromAudio({
         avatarId: row.avatar_id,
         audioAssetId: assetId,
       });
