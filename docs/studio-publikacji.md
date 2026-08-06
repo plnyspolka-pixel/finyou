@@ -88,9 +88,13 @@ Zakładki panelu:
    - **Baza pytań do shortów (250)** — pytania z pliku „Pożyczki prywatne —
      250 pytań do shortów" z filtrami (kategoria klient/inwestor, sekcja,
      szukajka). „Użyj" podstawia pytanie jako prompt (z prefiksem `#N · `)
-     oraz **gotowy, sprawdzony scenariusz złożony 1:1 z treści paczki**
-     (znacznik kategorii → pytanie → teza → stałe CTA) — AI niczego nie
-     przepisuje (`src/lib/shorts-script.ts`); tekst pozostaje edytowalny.
+     oraz **gotowy, sprawdzony scenariusz złożony 1:1 z treści paczki** —
+     rozbity w panelu na edytowalne sekcje: **hook** (znacznik kategorii +
+     pytanie), **treść** (teza) i **CTA**; lektor czyta ich sklejkę. AI
+     niczego nie przepisuje (`src/lib/shorts-script.ts`). Obok scenariusza
+     panel pokazuje **elementy dynamiczne** (instrukcje ekranowe do
+     montażu, lektor ich nie czyta): ikonka „AI" 0–3 s, znacznik kategorii
+     na starcie, duże pytanie od ~0,8/1,0 s — z przyciskiem „Kopiuj".
      Tytuł i opis publikacji też pochodzą z paczki (teza + nota „materiał
      edukacyjny"). Pytania, dla których wideo już istnieje, mają zielony
      znaczek (rozpoznanie po prefiksie promptu — bez zmiany schematu DB).
