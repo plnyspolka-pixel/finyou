@@ -50,6 +50,7 @@ import { useState } from "react";
 import { PanelShell } from "@/components/layout/panel-shell";
 import { AdminTopBar } from "@/components/admin/admin-top-bar";
 import { AdminSearchDialog, AdminSearchIconTrigger } from "@/components/admin/admin-search";
+import { SectionTabs } from "@/components/admin/section-tabs";
 import { adminSections, type AdminSection } from "@/lib/admin-nav";
 
 export const Route = createFileRoute("/admin")({
@@ -212,7 +213,12 @@ function AdminLayout() {
       title={isStaff ? "Panel administratora" : "Panel księgowości"}
       allow={["administrator", "ksiegowosc"]}
       sections={accountingOnly ? accountingSections : adminSections}
-      topBar={<AdminTopBar />}
+      topBar={
+        <>
+          <AdminTopBar />
+          <SectionTabs />
+        </>
+      }
       mobileHeaderExtra={<AdminSearchIconTrigger />}
       footer={<AdminSearchDialog allowedPaths={accountingOnly ? accountingPaths : undefined} />}
     />
