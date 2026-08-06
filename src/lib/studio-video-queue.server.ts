@@ -92,8 +92,15 @@ async function processClaimedJob(job: JobRow): Promise<void> {
   if (!script) {
     const questionId = parseShortsPromptTag(job.prompt);
     const q = questionId != null ? findShortsQuestion(questionId) : undefined;
-    const { generateShortsScript, generateVideoScript } = await import("./studio-ai.server");
-    const gen = q ? await generateShortsScript(q) : await generateVideoScript(job.prompt);
+    let gen: { script: string; title: string; description: string; hashtags: string[] };
+    if (q) {
+      // Pytanie z paczki 250: gotowy, sprawdzony scenariusz 1:1 z pliku — bez AI.
+      const { buildShortsScript } = await import("./shorts-script");
+      gen = buildShortsScript(q);
+    } else {
+      const { generateVideoScript } = await import("./studio-ai.server");
+      gen = await generateVideoScript(job.prompt);
+    }
     script = gen.script;
     if (!publishTitle.trim()) publishTitle = gen.title;
     if (!publishDescription.trim())
