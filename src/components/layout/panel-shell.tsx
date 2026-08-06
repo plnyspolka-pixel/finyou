@@ -18,6 +18,10 @@ type PanelShellProps = {
   allow?: AppRole[];
   /** Dodatkowy element w obrębie shella (np. pływający czat AI administratora). */
   footer?: ReactNode;
+  /** Opcjonalny pasek nad <main> w kolumnie treści (np. wyszukiwarka admina). */
+  topBar?: ReactNode;
+  /** Opcjonalny element po prawej stronie mobilnego headera (np. lupa wyszukiwarki). */
+  mobileHeaderExtra?: ReactNode;
   /** Włącz „fancy" navy aurora backdrop w obszarze głównym. */
   fancy?: boolean;
 };
@@ -27,7 +31,15 @@ type PanelShellProps = {
  * Jedno źródło prawdy dla: nawigacji desktop + mobilnej (Sheet), brandingu,
  * strażnika ról i wylogowania. Dzięki temu każdy panel jest nawigowalny na telefonie.
  */
-export function PanelShell({ title, groups, allow, footer, fancy = false }: PanelShellProps) {
+export function PanelShell({
+  title,
+  groups,
+  allow,
+  footer,
+  topBar,
+  mobileHeaderExtra,
+  fancy = false,
+}: PanelShellProps) {
   const { user, roles, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -172,7 +184,9 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
             />
             {title}
           </div>
+          {mobileHeaderExtra && <div className="ml-auto">{mobileHeaderExtra}</div>}
         </header>
+        {topBar}
         <main
           className={`relative flex-1 overflow-y-auto p-4 md:p-6 ${fancy ? "fy-fancy-main dark isolate text-foreground bg-[oklch(0.10_0.03_265)]" : ""}`}
         >

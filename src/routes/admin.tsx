@@ -48,6 +48,8 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useState } from "react";
 import { PanelShell } from "@/components/layout/panel-shell";
+import { AdminTopBar } from "@/components/admin/admin-top-bar";
+import { AdminSearchDialog, AdminSearchIconTrigger } from "@/components/admin/admin-search";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -176,15 +178,22 @@ const accountingGroups: Group[] = [
   },
 ];
 
+// Ścieżki dostępne dla roli `ksiegowosc` — zawężają indeks wyszukiwarki.
+const accountingPaths = accountingGroups.flatMap((g) => g.items.map((i) => i.to));
+
 function AdminLayout() {
   const { roles } = useAuth();
   const isStaff = roles.includes("administrator") || roles.includes("operator");
   const isAccountant = roles.includes("ksiegowosc");
+  const accountingOnly = !isStaff && isAccountant;
   return (
     <PanelShell
       title={isStaff ? "Panel administratora" : "Panel księgowości"}
       allow={["administrator", "ksiegowosc"]}
-      groups={isStaff ? groups : isAccountant ? accountingGroups : groups}
+      groups={accountingOnly ? accountingGroups : groups}
+      topBar={<AdminTopBar />}
+      mobileHeaderExtra={<AdminSearchIconTrigger />}
+      footer={<AdminSearchDialog allowedPaths={accountingOnly ? accountingPaths : undefined} />}
     />
   );
 }
