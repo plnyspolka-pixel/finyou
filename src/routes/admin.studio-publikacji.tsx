@@ -51,6 +51,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -69,6 +70,8 @@ import {
   BookOpen,
   CheckCircle2,
   Captions,
+  Play,
+  Maximize2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/studio-publikacji")({
@@ -490,6 +493,9 @@ function StudioPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Wideo otwarte w dużym odtwarzaczu (modal) — podgląd bez wychodzenia z panelu.
+  const [previewJob, setPreviewJob] = useState<StudioVideoJob | null>(null);
+
   const applyVideoToPublish = (url: string) => {
     setVideoUrl(url);
     setTab("publikacja");
@@ -640,6 +646,15 @@ function StudioPage() {
                         </option>
                       ))}
                     </select>
+                  )}
+                  {videoUrl.trim() && (
+                    <video
+                      src={videoUrl.trim()}
+                      controls
+                      playsInline
+                      preload="none"
+                      className="aspect-[9/16] w-28 rounded-md border bg-black object-cover"
+                    />
                   )}
                 </div>
               </div>
@@ -1310,13 +1325,36 @@ function StudioPage() {
                         className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:justify-between"
                       >
                         <div className="flex min-w-0 flex-1 gap-3">
-                          {j.thumbnail_url && (
-                            <img
-                              src={j.thumbnail_url}
-                              alt=""
-                              className="h-16 w-10 shrink-0 rounded-md object-cover"
-                              loading="lazy"
-                            />
+                          {j.video_url ? (
+                            // Odtwarzacz w liście — preload="none", więc plik pobiera się
+                            // dopiero po kliknięciu play (miniatura jako poster).
+                            <div className="shrink-0 space-y-1">
+                              <video
+                                src={j.video_url}
+                                poster={j.thumbnail_url ?? undefined}
+                                controls
+                                playsInline
+                                preload="none"
+                                className="aspect-[9/16] w-24 rounded-md border bg-black object-cover"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-24 px-1 text-xs"
+                                onClick={() => setPreviewJob(j)}
+                              >
+                                <Maximize2 className="mr-1 h-3 w-3" /> Duży
+                              </Button>
+                            </div>
+                          ) : (
+                            j.thumbnail_url && (
+                              <img
+                                src={j.thumbnail_url}
+                                alt=""
+                                className="h-16 w-10 shrink-0 rounded-md object-cover"
+                                loading="lazy"
+                              />
+                            )
                           )}
                           <div className="min-w-0 flex-1 space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
@@ -1360,9 +1398,16 @@ function StudioPage() {
                         <div className="flex flex-wrap items-center gap-1 sm:shrink-0 sm:justify-end">
                           {j.video_url && (
                             <>
+                              <Button variant="outline" size="sm" onClick={() => setPreviewJob(j)}>
+                                <Play className="mr-1 h-4 w-4" /> Odtwórz
+                              </Button>
                               <a href={j.video_url} target="_blank" rel="noreferrer">
-                                <Button variant="outline" size="sm">
-                                  <ExternalLink className="mr-1 h-4 w-4" /> Podgląd
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  title="Otwórz plik MP4 w nowej karcie"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
                                 </Button>
                               </a>
                               <Button
@@ -1397,6 +1442,46 @@ function StudioPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Duży odtwarzacz — pion 9:16, mieści się na ekranie telefonu. */}
+          <Dialog open={!!previewJob} onOpenChange={(open) => !open && setPreviewJob(null)}>
+            <DialogContent className="max-w-[min(28rem,95vw)]">
+              <DialogHeader>
+                <DialogTitle className="pr-6 text-left text-base leading-snug">
+                  {previewJob?.prompt.slice(0, 120) ?? "Podgląd wideo"}
+                </DialogTitle>
+              </DialogHeader>
+              {previewJob?.video_url && (
+                <>
+                  <video
+                    key={previewJob.id}
+                    src={previewJob.video_url}
+                    poster={previewJob.thumbnail_url ?? undefined}
+                    controls
+                    autoPlay
+                    playsInline
+                    className="max-h-[70vh] w-full rounded-md bg-black"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        applyVideoToPublish(previewJob.video_url!);
+                        setPreviewJob(null);
+                      }}
+                    >
+                      <Send className="mr-1 h-4 w-4" /> Publikuj
+                    </Button>
+                    <a href={previewJob.video_url} target="_blank" rel="noreferrer">
+                      <Button variant="outline" size="sm">
+                        <ExternalLink className="mr-1 h-4 w-4" /> Otwórz plik
+                      </Button>
+                    </a>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* ── GRAFIKI ────────────────────────────────────────────────────── */}
