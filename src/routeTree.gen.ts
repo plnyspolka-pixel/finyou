@@ -236,7 +236,9 @@ import { Route as ApiPublicHooksProjectAssignmentsTickRouteImport } from './rout
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
 import { Route as ApiPublicHooksPrMonitorTickRouteImport } from './routes/api/public/hooks/pr-monitor-tick'
 import { Route as ApiPublicHooksMissingInfoFollowUpTickRouteImport } from './routes/api/public/hooks/missing-info-follow-up-tick'
+import { Route as ApiPublicHooksMetaSubscribeWebhookFieldsRouteImport } from './routes/api/public/hooks/meta-subscribe-webhook-fields'
 import { Route as ApiPublicHooksMetaLeadsPullRouteImport } from './routes/api/public/hooks/meta-leads-pull'
+import { Route as ApiPublicHooksMetaInsightsSyncTickRouteImport } from './routes/api/public/hooks/meta-insights-sync-tick'
 import { Route as ApiPublicHooksMessengerSyncForceRouteImport } from './routes/api/public/hooks/messenger-sync-force'
 import { Route as ApiPublicHooksLocationScoringTickRouteImport } from './routes/api/public/hooks/location-scoring-tick'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
@@ -246,8 +248,10 @@ import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/pub
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
+import { Route as ApiPublicHooksBotJudgeTickRouteImport } from './routes/api/public/hooks/bot-judge-tick'
 import { Route as ApiPublicHooksAniaCallbacksRouteImport } from './routes/api/public/hooks/ania-callbacks'
 import { Route as ApiPublicHooksAffiliateEventsTickRouteImport } from './routes/api/public/hooks/affiliate-events-tick'
+import { Route as ApiPublicHooksAdOptimizerTickRouteImport } from './routes/api/public/hooks/ad-optimizer-tick'
 import { Route as ApiPublicHooksAccessExpiryTickRouteImport } from './routes/api/public/hooks/access-expiry-tick'
 import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
 import { Route as ApiPublicEmailClickRouteImport } from './routes/api/public/email/click'
@@ -1436,10 +1440,22 @@ const ApiPublicHooksMissingInfoFollowUpTickRoute =
     path: '/api/public/hooks/missing-info-follow-up-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksMetaSubscribeWebhookFieldsRoute =
+  ApiPublicHooksMetaSubscribeWebhookFieldsRouteImport.update({
+    id: '/api/public/hooks/meta-subscribe-webhook-fields',
+    path: '/api/public/hooks/meta-subscribe-webhook-fields',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksMetaLeadsPullRoute =
   ApiPublicHooksMetaLeadsPullRouteImport.update({
     id: '/api/public/hooks/meta-leads-pull',
     path: '/api/public/hooks/meta-leads-pull',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksMetaInsightsSyncTickRoute =
+  ApiPublicHooksMetaInsightsSyncTickRouteImport.update({
+    id: '/api/public/hooks/meta-insights-sync-tick',
+    path: '/api/public/hooks/meta-insights-sync-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksMessengerSyncForceRoute =
@@ -1496,6 +1512,12 @@ const ApiPublicHooksDailyBlogTickRoute =
     path: '/api/public/hooks/daily-blog-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksBotJudgeTickRoute =
+  ApiPublicHooksBotJudgeTickRouteImport.update({
+    id: '/api/public/hooks/bot-judge-tick',
+    path: '/api/public/hooks/bot-judge-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksAniaCallbacksRoute =
   ApiPublicHooksAniaCallbacksRouteImport.update({
     id: '/api/public/hooks/ania-callbacks',
@@ -1506,6 +1528,12 @@ const ApiPublicHooksAffiliateEventsTickRoute =
   ApiPublicHooksAffiliateEventsTickRouteImport.update({
     id: '/api/public/hooks/affiliate-events-tick',
     path: '/api/public/hooks/affiliate-events-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksAdOptimizerTickRoute =
+  ApiPublicHooksAdOptimizerTickRouteImport.update({
+    id: '/api/public/hooks/ad-optimizer-tick',
+    path: '/api/public/hooks/ad-optimizer-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksAccessExpiryTickRoute =
@@ -1734,8 +1762,10 @@ export interface FileRoutesByFullPath {
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
+  '/api/public/hooks/ad-optimizer-tick': typeof ApiPublicHooksAdOptimizerTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
+  '/api/public/hooks/bot-judge-tick': typeof ApiPublicHooksBotJudgeTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -1745,7 +1775,9 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
+  '/api/public/hooks/meta-insights-sync-tick': typeof ApiPublicHooksMetaInsightsSyncTickRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
+  '/api/public/hooks/meta-subscribe-webhook-fields': typeof ApiPublicHooksMetaSubscribeWebhookFieldsRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -1968,8 +2000,10 @@ export interface FileRoutesByTo {
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
+  '/api/public/hooks/ad-optimizer-tick': typeof ApiPublicHooksAdOptimizerTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
+  '/api/public/hooks/bot-judge-tick': typeof ApiPublicHooksBotJudgeTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -1979,7 +2013,9 @@ export interface FileRoutesByTo {
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
+  '/api/public/hooks/meta-insights-sync-tick': typeof ApiPublicHooksMetaInsightsSyncTickRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
+  '/api/public/hooks/meta-subscribe-webhook-fields': typeof ApiPublicHooksMetaSubscribeWebhookFieldsRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -2213,8 +2249,10 @@ export interface FileRoutesById {
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
+  '/api/public/hooks/ad-optimizer-tick': typeof ApiPublicHooksAdOptimizerTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
+  '/api/public/hooks/bot-judge-tick': typeof ApiPublicHooksBotJudgeTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2224,7 +2262,9 @@ export interface FileRoutesById {
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
+  '/api/public/hooks/meta-insights-sync-tick': typeof ApiPublicHooksMetaInsightsSyncTickRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
+  '/api/public/hooks/meta-subscribe-webhook-fields': typeof ApiPublicHooksMetaSubscribeWebhookFieldsRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -2459,8 +2499,10 @@ export interface FileRouteTypes {
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/access-expiry-tick'
+    | '/api/public/hooks/ad-optimizer-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
+    | '/api/public/hooks/bot-judge-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -2470,7 +2512,9 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
+    | '/api/public/hooks/meta-insights-sync-tick'
     | '/api/public/hooks/meta-leads-pull'
+    | '/api/public/hooks/meta-subscribe-webhook-fields'
     | '/api/public/hooks/missing-info-follow-up-tick'
     | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
@@ -2693,8 +2737,10 @@ export interface FileRouteTypes {
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/access-expiry-tick'
+    | '/api/public/hooks/ad-optimizer-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
+    | '/api/public/hooks/bot-judge-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -2704,7 +2750,9 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
+    | '/api/public/hooks/meta-insights-sync-tick'
     | '/api/public/hooks/meta-leads-pull'
+    | '/api/public/hooks/meta-subscribe-webhook-fields'
     | '/api/public/hooks/missing-info-follow-up-tick'
     | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
@@ -2937,8 +2985,10 @@ export interface FileRouteTypes {
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/access-expiry-tick'
+    | '/api/public/hooks/ad-optimizer-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
+    | '/api/public/hooks/bot-judge-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -2948,7 +2998,9 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
+    | '/api/public/hooks/meta-insights-sync-tick'
     | '/api/public/hooks/meta-leads-pull'
+    | '/api/public/hooks/meta-subscribe-webhook-fields'
     | '/api/public/hooks/missing-info-follow-up-tick'
     | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
@@ -3040,8 +3092,10 @@ export interface RootRouteChildren {
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
   ApiPublicHooksAccessExpiryTickRoute: typeof ApiPublicHooksAccessExpiryTickRoute
+  ApiPublicHooksAdOptimizerTickRoute: typeof ApiPublicHooksAdOptimizerTickRoute
   ApiPublicHooksAffiliateEventsTickRoute: typeof ApiPublicHooksAffiliateEventsTickRoute
   ApiPublicHooksAniaCallbacksRoute: typeof ApiPublicHooksAniaCallbacksRoute
+  ApiPublicHooksBotJudgeTickRoute: typeof ApiPublicHooksBotJudgeTickRoute
   ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -3051,7 +3105,9 @@ export interface RootRouteChildren {
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
   ApiPublicHooksLocationScoringTickRoute: typeof ApiPublicHooksLocationScoringTickRoute
   ApiPublicHooksMessengerSyncForceRoute: typeof ApiPublicHooksMessengerSyncForceRoute
+  ApiPublicHooksMetaInsightsSyncTickRoute: typeof ApiPublicHooksMetaInsightsSyncTickRoute
   ApiPublicHooksMetaLeadsPullRoute: typeof ApiPublicHooksMetaLeadsPullRoute
+  ApiPublicHooksMetaSubscribeWebhookFieldsRoute: typeof ApiPublicHooksMetaSubscribeWebhookFieldsRoute
   ApiPublicHooksMissingInfoFollowUpTickRoute: typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   ApiPublicHooksPrMonitorTickRoute: typeof ApiPublicHooksPrMonitorTickRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -4665,11 +4721,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksMissingInfoFollowUpTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/meta-subscribe-webhook-fields': {
+      id: '/api/public/hooks/meta-subscribe-webhook-fields'
+      path: '/api/public/hooks/meta-subscribe-webhook-fields'
+      fullPath: '/api/public/hooks/meta-subscribe-webhook-fields'
+      preLoaderRoute: typeof ApiPublicHooksMetaSubscribeWebhookFieldsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/meta-leads-pull': {
       id: '/api/public/hooks/meta-leads-pull'
       path: '/api/public/hooks/meta-leads-pull'
       fullPath: '/api/public/hooks/meta-leads-pull'
       preLoaderRoute: typeof ApiPublicHooksMetaLeadsPullRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/meta-insights-sync-tick': {
+      id: '/api/public/hooks/meta-insights-sync-tick'
+      path: '/api/public/hooks/meta-insights-sync-tick'
+      fullPath: '/api/public/hooks/meta-insights-sync-tick'
+      preLoaderRoute: typeof ApiPublicHooksMetaInsightsSyncTickRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/messenger-sync-force': {
@@ -4735,6 +4805,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksDailyBlogTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/bot-judge-tick': {
+      id: '/api/public/hooks/bot-judge-tick'
+      path: '/api/public/hooks/bot-judge-tick'
+      fullPath: '/api/public/hooks/bot-judge-tick'
+      preLoaderRoute: typeof ApiPublicHooksBotJudgeTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/ania-callbacks': {
       id: '/api/public/hooks/ania-callbacks'
       path: '/api/public/hooks/ania-callbacks'
@@ -4747,6 +4824,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/affiliate-events-tick'
       fullPath: '/api/public/hooks/affiliate-events-tick'
       preLoaderRoute: typeof ApiPublicHooksAffiliateEventsTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/ad-optimizer-tick': {
+      id: '/api/public/hooks/ad-optimizer-tick'
+      path: '/api/public/hooks/ad-optimizer-tick'
+      fullPath: '/api/public/hooks/ad-optimizer-tick'
+      preLoaderRoute: typeof ApiPublicHooksAdOptimizerTickRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/access-expiry-tick': {
@@ -5259,9 +5343,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
   ApiPublicHooksAccessExpiryTickRoute: ApiPublicHooksAccessExpiryTickRoute,
+  ApiPublicHooksAdOptimizerTickRoute: ApiPublicHooksAdOptimizerTickRoute,
   ApiPublicHooksAffiliateEventsTickRoute:
     ApiPublicHooksAffiliateEventsTickRoute,
   ApiPublicHooksAniaCallbacksRoute: ApiPublicHooksAniaCallbacksRoute,
+  ApiPublicHooksBotJudgeTickRoute: ApiPublicHooksBotJudgeTickRoute,
   ApiPublicHooksDailyBlogTickRoute: ApiPublicHooksDailyBlogTickRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:
@@ -5274,7 +5360,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksLocationScoringTickRoute:
     ApiPublicHooksLocationScoringTickRoute,
   ApiPublicHooksMessengerSyncForceRoute: ApiPublicHooksMessengerSyncForceRoute,
+  ApiPublicHooksMetaInsightsSyncTickRoute:
+    ApiPublicHooksMetaInsightsSyncTickRoute,
   ApiPublicHooksMetaLeadsPullRoute: ApiPublicHooksMetaLeadsPullRoute,
+  ApiPublicHooksMetaSubscribeWebhookFieldsRoute:
+    ApiPublicHooksMetaSubscribeWebhookFieldsRoute,
   ApiPublicHooksMissingInfoFollowUpTickRoute:
     ApiPublicHooksMissingInfoFollowUpTickRoute,
   ApiPublicHooksPrMonitorTickRoute: ApiPublicHooksPrMonitorTickRoute,

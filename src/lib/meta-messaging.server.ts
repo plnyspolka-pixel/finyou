@@ -13,6 +13,7 @@ import { replyToCommentPublic, sendPrivateReplyToComment } from "@/lib/meta-comm
 import { fetchMetaUserProfile } from "@/lib/meta-profile.server";
 import { ocrLeadAttachmentsAndEnrich, fillLeadNameFromKw } from "@/lib/lead-doc-intel.server";
 import { shouldSkipMessengerAutoReply } from "@/lib/bot-loop-guard.server";
+import { captureReferralFromEvent } from "@/lib/messenger-attribution.server";
 
 async function findOrCreateLeadByPsid(opts: {
   senderId: string;
@@ -121,6 +122,14 @@ export async function handleMetaMessagingBody(body: any): Promise<void> {
   for (const entry of body?.entry ?? []) {
     const pageId: string | undefined = entry.id;
     for (const ev of entry.messaging ?? []) {
+      // Atrybucja reklama→PSID PRZED obsługą wiadomości: zdarzenie `referral`
+      // (klik w reklamę click-to-Messenger) przychodzi też BEZ `message`, a
+      // handleMessagingEvent takie zdarzenia pomija.
+      try {
+        await captureReferralFromEvent(ev, platform);
+      } catch (e) {
+        console.error("[meta-messaging] referral capture error", e);
+      }
       try {
         await handleMessagingEvent(ev, platform);
       } catch (e) {

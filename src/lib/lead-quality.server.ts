@@ -294,5 +294,16 @@ export async function rescoreAndSend(opts: {
     tier: result.tier,
   });
 
+  // Ostatni krok lejka bota: tier A/B = lead kwalifikowany. To on jest
+  // mianownikiem CPQL w optymalizatorze reklam (ad-optimizer.server).
+  if (result.tier === "A" || result.tier === "B") {
+    try {
+      const { logFunnelStep } = await import("./bot-funnel.server");
+      await logFunnelStep(opts.leadId, "qualified");
+    } catch (e) {
+      console.error("[lead-quality] funnel qualified", e);
+    }
+  }
+
   return { ...result, capi: { ok: capi.ok, error: capi.error } };
 }

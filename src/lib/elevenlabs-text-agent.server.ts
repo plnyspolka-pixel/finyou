@@ -326,6 +326,24 @@ export async function runAgentTurn(opts: {
 
   const { prompt: systemPrompt } = await fetchAgentPrompt(variant);
 
+  // A/B promptów + lejek — tylko wariant "klient" (lejek pożyczkowy).
+  // Wariant losowany raz per lead i przypięty na stałe (bot-funnel.server),
+  // więc rozmowa nie zmienia stylu w połowie.
+  let variantSuffix = "";
+  if (variant === "klient") {
+    try {
+      const { getAssignedVariant, logFunnelStep } = await import("./bot-funnel.server");
+      const pv = await getAssignedVariant(opts.leadId, variant);
+      if (pv?.prompt_suffix) variantSuffix = "\n\n" + pv.prompt_suffix;
+      // Pierwsza odpowiedź bota w tej rozmowie = wejście do lejka.
+      if (!(history ?? []).some((m) => m.direction === "outbound")) {
+        await logFunnelStep(opts.leadId, "greeting");
+      }
+    } catch (e) {
+      console.error("[el-text-agent] prompt variant / funnel failed", e);
+    }
+  }
+
   // Spersonalizowany link do formularza: świeży magic link (auto-login do /klient),
   // gdy znamy email leada; inaczej publiczny fallback. Prompt z DB używa
   // placeholdera {{MAGIC_LINK_KLIENT}} — podstawiamy go poniżej.
@@ -427,7 +445,7 @@ export async function runAgentTurn(opts: {
   const messages: EmittedMessage[] = [
     {
       role: "system",
-      content: (systemPrompt + leadContext + checklistBlock + knowledgeBlock)
+      content: (systemPrompt + variantSuffix + leadContext + checklistBlock + knowledgeBlock)
         .replaceAll("{{MAGIC_LINK_KLIENT}}", applicationLink)
         .replaceAll(
           "{{LINK_REJESTRACJA_INWESTORA}}",
@@ -614,12 +632,24 @@ async function executeTool(
       } catch (e) {
         console.error("[el-text-agent] promote after update_lead_data", e);
       }
+      try {
+        const { logStepsFromPatch } = await import("./bot-funnel.server");
+        await logStepsFromPatch(leadId, patch);
+      } catch (e) {
+        console.error("[el-text-agent] funnel steps from patch", e);
+      }
     }
     return { ok: true, saved: Object.keys(patch) };
   }
   if (name === "send_application_link") {
     const link = ctx.applicationLink;
     await s.from("leads").update({ return_link: link }).eq("id", leadId);
+    try {
+      const { logFunnelStep } = await import("./bot-funnel.server");
+      await logFunnelStep(leadId, "application_link_sent");
+    } catch (e) {
+      console.error("[el-text-agent] funnel application_link_sent", e);
+    }
     return {
       ok: true,
       link,
