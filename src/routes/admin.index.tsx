@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { AdminBot } from "@/components/admin/admin-bot";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,7 @@ import {
   ArrowRight,
   Clock,
   Zap,
+  Bot,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/")({
@@ -64,6 +67,7 @@ const CHANNEL_META: Record<FollowUpChannel, { label: string; icon: typeof Mail }
 };
 
 function AdminDashboard() {
+  const { roles } = useAuth();
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [bySource, setBySource] = useState<Record<string, number>>({});
   const [byChannel, setByChannel] = useState<Record<string, number>>({});
@@ -141,6 +145,23 @@ function AdminDashboard() {
           ))}
         </div>
       </div>
+
+      {/* Asystent panelu — czat, z którego prowadzi się bieżącą robotę bez klikania po zakładkach */}
+      {roles.includes("administrator") && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-accent" />
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Asystent panelu
+            </h2>
+          </div>
+          <AdminBot className="h-[520px]" />
+          <p className="text-xs text-muted-foreground">
+            Ten sam asystent jest dostępny na każdej podstronie panelu — przycisk „Asystent” w
+            prawym dolnym rogu. Rozmowa jest wspólna.
+          </p>
+        </section>
+      )}
 
       {/* Najważniejsze liczby */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

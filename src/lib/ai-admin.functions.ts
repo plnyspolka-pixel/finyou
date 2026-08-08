@@ -1,15 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { AI_ADMIN_MODEL_IDS } from "@/lib/ai-admin.models";
 
-const ALLOWED_MODELS = [
-  "claude-opus-4-5",
-  "claude-sonnet-4-5",
-  "claude-haiku-4-5",
-  "claude-3-7-sonnet-latest",
-  "claude-3-5-sonnet-latest",
-  "claude-3-5-haiku-latest",
-] as const;
+const ALLOWED_MODELS = AI_ADMIN_MODEL_IDS;
 
 async function assertAdmin(ctx: {
   supabase: { rpc: (n: string, p: unknown) => Promise<{ data: unknown; error: unknown }> };
@@ -100,6 +94,28 @@ export const deleteConversation = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/** Ostatnie wywołania narzędzi asystenta — podgląd „co bot faktycznie zrobił”. */
+export const listAiAuditLog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context as never);
+    const { data, error } = await context.supabase
+      .from("ai_admin_audit_log")
+      .select("id, tool_name, success, error, created_at")
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (error) throw new Error(error.message);
+    return {
+      entries: (data ?? []) as Array<{
+        id: string;
+        tool_name: string;
+        success: boolean;
+        error: string | null;
+        created_at: string;
+      }>,
+    };
   });
 
 const attachmentSchema = z.object({
@@ -266,7 +282,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       }
     }
 
-    // Agentic loop — max 8 tool rounds
+    // Pętla agentowa — max 20 rund narzędzi na jedną wiadomość
     let totalIn = 0;
     let totalOut = 0;
     for (let round = 0; round < 20; round++) {
