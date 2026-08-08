@@ -110,6 +110,43 @@ export const ANTHROPIC_TOOLS = [
     },
   },
   {
+    name: "describe_table",
+    description:
+      "Opisz tabelę ze schemy 'public': kolumny (typ, NULL, default) + polityki RLS. Używaj zanim napiszesz zapytanie na nieznanej tabeli — zamiast zgadywać nazwy kolumn.",
+    input_schema: {
+      type: "object",
+      properties: {
+        table: { type: "string", description: "Nazwa tabeli w schemie public." },
+      },
+      required: ["table"],
+    },
+  },
+  {
+    name: "search_project_files",
+    description:
+      "Wyszukaj tekst w plikach projektu (grep). Zwraca ścieżki + numery i treść pasujących linii, max 120 trafień. Przydatne, by znaleźć miejsce w kodzie odpowiedzialne za funkcję panelu.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Szukany tekst lub wyrażenie regularne." },
+        dir: { type: "string", description: "Katalog startowy względem roota.", default: "src" },
+        regex: { type: "boolean", description: "Traktuj query jako regex.", default: false },
+        extensions: {
+          type: "array",
+          items: { type: "string" },
+          description: "Ogranicz do rozszerzeń, np. ['ts','tsx','sql'].",
+        },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "list_admin_pages",
+    description:
+      "Zwraca mapę panelu /admin: sekcje, ścieżki, opisy. Używaj, żeby wskazać administratorowi właściwą stronę — ścieżki podawaj w odpowiedzi jako linki markdown, np. [Klienci](/admin/klienci).",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "execute_sql",
     description:
       "Wykonaj DOWOLNE zapytanie SQL na bazie (SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, CREATE POLICY, GRANT itp.). Pełen dostęp administratora. Nie używaj do zmian ról i ustawień systemu (alter role/system, create/drop role). Zawsze najpierw rozważ skutki.",
@@ -272,6 +309,117 @@ export async function runTool(
       return { ok: true, output: { path: rel, action: "deleted" } };
     }
 
+    if (call.name === "describe_table") {
+      if (!opts.enableDbRead) return { ok: false, output: null, error: "Odczyt bazy wyłączony." };
+      const table = String(call.input.table ?? "").trim();
+      if (!/^[a-z_][a-z0-9_]*$/i.test(table))
+        return { ok: false, output: null, error: "Niepoprawna nazwa tabeli." };
+      const lit = `'${table.replace(/'/g, "''")}'`;
+      const sql = `SELECT
+  (SELECT jsonb_agg(jsonb_build_object('column', column_name, 'type', data_type, 'nullable', is_nullable, 'default', column_default) ORDER BY ordinal_position)
+     FROM information_schema.columns WHERE table_schema='public' AND table_name=${lit}) AS columns,
+  (SELECT jsonb_agg(jsonb_build_object('policy', policyname, 'cmd', cmd, 'using', qual, 'check', with_check))
+     FROM pg_policies WHERE schemaname='public' AND tablename=${lit}) AS policies`;
+      const { data, error } = await supabaseAdmin.rpc(
+        "exec_admin_select" as never,
+        { _sql: sql } as never,
+      );
+      if (error) return { ok: false, output: null, error: `DB: ${error.message}` };
+      const rows = data as Array<{ columns: unknown; policies: unknown }> | null;
+      if (!rows || rows.length === 0 || !rows[0].columns)
+        return { ok: false, output: null, error: `Tabela public.${table} nie istnieje.` };
+      return { ok: true, output: { table, ...rows[0] } };
+    }
+
+    if (call.name === "search_project_files") {
+      if (!opts.enableFileRead)
+        return { ok: false, output: null, error: "Odczyt plików wyłączony." };
+      const query = String(call.input.query ?? "");
+      if (!query.trim()) return { ok: false, output: null, error: "Puste zapytanie." };
+      const useRegex = call.input.regex === true;
+      const exts = Array.isArray(call.input.extensions)
+        ? (call.input.extensions as unknown[]).map((e) =>
+            String(e).replace(/^\./, "").toLowerCase(),
+          )
+        : null;
+      const safe = safeFilePath(String(call.input.dir ?? "src"));
+      if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona." };
+
+      let matcher: RegExp;
+      try {
+        matcher = new RegExp(useRegex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      } catch (e) {
+        return {
+          ok: false,
+          output: null,
+          error: `Niepoprawny regex: ${e instanceof Error ? e.message : String(e)}`,
+        };
+      }
+
+      const hits: Array<{ path: string; line: number; text: string }> = [];
+      let scanned = 0;
+      async function walk(p: string) {
+        if (hits.length >= 120 || scanned >= 3000) return;
+        let entries: { name: string; isDirectory: () => boolean }[] = [];
+        try {
+          entries = (await fs.readdir(p, { withFileTypes: true })) as never;
+        } catch {
+          return;
+        }
+        for (const e of entries) {
+          if (hits.length >= 120 || scanned >= 3000) return;
+          if (e.name.startsWith(".") || e.name === "node_modules" || e.name === "dist") continue;
+          const full = path.join(p, e.name);
+          if (e.isDirectory()) {
+            await walk(full);
+            continue;
+          }
+          const ext = path.extname(e.name).replace(/^\./, "").toLowerCase();
+          if (exts && !exts.includes(ext)) continue;
+          if (!exts && !/^(ts|tsx|js|jsx|sql|json|md|css|toml|yml|yaml|html)$/.test(ext)) continue;
+          const stat = await fs.stat(full).catch(() => null);
+          if (!stat || stat.size > 512 * 1024) continue;
+          scanned++;
+          let content = "";
+          try {
+            content = await fs.readFile(full, "utf8");
+          } catch {
+            continue;
+          }
+          if (!matcher.test(content)) continue;
+          const rel = path.relative(PROJECT_ROOT, full);
+          const lines = content.split("\n");
+          for (let i = 0; i < lines.length && hits.length < 120; i++) {
+            if (matcher.test(lines[i]))
+              hits.push({ path: rel, line: i + 1, text: lines[i].trim().slice(0, 300) });
+          }
+        }
+      }
+      await walk(safe);
+      return {
+        ok: true,
+        output: {
+          query,
+          files_scanned: scanned,
+          truncated: hits.length >= 120,
+          matches: hits,
+        },
+      };
+    }
+
+    if (call.name === "list_admin_pages") {
+      const { allAdminNavItems } = await import("@/lib/admin-nav");
+      return {
+        ok: true,
+        output: allAdminNavItems.map((i) => ({
+          path: i.to,
+          label: i.label,
+          section: i.sectionLabel,
+          description: i.description,
+        })),
+      };
+    }
+
     if (call.name === "execute_sql") {
       if (!opts.enableDbRead && !opts.enableDbWrite)
         return { ok: false, output: null, error: "Dostęp do bazy wyłączony." };
@@ -317,6 +465,22 @@ export type AnthropicMessage = {
       >;
 };
 
+/**
+ * Doklejane do promptu z bazy — reguły wynikające z tego, JAK bot jest osadzony
+ * (czat w panelu, markdown, linki nawigujące w aplikacji). Prompt merytoryczny
+ * administrator edytuje w ustawieniach asystenta, ta część jest stała.
+ */
+const RUNTIME_SYSTEM_SUFFIX = `
+--- KONTEKST URUCHOMIENIA ---
+Działasz jako tekstowy asystent wewnątrz panelu /admin aplikacji (czat na pulpicie i pływający na każdej podstronie). Rozmawia z Tobą administrator.
+Zasady odpowiedzi:
+- Odpowiadaj po polsku, zwięźle. Formatuj markdownem (listy, tabele) — jest renderowany.
+- Gdy kierujesz administratora do miejsca w panelu, podaj link markdown ze ścieżką aplikacji, np. [Klienci](/admin/klienci) — kliknięcie nawiguje bez przeładowania. Ścieżki potwierdzaj narzędziem list_admin_pages, nie wymyślaj ich.
+- Zanim odpytasz nieznaną tabelę, sprawdź jej kolumny narzędziem describe_table.
+- Zmiany w danych i plikach wykonuj po jasnym poleceniu; najpierw krótko napisz, co zmienisz i na ilu wierszach. Nieodwracalne operacje (DELETE/DROP bez WHERE, kasowanie plików) potwierdzaj zawsze.
+- Po wykonaniu zmiany napisz konkretnie, co się stało (np. „zaktualizowano 3 wiersze w loan_applications”).
+- Gdy narzędzie zwróci błąd, pokaż jego treść i zaproponuj następny krok — nie udawaj, że operacja się udała.`;
+
 export async function callAnthropic(args: {
   model: string;
   system: string;
@@ -343,7 +507,7 @@ export async function callAnthropic(args: {
     },
     body: JSON.stringify({
       model: args.model,
-      system: args.system,
+      system: `${args.system}\n${RUNTIME_SYSTEM_SUFFIX}`,
       messages: args.messages,
       max_tokens: args.max_tokens,
       temperature: args.temperature,

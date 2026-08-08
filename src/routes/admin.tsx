@@ -4,6 +4,7 @@ import { FileText, Receipt, FileCheck, Building2 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 import { AdminTopBar } from "@/components/admin/admin-top-bar";
 import { AdminSearchDialog, AdminSearchIconTrigger } from "@/components/admin/admin-search";
+import { AdminBotLauncher } from "@/components/admin/admin-bot-launcher";
 import { SectionTabs } from "@/components/admin/section-tabs";
 import { adminSections, type AdminSection } from "@/lib/admin-nav";
 
@@ -66,7 +67,12 @@ function AdminLayout() {
         </>
       }
       mobileHeaderExtra={<AdminSearchIconTrigger />}
-      footer={<AdminSearchDialog allowedPaths={accountingOnly ? accountingPaths : undefined} />}
+      footer={
+        <>
+          <AdminSearchDialog allowedPaths={accountingOnly ? accountingPaths : undefined} />
+          <AdminBotLauncher />
+        </>
+      }
     />
   );
 }
