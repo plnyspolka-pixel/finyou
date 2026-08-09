@@ -43,6 +43,8 @@ export const updateAiSettings = createServerFn({ method: "POST" })
         enable_file_write: z.boolean(),
         max_tokens: z.number().int().min(500).max(16000),
         temperature: z.number().min(0).max(1),
+        enable_memory: z.boolean(),
+        memory_limit: z.number().int().min(0).max(200),
       })
       .parse(d),
   )
@@ -96,6 +98,126 @@ export const deleteConversation = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const MEMORY_KIND_VALUES = ["preferencja", "proces", "fakt", "slownik", "projekt"] as const;
+
+export type AiMemoryEntry = {
+  id: string;
+  kind: string;
+  title: string;
+  content: string;
+  weight: number;
+  uses: number;
+  pinned: boolean;
+  last_used_at: string | null;
+  source_conversation_id: string | null;
+  updated_at: string;
+};
+
+/** Baza wiedzy asystenta — wpisy widoczne w zakładce „Pamięć”. */
+export const listMemory = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context as never);
+    const { data, error } = await context.supabase
+      .from("ai_admin_memory")
+      .select(
+        "id, kind, title, content, weight, uses, pinned, last_used_at, source_conversation_id, updated_at",
+      )
+      .eq("archived", false)
+      .order("weight", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(300);
+    if (error) throw new Error(error.message);
+    return { entries: (data ?? []) as AiMemoryEntry[] };
+  });
+
+/**
+ * Ręczny wpis pamięci z panelu. `pinned = true`, więc automatyczna destylacja
+ * rozmów go nie nadpisze — to wiedza wpisana świadomie przez administratora.
+ */
+export const upsertMemory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        id: z.string().uuid().optional(),
+        kind: z.enum(MEMORY_KIND_VALUES),
+        title: z.string().min(2).max(120),
+        content: z.string().min(2).max(4000),
+        weight: z.number().int().min(0).max(100).default(0),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    if (data.id) {
+      const { error } = await context.supabase
+        .from("ai_admin_memory")
+        .update({
+          kind: data.kind,
+          title: data.title,
+          content: data.content,
+          weight: data.weight,
+          pinned: true,
+        })
+        .eq("id", data.id);
+      if (error) throw new Error(error.message);
+      return { ok: true, id: data.id, action: "updated" as const };
+    }
+    const { upsertMemoryEntry } = await import("./ai-admin.server");
+    const r = await upsertMemoryEntry({
+      kind: data.kind,
+      title: data.title,
+      content: data.content,
+      weight: data.weight,
+      userId: context.userId,
+      pinned: true,
+    });
+    return { ok: true, ...r };
+  });
+
+/** Archiwizacja wpisu pamięci (nie kasujemy — zostaje ślad w bazie). */
+export const deleteMemory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { error } = await context.supabase
+      .from("ai_admin_memory")
+      .update({ archived: true })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
+ * Destylacja rozmowy → streszczenie wątku + wpisy do pamięci długotrwałej.
+ * Klient woła to po zakończonej turze bez czekania na wynik, żeby nie wydłużać
+ * odpowiedzi czatu.
+ */
+export const distillConversation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ conversation_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: settings } = await supabaseAdmin
+      .from("ai_admin_settings")
+      .select("enable_memory")
+      .limit(1)
+      .maybeSingle();
+    if (settings && settings.enable_memory === false) {
+      return { ok: false, reason: "Pamięć długotrwała wyłączona" };
+    }
+    const { distillConversation: distill } = await import("./ai-admin.server");
+    try {
+      return await distill({ conversationId: data.conversation_id, userId: context.userId });
+    } catch (e) {
+      // Destylacja jest dodatkiem — jej błąd nie może wyglądać jak błąd czatu.
+      return { ok: false, reason: e instanceof Error ? e.message : String(e) };
+    }
+  });
+
 /** Ostatnie wywołania narzędzi asystenta — podgląd „co bot faktycznie zrobił”. */
 export const listAiAuditLog = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -141,7 +263,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { callAnthropic, runTool } = await import("./ai-admin.server");
+    const { callAnthropic, runTool, buildMemoryBlock } = await import("./ai-admin.server");
     type AnthropicMessage = import("./ai-admin.server").AnthropicMessage;
     type AnthropicContent = Exclude<AnthropicMessage["content"], string>;
 
@@ -161,6 +283,8 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       enable_file_write: boolean;
       max_tokens: number;
       temperature: number;
+      enable_memory: boolean;
+      memory_limit: number;
     };
 
     // Ensure conversation
@@ -282,13 +406,33 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       }
     }
 
+    // Prompt systemowy = ustawienia + pamięć długotrwała (wiedza z poprzednich
+    // rozmów) + streszczenie tego wątku. Pamięć zbieramy raz na turę, nie na rundę.
+    let systemPrompt = s.system_prompt;
+    if (s.enable_memory !== false) {
+      try {
+        const mem = await buildMemoryBlock(s.memory_limit ?? 40);
+        if (mem.text) systemPrompt += mem.text;
+      } catch {
+        // Brak pamięci nie może blokować rozmowy — lecimy na samym prompcie.
+      }
+      const { data: convRow } = await supabaseAdmin
+        .from("ai_admin_conversations")
+        .select("summary")
+        .eq("id", convId)
+        .maybeSingle();
+      if (convRow?.summary) {
+        systemPrompt += `\n--- STRESZCZENIE TEGO WĄTKU (wcześniejsze ustalenia) ---\n${convRow.summary}`;
+      }
+    }
+
     // Pętla agentowa — max 20 rund narzędzi na jedną wiadomość
     let totalIn = 0;
     let totalOut = 0;
     for (let round = 0; round < 20; round++) {
       const resp = await callAnthropic({
         model: s.model,
-        system: s.system_prompt,
+        system: systemPrompt,
         messages,
         max_tokens: s.max_tokens,
         temperature: s.temperature,
@@ -343,6 +487,9 @@ export const sendAdminChat = createServerFn({ method: "POST" })
             enableDbWrite: s.enable_db_write,
             enableFileRead: s.enable_file_read,
             enableFileWrite: s.enable_file_write,
+            enableMemory: s.enable_memory !== false,
+            userId: context.userId,
+            conversationId: convId,
           },
         );
         const content = r.ok

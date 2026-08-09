@@ -26,7 +26,7 @@ księgowość nie widzą asystenta.
 
 | Element                                        | Plik                                                    |
 | ---------------------------------------------- | ------------------------------------------------------- |
-| Komponent czatu + dialog ustawień              | `src/components/admin/admin-bot.tsx`                    |
+| Komponent czatu + ustawienia + zakładka pamięci | `src/components/admin/admin-bot.tsx`                   |
 | Pływający launcher (layout `/admin`)           | `src/components/admin/admin-bot-launcher.tsx`           |
 | Server functions (czat, historia, ustawienia)  | `src/lib/ai-admin.functions.ts`                         |
 | Pętla agentowa, narzędzia, wywołanie Anthropic | `src/lib/ai-admin.server.ts`                            |
@@ -34,9 +34,11 @@ księgowość nie widzą asystenta.
 | Karta na pulpicie                              | `src/routes/admin.index.tsx`                             |
 | Montaż launchera                               | `src/routes/admin.tsx` (slot `footer` w `PanelShell`)   |
 
-Tabele (migracja `supabase/migrations/20260602160132_*.sql` + późniejsze):
-`ai_admin_settings` (singleton), `ai_admin_conversations`, `ai_admin_messages`,
-`ai_admin_audit_log`.
+Tabele (migracje `supabase/migrations/20260602160132_*.sql` oraz
+`20260809120000_ai_admin_memory.sql`): `ai_admin_settings` (singleton),
+`ai_admin_conversations` (+ `summary`, `summarized_message_count`),
+`ai_admin_messages` (+ indeks pełnotekstowy na treści), `ai_admin_audit_log`,
+`ai_admin_memory`.
 
 Wymagane sekrety: `ANTHROPIC_API_KEY` (czat), `ELEVENLABS_API_KEY` (dyktowanie
 głosem — opcjonalne).
@@ -45,6 +47,10 @@ głosem — opcjonalne).
 
 | Narzędzie              | Wymaga uprawnienia | Co robi                                                        |
 | ---------------------- | ------------------ | -------------------------------------------------------------- |
+| `remember`             | pamięć             | wpis do pamięci długotrwałej (istniejący tytuł = aktualizacja)  |
+| `recall_memory`        | pamięć             | szukanie w pamięci poza zestawem wstrzykniętym do promptu       |
+| `forget`               | pamięć             | archiwizacja wpisu (po id lub tytule)                          |
+| `search_conversations` | —                  | szukanie po treści wszystkich dotychczasowych rozmów            |
 | `query_database`       | odczyt bazy        | SELECT/WITH, max 200 wierszy                                   |
 | `list_database_tables` | odczyt bazy        | tabele schemy `public` z liczbą kolumn                         |
 | `describe_table`       | odczyt bazy        | kolumny (typ, NULL, default) + polityki RLS tabeli             |
@@ -64,6 +70,54 @@ poziomie `safeFilePath`. Każde wywołanie narzędzia ląduje w
 Uprawnienia (odczyt/zapis bazy, odczyt/zapis plików) przełącza się w
 ustawieniach asystenta — wyłączenie działa natychmiast, bo pętla czyta je z
 `ai_admin_settings` przy każdej turze.
+
+## Pamięć długotrwała (baza wiedzy z rozmów)
+
+Rozmowy były zapisywane od początku, ale każdy nowy wątek startował od zera.
+Teraz z rozmów destylowana jest **trwała wiedza**, którą bot dostaje w każdej
+kolejnej rozmowie.
+
+**Co jest zapisywane** — tabela `ai_admin_memory`, pięć rodzajów wpisów:
+
+| Rodzaj        | Co trzyma                                     | Przykład                                              |
+| ------------- | --------------------------------------------- | ----------------------------------------------------- |
+| `preferencja` | jak asystent ma pracować                      | „Raporty zawsze tabelą, bez wstępu"                   |
+| `proces`      | jak w firmie przebiega czynność                | „Lead z kalkulatora: telefon w 15 min, potem SMS"     |
+| `fakt`        | trwały fakt o firmie / danych                  | „Status `szukamy_inwestora` = wniosek u instytucji"   |
+| `slownik`     | nazwa własna, skrót                            | „«karta» = karta oferty, nie płatnicza"               |
+| `projekt`     | kontekst bieżącej roboty                       | „Trwa migracja windykacji na nowy moduł"              |
+
+**Dwa sposoby dopisywania:**
+
+1. **Bot sam w trakcie rozmowy** — narzędzie `remember`, gdy ustalasz sposób
+   pracy, tłumaczysz proces albo mówisz „zapamiętaj". Potwierdza to w odpowiedzi.
+2. **Destylacja po każdej turze** — `distillConversation` (model
+   `claude-haiku-4-5`, temperatura 0) czyta nowe wiadomości wątku i wyciąga z
+   nich trwałe wnioski + streszczenie rozmowy. Klient woła ją **po** otrzymaniu
+   odpowiedzi i nie czeka na wynik, więc czat nie zwalnia; błąd destylacji nigdy
+   nie wygląda jak błąd czatu.
+
+**Jak wraca do rozmowy:** przy każdej turze `buildMemoryBlock` wstrzykuje do
+promptu systemowego blok „PAMIĘĆ DŁUGOTRWAŁA" — do `memory_limit` wpisów
+(domyślnie 40), sortowanych po priorytecie, potem po dacie zmiany. Do tego
+dochodzi streszczenie bieżącego wątku (`ai_admin_conversations.summary`).
+Licznik `uses` / `last_used_at` pokazuje, które wpisy naprawdę pracują.
+
+**Higiena pamięci:**
+
+- Jeden wpis na tytuł (unikalny indeks na `lower(title)`) — powtórka
+  aktualizuje, nie duplikuje.
+- Wpisy dodane ręcznie w panelu są `pinned` — destylacja ich nie nadpisuje.
+- „Zapomniane" (`forget` / kosz w panelu) są archiwizowane, nie kasowane, i
+  destylacja ich **nie wskrzesza** (`allowRevive: false`) — inaczej raz odrzucona
+  wiedza wracałaby przy każdej rozmowie.
+- Sprzeczność między pamięcią a tym, co mówisz teraz, rozstrzyga się na korzyść
+  teraźniejszości — bot ma wtedy poprawić wpis.
+
+**Panel:** zakładka „Pamięć" w ustawieniach asystenta — lista wpisów z
+priorytetem i licznikiem użyć, filtr, edycja, kosz oraz ręczne dopisywanie.
+W zakładce „Model i uprawnienia" jest przełącznik pamięci (wyłączenie nie kasuje
+wpisów) i limit wpisów w prompcie.
 
 ## Jak działa tura
 

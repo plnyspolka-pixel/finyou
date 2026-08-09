@@ -14,6 +14,11 @@ import {
   getAiSettings,
   updateAiSettings,
   listAiAuditLog,
+  listMemory,
+  upsertMemory,
+  deleteMemory,
+  distillConversation,
+  type AiMemoryEntry,
 } from "@/lib/ai-admin.functions";
 import { AI_ADMIN_MODELS, type AiAdminModelId } from "@/lib/ai-admin.models";
 import { Button } from "@/components/ui/button";
@@ -53,6 +58,8 @@ import {
   Settings2,
   History,
   MessageSquare,
+  Brain,
+  Pin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -101,6 +108,7 @@ const STARTERS = [
   "Ile wniosków czeka na inwestora dłużej niż 7 dni?",
   "Podsumuj kolejkę follow-up: co jest zaległe?",
   "Które wnioski mają braki w dokumentach?",
+  "Co pamiętasz o tym, jak pracuję?",
 ];
 
 /** Wspólne dla wszystkich instancji id aktywnej rozmowy (cache RQ + localStorage). */
@@ -160,6 +168,7 @@ export function AdminBot({ className, compact = false, headerActions }: AdminBot
   const getFn = useServerFn(getConversation);
   const delFn = useServerFn(deleteConversation);
   const transcribeFn = useServerFn(transcribeAdminAudio);
+  const distillFn = useServerFn(distillConversation);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recChunksRef = useRef<Blob[]>([]);
@@ -192,6 +201,16 @@ export function AdminBot({ className, compact = false, headerActions }: AdminBot
       setInput("");
       await qc.invalidateQueries({ queryKey: ["ai-admin-msgs", r.conversation_id] });
       await qc.invalidateQueries({ queryKey: ["ai-admin-convs"] });
+      // Destylacja rozmowy (streszczenie wątku + wpisy do pamięci) leci w tle —
+      // nie blokuje UI, a jej błąd nie może wyglądać jak błąd czatu.
+      if (r.conversation_id) {
+        void distillFn({ data: { conversation_id: r.conversation_id } })
+          .then(async () => {
+            await qc.invalidateQueries({ queryKey: ["ai-admin-memory"] });
+            await qc.invalidateQueries({ queryKey: ["ai-admin-convs"] });
+          })
+          .catch(() => undefined);
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -385,7 +404,7 @@ export function AdminBot({ className, compact = false, headerActions }: AdminBot
           <div className="truncate text-[11px] text-muted-foreground">
             {send.isPending
               ? "Pracuję…"
-              : (activeTitle ?? "Baza, pliki projektu i nawigacja po panelu")}
+              : (activeTitle ?? "Baza, pliki projektu, pamięć poprzednich rozmów")}
           </div>
         </div>
         <Button
@@ -473,6 +492,8 @@ export function AdminBot({ className, compact = false, headerActions }: AdminBot
                 <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
                   Napisz, co mam zrobić. Mogę odpytać bazę, policzyć, poprawić dane po Twoim
                   potwierdzeniu, zajrzeć w pliki projektu i wskazać właściwą stronę panelu.
+                  Wszystkie rozmowy zapisuję, a trwałe ustalenia trafiają do pamięci — kolejny
+                  wątek startuje z tym, co już wiem.
                 </div>
                 {!compact && (
                   <div className="flex flex-wrap gap-1.5">
@@ -679,6 +700,8 @@ type AiSettings = {
   enable_file_write: boolean;
   max_tokens: number;
   temperature: number;
+  enable_memory: boolean;
+  memory_limit: number;
 };
 
 /** Ustawienia bota: model, uprawnienia narzędzi, prompt + log wywołań narzędzi. */
@@ -724,6 +747,8 @@ function AdminBotSettingsDialog({
         enable_file_write: s.enable_file_write,
         max_tokens: Number(s.max_tokens),
         temperature: Number(s.temperature),
+        enable_memory: s.enable_memory !== false,
+        memory_limit: Number(s.memory_limit ?? 40),
       });
     }
   }, [settingsQ.data, draft]);
@@ -760,6 +785,7 @@ function AdminBotSettingsDialog({
           <TabsList>
             <TabsTrigger value="model">Model i uprawnienia</TabsTrigger>
             <TabsTrigger value="prompt">Prompt</TabsTrigger>
+            <TabsTrigger value="memory">Pamięć</TabsTrigger>
             <TabsTrigger value="audit">Log narzędzi</TabsTrigger>
           </TabsList>
 
@@ -834,9 +860,33 @@ function AdminBotSettingsDialog({
                     checked={draft.enable_file_write}
                     onChange={(v) => patch({ enable_file_write: v })}
                   />
+                  <ToggleRow
+                    label="Pamięć długotrwała"
+                    hint="Destylacja rozmów do bazy wiedzy i wstrzykiwanie jej do promptu. Wyłączenie nie kasuje wpisów."
+                    checked={draft.enable_memory}
+                    onChange={(v) => patch({ enable_memory: v })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ile wpisów pamięci trafia do promptu</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={200}
+                    value={draft.memory_limit}
+                    onChange={(e) => patch({ memory_limit: Number(e.target.value) })}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Wchodzą wpisy o najwyższym priorytecie, potem najświeżej zmienione. Więcej
+                    wpisów = lepszy kontekst, ale droższa każda wiadomość.
+                  </p>
                 </div>
               </>
             )}
+          </TabsContent>
+
+          <TabsContent value="memory" className="mt-4">
+            <MemoryTab />
           </TabsContent>
 
           <TabsContent value="prompt" className="mt-4">
@@ -904,6 +954,217 @@ function AdminBotSettingsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+const MEMORY_KIND_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "preferencja", label: "Preferencja — jak mam pracować" },
+  { value: "proces", label: "Proces — jak przebiega czynność" },
+  { value: "fakt", label: "Fakt — trwały fakt o firmie/danych" },
+  { value: "slownik", label: "Słownik — nazwa własna, skrót" },
+  { value: "projekt", label: "Projekt — na czym teraz pracujemy" },
+];
+
+/**
+ * Baza wiedzy asystenta: wpisy wydestylowane z rozmów + dopisywane ręcznie.
+ * Ręczne (`pinned`) nie są nadpisywane przez destylację.
+ */
+function MemoryTab() {
+  const listFn = useServerFn(listMemory);
+  const upsertFn = useServerFn(upsertMemory);
+  const delFn = useServerFn(deleteMemory);
+  const qc = useQueryClient();
+
+  const [form, setForm] = useState<{
+    id?: string;
+    kind: string;
+    title: string;
+    content: string;
+    weight: number;
+  }>({ kind: "preferencja", title: "", content: "", weight: 0 });
+  const [filter, setFilter] = useState("");
+
+  const memoryQ = useQuery({ queryKey: ["ai-admin-memory"], queryFn: () => listFn() });
+
+  const save = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: {
+          id: form.id,
+          kind: form.kind as "preferencja" | "proces" | "fakt" | "slownik" | "projekt",
+          title: form.title.trim(),
+          content: form.content.trim(),
+          weight: form.weight,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success(form.id ? "Wpis zaktualizowany" : "Wpis dodany do pamięci");
+      setForm({ kind: "preferencja", title: "", content: "", weight: 0 });
+      await qc.invalidateQueries({ queryKey: ["ai-admin-memory"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => delFn({ data: { id } }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["ai-admin-memory"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const entries = (memoryQ.data?.entries ?? []) as AiMemoryEntry[];
+  const needle = filter.trim().toLowerCase();
+  const visible = needle
+    ? entries.filter(
+        (e) =>
+          e.title.toLowerCase().includes(needle) ||
+          e.content.toLowerCase().includes(needle) ||
+          e.kind.includes(needle),
+      )
+    : entries;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-2 rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+        <Brain className="mt-0.5 h-4 w-4 shrink-0" />
+        <p>
+          Po każdej turze rozmowa jest destylowana: asystent zapisuje tu trwałe ustalenia (jak
+          pracujesz, jak przebiegają procesy, co znaczą Twoje nazwy) i przy każdej kolejnej
+          wiadomości dostaje je w prompcie. Wpisy dodane tutaj ręcznie są przypięte — automat ich
+          nie nadpisze.
+        </p>
+      </div>
+
+      <div className="space-y-2 rounded-md border p-3">
+        <div className="text-sm font-medium">{form.id ? "Edytuj wpis" : "Dodaj wpis ręcznie"}</div>
+        <div className="grid gap-2 sm:grid-cols-[1fr_140px]">
+          <Select value={form.kind} onValueChange={(v) => setForm((f) => ({ ...f, kind: v }))}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MEMORY_KIND_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={form.weight}
+            onChange={(e) => setForm((f) => ({ ...f, weight: Number(e.target.value) }))}
+            title="Priorytet 0–100"
+          />
+        </div>
+        <Input
+          placeholder="Tytuł (klucz wpisu), np. Format raportów tygodniowych"
+          maxLength={120}
+          value={form.title}
+          onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+        />
+        <Textarea
+          rows={3}
+          placeholder="Treść — 1–4 zdania, konkretnie."
+          value={form.content}
+          onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+        />
+        <div className="flex justify-end gap-2">
+          {form.id && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setForm({ kind: "preferencja", title: "", content: "", weight: 0 })}
+            >
+              Anuluj
+            </Button>
+          )}
+          <Button
+            size="sm"
+            onClick={() => save.mutate()}
+            disabled={
+              save.isPending || form.title.trim().length < 2 || form.content.trim().length < 2
+            }
+          >
+            {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {form.id ? "Zapisz wpis" : "Dodaj"}
+          </Button>
+        </div>
+      </div>
+
+      <Input
+        placeholder={`Filtruj ${entries.length} wpisów…`}
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+      />
+
+      <div className="space-y-1.5">
+        {visible.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            {memoryQ.isLoading
+              ? "Ładowanie…"
+              : entries.length === 0
+                ? "Pamięć jest pusta — zapełni się sama w trakcie rozmów."
+                : "Brak wpisów dla tego filtra."}
+          </p>
+        )}
+        {visible.map((e) => (
+          <div key={e.id} className="rounded-md border p-2 text-xs">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <Badge variant="outline" className="text-[10px]">
+                  {e.kind}
+                </Badge>
+                {e.pinned && (
+                  <Badge variant="secondary" className="gap-1 text-[10px]">
+                    <Pin className="h-3 w-3" /> ręczny
+                  </Badge>
+                )}
+                <span className="font-medium">{e.title}</span>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  onClick={() =>
+                    setForm({
+                      id: e.id,
+                      kind: e.kind,
+                      title: e.title,
+                      content: e.content,
+                      weight: e.weight,
+                    })
+                  }
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Edytuj wpis"
+                  title="Edytuj"
+                >
+                  <Settings2 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Usunąć wpis „${e.title}"?`)) remove.mutate(e.id);
+                  }}
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label="Usuń wpis"
+                  title="Usuń"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+            <p className="mt-1 whitespace-pre-wrap break-words text-muted-foreground">
+              {e.content}
+            </p>
+            <div className="mt-1 text-[10px] text-muted-foreground">
+              priorytet {e.weight} · użyty {e.uses}× · zmiana{" "}
+              {new Date(e.updated_at).toLocaleString("pl-PL")}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

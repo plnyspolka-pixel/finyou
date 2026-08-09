@@ -27,6 +27,123 @@ export type ToolCall = {
   input: Record<string, unknown>;
 };
 
+/** Rodzaje wpisów pamięci — muszą odpowiadać CHECK-owi na `ai_admin_memory.kind`. */
+export const MEMORY_KINDS = ["preferencja", "proces", "fakt", "slownik", "projekt"] as const;
+export type MemoryKind = (typeof MEMORY_KINDS)[number];
+
+/** Ekranuje znaki wieloznaczne wzorca `ilike` (wartość filtra). */
+function escapeLikePattern(s: string): string {
+  return s.replace(/[%_\\]/g, (m) => `\\${m}`);
+}
+
+/**
+ * Wzorzec do wnętrza `.or("a.ilike.%x%,b.ilike.%x%")` — tam przecinki i nawiasy
+ * są składnią filtra, więc zamieniamy je na spacje.
+ */
+function escapeOrPattern(s: string): string {
+  return escapeLikePattern(s).replace(/[,()]/g, " ");
+}
+
+/**
+ * Zapisuje wpis pamięci „po tytule": istniejący (nieskasowany) tytuł jest
+ * aktualizowany, nowy — dodawany. Wpisów `pinned` (dopisanych ręcznie w panelu)
+ * automat nie nadpisuje.
+ */
+export async function upsertMemoryEntry(args: {
+  kind: string;
+  title: string;
+  content: string;
+  weight?: number;
+  userId?: string;
+  conversationId?: string;
+  pinned?: boolean;
+  /**
+   * Czy wolno wskrzesić wpis zarchiwizowany (domyślnie tak — świadome
+   * `remember` / wpis z panelu). Destylacja ustawia `false`, żeby raz
+   * „zapomniana" wiedza nie wracała sama przy każdej kolejnej rozmowie.
+   */
+  allowRevive?: boolean;
+}): Promise<{
+  id: string;
+  action: "created" | "updated" | "skipped_pinned" | "skipped_archived";
+}> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: existing } = await supabaseAdmin
+    .from("ai_admin_memory")
+    .select("id, pinned, weight, archived")
+    .ilike("title", escapeLikePattern(args.title))
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    if (existing.pinned && !args.pinned) return { id: existing.id, action: "skipped_pinned" };
+    if (existing.archived && args.allowRevive === false)
+      return { id: existing.id, action: "skipped_archived" };
+    const { error } = await supabaseAdmin
+      .from("ai_admin_memory")
+      .update({
+        kind: args.kind,
+        content: args.content,
+        weight: args.weight ?? existing.weight,
+        archived: false,
+        ...(args.pinned === undefined ? {} : { pinned: args.pinned }),
+      })
+      .eq("id", existing.id);
+    if (error) throw new Error(error.message);
+    return { id: existing.id, action: "updated" };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("ai_admin_memory")
+    .insert({
+      kind: args.kind,
+      title: args.title,
+      content: args.content,
+      weight: args.weight ?? 0,
+      pinned: args.pinned ?? false,
+      created_by: args.userId ?? null,
+      source_conversation_id: args.conversationId ?? null,
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return { id: data.id, action: "created" };
+}
+
+/**
+ * Blok pamięci długotrwałej doklejany do promptu systemowego. Zwraca też liczbę
+ * wpisów — przy okazji podbijamy licznik użyć, żeby było widać, co faktycznie
+ * pracuje (kolumny `uses` / `last_used_at`).
+ */
+export async function buildMemoryBlock(limit: number): Promise<{ text: string; count: number }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("ai_admin_memory")
+    .select("id, kind, title, content")
+    .eq("archived", false)
+    .order("weight", { ascending: false })
+    .order("updated_at", { ascending: false })
+    .limit(Math.max(1, Math.min(200, limit)));
+  if (error || !data || data.length === 0) return { text: "", count: 0 };
+
+  const lines = data.map((m) => `- [${m.kind}] ${m.title}: ${m.content} (id: ${m.id})`);
+  const ids = data.map((m) => `'${m.id}'`).join(",");
+  // PostgREST nie umie `uses = uses + 1`, więc jednym SQL-em przez RPC.
+  await supabaseAdmin
+    .rpc("exec_admin_any" as never, {
+      _sql: `UPDATE public.ai_admin_memory SET uses = uses + 1, last_used_at = now() WHERE id IN (${ids})`,
+    } as never)
+    .then(
+      () => undefined,
+      () => undefined, // licznik jest statystyką — jego błąd nie może psuć rozmowy
+    );
+
+  return {
+    text: `\n--- PAMIĘĆ DŁUGOTRWAŁA (wiedza z poprzednich rozmów; traktuj jak ustalenia administratora) ---\n${lines.join("\n")}\n--- KONIEC PAMIĘCI ---`,
+    count: data.length,
+  };
+}
+
 export const ANTHROPIC_TOOLS = [
   {
     name: "query_database",
@@ -141,6 +258,74 @@ export const ANTHROPIC_TOOLS = [
     },
   },
   {
+    name: "remember",
+    description:
+      "Zapisz trwały wpis do pamięci długotrwałej (baza wiedzy dostępna w KAŻDEJ przyszłej rozmowie). Używaj, gdy administrator ustala sposób pracy, tłumaczy proces, nazwę własną albo prosi „zapamiętaj”. Wpis o istniejącym tytule zostaje zaktualizowany, nie zduplikowany. Nie zapisuj rzeczy jednorazowych ani danych, które można w każdej chwili odpytać z bazy.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kind: {
+          type: "string",
+          enum: ["preferencja", "proces", "fakt", "slownik", "projekt"],
+          description:
+            "preferencja = jak mam pracować; proces = jak przebiega czynność w firmie; fakt = trwały fakt o firmie/danych; slownik = nazwa własna lub skrót; projekt = kontekst bieżącej roboty.",
+        },
+        title: { type: "string", description: "Krótka etykieta, max 120 znaków (klucz wpisu)." },
+        content: { type: "string", description: "Treść wpisu — zwięźle, konkretnie." },
+        weight: {
+          type: "number",
+          description: "Priorytet 0–100; wyżej = ważniejsze w prompcie.",
+          default: 0,
+        },
+      },
+      required: ["kind", "title", "content"],
+    },
+  },
+  {
+    name: "recall_memory",
+    description:
+      "Przeszukaj pamięć długotrwałą. Najważniejsze wpisy i tak masz w prompcie — używaj, gdy szukasz czegoś spoza tego zestawu.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Fraza (tytuł lub treść). Pomiń, by dostać listę.",
+        },
+        kind: { type: "string", description: "Filtr rodzaju wpisu." },
+      },
+    },
+  },
+  {
+    name: "forget",
+    description:
+      "Archiwizuj wpis pamięci (po id lub tytule) — gdy administrator mówi, że coś jest nieaktualne lub błędne.",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "Id wpisu (uuid)." },
+        title: { type: "string", description: "Albo dokładny tytuł wpisu." },
+      },
+    },
+  },
+  {
+    name: "search_conversations",
+    description:
+      "Szukaj po treści WSZYSTKICH dotychczasowych rozmów z asystentem (także innych wątków). Używaj, gdy administrator odwołuje się do czegoś, co ustalaliście wcześniej („jak wtedy robiliśmy”, „to co ci mówiłem o…”).",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Szukana fraza." },
+        limit: {
+          type: "number",
+          description: "Max trafień, domyślnie 20 (max 50).",
+          default: 20,
+        },
+      },
+      required: ["query"],
+    },
+  },
+  {
     name: "list_admin_pages",
     description:
       "Zwraca mapę panelu /admin: sekcje, ścieżki, opisy. Używaj, żeby wskazać administratorowi właściwą stronę — ścieżki podawaj w odpowiedzi jako linki markdown, np. [Klienci](/admin/klienci).",
@@ -178,6 +363,12 @@ export async function runTool(
     enableDbWrite: boolean;
     enableFileRead: boolean;
     enableFileWrite: boolean;
+    /** Pamięć długotrwała (`remember` / `recall_memory` / `forget`). */
+    enableMemory?: boolean;
+    /** Autor wpisów pamięci — administrator prowadzący rozmowę. */
+    userId?: string;
+    /** Rozmowa, z której pochodzi wywołanie (źródło wpisu pamięci). */
+    conversationId?: string;
   },
 ): Promise<{ ok: boolean; output: unknown; error?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -407,6 +598,118 @@ export async function runTool(
       };
     }
 
+    if (call.name === "remember") {
+      if (opts.enableMemory === false)
+        return { ok: false, output: null, error: "Pamięć długotrwała wyłączona." };
+      const kind = String(call.input.kind ?? "fakt");
+      const title = String(call.input.title ?? "").trim();
+      const content = String(call.input.content ?? "").trim();
+      if (!MEMORY_KINDS.includes(kind as (typeof MEMORY_KINDS)[number]))
+        return { ok: false, output: null, error: `Nieznany rodzaj wpisu: ${kind}` };
+      if (!title || !content)
+        return { ok: false, output: null, error: "Tytuł i treść są wymagane." };
+      if (title.length > 120)
+        return { ok: false, output: null, error: "Tytuł max 120 znaków." };
+      const weight = Math.max(0, Math.min(100, Number(call.input.weight ?? 0) || 0));
+      const saved = await upsertMemoryEntry({
+        kind,
+        title,
+        content,
+        weight,
+        userId: opts.userId,
+        conversationId: opts.conversationId,
+      });
+      return { ok: true, output: saved };
+    }
+
+    if (call.name === "recall_memory") {
+      if (opts.enableMemory === false)
+        return { ok: false, output: null, error: "Pamięć długotrwała wyłączona." };
+      const query = String(call.input.query ?? "").trim();
+      const kind = String(call.input.kind ?? "").trim();
+      let q = supabaseAdmin
+        .from("ai_admin_memory")
+        .select("id, kind, title, content, weight, updated_at")
+        .eq("archived", false)
+        .order("weight", { ascending: false })
+        .order("updated_at", { ascending: false })
+        .limit(60);
+      if (kind) q = q.eq("kind", kind);
+      if (query) {
+        const esc = escapeOrPattern(query);
+        q = q.or(`title.ilike.%${esc}%,content.ilike.%${esc}%`);
+      }
+      const { data, error } = await q;
+      if (error) return { ok: false, output: null, error: error.message };
+      return { ok: true, output: data ?? [] };
+    }
+
+    if (call.name === "forget") {
+      if (opts.enableMemory === false)
+        return { ok: false, output: null, error: "Pamięć długotrwała wyłączona." };
+      const id = String(call.input.id ?? "").trim();
+      const title = String(call.input.title ?? "").trim();
+      if (!id && !title) return { ok: false, output: null, error: "Podaj id albo tytuł wpisu." };
+      const base = supabaseAdmin.from("ai_admin_memory").update({ archived: true });
+      const { data, error } = id
+        ? await base.eq("id", id).select("id, title")
+        : await base.ilike("title", escapeLikePattern(title)).select("id, title");
+      if (error) return { ok: false, output: null, error: error.message };
+      if (!data || data.length === 0)
+        return { ok: false, output: null, error: "Nie znalazłem takiego wpisu pamięci." };
+      return { ok: true, output: { archived: data } };
+    }
+
+    if (call.name === "search_conversations") {
+      const query = String(call.input.query ?? "").trim();
+      if (!query) return { ok: false, output: null, error: "Puste zapytanie." };
+      const limit = Math.min(Number(call.input.limit ?? 20) || 20, 50);
+
+      // Szukamy tylko po wątkach tego administratora (service role widziałby
+      // wszystkie). Tytuły bierzemy z tego samego zapytania — bez embedów.
+      const titles = new Map<string, string>();
+      let ownIds: string[] = [];
+      if (opts.userId) {
+        const { data: convs, error: cErr } = await supabaseAdmin
+          .from("ai_admin_conversations")
+          .select("id, title")
+          .eq("user_id", opts.userId)
+          .order("updated_at", { ascending: false })
+          .limit(500);
+        if (cErr) return { ok: false, output: null, error: cErr.message };
+        for (const c of convs ?? []) titles.set(c.id, c.title);
+        ownIds = [...titles.keys()];
+        if (ownIds.length === 0) return { ok: true, output: [] };
+      }
+
+      let mq = supabaseAdmin
+        .from("ai_admin_messages")
+        .select("id, role, content, created_at, conversation_id")
+        .ilike("content", `%${escapeLikePattern(query)}%`)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (ownIds.length > 0) mq = mq.in("conversation_id", ownIds);
+      const { data, error } = await mq;
+      if (error) return { ok: false, output: null, error: error.message };
+      const rows = data ?? [];
+      const needle = query.toLowerCase();
+      return {
+        ok: true,
+        output: rows.map((m) => {
+          const content = String(m.content ?? "");
+          const at = content.toLowerCase().indexOf(needle);
+          const from = at < 0 ? 0 : Math.max(0, at - 120);
+          return {
+            conversation_id: m.conversation_id,
+            conversation_title: titles.get(m.conversation_id) ?? null,
+            role: m.role,
+            created_at: m.created_at,
+            snippet: (from > 0 ? "…" : "") + content.slice(from, from + 320),
+          };
+        }),
+      };
+    }
+
     if (call.name === "list_admin_pages") {
       const { allAdminNavItems } = await import("@/lib/admin-nav");
       return {
@@ -479,7 +782,12 @@ Zasady odpowiedzi:
 - Zanim odpytasz nieznaną tabelę, sprawdź jej kolumny narzędziem describe_table.
 - Zmiany w danych i plikach wykonuj po jasnym poleceniu; najpierw krótko napisz, co zmienisz i na ilu wierszach. Nieodwracalne operacje (DELETE/DROP bez WHERE, kasowanie plików) potwierdzaj zawsze.
 - Po wykonaniu zmiany napisz konkretnie, co się stało (np. „zaktualizowano 3 wiersze w loan_applications”).
-- Gdy narzędzie zwróci błąd, pokaż jego treść i zaproponuj następny krok — nie udawaj, że operacja się udała.`;
+- Gdy narzędzie zwróci błąd, pokaż jego treść i zaproponuj następny krok — nie udawaj, że operacja się udała.
+Pamięć i kontekst:
+- Blok „PAMIĘĆ DŁUGOTRWAŁA" w tym prompcie to wiedza z poprzednich rozmów — traktuj ją jak ustalenia administratora i stosuj bez pytania. Jeśli coś w niej jest sprzeczne z tym, co administrator mówi teraz, wierz temu, co mówi teraz, i popraw wpis ("remember" z tym samym tytułem albo "forget").
+- Gdy administrator tłumaczy, jak chce pracować, jak przebiega proces w firmie, co znaczy używana przez niego nazwa albo mówi „zapamiętaj" — zapisz to narzędziem "remember". Rób to z własnej inicjatywy, krótko potwierdzając w odpowiedzi („zapamiętałem: …"). Nie zapisuj rzeczy jednorazowych ani danych, które można odpytać z bazy.
+- Gdy administrator odwołuje się do wcześniejszych rozmów, użyj "search_conversations" (szuka po wszystkich wątkach) lub "recall_memory".
+- Wszystkie rozmowy są zapisywane; jeśli administrator pyta „o czym rozmawialiśmy", szukaj zamiast zgadywać.`;
 
 export async function callAnthropic(args: {
   model: string;
@@ -495,6 +803,17 @@ export async function callAnthropic(args: {
   >;
   usage: { input_tokens: number; output_tokens: number };
 }> {
+  return (await postAnthropic({
+    model: args.model,
+    system: `${args.system}\n${RUNTIME_SYSTEM_SUFFIX}`,
+    messages: args.messages,
+    max_tokens: args.max_tokens,
+    temperature: args.temperature,
+    tools: ANTHROPIC_TOOLS,
+  })) as never;
+}
+
+async function postAnthropic(body: Record<string, unknown>): Promise<unknown> {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("ANTHROPIC_API_KEY missing");
 
@@ -505,18 +824,162 @@ export async function callAnthropic(args: {
       "anthropic-version": ANTHROPIC_VERSION,
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      model: args.model,
-      system: `${args.system}\n${RUNTIME_SYSTEM_SUFFIX}`,
-      messages: args.messages,
-      max_tokens: args.max_tokens,
-      temperature: args.temperature,
-      tools: ANTHROPIC_TOOLS,
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const t = await res.text();
     throw new Error(`Anthropic ${res.status}: ${t}`);
   }
-  return (await res.json()) as never;
+  return await res.json();
+}
+
+/** Model destylacji — tani, bez narzędzi; działa w tle po każdej turze. */
+const DISTILL_MODEL = "claude-haiku-4-5";
+
+const DISTILL_SYSTEM = `Jesteś modułem pamięci asystenta administratora aplikacji Finance You (pożyczki pod nieruchomość, inwestowanie w wierzytelności).
+Dostajesz fragment rozmowy administratora z asystentem oraz listę tytułów już zapisanych wpisów pamięci.
+Twoje zadanie: wyciągnąć z rozmowy TRWAŁĄ wiedzę, która przyda się w każdej przyszłej rozmowie — czyli jak administrator pracuje, jak w firmie przebiegają procesy, co znaczą używane przez niego nazwy i na czym aktualnie pracuje.
+
+Zasady:
+- Zapisuj tylko rzeczy trwałe. NIE zapisuj: wyników zapytań, liczb, które zmienią się jutro, jednorazowych poleceń, treści, które w każdej chwili można odpytać z bazy.
+- Jeśli rozmowa uzupełnia albo koryguje istniejący wpis, użyj DOKŁADNIE jego tytułu — zostanie nadpisany.
+- Tytuł: max 120 znaków, rzeczownikowy, jednoznaczny (np. "Format raportów tygodniowych", "Proces: kwalifikacja leada z kalkulatora").
+- Treść: 1–4 zdania, konkretnie, bez lania wody.
+- Rodzaje: preferencja (jak mam pracować), proces (jak przebiega czynność), fakt (trwały fakt o firmie/danych), slownik (nazwa własna, skrót), projekt (na czym teraz pracujemy).
+- weight: 0 domyślnie, 10–30 dla rzeczy powtarzalnych i ważnych, 50+ tylko dla twardych zasad pracy.
+- Jeśli rozmowa nie wniosła nic trwałego, zwróć puste "memories".
+- "summary": zwięzłe streszczenie CAŁEJ rozmowy (max 900 znaków) — do przywołania kontekstu bez czytania historii.
+- "title": tytuł wątku, max 60 znaków.
+
+Odpowiadasz WYŁĄCZNIE surowym JSON-em, bez komentarzy i bez bloków kodu:
+{"title":"…","summary":"…","memories":[{"kind":"preferencja","title":"…","content":"…","weight":0}]}`;
+
+function parseJsonObject(text: string): Record<string, unknown> | null {
+  const cleaned = text
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  try {
+    const parsed: unknown = JSON.parse(cleaned.slice(start, end + 1));
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Destylacja rozmowy: streszczenie wątku + wpisy do pamięci długotrwałej.
+ * Wołana po zakończonej turze (osobne wywołanie z klienta, żeby nie wydłużać
+ * odpowiedzi czatu). Idempotentna: pracuje tylko na wiadomościach, które
+ * pojawiły się od ostatniej destylacji.
+ */
+export async function distillConversation(args: {
+  conversationId: string;
+  userId: string;
+}): Promise<{
+  ok: boolean;
+  reason?: string;
+  saved?: Array<{ title: string; action: string }>;
+  summarized?: number;
+}> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: conv, error: cErr } = await supabaseAdmin
+    .from("ai_admin_conversations")
+    .select("id, title, summary, summarized_message_count")
+    .eq("id", args.conversationId)
+    // Destylujemy tylko własne wątki — supabaseAdmin omija RLS, więc filtr tutaj.
+    .eq("user_id", args.userId)
+    .maybeSingle();
+  if (cErr) throw new Error(cErr.message);
+  if (!conv) return { ok: false, reason: "Rozmowa nie istnieje" };
+
+  const { data: msgs, error: mErr } = await supabaseAdmin
+    .from("ai_admin_messages")
+    .select("role, content, created_at")
+    .eq("conversation_id", args.conversationId)
+    .order("created_at", { ascending: true });
+  if (mErr) throw new Error(mErr.message);
+
+  const all = msgs ?? [];
+  // Wiadomości narzędziowe pomijamy — ich treść to surowe dane, nie wiedza.
+  const relevant = all.filter((m) => m.role !== "tool" && String(m.content ?? "").trim());
+  if (relevant.length === 0) return { ok: false, reason: "Brak treści do destylacji" };
+  if (all.length <= conv.summarized_message_count) return { ok: false, reason: "Bez nowych zmian" };
+
+  const transcript = relevant
+    .slice(-40)
+    .map((m) => `${m.role === "user" ? "ADMIN" : "ASYSTENT"}: ${String(m.content).slice(0, 2000)}`)
+    .join("\n\n");
+
+  const { data: known } = await supabaseAdmin
+    .from("ai_admin_memory")
+    .select("title")
+    .eq("archived", false)
+    .order("updated_at", { ascending: false })
+    .limit(200);
+  const titles = (known ?? []).map((k) => `- ${k.title}`).join("\n");
+  const knownTitles = titles || "(pamięć jest pusta)";
+
+  const userText = `ISTNIEJĄCE WPISY PAMIĘCI (tytuły):\n${knownTitles}\n\nDOTYCHCZASOWE STRESZCZENIE WĄTKU:\n${
+    conv.summary ?? "(brak)"
+  }\n\nFRAGMENT ROZMOWY:\n${transcript}`;
+
+  const raw = (await postAnthropic({
+    model: DISTILL_MODEL,
+    system: DISTILL_SYSTEM,
+    messages: [{ role: "user", content: userText }],
+    max_tokens: 2000,
+    temperature: 0,
+  })) as { content?: Array<{ type: string; text?: string }> };
+
+  const text = (raw.content ?? [])
+    .filter((b) => b.type === "text")
+    .map((b) => b.text ?? "")
+    .join("\n");
+  const parsed = parseJsonObject(text);
+  if (!parsed) return { ok: false, reason: "Nie udało się sparsować odpowiedzi destylacji" };
+
+  const saved: Array<{ title: string; action: string }> = [];
+  const memories = Array.isArray(parsed.memories) ? parsed.memories.slice(0, 8) : [];
+  for (const entry of memories) {
+    if (!entry || typeof entry !== "object") continue;
+    const e = entry as Record<string, unknown>;
+    const title = String(e.title ?? "").trim().slice(0, 120);
+    const content = String(e.content ?? "").trim().slice(0, 2000);
+    const kind = MEMORY_KINDS.includes(String(e.kind) as MemoryKind) ? String(e.kind) : "fakt";
+    if (!title || !content) continue;
+    try {
+      const r = await upsertMemoryEntry({
+        kind,
+        title,
+        content,
+        weight: Math.max(0, Math.min(100, Number(e.weight ?? 0) || 0)),
+        userId: args.userId,
+        conversationId: args.conversationId,
+        allowRevive: false,
+      });
+      saved.push({ title, action: r.action });
+    } catch {
+      // Jeden nieudany wpis nie może przerwać destylacji pozostałych.
+    }
+  }
+
+  const summary = String(parsed.summary ?? "").trim().slice(0, 2000);
+  const newTitle = String(parsed.title ?? "").trim().slice(0, 60);
+  await supabaseAdmin
+    .from("ai_admin_conversations")
+    .update({
+      ...(summary ? { summary } : {}),
+      ...(newTitle ? { title: newTitle } : {}),
+      summarized_message_count: all.length,
+      summarized_at: new Date().toISOString(),
+    })
+    .eq("id", args.conversationId);
+
+  return { ok: true, saved, summarized: all.length };
 }
