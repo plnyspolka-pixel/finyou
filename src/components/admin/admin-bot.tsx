@@ -104,10 +104,10 @@ const CONV_STORAGE_KEY = "fy_admin_bot_conv";
 
 /** Podpowiedzi startowe — najczęstsze rzeczy, które admin robi „z czatu”. */
 const STARTERS = [
+  "Kto czeka na odpowiedź w skrzynce?",
+  "Pokaż korespondencję z ostatnim leadem i zaproponuj odpowiedź.",
   "Pokaż 10 najnowszych leadów ze statusem i źródłem.",
   "Ile wniosków czeka na inwestora dłużej niż 7 dni?",
-  "Podsumuj kolejkę follow-up: co jest zaległe?",
-  "Które wnioski mają braki w dokumentach?",
   "Co pamiętasz o tym, jak pracuję?",
 ];
 
@@ -404,7 +404,7 @@ export function AdminBot({ className, compact = false, headerActions }: AdminBot
           <div className="truncate text-[11px] text-muted-foreground">
             {send.isPending
               ? "Pracuję…"
-              : (activeTitle ?? "Baza, pliki projektu, pamięć poprzednich rozmów")}
+              : (activeTitle ?? "Baza, skrzynka, pliki projektu, pamięć rozmów")}
           </div>
         </div>
         <Button
@@ -491,9 +491,9 @@ export function AdminBot({ className, compact = false, headerActions }: AdminBot
               <div className="space-y-3">
                 <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
                   Napisz, co mam zrobić. Mogę odpytać bazę, policzyć, poprawić dane po Twoim
-                  potwierdzeniu, zajrzeć w pliki projektu i wskazać właściwą stronę panelu.
-                  Wszystkie rozmowy zapisuję, a trwałe ustalenia trafiają do pamięci — kolejny
-                  wątek startuje z tym, co już wiem.
+                  potwierdzeniu, przeczytać korespondencję z klientami i inwestorami (mail,
+                  Messenger, czat) i przygotować odpowiedź — wyślę ją dopiero, gdy powiesz
+                  „wyślij". Wszystkie rozmowy zapisuję, a trwałe ustalenia trafiają do pamięci.
                 </div>
                 {!compact && (
                   <div className="flex flex-wrap gap-1.5">
@@ -702,6 +702,8 @@ type AiSettings = {
   temperature: number;
   enable_memory: boolean;
   memory_limit: number;
+  enable_comms_read: boolean;
+  enable_comms_send: boolean;
 };
 
 /** Ustawienia bota: model, uprawnienia narzędzi, prompt + log wywołań narzędzi. */
@@ -749,6 +751,8 @@ function AdminBotSettingsDialog({
         temperature: Number(s.temperature),
         enable_memory: s.enable_memory !== false,
         memory_limit: Number(s.memory_limit ?? 40),
+        enable_comms_read: s.enable_comms_read !== false,
+        enable_comms_send: s.enable_comms_send === true,
       });
     }
   }, [settingsQ.data, draft]);
@@ -865,6 +869,18 @@ function AdminBotSettingsDialog({
                     hint="Destylacja rozmów do bazy wiedzy i wstrzykiwanie jej do promptu. Wyłączenie nie kasuje wpisów."
                     checked={draft.enable_memory}
                     onChange={(v) => patch({ enable_memory: v })}
+                  />
+                  <ToggleRow
+                    label="Wgląd w korespondencję"
+                    hint="Czytanie skrzynki: maile, Messenger/Instagram, czat na stronie, czat inwestora i wątki z instytucjami."
+                    checked={draft.enable_comms_read}
+                    onChange={(v) => patch({ enable_comms_read: v })}
+                  />
+                  <ToggleRow
+                    label="Wysyłanie wiadomości do klientów"
+                    hint="Odpisywanie i wysyłka w imieniu firmy. Asystent zawsze pokazuje treść i czeka na Twoje „wyślij”; limit 20 wiadomości na godzinę, każda widoczna w skrzynce."
+                    checked={draft.enable_comms_send}
+                    onChange={(v) => patch({ enable_comms_send: v })}
                   />
                 </div>
                 <div className="space-y-2">

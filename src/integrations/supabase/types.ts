@@ -1444,6 +1444,8 @@ export type Database = {
       }
       ai_admin_settings: {
         Row: {
+          enable_comms_read: boolean
+          enable_comms_send: boolean
           enable_db_read: boolean
           enable_db_write: boolean
           enable_file_read: boolean
@@ -1459,6 +1461,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          enable_comms_read?: boolean
+          enable_comms_send?: boolean
           enable_db_read?: boolean
           enable_db_write?: boolean
           enable_file_read?: boolean
@@ -1474,6 +1478,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          enable_comms_read?: boolean
+          enable_comms_send?: boolean
           enable_db_read?: boolean
           enable_db_write?: boolean
           enable_file_read?: boolean

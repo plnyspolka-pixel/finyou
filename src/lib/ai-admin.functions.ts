@@ -45,6 +45,8 @@ export const updateAiSettings = createServerFn({ method: "POST" })
         temperature: z.number().min(0).max(1),
         enable_memory: z.boolean(),
         memory_limit: z.number().int().min(0).max(200),
+        enable_comms_read: z.boolean(),
+        enable_comms_send: z.boolean(),
       })
       .parse(d),
   )
@@ -285,6 +287,8 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       temperature: number;
       enable_memory: boolean;
       memory_limit: number;
+      enable_comms_read: boolean;
+      enable_comms_send: boolean;
     };
 
     // Ensure conversation
@@ -488,6 +492,9 @@ export const sendAdminChat = createServerFn({ method: "POST" })
             enableFileRead: s.enable_file_read,
             enableFileWrite: s.enable_file_write,
             enableMemory: s.enable_memory !== false,
+            enableCommsRead: s.enable_comms_read !== false,
+            // Wysyłka do klientów działa tylko po świadomym włączeniu w ustawieniach.
+            enableCommsSend: s.enable_comms_send === true,
             userId: context.userId,
             conversationId: convId,
           },

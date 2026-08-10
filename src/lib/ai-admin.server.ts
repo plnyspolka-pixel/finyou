@@ -144,6 +144,41 @@ export async function buildMemoryBlock(limit: number): Promise<{ text: string; c
   };
 }
 
+/**
+ * Znacznik w `lead_communications.metadata.source` dla wiadomości wysłanych
+ * ręką asystenta — po nim rozpoznajemy je w skrzynce i liczymy limit godzinowy.
+ */
+export const ASSISTANT_COMMS_SOURCE = "ai_admin_assistant";
+
+/** Bezpiecznik: ile wiadomości asystent może wysłać w ciągu godziny. */
+const ASSISTANT_SEND_LIMIT_PER_HOUR = 20;
+
+/**
+ * Twardy hamulec na wypadek pętli albo źle zrozumianego polecenia „odpisz
+ * wszystkim": asystent nie wyśle więcej niż `ASSISTANT_SEND_LIMIT_PER_HOUR`
+ * wiadomości na godzinę. Liczymy po śladzie w `lead_communications`.
+ */
+async function assertSendQuota(): Promise<{ ok: boolean; error?: string }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const since = new Date(Date.now() - 3_600_000).toISOString();
+  const { count, error } = await supabaseAdmin
+    .from("lead_communications")
+    .select("id", { count: "exact", head: true })
+    .eq("direction", "outbound")
+    .gte("created_at", since)
+    .filter("metadata->>source", "eq", ASSISTANT_COMMS_SOURCE);
+  // Gdy nie da się policzyć, nie blokujemy — sam limit jest zabezpieczeniem
+  // dodatkowym, a wysyłka i tak wymaga włączonego uprawnienia.
+  if (error) return { ok: true };
+  if ((count ?? 0) >= ASSISTANT_SEND_LIMIT_PER_HOUR) {
+    return {
+      ok: false,
+      error: `Limit bezpieczeństwa: asystent wysłał już ${count} wiadomości w ostatniej godzinie (max ${ASSISTANT_SEND_LIMIT_PER_HOUR}). Wyślij resztę ręcznie ze skrzynki albo spróbuj później.`,
+    };
+  }
+  return { ok: true };
+}
+
 export const ANTHROPIC_TOOLS = [
   {
     name: "query_database",
@@ -258,6 +293,142 @@ export const ANTHROPIC_TOOLS = [
     },
   },
   {
+    name: "comms_list_threads",
+    description:
+      "Lista wątków korespondencji z klientami i inwestorami (e-mail, Messenger/Instagram, czat na stronie, czat inwestora, SMS) — najświeższe pierwsze. Zwraca `lead_id` potrzebny do czytania wątku i odpowiadania.",
+    input_schema: {
+      type: "object",
+      properties: {
+        channel: {
+          type: "string",
+          enum: ["email", "messenger", "chat", "chat_inwestor", "sms", "whatsapp"],
+          description: "Filtr kanału. Pomiń, by dostać wszystkie.",
+        },
+        query: {
+          type: "string",
+          description: "Fraza: imię, nazwisko, e-mail, telefon albo treść wiadomości.",
+        },
+        only_awaiting_reply: {
+          type: "boolean",
+          description: "Tylko wątki, w których ostatnie słowo ma klient (czekają na odpowiedź).",
+          default: false,
+        },
+        days: { type: "number", description: "Ile dni wstecz (domyślnie 90).", default: 90 },
+        limit: {
+          type: "number",
+          description: "Ile wątków (domyślnie 25, max 60).",
+          default: 25,
+        },
+      },
+    },
+  },
+  {
+    name: "comms_read_thread",
+    description:
+      "Pełna korespondencja jednego klienta/inwestora (po `lead_id`), chronologicznie, ze wszystkich kanałów. Zawiera `reply_to_id` wiadomości mailowych — użyj go w comms_send_email, żeby odpowiedź trafiła do tego samego wątku u odbiorcy.",
+    input_schema: {
+      type: "object",
+      properties: {
+        lead_id: { type: "string", description: "Id leada (uuid) z comms_list_threads." },
+        channel: { type: "string", description: "Filtr kanału (opcjonalnie)." },
+        limit: {
+          type: "number",
+          description: "Ile ostatnich wiadomości (domyślnie 60, max 200).",
+          default: 60,
+        },
+      },
+      required: ["lead_id"],
+    },
+  },
+  {
+    name: "comms_send_email",
+    description:
+      "WYSYŁA e-maila do klienta lub inwestora (nowy albo odpowiedź w wątku). To realna wiadomość do prawdziwej osoby — wolno jej użyć TYLKO po tym, jak administrator zobaczył treść i wyraźnie kazał ją wysłać. Nigdy nie wysyłaj po własnej inicjatywie, nie obiecuj warunków ani kwot, których nie ma w danych.",
+    input_schema: {
+      type: "object",
+      properties: {
+        to: { type: "string", description: "Adres odbiorcy (max 3, rozdzielone przecinkiem)." },
+        subject: { type: "string", description: "Temat wiadomości." },
+        body: { type: "string", description: "Treść (zwykły tekst, akapity)." },
+        reply_to_message_id: {
+          type: "string",
+          description: "`reply_to_id` z comms_read_thread — kontynuacja wątku u odbiorcy.",
+        },
+        lead_id: {
+          type: "string",
+          description: "Id leada, do którego przypisać wiadomość w skrzynce (opcjonalnie).",
+        },
+      },
+      required: ["to", "subject", "body"],
+    },
+  },
+  {
+    name: "comms_send_messenger",
+    description:
+      "WYSYŁA wiadomość w Messengerze / Instagram Direct do leada. Ta sama zasada: tylko po wyraźnym poleceniu administratora, po pokazaniu treści.",
+    input_schema: {
+      type: "object",
+      properties: {
+        lead_id: { type: "string", description: "Id leada (musi mieć PSID/IGSID)." },
+        body: { type: "string", description: "Treść wiadomości (max ~1900 znaków)." },
+      },
+      required: ["lead_id", "body"],
+    },
+  },
+  {
+    name: "comms_send_chat",
+    description:
+      "WYSYŁA odpowiedź w czacie na stronie (`chat`) albo w czacie inwestora (`chat_inwestor`). Klient zobaczy ją w widgecie. Tylko po wyraźnym poleceniu administratora.",
+    input_schema: {
+      type: "object",
+      properties: {
+        lead_id: { type: "string", description: "Id leada." },
+        body: { type: "string", description: "Treść wiadomości." },
+        channel: {
+          type: "string",
+          enum: ["chat", "chat_inwestor"],
+          description: "Kanał czatu, domyślnie `chat`.",
+          default: "chat",
+        },
+      },
+      required: ["lead_id", "body"],
+    },
+  },
+  {
+    name: "comms_list_offer_threads",
+    description:
+      "Korespondencja mailowa z instytucjami finansującymi (dystrybucja ofert): status dystrybucji + cały wątek wiadomości. Zwraca `distribution_id` do odpowiedzi.",
+    input_schema: {
+      type: "object",
+      properties: {
+        application_id: { type: "string", description: "Filtr: id wniosku (uuid)." },
+        investor_id: { type: "string", description: "Filtr: id instytucji (uuid)." },
+        limit: {
+          type: "number",
+          description: "Ile dystrybucji (domyślnie 15, max 50).",
+          default: 15,
+        },
+      },
+    },
+  },
+  {
+    name: "comms_reply_offer_thread",
+    description:
+      "WYSYŁA odpowiedź w wątku z instytucją finansującą (adres zwrotny to alias dystrybucji, więc odpowiedź instytucji wróci na kartę wniosku). Tylko po wyraźnym poleceniu administratora.",
+    input_schema: {
+      type: "object",
+      properties: {
+        distribution_id: {
+          type: "string",
+          description: "Id dystrybucji z comms_list_offer_threads.",
+        },
+        subject: { type: "string", description: "Temat." },
+        body: { type: "string", description: "Treść." },
+      },
+      required: ["distribution_id", "subject", "body"],
+    },
+  },
+  {
     name: "remember",
     description:
       "Zapisz trwały wpis do pamięci długotrwałej (baza wiedzy dostępna w KAŻDEJ przyszłej rozmowie). Używaj, gdy administrator ustala sposób pracy, tłumaczy proces, nazwę własną albo prosi „zapamiętaj”. Wpis o istniejącym tytule zostaje zaktualizowany, nie zduplikowany. Nie zapisuj rzeczy jednorazowych ani danych, które można w każdej chwili odpytać z bazy.",
@@ -365,6 +536,10 @@ export async function runTool(
     enableFileWrite: boolean;
     /** Pamięć długotrwała (`remember` / `recall_memory` / `forget`). */
     enableMemory?: boolean;
+    /** Wgląd w korespondencję z klientami i inwestorami (`comms_list_*`, `comms_read_*`). */
+    enableCommsRead?: boolean;
+    /** Wysyłka wiadomości do klientów i inwestorów (`comms_send_*`, `comms_reply_*`). */
+    enableCommsSend?: boolean;
     /** Autor wpisów pamięci — administrator prowadzący rozmowę. */
     userId?: string;
     /** Rozmowa, z której pochodzi wywołanie (źródło wpisu pamięci). */
@@ -598,6 +773,155 @@ export async function runTool(
       };
     }
 
+    if (call.name.startsWith("comms_")) {
+      const isSend = call.name.startsWith("comms_send") || call.name === "comms_reply_offer_thread";
+      if (isSend) {
+        if (opts.enableCommsSend !== true)
+          return {
+            ok: false,
+            output: null,
+            error:
+              "Wysyłka wiadomości do klientów jest wyłączona. Administrator może ją włączyć w ustawieniach asystenta („Wysyłanie wiadomości do klientów”).",
+          };
+        if (!opts.userId)
+          return { ok: false, output: null, error: "Brak kontekstu użytkownika do wysyłki." };
+        const guard = await assertSendQuota();
+        if (!guard.ok) return { ok: false, output: null, error: guard.error };
+      }
+      // Autor wysyłki: administrator prowadzący rozmowę (ląduje w metadanych
+      // wiadomości jako `sent_by`). Dla narzędzi tylko-do-czytania nieużywany.
+      const actorUserId = String(opts.userId ?? "");
+      if (!isSend && opts.enableCommsRead === false) {
+        return { ok: false, output: null, error: "Wgląd w korespondencję wyłączony." };
+      }
+
+      const comms = await import("./comms-agent.server");
+
+      if (call.name === "comms_list_threads") {
+        return {
+          ok: true,
+          output: await comms.listCommsThreads({
+            channel: call.input.channel ? String(call.input.channel) : undefined,
+            query: call.input.query ? String(call.input.query) : undefined,
+            onlyAwaitingReply: call.input.only_awaiting_reply === true,
+            days: Number(call.input.days ?? 90) || 90,
+            limit: Number(call.input.limit ?? 25) || 25,
+          }),
+        };
+      }
+
+      if (call.name === "comms_read_thread") {
+        const leadId = String(call.input.lead_id ?? "");
+        if (!leadId) return { ok: false, output: null, error: "Brak lead_id." };
+        return {
+          ok: true,
+          output: await comms.readCommsThread({
+            leadId,
+            channel: call.input.channel ? String(call.input.channel) : undefined,
+            limit: Number(call.input.limit ?? 60) || 60,
+          }),
+        };
+      }
+
+      if (call.name === "comms_list_offer_threads") {
+        return {
+          ok: true,
+          output: await comms.listOfferThreads({
+            applicationId: call.input.application_id
+              ? String(call.input.application_id)
+              : undefined,
+            investorId: call.input.investor_id ? String(call.input.investor_id) : undefined,
+            limit: Number(call.input.limit ?? 15) || 15,
+          }),
+        };
+      }
+
+      if (call.name === "comms_send_email") {
+        const to = String(call.input.to ?? "").trim();
+        const subject = String(call.input.subject ?? "").trim();
+        const body = String(call.input.body ?? "").trim();
+        if (!to || !subject || !body)
+          return { ok: false, output: null, error: "Wymagane: to, subject, body." };
+        // Świadomie wąsko: asystent obsługuje pojedynczą korespondencję, nie mailing.
+        const recipients = to.split(/[,;\s]+/).filter(Boolean);
+        if (recipients.length > 3)
+          return {
+            ok: false,
+            output: null,
+            error: "Max 3 odbiorcy na raz. Do masowej wysyłki jest moduł mailingu.",
+          };
+        return {
+          ok: true,
+          output: await comms.sendEmailFromInbox({
+            to,
+            subject,
+            body,
+            replyToCommunicationId: call.input.reply_to_message_id
+              ? String(call.input.reply_to_message_id)
+              : null,
+            leadId: call.input.lead_id ? String(call.input.lead_id) : null,
+            actorUserId,
+            source: ASSISTANT_COMMS_SOURCE,
+          }),
+        };
+      }
+
+      if (call.name === "comms_send_messenger") {
+        const leadId = String(call.input.lead_id ?? "");
+        const body = String(call.input.body ?? "").trim();
+        if (!leadId || !body) return { ok: false, output: null, error: "Wymagane: lead_id, body." };
+        return {
+          ok: true,
+          output: await comms.sendMessengerReplyToLead({
+            leadId,
+            body,
+            actorUserId,
+            source: ASSISTANT_COMMS_SOURCE,
+          }),
+        };
+      }
+
+      if (call.name === "comms_send_chat") {
+        const leadId = String(call.input.lead_id ?? "");
+        const body = String(call.input.body ?? "").trim();
+        if (!leadId || !body) return { ok: false, output: null, error: "Wymagane: lead_id, body." };
+        const channel = call.input.channel === "chat_inwestor" ? "chat_inwestor" : "chat";
+        return {
+          ok: true,
+          output: await comms.sendChatReplyToLead({
+            leadId,
+            body,
+            channel,
+            actorUserId,
+            source: ASSISTANT_COMMS_SOURCE,
+          }),
+        };
+      }
+
+      if (call.name === "comms_reply_offer_thread") {
+        const distributionId = String(call.input.distribution_id ?? "");
+        const subject = String(call.input.subject ?? "").trim();
+        const body = String(call.input.body ?? "").trim();
+        if (!distributionId || !subject || !body)
+          return {
+            ok: false,
+            output: null,
+            error: "Wymagane: distribution_id, subject, body.",
+          };
+        return {
+          ok: true,
+          output: await comms.replyToOfferDistribution({
+            distributionId,
+            subject,
+            body,
+            actorUserId,
+          }),
+        };
+      }
+
+      return { ok: false, output: null, error: `Nieznane narzędzie: ${call.name}` };
+    }
+
     if (call.name === "remember") {
       if (opts.enableMemory === false)
         return { ok: false, output: null, error: "Pamięć długotrwała wyłączona." };
@@ -787,7 +1111,15 @@ Pamięć i kontekst:
 - Blok „PAMIĘĆ DŁUGOTRWAŁA" w tym prompcie to wiedza z poprzednich rozmów — traktuj ją jak ustalenia administratora i stosuj bez pytania. Jeśli coś w niej jest sprzeczne z tym, co administrator mówi teraz, wierz temu, co mówi teraz, i popraw wpis ("remember" z tym samym tytułem albo "forget").
 - Gdy administrator tłumaczy, jak chce pracować, jak przebiega proces w firmie, co znaczy używana przez niego nazwa albo mówi „zapamiętaj" — zapisz to narzędziem "remember". Rób to z własnej inicjatywy, krótko potwierdzając w odpowiedzi („zapamiętałem: …"). Nie zapisuj rzeczy jednorazowych ani danych, które można odpytać z bazy.
 - Gdy administrator odwołuje się do wcześniejszych rozmów, użyj "search_conversations" (szuka po wszystkich wątkach) lub "recall_memory".
-- Wszystkie rozmowy są zapisywane; jeśli administrator pyta „o czym rozmawialiśmy", szukaj zamiast zgadywać.`;
+- Wszystkie rozmowy są zapisywane; jeśli administrator pyta „o czym rozmawialiśmy", szukaj zamiast zgadywać.
+Korespondencja z klientami i inwestorami (narzędzia "comms_*"):
+- Czytanie jest swobodne: "comms_list_threads" (kto czeka na odpowiedź), "comms_read_thread" (cała historia jednej osoby), "comms_list_offer_threads" (wątki z instytucjami finansującymi).
+- WYSYŁKA to działanie nieodwracalne wobec prawdziwej osoby. Zanim cokolwiek wyślesz, pokaż w odpowiedzi: kanał, odbiorcę, temat i PEŁNĄ treść, i poczekaj na wyraźną zgodę („wyślij", „ok, ślij"). Sama prośba „przygotuj odpowiedź" albo „zobacz, co odpisać" NIE jest zgodą na wysyłkę.
+- Nigdy nie wysyłaj z własnej inicjatywy, nawet gdy wątek wygląda na zaległy. Zaproponuj treść i zapytaj.
+- W treści opieraj się wyłącznie na danych z bazy i historii wątku. Nie obiecuj kwot, oprocentowania, terminów ani decyzji, których nie ma w danych. Nie wymyślaj nazwisk, numerów umów ani ustaleń.
+- Odpowiadając mailem podawaj "reply_to_message_id" z "comms_read_thread" — inaczej wiadomość nie doklei się do wątku u odbiorcy.
+- Piszesz w imieniu firmy: po polsku, uprzejmie, zwięźle, bez emoji, z podpisem zespołu — chyba że pamięć długotrwała mówi inaczej.
+- Asystent ma limit 20 wysłanych wiadomości na godzinę. Do wysyłek masowych jest moduł mailingu — nie próbuj obchodzić limitu pętlą.`;
 
 export async function callAnthropic(args: {
   model: string;

@@ -1,9 +1,10 @@
 # Asystent panelu — tekstowy bot administratora
 
 Czat, z którego administrator prowadzi bieżącą robotę bez klikania po
-zakładkach: pyta o dane, liczy, poprawia rekordy, zagląda w kod i dostaje link
-do właściwej strony panelu. Model: Claude (Anthropic), z narzędziami po stronie
-serwera.
+zakładkach: pyta o dane, liczy, poprawia rekordy, czyta i pisze korespondencję z
+klientami oraz inwestorami, zagląda w kod i dostaje link do właściwej strony
+panelu. Pamięta ustalenia z poprzednich rozmów. Model: Claude (Anthropic), z
+narzędziami po stronie serwera.
 
 ## Gdzie jest
 
@@ -11,7 +12,7 @@ serwera.
 | ----------------------------------------------------------- | -------------------------------------------------------------------- |
 | Pulpit `/admin`                                             | pełna karta „Asystent panelu” (sekcja nad licznikami lejka)          |
 | Każda inna podstrona `/admin/*`                             | pływający przycisk „Asystent” w prawym dolnym rogu (można powiększyć) |
-| Ustawienia (zębatka w nagłówku czatu)                       | model, uprawnienia narzędzi, prompt systemowy, log wywołań narzędzi   |
+| Ustawienia (zębatka w nagłówku czatu)                       | model, uprawnienia narzędzi, prompt systemowy, pamięć, log narzędzi   |
 
 Rozmowa jest **wspólna dla wszystkich instancji** — id aktywnej konwersacji
 trzymamy w cache React Query (`["ai-admin-current-conv"]`) i w `localStorage`
@@ -29,19 +30,23 @@ księgowość nie widzą asystenta.
 | Komponent czatu + ustawienia + zakładka pamięci | `src/components/admin/admin-bot.tsx`                   |
 | Pływający launcher (layout `/admin`)           | `src/components/admin/admin-bot-launcher.tsx`           |
 | Server functions (czat, historia, ustawienia)  | `src/lib/ai-admin.functions.ts`                         |
+| Rdzeń korespondencji (czytanie + wysyłka)      | `src/lib/comms-agent.server.ts`                         |
 | Pętla agentowa, narzędzia, wywołanie Anthropic | `src/lib/ai-admin.server.ts`                            |
 | Lista dopuszczonych modeli                     | `src/lib/ai-admin.models.ts`                            |
 | Karta na pulpicie                              | `src/routes/admin.index.tsx`                             |
 | Montaż launchera                               | `src/routes/admin.tsx` (slot `footer` w `PanelShell`)   |
 
-Tabele (migracje `supabase/migrations/20260602160132_*.sql` oraz
-`20260809120000_ai_admin_memory.sql`): `ai_admin_settings` (singleton),
+Tabele i kolumny dokładają migracje `supabase/migrations/20260602160132_*.sql`,
+`20260809120000_ai_admin_memory.sql` i `20260810120000_ai_admin_comms_access.sql`:
+`ai_admin_settings` (singleton),
 `ai_admin_conversations` (+ `summary`, `summarized_message_count`),
 `ai_admin_messages` (+ indeks pełnotekstowy na treści), `ai_admin_audit_log`,
 `ai_admin_memory`.
 
 Wymagane sekrety: `ANTHROPIC_API_KEY` (czat), `ELEVENLABS_API_KEY` (dyktowanie
-głosem — opcjonalne).
+głosem — opcjonalne). Wysyłka korespondencji korzysta z sekretów już używanych
+przez panel: `LOVABLE_API_KEY` + `RESEND_API_KEY` (mail) oraz
+`META_PAGE_ACCESS_TOKEN` / `META_IG_PAGE_ACCESS_TOKEN` (Messenger, Instagram).
 
 ## Narzędzia bota
 
@@ -62,6 +67,13 @@ głosem — opcjonalne).
 | `write_project_file`   | zapis plików       | utworzenie/nadpisanie pliku (max 500 KB)                       |
 | `delete_project_file`  | zapis plików       | usunięcie pliku                                                |
 | `list_admin_pages`     | —                  | mapa panelu (`src/lib/admin-nav.ts`) — ścieżki, sekcje, opisy   |
+| `comms_list_threads`   | wgląd w korespondencję | wątki z klientami/inwestorami, kto czeka na odpowiedź       |
+| `comms_read_thread`    | wgląd w korespondencję | cała historia jednej osoby (wszystkie kanały)              |
+| `comms_list_offer_threads` | wgląd w korespondencję | wątki mailowe z instytucjami (dystrybucja ofert)       |
+| `comms_send_email`     | wysyłka wiadomości | mail do klienta/inwestora (nowy albo odpowiedź w wątku)         |
+| `comms_send_messenger` | wysyłka wiadomości | wiadomość w Messengerze / Instagram Direct                     |
+| `comms_send_chat`      | wysyłka wiadomości | odpowiedź w czacie na stronie lub czacie inwestora             |
+| `comms_reply_offer_thread` | wysyłka wiadomości | odpowiedź w wątku z instytucją finansującą                 |
 
 Pliki z sekretami (`.env*`), `.git/` i `node_modules/` są zablokowane na
 poziomie `safeFilePath`. Każde wywołanie narzędzia ląduje w
@@ -70,6 +82,48 @@ poziomie `safeFilePath`. Każde wywołanie narzędzia ląduje w
 Uprawnienia (odczyt/zapis bazy, odczyt/zapis plików) przełącza się w
 ustawieniach asystenta — wyłączenie działa natychmiast, bo pętla czyta je z
 `ai_admin_settings` przy każdej turze.
+
+## Korespondencja z klientami i inwestorami
+
+Asystent widzi tę samą skrzynkę co panel i może w niej odpisywać.
+
+**Czytanie** (uprawnienie „Wgląd w korespondencję", domyślnie włączone):
+
+- `lead_communications` — zunifikowane wątki per lead: e-mail, Messenger /
+  Instagram Direct, czat na stronie, czat inwestora, SMS. `comms_list_threads`
+  pokazuje, kto czeka na odpowiedź (ostatnie słowo należy do klienta),
+  `comms_read_thread` — całą historię jednej osoby z nazwami załączników.
+- `offer_distribution_messages` — wątki mailowe z instytucjami finansującymi:
+  `comms_list_offer_threads` zwraca status dystrybucji razem z całą wymianą.
+
+**Wysyłanie** (uprawnienie „Wysyłanie wiadomości do klientów", domyślnie
+**wyłączone** — trzeba je włączyć świadomie):
+
+| Kanał                        | Narzędzie                  | Jak wychodzi                                                     |
+| ---------------------------- | -------------------------- | ---------------------------------------------------------------- |
+| E-mail                       | `comms_send_email`         | Resend + nagłówki In-Reply-To/References (doklejenie do wątku)    |
+| Messenger / Instagram        | `comms_send_messenger`     | Meta Graph API na PSID/IGSID leada                                |
+| Czat na stronie / inwestora  | `comms_send_chat`          | zapis jako outbound — widget dociąga pollingiem                   |
+| Instytucja finansująca       | `comms_reply_offer_thread` | Resend z aliasem dystrybucji jako adresem zwrotnym                |
+
+Cała wysyłka i czytanie idzie przez `src/lib/comms-agent.server.ts` — **ten sam
+rdzeń, z którego korzystają ekrany panelu** (skrzynka, Messenger, czat,
+dystrybucja ofert). Dzięki temu wiadomość od asystenta wygląda w bazie dokładnie
+jak wysłana ręcznie: ląduje w `lead_communications` / `offer_distribution_messages`,
+jest widoczna w skrzynce i wątkuje się u odbiorcy.
+
+**Bezpieczniki** (wysyłka to działanie nieodwracalne wobec prawdziwej osoby):
+
+1. Osobne uprawnienie na wysyłkę, domyślnie wyłączone.
+2. Prompt wymaga pokazania kanału, odbiorcy, tematu i pełnej treści oraz
+   **wyraźnej zgody** („wyślij"). „Przygotuj odpowiedź" zgodą nie jest, a wysyłka
+   z własnej inicjatywy jest zabroniona.
+3. Limit 20 wysłanych wiadomości na godzinę (liczony po śladzie
+   `metadata.source = 'ai_admin_assistant'`), max 3 odbiorców na jednego maila —
+   do wysyłek masowych jest moduł mailingu.
+4. Każda wiadomość ma w metadanych `sent_by` (administrator) i znacznik
+   asystenta, a samo wywołanie narzędzia ląduje w `ai_admin_audit_log`.
+5. Prompt zabrania obiecywania kwot, terminów i decyzji, których nie ma w danych.
 
 ## Pamięć długotrwała (baza wiedzy z rozmów)
 

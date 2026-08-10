@@ -23,31 +23,14 @@ export const sendChatReply = createServerFn({ method: "POST" })
     ]);
     if (!isAdmin && !isOperator) throw new Error("Forbidden");
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { logLeadCommunication } = await import("./lead-comms.server");
-
-    const { data: lead, error: leadErr } = await supabaseAdmin
-      .from("leads")
-      .select("id, application_data")
-      .eq("id", data.leadId)
-      .maybeSingle();
-    if (leadErr) throw leadErr;
-    if (!lead) throw new Error("Lead nie istnieje");
-
-    const appData = (lead.application_data ?? {}) as Record<string, any>;
-    const sessionId = appData.chat_session_id ?? null;
-
-    const id = await logLeadCommunication({
+    // Rdzeń w comms-agent.server.ts — wspólny ze skrzynką i asystentem panelu.
+    const { sendChatReplyToLead } = await import("./comms-agent.server");
+    const { id } = await sendChatReplyToLead({
       leadId: data.leadId,
+      body: data.body,
+      actorUserId: context.userId,
       channel: "chat",
-      direction: "outbound",
-      content: data.body,
-      status: "sent",
-      metadata: {
-        chat_session_id: sessionId,
-        sent_by: context.userId,
-        source: "inbox_manual",
-      },
+      source: "inbox_manual",
     });
 
     return { ok: true, id };
