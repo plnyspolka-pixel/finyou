@@ -35,110 +35,18 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
     const { brokerHasPaidAccess } = await import("@/lib/access/guards.server");
     if (!(await brokerHasPaidAccess(context.userId))) throw new Error("Forbidden");
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    // Pobierz kontekst wątku (jeśli odpowiedź)
-    let leadId: string | null = null;
-    let threadId: string | null = null;
-    let inReplyTo: string | null = null;
-    let references: string | null = null;
-    if (data.replyToCommunicationId) {
-      const { data: parent } = await supabaseAdmin
-        .from("lead_communications")
-        .select("id, lead_id, thread_external_id, external_id, metadata")
-        .eq("id", data.replyToCommunicationId)
-        .maybeSingle();
-      if (parent) {
-        leadId = parent.lead_id ?? null;
-        threadId = parent.thread_external_id ?? null;
-        const meta = (parent.metadata ?? {}) as Record<string, any>;
-        inReplyTo = meta.message_id_header ?? parent.external_id ?? null;
-        references = meta.references ?? inReplyTo;
-      }
-    }
-
-    const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#0f172a;white-space:pre-wrap">${data.body
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")}</div>`;
-
-    const emails = data.to
-      .split(/[,;\s]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const invalid = emails.filter((e) => !emailRe.test(e));
-    if (!emails.length) throw new Error("Brak odbiorców");
-    if (invalid.length) throw new Error(`Nieprawidłowe adresy: ${invalid.join(", ")}`);
-
-    const { sendResendEmail } = await import("./resend-send.server");
-    const { logLeadCommunication } = await import("./lead-comms.server");
-
-    // Załączniki: pobierz pliki raz (Storage/URL → base64) i dołącz je do maila
-    // jako prawdziwe pliki. Jeśli któregoś nie da się pobrać — nie wysyłaj
-    // "po cichu" maila bez załącznika, tylko zgłoś błąd nadawcy.
-    let resolvedAttachments: Array<{ filename: string; content: string; contentType?: string }> =
-      [];
-    const attachmentRefs = data.attachments ?? [];
-    if (attachmentRefs.length) {
-      const { resolveOutboundAttachments } = await import("./outbound-attachments.server");
-      const { attachments, errors } = await resolveOutboundAttachments(attachmentRefs);
-      if (errors.length) throw new Error(errors.join(" "));
-      resolvedAttachments = attachments.map((a) => ({
-        filename: a.filename,
-        content: a.content,
-        contentType: a.contentType,
-      }));
-    }
-
-    const results: Array<{ email: string; ok: boolean; id?: string; error?: string }> = [];
-    for (const to of emails) {
-      const res = await sendResendEmail({
-        to,
-        subject: data.subject,
-        text: data.body,
-        html,
-        inReplyTo,
-        references,
-        replyTo: "kontakt@financeyou.pl",
-        showReplyHint: true,
-        attachments: resolvedAttachments.length ? resolvedAttachments : undefined,
-      });
-      results.push({ email: to, ok: res.ok, id: res.id, error: res.error });
-      try {
-        await logLeadCommunication({
-          leadId,
-          email: to,
-          channel: "email",
-          direction: "outbound",
-          status: res.ok ? "sent" : "failed",
-          subject: data.subject,
-          content: data.body,
-          externalId: res.id ?? null,
-          metadata: {
-            source: "inbox_manual",
-            sent_by: context.userId,
-            thread_id: threadId,
-            in_reply_to: inReplyTo,
-          },
-          attachments: attachmentRefs.length
-            ? attachmentRefs.map((a) => ({
-                name: a.name,
-                path: a.path ?? null,
-                url: a.url ?? null,
-                mime: a.mime ?? null,
-                size: a.size ?? null,
-              }))
-            : null,
-        });
-      } catch (e) {
-        console.error("[sendInboxEmail] log comm error", e);
-      }
-    }
-
-    const okCount = results.filter((r) => r.ok).length;
-    if (okCount === 0) throw new Error(results[0]?.error ?? "send_failed");
-    return { ok: true, sent: okCount, total: results.length, results };
+    // Sama wysyłka (wątkowanie, załączniki, log w skrzynce) żyje w
+    // comms-agent.server.ts — tego samego rdzenia używa asystent panelu.
+    const { sendEmailFromInbox } = await import("./comms-agent.server");
+    return await sendEmailFromInbox({
+      to: data.to,
+      subject: data.subject,
+      body: data.body,
+      replyToCommunicationId: data.replyToCommunicationId ?? null,
+      attachments: data.attachments,
+      actorUserId: context.userId,
+      source: "inbox_manual",
+    });
   });
 
 /** Zwraca tymczasowy podpisany URL do pliku w buckecie `pliki-klienta`. Dostępne dla admin / operator. */

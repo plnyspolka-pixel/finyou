@@ -14,8 +14,20 @@ import {
   getAiSettings,
   updateAiSettings,
   listAiAuditLog,
+  listMemory,
+  upsertMemory,
+  deleteMemory,
+  distillConversation,
+  checkAiEngine,
+  type AiMemoryEntry,
 } from "@/lib/ai-admin.functions";
-import { AI_ADMIN_MODELS, type AiAdminModelId } from "@/lib/ai-admin.models";
+import {
+  AI_ADMIN_MODELS,
+  THINKING_MODEL_MIN_MAX_TOKENS,
+  modelRejectsSamplingParams,
+  modelThinksByDefault,
+  type AiAdminModelId,
+} from "@/lib/ai-admin.models";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -53,6 +65,11 @@ import {
   Settings2,
   History,
   MessageSquare,
+  Brain,
+  Pin,
+  Plug,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -97,10 +114,11 @@ const CONV_STORAGE_KEY = "fy_admin_bot_conv";
 
 /** Podpowiedzi startowe — najczęstsze rzeczy, które admin robi „z czatu”. */
 const STARTERS = [
+  "Kto czeka na odpowiedź w skrzynce?",
+  "Pokaż korespondencję z ostatnim leadem i zaproponuj odpowiedź.",
   "Pokaż 10 najnowszych leadów ze statusem i źródłem.",
   "Ile wniosków czeka na inwestora dłużej niż 7 dni?",
-  "Podsumuj kolejkę follow-up: co jest zaległe?",
-  "Które wnioski mają braki w dokumentach?",
+  "Co pamiętasz o tym, jak pracuję?",
 ];
 
 /** Wspólne dla wszystkich instancji id aktywnej rozmowy (cache RQ + localStorage). */
@@ -160,6 +178,7 @@ export function AdminBot({ className, compact = false, headerActions }: AdminBot
   const getFn = useServerFn(getConversation);
   const delFn = useServerFn(deleteConversation);
   const transcribeFn = useServerFn(transcribeAdminAudio);
+  const distillFn = useServerFn(distillConversation);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recChunksRef = useRef<Blob[]>([]);
@@ -192,6 +211,16 @@ export function AdminBot({ className, compact = false, headerActions }: AdminBot
       setInput("");
       await qc.invalidateQueries({ queryKey: ["ai-admin-msgs", r.conversation_id] });
       await qc.invalidateQueries({ queryKey: ["ai-admin-convs"] });
+      // Destylacja rozmowy (streszczenie wątku + wpisy do pamięci) leci w tle —
+      // nie blokuje UI, a jej błąd nie może wyglądać jak błąd czatu.
+      if (r.conversation_id) {
+        void distillFn({ data: { conversation_id: r.conversation_id } })
+          .then(async () => {
+            await qc.invalidateQueries({ queryKey: ["ai-admin-memory"] });
+            await qc.invalidateQueries({ queryKey: ["ai-admin-convs"] });
+          })
+          .catch(() => undefined);
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -385,7 +414,7 @@ export function AdminBot({ className, compact = false, headerActions }: AdminBot
           <div className="truncate text-[11px] text-muted-foreground">
             {send.isPending
               ? "Pracuję…"
-              : (activeTitle ?? "Baza, pliki projektu i nawigacja po panelu")}
+              : (activeTitle ?? "Baza, skrzynka, pliki projektu, pamięć rozmów")}
           </div>
         </div>
         <Button
@@ -472,7 +501,9 @@ export function AdminBot({ className, compact = false, headerActions }: AdminBot
               <div className="space-y-3">
                 <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
                   Napisz, co mam zrobić. Mogę odpytać bazę, policzyć, poprawić dane po Twoim
-                  potwierdzeniu, zajrzeć w pliki projektu i wskazać właściwą stronę panelu.
+                  potwierdzeniu, przeczytać korespondencję z klientami i inwestorami (mail,
+                  Messenger, czat) i przygotować odpowiedź — wyślę ją dopiero, gdy powiesz
+                  „wyślij". Wszystkie rozmowy zapisuję, a trwałe ustalenia trafiają do pamięci.
                 </div>
                 {!compact && (
                   <div className="flex flex-wrap gap-1.5">
@@ -679,6 +710,10 @@ type AiSettings = {
   enable_file_write: boolean;
   max_tokens: number;
   temperature: number;
+  enable_memory: boolean;
+  memory_limit: number;
+  enable_comms_read: boolean;
+  enable_comms_send: boolean;
 };
 
 /** Ustawienia bota: model, uprawnienia narzędzi, prompt + log wywołań narzędzi. */
@@ -724,6 +759,10 @@ function AdminBotSettingsDialog({
         enable_file_write: s.enable_file_write,
         max_tokens: Number(s.max_tokens),
         temperature: Number(s.temperature),
+        enable_memory: s.enable_memory !== false,
+        memory_limit: Number(s.memory_limit ?? 40),
+        enable_comms_read: s.enable_comms_read !== false,
+        enable_comms_send: s.enable_comms_send === true,
       });
     }
   }, [settingsQ.data, draft]);
@@ -760,6 +799,8 @@ function AdminBotSettingsDialog({
           <TabsList>
             <TabsTrigger value="model">Model i uprawnienia</TabsTrigger>
             <TabsTrigger value="prompt">Prompt</TabsTrigger>
+            <TabsTrigger value="memory">Pamięć</TabsTrigger>
+            <TabsTrigger value="engine">Silnik</TabsTrigger>
             <TabsTrigger value="audit">Log narzędzi</TabsTrigger>
           </TabsList>
 
@@ -796,6 +837,14 @@ function AdminBotSettingsDialog({
                       value={draft.max_tokens}
                       onChange={(e) => patch({ max_tokens: Number(e.target.value) })}
                     />
+                    {modelThinksByDefault(draft.model) &&
+                      draft.max_tokens < THINKING_MODEL_MIN_MAX_TOKENS && (
+                        <p className="text-[11px] text-destructive">
+                          Ten model myśli domyślnie, a limit obejmuje myślenie razem z odpowiedzią —
+                          przy mniej niż {THINKING_MODEL_MIN_MAX_TOKENS} tokenów odpowiedzi mogą się
+                          ucinać.
+                        </p>
+                      )}
                   </div>
                   <div className="space-y-2">
                     <Label>Temperatura (0–1)</Label>
@@ -806,7 +855,14 @@ function AdminBotSettingsDialog({
                       max={1}
                       value={draft.temperature}
                       onChange={(e) => patch({ temperature: Number(e.target.value) })}
+                      disabled={modelRejectsSamplingParams(draft.model)}
                     />
+                    {modelRejectsSamplingParams(draft.model) && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Ten model odrzuca temperaturę (błąd 400), więc jej nie wysyłamy — styl
+                        odpowiedzi ustawia się promptem.
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-3 rounded-md border p-3">
@@ -834,9 +890,49 @@ function AdminBotSettingsDialog({
                     checked={draft.enable_file_write}
                     onChange={(v) => patch({ enable_file_write: v })}
                   />
+                  <ToggleRow
+                    label="Pamięć długotrwała"
+                    hint="Destylacja rozmów do bazy wiedzy i wstrzykiwanie jej do promptu. Wyłączenie nie kasuje wpisów."
+                    checked={draft.enable_memory}
+                    onChange={(v) => patch({ enable_memory: v })}
+                  />
+                  <ToggleRow
+                    label="Wgląd w korespondencję"
+                    hint="Czytanie skrzynki: maile, Messenger/Instagram, czat na stronie, czat inwestora i wątki z instytucjami."
+                    checked={draft.enable_comms_read}
+                    onChange={(v) => patch({ enable_comms_read: v })}
+                  />
+                  <ToggleRow
+                    label="Wysyłanie wiadomości do klientów"
+                    hint="Odpisywanie i wysyłka w imieniu firmy. Asystent zawsze pokazuje treść i czeka na Twoje „wyślij”; limit 20 wiadomości na godzinę, każda widoczna w skrzynce."
+                    checked={draft.enable_comms_send}
+                    onChange={(v) => patch({ enable_comms_send: v })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ile wpisów pamięci trafia do promptu</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={200}
+                    value={draft.memory_limit}
+                    onChange={(e) => patch({ memory_limit: Number(e.target.value) })}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Wchodzą wpisy o najwyższym priorytecie, potem najświeżej zmienione. Więcej
+                    wpisów = lepszy kontekst, ale droższa każda wiadomość.
+                  </p>
                 </div>
               </>
             )}
+          </TabsContent>
+
+          <TabsContent value="memory" className="mt-4">
+            <MemoryTab />
+          </TabsContent>
+
+          <TabsContent value="engine" className="mt-4">
+            <EngineTab />
           </TabsContent>
 
           <TabsContent value="prompt" className="mt-4">
@@ -904,6 +1000,337 @@ function AdminBotSettingsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * „Silnik" — dowód z panelu, że asystent rozmawia z API Anthropica i że
+ * ustawiony model odpowiada na tym kluczu. Woła `GET /v1/models` (bezpłatne)
+ * i jeden minimalny `POST /v1/messages`.
+ */
+function EngineTab() {
+  const checkFn = useServerFn(checkAiEngine);
+  const check = useMutation({
+    mutationFn: () => checkFn(),
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const r = check.data;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start gap-2 rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+        <Plug className="mt-0.5 h-4 w-4 shrink-0" />
+        <p>
+          Asystent woła bezpośrednio API Anthropica (<code>api.anthropic.com/v1/messages</code>,
+          nagłówek <code>x-api-key</code>) — bez żadnej bramki pośredniej. Ten test to potwierdza:
+          pobiera listę modeli dostępnych na koncie i wysyła jedną krótką wiadomość ustawionym
+          modelem.
+        </p>
+      </div>
+
+      <Button size="sm" onClick={() => check.mutate()} disabled={check.isPending}>
+        {check.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Sprawdź połączenie
+      </Button>
+
+      {r && (
+        <div className="space-y-2 text-xs">
+          <div className="grid gap-1 rounded-md border p-3">
+            <EngineRow label="Endpoint" value={r.endpoint} />
+            <EngineRow label="Wersja API" value={r.api_version} />
+            <EngineRow
+              label="Klucz ANTHROPIC_API_KEY"
+              value={r.key_present ? `obecny (${r.key_hint})` : "BRAK"}
+              ok={r.key_present}
+            />
+            <EngineRow label="Model z ustawień" value={r.configured_model} />
+            <EngineRow
+              label="Parametr temperature"
+              value={r.sends_temperature ? "wysyłany" : "pomijany (model go odrzuca)"}
+            />
+            <EngineRow
+              label="Myślenie modelu"
+              value={
+                r.thinks_by_default
+                  ? "włączone domyślnie — wchodzi w limit tokenów"
+                  : "wyłączone domyślnie"
+              }
+            />
+          </div>
+
+          <div className="grid gap-1 rounded-md border p-3">
+            <EngineRow
+              label="GET /v1/models"
+              value={
+                r.models_ok
+                  ? `OK — ${r.available_models.length} modeli na koncie`
+                  : (r.models_error ?? "błąd")
+              }
+              ok={r.models_ok}
+            />
+            {r.configured_model_available === false && (
+              <p className="text-destructive">
+                Ustawionego modelu nie ma na liście dostępnych dla tego klucza — wybierz inny w
+                zakładce „Model i uprawnienia”.
+              </p>
+            )}
+            {r.models_ok && r.available_models.length > 0 && (
+              <details className="mt-1">
+                <summary className="cursor-pointer text-muted-foreground">
+                  Modele dostępne na koncie
+                </summary>
+                <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap text-[10px]">
+                  {r.available_models.join("\n")}
+                </pre>
+              </details>
+            )}
+          </div>
+
+          <div className="grid gap-1 rounded-md border p-3">
+            <EngineRow
+              label="POST /v1/messages"
+              value={r.ping_ok ? "OK" : (r.ping_error ?? "błąd")}
+              ok={r.ping_ok}
+            />
+            {r.ping && (
+              <>
+                <EngineRow label="Odpowiedział model" value={r.ping.model} />
+                <EngineRow label="Powód zakończenia" value={r.ping.stop_reason ?? "—"} />
+                <EngineRow
+                  label="Tokeny (wejście / wyjście)"
+                  value={`${r.ping.input_tokens} / ${r.ping.output_tokens}`}
+                />
+                <EngineRow label="Treść odpowiedzi" value={r.ping.reply || "(pusta)"} />
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EngineRow({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="flex items-center gap-1 text-right font-medium">
+        {ok === true && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+        {ok === false && <AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
+        <span className="break-words">{value}</span>
+      </span>
+    </div>
+  );
+}
+
+const MEMORY_KIND_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "preferencja", label: "Preferencja — jak mam pracować" },
+  { value: "proces", label: "Proces — jak przebiega czynność" },
+  { value: "fakt", label: "Fakt — trwały fakt o firmie/danych" },
+  { value: "slownik", label: "Słownik — nazwa własna, skrót" },
+  { value: "projekt", label: "Projekt — na czym teraz pracujemy" },
+];
+
+/**
+ * Baza wiedzy asystenta: wpisy wydestylowane z rozmów + dopisywane ręcznie.
+ * Ręczne (`pinned`) nie są nadpisywane przez destylację.
+ */
+function MemoryTab() {
+  const listFn = useServerFn(listMemory);
+  const upsertFn = useServerFn(upsertMemory);
+  const delFn = useServerFn(deleteMemory);
+  const qc = useQueryClient();
+
+  const [form, setForm] = useState<{
+    id?: string;
+    kind: string;
+    title: string;
+    content: string;
+    weight: number;
+  }>({ kind: "preferencja", title: "", content: "", weight: 0 });
+  const [filter, setFilter] = useState("");
+
+  const memoryQ = useQuery({ queryKey: ["ai-admin-memory"], queryFn: () => listFn() });
+
+  const save = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: {
+          id: form.id,
+          kind: form.kind as "preferencja" | "proces" | "fakt" | "slownik" | "projekt",
+          title: form.title.trim(),
+          content: form.content.trim(),
+          weight: form.weight,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success(form.id ? "Wpis zaktualizowany" : "Wpis dodany do pamięci");
+      setForm({ kind: "preferencja", title: "", content: "", weight: 0 });
+      await qc.invalidateQueries({ queryKey: ["ai-admin-memory"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => delFn({ data: { id } }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["ai-admin-memory"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const entries = (memoryQ.data?.entries ?? []) as AiMemoryEntry[];
+  const needle = filter.trim().toLowerCase();
+  const visible = needle
+    ? entries.filter(
+        (e) =>
+          e.title.toLowerCase().includes(needle) ||
+          e.content.toLowerCase().includes(needle) ||
+          e.kind.includes(needle),
+      )
+    : entries;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-2 rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+        <Brain className="mt-0.5 h-4 w-4 shrink-0" />
+        <p>
+          Po każdej turze rozmowa jest destylowana: asystent zapisuje tu trwałe ustalenia (jak
+          pracujesz, jak przebiegają procesy, co znaczą Twoje nazwy) i przy każdej kolejnej
+          wiadomości dostaje je w prompcie. Wpisy dodane tutaj ręcznie są przypięte — automat ich
+          nie nadpisze.
+        </p>
+      </div>
+
+      <div className="space-y-2 rounded-md border p-3">
+        <div className="text-sm font-medium">{form.id ? "Edytuj wpis" : "Dodaj wpis ręcznie"}</div>
+        <div className="grid gap-2 sm:grid-cols-[1fr_140px]">
+          <Select value={form.kind} onValueChange={(v) => setForm((f) => ({ ...f, kind: v }))}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MEMORY_KIND_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={form.weight}
+            onChange={(e) => setForm((f) => ({ ...f, weight: Number(e.target.value) }))}
+            title="Priorytet 0–100"
+          />
+        </div>
+        <Input
+          placeholder="Tytuł (klucz wpisu), np. Format raportów tygodniowych"
+          maxLength={120}
+          value={form.title}
+          onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+        />
+        <Textarea
+          rows={3}
+          placeholder="Treść — 1–4 zdania, konkretnie."
+          value={form.content}
+          onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+        />
+        <div className="flex justify-end gap-2">
+          {form.id && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setForm({ kind: "preferencja", title: "", content: "", weight: 0 })}
+            >
+              Anuluj
+            </Button>
+          )}
+          <Button
+            size="sm"
+            onClick={() => save.mutate()}
+            disabled={
+              save.isPending || form.title.trim().length < 2 || form.content.trim().length < 2
+            }
+          >
+            {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {form.id ? "Zapisz wpis" : "Dodaj"}
+          </Button>
+        </div>
+      </div>
+
+      <Input
+        placeholder={`Filtruj ${entries.length} wpisów…`}
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+      />
+
+      <div className="space-y-1.5">
+        {visible.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            {memoryQ.isLoading
+              ? "Ładowanie…"
+              : entries.length === 0
+                ? "Pamięć jest pusta — zapełni się sama w trakcie rozmów."
+                : "Brak wpisów dla tego filtra."}
+          </p>
+        )}
+        {visible.map((e) => (
+          <div key={e.id} className="rounded-md border p-2 text-xs">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <Badge variant="outline" className="text-[10px]">
+                  {e.kind}
+                </Badge>
+                {e.pinned && (
+                  <Badge variant="secondary" className="gap-1 text-[10px]">
+                    <Pin className="h-3 w-3" /> ręczny
+                  </Badge>
+                )}
+                <span className="font-medium">{e.title}</span>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  onClick={() =>
+                    setForm({
+                      id: e.id,
+                      kind: e.kind,
+                      title: e.title,
+                      content: e.content,
+                      weight: e.weight,
+                    })
+                  }
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Edytuj wpis"
+                  title="Edytuj"
+                >
+                  <Settings2 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Usunąć wpis „${e.title}"?`)) remove.mutate(e.id);
+                  }}
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label="Usuń wpis"
+                  title="Usuń"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+            <p className="mt-1 whitespace-pre-wrap break-words text-muted-foreground">
+              {e.content}
+            </p>
+            <div className="mt-1 text-[10px] text-muted-foreground">
+              priorytet {e.weight} · użyty {e.uses}× · zmiana{" "}
+              {new Date(e.updated_at).toLocaleString("pl-PL")}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
