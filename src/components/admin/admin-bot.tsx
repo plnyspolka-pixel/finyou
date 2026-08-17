@@ -18,9 +18,16 @@ import {
   upsertMemory,
   deleteMemory,
   distillConversation,
+  checkAiEngine,
   type AiMemoryEntry,
 } from "@/lib/ai-admin.functions";
-import { AI_ADMIN_MODELS, type AiAdminModelId } from "@/lib/ai-admin.models";
+import {
+  AI_ADMIN_MODELS,
+  THINKING_MODEL_MIN_MAX_TOKENS,
+  modelRejectsSamplingParams,
+  modelThinksByDefault,
+  type AiAdminModelId,
+} from "@/lib/ai-admin.models";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -60,6 +67,9 @@ import {
   MessageSquare,
   Brain,
   Pin,
+  Plug,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -790,6 +800,7 @@ function AdminBotSettingsDialog({
             <TabsTrigger value="model">Model i uprawnienia</TabsTrigger>
             <TabsTrigger value="prompt">Prompt</TabsTrigger>
             <TabsTrigger value="memory">Pamięć</TabsTrigger>
+            <TabsTrigger value="engine">Silnik</TabsTrigger>
             <TabsTrigger value="audit">Log narzędzi</TabsTrigger>
           </TabsList>
 
@@ -826,6 +837,14 @@ function AdminBotSettingsDialog({
                       value={draft.max_tokens}
                       onChange={(e) => patch({ max_tokens: Number(e.target.value) })}
                     />
+                    {modelThinksByDefault(draft.model) &&
+                      draft.max_tokens < THINKING_MODEL_MIN_MAX_TOKENS && (
+                        <p className="text-[11px] text-destructive">
+                          Ten model myśli domyślnie, a limit obejmuje myślenie razem z odpowiedzią —
+                          przy mniej niż {THINKING_MODEL_MIN_MAX_TOKENS} tokenów odpowiedzi mogą się
+                          ucinać.
+                        </p>
+                      )}
                   </div>
                   <div className="space-y-2">
                     <Label>Temperatura (0–1)</Label>
@@ -836,7 +855,14 @@ function AdminBotSettingsDialog({
                       max={1}
                       value={draft.temperature}
                       onChange={(e) => patch({ temperature: Number(e.target.value) })}
+                      disabled={modelRejectsSamplingParams(draft.model)}
                     />
+                    {modelRejectsSamplingParams(draft.model) && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Ten model odrzuca temperaturę (błąd 400), więc jej nie wysyłamy — styl
+                        odpowiedzi ustawia się promptem.
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-3 rounded-md border p-3">
@@ -905,6 +931,10 @@ function AdminBotSettingsDialog({
             <MemoryTab />
           </TabsContent>
 
+          <TabsContent value="engine" className="mt-4">
+            <EngineTab />
+          </TabsContent>
+
           <TabsContent value="prompt" className="mt-4">
             {!draft ? (
               <p className="text-sm text-muted-foreground">Ładowanie…</p>
@@ -970,6 +1000,126 @@ function AdminBotSettingsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * „Silnik" — dowód z panelu, że asystent rozmawia z API Anthropica i że
+ * ustawiony model odpowiada na tym kluczu. Woła `GET /v1/models` (bezpłatne)
+ * i jeden minimalny `POST /v1/messages`.
+ */
+function EngineTab() {
+  const checkFn = useServerFn(checkAiEngine);
+  const check = useMutation({
+    mutationFn: () => checkFn(),
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const r = check.data;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start gap-2 rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+        <Plug className="mt-0.5 h-4 w-4 shrink-0" />
+        <p>
+          Asystent woła bezpośrednio API Anthropica (<code>api.anthropic.com/v1/messages</code>,
+          nagłówek <code>x-api-key</code>) — bez żadnej bramki pośredniej. Ten test to potwierdza:
+          pobiera listę modeli dostępnych na koncie i wysyła jedną krótką wiadomość ustawionym
+          modelem.
+        </p>
+      </div>
+
+      <Button size="sm" onClick={() => check.mutate()} disabled={check.isPending}>
+        {check.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Sprawdź połączenie
+      </Button>
+
+      {r && (
+        <div className="space-y-2 text-xs">
+          <div className="grid gap-1 rounded-md border p-3">
+            <EngineRow label="Endpoint" value={r.endpoint} />
+            <EngineRow label="Wersja API" value={r.api_version} />
+            <EngineRow
+              label="Klucz ANTHROPIC_API_KEY"
+              value={r.key_present ? `obecny (${r.key_hint})` : "BRAK"}
+              ok={r.key_present}
+            />
+            <EngineRow label="Model z ustawień" value={r.configured_model} />
+            <EngineRow
+              label="Parametr temperature"
+              value={r.sends_temperature ? "wysyłany" : "pomijany (model go odrzuca)"}
+            />
+            <EngineRow
+              label="Myślenie modelu"
+              value={
+                r.thinks_by_default
+                  ? "włączone domyślnie — wchodzi w limit tokenów"
+                  : "wyłączone domyślnie"
+              }
+            />
+          </div>
+
+          <div className="grid gap-1 rounded-md border p-3">
+            <EngineRow
+              label="GET /v1/models"
+              value={
+                r.models_ok
+                  ? `OK — ${r.available_models.length} modeli na koncie`
+                  : (r.models_error ?? "błąd")
+              }
+              ok={r.models_ok}
+            />
+            {r.configured_model_available === false && (
+              <p className="text-destructive">
+                Ustawionego modelu nie ma na liście dostępnych dla tego klucza — wybierz inny w
+                zakładce „Model i uprawnienia”.
+              </p>
+            )}
+            {r.models_ok && r.available_models.length > 0 && (
+              <details className="mt-1">
+                <summary className="cursor-pointer text-muted-foreground">
+                  Modele dostępne na koncie
+                </summary>
+                <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap text-[10px]">
+                  {r.available_models.join("\n")}
+                </pre>
+              </details>
+            )}
+          </div>
+
+          <div className="grid gap-1 rounded-md border p-3">
+            <EngineRow
+              label="POST /v1/messages"
+              value={r.ping_ok ? "OK" : (r.ping_error ?? "błąd")}
+              ok={r.ping_ok}
+            />
+            {r.ping && (
+              <>
+                <EngineRow label="Odpowiedział model" value={r.ping.model} />
+                <EngineRow label="Powód zakończenia" value={r.ping.stop_reason ?? "—"} />
+                <EngineRow
+                  label="Tokeny (wejście / wyjście)"
+                  value={`${r.ping.input_tokens} / ${r.ping.output_tokens}`}
+                />
+                <EngineRow label="Treść odpowiedzi" value={r.ping.reply || "(pusta)"} />
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EngineRow({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="flex items-center gap-1 text-right font-medium">
+        {ok === true && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+        {ok === false && <AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
+        <span className="break-words">{value}</span>
+      </span>
+    </div>
   );
 }
 

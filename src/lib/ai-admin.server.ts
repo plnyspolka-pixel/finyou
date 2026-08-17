@@ -1135,12 +1135,15 @@ export async function callAnthropic(args: {
   >;
   usage: { input_tokens: number; output_tokens: number };
 }> {
+  const { modelRejectsSamplingParams } = await import("./ai-admin.models");
   return (await postAnthropic({
     model: args.model,
     system: `${args.system}\n${RUNTIME_SYSTEM_SUFFIX}`,
     messages: args.messages,
     max_tokens: args.max_tokens,
-    temperature: args.temperature,
+    // Rodzina Claude 5 i Opus 4.7/4.8 odrzucają `temperature` błędem 400 —
+    // dla nich sterujemy zachowaniem samym promptem.
+    ...(modelRejectsSamplingParams(args.model) ? {} : { temperature: args.temperature }),
     tools: ANTHROPIC_TOOLS,
   })) as never;
 }
@@ -1163,6 +1166,133 @@ async function postAnthropic(body: Record<string, unknown>): Promise<unknown> {
     throw new Error(`Anthropic ${res.status}: ${t}`);
   }
   return await res.json();
+}
+
+/**
+ * Diagnostyka silnika: potwierdza, że asystent rozmawia z API Anthropica i że
+ * ustawiony model faktycznie działa na tym kluczu.
+ *
+ * Robi dwie rzeczy:
+ *  1. `GET /v1/models` — sprawdza klucz i zwraca modele dostępne na koncie
+ *     (bezpłatne, nie zużywa tokenów),
+ *  2. minimalny `POST /v1/messages` na ustawionym modelu — dowód, że ten
+ *     konkretny model odpowiada (kilkadziesiąt tokenów).
+ *
+ * Wynik pokazujemy w ustawieniach asystenta (zakładka „Silnik").
+ */
+export async function checkAnthropicEngine(model: string): Promise<{
+  endpoint: string;
+  api_version: string;
+  key_present: boolean;
+  /** Ostatnie 4 znaki klucza — do rozpoznania, który klucz siedzi w sekrecie. */
+  key_hint: string | null;
+  models_ok: boolean;
+  models_error?: string;
+  available_models: string[];
+  configured_model: string;
+  configured_model_available: boolean | null;
+  sends_temperature: boolean;
+  thinks_by_default: boolean;
+  ping_ok: boolean;
+  ping_error?: string;
+  ping?: {
+    model: string;
+    stop_reason: string | null;
+    input_tokens: number;
+    output_tokens: number;
+    reply: string;
+  };
+}> {
+  const { modelRejectsSamplingParams, modelThinksByDefault } = await import("./ai-admin.models");
+  const key = process.env.ANTHROPIC_API_KEY;
+  const base = {
+    endpoint: ANTHROPIC_URL,
+    api_version: ANTHROPIC_VERSION,
+    key_present: !!key,
+    key_hint: key ? `…${key.slice(-4)}` : null,
+    configured_model: model,
+    sends_temperature: !modelRejectsSamplingParams(model),
+    thinks_by_default: modelThinksByDefault(model),
+  };
+  if (!key) {
+    return {
+      ...base,
+      models_ok: false,
+      models_error: "Brak sekretu ANTHROPIC_API_KEY w środowisku.",
+      available_models: [],
+      configured_model_available: null,
+      ping_ok: false,
+      ping_error: "Brak sekretu ANTHROPIC_API_KEY.",
+    };
+  }
+
+  const headers = { "x-api-key": key, "anthropic-version": ANTHROPIC_VERSION };
+
+  let availableModels: string[] = [];
+  let modelsOk = false;
+  let modelsError: string | undefined;
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/models?limit=100", { headers });
+    if (!res.ok) {
+      modelsError = `HTTP ${res.status}: ${(await res.text().catch(() => "")).slice(0, 300)}`;
+    } else {
+      const json = (await res.json()) as { data?: Array<{ id?: string }> };
+      availableModels = (json.data ?? []).map((m) => String(m.id ?? "")).filter(Boolean);
+      modelsOk = true;
+    }
+  } catch (e) {
+    modelsError = e instanceof Error ? e.message : String(e);
+  }
+
+  let pingOk = false;
+  let pingError: string | undefined;
+  let ping: {
+    model: string;
+    stop_reason: string | null;
+    input_tokens: number;
+    output_tokens: number;
+    reply: string;
+  } | undefined;
+  try {
+    const raw = (await postAnthropic({
+      model,
+      max_tokens: 64,
+      messages: [{ role: "user", content: "Odpowiedz jednym słowem: OK" }],
+      ...(modelRejectsSamplingParams(model) ? {} : { temperature: 0 }),
+    })) as {
+      model?: string;
+      stop_reason?: string | null;
+      content?: Array<{ type: string; text?: string }>;
+      usage?: { input_tokens?: number; output_tokens?: number };
+    };
+    ping = {
+      model: String(raw.model ?? model),
+      stop_reason: raw.stop_reason ?? null,
+      input_tokens: Number(raw.usage?.input_tokens ?? 0),
+      output_tokens: Number(raw.usage?.output_tokens ?? 0),
+      reply: (raw.content ?? [])
+        .filter((b) => b.type === "text")
+        .map((b) => b.text ?? "")
+        .join(" ")
+        .trim()
+        .slice(0, 200),
+    };
+    pingOk = true;
+  } catch (e) {
+    pingError = e instanceof Error ? e.message : String(e);
+  }
+
+  return {
+    ...base,
+    models_ok: modelsOk,
+    models_error: modelsError,
+    available_models: availableModels,
+    // Gdy listy modeli nie udało się pobrać, nie zgadujemy — zostaje null.
+    configured_model_available: modelsOk ? availableModels.includes(model) : null,
+    ping_ok: pingOk,
+    ping_error: pingError,
+    ping,
+  };
 }
 
 /** Model destylacji — tani, bez narzędzi; działa w tle po każdej turze. */
@@ -1261,12 +1391,13 @@ export async function distillConversation(args: {
     conv.summary ?? "(brak)"
   }\n\nFRAGMENT ROZMOWY:\n${transcript}`;
 
+  const { modelRejectsSamplingParams } = await import("./ai-admin.models");
   const raw = (await postAnthropic({
     model: DISTILL_MODEL,
     system: DISTILL_SYSTEM,
     messages: [{ role: "user", content: userText }],
     max_tokens: 2000,
-    temperature: 0,
+    ...(modelRejectsSamplingParams(DISTILL_MODEL) ? {} : { temperature: 0 }),
   })) as { content?: Array<{ type: string; text?: string }> };
 
   const text = (raw.content ?? [])

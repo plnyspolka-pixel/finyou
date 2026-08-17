@@ -12,7 +12,7 @@ narzędziami po stronie serwera.
 | ----------------------------------------------------------- | -------------------------------------------------------------------- |
 | Pulpit `/admin`                                             | pełna karta „Asystent panelu” (sekcja nad licznikami lejka)          |
 | Każda inna podstrona `/admin/*`                             | pływający przycisk „Asystent” w prawym dolnym rogu (można powiększyć) |
-| Ustawienia (zębatka w nagłówku czatu)                       | model, uprawnienia narzędzi, prompt systemowy, pamięć, log narzędzi   |
+| Ustawienia (zębatka w nagłówku czatu)                       | model, uprawnienia, prompt, pamięć, test silnika, log narzędzi        |
 
 Rozmowa jest **wspólna dla wszystkich instancji** — id aktywnej konwersacji
 trzymamy w cache React Query (`["ai-admin-current-conv"]`) i w `localStorage`
@@ -32,12 +32,13 @@ księgowość nie widzą asystenta.
 | Server functions (czat, historia, ustawienia)  | `src/lib/ai-admin.functions.ts`                         |
 | Rdzeń korespondencji (czytanie + wysyłka)      | `src/lib/comms-agent.server.ts`                         |
 | Pętla agentowa, narzędzia, wywołanie Anthropic | `src/lib/ai-admin.server.ts`                            |
-| Lista dopuszczonych modeli                     | `src/lib/ai-admin.models.ts`                            |
+| Lista modeli + różnice API między nimi          | `src/lib/ai-admin.models.ts`                           |
 | Karta na pulpicie                              | `src/routes/admin.index.tsx`                             |
 | Montaż launchera                               | `src/routes/admin.tsx` (slot `footer` w `PanelShell`)   |
 
 Tabele i kolumny dokładają migracje `supabase/migrations/20260602160132_*.sql`,
-`20260809120000_ai_admin_memory.sql` i `20260810120000_ai_admin_comms_access.sql`:
+`20260809120000_ai_admin_memory.sql`, `20260810120000_ai_admin_comms_access.sql`
+i `20260811120000_ai_admin_model_refresh.sql`:
 `ai_admin_settings` (singleton),
 `ai_admin_conversations` (+ `summary`, `summarized_message_count`),
 `ai_admin_messages` (+ indeks pełnotekstowy na treści), `ai_admin_audit_log`,
@@ -47,6 +48,49 @@ Wymagane sekrety: `ANTHROPIC_API_KEY` (czat), `ELEVENLABS_API_KEY` (dyktowanie
 głosem — opcjonalne). Wysyłka korespondencji korzysta z sekretów już używanych
 przez panel: `LOVABLE_API_KEY` + `RESEND_API_KEY` (mail) oraz
 `META_PAGE_ACCESS_TOKEN` / `META_IG_PAGE_ACCESS_TOKEN` (Messenger, Instagram).
+
+## Silnik: API Anthropica
+
+Asystent woła **bezpośrednio API Anthropica** — bez bramki pośredniej:
+
+| Element              | Wartość                                                             |
+| -------------------- | ------------------------------------------------------------------- |
+| Endpoint             | `POST https://api.anthropic.com/v1/messages`                        |
+| Uwierzytelnienie     | nagłówek `x-api-key` z sekretu `ANTHROPIC_API_KEY`                  |
+| Wersja API           | `anthropic-version: 2023-06-01`                                     |
+| Wywołanie            | `postAnthropic()` w `src/lib/ai-admin.server.ts` — jedyna droga     |
+| Czat (z narzędziami) | `callAnthropic()` → `postAnthropic()`, model z ustawień             |
+| Destylacja pamięci   | `distillConversation()` → `postAnthropic()`, `claude-haiku-4-5`     |
+
+Poza Anthropikiem asystent używa jeszcze tylko ElevenLabs — wyłącznie do
+przepisania głosówki na tekst (`transcribeAdminAudio`). Cała inteligencja,
+narzędzia i destylacja pamięci to Anthropic.
+
+**Weryfikacja z panelu:** zakładka „Silnik" w ustawieniach asystenta →
+„Sprawdź połączenie". Test woła `GET /v1/models` (bezpłatne — potwierdza klucz i
+zwraca modele dostępne na koncie) oraz jeden minimalny `POST /v1/messages`
+ustawionym modelem. Pokazuje endpoint, wersję API, ostatnie znaki klucza, czy
+model z ustawień jest dostępny na koncie, oraz odpowiedź modelu z licznikiem
+tokenów.
+
+### Modele i dwie pułapki API
+
+Lista dopuszczonych modeli żyje w `src/lib/ai-admin.models.ts` i zawiera tylko
+modele **aktywne** — wcześniej dało się wybrać wycofane (`claude-3-5-*`,
+`claude-3-7-*`), na które API odpowiada 404, czyli czat milkł bez wyjaśnienia.
+Migracja `20260811120000_ai_admin_model_refresh.sql` przepisuje takie wartości z
+bazy na model domyślny (`claude-opus-5`).
+
+Dwie różnice między generacjami modeli są obsłużone w kodzie, bo źle ustawione
+wywalają całą rozmowę:
+
+| Różnica                          | Dotyczy                                    | Co robimy                                                                 |
+| -------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------- |
+| `temperature` odrzucane (400)    | Claude 5, Opus 4.7/4.8                     | nie wysyłamy parametru; pole w UI jest wyszarzone z wyjaśnieniem          |
+| myślenie włączone domyślnie      | Opus 5, Sonnet 5                           | `max_tokens` obejmuje myślenie + odpowiedź — UI ostrzega poniżej 8000     |
+
+Rozpoznanie idzie po mapie modeli plus zapasowy regex na rodziny, więc model
+wpisany do bazy ręcznie (poza listą) też nie dostanie zabronionego parametru.
 
 ## Narzędzia bota
 

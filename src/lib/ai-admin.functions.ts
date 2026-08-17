@@ -220,6 +220,26 @@ export const distillConversation = createServerFn({ method: "POST" })
     }
   });
 
+/**
+ * Test silnika: potwierdza, że asystent gada z API Anthropica (endpoint, wersja
+ * API, klucz) i że ustawiony model odpowiada na tym koncie. Woła `GET /v1/models`
+ * (bezpłatne) plus jeden minimalny `POST /v1/messages`.
+ */
+export const checkAiEngine = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context as never);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: settings } = await supabaseAdmin
+      .from("ai_admin_settings")
+      .select("model")
+      .limit(1)
+      .maybeSingle();
+    const { checkAnthropicEngine } = await import("./ai-admin.server");
+    const { AI_ADMIN_DEFAULT_MODEL } = await import("./ai-admin.models");
+    return await checkAnthropicEngine(settings?.model ?? AI_ADMIN_DEFAULT_MODEL);
+  });
+
 /** Ostatnie wywołania narzędzi asystenta — podgląd „co bot faktycznie zrobił”. */
 export const listAiAuditLog = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
