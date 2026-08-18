@@ -190,6 +190,18 @@ export async function listCommsThreads(args: {
   return { threads: threads.slice(0, limit), scanned: comms.length };
 }
 
+/** Kanał, którym realnie da się napisać do tej osoby. */
+export type AvailableChannel = {
+  /** Nazwa kanału do przekazania narzędziu wysyłkowemu. */
+  channel: "email" | "sms" | "messenger" | "instagram" | "chat" | "chat_inwestor";
+  /** Adres / numer / identyfikator odbiorcy — do pokazania administratorowi. */
+  target: string | null;
+  /** Czy ten kanał był już w tym wątku używany. */
+  used_before: boolean;
+  /** Którym narzędziem to wysłać. */
+  tool: string;
+};
+
 /** Pełna korespondencja jednego leada (klienta lub inwestora), od najstarszej. */
 export async function readCommsThread(args: {
   leadId: string;
@@ -206,6 +218,10 @@ export async function readCommsThread(args: {
     messenger: boolean;
     instagram: boolean;
   } | null;
+  /** Czym da się do tej osoby napisać — podstawa do ustalenia kanału z administratorem. */
+  available_channels: AvailableChannel[];
+  /** Kanał, którego klient użył ostatnio sam (naturalny domyślny wybór). */
+  client_last_used_channel: string | null;
   messages: CommsMessage[];
 }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -214,7 +230,7 @@ export async function readCommsThread(args: {
   const { data: lead } = await supabaseAdmin
     .from("leads")
     .select(
-      "id, first_name, last_name, email, phone_raw, type, status, messenger_psid, instagram_igsid",
+      "id, first_name, last_name, email, phone_raw, phone_normalized, type, status, messenger_psid, instagram_igsid, application_data",
     )
     .eq("id", args.leadId)
     .maybeSingle();
@@ -247,6 +263,64 @@ export async function readCommsThread(args: {
       reply_to_id: m.channel === "email" ? m.id : null,
     }));
 
+  // Czym da się napisać do tej osoby. Liczy się realna możliwość dostarczenia
+  // (adres / numer / identyfikator), nie sama obecność kanału w historii — dlatego
+  // `used_before` jest osobną informacją, a nie warunkiem.
+  const usedChannels = new Set((rows ?? []).map((m) => m.channel));
+  const appData = (lead?.application_data ?? {}) as Record<string, unknown>;
+  const available: AvailableChannel[] = [];
+  if (lead?.email) {
+    available.push({
+      channel: "email",
+      target: lead.email,
+      used_before: usedChannels.has("email"),
+      tool: "comms_send_email",
+    });
+  }
+  if (lead?.phone_normalized || lead?.phone_raw) {
+    available.push({
+      channel: "sms",
+      target: lead.phone_raw ?? lead.phone_normalized,
+      used_before: usedChannels.has("sms"),
+      tool: "comms_send_sms",
+    });
+  }
+  if (lead?.messenger_psid) {
+    available.push({
+      channel: "messenger",
+      target: "Messenger",
+      used_before: usedChannels.has("messenger"),
+      tool: "comms_send_messenger",
+    });
+  }
+  if (lead?.instagram_igsid) {
+    available.push({
+      channel: "instagram",
+      target: "Instagram Direct",
+      used_before: usedChannels.has("messenger"),
+      tool: "comms_send_messenger",
+    });
+  }
+  if (usedChannels.has("chat") || appData.chat_session_id) {
+    available.push({
+      channel: "chat",
+      target: "widget czatu na stronie",
+      used_before: usedChannels.has("chat"),
+      tool: "comms_send_chat",
+    });
+  }
+  if (usedChannels.has("chat_inwestor") || lead?.type === "inwestorski") {
+    available.push({
+      channel: "chat_inwestor",
+      target: "czat w panelu inwestora",
+      used_before: usedChannels.has("chat_inwestor"),
+      tool: "comms_send_chat",
+    });
+  }
+
+  // Kanał ostatniej wiadomości OD klienta — tam najpewniej odbierze odpowiedź.
+  const lastInbound = [...(rows ?? [])].find((m) => m.direction === "inbound");
+
   return {
     lead: lead
       ? {
@@ -260,8 +334,45 @@ export async function readCommsThread(args: {
           instagram: !!lead.instagram_igsid,
         }
       : null,
+    available_channels: available,
+    client_last_used_channel: lastInbound?.channel ?? null,
     messages,
   };
+}
+
+/**
+ * SMS do leada (Twilio przez bramkę konektorów). Wysyłkę i log w
+ * `lead_communications` robi `sendSmsInternal` — wspólna ścieżka z automatami
+ * follow-up, więc nie logujemy drugi raz. Ślad „kto kazał" zostaje w
+ * `ai_admin_audit_log` (wywołanie narzędzia + `user_id`).
+ */
+export async function sendSmsToLead(args: {
+  leadId: string;
+  body: string;
+  actorUserId: string;
+  source?: string;
+}): Promise<{ ok: boolean; sid?: string; to: string }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: lead, error } = await supabaseAdmin
+    .from("leads")
+    .select("id, phone_normalized, phone_raw")
+    .eq("id", args.leadId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!lead) throw new Error("Lead nie istnieje");
+
+  const phone = lead.phone_normalized ?? lead.phone_raw;
+  if (!phone) throw new Error("Ten lead nie ma zapisanego numeru telefonu.");
+
+  const { sendSmsInternal } = await import("./voicebot.functions");
+  const res = await sendSmsInternal({
+    phone,
+    body: args.body,
+    source: args.source ?? "inbox_manual",
+  });
+  if (!res.ok) throw new Error(res.error ?? "send_failed");
+  return { ok: true, sid: res.sid, to: phone };
 }
 
 function escapeHtml(s: string): string {

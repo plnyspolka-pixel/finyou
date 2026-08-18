@@ -325,7 +325,7 @@ export const ANTHROPIC_TOOLS = [
   {
     name: "comms_read_thread",
     description:
-      "Pełna korespondencja jednego klienta/inwestora (po `lead_id`), chronologicznie, ze wszystkich kanałów. Zawiera `reply_to_id` wiadomości mailowych — użyj go w comms_send_email, żeby odpowiedź trafiła do tego samego wątku u odbiorcy.",
+      "Pełna korespondencja jednego klienta/inwestora (po `lead_id`), chronologicznie, ze wszystkich kanałów. Zwraca też `available_channels` (czym da się do tej osoby napisać: kanał, adres/numer, narzędzie wysyłkowe) i `client_last_used_channel` — to podstawa do ustalenia z administratorem, którym kanałem wysłać odpowiedź. Zawiera `reply_to_id` wiadomości mailowych — użyj go w comms_send_email, żeby odpowiedź trafiła do tego samego wątku u odbiorcy.",
     input_schema: {
       type: "object",
       properties: {
@@ -360,6 +360,19 @@ export const ANTHROPIC_TOOLS = [
         },
       },
       required: ["to", "subject", "body"],
+    },
+  },
+  {
+    name: "comms_send_sms",
+    description:
+      "WYSYŁA SMS-a do leada (Twilio). Krótka forma — licz się z tym, że każde 160 znaków to osobna wiadomość i osobny koszt. Ta sama zasada co przy innych kanałach: tylko po wyraźnym poleceniu administratora, po pokazaniu treści.",
+    input_schema: {
+      type: "object",
+      properties: {
+        lead_id: { type: "string", description: "Id leada (musi mieć numer telefonu)." },
+        body: { type: "string", description: "Treść SMS-a." },
+      },
+      required: ["lead_id", "body"],
     },
   },
   {
@@ -866,6 +879,21 @@ export async function runTool(
         };
       }
 
+      if (call.name === "comms_send_sms") {
+        const leadId = String(call.input.lead_id ?? "");
+        const body = String(call.input.body ?? "").trim();
+        if (!leadId || !body) return { ok: false, output: null, error: "Wymagane: lead_id, body." };
+        return {
+          ok: true,
+          output: await comms.sendSmsToLead({
+            leadId,
+            body,
+            actorUserId,
+            source: ASSISTANT_COMMS_SOURCE,
+          }),
+        };
+      }
+
       if (call.name === "comms_send_messenger") {
         const leadId = String(call.input.lead_id ?? "");
         const body = String(call.input.body ?? "").trim();
@@ -1116,6 +1144,9 @@ Korespondencja z klientami i inwestorami (narzędzia "comms_*"):
 - Czytanie jest swobodne: "comms_list_threads" (kto czeka na odpowiedź), "comms_read_thread" (cała historia jednej osoby), "comms_list_offer_threads" (wątki z instytucjami finansującymi).
 - WYSYŁKA to działanie nieodwracalne wobec prawdziwej osoby. Zanim cokolwiek wyślesz, pokaż w odpowiedzi: kanał, odbiorcę, temat i PEŁNĄ treść, i poczekaj na wyraźną zgodę („wyślij", „ok, ślij"). Sama prośba „przygotuj odpowiedź" albo „zobacz, co odpisać" NIE jest zgodą na wysyłkę.
 - Nigdy nie wysyłaj z własnej inicjatywy, nawet gdy wątek wygląda na zaległy. Zaproponuj treść i zapytaj.
+- NAJPIERW KANAŁ, POTEM TREŚĆ. Zanim napiszesz wiadomość do klienta, ustal, czym ma ona dotrzeć: wywołaj "comms_read_thread" i przeczytaj "available_channels" (czym w ogóle da się do tej osoby napisać, wraz z adresem/numerem i narzędziem) oraz "client_last_used_channel" (czego klient używa sam). Jeśli administrator nie wskazał kanału, wypisz dostępne, zaproponuj domyślny — zwykle ten, którym klient pisze do nas — i zapytaj, zanim zredagujesz treść. Gdy zażyczy sobie kilku kanałów naraz, powiedz to wprost i wyślij osobnym wywołaniem dla każdego.
+- Dopasuj formę do kanału: mail może być pełny, z tematem i podpisem; SMS krótki i rzeczowy (każde 160 znaków to osobna wiadomość i osobny koszt, więc bez zbędnych grzeczności i długich linków); Messenger/Instagram zwięźle i bezpośrednio, jak w rozmowie. Tej samej propozycji nie kopiuj słowo w słowo między kanałami — przepisz ją pod kanał, zachowując te same liczby i warunki.
+- Jeśli kanał, o który prosi administrator, nie jest dostępny (brak maila, numeru, identyfikatora Messengera), powiedz to wprost i zaproponuj ten, który jest — nie próbuj wysyłać „na chybił trafił".
 - Konkretną propozycję handlową NAPISAĆ WOLNO — z kwotą, oprocentowaniem, prowizją, ratą i terminami. Każda liczba musi jednak pochodzić z jednego z trzech źródeł: (1) danych w systemie i historii wątku, (2) tego, co administrator podyktował Ci w tej rozmowie, (3) załączonego dokumentu albo karty oferty. To wszystko są źródła równoprawne.
 - Czego nie wolno: wymyślać liczb, „zaokrąglać po swojemu", interpolować brakującej stawki z podobnych spraw, dopisywać terminu, którego nikt nie podał, ani deklarować decyzji (przyznania, odmowy, akceptacji warunków), której nie ma w danych ani w poleceniu administratora. Nazwisk, numerów umów i ustaleń też nie wymyślaj.
 - Zanim poprosisz o zgodę na wysyłkę propozycji, wypisz administratorowi pochodzenie każdej liczby — np. „kwota i termin: wniosek #123", „oprocentowanie: podyktowane przez Ciebie", „prowizja: karta oferty". Jeśli którejś liczby brakuje, dopytaj zamiast zgadywać.

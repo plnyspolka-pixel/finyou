@@ -47,7 +47,8 @@ i `20260811120000_ai_admin_model_refresh.sql`:
 Wymagane sekrety: `ANTHROPIC_API_KEY` (czat), `ELEVENLABS_API_KEY` (dyktowanie
 głosem — opcjonalne). Wysyłka korespondencji korzysta z sekretów już używanych
 przez panel: `LOVABLE_API_KEY` + `RESEND_API_KEY` (mail) oraz
-`META_PAGE_ACCESS_TOKEN` / `META_IG_PAGE_ACCESS_TOKEN` (Messenger, Instagram).
+`META_PAGE_ACCESS_TOKEN` / `META_IG_PAGE_ACCESS_TOKEN` (Messenger, Instagram)
+oraz `TWILIO_API_KEY` + nadawca `sms_from` w ustawieniach voicebota (SMS).
 
 ## Silnik: API Anthropica
 
@@ -115,6 +116,7 @@ wpisany do bazy ręcznie (poza listą) też nie dostanie zabronionego parametru.
 | `comms_read_thread`    | wgląd w korespondencję | cała historia jednej osoby (wszystkie kanały)              |
 | `comms_list_offer_threads` | wgląd w korespondencję | wątki mailowe z instytucjami (dystrybucja ofert)       |
 | `comms_send_email`     | wysyłka wiadomości | mail do klienta/inwestora (nowy albo odpowiedź w wątku)         |
+| `comms_send_sms`       | wysyłka wiadomości | SMS przez Twilio (ta sama ścieżka co automaty follow-up)       |
 | `comms_send_messenger` | wysyłka wiadomości | wiadomość w Messengerze / Instagram Direct                     |
 | `comms_send_chat`      | wysyłka wiadomości | odpowiedź w czacie na stronie lub czacie inwestora             |
 | `comms_reply_offer_thread` | wysyłka wiadomości | odpowiedź w wątku z instytucją finansującą                 |
@@ -146,6 +148,7 @@ Asystent widzi tę samą skrzynkę co panel i może w niej odpisywać.
 | Kanał                        | Narzędzie                  | Jak wychodzi                                                     |
 | ---------------------------- | -------------------------- | ---------------------------------------------------------------- |
 | E-mail                       | `comms_send_email`         | Resend + nagłówki In-Reply-To/References (doklejenie do wątku)    |
+| SMS                          | `comms_send_sms`           | Twilio przez bramkę konektorów (`sendSmsInternal`)                |
 | Messenger / Instagram        | `comms_send_messenger`     | Meta Graph API na PSID/IGSID leada                                |
 | Czat na stronie / inwestora  | `comms_send_chat`          | zapis jako outbound — widget dociąga pollingiem                   |
 | Instytucja finansująca       | `comms_reply_offer_thread` | Resend z aliasem dystrybucji jako adresem zwrotnym                |
@@ -155,6 +158,15 @@ rdzeń, z którego korzystają ekrany panelu** (skrzynka, Messenger, czat,
 dystrybucja ofert). Dzięki temu wiadomość od asystenta wygląda w bazie dokładnie
 jak wysłana ręcznie: ląduje w `lead_communications` / `offer_distribution_messages`,
 jest widoczna w skrzynce i wątkuje się u odbiorcy.
+
+**Najpierw kanał, potem treść.** `comms_read_thread` zwraca `available_channels`
+(czym realnie da się do tej osoby napisać: kanał, adres/numer, narzędzie
+wysyłkowe) oraz `client_last_used_channel` (czego klient używa sam). Jeśli
+administrator nie wskazał kanału, asystent wypisuje dostępne, proponuje domyślny
+— zwykle ten, którym klient pisze do nas — i pyta, zanim zredaguje treść. Formę
+dopasowuje do kanału: mail pełny z tematem, SMS krótki (każde 160 znaków to
+osobna wiadomość i koszt), Messenger zwięźle. Kanału, którego nie ma na liście,
+nie próbuje użyć — mówi wprost i proponuje ten dostępny.
 
 **Bezpieczniki** (wysyłka to działanie nieodwracalne wobec prawdziwej osoby):
 
