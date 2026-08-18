@@ -8514,6 +8514,7 @@ export type Database = {
           auto_publish_platforms: string[]
           auto_published_at: string | null
           avatar_id: string
+          caption_wait_since: string | null
           captions: boolean
           created_at: string
           created_by: string | null
@@ -8530,12 +8531,14 @@ export type Database = {
           thumbnail_url: string | null
           updated_at: string
           video_url: string | null
+          video_url_clean: string | null
           voice_id: string
         }
         Insert: {
           auto_publish_platforms?: string[]
           auto_published_at?: string | null
           avatar_id: string
+          caption_wait_since?: string | null
           captions?: boolean
           created_at?: string
           created_by?: string | null
@@ -8552,12 +8555,14 @@ export type Database = {
           thumbnail_url?: string | null
           updated_at?: string
           video_url?: string | null
+          video_url_clean?: string | null
           voice_id?: string
         }
         Update: {
           auto_publish_platforms?: string[]
           auto_published_at?: string | null
           avatar_id?: string
+          caption_wait_since?: string | null
           captions?: boolean
           created_at?: string
           created_by?: string | null
@@ -8574,6 +8579,7 @@ export type Database = {
           thumbnail_url?: string | null
           updated_at?: string
           video_url?: string | null
+          video_url_clean?: string | null
           voice_id?: string
         }
         Relationships: []

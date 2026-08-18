@@ -1,6 +1,8 @@
 // Server-only helpers for HeyGen avatar FAQ video pipeline.
 // ElevenLabs TTS -> upload audio to HeyGen -> create video from avatar -> poll.
 
+import type { CaptionMode } from "./studio-captions";
+
 const HEYGEN_BASE = "https://api.heygen.com";
 
 const HEYGEN_API_KEY = () => {
@@ -67,25 +69,39 @@ export async function uploadAudioToHeygen(audio: ArrayBuffer): Promise<string> {
 }
 
 // Napisy: v3 przyjmuje OBIEKT `caption` (boolean `caption: true` z API v2
-// wywala walidację: „Extra inputs are not permitted"). Styl da się nadpisać
-// sekretem HEYGEN_CAPTION_STYLE, gdyby konto miało własny preset.
+// wywala walidację: „Extra inputs are not permitted"):
+//   { file_format: "srt" }                  → sam plik SRT obok wideo,
+//   { file_format: "srt", style: "default" } → DODATKOWO napisy wypalone
+//                                              w obrazie (osobny plik wynikowy,
+//                                              patrz captioned_video_url niżej).
+// Styl da się nadpisać sekretem HEYGEN_CAPTION_STYLE, gdyby konto miało własny
+// preset — publiczna specyfikacja zna tylko "default".
 export const HEYGEN_CAPTION_FORMAT = "srt";
-const captionConfig = () => ({
-  file_format: HEYGEN_CAPTION_FORMAT,
-  style: process.env.HEYGEN_CAPTION_STYLE || "default",
-});
+const captionStyle = () => process.env.HEYGEN_CAPTION_STYLE || "default";
+
+const captionPayload = (mode: CaptionMode): Record<string, unknown> | null => {
+  if (mode === "off") return null;
+  if (mode === "sidecar") return { file_format: HEYGEN_CAPTION_FORMAT };
+  return { file_format: HEYGEN_CAPTION_FORMAT, style: captionStyle() };
+};
 
 export type HeygenVideoResult = {
   videoId: string;
-  /** Czy render poszedł z napisami (false = HeyGen odrzucił konfigurację). */
-  captioned: boolean;
+  /**
+   * Tryb, w którym render faktycznie ruszył — bywa niższy od zamówionego, gdy
+   * HeyGen odrzuci konfigurację (np. konto bez napisów w planie).
+   */
+  captionMode: CaptionMode;
 };
 
 export async function createHeygenVideoFromAudio(opts: {
   avatarId: string;
   audioAssetId: string;
-  /** Domyślnie napisy włączone — shorty/rolki ogląda się bez dźwięku. */
-  captions?: boolean;
+  /**
+   * Domyślnie napisy wypalone w obrazie — shorty i rolki ogląda się bez
+   * dźwięku, a IG/FB Reels nie przyjmują osobnej ścieżki napisów.
+   */
+  captions?: CaptionMode;
 }): Promise<HeygenVideoResult> {
   // Uwaga: API v3 przyjmuje wyłącznie type 'avatar' / 'image' /
   // 'cinematic_avatar' / 'studio' — awatary "foto" (talking photo) też idą
@@ -98,7 +114,7 @@ export async function createHeygenVideoFromAudio(opts: {
     resolution: "720p",
     background: { type: "color", value: "#101728" },
   };
-  const wantCaptions = opts.captions !== false;
+  const want: CaptionMode = opts.captions ?? "burned";
 
   const send = async (payload: Record<string, unknown>) => {
     const res = await fetch(`${HEYGEN_BASE}/v3/videos`, {
@@ -112,26 +128,44 @@ export async function createHeygenVideoFromAudio(opts: {
     return { ok: res.ok, status: res.status, body: await res.text() };
   };
 
-  let captioned = wantCaptions;
-  let out = await send(wantCaptions ? { ...base, caption: captionConfig() } : base);
-  // Konto bez napisów w planie (albo zmieniony kontrakt pola) nie może
-  // blokować całej generacji — ponawiamy raz bez napisów i mówimy o tym wprost.
-  if (!out.ok && wantCaptions && /caption|invalid_parameter|not permitted/i.test(out.body)) {
-    console.warn(`[HeyGen] napisy odrzucone (${out.status}) — render bez napisów: ${out.body}`);
-    captioned = false;
-    out = await send(base);
+  // Drabina: schodzimy o szczebel tylko wtedy, gdy HeyGen odrzucił konfigurację
+  // napisów. Odrzucony styl nie może od razu kasować napisów w ogóle —
+  // wcześniej jeden 422 na `style` gasił je całkowicie.
+  const ladder: CaptionMode[] =
+    want === "burned"
+      ? ["burned", "sidecar", "off"]
+      : want === "sidecar"
+        ? ["sidecar", "off"]
+        : ["off"];
+
+  let out: Awaited<ReturnType<typeof send>> | null = null;
+  let captionMode: CaptionMode = want;
+  for (const mode of ladder) {
+    const caption = captionPayload(mode);
+    captionMode = mode;
+    out = await send(caption ? { ...base, caption } : base);
+    if (out.ok) break;
+    if (!/caption|style|invalid_parameter|not permitted/i.test(out.body)) break;
+    if (mode !== "off") {
+      console.warn(
+        `[HeyGen] napisy w trybie "${mode}" odrzucone (${out.status}) — schodzę niżej: ${out.body}`,
+      );
+    }
   }
-  if (!out.ok) throw new Error(`HeyGen generate failed: ${out.status} ${out.body}`);
+  if (!out?.ok) throw new Error(`HeyGen generate failed: ${out?.status} ${out?.body}`);
 
   const json = JSON.parse(out.body || "{}") as { data?: { video_id?: string } };
   const videoId = json?.data?.video_id;
   if (!videoId) throw new Error(`HeyGen generate: missing video_id ${out.body}`);
-  return { videoId, captioned };
+  return { videoId, captionMode };
 }
 
 export async function getHeygenVideoStatus(videoId: string): Promise<{
   status: string;
+  /** Czysty master — HeyGen NIE wgrywa tu wersji z napisami. */
   video_url?: string | null;
+  /** Ten sam render z napisami wypalonymi w obrazie (gdy zamówiono `style`). */
+  captioned_video_url?: string | null;
   thumbnail_url?: string | null;
   /** Plik napisów (SRT) obok wideo — nazwa pola bywa różna w odpowiedziach. */
   subtitle_url?: string | null;
@@ -148,6 +182,7 @@ export async function getHeygenVideoStatus(videoId: string): Promise<{
     data?: {
       status?: string;
       video_url?: string | null;
+      captioned_video_url?: string | null;
       thumbnail_url?: string | null;
       caption_url?: string | null;
       subtitle_url?: string | null;
@@ -161,6 +196,7 @@ export async function getHeygenVideoStatus(videoId: string): Promise<{
   return {
     status: d?.status ?? "unknown",
     video_url: d?.video_url ?? null,
+    captioned_video_url: d?.captioned_video_url ?? null,
     thumbnail_url: d?.thumbnail_url ?? null,
     subtitle_url: d?.caption_url ?? d?.subtitle_url ?? d?.srt_url ?? d?.caption?.url ?? null,
     error: d?.failure_message ?? d?.failure_code,

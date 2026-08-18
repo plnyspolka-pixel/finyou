@@ -125,13 +125,36 @@ Zakładki panelu:
    **Napisy** — przełącznik „Napisy na wideo" przy wyborze głosu (domyślnie
    włączony, bo rolki ogląda się bez dźwięku). Render idzie do HeyGen z polem
    `caption: { file_format: "srt", style: … }` (v3 nie przyjmuje `caption:
-true` z API v2 — walidacja odrzuca boolean). Gdy konto HeyGen nie ma
-   napisów w planie, generacja **nie pada**: ponawiamy render bez napisów
-   i zapisujemy `captions = false`, więc biblioteka pokazuje „bez napisów"
-   zamiast obiecywać coś, czego w pliku nie ma. Zwrócony przez HeyGen plik
-   SRT ląduje w `subtitle_url` (przycisk „SRT" w bibliotece) — przydaje się
-   przy montażu i przy ścieżce napisów na YouTube. Ustawienie obowiązuje
-   też dla generowania wsadowego.
+true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
+   i to jest tu sedno:
+
+   - `file_format` sam → HeyGen oddaje **tylko plik SRT** obok wideo,
+   - `file_format` + `style` → napisy są **dodatkowo wypalane w obrazie**.
+
+   Wypalona wersja **nie nadpisuje `video_url`** — HeyGen zwraca ją jako
+   osobny plik w polu `captioned_video_url`, a `video_url` zostaje czystym
+   masterem. Dlatego przy odbiorze renderu bierzemy `captioned_video_url`
+   (gdy zamówiono napisy) i to on ląduje w `studio_video_jobs.video_url`,
+   czyli w tym, co idzie do publikacji na YouTube, FB i IG. Czysty master
+   zapisujemy obok w `video_url_clean` (przycisk „Bez napisów" w bibliotece).
+   Na IG/FB Reels to jedyna droga — te platformy nie przyjmują osobnej
+   ścieżki napisów.
+
+   Gdy konto HeyGen nie ma napisów w planie, generacja **nie pada**:
+   schodzimy po drabinie `burned → sidecar → off` (odrzucony `style` nie kasuje
+   już napisów całkowicie — najpierw próbujemy samego pliku SRT). Jeśli wideo
+   jest gotowe, a wypalonej wersji jeszcze nie ma, job **zostaje w
+   `rendering`** przez karencję (`caption_wait_since`, 12 min ≈ jeszcze jeden
+   tick); po jej upływie publikujemy czysty plik, zapisujemy `captions = false`
+   i wpisujemy powód w `last_error`, zamiast po cichu wypuszczać rolkę bez
+   napisów. Biblioteka rozróżnia trzy stany: „napisy na wideo", „tylko plik
+   SRT", „bez napisów". Plik SRT nadal ląduje w `subtitle_url` (przycisk
+   „SRT"). Ustawienie obowiązuje też dla generowania wsadowego.
+
+   Pozostałe ścieżki HeyGena zamawiają świadomie `captions: "sidecar"`
+   (nie wypalamy tego, czego nie publikujemy): FAQ awatara gra na stronie
+   z dźwiękiem, a pipeline YouTube robi materiały 5–8 min, gdzie wypalone
+   napisy przeszkadzają, a player YT ma własne.
 
    Dalej: „Wygeneruj scenariusz" (edytowalny) → wybór awatara i głosu →
    „Generuj wideo". **Awatary** są pobierane na żywo z konta HeyGen

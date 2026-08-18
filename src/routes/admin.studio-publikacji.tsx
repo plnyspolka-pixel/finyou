@@ -31,6 +31,7 @@ import {
   type StudioVideoJob,
   type StudioAvatar,
 } from "@/lib/studio.functions";
+import { captionBadgeLabel } from "@/lib/studio-captions";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
 import { HEYGEN_AVATARS, FILIP_VOICE_ID } from "@/lib/heygen-avatars";
 import {
@@ -70,6 +71,7 @@ import {
   BookOpen,
   CheckCircle2,
   Captions,
+  Film,
   Play,
   Maximize2,
 } from "lucide-react";
@@ -1371,7 +1373,7 @@ function StudioPage() {
                               </Badge>
                               <Badge variant="outline" className="gap-1">
                                 <Captions className="h-3 w-3" />
-                                {j.captions ? "napisy" : "bez napisów"}
+                                {captionBadgeLabel(j)}
                               </Badge>
                             </div>
                             <p className="break-words font-medium">{j.prompt.slice(0, 90)}</p>
@@ -1418,6 +1420,17 @@ function StudioPage() {
                                 <Send className="mr-1 h-4 w-4" /> Publikuj
                               </Button>
                             </>
+                          )}
+                          {j.video_url_clean && (
+                            <a href={j.video_url_clean} target="_blank" rel="noreferrer">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                title="Ten sam render bez wypalonych napisów (do montażu)"
+                              >
+                                <Film className="mr-1 h-4 w-4" /> Bez napisów
+                              </Button>
+                            </a>
                           )}
                           {j.subtitle_url && (
                             <a href={j.subtitle_url} target="_blank" rel="noreferrer">

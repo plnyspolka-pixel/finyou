@@ -7,6 +7,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { StudioPromptKind } from "./studio-ai.server";
+import { resolveCaptionedOutput } from "./studio-captions";
 
 async function assertAdmin(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -267,10 +268,15 @@ export type StudioVideoJob = {
   voice_id: string;
   heygen_video_id: string | null;
   status: string;
+  /** Plik do publikacji — z wypalonymi napisami, jeśli je zamówiono. */
   video_url: string | null;
+  /** Czysty master bez napisów (do montażu); null, gdy nie ma osobnej wersji. */
+  video_url_clean: string | null;
   thumbnail_url: string | null;
   subtitle_url: string | null;
+  /** Czy `video_url` ma napisy wypalone w obrazie. */
   captions: boolean;
+  caption_wait_since: string | null;
   last_error: string | null;
   auto_publish_platforms: string[];
   publish_privacy: string;
@@ -500,15 +506,20 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         .eq("id", job.id);
 
       const assetId = await uploadAudioToHeygen(audio);
-      const { videoId, captioned } = await createHeygenVideoFromAudio({
+      const { videoId, captionMode } = await createHeygenVideoFromAudio({
         avatarId: data.avatar_id,
         audioAssetId: assetId,
-        captions: data.captions !== false,
+        captions: data.captions !== false ? "burned" : "off",
       });
 
       await supabaseAdmin
         .from("studio_video_jobs")
-        .update({ heygen_video_id: videoId, status: "rendering", captions: captioned })
+        .update({
+          heygen_video_id: videoId,
+          status: "rendering",
+          captions: captionMode === "burned",
+          caption_wait_since: null,
+        })
         .eq("id", job.id);
       return { ok: true, id: job.id as string };
     } catch (e) {
@@ -608,7 +619,7 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
     const { data: row } = await supabaseAdmin
       .from("studio_video_jobs")
       .select(
-        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, captions, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by",
+        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, captions, caption_wait_since, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by",
       )
       .eq("id", data.id)
       .single();
@@ -618,15 +629,37 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
     const update: {
       status?: string;
       video_url?: string | null;
+      video_url_clean?: string | null;
       thumbnail_url?: string | null;
       subtitle_url?: string | null;
+      captions?: boolean;
+      caption_wait_since?: string | null;
       last_error?: string | null;
     } = {};
     if (status.status === "completed" && status.video_url) {
+      // Wersja z wypalonymi napisami to osobny plik HeyGena — bierzemy ją,
+      // a czysty master zostaje pod video_url_clean.
+      const resolved = resolveCaptionedOutput({
+        want: row.captions ? "burned" : "sidecar",
+        outputs: status,
+        waitSince: row.caption_wait_since,
+        now: new Date(),
+      });
+      if (resolved.state === "waiting") {
+        await supabaseAdmin
+          .from("studio_video_jobs")
+          .update({ caption_wait_since: resolved.waitSince })
+          .eq("id", data.id);
+        return { status: "rendering", video_url: null, thumbnail_url: status.thumbnail_url };
+      }
       update.status = "ready";
-      update.video_url = status.video_url;
+      update.video_url = resolved.videoUrl;
+      update.video_url_clean = resolved.cleanVideoUrl;
       update.thumbnail_url = status.thumbnail_url ?? null;
-      update.subtitle_url = status.subtitle_url ?? null;
+      update.subtitle_url = resolved.subtitleUrl;
+      update.captions = resolved.captionsBurned;
+      update.caption_wait_since = null;
+      update.last_error = resolved.note;
     } else if (status.status === "failed") {
       update.status = "failed";
       update.last_error =
@@ -642,7 +675,8 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
     }
     return {
       status: status.status,
-      video_url: status.video_url,
+      // Ten sam plik, który zapisaliśmy i który pójdzie do publikacji.
+      video_url: update.video_url ?? null,
       thumbnail_url: status.thumbnail_url,
     };
   });

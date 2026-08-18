@@ -12,6 +12,7 @@
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parseShortsPromptTag, findShortsQuestion } from "./shorts-question-bank";
+import { resolveCaptionedOutput } from "./studio-captions";
 
 type JobRow = {
   id: string;
@@ -23,6 +24,7 @@ type JobRow = {
   status: string;
   video_url: string | null;
   captions: boolean;
+  caption_wait_since: string | null;
   auto_publish_platforms: string[];
   publish_privacy: string;
   publish_title: string;
@@ -124,14 +126,19 @@ async function processClaimedJob(job: JobRow): Promise<void> {
   await supabaseAdmin.from("studio_video_jobs").update({ status: "uploading" }).eq("id", job.id);
 
   const assetId = await uploadAudioToHeygen(audio);
-  const { videoId, captioned } = await createHeygenVideoFromAudio({
+  const { videoId, captionMode } = await createHeygenVideoFromAudio({
     avatarId: job.avatar_id,
     audioAssetId: assetId,
-    captions: job.captions !== false,
+    captions: job.captions !== false ? "burned" : "off",
   });
   await supabaseAdmin
     .from("studio_video_jobs")
-    .update({ heygen_video_id: videoId, status: "rendering", captions: captioned })
+    .update({
+      heygen_video_id: videoId,
+      status: "rendering",
+      captions: captionMode === "burned",
+      caption_wait_since: null,
+    })
     .eq("id", job.id);
 }
 
@@ -156,20 +163,40 @@ export async function pollStudioRenderingJobs(): Promise<{
     try {
       const status = await getHeygenVideoStatus(job.heygen_video_id!);
       if (status.status === "completed" && status.video_url) {
+        // HeyGen oddaje wersję z wypalonymi napisami jako OSOBNY plik
+        // (captioned_video_url) — publikujemy ją, nie czysty master.
+        const resolved = resolveCaptionedOutput({
+          want: job.captions ? "burned" : "sidecar",
+          outputs: status,
+          waitSince: job.caption_wait_since,
+          now: new Date(),
+        });
+        if (resolved.state === "waiting") {
+          // Zostajemy w 'rendering' — kolejny tick dokończy albo odpuści.
+          await supabaseAdmin
+            .from("studio_video_jobs")
+            .update({ caption_wait_since: resolved.waitSince })
+            .eq("id", job.id);
+          continue;
+        }
         await supabaseAdmin
           .from("studio_video_jobs")
           .update({
             status: "ready",
-            video_url: status.video_url,
+            video_url: resolved.videoUrl,
+            video_url_clean: resolved.cleanVideoUrl,
             thumbnail_url: status.thumbnail_url ?? null,
-            subtitle_url: status.subtitle_url ?? null,
+            subtitle_url: resolved.subtitleUrl,
+            captions: resolved.captionsBurned,
+            caption_wait_since: null,
+            last_error: resolved.note,
           })
           .eq("id", job.id);
         completed++;
         const published = await maybeAutoPublishJob({
           ...job,
           status: "ready",
-          video_url: status.video_url,
+          video_url: resolved.videoUrl,
         });
         if (published) autoPublished++;
       } else if (status.status === "failed") {
