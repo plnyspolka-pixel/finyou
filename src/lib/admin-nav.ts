@@ -40,6 +40,7 @@ import {
   Handshake,
   Megaphone,
   Landmark,
+  Download,
 } from "lucide-react";
 
 /**
@@ -303,6 +304,14 @@ export const adminSections: AdminSection[] = [
         icon: Bot,
         description: "Wideo-awatar odpowiadający na najczęstsze pytania.",
         synonyms: ["awatar", "faq", "filip", "wideo bot"],
+      },
+      {
+        to: "/admin/eksport-historii",
+        label: "Eksport historii",
+        icon: Download,
+        description:
+          "Pełna historia rozmów voicebota, SMS, maili i Messengera w jednej paczce ZIP, zestawiona z wnioskami.",
+        synonyms: ["eksport", "export", "zip", "paczka", "historia", "archiwum", "transkrypcje"],
       },
     ],
   },
