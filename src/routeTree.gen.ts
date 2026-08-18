@@ -138,6 +138,7 @@ import { Route as AdminFollowUpBrakiRouteImport } from './routes/admin.follow-up
 import { Route as AdminFinanseRouteImport } from './routes/admin.finanse'
 import { Route as AdminFacebookConnectRouteImport } from './routes/admin.facebook-connect'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
+import { Route as AdminEksportHistoriiRouteImport } from './routes/admin.eksport-historii'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
 import { Route as AdminCzatRouteImport } from './routes/admin.czat'
@@ -902,6 +903,11 @@ const AdminEmbedRoute = AdminEmbedRouteImport.update({
   path: '/embed',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminEksportHistoriiRoute = AdminEksportHistoriiRouteImport.update({
+  id: '/eksport-historii',
+  path: '/eksport-historii',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDystrybucjaRoute = AdminDystrybucjaRouteImport.update({
   id: '/dystrybucja',
   path: '/dystrybucja',
@@ -1567,6 +1573,7 @@ export interface FileRoutesByFullPath {
   '/admin/czat': typeof AdminCzatRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
+  '/admin/eksport-historii': typeof AdminEksportHistoriiRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/finanse': typeof AdminFinanseRoute
@@ -1806,6 +1813,7 @@ export interface FileRoutesByTo {
   '/admin/czat': typeof AdminCzatRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
+  '/admin/eksport-historii': typeof AdminEksportHistoriiRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/finanse': typeof AdminFinanseRoute
@@ -2046,6 +2054,7 @@ export interface FileRoutesById {
   '/admin/czat': typeof AdminCzatRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
+  '/admin/eksport-historii': typeof AdminEksportHistoriiRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/finanse': typeof AdminFinanseRoute
@@ -2292,6 +2301,7 @@ export interface FileRouteTypes {
     | '/admin/czat'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
+    | '/admin/eksport-historii'
     | '/admin/embed'
     | '/admin/facebook-connect'
     | '/admin/finanse'
@@ -2531,6 +2541,7 @@ export interface FileRouteTypes {
     | '/admin/czat'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
+    | '/admin/eksport-historii'
     | '/admin/embed'
     | '/admin/facebook-connect'
     | '/admin/finanse'
@@ -2770,6 +2781,7 @@ export interface FileRouteTypes {
     | '/admin/czat'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
+    | '/admin/eksport-historii'
     | '/admin/embed'
     | '/admin/facebook-connect'
     | '/admin/finanse'
@@ -3979,6 +3991,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEmbedRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/eksport-historii': {
+      id: '/admin/eksport-historii'
+      path: '/eksport-historii'
+      fullPath: '/admin/eksport-historii'
+      preLoaderRoute: typeof AdminEksportHistoriiRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/dystrybucja': {
       id: '/admin/dystrybucja'
       path: '/dystrybucja'
@@ -4810,6 +4829,7 @@ interface AdminRouteChildren {
   AdminCzatRoute: typeof AdminCzatRoute
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
+  AdminEksportHistoriiRoute: typeof AdminEksportHistoriiRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
   AdminFacebookConnectRoute: typeof AdminFacebookConnectRoute
   AdminFinanseRoute: typeof AdminFinanseRoute
@@ -4888,6 +4908,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCzatRoute: AdminCzatRoute,
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
+  AdminEksportHistoriiRoute: AdminEksportHistoriiRoute,
   AdminEmbedRoute: AdminEmbedRoute,
   AdminFacebookConnectRoute: AdminFacebookConnectRoute,
   AdminFinanseRoute: AdminFinanseRoute,

@@ -13,6 +13,7 @@
  *  - `offer_distribution_messages` — wątki mailowe z instytucjami finansującymi
  *    (dystrybucja oferty konkretnego wniosku).
  */
+import type { OutboundAttachmentRef } from "./email-attachments.types";
 
 export type CommsThread = {
   lead_id: string | null;
