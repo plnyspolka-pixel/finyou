@@ -167,7 +167,12 @@ jest widoczna w skrzynce i wątkuje się u odbiorcy.
    do wysyłek masowych jest moduł mailingu.
 4. Każda wiadomość ma w metadanych `sent_by` (administrator) i znacznik
    asystenta, a samo wywołanie narzędzia ląduje w `ai_admin_audit_log`.
-5. Prompt zabrania obiecywania kwot, terminów i decyzji, których nie ma w danych.
+5. Konkretną propozycję handlową (kwota, oprocentowanie, prowizja, rata,
+   terminy) **wolno** napisać — pod warunkiem, że każda liczba pochodzi z danych
+   w systemie, z polecenia administratora w tej rozmowie albo z załączonego
+   dokumentu. Zabronione jest wymyślanie liczb, interpolowanie stawki z
+   podobnych spraw i deklarowanie decyzji, której nikt nie podjął. Przed prośbą
+   o zgodę na wysyłkę asystent wypisuje, skąd wzięła się każda liczba.
 
 ## Pamięć długotrwała (baza wiedzy z rozmów)
 

@@ -343,7 +343,7 @@ export const ANTHROPIC_TOOLS = [
   {
     name: "comms_send_email",
     description:
-      "WYSYŁA e-maila do klienta lub inwestora (nowy albo odpowiedź w wątku). To realna wiadomość do prawdziwej osoby — wolno jej użyć TYLKO po tym, jak administrator zobaczył treść i wyraźnie kazał ją wysłać. Nigdy nie wysyłaj po własnej inicjatywie, nie obiecuj warunków ani kwot, których nie ma w danych.",
+      "WYSYŁA e-maila do klienta lub inwestora (nowy albo odpowiedź w wątku). To realna wiadomość do prawdziwej osoby — wolno jej użyć TYLKO po tym, jak administrator zobaczył treść i wyraźnie kazał ją wysłać. Nigdy nie wysyłaj po własnej inicjatywie. Konkretną propozycję kwotową z terminami napisać wolno, o ile każda liczba pochodzi z danych, z polecenia administratora albo z załączonego dokumentu — liczb nie wymyślaj.",
     input_schema: {
       type: "object",
       properties: {
@@ -1116,7 +1116,9 @@ Korespondencja z klientami i inwestorami (narzędzia "comms_*"):
 - Czytanie jest swobodne: "comms_list_threads" (kto czeka na odpowiedź), "comms_read_thread" (cała historia jednej osoby), "comms_list_offer_threads" (wątki z instytucjami finansującymi).
 - WYSYŁKA to działanie nieodwracalne wobec prawdziwej osoby. Zanim cokolwiek wyślesz, pokaż w odpowiedzi: kanał, odbiorcę, temat i PEŁNĄ treść, i poczekaj na wyraźną zgodę („wyślij", „ok, ślij"). Sama prośba „przygotuj odpowiedź" albo „zobacz, co odpisać" NIE jest zgodą na wysyłkę.
 - Nigdy nie wysyłaj z własnej inicjatywy, nawet gdy wątek wygląda na zaległy. Zaproponuj treść i zapytaj.
-- W treści opieraj się wyłącznie na danych z bazy i historii wątku. Nie obiecuj kwot, oprocentowania, terminów ani decyzji, których nie ma w danych. Nie wymyślaj nazwisk, numerów umów ani ustaleń.
+- Konkretną propozycję handlową NAPISAĆ WOLNO — z kwotą, oprocentowaniem, prowizją, ratą i terminami. Każda liczba musi jednak pochodzić z jednego z trzech źródeł: (1) danych w systemie i historii wątku, (2) tego, co administrator podyktował Ci w tej rozmowie, (3) załączonego dokumentu albo karty oferty. To wszystko są źródła równoprawne.
+- Czego nie wolno: wymyślać liczb, „zaokrąglać po swojemu", interpolować brakującej stawki z podobnych spraw, dopisywać terminu, którego nikt nie podał, ani deklarować decyzji (przyznania, odmowy, akceptacji warunków), której nie ma w danych ani w poleceniu administratora. Nazwisk, numerów umów i ustaleń też nie wymyślaj.
+- Zanim poprosisz o zgodę na wysyłkę propozycji, wypisz administratorowi pochodzenie każdej liczby — np. „kwota i termin: wniosek #123", „oprocentowanie: podyktowane przez Ciebie", „prowizja: karta oferty". Jeśli którejś liczby brakuje, dopytaj zamiast zgadywać.
 - Odpowiadając mailem podawaj "reply_to_message_id" z "comms_read_thread" — inaczej wiadomość nie doklei się do wątku u odbiorcy.
 - Piszesz w imieniu firmy: po polsku, uprzejmie, zwięźle, bez emoji, z podpisem zespołu — chyba że pamięć długotrwała mówi inaczej.
 - Asystent ma limit 20 wysłanych wiadomości na godzinę. Do wysyłek masowych jest moduł mailingu — nie próbuj obchodzić limitu pętlą.`;
