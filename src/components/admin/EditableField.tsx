@@ -12,7 +12,7 @@ import {
 import { Pencil, Check, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-type FieldType = "text" | "number" | "email" | "tel" | "select" | "bool";
+type FieldType = "text" | "number" | "email" | "tel" | "select" | "bool" | "array";
 
 interface Props {
   label: string;
@@ -38,16 +38,31 @@ export function EditableField({
   onSaved,
 }: Props) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<string>(value == null ? "" : String(value));
+  const [draft, setDraft] = useState<string>(
+    value == null ? "" : Array.isArray(value) ? value.join(", ") : String(value),
+  );
   const [saving, setSaving] = useState(false);
 
-  const shown = display ? display(value) : value == null || value === "" ? "—" : String(value);
+  const shown = display
+    ? display(value)
+    : Array.isArray(value)
+      ? value.length > 0
+        ? value.join(", ")
+        : "—"
+      : value == null || value === ""
+        ? "—"
+        : String(value);
 
   const save = async () => {
     setSaving(true);
     let payload: unknown = draft;
     if (type === "number") payload = draft === "" ? null : Number(draft);
     else if (type === "bool") payload = draft === "true";
+    else if (type === "array")
+      payload = draft
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
     else if (draft === "") payload = null;
     const { error } = await supabase
       .from(table as any)
@@ -71,7 +86,7 @@ export function EditableField({
         <button
           type="button"
           onClick={() => {
-            setDraft(value == null ? "" : String(value));
+            setDraft(value == null ? "" : Array.isArray(value) ? value.join(", ") : String(value));
             setEditing(true);
           }}
           className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
@@ -89,7 +104,7 @@ export function EditableField({
       {type === "select" && options ? (
         <Select value={draft} onValueChange={setDraft}>
           <SelectTrigger className="h-8 flex-1">
-            <SelectValue />
+            <SelectValue placeholder="Wybierz…" />
           </SelectTrigger>
           <SelectContent>
             {options.map((o) => (
