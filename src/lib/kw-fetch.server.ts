@@ -15,6 +15,33 @@ export function hasCmdConfig(): boolean {
   return Boolean(process.env.CMD_KW_USER && process.env.CMD_KW_PASSWORD);
 }
 
+// Limity CMD są grupowe (współdzielone przez całe konto) i odnawiają się po
+// stronie CMD — ponawianie zleceń tylko je dalej zużywa (każdy /v4/order to
+// bilingowany request TECH_IN_ORDER, nawet gdy kończy się 403).
+export function isCmdQuotaError(msg: string | null | undefined): boolean {
+  return /limit exceeded|usage type|wyczerpany limit/i.test(msg ?? "");
+}
+
+function quotaErrorMessage(detail: string): string {
+  const d = detail.replace(/\s+/g, " ").trim().slice(0, 200);
+  return (
+    "Wyczerpany limit zapytań CMD KW Engine (limit grupowy konta). " +
+    "Automatyczne ponawianie wstrzymane — limit odnawia się po stronie CMD; " +
+    "w razie potrzeby poproś CMD o zwiększenie limitu grupy. " +
+    (d ? `Odpowiedź API: ${d}` : "")
+  ).trim();
+}
+
+// Po wykrytym wyczerpaniu limitu nie odpytujemy CMD z automatów przez 6 h
+// (best-effort, per instancja). Ręczne pobranie (force) zawsze próbuje.
+const QUOTA_COOLDOWN_MS = 6 * 3600_000;
+let quotaBlockedUntil = 0;
+
+// Backoff ponowień per KW (wpis w kw_documents ze statusem "error"):
+// zwykły błąd — 6 h, wyczerpany limit — 24 h. force pomija backoff.
+const ERROR_RETRY_MS = 6 * 3600_000;
+const QUOTA_RETRY_MS = 24 * 3600_000;
+
 function authHeader(): string {
   const u = process.env.CMD_KW_USER ?? "";
   const p = process.env.CMD_KW_PASSWORD ?? "";
@@ -144,12 +171,44 @@ export async function fetchAndStoreKw(
   // Check cache
   const { data: cached } = await supabaseAdmin
     .from("kw_documents")
-    .select("status, fetched_at")
+    .select("status, fetched_at, ordered_at, last_error")
     .eq("kw_number", kw)
     .maybeSingle();
   if (cached && cached.status === "ready" && !opts?.force) {
     return { ok: true, status: "ready", cached: true };
   }
+
+  // Backoff po błędzie — nie odpytuj CMD w kółko o tę samą księgę
+  // (backfill leadów wraca do nieudanych KW przy każdym przebiegu).
+  if (cached?.status === "error" && !opts?.force && cached.ordered_at) {
+    const age = Date.now() - Date.parse(cached.ordered_at);
+    const wait = isCmdQuotaError(cached.last_error) ? QUOTA_RETRY_MS : ERROR_RETRY_MS;
+    if (Number.isFinite(age) && age < wait) {
+      return {
+        ok: false,
+        status: "error",
+        cached: true,
+        error: cached.last_error ?? "Poprzednia próba pobrania KW nie powiodła się.",
+      };
+    }
+  }
+
+  // Globalna blokada po wyczerpaniu limitu CMD (automaty; force próbuje mimo to).
+  if (!opts?.force && Date.now() < quotaBlockedUntil) {
+    return {
+      ok: false,
+      status: "error",
+      cached: false,
+      error: quotaErrorMessage(""),
+    };
+  }
+
+  // Świeżo zlecone pobranie (inne wywołanie już zamówiło tę księgę) — nie
+  // duplikuj /v4/order, tylko doczekaj wyniku; duplikaty biją w limit TECH_IN_ORDER.
+  const recentlyOrdered =
+    cached?.status === "processing" &&
+    !!cached.ordered_at &&
+    Date.now() - Date.parse(cached.ordered_at) < 10 * 60_000;
 
   // Mark/insert as processing
   await supabaseAdmin.from("kw_documents").upsert(
@@ -168,14 +227,29 @@ export async function fetchAndStoreKw(
   // więc też zlecamy pobranie przez /v4/order.
   let res = await fetchKwHtml(kw);
   if (!res.ok) {
-    const ord = await orderKw(kw);
-    if (ord.status === "NOT_ENQUEUED") {
-      const reason = ord.reason ?? "Nie udało się zlecić pobrania KW";
+    if (res.status === 403 && isCmdQuotaError(res.error)) {
+      quotaBlockedUntil = Date.now() + QUOTA_COOLDOWN_MS;
+      const msg = quotaErrorMessage(res.error ?? "");
       await supabaseAdmin
         .from("kw_documents")
-        .update({ status: "error", last_error: reason })
+        .update({ status: "error", last_error: msg })
         .eq("kw_number", kw);
-      return { ok: false, status: "error", cached: false, error: reason };
+      return { ok: false, status: "error", cached: false, error: msg };
+    }
+    if (!recentlyOrdered) {
+      const ord = await orderKw(kw);
+      if (ord.status === "NOT_ENQUEUED") {
+        let reason = ord.reason ?? "Nie udało się zlecić pobrania KW";
+        if (isCmdQuotaError(reason)) {
+          quotaBlockedUntil = Date.now() + QUOTA_COOLDOWN_MS;
+          reason = quotaErrorMessage(reason);
+        }
+        await supabaseAdmin
+          .from("kw_documents")
+          .update({ status: "error", last_error: reason })
+          .eq("kw_number", kw);
+        return { ok: false, status: "error", cached: false, error: reason };
+      }
     }
     const result = await pollResults(kw, opts?.pollMaxMs);
     if (result === "not_found") {
@@ -221,10 +295,14 @@ export async function fetchAndStoreKw(
     };
   }
   if (!res.ok || !res.html) {
-    const err = res.error ?? "Nie udało się pobrać treści KW.";
+    let err = res.error ?? "Nie udało się pobrać treści KW.";
+    if (res.status === 403 && isCmdQuotaError(res.error)) {
+      quotaBlockedUntil = Date.now() + QUOTA_COOLDOWN_MS;
+      err = quotaErrorMessage(res.error ?? "");
+    }
     await supabaseAdmin
       .from("kw_documents")
-      .update({ status: "error", last_error: res.error ?? "Nieznany błąd" })
+      .update({ status: "error", last_error: err })
       .eq("kw_number", kw);
     return { ok: false, status: "error", cached: false, error: err };
   }
