@@ -195,6 +195,14 @@ export const adminSections: AdminSection[] = [
     extraPrefixes: ["/admin/wnioski", "/admin/przypomnienia", "/admin/dokumenty"],
     items: [
       {
+        to: "/admin/tablica",
+        label: "Tablica workflow",
+        icon: LayoutDashboard,
+        description:
+          "Tablica Kanban: lead → kontakt → wniosek → dystrybucja → oferty → akt → faktura.",
+        synonyms: ["kanban", "tablica", "pipeline", "workflow", "lejek"],
+      },
+      {
         to: "/admin/klienci",
         label: "Klienci",
         icon: Users,
