@@ -64,6 +64,7 @@ import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as PosrednikAbonamentRouteImport } from './routes/posrednik.abonament'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
 import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
+import { Route as OperatorTablicaRouteImport } from './routes/operator.tablica'
 import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka'
 import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
 import { Route as OperatorOfertyRouteImport } from './routes/operator.oferty'
@@ -107,6 +108,7 @@ import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminVideoPipelineRouteImport } from './routes/admin.video-pipeline'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
+import { Route as AdminTablicaRouteImport } from './routes/admin.tablica'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminStudioPublikacjiRouteImport } from './routes/admin.studio-publikacji'
 import { Route as AdminSprzedazRouteImport } from './routes/admin.sprzedaz'
@@ -530,6 +532,11 @@ const OperatorWniosekRoute = OperatorWniosekRouteImport.update({
   path: '/wniosek',
   getParentRoute: () => OperatorRoute,
 } as any)
+const OperatorTablicaRoute = OperatorTablicaRouteImport.update({
+  id: '/tablica',
+  path: '/tablica',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const OperatorSkrzynkaRoute = OperatorSkrzynkaRouteImport.update({
   id: '/skrzynka',
   path: '/skrzynka',
@@ -747,6 +754,11 @@ const AdminUstawieniaRoute = AdminUstawieniaRouteImport.update({
 const AdminTextAgentRoute = AdminTextAgentRouteImport.update({
   id: '/text-agent',
   path: '/text-agent',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTablicaRoute = AdminTablicaRouteImport.update({
+  id: '/tablica',
+  path: '/tablica',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminSzkoleniaRoute = AdminSzkoleniaRouteImport.update({
@@ -1619,6 +1631,7 @@ export interface FileRoutesByFullPath {
   '/admin/sprzedaz': typeof AdminSprzedazRoute
   '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
+  '/admin/tablica': typeof AdminTablicaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/video-pipeline': typeof AdminVideoPipelineRoute
@@ -1662,6 +1675,7 @@ export interface FileRoutesByFullPath {
   '/operator/oferty': typeof OperatorOfertyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
+  '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
@@ -1861,6 +1875,7 @@ export interface FileRoutesByTo {
   '/admin/sprzedaz': typeof AdminSprzedazRoute
   '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
+  '/admin/tablica': typeof AdminTablicaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/video-pipeline': typeof AdminVideoPipelineRoute
@@ -1900,6 +1915,7 @@ export interface FileRoutesByTo {
   '/operator/oferty': typeof OperatorOfertyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
+  '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
@@ -2104,6 +2120,7 @@ export interface FileRoutesById {
   '/admin/sprzedaz': typeof AdminSprzedazRoute
   '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
+  '/admin/tablica': typeof AdminTablicaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/video-pipeline': typeof AdminVideoPipelineRoute
@@ -2147,6 +2164,7 @@ export interface FileRoutesById {
   '/operator/oferty': typeof OperatorOfertyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
+  '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
@@ -2353,6 +2371,7 @@ export interface FileRouteTypes {
     | '/admin/sprzedaz'
     | '/admin/studio-publikacji'
     | '/admin/szkolenia'
+    | '/admin/tablica'
     | '/admin/text-agent'
     | '/admin/ustawienia'
     | '/admin/video-pipeline'
@@ -2396,6 +2415,7 @@ export interface FileRouteTypes {
     | '/operator/oferty'
     | '/operator/profil'
     | '/operator/skrzynka'
+    | '/operator/tablica'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
@@ -2595,6 +2615,7 @@ export interface FileRouteTypes {
     | '/admin/sprzedaz'
     | '/admin/studio-publikacji'
     | '/admin/szkolenia'
+    | '/admin/tablica'
     | '/admin/text-agent'
     | '/admin/ustawienia'
     | '/admin/video-pipeline'
@@ -2634,6 +2655,7 @@ export interface FileRouteTypes {
     | '/operator/oferty'
     | '/operator/profil'
     | '/operator/skrzynka'
+    | '/operator/tablica'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
@@ -2837,6 +2859,7 @@ export interface FileRouteTypes {
     | '/admin/sprzedaz'
     | '/admin/studio-publikacji'
     | '/admin/szkolenia'
+    | '/admin/tablica'
     | '/admin/text-agent'
     | '/admin/ustawienia'
     | '/admin/video-pipeline'
@@ -2880,6 +2903,7 @@ export interface FileRouteTypes {
     | '/operator/oferty'
     | '/operator/profil'
     | '/operator/skrzynka'
+    | '/operator/tablica'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
@@ -3497,6 +3521,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorWniosekRouteImport
       parentRoute: typeof OperatorRoute
     }
+    '/operator/tablica': {
+      id: '/operator/tablica'
+      path: '/tablica'
+      fullPath: '/operator/tablica'
+      preLoaderRoute: typeof OperatorTablicaRouteImport
+      parentRoute: typeof OperatorRoute
+    }
     '/operator/skrzynka': {
       id: '/operator/skrzynka'
       path: '/skrzynka'
@@ -3796,6 +3827,13 @@ declare module '@tanstack/react-router' {
       path: '/text-agent'
       fullPath: '/admin/text-agent'
       preLoaderRoute: typeof AdminTextAgentRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/tablica': {
+      id: '/admin/tablica'
+      path: '/tablica'
+      fullPath: '/admin/tablica'
+      preLoaderRoute: typeof AdminTablicaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/szkolenia': {
@@ -4901,6 +4939,7 @@ interface AdminRouteChildren {
   AdminSprzedazRoute: typeof AdminSprzedazRoute
   AdminStudioPublikacjiRoute: typeof AdminStudioPublikacjiRoute
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
+  AdminTablicaRoute: typeof AdminTablicaRoute
   AdminTextAgentRoute: typeof AdminTextAgentRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
   AdminVideoPipelineRoute: typeof AdminVideoPipelineRoute
@@ -4980,6 +5019,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSprzedazRoute: AdminSprzedazRoute,
   AdminStudioPublikacjiRoute: AdminStudioPublikacjiRoute,
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
+  AdminTablicaRoute: AdminTablicaRoute,
   AdminTextAgentRoute: AdminTextAgentRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
   AdminVideoPipelineRoute: AdminVideoPipelineRoute,
@@ -5171,6 +5211,7 @@ interface OperatorRouteChildren {
   OperatorOfertyRoute: typeof OperatorOfertyRoute
   OperatorProfilRoute: typeof OperatorProfilRoute
   OperatorSkrzynkaRoute: typeof OperatorSkrzynkaRoute
+  OperatorTablicaRoute: typeof OperatorTablicaRoute
   OperatorWniosekRoute: typeof OperatorWniosekRoute
   OperatorIndexRoute: typeof OperatorIndexRoute
   OperatorWnioskiIdRoute: typeof OperatorWnioskiIdRoute
@@ -5188,6 +5229,7 @@ const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorOfertyRoute: OperatorOfertyRoute,
   OperatorProfilRoute: OperatorProfilRoute,
   OperatorSkrzynkaRoute: OperatorSkrzynkaRoute,
+  OperatorTablicaRoute: OperatorTablicaRoute,
   OperatorWniosekRoute: OperatorWniosekRoute,
   OperatorIndexRoute: OperatorIndexRoute,
   OperatorWnioskiIdRoute: OperatorWnioskiIdRoute,

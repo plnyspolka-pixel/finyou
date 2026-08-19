@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  LayoutDashboard,
   Users,
   UserCheck,
   FileText,
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/operator")({
 const groups: NavGroup[] = [
   {
     items: [
+      { to: "/operator/tablica", label: "Tablica workflow", icon: LayoutDashboard },
       { to: "/operator/leady", label: "Leady (wszystkie)", icon: Users },
       { to: "/operator/moje-leady", label: "Moje leady", icon: UserCheck },
       { to: "/operator/wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
