@@ -92,10 +92,10 @@ export async function backfillLeadNames(opts?: { force?: boolean }): Promise<Nam
       }
     }
 
-    // c) Właściciel z działu II KW — z cache kw_documents, a w razie braku
-    //    treści zleca pobranie z CMD KW Engine.
+    // c) Właściciel z działu II KW — wyłącznie z cache kw_documents
+    //    (pobranie z CMD zleca tylko operator ręcznie w panelu).
     try {
-      const kwFilled = await fillLeadNameFromKw({ leadId: lead.id, allowOrder: true });
+      const kwFilled = await fillLeadNameFromKw({ leadId: lead.id });
       if (kwFilled) namesFromKw += 1;
     } catch (e) {
       console.warn("[backfill] kw name error", lead.id, e);
