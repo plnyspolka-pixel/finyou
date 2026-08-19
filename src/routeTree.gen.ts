@@ -67,6 +67,7 @@ import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
 import { Route as OperatorTablicaRouteImport } from './routes/operator.tablica'
 import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka'
 import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
+import { Route as OperatorPowiadomieniaRouteImport } from './routes/operator.powiadomienia'
 import { Route as OperatorOfertyRouteImport } from './routes/operator.oferty'
 import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-leady'
 import { Route as OperatorMessengerRouteImport } from './routes/operator.messenger'
@@ -545,6 +546,11 @@ const OperatorSkrzynkaRoute = OperatorSkrzynkaRouteImport.update({
 const OperatorProfilRoute = OperatorProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => OperatorRoute,
+} as any)
+const OperatorPowiadomieniaRoute = OperatorPowiadomieniaRouteImport.update({
+  id: '/powiadomienia',
+  path: '/powiadomienia',
   getParentRoute: () => OperatorRoute,
 } as any)
 const OperatorOfertyRoute = OperatorOfertyRouteImport.update({
@@ -1673,6 +1679,7 @@ export interface FileRoutesByFullPath {
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/oferty': typeof OperatorOfertyRoute
+  '/operator/powiadomienia': typeof OperatorPowiadomieniaRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
@@ -1913,6 +1920,7 @@ export interface FileRoutesByTo {
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/oferty': typeof OperatorOfertyRoute
+  '/operator/powiadomienia': typeof OperatorPowiadomieniaRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
@@ -2162,6 +2170,7 @@ export interface FileRoutesById {
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/oferty': typeof OperatorOfertyRoute
+  '/operator/powiadomienia': typeof OperatorPowiadomieniaRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
@@ -2413,6 +2422,7 @@ export interface FileRouteTypes {
     | '/operator/messenger'
     | '/operator/moje-leady'
     | '/operator/oferty'
+    | '/operator/powiadomienia'
     | '/operator/profil'
     | '/operator/skrzynka'
     | '/operator/tablica'
@@ -2653,6 +2663,7 @@ export interface FileRouteTypes {
     | '/operator/messenger'
     | '/operator/moje-leady'
     | '/operator/oferty'
+    | '/operator/powiadomienia'
     | '/operator/profil'
     | '/operator/skrzynka'
     | '/operator/tablica'
@@ -2901,6 +2912,7 @@ export interface FileRouteTypes {
     | '/operator/messenger'
     | '/operator/moje-leady'
     | '/operator/oferty'
+    | '/operator/powiadomienia'
     | '/operator/profil'
     | '/operator/skrzynka'
     | '/operator/tablica'
@@ -3540,6 +3552,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/operator/profil'
       preLoaderRoute: typeof OperatorProfilRouteImport
+      parentRoute: typeof OperatorRoute
+    }
+    '/operator/powiadomienia': {
+      id: '/operator/powiadomienia'
+      path: '/powiadomienia'
+      fullPath: '/operator/powiadomienia'
+      preLoaderRoute: typeof OperatorPowiadomieniaRouteImport
       parentRoute: typeof OperatorRoute
     }
     '/operator/oferty': {
@@ -5209,6 +5228,7 @@ interface OperatorRouteChildren {
   OperatorMessengerRoute: typeof OperatorMessengerRoute
   OperatorMojeLeadyRoute: typeof OperatorMojeLeadyRoute
   OperatorOfertyRoute: typeof OperatorOfertyRoute
+  OperatorPowiadomieniaRoute: typeof OperatorPowiadomieniaRoute
   OperatorProfilRoute: typeof OperatorProfilRoute
   OperatorSkrzynkaRoute: typeof OperatorSkrzynkaRoute
   OperatorTablicaRoute: typeof OperatorTablicaRoute
@@ -5227,6 +5247,7 @@ const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorMessengerRoute: OperatorMessengerRoute,
   OperatorMojeLeadyRoute: OperatorMojeLeadyRoute,
   OperatorOfertyRoute: OperatorOfertyRoute,
+  OperatorPowiadomieniaRoute: OperatorPowiadomieniaRoute,
   OperatorProfilRoute: OperatorProfilRoute,
   OperatorSkrzynkaRoute: OperatorSkrzynkaRoute,
   OperatorTablicaRoute: OperatorTablicaRoute,
@@ -5409,13 +5430,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

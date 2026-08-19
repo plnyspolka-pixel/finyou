@@ -12,6 +12,7 @@ import {
   Sparkles,
   Calculator,
   HandCoins,
+  Bell,
 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 
@@ -34,6 +35,7 @@ const groups: NavGroup[] = [
       { to: "/operator/skrzynka", label: "Skrzynka mailowa", icon: Mail },
       { to: "/operator/messenger", label: "Messenger", icon: MessageCircle },
       { to: "/operator/czat", label: "Czat na stronie", icon: MessageCircle },
+      { to: "/operator/powiadomienia", label: "Powiadomienia", icon: Bell },
       { to: "/operator/profil", label: "Mój profil", icon: UserCircle },
     ],
   },

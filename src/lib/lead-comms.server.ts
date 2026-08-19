@@ -117,7 +117,25 @@ export async function logLeadCommunication(args: LogCommArgs): Promise<string | 
     console.error("[lead-comms] insert error", error);
     return null;
   }
-  return data?.id ?? null;
+  const commId = data?.id ?? null;
+  // Push dla operatorów o każdej wiadomości przychodzącej (czat / e-mail /
+  // Messenger / SMS / telefon) — z linkiem do właściwej skrzynki w panelu.
+  // Best-effort: błąd wysyłki nie może zablokować zalogowania komunikacji.
+  if ((args.direction ?? "outbound") === "inbound") {
+    try {
+      const { pushInboundCommNotification } = await import("./operator-push.server");
+      await pushInboundCommNotification({
+        commId,
+        leadId,
+        channel: args.channel,
+        subject: args.subject,
+        content: args.content,
+      });
+    } catch (e) {
+      console.error("[lead-comms] push notification error", e);
+    }
+  }
+  return commId;
 }
 
 /** Upsert leada po telefonie/email — używane przez webhooki źródłowe. */
@@ -189,6 +207,24 @@ export async function upsertLeadFromSource(opts: {
       await ensureLoanApplicationForLead(leadId);
     } catch (e) {
       console.error("[lead-comms] ensureLoanApplicationForLead error", e);
+    }
+    // Push dla operatorów o nowym leadzie — z linkiem do karty leada.
+    try {
+      const { sendOperatorPush } = await import("./operator-push.server");
+      const who =
+        [opts.firstName, opts.lastName].filter(Boolean).join(" ").trim() ||
+        opts.email ||
+        opts.phoneRaw ||
+        "bez danych kontaktowych";
+      await sendOperatorPush({
+        event: "lead:new",
+        title: "Nowy lead",
+        body: `${who} · źródło: ${opts.source}`,
+        url: `/operator/leady/${leadId}`,
+        tag: `lead-${leadId}`,
+      });
+    } catch (e) {
+      console.error("[lead-comms] push notification error", e);
     }
   }
   return leadId;
