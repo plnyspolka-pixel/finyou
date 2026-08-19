@@ -5,6 +5,7 @@
 //     (gateway zwraca data-URL base64; Meta/YouTube potrzebują trwałego https).
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { MIN_SCENES_FOR_BROLL, type SceneDecision } from "./studio-scenes";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const STORAGE_BUCKET = "studio-media";
@@ -66,6 +67,48 @@ Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","descri
 // Scenariusze dla pytań z paczki 250 NIE przechodzą przez AI — składa je
 // deterministycznie buildShortsScript (src/lib/shorts-script.ts) z gotowej,
 // sprawdzonej treści pliku źródłowego.
+
+// Plan scen: AI NIE dostaje scenariusza do przepisania — dostaje gotowe,
+// ponumerowane segmenty (podzielone deterministycznie po zdaniach) i decyduje
+// tylko, które z nich zilustrować pełnoekranową grafiką i czym. Dzięki temu
+// lektor zawsze mówi dokładnie to, co zatwierdzono w panelu.
+export async function planVideoScenes(args: {
+  segments: string[];
+  topic: string;
+}): Promise<SceneDecision[]> {
+  if (args.segments.length < MIN_SCENES_FOR_BROLL) return [];
+  const numbered = args.segments.map((s, i) => `${i}. ${s}`).join("\n");
+  const last = args.segments.length - 1;
+
+  const parsed = await chatJson(
+    `Jesteś montażystą krótkich pionowych wideo (Shorts/Reels) firmy finansowej. ${BRAND_CONTEXT}
+Dostajesz ponumerowane segmenty tekstu lektora. Dla każdego decydujesz, czy w tym miejscu pokazać pełnoekranową grafikę ilustracyjną (przebitka), czy zostawić mówiącego awatara.
+
+ZASADY:
+- Przebitka ma ILUSTROWAĆ to, co w danym segmencie mówi lektor (dokument, nieruchomość, podpis, kalkulacja, klucze) — nigdy dekoracja bez związku.
+- Segment 0 i segment ${last} zawsze zostają z awatarem (hook i CTA mówi twarz) — nie proponuj ich.
+- Nie proponuj dwóch przebitek pod rząd.
+- Przebitek ma być MAŁO: przy ${args.segments.length} segmentach maksymalnie ${Math.max(1, Math.floor((args.segments.length - 2) / 2))}.
+- Jeśli żaden segment nie nadaje się na sensowną ilustrację, zwróć pustą listę — nuda jest lepsza niż przypadkowy obrazek.
+- "query" to fraza do biblioteki stocku po ANGIELSKU, 2-4 słowa, konkret (np. "signing mortgage contract", "apartment building exterior"), bez nazw marek i bez ludzi z twarzą w kadrze.
+
+Zwracaj WYŁĄCZNIE JSON: {"scenes":[{"index":1,"query":"signing mortgage contract"}]}`,
+    `Temat odcinka: ${args.topic}\n\nSegmenty:\n${numbered}`,
+  );
+
+  const raw = Array.isArray(parsed.scenes) ? parsed.scenes : [];
+  const out: SceneDecision[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const e = entry as { index?: unknown; query?: unknown };
+    const index = typeof e.index === "number" ? e.index : Number.NaN;
+    const query = typeof e.query === "string" ? e.query.trim() : "";
+    if (!Number.isInteger(index) || index < 0 || index >= args.segments.length) continue;
+    if (!query) continue;
+    out.push({ index, broll: true, query });
+  }
+  return out;
+}
 
 export type StudioPromptKind = "video" | "image" | "social";
 

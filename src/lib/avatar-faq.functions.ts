@@ -171,9 +171,12 @@ export const startAvatarFaqGeneration = createServerFn({ method: "POST" })
         .eq("id", data.id);
 
       const assetId = await uploadAudioToHeygen(audio);
+      // FAQ awatara gra na stronie z dźwiękiem i nie ma gdzie pokazać SRT —
+      // nie zamawiamy wypalania, bo i tak publikujemy czysty master.
       const { videoId } = await createHeygenVideoFromAudio({
         avatarId: row.avatar_id,
         audioAssetId: assetId,
+        captions: "sidecar",
       });
 
       await supabaseAdmin

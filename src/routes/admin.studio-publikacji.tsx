@@ -31,6 +31,8 @@ import {
   type StudioVideoJob,
   type StudioAvatar,
 } from "@/lib/studio.functions";
+import { captionBadgeLabel } from "@/lib/studio-captions";
+import { describeScenePlan } from "@/lib/studio-scenes";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
 import { HEYGEN_AVATARS, FILIP_VOICE_ID } from "@/lib/heygen-avatars";
 import {
@@ -70,6 +72,7 @@ import {
   BookOpen,
   CheckCircle2,
   Captions,
+  Film,
   Play,
   Maximize2,
 } from "lucide-react";
@@ -306,6 +309,7 @@ function StudioPage() {
   const [voiceId, setVoiceId] = useState(FILIP_VOICE_ID);
   // Shorty i rolki ogląda się bez dźwięku — napisy domyślnie włączone.
   const [captionsOn, setCaptionsOn] = useState(true);
+  const [dynamicScenesOn, setDynamicScenesOn] = useState(false);
 
   // ── Wybór awatara (katalog HeyGen) ─────────────────────────────────────────
   const [avatarSearch, setAvatarSearch] = useState("");
@@ -432,6 +436,7 @@ function StudioPage() {
           avatar_id: avatarId,
           voice_id: voiceId,
           captions: captionsOn,
+          dynamic_scenes: dynamicScenesOn,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
           publish_title: title,
@@ -457,6 +462,7 @@ function StudioPage() {
           avatar_id: avatarId,
           voice_id: voiceId,
           captions: captionsOn,
+          dynamic_scenes: dynamicScenesOn,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
         },
@@ -1282,7 +1288,26 @@ function StudioPage() {
                     </span>
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Clapperboard className="h-4 w-4" /> Urozmaicenie (przebitki)
+                  </Label>
+                  <div className="flex h-10 items-center gap-3 rounded-md border bg-muted/40 px-3">
+                    <Switch checked={dynamicScenesOn} onCheckedChange={setDynamicScenesOn} />
+                    <span className="text-sm text-muted-foreground">
+                      {dynamicScenesOn ? "AI dobiera przebitki" : "Sama gadająca głowa"}
+                    </span>
+                  </div>
+                </div>
               </div>
+              {dynamicScenesOn && (
+                <p className="text-xs text-muted-foreground">
+                  Scenariusz zostanie pocięty na sceny (zdaniami — treść bez zmian), a AI wskaże
+                  fragmenty do zilustrowania pełnoekranową grafiką z biblioteki HeyGen; lektor mówi
+                  przez nie dalej. Hook i CTA zawsze zostają na awatarze. Gdy AI nie znajdzie
+                  sensownej ilustracji, rolka wychodzi jako pojedyncze ujęcie — z powodem w tabeli.
+                </p>
+              )}
 
               <Button
                 onClick={() => startVideoM.mutate()}
@@ -1371,8 +1396,30 @@ function StudioPage() {
                               </Badge>
                               <Badge variant="outline" className="gap-1">
                                 <Captions className="h-3 w-3" />
-                                {j.captions ? "napisy" : "bez napisów"}
+                                {captionBadgeLabel(j)}
                               </Badge>
+                              {j.scene_plan?.length ? (
+                                <Badge
+                                  variant="outline"
+                                  className="gap-1"
+                                  title={j.scene_plan
+                                    .map((s, i) =>
+                                      s.kind === "broll"
+                                        ? `${i + 1}. przebitka: ${s.query}`
+                                        : `${i + 1}. awatar`,
+                                    )
+                                    .join("\n")}
+                                >
+                                  <Clapperboard className="h-3 w-3" />
+                                  {describeScenePlan(j.scene_plan)}
+                                </Badge>
+                              ) : (
+                                j.dynamic_scenes && (
+                                  <Badge variant="outline" className="gap-1">
+                                    <Clapperboard className="h-3 w-3" /> jedno ujęcie
+                                  </Badge>
+                                )
+                              )}
                             </div>
                             <p className="break-words font-medium">{j.prompt.slice(0, 90)}</p>
                             <p className="text-xs text-muted-foreground">
@@ -1418,6 +1465,17 @@ function StudioPage() {
                                 <Send className="mr-1 h-4 w-4" /> Publikuj
                               </Button>
                             </>
+                          )}
+                          {j.video_url_clean && (
+                            <a href={j.video_url_clean} target="_blank" rel="noreferrer">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                title="Ten sam render bez wypalonych napisów (do montażu)"
+                              >
+                                <Film className="mr-1 h-4 w-4" /> Bez napisów
+                              </Button>
+                            </a>
                           )}
                           {j.subtitle_url && (
                             <a href={j.subtitle_url} target="_blank" rel="noreferrer">

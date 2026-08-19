@@ -7,6 +7,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { StudioPromptKind } from "./studio-ai.server";
+import { resolveCaptionedOutput } from "./studio-captions";
+import type { ScenePlanItem } from "./studio-scenes";
 
 async function assertAdmin(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -267,10 +269,19 @@ export type StudioVideoJob = {
   voice_id: string;
   heygen_video_id: string | null;
   status: string;
+  /** Plik do publikacji — z wypalonymi napisami, jeśli je zamówiono. */
   video_url: string | null;
+  /** Czysty master bez napisów (do montażu); null, gdy nie ma osobnej wersji. */
+  video_url_clean: string | null;
   thumbnail_url: string | null;
   subtitle_url: string | null;
+  /** Czy `video_url` ma napisy wypalone w obrazie. */
   captions: boolean;
+  caption_wait_since: string | null;
+  /** Czy rolka renderuje się jako sklejka scen (awatar + przebitki). */
+  dynamic_scenes: boolean;
+  /** Plan scen faktycznie wysłany na render; null = pojedyncze ujęcie. */
+  scene_plan: ScenePlanItem[] | null;
   last_error: string | null;
   auto_publish_platforms: string[];
   publish_privacy: string;
@@ -457,6 +468,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       avatar_id: string;
       voice_id?: string;
       captions?: boolean;
+      dynamic_scenes?: boolean;
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
       publish_title?: string;
@@ -467,8 +479,6 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     await assertAdmin(context.userId);
     if (!data.script.trim()) throw new Error("Scenariusz jest wymagany.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { ttsElevenLabs, uploadAudioToHeygen, createHeygenVideoFromAudio } =
-      await import("./avatar-faq.server");
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
     const voiceId = data.voice_id || FILIP_VOICE_ID;
     const autoPub = sanitizeAutoPublish(data);
@@ -482,6 +492,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         voice_id: voiceId,
         status: "generating_audio",
         captions: data.captions !== false,
+        dynamic_scenes: data.dynamic_scenes === true,
         auto_publish_platforms: autoPub.auto_publish_platforms,
         publish_privacy: autoPub.publish_privacy,
         publish_title: data.publish_title?.trim() ?? "",
@@ -493,22 +504,31 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     if (insErr) throw new Error(insErr.message);
 
     try {
-      const audio = await ttsElevenLabs({ text: data.script.trim(), voiceId });
       await supabaseAdmin
         .from("studio_video_jobs")
         .update({ status: "uploading" })
         .eq("id", job.id);
 
-      const assetId = await uploadAudioToHeygen(audio);
-      const { videoId, captioned } = await createHeygenVideoFromAudio({
+      const { renderStudioVideo } = await import("./studio-render.server");
+      const rendered = await renderStudioVideo({
+        script: data.script.trim(),
+        topic: data.prompt.trim(),
         avatarId: data.avatar_id,
-        audioAssetId: assetId,
+        voiceId,
         captions: data.captions !== false,
+        dynamicScenes: data.dynamic_scenes === true,
       });
 
       await supabaseAdmin
         .from("studio_video_jobs")
-        .update({ heygen_video_id: videoId, status: "rendering", captions: captioned })
+        .update({
+          heygen_video_id: rendered.videoId,
+          status: "rendering",
+          captions: rendered.captionMode === "burned",
+          caption_wait_since: null,
+          scene_plan: rendered.scenePlan,
+          last_error: rendered.note,
+        })
         .eq("id", job.id);
       return { ok: true, id: job.id as string };
     } catch (e) {
@@ -531,6 +551,7 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       avatar_id: string;
       voice_id?: string;
       captions?: boolean;
+      dynamic_scenes?: boolean;
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
     }) => d,
@@ -574,6 +595,7 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
         voice_id: data.voice_id || FILIP_VOICE_ID,
         status: "queued",
         captions: data.captions !== false,
+        dynamic_scenes: data.dynamic_scenes === true,
         auto_publish_platforms: autoPub.auto_publish_platforms,
         publish_privacy: autoPub.publish_privacy,
         publish_title: q.question.slice(0, 92),
@@ -608,7 +630,7 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
     const { data: row } = await supabaseAdmin
       .from("studio_video_jobs")
       .select(
-        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, captions, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by",
+        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, captions, caption_wait_since, dynamic_scenes, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by",
       )
       .eq("id", data.id)
       .single();
@@ -618,15 +640,37 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
     const update: {
       status?: string;
       video_url?: string | null;
+      video_url_clean?: string | null;
       thumbnail_url?: string | null;
       subtitle_url?: string | null;
+      captions?: boolean;
+      caption_wait_since?: string | null;
       last_error?: string | null;
     } = {};
     if (status.status === "completed" && status.video_url) {
+      // Wersja z wypalonymi napisami to osobny plik HeyGena — bierzemy ją,
+      // a czysty master zostaje pod video_url_clean.
+      const resolved = resolveCaptionedOutput({
+        want: row.captions ? "burned" : "sidecar",
+        outputs: status,
+        waitSince: row.caption_wait_since,
+        now: new Date(),
+      });
+      if (resolved.state === "waiting") {
+        await supabaseAdmin
+          .from("studio_video_jobs")
+          .update({ caption_wait_since: resolved.waitSince })
+          .eq("id", data.id);
+        return { status: "rendering", video_url: null, thumbnail_url: status.thumbnail_url };
+      }
       update.status = "ready";
-      update.video_url = status.video_url;
+      update.video_url = resolved.videoUrl;
+      update.video_url_clean = resolved.cleanVideoUrl;
       update.thumbnail_url = status.thumbnail_url ?? null;
-      update.subtitle_url = status.subtitle_url ?? null;
+      update.subtitle_url = resolved.subtitleUrl;
+      update.captions = resolved.captionsBurned;
+      update.caption_wait_since = null;
+      update.last_error = resolved.note;
     } else if (status.status === "failed") {
       update.status = "failed";
       update.last_error =
@@ -642,7 +686,8 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
     }
     return {
       status: status.status,
-      video_url: status.video_url,
+      // Ten sam plik, który zapisaliśmy i który pójdzie do publikacji.
+      video_url: update.video_url ?? null,
       thumbnail_url: status.thumbnail_url,
     };
   });
