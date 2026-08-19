@@ -361,6 +361,26 @@ Podgląd w panelu: ${adminUrl}`;
     }
   })();
 
+  // Push dla operatorów o nowym wniosku — z linkiem do szczegółów wniosku.
+  try {
+    const { sendOperatorPush } = await import("@/lib/operator-push.server");
+    const fmtPLN = new Intl.NumberFormat("pl-PL", {
+      style: "currency",
+      currency: "PLN",
+      maximumFractionDigits: 0,
+    });
+    await sendOperatorPush({
+      event: "loan_application:new",
+      title: "Nowy wniosek o pożyczkę",
+      body: `${data.first_name} ${data.last_name} · ${fmtPLN.format(data.loan_amount)} / ${data.preferred_period_months} mies.`,
+      url: `/operator/wnioski/${loan.id}`,
+      tag: `loan-${loan.id}`,
+      urgency: "high",
+    });
+  } catch (err) {
+    console.error("[landing-application] push notification failed", err);
+  }
+
   return { ok: true as const, id: loan.id, token_hash: tokenHash, email: data.email };
 }
 

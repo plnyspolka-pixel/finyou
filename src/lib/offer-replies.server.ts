@@ -258,6 +258,22 @@ export async function routeInboundOfferReply(mail: InboundOfferReply): Promise<b
     return false;
   }
 
+  // Push dla operatorów: odpowiedź inwestora na ofertę — link do zakładki Oferty.
+  try {
+    const { sendOperatorPush } = await import("@/lib/operator-push.server");
+    const snippet = (mail.subject || mail.text || "").replace(/\s+/g, " ").trim().slice(0, 140);
+    await sendOperatorPush({
+      event: "offer:reply",
+      title: "Odpowiedź inwestora na ofertę",
+      body: `${mail.fromEmail}${snippet ? ` · ${snippet}` : ""}`,
+      url: "/operator/oferty",
+      tag: `offer-reply-${dist?.id ?? investorId ?? mail.fromEmail}`,
+      urgency: "high",
+    });
+  } catch (e) {
+    console.error("[offer-replies] push notification failed", e);
+  }
+
   if (dist) {
     const summary = (mail.text || mail.subject || "").replace(/\s+/g, " ").trim().slice(0, 500);
     const { error: updError } = await supabaseAdmin

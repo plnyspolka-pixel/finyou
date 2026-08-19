@@ -100,6 +100,28 @@ export async function runPaidPostProcessing(
   } catch (e) {
     console.error("[tpay-webhook] affiliate event failed", (e as Error).message);
   }
+
+  // 4) Push dla administratorów o zaksięgowanej płatności (pomijany przy
+  //    wznowieniu po awarii — tak jak e-mail potwierdzenia).
+  if (!opts.skipConfirmationEmail) {
+    try {
+      const { sendOperatorPush } = await import("@/lib/operator-push.server");
+      const amountPLN = new Intl.NumberFormat("pl-PL", {
+        style: "currency",
+        currency: "PLN",
+      }).format(amountGrosz / 100);
+      await sendOperatorPush({
+        event: "payment:paid",
+        title: "Opłacony dostęp",
+        body: `${payment.buyer_email ?? "—"} · ${productLabel} · ${amountPLN}`,
+        url: "/admin/finanse",
+        tag: `payment-${paymentId}`,
+        roles: ["administrator"],
+      });
+    } catch (e) {
+      console.error("[tpay-webhook] push notification failed", (e as Error).message);
+    }
+  }
 }
 
 /** Nowy przepływ: płatność z rejestru access_payments. */
