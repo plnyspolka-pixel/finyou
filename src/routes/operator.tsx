@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Sparkles,
   Calculator,
+  HandCoins,
 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 
@@ -25,6 +26,7 @@ const groups: NavGroup[] = [
       { to: "/operator/wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
       { to: "/operator/kreator-udzielenia", label: "Kreator pożyczki (AI)", icon: Sparkles },
       { to: "/operator/wnioski", label: "Wnioski (wszystkie)", icon: FileText },
+      { to: "/operator/oferty", label: "Oferty", icon: HandCoins },
       { to: "/operator/faktury", label: "Wystaw fakturę", icon: Receipt },
       { to: "/operator/kalkulator", label: "Kalkulator", icon: Calculator },
       { to: "/operator/skrzynka", label: "Skrzynka mailowa", icon: Mail },

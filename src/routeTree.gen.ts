@@ -66,6 +66,7 @@ import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.r
 import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
 import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka'
 import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
+import { Route as OperatorOfertyRouteImport } from './routes/operator.oferty'
 import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-leady'
 import { Route as OperatorMessengerRouteImport } from './routes/operator.messenger'
 import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
@@ -537,6 +538,11 @@ const OperatorSkrzynkaRoute = OperatorSkrzynkaRouteImport.update({
 const OperatorProfilRoute = OperatorProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => OperatorRoute,
+} as any)
+const OperatorOfertyRoute = OperatorOfertyRouteImport.update({
+  id: '/oferty',
+  path: '/oferty',
   getParentRoute: () => OperatorRoute,
 } as any)
 const OperatorMojeLeadyRoute = OperatorMojeLeadyRouteImport.update({
@@ -1653,6 +1659,7 @@ export interface FileRoutesByFullPath {
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
+  '/operator/oferty': typeof OperatorOfertyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
@@ -1890,6 +1897,7 @@ export interface FileRoutesByTo {
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
+  '/operator/oferty': typeof OperatorOfertyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
@@ -2136,6 +2144,7 @@ export interface FileRoutesById {
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
+  '/operator/oferty': typeof OperatorOfertyRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
@@ -2384,6 +2393,7 @@ export interface FileRouteTypes {
     | '/operator/leady'
     | '/operator/messenger'
     | '/operator/moje-leady'
+    | '/operator/oferty'
     | '/operator/profil'
     | '/operator/skrzynka'
     | '/operator/wniosek'
@@ -2621,6 +2631,7 @@ export interface FileRouteTypes {
     | '/operator/kreator-udzielenia'
     | '/operator/messenger'
     | '/operator/moje-leady'
+    | '/operator/oferty'
     | '/operator/profil'
     | '/operator/skrzynka'
     | '/operator/wniosek'
@@ -2866,6 +2877,7 @@ export interface FileRouteTypes {
     | '/operator/leady'
     | '/operator/messenger'
     | '/operator/moje-leady'
+    | '/operator/oferty'
     | '/operator/profil'
     | '/operator/skrzynka'
     | '/operator/wniosek'
@@ -3497,6 +3509,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/operator/profil'
       preLoaderRoute: typeof OperatorProfilRouteImport
+      parentRoute: typeof OperatorRoute
+    }
+    '/operator/oferty': {
+      id: '/operator/oferty'
+      path: '/oferty'
+      fullPath: '/operator/oferty'
+      preLoaderRoute: typeof OperatorOfertyRouteImport
       parentRoute: typeof OperatorRoute
     }
     '/operator/moje-leady': {
@@ -5149,6 +5168,7 @@ interface OperatorRouteChildren {
   OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
   OperatorMessengerRoute: typeof OperatorMessengerRoute
   OperatorMojeLeadyRoute: typeof OperatorMojeLeadyRoute
+  OperatorOfertyRoute: typeof OperatorOfertyRoute
   OperatorProfilRoute: typeof OperatorProfilRoute
   OperatorSkrzynkaRoute: typeof OperatorSkrzynkaRoute
   OperatorWniosekRoute: typeof OperatorWniosekRoute
@@ -5165,6 +5185,7 @@ const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
   OperatorMessengerRoute: OperatorMessengerRoute,
   OperatorMojeLeadyRoute: OperatorMojeLeadyRoute,
+  OperatorOfertyRoute: OperatorOfertyRoute,
   OperatorProfilRoute: OperatorProfilRoute,
   OperatorSkrzynkaRoute: OperatorSkrzynkaRoute,
   OperatorWniosekRoute: OperatorWniosekRoute,
