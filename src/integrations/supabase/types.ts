@@ -1313,6 +1313,9 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          summarized_at: string | null
+          summarized_message_count: number
+          summary: string | null
           title: string
           updated_at: string
           user_id: string
@@ -1320,6 +1323,9 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          summarized_at?: string | null
+          summarized_message_count?: number
+          summary?: string | null
           title?: string
           updated_at?: string
           user_id: string
@@ -1327,11 +1333,70 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          summarized_at?: string | null
+          summarized_message_count?: number
+          summary?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      ai_admin_memory: {
+        Row: {
+          archived: boolean
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          last_used_at: string | null
+          pinned: boolean
+          source_conversation_id: string | null
+          title: string
+          updated_at: string
+          uses: number
+          weight: number
+        }
+        Insert: {
+          archived?: boolean
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          last_used_at?: string | null
+          pinned?: boolean
+          source_conversation_id?: string | null
+          title: string
+          updated_at?: string
+          uses?: number
+          weight?: number
+        }
+        Update: {
+          archived?: boolean
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          last_used_at?: string | null
+          pinned?: boolean
+          source_conversation_id?: string | null
+          title?: string
+          updated_at?: string
+          uses?: number
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_admin_memory_source_conversation_id_fkey"
+            columns: ["source_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_admin_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_admin_messages: {
         Row: {
@@ -1379,12 +1444,16 @@ export type Database = {
       }
       ai_admin_settings: {
         Row: {
+          enable_comms_read: boolean
+          enable_comms_send: boolean
           enable_db_read: boolean
           enable_db_write: boolean
           enable_file_read: boolean
           enable_file_write: boolean
+          enable_memory: boolean
           id: string
           max_tokens: number
+          memory_limit: number
           model: string
           singleton: boolean
           system_prompt: string
@@ -1392,12 +1461,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          enable_comms_read?: boolean
+          enable_comms_send?: boolean
           enable_db_read?: boolean
           enable_db_write?: boolean
           enable_file_read?: boolean
           enable_file_write?: boolean
+          enable_memory?: boolean
           id?: string
           max_tokens?: number
+          memory_limit?: number
           model?: string
           singleton?: boolean
           system_prompt?: string
@@ -1405,12 +1478,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          enable_comms_read?: boolean
+          enable_comms_send?: boolean
           enable_db_read?: boolean
           enable_db_write?: boolean
           enable_file_read?: boolean
           enable_file_write?: boolean
+          enable_memory?: boolean
           id?: string
           max_tokens?: number
+          memory_limit?: number
           model?: string
           singleton?: boolean
           system_prompt?: string

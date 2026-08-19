@@ -70,6 +70,7 @@ import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-le
 import { Route as OperatorMessengerRouteImport } from './routes/operator.messenger'
 import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
 import { Route as OperatorKreatorUdzieleniaRouteImport } from './routes/operator.kreator-udzielenia'
+import { Route as OperatorKalkulatorRouteImport } from './routes/operator.kalkulator'
 import { Route as OperatorFakturyRouteImport } from './routes/operator.faktury'
 import { Route as OperatorCzatRouteImport } from './routes/operator.czat'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
@@ -138,6 +139,7 @@ import { Route as AdminFollowUpBrakiRouteImport } from './routes/admin.follow-up
 import { Route as AdminFinanseRouteImport } from './routes/admin.finanse'
 import { Route as AdminFacebookConnectRouteImport } from './routes/admin.facebook-connect'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
+import { Route as AdminEksportHistoriiRouteImport } from './routes/admin.eksport-historii'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
 import { Route as AdminCzatRouteImport } from './routes/admin.czat'
@@ -558,6 +560,11 @@ const OperatorKreatorUdzieleniaRoute =
     path: '/kreator-udzielenia',
     getParentRoute: () => OperatorRoute,
   } as any)
+const OperatorKalkulatorRoute = OperatorKalkulatorRouteImport.update({
+  id: '/kalkulator',
+  path: '/kalkulator',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const OperatorFakturyRoute = OperatorFakturyRouteImport.update({
   id: '/faktury',
   path: '/faktury',
@@ -900,6 +907,11 @@ const AdminFacebookConnectRoute = AdminFacebookConnectRouteImport.update({
 const AdminEmbedRoute = AdminEmbedRouteImport.update({
   id: '/embed',
   path: '/embed',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEksportHistoriiRoute = AdminEksportHistoriiRouteImport.update({
+  id: '/eksport-historii',
+  path: '/eksport-historii',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDystrybucjaRoute = AdminDystrybucjaRouteImport.update({
@@ -1567,6 +1579,7 @@ export interface FileRoutesByFullPath {
   '/admin/czat': typeof AdminCzatRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
+  '/admin/eksport-historii': typeof AdminEksportHistoriiRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/finanse': typeof AdminFinanseRoute
@@ -1635,6 +1648,7 @@ export interface FileRoutesByFullPath {
   '/l/$slug': typeof LSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
+  '/operator/kalkulator': typeof OperatorKalkulatorRoute
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
@@ -1806,6 +1820,7 @@ export interface FileRoutesByTo {
   '/admin/czat': typeof AdminCzatRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
+  '/admin/eksport-historii': typeof AdminEksportHistoriiRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/finanse': typeof AdminFinanseRoute
@@ -1871,6 +1886,7 @@ export interface FileRoutesByTo {
   '/l/$slug': typeof LSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
+  '/operator/kalkulator': typeof OperatorKalkulatorRoute
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
@@ -2046,6 +2062,7 @@ export interface FileRoutesById {
   '/admin/czat': typeof AdminCzatRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
+  '/admin/eksport-historii': typeof AdminEksportHistoriiRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/finanse': typeof AdminFinanseRoute
@@ -2114,6 +2131,7 @@ export interface FileRoutesById {
   '/l/$slug': typeof LSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
+  '/operator/kalkulator': typeof OperatorKalkulatorRoute
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
@@ -2292,6 +2310,7 @@ export interface FileRouteTypes {
     | '/admin/czat'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
+    | '/admin/eksport-historii'
     | '/admin/embed'
     | '/admin/facebook-connect'
     | '/admin/finanse'
@@ -2360,6 +2379,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/operator/czat'
     | '/operator/faktury'
+    | '/operator/kalkulator'
     | '/operator/kreator-udzielenia'
     | '/operator/leady'
     | '/operator/messenger'
@@ -2531,6 +2551,7 @@ export interface FileRouteTypes {
     | '/admin/czat'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
+    | '/admin/eksport-historii'
     | '/admin/embed'
     | '/admin/facebook-connect'
     | '/admin/finanse'
@@ -2596,6 +2617,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/operator/czat'
     | '/operator/faktury'
+    | '/operator/kalkulator'
     | '/operator/kreator-udzielenia'
     | '/operator/messenger'
     | '/operator/moje-leady'
@@ -2770,6 +2792,7 @@ export interface FileRouteTypes {
     | '/admin/czat'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
+    | '/admin/eksport-historii'
     | '/admin/embed'
     | '/admin/facebook-connect'
     | '/admin/finanse'
@@ -2838,6 +2861,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/operator/czat'
     | '/operator/faktury'
+    | '/operator/kalkulator'
     | '/operator/kreator-udzielenia'
     | '/operator/leady'
     | '/operator/messenger'
@@ -3503,6 +3527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorKreatorUdzieleniaRouteImport
       parentRoute: typeof OperatorRoute
     }
+    '/operator/kalkulator': {
+      id: '/operator/kalkulator'
+      path: '/kalkulator'
+      fullPath: '/operator/kalkulator'
+      preLoaderRoute: typeof OperatorKalkulatorRouteImport
+      parentRoute: typeof OperatorRoute
+    }
     '/operator/faktury': {
       id: '/operator/faktury'
       path: '/faktury'
@@ -3977,6 +4008,13 @@ declare module '@tanstack/react-router' {
       path: '/embed'
       fullPath: '/admin/embed'
       preLoaderRoute: typeof AdminEmbedRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/eksport-historii': {
+      id: '/admin/eksport-historii'
+      path: '/eksport-historii'
+      fullPath: '/admin/eksport-historii'
+      preLoaderRoute: typeof AdminEksportHistoriiRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/dystrybucja': {
@@ -4810,6 +4848,7 @@ interface AdminRouteChildren {
   AdminCzatRoute: typeof AdminCzatRoute
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
+  AdminEksportHistoriiRoute: typeof AdminEksportHistoriiRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
   AdminFacebookConnectRoute: typeof AdminFacebookConnectRoute
   AdminFinanseRoute: typeof AdminFinanseRoute
@@ -4888,6 +4927,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCzatRoute: AdminCzatRoute,
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
+  AdminEksportHistoriiRoute: AdminEksportHistoriiRoute,
   AdminEmbedRoute: AdminEmbedRoute,
   AdminFacebookConnectRoute: AdminFacebookConnectRoute,
   AdminFinanseRoute: AdminFinanseRoute,
@@ -5104,6 +5144,7 @@ const OperatorLeadyRouteWithChildren = OperatorLeadyRoute._addFileChildren(
 interface OperatorRouteChildren {
   OperatorCzatRoute: typeof OperatorCzatRoute
   OperatorFakturyRoute: typeof OperatorFakturyRoute
+  OperatorKalkulatorRoute: typeof OperatorKalkulatorRoute
   OperatorKreatorUdzieleniaRoute: typeof OperatorKreatorUdzieleniaRoute
   OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
   OperatorMessengerRoute: typeof OperatorMessengerRoute
@@ -5119,6 +5160,7 @@ interface OperatorRouteChildren {
 const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorCzatRoute: OperatorCzatRoute,
   OperatorFakturyRoute: OperatorFakturyRoute,
+  OperatorKalkulatorRoute: OperatorKalkulatorRoute,
   OperatorKreatorUdzieleniaRoute: OperatorKreatorUdzieleniaRoute,
   OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
   OperatorMessengerRoute: OperatorMessengerRoute,

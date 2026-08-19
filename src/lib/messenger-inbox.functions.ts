@@ -24,47 +24,15 @@ export const sendMessengerReply = createServerFn({ method: "POST" })
     ]);
     if (!isAdmin && !isOperator) throw new Error("Forbidden");
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { sendMetaMessage } = await import("./meta-send.server");
-    const { logLeadCommunication } = await import("./lead-comms.server");
-
-    const { data: lead, error: leadErr } = await supabaseAdmin
-      .from("leads")
-      .select("id, messenger_psid, instagram_igsid")
-      .eq("id", data.leadId)
-      .maybeSingle();
-    if (leadErr) throw leadErr;
-    if (!lead) throw new Error("Lead nie istnieje");
-
-    const platform: "messenger" | "instagram" = lead.messenger_psid
-      ? "messenger"
-      : lead.instagram_igsid
-        ? "instagram"
-        : "messenger";
-    const recipientId = lead.messenger_psid ?? lead.instagram_igsid;
-    if (!recipientId)
-      throw new Error("Ten lead nie ma zapisanego identyfikatora Messenger/Instagram.");
-
-    const send = await sendMetaMessage({ recipientId, text: data.body, platform });
-
-    await logLeadCommunication({
+    // Rdzeń w comms-agent.server.ts — wspólny ze skrzynką i asystentem panelu.
+    const { sendMessengerReplyToLead } = await import("./comms-agent.server");
+    const r = await sendMessengerReplyToLead({
       leadId: data.leadId,
-      channel: "messenger",
-      direction: "outbound",
-      content: data.body,
-      externalId: send.messageId ?? null,
-      metadata: {
-        platform,
-        sender_id: recipientId,
-        sent_by: context.userId,
-        source: "inbox_manual",
-      },
-      status: send.ok ? "sent" : "error",
-      errorMessage: send.ok ? null : send.error,
+      body: data.body,
+      actorUserId: context.userId,
+      source: "inbox_manual",
     });
-
-    if (!send.ok) throw new Error(send.error ?? "send_failed");
-    return { ok: true, messageId: send.messageId };
+    return { ok: true, messageId: r.messageId };
   });
 
 /**

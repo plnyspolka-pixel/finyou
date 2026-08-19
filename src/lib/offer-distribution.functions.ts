@@ -268,72 +268,15 @@ export const replyToDistribution = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as unknown as SupabaseLike;
     await assertAdminOrOperator(supabase, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { sendResendEmail } = await import("@/lib/resend-send.server");
-    const { offerReplyAddress } = await import("@/lib/offer-replies.server");
 
-    const { data: dist, error: distErr } = await supabaseAdmin
-      .from("offer_distributions")
-      .select(
-        "id, loan_application_id, investor_id, investor:investors(company_name, first_name, last_name, email)",
-      )
-      .eq("id", data.distributionId)
-      .maybeSingle();
-    if (distErr || !dist) throw new Error("Nie znaleziono dystrybucji");
-
-    type InvestorContact = { email?: string | null };
-    const rawInvestor = (dist as { investor?: InvestorContact | InvestorContact[] | null })
-      .investor;
-    const investor = Array.isArray(rawInvestor) ? rawInvestor[0] : rawInvestor;
-    const to: string | null = investor?.email ?? null;
-    if (!to) throw new Error("Instytucja nie ma zapisanego adresu e-mail");
-
-    // Wątek: In-Reply-To = ostatnia wiadomość z message_id, References = kilka
-    // ostatnich (klienty pocztowe sklejają po nich konwersację).
-    const { data: prior } = await supabaseAdmin
-      .from("offer_distribution_messages")
-      .select("message_id, created_at")
-      .eq("distribution_id", data.distributionId)
-      .not("message_id", "is", null)
-      .order("created_at", { ascending: true })
-      .limit(20);
-    const chain = (prior ?? []).map((m) => m.message_id).filter((id): id is string => !!id);
-    const inReplyTo = chain.length ? chain[chain.length - 1] : null;
-    const references = chain.length ? chain.slice(-10).join(" ") : null;
-
-    const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#0f172a;white-space:pre-wrap">${escapeHtml(
-      data.body,
-    )}</div>`;
-    const replyTo = offerReplyAddress(dist.id);
-
-    const send = await sendResendEmail({
-      to,
+    // Rdzeń w comms-agent.server.ts — tego samego używa asystent panelu.
+    const { replyToOfferDistribution } = await import("@/lib/comms-agent.server");
+    return await replyToOfferDistribution({
+      distributionId: data.distributionId,
       subject: data.subject,
-      text: data.body,
-      html,
-      inReplyTo,
-      references,
-      replyTo,
-      showReplyHint: true,
+      body: data.body,
+      actorUserId: context.userId,
     });
-    if (!send.ok) throw new Error(send.error ?? "Nie udało się wysłać wiadomości");
-
-    const { error: msgErr } = await supabaseAdmin.from("offer_distribution_messages").insert({
-      distribution_id: dist.id,
-      loan_application_id: dist.loan_application_id,
-      investor_id: dist.investor_id,
-      direction: "outbound",
-      subject: data.subject,
-      content: data.body,
-      html,
-      from_email: replyTo,
-      to_email: to,
-      message_id: send.id ?? null,
-      in_reply_to: inReplyTo,
-    });
-    if (msgErr) console.error("[offer-distribution] reply log failed:", msgErr.message);
-
-    return { ok: true, id: send.id ?? null, to };
   });
 
 /** Dystrybucje wniosku wraz z wątkami korespondencji (odpowiedzi instytucji). */

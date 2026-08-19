@@ -253,8 +253,8 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
   });
 
   // 4) Po odpowiedzi (żeby nie opóźniać repliki): OCR świeżych załączników
-  //    oraz imię/nazwisko właściciela z KW — tu tylko z cache kw_documents,
-  //    płatne pobranie z CMD zleca dopiero backfill/cron.
+  //    oraz imię/nazwisko właściciela z KW — wyłącznie z cache kw_documents
+  //    (pobranie z CMD zleca tylko operator ręcznie w panelu).
   if (stored.length) {
     try {
       await ocrLeadAttachmentsAndEnrich({ leadId, attachments: stored });
@@ -263,7 +263,7 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     }
   }
   try {
-    await fillLeadNameFromKw({ leadId, allowOrder: false });
+    await fillLeadNameFromKw({ leadId });
   } catch (e) {
     console.error("[messenger] kw name error", e);
   }
