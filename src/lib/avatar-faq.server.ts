@@ -2,6 +2,7 @@
 // ElevenLabs TTS -> upload audio to HeyGen -> create video from avatar -> poll.
 
 import type { CaptionMode } from "./studio-captions";
+import type { HeygenStudioScene } from "./studio-scenes";
 
 const HEYGEN_BASE = "https://api.heygen.com";
 
@@ -94,28 +95,13 @@ export type HeygenVideoResult = {
   captionMode: CaptionMode;
 };
 
-export async function createHeygenVideoFromAudio(opts: {
-  avatarId: string;
-  audioAssetId: string;
-  /**
-   * Domyślnie napisy wypalone w obrazie — shorty i rolki ogląda się bez
-   * dźwięku, a IG/FB Reels nie przyjmują osobnej ścieżki napisów.
-   */
-  captions?: CaptionMode;
-}): Promise<HeygenVideoResult> {
-  // Uwaga: API v3 przyjmuje wyłącznie type 'avatar' / 'image' /
-  // 'cinematic_avatar' / 'studio' — awatary "foto" (talking photo) też idą
-  // jako 'avatar' z avatar_id (tak działała dotychczasowa sztywna lista).
-  const base = {
-    type: "avatar",
-    avatar_id: opts.avatarId,
-    audio_asset_id: opts.audioAssetId,
-    aspect_ratio: "9:16",
-    resolution: "720p",
-    background: { type: "color", value: "#101728" },
-  };
-  const want: CaptionMode = opts.captions ?? "burned";
-
+// Wysyła `POST /v3/videos` i schodzi po drabinie napisów, gdy HeyGen odrzuci
+// ich konfigurację. Odrzucony styl nie może od razu kasować napisów w ogóle —
+// wcześniej jeden 422 na `style` gasił je całkowicie.
+async function sendVideoCreate(
+  base: Record<string, unknown>,
+  want: CaptionMode,
+): Promise<HeygenVideoResult> {
   const send = async (payload: Record<string, unknown>) => {
     const res = await fetch(`${HEYGEN_BASE}/v3/videos`, {
       method: "POST",
@@ -128,9 +114,6 @@ export async function createHeygenVideoFromAudio(opts: {
     return { ok: res.ok, status: res.status, body: await res.text() };
   };
 
-  // Drabina: schodzimy o szczebel tylko wtedy, gdy HeyGen odrzucił konfigurację
-  // napisów. Odrzucony styl nie może od razu kasować napisów w ogóle —
-  // wcześniej jeden 422 na `style` gasił je całkowicie.
   const ladder: CaptionMode[] =
     want === "burned"
       ? ["burned", "sidecar", "off"]
@@ -158,6 +141,73 @@ export async function createHeygenVideoFromAudio(opts: {
   const videoId = json?.data?.video_id;
   if (!videoId) throw new Error(`HeyGen generate: missing video_id ${out.body}`);
   return { videoId, captionMode };
+}
+
+export async function createHeygenVideoFromAudio(opts: {
+  avatarId: string;
+  audioAssetId: string;
+  /**
+   * Domyślnie napisy wypalone w obrazie — shorty i rolki ogląda się bez
+   * dźwięku, a IG/FB Reels nie przyjmują osobnej ścieżki napisów.
+   */
+  captions?: CaptionMode;
+}): Promise<HeygenVideoResult> {
+  // Uwaga: API v3 przyjmuje wyłącznie type 'avatar' / 'image' /
+  // 'cinematic_avatar' / 'studio' — awatary "foto" (talking photo) też idą
+  // jako 'avatar' z avatar_id (tak działała dotychczasowa sztywna lista).
+  return sendVideoCreate(
+    {
+      type: "avatar",
+      avatar_id: opts.avatarId,
+      audio_asset_id: opts.audioAssetId,
+      aspect_ratio: "9:16",
+      resolution: "720p",
+      background: { type: "color", value: "#101728" },
+    },
+    opts.captions ?? "burned",
+  );
+}
+
+// Biblioteka stocku HeyGena (`GET /v3/assets/search`) — obrazy i ikony, BEZ
+// klipów wideo. Do rolki bierzemy grafikę pionową (kadr 9:16 docina resztę).
+export async function searchHeygenStockImage(query: string): Promise<string | null> {
+  const url = new URL(`${HEYGEN_BASE}/v3/assets/search`);
+  url.searchParams.set("query", query);
+  url.searchParams.set("type", "image");
+  url.searchParams.set("scope", "public");
+  url.searchParams.set("limit", "20");
+
+  const res = await fetch(url, { headers: { "X-Api-Key": HEYGEN_API_KEY() } });
+  if (!res.ok) {
+    console.warn(`[HeyGen] stock search "${query}" nieudany: ${res.status} ${await res.text()}`);
+    return null;
+  }
+  const json = (await res.json()) as {
+    data?: Array<{ url?: string | null; orientation?: string | null }>;
+  };
+  const items = (json.data ?? []).filter((i): i is { url: string; orientation?: string | null } =>
+    Boolean(i?.url),
+  );
+  if (!items.length) return null;
+  // Pion → kwadrat → cokolwiek: przy kadrze 9:16 poziomy obrazek traci najwięcej.
+  const byOrientation = (want: string) => items.find((i) => i.orientation === want);
+  return (byOrientation("portrait") ?? byOrientation("square") ?? items[0]).url;
+}
+
+/**
+ * Render wieloscenowy (`type: "studio"`): sklejka scen awatara i pełnoekranowych
+ * grafik. Napisy i kadr są globalne dla całego wideo, więc drabina napisów
+ * działa tak samo jak przy pojedynczym ujęciu.
+ */
+export async function createHeygenStudioVideo(opts: {
+  scenes: HeygenStudioScene[];
+  captions?: CaptionMode;
+}): Promise<HeygenVideoResult> {
+  if (!opts.scenes.length) throw new Error("HeyGen studio: pusta lista scen");
+  return sendVideoCreate(
+    { type: "studio", aspect_ratio: "9:16", resolution: "720p", scenes: opts.scenes },
+    opts.captions ?? "burned",
+  );
 }
 
 export async function getHeygenVideoStatus(videoId: string): Promise<{

@@ -8518,6 +8518,7 @@ export type Database = {
           captions: boolean
           created_at: string
           created_by: string | null
+          dynamic_scenes: boolean
           heygen_video_id: string | null
           id: string
           last_error: string | null
@@ -8525,6 +8526,7 @@ export type Database = {
           publish_description: string
           publish_privacy: string
           publish_title: string
+          scene_plan: Json | null
           script: string
           status: string
           subtitle_url: string | null
@@ -8542,6 +8544,7 @@ export type Database = {
           captions?: boolean
           created_at?: string
           created_by?: string | null
+          dynamic_scenes?: boolean
           heygen_video_id?: string | null
           id?: string
           last_error?: string | null
@@ -8549,6 +8552,7 @@ export type Database = {
           publish_description?: string
           publish_privacy?: string
           publish_title?: string
+          scene_plan?: Json | null
           script: string
           status?: string
           subtitle_url?: string | null
@@ -8566,6 +8570,7 @@ export type Database = {
           captions?: boolean
           created_at?: string
           created_by?: string | null
+          dynamic_scenes?: boolean
           heygen_video_id?: string | null
           id?: string
           last_error?: string | null
@@ -8573,6 +8578,7 @@ export type Database = {
           publish_description?: string
           publish_privacy?: string
           publish_title?: string
+          scene_plan?: Json | null
           script?: string
           status?: string
           subtitle_url?: string | null

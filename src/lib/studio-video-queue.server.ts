@@ -25,6 +25,7 @@ type JobRow = {
   video_url: string | null;
   captions: boolean;
   caption_wait_since: string | null;
+  dynamic_scenes: boolean;
   auto_publish_platforms: string[];
   publish_privacy: string;
   publish_title: string;
@@ -120,24 +121,26 @@ async function processClaimedJob(job: JobRow): Promise<void> {
     })
     .eq("id", job.id);
 
-  const { ttsElevenLabs, uploadAudioToHeygen, createHeygenVideoFromAudio } =
-    await import("./avatar-faq.server");
-  const audio = await ttsElevenLabs({ text: script, voiceId: job.voice_id });
   await supabaseAdmin.from("studio_video_jobs").update({ status: "uploading" }).eq("id", job.id);
 
-  const assetId = await uploadAudioToHeygen(audio);
-  const { videoId, captionMode } = await createHeygenVideoFromAudio({
+  const { renderStudioVideo } = await import("./studio-render.server");
+  const rendered = await renderStudioVideo({
+    script,
+    topic: job.prompt,
     avatarId: job.avatar_id,
-    audioAssetId: assetId,
-    captions: job.captions !== false ? "burned" : "off",
+    voiceId: job.voice_id,
+    captions: job.captions !== false,
+    dynamicScenes: job.dynamic_scenes === true,
   });
   await supabaseAdmin
     .from("studio_video_jobs")
     .update({
-      heygen_video_id: videoId,
+      heygen_video_id: rendered.videoId,
       status: "rendering",
-      captions: captionMode === "burned",
+      captions: rendered.captionMode === "burned",
       caption_wait_since: null,
+      scene_plan: rendered.scenePlan,
+      last_error: rendered.note,
     })
     .eq("id", job.id);
 }

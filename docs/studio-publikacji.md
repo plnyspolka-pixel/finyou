@@ -156,6 +156,50 @@ true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
    z dźwiękiem, a pipeline YouTube robi materiały 5–8 min, gdzie wypalone
    napisy przeszkadzają, a player YT ma własne.
 
+   **Urozmaicenie (przebitki)** — drugi przełącznik obok napisów, domyślnie
+   wyłączony. Włączony renderuje rolkę jako **sklejkę scen** zamiast jednego
+   ujęcia gadającej głowy (`POST /v3/videos` z `type: "studio"`):
+
+   1. scenariusz tniemy **deterministycznie po zdaniach** na maks. 6 segmentów
+      (`splitScriptIntoSegments`) — AI nie dostaje tekstu do przepisania,
+      więc lektor mówi dokładnie to, co zatwierdzono w panelu,
+   2. AI (`planVideoScenes`) dostaje ponumerowane segmenty i wskazuje tylko,
+      **które zilustrować** i jaką angielską frazą szukać w bibliotece,
+   3. frazy idą do stocku HeyGena (`GET /v3/assets/search`, `type=image`),
+      z preferencją grafik pionowych (kadr 9:16 docina resztę),
+   4. każdy segment dostaje własne audio z ElevenLabs (długość sceny HeyGen
+      liczy z jej audio) i ląduje jako scena `avatar_video` albo pełnoekranowa
+      `image` **z narracją** — lektor gra przez przebitkę dalej.
+
+   Reguły montażowe pilnuje `applyScenePlan` (testy w `studio-scenes.test.ts`):
+   hook i CTA zawsze na awatarze, żadnych dwóch przebitek pod rząd, przebitka
+   bez frazy albo bez znalezionej grafiki wraca na awatara. Plan faktycznie
+   wysłany na render zapisujemy w `scene_plan` — biblioteka pokazuje go jako
+   „3 ujęcia z awatarem + 2 przebitki" (szczegóły w tooltipie).
+
+   **Nic z tego nie blokuje generacji**: gdy planer AI nie odpowie, nie wskaże
+   sensownej ilustracji, biblioteka nic nie znajdzie albo render wieloscenowy
+   zostanie odrzucony — rolka wychodzi jako pojedyncze ujęcie, a powód ląduje
+   w `last_error` (widoczny w tabeli).
+
+   **Czego API HeyGena NIE potrafi** (sprawdzone w specyfikacji v3, żeby nie
+   szukać tego drugi raz):
+
+   - **nakładek na awatara** — sceny są pełnoekranowe i sklejane, nie ma
+     warstw. Ikonka „AI" w rogu, znacznik kategorii i duże pytanie na środku
+     z paczki 250 pytań zostają więc **instrukcją montażową** (przycisk
+     „Kopiuj"), a nie czymś, co API wyrenderuje. Jedyny tekst, jaki HeyGen
+     nakłada na obraz, to wypalane napisy. Pole `watermark` (grafika w rogu)
+     istnieje, ale jest płatną opcją tylko dla kont Enterprise i obowiązuje
+     dla całego wideo, nie od 0 do 3 s.
+   - **klipów wideo z narracją** — scena `video` przyjmuje klip, ale nie
+     przyjmuje audio i nie ma przycinania (`playback` to dziś tylko głośność
+     i wyciszenie). Wstawiona w środek rolki ucięłaby lektora i zrobiła ciszę
+     na całą długość klipu źródłowego. Dlatego przebitki robimy z grafik,
+     nie z filmików stokowych.
+   - **wyszukiwarki klipów** — `/v3/assets/search` obsługuje `type=image`
+     i `type=icon`; biblioteka wideo nie jest wystawiona przez API.
+
    Dalej: „Wygeneruj scenariusz" (edytowalny) → wybór awatara i głosu →
    „Generuj wideo". **Awatary** są pobierane na żywo z konta HeyGen
    (`src/lib/heygen-catalog.server.ts`: grupy użytkownika + talking photos
