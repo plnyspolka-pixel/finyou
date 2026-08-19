@@ -1,19 +1,15 @@
 // Automatyczne wydobywanie danych z plików leada (OCR operatów, odpisów KW,
 // zdjęć dokumentów przysyłanych przez Messengera/IG/e-mail) oraz uzupełnianie
 // imienia i nazwiska leada właścicielem z działu II księgi wieczystej.
-// Wołane z webhooka Messengera (best-effort, bez zlecania pobrania KW) oraz
-// z backfillu (cron follow-up-tick i przycisk "Uzupełnij historię" — tam
-// wolno też zlecić płatne pobranie KW z CMD).
+// Wołane z webhooka Messengera oraz z backfillu (cron follow-up-tick
+// i przycisk "Uzupełnij historię"). Treść KW czytamy WYŁĄCZNIE z cache
+// kw_documents — pobranie z CMD KW Engine zleca tylko operator ręcznie
+// w panelu (limity CMD są grupowe i automaty już raz je przepaliły).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { maybePromoteLeadToApplication } from "@/lib/lead-enrichment.server";
 import { extractKwOwnerPersons } from "@/lib/risk-assessment/kw-parser.server";
-import {
-  decodeMaybeBase64,
-  fetchAndStoreKw,
-  hasCmdConfig,
-  normalizeKwNumber,
-} from "@/lib/kw-fetch.server";
+import { decodeMaybeBase64, normalizeKwNumber } from "@/lib/kw-fetch.server";
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
@@ -267,14 +263,10 @@ export async function ocrLeadAttachmentsAndEnrich(opts: {
 
 /**
  * Uzupełnia brakujące imię/nazwisko leada właścicielem z działu II KW.
- * allowOrder=false (webhook): korzysta wyłącznie z cache kw_documents.
- * allowOrder=true (backfill/cron): przy braku treści zleca płatne pobranie
- * z CMD KW Engine (order → poll ~45 s → zapis do cache).
+ * Korzysta WYŁĄCZNIE z cache kw_documents — nigdy nie zleca pobrania z CMD
+ * (to robi tylko operator ręcznie w panelu wniosku).
  */
-export async function fillLeadNameFromKw(opts: {
-  leadId: string;
-  allowOrder: boolean;
-}): Promise<boolean> {
+export async function fillLeadNameFromKw(opts: { leadId: string }): Promise<boolean> {
   const { data: lead } = await supabaseAdmin
     .from("leads")
     .select("id, first_name, last_name, application_data")
@@ -291,29 +283,11 @@ export async function fillLeadNameFromKw(opts: {
     const kw = normalizeKwNumber(raw);
     if (!kw) continue;
 
-    let { data: doc } = await supabaseAdmin
+    const { data: doc } = await supabaseAdmin
       .from("kw_documents")
       .select("status, dzial_2")
       .eq("kw_number", kw)
       .maybeSingle();
-
-    if (
-      doc?.status !== "ready" &&
-      opts.allowOrder &&
-      hasCmdConfig() &&
-      doc?.status !== "not_found"
-    ) {
-      const out = await fetchAndStoreKw(kw);
-      if (out.status === "ready") {
-        ({ data: doc } = await supabaseAdmin
-          .from("kw_documents")
-          .select("status, dzial_2")
-          .eq("kw_number", kw)
-          .maybeSingle());
-      } else if (!out.ok && out.status !== "processing") {
-        console.warn("[lead-kw] fetch failed", kw, out.error);
-      }
-    }
     if (doc?.status !== "ready") continue;
 
     const persons = extractKwOwnerPersons(decodeMaybeBase64(doc.dzial_2));
