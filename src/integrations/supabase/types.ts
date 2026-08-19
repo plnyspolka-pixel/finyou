@@ -7657,7 +7657,7 @@ export type Database = {
           id: string
           in_reply_to: string | null
           investor_id: string | null
-          loan_application_id: string
+          loan_application_id: string | null
           message_id: string | null
           subject: string | null
           to_email: string | null
@@ -7673,7 +7673,7 @@ export type Database = {
           id?: string
           in_reply_to?: string | null
           investor_id?: string | null
-          loan_application_id: string
+          loan_application_id?: string | null
           message_id?: string | null
           subject?: string | null
           to_email?: string | null
@@ -7689,7 +7689,7 @@ export type Database = {
           id?: string
           in_reply_to?: string | null
           investor_id?: string | null
-          loan_application_id?: string
+          loan_application_id?: string | null
           message_id?: string | null
           subject?: string | null
           to_email?: string | null

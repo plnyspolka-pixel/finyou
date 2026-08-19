@@ -62,26 +62,76 @@ function extractDistributionIdFromRecipients(recipients: string[]): string | nul
 }
 
 /**
- * Zapasowe dopasowanie po NADAWCY: inwestor odpisał z pominięciem aliasu
- * oferta+<uuid>@ i bez nagłówków wątku (nowy mail na ogólny adres, klient
- * pocztowy ucinający In-Reply-To/References). Bierzemy jego najnowszą
+ * Darmowe skrzynki — domena nadawcy nic nie mówi o instytucji, więc
+ * dopasowanie po domenie stosujemy tylko dla adresów firmowych.
+ */
+const FREE_MAIL_DOMAINS = new Set([
+  "gmail.com",
+  "googlemail.com",
+  "outlook.com",
+  "hotmail.com",
+  "live.com",
+  "icloud.com",
+  "me.com",
+  "yahoo.com",
+  "yahoo.pl",
+  "proton.me",
+  "protonmail.com",
+  "wp.pl",
+  "o2.pl",
+  "op.pl",
+  "onet.pl",
+  "onet.eu",
+  "interia.pl",
+  "interia.eu",
+  "poczta.fm",
+  "gazeta.pl",
+  "tlen.pl",
+  "vp.pl",
+  "spoko.pl",
+]);
+
+/**
+ * Dopasowanie NADAWCY do inwestora: najpierw dokładny adres, a dla adresów
+ * firmowych także sama domena — instytucje często odpisują z osobistych
+ * skrzynek pracowników (imie.nazwisko@instytucja.pl), których nie mamy
+ * w bazie, a mamy adres ogólny (biuro@instytucja.pl) na tej samej domenie.
+ */
+async function findInvestorIdByEmail(fromEmail: string): Promise<string | null> {
+  const email = (fromEmail ?? "").trim().toLowerCase();
+  if (!email || !email.includes("@")) return null;
+  const { data: exact } = await supabaseAdmin
+    .from("investors")
+    .select("id")
+    .ilike("email", email)
+    .limit(1)
+    .maybeSingle();
+  if (exact) return exact.id;
+  const domain = email.split("@")[1];
+  if (!domain || FREE_MAIL_DOMAINS.has(domain)) return null;
+  const { data: byDomain } = await supabaseAdmin
+    .from("investors")
+    .select("id")
+    .eq("investor_type", "instytucjonalny")
+    .ilike("email", `%@${domain}`)
+    .limit(1)
+    .maybeSingle();
+  return byDomain?.id ?? null;
+}
+
+/**
+ * Zapasowe dopasowanie do dystrybucji po inwestorze: odpisał z pominięciem
+ * aliasu oferta+<uuid>@ i bez nagłówków wątku (nowy mail na ogólny adres,
+ * klient pocztowy ucinający In-Reply-To/References). Bierzemy jego najnowszą
  * dystrybucję z ostatnich 60 dni — lepiej, żeby wiadomość trafiła na kartę
  * właściwego wniosku (człowiek zweryfikuje), niż do ścieżki leadowej.
  */
-async function findDistributionByInvestorEmail(fromEmail: string): Promise<string | null> {
-  if (!fromEmail) return null;
-  const { data: inv } = await supabaseAdmin
-    .from("investors")
-    .select("id")
-    .ilike("email", fromEmail.trim())
-    .limit(1)
-    .maybeSingle();
-  if (!inv) return null;
+async function findDistributionByInvestorId(investorId: string): Promise<string | null> {
   const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
   const { data } = await supabaseAdmin
     .from("offer_distributions")
     .select("id")
-    .eq("investor_id", inv.id)
+    .eq("investor_id", investorId)
     .gte("created_at", since)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -109,7 +159,7 @@ async function findDistributionByThread(
 }
 
 async function storeReplyAttachments(
-  applicationId: string,
+  storageKey: string,
   attachments: NonNullable<InboundOfferReply["attachments"]>,
 ): Promise<Array<{ name: string; mime: string; size: number; path: string }>> {
   const stored: Array<{ name: string; mime: string; size: number; path: string }> = [];
@@ -125,7 +175,7 @@ async function storeReplyAttachments(
       }
       if (!buf) continue;
       const safeName = (a.name || `plik-${Date.now()}`).replace(/[^\w.\-]+/g, "_");
-      const path = `offer-replies/${applicationId}/${Date.now()}-${safeName}`;
+      const path = `offer-replies/${storageKey}/${Date.now()}-${safeName}`;
       const { error } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET).upload(path, buf, {
         contentType: mime ?? "application/octet-stream",
         upsert: false,
@@ -148,35 +198,51 @@ async function storeReplyAttachments(
 }
 
 /**
- * Próbuje dopasować przychodzący mail do dystrybucji oferty.
- * Zwraca true, gdy mail został obsłużony jako odpowiedź inwestora —
- * webhook powinien wtedy POMINĄĆ ścieżkę leadową i auto-odpowiedź agenta AI.
+ * Próbuje dopasować przychodzący mail do dystrybucji oferty lub do znanego
+ * inwestora instytucjonalnego. Mail od inwestora NIGDY nie trafia do ścieżki
+ * leadowej: gdy nie da się wskazać dystrybucji, wiadomość i tak zapisujemy
+ * w offer_distribution_messages (bez wniosku), żeby była widoczna w zakładce
+ * Oferty. Zwraca true, gdy mail został obsłużony — webhook powinien wtedy
+ * POMINĄĆ ścieżkę leadową i auto-odpowiedź agenta AI.
  */
 export async function routeInboundOfferReply(mail: InboundOfferReply): Promise<boolean> {
   let distributionId = extractDistributionIdFromRecipients(mail.recipients);
   if (!distributionId) {
     distributionId = await findDistributionByThread(mail.inReplyTo, mail.references);
   }
+  let investorId: string | null = null;
   if (!distributionId) {
-    distributionId = await findDistributionByInvestorEmail(mail.fromEmail);
+    investorId = await findInvestorIdByEmail(mail.fromEmail);
+    if (investorId) distributionId = await findDistributionByInvestorId(investorId);
   }
-  if (!distributionId) return false;
+  if (!distributionId && !investorId) return false;
 
-  const { data: dist } = await supabaseAdmin
-    .from("offer_distributions")
-    .select("id, loan_application_id, investor_id")
-    .eq("id", distributionId)
-    .maybeSingle();
-  if (!dist) return false;
+  let dist: { id: string; loan_application_id: string | null; investor_id: string | null } | null =
+    null;
+  if (distributionId) {
+    const { data } = await supabaseAdmin
+      .from("offer_distributions")
+      .select("id, loan_application_id, investor_id")
+      .eq("id", distributionId)
+      .maybeSingle();
+    dist = data ?? null;
+  }
+  if (!dist && !investorId) {
+    investorId = await findInvestorIdByEmail(mail.fromEmail);
+    if (!investorId) return false;
+  }
 
   const stored = mail.attachments?.length
-    ? await storeReplyAttachments(dist.loan_application_id, mail.attachments)
+    ? await storeReplyAttachments(
+        dist?.loan_application_id ?? `inwestor-${dist?.investor_id ?? investorId}`,
+        mail.attachments,
+      )
     : [];
 
   const { error: msgError } = await supabaseAdmin.from("offer_distribution_messages").insert({
-    distribution_id: dist.id,
-    loan_application_id: dist.loan_application_id,
-    investor_id: dist.investor_id,
+    distribution_id: dist?.id ?? null,
+    loan_application_id: dist?.loan_application_id ?? null,
+    investor_id: dist?.investor_id ?? investorId,
     direction: "inbound",
     subject: mail.subject || null,
     content: mail.text || null,
@@ -192,16 +258,18 @@ export async function routeInboundOfferReply(mail: InboundOfferReply): Promise<b
     return false;
   }
 
-  const summary = (mail.text || mail.subject || "").replace(/\s+/g, " ").trim().slice(0, 500);
-  const { error: updError } = await supabaseAdmin
-    .from("offer_distributions")
-    .update({
-      distribution_status: "odpowiedz_otrzymana" as any,
-      responded_at: new Date().toISOString(),
-      response_summary: summary || null,
-    })
-    .eq("id", dist.id);
-  if (updError) console.error("[offer-replies] update distribution failed:", updError.message);
+  if (dist) {
+    const summary = (mail.text || mail.subject || "").replace(/\s+/g, " ").trim().slice(0, 500);
+    const { error: updError } = await supabaseAdmin
+      .from("offer_distributions")
+      .update({
+        distribution_status: "odpowiedz_otrzymana" as any,
+        responded_at: new Date().toISOString(),
+        response_summary: summary || null,
+      })
+      .eq("id", dist.id);
+    if (updError) console.error("[offer-replies] update distribution failed:", updError.message);
+  }
 
   return true;
 }
