@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
+import { ArrowLeft, ThumbsUp, ThumbsDown, Search, Plus } from "lucide-react";
 import {
   loanStatusLabels,
   formatPLN,
@@ -99,6 +100,9 @@ export function WniosekDetail({
     content: "",
   });
   const [reason, setReason] = useState("");
+  const [newPropertyType, setNewPropertyType] =
+    useState<Database["public"]["Enums"]["property_type"]>("mieszkanie");
+  const [creatingProperty, setCreatingProperty] = useState(false);
 
   const load = async () => {
     const [a, c, d, o, au, am, di] = await Promise.all([
@@ -222,6 +226,23 @@ export function WniosekDetail({
     void load();
   };
 
+  // Wniosek bez rekordu nieruchomości (np. założony telefonicznie) — operator
+  // zakłada go ręcznie, żeby móc wpisać numer KW, powierzchnię itd.
+  const createProperty = async () => {
+    setCreatingProperty(true);
+    const { error } = await supabase.from("properties").insert({
+      loan_application_id: id,
+      property_type: newPropertyType,
+    });
+    setCreatingProperty(false);
+    if (error) {
+      toast.error("Błąd", { description: error.message });
+      return;
+    }
+    toast.success("Dodano nieruchomość — uzupełnij pola");
+    void load();
+  };
+
   const addContact = async () => {
     if (!contact.content) {
       toast.error("Wpisz treść");
@@ -248,6 +269,30 @@ export function WniosekDetail({
   if (!app) return <div className="text-muted-foreground">Ładowanie…</div>;
   const c = app.client;
   const p = app.properties?.[0];
+
+  const createPropertyForm = (
+    <div className="flex items-center gap-2 flex-wrap">
+      <Select
+        value={newPropertyType}
+        onValueChange={(v) => setNewPropertyType(v as Database["public"]["Enums"]["property_type"])}
+      >
+        <SelectTrigger className="h-8 w-48">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(propertyTypeLabels).map(([k, v]) => (
+            <SelectItem key={k} value={k}>
+              {v}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button size="sm" disabled={creatingProperty} onClick={() => void createProperty()}>
+        <Plus className="mr-1 h-4 w-4" />
+        Dodaj nieruchomość
+      </Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -431,6 +476,26 @@ export function WniosekDetail({
                   display={(v) => <b>{formatPLN(v as number)}</b>}
                   onSaved={load}
                 />
+                <EditableField
+                  label="Okres (mies.)"
+                  value={app.preferred_period_months}
+                  table="loan_applications"
+                  rowId={app.id}
+                  column="preferred_period_months"
+                  type="number"
+                  display={(v) => (v ? `${v} mies.` : "—")}
+                  onSaved={load}
+                />
+                <EditableField
+                  label="Maks. rata (PLN)"
+                  value={app.max_monthly_payment}
+                  table="loan_applications"
+                  rowId={app.id}
+                  column="max_monthly_payment"
+                  type="number"
+                  display={(v) => (v ? formatPLN(v as number) : "—")}
+                  onSaved={load}
+                />
                 {p ? (
                   <div className="flex items-center gap-2 flex-wrap">
                     <EditableField
@@ -450,8 +515,11 @@ export function WniosekDetail({
                     )}
                   </div>
                 ) : (
-                  <div>
-                    <span className="text-muted-foreground">Numer KW:</span> —
+                  <div className="pt-2 space-y-2">
+                    <p className="text-muted-foreground">
+                      Brak rekordu nieruchomości — dodaj go, aby wpisać numer KW, powierzchnię itd.
+                    </p>
+                    {createPropertyForm}
                   </div>
                 )}
               </CardContent>
@@ -467,11 +535,33 @@ export function WniosekDetail({
                 </CardHeader>
                 <CardContent className="text-sm space-y-1">
                   <EditableField
+                    label="Typ nieruchomości"
+                    value={p.property_type}
+                    table="properties"
+                    rowId={p.id}
+                    column="property_type"
+                    type="select"
+                    options={Object.entries(propertyTypeLabels).map(([value, label]) => ({
+                      value,
+                      label,
+                    }))}
+                    display={(v) => propertyTypeLabels[v as string] ?? String(v ?? "—")}
+                    onSaved={load}
+                  />
+                  <EditableField
                     label="Adres"
                     value={p.address}
                     table="properties"
                     rowId={p.id}
                     column="address"
+                    onSaved={load}
+                  />
+                  <EditableField
+                    label="Ulica"
+                    value={p.street}
+                    table="properties"
+                    rowId={p.id}
+                    column="street"
                     onSaved={load}
                   />
                   <EditableField
@@ -528,6 +618,23 @@ export function WniosekDetail({
                     )}
                   </div>
                   <EditableField
+                    label="Dodatkowe numery KW"
+                    value={p.additional_land_register_numbers}
+                    table="properties"
+                    rowId={p.id}
+                    column="additional_land_register_numbers"
+                    type="array"
+                    onSaved={load}
+                  />
+                  <EditableField
+                    label="MPZP"
+                    value={p.mpzp_info}
+                    table="properties"
+                    rowId={p.id}
+                    column="mpzp_info"
+                    onSaved={load}
+                  />
+                  <EditableField
                     label="Hipoteka"
                     value={p.has_mortgage}
                     table="properties"
@@ -560,7 +667,18 @@ export function WniosekDetail({
               <KwContentSection applicationId={id} canFetch showKwNumber canImportOcr={isAdmin} />
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>
+            <Card>
+              <CardHeader>
+                <CardTitle>Brak danych o nieruchomości</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-3">
+                <p className="text-muted-foreground">
+                  Wybierz typ i dodaj nieruchomość, aby ręcznie wpisać numer księgi wieczystej,
+                  powierzchnię, adres i pozostałe pola.
+                </p>
+                {createPropertyForm}
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
