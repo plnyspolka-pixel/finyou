@@ -70,6 +70,7 @@ import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-le
 import { Route as OperatorMessengerRouteImport } from './routes/operator.messenger'
 import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
 import { Route as OperatorKreatorUdzieleniaRouteImport } from './routes/operator.kreator-udzielenia'
+import { Route as OperatorKalkulatorRouteImport } from './routes/operator.kalkulator'
 import { Route as OperatorFakturyRouteImport } from './routes/operator.faktury'
 import { Route as OperatorCzatRouteImport } from './routes/operator.czat'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
@@ -559,6 +560,11 @@ const OperatorKreatorUdzieleniaRoute =
     path: '/kreator-udzielenia',
     getParentRoute: () => OperatorRoute,
   } as any)
+const OperatorKalkulatorRoute = OperatorKalkulatorRouteImport.update({
+  id: '/kalkulator',
+  path: '/kalkulator',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const OperatorFakturyRoute = OperatorFakturyRouteImport.update({
   id: '/faktury',
   path: '/faktury',
@@ -1642,6 +1648,7 @@ export interface FileRoutesByFullPath {
   '/l/$slug': typeof LSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
+  '/operator/kalkulator': typeof OperatorKalkulatorRoute
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
@@ -1879,6 +1886,7 @@ export interface FileRoutesByTo {
   '/l/$slug': typeof LSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
+  '/operator/kalkulator': typeof OperatorKalkulatorRoute
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
@@ -2123,6 +2131,7 @@ export interface FileRoutesById {
   '/l/$slug': typeof LSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
+  '/operator/kalkulator': typeof OperatorKalkulatorRoute
   '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
@@ -2370,6 +2379,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/operator/czat'
     | '/operator/faktury'
+    | '/operator/kalkulator'
     | '/operator/kreator-udzielenia'
     | '/operator/leady'
     | '/operator/messenger'
@@ -2607,6 +2617,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/operator/czat'
     | '/operator/faktury'
+    | '/operator/kalkulator'
     | '/operator/kreator-udzielenia'
     | '/operator/messenger'
     | '/operator/moje-leady'
@@ -2850,6 +2861,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/operator/czat'
     | '/operator/faktury'
+    | '/operator/kalkulator'
     | '/operator/kreator-udzielenia'
     | '/operator/leady'
     | '/operator/messenger'
@@ -3513,6 +3525,13 @@ declare module '@tanstack/react-router' {
       path: '/kreator-udzielenia'
       fullPath: '/operator/kreator-udzielenia'
       preLoaderRoute: typeof OperatorKreatorUdzieleniaRouteImport
+      parentRoute: typeof OperatorRoute
+    }
+    '/operator/kalkulator': {
+      id: '/operator/kalkulator'
+      path: '/kalkulator'
+      fullPath: '/operator/kalkulator'
+      preLoaderRoute: typeof OperatorKalkulatorRouteImport
       parentRoute: typeof OperatorRoute
     }
     '/operator/faktury': {
@@ -5125,6 +5144,7 @@ const OperatorLeadyRouteWithChildren = OperatorLeadyRoute._addFileChildren(
 interface OperatorRouteChildren {
   OperatorCzatRoute: typeof OperatorCzatRoute
   OperatorFakturyRoute: typeof OperatorFakturyRoute
+  OperatorKalkulatorRoute: typeof OperatorKalkulatorRoute
   OperatorKreatorUdzieleniaRoute: typeof OperatorKreatorUdzieleniaRoute
   OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
   OperatorMessengerRoute: typeof OperatorMessengerRoute
@@ -5140,6 +5160,7 @@ interface OperatorRouteChildren {
 const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorCzatRoute: OperatorCzatRoute,
   OperatorFakturyRoute: OperatorFakturyRoute,
+  OperatorKalkulatorRoute: OperatorKalkulatorRoute,
   OperatorKreatorUdzieleniaRoute: OperatorKreatorUdzieleniaRoute,
   OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
   OperatorMessengerRoute: OperatorMessengerRoute,
