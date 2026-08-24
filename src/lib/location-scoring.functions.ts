@@ -542,14 +542,19 @@ export async function runLocationScoringTick(
     (apps ?? []).map((a) => [a.id as string, a.location_scoring_status as string | null]),
   );
 
-  // NEEDS_DATA jest terminalny, ale po imporcie NOWEJ wersji danych referencyjnych
-  // (seed-real / GUS) taki wniosek dostaje kolejną szansę: requeue tylko, gdy jego
-  // najnowszy wynik liczony był na innej wersji danych niż aktywna — po jednym
-  // przeliczeniu na aktywnej wersji warunek gaśnie, więc nie ma pętli przeliczeń.
+  // Statusy NEEDS_DATA/COMPLETED są terminalne, ale po imporcie NOWEJ wersji
+  // danych referencyjnych (ms-teryt / GUS) wniosek dostaje kolejną szansę:
+  // requeue tylko, gdy jego najnowszy wynik liczony był na innej wersji danych
+  // niż aktywna — po jednym przeliczeniu na aktywnej wersji warunek gaśnie,
+  // więc nie ma pętli przeliczeń. FAILED (błędny numer KW) pomijamy — nowe dane
+  // nie naprawią złej cyfry kontrolnej; przeliczenie wywoła trigger po korekcie.
   let requeued = 0;
   const activeVersion = await resolveDataVersion(db);
   if (activeVersion) {
-    const needsData = appIds.filter((id) => statusById.get(id) === "NEEDS_DATA");
+    const needsData = appIds.filter((id) => {
+      const st = statusById.get(id);
+      return st === "NEEDS_DATA" || st === "COMPLETED";
+    });
     if (needsData.length > 0) {
       const { data: results } = await db
         .from("location_scoring_results")
