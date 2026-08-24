@@ -11,6 +11,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   UserPlus,
+  Users,
   Phone,
   FileText,
   FileWarning,
@@ -22,6 +23,8 @@ import {
   Paperclip,
   ExternalLink,
   RefreshCw,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,7 +64,8 @@ const COLUMNS: {
     label: "Lead",
     icon: UserPlus,
     accent: "border-t-sky-500",
-    description: "Nowe leady i wnioski bez pełnych danych kontaktowych.",
+    description:
+      "Nowe leady i wnioski bez pełnych danych kontaktowych. Leady bez żadnych danych (ani nazwiska, ani telefonu, ani e-maila) są zwinięte w jeden zbiorczy kafelek.",
   },
   {
     key: "kontakt",
@@ -226,6 +230,30 @@ function columnForApp(app: AppRow, offers: OfferRow[]): ColumnKey {
 
 function columnForLead(lead: LeadRow): ColumnKey {
   return lead.status === "w_kontakcie" || lead.status === "rozmowa" ? "kontakt" : "lead";
+}
+
+// ---------------------------------------------------------------------------
+// Leady/wnioski „anonimowe" — bez nazwiska, telefonu i e-maila.
+// Pojedynczo są nieodróżnialne i zalewają kolumnę „Lead", więc na tablicy
+// zwijamy je w jeden zbiorczy kafelek (z możliwością rozwinięcia).
+// ---------------------------------------------------------------------------
+
+function leadHasContactData(lead: LeadRow): boolean {
+  return !!(
+    `${lead.first_name ?? ""} ${lead.last_name ?? ""}`.trim() ||
+    (lead.email ?? "").trim() ||
+    (lead.phone_raw ?? "").trim() ||
+    (lead.phone_normalized ?? "").trim()
+  );
+}
+
+function appHasContactData(app: AppRow): boolean {
+  const c = app.client;
+  return !!(
+    `${c?.first_name ?? ""} ${c?.last_name ?? ""}`.trim() ||
+    (c?.email ?? "").trim() ||
+    (c?.phone ?? "").trim()
+  );
 }
 
 /** Status wniosku zapisywany po ręcznym upuszczeniu kafelka na kolumnę. */
@@ -399,6 +427,7 @@ export function ClientWorkflowBoard({
   leadDetailTo?: "/admin/klienci/$id" | "/operator/leady/$id";
 } = {}) {
   const [search, setSearch] = useState("");
+  const [showAnonymous, setShowAnonymous] = useState(false);
   const [dragOver, setDragOver] = useState<ColumnKey | null>(null);
   const [moving, setMoving] = useState<Record<string, ColumnKey>>({});
   const [filesDialog, setFilesDialog] = useState<{ title: string; files: CardFile[] } | null>(null);
@@ -571,6 +600,15 @@ export function ClientWorkflowBoard({
             const bucket = board.get(col.key)!;
             const count = bucket.apps.length + bucket.leads.length;
             const Icon = col.icon;
+            // Kolumna „Lead": kafelki bez jakichkolwiek danych kontaktowych zwijamy
+            // w jeden zbiorczy — pojedynczo są nieodróżnialne i zagłuszają te,
+            // z którymi faktycznie można pracować.
+            const isLeadCol = col.key === "lead";
+            const anonLeads = isLeadCol ? bucket.leads.filter((l) => !leadHasContactData(l)) : [];
+            const anonApps = isLeadCol ? bucket.apps.filter((a) => !appHasContactData(a)) : [];
+            const anonCount = anonLeads.length + anonApps.length;
+            const visibleLeads = isLeadCol ? bucket.leads.filter(leadHasContactData) : bucket.leads;
+            const visibleApps = isLeadCol ? bucket.apps.filter(appHasContactData) : bucket.apps;
             return (
               <div
                 key={col.key}
@@ -589,12 +627,20 @@ export function ClientWorkflowBoard({
                 <div className="flex items-center gap-2 px-3 py-2" title={col.description}>
                   <Icon className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-semibold">{col.label}</span>
-                  <Badge variant="secondary" className="ml-auto">
-                    {count}
+                  <Badge
+                    variant="secondary"
+                    className="ml-auto"
+                    title={
+                      isLeadCol && anonCount > 0
+                        ? `${count - anonCount} z danymi kontaktowymi + ${anonCount} bez danych`
+                        : undefined
+                    }
+                  >
+                    {isLeadCol && anonCount > 0 ? `${count - anonCount} + ${anonCount}` : count}
                   </Badge>
                 </div>
                 <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2">
-                  {bucket.leads.map((lead) => (
+                  {visibleLeads.map((lead) => (
                     <LeadCard
                       key={lead.id}
                       lead={lead}
@@ -602,7 +648,7 @@ export function ClientWorkflowBoard({
                       pending={!!moving[lead.id]}
                     />
                   ))}
-                  {bucket.apps.map((app) => (
+                  {visibleApps.map((app) => (
                     <AppCard
                       key={app.id}
                       app={app}
@@ -622,6 +668,51 @@ export function ClientWorkflowBoard({
                       }
                     />
                   ))}
+                  {anonCount > 0 && (
+                    <AnonymousLeadsSummary
+                      count={anonCount}
+                      newestAt={
+                        [
+                          ...anonLeads.map((l) => l.updated_at),
+                          ...anonApps.map((a) => a.updated_at),
+                        ]
+                          .sort()
+                          .at(-1) ?? null
+                      }
+                      expanded={showAnonymous}
+                      onToggle={() => setShowAnonymous((v) => !v)}
+                    />
+                  )}
+                  {showAnonymous &&
+                    anonLeads.map((lead) => (
+                      <LeadCard
+                        key={lead.id}
+                        lead={lead}
+                        detailTo={leadDetailTo}
+                        pending={!!moving[lead.id]}
+                      />
+                    ))}
+                  {showAnonymous &&
+                    anonApps.map((app) => (
+                      <AppCard
+                        key={app.id}
+                        app={app}
+                        column={col.key}
+                        docs={filtered?.docsByApp.get(app.id) ?? []}
+                        distributions={filtered?.distByApp.get(app.id) ?? []}
+                        offers={filtered?.offersByApp.get(app.id) ?? []}
+                        invoices={
+                          app.client?.user_id
+                            ? (filtered?.invoicesByUser.get(app.client.user_id) ?? [])
+                            : []
+                        }
+                        detailTo={wniosekDetailTo}
+                        pending={!!moving[app.id]}
+                        onShowFiles={(files) =>
+                          setFilesDialog({ title: `Pliki — ${clientName(app)}`, files })
+                        }
+                      />
+                    ))}
                   {count === 0 && (
                     <p className="px-2 py-6 text-center text-xs text-muted-foreground">
                       Przeciągnij tu kafelek
@@ -686,10 +777,12 @@ function startDrag(payload: DragPayload) {
 function CardShell({
   pending,
   onDragStart,
+  className,
   children,
 }: {
   pending: boolean;
   onDragStart: (e: React.DragEvent) => void;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -699,10 +792,61 @@ function CardShell({
       className={cn(
         "cursor-grab rounded-lg border bg-background p-3 shadow-sm transition hover:shadow-md active:cursor-grabbing",
         pending && "pointer-events-none opacity-50",
+        className,
       )}
     >
       {children}
     </div>
+  );
+}
+
+function pluralLeady(count: number): string {
+  if (count === 1) return "lead";
+  const d = count % 10;
+  const h = count % 100;
+  return d >= 2 && d <= 4 && !(h >= 12 && h <= 14) ? "leady" : "leadów";
+}
+
+/**
+ * Zbiorczy kafelek dla leadów bez jakichkolwiek danych kontaktowych.
+ * Zamiast dziesiątek identycznych kart „Lead bez danych" pokazujemy licznik
+ * z możliwością rozwinięcia pojedynczych kafelków (np. do ręcznego przeciągnięcia).
+ */
+function AnonymousLeadsSummary({
+  count,
+  newestAt,
+  expanded,
+  onToggle,
+}: {
+  count: number;
+  newestAt: string | null;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const Chevron = expanded ? ChevronDown : ChevronRight;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="rounded-lg border border-dashed bg-muted/40 p-3 text-left transition hover:bg-muted/70"
+      title="Leady bez nazwiska, telefonu i e-maila — kliknij, aby rozwinąć lub zwinąć pojedyncze kafelki"
+    >
+      <div className="flex items-center gap-2">
+        <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span className="text-sm font-medium leading-tight">
+          {count} {pluralLeady(count)} bez danych
+        </span>
+        <Chevron className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+      </div>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        Bez nazwiska, telefonu i e-maila — nie da się z nimi pracować, dopóki dane nie spłyną.
+      </p>
+      {newestAt && (
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          ostatni: {formatRelative(newestAt)}
+        </p>
+      )}
+    </button>
   );
 }
 
@@ -740,7 +884,11 @@ function LeadCard({
   pending: boolean;
 }) {
   return (
-    <CardShell pending={pending} onDragStart={startDrag({ kind: "lead", id: lead.id })}>
+    <CardShell
+      pending={pending}
+      onDragStart={startDrag({ kind: "lead", id: lead.id })}
+      className="border-l-4 border-l-sky-400 dark:border-l-sky-600"
+    >
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-medium leading-tight">{leadName(lead)}</span>
         <Link
@@ -753,8 +901,11 @@ function LeadCard({
         </Link>
       </div>
       <div className="mt-1 flex flex-wrap items-center gap-1">
+        <Badge className="border-transparent bg-sky-100 text-[10px] text-sky-800 hover:bg-sky-100 dark:bg-sky-900/50 dark:text-sky-200">
+          LEAD
+        </Badge>
         <Badge variant="outline" className="text-[10px]">
-          Lead — {leadStatusLabels[lead.status ?? ""] ?? lead.status ?? "?"}
+          {leadStatusLabels[lead.status ?? ""] ?? lead.status ?? "?"}
         </Badge>
         {lead.source && (
           <Badge variant="secondary" className="text-[10px]">
@@ -804,9 +955,16 @@ function AppCard({
     null,
   );
   const invoice = invoices[0];
+  // W kolumnach „Lead" i „Kontakt" obok leadów pojawiają się wnioski — oznaczamy
+  // je wyraźnie, żeby typy kafelków dało się odróżnić na pierwszy rzut oka.
+  const mixedColumn = column === "lead" || column === "kontakt";
 
   return (
-    <CardShell pending={pending} onDragStart={startDrag({ kind: "app", id: app.id })}>
+    <CardShell
+      pending={pending}
+      onDragStart={startDrag({ kind: "app", id: app.id })}
+      className={mixedColumn ? "border-l-4 border-l-amber-400 dark:border-l-amber-600" : undefined}
+    >
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-medium leading-tight">{clientName(app)}</span>
         <Link
@@ -820,6 +978,11 @@ function AppCard({
       </div>
 
       <div className="mt-1 flex flex-wrap items-center gap-1">
+        {mixedColumn && (
+          <Badge className="border-transparent bg-amber-100 text-[10px] text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-200">
+            WNIOSEK
+          </Badge>
+        )}
         <Badge variant="outline" className="text-[10px]">
           {loanStatusLabel(app.status)}
         </Badge>
