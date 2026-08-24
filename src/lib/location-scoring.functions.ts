@@ -312,7 +312,7 @@ async function persistResult(
     result: LocationScoringResult;
     dataVersion: string;
     contextParams: Record<string, unknown>;
-    userId: string;
+    userId: string | null;
     status: LocationScoringResult["decision"] extends never ? never : string;
   },
 ): Promise<string | null> {
@@ -354,7 +354,10 @@ async function persistResult(
       data_version: args.dataVersion,
       config_version: result.configVersion,
       status,
-      created_by: args.userId,
+      // Automat (cron) nie ma użytkownika: kolumna jest uuid, więc pusty string
+      // wywala INSERT (invalid input syntax for type uuid) i wniosek zostaje
+      // w PROCESSING na zawsze — musi iść NULL.
+      created_by: args.userId || null,
     })
     .select("id")
     .maybeSingle();
@@ -481,7 +484,7 @@ export async function scoreApplicationCore(
       result,
       dataVersion,
       contextParams,
-      userId: createdBy ?? "",
+      userId: createdBy,
       status: "" as never,
     });
   } catch (e) {
@@ -586,7 +589,10 @@ export async function runLocationScoringTick(
       const appId = p.loan_application_id as string;
       if (!appId || seen.has(appId)) return false;
       const st = statusById.get(appId);
-      if (st == null || st === "PENDING") {
+      // PROCESSING też jest podnoszone: to stan przejściowy, który po awarii
+      // w połowie scoringu (crash, błąd zapisu) zostawał na zawsze — tick
+      // biegnie co 5 min pojedynczo, więc ryzyko nakładki jest pomijalne.
+      if (st == null || st === "PENDING" || st === "PROCESSING") {
         seen.add(appId);
         return true;
       }
