@@ -77,12 +77,19 @@ Moduł jest zaprojektowany pod oficjalne, otwarte zbiory:
 Preferencja siatki: **125 m** → jeśli zbyt ciężka, **250 m** (kompromis) →
 awaryjnie **1 km** (MVP).
 
-> **UWAGA — stan danych.** Repozytorium zawiera wyłącznie **ziarno DEV/TEST**
-> (`scripts/location-scoring/seed-data.json`, `data_version = seed-dev-1`) z
-> przybliżonymi wartościami dla kilku wydziałów (RA1R, WA1M, KR1P) i ich gmin.
-> **To NIE są pełne dane produkcyjne.** Pobieranie zbiorów GUS jest w tym
-> środowisku niedostępne (brak sieci do usług zewnętrznych). Importer jest
-> gotowy i działa — należy podać produkcyjny `dataset.json` (patrz niżej).
+> **Stan danych.** Aktywną warstwą referencyjną jest **`ms-teryt-2026-1`**
+> (migracja `20260824130000_location_scoring_ms_teryt.sql`, generowana przez
+> `scripts/location-scoring/ms-teryt-import.ts`): **pełne pokrycie 342
+> prefiksów KW** z Rozporządzenia MS z 29.05.2026 (Dz.U. 2026 poz. 740, zał. 1)
+> × **2477 gmin** LAU 2020 (EDJNet lau_centres / Eurostat GISCO) z realną
+> ludnością, powierzchnią i populacyjnie ważonymi środkami. Źródła leżą w repo:
+> `scripts/location-scoring/data/`. Przybliżone pozostają: DEGURBA (heurystyka
+> ludność/gęstość), FUA (promień od miast ≥100/250 tys.) i promienie ludności
+> (po środkach gmin, nie po siatce NSP) — docelowo zastępuje je pełny ETL
+> `gus-import.ts` (GUGiK PRG + Eurostat DEGURBA/FUA + BDL). Starsze ziarna
+> (seed-dev-1, seed-real-2) pozostają w historii wersji. Po imporcie nowej
+> wersji danych tick **sam** cofa do kolejki wnioski `NEEDS_DATA` i `COMPLETED`
+> liczone na starszej wersji (jednorazowo — bez pętli przeliczeń).
 
 ## Import danych (ETL)
 

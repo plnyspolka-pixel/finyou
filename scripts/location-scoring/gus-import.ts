@@ -206,23 +206,33 @@ function loadFua(): Record<string, FuaEntry> {
 type MsKwEntry = {
   prefix: string;
   court_name: string;
-  department_name: string;
+  department_name: string | null;
   mapping_confidence: number;
   source: string;
-  areas: string[];
+  // Format prosty (README): lista TERYT-ów; format bogaty (data/): lista
+  // obiektów {type,name,teryt,partial} — normalizowany do listy TERYT-ów.
+  areas: Array<string | { teryt: string; partial?: boolean }>;
 };
 
-function loadKwDepartments(): MsKwEntry[] {
-  const path = resolve(DATA_DIR, "ms-kw-prefiksy-2026.json");
+function loadKwDepartments(): Array<Omit<MsKwEntry, "areas"> & { areas: string[] }> {
+  // Preferuj ręcznie podłożony plik w data-import/, w przeciwnym razie użyj
+  // wersji utrzymywanej w repo (scripts/location-scoring/data/).
+  const local = resolve(DATA_DIR, "ms-kw-prefiksy-2026.json");
+  const bundled = resolve(import.meta.dirname ?? __dirname, "data", "ms-kw-prefiksy-2026.json");
+  const path = existsSync(local) ? local : bundled;
   if (!existsSync(path)) {
     throw new Error(
-      `BRAK PLIKU: ${path}\n` +
+      `BRAK PLIKU: ${local}\n` +
         `Przygotuj z „Wykazu kodów wydziałów ksiąg wieczystych" MS oraz ` +
         `aktualnego rozporządzenia o właściwości sądów rejonowych. ` +
         `Format: [{prefix,court_name,department_name,mapping_confidence,source,areas:[teryt,...]}]`,
     );
   }
-  return JSON.parse(readFileSync(path, "utf-8")) as MsKwEntry[];
+  const raw = JSON.parse(readFileSync(path, "utf-8")) as MsKwEntry[];
+  return raw.map((e) => ({
+    ...e,
+    areas: e.areas.map((a) => (typeof a === "string" ? a : a.teryt)),
+  }));
 }
 
 // ----------------------------------------------------------------------------

@@ -19,8 +19,9 @@ Państwowy Rejestr Granic (GUGiK) — jednostki administracyjne, poziom **gmina*
 - Wymagane pola: `JPT_KOD_JE` (TERYT gminy) + geometria (Polygon/MultiPolygon).
 - Rozmiar: ~150 MB.
 
-### 2) `data-import/ms-kw-prefiksy-2026.json` (WYMAGANE)
+### 2) `data-import/ms-kw-prefiksy-2026.json` (JEST W REPO)
 Wykaz kodów wydziałów ksiąg wieczystych Ministerstwa Sprawiedliwości + mapa właściwości sądów rejonowych na TERYT gmin.
+- **Gotowy plik jest utrzymywany w repo**: `scripts/location-scoring/data/ms-kw-prefiksy-2026.json` (342 prefiksy; Rozp. MS z 29.05.2026, Dz.U. 2026 poz. 740, zał. 1). `gus-import.ts` używa go automatycznie, gdy w `data-import/` nie ma nowszej wersji. Akceptowane są oba formaty `areas`: lista TERYT-ów lub lista obiektów `{type,name,teryt,partial}`.
 - Źródło: Wykaz kodów wydziałów ksiąg wieczystych MS + aktualne rozporządzenie Ministra Sprawiedliwości o właściwości sądów rejonowych (Dz.U.).
 - Format:
 ```json
