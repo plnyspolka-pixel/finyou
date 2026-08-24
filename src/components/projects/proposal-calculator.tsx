@@ -26,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ProposalScheduleTable } from "@/components/projects/proposal-schedule";
 import { computeProposalServer, submitProposal } from "@/lib/projects/proposals.functions";
 import { PROPOSAL_STATEMENT_LABELS } from "@/lib/projects/proposals.functions";
 import { SECURITY_OPTIONS } from "@/lib/projects/module-types";
@@ -321,6 +322,12 @@ export function ProposalCalculator({
               Uzupełnij kwotę, okres i zabezpieczenia, aby zobaczyć wyliczenia.
             </p>
           )}
+          {computed && computed.schedule.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <div className="text-sm font-semibold">Harmonogram spłat</div>
+              <ProposalScheduleTable schedule={computed.schedule} />
+            </div>
+          )}
           {computed?.warnings.map((w) => (
             <div
               key={w}
@@ -342,7 +349,7 @@ export function ProposalCalculator({
 
       {/* Podsumowanie + oświadczenia */}
       <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Podsumowanie propozycji</DialogTitle>
             <DialogDescription>
@@ -368,6 +375,11 @@ export function ProposalCalculator({
                   value={securities.length ? `${securities.length} wybrane` : "—"}
                 />
                 <Result label="Termin ważności" value={validUntil || "—"} />
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-sm font-semibold">Harmonogram spłat</div>
+                <ProposalScheduleTable schedule={computed.schedule} />
               </div>
 
               <div className="space-y-2">

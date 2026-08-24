@@ -39,6 +39,7 @@ import {
   adminUpdateModuleSettings,
 } from "@/lib/projects/admin.functions";
 import { formatPLN } from "@/lib/labels";
+import { ProposalScheduleTable } from "@/components/projects/proposal-schedule";
 import { AssignmentBadge, ProposalBadge, fmtDateTime } from "./shared";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -311,7 +312,7 @@ function ProposalDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Propozycja — {proposal.investor?.name ?? ""}</DialogTitle>
         </DialogHeader>
@@ -334,6 +335,13 @@ function ProposalDialog({
             />
             <Fact label="Wersja projektu" value={`${proposal.project_version}`} />
           </div>
+
+          {Array.isArray(c.schedule) && c.schedule.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm">Harmonogram spłat</Label>
+              <ProposalScheduleTable schedule={c.schedule} />
+            </div>
+          )}
 
           <div className="space-y-2 rounded-md border p-3">
             <Label className="text-sm">Decyzja</Label>

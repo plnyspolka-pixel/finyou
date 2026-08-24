@@ -5,10 +5,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, FileText, Undo2 } from "lucide-react";
+import { ArrowLeft, CalendarRange, FileText, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ProposalScheduleTable,
+  type ProposalScheduleRow,
+} from "@/components/projects/proposal-schedule";
 import { listMyProposals, withdrawProposal } from "@/lib/projects/proposals.functions";
 import { PROPOSAL_STATUS_LABELS, type ProposalStatus } from "@/lib/projects/module-types";
 import { formatPLN } from "@/lib/labels";
@@ -38,6 +42,7 @@ function MyProposals() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["projects-my-proposals"], queryFn: () => listFn() });
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [scheduleOpenId, setScheduleOpenId] = useState<string | null>(null);
 
   const proposals = ((q.data as { proposals?: unknown[] } | undefined)?.proposals ?? []) as {
     id: string;
@@ -45,7 +50,11 @@ function MyProposals() {
     version: number;
     status: ProposalStatus;
     params: { amount?: number; periodMonths?: number; interestRatePercent?: number };
-    computed: { totalToRepay?: number; investorAnnualReturnPercent?: number };
+    computed: {
+      totalToRepay?: number;
+      investorAnnualReturnPercent?: number;
+      schedule?: ProposalScheduleRow[];
+    };
     submitted_at: string | null;
     valid_until: string | null;
     decision_reason: string | null;
@@ -131,7 +140,25 @@ function MyProposals() {
                     </p>
                   </div>
                 )}
+                {scheduleOpenId === p.id &&
+                  p.computed?.schedule &&
+                  p.computed.schedule.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold">Harmonogram spłat</div>
+                      <ProposalScheduleTable schedule={p.computed.schedule} />
+                    </div>
+                  )}
                 <div className="flex flex-wrap gap-2">
+                  {(p.computed?.schedule?.length ?? 0) > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setScheduleOpenId((cur) => (cur === p.id ? null : p.id))}
+                    >
+                      <CalendarRange className="mr-1 h-4 w-4" />
+                      {scheduleOpenId === p.id ? "Ukryj harmonogram" : "Harmonogram spłat"}
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" asChild>
                     <Link
                       to="/inwestor/projekty/oferta/$assignmentId"

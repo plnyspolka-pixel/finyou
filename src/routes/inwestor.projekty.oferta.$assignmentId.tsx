@@ -27,6 +27,10 @@ import {
 import type { RiskAnalysis } from "@/lib/projects/module-types";
 import { RiskSection } from "@/components/projects/risk-section";
 import { ProposalCalculator } from "@/components/projects/proposal-calculator";
+import {
+  ProposalScheduleTable,
+  type ProposalScheduleRow,
+} from "@/components/projects/proposal-schedule";
 import { AssignmentCountdown } from "@/components/projects/countdown";
 import { formatPLN } from "@/lib/labels";
 
@@ -95,14 +99,26 @@ function FullProjectCard() {
       maxLtvPercent: number;
       propertyValue: number | null;
     };
-    proposals: { id: string; status: string; version: number }[];
+    proposals: {
+      id: string;
+      status: string;
+      version: number;
+      params: { amount?: number; periodMonths?: number; interestRatePercent?: number } | null;
+      computed: {
+        totalToRepay?: number;
+        totalInterest?: number;
+        totalCommission?: number;
+        schedule?: ProposalScheduleRow[];
+      } | null;
+    }[];
     watermark: { name: string; accountId: string; date: string };
   };
 
   const d = data.details;
-  const submitted = data.proposals.some(
+  const activeProposal = data.proposals.find(
     (p) => !["draft", "withdrawn", "rejected", "expired"].includes(p.status),
   );
+  const submitted = Boolean(activeProposal);
 
   const openDoc = async (path: string) => {
     try {
@@ -254,6 +270,30 @@ function FullProjectCard() {
               Twoja propozycja została przekazana do analizy. Nie jest to jeszcze zawarcie umowy
               pożyczki. Finance You skontaktuje się z Tobą po jej rozpatrzeniu.
             </p>
+            {activeProposal?.computed?.schedule && activeProposal.computed.schedule.length > 0 && (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                  <Detail
+                    label="Proponowana kwota"
+                    value={formatPLN(activeProposal.params?.amount ?? 0)}
+                  />
+                  <Detail
+                    label="Okres"
+                    value={`${activeProposal.params?.periodMonths ?? "—"} mies.`}
+                  />
+                  <Detail
+                    label="Suma odsetek"
+                    value={formatPLN(activeProposal.computed.totalInterest ?? 0)}
+                  />
+                  <Detail
+                    label="Całkowita spłata"
+                    value={formatPLN(activeProposal.computed.totalToRepay ?? 0)}
+                  />
+                </div>
+                <div className="text-sm font-semibold">Harmonogram spłat</div>
+                <ProposalScheduleTable schedule={activeProposal.computed.schedule} />
+              </div>
+            )}
             <Button asChild variant="outline">
               <Link to="/inwestor/projekty/propozycje">Zobacz status w „Moje propozycje”</Link>
             </Button>
