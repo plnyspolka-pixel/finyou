@@ -518,7 +518,7 @@ export const runLocationScoring = createServerFn({ method: "POST" })
 export async function runLocationScoringTick(
   db: SupabaseClient,
   limit = 40,
-): Promise<{ processed: number; scored: number; skipped: number }> {
+): Promise<{ processed: number; scored: number; skipped: number; requeued: number }> {
   // Dwustopniowo (bez embed FK, odporne na nazwę relacji): nieruchomości z KW,
   // a następnie statusy ich wniosków.
   const { data: props } = await db
@@ -532,7 +532,7 @@ export async function runLocationScoringTick(
   const appIds = Array.from(
     new Set((props ?? []).map((p) => p.loan_application_id as string).filter(Boolean)),
   );
-  if (appIds.length === 0) return { processed: 0, scored: 0, skipped: 0 };
+  if (appIds.length === 0) return { processed: 0, scored: 0, skipped: 0, requeued: 0 };
 
   const { data: apps } = await db
     .from("loan_applications")
@@ -541,6 +541,39 @@ export async function runLocationScoringTick(
   const statusById = new Map(
     (apps ?? []).map((a) => [a.id as string, a.location_scoring_status as string | null]),
   );
+
+  // NEEDS_DATA jest terminalny, ale po imporcie NOWEJ wersji danych referencyjnych
+  // (seed-real / GUS) taki wniosek dostaje kolejną szansę: requeue tylko, gdy jego
+  // najnowszy wynik liczony był na innej wersji danych niż aktywna — po jednym
+  // przeliczeniu na aktywnej wersji warunek gaśnie, więc nie ma pętli przeliczeń.
+  let requeued = 0;
+  const activeVersion = await resolveDataVersion(db);
+  if (activeVersion) {
+    const needsData = appIds.filter((id) => statusById.get(id) === "NEEDS_DATA");
+    if (needsData.length > 0) {
+      const { data: results } = await db
+        .from("location_scoring_results")
+        .select("loan_application_id, data_version, calculated_at")
+        .in("loan_application_id", needsData)
+        .order("calculated_at", { ascending: false });
+      const latestVersion = new Map<string, string>();
+      for (const r of results ?? []) {
+        const id = r.loan_application_id as string;
+        if (id && !latestVersion.has(id)) {
+          latestVersion.set(id, (r.data_version as string) ?? "");
+        }
+      }
+      const stale = needsData.filter((id) => latestVersion.get(id) !== activeVersion);
+      if (stale.length > 0) {
+        await db
+          .from("loan_applications")
+          .update({ location_scoring_status: "PENDING" })
+          .in("id", stale);
+        for (const id of stale) statusById.set(id, "PENDING");
+        requeued = stale.length;
+      }
+    }
+  }
 
   const seen = new Set<string>();
   const pending = (props ?? [])
@@ -576,7 +609,7 @@ export async function runLocationScoringTick(
       console.error(`[location-scoring-tick] failed for app ${p.loan_application_id}:`, e);
     }
   }
-  return { processed: pending.length, scored, skipped };
+  return { processed: pending.length, scored, skipped, requeued };
 }
 
 /** Zwraca najnowszy wynik scoringu dla wniosku. */

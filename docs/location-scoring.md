@@ -77,12 +77,17 @@ Moduł jest zaprojektowany pod oficjalne, otwarte zbiory:
 Preferencja siatki: **125 m** → jeśli zbyt ciężka, **250 m** (kompromis) →
 awaryjnie **1 km** (MVP).
 
-> **UWAGA — stan danych.** Repozytorium zawiera wyłącznie **ziarno DEV/TEST**
-> (`scripts/location-scoring/seed-data.json`, `data_version = seed-dev-1`) z
-> przybliżonymi wartościami dla kilku wydziałów (RA1R, WA1M, KR1P) i ich gmin.
-> **To NIE są pełne dane produkcyjne.** Pobieranie zbiorów GUS jest w tym
-> środowisku niedostępne (brak sieci do usług zewnętrznych). Importer jest
-> gotowy i działa — należy podać produkcyjny `dataset.json` (patrz niżej).
+> **UWAGA — stan danych.** Repozytorium zawiera dwa ziarna przybliżone:
+> DEV/TEST (`scripts/location-scoring/seed-data.json`, `data_version =
+> seed-dev-1`; RA1R, WA1M, KR1P) oraz **rozszerzony seed `seed-real-2`**
+> (migracja `20260824120000_location_scoring_seed_real.sql`, generowana z
+> `scripts/location-scoring/emit-sql.ts` / `real-dataset.ts`) pokrywający
+> prefiksy KW realnie występujące we wnioskach wraz ze strefami podmiejskimi.
+> **To nadal NIE są pełne dane produkcyjne** — pobieranie zbiorów GUS jest w tym
+> środowisku niedostępne. Importer jest gotowy i działa — należy podać
+> produkcyjny `dataset.json` (patrz niżej). Po imporcie nowej wersji danych tick
+> **sam** cofa wnioski `NEEDS_DATA` do kolejki (requeue tylko, gdy najnowszy
+> wynik liczony był na starszej wersji danych).
 
 ## Import danych (ETL)
 
