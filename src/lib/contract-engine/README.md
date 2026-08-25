@@ -48,6 +48,18 @@ ryzyko prawne**; kontrole spójności konstrukcyjnej zostają.
    kwota, treść wpisu. Tylko opis stanu księgi — bez ostrzeżeń o
    pierwszeństwie.
 
+## Agent umowy (AI) — główny ekran /inwestor
+
+Silnik jest uzbrojony w **osobnego agenta czatowego tylko do wypełniania
+umowy** (`umowa-agent.functions.ts` + jądro `umowa-agent-core.ts`, panel
+`components/inwestor/umowa-agent-panel.tsx` na głównym ekranie `/inwestor`).
+Architektura zgodna z filozofią silnika: AI zwraca wyłącznie łatkę danych pod
+schemat `UmowaData` (deep-merge), a kod deterministycznie dolicza kwoty
+słownie, identyfikatory nieruchomości i harmonogram rat
+(`buildEngineSchedule`), domyka grosze autonaprawą, waliduje i składa
+podgląd/.docx tymi samymi funkcjami co kreator. Agent nie dotyka treści
+klauzul i niczego nie liczy sam.
+
 ## Weryfikacja wierności
 
 Port był sprawdzany względem oryginału (Python) jako wyroczni:

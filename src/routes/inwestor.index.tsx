@@ -26,7 +26,7 @@ import {
   signStoragePath,
 } from "@/lib/property-photos";
 import { useAccessState } from "@/hooks/use-access";
-import { InvestorAgentPanel } from "@/components/inwestor/agent-panel";
+import { UmowaAgentPanel } from "@/components/inwestor/umowa-agent-panel";
 import { InvestorTeaserList } from "@/components/access/InvestorTeaserList";
 import { getModuleState } from "@/lib/projects/module-access.functions";
 import { ModuleGate, type ModuleStateView } from "@/components/projects/module-gate";
@@ -312,12 +312,12 @@ function InwestorList() {
     <div className="space-y-6">
       <FancyPageHeader
         eyebrow="Panel inwestora"
-        title="Agent AI"
-        subtitle="Główny ekran panelu — agent czatowy AI poprowadzi Cię po wnioskach, ofertach i kalkulatorze. Poniżej wyszukiwarka dostępnych wniosków."
+        title="Agent umowy (AI)"
+        subtitle="Główny ekran panelu — osobny agent czatowy tylko do wypełniania umowy: zbiera dane, a umowę składa deterministycznie silnik klauzul. Poniżej wyszukiwarka dostępnych wniosków."
       />
 
-      {/* Agent czatowy AI — główny ekran panelu inwestora. */}
-      <InvestorAgentPanel />
+      {/* Osobny agent AI tylko do wypełniania umowy — główny ekran panelu. */}
+      <UmowaAgentPanel />
 
       <div className="pt-2">
         <h2 className="text-lg font-semibold">Dostępne wnioski ({apps.length})</h2>

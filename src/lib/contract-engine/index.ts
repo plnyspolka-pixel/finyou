@@ -44,3 +44,10 @@ export type { KlauzulaMeta } from "./clause-select";
 export { buildUmowaData, profileToCalcPayload } from "./profile-to-umowa";
 export type { BuildUmowaOptions } from "./profile-to-umowa";
 export { buildUmowaDocx, buildUmowaDocumentXml, harmonogramZUmowy } from "./umowa-docx";
+export {
+  scalPatch,
+  przetworzSzkic,
+  uzupelnijHarmonogram,
+  uzupelnijSlownie,
+  uzupelnijIdNieruchomosci,
+} from "./umowa-agent-core";
