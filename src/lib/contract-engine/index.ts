@@ -24,13 +24,15 @@ export { waliduj, walidujReguly, walidujSchemat } from "./validator";
 export type { Problem, Poziom } from "./validator";
 export {
   walidujHarmonogram,
+  autonaprawHarmonogram,
+  tolerancjaAutonaprawy,
   payloadDoRaty,
   formatujRaty,
   formatKwotaPL,
   parseKwota,
   TOLERANCJA_GROSZOWA,
 } from "./schedule";
-export type { RataLiczbowa, RataSchema } from "./schedule";
+export type { RataLiczbowa, RataSchema, KorektaGroszowa } from "./schedule";
 export { mapujKwDoNieruchomosci } from "./kw-mapper";
 export type { KwMapContext, KwMapResult } from "./kw-mapper";
 export { buildEngineSchedule } from "./loan-schedule";

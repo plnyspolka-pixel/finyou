@@ -600,25 +600,177 @@ describe("I. Regresja — usunięte zabezpieczenia", () => {
       expect(!t.includes("weksel") && !t.includes("wekslow") && !t.includes("polisy")).toBe(true);
     }
   });
-  it("I7 brak wariantu ułamkowego w bibliotece", () =>
-    expect(bibBlob.includes("ulamkowa")).toBe(false));
-  it("I8 brak klauzuli o zgodzie współwłaścicieli", () =>
-    expect(!bibBlob.includes("wspolwlascicieli") && !bibBlob.includes("współwłaścicieli")).toBe(
-      true,
-    ));
-  it("I9 brak art. 199 k.c.", () => expect(bibBlob.includes("art. 199 k.c.")).toBe(false));
-  it("I10 schemat odrzuca współwłasność ułamkową", () => {
-    const z = clone(S2) as any;
-    for (const n of z.nieruchomosci) if (n.wspolwlasnosc) n.wspolwlasnosc.rodzaj = "ulamkowa";
-    expect(walidujSchemat(z).length).not.toBe(0);
+});
+
+// ══ I2. Współwłasność ułamkowa — przywrócona (zmiana 1 po Kańkowskich) ══
+describe("I2. Współwłasność ułamkowa (przywrócona)", () => {
+  // Wariant Kańkowskich: dwoje pożyczkobiorców, każde z udziałem 1/2,
+  // oboje przystępują do umowy.
+  const zUlamkowa = () => {
+    const z = clone(S4) as any;
+    z.nieruchomosci[0].wspolwlasnosc = {
+      rodzaj: "ulamkowa",
+      wspolwlasciciele: [
+        { imie_nazwisko: "Tomasz Kowalczyk", pesel: "80051012345", udzial: "1/2" },
+        { imie_nazwisko: "Agnieszka Kowalczyk", pesel: "82092387654", udzial: "1/2" },
+      ],
+    };
+    return z;
+  };
+
+  it("I7 schemat przyjmuje wariant ułamkowy z udziałami", () =>
+    expect(walidujSchemat(zUlamkowa())).toEqual([]));
+
+  it("I8 komparycja opisuje udziały („w udziale wynoszącym 1/2 części”)", () => {
+    const k = render(zUlamkowa())
+      .komparycja.strony.map((s) => s.opis)
+      .join(" | ");
+    expect(k.includes("w udziale wynoszącym 1/2 części")).toBe(true);
+    expect(k.includes("współwłaściciel")).toBe(true);
   });
-  it("I11/I12 brak treści i załącznika o współwłaścicielach", () => {
-    for (const s of [S1, S2, S3, S4, S5]) {
-      const t = plaskiDoc(render(s)).toLowerCase();
-      expect(t.includes("współwłaścicieli")).toBe(false);
-      expect(render(s).zalaczniki.some((x) => x.tytul.includes("współwłaścicieli"))).toBe(false);
-    }
+
+  it("I9 sekcja zabezpieczeń: hipoteka obciąża całą nieruchomość, gdy wszyscy współwłaściciele przystępują do umowy", () => {
+    const p = plaski(zUlamkowa());
+    expect(p.includes("współwłasności w częściach ułamkowych")).toBe(true);
+    expect(p.includes("hipoteka obciąża całą nieruchomość")).toBe(true);
   });
+
+  it("I10 współwłaściciel będący pożyczkobiorcą → żadna zgoda się nie generuje", () => {
+    const d = render(zUlamkowa());
+    expect(d.fakty.wymaga_zgody_malzonka).toBe(false);
+    expect(d.zalaczniki.some((x) => x.tytul.includes("Zgoda małżonka"))).toBe(false);
+  });
+
+  it("I11 współwłaściciel spoza stron → silnik nie blokuje (brak reguły oceniającej), opis udziałów zostaje", () => {
+    const z = zUlamkowa();
+    z.pozyczkobiorca = [z.pozyczkobiorca[0]]; // drugi współwłaściciel nie jest stroną
+    expect(walidujSchemat(z)).toEqual([]);
+    expect(bledy(z)).toEqual([]);
+    const p = plaski(z);
+    expect(p.includes("współwłasności w częściach ułamkowych")).toBe(true);
+    expect(p.includes("hipoteka obciąża całą nieruchomość")).toBe(false);
+    expect(p.includes("udziały we współwłasności przysługujące osobom składającym")).toBe(true);
+  });
+
+  it("I12 wariant łączny małżeński działa bez zmian (regresja)", () => {
+    const d = render(S4);
+    expect(d.fakty.wymaga_zgody_malzonka).toBe(false);
+    expect(plaskiDoc(d).includes("współwłasności w częściach ułamkowych")).toBe(false);
+  });
+});
+
+// ══ K. Rolnicy prowadzący gospodarstwo (zmiana 2 po Kańkowskich) ══
+describe("K. Rolnicy prowadzący gospodarstwo rolne", () => {
+  // Dwoje rolników prowadzących wspólne gospodarstwo: NIP gospodarstwa przy
+  // jednym z nich (przedstawiciel), drugie ma sam PESEL.
+  const zRolnicy = () => {
+    const z = clone(S4) as any;
+    z.pozyczkobiorca[0].firma = null;
+    z.pozyczkobiorca[0].dzialalnosc = "gospodarstwo_rolne";
+    z.pozyczkobiorca[0].nip = "7122334455";
+    z.pozyczkobiorca[0].regon = null;
+    z.pozyczkobiorca[1].firma = null;
+    z.pozyczkobiorca[1].dzialalnosc = "gospodarstwo_rolne";
+    z.pozyczkobiorca[1].nip = null;
+    return z;
+  };
+
+  it("K1 schemat przyjmuje status gospodarstwa rolnego", () =>
+    expect(walidujSchemat(zRolnicy())).toEqual([]));
+
+  it("K2 komparycja: rolnicy prowadzący wspólne gospodarstwo rolne", () => {
+    const k = render(zRolnicy())
+      .komparycja.strony.map((s) => s.opis)
+      .join(" | ");
+    expect(k.includes("rolnik prowadzący wspólne gospodarstwo rolne")).toBe(true);
+    expect(k.includes("rolnik prowadząca wspólne gospodarstwo rolne")).toBe(true);
+  });
+
+  it("K3 NIP gospodarstwa wyłącznie przy przedstawicielu", () => {
+    const k = render(zRolnicy())
+      .komparycja.strony.filter((s) => s.grupa === "pozyczkobiorca")
+      .map((s) => s.opis)
+      .join(" | ");
+    expect(k.split("NIP 7122334455").length - 1).toBe(1);
+    expect(k.split("NIP").length - 1).toBe(1); // drugi rolnik bez NIP — sam PESEL
+  });
+
+  it("K4 kwalifikacja jako przedsiębiorcy — klauzula niekonsumencka aktywna", () => {
+    const p = plaski(zRolnicy());
+    expect(p.includes("są przedsiębiorcami")).toBe(true);
+    expect(p.includes("nie mają zastosowania przepisy ustawy o kredycie konsumenckim")).toBe(true);
+  });
+
+  it("K5 pojedynczy rolnik — bez „wspólnego” gospodarstwa", () => {
+    const z = zRolnicy();
+    z.pozyczkobiorca = [z.pozyczkobiorca[0]];
+    const k = render(z)
+      .komparycja.strony.map((s) => s.opis)
+      .join(" | ");
+    expect(k.includes("rolnik prowadzący gospodarstwo rolne")).toBe(true);
+    expect(k.includes("wspólne gospodarstwo")).toBe(false);
+  });
+
+  it("K6 status nie psuje walidatora (brak nowych reguł)", () =>
+    expect(bledy(zRolnicy())).toEqual([]));
+});
+
+// ══ L. Hipoteki przymusowe w dziale IV (zmiana 3 po Kańkowskich) ══
+describe("L. Hipoteki przymusowe w dziale IV", () => {
+  // Dział IV jak u Kańkowskich: dwie hipoteki przymusowe na rzecz Skarbu
+  // Państwa (KRUS), pozostające na nieruchomości.
+  const zPrzymusowe = () => {
+    const z = clone(S1) as any;
+    z.nieruchomosci[0].hipoteka.pierwszenstwo = "kolejne";
+    z.nieruchomosci[0].obciazenia = [
+      {
+        dzial: "IV",
+        rodzaj: "hipoteka_przymusowa",
+        opis: "hipoteka przymusowa wpisana na podstawie tytułu wykonawczego z 12.03.2024",
+        wierzyciel:
+          "Skarb Państwa — Kasa Rolniczego Ubezpieczenia Społecznego, Oddział Regionalny w Lublinie",
+        kwota: "38 450,00",
+        sposob_usuniecia: "pozostaje_akceptowane",
+        uprawniony_do_zrzeczenia: null,
+        kwota_splaty: null,
+        wierzyciel_rachunek: null,
+      },
+      {
+        dzial: "IV",
+        rodzaj: "hipoteka_przymusowa",
+        opis: "hipoteka przymusowa wpisana na podstawie tytułu wykonawczego z 05.09.2025",
+        wierzyciel:
+          "Skarb Państwa — Kasa Rolniczego Ubezpieczenia Społecznego, Oddział Regionalny w Lublinie",
+        kwota: "17 890,00",
+        sposob_usuniecia: "pozostaje_akceptowane",
+        uprawniony_do_zrzeczenia: null,
+        kwota_splaty: null,
+        wierzyciel_rachunek: null,
+      },
+    ];
+    return z;
+  };
+
+  it("L1 schemat przyjmuje hipotekę przymusową z wierzycielem instytucjonalnym", () =>
+    expect(walidujSchemat(zPrzymusowe())).toEqual([]));
+
+  it("L2 obie hipoteki przymusowe trafiają do umowy z kwotami i wierzycielem", () => {
+    const p = plaski(zPrzymusowe());
+    expect(p.split("hipoteka przymusowa").length - 1).toBeGreaterThanOrEqual(2);
+    expect(p.includes("38 450,00")).toBe(true);
+    expect(p.includes("17 890,00")).toBe(true);
+    expect(p.includes("Kasa Rolniczego Ubezpieczenia Społecznego")).toBe(true);
+    expect(p.includes("w dziale IV księgi wieczystej")).toBe(true);
+  });
+
+  it("L3 wpis egzekucyjny rozpoznany w faktach", () =>
+    expect(render(zPrzymusowe()).fakty.ma_obciazenia_egzekucyjne).toBe(true));
+
+  it("L4 bez błędów blokujących (opis stanu księgi, nie ocena ryzyka)", () =>
+    expect(bledy(zPrzymusowe())).toEqual([]));
+
+  it("L5 brak obciążeń → klauzula o stanie obciążeń nie renderuje się", () =>
+    expect(plaski(S1).includes("stan obciążeń")).toBe(false));
 });
 
 // ══ E. Determinizm ══

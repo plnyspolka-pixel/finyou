@@ -56,6 +56,8 @@ export interface LoanCalcPayload {
   /** Data umowy DD.MM.RRRR (jeśli ustawiona). */
   agreementDate?: string;
   clientName?: string | null;
+  /** Nagłówek dokumentu (domyślnie „KALKULACJA POZYCZKI") — np. dla PDF oferty. */
+  title?: string;
   schedule: LoanCalcScheduleRow[];
 }
 
@@ -132,7 +134,7 @@ function pdfEscape(s: string): string {
 
 function buildLines(p: LoanCalcPayload): string[] {
   const L: string[] = [];
-  L.push("FINANCE YOU - KALKULACJA POZYCZKI");
+  L.push(p.title || "FINANCE YOU - KALKULACJA POZYCZKI");
   L.push("");
   if (p.clientName) L.push(`Klient: ${p.clientName}`);
   if (p.agreementDate) L.push(`Data umowy: ${p.agreementDate}`);

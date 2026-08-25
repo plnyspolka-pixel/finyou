@@ -26,6 +26,7 @@ import {
   signStoragePath,
 } from "@/lib/property-photos";
 import { useAccessState } from "@/hooks/use-access";
+import { InvestorAgentPanel } from "@/components/inwestor/agent-panel";
 import { InvestorTeaserList } from "@/components/access/InvestorTeaserList";
 import { getModuleState } from "@/lib/projects/module-access.functions";
 import { ModuleGate, type ModuleStateView } from "@/components/projects/module-gate";
@@ -310,10 +311,20 @@ function InwestorList() {
   return (
     <div className="space-y-6">
       <FancyPageHeader
-        eyebrow="Marketplace inwestora"
-        title={`Dostępne wnioski (${apps.length})`}
-        subtitle="Wnioski dopuszczone do inwestorów — wyszukaj nieruchomość pod inwestycję."
+        eyebrow="Panel inwestora"
+        title="Agent AI"
+        subtitle="Główny ekran panelu — agent czatowy AI poprowadzi Cię po wnioskach, ofertach i kalkulatorze. Poniżej wyszukiwarka dostępnych wniosków."
       />
+
+      {/* Agent czatowy AI — główny ekran panelu inwestora. */}
+      <InvestorAgentPanel />
+
+      <div className="pt-2">
+        <h2 className="text-lg font-semibold">Dostępne wnioski ({apps.length})</h2>
+        <p className="text-sm text-muted-foreground">
+          Wnioski dopuszczone do inwestorów — wyszukaj nieruchomość pod inwestycję.
+        </p>
+      </div>
 
       <Card>
         <CardContent className="pt-6 space-y-4">

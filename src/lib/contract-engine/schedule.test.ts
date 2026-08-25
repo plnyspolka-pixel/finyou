@@ -3,7 +3,13 @@
  * Każda mutacja psująca niezmiennik musi dać błąd blokujący.
  */
 import { describe, it, expect } from "vitest";
-import { walidujHarmonogram, payloadDoRaty, formatKwotaPL, parseKwota } from "./schedule";
+import {
+  walidujHarmonogram,
+  autonaprawHarmonogram,
+  payloadDoRaty,
+  formatKwotaPL,
+  parseKwota,
+} from "./schedule";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const clone = <T>(o: T): T => structuredClone(o);
@@ -120,6 +126,67 @@ describe("Walidacja harmonogramu (3.2)", () => {
     w.harmonogram.raty[0].rata_razem = "560,03";
     // suma odsetek nie jest sprawdzana wprost; rata_razem wciąż spójna → brak błędu
     expect(bledy(w)).toEqual([]);
+  });
+});
+
+// Harmonogram balonowy „po Kańkowskich": rata balonowa niższa o rozjazd
+// z zaokrągleń niż suma jej składników (kapitał + odsetki + prowizja).
+function warunkiBalonoweZRozjazdem(rozjazd: number): any {
+  const w = warunkiOk();
+  w.harmonogram.typ = "balonowy";
+  // składniki ostatniej raty: 500 + 5 + 50 = 555; rata_razem zaniżona o rozjazd
+  const zle = 555 - rozjazd;
+  w.harmonogram.raty[1].rata_razem = formatKwotaPL(zle);
+  w.harmonogram.kwota_raty_koncowej = {
+    cyframi: formatKwotaPL(zle),
+    slownie: "x",
+  };
+  return w;
+}
+
+describe("Autonaprawa rozjazdu groszowego (zmiana 4)", () => {
+  it("rozjazd 1 zł na racie balonowej → skorygowany, walidacja przechodzi", () => {
+    const w = warunkiBalonoweZRozjazdem(1);
+    expect(bledy(w).length).toBeGreaterThan(0); // przed autonaprawą: błąd spójności
+    const korekty = autonaprawHarmonogram(w);
+    expect(korekty.length).toBeGreaterThan(0);
+    expect(w.harmonogram.raty[1].rata_razem).toBe("555,00");
+    expect(w.harmonogram.kwota_raty_koncowej.cyframi).toBe("555,00");
+    expect(bledy(w)).toEqual([]); // fundament „suma rat = suma składników" przechodzi
+  });
+
+  it("korekta jest odnotowana w wyniku (o ile i gdzie)", () => {
+    const w = warunkiBalonoweZRozjazdem(1);
+    const korekty = autonaprawHarmonogram(w);
+    expect(korekty[0].kwota).toBeCloseTo(1);
+    expect(korekty[0].sciezka).toContain("raty[1].rata_razem");
+    expect(korekty[0].komunikat).toContain("Autonaprawa zaokrągleń");
+  });
+
+  it("rozjazd 500 zł → ZA DUŻY na zaokrąglenie, błąd konstrukcyjny zostaje", () => {
+    const w = warunkiBalonoweZRozjazdem(500);
+    const korekty = autonaprawHarmonogram(w);
+    expect(korekty).toEqual([]);
+    expect(bledy(w).length).toBeGreaterThan(0);
+  });
+
+  it("rozjazd w granicach tolerancji groszowej (≤ 5 gr) → nic do domykania", () => {
+    const w = warunkiBalonoweZRozjazdem(0.05);
+    expect(autonaprawHarmonogram(w)).toEqual([]);
+    expect(bledy(w)).toEqual([]);
+  });
+
+  it("rozjazd we wcześniejszej racie → nie domykamy (to nie zaokrąglenie)", () => {
+    const w = warunkiBalonoweZRozjazdem(1);
+    w.harmonogram.raty[0].rata_razem = "559,00"; // składniki: 560
+    expect(autonaprawHarmonogram(w)).toEqual([]);
+    expect(bledy(w).length).toBeGreaterThan(0);
+  });
+
+  it("pusty harmonogram → brak korekt", () => {
+    const w = warunkiOk();
+    w.harmonogram.raty = [];
+    expect(autonaprawHarmonogram(w)).toEqual([]);
   });
 });
 

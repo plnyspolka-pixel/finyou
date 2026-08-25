@@ -26,7 +26,8 @@ export const Route = createFileRoute("/inwestor")({
 const fullGroups: NavGroup[] = [
   {
     items: [
-      { to: "/inwestor", label: "Dostępne wnioski", icon: ListChecks, exact: true },
+      // Główny ekran panelu: agent czatowy AI + wyszukiwarka wniosków.
+      { to: "/inwestor", label: "Agent AI · wnioski", icon: Bot, exact: true },
       { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
       { to: "/inwestor/windykacja", label: "Windykacja", icon: Gavel },
       { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },

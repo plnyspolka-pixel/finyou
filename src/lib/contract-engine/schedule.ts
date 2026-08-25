@@ -16,6 +16,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Problem } from "./validator";
 import type { LoanCalcPayload } from "../loan-calc-pdf";
+import { amountToWordsPLN } from "../amount-to-words-pl";
 
 export const TOLERANCJA_GROSZOWA = 0.05;
 
@@ -132,6 +133,106 @@ function rozlozProwizje(prowizja: number[] | number, n: number): number[] {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+// ── autonaprawa rozjazdu groszowego (zmiana 4 po Kańkowskich) ──
+/**
+ * Wpis o dokonanej autokorekcie — informacja techniczna dla operatora,
+ * NIE trafia do treści umowy.
+ */
+export interface KorektaGroszowa {
+  sciezka: string;
+  komunikat: string;
+  /** O ile skorygowano ratę balonową (zł; dodatnia = podwyższono). */
+  kwota: number;
+}
+
+/**
+ * Tolerancja autonaprawy: do kilku groszy na ratę, łącznie 1–2 zł.
+ * (Rozjazd większy niż to pozostaje błędem konstrukcyjnym.)
+ */
+export function tolerancjaAutonaprawy(liczbaRat: number): number {
+  return Math.min(2, Math.max(1, liczbaRat * TOLERANCJA_GROSZOWA));
+}
+
+/**
+ * Autonaprawa rozjazdu groszowego (zmiana 4): gdy suma rat różni się od sumy
+ * składników (kapitał + odsetki + prowizja) o kwotę w granicach tolerancji
+ * zaokrągleń, silnik domyka różnicę na racie OSTATNIEJ (balonowej) — koryguje
+ * jej `rata_razem` (i `kwota_raty_koncowej` przy typie balonowym) tak, by suma
+ * zgadzała się co do grosza.
+ *
+ * Dotyczy WYŁĄCZNIE domknięcia zaokrągleń: jeśli rozjazd przekracza tolerancję
+ * albo rozjeżdżają się także raty wcześniejsze, niczego nie zmienia — realny
+ * błąd w danych ma zostać zgłoszony przez `walidujHarmonogram` (fundament
+ * „suma rat = suma składników" zostaje nienaruszony i po autonaprawie
+ * przechodzi).
+ *
+ * Mutuje `warunki` w miejscu. Zwraca listę dokonanych korekt (informacja
+ * techniczna dla operatora — nie klauzula, nie treść umowy).
+ */
+export function autonaprawHarmonogram(warunki: any, tolerancja?: number): KorektaGroszowa[] {
+  const h = warunki?.harmonogram ?? {};
+  const raty: any[] = h.raty ?? [];
+  if (raty.length === 0) return [];
+
+  const tol = tolerancja ?? tolerancjaAutonaprawy(raty.length);
+
+  // Rozjazd per rata: rata_razem − (kapitał + odsetki + prowizja).
+  const rozjazd = raty.map((r) => {
+    const skladniki = parseKwota(r.kapital) + parseKwota(r.odsetki) + parseKwota(r.prowizja);
+    const razem = parseKwota(r.rata_razem);
+    return Number.isNaN(skladniki) || Number.isNaN(razem) ? NaN : razem - skladniki;
+  });
+  if (rozjazd.some((x) => Number.isNaN(x))) return []; // niekompletne dane — nie ruszamy
+
+  // Raty wcześniejsze muszą się spinać same z siebie — inaczej to nie jest
+  // kwestia zaokrągleń, tylko błąd konstrukcyjny (zostawiamy walidatorowi).
+  const wczesniejszeOk = rozjazd
+    .slice(0, -1)
+    .every((x) => Math.abs(x) <= TOLERANCJA_GROSZOWA + 1e-9);
+  const rozjazdOstatnia = rozjazd[rozjazd.length - 1];
+  if (!wczesniejszeOk) return [];
+  if (Math.abs(rozjazdOstatnia) <= TOLERANCJA_GROSZOWA + 1e-9) return []; // nie ma czego domykać
+  if (Math.abs(rozjazdOstatnia) > tol + 1e-9) return []; // za dużo na zaokrąglenie — błąd zostaje
+
+  const ostatnia = raty[raty.length - 1];
+  const przed = parseKwota(ostatnia.rata_razem);
+  const po = round2(
+    parseKwota(ostatnia.kapital) + parseKwota(ostatnia.odsetki) + parseKwota(ostatnia.prowizja),
+  );
+  ostatnia.rata_razem = formatKwotaPL(po);
+
+  const korekty: KorektaGroszowa[] = [
+    {
+      sciezka: `warunki.harmonogram.raty[${raty.length - 1}].rata_razem`,
+      komunikat:
+        `Autonaprawa zaokrągleń: rata ostatnia (balonowa) skorygowana z ` +
+        `${formatKwotaPL(przed)} zł na ${formatKwotaPL(po)} zł ` +
+        `(różnica ${formatKwotaPL(po - przed)} zł), aby suma rat zgadzała się ` +
+        `z sumą składników co do grosza.`,
+      kwota: round2(po - przed),
+    },
+  ];
+
+  // Przy harmonogramie balonowym kwota raty końcowej z §2 musi podążyć za
+  // skorygowaną ratą — inaczej dokument byłby wewnętrznie sprzeczny.
+  if (h.typ === "balonowy" && h.kwota_raty_koncowej) {
+    const koncowa = parseKwota(h.kwota_raty_koncowej.cyframi);
+    if (!Number.isNaN(koncowa) && Math.abs(koncowa - po) > TOLERANCJA_GROSZOWA + 1e-9) {
+      h.kwota_raty_koncowej = {
+        cyframi: formatKwotaPL(po),
+        slownie: amountToWordsPLN(po) || h.kwota_raty_koncowej.slownie,
+      };
+      korekty.push({
+        sciezka: "warunki.harmonogram.kwota_raty_koncowej",
+        komunikat: `Autonaprawa zaokrągleń: kwota_raty_koncowej skorygowana z ${formatKwotaPL(koncowa)} zł na ${formatKwotaPL(po)} zł (spójnie z ratą balonową).`,
+        kwota: round2(po - koncowa),
+      });
+    }
+  }
+
+  return korekty;
 }
 
 // ── walidacja spójności harmonogramu (pkt 3.2) ─────────────────

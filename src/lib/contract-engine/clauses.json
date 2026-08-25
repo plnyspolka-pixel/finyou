@@ -163,6 +163,15 @@
       "podstawa_prawna": "art. 65 i art. 76 u.k.w.h."
     },
     {
+      "id": "ZAB_01c_wspolwlasnosc_ulamkowa",
+      "sekcja": "ZABEZPIECZENIA",
+      "order": 12,
+      "warunek": "ma_wspolwlasnosc_ulamkowa",
+      "tekst_pozycja": "Nieruchomość objęta księgą wieczystą nr {{n.nr_kw}} stanowi przedmiot współwłasności w częściach ułamkowych: {{n.wspolwlasnosc_opis}}. {{n.ulamkowa_hipoteka_zdanie}}.",
+      "iteruje": "nieruchomosci_ulamkowe",
+      "podstawa_prawna": "art. 195 k.c.; art. 65 u.k.w.h."
+    },
+    {
       "id": "ZAB_02_oproznione_miejsce",
       "sekcja": "ZABEZPIECZENIA",
       "order": 20,
@@ -284,6 +293,22 @@
       "order": 30,
       "warunek": true,
       "tekst": "{{wlasciciele_oznaczenie_zbiorcze}} {{wlasciciele_czasownik_oswiadcza}}, że {{wlasciciele_zaimek_przysluguje}} prawo własności nieruchomości stanowiących zabezpieczenie, że nieruchomości te — poza obciążeniami ujawnionymi w niniejszej Umowie — są wolne od praw i roszczeń osób trzecich, nie są przedmiotem postępowania egzekucyjnego (sądowego ani administracyjnego), postępowania o zniesienie współwłasności, działu spadku ani sporu co do stanu prawnego, a także że nie istnieją zaległości publicznoprawne mogące skutkować wpisem hipoteki przymusowej."
+    },
+    {
+      "id": "OSW_03b_stan_obciazen",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 31,
+      "warunek": "ma_obciazenia_ujawnione",
+      "tekst": "Strony zgodnie potwierdzają, że w księgach wieczystych nieruchomości stanowiących zabezpieczenie ujawnione są następujące wpisy (stan obciążeń):"
+    },
+    {
+      "id": "OSW_03c_stan_obciazen_pozycje",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 32,
+      "warunek": "ma_obciazenia_ujawnione",
+      "tekst_pozycja": "{{o.opis_wpisu}};",
+      "poziom": "podpunkt",
+      "iteruje": "obciazenia_wszystkie"
     },
     {
       "id": "OSW_04_brak_zaleglosci_publicznoprawnych",

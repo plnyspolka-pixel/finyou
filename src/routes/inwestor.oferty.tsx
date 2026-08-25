@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileSignature } from "lucide-react";
+import { FileSignature, FileDown } from "lucide-react";
+import { toast } from "sonner";
 import { formatPLN, offerStatusLabels, formatDate } from "@/lib/labels";
+import { downloadOfferPdf } from "@/lib/offer-pdf";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
@@ -121,21 +123,36 @@ function InwestorOferty() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {o.offer_status === "zaakceptowana_przez_klienta" && (
+                        <div className="flex justify-end gap-1.5">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() =>
-                              void navigate({
-                                to: "/inwestor/umowa/$offerId",
-                                params: { offerId: o.id },
-                              })
-                            }
+                            title="Pobierz PDF oferty z pełnym harmonogramem spłat"
+                            onClick={() => {
+                              if (!downloadOfferPdf(o)) {
+                                toast.error("Oferta nie ma kompletu danych do wygenerowania PDF.");
+                              }
+                            }}
                           >
-                            <FileSignature className="mr-1 h-3.5 w-3.5" />
-                            Umowa
+                            <FileDown className="mr-1 h-3.5 w-3.5" />
+                            PDF
                           </Button>
-                        )}
+                          {o.offer_status === "zaakceptowana_przez_klienta" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                void navigate({
+                                  to: "/inwestor/umowa/$offerId",
+                                  params: { offerId: o.id },
+                                })
+                              }
+                            >
+                              <FileSignature className="mr-1 h-3.5 w-3.5" />
+                              Umowa
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                     {o.loan_application && (

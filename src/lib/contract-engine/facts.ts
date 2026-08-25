@@ -48,6 +48,21 @@ export function rodzajZenski(imieNazwisko: string): boolean {
   return imieNazwisko.split(/\s+/)[0].trim().toLowerCase().endsWith("a");
 }
 
+// Nazwy rodzajów obciążeń z działów III/IV — do klauzuli o stanie obciążeń.
+const RODZAJ_OBCIAZENIA: Record<string, string> = {
+  hipoteka_umowna: "hipoteka umowna",
+  hipoteka_przymusowa: "hipoteka przymusowa",
+  sluzebnosc_osobista: "służebność osobista",
+  sluzebnosc_gruntowa: "służebność gruntowa",
+  dozywocie: "prawo dożywocia",
+  roszczenie: "roszczenie",
+  egzekucja_sadowa: "wzmianka o egzekucji sądowej",
+  egzekucja_administracyjna: "wzmianka o egzekucji administracyjnej",
+  najem_dzierzawa: "najem/dzierżawa",
+  zakaz_zbywania: "zakaz zbywania",
+  inne: "inne obciążenie",
+};
+
 const ORGAN_NAZWA: Record<string, string> = {
   zgromadzenie_wspolnikow: "zgromadzenia wspólników",
   walne_zgromadzenie: "walnego zgromadzenia",
@@ -112,11 +127,27 @@ export function opisReprezentacji(s: any): string {
   return "reprezentowana przez " + tresc;
 }
 
-export function oznaczenieStrony(s: any, pelne = true): string {
+export interface OznaczenieOpts {
+  /** Komparycja: strona jest jednym z rolników prowadzących WSPÓLNE gospodarstwo. */
+  wspolneGospodarstwo?: boolean;
+}
+
+export function oznaczenieStrony(s: any, pelne = true, opts?: OznaczenieOpts): string {
   if (s === null || s === undefined) return "";
   if (s.typ === "osoba_fizyczna") {
     const czesci: string[] = [String(s.imie_nazwisko).toUpperCase()];
     if (s.firma) czesci.push(`prowadzący działalność gospodarczą pod firmą ${s.firma}`);
+    else if (s.dzialalnosc === "gospodarstwo_rolne") {
+      // Zmiana 2 po Kańkowskich: rolnik prowadzący gospodarstwo — traktowany
+      // jak przedsiębiorca; przy wspólnym gospodarstwie NIP widnieje przy
+      // przedstawicielu (pole `nip` tej osoby), pozostali mają sam PESEL.
+      const prowadzacy = rodzajZenski(s.imie_nazwisko) ? "prowadząca" : "prowadzący";
+      czesci.push(
+        opts?.wspolneGospodarstwo
+          ? `rolnik ${prowadzacy} wspólne gospodarstwo rolne`
+          : `rolnik ${prowadzacy} gospodarstwo rolne`,
+      );
+    }
     if (!pelne) return String(s.imie_nazwisko).toUpperCase();
     czesci.push(`adres: ${s.adres}`);
     const ident: string[] = [`PESEL ${s.pesel}`];
@@ -287,10 +318,21 @@ export function zbudujFakty(d: any): Record<string, any> {
   for (const n of nier) {
     for (const o of n.obciazenia ?? []) {
       const o2 = { ...o, nr_kw: n.nr_kw, nieruchomosc_id: n.id };
+      // Czytelny opis wpisu do klauzuli o stanie obciążeń (zmiana 3 po
+      // Kańkowskich): rodzaj (w tym hipoteka PRZYMUSOWA), wierzyciel
+      // instytucjonalny (KRUS, ZUS, US, Skarb Państwa…), kwota, treść wpisu.
+      // Silnik tylko opisuje, co jest w księdze — bez ocen i ostrzeżeń.
+      o2.opis_wpisu =
+        `w dziale ${o2.dzial} księgi wieczystej nr ${o2.nr_kw}: ` +
+        (RODZAJ_OBCIAZENIA[o2.rodzaj] ?? o2.rodzaj) +
+        (o2.wierzyciel ? ` na rzecz ${o2.wierzyciel}` : "") +
+        (o2.kwota ? ` na kwotę ${o2.kwota} zł` : "") +
+        ` — ${o2.opis}`;
       obcAll.push(o2);
     }
   }
   f.obciazenia_wszystkie = obcAll;
+  f.ma_obciazenia_ujawnione = obcAll.length > 0;
   f.obciazenia_wykreslenie_przed = obcAll.filter(
     (o) => o.sposob_usuniecia === "wykreslenie_przed_wyplata",
   );
@@ -315,8 +357,10 @@ export function zbudujFakty(d: any): Record<string, any> {
     }
     const wl = wlascicielObiekt(d, n);
     if (wl && wl.typ === "osoba_fizyczna" && wl.ustroj_majatkowy === "wspolnosc_ustawowa") {
-      const ok =
-        w && w.rodzaj === "laczna_malzenska" && isSubset(peselSet(w.wspolwlasciciele), peseleP);
+      // Logika konstrukcyjna (kto jest stroną): gdy wszyscy współwłaściciele —
+      // przy współwłasności łącznej małżeńskiej ORAZ ułamkowej — są zarazem
+      // pożyczkobiorcami, odrębna zgoda małżonka nie jest generowana.
+      const ok = !!w && isSubset(peselSet(w.wspolwlasciciele), peseleP);
       if (!ok) wymagaMalzonka = true;
     }
   }
@@ -330,6 +374,32 @@ export function zbudujFakty(d: any): Record<string, any> {
       n.wspolwlasnosc.wspolwlasciciele.length > 1
     );
   });
+
+  // --- współwłasność ułamkowa (zmiana 1 po Kańkowskich) ---
+  // Renderer opisuje udziały w komparycji i w sekcji zabezpieczeń; gdy wszyscy
+  // współwłaściciele przystępują do Umowy, hipoteka obciąża całą nieruchomość.
+  // Żadnej reguły blokującej — silnik składa umowę z takimi stronami, jakie
+  // dostanie; decyzja, czy brać taką nieruchomość, należy do człowieka.
+  f.nieruchomosci_ulamkowe = nier.filter((n) => n.wspolwlasnosc?.rodzaj === "ulamkowa");
+  f.ma_wspolwlasnosc_ulamkowa = f.nieruchomosci_ulamkowe.length > 0;
+  for (const n of f.nieruchomosci_ulamkowe) {
+    const wspolwl: any[] = n.wspolwlasnosc.wspolwlasciciele ?? [];
+    const opisy = wspolwl.map((w: any) => {
+      let t = String(w.imie_nazwisko ?? "");
+      if (w.pesel) t += ` (PESEL ${w.pesel})`;
+      if (w.udzial) t += ` — w udziale wynoszącym ${w.udzial} części`;
+      return t;
+    });
+    n.wspolwlasnosc_opis =
+      opisy.length > 1
+        ? opisy.slice(0, -1).join(", ") + " oraz " + opisy[opisy.length - 1]
+        : (opisy[0] ?? "");
+    const wszyscyStronami =
+      wspolwl.length > 0 && isSubset(peselSet(wspolwl), peseleP) && peseleP.size > 0;
+    n.ulamkowa_hipoteka_zdanie = wszyscyStronami
+      ? "Wszyscy współwłaściciele przystępują do niniejszej Umowy i wspólnie obejmują żądaniem ustanowienia hipoteki całą nieruchomość — hipoteka obciąża całą nieruchomość, a nie poszczególne udziały"
+      : "Oświadczenie o ustanowieniu hipoteki obejmuje udziały we współwłasności przysługujące osobom składającym to oświadczenie";
+  }
 
   // --- poręczyciel ---
   const por = d.porecziciel ?? null;
