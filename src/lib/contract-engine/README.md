@@ -20,6 +20,46 @@ w umowie bez poręczyciela.
 | `fixtures/` | 5 scenariuszy testowych, kopie 1:1. | `tests/` |
 | `contract-engine.test.ts` | Port całego `test_suite.py` (194 asercje, w tym 33 negatywne). | `test_suite.py` |
 
+## Zmiany po sprawie Kańkowskich (zlecenie)
+
+Cztery zmiany — i tylko te cztery. Zasada nadrzędna zachowana: silnik jest
+narzędziem konstrukcyjnym, nie doradcą — **żadnych nowych reguł oceniających
+ryzyko prawne**; kontrole spójności konstrukcyjnej zostają.
+
+1. **Autonaprawa rozjazdu groszowego** (`autonaprawHarmonogram` w
+   `schedule.ts`): rozjazd sumy rat względem sumy składników w granicach
+   tolerancji zaokrągleń (kilka groszy na ratę, łącznie 1–2 zł) jest domykany
+   na racie ostatniej (balonowej); korekta jest odnotowana w wyniku
+   (`autokorekty` w `generate-umowa.functions.ts`), nie w treści umowy.
+   Większy rozjazd pozostaje błędem konstrukcyjnym.
+2. **Współwłasność ułamkowa przywrócona**: `wspolwlasnosc.rodzaj = "ulamkowa"`
+   + pole `udzial` przy współwłaścicielu. Komparycja opisuje udziały
+   („w udziale wynoszącym 1/2 części"), klauzula `ZAB_01c` opisuje, że hipoteka
+   obciąża całą nieruchomość, gdy wszyscy współwłaściciele przystępują do
+   Umowy. Bez reguły blokującej. Gdy współwłaściciel jest zarazem
+   pożyczkobiorcą, żadna zgoda od niego się nie generuje.
+3. **Rolnik prowadzący gospodarstwo**: `dzialalnosc = "gospodarstwo_rolne"`
+   przy osobie fizycznej; NIP gospodarstwa przy jednym ze współrolników
+   (przedstawicielu). Komparycja: „rolnicy prowadzący wspólne gospodarstwo
+   rolne". Klauzula niekonsumencka (OSW_01) obejmuje ten status.
+4. **Hipoteki przymusowe w dziale IV**: klauzula o stanie obciążeń
+   (`OSW_03b/OSW_03c`) opisuje wpisy z działów III/IV — rodzaj (umowna /
+   przymusowa), wierzyciel instytucjonalny (KRUS, ZUS, US, Skarb Państwa),
+   kwota, treść wpisu. Tylko opis stanu księgi — bez ostrzeżeń o
+   pierwszeństwie.
+
+## Agent umowy (AI) — główny ekran /inwestor
+
+Silnik jest uzbrojony w **osobnego agenta czatowego tylko do wypełniania
+umowy** (`umowa-agent.functions.ts` + jądro `umowa-agent-core.ts`, panel
+`components/inwestor/umowa-agent-panel.tsx` na głównym ekranie `/inwestor`).
+Architektura zgodna z filozofią silnika: AI zwraca wyłącznie łatkę danych pod
+schemat `UmowaData` (deep-merge), a kod deterministycznie dolicza kwoty
+słownie, identyfikatory nieruchomości i harmonogram rat
+(`buildEngineSchedule`), domyka grosze autonaprawą, waliduje i składa
+podgląd/.docx tymi samymi funkcjami co kreator. Agent nie dotyka treści
+klauzul i niczego nie liczy sam.
+
 ## Weryfikacja wierności
 
 Port był sprawdzany względem oryginału (Python) jako wyroczni:

@@ -24,13 +24,15 @@ export { waliduj, walidujReguly, walidujSchemat } from "./validator";
 export type { Problem, Poziom } from "./validator";
 export {
   walidujHarmonogram,
+  autonaprawHarmonogram,
+  tolerancjaAutonaprawy,
   payloadDoRaty,
   formatujRaty,
   formatKwotaPL,
   parseKwota,
   TOLERANCJA_GROSZOWA,
 } from "./schedule";
-export type { RataLiczbowa, RataSchema } from "./schedule";
+export type { RataLiczbowa, RataSchema, KorektaGroszowa } from "./schedule";
 export { mapujKwDoNieruchomosci } from "./kw-mapper";
 export type { KwMapContext, KwMapResult } from "./kw-mapper";
 export { buildEngineSchedule } from "./loan-schedule";
@@ -42,3 +44,10 @@ export type { KlauzulaMeta } from "./clause-select";
 export { buildUmowaData, profileToCalcPayload } from "./profile-to-umowa";
 export type { BuildUmowaOptions } from "./profile-to-umowa";
 export { buildUmowaDocx, buildUmowaDocumentXml, harmonogramZUmowy } from "./umowa-docx";
+export {
+  scalPatch,
+  przetworzSzkic,
+  uzupelnijHarmonogram,
+  uzupelnijSlownie,
+  uzupelnijIdNieruchomosci,
+} from "./umowa-agent-core";

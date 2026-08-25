@@ -105,6 +105,11 @@ const osobaFizycznaBase = {
   typ: z.literal("osoba_fizyczna"),
   imie_nazwisko: z.string().min(3),
   firma: nullableStr,
+  // Rolnik prowadzący gospodarstwo rolne (zmiana 2 po Kańkowskich) jest
+  // traktowany jak przedsiębiorca (umowa niekonsumencka). NIP gospodarstwa
+  // może być przypisany jednemu ze współrolników (przedstawicielowi) —
+  // pozostali mają sam PESEL.
+  dzialalnosc: z.enum(["gospodarstwo_rolne"]).nullable().optional(),
   pesel,
   nip,
   regon,
@@ -210,13 +215,18 @@ const obciazenie = z
 
 const wspolwlasnosc = z
   .object({
-    rodzaj: z.enum(["laczna_malzenska"]),
+    // `ulamkowa` przywrócona (zmiana 1 po Kańkowskich): bywa współwłasność
+    // ½+½, gdzie wszyscy współwłaściciele są pożyczkobiorcami. Silnik nie
+    // ocenia stron — składa umowę z takimi, jakie dostanie.
+    rodzaj: z.enum(["laczna_malzenska", "ulamkowa"]),
     wspolwlasciciele: z
       .array(
         z
           .object({
             imie_nazwisko: z.string(),
             pesel: pesel.nullable().optional(),
+            // Udział we współwłasności ułamkowej, np. "1/2" — do komparycji.
+            udzial: nullableStr,
           })
           .strict(),
       )

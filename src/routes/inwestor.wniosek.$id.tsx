@@ -13,6 +13,7 @@ import {
   Send,
   MessageSquare,
   FileText,
+  FileDown,
   ExternalLink,
   Eye,
   AlertTriangle,
@@ -28,6 +29,7 @@ import { KwContentSection } from "@/components/kw-content-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { formatPLN } from "@/lib/loan-math";
+import { downloadOfferPdf } from "@/lib/offer-pdf";
 import { CLIENT_FILES_BUCKET, CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 import { signStoragePath } from "@/lib/property-photos";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
@@ -195,6 +197,7 @@ function InwestorWniosek() {
         rata: r.rata,
         kapital: r.kap,
         odsetki: r.ods,
+        prowizja: r.prow ?? 0,
         saldo: r.saldo,
       })) as any,
       investor_note: note || null,
@@ -411,6 +414,35 @@ function InwestorWniosek() {
         >
           <MessageSquare className="mr-2 h-4 w-4" />
           Czat z klientem
+        </Button>
+        <Button
+          variant="outline"
+          disabled={!calc || !calc.amount || !calc.months}
+          onClick={() => {
+            if (!calc) return;
+            const ok = downloadOfferPdf({
+              proposed_amount: calc.amount,
+              period_months: calc.months,
+              expected_yearly_yield: calc.annualRate,
+              commission: calc.commissionPln,
+              estimated_monthly_payment: calc.cappedRata,
+              estimated_total_cost: calc.totalToRepay,
+              balloon_amount: calc.balloon > 0 ? calc.balloon : null,
+              schedule: calc.schedule.map((r) => ({
+                idx: r.idx,
+                date: r.date,
+                rata: r.rata,
+                kapital: r.kap,
+                odsetki: r.ods,
+                prowizja: r.prow ?? 0,
+                saldo: r.saldo,
+              })),
+            });
+            if (!ok) toast.error("Uzupełnij parametry oferty w kalkulatorze");
+          }}
+        >
+          <FileDown className="mr-2 h-4 w-4" />
+          PDF oferty (pełny harmonogram)
         </Button>
         <Button variant="outline" disabled={submitting} onClick={() => void submit("szkic")}>
           Zapisz jako szkic

@@ -22,7 +22,7 @@ import type { ClientProfile } from "@/lib/client-profile-types";
 import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
 import { buildUmowaData, profileToCalcPayload, type BuildUmowaOptions } from "./profile-to-umowa";
 import { waliduj } from "./validator";
-import { walidujHarmonogram } from "./schedule";
+import { autonaprawHarmonogram, walidujHarmonogram, type KorektaGroszowa } from "./schedule";
 import { renderuj } from "./renderer";
 import { formatuj } from "./formatter";
 import { bibliotekaBez } from "./clause-select";
@@ -77,7 +77,7 @@ function zbudujIzweryfikuj(profile: ClientProfile, input: UmowaGenInput) {
       komunikat:
         "Brak danych oferty do policzenia harmonogramu (kwota, okres, maks. rata, data wypłaty). Uzupełnij ofertę w profilu.",
     };
-    return { calc: null, umowa: null, problemy: [problem], blocked: true };
+    return { calc: null, umowa: null, problemy: [problem], blocked: true, autokorekty: [] };
   }
 
   const opts: BuildUmowaOptions = {
@@ -89,9 +89,14 @@ function zbudujIzweryfikuj(profile: ClientProfile, input: UmowaGenInput) {
   };
   const umowa = buildUmowaData(profile, calc, opts);
 
+  // Zmiana 4 (po Kańkowskich): rozjazd groszowy z zaokrągleń domykamy na racie
+  // balonowej PRZED walidacją. Korekta jest odnotowana w wyniku (informacja
+  // techniczna dla operatora), nie w treści umowy.
+  const autokorekty: KorektaGroszowa[] = autonaprawHarmonogram(umowa.warunki);
+
   const problemy: Problem[] = [...waliduj(umowa), ...walidujHarmonogram(umowa.warunki)];
   const blocked = problemy.some((p) => p.poziom === "BLAD");
-  return { calc, umowa, problemy, blocked };
+  return { calc, umowa, problemy, blocked, autokorekty };
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -103,7 +108,7 @@ export const previewUmowaFromEngine = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => inputSchema.parse(input) as UmowaGenInput)
   .handler(async ({ data, context }) => {
     const profile = await ladujProfil(context.supabase, data.profileId);
-    const { umowa, problemy, blocked } = zbudujIzweryfikuj(profile, data);
+    const { umowa, problemy, blocked, autokorekty } = zbudujIzweryfikuj(profile, data);
 
     let previewText = "";
     if (umowa && !blocked) {
@@ -118,7 +123,12 @@ export const previewUmowaFromEngine = createServerFn({ method: "POST" })
       }
     }
 
-    return { previewText, problemy, blocked: blocked || problemy.some((p) => p.poziom === "BLAD") };
+    return {
+      previewText,
+      problemy,
+      autokorekty,
+      blocked: blocked || problemy.some((p) => p.poziom === "BLAD"),
+    };
   });
 
 // ─────────────────────────────────────────────────────────────────────
@@ -131,11 +141,11 @@ export const generateUmowaFromEngine = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const profile = await ladujProfil(supabase, data.profileId);
-    const { umowa, problemy, blocked } = zbudujIzweryfikuj(profile, data);
+    const { umowa, problemy, blocked, autokorekty } = zbudujIzweryfikuj(profile, data);
 
     // Brama: przy błędach blokujących nie generujemy pliku — zwracamy braki.
     if (!umowa || blocked) {
-      return { docxPath: null, signedUrl: null, problemy, blocked: true };
+      return { docxPath: null, signedUrl: null, problemy, autokorekty, blocked: true };
     }
 
     // Render może rzucić BladPola dla pola szablonu, które przechodzi schemat
@@ -151,7 +161,7 @@ export const generateUmowaFromEngine = createServerFn({ method: "POST" })
         sciezka: "render",
         komunikat: `Nie udało się złożyć dokumentu: ${e?.message ?? e}`,
       });
-      return { docxPath: null, signedUrl: null, problemy, blocked: true };
+      return { docxPath: null, signedUrl: null, problemy, autokorekty, blocked: true };
     }
 
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
@@ -189,5 +199,11 @@ export const generateUmowaFromEngine = createServerFn({ method: "POST" })
       .from(CLIENT_FILES_BUCKET)
       .createSignedUrl(outPath, 3600);
 
-    return { docxPath: outPath, signedUrl: signed?.signedUrl ?? null, problemy, blocked: false };
+    return {
+      docxPath: outPath,
+      signedUrl: signed?.signedUrl ?? null,
+      problemy,
+      autokorekty,
+      blocked: false,
+    };
   });

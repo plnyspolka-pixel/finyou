@@ -153,7 +153,16 @@ export type LoanCalculatorState = {
   totalKap: number;
   totalCost: number;
   totalToRepay: number;
-  schedule: { idx: number; date: string; rata: number; kap: number; ods: number; saldo: number }[];
+  schedule: {
+    idx: number;
+    date: string;
+    rata: number;
+    kap: number;
+    ods: number;
+    /** Część prowizji w racie (model silnika umów). */
+    prow?: number;
+    saldo: number;
+  }[];
 };
 
 type Props = {
@@ -484,8 +493,8 @@ export function LoanCalculator({
   useEffect(() => {
     if (!commissionTouched.current) {
       // Maksymalna prowizja bez wątpliwości prawnych = limit MPKK (% kwoty pożyczki),
-      // przycięta do zakresu suwaka (0–30%).
-      const mpkkPct = Math.min(30, Math.max(0, 10 + 10 * (months / 12)));
+      // przycięta do ustawowego pułapu MPKK (45% kwoty); suwak pozwala ręcznie do 50%.
+      const mpkkPct = Math.min(45, Math.max(0, 10 + 10 * (months / 12)));
       const rounded = Math.floor(mpkkPct * 2) / 2; // krok 0,5%
       if (Math.abs(commissionPct - rounded) > 1e-9) setCommissionPct(rounded);
     }
@@ -764,7 +773,9 @@ export function LoanCalculator({
             )}
             <span className="text-white/70">
               Maks. odsetki ustawowe:{" "}
-              <b className="tabular-nums whitespace-nowrap text-right text-emerald-300">{MAX_INTEREST_RATE.toFixed(2)}%</b>
+              <b className="tabular-nums whitespace-nowrap text-right text-emerald-300">
+                {MAX_INTEREST_RATE.toFixed(2)}%
+              </b>
             </span>
             {ratesQ.data?.effectiveFrom && (
               <span className="text-xs text-white/60 ml-auto">
@@ -940,14 +951,18 @@ export function LoanCalculator({
               <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Do wypłaty klientowi (pełna kwota)</span>
-                  <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(disbursedOnHand)}</b>
+                  <b className="tabular-nums whitespace-nowrap text-right">
+                    {formatPLN(disbursedOnHand)}
+                  </b>
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">
                     Realny wkład gotówkowy inwestora
                     {internalOperatorMode && " (z prowizją operatora)"}
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right text-primary">{formatPLN(investorCashOut)}</b>
+                  <b className="tabular-nums whitespace-nowrap text-right text-primary">
+                    {formatPLN(investorCashOut)}
+                  </b>
                 </div>
               </div>
             </div>
@@ -1034,9 +1049,9 @@ export function LoanCalculator({
               </div>
               <Slider
                 min={0}
-                max={30}
+                max={50}
                 step={0.5}
-                value={[Math.min(30, Math.max(0, commissionPct))]}
+                value={[Math.min(50, Math.max(0, commissionPct))]}
                 onValueChange={(v) => setCommissionPctTouched(v[0])}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
@@ -1048,7 +1063,7 @@ export function LoanCalculator({
                 ) : (
                   <span />
                 )}
-                <span>30%</span>
+                <span>50%</span>
               </div>
             </div>
 
@@ -1145,13 +1160,17 @@ export function LoanCalculator({
                       <InfoTip text="Wynagrodzenie operatora. Klient dostaje na nią fakturę VAT od Finance You. Klient spłaca ją w ratach, a przez to wraca ona do inwestora. Podnosi wkład gotówkowy inwestora na starcie, ale jest neutralna dla jego zysku. Nie wlicza się do limitu MPKK." />
                     )}
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(financeYouFeePln)}</b>
+                  <b className="tabular-nums whitespace-nowrap text-right">
+                    {formatPLN(financeYouFeePln)}
+                  </b>
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">
                     Kapitał pożyczki (od którego liczone są odsetki)
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(grossPrincipal)}</b>
+                  <b className="tabular-nums whitespace-nowrap text-right">
+                    {formatPLN(grossPrincipal)}
+                  </b>
                 </div>
               </div>
             )}
@@ -1184,7 +1203,9 @@ export function LoanCalculator({
                       <InfoTip text="Pełna rata annuitetowa wyliczona od kwoty pożyczki i oprocentowania." />
                     )}
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(schedule.nominalRata)}</b>
+                  <b className="tabular-nums whitespace-nowrap text-right">
+                    {formatPLN(schedule.nominalRata)}
+                  </b>
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground flex items-center gap-1">
@@ -1193,7 +1214,9 @@ export function LoanCalculator({
                       <InfoTip text="Jednorazowa spłata nadwyżki kapitału na koniec umowy, gdy rata miesięczna jest ograniczona limitem." />
                     )}
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(schedule.balloon)}</b>
+                  <b className="tabular-nums whitespace-nowrap text-right">
+                    {formatPLN(schedule.balloon)}
+                  </b>
                 </div>
               </div>
               {schedule.balloon > 0 && (
@@ -1402,11 +1425,15 @@ export function LoanCalculator({
           <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
             <div className="flex justify-between gap-3">
               <span>Kwota pożyczki (kapitał, wypłacana klientowi w całości)</span>
-              <b className="tabular-nums whitespace-nowrap text-right text-emerald-300">{formatPLN(disbursedOnHand)}</b>
+              <b className="tabular-nums whitespace-nowrap text-right text-emerald-300">
+                {formatPLN(disbursedOnHand)}
+              </b>
             </div>
             <div className="flex justify-between gap-3">
               <span>Odsetki razem</span>
-              <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(schedule.totalOds)}</b>
+              <b className="tabular-nums whitespace-nowrap text-right">
+                {formatPLN(schedule.totalOds)}
+              </b>
             </div>
 
             <div className="flex justify-between gap-3">
@@ -1414,7 +1441,9 @@ export function LoanCalculator({
                 Prowizja dla inwestora{" "}
                 <span className="text-xs text-white/60">(koszt pozaodsetkowy)</span>
               </span>
-              <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(commissionPln)}</b>
+              <b className="tabular-nums whitespace-nowrap text-right">
+                {formatPLN(commissionPln)}
+              </b>
             </div>
             {internalOperatorMode && (
               <>
@@ -1422,7 +1451,9 @@ export function LoanCalculator({
                   <span className="pl-3">
                     ↳ prowizja operatora ({operatorCommissionPctClamped.toFixed(1)}%)
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right text-amber-200">{formatPLN(operatorCommissionPln)}</b>
+                  <b className="tabular-nums whitespace-nowrap text-right text-amber-200">
+                    {formatPLN(operatorCommissionPln)}
+                  </b>
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="pl-3">↳ prowizja netto inwestora</span>
@@ -1440,7 +1471,9 @@ export function LoanCalculator({
                     (koszt klienta, FV od Finance You — kredytowana do kapitału)
                   </span>
                 </span>
-                <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(financeYouFeePln)}</b>
+                <b className="tabular-nums whitespace-nowrap text-right">
+                  {formatPLN(financeYouFeePln)}
+                </b>
               </div>
             )}
 
@@ -1473,14 +1506,18 @@ export function LoanCalculator({
                   {hideFinanceYouFee ? "" : "(na rękę dla klienta + prowizja FY do Finance You)"}
                 </span>
               </span>
-              <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(investorCashOut)}</b>
+              <b className="tabular-nums whitespace-nowrap text-right">
+                {formatPLN(investorCashOut)}
+              </b>
             </div>
             <div className="flex justify-between gap-3">
               <span>
                 Zysk inwestora{" "}
                 <span className="text-xs text-white/60">(odsetki + prowizja inwestora netto)</span>
               </span>
-              <b className="tabular-nums whitespace-nowrap text-right text-emerald-300">{formatPLN(investorProfit)}</b>
+              <b className="tabular-nums whitespace-nowrap text-right text-emerald-300">
+                {formatPLN(investorProfit)}
+              </b>
             </div>
             <div className="flex justify-between gap-3 md:col-span-2 border-t border-white/15 pt-2">
               <span>Łączna kwota do spłaty (raty z harmonogramu)</span>
@@ -1663,7 +1700,9 @@ export function LoanCalculator({
                   <div className="rounded-md border border-white/15 bg-white/[0.05] p-3 text-sm grid gap-1.5 sm:grid-cols-2">
                     <div className="flex justify-between gap-3">
                       <span className="text-white/70">LTV (kwota pożyczki / wartość)</span>
-                      <b className="tabular-nums whitespace-nowrap text-right">{ltvPct.toFixed(1)}%</b>
+                      <b className="tabular-nums whitespace-nowrap text-right">
+                        {ltvPct.toFixed(1)}%
+                      </b>
                     </div>
                     <div className="flex justify-between gap-3">
                       <span className="text-white/70">Próg 5% licytacji (art. 952¹ § 2 KPC)</span>
@@ -1675,13 +1714,17 @@ export function LoanCalculator({
                     </div>
                     <div className="flex justify-between gap-3">
                       <span className="text-white/70">I licytacja — cena wywołania (3/4)</span>
-                      <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(firstAuctionPln)}</b>
+                      <b className="tabular-nums whitespace-nowrap text-right">
+                        {formatPLN(firstAuctionPln)}
+                      </b>
                     </div>
                     <div className="flex justify-between gap-3">
                       <span className="text-white/70">
                         Wartość „po komorniku" (2/3 — II licytacja / przejęcie)
                       </span>
-                      <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(secondAuctionPln)}</b>
+                      <b className="tabular-nums whitespace-nowrap text-right">
+                        {formatPLN(secondAuctionPln)}
+                      </b>
                     </div>
                     <div className="flex justify-between gap-3 sm:col-span-2 border-t border-white/15 pt-1.5">
                       <span className="text-white/70">
@@ -1846,19 +1889,27 @@ export function LoanCalculator({
                       <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
                         <div className="flex justify-between gap-3">
                           <span className="text-muted-foreground">Do wypłaty na rękę</span>
-                          <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(onHand)}</b>
+                          <b className="tabular-nums whitespace-nowrap text-right">
+                            {formatPLN(onHand)}
+                          </b>
                         </div>
                         <div className="flex justify-between gap-3">
                           <span className="text-muted-foreground">Rata miesięczna</span>
-                          <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(schedule.cappedRata)}</b>
+                          <b className="tabular-nums whitespace-nowrap text-right">
+                            {formatPLN(schedule.cappedRata)}
+                          </b>
                         </div>
                         <div className="flex justify-between gap-3">
                           <span className="text-muted-foreground">Okres</span>
-                          <b className="tabular-nums whitespace-nowrap text-right">{months} mies.</b>
+                          <b className="tabular-nums whitespace-nowrap text-right">
+                            {months} mies.
+                          </b>
                         </div>
                         <div className="flex justify-between gap-3">
                           <span className="text-muted-foreground">Łączna kwota do spłaty</span>
-                          <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(totalToRepay)}</b>
+                          <b className="tabular-nums whitespace-nowrap text-right">
+                            {formatPLN(totalToRepay)}
+                          </b>
                         </div>
                       </div>
                     </div>
@@ -1975,9 +2026,15 @@ export function LoanCalculator({
                     <TableRow key={r.idx} className="border-white/10 hover:bg-white/5">
                       <TableCell className="whitespace-nowrap text-white/90">{r.idx}</TableCell>
                       <TableCell className="whitespace-nowrap text-white/90">{r.date}</TableCell>
-                      <TableCell className="tabular-nums whitespace-nowrap text-white">{formatPLN(r.rata)}</TableCell>
-                      <TableCell className="tabular-nums whitespace-nowrap text-white">{formatPLN(r.kap)}</TableCell>
-                      <TableCell className="tabular-nums whitespace-nowrap text-white">{formatPLN(r.ods)}</TableCell>
+                      <TableCell className="tabular-nums whitespace-nowrap text-white">
+                        {formatPLN(r.rata)}
+                      </TableCell>
+                      <TableCell className="tabular-nums whitespace-nowrap text-white">
+                        {formatPLN(r.kap)}
+                      </TableCell>
+                      <TableCell className="tabular-nums whitespace-nowrap text-white">
+                        {formatPLN(r.ods)}
+                      </TableCell>
                       <TableCell className="tabular-nums whitespace-nowrap text-white">
                         {formatPLN(r.prow ?? 0)}
                       </TableCell>

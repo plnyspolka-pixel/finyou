@@ -11,7 +11,13 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ewaluujWarunek, pobierzSciezke, type Ctx } from "./conditions";
-import { listaPozyczkobiorcow, oznaczenieStrony, ROLA_NAZWA, zbudujFakty } from "./facts";
+import {
+  listaPozyczkobiorcow,
+  oznaczenieStrony,
+  rodzajZenski,
+  ROLA_NAZWA,
+  zbudujFakty,
+} from "./facts";
 import biblioteka from "./clauses.json";
 
 export interface Ustep {
@@ -210,21 +216,58 @@ function renderujKlauzule(kl: any, ctx: Ctx, fakty: Record<string, any>): Ustep[
   return out;
 }
 
+/**
+ * Udziały we współwłasności ułamkowej (zmiana 1 po Kańkowskich) — dopisek do
+ * komparycji przy osobie będącej współwłaścicielem w częściach ułamkowych.
+ */
+function opisUdzialowUlamkowych(d: any, p: any): string {
+  if (!p || p.typ !== "osoba_fizyczna") return "";
+  const czesci: string[] = [];
+  for (const n of d.nieruchomosci ?? []) {
+    const w = n.wspolwlasnosc;
+    if (w?.rodzaj !== "ulamkowa") continue;
+    for (const ws of w.wspolwlasciciele ?? []) {
+      if (ws?.pesel && ws.pesel === p.pesel && ws.udzial) {
+        const rola = rodzajZenski(p.imie_nazwisko) ? "współwłaścicielka" : "współwłaściciel";
+        czesci.push(
+          `${rola} w udziale wynoszącym ${ws.udzial} części nieruchomości objętej księgą wieczystą nr ${n.nr_kw}`,
+        );
+      }
+    }
+  }
+  return czesci.length ? ", " + czesci.join(", ") : "";
+}
+
 function komparycja(d: any): Dokument["komparycja"] {
   const poz = listaPozyczkobiorcow(d);
   const rolaPb = poz.length > 1 ? "Pożyczkobiorcami" : "Pożyczkobiorcą";
+  // Zmiana 2 po Kańkowskich: dwoje (lub więcej) rolników wśród pożyczkobiorców
+  // komparycja opisuje jako „rolników prowadzących wspólne gospodarstwo rolne".
+  const wspolneGospodarstwo =
+    poz.filter((p) => p?.typ === "osoba_fizyczna" && p.dzialalnosc === "gospodarstwo_rolne")
+      .length > 1;
   const strony: Strona[] = poz.map((p) => ({
     rola: rolaPb,
-    opis: oznaczenieStrony(p),
+    opis:
+      oznaczenieStrony(p, true, {
+        wspolneGospodarstwo:
+          wspolneGospodarstwo &&
+          p?.typ === "osoba_fizyczna" &&
+          p.dzialalnosc === "gospodarstwo_rolne",
+      }) + opisUdzialowUlamkowych(d, p),
     grupa: "pozyczkobiorca",
   }));
   if (d.porecziciel) {
-    strony.push({ rola: "Poręczycielem", opis: oznaczenieStrony(d.porecziciel) });
+    strony.push({
+      rola: "Poręczycielem",
+      opis: oznaczenieStrony(d.porecziciel) + opisUdzialowUlamkowych(d, d.porecziciel),
+    });
   }
   const widziani = new Set<string>();
   for (const n of d.nieruchomosci) {
     if (n.wlasciciel_ref === "osoba_trzecia" && n.wlasciciel_dane) {
-      const opis = oznaczenieStrony(n.wlasciciel_dane);
+      const opis =
+        oznaczenieStrony(n.wlasciciel_dane) + opisUdzialowUlamkowych(d, n.wlasciciel_dane);
       if (!widziani.has(opis)) {
         widziani.add(opis);
         strony.push({ rola: "Właścicielem nieruchomości", opis });
