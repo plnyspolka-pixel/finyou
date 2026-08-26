@@ -245,7 +245,20 @@ export async function ensureLoanApplicationForLead(leadId: string): Promise<stri
     .eq("id", leadId)
     .maybeSingle();
   if (!lead) return null;
-  if (lead.loan_application_id) return lead.loan_application_id as string;
+  if (lead.loan_application_id) {
+    // Samonaprawa: dopnij do wniosku załączniki z wiadomości (Messenger/e-mail),
+    // które przyszły zanim wniosek istniał — inaczej listy pokazują „brak plików".
+    try {
+      const { backfillLeadAttachmentsToDocuments } = await import("./inbound-attachments.server");
+      await backfillLeadAttachmentsToDocuments({
+        leadId,
+        loanApplicationId: lead.loan_application_id as string,
+      });
+    } catch (e) {
+      console.error("[ensureLoanApp] attachments backfill error", e);
+    }
+    return lead.loan_application_id as string;
+  }
   // Sekwencja wychodzi na e-mail — bez e-maila nie ma sensu tworzyć stubu.
   if (!lead.email) return null;
 
@@ -305,5 +318,14 @@ export async function ensureLoanApplicationForLead(leadId: string): Promise<stri
     .from("leads")
     .update({ loan_application_id: loanId, client_id: clientId })
     .eq("id", leadId);
+
+  // Świeżo utworzony wniosek: przepnij załączniki, które klient przysłał
+  // wcześniej (leżały tylko w lead_communications.attachments / Storage).
+  try {
+    const { backfillLeadAttachmentsToDocuments } = await import("./inbound-attachments.server");
+    await backfillLeadAttachmentsToDocuments({ leadId, loanApplicationId: loanId });
+  } catch (e) {
+    console.error("[ensureLoanApp] attachments backfill error", e);
+  }
   return loanId;
 }
