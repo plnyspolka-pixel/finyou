@@ -5793,18 +5793,28 @@ export type Database = {
           bill_in: number | null
           bill_out: number | null
           created_at: string
+          credits_spent: number
           dzial_1o: string | null
           dzial_1s: string | null
           dzial_2: string | null
           dzial_3: string | null
           dzial_4: string | null
+          easymkw_job_id: string | null
+          easymkw_json: Json | null
+          easymkw_order_id: string | null
           fetched_at: string | null
+          first_ordered_at: string | null
           id: string
           kw_number: string
           last_error: string | null
+          last_order_at: string | null
           okladka: string | null
+          order_attempts: number
+          order_block_reason: string | null
+          order_blocked_at: string | null
           ordered_at: string | null
           ordered_by: string | null
+          provider: string
           status: string
           thumbnail_path: string | null
           updated_at: string
@@ -5813,18 +5823,28 @@ export type Database = {
           bill_in?: number | null
           bill_out?: number | null
           created_at?: string
+          credits_spent?: number
           dzial_1o?: string | null
           dzial_1s?: string | null
           dzial_2?: string | null
           dzial_3?: string | null
           dzial_4?: string | null
+          easymkw_job_id?: string | null
+          easymkw_json?: Json | null
+          easymkw_order_id?: string | null
           fetched_at?: string | null
+          first_ordered_at?: string | null
           id?: string
           kw_number: string
           last_error?: string | null
+          last_order_at?: string | null
           okladka?: string | null
+          order_attempts?: number
+          order_block_reason?: string | null
+          order_blocked_at?: string | null
           ordered_at?: string | null
           ordered_by?: string | null
+          provider?: string
           status?: string
           thumbnail_path?: string | null
           updated_at?: string
@@ -5833,18 +5853,28 @@ export type Database = {
           bill_in?: number | null
           bill_out?: number | null
           created_at?: string
+          credits_spent?: number
           dzial_1o?: string | null
           dzial_1s?: string | null
           dzial_2?: string | null
           dzial_3?: string | null
           dzial_4?: string | null
+          easymkw_job_id?: string | null
+          easymkw_json?: Json | null
+          easymkw_order_id?: string | null
           fetched_at?: string | null
+          first_ordered_at?: string | null
           id?: string
           kw_number?: string
           last_error?: string | null
+          last_order_at?: string | null
           okladka?: string | null
+          order_attempts?: number
+          order_block_reason?: string | null
+          order_blocked_at?: string | null
           ordered_at?: string | null
           ordered_by?: string | null
+          provider?: string
           status?: string
           thumbnail_path?: string | null
           updated_at?: string
@@ -6025,6 +6055,42 @@ export type Database = {
           section_label?: string
           success?: boolean
           url?: string | null
+        }
+        Relationships: []
+      }
+      kw_quota_state: {
+        Row: {
+          blocked_until: string | null
+          id: boolean
+          limit_account: number | null
+          limit_group: number | null
+          reason: string | null
+          updated_at: string
+          usage_account: number | null
+          usage_group: number | null
+          usage_type: string | null
+        }
+        Insert: {
+          blocked_until?: string | null
+          id?: boolean
+          limit_account?: number | null
+          limit_group?: number | null
+          reason?: string | null
+          updated_at?: string
+          usage_account?: number | null
+          usage_group?: number | null
+          usage_type?: string | null
+        }
+        Update: {
+          blocked_until?: string | null
+          id?: boolean
+          limit_account?: number | null
+          limit_group?: number | null
+          reason?: string | null
+          updated_at?: string
+          usage_account?: number | null
+          usage_group?: number | null
+          usage_type?: string | null
         }
         Relationships: []
       }
@@ -9573,6 +9639,10 @@ export type Database = {
       }
       is_external_partner: { Args: { _user_id: string }; Returns: boolean }
       is_internal_staff: { Args: { _user_id: string }; Returns: boolean }
+      kw_claim_order: {
+        Args: { _kw: string; _max_attempts?: number; _ordered_by?: string }
+        Returns: Json
+      }
       list_public_loan_proposals: {
         Args: never
         Returns: {

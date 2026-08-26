@@ -35,7 +35,7 @@ export const getKwForApplication = createServerFn({ method: "POST" })
     const { data: row, error } = await context.supabase
       .from("kw_documents")
       .select(
-        "status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error, ordered_at",
+        "status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error, ordered_at, provider, easymkw_json",
       )
       .eq("kw_number", kw)
       .maybeSingle();
@@ -73,14 +73,23 @@ export const fetchKwForApplication = createServerFn({ method: "POST" })
     const allowed = (roles ?? []).some((r) => r.role === "administrator" || r.role === "operator");
     if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator/operator).");
 
-    if (!hasCmdConfig()) {
-      throw new Error("Brak konfiguracji CMD KW Engine (CMD_KW_USER / CMD_KW_PASSWORD).");
+    const { hasEasyMkwConfig } = await import("@/lib/easymkw.server");
+    const useEasyMkw = hasEasyMkwConfig();
+    if (!useEasyMkw && !hasCmdConfig()) {
+      throw new Error(
+        "Brak konfiguracji pobierania KW (EASYMKW_API_USER / EASYMKW_API_PASSWORD lub CMD_KW_USER / CMD_KW_PASSWORD).",
+      );
     }
 
     const kw = await resolveKwForApplication(supabase, data.loanApplicationId);
     if (!kw) throw new Error("Wniosek nie ma poprawnego numeru KW na nieruchomości.");
 
-    const out = await fetchAndStoreKw(kw, { orderedBy: userId, force: data.force });
+    const out = useEasyMkw
+      ? await (await import("@/lib/kw-easymkw.server")).fetchAndStoreKwEasyMkw(kw, {
+          orderedBy: userId,
+          force: data.force,
+        })
+      : await fetchAndStoreKw(kw, { orderedBy: userId, force: data.force });
     if (out.status === "processing") {
       return { ok: false, kwNumber: kw, status: "processing", cached: false };
     }

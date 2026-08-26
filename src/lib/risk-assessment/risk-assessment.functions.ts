@@ -10,7 +10,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { runPropertyCollateralAnalysisCore } from "@/lib/property-analysis/property-collateral-analysis.functions";
 import type { DataSourceUsage } from "@/lib/property-analysis/types";
-import { fetchAndStoreKw, normalizeKwNumber } from "@/lib/kw-fetch.server";
+import { normalizeKwNumber } from "@/lib/kw-fetch.server";
+import { fetchAndStoreKwAuto } from "@/lib/kw-gateway.server";
 import { analyzeKwLegal } from "./kw-parser.server";
 import { analyzeOwner } from "./owner-analysis.server";
 import { analyzeCorrespondence } from "./correspondence-intel.server";
@@ -145,7 +146,7 @@ export async function runInvestmentRiskAssessmentCore(
       "Ocena przerwana: wniosek nie ma poprawnego numeru księgi wieczystej (KW). Uzupełnij numer KW i uruchom ocenę ponownie.",
     );
   }
-  const kwFetch = await fetchAndStoreKw(kwNumber, { pollMaxMs: 60_000 });
+  const kwFetch = await fetchAndStoreKwAuto(kwNumber, { pollMaxMs: 60_000 });
   if (!kwFetch.ok) {
     const reason =
       kwFetch.status === "processing"

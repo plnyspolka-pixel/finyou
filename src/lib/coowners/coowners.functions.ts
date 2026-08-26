@@ -6,7 +6,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { fetchAndStoreKw, normalizeKwNumber } from "@/lib/kw-fetch.server";
+import { normalizeKwNumber } from "@/lib/kw-fetch.server";
+import { fetchAndStoreKwAuto } from "@/lib/kw-gateway.server";
 import { analyzeCoOwners } from "./analyze.server";
 import type { CoOwnersAnalysis } from "./types";
 
@@ -47,7 +48,7 @@ export const runCoOwnersCheck = createServerFn({ method: "POST" })
     }
 
     // Upewnij się, że treść KW (dział II) jest pobrana z KW Engine.
-    const kwFetch = await fetchAndStoreKw(kwNumber, { pollMaxMs: 60_000 });
+    const kwFetch = await fetchAndStoreKwAuto(kwNumber, { pollMaxMs: 60_000 });
     if (!kwFetch.ok) {
       const reason =
         kwFetch.status === "processing"

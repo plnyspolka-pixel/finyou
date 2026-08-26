@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { getKwForApplication, fetchKwForApplication } from "@/lib/kw-content.functions";
 import { ensureKwReady } from "@/lib/kw-ensure";
 import { sanitizeHtml } from "@/lib/sanitize-html";
+import { KwJsonView } from "@/components/kw-json-view";
 import { KwPasteSlotsDialog } from "@/components/kw-paste-slots";
 import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
 
@@ -42,6 +43,8 @@ type KwDoc = {
   fetched_at: string | null;
   last_error: string | null;
   ordered_at: string | null;
+  provider?: string | null;
+  easymkw_json?: unknown;
 } | null;
 
 const SECTIONS: Array<{ key: keyof NonNullable<KwDoc>; label: string }> = [
@@ -204,7 +207,7 @@ export function KwContentSection({
                 Treść księgi wieczystej
               </CardTitle>
               <CardDescription>
-                Dane z Centralnej Bazy Ksiąg Wieczystych (CMD KW Engine).
+                Dane z Centralnej Bazy Ksiąg Wieczystych (EasyMKW / CMD).
                 {showKwNumber && kwNumber && (
                   <>
                     {" "}
@@ -268,6 +271,9 @@ export function KwContentSection({
               </AlertTitle>
               {doc?.last_error && <AlertDescription>{doc.last_error}</AlertDescription>}
             </Alert>
+          )}
+          {ready && !SECTIONS.some(({ key }) => (doc as any)?.[key]) && doc?.easymkw_json != null && (
+            <KwJsonView data={doc.easymkw_json} />
           )}
           {ready && (
             <Accordion type="multiple" defaultValue={["dzial_1o", "dzial_2"]}>

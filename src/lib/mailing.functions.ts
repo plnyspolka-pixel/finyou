@@ -22,9 +22,8 @@ function htmlToText(html: string) {
 }
 
 /**
- * Enqueue email to Lovable transactional_emails pgmq queue.
- * The process-email-queue cron drains it within seconds, sending via notify.financeyou.pl.
- * From: header uses @financeyou.pl (root), while DNS/DKIM lives on the notify. subdomain.
+ * Wysyłka maili mailingowych aktualną ścieżką (Lovable → Resend gateway).
+ * Kolejka `enqueue_email` została usunięta — nie używać.
  */
 async function sendViaLovable(args: {
   to: string;
@@ -40,27 +39,22 @@ async function sendViaLovable(args: {
   const fromAddr = args.from || DEFAULT_FROM;
   const fromName = args.fromName || DEFAULT_FROM_NAME;
   const messageId = crypto.randomUUID();
-  const payload = {
-    run_id: crypto.randomUUID(),
-    to: args.toName ? `${args.toName} <${args.to}>` : args.to,
+  const { sendViaResend } = await import("@/lib/email-marketing.server");
+  await sendViaResend({
     from: `${fromName} <${fromAddr}>`,
-    sender_domain: SENDER_DOMAIN,
+    to: args.toName ? `${args.toName} <${args.to}>` : args.to,
     subject: args.subject,
     html: args.html,
     text: args.text || htmlToText(args.html),
-    purpose: "transactional",
-    label: args.label || "mailing_campaign",
-    idempotency_key: args.idempotencyKey || messageId,
-    message_id: messageId,
-    queued_at: new Date().toISOString(),
-  };
-  const { error } = await supabaseAdmin.rpc("enqueue_email", {
-    queue_name: "transactional_emails",
-    payload,
+    tags: [{ name: "label", value: args.label || "mailing_campaign" }],
+    headers: {
+      "X-Entity-Ref-ID": args.idempotencyKey || messageId,
+      "X-Sender-Domain": SENDER_DOMAIN,
+    },
   });
-  if (error) throw new Error(`enqueue_email failed: ${error.message}`);
   return { messageId };
 }
+
 
 function renderTemplate(html: string, vars: Record<string, string>) {
   return html.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, k) => vars[k] ?? "");
