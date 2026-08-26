@@ -34,6 +34,7 @@ import { SourceIcon } from "@/components/admin/SourceIcon";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
 import { leadSourceLabel } from "@/lib/lead-source";
 import { resolveShowablePhotoUrls } from "@/lib/property-photos";
+import { fetchAllRows } from "@/lib/supabase-paging";
 import {
   evaluateApplicationCore,
   missingLabels,
@@ -447,10 +448,17 @@ export function ApplicationsPage({
       const docPathSet = new Set<string>();
 
       if (ids.length > 0) {
-        const { data: docs } = await supabase
-          .from("documents")
-          .select("loan_application_id,document_type,uploaded_by,file_path")
-          .in("loan_application_id", ids);
+        // PAGINACJA jest konieczna: documents ma więcej wierszy niż limit
+        // 1000/zapytanie PostgREST — bez niej część wniosków „traciła" pliki
+        // i lista pokazywała „brak" mimo załączonych dokumentów.
+        const docs = await fetchAllRows((from, to) =>
+          supabase
+            .from("documents")
+            .select("loan_application_id,document_type,uploaded_by,file_path")
+            .in("loan_application_id", ids)
+            .order("id")
+            .range(from, to),
+        );
         for (const d of (docs ?? []) as any[]) {
           if (!d.loan_application_id) continue;
           docCounts[d.loan_application_id] = (docCounts[d.loan_application_id] ?? 0) + 1;
@@ -484,20 +492,41 @@ export function ApplicationsPage({
       // Załączniki przysłane w wiadomościach (Messenger/e-mail) — per klient.
       const commAttPathsByClient = new Map<string, Set<string>>();
       if (leadIds.length > 0) {
-        const { data: comms } = await supabase
-          .from("lead_communications")
-          .select("lead_id,channel,direction,content,attachments")
-          .in("lead_id", leadIds)
-          .limit(5000);
         const leadToClient = new Map<string, string>();
         for (const [cid, ls] of leadsByClient.entries())
           for (const l of ls) leadToClient.set(l, cid);
+
+        // Treści wiadomości (do wnioskowania źródeł pól) — bez attachments,
+        // bo tych wierszy są dziesiątki tysięcy i i tak obcina je limit 1000.
+        const { data: comms } = await supabase
+          .from("lead_communications")
+          .select("lead_id,channel,direction,content")
+          .in("lead_id", leadIds)
+          .limit(5000);
         for (const c of (comms ?? []) as any[]) {
           const cid = leadToClient.get(c.lead_id);
           if (!cid) continue;
           const arr = commsByClient.get(cid) ?? [];
           arr.push(c);
           commsByClient.set(cid, arr);
+        }
+
+        // Załączniki pobieramy OSOBNYM zapytaniem tylko o wiersze, które je
+        // mają (rzędy setek, nie tysięcy) — z paginacją, żeby limit 1000
+        // niczego po cichu nie uciął.
+        const commsWithAtts = await fetchAllRows((from, to) =>
+          supabase
+            .from("lead_communications")
+            .select("lead_id,channel,attachments")
+            .in("lead_id", leadIds)
+            .not("attachments", "is", null)
+            .neq("attachments", "[]")
+            .order("id")
+            .range(from, to),
+        );
+        for (const c of (commsWithAtts ?? []) as any[]) {
+          const cid = leadToClient.get(c.lead_id);
+          if (!cid) continue;
           for (const a of (Array.isArray(c.attachments) ? c.attachments : []) as {
             path?: string | null;
           }[]) {

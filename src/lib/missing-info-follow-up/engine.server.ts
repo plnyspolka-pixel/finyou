@@ -19,6 +19,7 @@ import { computeLoanProgress, type ProgressResult } from "@/lib/loan-progress";
 import { normalizeLoanStatus } from "@/lib/loan-status";
 import type { ResolutionState } from "@/lib/kw-analysis/types";
 import { logLeadCommunication, findLeadId } from "@/lib/lead-comms.server";
+import { fetchAllRows } from "@/lib/supabase-paging";
 import { buildMissingInfoBrief, type BriefKwFinding, type MissingInfoBrief } from "./brief";
 import {
   composeEmailSubject,
@@ -137,7 +138,7 @@ export async function buildBriefBundles(
   const s = admin();
   const sb = s as any;
 
-  const [{ data: loans }, { data: props }, { data: docs }, { data: analyses }, { data: coowners }] =
+  const [{ data: loans }, { data: props }, docs, { data: analyses }, { data: coowners }] =
     await Promise.all([
       s.from("loan_applications").select(LOAN_SELECT).in("id", loanIds),
       s
@@ -146,10 +147,17 @@ export async function buildBriefBundles(
           "loan_application_id, property_type, city, voivodeship, land_register_number, area_sqm, photos, mpzp_info, land_registry_extract",
         )
         .in("loan_application_id", loanIds),
-      s
-        .from("documents")
-        .select("id, loan_application_id, document_type, file_name")
-        .in("loan_application_id", loanIds),
+      // PAGINACJA: documents przekracza limit 1000 wierszy/zapytanie PostgREST
+      // — bez niej część wniosków wyglądała na pozbawioną plików i follow-upy
+      // prosiły klientów o dokumenty, które już przysłali.
+      fetchAllRows((from, to) =>
+        s
+          .from("documents")
+          .select("id, loan_application_id, document_type, file_name")
+          .in("loan_application_id", loanIds)
+          .order("id")
+          .range(from, to),
+      ),
       sb
         .from("kw_land_register_analyses")
         .select("id, loan_application_id, result_json, created_at")
