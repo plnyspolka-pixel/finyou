@@ -132,7 +132,7 @@ type SortKey =
   | "kw"
   | "location";
 type SortDir = "asc" | "desc";
-type TabKey = "all" | "incomplete" | "complete" | "attention";
+type TabKey = "all" | "incomplete" | "complete";
 
 function MediaThumbs({
   photoPaths,
@@ -674,17 +674,18 @@ export function ApplicationsPage({
 
   // Klasyfikacja wg DANYCH, nie tylko statusu:
   //  - "complete"   — status kompletny I komplet podstawowych danych,
-  //  - "attention"  — status kompletny, ale BRAKUJE danych (do korekty),
-  //  - "incomplete" — wniosek jeszcze w kompletowaniu.
-  const classify = (r: Row): "complete" | "attention" | "incomplete" => {
+  //  - "incomplete" — braki w danych: wniosek w kompletowaniu ALBO oznaczony
+  //    jako kompletny mimo braków (takie wiersze świecą na pomarańczowo
+  //    i mają akcję cofnięcia do kompletowania).
+  const classify = (r: Row): "complete" | "incomplete" => {
     if (COMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))) {
-      return coreOf(r).complete ? "complete" : "attention";
+      return coreOf(r).complete ? "complete" : "incomplete";
     }
     return "incomplete";
   };
 
   const counts = useMemo(() => {
-    const c = { all: applications.length, incomplete: 0, complete: 0, attention: 0 };
+    const c = { all: applications.length, incomplete: 0, complete: 0 };
     for (const r of applications) c[classify(r)]++;
     return c;
   }, [applications]);
@@ -786,6 +787,19 @@ export function ApplicationsPage({
     return out;
   }, [applications, q, sort, tab, locFilter]);
 
+  // Wnioski oznaczone jako kompletne mimo braków danych (dawne „Do korekty") —
+  // po scaleniu zakładek liczą się do „Niekompletnych", ale nadal mają akcję
+  // zbiorczego cofnięcia do kompletowania.
+  const needsFixIds = useMemo(
+    () =>
+      filtered
+        .filter(
+          (r) => COMPLETE_STATUSES.includes(normalizeLoanStatus(r.status)) && !coreOf(r).complete,
+        )
+        .map((r) => r.id),
+    [filtered],
+  );
+
   // Przyciski akcji wiersza — identyczne w tabeli (desktop) i na karcie (mobile).
   const rowActions = (r: Row, d: DerivedRow) => (
     <div className="flex items-center justify-end gap-0.5">
@@ -838,7 +852,8 @@ export function ApplicationsPage({
           <p className="text-sm text-muted-foreground">
             Wniosek jest „kompletny" dopiero z kompletem podstawowych danych: imię i nazwisko,
             kontakt, kwota, poprawny numer KW oraz zdjęcia lub dokumenty. Braki widać w kolumnie
-            „Braki”; sprawy oznaczone jako kompletne mimo braków trafiają do zakładki „Do korekty”.
+            „Braki”; sprawy oznaczone jako kompletne mimo braków liczą się jako „Niekompletne” i są
+            wyróżnione na pomarańczowo.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
@@ -855,27 +870,17 @@ export function ApplicationsPage({
                 <TabsTrigger value="all">Wszystkie ({counts.all})</TabsTrigger>
                 <TabsTrigger value="incomplete">Niekompletne ({counts.incomplete})</TabsTrigger>
                 <TabsTrigger value="complete">Kompletne ({counts.complete})</TabsTrigger>
-                <TabsTrigger
-                  value="attention"
-                  className={
-                    counts.attention > 0
-                      ? "text-amber-600 data-[state=active]:text-amber-700 dark:text-amber-400 dark:data-[state=active]:text-amber-300"
-                      : undefined
-                  }
-                >
-                  Do korekty ({counts.attention})
-                </TabsTrigger>
               </TabsList>
             </Tabs>
-            {tab === "attention" && filtered.length > 0 && (
+            {tab !== "complete" && needsFixIds.length > 0 && (
               <Button
                 size="sm"
                 variant="outline"
                 className="text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-500/50 dark:hover:bg-amber-500/10"
-                onClick={() => void demote(filtered.map((r) => r.id))}
+                onClick={() => void demote(needsFixIds)}
               >
-                <Undo2 className="h-4 w-4 mr-2" /> Cofnij wszystkie ({filtered.length}) do
-                kompletowania
+                <Undo2 className="h-4 w-4 mr-2" /> Cofnij oznaczone mimo braków (
+                {needsFixIds.length}) do kompletowania
               </Button>
             )}
           </div>
