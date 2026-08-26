@@ -140,8 +140,9 @@ Asystent widzi tę samą skrzynkę co panel i może w niej odpisywać.
 - `offer_distribution_messages` — wątki mailowe z instytucjami finansującymi:
   `comms_list_offer_threads` zwraca status dystrybucji razem z całą wymianą.
 
-**Wysyłanie** (uprawnienie „Wysyłanie wiadomości do klientów", domyślnie
-**wyłączone** — trzeba je włączyć świadomie):
+**Wysyłanie** (uprawnienie „Wysyłanie wiadomości do klientów", od migracji
+`20260826120000_ai_admin_full_access` domyślnie **włączone** — asystent ma
+pełny dostęp; w Ustawieniach asystenta można je w każdej chwili wyłączyć):
 
 | Kanał                        | Narzędzie                  | Jak wychodzi                                                     |
 | ---------------------------- | -------------------------- | ---------------------------------------------------------------- |
@@ -158,7 +159,8 @@ jest widoczna w skrzynce i wątkuje się u odbiorcy.
 
 **Bezpieczniki** (wysyłka to działanie nieodwracalne wobec prawdziwej osoby):
 
-1. Osobne uprawnienie na wysyłkę, domyślnie wyłączone.
+1. Osobne uprawnienie na wysyłkę — obecnie włączone (pełny dostęp), ale dalej
+   wyłączalne jednym przełącznikiem w Ustawieniach asystenta.
 2. Prompt wymaga pokazania kanału, odbiorcy, tematu i pełnej treści oraz
    **wyraźnej zgody** („wyślij"). „Przygotuj odpowiedź" zgodą nie jest, a wysyłka
    z własnej inicjatywy jest zabroniona.
