@@ -89,7 +89,11 @@ export function MediaPreviewDialog({
         .eq("loan_application_id", loanApplicationId)
         .order("created_at", { ascending: false });
 
+      // Ta sama ścieżka może przyjść w photoPaths (np. załącznik z Messengera
+      // podany wprost) i mieć równolegle rekord w documents — pokaż raz.
+      const shownPaths = new Set(photoPaths);
       for (const d of (docRows ?? []) as Doc[]) {
+        if (d.file_path && shownPaths.has(d.file_path)) continue;
         // UWAGA: file_url bywa błędnie wypełniony ścieżką Storage (nie URL-em http)
         // — np. załączniki inbound z Messengera/maila. Dlatego podpisujemy przez
         // signStoragePath, które zwraca zewnętrzny URL bez zmian, a ścieżkę

@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { backfillCommAttachmentDocuments } from "@/lib/lead-attachments.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,7 +75,10 @@ type Row = {
     source?: string | null;
   } | null;
   properties: Property[] | null;
+  /** documents + załączniki z wiadomości (lead_communications) bez rekordu w documents. */
   docCount?: number;
+  /** Ścieżki załączników z wiadomości, których NIE ma jeszcze w documents. */
+  commAttachmentPaths?: string[];
 };
 
 const INCOMPLETE_STATUSES = [
@@ -388,6 +393,7 @@ export function ApplicationsPage({
   const [preview, setPreview] = useState<{ id: string; paths: string[]; name: string } | null>(
     null,
   );
+  const backfillAttachmentsFn = useServerFn(backfillCommAttachmentDocuments);
 
   const load = async () => {
     setLoading(true);
@@ -436,15 +442,19 @@ export function ApplicationsPage({
       const nameByUser = new Map<string, string>();
       const operatorByLoan = new Map<string, string | null>();
       const docCounts: Record<string, number> = {};
+      // file_path wszystkich rekordów documents — do dedupu z załącznikami
+      // z wiadomości (lead_communications.attachments).
+      const docPathSet = new Set<string>();
 
       if (ids.length > 0) {
         const { data: docs } = await supabase
           .from("documents")
-          .select("loan_application_id,document_type,uploaded_by")
+          .select("loan_application_id,document_type,uploaded_by,file_path")
           .in("loan_application_id", ids);
         for (const d of (docs ?? []) as any[]) {
           if (!d.loan_application_id) continue;
           docCounts[d.loan_application_id] = (docCounts[d.loan_application_id] ?? 0) + 1;
+          if (d.file_path) docPathSet.add(d.file_path);
           const arr = docsByLoan.get(d.loan_application_id) ?? [];
           arr.push(d);
           docsByLoan.set(d.loan_application_id, arr);
@@ -471,10 +481,12 @@ export function ApplicationsPage({
         }
       }
 
+      // Załączniki przysłane w wiadomościach (Messenger/e-mail) — per klient.
+      const commAttPathsByClient = new Map<string, Set<string>>();
       if (leadIds.length > 0) {
         const { data: comms } = await supabase
           .from("lead_communications")
-          .select("lead_id,channel,direction,content")
+          .select("lead_id,channel,direction,content,attachments")
           .in("lead_id", leadIds)
           .limit(5000);
         const leadToClient = new Map<string, string>();
@@ -486,7 +498,38 @@ export function ApplicationsPage({
           const arr = commsByClient.get(cid) ?? [];
           arr.push(c);
           commsByClient.set(cid, arr);
+          for (const a of (Array.isArray(c.attachments) ? c.attachments : []) as {
+            path?: string | null;
+          }[]) {
+            if (!a?.path) continue;
+            const set = commAttPathsByClient.get(cid) ?? new Set<string>();
+            set.add(a.path);
+            commAttPathsByClient.set(cid, set);
+          }
         }
+      }
+
+      // Pliki z wiadomości, które NIE mają jeszcze rekordu w documents, licz do
+      // „Pliki" i kompletności — wcześniej takie wnioski pokazywały „brak"
+      // mimo zdjęć/dokumentów przysłanych przez klienta (najczęściej zanim
+      // wniosek w ogóle powstał).
+      const healLeadIds = new Set<string>();
+      for (const r of list) {
+        const cid = r.client?.id;
+        const set = cid ? commAttPathsByClient.get(cid) : undefined;
+        if (!set || set.size === 0) continue;
+        const extra = Array.from(set).filter((p) => !docPathSet.has(p));
+        if (extra.length === 0) continue;
+        r.commAttachmentPaths = extra;
+        r.docCount = (r.docCount ?? 0) + extra.length;
+        for (const lid of (cid ? leadsByClient.get(cid) : undefined) ?? []) healLeadIds.add(lid);
+      }
+      // Best-effort: dopnij je też w bazie (rekordy documents), żeby podgląd,
+      // panel klienta i follow-upy widziały te pliki bez liczenia w UI.
+      if (healLeadIds.size > 0) {
+        void backfillAttachmentsFn({
+          data: { leadIds: Array.from(healLeadIds).slice(0, 300) },
+        }).catch(() => {});
       }
 
       if (kwNums.length > 0) {
@@ -721,7 +764,13 @@ export function ApplicationsPage({
         size="sm"
         variant="ghost"
         className="h-8 w-8 p-0"
-        onClick={() => setPreview({ id: r.id, paths: d.allPhotos, name: d.name })}
+        onClick={() =>
+          setPreview({
+            id: r.id,
+            paths: [...d.allPhotos, ...(r.commAttachmentPaths ?? [])],
+            name: d.name,
+          })
+        }
         title="Podgląd"
       >
         <Eye className="h-3.5 w-3.5" />
@@ -919,7 +968,13 @@ export function ApplicationsPage({
                       <MediaThumbs
                         photoPaths={d.allPhotos}
                         docCount={r.docCount ?? 0}
-                        onOpen={() => setPreview({ id: r.id, paths: d.allPhotos, name: d.name })}
+                        onOpen={() =>
+                          setPreview({
+                            id: r.id,
+                            paths: [...d.allPhotos, ...(r.commAttachmentPaths ?? [])],
+                            name: d.name,
+                          })
+                        }
                       />
                     </div>
 
@@ -1122,7 +1177,13 @@ export function ApplicationsPage({
                         <MediaThumbs
                           photoPaths={d.allPhotos}
                           docCount={r.docCount ?? 0}
-                          onOpen={() => setPreview({ id: r.id, paths: d.allPhotos, name: d.name })}
+                          onOpen={() =>
+                            setPreview({
+                              id: r.id,
+                              paths: [...d.allPhotos, ...(r.commAttachmentPaths ?? [])],
+                              name: d.name,
+                            })
+                          }
                         />
                       </div>
                     </TableCell>
