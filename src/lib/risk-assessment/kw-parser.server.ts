@@ -88,7 +88,10 @@ export async function analyzeKwLegal(args: {
     .eq("kw_number", kw)
     .maybeSingle();
 
-  if (!row || row.status !== "ready") return empty;
+  // Zapisane działy analizujemy nawet przy statusie błędu odświeżenia —
+  // raz pobrana treść pozostaje dostępna.
+  const hasContent = Boolean(row?.dzial_1o || row?.dzial_2 || row?.dzial_3 || row?.dzial_4);
+  if (!row || (row.status !== "ready" && !hasContent)) return empty;
 
   const owners = parseOwners(row.dzial_2);
   const address = parseKwAddress(row.dzial_1o);

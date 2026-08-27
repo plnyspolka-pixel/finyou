@@ -181,6 +181,32 @@ export async function fetchAndStoreKw(
     return { ok: true, status: "ready", cached: true };
   }
 
+  // fetched_at jest ustawiane wyłącznie przy udanym zapisie treści — rekord
+  // z fetched_at MA pobrane działy, nawet jeśli późniejsze odświeżenie
+  // zostawiło status "error". Takiej treści nigdy nie zasłaniamy błędem.
+  const hadContent = Boolean(cached?.fetched_at);
+
+  // Samonaprawa: rekord z treścią uwięziony w statusie błędu (starsze wersje
+  // nadpisywały status przy nieudanym odświeżeniu) wraca do "ready".
+  if (
+    hadContent &&
+    !opts?.force &&
+    (cached!.status === "error" || cached!.status === "not_found")
+  ) {
+    await supabaseAdmin.from("kw_documents").update({ status: "ready" }).eq("kw_number", kw);
+    return { ok: true, status: "ready", cached: true };
+  }
+
+  // Nieudana próba pobrania: rekord z wcześniejszą treścią wraca do "ready"
+  // (treść zostaje widoczna, błąd trafia do last_error); rekord bez treści
+  // dostaje docelowy status błędu.
+  const markFailed = async (status: "error" | "not_found", msg: string) => {
+    await supabaseAdmin
+      .from("kw_documents")
+      .update({ status: hadContent ? "ready" : status, last_error: msg })
+      .eq("kw_number", kw);
+  };
+
   // Backoff po błędzie — nie odpytuj CMD w kółko o tę samą księgę
   // (backfill leadów wraca do nieudanych KW przy każdym przebiegu).
   if (cached?.status === "error" && !opts?.force && cached.ordered_at) {
@@ -233,11 +259,8 @@ export async function fetchAndStoreKw(
     if (res.status === 403 && isCmdQuotaError(res.error)) {
       quotaBlockedUntil = Date.now() + QUOTA_COOLDOWN_MS;
       const msg = quotaErrorMessage(res.error ?? "");
-      await supabaseAdmin
-        .from("kw_documents")
-        .update({ status: "error", last_error: msg })
-        .eq("kw_number", kw);
-      return { ok: false, status: "error", cached: false, error: msg };
+      await markFailed("error", msg);
+      return { ok: false, status: "error", cached: hadContent, error: msg };
     }
     if (!recentlyOrdered) {
       const ord = await orderKw(kw);
@@ -247,53 +270,49 @@ export async function fetchAndStoreKw(
           quotaBlockedUntil = Date.now() + QUOTA_COOLDOWN_MS;
           reason = quotaErrorMessage(reason);
         }
-        await supabaseAdmin
-          .from("kw_documents")
-          .update({ status: "error", last_error: reason })
-          .eq("kw_number", kw);
-        return { ok: false, status: "error", cached: false, error: reason };
+        await markFailed("error", reason);
+        return { ok: false, status: "error", cached: hadContent, error: reason };
       }
     }
     const result = await pollResults(kw, opts?.pollMaxMs);
     if (result === "not_found") {
-      await supabaseAdmin
-        .from("kw_documents")
-        .update({ status: "not_found", last_error: "Księga nie znaleziona w EKW" })
-        .eq("kw_number", kw);
+      await markFailed("not_found", "Księga nie znaleziona w EKW");
       return {
         ok: false,
         status: "not_found",
-        cached: false,
+        cached: hadContent,
         error: "Księga wieczysta nie została odnaleziona w EKW.",
       };
     }
     if (result === "etl_error") {
-      await supabaseAdmin
-        .from("kw_documents")
-        .update({ status: "error", last_error: "Błąd przetwarzania po stronie CMD" })
-        .eq("kw_number", kw);
+      await markFailed("error", "Błąd przetwarzania po stronie CMD");
       return {
         ok: false,
         status: "error",
-        cached: false,
+        cached: hadContent,
         error: "Błąd przetwarzania KW po stronie CMD KW Engine.",
       };
     }
     if (result === "timeout") {
+      if (hadContent) {
+        // Odświeżenie się nie dowiozło — nie zostawiaj rekordu z treścią
+        // w "processing" (zasłania treść); wróć do "ready".
+        await markFailed(
+          "error",
+          "Odświeżenie treści KW nie zakończyło się w czasie — pokazywana wcześniej pobrana treść.",
+        );
+      }
       return { ok: false, status: "processing", cached: false };
     }
     res = await fetchKwHtml(kw);
   }
 
   if (res.status === 404) {
-    await supabaseAdmin
-      .from("kw_documents")
-      .update({ status: "not_found", last_error: "404 not found" })
-      .eq("kw_number", kw);
+    await markFailed("not_found", "404 not found");
     return {
       ok: false,
       status: "not_found",
-      cached: false,
+      cached: hadContent,
       error: "Księga wieczysta nie została odnaleziona w EKW.",
     };
   }
@@ -303,11 +322,8 @@ export async function fetchAndStoreKw(
       quotaBlockedUntil = Date.now() + QUOTA_COOLDOWN_MS;
       err = quotaErrorMessage(res.error ?? "");
     }
-    await supabaseAdmin
-      .from("kw_documents")
-      .update({ status: "error", last_error: err })
-      .eq("kw_number", kw);
-    return { ok: false, status: "error", cached: false, error: err };
+    await markFailed("error", err);
+    return { ok: false, status: "error", cached: hadContent, error: err };
   }
 
   const h = res.html;

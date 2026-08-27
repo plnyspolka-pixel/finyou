@@ -133,7 +133,13 @@ export const runKwLandRegisterAnalysis = createServerFn({ method: "POST" })
         message: "Treść KW nie została jeszcze pobrana. Pobierz odpis KW przed analizą.",
       };
     }
-    if (loaded.status !== "ready") {
+    // Analizujemy zapisaną treść, jeśli tylko istnieje — nieudane odświeżenie
+    // (status "error" z last_error) nie unieważnia wcześniej pobranych działów.
+    const s = loaded.sections;
+    const hasContent = Boolean(
+      s.okladka || s.dzial_1o || s.dzial_1s || s.dzial_2 || s.dzial_4 || s.dzial_3,
+    );
+    if (loaded.status !== "ready" && !hasContent) {
       return {
         ok: false as const,
         status: loaded.status,

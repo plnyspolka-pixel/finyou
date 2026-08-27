@@ -72,7 +72,8 @@ async function findAllPeselsInKw(kwNumber: string): Promise<KwOwnerPesel[]> {
     .select("status, dzial_2")
     .eq("kw_number", kwNumber)
     .maybeSingle();
-  if (!row || row.status !== "ready") return [];
+  // Zapisany dział II czytamy nawet przy statusie błędu odświeżenia.
+  if (!row || (row.status !== "ready" && !row.dzial_2)) return [];
   return extractKwOwnerPesels(row.dzial_2);
 }
 
