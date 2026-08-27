@@ -120,10 +120,7 @@ export function extractKwOwnerPersons(dzial2: string | null | undefined): KwOwne
   // przecinkami — "Osoba fizyczna (Imię pierwsze nazwisko, imię ojca, imię
   // matki, PESEL) ANATOLII SLAVINSKYI, PETRO, JEWDOKIJA, 73063017816".
   for (const m of text.matchAll(
-    new RegExp(
-      `[Oo]soba\\s+fizyczna\\s*\\([^)]{0,160}\\)\\s*(${TOKEN})\\s+(${TOKEN})\\s*,`,
-      "gu",
-    ),
+    new RegExp(`[Oo]soba\\s+fizyczna\\s*\\([^)]{0,160}\\)\\s*(${TOKEN})\\s+(${TOKEN})\\s*,`, "gu"),
   )) {
     push(m[1], m[2]);
   }
@@ -164,6 +161,109 @@ export function extractKwOwnerPersons(dzial2: string | null | undefined): KwOwne
   let m: RegExpExecArray | null;
   while ((m = personRe.exec(text)) !== null) push(m[1], m[2]);
   return out.slice(0, 6);
+}
+
+// ── Udziały i rodzaj wspólności w dziale II ─────────────────────────────────
+// Wielkość udziału występuje w dwóch układach EKW:
+//  1) odpis/etykietowany: „Wielkość udziału 1/2",
+//  2) tabelaryczny (strona EKW): „Lista wskazań udziałów w prawie (numer
+//     udziału w prawie/ wielkość udziału/rodzaj wspólności) Lp. 1. 3 1 /1
+//     WSPÓLNOŚĆ USTAWOWA MAJĄTKOWA MAŁŻEŃSKA" — ułamek stoi dopiero za „Lp."
+//     i numerem udziału, poza zasięgiem prostego dopasowania po etykiecie.
+const SHARE_FRACTION = "(\\d{1,4}\\s*\\/\\s*\\d{1,6})";
+
+export type TextToken = { index: number; value: string };
+
+/** Pozycje ułamków udziałów w (płaskim) tekście działu II — oba układy EKW. */
+export function extractShareTokens(text: string): TextToken[] {
+  const out: TextToken[] = [];
+  const seen = new Set<number>();
+  const push = (m: RegExpMatchArray) => {
+    // Dedupe po pozycji samego ułamka — oba regexy mogą trafić ten sam wpis.
+    const idx = (m.index ?? 0) + m[0].lastIndexOf(m[1]);
+    if (seen.has(idx)) return;
+    seen.add(idx);
+    out.push({ index: idx, value: m[1].replace(/\s/g, "") });
+  };
+  for (const m of text.matchAll(
+    new RegExp(`(?:wielko[śs][ćc]\\s+udzia[łl]u|udzia[łl])[^0-9]{0,12}${SHARE_FRACTION}`, "gi"),
+  )) {
+    push(m);
+  }
+  for (const m of text.matchAll(
+    new RegExp(
+      `rodzaj\\s+wsp[óo]lno[śs]ci\\)\\s*Lp\\.?\\s*\\d+\\.?\\s*(?:\\d{1,3}\\s+)?${SHARE_FRACTION}`,
+      "gi",
+    ),
+  )) {
+    push(m);
+  }
+  out.sort((a, b) => a.index - b.index);
+  return out;
+}
+
+// Człony nazw rodzajów wspólności w EKW (np. „WSPÓLNOŚĆ USTAWOWA MAJĄTKOWA
+// MAŁŻEŃSKA", „WSPÓLNOŚĆ ŁĄCZNA WSPÓLNIKÓW SPÓŁKI CYWILNEJ").
+const CO_TYPE_WORD =
+  "(?:ustawow[\\p{L}]*|maj[ąa]tkow[\\p{L}]*|ma[łl][żz]e[ńn]sk[\\p{L}]*|umown[\\p{L}]*|rozszerzon[\\p{L}]*|ograniczon[\\p{L}]*|[łl][ąa]czn[\\p{L}]*|wsp[óo]lnik[óo]w|sp[óo][łl]ki|cywilnej)";
+
+/** Pozycje rodzajów wspólności w (płaskim) tekście działu II. */
+export function extractCoOwnershipTokens(text: string): TextToken[] {
+  const out: TextToken[] = [];
+  for (const m of text.matchAll(
+    new RegExp(`wsp[óo]lno[śs][ćc]\\s+(${CO_TYPE_WORD}(?:\\s+${CO_TYPE_WORD})*)`, "giu"),
+  )) {
+    out.push({ index: m.index ?? 0, value: m[1].replace(/\s+/g, " ").trim() });
+  }
+  return out;
+}
+
+function lastTokenBefore(tokens: TextToken[], idx: number): TextToken | null {
+  let best: TextToken | null = null;
+  for (const t of tokens) {
+    if (t.index < idx) best = t;
+    else break;
+  }
+  return best;
+}
+
+export type KwOwnerEntry = KwOwnerPerson & {
+  share: string | null;
+  coOwnershipType: string | null;
+};
+
+/**
+ * Osoby fizyczne z działu II wraz z wielkością udziału i rodzajem wspólności
+ * przypisanymi PO POZYCJI W TEKŚCIE (najbliższy udział/wspólność przed osobą),
+ * a nie po indeksie na liście — w EKW jeden udział we wspólności małżeńskiej
+ * obejmuje dwie osoby, a wpisy osób prawnych przesuwałyby dopasowanie pozycyjne.
+ */
+export function extractKwOwnerEntries(dzial2: string | null | undefined): KwOwnerEntry[] {
+  const text = stripHtml(dzial2);
+  if (!text) return [];
+  const persons = extractKwOwnerPersons(dzial2);
+  const shares = extractShareTokens(text);
+  const coTypes = extractCoOwnershipTokens(text);
+  const distinctCoTypes = new Set(coTypes.map((t) => norm(t.value)));
+  let cursor = 0;
+  return persons.map((p, i) => {
+    // Pozycja osoby: szukamy od poprzedniej osoby, żeby zachować kolejność
+    // przy powtarzających się nazwiskach (małżeństwa, rodzeństwo).
+    let idx = text.indexOf(`${p.firstName} ${p.lastName}`, cursor);
+    if (idx < 0) idx = text.indexOf(p.lastName, cursor);
+    if (idx < 0) idx = text.indexOf(p.firstName, cursor);
+    if (idx < 0) idx = cursor;
+    cursor = Math.max(cursor, idx + 1);
+    let share = lastTokenBefore(shares, idx)?.value ?? null;
+    // Backstop: układ, w którym udział stoi za osobą — gdy liczby się zgadzają,
+    // wracamy do dopasowania pozycyjnego.
+    if (share == null && shares.length === persons.length) share = shares[i]?.value ?? null;
+    let coOwnershipType = lastTokenBefore(coTypes, idx)?.value ?? null;
+    if (coOwnershipType == null && distinctCoTypes.size === 1) {
+      coOwnershipType = coTypes[0]?.value ?? null;
+    }
+    return { ...p, share, coOwnershipType };
+  });
 }
 
 export type KwOwnerPesel = { pesel: string; ownerName: string | null };

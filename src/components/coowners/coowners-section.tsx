@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { formatKwNumber } from "@/lib/kw";
 import { runCoOwnersCheck, getCoOwnersCheck } from "@/lib/coowners/coowners.functions";
 import type { CoOwnersAnalysis, CoOwnerRegistryCheck } from "@/lib/coowners/types";
 import { ensureKwReady } from "@/lib/kw-ensure";
@@ -135,7 +136,7 @@ export function CoOwnersSection({ applicationId }: { applicationId: string }) {
               <CardContent className="py-4 text-sm">
                 <p>{result.summary}</p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  KW {result.kwNumber ?? "—"} · sprawdzono{" "}
+                  KW {formatKwNumber(result.kwNumber) ?? result.kwNumber ?? "—"} · sprawdzono{" "}
                   {new Date(result.generatedAt).toLocaleString("pl-PL")}
                 </p>
               </CardContent>
@@ -178,6 +179,7 @@ function CoOwnerCard({ owner }: { owner: CoOwnerRegistryCheck }) {
           <UserRound className="h-4 w-4" />
           {owner.fullName ?? "Osoba nierozpoznana"}
           {owner.isPrimaryClient && <Badge variant="secondary">wnioskodawca</Badge>}
+          {owner.share && <Badge variant="outline">udział {owner.share}</Badge>}
         </CardTitle>
         <CardDescription>
           {owner.peselMasked ? (
@@ -193,6 +195,7 @@ function CoOwnerCard({ owner }: { owner: CoOwnerRegistryCheck }) {
           ) : (
             "Brak numeru PESEL w dziale II KW"
           )}
+          {owner.coOwnershipType && <> · wspólność: {owner.coOwnershipType.toLowerCase()}</>}
         </CardDescription>
       </CardHeader>
       <CardContent className="text-sm space-y-3">

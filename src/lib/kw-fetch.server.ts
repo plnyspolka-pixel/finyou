@@ -6,9 +6,12 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export function normalizeKwNumber(raw: string): string | null {
   const v = (raw || "").toUpperCase().replace(/\s+/g, "");
   // Try to extract a KW pattern from anywhere in the string (tolerates trailing garbage).
-  const m = v.match(/([A-Z]{2}\d[A-Z0-9])\/?(\d{8})\/?(\d)/);
+  // 7-digit numbers (older paper registers) are zero-padded to 8, like EKW does.
+  const m =
+    v.match(/([A-Z]{2}\d[A-Z0-9])\/?(\d{8})\/?(\d)/) ??
+    v.match(/([A-Z]{2}\d[A-Z0-9])\/(\d{7})\/(\d)/);
   if (!m) return null;
-  return `${m[1]}${m[2]}${m[3]}`; // CMD API uses compact 13-char form
+  return `${m[1]}${m[2].padStart(8, "0")}${m[3]}`; // CMD API uses compact 13-char form
 }
 
 export function hasCmdConfig(): boolean {

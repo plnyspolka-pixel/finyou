@@ -9,17 +9,14 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { decodeMaybeBase64 } from "@/lib/kw-fetch.server";
-import { normalizeKwNumber } from "@/lib/kw";
+import { compactKwNumber, normalizeKwNumber } from "@/lib/kw";
 import { runKwAnalysis } from "@/lib/kw-analysis/engine";
 import type { KwDocumentSections } from "@/lib/kw-analysis/normalize";
 import type { KwAnalysisInput, Party, PartyRole } from "@/lib/kw-analysis/types";
 
-// Numer KW w formacie kompaktowym (13 znaków) — tak przechowuje go kw_documents.
-function compactKw(raw: string): string | null {
-  const norm = normalizeKwNumber(raw);
-  if (!norm) return null;
-  return norm.replace(/\//g, "").toUpperCase();
-}
+// Numer KW w formacie kompaktowym (13 znaków) — tak przechowuje go kw_documents
+// (i tak samo zapisujemy go w kw_land_register_analyses.kw_number).
+const compactKw = compactKwNumber;
 
 async function requireOperator(supabase: SupabaseClient, userId: string): Promise<void> {
   const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
@@ -198,7 +195,7 @@ export const runKwLandRegisterAnalysis = createServerFn({ method: "POST" })
     const { data: inserted, error } = await (supabase as unknown as SupabaseClient)
       .from("kw_land_register_analyses")
       .insert({
-        kw_number: result.kwNumber,
+        kw_number: compactKw(result.kwNumber) ?? compact,
         loan_application_id: data.loanApplicationId ?? null,
         ruleset_version: result.rulesetVersion,
         overall_status: result.overallStatus,
@@ -241,7 +238,8 @@ export const getKwLandRegisterAnalysis = createServerFn({ method: "POST" })
       .limit(1);
     if (data.loanApplicationId) q = q.eq("loan_application_id", data.loanApplicationId);
     else if (data.kwNumber)
-      q = q.eq("kw_number", normalizeKwNumber(data.kwNumber) ?? data.kwNumber);
+      // Kolumna kw_number przechowuje formę kompaktową (patrz compactKw wyżej).
+      q = q.eq("kw_number", compactKw(data.kwNumber) ?? data.kwNumber);
     else return { found: false as const };
     const { data: row, error } = await q.maybeSingle();
     if (error) throw new Error(error.message);

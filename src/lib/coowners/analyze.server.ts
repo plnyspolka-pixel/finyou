@@ -8,6 +8,7 @@
 // RODO: w zapisywanym wyniku PESEL występuje wyłącznie zamaskowany.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { compactKwNumber } from "@/lib/kw";
 import { parsePesel } from "@/lib/risk-assessment/pesel";
 import { parseOwners } from "@/lib/risk-assessment/kw-parse-core";
 import { lookupCeidgActivity, emptyCeidg } from "@/lib/risk-assessment/ceidg-lookup.server";
@@ -34,7 +35,9 @@ export async function analyzeCoOwners(args: {
   city?: string | null;
   voivodeship?: string | null;
 }): Promise<CoOwnersAnalysis> {
-  const kw = (args.kwNumber ?? "").replace(/\s|\//g, "").toUpperCase();
+  // kw_documents.kw_number przechowuje formę kompaktową (13 znaków).
+  const kw =
+    compactKwNumber(args.kwNumber) ?? (args.kwNumber ?? "").replace(/\s|\//g, "").toUpperCase();
   if (!kw) return emptyAnalysis(null, "Brak numeru KW — nie przeanalizowano współwłaścicieli.");
 
   const { data: row } = await supabaseAdmin
@@ -95,6 +98,8 @@ export async function analyzeCoOwners(args: {
 
       return {
         fullName: o.fullName,
+        share: o.share,
+        coOwnershipType: o.coOwnershipType,
         peselMasked: maskPesel(o.pesel),
         peselValid: pesel.valid,
         birthDate: pesel.birthDate,
