@@ -39,6 +39,10 @@ export interface CoOwnerKrsCheck {
 
 export interface CoOwnerRegistryCheck {
   fullName: string | null;
+  /** Wielkość udziału z działu II KW (np. "1/2"), jeśli rozpoznana. */
+  share?: string | null;
+  /** Rodzaj wspólności z działu II KW (np. "USTAWOWA MAJĄTKOWA MAŁŻEŃSKA"). */
+  coOwnershipType?: string | null;
   /** Zamaskowany PESEL z działu II KW (RRMMDD*****) — pełny numer nie jest zapisywany. */
   peselMasked: string | null;
   peselValid: boolean;

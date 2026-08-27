@@ -31,7 +31,7 @@ export const getKwForApplication = createServerFn({ method: "POST" })
   .inputValidator((i) => z.object({ loanApplicationId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const kw = await resolveKwForApplication(context.supabase, data.loanApplicationId);
-    if (!kw) return { hasKw: false as const };
+    if (!kw) return { hasKw: false as const, kwNumber: null };
     const { data: row, error } = await context.supabase
       .from("kw_documents")
       .select(
@@ -51,7 +51,7 @@ export const getKwForApplication = createServerFn({ method: "POST" })
           dzial_4: decodeMaybeBase64(row.dzial_4),
         }
       : row;
-    return { hasKw: true as const, document };
+    return { hasKw: true as const, kwNumber: kw, document };
   });
 
 /** Admin/operator only. Orders KW download from CMD, polls, fetches HTML, stores in cache. */

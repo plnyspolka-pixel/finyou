@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeKwNumber } from "@/lib/kw";
+import { compactKwNumber } from "@/lib/kw";
 import { parseKwAddress, type KwAddress } from "@/lib/kw-address-core";
 
 export { parseKwAddress };
@@ -20,7 +20,8 @@ export function useKwAddress(kwNumber?: string | null): KwAddress | null {
     }
     let cancelled = false;
     void (async () => {
-      const normalized = normalizeKwNumber(kwNumber);
+      // kw_documents.kw_number przechowuje formę kompaktową (13 znaków).
+      const normalized = compactKwNumber(kwNumber);
       if (!normalized) return;
       const { data } = await supabase
         .from("kw_documents")

@@ -584,3 +584,53 @@
   white-space: nowrap;
 }
 .fy-article tbody tr:nth-child(even) { background: rgba(120, 160, 255, 0.045); }
+
+/* ── Treść księgi wieczystej (kw-content-section / karta oferty) ─────────────
+   HTML działów przychodzi 1:1 z EKW (tabele CMD z komórkami csTytul/csDane/
+   csBDane) albo z importu ręcznego (sekcje <pre> z kw-ocr-import) — sanitizer
+   wycina style inline, więc cały wygląd definiujemy tutaj. */
+.kw-html { font-size: 0.8125rem; line-height: 1.5; }
+.kw-html table {
+  width: 100%;
+  margin: 0.5rem 0;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+}
+.kw-html td,
+.kw-html th {
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+}
+/* Komórki etykiet EKW (csTytul, csTTytul…) oraz nagłówki tabel. */
+.kw-html th,
+.kw-html td[class*="tytul" i] {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+.kw-html td[class*="dane" i] { color: var(--foreground); }
+.kw-html tbody tr:nth-child(even) td:not([class*="tytul" i]) {
+  background: color-mix(in oklab, var(--muted) 35%, transparent);
+}
+/* Import ręczny (wklejony tekst z EKW): zachowaj łamanie wierszy. */
+.kw-html pre {
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.kw-html h3 {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}

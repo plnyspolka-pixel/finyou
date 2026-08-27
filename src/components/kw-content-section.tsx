@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/accordion";
 import { BookOpenCheck, RefreshCw, AlertCircle, Loader2, ScanText } from "lucide-react";
 import { toast } from "sonner";
+import { formatKwNumber } from "@/lib/kw";
 import { getKwForApplication, fetchKwForApplication } from "@/lib/kw-content.functions";
 import { ensureKwReady } from "@/lib/kw-ensure";
 import { sanitizeHtml } from "@/lib/sanitize-html";
@@ -94,6 +95,7 @@ export function KwContentSection({
     try {
       const r = await getKw({ data: { loanApplicationId: applicationId } });
       setHasKw(r.hasKw);
+      setKwNumber(r.kwNumber ?? null);
       if (r.hasKw) setDoc(r.document as KwDoc);
     } finally {
       setLoading(false);
@@ -208,7 +210,8 @@ export function KwContentSection({
                 {showKwNumber && kwNumber && (
                   <>
                     {" "}
-                    · KW: <code className="text-foreground">{kwNumber}</code>
+                    · KW:{" "}
+                    <code className="text-foreground">{formatKwNumber(kwNumber) ?? kwNumber}</code>
                   </>
                 )}
                 {doc?.fetched_at && <> · Pobrano: {formatDateTime(doc.fetched_at)}</>}

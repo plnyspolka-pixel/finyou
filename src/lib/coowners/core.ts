@@ -3,7 +3,11 @@
 // oraz przeszukiwanie surowego odpisu KRS pod kątem konkretnej osoby.
 // Bez zależności serwerowych — testowalne w vitest.
 
-import { extractKwOwnerPersons, extractKwOwnerPesels } from "@/lib/risk-assessment/kw-parse-core";
+import {
+  extractKwOwnerEntries,
+  extractKwOwnerPesels,
+  type KwOwnerEntry,
+} from "@/lib/risk-assessment/kw-parse-core";
 
 export interface KwCoOwnerCandidate {
   fullName: string;
@@ -11,6 +15,10 @@ export interface KwCoOwnerCandidate {
   lastName: string | null;
   /** Pełny PESEL z działu II — wyłącznie do użycia w pamięci (nie zapisywać). */
   pesel: string | null;
+  /** Wielkość udziału z działu II (np. "1/2"), jeśli rozpoznana. */
+  share: string | null;
+  /** Rodzaj wspólności (np. "USTAWOWA MAJĄTKOWA MAŁŻEŃSKA"), jeśli rozpoznany. */
+  coOwnershipType: string | null;
 }
 
 /** Maskuje PESEL do zapisu w wyniku: 6 cyfr daty urodzenia + gwiazdki. */
@@ -52,8 +60,10 @@ export function personNamesOverlap(
  * (sprawdzenie wyłącznie po imieniu i nazwisku).
  */
 export function mergeKwOwners(dzial2: string | null | undefined): KwCoOwnerCandidate[] {
-  const persons = extractKwOwnerPersons(dzial2);
+  const persons = extractKwOwnerEntries(dzial2);
   const pesels = extractKwOwnerPesels(dzial2);
+  const findPerson = (name: string | null | undefined): KwOwnerEntry | undefined =>
+    persons.find((per) => personNamesOverlap(`${per.firstName} ${per.lastName}`, name));
 
   const out: KwCoOwnerCandidate[] = [];
   const seen = new Set<string>();
@@ -78,14 +88,14 @@ export function mergeKwOwners(dzial2: string | null | undefined): KwCoOwnerCandi
     if (usedPesels.has(p.pesel)) continue;
     usedPesels.add(p.pesel);
     if (p.ownerName) {
-      const person = persons.find((per) =>
-        personNamesOverlap(`${per.firstName} ${per.lastName}`, p.ownerName),
-      );
+      const person = findPerson(p.ownerName);
       push({
         fullName: p.ownerName,
         firstName: person?.firstName ?? (p.ownerName.split(/\s+/)[0] || null),
         lastName: person?.lastName ?? (p.ownerName.split(/\s+/).slice(1).join(" ") || null),
         pesel: p.pesel,
+        share: person?.share ?? null,
+        coOwnershipType: person?.coOwnershipType ?? null,
       });
     } else if (pesels.length === 1 && persons.length === 1) {
       // Jedyny PESEL i jedyna osoba w dziale II — przypisz mimo braku dopasowania tekstowego.
@@ -94,6 +104,8 @@ export function mergeKwOwners(dzial2: string | null | undefined): KwCoOwnerCandi
         firstName: persons[0].firstName,
         lastName: persons[0].lastName,
         pesel: p.pesel,
+        share: persons[0].share,
+        coOwnershipType: persons[0].coOwnershipType,
       });
     }
   }
@@ -105,6 +117,8 @@ export function mergeKwOwners(dzial2: string | null | undefined): KwCoOwnerCandi
       firstName: per.firstName,
       lastName: per.lastName,
       pesel: null,
+      share: per.share,
+      coOwnershipType: per.coOwnershipType,
     });
   }
 

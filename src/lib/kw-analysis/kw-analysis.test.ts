@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { renderKwSections, type KwExtraction } from "@/lib/kw-render";
 import { runKwAnalysis } from "./engine";
-import type { KwDocumentSections } from "./normalize";
+import { normalizeLandRegister, type KwDocumentSections } from "./normalize";
 import type { FindingStatus, KwAnalysisInput, Party, SeniorDebtCertificate } from "./types";
 
 // ── Ważne, poprawne PESEL-e (data + suma kontrolna) do fixtures. ─────────────
@@ -495,6 +495,50 @@ describe("Scenariusz 30 — błędny payload dostawcy", () => {
   });
 });
 
+describe("Normalizacja — udziały ułamkowe i import ręczny", () => {
+  it("odpis: udział przypisany do właściwej osoby (nie pozycyjnie)", () => {
+    // Dwóch właścicieli po 1/2 — układ odpisu z renderKwSections:
+    // Lp. → Wielkość udziału → dane osoby.
+    const s = sections(
+      baseExtraction({
+        dzial2: {
+          wlasciciele: [
+            { imiePierwsze: "JAN", nazwisko: "KOWALSKI", pesel: PESEL_A, udzial: "1/2" },
+            { imiePierwsze: "ANNA", nazwisko: "NOWAK", pesel: PESEL_B, udzial: "1/2" },
+          ],
+        },
+      }),
+    );
+    const nlr = normalizeLandRegister(s);
+    const jan = nlr.owners.find((o) => o.lastName === "KOWALSKI");
+    const anna = nlr.owners.find((o) => o.lastName === "NOWAK");
+    expect(jan?.share).toBe("1/2");
+    expect(anna?.share).toBe("1/2");
+  });
+
+  it("duże mianowniki udziałów (spadki) są łapane", () => {
+    const s = sections(
+      baseExtraction({
+        dzial2: {
+          wlasciciele: [{ imiePierwsze: "JAN", nazwisko: "KOWALSKI", udzial: "3/1024" }],
+        },
+      }),
+    );
+    const nlr = normalizeLandRegister(s);
+    expect(nlr.owners[0]?.share).toBe("3/1024");
+  });
+
+  it("import ręczny: dział III z nagłówkiem i 'BRAK WPISU' nie generuje wpisów do ręcznej analizy", () => {
+    const s = sections(baseExtraction(), {
+      dzial_3:
+        `<div class="kw-ocr-section"><h3>Dział III — Prawa, roszczenia, ograniczenia</h3>` +
+        `<pre>BRAK WPISU</pre></div>`,
+    });
+    const nlr = normalizeLandRegister(s);
+    expect(nlr.sectionThreeEntries).toHaveLength(0);
+  });
+});
+
 describe("Agregacja statusu globalnego", () => {
   it("bloker nie jest przykrywany przez pozytywne wpisy", () => {
     const ext = baseExtraction({
@@ -561,6 +605,20 @@ describe("Układ tabelaryczny EKW — pusty dział IV z komentarzem migracji", (
     expect(res.priority.expectedInvestorRank).toBe(1);
     expect(statusesOf(res.findings, "R-SECOND-RANK-CERT")).toHaveLength(0);
     expect(statusesOf(res.findings, "R-MORTGAGE-DEPENDENCIES")).toHaveLength(0);
+  });
+
+  it("odczytuje udział i rodzaj wspólności per wpis (układ tabelaryczny)", () => {
+    const nlr = normalizeLandRegister(ekwSections);
+    expect(nlr.owners).toHaveLength(2);
+    for (const o of nlr.owners) {
+      expect(o.share).toBe("1/1");
+      expect(o.coOwnershipType).toMatch(/USTAWOWA MAJĄTKOWA MAŁŻEŃSKA/i);
+    }
+  });
+
+  it("nie klasyfikuje nagłówka działu III jako wpisu (BRAK WPISÓW za długim nagłówkiem)", () => {
+    const nlr = normalizeLandRegister(ekwSections);
+    expect(nlr.sectionThreeEntries).toHaveLength(0);
   });
 
   it("rozpoznaje oboje właścicieli z podrubryki Osoba fizyczna wraz z PESEL", () => {

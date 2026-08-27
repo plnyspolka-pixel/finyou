@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { containsValidKw, normalizeKwNumber } from "./kw";
+import { compactKwNumber, containsValidKw, formatKwNumber, normalizeKwNumber } from "./kw";
 
 describe("normalizeKwNumber", () => {
   it("akceptuje poprawny numer KW", () => {
@@ -23,6 +23,35 @@ describe("normalizeKwNumber", () => {
   it("odrzuca numery o złej strukturze", () => {
     expect(normalizeKwNumber("LU1I/86478/5")).toBeNull(); // 5 cyfr zamiast 7-8
     expect(normalizeKwNumber("1234567")).toBeNull();
+  });
+});
+
+describe("compactKwNumber — forma z kw_documents", () => {
+  it("kompaktuje formę z ukośnikami do 13 znaków", () => {
+    expect(compactKwNumber("WL1A/00006862/7")).toBe("WL1A000068627");
+    expect(compactKwNumber("wl1a 00006862 7")).toBe("WL1A000068627");
+  });
+  it("akceptuje formę już kompaktową", () => {
+    expect(compactKwNumber("WL1A000068627")).toBe("WL1A000068627");
+  });
+  it("dopełnia 7-cyfrowe numery zerem (starsze księgi)", () => {
+    expect(compactKwNumber("KA1L/0008967/5")).toBe("KA1L000089675");
+  });
+  it("zwraca null dla śmieci", () => {
+    expect(compactKwNumber("PRZESŁANY")).toBeNull();
+    expect(compactKwNumber(null)).toBeNull();
+  });
+});
+
+describe("formatKwNumber — forma z ukośnikami do wyświetlania", () => {
+  it("formatuje formę kompaktową z kw_documents", () => {
+    expect(formatKwNumber("WL1A000068627")).toBe("WL1A/00006862/7");
+  });
+  it("zachowuje formę z ukośnikami", () => {
+    expect(formatKwNumber("WL1A/00006862/7")).toBe("WL1A/00006862/7");
+  });
+  it("zwraca null dla śmieci", () => {
+    expect(formatKwNumber("nie mam")).toBeNull();
   });
 });
 

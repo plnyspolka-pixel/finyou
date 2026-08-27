@@ -21,6 +21,7 @@ import {
   ScrollText,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatKwNumber } from "@/lib/kw";
 import { runKwLandRegisterAnalysis } from "@/lib/kw-analysis.functions";
 import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
 import type {
@@ -243,7 +244,8 @@ export function KwAnalysisReport({ result }: { result: KwAnalysisResult }) {
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Scale className="h-5 w-5" /> Analiza KW {result.kwNumber}
+                <Scale className="h-5 w-5" /> Analiza KW{" "}
+                {formatKwNumber(result.kwNumber) ?? result.kwNumber}
                 <KwPotentialBadge kwNumber={result.kwNumber} />
               </CardTitle>
               <CardDescription>

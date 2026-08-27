@@ -61,6 +61,28 @@ describe("mergeKwOwners — dział II KW", () => {
     expect(mergeKwOwners(null)).toEqual([]);
     expect(mergeKwOwners("")).toEqual([]);
   });
+
+  it("odczytuje udział i rodzaj wspólności z układu tabelarycznego EKW", () => {
+    const dzial2 =
+      "Właściciele Lp. 1. --- Nr podstawy wpisu Lista wskazań udziałów w prawie " +
+      "(numer udziału w prawie/ wielkość udziału/rodzaj wspólności) Lp. 1. 3 1 /1 " +
+      "WSPÓLNOŚĆ USTAWOWA MAJĄTKOWA MAŁŻEŃSKA 26 Osoba fizyczna " +
+      `(Imię pierwsze nazwisko, imię ojca, imię matki, PESEL) ANATOLII SLAVINSKYI, PETRO, JEWDOKIJA, ${PESEL_A}`;
+    const owners = mergeKwOwners(dzial2);
+    expect(owners).toHaveLength(1);
+    expect(owners[0].share).toBe("1/1");
+    expect(owners[0].coOwnershipType).toMatch(/USTAWOWA MAJĄTKOWA MAŁŻEŃSKA/i);
+  });
+
+  it("odczytuje udziały ułamkowe z układu odpisu (Wielkość udziału)", () => {
+    const dzial2 =
+      "Lp. 1 Wielkość udziału 1/2 Imię pierwsze JAN Nazwisko / pierwszy człon nazwiska złożonego KOWALSKI " +
+      "Lp. 2 Wielkość udziału 1/2 Imię pierwsze ANNA Nazwisko / pierwszy człon nazwiska złożonego NOWAK";
+    const owners = mergeKwOwners(dzial2);
+    expect(owners).toHaveLength(2);
+    expect(owners.find((o) => o.fullName.includes("KOWALSKI"))?.share).toBe("1/2");
+    expect(owners.find((o) => o.fullName.includes("NOWAK"))?.share).toBe("1/2");
+  });
 });
 
 describe("scanKrsOdpisForPerson — odpis z api-krs.ms.gov.pl", () => {

@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { SourceIcon } from "@/components/admin/SourceIcon";
+import { compactKwNumber } from "@/lib/kw";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
 import { leadSourceLabel } from "@/lib/lead-source";
 import { resolveShowablePhotoUrls } from "@/lib/property-photos";
@@ -562,15 +563,25 @@ export function ApplicationsPage({
       }
 
       if (kwNums.length > 0) {
-        const { data: kws } = await supabase
-          .from("kw_documents")
-          .select("kw_number,status")
-          .in("kw_number", kwNums);
-        for (const k of (kws ?? []) as { kw_number: string; status: string | null }[]) {
-          if (k.status && ["fetched", "completed", "success", "ok"].includes(k.status)) {
-            autoKwSet.add(k.kw_number);
-          } else if (!k.status) {
-            autoKwSet.add(k.kw_number);
+        // kw_documents.kw_number przechowuje formę kompaktową (13 znaków),
+        // a properties.land_register_number zwykle formę z ukośnikami —
+        // porównujemy po formie kompaktowej.
+        const compactToRaw = new Map<string, string>();
+        for (const raw of kwNums) {
+          const c = compactKwNumber(raw);
+          if (c) compactToRaw.set(c, raw);
+        }
+        if (compactToRaw.size > 0) {
+          const { data: kws } = await supabase
+            .from("kw_documents")
+            .select("kw_number,status")
+            .in("kw_number", Array.from(compactToRaw.keys()));
+          for (const k of (kws ?? []) as { kw_number: string; status: string | null }[]) {
+            if (k.status === "ready") {
+              autoKwSet.add(k.kw_number);
+              const raw = compactToRaw.get(k.kw_number);
+              if (raw) autoKwSet.add(raw);
+            }
           }
         }
       }

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizeKwNumber } from "@/lib/kw-fetch.server";
+import { formatKwNumber } from "@/lib/kw";
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
@@ -53,7 +54,8 @@ function escapeHtml(s: string): string {
 function wrapSection(title: string, body: string | null | undefined): string | null {
   const trimmed = (body ?? "").trim();
   if (!trimmed) return null;
-  return `<div class="kw-ocr-section"><h3>${escapeHtml(title)}</h3><pre style="white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;line-height:1.5">${escapeHtml(trimmed)}</pre></div>`;
+  // Bez styli inline — sanitizer je wycina; wygląd definiuje CSS `.kw-html pre`.
+  return `<div class="kw-ocr-section"><h3>${escapeHtml(title)}</h3><pre>${escapeHtml(trimmed)}</pre></div>`;
 }
 
 function extractKwNumberFromText(t: string): string | null {
@@ -220,9 +222,11 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
         .eq("id", propertyId)
         .maybeSingle();
       if (prop && !prop.land_register_number) {
+        // Na nieruchomości trzymamy formę z ukośnikami (jak formularze) —
+        // forma kompaktowa zostaje w kw_documents.
         await supabaseAdmin
           .from("properties")
-          .update({ land_register_number: kw })
+          .update({ land_register_number: formatKwNumber(kw) ?? kw })
           .eq("id", propertyId);
         warnings.push("Numer KW z importu zapisano na nieruchomości wniosku.");
       }

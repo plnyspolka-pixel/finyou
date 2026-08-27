@@ -9,7 +9,12 @@
 // Moduł czysty (bez Supabase) — testowalny.
 
 import { stripHtml, parseMortgages } from "@/lib/risk-assessment/kw-parse-core";
-import { extractKwOwnerPersons, extractKwOwnerPesels } from "@/lib/risk-assessment/kw-parse-core";
+import {
+  extractKwOwnerEntries,
+  extractKwOwnerPesels,
+  extractShareTokens,
+  extractCoOwnershipTokens,
+} from "@/lib/risk-assessment/kw-parse-core";
 import { parseKwAddress } from "@/lib/kw-address-core";
 import type {
   KwSection,
@@ -230,18 +235,18 @@ function parseAssociatedRights(doc: KwDocumentSections): NormalizedAssociatedRig
 function parseOwners(doc: KwDocumentSections): NormalizedOwner[] {
   const text = stripHtml(doc.dzial_2);
   if (!text) return [];
-  const persons = extractKwOwnerPersons(doc.dzial_2);
+  // Udział i rodzaj wspólności dopasowane po pozycji wpisu w tekście (nie po
+  // indeksie na liście osób) — wspólna logika z modułem współwłaścicieli.
+  const entries = extractKwOwnerEntries(doc.dzial_2);
   const pesels = extractKwOwnerPesels(doc.dzial_2);
-  const shares = [
-    ...text.matchAll(
-      /(?:wielko[śs][ćc]\s+udzia[łl]u|udzia[łl])[^0-9]{0,12}(\d{1,3}\s*\/\s*\d{1,3})/gi,
-    ),
-  ].map((m) => m[1].replace(/\s/g, ""));
-  const coType = text.match(
-    /wsp[óo]lno[śs][ćc]\s+(ustawow[a-z]*\s+majatkow[a-z]*|[a-ząćęłńóśźż]+)/i,
-  );
+  const shareTokens = extractShareTokens(text);
+  const coTypeTokens = extractCoOwnershipTokens(text);
+  const fallbackCoType =
+    new Set(coTypeTokens.map((t) => norm(t.value))).size === 1
+      ? (coTypeTokens[0]?.value ?? null)
+      : null;
 
-  const out: NormalizedOwner[] = persons.map((p, i) => {
+  const out: NormalizedOwner[] = entries.map((p) => {
     const match = pesels.find(
       (x) => x.ownerName && norm(x.ownerName) === norm(`${p.firstName} ${p.lastName}`),
     );
@@ -254,8 +259,8 @@ function parseOwners(doc: KwDocumentSections): NormalizedOwner[] {
       regon: null,
       fatherName: null,
       motherName: null,
-      share: shares[i] ?? null,
-      coOwnershipType: coType ? coType[1].trim() : null,
+      share: p.share,
+      coOwnershipType: p.coOwnershipType,
       evidence: [
         ev("II", `${p.firstName} ${p.lastName}`, {
           fieldCode: "2.2.5",
@@ -279,7 +284,7 @@ function parseOwners(doc: KwDocumentSections): NormalizedOwner[] {
       fatherName: null,
       motherName: null,
       share: null,
-      coOwnershipType: coType ? coType[1].trim() : null,
+      coOwnershipType: fallbackCoType,
       evidence: [
         ev("II", x.ownerName ?? x.pesel, {
           fieldCode: "2.2.5.8",
@@ -289,7 +294,7 @@ function parseOwners(doc: KwDocumentSections): NormalizedOwner[] {
       ],
     });
   }
-  // Osoby prawne (Nazwa / REGON / KRS).
+  // Osoby prawne (Nazwa / REGON / KRS) — udział z najbliższego ułamka przed wpisem.
   for (const m of text.matchAll(
     /nazwa[^A-ZĄĆĘŁŃÓŚŹŻ]{0,6}([A-ZĄĆĘŁŃÓŚŹŻ][^;]{2,80}?)(?=\s+(?:siedziba|regon|krs|kraj|lp\b|numer|udzia|$))/gi,
   )) {
@@ -298,6 +303,11 @@ function parseOwners(doc: KwDocumentSections): NormalizedOwner[] {
     const rest = text.slice(m.index ?? 0, (m.index ?? 0) + 300);
     const regon = rest.match(/regon[^0-9]{0,6}(\d{9}|\d{14})/i);
     const krs = rest.match(/krs[^0-9]{0,6}(\d{10})/i);
+    let share: string | null = null;
+    for (const t of shareTokens) {
+      if (t.index < (m.index ?? 0)) share = t.value;
+      else break;
+    }
     out.push({
       firstName: null,
       lastName: null,
@@ -307,8 +317,8 @@ function parseOwners(doc: KwDocumentSections): NormalizedOwner[] {
       regon: regon ? regon[1] : null,
       fatherName: null,
       motherName: null,
-      share: null,
-      coOwnershipType: coType ? coType[1].trim() : null,
+      share,
+      coOwnershipType: null,
       evidence: [
         ev("II", name, { fieldCode: "2.2.4", fieldLabel: "Osoba prawna", sourcePath: "dzial_2" }),
       ],
@@ -391,8 +401,27 @@ function extractBeneficiary(seg: string): string | null {
   return m ? m[1].trim() : null;
 }
 
+// Boilerplate wokół treści działu III: nagłówek strony EKW („TREŚĆ KSIĘGI
+// WIECZYSTEJ NR … DZIAŁ III - PRAWA, ROSZCZENIA I OGRANICZENIA") albo tytuł
+// sekcji z importu ręcznego. stripHtml skleja go z pierwszym wpisem w jeden
+// segment, więc bez odcięcia nagłówek trafiał do klasyfikacji jako wpis
+// (fałszywe OTHER + needsManualReview), a „BRAK WPISU" z długim nagłówkiem
+// nie przechodził progu pustego działu.
+function stripSectionThreeChrome(text: string): string {
+  return text
+    .replace(
+      /^[\s\S]{0,600}?DZIA[ŁL]\s+III\s*[-–—]?\s*PRAWA[,\s]+ROSZCZENIA[,\s]+(?:I\s+)?OGRANICZENIA/i,
+      " ",
+    )
+    .replace(/\bPowr[óo]t\b\s*$/i, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function parseSectionThree(doc: KwDocumentSections): NormalizedSectionThreeEntry[] {
-  const text = stripHtml(doc.dzial_3);
+  const raw = stripHtml(doc.dzial_3);
+  if (!raw) return [];
+  const text = stripSectionThreeChrome(raw);
   if (!text) return [];
   if (/brak\s+wpis/i.test(text) && norm(text).length < 40) return [];
   const out: NormalizedSectionThreeEntry[] = [];

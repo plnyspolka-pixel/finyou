@@ -29,3 +29,27 @@ export function normalizeKwNumber(raw: unknown): string | null {
 export function containsValidKw(raw: unknown): boolean {
   return normalizeKwNumber(raw) !== null;
 }
+
+/**
+ * Kompaktowa forma numeru KW (13 znaków, bez ukośników), np. "WL1A000068627".
+ * DOKŁADNIE w tej formie kw_documents.kw_number przechowuje numery (tak wymaga
+ * CMD KW Engine) — każdy odczyt z tej tabeli musi używać tej funkcji.
+ * Numery 7-cyfrowe (starsze księgi) dopełniamy zerem do 8 cyfr, jak EKW.
+ */
+export function compactKwNumber(raw: unknown): string | null {
+  const norm = normalizeKwNumber(raw);
+  if (!norm) return null;
+  const [court, num, check] = norm.split("/");
+  return `${court}${num.padStart(8, "0")}${check}`;
+}
+
+/**
+ * Forma z ukośnikami do wyświetlania i zapisu w polach formularzy
+ * (properties.land_register_number), np. "WL1A/00006862/7".
+ * Przyjmuje dowolny zapis (także kompaktowy 13-znakowy z kw_documents).
+ */
+export function formatKwNumber(raw: unknown): string | null {
+  const compact = compactKwNumber(raw);
+  if (!compact) return null;
+  return `${compact.slice(0, 4)}/${compact.slice(4, 12)}/${compact.slice(12)}`;
+}
