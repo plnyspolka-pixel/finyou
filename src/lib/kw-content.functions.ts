@@ -51,6 +51,27 @@ export const getKwForApplication = createServerFn({ method: "POST" })
           dzial_4: decodeMaybeBase64(row.dzial_4),
         }
       : row;
+    // Rekord z pobraną treścią raportujemy jako "ready", nawet gdy późniejsze
+    // odświeżenie zostawiło status błędu (błąd zostaje w last_error) albo
+    // proces odświeżania utknął w "processing" (starszy niż 10 min).
+    // Treść pobrana raz nie może znikać z podglądu przez nieudane odświeżenie.
+    const hasContent = Boolean(
+      document &&
+      (document.okladka ||
+        document.dzial_1o ||
+        document.dzial_1s ||
+        document.dzial_2 ||
+        document.dzial_3 ||
+        document.dzial_4),
+    );
+    if (document && hasContent) {
+      const stuckProcessing =
+        document.status === "processing" &&
+        (!document.ordered_at || Date.now() - Date.parse(document.ordered_at) > 10 * 60_000);
+      if (document.status === "error" || document.status === "not_found" || stuckProcessing) {
+        document.status = "ready";
+      }
+    }
     return { hasKw: true as const, kwNumber: kw, document };
   });
 

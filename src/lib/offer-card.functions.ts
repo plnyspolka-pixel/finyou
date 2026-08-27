@@ -261,12 +261,16 @@ export const getPublicOfferCard = createServerFn({ method: "GET" })
         .select("status, fetched_at, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4")
         .eq("kw_number", normalized)
         .maybeSingle();
-      if (kwDoc?.status === "ready") {
+      // Zapisane działy pokazujemy nawet przy statusie błędu odświeżenia —
+      // raz pobrana treść pozostaje dostępna.
+      if (kwDoc?.status === "ready" || kwDoc?.fetched_at) {
         const sections = KW_SECTIONS.flatMap(({ key, label }) => {
           const html = (kwDoc as any)[key] as string | null;
           return html ? [{ key, label, html }] : [];
         });
-        kw = { fetchedAt: (kwDoc as any).fetched_at ?? null, sections };
+        if (sections.length > 0) {
+          kw = { fetchedAt: (kwDoc as any).fetched_at ?? null, sections };
+        }
       }
     }
 

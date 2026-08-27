@@ -45,7 +45,9 @@ export async function analyzeCoOwners(args: {
     .select("status, dzial_2")
     .eq("kw_number", kw)
     .maybeSingle();
-  if (!row || row.status !== "ready") {
+  // Zapisany dział II analizujemy nawet przy statusie błędu odświeżenia —
+  // raz pobrana treść pozostaje dostępna.
+  if (!row || (row.status !== "ready" && !row.dzial_2)) {
     return emptyAnalysis(
       kw,
       "Treść działu II KW niedostępna — pobierz księgę wieczystą i uruchom sprawdzenie ponownie.",

@@ -272,6 +272,16 @@ export function KwContentSection({
               {doc?.last_error && <AlertDescription>{doc.last_error}</AlertDescription>}
             </Alert>
           )}
+          {ready && doc?.last_error && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Ostatnia próba odświeżenia nie powiodła się</AlertTitle>
+              <AlertDescription>
+                {doc.last_error} Poniżej wcześniej pobrana treść
+                {doc.fetched_at ? ` (z ${formatDateTime(doc.fetched_at)})` : ""}.
+              </AlertDescription>
+            </Alert>
+          )}
           {ready && (
             <Accordion type="multiple" defaultValue={["dzial_1o", "dzial_2"]}>
               {SECTIONS.map(({ key, label }) => {

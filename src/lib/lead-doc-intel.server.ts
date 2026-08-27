@@ -288,7 +288,8 @@ export async function fillLeadNameFromKw(opts: { leadId: string }): Promise<bool
       .select("status, dzial_2")
       .eq("kw_number", kw)
       .maybeSingle();
-    if (doc?.status !== "ready") continue;
+    // Zapisany dział II czytamy nawet przy statusie błędu odświeżenia.
+    if (!doc || (doc.status !== "ready" && !doc.dzial_2)) continue;
 
     const persons = extractKwOwnerPersons(decodeMaybeBase64(doc.dzial_2));
     if (persons.length === 0) continue;
