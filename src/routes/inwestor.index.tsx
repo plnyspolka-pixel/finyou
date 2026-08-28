@@ -26,7 +26,6 @@ import {
   signStoragePath,
 } from "@/lib/property-photos";
 import { useAccessState } from "@/hooks/use-access";
-import { UmowaAgentPanel } from "@/components/inwestor/umowa-agent-panel";
 import { InvestorTeaserList } from "@/components/access/InvestorTeaserList";
 import { getModuleState } from "@/lib/projects/module-access.functions";
 import { ModuleGate, type ModuleStateView } from "@/components/projects/module-gate";
@@ -116,9 +115,40 @@ function maskKw(kw: string): string {
   return `${court}/${masked}/•`;
 }
 
+// Wiersze wyszukiwarki: dokładnie kolumny z selecta poniżej (wniosek + nieruchomość).
+interface ListProperty {
+  property_type: string | null;
+  city: string | null;
+  voivodeship: string | null;
+  estimated_value: number | null;
+  area_sqm: number | null;
+  photos: string[] | null;
+  description: string | null;
+  street: string | null;
+  land_register_number: string | null;
+}
+
+interface ListApp {
+  id: string;
+  loan_amount: number | null;
+  preferred_period_months: number | null;
+  annual_investor_rate: number | null;
+  estimated_ltv: number | null;
+  max_monthly_payment: number | null;
+  visibility_level: string | null;
+  properties: ListProperty[] | null;
+}
+
+type DocRow = {
+  loan_application_id: string | null;
+  file_path: string | null;
+  file_name: string | null;
+  document_type: string | null;
+};
+
 function InwestorList() {
   const { user } = useAuth();
-  const [apps, setApps] = useState<any[]>([]);
+  const [apps, setApps] = useState<ListApp[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
 
@@ -144,7 +174,7 @@ function InwestorList() {
       // Defensywnie: pokazuj wyłącznie wnioski z podstawą dla inwestora —
       // nieruchomość z typem oraz sensowną kwotą. Zabezpiecza przed pustymi
       // kartami z legacy-danych mimo flagi available_to_investors.
-      const list = (data ?? []).filter((a) => {
+      const list = ((data ?? []) as ListApp[]).filter((a) => {
         const p = a.properties?.[0];
         return !!p?.property_type && a.loan_amount != null && Number(a.loan_amount) > 0;
       });
@@ -152,7 +182,7 @@ function InwestorList() {
       setLoading(false);
 
       const appIds = list.map((a) => a.id).filter(Boolean);
-      const docsByApp = new Map<string, any[]>();
+      const docsByApp = new Map<string, DocRow[]>();
       if (appIds.length > 0) {
         const { data: docRows } = await supabase
           .from("documents")
@@ -162,12 +192,6 @@ function InwestorList() {
         // (klient wgrywa zdjęcia pod różnymi document_type, np. przez czat) —
         // lista nie może być bardziej restrykcyjna, bo karty zostają szare.
         // Bierzemy każdy obrazek; typy stricte zdjęciowe idą na początek.
-        type DocRow = {
-          loan_application_id: string | null;
-          file_path: string | null;
-          file_name: string | null;
-          document_type: string | null;
-        };
         ((docRows ?? []) as DocRow[])
           .filter((doc) => {
             const name = String(doc.file_name ?? doc.file_path ?? "");
@@ -229,7 +253,10 @@ function InwestorList() {
 
   const voivodeships = useMemo(() => {
     const set = new Set<string>();
-    apps.forEach((a) => a.properties?.[0]?.voivodeship && set.add(a.properties[0].voivodeship));
+    apps.forEach((a) => {
+      const v = a.properties?.[0]?.voivodeship;
+      if (v) set.add(v);
+    });
     return Array.from(set).sort();
   }, [apps]);
 
@@ -312,19 +339,9 @@ function InwestorList() {
     <div className="space-y-6">
       <FancyPageHeader
         eyebrow="Panel inwestora"
-        title="Agent umowy (AI)"
-        subtitle="Główny ekran panelu — osobny agent czatowy tylko do wypełniania umowy: zbiera dane, a umowę składa deterministycznie silnik klauzul. Poniżej wyszukiwarka dostępnych wniosków."
+        title={`Dostępne wnioski (${apps.length})`}
+        subtitle="Wnioski dopuszczone do inwestorów — wyszukaj nieruchomość pod inwestycję. Umowę przygotujesz w zakładce „Tworzenie umowy”."
       />
-
-      {/* Osobny agent AI tylko do wypełniania umowy — główny ekran panelu. */}
-      <UmowaAgentPanel />
-
-      <div className="pt-2">
-        <h2 className="text-lg font-semibold">Dostępne wnioski ({apps.length})</h2>
-        <p className="text-sm text-muted-foreground">
-          Wnioski dopuszczone do inwestorów — wyszukaj nieruchomość pod inwestycję.
-        </p>
-      </div>
 
       <Card>
         <CardContent className="pt-6 space-y-4">
@@ -453,7 +470,7 @@ function InwestorList() {
                         {propertyTypeLabels[p.property_type]}
                       </Badge>
                     )}
-                    {p?.photos?.length > 1 && (
+                    {p?.photos && p.photos.length > 1 && (
                       <Badge
                         variant="secondary"
                         className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm"

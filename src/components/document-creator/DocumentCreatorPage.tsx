@@ -13,9 +13,12 @@ import {
   type DocTemplate,
   type GeneratedDoc,
 } from "@/lib/document-generator.functions";
-import { gusCompanyLookup } from "@/lib/gus-bir.functions";
-import { krsCompanyLookup } from "@/lib/krs.functions";
-import { companyBankAccountLookup } from "@/lib/company-bank-lookup.functions";
+import { gusCompanyLookup, type GusLookupResult } from "@/lib/gus-bir.functions";
+import { krsCompanyLookup, type KrsLookupResult } from "@/lib/krs.functions";
+import {
+  companyBankAccountLookup,
+  type CompanyBankLookupResult,
+} from "@/lib/company-bank-lookup.functions";
 import {
   extractOrderedFields,
   groupFields,
@@ -95,6 +98,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 // ════════════════════════════════════════════════════════════════════
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
+const errMsg = (e: unknown): string | null => (e instanceof Error ? e.message : null);
 const isoToDDMM = (iso: string) => {
   if (!iso) return "";
   const [y, m, d] = iso.split("-");
@@ -145,7 +149,13 @@ interface BundleResult {
 // KOMPONENT
 // ════════════════════════════════════════════════════════════════════
 
-export function DocumentCreatorPage() {
+export function DocumentCreatorPage({
+  excludeCategories,
+}: {
+  /** Kategorie wzorów ukryte w tym panelu (np. „umowa" u inwestora,
+   *  gdzie umowy powstają wyłącznie w zakładce „Tworzenie umowy"). */
+  excludeCategories?: string[];
+} = {}) {
   const _list = useServerFn(listDocxTemplates);
   const _generate = useServerFn(generateDocxFromTemplate);
   const _history = useServerFn(listGeneratedDocs);
@@ -240,8 +250,8 @@ export function DocumentCreatorPage() {
       const [t, h] = await Promise.all([_list(), _history({ data: { limit: 30 } })]);
       setTemplates(t);
       setHistory(h);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Błąd ładowania");
+    } catch (e) {
+      toast.error(errMsg(e) ?? "Błąd ładowania");
     } finally {
       setLoading(false);
     }
@@ -254,7 +264,9 @@ export function DocumentCreatorPage() {
   // Grupowanie listy wzorów po kategoriach
   const templateGroups = useMemo(() => {
     const filtered = templates.filter(
-      (t) => !search || t.name.toLowerCase().includes(search.toLowerCase()),
+      (t) =>
+        !excludeCategories?.includes(t.category ?? "inne") &&
+        (!search || t.name.toLowerCase().includes(search.toLowerCase())),
     );
     const map = new Map<string, DocTemplate[]>();
     for (const t of filtered) {
@@ -263,7 +275,7 @@ export function DocumentCreatorPage() {
       map.get(cat)!.push(t);
     }
     return Array.from(map.entries());
-  }, [templates, search]);
+  }, [templates, search, excludeCategories]);
 
   // Po wyborze wzoru — wczytaj podgląd, wyzeruj formularz
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -277,8 +289,8 @@ export function DocumentCreatorPage() {
     setPreviewLoading(true);
     _preview({ data: { templateId: selected.id } })
       .then((r) => setPreviewText(r.text))
-      .catch((e: any) => {
-        const msg = String(e?.message ?? "błąd");
+      .catch((e: unknown) => {
+        const msg = errMsg(e) ?? "błąd";
         setPreviewError(msg);
         if (!/not found|nie istnieje/i.test(msg)) toast.error(`Podgląd wzoru: ${msg}`);
       })
@@ -318,7 +330,7 @@ export function DocumentCreatorPage() {
       annualInterestPercent: calc.annualInterest,
       investorMonthlyReturnType: "percent",
       investorMonthlyReturnPercent: calc.investorMonthlyPct,
-    } as any);
+    });
   }, [calc, showCalculator]);
 
   const applyCalculatorToContract = () => {
@@ -394,8 +406,8 @@ export function DocumentCreatorPage() {
         }
         applyCalcPayload(payload, "pdf");
         toast.dismiss(t);
-      } catch (e: any) {
-        toast.error(e?.message ?? "Nie udało się wczytać PDF.", { id: t });
+      } catch (e) {
+        toast.error(errMsg(e) ?? "Nie udało się wczytać PDF.", { id: t });
       }
     },
     [applyCalcPayload],
@@ -415,11 +427,11 @@ export function DocumentCreatorPage() {
       else if (ids.regon) payload.regon = ids.regon;
       else if (ids.krs) payload.krs = ids.krs;
 
-      let gus: any = null;
+      let gus: GusLookupResult | null = null;
       try {
         gus = await _gus({ data: payload });
-      } catch (e: any) {
-        warnings.push(e?.message ?? "Błąd połączenia z GUS.");
+      } catch (e) {
+        warnings.push(errMsg(e) ?? "Błąd połączenia z GUS.");
       }
       if (gus?.success) {
         const c = gus.company;
@@ -439,11 +451,11 @@ export function DocumentCreatorPage() {
       // 2) KRS — pełny odpis (zarząd, reprezentacja, adres)
       const krsNum = (bundle.krs || ids.krs || "").replace(/\D/g, "");
       if (krsNum) {
-        let krs: any = null;
+        let krs: KrsLookupResult | null = null;
         try {
           krs = await _krs({ data: { krs: krsNum } });
-        } catch (e: any) {
-          warnings.push(e?.message ?? "Błąd połączenia z KRS.");
+        } catch (e) {
+          warnings.push(errMsg(e) ?? "Błąd połączenia z KRS.");
         }
         if (krs?.success) {
           const c = krs.company;
@@ -476,7 +488,7 @@ export function DocumentCreatorPage() {
 
       // 3) Rachunek bankowy z internetu (Perplexity) — wymaga ręcznej weryfikacji
       if (bundle.nip || bundle.krs || bundle.name) {
-        let bk: any = null;
+        let bk: CompanyBankLookupResult | null = null;
         try {
           bk = await _bank({
             data: {
@@ -537,8 +549,8 @@ export function DocumentCreatorPage() {
       const url = await _signedUrl({ data: { path: res.docxPath } });
       window.open(url.url, "_blank");
       await refresh();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Błąd generowania");
+    } catch (e) {
+      toast.error(errMsg(e) ?? "Błąd generowania");
     } finally {
       setGenerating(false);
     }
@@ -548,8 +560,8 @@ export function DocumentCreatorPage() {
     try {
       const r = await _signedUrl({ data: { path } });
       window.open(r.url, "_blank");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Błąd pobierania");
+    } catch (e) {
+      toast.error(errMsg(e) ?? "Błąd pobierania");
     }
   };
 
@@ -1059,8 +1071,8 @@ function GroupCard({
         );
       }
       setNote({ sources: res.sources, warnings: res.warnings, bankNote: res.bankNote });
-    } catch (e: any) {
-      toast.error(e?.message ?? "Błąd pobierania danych firmy.", { id: t });
+    } catch (e) {
+      toast.error(errMsg(e) ?? "Błąd pobierania danych firmy.", { id: t });
     } finally {
       setBusy(false);
     }
