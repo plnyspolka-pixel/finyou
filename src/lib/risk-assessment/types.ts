@@ -219,6 +219,10 @@ export interface MasterValuation {
   rationale: string;
   citations: string[];
   errorMessage?: string;
+  /** Wycena oparta wyłącznie o ceny OFERTOWE (0 transakcji) — obniżona pewność. */
+  offersOnly?: boolean;
+  /** Zastosowano korektę wielkości działki (malejąca wartość krańcowa zł/m²). */
+  sizeAdjusted?: boolean;
 }
 
 // ---- Prognozowana łatwość sprzedaży (popyt z otoczenia) ----

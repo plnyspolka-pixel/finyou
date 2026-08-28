@@ -60,4 +60,68 @@ describe("assessPlotBuildability — prawo zabudowy działki", () => {
     expect(assessPlotBuildability({ propertyType: "mieszkanie" }).applicable).toBe(false);
     expect(assessPlotBuildability({ propertyType: "dom" }).applicable).toBe(false);
   });
+
+  it("KW mówi R - GRUNTY ORNE: status rolny mimo deklaracji dzialka_budowlana", () => {
+    const r = assessPlotBuildability({
+      propertyType: "dzialka_budowlana",
+      kwLandUse: "R - GRUNTY ORNE",
+      landAreaHa: 9.39,
+    });
+    expect(r.category).toBe("rolna_bez_zabudowy");
+    expect(r.valuationBasis).toBe("rolna_gus");
+    expect(r.buyerPool).toBe("rolniczy");
+    expect(r.warnings.join(" ")).toMatch(/Rozbieżność/);
+    expect(r.warnings.join(" ")).toMatch(/UKUR/);
+    expect(r.warnings.join(" ")).toMatch(/KOWR/);
+  });
+
+  it("KW z użytkiem budowlanym (B - tereny mieszkaniowe) nie zmienia statusu budowlanego", () => {
+    const r = assessPlotBuildability({
+      propertyType: "dzialka_budowlana",
+      kwLandUse: "B - TERENY MIESZKANIOWE",
+    });
+    expect(r.category).toBe("budowlana");
+    expect(r.buyerPool).toBe("szeroki");
+  });
+
+  it("grunt rolny <1 ha — bez ostrzeżenia UKUR", () => {
+    const r = assessPlotBuildability({
+      propertyType: "grunt_rolny",
+      kwLandUse: "R - GRUNTY ORNE",
+      landAreaHa: 0.5,
+    });
+    expect(r.category).toBe("rolna_bez_zabudowy");
+    expect(r.warnings.join(" ")).not.toMatch(/UKUR/);
+  });
+
+  it("jednoznaczne przeznaczenie budowlane w dokumentach (OCR/MPZP) wygrywa z użytkiem R w KW", () => {
+    const r = assessPlotBuildability({
+      propertyType: "dzialka_budowlana",
+      kwLandUse: "R - GRUNTY ORNE",
+      ocrText: "Wypis z MPZP: teren zabudowy mieszkaniowej jednorodzinnej MN",
+    });
+    expect(r.category).toBe("budowlana");
+    expect(r.buyerPool).toBe("szeroki");
+    expect(r.warnings.join(" ")).toMatch(/wg dokumentów/);
+  });
+
+  it("dokumenty niejednoznaczne (budowlane + rolne) przy KW R — ostrożnościowo status rolny", () => {
+    const r = assessPlotBuildability({
+      propertyType: "dzialka_budowlana",
+      kwLandUse: "R - GRUNTY ORNE",
+      ocrText: "wypis z rejestru gruntów: grunty orne RIVb; częściowo teren budowlany",
+    });
+    expect(r.category).toBe("rolna_bez_zabudowy");
+    expect(r.warnings.join(" ")).toMatch(/niejednoznaczna/);
+  });
+
+  it("odrolnienie wygrywa z użytkiem rolnym w KW", () => {
+    const r = assessPlotBuildability({
+      propertyType: "dzialka_budowlana",
+      kwLandUse: "R - GRUNTY ORNE",
+      isOdrolniona: true,
+    });
+    expect(r.category).toBe("budowlana");
+    expect(r.valuationBasis).toBe("budowlana");
+  });
 });

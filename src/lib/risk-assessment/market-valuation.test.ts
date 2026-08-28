@@ -173,4 +173,64 @@ describe("computeMarketValuation", () => {
     expect(v.keyRisks.join(" ")).toMatch(/deklarowana/);
     expect(v.keyRisks.join(" ")).toMatch(/przekracza/);
   });
+
+  it("podstawa rolna_gus z KW wymusza wycenę GUS zł/ha mimo deklaracji dzialka_budowlana", () => {
+    const v = computeMarketValuation(
+      baseInput({
+        propertyType: "dzialka_budowlana",
+        areaM2: 93_900,
+        landAreaHa: 9.39,
+        valuationBasis: "rolna_gus",
+        govBenchmark: gov({ areaHa: 9.39, landValuePln: null }),
+        marketComparables: mc({ pricePerM2Median: 620, transactionsCount: 0, offersCount: 27 }),
+      }),
+    );
+    expect(v.status).toBe("success");
+    expect(v.estimatedValueMidPln).toBe(563_400); // 60 000 zł/ha × 9,39 ha
+    expect(v.basisSource).toContain("GUS");
+  });
+
+  it("duża działka bez danych GUS: korekta wielkości zamiast liniowej ekstrapolacji + do_weryfikacji", () => {
+    const v = computeMarketValuation(
+      baseInput({
+        propertyType: "dzialka_budowlana",
+        areaM2: 93_900,
+        landAreaHa: 9.39,
+        marketComparables: mc({
+          city: "Wołomin",
+          pricePerM2Median: 620,
+          pricePerM2P25: 500,
+          pricePerM2P75: 800,
+          transactionsCount: 0,
+          offersCount: 27,
+        }),
+        govBenchmark: null,
+        requestedLoanPln: 60_000,
+      }),
+    );
+    expect(v.status).toBe("success");
+    expect(v.sizeAdjusted).toBe(true);
+    expect(v.offersOnly).toBe(true);
+    // 620 × 3000 + 620 × 0,25 × 90 900 = 15 949 500 — wciąż wskaźnik, ale
+    // bez liniowych 58,2 mln i z wymuszoną ręczną weryfikacją.
+    expect(v.estimatedValueMidPln).toBe(15_949_500);
+    expect(v.estimatedValueMidPln!).toBeLessThan(0.3 * 620 * 93_900);
+    expect(v.recommendation).toBe("do_weryfikacji");
+    expect(v.keyRisks.join(" ")).toMatch(/ekstrapolacja/i);
+    expect(v.keyRisks.join(" ")).toMatch(/nieproporcjonalnie wysoka/);
+    expect(v.keyRisks.join(" ")).toMatch(/cen ofertowych/);
+  });
+
+  it("mała działka (≤3000 m²) — bez korekty wielkości, pełna stawka zł/m²", () => {
+    const v = computeMarketValuation(
+      baseInput({
+        propertyType: "dzialka_budowlana",
+        areaM2: 1_200,
+        marketComparables: mc({ pricePerM2Median: 620, pricePerM2P25: 500, pricePerM2P75: 800 }),
+      }),
+    );
+    expect(v.sizeAdjusted).toBe(false);
+    expect(v.estimatedValueMidPln).toBe(744_000); // 620 × 1200
+    expect(v.recommendation).toBe("rekomendowana");
+  });
 });

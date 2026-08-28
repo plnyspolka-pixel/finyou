@@ -23,6 +23,13 @@ export interface PlotBuildabilityInput {
   isOdrolniona?: boolean | null; // odrolniona / wyłączona z produkcji rolnej
   ownerIsFarmer?: boolean | null; // status rolnika indywidualnego (jeśli znany)
   ocrText?: string | null; // złączony tekst z OCR/dokumentów
+  /**
+   * Sposób korzystania z gruntu z działu I-O KW (np. „R - GRUNTY ORNE") —
+   * dane URZĘDOWE, mają pierwszeństwo przed typem zadeklarowanym we wniosku.
+   */
+  kwLandUse?: string | null;
+  /** Obszar gruntu w ha (dział I-O KW) — próg UKUR dla obrotu gruntem rolnym. */
+  landAreaHa?: number | null;
 }
 
 export interface PlotBuildabilityResult {
@@ -56,6 +63,10 @@ function neutral(propertyType: string): PlotBuildabilityResult {
   };
 }
 
+const AGRI_LAND_USE_RE =
+  /grunt\w*\s+orn|grunt\w*\s+roln|u[żz]ytk\w*\s+roln|[łl][ąa]k\w*\s+trwa|pastwisk|\brola\b|sad\b|nieu[żz]ytk/;
+const BUILT_LAND_USE_RE = /\bb\b|teren\w*\s+mieszkaniow|zabudowan|budowlan/;
+
 export function assessPlotBuildability(input: PlotBuildabilityInput): PlotBuildabilityResult {
   if (!PLOT_TYPES.has(input.propertyType)) return neutral(input.propertyType);
 
@@ -74,9 +85,17 @@ export function assessPlotBuildability(input: PlotBuildabilityInput): PlotBuilda
   const rolnyText =
     /grunt\w*\s+roln|u[żz]ytk\w*\s+roln|\brola\b|grunt\w*\s+orn|klasa\s+bonitacyjn/.test(text);
 
+  // Sposób korzystania z działu I-O KW — dane urzędowe. „R - GRUNTY ORNE" itp.
+  // przesądza o statusie rolnym, gdy dokumenty (MPZP/WZ/wypis z OCR) milczą lub
+  // są niejednoznaczne. Jednoznaczne przeznaczenie budowlane w DOKUMENTACH
+  // wygrywa z użytkiem z KW — ewidencja gruntów bywa nieaktualna względem MPZP.
+  const kwUse = (input.kwLandUse ?? "").toLowerCase();
+  const kwSaysAgri = AGRI_LAND_USE_RE.test(kwUse) && !BUILT_LAND_USE_RE.test(kwUse);
+
   let category: PlotBuildCategory;
   if (rmZagrodowa) category = "zagrodowa_siedliskowa";
   else if (odrolniona || (budowlana && !rolnyText)) category = "budowlana";
+  else if (kwSaysAgri) category = "rolna_bez_zabudowy";
   else if (input.propertyType === "dzialka_budowlana")
     category = budowlana || !rolnyText ? "budowlana" : "nieokreslona";
   else if (input.propertyType === "dzialka_zabudowana") category = "zabudowana";
@@ -140,6 +159,34 @@ export function assessPlotBuildability(input: PlotBuildabilityInput): PlotBuilda
       warnings.push(
         "Status zabudowy działki nieokreślony — zweryfikuj MPZP (symbol RM/MN/R) lub decyzję WZ.",
       );
+  }
+
+  // Dane urzędowe z KW kontra deklaracja wniosku i dokumenty + próg UKUR.
+  if (kwSaysAgri && category === "rolna_bez_zabudowy") {
+    if (input.propertyType === "dzialka_budowlana") {
+      warnings.push(
+        `Rozbieżność: wniosek deklaruje działkę budowlaną, ale dział I-O KW podaje sposób korzystania „${input.kwLandUse}" (grunt rolny), a dokumenty nie potwierdzają statusu budowlanego. Do analizy przyjęto status rolny — status budowlany wymaga potwierdzenia wypisem z MPZP lub decyzją WZ.`,
+      );
+    }
+    if (budowlana) {
+      warnings.push(
+        "W dokumentach pojawia się przeznaczenie budowlane obok wzmianek o gruncie rolnym (treść niejednoznaczna), a KW wskazuje grunt rolny — przyjęto ostrożnościowo status rolny; zweryfikuj MPZP/WZ.",
+      );
+    }
+  }
+  if (kwSaysAgri && category === "budowlana" && !odrolniona) {
+    warnings.push(
+      `Dokumenty (MPZP/WZ/OCR) wskazują przeznaczenie budowlane, choć dział I-O KW podaje „${input.kwLandUse}" — przyjęto status budowlany wg dokumentów; upewnij się, że dotyczą tej działki (ewidencja w KW bywa nieaktualna względem MPZP).`,
+    );
+  }
+  if (
+    (category === "rolna_bez_zabudowy" || category === "zagrodowa_siedliskowa") &&
+    input.landAreaHa != null &&
+    input.landAreaHa >= 1
+  ) {
+    warnings.push(
+      `Grunt rolny o powierzchni ${input.landAreaHa} ha (≥1 ha) — obrót podlega UKUR: nabywcą może być zasadniczo rolnik indywidualny, a sprzedaż innym podmiotom wymaga zgody KOWR (plus prawo pierwokupu KOWR). Istotnie zawężony krąg nabywców przy wymuszonej sprzedaży.`,
+    );
   }
 
   // Modyfikatory łagodzące.
