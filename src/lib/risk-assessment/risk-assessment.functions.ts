@@ -169,10 +169,19 @@ export async function runInvestmentRiskAssessmentCore(
     );
   }
 
-  // Adres efektywny: dane wniosku → fallback z działu I-O KW.
+  // Adres efektywny: dział I-O KW to dane urzędowe — przy rozbieżności z danymi
+  // wniosku (np. lead podał miasto powiatowe zamiast wsi) wygrywa miejscowość
+  // z KW; dane wniosku są tylko uzupełnieniem, gdy KW nie podaje adresu.
   const kwAddr = kwLegal.address;
   const effAddress = property?.address || kwAddr?.fullAddress || null;
-  const effCity = property?.city || kwAddr?.city || null;
+  const normCity = (s: string) => s.trim().toLowerCase();
+  let effCity = property?.city || kwAddr?.city || null;
+  if (kwAddr?.city && property?.city && normCity(property.city) !== normCity(kwAddr.city)) {
+    effCity = kwAddr.city;
+    warnings.push(
+      `Rozbieżność lokalizacji: wniosek podaje „${property.city}", a dział I-O KW „${kwAddr.city}" — analizę rynku i lokalizacji oparto na miejscowości z KW.`,
+    );
+  }
   const effVoivodeship = property?.voivodeship || kwAddr?.voivodeship || null;
 
   // Parametry nieruchomości z działu I-O KW (oznaczenie) — źródło do wyceny.
@@ -228,8 +237,23 @@ export async function runInvestmentRiskAssessmentCore(
     warnings.push(`Analiza zabezpieczenia nie powiodła się: ${e?.message ?? "błąd"}.`);
   }
 
-  // 3) Korespondencja + łatwość sprzedaży — równolegle. OCR dokumentów wyłączony.
+  // 3) Korespondencja + łatwość sprzedaży — równolegle. OCR dokumentów wyłączony,
+  //    ale załączniki klienta muszą być widoczne jako nieprzetworzone, nie „brak".
   const ocr = EMPTY_OCR;
+  try {
+    const { data: docRows } = await db
+      .from("documents")
+      .select("id")
+      .eq("loan_application_id", applicationId);
+    const docsCount = docRows?.length ?? 0;
+    if (docsCount > 0) {
+      warnings.push(
+        `${docsCount} załącznik(ów) klienta nie zostało przetworzonych (moduł OCR wyłączony) — mogą zawierać wypis z rejestru gruntów, MPZP lub operat; zweryfikuj ręcznie.`,
+      );
+    }
+  } catch {
+    // brak dostępu do tabeli documents — pomijamy
+  }
   const [correspondence, saleabilityRaw] = await Promise.all([
     analyzeCorrespondence({ applicationId, clientId, declaredValue, loanAmount, city: effCity }),
     analyzeSaleability({
@@ -240,6 +264,25 @@ export async function runInvestmentRiskAssessmentCore(
       areaM2: property?.area_sqm ?? null,
     }),
   ]);
+
+  // Rekonsyliacja sygnałów z korespondencji z AKTUALNYM stanem wniosku: flagi
+  // „brak numeru KW" / „brak adresu" wygasają, gdy dane są już uzupełnione
+  // (korespondencja bywa starsza niż dokumenty dosłane później).
+  const staleCorrespondenceFlag = (s: string) =>
+    (Boolean(kwNumber) && /brak\s+(numeru\s+)?(ksi[ęe]gi|kw\b)/i.test(s)) ||
+    (Boolean(effAddress) && /brak\s+adresu/i.test(s));
+  const staleFlags = [...correspondence.redFlags, ...correspondence.inconsistencies].filter(
+    staleCorrespondenceFlag,
+  );
+  if (staleFlags.length > 0) {
+    correspondence.redFlags = correspondence.redFlags.filter((s) => !staleCorrespondenceFlag(s));
+    correspondence.inconsistencies = correspondence.inconsistencies.filter(
+      (s) => !staleCorrespondenceFlag(s),
+    );
+    warnings.push(
+      `Pominięto ${staleFlags.length} nieaktualny(e) sygnał(y) z korespondencji (numer KW/adres są już uzupełnione we wniosku).`,
+    );
+  }
 
   // 4) Właściciel — potrzebuje wyników KW do porównania nazwiska; PESEL
   //    zaciągany bezpośrednio z działu II KW (rekord klienta tylko zapasowo).
@@ -252,7 +295,9 @@ export async function runInvestmentRiskAssessmentCore(
     voivodeship: effVoivodeship,
   });
   warnings.push(
-    ...owner.notes.filter((n) => /nieprawidłowy|niezgod|brak PESEL|brak powiązanego/i.test(n)),
+    ...owner.notes.filter((n) =>
+      /nieprawidłowy|niezgod|brak PESEL|nie zawiera pola PESEL|brak powiązanego/i.test(n),
+    ),
   );
 
   // 5) Czynnik kondygnacji (mieszkania) — 1. piętro najlepiej, ostatnie w niskim
@@ -272,17 +317,28 @@ export async function runInvestmentRiskAssessmentCore(
     mpzpInfo: (property as any)?.mpzp_info ?? null,
     landRegistryExtract: (property as any)?.land_registry_extract ?? null,
     ocrText: null,
+    // Sposób korzystania z działu I-O KW (np. „R - GRUNTY ORNE") — dane
+    // urzędowe mają pierwszeństwo przed typem zadeklarowanym we wniosku.
+    kwLandUse: kwParams.landUse ?? kwParams.kind ?? null,
+    landAreaHa: kwParams.landAreaHa,
   });
   const saleability = plotBuildability.applicable
     ? applyPlotBuildabilityToSaleability(saleabilityFloor, plotBuildability)
     : saleabilityFloor;
   if (plotBuildability.onlyFarmerCanBuild) warnings.push(...plotBuildability.warnings);
 
+  // Typ EFEKTYWNY do wyceny: gdy KW wskazuje grunt rolny (podstawa „rolna_gus"),
+  // wyceniamy jak grunt rolny (GUS zł/ha), niezależnie od deklaracji wniosku.
+  const effPropertyType =
+    plotBuildability.applicable && plotBuildability.valuationBasis === "rolna_gus"
+      ? "grunt_rolny"
+      : (property?.property_type ?? "inna");
+
   // 5c) GUS BDL — wyłącznie POMOCNICZO: dla gruntu rolnego podstawa wyceny
   //     (ceny zł/ha wg klasy bonitacyjnej z KW), dla pozostałych typów fallback.
   //     RCN pozostaje wyłączony.
   const govBenchmark = await fetchGusAuxiliaryBenchmark({
-    propertyType: property?.property_type ?? "inna",
+    propertyType: effPropertyType,
     city: effCity,
     voivodeship: effVoivodeship,
     soilClass: kwLegal.soilClass,
@@ -290,7 +346,7 @@ export async function runInvestmentRiskAssessmentCore(
     landAreaHa: kwParams.landAreaHa,
   }).catch((e) => {
     warnings.push(`GUS BDL (pomocniczo): ${e?.message ?? "błąd"}.`);
-    return emptyGovBenchmark(property?.property_type ?? "inna");
+    return emptyGovBenchmark(effPropertyType);
   });
 
   // 5d) PODSTAWA WYCENY — scraping rynku (Firecrawl):
@@ -308,14 +364,12 @@ export async function runInvestmentRiskAssessmentCore(
 
   // 6) Deterministyczna wycena rynkowa — mediana zł/m² ze scrapingu × powierzchnia
   //    z KW; grunt rolny: ceny GUS zł/ha × ha. Bez udziału LLM.
-  const isPlotType = /dzialka|działka|grunt|siedlisk/.test(
-    (property?.property_type ?? "").toLowerCase(),
-  );
+  const isPlotType = /dzialka|działka|grunt|siedlisk/.test(effPropertyType.toLowerCase());
   const areaM2 = isPlotType
     ? (kwParams.landAreaM2 ?? property?.area_sqm ?? null)
     : (kwParams.usableAreaM2 ?? property?.area_sqm ?? null);
   const master = computeMarketValuation({
-    propertyType: property?.property_type ?? "inna",
+    propertyType: effPropertyType,
     areaM2,
     landAreaHa: kwParams.landAreaHa,
     declaredValuePln: declaredValue,
@@ -326,6 +380,7 @@ export async function runInvestmentRiskAssessmentCore(
     ownerMatchesKw: owner.matchesKwOwner,
     saleabilityScore: saleability.available ? saleability.score : null,
     onlyFarmerCanBuild: plotBuildability.applicable ? plotBuildability.onlyFarmerCanBuild : false,
+    valuationBasis: plotBuildability.applicable ? plotBuildability.valuationBasis : null,
   });
   if (master.status !== "success")
     warnings.push(
@@ -346,7 +401,7 @@ export async function runInvestmentRiskAssessmentCore(
       : null);
   // Dla gruntu rolnego podstawą wyceny są ceny gruntów rolnych GUS (zł/ha × ha) —
   // wycena rynkowa (master) liczy to samo, ale zostawiamy jawny priorytet.
-  const govLandValue = property?.property_type === "grunt_rolny" ? govBenchmark.landValuePln : null;
+  const govLandValue = effPropertyType === "grunt_rolny" ? govBenchmark.landValuePln : null;
   const basisValue =
     govLandValue ?? master.estimatedValueMidPln ?? collateralMid ?? declaredValue ?? null;
   const basisSource = govLandValue
@@ -361,7 +416,7 @@ export async function runInvestmentRiskAssessmentCore(
   const forcedSale = estimateForcedSale({
     basisValuePln: basisValue,
     basisSource,
-    propertyType: property?.property_type ?? null,
+    propertyType: effPropertyType,
     requestedLoanPln: loanAmount,
     saleabilityScore: saleability.available ? saleability.score : null,
     marketLowPln:

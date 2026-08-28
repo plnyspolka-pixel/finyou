@@ -66,15 +66,22 @@ function surnameMatches(fullName: string | null, ownerName: string | null): bool
  * współwłaściciel) — walidowane sumą kontrolną, z przypisanym imieniem
  * i nazwiskiem wpisu, jeśli udało się je rozpoznać.
  */
-async function findAllPeselsInKw(kwNumber: string): Promise<KwOwnerPesel[]> {
+async function findAllPeselsInKw(
+  kwNumber: string,
+): Promise<{ candidates: KwOwnerPesel[]; dzial2Incomplete: boolean }> {
   const { data: row } = await supabaseAdmin
     .from("kw_documents")
     .select("status, dzial_2")
     .eq("kw_number", kwNumber)
     .maybeSingle();
   // Zapisany dział II czytamy nawet przy statusie błędu odświeżenia.
-  if (!row || (row.status !== "ready" && !row.dzial_2)) return [];
-  return extractKwOwnerPesels(row.dzial_2);
+  if (!row || (row.status !== "ready" && !row.dzial_2))
+    return { candidates: [], dzial2Incomplete: false };
+  // Dział II KW ZAWSZE zawiera PESEL właścicieli (osób fizycznych). Jeśli
+  // pobrana treść w ogóle nie ma pola „PESEL", to niekompletny odczyt od
+  // dostawcy (easymkw/CMD) — sygnał do ponownego zamówienia treści KW.
+  const dzial2Incomplete = Boolean(row.dzial_2) && !/pesel/i.test(row.dzial_2 ?? "");
+  return { candidates: extractKwOwnerPesels(row.dzial_2), dzial2Incomplete };
 }
 
 /**
@@ -146,12 +153,20 @@ export async function analyzeOwner(args: {
   // ŹRÓDŁO PODSTAWOWE: PESEL-e WSZYSTKICH właścicieli bezpośrednio z treści
   // księgi wieczystej (dział II) — wnioskodawcy i każdego współwłaściciela.
   let kwCandidates: KwOwnerPesel[] = [];
+  let dzial2Incomplete = false;
   if (args.kwNumber) {
     try {
-      kwCandidates = await findAllPeselsInKw(args.kwNumber);
+      const found = await findAllPeselsInKw(args.kwNumber);
+      kwCandidates = found.candidates;
+      dzial2Incomplete = found.dzial2Incomplete;
     } catch (e: any) {
       console.error("[owner-analysis] PESEL z KW nieodczytany:", e?.message ?? e);
     }
+  }
+  if (dzial2Incomplete) {
+    notes.push(
+      "Pobrana treść działu II KW nie zawiera pola PESEL — niekompletny odczyt od dostawcy (w KW numer PESEL właściciela jest zawsze). Zamów ponowny odczyt treści KW.",
+    );
   }
 
   const applicantPick = pickApplicantPesel(kwCandidates, fullName);

@@ -59,6 +59,10 @@ function valuationConfidenceScore(
     if (cv.citations.length >= 3) score += 5;
   }
   if (master.status === "success" && master.estimatedValueMidPln) score += 20;
+  // Sygnały obniżające wiarygodność wyceny rynkowej: brak transakcji (same
+  // ceny ofertowe) i ekstrapolacja cen małych działek na duży areał.
+  if (master.offersOnly) score -= 15;
+  if (master.sizeAdjusted) score -= 15;
   return Math.max(0, Math.min(100, score));
 }
 
@@ -108,7 +112,12 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     i.owner.lifeExpectancy.longevityRiskBand,
     ...i.owner.kwOwnerProfiles.map((p) => p.lifeExpectancy.longevityRiskBand),
   ];
-  const borrowerLongevity = Math.max(...longevityBands.map(longevityToScore));
+  let borrowerLongevity = Math.max(...longevityBands.map(longevityToScore));
+  // Brak PESEL gdziekolwiek (dział II KW i rekord klienta) to defekt danych,
+  // nie stan neutralny — PESEL w dziale II KW powinien być zawsze; jego brak
+  // oznacza niekompletny odczyt treści KW i nieznany wiek właściciela.
+  const noPeselAnywhere = !i.owner.peselValid && i.owner.kwOwnerProfiles.length === 0;
+  if (noPeselAnywhere) borrowerLongevity = Math.min(borrowerLongevity, 45);
 
   const componentScores: RiskComponentScores = {
     collateral: i.collateral?.collateralScore?.total ?? 40,
@@ -183,6 +192,10 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
   const keyRisks: string[] = [];
   const keyStrengths: string[] = [];
   keyRisks.push(...i.kwLegal.warnings);
+  if (noPeselAnywhere)
+    keyRisks.push(
+      "Brak PESEL właściciela w dziale II KW i w rekordzie klienta — nieznany wiek/dożycie; treść działu II wygląda na niekompletną (PESEL w KW powinien być zawsze) — zamów ponowny odczyt KW.",
+    );
   if (
     i.owner.lifeExpectancy.longevityRiskBand === "wysokie" ||
     i.owner.lifeExpectancy.longevityRiskBand === "podwyzszone"

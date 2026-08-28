@@ -11,6 +11,7 @@ import type {
   KwLegalAnalysis,
   Recommendation,
 } from "./types";
+import type { ValuationBasis } from "./plot-buildability";
 
 export interface MarketValuationInput {
   propertyType: string;
@@ -30,6 +31,35 @@ export interface MarketValuationInput {
   ownerMatchesKw: boolean | null;
   saleabilityScore: number | null;
   onlyFarmerCanBuild?: boolean;
+  /**
+   * Podstawa wyceny wskazana przez analizę prawa zabudowy (dział I-O KW ma
+   * pierwszeństwo przed typem z wniosku): „rolna_gus" wymusza wycenę wg cen
+   * gruntów rolnych GUS (zł/ha), nawet gdy wniosek deklaruje działkę budowlaną.
+   */
+  valuationBasis?: ValuationBasis | null;
+}
+
+// Ceny zł/m² małych działek (typowe ogłoszenia ~500–3000 m²) nie skalują się
+// liniowo na duże areały. Powyżej progu każdy kolejny m² liczymy z malejącą
+// wartością krańcową; bez tej korekty 9 ha pola wycenialiśmy jak 90 działek
+// budowlanych w mieście.
+const PLOT_FULL_PRICE_AREA_M2 = 3000;
+const PLOT_MARGINAL_FACTOR = 0.25;
+// Powyżej 1 ha wycena z komparabli małych działek to już ekstrapolacja poza
+// segment rynku — wynik traktujemy jako wymagający ręcznej weryfikacji.
+const PLOT_EXTRAPOLATION_LIMIT_M2 = 10_000;
+
+function isPlotPropertyType(propertyType: string): boolean {
+  return /dzialka|działka|grunt|siedlisk/.test((propertyType || "").toLowerCase());
+}
+
+/** Wartość działki z zł/m² z korektą wielkości (malejąca wartość krańcowa). */
+export function plotValueWithSizeAdjustment(ppm2: number, areaM2: number): number {
+  if (areaM2 <= PLOT_FULL_PRICE_AREA_M2) return Math.round(ppm2 * areaM2);
+  return Math.round(
+    ppm2 * PLOT_FULL_PRICE_AREA_M2 +
+      ppm2 * PLOT_MARGINAL_FACTOR * (areaM2 - PLOT_FULL_PRICE_AREA_M2),
+  );
 }
 
 const VALUATION_DISCLAIMER =
@@ -50,7 +80,10 @@ function pct(n: number, p: number): number {
 }
 
 export function computeMarketValuation(i: MarketValuationInput): MasterValuation {
-  const isAgri = i.propertyType === "grunt_rolny";
+  // Status rolny wynika z typu wniosku LUB z analizy prawa zabudowy (dział I-O KW
+  // „R - GRUNTY ORNE" itp. wymusza podstawę rolną mimo deklaracji „budowlana").
+  const isAgri = i.propertyType === "grunt_rolny" || i.valuationBasis === "rolna_gus";
+  const isPlot = isPlotPropertyType(i.propertyType);
   const mc = i.marketComparables;
   const gov = i.govBenchmark;
   const mcUsable =
@@ -61,6 +94,7 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
   let mid: number | null = null;
   let high: number | null = null;
   let basisSource = "brak";
+  let sizeAdjusted = false;
   const rationaleParts: string[] = [];
 
   if (isAgri && gov?.pricePerHa != null && i.landAreaHa != null) {
@@ -82,18 +116,31 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
     const medPpm2 = mc!.pricePerM2Median!;
     const lowPpm2 = mc!.pricePerM2P25 ?? pct(medPpm2, 0.85);
     const highPpm2 = mc!.pricePerM2P75 ?? pct(medPpm2, 1.1);
-    mid = Math.round(medPpm2 * i.areaM2);
-    low = Math.round(Math.min(lowPpm2, medPpm2) * i.areaM2);
-    high = Math.round(Math.max(highPpm2, medPpm2) * i.areaM2);
+    if (isPlot && i.areaM2 > PLOT_FULL_PRICE_AREA_M2) {
+      // Duża działka: zł/m² z ogłoszeń dotyczy małych działek — korekta wielkości.
+      sizeAdjusted = true;
+      mid = plotValueWithSizeAdjustment(medPpm2, i.areaM2);
+      low = plotValueWithSizeAdjustment(Math.min(lowPpm2, medPpm2), i.areaM2);
+      high = plotValueWithSizeAdjustment(Math.max(highPpm2, medPpm2), i.areaM2);
+      rationaleParts.push(
+        `Wycena ze scrapingu rynku z KOREKTĄ WIELKOŚCI działki: mediana ${medPpm2.toLocaleString("pl-PL")} zł/m² (${mc!.transactionsCount} transakcji deweloperuch, ${mc!.offersCount} ofert otodom${mc!.city ? `, ${mc!.city}` : ""}); pierwsze ${PLOT_FULL_PRICE_AREA_M2.toLocaleString("pl-PL")} m² po pełnej stawce, powyżej — ${Math.round(PLOT_MARGINAL_FACTOR * 100)}% stawki (ceny małych działek nie skalują się liniowo na ${i.areaM2.toLocaleString("pl-PL")} m²). Wynik: ${mid.toLocaleString("pl-PL")} PLN.`,
+      );
+    } else {
+      mid = Math.round(medPpm2 * i.areaM2);
+      low = Math.round(Math.min(lowPpm2, medPpm2) * i.areaM2);
+      high = Math.round(Math.max(highPpm2, medPpm2) * i.areaM2);
+      rationaleParts.push(
+        `Wycena ze scrapingu rynku: mediana ${medPpm2.toLocaleString("pl-PL")} zł/m² (${mc!.transactionsCount} transakcji deweloperuch, ${mc!.offersCount} ofert otodom${mc!.city ? `, ${mc!.city}` : ""}) × ${i.areaM2} m² = ${mid.toLocaleString("pl-PL")} PLN; widełki z kwartyli próbki.`,
+      );
+    }
     basisSource =
       mc!.transactionsCount > 0
         ? "deweloperuch.pl (transakcje) + otodom.pl (oferty)"
         : "otodom.pl (aktywne oferty)";
-    rationaleParts.push(
-      `Wycena ze scrapingu rynku: mediana ${medPpm2.toLocaleString("pl-PL")} zł/m² (${mc!.transactionsCount} transakcji deweloperuch, ${mc!.offersCount} ofert otodom${mc!.city ? `, ${mc!.city}` : ""}) × ${i.areaM2} m² = ${mid.toLocaleString("pl-PL")} PLN; widełki z kwartyli próbki.`,
-    );
     if (isAgri)
-      rationaleParts.push("Uwaga: brak danych GUS dla gruntu rolnego — użyto ofert rynkowych.");
+      rationaleParts.push(
+        "Uwaga: grunt o statusie rolnym bez danych GUS (zł/ha) — użyto ofert rynkowych; wynik traktuj ostrożnie.",
+      );
   } else if (!isAgri && gov?.pricePerM2Median != null && i.areaM2 != null && i.areaM2 > 0) {
     // Fallback pomocniczy: GUS zł/m² (przeciętne ceny lokali), gdy scraping nie dał danych.
     mid = Math.round(gov.pricePerM2Median * i.areaM2);
@@ -140,9 +187,33 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
 
   const keyRisks: string[] = [];
   const keyStrengths: string[] = [];
+  const offersOnly = basisSource === "otodom.pl (aktywne oferty)";
+  const extrapolatedPlot =
+    sizeAdjusted && i.areaM2 != null && i.areaM2 > PLOT_EXTRAPOLATION_LIMIT_M2;
 
   if (mcUsable && sampleN < 3)
     keyRisks.push(`Wąska próbka porównawcza (${sampleN} rekordów) — wycena o obniżonej pewności.`);
+  if (offersOnly)
+    keyRisks.push(
+      "Wycena wyłącznie z cen ofertowych (0 transakcji) — ceny wywoławcze bywają zawyżone.",
+    );
+  if (sizeAdjusted)
+    keyRisks.push(
+      `Duża działka (${i.areaM2!.toLocaleString("pl-PL")} m²) wyceniona z cen małych działek z korektą wielkości — obniżona pewność wyceny.`,
+    );
+  if (extrapolatedPlot)
+    keyRisks.push(
+      "Powierzchnia działki przekracza 1 ha — wycena z komparabli małych działek to ekstrapolacja poza segment rynku; wymagana ręczna weryfikacja (operat/MPZP).",
+    );
+  if (
+    i.requestedLoanPln != null &&
+    i.requestedLoanPln > 0 &&
+    mid != null &&
+    mid > 100 * i.requestedLoanPln
+  )
+    keyRisks.push(
+      `Wycena (${mid.toLocaleString("pl-PL")} PLN) jest nieproporcjonalnie wysoka względem wnioskowanej kwoty (${i.requestedLoanPln.toLocaleString("pl-PL")} PLN) — sprawdź poprawność lokalizacji, typu i powierzchni w danych wejściowych.`,
+    );
   if (basisSource.startsWith("GUS BDL — przeciętne"))
     keyRisks.push(
       "Wycena oparta o przeciętne GUS (fallback) — brak lokalnych danych ze scrapingu rynku.",
@@ -183,6 +254,10 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
 
   let recommendation: Recommendation = "rekomendowana";
   if (i.kwLegal.hasEnforcement || i.ownerMatchesKw === false) recommendation = "warunkowa";
+  // Ekstrapolacja poza segment rynku (działka >1 ha z cen małych działek) —
+  // wynik liczbowy zostaje jako wskaźnik, ale rekomendacja wymaga człowieka.
+  if (extrapolatedPlot) recommendation = "do_weryfikacji";
+  else if (sizeAdjusted && recommendation === "rekomendowana") recommendation = "warunkowa";
 
   const liquidityComment = mc
     ? `Aktywna podaż w okolicy: ${mc.offersCount} ofert (otodom), ${mc.transactionsCount} transakcji (deweloperuch).`
@@ -208,5 +283,7 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
     recommendation,
     rationale: `${rationaleParts.join(" ")} Podstawa: ${basisSource}. ${VALUATION_DISCLAIMER}`,
     citations,
+    offersOnly,
+    sizeAdjusted,
   };
 }
