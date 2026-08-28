@@ -4,6 +4,7 @@ import {
   ListChecks,
   Tag,
   FileSignature,
+  FileText,
   GraduationCap,
   Calculator,
   CreditCard,
@@ -11,8 +12,6 @@ import {
   Gavel,
   Receipt,
   ShieldCheck,
-  Sparkles,
-  Bot,
 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 import { InvestorAssistantWidget } from "@/components/inwestor/assistant-widget";
@@ -26,14 +25,17 @@ export const Route = createFileRoute("/inwestor")({
 const fullGroups: NavGroup[] = [
   {
     items: [
-      // Główny ekran panelu: osobny agent AI do wypełniania umowy + wyszukiwarka wniosków.
-      { to: "/inwestor", label: "Agent umowy · wnioski", icon: Bot, exact: true },
+      // Główny ekran panelu: wyszukiwarka dostępnych wniosków (tylko wnioski —
+      // tworzenie umowy ma osobną, JEDYNĄ zakładkę „Tworzenie umowy").
+      { to: "/inwestor", label: "Dostępne wnioski", icon: ListChecks, exact: true },
+      // Jedyna ścieżka tworzenia umowy: agent AI + deterministyczny silnik klauzul.
+      { to: "/inwestor/kreator-umowy", label: "Tworzenie umowy", icon: FileSignature },
       { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
       { to: "/inwestor/windykacja", label: "Windykacja", icon: Gavel },
       { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
-      { to: "/inwestor/kreator-dokumentow", label: "Kreator dokumentów", icon: FileSignature },
-      { to: "/inwestor/kreator-udzielenia", label: "Kreator udzielenia pożyczki", icon: Sparkles },
-      { to: "/inwestor/kreator-umowy", label: "Kreator umowy (AI)", icon: Bot },
+      // Kreator dokumentów BEZ kategorii „Umowy" — umowy powstają wyłącznie
+      // w zakładce „Tworzenie umowy".
+      { to: "/inwestor/kreator-dokumentow", label: "Kreator dokumentów", icon: FileText },
       { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
       { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
       { to: "/inwestor/abonament", label: "Dostęp", icon: CreditCard },

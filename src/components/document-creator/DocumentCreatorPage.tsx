@@ -145,7 +145,13 @@ interface BundleResult {
 // KOMPONENT
 // ════════════════════════════════════════════════════════════════════
 
-export function DocumentCreatorPage() {
+export function DocumentCreatorPage({
+  excludeCategories,
+}: {
+  /** Kategorie wzorów ukryte w tym panelu (np. „umowa" u inwestora,
+   *  gdzie umowy powstają wyłącznie w zakładce „Tworzenie umowy"). */
+  excludeCategories?: string[];
+} = {}) {
   const _list = useServerFn(listDocxTemplates);
   const _generate = useServerFn(generateDocxFromTemplate);
   const _history = useServerFn(listGeneratedDocs);
@@ -254,7 +260,9 @@ export function DocumentCreatorPage() {
   // Grupowanie listy wzorów po kategoriach
   const templateGroups = useMemo(() => {
     const filtered = templates.filter(
-      (t) => !search || t.name.toLowerCase().includes(search.toLowerCase()),
+      (t) =>
+        !excludeCategories?.includes(t.category ?? "inne") &&
+        (!search || t.name.toLowerCase().includes(search.toLowerCase())),
     );
     const map = new Map<string, DocTemplate[]>();
     for (const t of filtered) {
@@ -263,7 +271,7 @@ export function DocumentCreatorPage() {
       map.get(cat)!.push(t);
     }
     return Array.from(map.entries());
-  }, [templates, search]);
+  }, [templates, search, excludeCategories]);
 
   // Po wyborze wzoru — wczytaj podgląd, wyzeruj formularz
   const [previewError, setPreviewError] = useState<string | null>(null);
