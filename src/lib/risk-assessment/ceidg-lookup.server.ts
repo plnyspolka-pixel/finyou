@@ -178,34 +178,54 @@ export async function lookupCeidgActivity(args: {
 
   // 2) Zapytanie po imieniu i nazwisku (+ województwo).
   if (args.firstName && args.lastName) {
-    const params = new URLSearchParams();
-    params.set("imie", args.firstName);
-    params.set("nazwisko", args.lastName);
-    if (args.voivodeship) params.set("wojewodztwo", args.voivodeship);
-    const json = await ceidgFetch(`${CEIDG_BASE}?${params.toString()}`, token);
-    if ((json as any)?.error) return emptyCeidg(String((json as any).error), "name");
+    const queryByName = async (withVoivodeship: boolean): Promise<CeidgActivity | null> => {
+      const params = new URLSearchParams();
+      params.set("imie", args.firstName!);
+      params.set("nazwisko", args.lastName!);
+      if (withVoivodeship && args.voivodeship) params.set("wojewodztwo", args.voivodeship);
+      const json = await ceidgFetch(`${CEIDG_BASE}?${params.toString()}`, token);
+      if ((json as any)?.error) return emptyCeidg(String((json as any).error), "name");
 
-    const all = pickFirms(json).map(parseFirm);
-    const wantFirst = normName(args.firstName);
-    const wantLast = normName(args.lastName);
-    const wantCity = normName(args.city);
+      const all = pickFirms(json).map(parseFirm);
+      if (all.length === 0) return null;
+      const wantFirst = normName(args.firstName);
+      const wantLast = normName(args.lastName);
+      const wantCity = normName(args.city);
 
-    // Dopasowanie po nazwisku i imieniu (jeśli CEIDG zwraca właściciela).
-    let matched = all.filter((f) => {
-      const okLast = f.ownerLast ? normName(f.ownerLast).includes(wantLast) : true;
-      const okFirst = f.ownerFirst ? normName(f.ownerFirst).includes(wantFirst) : true;
-      return okLast && okFirst;
-    });
-    let confidence: CeidgActivity["matchConfidence"] = "low";
-    if (wantCity) {
-      const byCity = matched.filter((f) => normName(f.city).includes(wantCity));
-      if (byCity.length) {
-        matched = byCity;
-        confidence = "medium";
+      // Dopasowanie po nazwisku i imieniu (jeśli CEIDG zwraca właściciela).
+      let matched = all.filter((f) => {
+        const okLast = f.ownerLast ? normName(f.ownerLast).includes(wantLast) : true;
+        const okFirst = f.ownerFirst ? normName(f.ownerFirst).includes(wantFirst) : true;
+        return okLast && okFirst;
+      });
+      let confidence: CeidgActivity["matchConfidence"] = "low";
+      if (wantCity) {
+        const byCity = matched.filter((f) => normName(f.city).includes(wantCity));
+        if (byCity.length) {
+          matched = byCity;
+          confidence = "medium";
+        }
       }
+      if (matched.length === 0) matched = all;
+      return toActivity(matched, "name", matched.length ? confidence : "none");
+    };
+
+    const withVoiv = await queryByName(true);
+    // Filtr województwa potrafi odciąć AKTYWNY wpis (adres działalności w innym
+    // województwie niż nieruchomość) i zostawić tylko stary wykreślony — gdy
+    // nie znaleziono aktywnej działalności, ponawiamy raz bez filtra.
+    if (withVoiv?.isEntrepreneur) return withVoiv;
+    if (args.voivodeship) {
+      const broad = await queryByName(false);
+      if (broad?.isEntrepreneur) {
+        return {
+          ...broad,
+          note: `${broad.note} Wpis znaleziony w zapytaniu ogólnopolskim (poza województwem nieruchomości) — zweryfikuj tożsamość.`,
+        };
+      }
+      if (!withVoiv && broad) return broad;
     }
-    if (matched.length === 0) matched = all;
-    return toActivity(matched, "name", matched.length ? confidence : "none");
+    return withVoiv ?? toActivity([], "name", "none");
   }
 
   return emptyCeidg("Brak NIP oraz imienia/nazwiska — nie odpytano CEIDG.", "none");

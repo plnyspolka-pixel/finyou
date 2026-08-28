@@ -86,13 +86,15 @@ export function assessPlotBuildability(input: PlotBuildabilityInput): PlotBuilda
     /grunt\w*\s+roln|u[żz]ytk\w*\s+roln|\brola\b|grunt\w*\s+orn|klasa\s+bonitacyjn/.test(text);
 
   // Sposób korzystania z działu I-O KW — dane urzędowe. „R - GRUNTY ORNE" itp.
-  // przesądza o statusie rolnym nawet, gdy wniosek deklaruje działkę budowlaną.
+  // przesądza o statusie rolnym, gdy dokumenty (MPZP/WZ/wypis z OCR) milczą lub
+  // są niejednoznaczne. Jednoznaczne przeznaczenie budowlane w DOKUMENTACH
+  // wygrywa z użytkiem z KW — ewidencja gruntów bywa nieaktualna względem MPZP.
   const kwUse = (input.kwLandUse ?? "").toLowerCase();
   const kwSaysAgri = AGRI_LAND_USE_RE.test(kwUse) && !BUILT_LAND_USE_RE.test(kwUse);
 
   let category: PlotBuildCategory;
   if (rmZagrodowa) category = "zagrodowa_siedliskowa";
-  else if (odrolniona || (budowlana && !rolnyText && !kwSaysAgri)) category = "budowlana";
+  else if (odrolniona || (budowlana && !rolnyText)) category = "budowlana";
   else if (kwSaysAgri) category = "rolna_bez_zabudowy";
   else if (input.propertyType === "dzialka_budowlana")
     category = budowlana || !rolnyText ? "budowlana" : "nieokreslona";
@@ -159,18 +161,23 @@ export function assessPlotBuildability(input: PlotBuildabilityInput): PlotBuilda
       );
   }
 
-  // Dane urzędowe z KW kontra deklaracja wniosku + próg UKUR.
+  // Dane urzędowe z KW kontra deklaracja wniosku i dokumenty + próg UKUR.
   if (kwSaysAgri && category === "rolna_bez_zabudowy") {
     if (input.propertyType === "dzialka_budowlana") {
       warnings.push(
-        `Rozbieżność: wniosek deklaruje działkę budowlaną, ale dział I-O KW podaje sposób korzystania „${input.kwLandUse}" (grunt rolny). Do analizy przyjęto status rolny — status budowlany wymaga potwierdzenia wypisem z MPZP lub decyzją WZ.`,
+        `Rozbieżność: wniosek deklaruje działkę budowlaną, ale dział I-O KW podaje sposób korzystania „${input.kwLandUse}" (grunt rolny), a dokumenty nie potwierdzają statusu budowlanego. Do analizy przyjęto status rolny — status budowlany wymaga potwierdzenia wypisem z MPZP lub decyzją WZ.`,
       );
     }
     if (budowlana) {
       warnings.push(
-        "W dokumentach pojawia się przeznaczenie budowlane, ale KW wskazuje grunt rolny — przyjęto ostrożnościowo status rolny; zweryfikuj MPZP/WZ.",
+        "W dokumentach pojawia się przeznaczenie budowlane obok wzmianek o gruncie rolnym (treść niejednoznaczna), a KW wskazuje grunt rolny — przyjęto ostrożnościowo status rolny; zweryfikuj MPZP/WZ.",
       );
     }
+  }
+  if (kwSaysAgri && category === "budowlana" && !odrolniona) {
+    warnings.push(
+      `Dokumenty (MPZP/WZ/OCR) wskazują przeznaczenie budowlane, choć dział I-O KW podaje „${input.kwLandUse}" — przyjęto status budowlany wg dokumentów; upewnij się, że dotyczą tej działki (ewidencja w KW bywa nieaktualna względem MPZP).`,
+    );
   }
   if (
     (category === "rolna_bez_zabudowy" || category === "zagrodowa_siedliskowa") &&

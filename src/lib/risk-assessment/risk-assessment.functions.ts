@@ -1,9 +1,10 @@
 // Orkiestrator „Wycena i ocena ryzyka inwestycji".
 // Pipeline: BRAMKA KW (KW Engine — bez poprawnie pobranej księgi ocena nie startuje)
 // → stan prawny KW → właściciel (PESEL, trwanie życia) → korespondencja →
+// → OCR załączników klienta (status gruntu z wypisu/MPZP) →
 // → scraping rynku (deweloperuch.pl transakcje + otodom.pl oferty, Firecrawl) →
 // → deterministyczna wycena rynkowa (GUS BDL pomocniczo — grunty rolne zł/ha).
-// Perplexity usunięta z toru wyceny. Moduły RCN oraz OCR dokumentów wyłączone.
+// Perplexity usunięta z toru wyceny. Moduł RCN wyłączony.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -11,6 +12,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { runPropertyCollateralAnalysisCore } from "@/lib/property-analysis/property-collateral-analysis.functions";
 import type { DataSourceUsage } from "@/lib/property-analysis/types";
 import { fetchAndStoreKw, normalizeKwNumber } from "@/lib/kw-fetch.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { ocrDocuments } from "./document-ocr.server";
 import { analyzeKwLegal } from "./kw-parser.server";
 import { analyzeOwner } from "./owner-analysis.server";
 import { analyzeCorrespondence } from "./correspondence-intel.server";
@@ -237,23 +241,73 @@ export async function runInvestmentRiskAssessmentCore(
     warnings.push(`Analiza zabezpieczenia nie powiodła się: ${e?.message ?? "błąd"}.`);
   }
 
-  // 3) Korespondencja + łatwość sprzedaży — równolegle. OCR dokumentów wyłączony,
-  //    ale załączniki klienta muszą być widoczne jako nieprzetworzone, nie „brak".
-  const ocr = EMPTY_OCR;
+  // 3) OCR załączników klienta (Gemini, cache w property_document_extractions) —
+  //    zdjęcia wypisów/MPZP/operatów z Messengera to często JEDYNE źródło
+  //    statusu gruntu; ich treść zasila analizę prawa zabudowy (krok 5b).
+  let ocr = EMPTY_OCR;
   try {
     const { data: docRows } = await db
       .from("documents")
-      .select("id")
+      .select("id, file_name, file_path, file_url, document_type")
       .eq("loan_application_id", applicationId);
-    const docsCount = docRows?.length ?? 0;
-    if (docsCount > 0) {
-      warnings.push(
-        `${docsCount} załącznik(ów) klienta nie zostało przetworzonych (moduł OCR wyłączony) — mogą zawierać wypis z rejestru gruntów, MPZP lub operat; zweryfikuj ręcznie.`,
+    type DocRow = {
+      id: string;
+      file_name: string | null;
+      file_path: string | null;
+      file_url: string | null;
+      document_type: string | null;
+    };
+    const docs: DocRow[] = docRows ?? [];
+    if (docs.length > 0) {
+      const withUrls = await Promise.all(
+        docs.map(async (d) => {
+          const raw: string | null = d.file_url ?? d.file_path ?? null;
+          let url: string | null = raw;
+          if (raw && !/^https?:\/\//i.test(raw)) {
+            const { data: signed } = await supabaseAdmin.storage
+              .from(CLIENT_FILES_BUCKET)
+              .createSignedUrl(raw, 600);
+            url = signed?.signedUrl ?? null;
+          }
+          return { id: d.id, url, type: d.document_type, name: d.file_name };
+        }),
       );
+      ocr = await ocrDocuments({ applicationId, documents: withUrls });
+      const failed = ocr.documents.filter((r) => r.status !== "success").length;
+      if (failed > 0) {
+        warnings.push(
+          `OCR: ${failed} z ${ocr.documentsProcessed} załączników klienta nie udało się przetworzyć — zweryfikuj pliki ręcznie.`,
+        );
+      }
+      if (docs.length > ocr.documentsProcessed) {
+        warnings.push(
+          `OCR objął ${ocr.documentsProcessed} z ${docs.length} załączników (limit na jedną ocenę) — pozostałe zweryfikuj ręcznie.`,
+        );
+      }
     }
-  } catch {
-    // brak dostępu do tabeli documents — pomijamy
+  } catch (e) {
+    warnings.push(`OCR załączników nie powiódł się: ${e instanceof Error ? e.message : "błąd"}.`);
   }
+
+  // Tekst z OCR do analizy prawa zabudowy: przeznaczenie/klasa gruntu,
+  // kluczowe ustalenia i surowe fragmenty ze wszystkich odczytanych plików.
+  const ocrText =
+    ocr.documents
+      .filter((d) => d.status === "success")
+      .map((d) => {
+        const f = d.fields ?? {};
+        return [
+          d.docKind,
+          f.landUse,
+          ...(Array.isArray(f.keyFindings) ? f.keyFindings : []),
+          ...(Array.isArray(f.encumbrances) ? f.encumbrances : []),
+          d.rawTextSnippet,
+        ]
+          .filter(Boolean)
+          .join(" \n ");
+      })
+      .join(" \n ") || null;
+
   const [correspondence, saleabilityRaw] = await Promise.all([
     analyzeCorrespondence({ applicationId, clientId, declaredValue, loanAmount, city: effCity }),
     analyzeSaleability({
@@ -316,9 +370,11 @@ export async function runInvestmentRiskAssessmentCore(
     propertyType: property?.property_type ?? "inna",
     mpzpInfo: (property as any)?.mpzp_info ?? null,
     landRegistryExtract: (property as any)?.land_registry_extract ?? null,
-    ocrText: null,
+    // Treść dokumentów klienta z OCR (wypis/MPZP/WZ/operat) — najbardziej
+    // aktualne źródło statusu gruntu, rozstrzyga przed użytkiem z KW.
+    ocrText,
     // Sposób korzystania z działu I-O KW (np. „R - GRUNTY ORNE") — dane
-    // urzędowe mają pierwszeństwo przed typem zadeklarowanym we wniosku.
+    // urzędowe, decydują gdy dokumenty milczą lub są niejednoznaczne.
     kwLandUse: kwParams.landUse ?? kwParams.kind ?? null,
     landAreaHa: kwParams.landAreaHa,
   });

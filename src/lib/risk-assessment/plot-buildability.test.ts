@@ -94,6 +94,27 @@ describe("assessPlotBuildability — prawo zabudowy działki", () => {
     expect(r.warnings.join(" ")).not.toMatch(/UKUR/);
   });
 
+  it("jednoznaczne przeznaczenie budowlane w dokumentach (OCR/MPZP) wygrywa z użytkiem R w KW", () => {
+    const r = assessPlotBuildability({
+      propertyType: "dzialka_budowlana",
+      kwLandUse: "R - GRUNTY ORNE",
+      ocrText: "Wypis z MPZP: teren zabudowy mieszkaniowej jednorodzinnej MN",
+    });
+    expect(r.category).toBe("budowlana");
+    expect(r.buyerPool).toBe("szeroki");
+    expect(r.warnings.join(" ")).toMatch(/wg dokumentów/);
+  });
+
+  it("dokumenty niejednoznaczne (budowlane + rolne) przy KW R — ostrożnościowo status rolny", () => {
+    const r = assessPlotBuildability({
+      propertyType: "dzialka_budowlana",
+      kwLandUse: "R - GRUNTY ORNE",
+      ocrText: "wypis z rejestru gruntów: grunty orne RIVb; częściowo teren budowlany",
+    });
+    expect(r.category).toBe("rolna_bez_zabudowy");
+    expect(r.warnings.join(" ")).toMatch(/niejednoznaczna/);
+  });
+
   it("odrolnienie wygrywa z użytkiem rolnym w KW", () => {
     const r = assessPlotBuildability({
       propertyType: "dzialka_budowlana",
