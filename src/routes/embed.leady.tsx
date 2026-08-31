@@ -87,17 +87,14 @@ export function LeadsTable({ leads }: { leads: PublicLead[] }) {
   return (
     <div>
       <div className="overflow-x-auto rounded-2xl border border-sky-400/20 bg-gradient-to-br from-[#0f1846] via-[#0c1338] to-[#0a1030] shadow-[0_8px_30px_-12px_rgba(56,189,248,0.35)] [scrollbar-width:thin]">
-        <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[640px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-white/10">
               <th className={TH_CLASS}>Nieruchomość</th>
               <th className={TH_CLASS}>Kwota</th>
-              <th className={TH_CLASS}>LTV</th>
-              <th className={TH_CLASS}>Okres</th>
               <th className={TH_CLASS}>Ocena ryzyka</th>
               <th className={TH_CLASS}>Potencjał lokalizacji</th>
               <th className={TH_CLASS}>Dodano</th>
-              <th className={TH_CLASS}>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -152,12 +149,6 @@ function LeadRow({ lead }: { lead: PublicLead }) {
       <td className={`${TD_CLASS} font-bold tabular-nums text-white`}>
         {formatPLN(lead.loan_amount ?? 0)}
       </td>
-      <td className={`${TD_CLASS} tabular-nums text-slate-200`}>
-        {lead.ltv != null ? `${lead.ltv}%` : "—"}
-      </td>
-      <td className={`${TD_CLASS} tabular-nums text-slate-200`}>
-        {lead.period_months != null ? `${lead.period_months} mies.` : "—"}
-      </td>
       <td className={TD_CLASS}>
         <GradeCell score={lead.score} grade={lead.grade} />
       </td>
@@ -169,17 +160,6 @@ function LeadRow({ lead }: { lead: PublicLead }) {
         />
       </td>
       <td className={`${TD_CLASS} tabular-nums text-slate-200`}>{dateStr}</td>
-      <td className={TD_CLASS}>
-        {lead.is_new ? (
-          <span className="rounded-full bg-amber-500/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-900 shadow-[0_4px_12px_-2px_rgba(245,158,11,0.6)]">
-            Nowa oferta
-          </span>
-        ) : (
-          <span className="rounded-full border border-sky-400/40 bg-sky-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-sky-300">
-            Szuka inwestora
-          </span>
-        )}
-      </td>
     </tr>
   );
 }
