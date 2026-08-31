@@ -5,7 +5,7 @@
 // wysyłkę zatwierdza człowiek w /admin/auto-dystrybucja; sama wysyłka idzie
 // rdzeniem distributeOfferToInvestors — dokładnie jak dystrybucja ręczna.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { normalizeLoanStatus } from "@/lib/loan-status";
+import { LEGACY_STATUS_MAP, normalizeLoanStatus } from "@/lib/loan-status";
 
 /** Statusy, w których wniosek może kwalifikować się do dystrybucji. */
 const CANDIDATE_STATUSES = new Set([
@@ -16,6 +16,15 @@ const CANDIDATE_STATUSES = new Set([
   "kompletowanie_danych",
   "szukamy_inwestora",
 ]);
+
+/** Lista wartości enuma w bazie (kanoniczne + legacy mapowane na kandydatów) —
+ *  filtr statusu MUSI być w SQL, inaczej limit okna zapycha się zamkniętymi. */
+export const CANDIDATE_DB_STATUSES: string[] = [
+  ...CANDIDATE_STATUSES,
+  ...Object.entries(LEGACY_STATUS_MAP)
+    .filter(([, canonical]) => CANDIDATE_STATUSES.has(canonical))
+    .map(([legacy]) => legacy),
+];
 
 export interface AutoDistributionSettings {
   enabled: boolean;
@@ -99,12 +108,15 @@ export async function syncAutoDistributionProposals(): Promise<SyncResult | { di
     skipped_no_matches: 0,
   };
 
-  // 1) Kandydaci: nieusunięte wnioski z kwotą, w statusach „przed/na dystrybucji".
+  // 1) Kandydaci: nieusunięte wnioski z kwotą, w statusach „przed/na dystrybucji"
+  //    — filtr statusu w SQL + najnowsze najpierw (stabilne okno limitu).
   const { data: loans, error } = await supabaseAdmin
     .from("loan_applications")
     .select("id, status, loan_amount, location_potential_score, deleted_at")
     .is("deleted_at", null)
     .not("loan_amount", "is", null)
+    .in("status", CANDIDATE_DB_STATUSES as any)
+    .order("created_at", { ascending: false })
     .limit(500);
   if (error) throw new Error(error.message);
 
@@ -247,6 +259,18 @@ export async function approveProposal(
 
   const investorIds = ((proposal.matches ?? []) as ProposalMatch[]).map((m) => m.investor_id);
   if (investorIds.length === 0) return { ok: false, error: "Propozycja nie ma dopasowanych instytucji" };
+
+  // Atomowe przejęcie propozycji — dwa równoległe zatwierdzenia nie mogą
+  // wysłać maili podwójnie (update warunkowany statusem 'proposed').
+  const { data: claimed } = await (supabaseAdmin as any)
+    .from("auto_distribution_proposals")
+    .update({ status: "sending", decided_by: decidedBy, decided_at: new Date().toISOString() })
+    .eq("id", proposal.id)
+    .eq("status", "proposed")
+    .select("id");
+  if (!claimed?.length) {
+    return { ok: false, error: "Propozycja została już rozstrzygnięta przez kogoś innego." };
+  }
 
   const { distributeOfferToInvestors } = await import("@/lib/offer-distribution-core.server");
   try {

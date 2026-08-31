@@ -107,22 +107,19 @@ export async function scanInstitutionInbox(): Promise<InboxScanResult> {
     errors: 0,
   };
 
-  // Nowe inboundy bez klasyfikacji.
-  const { data: inbound, error } = await supabaseAdmin
+  // Nieobsłużone inboundy (znacznik agent_processed_at — okno nigdy nie
+  // zapycha się już sklasyfikowanymi wiadomościami).
+  const { data: inbound, error } = await (supabaseAdmin as any)
     .from("offer_distribution_messages")
     .select("id, distribution_id, loan_application_id, investor_id, subject, content, created_at")
     .eq("direction", "inbound")
+    .is("agent_processed_at", null)
     .order("created_at", { ascending: true })
-    .limit(200);
+    .limit(MAX_CLASSIFY_PER_TICK);
   if (error) throw new Error(error.message);
   if (!inbound?.length) return result;
 
-  const { data: doneRows } = await (supabaseAdmin as any)
-    .from("institution_mail_intel")
-    .select("message_id")
-    .in("message_id", inbound.map((m: any) => m.id));
-  const done = new Set(((doneRows ?? []) as any[]).map((r) => r.message_id));
-  const fresh = (inbound as any[]).filter((m) => !done.has(m.id)).slice(0, MAX_CLASSIFY_PER_TICK);
+  const fresh = inbound as any[];
   result.scanned = fresh.length;
 
   for (const mail of fresh) {
@@ -166,9 +163,19 @@ export async function scanInstitutionInbox(): Promise<InboxScanResult> {
           result.questions += 1;
         }
       }
+      await (supabaseAdmin as any)
+        .from("offer_distribution_messages")
+        .update({ agent_processed_at: new Date().toISOString() })
+        .eq("id", mail.id);
     } catch (e: any) {
       console.error("[institution-mail] classify error", mail.id, e?.message);
       result.errors += 1;
+      // Błąd też oznaczamy jako obsłużony (intel może już istnieć / wiadomość
+      // wadliwa) — inaczej jedna zatruta wiadomość blokowałaby całą kolejkę.
+      await (supabaseAdmin as any)
+        .from("offer_distribution_messages")
+        .update({ agent_processed_at: new Date().toISOString() })
+        .eq("id", mail.id);
     }
   }
   return result;

@@ -49,7 +49,7 @@ create table if not exists public.auto_distribution_proposals (
   id uuid primary key default gen_random_uuid(),
   loan_application_id uuid not null references public.loan_applications(id) on delete cascade,
   status text not null default 'proposed'
-    check (status in ('proposed','approved_sent','rejected','failed','stale')),
+    check (status in ('proposed','sending','approved_sent','rejected','failed','stale')),
   -- Dlaczego wniosek się kwalifikuje: {loan_amount, location_score, brief_empty}
   eligibility jsonb not null default '{}'::jsonb,
   -- Dopasowane instytucje: [{investor_id, name, reason}]

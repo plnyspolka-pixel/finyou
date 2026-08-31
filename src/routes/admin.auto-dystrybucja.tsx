@@ -41,6 +41,7 @@ function fmtPln(v: number | null | undefined): string {
 
 const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   proposed: { label: "Do zatwierdzenia", variant: "default" },
+  sending: { label: "Wysyłanie…", variant: "secondary" },
   approved_sent: { label: "Wysłane", variant: "secondary" },
   rejected: { label: "Odrzucone", variant: "outline" },
   failed: { label: "Błąd wysyłki", variant: "destructive" },

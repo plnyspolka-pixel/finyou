@@ -6,6 +6,7 @@
 // Błąd jednego kroku nie blokuje pozostałych — raport dostaje status kroku.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizeLoanStatus } from "@/lib/loan-status";
+import { CANDIDATE_DB_STATUSES } from "@/lib/auto-distribution/engine.server";
 
 /** Minimalny potencjał lokalizacyjny uruchamiający pipeline (0–100). */
 export const PIPELINE_MIN_LOCATION_SCORE = 50;
@@ -56,12 +57,16 @@ export interface PipelineSyncResult {
 export async function syncAnalysisPipelineRuns(): Promise<PipelineSyncResult> {
   const result: PipelineSyncResult = { scanned: 0, started: 0, skipped_existing: 0 };
 
+  // Filtr statusu w SQL + najnowsze najpierw — okno limitu nie może zapychać
+  // się zamkniętymi wnioskami (te same statusy co auto-dystrybucja).
   const { data: loans, error } = await supabaseAdmin
     .from("loan_applications")
     .select("id, status, loan_amount, location_potential_score, deleted_at")
     .is("deleted_at", null)
     .not("loan_amount", "is", null)
     .gt("location_potential_score", PIPELINE_MIN_LOCATION_SCORE)
+    .in("status", CANDIDATE_DB_STATUSES as any)
+    .order("created_at", { ascending: false })
     .limit(300);
   if (error) throw new Error(error.message);
 

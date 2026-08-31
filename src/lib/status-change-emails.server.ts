@@ -106,9 +106,14 @@ async function handleRow(
     text,
   });
   if (!sent.ok) {
-    // Suppression/limit — traktujemy jak skip, nie błąd (nie ponawiamy).
     console.warn("[status-email] send failed", client.email, sent.error);
-    return "skipped";
+    // Trwałe przyczyny (suppression, brak tematu/konfiguracji) — skip bez
+    // ponowień; wszystko inne (np. chwilowa awaria Resend) → błąd, wpis
+    // zostaje bez notified_at i następny tick ponowi (okno MAX_AGE_DAYS
+    // ogranicza ponowienia w czasie).
+    const permanent = ["recipient_suppressed", "missing_subject"].includes(sent.error ?? "");
+    if (permanent) return "skipped";
+    throw new Error(sent.error ?? "send failed");
   }
 
   // Ślad w skrzynce panelu — wiadomość widoczna jak każda inna wysyłka.

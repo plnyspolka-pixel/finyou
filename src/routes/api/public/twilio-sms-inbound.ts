@@ -10,19 +10,16 @@
 //     HTTP: POST
 import { createFileRoute } from "@tanstack/react-router";
 import { upsertLeadFromSource, logLeadCommunication } from "@/lib/lead-comms.server";
-
-function normalizePhone(raw: string): string | null {
-  if (!raw) return null;
-  const digits = raw.replace(/\D/g, "");
-  return digits ? `+${digits}` : null;
-}
+import { normalizePolishPhone } from "@/lib/phone";
 
 /** STOP w pierwszym słowie wiadomości = wypis z SMS-ów. */
 const OPT_OUT_RE = /^\s*(stop|wypisz|wypisuje|wypisuję|rezygnuje|rezygnuję|koniec)\b/i;
 
-const EMPTY_TWIML = new Response('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', {
-  headers: { "Content-Type": "text/xml" },
-});
+// Świeży Response na każde żądanie — body strumienia da się wysłać tylko raz.
+const emptyTwiml = () =>
+  new Response('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', {
+    headers: { "Content-Type": "text/xml" },
+  });
 
 export const Route = createFileRoute("/api/public/twilio-sms-inbound")({
   server: {
@@ -39,8 +36,8 @@ export const Route = createFileRoute("/api/public/twilio-sms-inbound")({
         const from = String(form.get("From") ?? "");
         const to = String(form.get("To") ?? "");
         const body = String(form.get("Body") ?? "").trim();
-        const phone = normalizePhone(from);
-        if (!phone || !body) return EMPTY_TWIML;
+        const { normalized: phone } = normalizePolishPhone(from);
+        if (!phone || !body) return emptyTwiml();
 
         try {
           const leadId = await upsertLeadFromSource({
@@ -72,7 +69,7 @@ export const Route = createFileRoute("/api/public/twilio-sms-inbound")({
           console.error("[twilio-sms-inbound] error", e?.message);
         }
         // Pusty TwiML — bez automatycznej odpowiedzi Twilio.
-        return EMPTY_TWIML;
+        return emptyTwiml();
       },
     },
   },

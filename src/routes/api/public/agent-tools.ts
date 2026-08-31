@@ -24,12 +24,13 @@ async function resolveLeadId(body: any): Promise<string | null> {
   if (typeof body.lead_id === "string" && body.lead_id) return body.lead_id;
 
   if (typeof body.phone === "string" && body.phone) {
-    const digits = body.phone.replace(/\D/g, "");
-    if (digits) {
+    const { normalizePolishPhone } = await import("@/lib/phone");
+    const { normalized } = normalizePolishPhone(body.phone);
+    if (normalized) {
       const { data } = await supabaseAdmin
         .from("leads")
         .select("id")
-        .eq("phone_normalized", `+${digits}`)
+        .eq("phone_normalized", normalized)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();

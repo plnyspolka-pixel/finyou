@@ -2,6 +2,14 @@
 -- (offer_distribution_messages), propozycje zmian kryteriów instytucji
 -- (zatwierdzane 1 kliknięciem) i pętla pytań instytucja → klient → instytucje.
 
+-- Znacznik obsłużenia inboundu przez agenta — skan wybiera wyłącznie
+-- nieobsłużone wiadomości (bez tego okno limitu zapchałoby się starymi).
+alter table public.offer_distribution_messages
+  add column if not exists agent_processed_at timestamptz;
+create index if not exists odm_agent_pending_idx
+  on public.offer_distribution_messages (created_at)
+  where direction = 'inbound' and agent_processed_at is null;
+
 -- Klasyfikacja per wiadomość przychodząca (idempotencja skanu).
 create table if not exists public.institution_mail_intel (
   id uuid primary key default gen_random_uuid(),
