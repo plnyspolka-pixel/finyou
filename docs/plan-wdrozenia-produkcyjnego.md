@@ -586,10 +586,11 @@ widokiem wyników.
    właściciele → analiza KW → ryzyko (kolejne kroki zależą od treści KW).
    Retry z backoffem; błąd kroku nie blokuje raportu — dział dostaje status
    „nie udało się pobrać" zamiast dziury.
-2. **Trigger**: wniosek z poprawnym numerem KW + score lokalizacji **> 50**
-   (liczony przy analizie lokalizacji, która już działa automatycznie).
-   Pipeline odpala się raz; ponownie tylko przy zmianie numeru KW albo
-   ręcznie z panelu. Uwaga na koszty CMD KW Engine — licznik pobrań w runie.
+2. **Trigger** (decyzja właściciela): wniosek **kompletny** (pusty brief
+   braków) z poprawnym numerem KW + score lokalizacji **> 50** — pipeline
+   nie rusza dla wniosków niekompletnych (niższe koszty pobrań KW).
+   Odpala się raz; ponownie tylko przy zmianie numeru KW albo ręcznie z
+   panelu. Uwaga na koszty CMD KW Engine — licznik pobrań w runie.
 3. **Raport zbiorczy** — `loan_offer_reports` (jsonb, wersjonowany):
    jeden dokument z działami:
    1. **Podsumowanie oferty** — kwota, cel, zabezpieczenie, LTV, status;
@@ -612,12 +613,11 @@ widokiem wyników.
    wniosków 40–50 karta pokazuje wersję podstawową. Dwa progi celowo różne —
    do ewentualnego wyrównania po okresie próbnym.
 
-### Decyzja otwarta obszaru 5
+### Decyzja podjęta (właściciel, 31.08.2026)
 
-Czy pipeline ma się odpalać także dla wniosków **niekompletnych** z samym
-numerem KW (wcześniejsza wiedza = szybsze dopytanie klienta o zgody
-współwłaścicieli), czy dopiero po skompletowaniu wniosku (niższe koszty
-pobrań KW)?
+Pipeline odpala się **dopiero po skompletowaniu wniosku** — nie dla
+niekompletnych wniosków z samym numerem KW (priorytet: niższe koszty
+pobrań KW). Wpisane w warunek triggera powyżej.
 
 ---
 
