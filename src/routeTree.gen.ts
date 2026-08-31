@@ -232,6 +232,7 @@ import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/
 import { Route as ApiPublicHooksVoicebotEnrichTickRouteImport } from './routes/api/public/hooks/voicebot-enrich-tick'
 import { Route as ApiPublicHooksVideoPipelineTickRouteImport } from './routes/api/public/hooks/video-pipeline-tick'
 import { Route as ApiPublicHooksSyncAccountingRouteImport } from './routes/api/public/hooks/sync-accounting'
+import { Route as ApiPublicHooksStatusEmailTickRouteImport } from './routes/api/public/hooks/status-email-tick'
 import { Route as ApiPublicHooksSocialPublishTickRouteImport } from './routes/api/public/hooks/social-publish-tick'
 import { Route as ApiPublicHooksSeoLocationSeedRouteImport } from './routes/api/public/hooks/seo-location-seed'
 import { Route as ApiPublicHooksSeoLocationPublishTickRouteImport } from './routes/api/public/hooks/seo-location-publish-tick'
@@ -1412,6 +1413,12 @@ const ApiPublicHooksSyncAccountingRoute =
     path: '/api/public/hooks/sync-accounting',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksStatusEmailTickRoute =
+  ApiPublicHooksStatusEmailTickRouteImport.update({
+    id: '/api/public/hooks/status-email-tick',
+    path: '/api/public/hooks/status-email-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSocialPublishTickRoute =
   ApiPublicHooksSocialPublishTickRouteImport.update({
     id: '/api/public/hooks/social-publish-tick',
@@ -1789,6 +1796,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
+  '/api/public/hooks/status-email-tick': typeof ApiPublicHooksStatusEmailTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -2028,6 +2036,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
+  '/api/public/hooks/status-email-tick': typeof ApiPublicHooksStatusEmailTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -2278,6 +2287,7 @@ export interface FileRoutesById {
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
+  '/api/public/hooks/status-email-tick': typeof ApiPublicHooksStatusEmailTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -2529,6 +2539,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/social-publish-tick'
+    | '/api/public/hooks/status-email-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
@@ -2768,6 +2779,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/social-publish-tick'
+    | '/api/public/hooks/status-email-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
@@ -3017,6 +3029,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/social-publish-tick'
+    | '/api/public/hooks/status-email-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
@@ -3120,6 +3133,7 @@ export interface RootRouteChildren {
   ApiPublicHooksSeoLocationPublishTickRoute: typeof ApiPublicHooksSeoLocationPublishTickRoute
   ApiPublicHooksSeoLocationSeedRoute: typeof ApiPublicHooksSeoLocationSeedRoute
   ApiPublicHooksSocialPublishTickRoute: typeof ApiPublicHooksSocialPublishTickRoute
+  ApiPublicHooksStatusEmailTickRoute: typeof ApiPublicHooksStatusEmailTickRoute
   ApiPublicHooksSyncAccountingRoute: typeof ApiPublicHooksSyncAccountingRoute
   ApiPublicHooksVideoPipelineTickRoute: typeof ApiPublicHooksVideoPipelineTickRoute
   ApiPublicHooksVoicebotEnrichTickRoute: typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -4696,6 +4710,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncAccountingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/status-email-tick': {
+      id: '/api/public/hooks/status-email-tick'
+      path: '/api/public/hooks/status-email-tick'
+      fullPath: '/api/public/hooks/status-email-tick'
+      preLoaderRoute: typeof ApiPublicHooksStatusEmailTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/social-publish-tick': {
       id: '/api/public/hooks/social-publish-tick'
       path: '/api/public/hooks/social-publish-tick'
@@ -5393,6 +5414,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksSeoLocationPublishTickRoute,
   ApiPublicHooksSeoLocationSeedRoute: ApiPublicHooksSeoLocationSeedRoute,
   ApiPublicHooksSocialPublishTickRoute: ApiPublicHooksSocialPublishTickRoute,
+  ApiPublicHooksStatusEmailTickRoute: ApiPublicHooksStatusEmailTickRoute,
   ApiPublicHooksSyncAccountingRoute: ApiPublicHooksSyncAccountingRoute,
   ApiPublicHooksVideoPipelineTickRoute: ApiPublicHooksVideoPipelineTickRoute,
   ApiPublicHooksVoicebotEnrichTickRoute: ApiPublicHooksVoicebotEnrichTickRoute,
@@ -5408,3 +5430,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
