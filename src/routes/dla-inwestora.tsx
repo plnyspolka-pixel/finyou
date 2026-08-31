@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
@@ -14,16 +13,13 @@ import {
 import { MktBadge, MktButton, Eyebrow } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
-import {
-  TwoColSlider,
-  SmartOfferSlider,
-  SmartOfferPanel,
-  type TwoColSlide,
-} from "@/components/marketing/sliders";
+import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
 import { MarketingPricing } from "@/components/marketing/pricing";
 import { ChatWidget } from "@/components/landing/chat-widget";
+import { LeadsTable } from "@/routes/embed.leady";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import type { AccessProduct } from "@/lib/access/core";
+import { fetchPublicLeads, type PublicLead } from "@/lib/public-leads.functions";
 
 const JOIN = "/rejestracja?role=inwestor";
 
@@ -32,6 +28,15 @@ const JOIN = "/rejestracja?role=inwestor";
 async function loadInvestorProducts(): Promise<AccessProduct[]> {
   try {
     return await listAccessProducts({ data: { audience: "investor" } });
+  } catch {
+    return [];
+  }
+}
+
+// Okazje ładowane bezpośrednio (bez iframe) — odporne na brak bazy podczas SSR.
+async function loadPublicLeads(): Promise<PublicLead[]> {
+  try {
+    return await fetchPublicLeads();
   } catch {
     return [];
   }
@@ -53,7 +58,10 @@ const PRICING_FEATURES: Record<number, string[]> = {
 };
 
 export const Route = createFileRoute("/dla-inwestora")({
-  loader: async () => ({ products: await loadInvestorProducts() }),
+  loader: async () => {
+    const [products, leads] = await Promise.all([loadInvestorProducts(), loadPublicLeads()]);
+    return { products, leads };
+  },
   head: () => ({
     meta: [
       {
@@ -395,62 +403,51 @@ function Hero() {
   );
 }
 
-// Iframe z okazjami dopasowuje wysokość do treści zgłaszanej przez embed
-// (postMessage z /embed/leady) — karty nie ucinają się na żadnej szerokości.
-function LeadsEmbed() {
-  const [height, setHeight] = useState(430);
-  useEffect(() => {
-    const onMessage = (e: MessageEvent) => {
-      const d = e.data as { type?: string; height?: number } | null;
-      if (d?.type === "fy:leady-embed:height" && typeof d.height === "number" && d.height > 0) {
-        setHeight(Math.ceil(d.height));
-      }
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, []);
+// Sekcja z okazjami renderowana bezpośrednio (bez iframe), na całą szerokość
+// strony — tylko lekki padding boczny, bez ograniczenia max-width.
+function LeadsSection({ leads }: { leads: PublicLead[] }) {
   return (
-    <div
+    <section
       style={{
-        marginTop: "1.1rem",
-        borderRadius: 18,
-        overflow: "hidden",
-        border: "1px solid rgba(84, 124, 214, 0.2)",
+        background: "#0a1030",
+        borderTop: "1px solid rgba(84,124,214,0.2)",
+        borderBottom: "1px solid rgba(84,124,214,0.2)",
+        padding: "3.5rem clamp(1rem, 3vw, 2.5rem) 4rem",
+        color: "#fff",
       }}
     >
-      <iframe
-        src="https://app.financeyou.pl/embed/leady"
-        style={{ border: 0, width: "100%", minHeight: 340, height, display: "block" }}
-        loading="lazy"
-        title="Ostatnie okazje inwestycyjne Finance You"
-      />
-    </div>
+      <Eyebrow tone="gold" style={{ letterSpacing: "0.24em" }}>
+        Ostatnie okazje inwestycyjne
+      </Eyebrow>
+      <div style={{ marginTop: "1.1rem" }}>
+        {leads.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-10 text-center text-sm text-slate-300">
+            Brak okazji do wyświetlenia.
+          </div>
+        ) : (
+          <LeadsTable leads={leads} />
+        )}
+      </div>
+      <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "center" }}>
+        <MktButton variant="outline" href={JOIN}>
+          <BrandIcon name="handCoins" size={16} /> Zobacz wszystkie okazje w aplikacji
+        </MktButton>
+      </div>
+      <ComplianceNote style={{ marginTop: "1.5rem" }}>
+        Przykładowe okazje o charakterze poglądowym. Dane nie stanowią oferty ani rekomendacji
+        inwestycyjnej. Inwestowanie wiąże się z ryzykiem utraty kapitału.
+      </ComplianceNote>
+    </section>
   );
 }
 
 function InvestorLanding() {
-  const { products } = Route.useLoaderData();
+  const { products, leads } = Route.useLoaderData();
   return (
     <MarketingShell page="inwestor" sticky={{ label: "Dołącz do Klubu", href: JOIN }}>
       <Hero />
 
-      <Section>
-        <SmartOfferPanel>
-          <Eyebrow tone="gold" style={{ letterSpacing: "0.24em" }}>
-            Ostatnie okazje inwestycyjne
-          </Eyebrow>
-          <LeadsEmbed />
-        </SmartOfferPanel>
-        <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "center" }}>
-          <MktButton variant="outline" href={JOIN}>
-            <BrandIcon name="handCoins" size={16} /> Zobacz wszystkie okazje w aplikacji
-          </MktButton>
-        </div>
-        <ComplianceNote style={{ marginTop: "1.5rem" }}>
-          Przykładowe okazje o charakterze poglądowym. Dane nie stanowią oferty ani rekomendacji
-          inwestycyjnej. Inwestowanie wiąże się z ryzykiem utraty kapitału.
-        </ComplianceNote>
-      </Section>
+      <LeadsSection leads={leads} />
 
       <Section>
         <SmartOfferSlider />
