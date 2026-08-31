@@ -424,13 +424,76 @@ JanVest: tylko powyżej 100 tys. zł).
    historia (wniosek → instytucje → powód dopasowania), wnioski
    niekwalifikujące się z powodem (niekompletny / score za niski).
 
+### Agent korespondencji z instytucjami (orkiestrator maili przychodzących)
+
+Kryteria instytucji są **dynamiczne** — instytucje mailem zawieszają
+przyjmowanie wniosków, ogłaszają promocje, zmieniają warunki. Do tego w
+wątkach o konkretne wnioski zadają pytania, które dziś człowiek ręcznie
+przenosi do klienta i z powrotem. Ten ruch robiony był dotąd ręcznie
+(forward dokumentów do wielu instytucji, przepisywanie pytań) i przez bota
+admina — teraz ma go robić agent automatycznie.
+
+Realne kategorie wiadomości (z dotychczasowej skrzynki):
+
+1. **Prośba o uzupełnienie** — „prosimy o więcej danych", „proszę o numer
+   telefonu do klienta", „dane w poprzednim mailu są niewidoczne" (najczęstsze).
+2. **Oferta z warunkami** — kwota, rata, okres, sposób zabezpieczenia.
+3. **Odmowa z powodem** — np. „z uwagi na lokalizację nie zabezpieczymy się".
+4. **Zmiana statusu/kryteriów instytucji** — zawieszenie przyjmowania
+   wniosków, promocje, zmiana widełek.
+5. Automatyczne potwierdzenia rejestracji (do zignorowania/odnotowania).
+
+**Jak działa (pętla):**
+
+1. **Wejście**: każda odpowiedź instytucji już ląduje w
+   `offer_distribution_messages` (alias `oferta+<id>@`, inbound webhook
+   Resend/Mailgun — `src/lib/offer-replies.server.ts`). Agent obserwuje nowe
+   wiadomości inbound (cron tick lub hook po zapisie).
+2. **Klasyfikacja + ekstrakcja** (LLM, server-side): kategoria jak wyżej;
+   dla pytań — lista konkretnych pytań/braków; dla ofert — sparowane warunki;
+   dla zmian kryteriów — co się zmienia i od kiedy.
+3. **Zmiany kryteriów** → aktualizacja `investor_distribution_criteria`
+   (nowe pola: `accepting_applications`, `paused_until`, `notes`) — na start
+   jako propozycja do zatwierdzenia jednym kliknięciem w panelu, z pełnym
+   logiem; zawieszona instytucja wypada z auto-dystrybucji natychmiast.
+4. **Pytania o wniosek** → agent scala pytania od wielu instytucji
+   (deduplikacja — dwie instytucje pytające o to samo = jedno pytanie do
+   klienta), tłumaczy na język klienta i wysyła **preferowanym kanałem
+   klienta** (ostatnio używany/wskazany kanał z `lead_communications`)
+   istniejącym rdzeniem `comms-agent.server.ts` (e-mail / SMS / Messenger /
+   czat) — tym samym, którego używa bot admina. Pytania zasilają też brief
+   braków, więc follow-upy braków dopominają się odpowiedzi automatycznie.
+5. **Odpowiedź klienta** → agent formatuje i odsyła w wątkach **wszystkich
+   zainteresowanych instytucji** (`comms_reply_offer_thread` / alias
+   dystrybucji), z załącznikami jeśli klient je dosłał.
+6. **Oferty i odmowy** → odnotowane na wniosku (odmowa z powodem = sygnał do
+   analizy; oferta = powiadomienie operatora/admina i klienta zgodnie z
+   zasadą „konkretna oferta albo cisza" z obszaru 2).
+
+**Stan i widoczność**: tabela `institution_qa_threads` (wniosek, pytanie,
+instytucje pytające, status: `zadane_klientowi` / `odpowiedziane` /
+`przekazane_instytucjom`, znaczniki czasu) + zakładka na karcie wniosku w
+panelu admina; każdy krok agenta logowany, wysyłki wyglądają w bazie jak
+ręczne (ten sam rdzeń comms).
+
+**Bezpieczniki**: treść maili instytucji traktowana jako dane (nigdy jako
+polecenia dla agenta); zmiany kryteriów zawsze z logiem i na start z
+zatwierdzeniem; limit wysyłek do klienta (nie częściej niż raz dziennie
+scalone pytania, chyba że klient właśnie odpowiedział); żadnych obietnic
+wobec klienta poza przekazaniem pytań/oferty.
+
 ### Decyzje otwarte obszaru 4
 
 1. Pełna lista kryteriów instytucji na start: tylko widełki kwotowe, czy od
    razu też region/typ nieruchomości? (Kwoty wystarczą na start — reszta
    dobudowywana bez zmiany architektury.)
 2. Wartość globalnego progu score lokalizacji.
-3. Czy start w trybie pełnego automatu, czy najpierw okres z zatwierdzaniem.
+3. Czy start w trybie pełnego automatu, czy najpierw okres z zatwierdzaniem
+   (dotyczy i wysyłki wniosków, i auto-aktualizacji kryteriów z maili).
+4. Historyczna korespondencja szła też przez prywatną skrzynkę
+   (plnyspolka@gmail.com) — czy agent ma objąć również ją (import/przekaz na
+   alias), czy od wdrożenia cały ruch z instytucjami idzie wyłącznie przez
+   aliasy systemowe `oferta+<id>@financeyou.pl`?
 
 ---
 
