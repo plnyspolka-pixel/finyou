@@ -517,7 +517,7 @@ export async function runAgentTurn(opts: {
     const calls = msg.tool_calls ?? [];
     if (calls.length === 0) {
       return {
-        reply: String(msg.content ?? "").trim() || "Dziękuję, oddzwonimy.",
+        reply: String(msg.content ?? "").trim() || "Dziękuję za wiadomość.",
         toolCalls: toolResults,
       };
     }

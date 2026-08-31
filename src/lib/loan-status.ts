@@ -211,8 +211,8 @@ export function describeLoanStatusForAgent(status: string): {
       return {
         status_label: label,
         status_message:
-          "Twój wniosek jest u nas — pośrednik wkrótce się skontaktuje, aby omówić szczegóły.",
-        client_action: "Odbierz telefon od naszego pośrednika.",
+          "Twój wniosek jest u nas. Uzupełnij dane i dokumenty w panelu klienta — kompletny wniosek trafia do inwestorów.",
+        client_action: "Uzupełnij dane wniosku w panelu klienta.",
         is_decision_available: false,
         is_completed: false,
         is_rejected: false,
@@ -269,7 +269,8 @@ export function describeLoanStatusForAgent(status: string): {
         status_label: label,
         status_message:
           "Szukamy inwestora dla Twojego wniosku i oczekujemy na oferty finansowania.",
-        client_action: "Czekaj na decyzję — poinformujemy Cię natychmiast, gdy ją otrzymamy.",
+        client_action:
+          "Jeśli wniosek spotka się z zainteresowaniem inwestora, otrzymasz konkretną ofertę finansową.",
         is_decision_available: false,
         is_completed: false,
         is_rejected: false,

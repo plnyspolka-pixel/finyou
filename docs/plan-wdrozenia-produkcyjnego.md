@@ -648,5 +648,18 @@ Decyzje podjęte przez właściciela (31.08.2026):
 5. Auto-dystrybucja: rozruch z zatwierdzaniem, próg score 40, tylko aliasy
    systemowe (szczegóły w obszarze 4).
 
-Start implementacji: **wstrzymany do sygnału właściciela** — plan jest dalej
-uzupełniany.
+## Stan implementacji (31.08.2026, branch `claude/production-deployment-plan-54zocm`)
+
+| Obszar | Stan |
+| --- | --- |
+| Obszar 3 — status wniosku w panelu klienta | **ZROBIONE**: karta statusu + oś 4 etapów + historia (`loan_status_history`) + e-mail przy zmianie (tick co 15 min) |
+| Obszar 4 — auto-dystrybucja | **ZROBIONE**: kryteria instytucji (seed Korona/JanVest), kolejka propozycji z zatwierdzaniem, panel `/admin/auto-dystrybucja`, cron |
+| Obszar 4 — agent korespondencji | **ZROBIONE**: klasyfikacja maili, propozycje zmian kryteriów (1 kliknięcie), pętla pytania→klient→odpowiedź→instytucje |
+| Obszar 5 — pipeline analityczny | **ZROBIONE**: KW→właściciele→analiza KW→ryzyko dla kompletnych wniosków ze score>50; sekcja analityczna na karcie oferty |
+| Obszar 2 — boty ElevenLabs | **ZROBIONE (kod)**: SMS dwukierunkowy, agenty A1–A3 (tworzenie z `/admin/text-agent`), webhook toole (`/api/public/agent-tools`), `issue_invoice`, przełącznik widgetów, kanały async przez turę tekstową z fallbackiem — patrz `docs/boty-elevenlabs.md`; wygaszenie starego silnika po stabilizacji logów |
+| Obszar 1 — umowy inwestora | **CELOWO NA KOŃCU** (decyzja właściciela — projekty umów + kod razem, po poprawkach prawnika) |
+
+Kroki wdrożeniowe po merge'u: zastosować migracje `20260831*` (supabase db
+push / panel), ustawić sekrety `AGENT_TOOLS_SECRET` (+ istniejące ElevenLabs/
+Twilio), w Twilio dopiąć webhook SMS inbound, w konsoli ElevenLabs dopiąć
+webhook toole do utworzonych agentów.
