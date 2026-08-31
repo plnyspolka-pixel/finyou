@@ -20,6 +20,11 @@ import {
   runAutoDistributionSync,
 } from "@/lib/auto-distribution/auto-distribution.functions";
 import { listAnalysisPipelineRuns } from "@/lib/analysis-pipeline/analysis-pipeline.functions";
+import {
+  listCriteriaChangeProposals,
+  decideCriteriaChange,
+  listInstitutionQaThreads,
+} from "@/lib/institution-mail-agent/institution-mail.functions";
 
 export const Route = createFileRoute("/admin/auto-dystrybucja")({
   component: AutoDystrybucjaPage,
@@ -197,6 +202,12 @@ function AutoDystrybucjaPage() {
         </Card>
       )}
 
+      {/* Agent korespondencji: propozycje zmian kryteriów z maili */}
+      <CriteriaProposalsCard />
+
+      {/* Agent korespondencji: pytania instytucja ↔ klient */}
+      <QaThreadsCard />
+
       {/* Pipeline analityczny — ostatnie przebiegi */}
       <PipelineRunsCard />
 
@@ -229,6 +240,144 @@ function AutoDystrybucjaPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+const PATCH_LABELS: Record<string, string> = {
+  accepting_applications: "przyjmowanie wniosków",
+  paused_until: "zawieszenie do",
+  min_amount: "kwota od",
+  max_amount: "kwota do",
+};
+
+function describePatch(patch: Record<string, unknown>): string {
+  return Object.entries(patch ?? {})
+    .map(([k, v]) => {
+      const label = PATCH_LABELS[k] ?? k;
+      if (typeof v === "boolean") return `${label}: ${v ? "TAK" : "NIE"}`;
+      if (k === "paused_until" && typeof v === "string") return `${label} ${v.slice(0, 10)}`;
+      return `${label}: ${v}`;
+    })
+    .join(" · ");
+}
+
+function CriteriaProposalsCard() {
+  const qc = useQueryClient();
+  const fetchProposals = useServerFn(listCriteriaChangeProposals);
+  const decide = useServerFn(decideCriteriaChange);
+  const { data: proposals } = useQuery({
+    queryKey: ["criteria-change-proposals"],
+    queryFn: () => fetchProposals(),
+  });
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const open = (proposals ?? []).filter((p: any) => p.status === "proposed");
+  if (open.length === 0) return null;
+
+  const onDecide = async (proposalId: string, decision: "apply" | "reject") => {
+    setBusyId(proposalId);
+    try {
+      await decide({ data: { proposalId, decision } });
+      toast.success(decision === "apply" ? "Kryteria zaktualizowane" : "Propozycja odrzucona");
+      void qc.invalidateQueries({ queryKey: ["criteria-change-proposals"] });
+      void qc.invalidateQueries({ queryKey: ["auto-dist-criteria"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Zmiany kryteriów wykryte w mailach ({open.length})</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <p className="text-sm text-muted-foreground">
+          Agent korespondencji wyłapał w mailach instytucji zmiany zasad przyjmowania wniosków.
+          Zastosowanie aktualizuje kryteria auto-dystrybucji.
+        </p>
+        {open.map((p: any) => (
+          <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-md border p-2.5 text-sm">
+            <span className="font-medium">{p.investor_name}</span>
+            <span className="text-muted-foreground">{describePatch(p.proposed_patch)}</span>
+            {p.summary && <span className="w-full text-xs text-muted-foreground">„{p.summary}"</span>}
+            <div className="ml-auto flex gap-2">
+              <Button size="sm" disabled={busyId === p.id} onClick={() => onDecide(p.id, "apply")}>
+                Zastosuj
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busyId === p.id}
+                onClick={() => onDecide(p.id, "reject")}
+              >
+                Odrzuć
+              </Button>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+const QA_STATUS_LABELS: Record<string, string> = {
+  otwarte: "Czeka na odpowiedź klienta",
+  przekazane: "Odpowiedź przekazana instytucjom",
+  zamkniete: "Zamknięte",
+};
+
+function QaThreadsCard() {
+  const fetchThreads = useServerFn(listInstitutionQaThreads);
+  const { data: threads } = useQuery({
+    queryKey: ["institution-qa-threads"],
+    queryFn: () => fetchThreads(),
+  });
+  if (!threads?.length) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Pytania instytucji do klientów ({threads.length})</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <p className="text-sm text-muted-foreground">
+          Agent scala pytania z maili instytucji, wysyła je klientowi jego kanałem (max raz na
+          dobę) i odsyła odpowiedzi do wszystkich pytających.
+        </p>
+        {threads.map((t: any) => {
+          const c = t.loan?.client;
+          const name = c ? [c.first_name, c.last_name].filter(Boolean).join(" ") : "Wniosek";
+          const qs = (t.questions ?? []) as Array<{ text: string; from: string[] }>;
+          return (
+            <div key={t.id} className="space-y-1 rounded-md border p-2.5 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={t.status === "otwarte" ? "default" : "secondary"}>
+                  {QA_STATUS_LABELS[t.status] ?? t.status}
+                </Badge>
+                <span className="font-medium">{name}</span>
+                {t.client_channel && (
+                  <span className="text-xs text-muted-foreground">kanał: {t.client_channel}</span>
+                )}
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {new Date(t.created_at).toLocaleString("pl-PL")}
+                </span>
+              </div>
+              <ul className="list-disc pl-5 text-muted-foreground">
+                {qs.map((q, i) => (
+                  <li key={i}>
+                    {q.text}{" "}
+                    <span className="text-xs">({(q.from ?? []).join(", ")})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }
 
