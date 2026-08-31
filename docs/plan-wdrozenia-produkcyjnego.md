@@ -274,6 +274,31 @@ Baza wiedzy RAG (`text_agent_knowledge`) → **Knowledge Base ElevenLabs**
 per agent (eksport skryptem jednorazowym); tabelę zostawiamy do czasu
 potwierdzenia jakości odpowiedzi, potem do wygaszenia.
 
+### SMS dwukierunkowy (rejestrowanie odpowiedzi na SMS-y)
+
+Dziś SMS-y tylko wychodzą (2 124 od czerwca: VI 496 / VII 1 095 / VIII 533,
+z numeru Twilio `voicebot_settings.sms_from = +48 732 059 898`) — odpowiedzi
+klientów przepadają. Numer jest prawdziwym numerem Twilio, więc odbiór jest
+możliwy; wzorzec webhooka Twilio z weryfikacją podpisu już istnieje
+(`src/routes/api/public/twilio-voice.ts`, `twilio-recording.ts`).
+
+1. Konsola Twilio: na numerze SMS webhook „A message comes in" → nowy
+   endpoint `src/routes/api/public/twilio-sms-inbound.ts` (walidacja
+   `X-Twilio-Signature`).
+2. Endpoint dopasowuje nadawcę do leada (`normalizePolishPhone` → `leads`)
+   i zapisuje wiadomość do `lead_communications` (`channel: sms`,
+   `direction: inbound`) — od razu widoczna w skrzynce panelu i dla
+   asystenta admina.
+3. Efekty automatyczne po samym zapisie:
+   - **pauza follow-upów 24 h** — silniki już pauzują po inboundzie
+     dowolnym kanałem; dziś odpowiedź SMS tego nie robi, bo jej nie widzimy;
+   - **opt-out**: parsowanie „STOP"/„WYPISZ" → `clients.do_not_sms`
+     (zamyka znany brak z `docs/follow-up-braki.md`);
+   - **SMS jako kanał agenta A1** — odpowiedź klienta SMS-em może obsłużyć
+     ten sam agent przyjęcia wniosku (tryb tekstowy), jak Messenger.
+4. Do sprawdzenia przy wdrożeniu: czy numer ma w Twilio włączony odbiór SMS
+   (inbound capability).
+
 ### Migracja i wygaszanie botów w systemie głównym
 
 Kolejność (każdy krok osobno wdrażalny i odwracalny):
