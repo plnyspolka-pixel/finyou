@@ -148,6 +148,7 @@ import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
 import { Route as AdminCzatRouteImport } from './routes/admin.czat'
 import { Route as AdminClarityRouteImport } from './routes/admin.clarity'
 import { Route as AdminAvatarFaqRouteImport } from './routes/admin.avatar-faq'
+import { Route as AdminAutoDystrybucjaRouteImport } from './routes/admin.auto-dystrybucja'
 import { Route as AdminAiSerpRouteImport } from './routes/admin.ai-serp'
 import { Route as AdminAiSeoRouteImport } from './routes/admin.ai-seo'
 import { Route as AdminAiOutreachRouteImport } from './routes/admin.ai-outreach'
@@ -252,6 +253,7 @@ import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/pub
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
+import { Route as ApiPublicHooksAutoDistributionTickRouteImport } from './routes/api/public/hooks/auto-distribution-tick'
 import { Route as ApiPublicHooksAniaCallbacksRouteImport } from './routes/api/public/hooks/ania-callbacks'
 import { Route as ApiPublicHooksAffiliateEventsTickRouteImport } from './routes/api/public/hooks/affiliate-events-tick'
 import { Route as ApiPublicHooksAccessExpiryTickRouteImport } from './routes/api/public/hooks/access-expiry-tick'
@@ -957,6 +959,11 @@ const AdminAvatarFaqRoute = AdminAvatarFaqRouteImport.update({
   path: '/avatar-faq',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAutoDystrybucjaRoute = AdminAutoDystrybucjaRouteImport.update({
+  id: '/auto-dystrybucja',
+  path: '/auto-dystrybucja',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAiSerpRoute = AdminAiSerpRouteImport.update({
   id: '/ai-serp',
   path: '/ai-serp',
@@ -1532,6 +1539,12 @@ const ApiPublicHooksDailyBlogTickRoute =
     path: '/api/public/hooks/daily-blog-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksAutoDistributionTickRoute =
+  ApiPublicHooksAutoDistributionTickRouteImport.update({
+    id: '/api/public/hooks/auto-distribution-tick',
+    path: '/api/public/hooks/auto-distribution-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksAniaCallbacksRoute =
   ApiPublicHooksAniaCallbacksRouteImport.update({
     id: '/api/public/hooks/ania-callbacks',
@@ -1598,6 +1611,7 @@ export interface FileRoutesByFullPath {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/auto-dystrybucja': typeof AdminAutoDystrybucjaRoute
   '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/czat': typeof AdminCzatRoute
@@ -1777,6 +1791,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
+  '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -1843,6 +1858,7 @@ export interface FileRoutesByTo {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/auto-dystrybucja': typeof AdminAutoDystrybucjaRoute
   '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/czat': typeof AdminCzatRoute
@@ -2017,6 +2033,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
+  '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2089,6 +2106,7 @@ export interface FileRoutesById {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/auto-dystrybucja': typeof AdminAutoDystrybucjaRoute
   '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/czat': typeof AdminCzatRoute
@@ -2268,6 +2286,7 @@ export interface FileRoutesById {
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
+  '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2341,6 +2360,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/auto-dystrybucja'
     | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/czat'
@@ -2520,6 +2540,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
+    | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -2586,6 +2607,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/auto-dystrybucja'
     | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/czat'
@@ -2760,6 +2782,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
+    | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -2831,6 +2854,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/auto-dystrybucja'
     | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/czat'
@@ -3010,6 +3034,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
+    | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -3114,6 +3139,7 @@ export interface RootRouteChildren {
   ApiPublicHooksAccessExpiryTickRoute: typeof ApiPublicHooksAccessExpiryTickRoute
   ApiPublicHooksAffiliateEventsTickRoute: typeof ApiPublicHooksAffiliateEventsTickRoute
   ApiPublicHooksAniaCallbacksRoute: typeof ApiPublicHooksAniaCallbacksRoute
+  ApiPublicHooksAutoDistributionTickRoute: typeof ApiPublicHooksAutoDistributionTickRoute
   ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -4122,6 +4148,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAvatarFaqRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/auto-dystrybucja': {
+      id: '/admin/auto-dystrybucja'
+      path: '/auto-dystrybucja'
+      fullPath: '/admin/auto-dystrybucja'
+      preLoaderRoute: typeof AdminAutoDystrybucjaRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ai-serp': {
       id: '/admin/ai-serp'
       path: '/ai-serp'
@@ -4850,6 +4883,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksDailyBlogTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/auto-distribution-tick': {
+      id: '/api/public/hooks/auto-distribution-tick'
+      path: '/api/public/hooks/auto-distribution-tick'
+      fullPath: '/api/public/hooks/auto-distribution-tick'
+      preLoaderRoute: typeof ApiPublicHooksAutoDistributionTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/ania-callbacks': {
       id: '/api/public/hooks/ania-callbacks'
       path: '/api/public/hooks/ania-callbacks'
@@ -4920,6 +4960,7 @@ interface AdminRouteChildren {
   AdminAiOutreachRoute: typeof AdminAiOutreachRoute
   AdminAiSeoRoute: typeof AdminAiSeoRoute
   AdminAiSerpRoute: typeof AdminAiSerpRoute
+  AdminAutoDystrybucjaRoute: typeof AdminAutoDystrybucjaRoute
   AdminAvatarFaqRoute: typeof AdminAvatarFaqRoute
   AdminClarityRoute: typeof AdminClarityRoute
   AdminCzatRoute: typeof AdminCzatRoute
@@ -5000,6 +5041,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAiOutreachRoute: AdminAiOutreachRoute,
   AdminAiSeoRoute: AdminAiSeoRoute,
   AdminAiSerpRoute: AdminAiSerpRoute,
+  AdminAutoDystrybucjaRoute: AdminAutoDystrybucjaRoute,
   AdminAvatarFaqRoute: AdminAvatarFaqRoute,
   AdminClarityRoute: AdminClarityRoute,
   AdminCzatRoute: AdminCzatRoute,
@@ -5387,6 +5429,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksAffiliateEventsTickRoute:
     ApiPublicHooksAffiliateEventsTickRoute,
   ApiPublicHooksAniaCallbacksRoute: ApiPublicHooksAniaCallbacksRoute,
+  ApiPublicHooksAutoDistributionTickRoute:
+    ApiPublicHooksAutoDistributionTickRoute,
   ApiPublicHooksDailyBlogTickRoute: ApiPublicHooksDailyBlogTickRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:
