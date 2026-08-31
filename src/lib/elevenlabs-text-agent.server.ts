@@ -312,6 +312,44 @@ export async function runAgentTurn(opts: {
   const { data: lead } = await s.from("leads").select("*").eq("id", opts.leadId).maybeSingle();
   if (!lead) throw new Error(`Lead ${opts.leadId} not found`);
 
+  // ── Ścieżka ElevenLabs (decyzja: wszystkie boty procesowe na ElevenLabs) ──
+  // Gdy agent dla powierzchni istnieje, tura idzie do niego (tryb tekstowy);
+  // narzędzia wykonuje webhook /api/public/agent-tools po stronie ElevenLabs.
+  // Każde niepowodzenie = cichy powrót do dotychczasowego silnika poniżej.
+  try {
+    const { getAgentIdForSurface } = await import("./elevenlabs-agents.server");
+    const surface =
+      variant === "inwestor"
+        ? ("investor_info" as const)
+        : variant === "inwestor_prywatny"
+          ? ("investor_panel" as const)
+          : ("intake" as const);
+    const elAgentId = await getAgentIdForSurface(surface);
+    if (elAgentId) {
+      const { elevenLabsTextTurn } = await import("./elevenlabs-text-turn.server");
+      const turn = await elevenLabsTextTurn({
+        agentId: elAgentId,
+        userMessage: opts.userMessage,
+        dynamicVariables: {
+          lead_id: lead.id,
+          channel: opts.channel,
+          first_name: lead.first_name ?? "",
+          last_name: lead.last_name ?? "",
+          email: lead.email ?? "",
+          phone: lead.phone_normalized ?? lead.phone_raw ?? "",
+        },
+      });
+      if (turn.ok && turn.reply) {
+        return { reply: turn.reply, toolCalls: [] };
+      }
+      console.warn(
+        `[el-text-agent] ElevenLabs turn fallback (${surface}): ${turn.error ?? "unknown"}`,
+      );
+    }
+  } catch (e) {
+    console.error("[el-text-agent] ElevenLabs path error — fallback", e);
+  }
+
   // Historia per wariant — rozmowa inwestorska nie miesza się z kanałami
   // pożyczkobiorcy (i odwrotnie), nawet gdy lead ma oba rodzaje komunikacji.
   const historyChannels =
