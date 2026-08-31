@@ -270,6 +270,32 @@ Dzisiejsze narzędzia bota tekstowego (`update_lead_data`,
   `describeLoanStatusForAgent` z voicebota) i odczytu briefu braków
   (`getMyMissingInfoBrief`).
 
+**Wystawianie FV na żądanie (nowe narzędzie `issue_invoice`).**
+Dziś narzędzie `request_invoice` (bot instytucjonalny) tylko zapisuje prośbę
+w leadzie i flaguje go dla księgowości (`status: wymaga_kontaktu`) — fakturę
+wystawia człowiek w module `operator-invoices`. Cała maszyneria do
+automatu już istnieje i jest używana przy płatnościach Tpay:
+`ensureInvoiceForAccessPayment` (`src/lib/access/invoice.server.ts`) —
+rekord `sales_invoices`, XML i wysyłka **KSeF** (`src/lib/ksef/`), mail z
+fakturą (Resend), dane firmy z GUS po NIP (`BIR_API_KEY`). Zmiana:
+
+1. Nowa funkcja serwerowa `issueInvoiceOnDemand` — reużywa ten sam pipeline
+   (numeracja, `sales_invoices`, KSeF, mail), wejście: NIP (dane firmy
+   dociągane z GUS — bot nie przepisuje adresu ze słuchu), e-mail, pozycja,
+   kwota.
+2. Narzędzie `issue_invoice` dla agentów A2 (instytucjonalny) i A3 (panel
+   inwestora) jako webhook tool; `request_invoice` znika.
+3. **Bezpieczniki** (FV to dokument księgowy — błąd wymaga korekty):
+   - automatycznie od ręki: pozycje z cennika (`access_products`) i kwoty
+     powiązane z płatnością widoczną w systemie;
+   - dowolna kwota/pozycja podana w rozmowie → faktura w statusie „szkic",
+     księgowość zatwierdza jednym kliknięciem (spójnie z trybem rozruchowym
+     auto-dystrybucji), bot informuje: „faktura zostanie wysłana po
+     zatwierdzeniu przez księgowość";
+   - walidacja NIP (suma kontrolna + GUS), dedup (ta sama prośba dwa razy =
+     jedna FV), limit dzienny na rozmówcę, pełny log w rozmowie i na fakturze
+     (`issued_via: agent`).
+
 Baza wiedzy RAG (`text_agent_knowledge`) → **Knowledge Base ElevenLabs**
 per agent (eksport skryptem jednorazowym); tabelę zostawiamy do czasu
 potwierdzenia jakości odpowiedzi, potem do wygaszenia.
