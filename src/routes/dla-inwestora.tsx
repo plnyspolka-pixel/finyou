@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
@@ -14,16 +14,13 @@ import {
 import { MktBadge, MktButton, Eyebrow } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
-import {
-  TwoColSlider,
-  SmartOfferSlider,
-  SmartOfferPanel,
-  type TwoColSlide,
-} from "@/components/marketing/sliders";
+import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
 import { MarketingPricing } from "@/components/marketing/pricing";
 import { ChatWidget } from "@/components/landing/chat-widget";
+import { LeadsTable } from "@/routes/embed.leady";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import type { AccessProduct } from "@/lib/access/core";
+import { fetchPublicLeads, type PublicLead } from "@/lib/public-leads.functions";
 
 const JOIN = "/rejestracja?role=inwestor";
 
@@ -32,6 +29,15 @@ const JOIN = "/rejestracja?role=inwestor";
 async function loadInvestorProducts(): Promise<AccessProduct[]> {
   try {
     return await listAccessProducts({ data: { audience: "investor" } });
+  } catch {
+    return [];
+  }
+}
+
+// Okazje ładowane bezpośrednio (bez iframe) — odporne na brak bazy podczas SSR.
+async function loadPublicLeads(): Promise<PublicLead[]> {
+  try {
+    return await fetchPublicLeads();
   } catch {
     return [];
   }
@@ -53,7 +59,10 @@ const PRICING_FEATURES: Record<number, string[]> = {
 };
 
 export const Route = createFileRoute("/dla-inwestora")({
-  loader: async () => ({ products: await loadInvestorProducts() }),
+  loader: async () => {
+    const [products, leads] = await Promise.all([loadInvestorProducts(), loadPublicLeads()]);
+    return { products, leads };
+  },
   head: () => ({
     meta: [
       {
@@ -395,62 +404,239 @@ function Hero() {
   );
 }
 
-// Iframe z okazjami dopasowuje wysokość do treści zgłaszanej przez embed
-// (postMessage z /embed/leady) — karty nie ucinają się na żadnej szerokości.
-function LeadsEmbed() {
-  const [height, setHeight] = useState(430);
-  useEffect(() => {
-    const onMessage = (e: MessageEvent) => {
-      const d = e.data as { type?: string; height?: number } | null;
-      if (d?.type === "fy:leady-embed:height" && typeof d.height === "number" && d.height > 0) {
-        setHeight(Math.ceil(d.height));
-      }
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, []);
+// Panel z okazjami renderowany bezpośrednio (bez iframe), na całą szerokość
+// strony — tylko lekki padding boczny, bez ograniczenia max-width.
+function LeadsSection({ leads }: { leads: PublicLead[] }) {
   return (
-    <div
+    <section
       style={{
-        marginTop: "1.1rem",
-        borderRadius: 18,
-        overflow: "hidden",
-        border: "1px solid rgba(84, 124, 214, 0.2)",
+        background: "#0a1030",
+        borderBottom: "1px solid rgba(84,124,214,0.2)",
+        padding: "3rem clamp(1rem, 3vw, 2.5rem) 4rem",
+        color: "#fff",
       }}
     >
-      <iframe
-        src="https://app.financeyou.pl/embed/leady"
-        style={{ border: 0, width: "100%", minHeight: 340, height, display: "block" }}
-        loading="lazy"
-        title="Ostatnie okazje inwestycyjne Finance You"
-      />
+      <Eyebrow tone="gold" style={{ letterSpacing: "0.24em" }}>
+        Ostatnie okazje inwestycyjne
+      </Eyebrow>
+      <div style={{ marginTop: "1.1rem" }}>
+        {leads.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-10 text-center text-sm text-slate-300">
+            Brak okazji do wyświetlenia.
+          </div>
+        ) : (
+          <LeadsTable leads={leads} />
+        )}
+      </div>
+      <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "center" }}>
+        <MktButton variant="outline" href={JOIN}>
+          <BrandIcon name="handCoins" size={16} /> Zobacz wszystkie okazje w aplikacji
+        </MktButton>
+      </div>
+      <ComplianceNote style={{ marginTop: "1.5rem" }}>
+        Przykładowe okazje o charakterze poglądowym. Dane nie stanowią oferty ani rekomendacji
+        inwestycyjnej. Inwestowanie wiąże się z ryzykiem utraty kapitału.
+      </ComplianceNote>
+    </section>
+  );
+}
+
+// ── Zakładki bezpośrednio pod filmem ─────────────────────────────────────────
+// Kotwice z nagłówka (#akademia, #ochrona, #windykacja-ai, #cennik) wybierają
+// odpowiednią zakładkę i przewijają do pasa zakładek — sekcje nie mają już
+// własnych id na stronie.
+type InvestorTabKey = "oferty" | "akademia" | "ochrona" | "windykacja" | "cennik";
+
+const INVESTOR_TABS: { key: InvestorTabKey; hash: string; label: string }[] = [
+  { key: "oferty", hash: "#oferty", label: "Oferty" },
+  { key: "akademia", hash: "#akademia", label: "Akademia inwestora" },
+  { key: "ochrona", hash: "#ochrona", label: "7 warstw ochrony" },
+  { key: "windykacja", hash: "#windykacja-ai", label: "Windykacja AI" },
+  { key: "cennik", hash: "#cennik", label: "Cennik" },
+];
+
+function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: AccessProduct[] }) {
+  const [active, setActive] = useState<InvestorTabKey>("oferty");
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // Hash w URL (wejście z linku lub klik w menu) wybiera zakładkę.
+  useEffect(() => {
+    const applyHash = (scroll: boolean) => {
+      const tab = INVESTOR_TABS.find((t) => t.hash === window.location.hash);
+      if (!tab) return;
+      setActive(tab.key);
+      if (scroll) barRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    applyHash(window.location.hash !== "" && window.location.hash !== "#oferty");
+    const onHash = () => applyHash(true);
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  const select = (tab: (typeof INVESTOR_TABS)[number]) => {
+    setActive(tab.key);
+    // replaceState zamiast location.hash — bez skoku strony, ale link można udostępnić.
+    window.history.replaceState(null, "", tab.hash);
+  };
+
+  return (
+    <div>
+      <div
+        ref={barRef}
+        style={{
+          background: "#0a1030",
+          borderTop: "1px solid rgba(84,124,214,0.2)",
+          scrollMarginTop: "5rem",
+        }}
+      >
+        <div
+          role="tablist"
+          aria-label="Sekcje dla inwestora"
+          style={{
+            display: "flex",
+            gap: "0.55rem",
+            overflowX: "auto",
+            padding: "1.1rem clamp(1rem, 3vw, 2.5rem)",
+            scrollbarWidth: "thin",
+          }}
+        >
+          {INVESTOR_TABS.map((t) => {
+            const isActive = t.key === active;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => select(t)}
+                style={{
+                  whiteSpace: "nowrap",
+                  padding: "0.6rem 1.15rem",
+                  borderRadius: 999,
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all .18s ease",
+                  border: isActive ? "1px solid transparent" : "1px solid rgba(84,124,214,0.35)",
+                  background: isActive
+                    ? "linear-gradient(95deg,#f0c667,#f6dc9c)"
+                    : "rgba(255,255,255,0.04)",
+                  color: isActive ? "#101430" : "rgba(255,255,255,.85)",
+                  boxShadow: isActive ? "0 8px 24px -10px rgba(240,198,103,0.6)" : "none",
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {active === "oferty" && <LeadsSection leads={leads} />}
+
+      {active === "akademia" && (
+        <Section>
+          <SectionHead
+            center
+            eyebrow="Akademia inwestora"
+            title="Program szkolenia w 7 modułach"
+            sub="Od wprowadzenia i strategii, przez marketing, prawo i operacje, po analizę nieruchomości, analizę klienta i praktyczne case studies."
+          />
+          <div style={{ marginTop: "2.5rem" }}>
+            <TwoColSlider slides={AKADEMIA} />
+          </div>
+        </Section>
+      )}
+
+      {active === "ochrona" && (
+        <Section tint>
+          <SectionHead
+            center
+            eyebrow="Bezpieczeństwo"
+            title="7 warstw ochrony inwestora"
+            sub="Od zgodności z przepisami i stanu prawnego nieruchomości, przez wycenę, kalkulację i dokumenty, po ocenę ryzyka oraz monitoring spłaty."
+          />
+          <div style={{ marginTop: "2.5rem" }}>
+            <TwoColSlider slides={OCHRONA} />
+          </div>
+          <ComplianceNote style={{ marginTop: "2rem" }}>
+            System wspiera analizę i porządkuje dane — decyzja należy do inwestora. Zakres zależy od
+            modelu i stron transakcji.
+          </ComplianceNote>
+        </Section>
+      )}
+
+      {active === "windykacja" && (
+        <Section>
+          <SectionHead
+            center
+            eyebrow="Moduł AI"
+            title="Automatyczna windykacja krok po kroku"
+            sub="Sześć etapów procesu — od pierwszego kontaktu po egzekucję komorniczą. Każdy etap pokazuje działania systemu oraz prognozowany czas."
+          />
+          <div style={{ marginTop: "2.5rem" }}>
+            <TwoColSlider slides={WINDYKACJA} />
+          </div>
+          <ComplianceNote style={{ marginTop: "2rem" }}>
+            Prognoza poglądowa — wartości zaokrąglone, zależne od umowy, harmonogramu i kosztów
+            czynności.
+          </ComplianceNote>
+        </Section>
+      )}
+
+      {active === "cennik" && (
+        <Section tint>
+          <SectionHead
+            center
+            eyebrow="Cennik"
+            title="Klub Inwestorów Hipotecznych"
+            sub="Jednorazowa płatność za czasowy dostęp — bez automatycznych odnowień."
+          />
+          <div style={{ marginTop: "2.5rem" }}>
+            <MarketingPricing
+              products={products}
+              audience="investor"
+              ctaLabel="Wykup dostęp"
+              featuresByDuration={PRICING_FEATURES}
+              fallback={
+                <PricingCard
+                  eyebrow="Klub Inwestorów Hipotecznych"
+                  title="Pełny dostęp inwestora"
+                  price="999 zł"
+                  period="/ 30 dni"
+                  cta="Dołącz do Klubu"
+                  href={JOIN}
+                  features={[
+                    "Dostęp do spraw klientów",
+                    "Akademia inwestora",
+                    "Wzory dokumentów i procedury",
+                    "Narzędzia AI + CRM",
+                    "Wsparcie compliance",
+                    "Dostęp do społeczności",
+                  ]}
+                  note="Ceny brutto. Dostęp roczny: 5 999 zł / 365 dni. Materiały mają charakter edukacyjny i informacyjny."
+                />
+              }
+            />
+          </div>
+          <ComplianceNote style={{ marginTop: "2rem" }}>
+            Ceny brutto (PLN). Zakup wymaga konta inwestora — po wybraniu pakietu przejdziesz do
+            bezpiecznej płatności Tpay, a faktura zostanie wystawiona automatycznie. Materiały mają
+            charakter edukacyjny i informacyjny.
+          </ComplianceNote>
+        </Section>
+      )}
     </div>
   );
 }
 
 function InvestorLanding() {
-  const { products } = Route.useLoaderData();
+  const { products, leads } = Route.useLoaderData();
   return (
     <MarketingShell page="inwestor" sticky={{ label: "Dołącz do Klubu", href: JOIN }}>
       <Hero />
 
-      <Section>
-        <SmartOfferPanel>
-          <Eyebrow tone="gold" style={{ letterSpacing: "0.24em" }}>
-            Ostatnie okazje inwestycyjne
-          </Eyebrow>
-          <LeadsEmbed />
-        </SmartOfferPanel>
-        <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "center" }}>
-          <MktButton variant="outline" href={JOIN}>
-            <BrandIcon name="handCoins" size={16} /> Zobacz wszystkie okazje w aplikacji
-          </MktButton>
-        </div>
-        <ComplianceNote style={{ marginTop: "1.5rem" }}>
-          Przykładowe okazje o charakterze poglądowym. Dane nie stanowią oferty ani rekomendacji
-          inwestycyjnej. Inwestowanie wiąże się z ryzykiem utraty kapitału.
-        </ComplianceNote>
-      </Section>
+      <InvestorTabs leads={leads} products={products} />
 
       <Section>
         <SmartOfferSlider />
@@ -461,50 +647,6 @@ function InvestorLanding() {
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={GET} icon3d />
         </div>
-      </Section>
-
-      <Section id="akademia">
-        <SectionHead
-          center
-          eyebrow="Akademia inwestora"
-          title="Program szkolenia w 7 modułach"
-          sub="Od wprowadzenia i strategii, przez marketing, prawo i operacje, po analizę nieruchomości, analizę klienta i praktyczne case studies."
-        />
-        <div style={{ marginTop: "2.5rem" }}>
-          <TwoColSlider slides={AKADEMIA} />
-        </div>
-      </Section>
-
-      <Section tint id="ochrona">
-        <SectionHead
-          center
-          eyebrow="Bezpieczeństwo"
-          title="7 warstw ochrony inwestora"
-          sub="Od zgodności z przepisami i stanu prawnego nieruchomości, przez wycenę, kalkulację i dokumenty, po ocenę ryzyka oraz monitoring spłaty."
-        />
-        <div style={{ marginTop: "2.5rem" }}>
-          <TwoColSlider slides={OCHRONA} />
-        </div>
-        <ComplianceNote style={{ marginTop: "2rem" }}>
-          System wspiera analizę i porządkuje dane — decyzja należy do inwestora. Zakres zależy od
-          modelu i stron transakcji.
-        </ComplianceNote>
-      </Section>
-
-      <Section id="windykacja-ai">
-        <SectionHead
-          center
-          eyebrow="Moduł AI"
-          title="Automatyczna windykacja krok po kroku"
-          sub="Sześć etapów procesu — od pierwszego kontaktu po egzekucję komorniczą. Każdy etap pokazuje działania systemu oraz prognozowany czas."
-        />
-        <div style={{ marginTop: "2.5rem" }}>
-          <TwoColSlider slides={WINDYKACJA} />
-        </div>
-        <ComplianceNote style={{ marginTop: "2rem" }}>
-          Prognoza poglądowa — wartości zaokrąglone, zależne od umowy, harmonogramu i kosztów
-          czynności.
-        </ComplianceNote>
       </Section>
 
       <Section tint>
@@ -557,47 +699,6 @@ function InvestorLanding() {
         <ComplianceNote style={{ marginTop: "2rem" }}>
           Finance You wspiera zgodność procesu i edukację prawno-operacyjną. Nie zapewnia obsługi
           prawnej.
-        </ComplianceNote>
-      </Section>
-
-      <Section tint id="cennik">
-        <SectionHead
-          center
-          eyebrow="Cennik"
-          title="Klub Inwestorów Hipotecznych"
-          sub="Jednorazowa płatność za czasowy dostęp — bez automatycznych odnowień."
-        />
-        <div style={{ marginTop: "2.5rem" }}>
-          <MarketingPricing
-            products={products}
-            audience="investor"
-            ctaLabel="Wykup dostęp"
-            featuresByDuration={PRICING_FEATURES}
-            fallback={
-              <PricingCard
-                eyebrow="Klub Inwestorów Hipotecznych"
-                title="Pełny dostęp inwestora"
-                price="999 zł"
-                period="/ 30 dni"
-                cta="Dołącz do Klubu"
-                href={JOIN}
-                features={[
-                  "Dostęp do spraw klientów",
-                  "Akademia inwestora",
-                  "Wzory dokumentów i procedury",
-                  "Narzędzia AI + CRM",
-                  "Wsparcie compliance",
-                  "Dostęp do społeczności",
-                ]}
-                note="Ceny brutto. Dostęp roczny: 5 999 zł / 365 dni. Materiały mają charakter edukacyjny i informacyjny."
-              />
-            }
-          />
-        </div>
-        <ComplianceNote style={{ marginTop: "2rem" }}>
-          Ceny brutto (PLN). Zakup wymaga konta inwestora — po wybraniu pakietu przejdziesz do
-          bezpiecznej płatności Tpay, a faktura zostanie wystawiona automatycznie. Materiały mają
-          charakter edukacyjny i informacyjny.
         </ComplianceNote>
       </Section>
 
