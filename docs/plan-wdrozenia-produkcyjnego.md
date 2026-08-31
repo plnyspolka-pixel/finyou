@@ -375,12 +375,72 @@ pierwszy jako szybki, widoczny efekt.
 
 ---
 
+## Obszar 4 — Automatyczna dystrybucja kompletnych wniosków do instytucji
+
+### Cel
+
+Każdy **kompletny** wniosek z przynajmniej sensownym potencjałem
+lokalizacyjnym leci **automatycznie** do inwestorów instytucjonalnych —
+z zachowaniem kryteriów każdej instytucji (np. Korona: tylko do 350 tys. zł;
+JanVest: tylko powyżej 100 tys. zł).
+
+### Co już jest
+
+- **Ręczna dystrybucja działa w całości** —
+  `src/lib/offer-distribution.functions.ts`: wysyłka e-mail do wszystkich lub
+  wybranych `investors` (`investor_type = 'instytucjonalny'`, `is_active`),
+  karta wniosku `/karta/<token>`, odpowiedzi instytucji wracają aliasem
+  `oferta+<distribution_id>@` prosto na kartę; jest dedup („nie wysyłaj
+  drugi raz do instytucji, która już dostała ten temat").
+- **Kompletność wniosku** — `computeLoanProgress` + brief braków
+  (`missing-info-follow-up/brief.ts`); status `szukamy_inwestora`.
+- **Scoring lokalizacji 0–100** — `src/lib/location-scoring/` +
+  `property-analysis/location-score.server.ts` (neutralny wynik 40 przy braku
+  danych).
+- **Brakuje**: kryteriów per instytucja i jakiegokolwiek automatu wysyłki —
+  dziś dystrybucję odpala ręcznie admin.
+
+### Do zbudowania
+
+1. **Kryteria per instytucja** — tabela `investor_distribution_criteria`:
+   `investor_id`, `min_amount`, `max_amount`, `auto_send_enabled`,
+   opcjonalnie na przyszłość: województwa, typy nieruchomości, własny próg
+   score. Seed od właściciela: Korona `max_amount = 350 000`, JanVest
+   `min_amount = 100 000`. Edycja w panelu admina przy liście instytucji.
+2. **Kwalifikacja wniosku** — funkcja `isEligibleForAutoDistribution`:
+   wniosek kompletny (pusty brief braków) **i** score lokalizacji ≥ próg
+   globalny (konfigurowalny w ustawieniach, propozycja startowa: 40 =
+   „przynajmniej neutralny") **i** status `szukamy_inwestora`.
+3. **Silnik auto-dystrybucji** — cron tick (wzorem
+   `missing-info-follow-up-tick`): bierze świeżo zakwalifikowane wnioski,
+   dobiera instytucje, których widełki kwotowe obejmują kwotę wniosku,
+   i wysyła **istniejącym pipeline'em** `offer-distribution` (dedup działa
+   bez zmian). Znacznik `auto` vs `manual` na `offer_distributions`.
+4. **Bezpieczniki** — globalny wyłącznik w ustawieniach, limit dzienny
+   wysyłek, log decyzji (dlaczego wniosek poszedł / nie poszedł i do kogo);
+   opcja trybu rozruchowego „do zatwierdzenia jednym kliknięciem" zanim
+   puścimy pełny automat.
+5. **Panel** — zakładka w `/admin/dystrybucja`: kolejka auto-wysyłek,
+   historia (wniosek → instytucje → powód dopasowania), wnioski
+   niekwalifikujące się z powodem (niekompletny / score za niski).
+
+### Decyzje otwarte obszaru 4
+
+1. Pełna lista kryteriów instytucji na start: tylko widełki kwotowe, czy od
+   razu też region/typ nieruchomości? (Kwoty wystarczą na start — reszta
+   dobudowywana bez zmiany architektury.)
+2. Wartość globalnego progu score lokalizacji.
+3. Czy start w trybie pełnego automatu, czy najpierw okres z zatwierdzaniem.
+
+---
+
 ## Proponowana kolejność wdrożenia
 
 | Faza | Zakres | Zależności |
 | --- | --- | --- |
 | 0 | Produkcyjne workflowy Didit (publikacja draftów, sekrety) — patrz `docs/didit-kyc.md`, sekcja „Do zrobienia" | — |
 | 1 | Obszar 3 (status w panelu klienta) | — |
+| 1b | Obszar 4 (auto-dystrybucja do instytucji) — niezależny, może iść równolegle | kryteria instytucji od właściciela |
 | 2 | Obszar 1 (umowy inwestora) | faza 0 + treści umów od prawnika |
 | 3 | Obszar 2, kroki 1–3 (agenty ElevenLabs, narzędzia, chat inwestora) | — |
 | 4 | Obszar 2, kroki 4–6 (agent A1 na wszystkich kanałach klienta, panel inwestora, przegląd treści pod kątem obietnic kontaktu) | faza 1 (słownik statusów) |
