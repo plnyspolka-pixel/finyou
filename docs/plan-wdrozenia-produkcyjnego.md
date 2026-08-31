@@ -554,6 +554,73 @@ wobec klienta poza przekazaniem pytań/oferty.
 
 ---
 
+## Obszar 5 — Automatyczny pipeline analityczny + spójny raport na karcie oferty
+
+### Cel
+
+Każdy wniosek z potencjałem lokalizacyjnym **powyżej 50** automatycznie
+przechodzi pełny pipeline: **pobranie KW → właściciele → analiza KW →
+analiza ryzyka**, a wyniki składają się w **jeden spójny raport z podziałem
+na działy**, którym karta oferty (`/karta/<token>`) prezentuje się odbiorcy
+czytelnie i ładnie.
+
+### Co już jest (wszystkie ogniwa istnieją, brak orkiestracji)
+
+| Ogniwo | Moduł |
+| --- | --- |
+| Pobranie treści KW | `src/lib/kw-fetch.server.ts` (CMD KW Engine, cache `kw_documents`) + `kw-ensure.ts` (dowozi do „ready", ~45 s/polling) |
+| Właściciele | `src/lib/coowners/` (analiza działu II, KRS, `coowner_registry_checks`) |
+| Analiza KW | `src/lib/kw-analysis/` (silnik reguł, znaleziska → `kw_land_register_analyses`) |
+| Analiza ryzyka | `src/lib/risk-assessment/` (exit liquidity, forced sale, CEIDG, benchmark, korespondencja, lokalizacja) |
+| Karta oferty | `src/routes/karta.$token.tsx` — już renderuje sekcje KW; anonimizacja wg `visibility_level` |
+| PDF oferty | `src/lib/offer-pdf.ts` |
+
+Każde ogniwo odpalane jest dziś **ręcznie z panelu**, każde z osobnym
+widokiem wyników.
+
+### Do zbudowania
+
+1. **Orkiestrator** — tabela `analysis_pipeline_runs` (wniosek, krok,
+   status per krok: `pending/running/done/error`, znaczniki czasu, koszt) +
+   cron tick (wzorem pozostałych ticków). Kroki sekwencyjnie: KW →
+   właściciele → analiza KW → ryzyko (kolejne kroki zależą od treści KW).
+   Retry z backoffem; błąd kroku nie blokuje raportu — dział dostaje status
+   „nie udało się pobrać" zamiast dziury.
+2. **Trigger**: wniosek z poprawnym numerem KW + score lokalizacji **> 50**
+   (liczony przy analizie lokalizacji, która już działa automatycznie).
+   Pipeline odpala się raz; ponownie tylko przy zmianie numeru KW albo
+   ręcznie z panelu. Uwaga na koszty CMD KW Engine — licznik pobrań w runie.
+3. **Raport zbiorczy** — `loan_offer_reports` (jsonb, wersjonowany):
+   jeden dokument z działami:
+   1. **Podsumowanie oferty** — kwota, cel, zabezpieczenie, LTV, status;
+   2. **Nieruchomość i lokalizacja** — typ, adres (wg anonimizacji), score
+      lokalizacji z uzasadnieniem;
+   3. **Księga wieczysta** — działy I–IV, znaleziska analizy z kolorami
+      statusów (STOP / warunkowe / OK);
+   4. **Właściciele i zgody** — kto w dziale II, wymagane zgody
+      współwłaścicieli;
+   5. **Analiza ryzyka** — sygnały i wskaźniki (płynność wyjścia, wartość
+      wymuszonej sprzedaży, CEIDG, rozbieżności z korespondencji);
+   6. **Dokumenty** — co dostarczone / czego brakuje.
+4. **Karta oferty — przeprojektowanie prezentacji**: te same dane co w
+   raporcie, jeden spójny układ działów (nawigacja po sekcjach, badge'y
+   statusów, czytelna typografia), zachowana anonimizacja wg
+   `visibility_level`; eksport PDF z tego samego raportu (rozbudowa
+   `offer-pdf.ts`) — instytucja dostaje kartę online i może pobrać PDF.
+5. **Spięcie z obszarem 4**: auto-dystrybucja (próg 40) wysyła kartę
+   wzbogaconą o raport, jeśli pipeline (próg 50) już się wykonał; dla
+   wniosków 40–50 karta pokazuje wersję podstawową. Dwa progi celowo różne —
+   do ewentualnego wyrównania po okresie próbnym.
+
+### Decyzja otwarta obszaru 5
+
+Czy pipeline ma się odpalać także dla wniosków **niekompletnych** z samym
+numerem KW (wcześniejsza wiedza = szybsze dopytanie klienta o zgody
+współwłaścicieli), czy dopiero po skompletowaniu wniosku (niższe koszty
+pobrań KW)?
+
+---
+
 ## Proponowana kolejność wdrożenia
 
 | Faza | Zakres | Zależności |
@@ -561,6 +628,7 @@ wobec klienta poza przekazaniem pytań/oferty.
 | 0 | Produkcyjne workflowy Didit (publikacja draftów, sekrety) — patrz `docs/didit-kyc.md`, sekcja „Do zrobienia" | — |
 | 1 | Obszar 3 (status w panelu klienta) | — |
 | 1b | Obszar 4 (auto-dystrybucja do instytucji) — niezależny, może iść równolegle | kryteria instytucji od właściciela |
+| 1c | Obszar 5 (pipeline analityczny + raport na karcie oferty) — najlepiej przed pełnym automatem dystrybucji, żeby instytucje dostawały wzbogacone karty | — |
 | 2 | Obszar 1 (umowy inwestora) | faza 0 + treści umów od prawnika |
 | 3 | Obszar 2, kroki 1–3 (agenty ElevenLabs, narzędzia, chat inwestora) | — |
 | 4 | Obszar 2, kroki 4–6 (agent A1 na wszystkich kanałach klienta, panel inwestora, przegląd treści pod kątem obietnic kontaktu) | faza 1 (słownik statusów) |
