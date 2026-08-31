@@ -93,6 +93,107 @@ export const LOAN_STATUS_LABELS: Record<string, string> = {
   zamkniete: "Sprawa zamknięta",
 };
 
+// ---------------------------------------------------------------------------
+// Widok statusu dla KLIENTA (panel /klient, boty, maile) — język klienta,
+// bez żargonu operacyjnego. Zasada komunikacji: NIE obiecujemy kontaktu
+// analityka ani oddzwonienia — „konkretna oferta albo cisza".
+// ---------------------------------------------------------------------------
+
+/** Cztery etapy procesu widziane przez klienta (oś na karcie statusu). */
+export const CLIENT_STAGES = [
+  { key: "wniosek", label: "Wniosek" },
+  { key: "kompletowanie", label: "Kompletowanie" },
+  { key: "inwestor", label: "Szukamy inwestora" },
+  { key: "umowa", label: "Umowa i wypłata" },
+] as const;
+
+export type ClientStageKey = (typeof CLIENT_STAGES)[number]["key"];
+
+/** Status kanoniczny → etap kliencki. */
+const STATUS_TO_CLIENT_STAGE: Record<LoanStatus, ClientStageKey> = {
+  nowy_lead: "wniosek",
+  brak_kontaktu: "wniosek",
+  brak_kwoty: "kompletowanie",
+  brak_kw: "kompletowanie",
+  brak_zdjec_dokumentow: "kompletowanie",
+  kontakt: "kompletowanie",
+  kompletowanie_danych: "kompletowanie",
+  szukamy_inwestora: "inwestor",
+  warunki_zaakceptowane: "umowa",
+  dokumenty_przygotowanie_umowy: "umowa",
+  notariusz: "umowa",
+  zamkniete: "umowa",
+};
+
+/** Etykiety statusów w języku klienta (statusy operacyjne braków zlane w jedno). */
+export const CLIENT_STATUS_LABELS: Record<LoanStatus, string> = {
+  nowy_lead: "Wniosek przyjęty",
+  brak_kontaktu: "Uzupełnij dane kontaktowe",
+  brak_kwoty: "Uzupełnij dane wniosku",
+  brak_kw: "Uzupełnij dane wniosku",
+  brak_zdjec_dokumentow: "Uzupełnij dane wniosku",
+  kontakt: "Wniosek w przygotowaniu",
+  kompletowanie_danych: "Uzupełnij dane wniosku",
+  szukamy_inwestora: "Wniosek u inwestorów",
+  warunki_zaakceptowane: "Warunki zaakceptowane",
+  dokumenty_przygotowanie_umowy: "Przygotowujemy umowę",
+  notariusz: "Umowa u notariusza",
+  zamkniete: "Sprawa zakończona",
+};
+
+/** Opisy statusów dla klienta — bez obietnic kontaktu z naszej strony. */
+export const CLIENT_STATUS_DESCRIPTIONS: Record<LoanStatus, string> = {
+  nowy_lead:
+    "Twój wniosek jest w naszym systemie. Uzupełnij dane i dokumenty, aby mógł trafić do inwestorów.",
+  brak_kontaktu:
+    "Do dalszych kroków potrzebujemy Twoich danych kontaktowych — uzupełnij je w profilu.",
+  brak_kwoty:
+    "Brakuje jeszcze części danych. Sprawdź listę poniżej i uzupełnij braki — kompletny wniosek trafia do inwestorów.",
+  brak_kw:
+    "Brakuje jeszcze części danych. Sprawdź listę poniżej i uzupełnij braki — kompletny wniosek trafia do inwestorów.",
+  brak_zdjec_dokumentow:
+    "Brakuje jeszcze części danych. Sprawdź listę poniżej i uzupełnij braki — kompletny wniosek trafia do inwestorów.",
+  kontakt:
+    "Doprecyzowujemy szczegóły Twojego wniosku. Uzupełnij ewentualne braki z listy poniżej.",
+  kompletowanie_danych:
+    "Brakuje jeszcze części danych. Sprawdź listę poniżej i uzupełnij braki — kompletny wniosek trafia do inwestorów.",
+  szukamy_inwestora:
+    "Twój wniosek jest przedstawiany inwestorom. Jeśli spotka się z zainteresowaniem, otrzymasz konkretną ofertę finansową. Brak oferty oznacza, że wniosek na razie nie wzbudził zainteresowania.",
+  warunki_zaakceptowane:
+    "Warunki oferty zostały zaakceptowane. Przygotowujemy dokumenty do kolejnego kroku.",
+  dokumenty_przygotowanie_umowy:
+    "Przygotowujemy dokumenty i treść umowy pożyczki.",
+  notariusz:
+    "Umowa jest u notariusza — trwa podpisanie i ustanowienie zabezpieczeń.",
+  zamkniete: "Sprawa została zakończona.",
+};
+
+export interface ClientLoanStatusInfo {
+  /** Znormalizowany status kanoniczny. */
+  status: LoanStatus;
+  label: string;
+  description: string;
+  stage: ClientStageKey;
+  /** Indeks etapu na osi CLIENT_STAGES (0–3). */
+  stage_index: number;
+  /** Sprawa zamknięta — oś w pełni wypełniona. */
+  is_closed: boolean;
+}
+
+/** Widok statusu dla klienta — jedyne źródło etykiet w panelu, botach i mailach. */
+export function clientLoanStatusView(status: string | null | undefined): ClientLoanStatusInfo {
+  const s = normalizeLoanStatus(status);
+  const stage = STATUS_TO_CLIENT_STAGE[s];
+  return {
+    status: s,
+    label: CLIENT_STATUS_LABELS[s],
+    description: CLIENT_STATUS_DESCRIPTIONS[s],
+    stage,
+    stage_index: CLIENT_STAGES.findIndex((x) => x.key === stage),
+    is_closed: s === "zamkniete",
+  };
+}
+
 /** Wiadomość dla voicebota — co powiedzieć klientowi. */
 export function describeLoanStatusForAgent(status: string): {
   status_label: string;
