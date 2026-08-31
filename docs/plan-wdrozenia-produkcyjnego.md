@@ -198,55 +198,60 @@ wewnętrzne i silniki deterministyczne:
 | Chat klienta na stronie (zbieranie wniosku) | `src/routes/api/public/chat-widget.ts` → `runAgentTurn` (Gemini przez Lovable Gateway) | **→ ElevenLabs** |
 | Chat inwestora instytucjonalnego (`/dla-inwestora`) | `src/routes/api/public/investor-chat-widget.ts` (Gemini) | **→ ElevenLabs** |
 | Asystent panelu inwestora (Klub Inwestora) | `src/lib/investor-assistant.functions.ts` (Gemini) | **→ ElevenLabs** |
-| Voicebot „Ania" (telefon, nowe leady) | już ElevenLabs (`voicebot.functions.ts`) | zostaje — porządkujemy jako agenta etapu 1 |
-| „Ania — uzupełnia braki" (widget w `/klient`) | już ElevenLabs (`missing-info-voice-agent.tsx`) | zostaje — agent etapu 3 |
-| Windykacja (telefony do dłużników) | już ElevenLabs (`windykacja-call.functions.ts`) | zostaje — agent etapu 6 |
-| Asystent panelu **admina** | `src/lib/ai-admin.server.ts` (Anthropic, 22 narzędzia) | **zostaje w systemie** — narzędzie wewnętrzne administratora, nie bot procesowy |
+| Voicebot „Ania" (telefon, nowe leady) | już ElevenLabs (`voicebot.functions.ts`) | zostaje — scala się z agentem przyjęcia wniosku (A1) |
+| „Ania — uzupełnia braki" (widget w `/klient`) | już ElevenLabs (`missing-info-voice-agent.tsx`) | zostaje — scala się z agentem przyjęcia wniosku (A1) |
+| Windykacja (telefony do dłużników) | już ElevenLabs (`windykacja-call.functions.ts`) | zostaje — osobny agent (A4) |
+| Asystent panelu **admina** | `src/lib/ai-admin.server.ts` (Anthropic, 22 narzędzia) | **zostaje w systemie** — decyzja właściciela: narzędzie wewnętrzne administratora, nie bot procesowy |
 | Agent umowy (kreator umowy pożyczki) | `src/lib/contract-engine/umowa-agent.functions.ts` (Gemini Pro) | **zostaje** — to generator danych do deterministycznego silnika umowy, nie rozmowa z klientem; przenoszenie do ElevenLabs pogorszyłoby kontrolę nad treścią umowy |
 | Follow-up braków / drip / nurture | `src/lib/missing-info-follow-up/` itd. | zostaje — silniki deterministyczne (nie boty), ale podpinamy je do agentów (patrz orkiestracja) |
 
-### Docelowa mapa agentów ElevenLabs (jeden agent = jeden etap procesu)
+### Docelowa mapa agentów ElevenLabs
 
-**Proces klienta (składanie wniosku):**
+Decyzja właściciela: **jeden bot przyjmuje wniosek i obsługuje klienta do
+momentu przyjęcia kompletnego wniosku** — na wszystkich kanałach. Osobne
+agenty zostają tam, gdzie proces i rozmówca są inne (inwestor, windykacja).
 
-| # | Agent | Etap procesu (statusy z `src/lib/loan-status.ts`) | Kanały |
+| # | Agent | Zakres | Kanały |
 | --- | --- | --- | --- |
-| A1 | **Pierwszy kontakt / kwalifikacja** | `nowy_lead`, `brak_kontaktu`, `kontakt` | telefon (istniejący voicebot), chat na stronie |
-| A2 | **Zbieranie wniosku** | `brak_kwoty`, `brak_kw`, `brak_zdjec_dokumentow` | chat na stronie, Messenger/IG, e-mail |
-| A3 | **Uzupełnianie braków** | `kompletowanie_danych` | widget głosowy w `/klient` (istniejący agent), telefon |
-| A4 | **Status i opieka** | `szukamy_inwestora` → `zamkniete` | chat w `/klient`, telefon |
+| A1 | **Przyjęcie wniosku** | od pierwszego kontaktu do kompletnego wniosku (`nowy_lead` → `kompletowanie_danych`): krótka rozmowa, zebranie danych i dokumentów, dopytanie o braki; scala dzisiejszego voicebota „Ania", widget braków i chat na stronie | chat na stronie, telefon, widget w `/klient`, Messenger/IG, e-mail |
+| A2 | **Informacja / onboarding inwestora** | pytania o platformę, cennik, faktura proforma (`request_invoice`) | chat na `/dla-inwestora` |
+| A3 | **Obsługa wniosków inwestora** | pomoc w panelu: teasery, składanie ofert, dokumenty, statusy dystrybucji | chat w `/inwestor` |
+| A4 | **Windykacja** | istniejący agent | telefon |
 
-**Proces inwestora instytucjonalnego (obsługa wniosków):**
+### Zasady rozmowy agenta A1 (twarde reguły promptu)
 
-| # | Agent | Rola | Kanały |
-| --- | --- | --- | --- |
-| A5 | **Informacja / onboarding inwestora** | pytania o platformę, cennik, faktura proforma (`request_invoice`) | chat na `/dla-inwestora` |
-| A6 | **Obsługa wniosków inwestora** | pomoc w panelu: teasery, składanie ofert, dokumenty, statusy dystrybucji | chat w `/inwestor` |
-| A7 | **Windykacja** | istniejący agent | telefon |
+Ustalenie właściciela — do zapisania wprost w prompcie i w szablonach
+follow-upów:
 
-Prompty per agent są krótkie i jednozadaniowe — to jest sedno rozbicia:
-zamiast jednego promptu „od wszystkiego" (dzisiejsze `text_agent_settings` id
-1/2/3) każdy agent zna tylko swój etap i wie, komu przekazać rozmowę.
+- **Bot NIE obiecuje, że „skontaktuje się analityk"** ani żadnego oddzwonienia.
+- Rozmowa jest krótka: zebrać dane, podziękować, ustawić oczekiwania.
+- Komunikat po przyjęciu wniosku: *„Jeśli wniosek spotka się z zainteresowaniem
+  inwestora, otrzyma Pan/Pani konkretną ofertę finansową. Brak oferty i brak
+  pytań oznacza, że wniosek na razie nie spotkał się z zainteresowaniem."*
+- Człowiek (analityk) odzywa się wyłącznie z własnej inicjatywy firmy — gdy
+  wniosek jest interesujący — i wtedy klient dostaje od razu konkretną ofertę
+  lub konkretne pytania. Bot o tym informuje, ale tego nie obiecuje.
+- Ta sama zasada obowiązuje w szablonach follow-upów braków
+  (`src/lib/missing-info-follow-up/templates.ts`), mailach drip i opisach
+  statusów w panelu (obszar 3) — do przejrzenia jednorazowo pod kątem
+  obietnic kontaktu.
+- `mark_ready_for_human` zostaje jako narzędzie, ale oznacza „wniosek gotowy
+  do oceny", nie „klient czeka na telefon".
 
 ### Orkiestracja
 
-1. **Handoff między agentami**: natywny mechanizm ElevenLabs **agent
-   transfer** (narzędzie systemowe `transfer_to_agent`) — A1 po zebraniu
-   kontaktu przekazuje do A2, A2 po komplecie danych do A3 itd. Reguły
-   transferu opisane w konfiguracji agenta (kiedy i do kogo). Do weryfikacji
-   w konsoli przy wdrożeniu: „Agent Workflows" ElevenLabs pozwala złożyć te
-   same przejścia grafem — jeśli dostępne na naszym planie, preferować
-   workflow nad ręcznymi regułami transferu.
-2. **Routing wejściowy**: o tym, który agent odbiera rozmowę, decyduje nasz
-   backend na podstawie statusu wniosku — istniejący webhook
-   `elevenlabs-conversation-init.ts` już dziś wstrzykuje dynamic variables;
-   rozszerzamy go o zwrócenie właściwego `agent_id` per status (mapa
-   status → agent w nowym module `src/lib/elevenlabs-agents.ts`, obok
-   `loan-status.ts`). Widgety w UI dostają `agent_id` z tej samej mapy.
+1. **Routing wejściowy**: o tym, który agent odbiera rozmowę, decyduje
+   kontekst kanału (strona klienta → A1, `/dla-inwestora` → A2, panel
+   inwestora → A3, kampania windykacyjna → A4). Istniejący webhook
+   `elevenlabs-conversation-init.ts` wstrzykuje dynamic variables; mapa
+   kanał/agent w nowym module `src/lib/elevenlabs-agents.ts` (ID przez env).
+2. **Handoff**: między A2 i A3 (inwestor anonimowy → zalogowany) natywny
+   **agent transfer** ElevenLabs; A1 nie potrzebuje transferów — prowadzi
+   klienta przez cały intake sam, a stan etapu dostaje w dynamic variables.
 3. **Wspólny kontekst**: dynamic variables w konwencji już używanej przez
    telefon i widget braków (`first_name`, `missing_documents`,
    `missing_step`, `missing_questions` — patrz `docs/follow-up-braki.md`) +
-   `loan_status`, `application_id`. Jedna konwencja dla wszystkich siedmiu
+   `loan_status`, `application_id`. Jedna konwencja dla wszystkich czterech
    agentów.
 
 ### Narzędzia agentów (server tools)
@@ -273,18 +278,22 @@ potwierdzenia jakości odpowiedzi, potem do wygaszenia.
 
 Kolejność (każdy krok osobno wdrażalny i odwracalny):
 
-1. Utworzenie 7 agentów w koncie ElevenLabs + mapa `elevenlabs-agents.ts`
-   (ID przez env, wzorem `VITE_ELEVENLABS_MISSING_INFO_AGENT_ID`).
+1. Utworzenie 4 agentów w koncie ElevenLabs + mapa `elevenlabs-agents.ts`
+   (ID przez env, wzorem `VITE_ELEVENLABS_MISSING_INFO_AGENT_ID`); prompt A1
+   z twardymi regułami rozmowy (sekcja wyżej).
 2. Endpointy `agent-tools/*` + testy (vitest, wzorem istniejących testów lib).
-3. Przełączenie **chatu inwestora instytucjonalnego** (A5) — najmniejsze
+3. Przełączenie **chatu inwestora instytucjonalnego** (A2) — najmniejsze
    ryzyko, bot czysto informacyjny. Widget: komponent `<elevenlabs-convai>`
    z CDN — **nie** `@elevenlabs/react`, bo build produkcyjny stoi na
    przypiętym `bun.lock` (ta sama decyzja co przy widgecie braków,
    opisana w `docs/follow-up-braki.md`).
-4. Przełączenie chatu klienta na stronie (A1/A2) z transferami.
-5. Asystent Klubu Inwestora (A6) w panelu `/inwestor`.
-6. Podpięcie routingu per status w `elevenlabs-conversation-init.ts` (A3/A4)
-   — telefon i widgety zaczynają trafiać do agenta właściwego etapu.
+4. Przełączenie chatu klienta na stronie na A1; scalenie promptów voicebota
+   „Ania" i widgetu braków w tego samego agenta A1 (telefon + widget
+   wskazują nowe ID w `voicebot_settings` / env).
+5. Asystent Klubu Inwestora (A3) w panelu `/inwestor`.
+6. Przegląd szablonów follow-upów, dripów i treści statusów pod kątem
+   obietnic kontaktu analityka — ujednolicenie komunikatu „oferta albo brak
+   zainteresowania".
 7. Wygaszenie: usunięcie ścieżki Gemini z `chat-widget.ts`,
    `investor-chat-widget.ts`, `investor-assistant.functions.ts`; wygaszenie
    `runAgentTurn`; `text_agent_settings`/`text_agent_knowledge` → readonly,
@@ -352,10 +361,14 @@ admina/pośrednika. Kanoniczny cykl życia: 12 statusów w
    `resend-send.server.ts` (szablon per status; wysyłka tylko dla statusów
    „widocznych" dla klienta, żeby nie spamować przy przejściach
    operacyjnych).
-5. **Spójność z botami (obszar 2)**: agent A4 i narzędzie
+5. **Spójność z botami (obszar 2)**: agent A1 i narzędzie
    `get_application_status` korzystają z tego samego słownika
    `CLIENT_STATUS_LABELS` — klient słyszy w rozmowie to samo, co widzi w
    panelu.
+6. **Bez obietnic kontaktu**: opisy statusów trzymają się zasady z obszaru 2 —
+   np. `szukamy_inwestora`: „Wniosek jest przedstawiany inwestorom. Jeśli
+   spotka się z zainteresowaniem, otrzymasz konkretną ofertę finansową" —
+   żadnego „skontaktuje się z Tobą analityk".
 
 Ten obszar jest najtańszy i niezależny od pozostałych — można go wdrożyć
 pierwszy jako szybki, widoczny efekt.
@@ -370,7 +383,7 @@ pierwszy jako szybki, widoczny efekt.
 | 1 | Obszar 3 (status w panelu klienta) | — |
 | 2 | Obszar 1 (umowy inwestora) | faza 0 + treści umów od prawnika |
 | 3 | Obszar 2, kroki 1–3 (agenty ElevenLabs, narzędzia, chat inwestora) | — |
-| 4 | Obszar 2, kroki 4–6 (chat klienta, panel inwestora, routing per status) | faza 1 (słownik statusów) |
+| 4 | Obszar 2, kroki 4–6 (agent A1 na wszystkich kanałach klienta, panel inwestora, przegląd treści pod kątem obietnic kontaktu) | faza 1 (słownik statusów) |
 | 5 | Obszar 2, krok 7 (wygaszenie botów Gemini w systemie głównym) | potwierdzona jakość + transkrypcje w `lead_communications` |
 
 Decyzje otwarte (do rozstrzygnięcia przed odpowiednią fazą):
