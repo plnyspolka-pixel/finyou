@@ -198,6 +198,7 @@ import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/publi
 import { Route as ApiPublicInvestorChatWidgetRouteImport } from './routes/api/public/investor-chat-widget'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as ApiPublicElevenlabsSendSmsRouteImport } from './routes/api/public/elevenlabs-send-sms'
+import { Route as ApiPublicElevenlabsReadSmsRouteImport } from './routes/api/public/elevenlabs-read-sms'
 import { Route as ApiPublicChatWidgetRouteImport } from './routes/api/public/chat-widget'
 import { Route as ApiPublicAgentToolsRouteImport } from './routes/api/public/agent-tools'
 import { Route as ApiPublicAgentConfigRouteImport } from './routes/api/public/agent-config'
@@ -1230,6 +1231,12 @@ const ApiPublicElevenlabsSendSmsRoute =
     path: '/api/public/elevenlabs-send-sms',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicElevenlabsReadSmsRoute =
+  ApiPublicElevenlabsReadSmsRouteImport.update({
+    id: '/api/public/elevenlabs-read-sms',
+    path: '/api/public/elevenlabs-read-sms',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicChatWidgetRoute = ApiPublicChatWidgetRouteImport.update({
   id: '/api/public/chat-widget',
   path: '/api/public/chat-widget',
@@ -1782,6 +1789,7 @@ export interface FileRoutesByFullPath {
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
+  '/api/public/elevenlabs-read-sms': typeof ApiPublicElevenlabsReadSmsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/investor-chat-widget': typeof ApiPublicInvestorChatWidgetRoute
@@ -2029,6 +2037,7 @@ export interface FileRoutesByTo {
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
+  '/api/public/elevenlabs-read-sms': typeof ApiPublicElevenlabsReadSmsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/investor-chat-widget': typeof ApiPublicInvestorChatWidgetRoute
@@ -2287,6 +2296,7 @@ export interface FileRoutesById {
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
+  '/api/public/elevenlabs-read-sms': typeof ApiPublicElevenlabsReadSmsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/investor-chat-widget': typeof ApiPublicInvestorChatWidgetRoute
@@ -2546,6 +2556,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
     | '/api/public/chat-widget'
+    | '/api/public/elevenlabs-read-sms'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/investor-chat-widget'
@@ -2793,6 +2804,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
     | '/api/public/chat-widget'
+    | '/api/public/elevenlabs-read-sms'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/investor-chat-widget'
@@ -3050,6 +3062,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
     | '/api/public/chat-widget'
+    | '/api/public/elevenlabs-read-sms'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/investor-chat-widget'
@@ -3186,6 +3199,7 @@ export interface RootRouteChildren {
   ApiPublicAgentConfigRoute: typeof ApiPublicAgentConfigRoute
   ApiPublicAgentToolsRoute: typeof ApiPublicAgentToolsRoute
   ApiPublicChatWidgetRoute: typeof ApiPublicChatWidgetRoute
+  ApiPublicElevenlabsReadSmsRoute: typeof ApiPublicElevenlabsReadSmsRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicInvestorChatWidgetRoute: typeof ApiPublicInvestorChatWidgetRoute
@@ -4566,6 +4580,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicElevenlabsSendSmsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/elevenlabs-read-sms': {
+      id: '/api/public/elevenlabs-read-sms'
+      path: '/api/public/elevenlabs-read-sms'
+      fullPath: '/api/public/elevenlabs-read-sms'
+      preLoaderRoute: typeof ApiPublicElevenlabsReadSmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat-widget': {
       id: '/api/public/chat-widget'
       path: '/api/public/chat-widget'
@@ -5515,6 +5536,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAgentConfigRoute: ApiPublicAgentConfigRoute,
   ApiPublicAgentToolsRoute: ApiPublicAgentToolsRoute,
   ApiPublicChatWidgetRoute: ApiPublicChatWidgetRoute,
+  ApiPublicElevenlabsReadSmsRoute: ApiPublicElevenlabsReadSmsRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicInvestorChatWidgetRoute: ApiPublicInvestorChatWidgetRoute,
