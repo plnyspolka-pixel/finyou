@@ -77,24 +77,32 @@ function scoreColor(score: number): string {
   return `hsl(${hue} 85% 52%)`;
 }
 
+// Ciasny padding na mobile, wygodniejszy od sm w górę — tabela ma się mieścić
+// na szerokości ekranu telefonu bez przewijania poziomego.
 const TH_CLASS =
-  "whitespace-nowrap px-3 py-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500 first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5";
+  "whitespace-nowrap px-1.5 py-2.5 text-[9px] font-semibold uppercase tracking-wider text-slate-500 first:pl-2.5 last:pr-2.5 sm:px-3 sm:py-3 sm:text-[10px] sm:tracking-widest sm:first:pl-5 sm:last:pr-5";
 const TD_CLASS =
-  "whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5";
+  "whitespace-nowrap px-1.5 py-2.5 align-middle first:pl-2.5 last:pr-2.5 sm:px-3 sm:py-3 sm:first:pl-5 sm:last:pr-5";
 
 /** Tabela okazji — używana w publicznym embedzie i w podglądzie admina. */
 export function LeadsTable({ leads }: { leads: PublicLead[] }) {
   return (
     <div>
       <div className="overflow-x-auto rounded-2xl border border-sky-400/20 bg-gradient-to-br from-[#0f1846] via-[#0c1338] to-[#0a1030] shadow-[0_8px_30px_-12px_rgba(56,189,248,0.35)] [scrollbar-width:thin]">
-        <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+        <table className="w-full border-collapse text-left text-xs sm:text-sm">
           <thead>
             <tr className="border-b border-white/10">
               <th className={TH_CLASS}>Nieruchomość</th>
               <th className={TH_CLASS}>Kwota</th>
-              <th className={TH_CLASS}>Ocena ryzyka</th>
-              <th className={TH_CLASS}>Potencjał lokalizacji</th>
-              <th className={TH_CLASS}>Dodano</th>
+              <th className={TH_CLASS}>
+                <span className="sm:hidden">Ryzyko</span>
+                <span className="hidden sm:inline">Ocena ryzyka</span>
+              </th>
+              <th className={TH_CLASS}>
+                <span className="sm:hidden">Lokalizacja</span>
+                <span className="hidden sm:inline">Potencjał lokalizacji</span>
+              </th>
+              <th className={`${TH_CLASS} hidden md:table-cell`}>Dodano</th>
             </tr>
           </thead>
           <tbody>
@@ -106,8 +114,9 @@ export function LeadsTable({ leads }: { leads: PublicLead[] }) {
       </div>
       <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
         Ocena ryzyka (skala 0–100, klasy A–E) i potencjał lokalizacyjny (skala 0–100) są wartościami
-        szacunkowymi. Oznaczenie „szac." przy potencjale to wartość orientacyjna dla wydziału ksiąg
-        wieczystych. Dane nie stanowią oferty ani rekomendacji inwestycyjnej.
+        szacunkowymi. Oznaczenie „szac." (na węższych ekranach „*") przy potencjale to wartość
+        orientacyjna dla wydziału ksiąg wieczystych. Dane nie stanowią oferty ani rekomendacji
+        inwestycyjnej.
       </p>
     </div>
   );
@@ -125,28 +134,30 @@ function LeadRow({ lead }: { lead: PublicLead }) {
   return (
     <tr className="border-b border-white/5 last:border-b-0 transition-colors hover:bg-white/[0.04]">
       <td className={TD_CLASS}>
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400/20 via-indigo-500/15 to-emerald-400/10 ring-1 ring-white/10">
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-400/20 via-indigo-500/15 to-emerald-400/10 ring-1 ring-white/10 sm:h-11 sm:w-11 sm:rounded-xl">
             <img
               src={icon}
               alt=""
-              className="h-9 w-9 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]"
+              className="h-6 w-6 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] sm:h-9 sm:w-9"
             />
           </div>
           <div className="min-w-0">
-            <p className="font-bold text-white">
+            <p className="max-w-[92px] truncate text-[12px] font-bold text-white sm:max-w-none sm:text-sm">
               {label}
               {lead.first_name && (
-                <span className="ml-2 text-xs font-normal text-slate-300">
+                <span className="ml-2 hidden text-xs font-normal text-slate-300 sm:inline">
                   Klient: <span className="font-semibold text-white">{lead.first_name}</span>
                 </span>
               )}
             </p>
-            <p className="mt-0.5 font-mono text-[11px] text-slate-400">{subtitle}</p>
+            <p className="mt-0.5 max-w-[92px] truncate font-mono text-[9px] text-slate-400 sm:max-w-none sm:text-[11px]">
+              {subtitle}
+            </p>
           </div>
         </div>
       </td>
-      <td className={`${TD_CLASS} font-bold tabular-nums text-white`}>
+      <td className={`${TD_CLASS} text-[11px] font-bold tabular-nums text-white sm:text-sm`}>
         {formatPLN(lead.loan_amount ?? 0)}
       </td>
       <td className={TD_CLASS}>
@@ -159,7 +170,7 @@ function LeadRow({ lead }: { lead: PublicLead }) {
           scope={lead.location_scope}
         />
       </td>
-      <td className={`${TD_CLASS} tabular-nums text-slate-200`}>{dateStr}</td>
+      <td className={`${TD_CLASS} hidden tabular-nums text-slate-200 md:table-cell`}>{dateStr}</td>
     </tr>
   );
 }
@@ -168,9 +179,9 @@ function GradeCell({ score, grade }: { score: number; grade: string }) {
   const pct = Math.max(0, Math.min(100, score));
   const color = scoreColor(pct);
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1 sm:gap-2">
       <span
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm font-black"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-black sm:h-7 sm:w-7 sm:text-sm"
         style={{
           color,
           backgroundColor: "rgba(255,255,255,0.06)",
@@ -179,9 +190,9 @@ function GradeCell({ score, grade }: { score: number; grade: string }) {
       >
         {grade}
       </span>
-      <span className="text-xs font-bold tabular-nums text-white">
+      <span className="text-[11px] font-bold tabular-nums text-white sm:text-xs">
         {pct}
-        <span className="font-normal text-slate-400">/100</span>
+        <span className="hidden font-normal text-slate-400 sm:inline">/100</span>
       </span>
     </div>
   );
@@ -209,19 +220,21 @@ function LocationCell({
     .filter(Boolean)
     .join(" · ");
   return (
-    <div className="flex items-center gap-2" title={title}>
-      <span className="text-xs font-bold tabular-nums text-white">
+    <div className="flex items-center gap-1 sm:gap-2" title={title}>
+      <span className="text-[11px] font-bold tabular-nums text-white sm:text-xs">
         {pct}
-        <span className="font-normal text-slate-400">/100</span>
+        <span className="hidden font-normal text-slate-400 sm:inline">/100</span>
+        {/* Na mobile „szac." zastępuje gwiazdka — pełny opis w atrybucie title. */}
+        {scope === "prefix" && <span className="text-slate-400 sm:hidden">*</span>}
       </span>
-      <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-white/10">
+      <span className="hidden h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-white/10 sm:block">
         <span
           className="block h-full rounded-full"
           style={{ width: `${pct}%`, backgroundColor: color, boxShadow: `0 0 6px ${color}` }}
         />
       </span>
       {scope === "prefix" && (
-        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+        <span className="hidden text-[10px] font-medium uppercase tracking-wider text-slate-500 sm:inline">
           szac.
         </span>
       )}

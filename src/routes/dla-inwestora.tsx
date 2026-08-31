@@ -445,10 +445,11 @@ function LeadsSection({ leads }: { leads: PublicLead[] }) {
 // Kotwice z nagłówka (#akademia, #ochrona, #windykacja-ai, #cennik) wybierają
 // odpowiednią zakładkę i przewijają do pasa zakładek — sekcje nie mają już
 // własnych id na stronie.
-type InvestorTabKey = "oferty" | "akademia" | "ochrona" | "windykacja" | "cennik";
+type InvestorTabKey = "oferty" | "system" | "akademia" | "ochrona" | "windykacja" | "cennik";
 
 const INVESTOR_TABS: { key: InvestorTabKey; hash: string; label: string }[] = [
   { key: "oferty", hash: "#oferty", label: "Oferty" },
+  { key: "system", hash: "#system-inwestora", label: "Inteligentny system" },
   { key: "akademia", hash: "#akademia", label: "Akademia inwestora" },
   { key: "ochrona", hash: "#ochrona", label: "7 warstw ochrony" },
   { key: "windykacja", hash: "#windykacja-ai", label: "Windykacja AI" },
@@ -510,10 +511,13 @@ function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: Acce
                 aria-selected={isActive}
                 onClick={() => select(t)}
                 style={{
+                  // flex 0 0 auto — bez tego pigułki ściskają się w pasie
+                  // przewijanym poziomo i tekst wylewa się poza obrys.
+                  flex: "0 0 auto",
                   whiteSpace: "nowrap",
-                  padding: "0.6rem 1.15rem",
+                  padding: "0.55rem clamp(0.8rem, 2.4vw, 1.15rem)",
                   borderRadius: 999,
-                  fontSize: "0.9rem",
+                  fontSize: "clamp(0.8rem, 2.6vw, 0.9rem)",
                   fontWeight: 700,
                   cursor: "pointer",
                   transition: "all .18s ease",
@@ -533,6 +537,12 @@ function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: Acce
       </div>
 
       {active === "oferty" && <LeadsSection leads={leads} />}
+
+      {active === "system" && (
+        <Section>
+          <SmartOfferSlider />
+        </Section>
+      )}
 
       {active === "akademia" && (
         <Section>
@@ -637,10 +647,6 @@ function InvestorLanding() {
       <Hero />
 
       <InvestorTabs leads={leads} products={products} />
-
-      <Section>
-        <SmartOfferSlider />
-      </Section>
 
       <Section>
         <SectionHead eyebrow="Co otrzymujesz" title="Wszystko, czego potrzebuje inwestor" />
