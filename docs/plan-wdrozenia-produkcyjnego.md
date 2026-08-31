@@ -309,14 +309,19 @@ skrzynka panelu i asystent admina dalej widziały całość korespondencji —
 
 - **Okno Meta 24 h / e-mail**: ElevenLabs ConvAI to chat/głos w czasie
   rzeczywistym; kanały asynchroniczne (Messenger, e-mail) dziś obsługuje
-  `runAgentTurn`. Decyzja w planie: Messenger/e-mail w etapie 1 przechodzą na
-  te same webhook toole, ale wywoływane przez nasz istniejący router
-  wiadomości, który woła agenta ElevenLabs przez **Agents API (tryb
-  tekstowy)**; jeśli jakość/latencja zawiedzie — kanały async zostają na
-  starym silniku do etapu 2 (fallback bez utraty funkcji).
-- **Koszty**: ConvAI rozlicza się za minuty/sesje — przed pełnym
-  przełączeniem chatu na stronie (duży wolumen anonimowych wejść) zmierzyć
-  koszt na próbce; ewentualnie limit sesji dla niezalogowanych.
+  `runAgentTurn`. **Decyzja właściciela: wszystkie kanały przechodzą na
+  ElevenLabs od razu** — Messenger/e-mail przez nasz istniejący router
+  wiadomości wołający agenta ElevenLabs w trybie tekstowym (Agents API).
+- **Koszty — zbadane na produkcji (31.08.2026)**: chat na stronie ma **zero
+  zapisanych rozmów** od uruchomienia (~30.07), chat inwestora i asystent
+  Klubu Inwestora również zero. Realny ruch botów to voicebot (614/1372/633
+  połączeń w VI/VII/VIII — już na ElevenLabs, więc to obecna baza kosztowa)
+  i Messenger (~90 leadów, ~500–600 wiadomości przychodzących miesięcznie).
+  Ryzyko kosztowe anonimowego chatu jest dziś teoretyczne — limitów nie
+  budujemy na start, wystarczy prosty bezpiecznik (max długość rozmowy
+  anonimowej) i obserwacja po wdrożeniu. Osobny wniosek produktowy: widget
+  chatu jest zamontowany na landingu, ale nikt z niego nie korzysta —
+  do przyjrzenia się widoczności/zachęcie niezależnie od migracji.
 - **Bezpieczeństwo narzędzi**: endpointy `agent-tools/*` mają uprawnienia
   zapisu do leadów — sekret + HMAC + rate limit + walidacja `conversation_id`
   po stronie ElevenLabs API zanim wykonamy zapis.
@@ -482,18 +487,19 @@ zatwierdzeniem; limit wysyłek do klienta (nie częściej niż raz dziennie
 scalone pytania, chyba że klient właśnie odpowiedział); żadnych obietnic
 wobec klienta poza przekazaniem pytań/oferty.
 
-### Decyzje otwarte obszaru 4
+### Decyzje podjęte (właściciel, 31.08.2026)
 
-1. Pełna lista kryteriów instytucji na start: tylko widełki kwotowe, czy od
-   razu też region/typ nieruchomości? (Kwoty wystarczą na start — reszta
-   dobudowywana bez zmiany architektury.)
-2. Wartość globalnego progu score lokalizacji.
-3. Czy start w trybie pełnego automatu, czy najpierw okres z zatwierdzaniem
-   (dotyczy i wysyłki wniosków, i auto-aktualizacji kryteriów z maili).
-4. Historyczna korespondencja szła też przez prywatną skrzynkę
-   (plnyspolka@gmail.com) — czy agent ma objąć również ją (import/przekaz na
-   alias), czy od wdrożenia cały ruch z instytucjami idzie wyłącznie przez
-   aliasy systemowe `oferta+<id>@financeyou.pl`?
+1. **Tryb startu auto-dystrybucji**: rozruch z zatwierdzaniem jednym
+   kliknięciem (wysyłka wniosków i zmiany kryteriów z maili); pełny automat
+   po okresie próbnym.
+2. **Próg score lokalizacji**: 40 — przynajmniej neutralny (wniosek bez
+   danych geo przechodzi).
+3. **Skrzynka agenta korespondencji**: wyłącznie aliasy systemowe
+   `oferta+<id>@financeyou.pl` — od wdrożenia cały ruch z instytucjami idzie
+   przez system; prywatna skrzynka poza zakresem.
+4. Kryteria instytucji na start: widełki kwotowe (Korona ≤ 350 tys.,
+   JanVest > 100 tys.) + statusy zawieszenia; kolejne kryteria dopisywane w
+   miarę jak instytucje je zgłaszają (mailem → agent korespondencji).
 
 ---
 
@@ -509,10 +515,19 @@ wobec klienta poza przekazaniem pytań/oferty.
 | 4 | Obszar 2, kroki 4–6 (agent A1 na wszystkich kanałach klienta, panel inwestora, przegląd treści pod kątem obietnic kontaktu) | faza 1 (słownik statusów) |
 | 5 | Obszar 2, krok 7 (wygaszenie botów Gemini w systemie głównym) | potwierdzona jakość + transkrypcje w `lead_communications` |
 
-Decyzje otwarte (do rozstrzygnięcia przed odpowiednią fazą):
+Decyzje podjęte przez właściciela (31.08.2026):
 
-1. Czy umowa pośrednictwa finansowego wymaga kwalifikowanego e-podpisu, czy
-   wystarcza forma dokumentowa (prawnik — blokuje fazę 2).
-2. Czy kanały asynchroniczne (Messenger/e-mail) przechodzą na ElevenLabs w
-   fazie 4, czy zostają na obecnym silniku do osobnej decyzji (koszt/jakość).
-3. Budżet minutowy ElevenLabs dla anonimowego chatu na stronie (limit sesji?).
+1. **Umowy — forma dokumentowa** dla wszystkich trzech umów (akceptacja w
+   panelu po weryfikacji Didit, pełny ślad: data, IP, hash PDF); do
+   potwierdzenia z prawnikiem, e-podpis ewentualnie później.
+2. **Treści umów**: przygotowujemy robocze projekty z placeholderami danych
+   Didit — właściciel przekazuje je prawnikowi do weryfikacji.
+3. **Kanały asynchroniczne** (Messenger/e-mail): wszystko od razu na
+   ElevenLabs, bez okresu przejściowego na starym silniku.
+4. Limity chatu anonimowego: bez limitów na start (zerowe użycie chatu na
+   produkcji — patrz Ryzyka obszaru 2); prosty bezpiecznik + obserwacja.
+5. Auto-dystrybucja: rozruch z zatwierdzaniem, próg score 40, tylko aliasy
+   systemowe (szczegóły w obszarze 4).
+
+Start implementacji: **wstrzymany do sygnału właściciela** — plan jest dalej
+uzupełniany.
