@@ -1,6 +1,47 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, X, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// ── Tryb ElevenLabs ─────────────────────────────────────────────────────────
+// Gdy dla powierzchni skonfigurowano agenta ElevenLabs (/api/public/
+// agent-config), zamiast własnego czatu renderujemy osadzony widget
+// <elevenlabs-convai> z CDN (celowo nie @elevenlabs/react — bun.lock
+// przypięty do rejestru Lovable; ta sama decyzja co widget braków).
+const EL_WIDGET_SCRIPT_ID = "elevenlabs-convai-widget-script";
+const EL_WIDGET_SCRIPT_SRC = "https://elevenlabs.io/convai-widget/index.js";
+
+function ensureElWidgetScript() {
+  if (document.getElementById(EL_WIDGET_SCRIPT_ID)) return;
+  const script = document.createElement("script");
+  script.id = EL_WIDGET_SCRIPT_ID;
+  script.src = EL_WIDGET_SCRIPT_SRC;
+  script.async = true;
+  document.body.appendChild(script);
+}
+
+function useElevenLabsAgent(surface: string | null): string | null {
+  const [agentId, setAgentId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!surface) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/public/agent-config?surface=${surface}`);
+        const json: { agentId?: string | null } = await res.json();
+        if (!cancelled && json?.agentId) setAgentId(json.agentId);
+      } catch {
+        /* stary silnik pozostaje fallbackiem */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [surface]);
+  useEffect(() => {
+    if (agentId) ensureElWidgetScript();
+  }, [agentId]);
+  return agentId;
+}
 
 type ChatMsg = { id?: string; role: "user" | "assistant" | "staff"; content: string };
 
@@ -45,6 +86,10 @@ export function ChatWidget({
   title?: string;
   subtitle?: string;
 }) {
+  // Powierzchnia agenta ElevenLabs: chat klienta = intake (A1),
+  // chat inwestora instytucjonalnego = investor_info (A2).
+  const elSurface = endpoint.includes("investor-chat-widget") ? "investor_info" : "intake";
+  const elAgentId = useElevenLabsAgent(elSurface);
   const [open, setOpen] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -128,6 +173,14 @@ export function ChatWidget({
     } finally {
       setSending(false);
     }
+  }
+
+  // Agent ElevenLabs skonfigurowany → osadzony widget zamiast własnego czatu.
+  if (elAgentId) {
+    return createElement("elevenlabs-convai", {
+      "agent-id": elAgentId,
+      "dynamic-variables": JSON.stringify({ source, session_id: sessionId }),
+    });
   }
 
   return (

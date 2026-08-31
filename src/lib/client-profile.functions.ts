@@ -652,7 +652,7 @@ async function bialaListaLookupByNip(
  * Implementacja SOAP jest złożona; bez klucza zwracamy null żeby UI pokazało
  * jasny komunikat. Jeśli klucz jest, używamy najprostszego endpointu DaneSzukajPodmioty.
  */
-async function gusLookupByNip(
+export async function gusLookupByNip(
   nip: string,
 ): Promise<
   | { kind: "found"; regon?: string; krs?: string; nazwa?: string; typ?: string }

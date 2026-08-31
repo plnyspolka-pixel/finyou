@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, X, Send, Loader2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,37 @@ const GREETING =
  * z wykupionym dostępem. Historia trzymana serwerowo per użytkownik
  * (investor_assistant_messages), rozmowa przez server functions.
  */
+const EL_WIDGET_SCRIPT_ID = "elevenlabs-convai-widget-script";
+const EL_WIDGET_SCRIPT_SRC = "https://elevenlabs.io/convai-widget/index.js";
+
 export function InvestorAssistantWidget() {
   const loadHistory = useServerFn(getInvestorAssistantHistory);
   const sendMessage = useServerFn(sendInvestorAssistantMessage);
+  // Agent ElevenLabs (A3) skonfigurowany → osadzony widget zamiast czatu Gemini.
+  const [elAgentId, setElAgentId] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/public/agent-config?surface=investor_panel");
+        const json: { agentId?: string | null } = await res.json();
+        if (!cancelled && json?.agentId) setElAgentId(json.agentId);
+      } catch {
+        /* fallback: stary silnik */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  useEffect(() => {
+    if (!elAgentId || document.getElementById(EL_WIDGET_SCRIPT_ID)) return;
+    const script = document.createElement("script");
+    script.id = EL_WIDGET_SCRIPT_ID;
+    script.src = EL_WIDGET_SCRIPT_SRC;
+    script.async = true;
+    document.body.appendChild(script);
+  }, [elAgentId]);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
@@ -69,6 +97,10 @@ export function InvestorAssistantWidget() {
     } finally {
       setSending(false);
     }
+  }
+
+  if (elAgentId) {
+    return createElement("elevenlabs-convai", { "agent-id": elAgentId });
   }
 
   return (

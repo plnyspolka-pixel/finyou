@@ -187,6 +187,7 @@ import { Route as InwestorAmlKlienciRouteImport } from './routes/inwestor.aml.kl
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
 import { Route as ApiPublicYoutubeOauthCallbackRouteImport } from './routes/api/public/youtube-oauth-callback'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio-voice'
+import { Route as ApiPublicTwilioSmsInboundRouteImport } from './routes/api/public/twilio-sms-inbound'
 import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/public/twilio-recording'
 import { Route as ApiPublicResendWebhookRouteImport } from './routes/api/public/resend-webhook'
 import { Route as ApiPublicResendInboundWebhookRouteImport } from './routes/api/public/resend-inbound-webhook'
@@ -198,6 +199,8 @@ import { Route as ApiPublicInvestorChatWidgetRouteImport } from './routes/api/pu
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as ApiPublicElevenlabsSendSmsRouteImport } from './routes/api/public/elevenlabs-send-sms'
 import { Route as ApiPublicChatWidgetRouteImport } from './routes/api/public/chat-widget'
+import { Route as ApiPublicAgentToolsRouteImport } from './routes/api/public/agent-tools'
+import { Route as ApiPublicAgentConfigRouteImport } from './routes/api/public/agent-config'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminProgramPosrednikowZdarzeniaRouteImport } from './routes/admin.program-posrednikow.zdarzenia'
 import { Route as AdminProgramPosrednikowWyplatyRouteImport } from './routes/admin.program-posrednikow.wyplaty'
@@ -1162,6 +1165,12 @@ const ApiPublicTwilioVoiceRoute = ApiPublicTwilioVoiceRouteImport.update({
   path: '/api/public/twilio-voice',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTwilioSmsInboundRoute =
+  ApiPublicTwilioSmsInboundRouteImport.update({
+    id: '/api/public/twilio-sms-inbound',
+    path: '/api/public/twilio-sms-inbound',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTwilioRecordingRoute =
   ApiPublicTwilioRecordingRouteImport.update({
     id: '/api/public/twilio-recording',
@@ -1224,6 +1233,16 @@ const ApiPublicElevenlabsSendSmsRoute =
 const ApiPublicChatWidgetRoute = ApiPublicChatWidgetRouteImport.update({
   id: '/api/public/chat-widget',
   path: '/api/public/chat-widget',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAgentToolsRoute = ApiPublicAgentToolsRouteImport.update({
+  id: '/api/public/agent-tools',
+  path: '/api/public/agent-tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAgentConfigRoute = ApiPublicAgentConfigRouteImport.update({
+  id: '/api/public/agent-config',
+  path: '/api/public/agent-config',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
@@ -1760,6 +1779,8 @@ export interface FileRoutesByFullPath {
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
+  '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -1771,6 +1792,7 @@ export interface FileRoutesByFullPath {
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
@@ -2004,6 +2026,8 @@ export interface FileRoutesByTo {
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
+  '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -2015,6 +2039,7 @@ export interface FileRoutesByTo {
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
@@ -2259,6 +2284,8 @@ export interface FileRoutesById {
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
+  '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -2270,6 +2297,7 @@ export interface FileRoutesById {
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
@@ -2515,6 +2543,8 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
+    | '/api/public/agent-config'
+    | '/api/public/agent-tools'
     | '/api/public/chat-widget'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
@@ -2526,6 +2556,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
     | '/api/public/twilio-recording'
+    | '/api/public/twilio-sms-inbound'
     | '/api/public/twilio-voice'
     | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
@@ -2759,6 +2790,8 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
+    | '/api/public/agent-config'
+    | '/api/public/agent-tools'
     | '/api/public/chat-widget'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
@@ -2770,6 +2803,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
     | '/api/public/twilio-recording'
+    | '/api/public/twilio-sms-inbound'
     | '/api/public/twilio-voice'
     | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
@@ -3013,6 +3047,8 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
+    | '/api/public/agent-config'
+    | '/api/public/agent-tools'
     | '/api/public/chat-widget'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
@@ -3024,6 +3060,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
     | '/api/public/twilio-recording'
+    | '/api/public/twilio-sms-inbound'
     | '/api/public/twilio-voice'
     | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
@@ -3146,6 +3183,8 @@ export interface RootRouteChildren {
   PropozycjeIndexRoute: typeof PropozycjeIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicAgentConfigRoute: typeof ApiPublicAgentConfigRoute
+  ApiPublicAgentToolsRoute: typeof ApiPublicAgentToolsRoute
   ApiPublicChatWidgetRoute: typeof ApiPublicChatWidgetRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
@@ -3157,6 +3196,7 @@ export interface RootRouteChildren {
   ApiPublicResendInboundWebhookRoute: typeof ApiPublicResendInboundWebhookRoute
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   ApiPublicTwilioRecordingRoute: typeof ApiPublicTwilioRecordingRoute
+  ApiPublicTwilioSmsInboundRoute: typeof ApiPublicTwilioSmsInboundRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
   ApiPublicYoutubeOauthCallbackRoute: typeof ApiPublicYoutubeOauthCallbackRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
@@ -4449,6 +4489,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTwilioVoiceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/twilio-sms-inbound': {
+      id: '/api/public/twilio-sms-inbound'
+      path: '/api/public/twilio-sms-inbound'
+      fullPath: '/api/public/twilio-sms-inbound'
+      preLoaderRoute: typeof ApiPublicTwilioSmsInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/twilio-recording': {
       id: '/api/public/twilio-recording'
       path: '/api/public/twilio-recording'
@@ -4524,6 +4571,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/chat-widget'
       fullPath: '/api/public/chat-widget'
       preLoaderRoute: typeof ApiPublicChatWidgetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/agent-tools': {
+      id: '/api/public/agent-tools'
+      path: '/api/public/agent-tools'
+      fullPath: '/api/public/agent-tools'
+      preLoaderRoute: typeof ApiPublicAgentToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/agent-config': {
+      id: '/api/public/agent-config'
+      path: '/api/public/agent-config'
+      fullPath: '/api/public/agent-config'
+      preLoaderRoute: typeof ApiPublicAgentConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/wnioski/$id': {
@@ -5451,6 +5512,8 @@ const rootRouteChildren: RootRouteChildren = {
   PropozycjeIndexRoute: PropozycjeIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicAgentConfigRoute: ApiPublicAgentConfigRoute,
+  ApiPublicAgentToolsRoute: ApiPublicAgentToolsRoute,
   ApiPublicChatWidgetRoute: ApiPublicChatWidgetRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
@@ -5462,6 +5525,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResendInboundWebhookRoute: ApiPublicResendInboundWebhookRoute,
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   ApiPublicTwilioRecordingRoute: ApiPublicTwilioRecordingRoute,
+  ApiPublicTwilioSmsInboundRoute: ApiPublicTwilioSmsInboundRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
   ApiPublicYoutubeOauthCallbackRoute: ApiPublicYoutubeOauthCallbackRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,

@@ -570,7 +570,9 @@ function normalizePatch(raw: Record<string, any>): Record<string, any> {
   return out;
 }
 
-async function executeTool(
+// Eksportowane: używane też przez webhook toole agentów ElevenLabs
+// (/api/public/agent-tools) — te same operacje, ta sama semantyka zapisu.
+export async function executeTool(
   leadId: string,
   channel: string,
   name: string,
