@@ -302,7 +302,7 @@ export type AgentReply = {
  */
 export async function runAgentTurn(opts: {
   leadId: string;
-  channel: "messenger" | "instagram" | "email" | "chat" | "chat_inwestor";
+  channel: "messenger" | "instagram" | "email" | "chat" | "chat_inwestor" | "sms";
   userMessage: string;
   attachmentsSummary?: string | null;
   variant?: AgentVariant;
@@ -315,7 +315,7 @@ export async function runAgentTurn(opts: {
   // Historia per wariant — rozmowa inwestorska nie miesza się z kanałami
   // pożyczkobiorcy (i odwrotnie), nawet gdy lead ma oba rodzaje komunikacji.
   const historyChannels =
-    variant === "inwestor" ? ["chat_inwestor"] : ["messenger", "instagram", "email", "chat"];
+    variant === "inwestor" ? ["chat_inwestor"] : ["messenger", "instagram", "email", "chat", "sms"];
   const { data: history } = await s
     .from("lead_communications")
     .select("direction, content, created_at, channel")

@@ -64,6 +64,45 @@ export const Route = createFileRoute("/api/public/twilio-sms-inbound")({
               .update({ do_not_sms: true })
               .eq("phone_normalized", phone);
             console.log("[twilio-sms-inbound] opt-out", phone);
+          } else if (leadId) {
+            // SMS jako kanał agenta A1 (dotąd SMS-y przychodzące obsługiwał
+            // bezpośrednio routing ElevenLabs w Twilio — po przepięciu na ten
+            // webhook odpowiedź generuje ta sama ścieżka co Messenger/e-mail:
+            // runAgentTurn → tura ElevenLabs z fallbackiem). Odpowiedź krótka,
+            // jak przystało na SMS.
+            try {
+              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+              const { data: client } = await supabaseAdmin
+                .from("clients")
+                .select("do_not_sms")
+                .eq("phone_normalized", phone)
+                .maybeSingle();
+              if (!client?.do_not_sms) {
+                const { runAgentTurn } = await import("@/lib/elevenlabs-text-agent.server");
+                const agent = await runAgentTurn({ leadId, channel: "sms", userMessage: body });
+                const reply = agent.reply.trim().slice(0, 450);
+                if (reply) {
+                  const { sendSmsInternal } = await import("@/lib/voicebot.functions");
+                  const sent = await sendSmsInternal({
+                    phone,
+                    body: reply,
+                    source: "sms_agent_reply",
+                  });
+                  if (sent.ok) {
+                    await logLeadCommunication({
+                      leadId,
+                      channel: "sms",
+                      direction: "outbound",
+                      content: reply,
+                      status: "sent",
+                      metadata: { source: "sms_agent_reply", in_reply_to: messageSid },
+                    });
+                  }
+                }
+              }
+            } catch (e: any) {
+              console.error("[twilio-sms-inbound] agent reply error", e?.message);
+            }
           }
         } catch (e: any) {
           console.error("[twilio-sms-inbound] error", e?.message);
