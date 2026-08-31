@@ -19,6 +19,7 @@ import {
   updateAutoDistributionSettings,
   runAutoDistributionSync,
 } from "@/lib/auto-distribution/auto-distribution.functions";
+import { listAnalysisPipelineRuns } from "@/lib/analysis-pipeline/analysis-pipeline.functions";
 
 export const Route = createFileRoute("/admin/auto-dystrybucja")({
   component: AutoDystrybucjaPage,
@@ -196,6 +197,9 @@ function AutoDystrybucjaPage() {
         </Card>
       )}
 
+      {/* Pipeline analityczny — ostatnie przebiegi */}
+      <PipelineRunsCard />
+
       {/* Historia decyzji */}
       <Card>
         <CardHeader>
@@ -225,6 +229,72 @@ function AutoDystrybucjaPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+const STEP_LABELS: Record<string, string> = {
+  kw: "Pobranie KW",
+  coowners: "Właściciele",
+  kw_analysis: "Analiza KW",
+  risk: "Analiza ryzyka",
+};
+
+function PipelineRunsCard() {
+  const fetchRuns = useServerFn(listAnalysisPipelineRuns);
+  const { data: runs } = useQuery({
+    queryKey: ["analysis-pipeline-runs"],
+    queryFn: () => fetchRuns(),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Pipeline analityczny — ostatnie przebiegi</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <p className="text-sm text-muted-foreground">
+          Kompletne wnioski z potencjałem lokalizacji powyżej 50 automatycznie przechodzą: pobranie
+          KW → właściciele → analiza KW → analiza ryzyka. Wyniki zasilają kartę oferty.
+        </p>
+        {(runs ?? []).length === 0 && (
+          <p className="text-sm text-muted-foreground">Brak przebiegów.</p>
+        )}
+        {(runs ?? []).map((r: any) => {
+          const c = r.loan?.client;
+          const name = c ? [c.first_name, c.last_name].filter(Boolean).join(" ") : r.kw_number;
+          return (
+            <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm">
+              <Badge
+                variant={
+                  r.status === "done" && !r.error
+                    ? "secondary"
+                    : r.status === "running"
+                      ? "default"
+                      : "destructive"
+                }
+              >
+                {r.status === "done" ? (r.error ? "zakończony z błędami" : "gotowy") : r.status === "running" ? "w toku" : "błąd"}
+              </Badge>
+              <span className="font-medium">{name}</span>
+              <span className="font-mono text-xs text-muted-foreground">{r.kw_number}</span>
+              <span className="text-xs text-muted-foreground">
+                {Object.entries(STEP_LABELS)
+                  .map(([k, label]) => {
+                    const st = r.steps?.[k]?.status ?? "pending";
+                    const mark = st === "done" ? "✓" : st === "error" ? "✗" : "…";
+                    return `${label} ${mark}`;
+                  })
+                  .join(" · ")}
+              </span>
+              <span className="ml-auto text-xs text-muted-foreground">
+                {new Date(r.started_at).toLocaleString("pl-PL")}
+              </span>
+              {r.error && <span className="w-full text-xs text-destructive">{r.error}</span>}
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }
 

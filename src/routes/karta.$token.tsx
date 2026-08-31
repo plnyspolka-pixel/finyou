@@ -450,6 +450,88 @@ function OfferCardPage() {
         </Card>
       )}
 
+      {/* Analiza KW (silnik reguł) + właściciele + lokalizacja */}
+      {card.analysis && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5" /> Analiza księgi wieczystej i właściciele
+            </CardTitle>
+            <CardDescription>
+              Wynik automatycznej analizy prawnej KW (silnik reguł), sprawdzenie właścicieli z
+              działu II i potencjał lokalizacyjny.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm">
+            <div className="flex flex-wrap gap-2">
+              {card.analysis.locationScore != null && (
+                <Badge variant="secondary">
+                  Potencjał lokalizacji: {Math.round(card.analysis.locationScore)}/100
+                </Badge>
+              )}
+              {card.analysis.kwAnalysis && (
+                <Badge
+                  variant={
+                    card.analysis.kwAnalysis.overallStatus === "STOP"
+                      ? "destructive"
+                      : card.analysis.kwAnalysis.unresolvedCount > 0
+                        ? "outline"
+                        : "secondary"
+                  }
+                >
+                  Analiza KW: {card.analysis.kwAnalysis.overallStatus}
+                  {card.analysis.kwAnalysis.unresolvedCount > 0
+                    ? ` · ${card.analysis.kwAnalysis.unresolvedCount} kwestii otwartych`
+                    : ""}
+                </Badge>
+              )}
+              {card.analysis.owners?.totalInKw != null && (
+                <Badge variant="outline">
+                  Właścicieli w dziale II: {card.analysis.owners.totalInKw}
+                </Badge>
+              )}
+            </div>
+
+            {card.analysis.kwAnalysis && card.analysis.kwAnalysis.findings.length > 0 && (
+              <div className="space-y-2">
+                {card.analysis.kwAnalysis.findings.map((f) => (
+                  <div key={f.id} className="rounded-md border p-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant={
+                          f.status === "STOP"
+                            ? "destructive"
+                            : f.status === "OK"
+                              ? "secondary"
+                              : "outline"
+                        }
+                      >
+                        {f.status}
+                      </Badge>
+                      <span className="font-medium">{f.title}</span>
+                    </div>
+                    {f.investorMessage && (
+                      <p className="mt-1 text-muted-foreground">{f.investorMessage}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {card.analysis.owners?.summary && (
+              <p className="text-muted-foreground">
+                <b>Właściciele:</b> {card.analysis.owners.summary}
+              </p>
+            )}
+            {(card.analysis.owners?.warnings ?? []).map((w, i) => (
+              <p key={i} className="text-amber-600 dark:text-amber-400">
+                {w}
+              </p>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Wszystkie pliki klienta */}
       {card.media.files.length > 0 && (
         <Card>
