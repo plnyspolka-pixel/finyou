@@ -120,6 +120,9 @@ export async function ensureElevenLabsProcessAgents(): Promise<EnsureAgentsResul
               language: "pl",
               prompt: { prompt },
             },
+            // Agenty nie-angielskie wymagają modelu turbo/flash v2_5 — bez tego
+            // API odrzuca tworzenie ("Non-english Agents must use turbo or flash v2_5").
+            tts: { model_id: "eleven_flash_v2_5" },
           },
         }),
       });

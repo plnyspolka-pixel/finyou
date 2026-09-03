@@ -81,6 +81,8 @@ async function ensureWindykacjaAgent(): Promise<{ agentId?: string; error?: stri
               },
             },
           },
+          // Agenty nie-angielskie wymagają modelu turbo/flash v2_5.
+          tts: { model_id: "eleven_flash_v2_5" },
         },
       }),
     });
