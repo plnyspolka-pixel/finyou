@@ -694,3 +694,27 @@ export const getVoicebotAudio = createServerFn({ method: "POST" })
     const contentType = res.headers.get("content-type") || "audio/mpeg";
     return { base64, contentType };
   });
+
+/** Ręczna wysyłka SMS do leada z panelu (admin/operator/pośrednik). */
+export const sendSmsToLead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        leadId: z.string().uuid(),
+        body: z.string().min(1).max(600),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const s = admin();
+    const { data: lead } = await s
+      .from("leads")
+      .select("id, phone_normalized, phone_raw")
+      .eq("id", data.leadId)
+      .maybeSingle();
+    const phone = lead?.phone_normalized || lead?.phone_raw;
+    if (!phone) return { ok: false, error: "Lead nie ma numeru telefonu" };
+    // sendSmsInternal sam loguje wysyłkę w lead_communications (po numerze).
+    return await sendSmsInternal({ phone, body: data.body, source: "panel_manual" });
+  });

@@ -76,6 +76,30 @@ export interface PublicOfferCard {
     fetchedAt: string | null;
     sections: Array<{ key: string; label: string; html: string }>;
   } | null;
+  /**
+   * Raport analityczny (pipeline: analiza KW + właściciele + lokalizacja) —
+   * komponowany na żywo z tabel modułów; null, gdy nic jeszcze nie policzono.
+   */
+  analysis: {
+    locationScore: number | null;
+    kwAnalysis: {
+      createdAt: string | null;
+      overallStatus: string;
+      unresolvedCount: number;
+      findings: Array<{
+        id: string;
+        title: string;
+        status: string;
+        category: string;
+        investorMessage: string;
+      }>;
+    } | null;
+    owners: {
+      totalInKw: number | null;
+      summary: string | null;
+      warnings: string[];
+    } | null;
+  } | null;
   /** Adres do osadzenia mapy (Google Maps embed po adresie). */
   mapQuery: string | null;
   /** Zdjęcia nieruchomości i wszystkie pliki klienta (podpisane URL-e Storage). */
@@ -238,7 +262,7 @@ export const getPublicOfferCard = createServerFn({ method: "GET" })
     const { data: app } = await supabaseAdmin
       .from("loan_applications")
       .select(
-        "id, loan_amount, preferred_period_months, deleted_at, client:clients(first_name,last_name), properties(property_type,address,street,city,voivodeship,area_sqm,estimated_value,land_register_number,description,has_mortgage,photos)",
+        "id, loan_amount, preferred_period_months, deleted_at, location_potential_score, client:clients(first_name,last_name), properties(property_type,address,street,city,voivodeship,area_sqm,estimated_value,land_register_number,description,has_mortgage,photos)",
       )
       .eq("offer_card_token", data.token)
       .maybeSingle();
@@ -312,6 +336,55 @@ export const getPublicOfferCard = createServerFn({ method: "GET" })
         (IMAGE_EXT.test(f.name) || IMAGE_EXT.test(f.src)) && isShowablePropertyPhoto(f.src);
       if (isPhoto) media.photos.push({ url, name: f.name });
       else media.files.push({ url, name: f.name });
+    }
+
+    // Raport analityczny: najnowsza analiza KW (silnik reguł) + właściciele
+    // + potencjał lokalizacyjny — sekcje pipeline'u automatycznego.
+    let analysis: PublicOfferCard["analysis"] = null;
+    {
+      const [{ data: kwAn }, { data: coRow }] = await Promise.all([
+        (supabaseAdmin as any)
+          .from("kw_land_register_analyses")
+          .select("created_at, overall_status, unresolved_finding_count, result_json")
+          .eq("loan_application_id", (app as any).id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        (supabaseAdmin as any)
+          .from("coowner_registry_checks")
+          .select("result_json, warnings")
+          .eq("application_id", (app as any).id)
+          .maybeSingle(),
+      ]);
+      const locationScore =
+        (app as any).location_potential_score != null
+          ? Number((app as any).location_potential_score)
+          : null;
+      const kwAnalysis = kwAn?.result_json
+        ? {
+            createdAt: kwAn.created_at ?? null,
+            overallStatus: String(kwAn.overall_status ?? "OK"),
+            unresolvedCount: Number(kwAn.unresolved_finding_count ?? 0),
+            findings: ((kwAn.result_json?.findings ?? []) as any[]).map((f) => ({
+              id: String(f.id ?? ""),
+              title: String(f.title ?? ""),
+              status: String(f.status ?? ""),
+              category: String(f.category ?? ""),
+              investorMessage: String(f.investorMessage ?? f.plainLanguageSummary ?? ""),
+            })),
+          }
+        : null;
+      const co = coRow?.result_json as any;
+      const owners = co
+        ? {
+            totalInKw: co.totalOwnersInKw ?? null,
+            summary: co.summary ?? null,
+            warnings: (coRow?.warnings ?? co.warnings ?? []) as string[],
+          }
+        : null;
+      if (locationScore != null || kwAnalysis || owners) {
+        analysis = { locationScore, kwAnalysis, owners };
+      }
     }
 
     // Analiza ryzyka — zaludnienie, rynek w okolicy, wycena, źródła danych
@@ -431,6 +504,7 @@ export const getPublicOfferCard = createServerFn({ method: "GET" })
           }
         : null,
       kw,
+      analysis,
       mapQuery,
       media,
       risk,

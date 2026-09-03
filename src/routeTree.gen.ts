@@ -148,6 +148,7 @@ import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
 import { Route as AdminCzatRouteImport } from './routes/admin.czat'
 import { Route as AdminClarityRouteImport } from './routes/admin.clarity'
 import { Route as AdminAvatarFaqRouteImport } from './routes/admin.avatar-faq'
+import { Route as AdminAutoDystrybucjaRouteImport } from './routes/admin.auto-dystrybucja'
 import { Route as AdminAiSerpRouteImport } from './routes/admin.ai-serp'
 import { Route as AdminAiSeoRouteImport } from './routes/admin.ai-seo'
 import { Route as AdminAiOutreachRouteImport } from './routes/admin.ai-outreach'
@@ -186,6 +187,7 @@ import { Route as InwestorAmlKlienciRouteImport } from './routes/inwestor.aml.kl
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
 import { Route as ApiPublicYoutubeOauthCallbackRouteImport } from './routes/api/public/youtube-oauth-callback'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio-voice'
+import { Route as ApiPublicTwilioSmsInboundRouteImport } from './routes/api/public/twilio-sms-inbound'
 import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/public/twilio-recording'
 import { Route as ApiPublicResendWebhookRouteImport } from './routes/api/public/resend-webhook'
 import { Route as ApiPublicResendInboundWebhookRouteImport } from './routes/api/public/resend-inbound-webhook'
@@ -196,7 +198,10 @@ import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/publi
 import { Route as ApiPublicInvestorChatWidgetRouteImport } from './routes/api/public/investor-chat-widget'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as ApiPublicElevenlabsSendSmsRouteImport } from './routes/api/public/elevenlabs-send-sms'
+import { Route as ApiPublicElevenlabsReadSmsRouteImport } from './routes/api/public/elevenlabs-read-sms'
 import { Route as ApiPublicChatWidgetRouteImport } from './routes/api/public/chat-widget'
+import { Route as ApiPublicAgentToolsRouteImport } from './routes/api/public/agent-tools'
+import { Route as ApiPublicAgentConfigRouteImport } from './routes/api/public/agent-config'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminProgramPosrednikowZdarzeniaRouteImport } from './routes/admin.program-posrednikow.zdarzenia'
 import { Route as AdminProgramPosrednikowWyplatyRouteImport } from './routes/admin.program-posrednikow.wyplaty'
@@ -232,6 +237,7 @@ import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/
 import { Route as ApiPublicHooksVoicebotEnrichTickRouteImport } from './routes/api/public/hooks/voicebot-enrich-tick'
 import { Route as ApiPublicHooksVideoPipelineTickRouteImport } from './routes/api/public/hooks/video-pipeline-tick'
 import { Route as ApiPublicHooksSyncAccountingRouteImport } from './routes/api/public/hooks/sync-accounting'
+import { Route as ApiPublicHooksStatusEmailTickRouteImport } from './routes/api/public/hooks/status-email-tick'
 import { Route as ApiPublicHooksSocialPublishTickRouteImport } from './routes/api/public/hooks/social-publish-tick'
 import { Route as ApiPublicHooksSeoLocationSeedRouteImport } from './routes/api/public/hooks/seo-location-seed'
 import { Route as ApiPublicHooksSeoLocationPublishTickRouteImport } from './routes/api/public/hooks/seo-location-publish-tick'
@@ -247,11 +253,14 @@ import { Route as ApiPublicHooksLocationScoringTickRouteImport } from './routes/
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
 import { Route as ApiPublicHooksLoanReminderEmailsTickRouteImport } from './routes/api/public/hooks/loan-reminder-emails-tick'
 import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/api/public/hooks/loan-reminder-emails'
+import { Route as ApiPublicHooksInstitutionMailTickRouteImport } from './routes/api/public/hooks/institution-mail-tick'
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
+import { Route as ApiPublicHooksAutoDistributionTickRouteImport } from './routes/api/public/hooks/auto-distribution-tick'
 import { Route as ApiPublicHooksAniaCallbacksRouteImport } from './routes/api/public/hooks/ania-callbacks'
+import { Route as ApiPublicHooksAnalysisPipelineTickRouteImport } from './routes/api/public/hooks/analysis-pipeline-tick'
 import { Route as ApiPublicHooksAffiliateEventsTickRouteImport } from './routes/api/public/hooks/affiliate-events-tick'
 import { Route as ApiPublicHooksAccessExpiryTickRouteImport } from './routes/api/public/hooks/access-expiry-tick'
 import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
@@ -956,6 +965,11 @@ const AdminAvatarFaqRoute = AdminAvatarFaqRouteImport.update({
   path: '/avatar-faq',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAutoDystrybucjaRoute = AdminAutoDystrybucjaRouteImport.update({
+  id: '/auto-dystrybucja',
+  path: '/auto-dystrybucja',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAiSerpRoute = AdminAiSerpRouteImport.update({
   id: '/ai-serp',
   path: '/ai-serp',
@@ -1152,6 +1166,12 @@ const ApiPublicTwilioVoiceRoute = ApiPublicTwilioVoiceRouteImport.update({
   path: '/api/public/twilio-voice',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTwilioSmsInboundRoute =
+  ApiPublicTwilioSmsInboundRouteImport.update({
+    id: '/api/public/twilio-sms-inbound',
+    path: '/api/public/twilio-sms-inbound',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTwilioRecordingRoute =
   ApiPublicTwilioRecordingRouteImport.update({
     id: '/api/public/twilio-recording',
@@ -1211,9 +1231,25 @@ const ApiPublicElevenlabsSendSmsRoute =
     path: '/api/public/elevenlabs-send-sms',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicElevenlabsReadSmsRoute =
+  ApiPublicElevenlabsReadSmsRouteImport.update({
+    id: '/api/public/elevenlabs-read-sms',
+    path: '/api/public/elevenlabs-read-sms',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicChatWidgetRoute = ApiPublicChatWidgetRouteImport.update({
   id: '/api/public/chat-widget',
   path: '/api/public/chat-widget',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAgentToolsRoute = ApiPublicAgentToolsRouteImport.update({
+  id: '/api/public/agent-tools',
+  path: '/api/public/agent-tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAgentConfigRoute = ApiPublicAgentConfigRouteImport.update({
+  id: '/api/public/agent-config',
+  path: '/api/public/agent-config',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
@@ -1412,6 +1448,12 @@ const ApiPublicHooksSyncAccountingRoute =
     path: '/api/public/hooks/sync-accounting',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksStatusEmailTickRoute =
+  ApiPublicHooksStatusEmailTickRouteImport.update({
+    id: '/api/public/hooks/status-email-tick',
+    path: '/api/public/hooks/status-email-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSocialPublishTickRoute =
   ApiPublicHooksSocialPublishTickRouteImport.update({
     id: '/api/public/hooks/social-publish-tick',
@@ -1501,6 +1543,12 @@ const ApiPublicHooksLoanReminderEmailsRoute =
     path: '/api/public/hooks/loan-reminder-emails',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksInstitutionMailTickRoute =
+  ApiPublicHooksInstitutionMailTickRouteImport.update({
+    id: '/api/public/hooks/institution-mail-tick',
+    path: '/api/public/hooks/institution-mail-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksFollowUpTickRoute =
   ApiPublicHooksFollowUpTickRouteImport.update({
     id: '/api/public/hooks/follow-up-tick',
@@ -1525,10 +1573,22 @@ const ApiPublicHooksDailyBlogTickRoute =
     path: '/api/public/hooks/daily-blog-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksAutoDistributionTickRoute =
+  ApiPublicHooksAutoDistributionTickRouteImport.update({
+    id: '/api/public/hooks/auto-distribution-tick',
+    path: '/api/public/hooks/auto-distribution-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksAniaCallbacksRoute =
   ApiPublicHooksAniaCallbacksRouteImport.update({
     id: '/api/public/hooks/ania-callbacks',
     path: '/api/public/hooks/ania-callbacks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksAnalysisPipelineTickRoute =
+  ApiPublicHooksAnalysisPipelineTickRouteImport.update({
+    id: '/api/public/hooks/analysis-pipeline-tick',
+    path: '/api/public/hooks/analysis-pipeline-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksAffiliateEventsTickRoute =
@@ -1591,6 +1651,7 @@ export interface FileRoutesByFullPath {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/auto-dystrybucja': typeof AdminAutoDystrybucjaRoute
   '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/czat': typeof AdminCzatRoute
@@ -1725,7 +1786,10 @@ export interface FileRoutesByFullPath {
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
+  '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
+  '/api/public/elevenlabs-read-sms': typeof ApiPublicElevenlabsReadSmsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/investor-chat-widget': typeof ApiPublicInvestorChatWidgetRoute
@@ -1736,6 +1800,7 @@ export interface FileRoutesByFullPath {
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
@@ -1769,11 +1834,14 @@ export interface FileRoutesByFullPath {
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
+  '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
+  '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -1789,6 +1857,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
+  '/api/public/hooks/status-email-tick': typeof ApiPublicHooksStatusEmailTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -1835,6 +1904,7 @@ export interface FileRoutesByTo {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/auto-dystrybucja': typeof AdminAutoDystrybucjaRoute
   '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/czat': typeof AdminCzatRoute
@@ -1964,7 +2034,10 @@ export interface FileRoutesByTo {
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
+  '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
+  '/api/public/elevenlabs-read-sms': typeof ApiPublicElevenlabsReadSmsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/investor-chat-widget': typeof ApiPublicInvestorChatWidgetRoute
@@ -1975,6 +2048,7 @@ export interface FileRoutesByTo {
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
@@ -2008,11 +2082,14 @@ export interface FileRoutesByTo {
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
+  '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
+  '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -2028,6 +2105,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
+  '/api/public/hooks/status-email-tick': typeof ApiPublicHooksStatusEmailTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -2080,6 +2158,7 @@ export interface FileRoutesById {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/auto-dystrybucja': typeof AdminAutoDystrybucjaRoute
   '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/czat': typeof AdminCzatRoute
@@ -2214,7 +2293,10 @@ export interface FileRoutesById {
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
+  '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
+  '/api/public/elevenlabs-read-sms': typeof ApiPublicElevenlabsReadSmsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/investor-chat-widget': typeof ApiPublicInvestorChatWidgetRoute
@@ -2225,6 +2307,7 @@ export interface FileRoutesById {
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
@@ -2258,11 +2341,14 @@ export interface FileRoutesById {
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
+  '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
+  '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -2278,6 +2364,7 @@ export interface FileRoutesById {
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
+  '/api/public/hooks/status-email-tick': typeof ApiPublicHooksStatusEmailTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -2331,6 +2418,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/auto-dystrybucja'
     | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/czat'
@@ -2465,7 +2553,10 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
+    | '/api/public/agent-config'
+    | '/api/public/agent-tools'
     | '/api/public/chat-widget'
+    | '/api/public/elevenlabs-read-sms'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/investor-chat-widget'
@@ -2476,6 +2567,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
     | '/api/public/twilio-recording'
+    | '/api/public/twilio-sms-inbound'
     | '/api/public/twilio-voice'
     | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
@@ -2509,11 +2601,14 @@ export interface FileRouteTypes {
     | '/api/public/email/open'
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
+    | '/api/public/hooks/analysis-pipeline-tick'
     | '/api/public/hooks/ania-callbacks'
+    | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -2529,6 +2624,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/social-publish-tick'
+    | '/api/public/hooks/status-email-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
@@ -2575,6 +2671,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/auto-dystrybucja'
     | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/czat'
@@ -2704,7 +2801,10 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
+    | '/api/public/agent-config'
+    | '/api/public/agent-tools'
     | '/api/public/chat-widget'
+    | '/api/public/elevenlabs-read-sms'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/investor-chat-widget'
@@ -2715,6 +2815,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
     | '/api/public/twilio-recording'
+    | '/api/public/twilio-sms-inbound'
     | '/api/public/twilio-voice'
     | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
@@ -2748,11 +2849,14 @@ export interface FileRouteTypes {
     | '/api/public/email/open'
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
+    | '/api/public/hooks/analysis-pipeline-tick'
     | '/api/public/hooks/ania-callbacks'
+    | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -2768,6 +2872,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/social-publish-tick'
+    | '/api/public/hooks/status-email-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
@@ -2819,6 +2924,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/auto-dystrybucja'
     | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/czat'
@@ -2953,7 +3059,10 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
+    | '/api/public/agent-config'
+    | '/api/public/agent-tools'
     | '/api/public/chat-widget'
+    | '/api/public/elevenlabs-read-sms'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/investor-chat-widget'
@@ -2964,6 +3073,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
     | '/api/public/twilio-recording'
+    | '/api/public/twilio-sms-inbound'
     | '/api/public/twilio-voice'
     | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
@@ -2997,11 +3107,14 @@ export interface FileRouteTypes {
     | '/api/public/email/open'
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
+    | '/api/public/hooks/analysis-pipeline-tick'
     | '/api/public/hooks/ania-callbacks'
+    | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -3017,6 +3130,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
     | '/api/public/hooks/social-publish-tick'
+    | '/api/public/hooks/status-email-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
     | '/api/public/hooks/voicebot-enrich-tick'
@@ -3082,7 +3196,10 @@ export interface RootRouteChildren {
   PropozycjeIndexRoute: typeof PropozycjeIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicAgentConfigRoute: typeof ApiPublicAgentConfigRoute
+  ApiPublicAgentToolsRoute: typeof ApiPublicAgentToolsRoute
   ApiPublicChatWidgetRoute: typeof ApiPublicChatWidgetRoute
+  ApiPublicElevenlabsReadSmsRoute: typeof ApiPublicElevenlabsReadSmsRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicInvestorChatWidgetRoute: typeof ApiPublicInvestorChatWidgetRoute
@@ -3093,6 +3210,7 @@ export interface RootRouteChildren {
   ApiPublicResendInboundWebhookRoute: typeof ApiPublicResendInboundWebhookRoute
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   ApiPublicTwilioRecordingRoute: typeof ApiPublicTwilioRecordingRoute
+  ApiPublicTwilioSmsInboundRoute: typeof ApiPublicTwilioSmsInboundRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
   ApiPublicYoutubeOauthCallbackRoute: typeof ApiPublicYoutubeOauthCallbackRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
@@ -3100,11 +3218,14 @@ export interface RootRouteChildren {
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
   ApiPublicHooksAccessExpiryTickRoute: typeof ApiPublicHooksAccessExpiryTickRoute
   ApiPublicHooksAffiliateEventsTickRoute: typeof ApiPublicHooksAffiliateEventsTickRoute
+  ApiPublicHooksAnalysisPipelineTickRoute: typeof ApiPublicHooksAnalysisPipelineTickRoute
   ApiPublicHooksAniaCallbacksRoute: typeof ApiPublicHooksAniaCallbacksRoute
+  ApiPublicHooksAutoDistributionTickRoute: typeof ApiPublicHooksAutoDistributionTickRoute
   ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
+  ApiPublicHooksInstitutionMailTickRoute: typeof ApiPublicHooksInstitutionMailTickRoute
   ApiPublicHooksLoanReminderEmailsRoute: typeof ApiPublicHooksLoanReminderEmailsRoute
   ApiPublicHooksLoanReminderEmailsTickRoute: typeof ApiPublicHooksLoanReminderEmailsTickRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
@@ -3120,6 +3241,7 @@ export interface RootRouteChildren {
   ApiPublicHooksSeoLocationPublishTickRoute: typeof ApiPublicHooksSeoLocationPublishTickRoute
   ApiPublicHooksSeoLocationSeedRoute: typeof ApiPublicHooksSeoLocationSeedRoute
   ApiPublicHooksSocialPublishTickRoute: typeof ApiPublicHooksSocialPublishTickRoute
+  ApiPublicHooksStatusEmailTickRoute: typeof ApiPublicHooksStatusEmailTickRoute
   ApiPublicHooksSyncAccountingRoute: typeof ApiPublicHooksSyncAccountingRoute
   ApiPublicHooksVideoPipelineTickRoute: typeof ApiPublicHooksVideoPipelineTickRoute
   ApiPublicHooksVoicebotEnrichTickRoute: typeof ApiPublicHooksVoicebotEnrichTickRoute
@@ -4108,6 +4230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAvatarFaqRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/auto-dystrybucja': {
+      id: '/admin/auto-dystrybucja'
+      path: '/auto-dystrybucja'
+      fullPath: '/admin/auto-dystrybucja'
+      preLoaderRoute: typeof AdminAutoDystrybucjaRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ai-serp': {
       id: '/admin/ai-serp'
       path: '/ai-serp'
@@ -4374,6 +4503,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTwilioVoiceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/twilio-sms-inbound': {
+      id: '/api/public/twilio-sms-inbound'
+      path: '/api/public/twilio-sms-inbound'
+      fullPath: '/api/public/twilio-sms-inbound'
+      preLoaderRoute: typeof ApiPublicTwilioSmsInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/twilio-recording': {
       id: '/api/public/twilio-recording'
       path: '/api/public/twilio-recording'
@@ -4444,11 +4580,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicElevenlabsSendSmsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/elevenlabs-read-sms': {
+      id: '/api/public/elevenlabs-read-sms'
+      path: '/api/public/elevenlabs-read-sms'
+      fullPath: '/api/public/elevenlabs-read-sms'
+      preLoaderRoute: typeof ApiPublicElevenlabsReadSmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat-widget': {
       id: '/api/public/chat-widget'
       path: '/api/public/chat-widget'
       fullPath: '/api/public/chat-widget'
       preLoaderRoute: typeof ApiPublicChatWidgetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/agent-tools': {
+      id: '/api/public/agent-tools'
+      path: '/api/public/agent-tools'
+      fullPath: '/api/public/agent-tools'
+      preLoaderRoute: typeof ApiPublicAgentToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/agent-config': {
+      id: '/api/public/agent-config'
+      path: '/api/public/agent-config'
+      fullPath: '/api/public/agent-config'
+      preLoaderRoute: typeof ApiPublicAgentConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/wnioski/$id': {
@@ -4696,6 +4853,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncAccountingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/status-email-tick': {
+      id: '/api/public/hooks/status-email-tick'
+      path: '/api/public/hooks/status-email-tick'
+      fullPath: '/api/public/hooks/status-email-tick'
+      preLoaderRoute: typeof ApiPublicHooksStatusEmailTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/social-publish-tick': {
       id: '/api/public/hooks/social-publish-tick'
       path: '/api/public/hooks/social-publish-tick'
@@ -4801,6 +4965,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksLoanReminderEmailsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/institution-mail-tick': {
+      id: '/api/public/hooks/institution-mail-tick'
+      path: '/api/public/hooks/institution-mail-tick'
+      fullPath: '/api/public/hooks/institution-mail-tick'
+      preLoaderRoute: typeof ApiPublicHooksInstitutionMailTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/follow-up-tick': {
       id: '/api/public/hooks/follow-up-tick'
       path: '/api/public/hooks/follow-up-tick'
@@ -4829,11 +5000,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksDailyBlogTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/auto-distribution-tick': {
+      id: '/api/public/hooks/auto-distribution-tick'
+      path: '/api/public/hooks/auto-distribution-tick'
+      fullPath: '/api/public/hooks/auto-distribution-tick'
+      preLoaderRoute: typeof ApiPublicHooksAutoDistributionTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/ania-callbacks': {
       id: '/api/public/hooks/ania-callbacks'
       path: '/api/public/hooks/ania-callbacks'
       fullPath: '/api/public/hooks/ania-callbacks'
       preLoaderRoute: typeof ApiPublicHooksAniaCallbacksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/analysis-pipeline-tick': {
+      id: '/api/public/hooks/analysis-pipeline-tick'
+      path: '/api/public/hooks/analysis-pipeline-tick'
+      fullPath: '/api/public/hooks/analysis-pipeline-tick'
+      preLoaderRoute: typeof ApiPublicHooksAnalysisPipelineTickRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/affiliate-events-tick': {
@@ -4899,6 +5084,7 @@ interface AdminRouteChildren {
   AdminAiOutreachRoute: typeof AdminAiOutreachRoute
   AdminAiSeoRoute: typeof AdminAiSeoRoute
   AdminAiSerpRoute: typeof AdminAiSerpRoute
+  AdminAutoDystrybucjaRoute: typeof AdminAutoDystrybucjaRoute
   AdminAvatarFaqRoute: typeof AdminAvatarFaqRoute
   AdminClarityRoute: typeof AdminClarityRoute
   AdminCzatRoute: typeof AdminCzatRoute
@@ -4979,6 +5165,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAiOutreachRoute: AdminAiOutreachRoute,
   AdminAiSeoRoute: AdminAiSeoRoute,
   AdminAiSerpRoute: AdminAiSerpRoute,
+  AdminAutoDystrybucjaRoute: AdminAutoDystrybucjaRoute,
   AdminAvatarFaqRoute: AdminAvatarFaqRoute,
   AdminClarityRoute: AdminClarityRoute,
   AdminCzatRoute: AdminCzatRoute,
@@ -5346,7 +5533,10 @@ const rootRouteChildren: RootRouteChildren = {
   PropozycjeIndexRoute: PropozycjeIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicAgentConfigRoute: ApiPublicAgentConfigRoute,
+  ApiPublicAgentToolsRoute: ApiPublicAgentToolsRoute,
   ApiPublicChatWidgetRoute: ApiPublicChatWidgetRoute,
+  ApiPublicElevenlabsReadSmsRoute: ApiPublicElevenlabsReadSmsRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicInvestorChatWidgetRoute: ApiPublicInvestorChatWidgetRoute,
@@ -5357,6 +5547,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResendInboundWebhookRoute: ApiPublicResendInboundWebhookRoute,
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   ApiPublicTwilioRecordingRoute: ApiPublicTwilioRecordingRoute,
+  ApiPublicTwilioSmsInboundRoute: ApiPublicTwilioSmsInboundRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
   ApiPublicYoutubeOauthCallbackRoute: ApiPublicYoutubeOauthCallbackRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
@@ -5365,12 +5556,18 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksAccessExpiryTickRoute: ApiPublicHooksAccessExpiryTickRoute,
   ApiPublicHooksAffiliateEventsTickRoute:
     ApiPublicHooksAffiliateEventsTickRoute,
+  ApiPublicHooksAnalysisPipelineTickRoute:
+    ApiPublicHooksAnalysisPipelineTickRoute,
   ApiPublicHooksAniaCallbacksRoute: ApiPublicHooksAniaCallbacksRoute,
+  ApiPublicHooksAutoDistributionTickRoute:
+    ApiPublicHooksAutoDistributionTickRoute,
   ApiPublicHooksDailyBlogTickRoute: ApiPublicHooksDailyBlogTickRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:
     ApiPublicHooksElevenlabsConversationInitRoute,
   ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
+  ApiPublicHooksInstitutionMailTickRoute:
+    ApiPublicHooksInstitutionMailTickRoute,
   ApiPublicHooksLoanReminderEmailsRoute: ApiPublicHooksLoanReminderEmailsRoute,
   ApiPublicHooksLoanReminderEmailsTickRoute:
     ApiPublicHooksLoanReminderEmailsTickRoute,
@@ -5393,6 +5590,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksSeoLocationPublishTickRoute,
   ApiPublicHooksSeoLocationSeedRoute: ApiPublicHooksSeoLocationSeedRoute,
   ApiPublicHooksSocialPublishTickRoute: ApiPublicHooksSocialPublishTickRoute,
+  ApiPublicHooksStatusEmailTickRoute: ApiPublicHooksStatusEmailTickRoute,
   ApiPublicHooksSyncAccountingRoute: ApiPublicHooksSyncAccountingRoute,
   ApiPublicHooksVideoPipelineTickRoute: ApiPublicHooksVideoPipelineTickRoute,
   ApiPublicHooksVoicebotEnrichTickRoute: ApiPublicHooksVoicebotEnrichTickRoute,
@@ -5408,3 +5606,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -302,7 +302,7 @@ export type AgentReply = {
  */
 export async function runAgentTurn(opts: {
   leadId: string;
-  channel: "messenger" | "instagram" | "email" | "chat" | "chat_inwestor";
+  channel: "messenger" | "instagram" | "email" | "chat" | "chat_inwestor" | "sms";
   userMessage: string;
   attachmentsSummary?: string | null;
   variant?: AgentVariant;
@@ -315,7 +315,7 @@ export async function runAgentTurn(opts: {
   // Historia per wariant — rozmowa inwestorska nie miesza się z kanałami
   // pożyczkobiorcy (i odwrotnie), nawet gdy lead ma oba rodzaje komunikacji.
   const historyChannels =
-    variant === "inwestor" ? ["chat_inwestor"] : ["messenger", "instagram", "email", "chat"];
+    variant === "inwestor" ? ["chat_inwestor"] : ["messenger", "instagram", "email", "chat", "sms"];
   const { data: history } = await s
     .from("lead_communications")
     .select("direction, content, created_at, channel")
@@ -323,6 +323,62 @@ export async function runAgentTurn(opts: {
     .in("channel", historyChannels)
     .order("created_at", { ascending: true })
     .limit(40);
+
+  // ── Ścieżka ElevenLabs (decyzja: wszystkie boty procesowe na ElevenLabs) ──
+  // Gdy agent dla powierzchni istnieje, tura idzie do niego (tryb tekstowy);
+  // narzędzia wykonuje webhook /api/public/agent-tools po stronie ElevenLabs.
+  // Sesja WebSocket żyje jedną turę, więc pamięć rozmowy dowozimy sami:
+  // ostatnie wiadomości wątku idą w treści jako kontekst przed nową
+  // wiadomością. Każde niepowodzenie = cichy powrót do silnika poniżej.
+  try {
+    const { getAgentIdForSurface } = await import("./elevenlabs-agents.server");
+    const surface =
+      variant === "inwestor"
+        ? ("investor_info" as const)
+        : variant === "inwestor_prywatny"
+          ? ("investor_panel" as const)
+          : ("intake" as const);
+    const elAgentId = await getAgentIdForSurface(surface);
+    if (elAgentId) {
+      const recent = (history ?? []).slice(-16);
+      const historyBlock =
+        recent.length > 0
+          ? recent
+              .map(
+                (h) =>
+                  `${h.direction === "inbound" ? "KLIENT" : "TY (asystent)"}: ${String(h.content ?? "")
+                    .replace(/\s+/g, " ")
+                    .slice(0, 600)}`,
+              )
+              .join("\n")
+          : "(brak wcześniejszych wiadomości)";
+      const elMessage =
+        `[DOTYCHCZASOWA ROZMOWA — kontekst, nie odpowiadaj na nią ponownie]\n${historyBlock}\n\n` +
+        `[NOWA WIADOMOŚĆ KLIENTA — odpowiedz na nią]\n${opts.userMessage}`;
+
+      const { elevenLabsTextTurn } = await import("./elevenlabs-text-turn.server");
+      const turn = await elevenLabsTextTurn({
+        agentId: elAgentId,
+        userMessage: elMessage,
+        dynamicVariables: {
+          lead_id: lead.id,
+          channel: opts.channel,
+          first_name: lead.first_name ?? "",
+          last_name: lead.last_name ?? "",
+          email: lead.email ?? "",
+          phone: lead.phone_normalized ?? lead.phone_raw ?? "",
+        },
+      });
+      if (turn.ok && turn.reply) {
+        return { reply: turn.reply, toolCalls: [] };
+      }
+      console.warn(
+        `[el-text-agent] ElevenLabs turn fallback (${surface}): ${turn.error ?? "unknown"}`,
+      );
+    }
+  } catch (e) {
+    console.error("[el-text-agent] ElevenLabs path error — fallback", e);
+  }
 
   const { prompt: systemPrompt } = await fetchAgentPrompt(variant);
 
@@ -479,7 +535,7 @@ export async function runAgentTurn(opts: {
     const calls = msg.tool_calls ?? [];
     if (calls.length === 0) {
       return {
-        reply: String(msg.content ?? "").trim() || "Dziękuję, oddzwonimy.",
+        reply: String(msg.content ?? "").trim() || "Dziękuję za wiadomość.",
         toolCalls: toolResults,
       };
     }
@@ -570,7 +626,9 @@ function normalizePatch(raw: Record<string, any>): Record<string, any> {
   return out;
 }
 
-async function executeTool(
+// Eksportowane: używane też przez webhook toole agentów ElevenLabs
+// (/api/public/agent-tools) — te same operacje, ta sama semantyka zapisu.
+export async function executeTool(
   leadId: string,
   channel: string,
   name: string,

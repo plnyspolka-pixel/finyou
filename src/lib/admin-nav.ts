@@ -360,6 +360,14 @@ export const adminSections: AdminSection[] = [
         synonyms: ["dystrybucja", "wysylka ofert"],
       },
       {
+        to: "/admin/auto-dystrybucja",
+        label: "Auto-dystrybucja",
+        icon: Send,
+        description:
+          "Automatyczne dopasowanie kompletnych wniosków do instytucji wg kryteriów; wysyłka po zatwierdzeniu.",
+        synonyms: ["auto dystrybucja", "automat wysylki", "kryteria instytucji"],
+      },
+      {
         to: "/admin/karty-ofert",
         label: "Karty ofert",
         icon: IdCard,

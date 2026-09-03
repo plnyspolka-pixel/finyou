@@ -20,6 +20,10 @@ import {
 import { Trash2, Plus, Pencil } from "lucide-react";
 import { getTextAgentSettings, saveTextAgentSettings } from "@/lib/text-agent-settings.functions";
 import {
+  getProcessAgentsState,
+  provisionProcessAgents,
+} from "@/lib/elevenlabs-agents.functions";
+import {
   listKnowledge,
   upsertKnowledge,
   deleteKnowledge,
@@ -30,6 +34,98 @@ import type { AgentVariant } from "@/lib/elevenlabs-text-agent.server";
 export const Route = createFileRoute("/admin/text-agent")({
   component: TextAgentSettingsPage,
 });
+
+const SURFACE_LABELS: Record<string, string> = {
+  intake: "A1 — przyjęcie wniosku (chat na stronie, telefon, widget)",
+  investor_info: "A2 — informacja dla inwestora (/dla-inwestora)",
+  investor_panel: "A3 — panel inwestora",
+};
+
+function ElevenLabsAgentsCard() {
+  const fetchState = useServerFn(getProcessAgentsState);
+  const provision = useServerFn(provisionProcessAgents);
+  const [state, setState] = useState<any | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const reload = useCallback(async () => {
+    try {
+      setState(await fetchState());
+    } catch {
+      /* brak uprawnień / błąd — karta zostaje pusta */
+    }
+  }, [fetchState]);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  if (!state) return null;
+
+  const missing = ["intake", "investor_info", "investor_panel"].filter((s) => !state[s]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Agenty procesowe ElevenLabs</CardTitle>
+        <CardDescription>
+          Docelowo wszystkie boty procesowe działają jako agenty ElevenLabs. Gdy agent dla
+          powierzchni jest utworzony, widget na stronie/panelu automatycznie przełącza się na
+          niego; bez agenta działa dotychczasowy silnik tekstowy.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {(["intake", "investor_info", "investor_panel"] as const).map((s) => (
+          <div key={s} className="flex flex-wrap items-center gap-2 text-sm">
+            <Badge variant={state[s] ? "secondary" : "outline"}>
+              {state[s] ? "aktywny" : "brak agenta"}
+            </Badge>
+            <span>{SURFACE_LABELS[s]}</span>
+            {state[s] && <span className="font-mono text-xs text-muted-foreground">{state[s]}</span>}
+          </div>
+        ))}
+        {!state.hasApiKey && (
+          <p className="text-sm text-destructive">
+            Brak sekretu ELEVENLABS_API_KEY — utworzenie agentów niemożliwe.
+          </p>
+        )}
+        {!state.hasToolsSecret && (
+          <p className="text-sm text-amber-600">
+            Brak sekretu AGENT_TOOLS_SECRET — narzędzia webhook agentów (zapis leadów, status,
+            faktury) nie będą działać, ustaw go przed podpięciem tooli w konsoli ElevenLabs.
+          </p>
+        )}
+        {missing.length > 0 && state.hasApiKey && (
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const res: any = await provision();
+                if (res.created?.length)
+                  toast.success(`Utworzono agentów: ${res.created.map((c: any) => c.surface).join(", ")}`);
+                if (res.errors?.length)
+                  toast.error(res.errors.map((e: any) => `${e.surface}: ${e.error}`).join("; "));
+                await reload();
+              } catch (e: any) {
+                toast.error(e?.message ?? "Błąd tworzenia agentów");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? "Tworzę agentów…" : `Utwórz brakujących agentów (${missing.length})`}
+          </Button>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Po utworzeniu agentów dopnij w konsoli ElevenLabs webhook tool:{" "}
+          <span className="font-mono">POST /api/public/agent-tools</span> (nagłówek
+          X-Agent-Tools-Secret) — narzędzia: update_lead_data, send_application_link,
+          mark_ready_for_human, get_application_status, get_missing_info_brief, issue_invoice.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
 
 function TextAgentSettingsPage() {
   return (
@@ -42,6 +138,7 @@ function TextAgentSettingsPage() {
           informacje + FV) i asystent Klubu dla inwestorów prywatnych z dostępem (panel /inwestor).
         </p>
       </div>
+      <ElevenLabsAgentsCard />
       <Tabs defaultValue="prompt">
         <TabsList>
           <TabsTrigger value="prompt">Prompt — klienci</TabsTrigger>

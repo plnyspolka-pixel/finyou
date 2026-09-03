@@ -121,7 +121,21 @@ export const runKwLandRegisterAnalysis = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await requireOperator(supabase, userId);
+    return runKwLandRegisterAnalysisCore(supabase as unknown as SupabaseClient, data, userId);
+  });
 
+export type RunKwAnalysisInput = z.infer<typeof runInputSchema>;
+
+/**
+ * Rdzeń analizy KW — bez autoryzacji; używany przez server fn (operator)
+ * oraz automatyczny pipeline analityczny (service_role).
+ */
+export async function runKwLandRegisterAnalysisCore(
+  supabase: SupabaseClient,
+  data: RunKwAnalysisInput,
+  userId: string | null,
+) {
+  {
     const compact = compactKw(data.kwNumber);
     if (!compact) throw new Error("Nieprawidłowy numer księgi wieczystej.");
 
@@ -221,7 +235,8 @@ export const runKwLandRegisterAnalysis = createServerFn({ method: "POST" })
       analysisId: inserted?.id ?? null,
       result,
     };
-  });
+  }
+}
 
 /** Zwraca najnowszą analizę KW dla numeru albo wniosku. */
 export const getKwLandRegisterAnalysis = createServerFn({ method: "POST" })

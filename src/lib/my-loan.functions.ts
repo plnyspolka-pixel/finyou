@@ -6,6 +6,25 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { computeLoanProgress } from "./loan-progress";
 import { enrichLoanProgress, type EnrichedProgress } from "./my-loan-progress";
+import { clientLoanStatusView, type ClientLoanStatusInfo } from "./loan-status";
+
+export interface LoanStatusHistoryEntry {
+  /** Status kanoniczny po zmianie. */
+  status: string;
+  /** Etykieta w języku klienta. */
+  label: string;
+  changed_at: string;
+}
+
+export interface MyLoanStatus {
+  info: ClientLoanStatusInfo;
+  /** Data ostatniej zmiany statusu (najświeższy wpis historii). */
+  changed_at: string | null;
+  /** Historia zmian, od najnowszej; wpisy o tej samej etykiecie klienckiej scalone. */
+  history: LoanStatusHistoryEntry[];
+}
+
+export type MyLoanProgress = EnrichedProgress & { status_info: MyLoanStatus | null };
 
 /**
  * Zwraca wzbogacony postęp aktywnego wniosku zalogowanego klienta.
@@ -14,7 +33,7 @@ import { enrichLoanProgress, type EnrichedProgress } from "./my-loan-progress";
  */
 export const getMyLoanProgress = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<EnrichedProgress | null> => {
+  .handler(async ({ context }): Promise<MyLoanProgress | null> => {
     const { supabase, userId } = context;
 
     const { data: client } = await supabase
@@ -49,14 +68,38 @@ export const getMyLoanProgress = createServerFn({ method: "GET" })
         property: null,
         documents: [],
       });
-      return enrichLoanProgress(empty, {
+      const enriched = enrichLoanProgress(empty, {
         hasLoan: false,
         hasContact: Boolean(client.first_name && client.phone),
         hasPropertyType: false,
         hasInvestorDescription: false,
         hasLoanTerms: false,
       });
+      return { ...enriched, status_info: null };
     }
+
+    // Historia zmian statusu (RLS: klient widzi tylko swój wniosek).
+    // Tabela może jeszcze nie mieć wygenerowanych typów — stąd luźny klient.
+    const { data: historyRows } = await (supabase as any)
+      .from("loan_status_history")
+      .select("new_status, changed_at")
+      .eq("loan_application_id", loan.id)
+      .order("changed_at", { ascending: false })
+      .limit(30);
+
+    const historyAll: LoanStatusHistoryEntry[] = ((historyRows ?? []) as any[]).map((h) => {
+      const view = clientLoanStatusView(h.new_status);
+      return { status: view.status, label: view.label, changed_at: h.changed_at };
+    });
+    // Klient widzi mniej statusów niż operacje — sąsiednie wpisy o tej samej
+    // etykiecie zlewamy w jeden (zostaje najnowszy).
+    const history = historyAll.filter((h, i) => i === 0 || h.label !== historyAll[i - 1].label);
+
+    const status_info: MyLoanStatus = {
+      info: clientLoanStatusView(loan.status),
+      changed_at: historyAll[0]?.changed_at ?? null,
+      history,
+    };
 
     const [{ data: property }, { data: documents }] = await Promise.all([
       supabase
@@ -85,13 +128,14 @@ export const getMyLoanProgress = createServerFn({ method: "GET" })
       documents: documents ?? [],
     });
 
-    return enrichLoanProgress(base, {
+    const enriched = enrichLoanProgress(base, {
       hasLoan: true,
       hasContact: Boolean(client.first_name && client.phone),
       hasPropertyType: Boolean(property?.property_type),
       hasInvestorDescription: Boolean(loan.investor_description),
       hasLoanTerms: Boolean(loan.loan_amount && loan.preferred_period_months),
     });
+    return { ...enriched, status_info };
   });
 
 /**

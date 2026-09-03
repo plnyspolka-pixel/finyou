@@ -11,6 +11,7 @@ import {
   listCapiEvents,
 } from "@/lib/lead-quality.functions";
 import { refetchInboundEmailBody, getCommAttachmentUrl } from "@/lib/inbox.functions";
+import { sendSmsToLead } from "@/lib/voicebot.functions";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -162,6 +163,8 @@ export function LeadDetailView({
               </Button>
             ))}
           </Card>
+
+          <SmsPanel leadId={id} lead={lead} communications={communications} />
 
           <Card className="p-4 space-y-2">
             <div className="text-sm font-medium">Dodaj notatkę</div>
@@ -858,5 +861,92 @@ function EmailExtras({ comm, qc, leadId }: { comm: any; qc: any; leadId: string 
         </div>
       )}
     </div>
+  );
+}
+
+/** Wątek SMS (przychodzące + wychodzące) z możliwością ręcznej wysyłki. */
+function SmsPanel({
+  leadId,
+  lead,
+  communications,
+}: {
+  leadId: string;
+  lead: any;
+  communications: any[];
+}) {
+  const qc = useQueryClient();
+  const sendFn = useServerFn(sendSmsToLead);
+  const [text, setText] = useState("");
+  const sms = (communications ?? []).filter((c: any) => c.channel === "sms");
+  const phone = lead?.phone_normalized || lead?.phone_raw;
+
+  const mSend = useMutation({
+    mutationFn: () => sendFn({ data: { leadId, body: text.trim() } }),
+    onSuccess: (res: any) => {
+      if (res?.ok) {
+        toast.success("SMS wysłany");
+        setText("");
+        qc.invalidateQueries({ queryKey: ["lead", leadId] });
+      } else {
+        toast.error(res?.error ?? "Nie udało się wysłać SMS");
+      }
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Błąd wysyłki SMS"),
+  });
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+        <div className="text-sm font-medium">SMS ({sms.length})</div>
+        <span className="ml-auto text-xs text-muted-foreground">{phone ?? "brak numeru"}</span>
+      </div>
+
+      <div className="space-y-2 max-h-64 overflow-y-auto">
+        {sms.length === 0 && (
+          <div className="text-xs text-muted-foreground">Brak SMS-ów z tym numerem.</div>
+        )}
+        {sms
+          .slice()
+          .reverse()
+          .map((m: any) => (
+            <div
+              key={m.id}
+              className={
+                m.direction === "inbound"
+                  ? "max-w-[85%] rounded-lg bg-muted px-3 py-2"
+                  : "max-w-[85%] ml-auto rounded-lg bg-primary/10 px-3 py-2"
+              }
+            >
+              <div className="text-sm whitespace-pre-wrap break-words">{m.content}</div>
+              <div className="mt-1 text-[10px] text-muted-foreground flex gap-2">
+                <span>{m.direction === "inbound" ? "przychodzący" : "wychodzący"}</span>
+                {m.status && <span>· {m.status}</span>}
+                <span className="ml-auto">{formatDateTime(m.created_at)}</span>
+              </div>
+            </div>
+          ))}
+      </div>
+
+      <div className="space-y-2">
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Treść SMS-a…"
+          rows={2}
+          disabled={!phone}
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => mSend.mutate()}
+            disabled={!phone || !text.trim() || mSend.isPending}
+          >
+            Wyślij SMS
+          </Button>
+          <span className="text-[10px] text-muted-foreground">{text.length}/600 znaków</span>
+        </div>
+      </div>
+    </Card>
   );
 }

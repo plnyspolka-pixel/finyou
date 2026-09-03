@@ -394,11 +394,11 @@ const RAW_EMAILS: RawEmail[] = [
     cta: "Uzupełnij wniosek teraz",
   },
   {
-    subject: "Ania oddzwoni i wszystko wyjaśni",
-    preview: "Masz pytania? Twój opiekun jest po to, żeby pomóc.",
+    subject: "Ania odpowie na Twoje pytania",
+    preview: "Masz pytania? Ania chętnie wszystko wyjaśni.",
     paras: [
-      "{{greeting}}, jeśli masz pytania, Ania chętnie wszystko wyjaśni.",
-      "Zostaw wniosek, a Twój opiekun skontaktuje się i przeprowadzi Cię przez każdy krok.",
+      "{{greeting}}, jeśli masz pytania, Ania chętnie wszystko wyjaśni — napisz lub porozmawiaj z nią w panelu.",
+      "Uzupełnij wniosek do końca — kompletny wniosek trafia do inwestorów, a jeśli spotka się z zainteresowaniem, otrzymasz konkretną ofertę finansową.",
     ],
     cta: "Uzupełnij wniosek teraz",
   },
