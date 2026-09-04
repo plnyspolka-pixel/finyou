@@ -176,10 +176,19 @@ export function ChatWidget({
   }
 
   // Agent ElevenLabs skonfigurowany → osadzony widget zamiast własnego czatu.
+  // UWAGA: toole agenta deklarują zmienne lead_id/email/phone — muszą być
+  // przekazane ZAWSZE (puste dla anonima), inaczej widget odmawia startu
+  // rozmowy ("Missing required dynamic variables in tools").
   if (elAgentId) {
     return createElement("elevenlabs-convai", {
       "agent-id": elAgentId,
-      "dynamic-variables": JSON.stringify({ source, session_id: sessionId }),
+      "dynamic-variables": JSON.stringify({
+        source,
+        session_id: sessionId,
+        lead_id: "",
+        email: "",
+        phone: "",
+      }),
     });
   }
 

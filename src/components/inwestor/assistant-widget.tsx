@@ -99,8 +99,13 @@ export function InvestorAssistantWidget() {
     }
   }
 
+  // Toole agenta deklarują lead_id/email/phone — przekazujemy zawsze (puste,
+  // gdy nieznane), inaczej widget odmawia startu rozmowy.
   if (elAgentId) {
-    return createElement("elevenlabs-convai", { "agent-id": elAgentId });
+    return createElement("elevenlabs-convai", {
+      "agent-id": elAgentId,
+      "dynamic-variables": JSON.stringify({ lead_id: "", email: "", phone: "" }),
+    });
   }
 
   return (
