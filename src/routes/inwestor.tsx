@@ -12,6 +12,7 @@ import {
   Gavel,
   Receipt,
   ShieldCheck,
+  FileCheck,
 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 import { InvestorAssistantWidget } from "@/components/inwestor/assistant-widget";
@@ -39,6 +40,7 @@ const fullGroups: NavGroup[] = [
       { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
       { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
       { to: "/inwestor/abonament", label: "Dostęp", icon: CreditCard },
+      { to: "/inwestor/umowy", label: "Umowy i Zlecenia", icon: FileCheck },
       { to: "/inwestor/platnosci", label: "Płatności i faktury", icon: Receipt },
       { to: "/inwestor/profil", label: "Profil", icon: User },
     ],
@@ -57,6 +59,7 @@ const limitedGroups: NavGroup[] = [
       { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
       { to: "/inwestor/szkolenia", label: "Akademia (3 darmowe lekcje)", icon: GraduationCap },
       { to: "/inwestor/abonament", label: "Pełny dostęp", icon: CreditCard },
+      { to: "/inwestor/umowy", label: "Umowy i Zlecenia", icon: FileCheck },
       { to: "/inwestor/platnosci", label: "Płatności i faktury", icon: Receipt },
       { to: "/inwestor/profil", label: "Profil", icon: User },
     ],
@@ -72,6 +75,9 @@ const FREE_PATHS = [
   // /inwestor/projekty zostają dostępne dla głębokich linków (przypisania,
   // propozycje) — dane i tak chronią server functions + RLS.
   "/inwestor/projekty",
+  // Pakiet umów (FY-LEGAL-2026-09-04) musi być dostępny PRZED subskrypcją —
+  // subskrypcja daje możliwość składania Zleceń, a nie dostęp do umów.
+  "/inwestor/umowy",
   "/inwestor/abonament",
   "/inwestor/platnosci",
   "/inwestor/profil",

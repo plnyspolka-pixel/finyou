@@ -20,168 +20,109 @@ kodzie i checklistę wdrożeniową.
 
 ---
 
-## Obszar 1 — Umowy inwestora (NDA, powierzenie danych, pośrednictwo finansowe)
+## Obszar 1 — Umowy inwestora (pakiet FY-LEGAL-2026-09-04, paczka prawnika v5)
 
-### Cel
+> **Zmiana architektury (2026-09-04):** właściciel dostarczył paczkę
+> kancelaryjną `Paczka_Inwestor_v5.zip`. Zastępuje ona wcześniejszy plan
+> „NDA + powierzenie + pośrednictwo z placeholderami" — obowiązuje model:
+> **Ramowa umowa pośrednictwa finansowego (02, v5)** → **NDA i zakaz
+> obchodzenia (01, v5)** → **Umowa udostępniania i ochrony danych osobowych
+> (03, v4, Moduł A)** → **Formularz Zlecenia (Załącznik nr 7)** → cykl
+> per Projekt (teaser → Karta Leada → Karta Transferu → Ujawnienie →
+> rezerwacja 24 h + 12 h). Kanoniczne DOCX + `MANIFEST.sha256` leżą w
+> `docs/legal/paczka-inwestor-v5/`.
 
-Każdy inwestor, który kupuje szkolenie **lub** dostaje dostęp do modułu z
-ofertami, ma w systemie komplet trzech umów:
+### Etap U1 — ZROBIONE (uśpione do przeglądu kancelarii)
 
-| Umowa | Kod (`agreement_kind`) |
-| --- | --- |
-| Umowa o zachowaniu poufności (NDA) | `nda` |
-| Umowa powierzenia przetwarzania danych osobowych | `data_processing` |
-| Umowa pośrednictwa finansowego | `financial_intermediation` |
+Zaimplementowane i wdrożone; pakiet startuje z `legal_documents.active=false`
+(inwestor widzi „pakiet w przygotowaniu"), aktywacja jednym przyciskiem w
+`/admin/umowy-inwestorow` **dopiero po potwierdzeniu przeglądu kancelarii**.
 
-Dane osobowe inwestora w umowach pochodzą z **zatwierdzonej weryfikacji
-Didit** (nie z formularza), umowy generują się i archiwizują automatycznie w
-folderze klienta, a firma ma trwały dowód zawarcia każdej z nich (forma
-dokumentowa: kto, kiedy, z jakiego IP, jaka wersja treści, jaki hash pliku).
+- **Migracja `20260904120000_investor_legal_pack.sql`**: rejestr
+  `legal_documents` (kod, wersja, tytuł, SHA-256 pliku DOCX, pełny tekst,
+  DOCX w base64 do doręczeń, `active`), `investors.entity_variant`
+  (osoba_fizyczna/jdg/osoba_prawna) + `is_consumer`,
+  `investor_agreement_acceptances` (ślad audytowy per § 4 ust. 2 / Zał. 5:
+  wersja + hash, snapshot komparycji, oświadczenia, metoda uwierzytelnienia,
+  IP + urządzenie, id doręczenia, sesja Didit; `UNIQUE (user, code,
+  version)`), `legal_deliveries` (doręczenia na trwałym nośniku),
+  `investor_orders` (Zlecenia: kwota ± 15 %, maks. okres, min. zysk roczny,
+  ważność 30/60/90 dni, statusy złożone/przyjęte/wykonane/wygasłe/cofnięte/
+  odmowa, wybór konsumencki per Zlecenie), RPC
+  `investor_legal_pack_complete(user)` + RLS (właściciel / personel).
+- **Server functions** `src/lib/investor-agreements/legal-pack.functions.ts`:
+  stan pakietu, pełne treści, identyfikacja strony (wariant + Konsument),
+  doręczenie pakietu e-mailem z załącznikami DOCX (trwały nośnik — dla
+  Konsumenta obowiązkowe PRZED akceptacją Umowy ramowej, § 15 ust. 1),
+  akceptacja w wymuszonej kolejności ramowa → NDA → RODO z potwierdzeniem
+  e-mail (wersja + SHA-256), Formularz Zlecenia za bramką RPC (komplet 1–5),
+  cofnięcie Zlecenia, panel admina (aktywacja pakietu, dziennik akceptacji,
+  decyzje o Zleceniach: przyjęcie z limitem 3 jednocześnie przyjętych i
+  terminem ważności / odmowa z powodem; leniwe wygaszanie po terminie).
+- **Weryfikacja tożsamości samego inwestora**:
+  `extractDiditPersonalData(decision)` w `src/lib/didit.server.ts` +
+  `src/lib/investor-agreements/didit-self.functions.ts`
+  (`vendor_data = investor:<user_id>`, reużycie aktywnej sesji, dane
+  potwierdzone trafiają do snapshotu komparycji przy każdej akceptacji).
+- **UI**: kreator `/inwestor/umowy` (kroki 1–5 + Formularz Zlecenia + lista
+  Zleceń; **żaden checkbox nie startuje zaznaczony** — § 15 ust. 7,
+  egzekwowane też serwerowo `z.literal(true)`), ścieżka dostępna bez
+  subskrypcji (subskrypcja daje „możliwość składania Zleceń", nie dostęp do
+  umów) oraz `/admin/umowy-inwestorow` (dokumenty + hashe + aktywacja,
+  dziennik akceptacji, decyzje o Zleceniach z SLA 2 dni roboczych).
+- **Forma dokumentowa** (decyzja właściciela): akceptacja w panelu + trwały
+  nośnik e-mail; kwalifikowany e-podpis to świadomie etap późniejszy.
 
-### Co już jest w repo (nie budujemy od zera)
+**Uwagi dla właściciela (nie do pominięcia):**
 
-- **Didit KYC/KYB** — pełna integracja: `src/lib/didit.server.ts` (klient REST
-  + HMAC), `src/lib/didit.functions.ts`, webhook
-  `supabase/functions/didit-webhook/index.ts`, tabela `didit_verifications`
-  z pełnym `decision` (jsonb) — tam są dane z dokumentu tożsamości (imię,
-  nazwisko, numer dokumentu, data urodzenia, adres). Doc: `docs/didit-kyc.md`.
-- **Akceptacje umów** — wzorzec istnieje w module projektów:
-  `project_module_acceptances` (`kind` już zawiera `nda`, `data_processing`;
-  `UNIQUE (user_id, kind, version)`), egzekwowanie w
-  `src/lib/projects/module-access.functions.ts` i
-  `src/components/projects/module-gate.tsx`.
-- **Generowanie dokumentów** — docxtemplater + pizzip:
-  `src/lib/document-generator.functions.ts` (szablony w `document_templates`,
-  wynik w `generated_documents.docx_path/pdf_path`) oraz deterministyczny
-  silnik umowy pożyczki `src/lib/contract-engine/`.
-- **Folder klienta** — jeden prywatny bucket `pliki-klienta`
-  (`src/lib/storage-buckets.ts`), podpisywane URL-e, RLS.
-- **Punkty triggera** — webhook płatności Tpay
-  (`src/lib/access/webhook-core.server.ts`, post-processing po
-  `process_access_payment_paid`) i aktywacja modułu projektów.
+1. W treściach dokumentów prawnik zaszył na sztywno `plnyspolka@gmail.com`
+   i tel. `889 888 700` — każda zmiana tych danych wymaga NOWEJ wersji
+   dokumentu od kancelarii (zmienia się hash).
+2. Aktywacja pakietu = przycisk w `/admin/umowy-inwestorow`, dopiero po
+   przeglądzie kancelarii (w szczególności: sekwencyjne przedstawianie tego
+   samego Projektu kolejnym zleceniodawcom i Kara Obejściowa wobec
+   Konsumenta — pkt 4 uwag wdrożeniowych paczki).
+3. Sekrety Didit produkcyjne (`DIDIT_API_KEY`, `DIDIT_WEBHOOK_SECRET`)
+   trzeba skopiować z konsoli Didit do Lovable — workflowy produkcyjne są
+   już opublikowane (KYC `1612939d…`, KYB `c7f1dde1…`).
 
-Brakuje wyłącznie: ekstrakcji danych osobowych z decyzji Didit do umów,
-trzech szablonów umów, tabeli-rejestru zawartych umów inwestorskich i bramki
-w przepływie inwestora.
+### Etap U2 — DO ZROBIENIA (pełny cykl Zlecenie–Projekt)
 
-### Do zbudowania
-
-**1.1. Treści umów (zadanie właściciela + prawnika, blokujące).**
-Trzy wzory umów w DOCX z placeholderami. Minimalny zestaw pól:
-`{imie_nazwisko}`, `{numer_dokumentu}`, `{rodzaj_dokumentu}`, `{pesel_lub_data_urodzenia}`,
-`{adres}`, `{email}`, `{telefon}`, `{data_zawarcia}`, `{wersja_umowy}`,
-`{didit_session_id}`, `{data_weryfikacji_didit}`; dla firm (KYB) dodatkowo
-`{nazwa_firmy}`, `{nip}`, `{reprezentant}`. Wzory wgrywane jak dotychczasowe
-szablony do `document_templates` (nowe kody:
-`nda_inwestor`, `powierzenie_danych_inwestor`, `posrednictwo_finansowe_inwestor`).
-Wersjonowanie treści jak w `consent_documents` — każda zmiana treści to nowa
-`version`, stare akceptacje pozostają ważne dla swojej wersji.
-
-> Uwaga prawna (do potwierdzenia z obsługą prawną): NDA i umowa powierzenia
-> mogą być zawarte w **formie dokumentowej** (akceptacja w panelu + trwały
-> zapis) — art. 77² KC. Dla umowy pośrednictwa finansowego forma dokumentowa
-> też zwykle wystarcza, ale przy tej umowie warto dodatkowo przewidzieć opcję
-> kwalifikowanego e-podpisu (Autenti/mSzafir) jako etap 2 — w repo nie ma
-> dziś żadnej integracji e-podpisu, więc etap 1 świadomie jej nie wymaga.
-
-**1.2. Ekstrakcja danych osobowych z Didit.**
-Nowa funkcja `extractDiditPersonalData(decision)` w `src/lib/didit.server.ts`
-mapująca `didit_verifications.decision` (sekcje OCR/id_verification) na
-płaską strukturę pól umowy + osobno wariant KYB. Snapshot tych danych
-zapisujemy przy zawarciu umowy (patrz 1.4) — umowa ma odzwierciedlać stan z
-chwili podpisania, nie „aktualny".
-
-**1.3. Didit dla inwestora jako osoby (nie klienta AML).**
-Dziś `didit_verifications` kluczuje po `aml_customer_id` (weryfikacje robione
-przez inwestora *na jego klientach*) oraz po module projektów. Potrzebujemy
-sesji, w której weryfikowany jest **sam inwestor**:
-
-- moduł projektów już to robi (`project_module_access.kyc_status`) — dla
-  inwestorów przechodzących przez projekty **reużywamy tej weryfikacji**;
-- dla inwestorów kupujących sam dostęp/szkolenie: nowa server function
-  `startInvestorSelfVerification` (w `didit.functions.ts`) tworząca sesję KYC
-  z `vendor_data = 'investor:' + user_id`; webhook `didit-webhook` rozszerzyć
-  o rozpoznanie tego prefiksu i zapis z `user_id` zamiast `aml_customer_id`
-  (kolumna `user_id` już istnieje w tabeli).
-
-**1.4. Rejestr umów — migracja `investor_agreements`.**
-
-```sql
-create table investor_agreements (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id),
-  agreement_kind text not null check (agreement_kind in
-    ('nda','data_processing','financial_intermediation')),
-  version text not null,
-  status text not null default 'draft' check (status in ('draft','accepted','void')),
-  didit_session_id text,                -- sesja, z której wzięto dane
-  personal_data_snapshot jsonb not null, -- dane wstawione do umowy
-  generated_document_id uuid references generated_documents(id),
-  pdf_path text,                        -- pliki-klienta/<user_id>/umowy/...
-  content_sha256 text,                  -- hash pliku PDF (dowód integralności)
-  accepted_at timestamptz,
-  accepted_ip inet,
-  accepted_user_agent text,
-  created_at timestamptz not null default now(),
-  unique (user_id, agreement_kind, version)
-);
-```
-
-RLS: właściciel czyta swoje, personel wewnętrzny (`is_internal_staff`)
-wszystko; zapis wyłącznie przez server functions (service role). Wzorzec IP +
-user-agent + data już istnieje w `access_payments.consents` — kopiujemy go.
-
-**1.5. Przepływ (server functions w `src/lib/investor-agreements/`).**
-
-1. `getInvestorAgreementsState` — czego brakuje danemu inwestorowi
-   (weryfikacja Didit? które umowy niepodpisane w bieżącej wersji?).
-2. `prepareInvestorAgreements` — po zatwierdzonym KYC: ekstrakcja danych,
-   render trzech DOCX→PDF (istniejący pipeline `document-generator`),
-   zapis do `pliki-klienta/<user_id>/umowy/<rok>/`, rekordy `draft`.
-3. `acceptInvestorAgreement` — klient w panelu widzi pełną treść PDF,
-   zaznacza akceptację → status `accepted`, `accepted_at/ip/user_agent`,
-   `content_sha256`; potwierdzenie mailem (Resend, istniejący
-   `resend-send.server.ts`) z załączonym PDF — mail jest dodatkowym śladem.
-4. Komplet trzech `accepted` ⇒ flaga podobna do
-   `investor_module_access_active`: SQL `investor_has_signed_agreements(user_id)`.
-
-**1.6. Bramka (gdzie egzekwujemy).**
-
-- **UI/routing**: w `src/routes/inwestor.tsx` — analogicznie do paywalla:
-  inwestor z opłaconym dostępem, ale bez kompletu umów, jest przekierowany na
-  nowy ekran `/inwestor/umowy` (kreator: weryfikacja Didit → podgląd 3 umów →
-  akceptacje). Zakup szkolenia/dostępu **nie jest blokowany** — blokowany
-  jest wgląd w dane ofert.
-- **Server functions**: `assertInvestorFullAccess`
-  (`src/lib/access/guards.server.ts`) rozszerzyć o warunek
-  `investor_has_signed_agreements` — jedna zmiana pokrywa wszystkie RPC ofert.
-- **RLS**: dopiąć warunek do `investor_has_full_access()` w SQL (wzorem
-  migracji `20260719106000_investor_paywall_rls.sql` — wtedy działa też na
-  poziomie bazy, bez dotykania każdej polityki osobno).
-- **Trigger po płatności**: w post-processingu webhooka Tpay
-  (`webhook-core.server.ts`) — mail „dokończ formalności" z linkiem do
-  `/inwestor/umowy`, jeśli umowy niekompletne.
-- Moduł projektów: obecne akceptacje `project_module_acceptances` zostają
-  (dotyczą regulaminu modułu); docelowo NDA/powierzenie w module projektów
-  wskazują na te same wzory, żeby nie utrzymywać dwóch treści NDA.
-
-**1.7. Panel administratora.**
-Nowa podstrona `/admin/umowy-inwestorow`: lista inwestorów × 3 umowy,
-status, wersja, data/IP akceptacji, link do PDF (signed URL), filtr „brak
-kompletu". To jest ekran „wykazania się" — jedno kliknięcie od dowodu.
+1. **Teaser per Zlecenie** — generowanie teasera wyłącznie dla pary
+   Projekt–Zlecenie (system NIE może mieć ścieżki teasera bez numeru
+   Zlecenia — uwaga wdrożeniowa nr 2 paczki).
+2. **Karta Leada (Załącznik nr 1)** per para Projekt–Zlecenie: pola
+   Nr Zlecenia, Parametry, Przyjęcie/Dopasowanie; akceptacja Karty Leada
+   PRZED Ujawnieniem Identyfikującym; dla Konsumenta odrębne, logowane
+   uzgodnienie Kary Obejściowej.
+3. **Rezerwacje**: wyłączność 24 h (+12 h przedłużenia) wobec innych
+   zleceniodawców; dziennik: przyjęcie Zlecenia, Dopasowanie, przypisanie
+   Projektu, rezerwacja, decyzja, przekazanie do kolejnego Zlecenia —
+   każde z datą i wersją dokumentów.
+4. **Karta Transferu Danych** (Moduł RODO) zatwierdzana per Projekt przed
+   Ujawnieniem; **Załącznik nr 6** (dyspozycja Klienta + klauzula
+   prowizyjna) przy wypłacie — Prowizja Klientowska 7 % / min 5000 zł na
+   rachunek Finance You najpóźniej z pierwszą wypłatą.
+5. **Internetowa funkcja odstąpienia** dla Konsumenta (wzór — Załącznik
+   nr 4) + obsługa 14-dniowego biegu terminu per Zlecenie.
+6. **Przystąpienia spółek** do NDA (Załącznik nr 1 NDA) dla podmiotów
+   innych niż Inwestor.
+7. **Język systemu i marketingu**: wymienić każde „dostęp do Projektów /
+   spraw / okazji" na „możliwość składania Zleceń" (§ 5 ust. 7);
+   subskrypcja = bramka składania Zleceń.
+8. Stary plan `investor_agreements`/`agreement_kind` (nda, data_processing,
+   financial_intermediation) jest NIEAKTUALNY — nie implementować.
 
 ### Checklista produkcyjna obszaru 1
 
-- [ ] Treści 3 umów zatwierdzone przez prawnika, wgrane jako szablony DOCX.
-- [ ] Migracje: `investor_agreements` + `investor_has_signed_agreements` + RLS.
-- [ ] Rozszerzenie webhooka Didit o `vendor_data = investor:<user_id>`.
-- [ ] Opublikowanie **produkcyjnych** workflowów Didit i podmiana ID
-      (draftowe ID są w `docs/didit-kyc.md`; sekrety: `DIDIT_API_KEY`,
-      `DIDIT_WORKFLOW_ID_KYC/KYB`, `DIDIT_WEBHOOK_SECRET`).
-- [ ] Kreator `/inwestor/umowy` + bramka w guards + RLS.
-- [ ] `/admin/umowy-inwestorow`.
-- [ ] Test end-to-end na koncie testowym: zakup → KYC → 3 umowy → dostęp do
-      ofert; sprawdzenie, że PDF-y leżą w `pliki-klienta/<user>/umowy/`.
+- [x] Kanoniczne DOCX + manifest SHA-256 w repo.
+- [x] Migracja pakietu + RLS + RPC (wdrożona na produkcję, pakiet uśpiony).
+- [x] Kreator `/inwestor/umowy` + `/admin/umowy-inwestorow`.
+- [x] Ekstrakcja danych Didit + samoweryfikacja inwestora.
+- [ ] Sekrety Didit produkcyjne w Lovable (właściciel, z konsoli).
+- [ ] Przegląd kancelarii → aktywacja pakietu przyciskiem.
+- [ ] Etap U2 (cykl Zlecenie–Projekt, pkt 1–7 wyżej).
+- [ ] Test end-to-end na koncie testowym po aktywacji.
 
 ---
 
@@ -657,7 +598,7 @@ Decyzje podjęte przez właściciela (31.08.2026):
 | Obszar 4 — agent korespondencji | **ZROBIONE**: klasyfikacja maili, propozycje zmian kryteriów (1 kliknięcie), pętla pytania→klient→odpowiedź→instytucje |
 | Obszar 5 — pipeline analityczny | **ZROBIONE**: KW→właściciele→analiza KW→ryzyko dla kompletnych wniosków ze score>50; sekcja analityczna na karcie oferty |
 | Obszar 2 — boty ElevenLabs | **ZROBIONE (kod)**: SMS dwukierunkowy, agenty A1–A3 (tworzenie z `/admin/text-agent`), webhook toole (`/api/public/agent-tools`), `issue_invoice`, przełącznik widgetów, kanały async przez turę tekstową z fallbackiem — patrz `docs/boty-elevenlabs.md`; wygaszenie starego silnika po stabilizacji logów |
-| Obszar 1 — umowy inwestora | **CELOWO NA KOŃCU** (decyzja właściciela — projekty umów + kod razem, po poprawkach prawnika) |
+| Obszar 1 — umowy inwestora | **Etap U1 WDROŻONY (uśpiony)** — paczka prawnika v5 w systemie, aktywacja po przeglądzie kancelarii; Etap U2 (cykl Zlecenie–Projekt) do zrobienia |
 
 Kroki wdrożeniowe po merge'u: zastosować migracje `20260831*` (supabase db
 push / panel), ustawić sekrety `AGENT_TOOLS_SECRET` (+ istniejące ElevenLabs/

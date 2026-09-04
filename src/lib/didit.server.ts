@@ -74,6 +74,51 @@ function requireApiKey(): string {
 }
 
 /** Tworzy sesję weryfikacji Didit i zwraca link, pod którym użytkownik ją przejdzie. */
+/** Płaskie dane osobowe wyciągnięte z decyzji Didit (KYC) — do komparycji
+ *  umów i snapshotów akceptacji. Wszystkie pola opcjonalne (różne workflowy
+ *  zwracają różne sekcje); ekstrakcja toleruje oba układy decision
+ *  (decision.id_verification oraz decision.kyc / top-level). */
+export interface DiditPersonalData {
+  fullName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  documentType: string | null;
+  documentNumber: string | null;
+  personalNumber: string | null; // PESEL / personal identification number
+  dateOfBirth: string | null;
+  address: string | null;
+  issuingCountry: string | null;
+}
+
+export function extractDiditPersonalData(decision: unknown): DiditPersonalData {
+  const d = (decision ?? {}) as Record<string, any>;
+  const idv = d.id_verification ?? d.kyc ?? d.id_verifications?.[0] ?? d;
+  const pick = (...vals: unknown[]): string | null => {
+    for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
+    return null;
+  };
+  const first = pick(idv.first_name, idv.given_names, d.first_name);
+  const last = pick(idv.last_name, idv.surname, d.last_name);
+  return {
+    fullName: pick(idv.full_name, d.full_name, [first, last].filter(Boolean).join(" ") || null),
+    firstName: first,
+    lastName: last,
+    documentType: pick(idv.document_type, d.document_type),
+    documentNumber: pick(idv.document_number, d.document_number),
+    personalNumber: pick(idv.personal_number, idv.personal_identification_number, d.personal_number),
+    dateOfBirth: pick(idv.date_of_birth, d.date_of_birth, idv.birth_date),
+    address: pick(
+      idv.address,
+      idv.formatted_address,
+      d.address,
+      typeof idv.parsed_address === "object" && idv.parsed_address
+        ? Object.values(idv.parsed_address).filter(Boolean).join(", ")
+        : null,
+    ),
+    issuingCountry: pick(idv.issuing_state_name, idv.issuing_state, d.issuing_state_name),
+  };
+}
+
 export async function createDiditSession(input: {
   workflowId: string;
   vendorData?: string;

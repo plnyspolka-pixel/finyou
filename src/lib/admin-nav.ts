@@ -339,6 +339,14 @@ export const adminSections: AdminSection[] = [
         synonyms: ["inwestor", "baza inwestorow"],
       },
       {
+        to: "/admin/umowy-inwestorow",
+        label: "Umowy inwestorów",
+        icon: FileCheck,
+        description:
+          "Pakiet FY-LEGAL-2026-09-04: dokumenty z hashami, aktywacja po przeglądzie kancelarii, dziennik akceptacji i decyzje o Zleceniach.",
+        synonyms: ["umowy", "nda", "zlecenia", "pakiet prawny", "akceptacje"],
+      },
+      {
         to: "/admin/projekty",
         label: "Projekty inwestycyjne",
         icon: FolderOpen,
