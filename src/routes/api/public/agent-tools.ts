@@ -19,13 +19,28 @@ function unauthorized(): Response {
   return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
 }
 
+/** Kontakt z żądania: zmienne dynamiczne (lead_id/phone/email) LUB dane
+ *  zebrane przez model w args (anonimowy chat — telefon/e-mail z rozmowy). */
+function contactFromBody(body: any): { phone: string | null; email: string | null } {
+  const args = body?.args ?? {};
+  const patch = args?.patch ?? {};
+  const phone =
+    [body.phone, args.phone, patch.phone, patch.telefon].find(
+      (v) => typeof v === "string" && v.trim(),
+    ) ?? null;
+  const email =
+    [body.email, args.email, patch.email].find((v) => typeof v === "string" && v.trim()) ?? null;
+  return { phone, email: email ? String(email).trim().toLowerCase() : null };
+}
+
 async function resolveLeadId(body: any): Promise<string | null> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   if (typeof body.lead_id === "string" && body.lead_id) return body.lead_id;
 
-  if (typeof body.phone === "string" && body.phone) {
+  const { phone, email } = contactFromBody(body);
+  if (phone) {
     const { normalizePolishPhone } = await import("@/lib/phone");
-    const { normalized } = normalizePolishPhone(body.phone);
+    const { normalized } = normalizePolishPhone(phone);
     if (normalized) {
       const { data } = await supabaseAdmin
         .from("leads")
@@ -37,11 +52,11 @@ async function resolveLeadId(body: any): Promise<string | null> {
       if (data?.id) return data.id;
     }
   }
-  if (typeof body.email === "string" && body.email) {
+  if (email) {
     const { data } = await supabaseAdmin
       .from("leads")
       .select("id")
-      .eq("email", String(body.email).trim().toLowerCase())
+      .eq("email", email)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -95,11 +110,30 @@ export const Route = createFileRoute("/api/public/agent-tools")({
         try {
           // ── Narzędzia zapisu — reuse istniejącego executor-a botów ─────────
           if (WRITE_TOOLS.has(tool)) {
-            const leadId = await resolveLeadId(body);
+            let leadId = await resolveLeadId(body);
+            // Anonimowy rozmówca z chatu: pierwszy zapis danych zakłada leada
+            // z kontaktu zebranego w rozmowie (jak stary chat-widget).
+            if (!leadId && tool === "update_lead_data") {
+              const { phone, email } = contactFromBody(body);
+              if (phone || email) {
+                const { normalizePolishPhone } = await import("@/lib/phone");
+                const { normalized } = normalizePolishPhone(phone ?? "");
+                const { upsertLeadFromSource } = await import("@/lib/lead-comms.server");
+                leadId = await upsertLeadFromSource({
+                  type: "pozyczkowy",
+                  source: "agent_tool",
+                  phoneRaw: phone,
+                  phoneNormalized: normalized,
+                  email,
+                  applicationData: {},
+                });
+              }
+            }
             if (!leadId) {
               return Response.json({
                 ok: false,
-                error: "Nie znaleziono leada — podaj lead_id, telefon albo e-mail rozmówcy.",
+                error:
+                  "Nie znaleziono rozmówcy w systemie — poproś o numer telefonu lub e-mail i przekaż go w args.",
               });
             }
             const { executeTool } = await import("@/lib/elevenlabs-text-agent.server");
