@@ -83,6 +83,7 @@ import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiado
 import { Route as KartaTokenRouteImport } from './routes/karta.$token'
 import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windykacja'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
+import { Route as InwestorUmowyRouteImport } from './routes/inwestor.umowy'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProjektyRouteImport } from './routes/inwestor.projekty'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
@@ -107,6 +108,7 @@ import { Route as AdminWnioskiNiekompletneRouteImport } from './routes/admin.wni
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminVideoPipelineRouteImport } from './routes/admin.video-pipeline'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
+import { Route as AdminUmowyInwestorowRouteImport } from './routes/admin.umowy-inwestorow'
 import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
 import { Route as AdminTablicaRouteImport } from './routes/admin.tablica'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
@@ -637,6 +639,11 @@ const InwestorWiadomosciRoute = InwestorWiadomosciRouteImport.update({
   path: '/wiadomosci',
   getParentRoute: () => InwestorRoute,
 } as any)
+const InwestorUmowyRoute = InwestorUmowyRouteImport.update({
+  id: '/umowy',
+  path: '/umowy',
+  getParentRoute: () => InwestorRoute,
+} as any)
 const InwestorSzkoleniaRoute = InwestorSzkoleniaRouteImport.update({
   id: '/szkolenia',
   path: '/szkolenia',
@@ -757,6 +764,11 @@ const AdminVideoPipelineRoute = AdminVideoPipelineRouteImport.update({
 const AdminUstawieniaRoute = AdminUstawieniaRouteImport.update({
   id: '/ustawienia',
   path: '/ustawienia',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUmowyInwestorowRoute = AdminUmowyInwestorowRouteImport.update({
+  id: '/umowy-inwestorow',
+  path: '/umowy-inwestorow',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminTextAgentRoute = AdminTextAgentRouteImport.update({
@@ -1693,6 +1705,7 @@ export interface FileRoutesByFullPath {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/tablica': typeof AdminTablicaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
+  '/admin/umowy-inwestorow': typeof AdminUmowyInwestorowRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/video-pipeline': typeof AdminVideoPipelineRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
@@ -1717,6 +1730,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/projekty': typeof InwestorProjektyRouteWithChildren
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
+  '/inwestor/umowy': typeof InwestorUmowyRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/karta/$token': typeof KartaTokenRoute
@@ -1946,6 +1960,7 @@ export interface FileRoutesByTo {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/tablica': typeof AdminTablicaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
+  '/admin/umowy-inwestorow': typeof AdminUmowyInwestorowRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/video-pipeline': typeof AdminVideoPipelineRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
@@ -1968,6 +1983,7 @@ export interface FileRoutesByTo {
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
+  '/inwestor/umowy': typeof InwestorUmowyRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/karta/$token': typeof KartaTokenRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
@@ -2200,6 +2216,7 @@ export interface FileRoutesById {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/tablica': typeof AdminTablicaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
+  '/admin/umowy-inwestorow': typeof AdminUmowyInwestorowRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/video-pipeline': typeof AdminVideoPipelineRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
@@ -2224,6 +2241,7 @@ export interface FileRoutesById {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/projekty': typeof InwestorProjektyRouteWithChildren
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
+  '/inwestor/umowy': typeof InwestorUmowyRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/karta/$token': typeof KartaTokenRoute
@@ -2460,6 +2478,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/tablica'
     | '/admin/text-agent'
+    | '/admin/umowy-inwestorow'
     | '/admin/ustawienia'
     | '/admin/video-pipeline'
     | '/admin/voicebot'
@@ -2484,6 +2503,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/projekty'
     | '/inwestor/szkolenia'
+    | '/inwestor/umowy'
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
     | '/karta/$token'
@@ -2713,6 +2733,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/tablica'
     | '/admin/text-agent'
+    | '/admin/umowy-inwestorow'
     | '/admin/ustawienia'
     | '/admin/video-pipeline'
     | '/admin/voicebot'
@@ -2735,6 +2756,7 @@ export interface FileRouteTypes {
     | '/inwestor/platnosci'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
+    | '/inwestor/umowy'
     | '/inwestor/wiadomosci'
     | '/karta/$token'
     | '/klient/powiadomienia'
@@ -2966,6 +2988,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/tablica'
     | '/admin/text-agent'
+    | '/admin/umowy-inwestorow'
     | '/admin/ustawienia'
     | '/admin/video-pipeline'
     | '/admin/voicebot'
@@ -2990,6 +3013,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/projekty'
     | '/inwestor/szkolenia'
+    | '/inwestor/umowy'
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
     | '/karta/$token'
@@ -3775,6 +3799,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorWiadomosciRouteImport
       parentRoute: typeof InwestorRoute
     }
+    '/inwestor/umowy': {
+      id: '/inwestor/umowy'
+      path: '/umowy'
+      fullPath: '/inwestor/umowy'
+      preLoaderRoute: typeof InwestorUmowyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
     '/inwestor/szkolenia': {
       id: '/inwestor/szkolenia'
       path: '/szkolenia'
@@ -3941,6 +3972,13 @@ declare module '@tanstack/react-router' {
       path: '/ustawienia'
       fullPath: '/admin/ustawienia'
       preLoaderRoute: typeof AdminUstawieniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/umowy-inwestorow': {
+      id: '/admin/umowy-inwestorow'
+      path: '/umowy-inwestorow'
+      fullPath: '/admin/umowy-inwestorow'
+      preLoaderRoute: typeof AdminUmowyInwestorowRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/text-agent': {
@@ -5126,6 +5164,7 @@ interface AdminRouteChildren {
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminTablicaRoute: typeof AdminTablicaRoute
   AdminTextAgentRoute: typeof AdminTextAgentRoute
+  AdminUmowyInwestorowRoute: typeof AdminUmowyInwestorowRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
   AdminVideoPipelineRoute: typeof AdminVideoPipelineRoute
   AdminVoicebotRoute: typeof AdminVoicebotRoute
@@ -5207,6 +5246,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminTablicaRoute: AdminTablicaRoute,
   AdminTextAgentRoute: AdminTextAgentRoute,
+  AdminUmowyInwestorowRoute: AdminUmowyInwestorowRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
   AdminVideoPipelineRoute: AdminVideoPipelineRoute,
   AdminVoicebotRoute: AdminVoicebotRoute,
@@ -5324,6 +5364,7 @@ interface InwestorRouteChildren {
   InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorProjektyRoute: typeof InwestorProjektyRouteWithChildren
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
+  InwestorUmowyRoute: typeof InwestorUmowyRoute
   InwestorWiadomosciRoute: typeof InwestorWiadomosciRoute
   InwestorWindykacjaRoute: typeof InwestorWindykacjaRouteWithChildren
   InwestorIndexRoute: typeof InwestorIndexRoute
@@ -5342,6 +5383,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorProfilRoute: InwestorProfilRoute,
   InwestorProjektyRoute: InwestorProjektyRouteWithChildren,
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
+  InwestorUmowyRoute: InwestorUmowyRoute,
   InwestorWiadomosciRoute: InwestorWiadomosciRoute,
   InwestorWindykacjaRoute: InwestorWindykacjaRouteWithChildren,
   InwestorIndexRoute: InwestorIndexRoute,
