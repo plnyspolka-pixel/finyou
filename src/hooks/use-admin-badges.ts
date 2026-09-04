@@ -24,6 +24,20 @@ export function useAdminBadges(): Record<string, number> {
         // Brak dostępu (RLS) — bez badge'a.
       }
 
+      // Auto-dystrybucja: propozycje wysyłek do instytucji czekające na
+      // zatwierdzenie (sekcja Sprzedaż). Tabela spoza wygenerowanych typów
+      // klienta — stąd rzutowanie (jak przy innych tabelach agentów).
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { count } = await (supabase as any)
+          .from("auto_distribution_proposals")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "proposed");
+        if (count) badges.autoDystrybucjaDoZatwierdzenia = count;
+      } catch {
+        // Brak dostępu (RLS) — bez badge'a.
+      }
+
       // TODO: `nieprzeczytaneMaile` i `nieprzeczytaneDM` — tabela
       // `lead_communications` nie ma flagi przeczytania (brak kolumny w schemacie),
       // więc nie da się policzyć nieprzeczytanych bez zmiany schematu. Po dodaniu
