@@ -82,9 +82,13 @@ Zaimplementowane i wdrożone; pakiet startuje z `legal_documents.active=false`
    przeglądzie kancelarii (w szczególności: sekwencyjne przedstawianie tego
    samego Projektu kolejnym zleceniodawcom i Kara Obejściowa wobec
    Konsumenta — pkt 4 uwag wdrożeniowych paczki).
-3. Sekrety Didit produkcyjne (`DIDIT_API_KEY`, `DIDIT_WEBHOOK_SECRET`)
-   trzeba skopiować z konsoli Didit do Lovable — workflowy produkcyjne są
-   już opublikowane (KYC `1612939d…`, KYB `c7f1dde1…`).
+3. ~~Sekrety Didit~~ ZAŁATWIONE (2026-09-07): `DIDIT_API_KEY` i
+   `DIDIT_WEBHOOK_SECRET` były już w Lovable od lipca;
+   `DIDIT_WORKFLOW_ID_KYC/KYB` ustawione na produkcyjne workflowy
+   (KYC `1612939d…`, KYB `c7f1dde1…`). Webhook w konsoli Didit przekierowany
+   z nieistniejącego `financeyou.pl/api/public/didit-webhook` (100 % błędów
+   dostaw) na edge function
+   `https://jqvepxhulxdnbwbogkhe.supabase.co/functions/v1/didit-webhook`.
 
 ### Etap U2 — ZROBIONE (pełny cykl Zlecenie–Projekt; aktywny razem z pakietem)
 
@@ -130,7 +134,7 @@ punktów 1–7 poniżej — wszystkie pokryte:
 - [x] Migracja pakietu + RLS + RPC (wdrożona na produkcję, pakiet uśpiony).
 - [x] Kreator `/inwestor/umowy` + `/admin/umowy-inwestorow`.
 - [x] Ekstrakcja danych Didit + samoweryfikacja inwestora.
-- [ ] Sekrety Didit produkcyjne w Lovable (właściciel, z konsoli).
+- [x] Sekrety Didit produkcyjne w Lovable + naprawiony URL webhooka w konsoli Didit.
 - [ ] Przegląd kancelarii → aktywacja pakietu przyciskiem.
 - [x] Etap U2 (cykl Zlecenie–Projekt, pkt 1–7 wyżej).
 - [ ] Test end-to-end na koncie testowym po aktywacji.
