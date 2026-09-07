@@ -71,7 +71,7 @@ export const Route = createFileRoute("/dla-inwestora")({
       {
         name: "description",
         content:
-          "Dołącz do Klubu Inwestorów Hipotecznych Finance You: dostęp do spraw klientów, Akademia inwestora, wzory dokumentów, narzędzia AI, CRM i wsparcie compliance.",
+          "Dołącz do Klubu Inwestorów Hipotecznych Finance You: możliwość składania Zleceń, Akademia inwestora, wzory dokumentów, narzędzia AI, CRM i wsparcie compliance.",
       },
       { property: "og:title", content: "Dla inwestorów — Finance You" },
       {
@@ -294,8 +294,8 @@ const FAQS = [
     a: "Dostęp do spraw, szkolenia, wzory dokumentów, procedury, bazę wiedzy, narzędzia AI, CRM oraz wsparcie compliance.",
   },
   {
-    q: "Czy mam dostęp do spraw klientów?",
-    a: "Tak. Uzyskujesz dostęp do zgłoszeń klientów szukających finansowania pod zabezpieczenie nieruchomości.",
+    q: "Czy mogę finansować sprawy klientów?",
+    a: "Tak. Zyskujesz możliwość składania Zleceń — na ich podstawie przedstawiamy Ci dopasowane projekty klientów szukających finansowania pod zabezpieczenie nieruchomości.",
   },
   {
     q: "Jak działa AI?",

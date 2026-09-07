@@ -445,6 +445,23 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
       .select("id, order_seq")
       .single();
     if (error) throw new Error(error.message);
+    // Dziennik cyklu (Etap U2) — złożenie Zlecenia z wersjami dokumentów.
+    try {
+      const { data: docs } = await loose(supabaseAdmin)
+        .from("legal_documents")
+        .select("code, version, sha256")
+        .eq("active", true);
+      await loose(supabaseAdmin).from("investor_order_events").insert({
+        order_id: inserted.id,
+        event_type: "zlecenie_zlozone",
+        payload: { order_no: `FY-Z-${inserted.order_seq}` },
+        document_versions: docs ?? [],
+        actor: userId,
+        actor_kind: "inwestor",
+      });
+    } catch (e) {
+      console.error("[legal-pack] order event log failed", e);
+    }
     return { ok: true, orderId: inserted.id, orderNo: `FY-Z-${inserted.order_seq}` };
   });
 
@@ -562,6 +579,17 @@ export const decideInvestorOrder = createServerFn({ method: "POST" })
         .eq("id", order.id)
         .eq("status", "zlozone");
       if (error) throw new Error(error.message);
+      try {
+        await loose(supabaseAdmin).from("investor_order_events").insert({
+          order_id: order.id,
+          event_type: "zlecenie_przyjete",
+          payload: { expires_at: expires.toISOString() },
+          actor: context.userId,
+          actor_kind: "admin",
+        });
+      } catch (e) {
+        console.error("[legal-pack] order event log failed", e);
+      }
       return { ok: true };
     }
 

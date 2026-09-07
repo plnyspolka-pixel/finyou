@@ -17,6 +17,7 @@ import {
   setLegalPackActive,
   decideInvestorOrder,
 } from "@/lib/investor-agreements/legal-pack.functions";
+import { OrderCycleAdminSection } from "@/components/admin/order-cycle-admin";
 
 export const Route = createFileRoute("/admin/umowy-inwestorow")({
   component: AdminUmowyPage,
@@ -52,6 +53,9 @@ function AdminUmowyPage() {
       />
       <DocumentsCard state={state} onDone={refresh} />
       <OrdersCard state={state} onDone={refresh} />
+      {/* Etap U2: cykl Zlecenie–Projekt (Dopasowania, Karta Transferu,
+          decyzje, Zał. 6, przystąpienia NDA, odstąpienia, dziennik). */}
+      <OrderCycleAdminSection />
       <AcceptancesCard state={state} />
     </div>
   );
