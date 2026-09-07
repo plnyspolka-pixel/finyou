@@ -5,7 +5,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, Loader2, Lock, Unlock } from "lucide-react";
+import { CheckCircle2, FileText, Loader2, Lock, Unlock, X } from "lucide-react";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   getLegalPackAdminState,
+  getLegalDocumentText,
   setLegalPackActive,
   decideInvestorOrder,
 } from "@/lib/investor-agreements/legal-pack.functions";
@@ -111,25 +112,61 @@ function DocumentsCard({ state, onDone }: { state: any; onDone: () => void }) {
           </p>
         ) : null}
         {docs.map((d: any) => (
-          <div
-            key={d.code}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm"
-          >
-            <div>
-              <div className="font-medium">
-                {d.title} <span className="text-muted-foreground">({d.version})</span>
-              </div>
-              <div className="font-mono text-[11px] text-muted-foreground break-all">
-                SHA-256: {d.sha256}
-              </div>
-            </div>
-            <Badge className={d.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}>
-              {d.active ? "aktywny" : "uśpiony"}
-            </Badge>
-          </div>
+          <DocumentRow key={d.code} doc={d} />
         ))}
       </CardContent>
     </Card>
+  );
+}
+
+/** Wiersz dokumentu + rozwijany podgląd pełnej treści (z rejestru w bazie —
+ *  dokładnie to, co zobaczy inwestor w kreatorze akceptacji). */
+function DocumentRow({ doc }: { doc: any }) {
+  const fetchText = useServerFn(getLegalDocumentText);
+  const [open, setOpen] = useState(false);
+  const { data: text, isLoading } = useQuery({
+    queryKey: ["legal-doc-text-admin", doc.code, doc.version],
+    queryFn: () => fetchText({ data: { code: doc.code } }),
+    enabled: open,
+    staleTime: Infinity,
+  });
+  return (
+    <div className="rounded-md border text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 p-3">
+        <div>
+          <div className="font-medium">
+            {doc.title} <span className="text-muted-foreground">({doc.version})</span>
+          </div>
+          <div className="font-mono text-[11px] text-muted-foreground break-all">
+            SHA-256: {doc.sha256}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setOpen((v) => !v)}>
+            {open ? <X className="mr-2 h-3.5 w-3.5" /> : <FileText className="mr-2 h-3.5 w-3.5" />}
+            {open ? "Zamknij podgląd" : "Podgląd treści"}
+          </Button>
+          <Badge
+            className={doc.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}
+          >
+            {doc.active ? "aktywny" : "uśpiony"}
+          </Badge>
+        </div>
+      </div>
+      {open ? (
+        <div className="border-t bg-muted/30 p-3">
+          {isLoading ? (
+            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Wczytywanie treści…
+            </p>
+          ) : (
+            <div className="max-h-[70vh] overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed">
+              {text?.content_text ?? "Brak treści w rejestrze."}
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
