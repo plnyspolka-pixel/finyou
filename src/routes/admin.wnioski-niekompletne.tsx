@@ -1024,12 +1024,10 @@ export function ApplicationsPage({
                     </div>
 
                     <div className="flex items-center justify-between gap-2 border-t pt-2">
-                      <span
-                        className="text-[11px] text-muted-foreground"
-                        title={`Utworzono: ${fmtDate(r.created_at)}`}
-                      >
-                        {fmtDate(r.updated_at)}
-                      </span>
+                      <div className="text-[11px] text-muted-foreground leading-tight">
+                        <div>Utworzono: {fmtDate(r.created_at)}</div>
+                        <div>Aktualizacja: {fmtDate(r.updated_at)}</div>
+                      </div>
                       {rowActions(r, d)}
                     </div>
                   </div>
@@ -1039,7 +1037,7 @@ export function ApplicationsPage({
 
           {/* Desktop: pełna tabela; min-w wymusza poziomy scroll zamiast miażdżenia
               kolumn, gdy kontener jest węższy (wrapper Table ma overflow-auto). */}
-          <Table className="hidden md:table w-full table-fixed min-w-[1000px] text-sm [&_th]:text-xs">
+          <Table className="hidden md:table w-full table-fixed min-w-[1100px] text-sm [&_th]:text-xs">
             <TableHeader>
               <TableRow>
                 <SortHeader
@@ -1047,35 +1045,42 @@ export function ApplicationsPage({
                   k="name"
                   sort={sort}
                   setSort={setSort}
-                  className="w-[17%]"
+                  className="w-[15%]"
                 />
-                <TableHead className="w-[15%]">Kontakt</TableHead>
+                <TableHead className="w-[14%]">Kontakt</TableHead>
                 <SortHeader
                   label="Status"
                   k="status"
                   sort={sort}
                   setSort={setSort}
-                  className="w-[10%]"
+                  className="w-[9%]"
                 />
-                <TableHead className="w-[13%]">Braki</TableHead>
+                <TableHead className="w-[12%]">Braki</TableHead>
                 <SortHeader
                   label="Kwota"
                   k="loan_amount"
                   sort={sort}
                   setSort={setSort}
-                  className="text-right w-[9%]"
+                  className="text-right w-[8%]"
                 />
-                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} className="w-[11%]" />
+                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} className="w-[10%]" />
                 <SortHeader
                   label="Lokalizacja"
                   k="location"
                   sort={sort}
                   setSort={setSort}
-                  className="w-[11%]"
+                  className="w-[10%]"
                 />
                 <SortHeader
                   label="Pliki"
                   k="media"
+                  sort={sort}
+                  setSort={setSort}
+                  className="w-[7%]"
+                />
+                <SortHeader
+                  label="Utworzono"
+                  k="created_at"
                   sort={sort}
                   setSort={setSort}
                   className="w-[8%]"
@@ -1093,14 +1098,14 @@ export function ApplicationsPage({
             <TableBody>
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                     Ładowanie…
                   </TableCell>
                 </TableRow>
               )}
               {!loading && filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                     Brak wniosków.
                   </TableCell>
                 </TableRow>
@@ -1232,12 +1237,8 @@ export function ApplicationsPage({
                         />
                       </div>
                     </TableCell>
-                    <TableCell
-                      className="text-xs align-top"
-                      title={`Utworzono: ${fmtDate(r.created_at)}`}
-                    >
-                      {fmtDate(r.updated_at)}
-                    </TableCell>
+                    <TableCell className="text-xs align-top">{fmtDate(r.created_at)}</TableCell>
+                    <TableCell className="text-xs align-top">{fmtDate(r.updated_at)}</TableCell>
                     <TableCell className="text-right align-top">{rowActions(r, d)}</TableCell>
                   </TableRow>
                 );

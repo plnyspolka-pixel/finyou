@@ -225,6 +225,21 @@ export const adminSections: AdminSection[] = [
         synonyms: ["followup", "braki", "przypomnienia o brakach"],
       },
       {
+        to: "/admin/auto-dystrybucja",
+        label: "Auto-dystrybucja",
+        icon: Send,
+        description:
+          "Automatyczne dopasowanie kompletnych wniosków do instytucji wg kryteriów; wysyłka po zatwierdzeniu.",
+        synonyms: [
+          "auto dystrybucja",
+          "automat wysylki",
+          "kryteria instytucji",
+          "do zatwierdzenia",
+          "inwestorzy instytucjonalni",
+        ],
+        badgeKey: "autoDystrybucjaDoZatwierdzenia",
+      },
+      {
         to: "/admin/kreator-pozyczki",
         label: "Kreator pożyczki",
         icon: Wand2,
@@ -366,14 +381,6 @@ export const adminSections: AdminSection[] = [
         icon: Send,
         description: "Wysyłka ofert do inwestorów i śledzenie odpowiedzi.",
         synonyms: ["dystrybucja", "wysylka ofert"],
-      },
-      {
-        to: "/admin/auto-dystrybucja",
-        label: "Auto-dystrybucja",
-        icon: Send,
-        description:
-          "Automatyczne dopasowanie kompletnych wniosków do instytucji wg kryteriów; wysyłka po zatwierdzeniu.",
-        synonyms: ["auto dystrybucja", "automat wysylki", "kryteria instytucji"],
       },
       {
         to: "/admin/karty-ofert",
