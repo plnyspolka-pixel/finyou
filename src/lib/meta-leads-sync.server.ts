@@ -1,6 +1,8 @@
 // Pełna logika pull-a leadów z Meta (Graph API) – wywoływana z:
 // - createServerFn (admin "Sync Meta leads" w panelu)
 // - cron hooka /api/public/hooks/meta-leads-pull (co minutę)
+import { extractLoanAmount, extractPropertyTypeRaw } from "@/lib/meta-lead-answers.server";
+
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 function normPhone(p: string): string {
@@ -293,6 +295,17 @@ export async function runMetaLeadsSync(): Promise<{
             loanApplicationId = app?.id ?? null;
           }
 
+          // Odpowiedzi z formularza (kwota, typ nieruchomości) → dane wniosku.
+          if (loanApplicationId) {
+            try {
+              const { applyMetaAnswersToApplication } =
+                await import("@/lib/meta-lead-answers.server");
+              await applyMetaAnswersToApplication(supabaseAdmin, loanApplicationId, fd);
+            } catch (e: any) {
+              summary.errors.push(`answers ${leadgenId}: ${e?.message ?? e}`);
+            }
+          }
+
           const { data: inserted } = await supabaseAdmin
             .from("meta_leads")
             .upsert(
@@ -326,7 +339,12 @@ export async function runMetaLeadsSync(): Promise<{
               metaCampaignId: lead.campaign_id ?? null,
               loanApplicationId,
               clientId,
-              applicationData: { meta_field_data: fd, return_link: returnLink },
+              applicationData: {
+                meta_field_data: fd,
+                return_link: returnLink,
+                loan_amount: extractLoanAmount(fd) ?? undefined,
+                typ_nieruchomosci: extractPropertyTypeRaw(fd) ?? undefined,
+              },
             });
             // Meta Lead Forms wymagają zgody w formularzu — mapujemy do kolumn consent_*
             if (unifiedLeadId) {

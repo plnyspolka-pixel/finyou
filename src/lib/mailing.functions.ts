@@ -54,11 +54,19 @@ async function sendViaLovable(args: {
     message_id: messageId,
     queued_at: new Date().toISOString(),
   };
-  const { error } = await supabaseAdmin.rpc("enqueue_email", {
-    queue_name: "transactional_emails",
-    payload,
+  // Wysyłka bezpośrednio przez działającą bramkę Resend — RPC enqueue_email
+  // wskazywał nieistniejącą kolejkę i maile ginęły (poprawka z sandboxa
+  // Lovable, 2026-09-04; przeniesiona do repo).
+  const { sendViaResend } = await import("@/lib/email-marketing.server");
+  await sendViaResend({
+    from: payload.from,
+    to: args.to,
+    subject: payload.subject,
+    html: payload.html,
+    text: payload.text,
+    tags: [{ name: "label", value: String(payload.label).slice(0, 60) }],
+    headers: { "X-Entity-Ref-ID": String(payload.idempotency_key) },
   });
-  if (error) throw new Error(`enqueue_email failed: ${error.message}`);
   return { messageId };
 }
 
