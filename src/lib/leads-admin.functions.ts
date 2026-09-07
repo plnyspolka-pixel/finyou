@@ -160,14 +160,25 @@ export const listLeads = createServerFn({ method: "GET" })
 
     // Index leads by lowercase email for case-insensitive matching (inbound emails often differ in case).
     const leadsByEmailLower: Record<string, any[]> = {};
+    const leadsById: Record<string, any> = {};
+    const leadsByPhone: Record<string, any[]> = {};
     for (const l of list) {
+      leadsById[l.id] = l;
+      if (l.phone_normalized) (leadsByPhone[l.phone_normalized] ??= []).push(l);
       const k = (l.email ?? "").toLowerCase();
       if (!k) continue;
       (leadsByEmailLower[k] ??= []).push(l);
     }
 
-    const COLS =
-      "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content, attachments, metadata";
+    // Kolumny lekkie (liczniki) vs ciężkie (treść notatki, załączniki, metadane).
+    // Wciąganie content/attachments/metadata dla WSZYSTKICH wierszy potrafiło
+    // wysadzić pamięć workera (502) — ciężkie pola pobieramy tylko dla kanałów,
+    // które ich realnie używają.
+    const LIGHT =
+      "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by";
+    const HEAVY = `${LIGHT}, content, attachments, metadata`;
+    const HEAVY_CHANNELS = ["manual_note", "messenger", "instagram", "whatsapp", "reveal"];
+    const ROW_CAP = 5000;
     // Liczniki kontaktu czytamy SERVICE-ROLEM (endpoint jest już za assertAdmin) —
     // dzięki temu panel pokazuje realną liczbę maili/SMS/telefonów niezależnie od
     // tego, jakie wiersze lead_communications widzi sesja operatora przez RLS.
@@ -178,34 +189,41 @@ export const listLeads = createServerFn({ method: "GET" })
       for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
       return out;
     };
-    const queries: Promise<any>[] = [];
-    for (const c of chunk(ids, 100)) {
-      queries.push(
+    const base = (cols: string) => supabaseAdmin.from("lead_communications").select(cols);
+    const scoped = (cols: string, kind: "ids" | "phones" | "emails", c: string[]) => {
+      let q = base(cols);
+      if (kind === "ids") q = q.in("lead_id", c);
+      else if (kind === "phones") q = q.in("phone_normalized", c);
+      else q = q.or(c.map((e) => `email.ilike.${e}`).join(","));
+      return q;
+    };
+    const heavyQueries: Promise<any>[] = [];
+    const lightQueries: Promise<any>[] = [];
+    const buckets: Array<{ kind: "ids" | "phones" | "emails"; values: string[] }> = [
+      ...chunk(ids, 100).map((c) => ({ kind: "ids" as const, values: c })),
+      ...chunk(phones, 100).map((c) => ({ kind: "phones" as const, values: c })),
+      ...chunk(emailsLower, 100).map((c) => ({ kind: "emails" as const, values: c })),
+    ];
+    for (const b of buckets) {
+      // Ciężkie pola: kanały z notatką/załącznikiem/metadanymi + PRZYCHODZĄCE maile.
+      heavyQueries.push(
         Promise.resolve(
-          supabaseAdmin.from("lead_communications").select(COLS).in("lead_id", c).limit(20000),
+          scoped(HEAVY, b.kind, b.values).in("channel", HEAVY_CHANNELS).limit(ROW_CAP),
         ),
       );
-    }
-    for (const c of chunk(phones, 100)) {
-      queries.push(
+      heavyQueries.push(
         Promise.resolve(
-          supabaseAdmin
-            .from("lead_communications")
-            .select(COLS)
-            .in("phone_normalized", c)
-            .limit(20000),
+          scoped(HEAVY, b.kind, b.values)
+            .eq("channel", "email")
+            .eq("direction", "inbound")
+            .limit(ROW_CAP),
         ),
       );
+      lightQueries.push(Promise.resolve(scoped(LIGHT, b.kind, b.values).limit(ROW_CAP)));
     }
-    for (const c of chunk(emailsLower, 100)) {
-      const orExpr = c.map((e) => `email.ilike.${e}`).join(",");
-      queries.push(
-        Promise.resolve(
-          supabaseAdmin.from("lead_communications").select(COLS).or(orExpr).limit(20000),
-        ),
-      );
-    }
-    const results = await Promise.all(queries);
+    // Kolejność MA znaczenie: wiersze ciężkie przetwarzamy pierwsze, a dedup
+    // (`seen`) odrzuca ich lekkie duplikaty — dzięki temu nic nie liczy się dwa razy.
+    const results = [...(await Promise.all(heavyQueries)), ...(await Promise.all(lightQueries))];
 
     const seen = new Set<string>();
     for (const r of results) {
@@ -215,9 +233,9 @@ export const listLeads = createServerFn({ method: "GET" })
         if (seen.has(key)) continue;
         seen.add(key);
         const matched = new Set<any>();
-        if (ev.lead_id) for (const l of list) if (l.id === ev.lead_id) matched.add(l);
-        if (ev.phone_normalized)
-          for (const l of list) if (l.phone_normalized === ev.phone_normalized) matched.add(l);
+        if (ev.lead_id && leadsById[ev.lead_id]) matched.add(leadsById[ev.lead_id]);
+        if (ev.phone_normalized && leadsByPhone[ev.phone_normalized])
+          for (const l of leadsByPhone[ev.phone_normalized]) matched.add(l);
         if (evEmailLower && leadsByEmailLower[evEmailLower])
           for (const l of leadsByEmailLower[evEmailLower]) matched.add(l);
         const matching = Array.from(matched);
@@ -394,7 +412,8 @@ export const listLeads = createServerFn({ method: "GET" })
         .from("documents")
         .select("loan_application_id, file_name, file_path, mime_type, file_size, created_at")
         .in("loan_application_id", loanIds)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(3000);
       for (const d of (docs ?? []) as any[]) {
         if (!d.loan_application_id) continue;
         docCountByLoan[d.loan_application_id] = (docCountByLoan[d.loan_application_id] ?? 0) + 1;

@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { placeOutboundCallInternal } from "@/lib/voicebot.functions";
 import { handleMetaMessagingBody } from "@/lib/meta-messaging.server";
+import { extractLoanAmount, extractPropertyTypeRaw } from "@/lib/meta-lead-answers.server";
 
 function verifyMetaSig(body: string, signature: string | null, secret: string): boolean {
   if (!signature) return false;
@@ -354,8 +355,20 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                   applicationData: {
                     meta_field_data: details.field_data,
                     return_link: capture.returnLink,
+                    loan_amount: extractLoanAmount(details.field_data) ?? undefined,
+                    typ_nieruchomosci:
+                      extractPropertyTypeRaw(details.field_data) ?? undefined,
                   },
                 });
+                if (capture.loanApplicationId) {
+                  const { applyMetaAnswersToApplication } =
+                    await import("@/lib/meta-lead-answers.server");
+                  await applyMetaAnswersToApplication(
+                    supabaseAdmin,
+                    capture.loanApplicationId,
+                    details.field_data,
+                  );
+                }
               } catch (e) {
                 console.error("[meta-leads-webhook] unified lead upsert", e);
               }

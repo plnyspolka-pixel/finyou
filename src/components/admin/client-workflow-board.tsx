@@ -282,6 +282,61 @@ function dropStatusForColumn(col: ColumnKey, app: AppRow): LoanStatus {
 }
 
 // ---------------------------------------------------------------------------
+// Sortowanie kafelków (ręczne — domyślnie od najnowszych)
+// ---------------------------------------------------------------------------
+
+type SortKey = "newest" | "oldest" | "activity" | "amount_desc" | "amount_asc" | "name";
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "newest", label: "Najnowsze" },
+  { key: "oldest", label: "Najstarsze" },
+  { key: "activity", label: "Ostatnia aktywność" },
+  { key: "amount_desc", label: "Kwota malejąco" },
+  { key: "amount_asc", label: "Kwota rosnąco" },
+  { key: "name", label: "Nazwisko A→Z" },
+];
+
+const ts = (v?: string | null) => (v ? new Date(v).getTime() : 0);
+
+function sortApps(rows: AppRow[], key: SortKey): AppRow[] {
+  const out = [...rows];
+  out.sort((a, b) => {
+    switch (key) {
+      case "oldest":
+        return ts(a.created_at) - ts(b.created_at);
+      case "activity":
+        return ts(b.updated_at ?? b.created_at) - ts(a.updated_at ?? a.created_at);
+      case "amount_desc":
+        return (Number(b.loan_amount) || 0) - (Number(a.loan_amount) || 0);
+      case "amount_asc":
+        return (Number(a.loan_amount) || 0) - (Number(b.loan_amount) || 0);
+      case "name":
+        return clientName(a).localeCompare(clientName(b), "pl");
+      default:
+        return ts(b.created_at) - ts(a.created_at);
+    }
+  });
+  return out;
+}
+
+function sortLeads(rows: LeadRow[], key: SortKey): LeadRow[] {
+  const out = [...rows];
+  out.sort((a, b) => {
+    switch (key) {
+      case "oldest":
+        return ts(a.created_at) - ts(b.created_at);
+      case "activity":
+        return ts(b.updated_at ?? b.created_at) - ts(a.updated_at ?? a.created_at);
+      case "name":
+        return leadName(a).localeCompare(leadName(b), "pl");
+      default:
+        return ts(b.created_at) - ts(a.created_at);
+    }
+  });
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Pobieranie danych
 // ---------------------------------------------------------------------------
 
@@ -294,7 +349,7 @@ async function fetchBoard(): Promise<BoardData> {
     .is("merged_into_id", null)
     .is("archived_at", null)
     .neq("status", "archiwalny")
-    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(500);
   if (appsError) throw appsError;
   const apps = (appsRaw ?? []) as unknown as AppRow[];
@@ -307,7 +362,7 @@ async function fetchBoard(): Promise<BoardData> {
     )
     .is("loan_application_id", null)
     .in("status", ["nowy", "w_kontakcie", "rozmowa"])
-    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(300);
   const leads = (leadsRaw ?? []) as LeadRow[];
 
@@ -427,6 +482,7 @@ export function ClientWorkflowBoard({
   leadDetailTo?: "/admin/klienci/$id" | "/operator/leady/$id";
 } = {}) {
   const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("newest");
   const [showAnonymous, setShowAnonymous] = useState(false);
   const [dragOver, setDragOver] = useState<ColumnKey | null>(null);
   const [moving, setMoving] = useState<Record<string, ColumnKey>>({});
@@ -485,8 +541,12 @@ export function ClientWorkflowBoard({
       const col = moving[lead.id] ?? columnForLead(lead);
       cols.get(col)!.leads.push(lead);
     }
+    for (const bucket of cols.values()) {
+      bucket.apps = sortApps(bucket.apps, sortKey);
+      bucket.leads = sortLeads(bucket.leads, sortKey);
+    }
     return cols;
-  }, [filtered, moving]);
+  }, [filtered, moving, sortKey]);
 
   const moveApp = async (app: AppRow, col: ColumnKey) => {
     const offers = data?.offersByApp.get(app.id) ?? [];
@@ -574,9 +634,21 @@ export function ClientWorkflowBoard({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Szukaj: klient, telefon, e-mail…"
+            placeholder="Szukaj: klient, telefon, e-mail, kwota, KW…"
             className="w-64"
           />
+          <select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            className="h-10 rounded-md border bg-background px-3 text-sm"
+            aria-label="Sortowanie kafelków"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
           <Button
             variant="outline"
             size="icon"
