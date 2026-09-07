@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { compactKwNumber, containsValidKw, formatKwNumber, normalizeKwNumber } from "./kw";
+import {
+  compactKwNumber,
+  containsValidKw,
+  formatKwNumber,
+  normalizeKwNumber,
+  normalizeKwNumbersInText,
+  validateKwInput,
+} from "./kw";
 
 describe("normalizeKwNumber", () => {
   it("akceptuje poprawny numer KW", () => {
@@ -52,6 +59,60 @@ describe("formatKwNumber — forma z ukośnikami do wyświetlania", () => {
   });
   it("zwraca null dla śmieci", () => {
     expect(formatKwNumber("nie mam")).toBeNull();
+  });
+});
+
+describe("normalizeKwNumbersInText — naprawa formatu w dłuższym tekście", () => {
+  it("naprawia separatory i wielkość liter, zachowując resztę tekstu", () => {
+    expect(normalizeKwNumbersInText("OL1M 00025761 4 | Pow. użytkowa: 140 m²")).toBe(
+      "OL1M/00025761/4 | Pow. użytkowa: 140 m²",
+    );
+    expect(normalizeKwNumbersInText("wa1m-00123456-7")).toBe("WA1M/00123456/7");
+  });
+
+  it("naprawia wszystkie numery w polu z wieloma KW", () => {
+    expect(normalizeKwNumbersInText("TB1M 00065977 7 | tb1m.00065978.4")).toBe(
+      "TB1M/00065977/7 | TB1M/00065978/4",
+    );
+  });
+
+  it("dopełnia 7-cyfrowe numery zerem wiodącym", () => {
+    expect(normalizeKwNumbersInText("KA1L/0008967/5")).toBe("KA1L/00008967/5");
+  });
+
+  it("zostawia tekst bez numerów KW bez zmian; pusta wartość → null", () => {
+    expect(normalizeKwNumbersInText("PRZESŁANY")).toBe("PRZESŁANY");
+    expect(normalizeKwNumbersInText("")).toBeNull();
+    expect(normalizeKwNumbersInText(null)).toBeNull();
+  });
+});
+
+describe("validateKwInput — walidacja pola formularza", () => {
+  it("akceptuje i normalizuje poprawne numery (auto-naprawa drobnych odstępstw)", () => {
+    expect(validateKwInput("WA1M/00123456/7")).toMatchObject({
+      ok: true,
+      normalized: "WA1M/00123456/7",
+    });
+    expect(validateKwInput("wa1m 00123456 7")).toMatchObject({
+      ok: true,
+      normalized: "WA1M/00123456/7",
+    });
+    expect(validateKwInput("KA1L/0008967/5")).toMatchObject({
+      ok: true,
+      normalized: "KA1L/00008967/5",
+    });
+  });
+
+  it("odrzuca pustą wartość i śmieci z konkretnym komunikatem", () => {
+    expect(validateKwInput("")).toMatchObject({ ok: false });
+    expect(validateKwInput("PRZESŁANY").ok).toBe(false);
+    expect(validateKwInput("PRZESŁANY").error).toBeTruthy();
+  });
+
+  it("wskazuje zepsutą część numeru", () => {
+    expect(validateKwInput("WARSZAWA/00123456/7").error).toMatch(/[Kk]od sądu/);
+    expect(validateKwInput("WA1M/123/4").error).toMatch(/8 cyfr/);
+    expect(validateKwInput("WA1M/00123456/77").error).toMatch(/kontroln/);
   });
 });
 

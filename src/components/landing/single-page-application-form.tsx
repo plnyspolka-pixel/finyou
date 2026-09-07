@@ -36,6 +36,7 @@ import {
 import { uploadLandingAttachment } from "@/lib/uploads/landing-upload.functions";
 import { compressImageIfNeeded, fileToDataUrl } from "@/lib/uploads/client-image-compress";
 import { supabase } from "@/integrations/supabase/client";
+import { validateKwInput } from "@/lib/kw";
 import { trackEvent } from "@/lib/fb-pixel";
 import { FancyShell } from "@/components/landing/fancy-shell";
 
@@ -433,11 +434,27 @@ export function SinglePageApplicationForm({
     () => photos.some((p) => p.bucket === "ownership_deed"),
     [photos],
   );
-  const allKwNumbers = useMemo(
-    () => [kwNumber, ...extraKwNumbers].map((k) => k.trim()).filter(Boolean),
+  // Walidacja formatu każdego wpisanego numeru KW (WA1M/00123456/7);
+  // drobne odstępstwa (spacje, myślniki, 7 cyfr) naprawiamy automatycznie.
+  const kwValidations = useMemo(
+    () =>
+      [kwNumber, ...extraKwNumbers]
+        .map((k) => k.trim())
+        .filter(Boolean)
+        .map((k) => validateKwInput(k)),
     [kwNumber, extraKwNumbers],
   );
-  const kwOrDeedOk = allKwNumbers.length > 0 || hasOwnershipDeed;
+  const firstKwError = kwValidations.find((v) => !v.ok) ?? null;
+  const allKwNumbers = useMemo(
+    () =>
+      Array.from(
+        new Set(kwValidations.flatMap((v) => (v.ok && v.normalized ? [v.normalized] : []))),
+      ),
+    [kwValidations],
+  );
+  const kwOrDeedOk =
+    (kwValidations.length > 0 && kwValidations.every((v) => v.ok)) ||
+    (kwValidations.length === 0 && hasOwnershipDeed);
 
   // Allow external CTAs (e.g. hero button) to scroll to the form
   useEffect(() => {
@@ -469,6 +486,13 @@ export function SinglePageApplicationForm({
 
     if (!typeSelected) {
       toast.error("Wybierz typ nieruchomości.");
+      return;
+    }
+    if (firstKwError) {
+      toast.error(
+        [firstKwError.error, firstKwError.hint].filter(Boolean).join(" ") ||
+          "Nieprawidłowy format numeru księgi wieczystej.",
+      );
       return;
     }
     if (!kwOrDeedOk) {
@@ -764,35 +788,62 @@ export function SinglePageApplicationForm({
                   id="f-kw"
                   value={kwNumber}
                   onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
+                  onBlur={() => {
+                    const v = validateKwInput(kwNumber);
+                    if (v.ok && v.normalized) setKwNumber(v.normalized);
+                  }}
                   placeholder="np. WA1M/00123456/7"
                   className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 pl-4 pr-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
                 />
+                {kwNumber.trim() && !validateKwInput(kwNumber).ok && (
+                  <p className="text-xs font-semibold text-red-200">
+                    {validateKwInput(kwNumber).error}{" "}
+                    {validateKwInput(kwNumber).hint ?? "Format: WA1M/00123456/7"}
+                  </p>
+                )}
                 <p className="text-xs text-white/75">
-                  Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji
-                  mObywatel.
+                  Format: kod sądu / 8 cyfr / cyfra kontrolna, np. WA1M/00123456/7. Wystarczy numer
+                  KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.
                 </p>
 
                 {extraKwNumbers.map((val, idx) => (
-                  <div key={idx} className="flex gap-2 pt-1">
-                    <Input
-                      value={val}
-                      onChange={(e) => {
-                        const v = e.target.value.toUpperCase();
-                        setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
-                      }}
-                      placeholder={`Dodatkowy numer KW #${idx + 2}`}
-                      className={`${FANCY_INPUT_CLASS} font-mono text-lg tracking-wider`}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
-                      className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                      aria-label="Usuń numer KW"
-                    >
-                      ×
-                    </Button>
+                  <div key={idx} className="space-y-1 pt-1">
+                    <div className="flex gap-2">
+                      <Input
+                        value={val}
+                        onChange={(e) => {
+                          const v = e.target.value.toUpperCase();
+                          setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
+                        }}
+                        onBlur={() => {
+                          const v = validateKwInput(val);
+                          if (v.ok && v.normalized) {
+                            const normalized = v.normalized;
+                            setExtraKwNumbers((cur) =>
+                              cur.map((x, i) => (i === idx ? normalized : x)),
+                            );
+                          }
+                        }}
+                        placeholder={`Dodatkowy numer KW #${idx + 2}`}
+                        className={`${FANCY_INPUT_CLASS} font-mono text-lg tracking-wider`}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
+                        className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                        aria-label="Usuń numer KW"
+                      >
+                        ×
+                      </Button>
+                    </div>
+                    {val.trim() && !validateKwInput(val).ok && (
+                      <p className="text-xs font-semibold text-red-200">
+                        {validateKwInput(val).error}{" "}
+                        {validateKwInput(val).hint ?? "Format: WA1M/00123456/7"}
+                      </p>
+                    )}
                   </div>
                 ))}
                 <div className="flex flex-wrap gap-2 pt-1">

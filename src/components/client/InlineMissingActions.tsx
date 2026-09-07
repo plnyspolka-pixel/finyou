@@ -14,6 +14,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import { formatPLN, type SecurityType } from "@/lib/loan-math";
+import { validateKwInput } from "@/lib/kw";
 import { Circle, Upload, Loader2, CheckCircle2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import type { EnrichedProgress } from "@/lib/my-loan-progress";
@@ -444,15 +445,24 @@ function KwNumberBox({
 }) {
   const [kw, setKw] = useState(initial);
   const [busy, setBusy] = useState(false);
+  const validation = validateKwInput(kw);
   const save = async () => {
     if (!kw.trim()) return;
+    if (!validation.ok || !validation.normalized) {
+      toast.error(
+        [validation.error, validation.hint].filter(Boolean).join(" ") ||
+          "Nieprawidłowy format numeru księgi wieczystej.",
+      );
+      return;
+    }
     setBusy(true);
     try {
       const res = await supabase
         .from("properties")
-        .update({ land_register_number: kw.trim().toUpperCase() })
+        .update({ land_register_number: validation.normalized })
         .eq("id", propertyId);
       if (res.error) throw res.error;
+      setKw(validation.normalized);
       toast.success("Numer KW zapisany");
       onChanged();
     } catch (e: any) {
@@ -466,13 +476,22 @@ function KwNumberBox({
       <Input
         value={kw}
         onChange={(e) => setKw(e.target.value.toUpperCase())}
+        onBlur={() => {
+          if (validation.ok && validation.normalized) setKw(validation.normalized);
+        }}
         placeholder="np. WA1M/00123456/7"
         className="font-mono"
       />
+      {kw.trim() && !validation.ok && (
+        <p className="text-xs font-semibold text-destructive">
+          {validation.error} {validation.hint ?? "Format: WA1M/00123456/7"}
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">
-        Adres i dane nieruchomości pobierzemy automatycznie z KW.
+        Format: kod sądu / 8 cyfr / cyfra kontrolna, np. WA1M/00123456/7. Adres i dane nieruchomości
+        pobierzemy automatycznie z KW.
       </p>
-      <Button size="sm" onClick={save} disabled={busy || !kw.trim()}>
+      <Button size="sm" onClick={save} disabled={busy || !kw.trim() || !validation.ok}>
         {busy ? "Zapisuję…" : "Zapisz numer"}
       </Button>
     </Box>

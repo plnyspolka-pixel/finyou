@@ -24,6 +24,7 @@ import { submitLandingLoanApplication } from "@/lib/landing-application.function
 import { uploadLandingAttachment } from "@/lib/uploads/landing-upload.functions";
 import { compressImageIfNeeded, fileToDataUrl } from "@/lib/uploads/client-image-compress";
 import { supabase } from "@/integrations/supabase/client";
+import { validateKwInput } from "@/lib/kw";
 import { trackEvent } from "@/lib/fb-pixel";
 
 const INPUT_CLASS =
@@ -174,7 +175,7 @@ export function EmbedApplicationForm() {
       case "contact":
         return contactValid;
       case "property":
-        return !!secType && kwNumber.trim().length > 0;
+        return !!secType && validateKwInput(kwNumber).ok;
       case "photos":
         return allPhotosReady;
       case "consent":
@@ -187,6 +188,14 @@ export function EmbedApplicationForm() {
   const isLast = step === STEPS.length - 1;
 
   const onSubmit = async () => {
+    const kwValidation = validateKwInput(kwNumber);
+    if (!kwValidation.ok) {
+      toast.error(
+        [kwValidation.error, kwValidation.hint].filter(Boolean).join(" ") ||
+          "Nieprawidłowy format numeru księgi wieczystej.",
+      );
+      return;
+    }
     if (!consent) {
       toast.error("Zaakceptuj politykę prywatności i regulamin.");
       return;
@@ -216,7 +225,7 @@ export function EmbedApplicationForm() {
           loan_amount: amount,
           preferred_period_months: months,
           property_type: secType,
-          land_register_number: kwNumber.trim(),
+          land_register_number: kwValidation.normalized ?? kwNumber.trim(),
           photos: photoPayload,
           source: "embed_wniosek",
         },
@@ -407,12 +416,22 @@ export function EmbedApplicationForm() {
                   <Label className="text-white">Numer księgi wieczystej *</Label>
                   <Input
                     value={kwNumber}
-                    onChange={(e) => setKwNumber(e.target.value)}
-                    placeholder="WA1M/00000000/0"
+                    onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
+                    onBlur={() => {
+                      const v = validateKwInput(kwNumber);
+                      if (v.ok && v.normalized) setKwNumber(v.normalized);
+                    }}
+                    placeholder="WA1M/00123456/7"
                     className={INPUT_CLASS}
                   />
+                  {kwNumber.trim() && !validateKwInput(kwNumber).ok && (
+                    <p className="text-xs font-semibold text-red-200">
+                      {validateKwInput(kwNumber).error}{" "}
+                      {validateKwInput(kwNumber).hint ?? "Format: WA1M/00123456/7"}
+                    </p>
+                  )}
                   <p className="text-xs text-white/70">
-                    Format: kod sądu / numer / cyfra kontrolna.
+                    Format: kod sądu / 8 cyfr / cyfra kontrolna, np. WA1M/00123456/7.
                   </p>
                 </div>
               </div>

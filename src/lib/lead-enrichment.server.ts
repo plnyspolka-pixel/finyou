@@ -2,7 +2,7 @@
 // oraz automatyczna promocja leada do loan_application, gdy zebrane są
 // minimalne dane: KW + kwota + jakikolwiek załącznik/dokument.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { normalizeKwNumber } from "./kw";
+import { formatKwNumber, normalizeKwNumber } from "./kw";
 
 function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -329,7 +329,7 @@ async function backfillApplicationFromFacts(
     loan_application_id: loanId,
     property_type: propertyType as any,
     city: (appData.city as string | null) ?? null,
-    land_register_number: kw,
+    land_register_number: formatKwNumber(kw) ?? kw,
     estimated_value: estimatedValue,
   }));
   const { error } = await s.from("properties").insert(rows as any);
@@ -454,7 +454,7 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
     loan_application_id: loan.id,
     property_type: propertyType as any,
     city: (appData.city as string | null) ?? null,
-    land_register_number: kw,
+    land_register_number: formatKwNumber(kw) ?? kw,
     estimated_value: estimatedValue,
   }));
   const { error: pErr } = await s.from("properties").insert(propRows as any);

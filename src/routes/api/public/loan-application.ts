@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizePolishPhone } from "@/lib/phone";
+import { normalizeKwNumbersInText } from "@/lib/kw";
 import { runPropertyCollateralAnalysisCore } from "@/lib/property-analysis/property-collateral-analysis.functions";
 
 const Schema = z.object({
@@ -122,7 +123,8 @@ export const Route = createFileRoute("/api/public/loan-application")({
             city: data.city ?? null,
             street: data.street ?? null,
             voivodeship: data.voivodeship ?? null,
-            land_register_number: data.land_register_number ?? null,
+            // Napraw format numerów KW (obrona w głąb — endpoint publiczny).
+            land_register_number: normalizeKwNumbersInText(data.land_register_number) ?? null,
           });
 
           // Jednorazowa analiza zabezpieczenia — fire-and-forget, zapisuje wynik na stałe.

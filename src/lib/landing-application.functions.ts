@@ -185,12 +185,15 @@ async function submitApplicationCore(
     console.error("[landing-application] auth user create/link failed", err);
   }
 
+  // Napraw format numerów KW w polu (obrona w głąb — formularze walidują,
+  // ale pole bywa zasilane też przez starsze/zewnętrzne wywołania).
+  const { normalizeKwNumbersInText } = await import("@/lib/kw");
   const { data: property } = await supabaseAdmin
     .from("properties")
     .insert({
       loan_application_id: loan.id,
       property_type: data.property_type,
-      land_register_number: data.land_register_number ?? null,
+      land_register_number: normalizeKwNumbersInText(data.land_register_number) ?? null,
       city: data.city ?? null,
     })
     .select("id")
