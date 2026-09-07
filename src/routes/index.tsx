@@ -67,7 +67,7 @@ const ROLES: RoleCardProps[] = [
     accent: "var(--cyan-500)",
     badge: { v: "secondary", t: "Inwestor" },
     title: "Dla inwestorów",
-    desc: "Uzyskaj dostęp do spraw klientów szukających finansowania i ucz się inwestowania w pożyczki zabezpieczone nieruchomościami.",
+    desc: "Zyskaj możliwość składania Zleceń na finansowanie klientów i ucz się inwestowania w pożyczki zabezpieczone nieruchomościami.",
     cta: "Dołącz do klubu",
     href: "/dla-inwestora",
   },

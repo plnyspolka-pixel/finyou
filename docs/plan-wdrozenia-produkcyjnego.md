@@ -86,7 +86,18 @@ Zaimplementowane i wdrożone; pakiet startuje z `legal_documents.active=false`
    trzeba skopiować z konsoli Didit do Lovable — workflowy produkcyjne są
    już opublikowane (KYC `1612939d…`, KYB `c7f1dde1…`).
 
-### Etap U2 — DO ZROBIENIA (pełny cykl Zlecenie–Projekt)
+### Etap U2 — ZROBIONE (pełny cykl Zlecenie–Projekt; aktywny razem z pakietem)
+
+Zaimplementowane (2026-09-07): migracja `20260907140000_investor_order_cycle.sql`
+(`investor_order_matches` z wyłącznością sekwencyjną per Projekt — partial
+unique index, `investor_order_events` — dziennik z wersjami dokumentów,
+`nda_accessions`, `consumer_withdrawals`; RLS + polityka ujawnień
+`investor_has_disclosed_match` na loan_applications/properties; RPC
+`investor_legal_pack_complete` unieważnia komplet po odstąpieniu),
+reguły czyste w `order-cycle-core.ts` (testy jednostkowe), server functions
+`order-cycle.functions.ts`, UI inwestora w `/inwestor/umowy` (sekcja widoczna
+po aktywacji pakietu) i admina w `/admin/umowy-inwestorow`. Pierwotny zakres
+punktów 1–7 poniżej — wszystkie pokryte:
 
 1. **Teaser per Zlecenie** — generowanie teasera wyłącznie dla pary
    Projekt–Zlecenie (system NIE może mieć ścieżki teasera bez numeru
@@ -121,7 +132,7 @@ Zaimplementowane i wdrożone; pakiet startuje z `legal_documents.active=false`
 - [x] Ekstrakcja danych Didit + samoweryfikacja inwestora.
 - [ ] Sekrety Didit produkcyjne w Lovable (właściciel, z konsoli).
 - [ ] Przegląd kancelarii → aktywacja pakietu przyciskiem.
-- [ ] Etap U2 (cykl Zlecenie–Projekt, pkt 1–7 wyżej).
+- [x] Etap U2 (cykl Zlecenie–Projekt, pkt 1–7 wyżej).
 - [ ] Test end-to-end na koncie testowym po aktywacji.
 
 ---
@@ -598,7 +609,7 @@ Decyzje podjęte przez właściciela (31.08.2026):
 | Obszar 4 — agent korespondencji | **ZROBIONE**: klasyfikacja maili, propozycje zmian kryteriów (1 kliknięcie), pętla pytania→klient→odpowiedź→instytucje |
 | Obszar 5 — pipeline analityczny | **ZROBIONE**: KW→właściciele→analiza KW→ryzyko dla kompletnych wniosków ze score>50; sekcja analityczna na karcie oferty |
 | Obszar 2 — boty ElevenLabs | **ZROBIONE (kod)**: SMS dwukierunkowy, agenty A1–A3 (tworzenie z `/admin/text-agent`), webhook toole (`/api/public/agent-tools`), `issue_invoice`, przełącznik widgetów, kanały async przez turę tekstową z fallbackiem — patrz `docs/boty-elevenlabs.md`; wygaszenie starego silnika po stabilizacji logów |
-| Obszar 1 — umowy inwestora | **Etap U1 WDROŻONY (uśpiony)** — paczka prawnika v5 w systemie, aktywacja po przeglądzie kancelarii; Etap U2 (cykl Zlecenie–Projekt) do zrobienia |
+| Obszar 1 — umowy inwestora | **Etapy U1+U2 WDROŻONE (uśpione)** — paczka prawnika v5 + pełny cykl Zlecenie–Projekt w systemie; start po przeglądzie kancelarii (przycisk aktywacji) |
 
 Kroki wdrożeniowe po merge'u: zastosować migracje `20260831*` (supabase db
 push / panel), ustawić sekrety `AGENT_TOOLS_SECRET` (+ istniejące ElevenLabs/

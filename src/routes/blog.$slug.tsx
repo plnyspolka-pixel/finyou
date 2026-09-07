@@ -379,7 +379,7 @@ function ArticlePage() {
     ? "Inwestuj w pożyczki zabezpieczone nieruchomościami"
     : "Szukasz finansowania pod zabezpieczenie nieruchomości?";
   const ctaSub = isInvestor
-    ? "Inwestorzy na rynku pożyczek zabezpieczonych nieruchomościami realnie osiągają od kilkunastu do nawet kilkudziesięciu procent rocznie. W Klubie Inwestorów Hipotecznych: dostęp do spraw klientów, Akademia inwestora, wzory dokumentów, narzędzia AI i wsparcie compliance."
+    ? "Inwestorzy na rynku pożyczek zabezpieczonych nieruchomościami realnie osiągają od kilkunastu do nawet kilkudziesięciu procent rocznie. W Klubie Inwestorów Hipotecznych: możliwość składania Zleceń, Akademia inwestora, wzory dokumentów, narzędzia AI i wsparcie compliance."
     : "Złóż bezpłatny wniosek — jedno zgłoszenie trafia do wielu prywatnych inwestorów i partnerów finansowych. Bez zobowiązań.";
   const ctaLabel = isInvestor ? "Poznaj Klub Inwestorów" : "Sprawdź możliwości bezpłatnie";
   const ctaMicro = isInvestor

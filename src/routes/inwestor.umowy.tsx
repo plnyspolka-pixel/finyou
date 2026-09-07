@@ -45,6 +45,7 @@ import {
   startInvestorSelfVerification,
   getMyInvestorVerification,
 } from "@/lib/investor-agreements/didit-self.functions";
+import { OrderCycleSection } from "@/components/inwestor/order-cycle";
 
 export const Route = createFileRoute("/inwestor/umowy")({
   component: UmowyPage,
@@ -107,6 +108,9 @@ function UmowyPage() {
         </>
       ) : null}
       <OrdersList state={state} onDone={refresh} />
+      {/* Etap U2: Dopasowania (teaser → Karta Leada → Ujawnienie → rezerwacja),
+          odstąpienie Konsumenta i przystąpienia spółek do NDA. */}
+      {state.packActive ? <OrderCycleSection /> : null}
     </div>
   );
 }
