@@ -105,6 +105,17 @@ export function ClientCommsPreview({
     };
   }, [loanApplicationId, clientId, limit]);
 
+  // Panel admina nie ma trasy /admin/leady/$id — pełną historię pokazuje karta
+  // klienta. Bez tego rozróżnienia przycisk prowadził w /admin donikąd.
+  const historyTo =
+    base === "/admin"
+      ? clientId
+        ? `/admin/klienci/${clientId}`
+        : null
+      : leadId
+        ? `${base}/leady/${leadId}`
+        : null;
+
   return (
     <Card className="overflow-hidden border-primary/10 shadow-sm">
       <CardHeader className="bg-gradient-to-br from-primary/5 via-primary/[0.03] to-transparent pb-3">
@@ -116,9 +127,9 @@ export function ClientCommsPreview({
               {total}
             </Badge>
           </CardTitle>
-          {leadId && (
+          {historyTo && (
             <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
-              <Link to={`${base}/leady/${leadId}` as any}>
+              <Link to={historyTo as any}>
                 Pełna historia
                 <ArrowRight className="ml-1 h-3.5 w-3.5" />
               </Link>

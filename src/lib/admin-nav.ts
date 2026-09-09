@@ -238,6 +238,22 @@ export const adminSections: AdminSection[] = [
           "inwestorzy instytucjonalni",
         ],
         badgeKey: "autoDystrybucjaDoZatwierdzenia",
+        exact: true,
+      },
+      {
+        to: "/admin/auto-dystrybucja/pytania",
+        label: "Pytania instytucji",
+        icon: MessageCircle,
+        description:
+          "Pytania instytucji scalone w jedną wiadomość do klienta: co wysłane, co czeka, co nie dotarło.",
+        synonyms: [
+          "pytania instytucji",
+          "pytania do klienta",
+          "agent korespondencji",
+          "uzupelnienia",
+          "dopytki instytucji",
+        ],
+        badgeKey: "pytaniaInstytucjiBlokada",
       },
       {
         to: "/admin/kreator-pozyczki",

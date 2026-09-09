@@ -150,7 +150,6 @@ import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
 import { Route as AdminCzatRouteImport } from './routes/admin.czat'
 import { Route as AdminClarityRouteImport } from './routes/admin.clarity'
 import { Route as AdminAvatarFaqRouteImport } from './routes/admin.avatar-faq'
-import { Route as AdminAutoDystrybucjaRouteImport } from './routes/admin.auto-dystrybucja'
 import { Route as AdminAiSerpRouteImport } from './routes/admin.ai-serp'
 import { Route as AdminAiSeoRouteImport } from './routes/admin.ai-seo'
 import { Route as AdminAiOutreachRouteImport } from './routes/admin.ai-outreach'
@@ -170,6 +169,7 @@ import { Route as InwestorAmlIndexRouteImport } from './routes/inwestor.aml.inde
 import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin.program-posrednikow.index'
 import { Route as AdminMarketingIndexRouteImport } from './routes/admin.marketing.index'
 import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
+import { Route as AdminAutoDystrybucjaIndexRouteImport } from './routes/admin.auto-dystrybucja.index'
 import { Route as PosrednikWnioskiIdRouteImport } from './routes/posrednik.wnioski.$id'
 import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
 import { Route as OperatorWnioskiIdRouteImport } from './routes/operator.wnioski.$id'
@@ -224,6 +224,7 @@ import { Route as AdminKlienciIdRouteImport } from './routes/admin.klienci.$id'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
 import { Route as AdminGoogleAdsKreatorRouteImport } from './routes/admin.google-ads.kreator'
 import { Route as AdminFbAdsKreatorRouteImport } from './routes/admin.fb-ads.kreator'
+import { Route as AdminAutoDystrybucjaPytaniaRouteImport } from './routes/admin.auto-dystrybucja.pytania'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -977,11 +978,6 @@ const AdminAvatarFaqRoute = AdminAvatarFaqRouteImport.update({
   path: '/avatar-faq',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminAutoDystrybucjaRoute = AdminAutoDystrybucjaRouteImport.update({
-  id: '/auto-dystrybucja',
-  path: '/auto-dystrybucja',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminAiSerpRoute = AdminAiSerpRouteImport.update({
   id: '/ai-serp',
   path: '/ai-serp',
@@ -1080,6 +1076,12 @@ const AdminKsiegowoscIndexRoute = AdminKsiegowoscIndexRouteImport.update({
   path: '/ksiegowosc/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAutoDystrybucjaIndexRoute =
+  AdminAutoDystrybucjaIndexRouteImport.update({
+    id: '/auto-dystrybucja/',
+    path: '/auto-dystrybucja/',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const PosrednikWnioskiIdRoute = PosrednikWnioskiIdRouteImport.update({
   id: '/wnioski/$id',
   path: '/wnioski/$id',
@@ -1373,6 +1375,12 @@ const AdminFbAdsKreatorRoute = AdminFbAdsKreatorRouteImport.update({
   path: '/fb-ads/kreator',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAutoDystrybucjaPytaniaRoute =
+  AdminAutoDystrybucjaPytaniaRouteImport.update({
+    id: '/auto-dystrybucja/pytania',
+    path: '/auto-dystrybucja/pytania',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -1663,7 +1671,6 @@ export interface FileRoutesByFullPath {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
-  '/admin/auto-dystrybucja': typeof AdminAutoDystrybucjaRoute
   '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/czat': typeof AdminCzatRoute
@@ -1780,6 +1787,7 @@ export interface FileRoutesByFullPath {
   '/propozycje/': typeof PropozycjeIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/admin/auto-dystrybucja/pytania': typeof AdminAutoDystrybucjaPytaniaRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -1834,6 +1842,7 @@ export interface FileRoutesByFullPath {
   '/operator/wnioski/$id': typeof OperatorWnioskiIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
+  '/admin/auto-dystrybucja/': typeof AdminAutoDystrybucjaIndexRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/marketing/': typeof AdminMarketingIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
@@ -1918,7 +1927,6 @@ export interface FileRoutesByTo {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
-  '/admin/auto-dystrybucja': typeof AdminAutoDystrybucjaRoute
   '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/czat': typeof AdminCzatRoute
@@ -2030,6 +2038,7 @@ export interface FileRoutesByTo {
   '/propozycje': typeof PropozycjeIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/admin/auto-dystrybucja/pytania': typeof AdminAutoDystrybucjaPytaniaRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -2084,6 +2093,7 @@ export interface FileRoutesByTo {
   '/operator/wnioski/$id': typeof OperatorWnioskiIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
+  '/admin/auto-dystrybucja': typeof AdminAutoDystrybucjaIndexRoute
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
   '/admin/marketing': typeof AdminMarketingIndexRoute
   '/admin/program-posrednikow': typeof AdminProgramPosrednikowIndexRoute
@@ -2174,7 +2184,6 @@ export interface FileRoutesById {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
-  '/admin/auto-dystrybucja': typeof AdminAutoDystrybucjaRoute
   '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/czat': typeof AdminCzatRoute
@@ -2291,6 +2300,7 @@ export interface FileRoutesById {
   '/propozycje/': typeof PropozycjeIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/admin/auto-dystrybucja/pytania': typeof AdminAutoDystrybucjaPytaniaRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -2345,6 +2355,7 @@ export interface FileRoutesById {
   '/operator/wnioski/$id': typeof OperatorWnioskiIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
+  '/admin/auto-dystrybucja/': typeof AdminAutoDystrybucjaIndexRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/marketing/': typeof AdminMarketingIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
@@ -2436,7 +2447,6 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
-    | '/admin/auto-dystrybucja'
     | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/czat'
@@ -2553,6 +2563,7 @@ export interface FileRouteTypes {
     | '/propozycje/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/admin/auto-dystrybucja/pytania'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -2607,6 +2618,7 @@ export interface FileRouteTypes {
     | '/operator/wnioski/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
+    | '/admin/auto-dystrybucja/'
     | '/admin/ksiegowosc/'
     | '/admin/marketing/'
     | '/admin/program-posrednikow/'
@@ -2691,7 +2703,6 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
-    | '/admin/auto-dystrybucja'
     | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/czat'
@@ -2803,6 +2814,7 @@ export interface FileRouteTypes {
     | '/propozycje'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/admin/auto-dystrybucja/pytania'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -2857,6 +2869,7 @@ export interface FileRouteTypes {
     | '/operator/wnioski/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
+    | '/admin/auto-dystrybucja'
     | '/admin/ksiegowosc'
     | '/admin/marketing'
     | '/admin/program-posrednikow'
@@ -2946,7 +2959,6 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
-    | '/admin/auto-dystrybucja'
     | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/czat'
@@ -3063,6 +3075,7 @@ export interface FileRouteTypes {
     | '/propozycje/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/admin/auto-dystrybucja/pytania'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -3117,6 +3130,7 @@ export interface FileRouteTypes {
     | '/operator/wnioski/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
+    | '/admin/auto-dystrybucja/'
     | '/admin/ksiegowosc/'
     | '/admin/marketing/'
     | '/admin/program-posrednikow/'
@@ -4268,13 +4282,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAvatarFaqRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/auto-dystrybucja': {
-      id: '/admin/auto-dystrybucja'
-      path: '/auto-dystrybucja'
-      fullPath: '/admin/auto-dystrybucja'
-      preLoaderRoute: typeof AdminAutoDystrybucjaRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/ai-serp': {
       id: '/admin/ai-serp'
       path: '/ai-serp'
@@ -4406,6 +4413,13 @@ declare module '@tanstack/react-router' {
       path: '/ksiegowosc'
       fullPath: '/admin/ksiegowosc/'
       preLoaderRoute: typeof AdminKsiegowoscIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/auto-dystrybucja/': {
+      id: '/admin/auto-dystrybucja/'
+      path: '/auto-dystrybucja'
+      fullPath: '/admin/auto-dystrybucja/'
+      preLoaderRoute: typeof AdminAutoDystrybucjaIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/posrednik/wnioski/$id': {
@@ -4786,6 +4800,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFbAdsKreatorRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/auto-dystrybucja/pytania': {
+      id: '/admin/auto-dystrybucja/pytania'
+      path: '/auto-dystrybucja/pytania'
+      fullPath: '/admin/auto-dystrybucja/pytania'
+      preLoaderRoute: typeof AdminAutoDystrybucjaPytaniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -5122,7 +5143,6 @@ interface AdminRouteChildren {
   AdminAiOutreachRoute: typeof AdminAiOutreachRoute
   AdminAiSeoRoute: typeof AdminAiSeoRoute
   AdminAiSerpRoute: typeof AdminAiSerpRoute
-  AdminAutoDystrybucjaRoute: typeof AdminAutoDystrybucjaRoute
   AdminAvatarFaqRoute: typeof AdminAvatarFaqRoute
   AdminClarityRoute: typeof AdminClarityRoute
   AdminCzatRoute: typeof AdminCzatRoute
@@ -5173,6 +5193,7 @@ interface AdminRouteChildren {
   AdminZespolAktywnoscRoute: typeof AdminZespolAktywnoscRoute
   AdminZgodyRoute: typeof AdminZgodyRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminAutoDystrybucjaPytaniaRoute: typeof AdminAutoDystrybucjaPytaniaRoute
   AdminFbAdsKreatorRoute: typeof AdminFbAdsKreatorRoute
   AdminGoogleAdsKreatorRoute: typeof AdminGoogleAdsKreatorRoute
   AdminKsiegowoscDokumentyRoute: typeof AdminKsiegowoscDokumentyRoute
@@ -5191,6 +5212,7 @@ interface AdminRouteChildren {
   AdminProgramPosrednikowWyplatyRoute: typeof AdminProgramPosrednikowWyplatyRoute
   AdminProgramPosrednikowZdarzeniaRoute: typeof AdminProgramPosrednikowZdarzeniaRoute
   AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
+  AdminAutoDystrybucjaIndexRoute: typeof AdminAutoDystrybucjaIndexRoute
   AdminKsiegowoscIndexRoute: typeof AdminKsiegowoscIndexRoute
   AdminMarketingIndexRoute: typeof AdminMarketingIndexRoute
   AdminProgramPosrednikowIndexRoute: typeof AdminProgramPosrednikowIndexRoute
@@ -5204,7 +5226,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAiOutreachRoute: AdminAiOutreachRoute,
   AdminAiSeoRoute: AdminAiSeoRoute,
   AdminAiSerpRoute: AdminAiSerpRoute,
-  AdminAutoDystrybucjaRoute: AdminAutoDystrybucjaRoute,
   AdminAvatarFaqRoute: AdminAvatarFaqRoute,
   AdminClarityRoute: AdminClarityRoute,
   AdminCzatRoute: AdminCzatRoute,
@@ -5255,6 +5276,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminZespolAktywnoscRoute: AdminZespolAktywnoscRoute,
   AdminZgodyRoute: AdminZgodyRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminAutoDystrybucjaPytaniaRoute: AdminAutoDystrybucjaPytaniaRoute,
   AdminFbAdsKreatorRoute: AdminFbAdsKreatorRoute,
   AdminGoogleAdsKreatorRoute: AdminGoogleAdsKreatorRoute,
   AdminKsiegowoscDokumentyRoute: AdminKsiegowoscDokumentyRoute,
@@ -5275,6 +5297,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminProgramPosrednikowWyplatyRoute: AdminProgramPosrednikowWyplatyRoute,
   AdminProgramPosrednikowZdarzeniaRoute: AdminProgramPosrednikowZdarzeniaRoute,
   AdminWnioskiIdRoute: AdminWnioskiIdRoute,
+  AdminAutoDystrybucjaIndexRoute: AdminAutoDystrybucjaIndexRoute,
   AdminKsiegowoscIndexRoute: AdminKsiegowoscIndexRoute,
   AdminMarketingIndexRoute: AdminMarketingIndexRoute,
   AdminProgramPosrednikowIndexRoute: AdminProgramPosrednikowIndexRoute,

@@ -482,17 +482,32 @@ Realne kategorie wiadomości (z dotychczasowej skrzynki):
    analizy; oferta = powiadomienie operatora/admina i klienta zgodnie z
    zasadą „konkretna oferta albo cisza" z obszaru 2).
 
-**Stan i widoczność**: tabela `institution_qa_threads` (wniosek, pytanie,
-instytucje pytające, status: `zadane_klientowi` / `odpowiedziane` /
-`przekazane_instytucjom`, znaczniki czasu) + zakładka na karcie wniosku w
-panelu admina; każdy krok agenta logowany, wysyłki wyglądają w bazie jak
-ręczne (ten sam rdzeń comms).
+**Stan i widoczność**: tabela `institution_qa_threads` (wniosek, pytania z
+kluczem tematu, instytucje pytające, pytania „do biura", znaczniki czasu,
+`blocked_reason`) + widok poziomu 2 **`/admin/auto-dystrybucja/pytania`**
+(karta na stronie głównej auto-dystrybucji jest tylko skrótem z licznikami);
+każdy krok agenta logowany, wysyłki wyglądają w bazie jak ręczne (ten sam
+rdzeń comms).
+
+Stan wątku liczony jest z danych, nie z samej kolumny `status`: *zebrane —
+niewysłane*, *wysłane — czeka*, *część odpowiedzi przekazana*, *przekazane*,
+*zamknięte* i osobno **„nie da się wysłać"** z powodem (brak leada, brak
+kanału, błąd wysyłki). Nic nie ginie po cichu: nieudana próba zapisuje się na
+wątku i podbija badge w nawigacji. Operator ma „Wyślij teraz", „Zamknij
+wątek", odhaczanie pytań biurowych i ręczny przebieg agenta.
+
+Rozdzielone znaczniki czasu (migracja `20260909120000`):
+`last_sent_to_client_at` trzyma limit 1/dobę, `answers_read_until` — granicę
+czytania odpowiedzi klienta. Wcześniej robiła to jedna kolumna i wysyłka
+kolejnej paczki pytań kasowała nieprzekazaną odpowiedź.
 
 **Bezpieczniki**: treść maili instytucji traktowana jako dane (nigdy jako
 polecenia dla agenta); zmiany kryteriów zawsze z logiem i na start z
 zatwierdzeniem; limit wysyłek do klienta (nie częściej niż raz dziennie
-scalone pytania, chyba że klient właśnie odpowiedział); żadnych obietnic
-wobec klienta poza przekazaniem pytań/oferty.
+scalone pytania, chyba że klient właśnie odpowiedział; po 3 dniach ciszy
+maks. 2 przypomnienia); pytania, na które odpowiedź mamy u siebie (treść i
+aktualność KW, wzmianki, status wniosku), nie idą do klienta tylko do kolejki
+biura; żadnych obietnic wobec klienta poza przekazaniem pytań/oferty.
 
 ### Decyzje podjęte (właściciel, 31.08.2026)
 
@@ -610,7 +625,7 @@ Decyzje podjęte przez właściciela (31.08.2026):
 | --- | --- |
 | Obszar 3 — status wniosku w panelu klienta | **ZROBIONE**: karta statusu + oś 4 etapów + historia (`loan_status_history`) + e-mail przy zmianie (tick co 15 min) |
 | Obszar 4 — auto-dystrybucja | **ZROBIONE**: kryteria instytucji (seed Korona/JanVest), kolejka propozycji z zatwierdzaniem, panel `/admin/auto-dystrybucja`, cron |
-| Obszar 4 — agent korespondencji | **ZROBIONE**: klasyfikacja maili, propozycje zmian kryteriów (1 kliknięcie), pętla pytania→klient→odpowiedź→instytucje |
+| Obszar 4 — agent korespondencji | **ZROBIONE**: klasyfikacja maili, propozycje zmian kryteriów (1 kliknięcie), pętla pytania→klient→odpowiedź→instytucje; widok `/admin/auto-dystrybucja/pytania` ze stanem realnym, powodami blokad i akcjami operatora (migracja `20260909120000`) |
 | Obszar 5 — pipeline analityczny | **ZROBIONE**: KW→właściciele→analiza KW→ryzyko dla kompletnych wniosków ze score>50; sekcja analityczna na karcie oferty |
 | Obszar 2 — boty ElevenLabs | **ZROBIONE (kod)**: SMS dwukierunkowy, agenty A1–A3 (tworzenie z `/admin/text-agent`), webhook toole (`/api/public/agent-tools`), `issue_invoice`, przełącznik widgetów, kanały async przez turę tekstową z fallbackiem — patrz `docs/boty-elevenlabs.md`; wygaszenie starego silnika po stabilizacji logów |
 | Obszar 1 — umowy inwestora | **Etapy U1+U2 WDROŻONE (uśpione)** — paczka prawnika v5 + pełny cykl Zlecenie–Projekt w systemie; start po przeglądzie kancelarii (przycisk aktywacji) |

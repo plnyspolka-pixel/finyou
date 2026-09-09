@@ -37,7 +37,10 @@ export const listCriteriaChangeProposals = createServerFn({ method: "GET" })
         i.company_name || [i.first_name, i.last_name].filter(Boolean).join(" ") || i.id,
       ]),
     );
-    return (proposals ?? []).map((p: any) => ({ ...p, investor_name: byId.get(p.investor_id) ?? p.investor_id }));
+    return (proposals ?? []).map((p: any) => ({
+      ...p,
+      investor_name: byId.get(p.investor_id) ?? p.investor_id,
+    }));
   });
 
 export const decideCriteriaChange = createServerFn({ method: "POST" })
@@ -97,9 +100,15 @@ export const listInstitutionQaThreads = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdminOrOperator(context.supabase as any, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { deriveQaThreadState } = await import("./qa-questions");
     const { data: threads, error } = await (supabaseAdmin as any)
       .from("institution_qa_threads")
-      .select("id, loan_application_id, questions, status, client_channel, last_client_message_at, forwarded_at, created_at")
+      .select(
+        "id, loan_application_id, questions, office_questions, status, client_channel, " +
+          "client_lead_id, client_answer, blocked_reason, last_attempt_at, attempt_count, " +
+          "last_sent_to_client_at, last_reminder_at, reminder_count, answers_read_until, " +
+          "forwarded_at, closed_at, created_at, updated_at",
+      )
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);
@@ -108,9 +117,102 @@ export const listInstitutionQaThreads = createServerFn({ method: "GET" })
     const { data: loans } = loanIds.length
       ? await supabaseAdmin
           .from("loan_applications")
-          .select("id, client:clients(first_name,last_name)")
+          .select("id, loan_amount, client:clients(first_name,last_name,email,phone)")
           .in("id", loanIds as string[])
       : { data: [] };
     const byId = new Map((loans ?? []).map((l: any) => [l.id, l]));
-    return (threads ?? []).map((t: any) => ({ ...t, loan: byId.get(t.loan_application_id) ?? null }));
+    return (threads ?? []).map((t: any) => ({
+      ...t,
+      loan: byId.get(t.loan_application_id) ?? null,
+      state: deriveQaThreadState(t),
+    }));
+  });
+
+/** „Wyślij teraz" — pomija limit 1/dobę i zwraca powód, gdy się nie udało. */
+export const sendQaThreadNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdminOrOperator(context.supabase as any, context.userId);
+    const { sendPendingQuestionsToClients } = await import("./engine.server");
+    const res = await sendPendingQuestionsToClients({ threadId: data.threadId, force: true });
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: thread } = await (supabaseAdmin as any)
+      .from("institution_qa_threads")
+      .select("blocked_reason, client_channel")
+      .eq("id", data.threadId)
+      .maybeSingle();
+    if (res.sent || res.reminders)
+      return {
+        ok: true,
+        reminder: res.reminders > 0,
+        channel: thread?.client_channel ?? null,
+      };
+    return {
+      ok: false,
+      error:
+        thread?.blocked_reason ??
+        "Nie było czego wysłać (brak nowych pytań i nic nie czeka na odpowiedź).",
+    };
+  });
+
+/** Ręczne domknięcie wątku — np. gdy sprawę załatwiono telefonicznie. */
+export const closeQaThread = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdminOrOperator(context.supabase as any, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const now = new Date().toISOString();
+    const { error } = await (supabaseAdmin as any)
+      .from("institution_qa_threads")
+      .update({
+        status: "zamkniete",
+        closed_at: now,
+        closed_by: context.userId,
+        blocked_reason: null,
+        updated_at: now,
+      })
+      .eq("id", data.threadId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Odhaczenie pytania, na które odpowiada biuro (dane z KW / status wniosku). */
+export const setOfficeQuestionHandled = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({ threadId: z.string().uuid(), key: z.string().min(1), handled: z.boolean() })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdminOrOperator(context.supabase as any, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: thread } = await (supabaseAdmin as any)
+      .from("institution_qa_threads")
+      .select("id, office_questions")
+      .eq("id", data.threadId)
+      .maybeSingle();
+    if (!thread) throw new Error("Nie znaleziono wątku");
+    const now = new Date().toISOString();
+    const next = ((thread.office_questions ?? []) as any[]).map((q) =>
+      q?.key === data.key ? { ...q, handled_at: data.handled ? now : null } : q,
+    );
+    const { error } = await (supabaseAdmin as any)
+      .from("institution_qa_threads")
+      .update({ office_questions: next, updated_at: now })
+      .eq("id", data.threadId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Ręczne uruchomienie pełnego przebiegu agenta (przycisk w panelu). */
+export const runInstitutionMailAgentNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdminOrOperator(context.supabase as any, context.userId);
+    const { runInstitutionMailAgent } = await import("./engine.server");
+    return await runInstitutionMailAgent();
   });
