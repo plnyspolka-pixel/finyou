@@ -171,3 +171,18 @@ export async function resolveShowablePhotoUrls(
     .map((p) => (isExternalUrl(p) ? p : urlByPath.get(p)))
     .filter((u): u is string => !!u);
 }
+
+/**
+ * Ścieżki zdjęć nieruchomości z rekordu wniosku. Relacja `properties`
+ * przychodzi z PostgREST raz jako tablica, raz jako pojedynczy obiekt.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function propertyPhotos(loan: any): string[] {
+  const props = Array.isArray(loan?.properties)
+    ? loan.properties
+    : loan?.properties
+      ? [loan.properties]
+      : [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return props.flatMap((p: any) => (Array.isArray(p?.photos) ? p.photos : [])).filter(Boolean);
+}

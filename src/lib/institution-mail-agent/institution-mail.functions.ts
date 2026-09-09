@@ -117,7 +117,9 @@ export const listInstitutionQaThreads = createServerFn({ method: "GET" })
     const { data: loans } = loanIds.length
       ? await supabaseAdmin
           .from("loan_applications")
-          .select("id, loan_amount, client:clients(first_name,last_name,email,phone)")
+          .select(
+            "id, loan_amount, client:clients(id,first_name,last_name,email,phone), properties(photos)",
+          )
           .in("id", loanIds as string[])
       : { data: [] };
     const byId = new Map((loans ?? []).map((l: any) => [l.id, l]));
