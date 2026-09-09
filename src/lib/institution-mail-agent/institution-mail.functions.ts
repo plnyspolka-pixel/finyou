@@ -218,3 +218,28 @@ export const runInstitutionMailAgentNow = createServerFn({ method: "POST" })
     const { runInstitutionMailAgent } = await import("./engine.server");
     return await runInstitutionMailAgent();
   });
+
+export const getInstitutionMailSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdminOrOperator(context.supabase as any, context.userId);
+    const { loadInstitutionMailSettings } = await import("./engine.server");
+    return loadInstitutionMailSettings();
+  });
+
+/** Stop-klatka wysyłek: agent zbiera i przygotowuje, wysyła operator. */
+export const setInstitutionMailOutboundPaused = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ paused: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdminOrOperator(context.supabase as any, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any).from("institution_mail_agent_settings").upsert({
+      id: 1,
+      outbound_paused: data.paused,
+      updated_by: context.userId,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, paused: data.paused };
+  });

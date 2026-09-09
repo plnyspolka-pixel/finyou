@@ -50,6 +50,24 @@ interface LeadRow {
   created_at: string;
 }
 
+// ── Ustawienia agenta ───────────────────────────────────────────────────────
+
+export interface InstitutionMailSettings {
+  /** TRUE = agent nie wysyła nic sam; wysyła wyłącznie operator z panelu. */
+  outbound_paused: boolean;
+}
+
+export async function loadInstitutionMailSettings(): Promise<InstitutionMailSettings> {
+  const { data } = await (supabaseAdmin as any)
+    .from("institution_mail_agent_settings")
+    .select("outbound_paused")
+    .eq("id", 1)
+    .maybeSingle();
+  // Brak wiersza (np. migracja jeszcze nieprzepuszczona) = wysyłka wstrzymana.
+  // Bezpieczniej stanąć, niż wysłać klientowi coś, czego nikt nie zatwierdził.
+  return { outbound_paused: data?.outbound_paused ?? true };
+}
+
 // ── LLM ─────────────────────────────────────────────────────────────────────
 
 function tryParseJson(s: string): any | null {
@@ -529,6 +547,8 @@ export interface OutreachResult {
   reminders: number;
   blocked: number;
   skipped: number;
+  /** Wątki gotowe do wysyłki, wstrzymane bramką „nic bez zatwierdzenia". */
+  paused: number;
 }
 
 export async function sendPendingQuestionsToClients(opts?: {
@@ -536,7 +556,17 @@ export async function sendPendingQuestionsToClients(opts?: {
   /** Ręczne „wyślij teraz" z panelu — pomija limit 1/dobę. */
   force?: boolean;
 }): Promise<OutreachResult> {
-  const result: OutreachResult = { threads: 0, sent: 0, reminders: 0, blocked: 0, skipped: 0 };
+  const result: OutreachResult = {
+    threads: 0,
+    sent: 0,
+    reminders: 0,
+    blocked: 0,
+    skipped: 0,
+    paused: 0,
+  };
+  // Ręczne „Wyślij teraz" (force) to właśnie klikniecie operatora — przechodzi
+  // przez bramkę. Automat nie.
+  const paused = opts?.force ? false : (await loadInstitutionMailSettings()).outbound_paused;
   let query = (supabaseAdmin as any)
     .from("institution_qa_threads")
     .select(
@@ -569,6 +599,12 @@ export async function sendPendingQuestionsToClients(opts?: {
     }
 
     result.threads += 1;
+
+    if (paused) {
+      // Treść jest gotowa i widoczna w panelu — czeka na zatwierdzenie.
+      result.paused += 1;
+      continue;
+    }
 
     // Limit „nie częściej niż raz na dobę" liczony od OSTATNIEJ wiadomości do
     // klienta (pytania albo przypomnienie).
@@ -658,10 +694,23 @@ export interface ForwardResult {
   threads: number;
   forwarded: number;
   blocked: number;
+  /** Odpowiedzi klienta czekające na zatwierdzenie przed odesłaniem instytucjom. */
+  paused: number;
 }
 
-export async function forwardClientAnswers(): Promise<ForwardResult> {
-  const result: ForwardResult = { threads: 0, forwarded: 0, blocked: 0 };
+export async function forwardClientAnswers(opts?: { force?: boolean }): Promise<ForwardResult> {
+  const result: ForwardResult = { threads: 0, forwarded: 0, blocked: 0, paused: 0 };
+  if (!opts?.force && (await loadInstitutionMailSettings()).outbound_paused) {
+    // Nie ruszamy granicy czytania odpowiedzi — odpowiedzi klientów mają
+    // doczekać nietknięte do momentu zatwierdzenia.
+    const { count } = await (supabaseAdmin as any)
+      .from("institution_qa_threads")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "otwarte")
+      .not("last_sent_to_client_at", "is", null);
+    result.paused = count ?? 0;
+    return result;
+  }
   const { data: threads } = await (supabaseAdmin as any)
     .from("institution_qa_threads")
     .select(
