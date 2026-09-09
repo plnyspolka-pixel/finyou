@@ -11,11 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, RefreshCw, Send, Check, AlertTriangle } from "lucide-react";
+import { ArrowLeft, RefreshCw, Send, Check, AlertTriangle, PauseCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { ClientFilesButton } from "@/components/admin/ClientFilesButton";
 import { propertyPhotos } from "@/lib/property-photos";
 import {
+  getInstitutionMailSettings,
+  setInstitutionMailOutboundPaused,
   listInstitutionQaThreads,
   sendQaThreadNow,
   closeQaThread,
@@ -95,6 +98,9 @@ function PytaniaPage() {
           `(przypomnienia: ${res.outreach.reminders}) · odpowiedzi przekazane: ${res.forwarding.forwarded}` +
           (res.outreach.blocked + res.forwarding.blocked > 0
             ? ` · zablokowane: ${res.outreach.blocked + res.forwarding.blocked}`
+            : "") +
+          (res.outreach.paused + res.forwarding.paused > 0
+            ? ` · czeka na zatwierdzenie: ${res.outreach.paused + res.forwarding.paused}`
             : ""),
       );
       void qc.invalidateQueries({ queryKey: ["institution-qa-threads"] });
@@ -129,6 +135,8 @@ function PytaniaPage() {
         </Button>
       </div>
 
+      <OutboundGateCard pausedThreads={rows.filter((t) => t.state?.key === "do_wyslania").length} />
+
       {blocked.length > 0 && (
         <Card className="border-destructive/40">
           <CardHeader className="pb-2">
@@ -161,6 +169,66 @@ function PytaniaPage() {
         <ThreadCard key={t.id} thread={t} />
       ))}
     </div>
+  );
+}
+
+/**
+ * Stop-klatka: dopóki jest włączona, agent zbiera i przygotowuje pytania, ale
+ * nic nie wychodzi bez kliknięcia operatora. Decyzje operatora są materiałem
+ * do nauki modelu, który ma później przejąć proces.
+ */
+function OutboundGateCard({ pausedThreads }: { pausedThreads: number }) {
+  const qc = useQueryClient();
+  const fetchSettings = useServerFn(getInstitutionMailSettings);
+  const setPaused = useServerFn(setInstitutionMailOutboundPaused);
+  const { data: settings } = useQuery({
+    queryKey: ["institution-mail-settings"],
+    queryFn: () => fetchSettings(),
+  });
+  const [busy, setBusy] = useState(false);
+  const paused = settings?.outbound_paused ?? true;
+
+  return (
+    <Card className={paused ? "border-amber-400/60 bg-amber-50/40 dark:bg-amber-500/5" : undefined}>
+      <CardContent className="flex flex-wrap items-center gap-3 py-3 text-sm">
+        <PauseCircle
+          className={`h-4 w-4 ${paused ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="font-medium">
+            {paused
+              ? "Wysyłka automatyczna wstrzymana — wysyłasz Ty"
+              : "Wysyłka automatyczna włączona — agent wysyła sam"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {paused
+              ? `Agent zbiera maile instytucji, scala pytania i przygotowuje treści; nic nie idzie ` +
+                `do klienta ani do instytucji bez Twojego „Wyślij teraz". ` +
+                (pausedThreads > 0 ? `Czeka na Ciebie: ${pausedThreads}.` : "Nic nie czeka.")
+              : "Agent wysyła zbiorcze pytania (maks. raz na dobę) i odsyła odpowiedzi instytucjom bez pytania Cię o zdanie."}
+          </div>
+        </div>
+        <label className="flex items-center gap-2 text-xs">
+          <Switch
+            checked={!paused}
+            disabled={busy}
+            onCheckedChange={async (next) => {
+              setBusy(true);
+              try {
+                await setPaused({ data: { paused: !next } });
+                toast.success(next ? "Automat włączony" : "Automat wstrzymany");
+                void qc.invalidateQueries({ queryKey: ["institution-mail-settings"] });
+              } catch (e: any) {
+                toast.error(e?.message ?? "Błąd");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+          Automat
+        </label>
+      </CardContent>
+    </Card>
   );
 }
 
