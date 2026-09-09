@@ -24,7 +24,9 @@ export const listAutoDistributionQueue = createServerFn({ method: "GET" })
 
     const { data: proposals, error } = await (supabaseAdmin as any)
       .from("auto_distribution_proposals")
-      .select("id, loan_application_id, status, eligibility, matches, proposed_at, decided_at, sent_result, error")
+      .select(
+        "id, loan_application_id, status, eligibility, matches, proposed_at, decided_at, sent_result, error",
+      )
       .order("proposed_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
@@ -34,21 +36,22 @@ export const listAutoDistributionQueue = createServerFn({ method: "GET" })
       ? await supabaseAdmin
           .from("loan_applications")
           .select(
-            "id, status, loan_amount, location_potential_score, client:clients(first_name,last_name), properties(city, land_register_number)",
+            "id, status, loan_amount, location_potential_score, client:clients(id,first_name,last_name), properties(city, land_register_number, photos)",
           )
           .in("id", loanIds as string[])
       : { data: [] };
     const loanById = new Map((loans ?? []).map((l: any) => [l.id, l]));
 
-    return (proposals ?? []).map((p: any) => ({ ...p, loan: loanById.get(p.loan_application_id) ?? null }));
+    return (proposals ?? []).map((p: any) => ({
+      ...p,
+      loan: loanById.get(p.loan_application_id) ?? null,
+    }));
   });
 
 export const decideAutoDistribution = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z
-      .object({ proposalId: z.string().uuid(), decision: z.enum(["approve", "reject"]) })
-      .parse(d),
+    z.object({ proposalId: z.string().uuid(), decision: z.enum(["approve", "reject"]) }).parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertAdminOrOperator(context.supabase as any, context.userId);
@@ -88,7 +91,9 @@ export const listDistributionCriteria = createServerFn({ method: "GET" })
         .order("company_name", { ascending: true }),
       (supabaseAdmin as any)
         .from("investor_distribution_criteria")
-        .select("investor_id, min_amount, max_amount, auto_send_enabled, accepting_applications, paused_until, notes, updated_at"),
+        .select(
+          "investor_id, min_amount, max_amount, auto_send_enabled, accepting_applications, paused_until, notes, updated_at",
+        ),
     ]);
     const byInvestor = new Map(((criteria ?? []) as any[]).map((c) => [c.investor_id, c]));
     return (investors ?? []).map((i: any) => ({
@@ -120,19 +125,17 @@ export const upsertDistributionCriteria = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdminOrOperator(context.supabase as any, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await (supabaseAdmin as any)
-      .from("investor_distribution_criteria")
-      .upsert({
-        investor_id: data.investorId,
-        min_amount: data.minAmount,
-        max_amount: data.maxAmount,
-        auto_send_enabled: data.autoSendEnabled,
-        accepting_applications: data.acceptingApplications,
-        paused_until: data.pausedUntil ?? null,
-        notes: data.notes ?? null,
-        updated_by: context.userId,
-        updated_at: new Date().toISOString(),
-      });
+    const { error } = await (supabaseAdmin as any).from("investor_distribution_criteria").upsert({
+      investor_id: data.investorId,
+      min_amount: data.minAmount,
+      max_amount: data.maxAmount,
+      auto_send_enabled: data.autoSendEnabled,
+      accepting_applications: data.acceptingApplications,
+      paused_until: data.pausedUntil ?? null,
+      notes: data.notes ?? null,
+      updated_by: context.userId,
+      updated_at: new Date().toISOString(),
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

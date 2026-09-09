@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, RefreshCw, Send, Check, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { ClientFilesButton } from "@/components/admin/ClientFilesButton";
+import { propertyPhotos } from "@/lib/property-photos";
 import {
   listInstitutionQaThreads,
   sendQaThreadNow,
@@ -233,6 +235,12 @@ function ThreadCard({ thread }: { thread: any }) {
           <span className="ml-auto text-xs text-muted-foreground">
             pytania z {fmt(thread.created_at)}
           </span>
+          <ClientFilesButton
+            loanApplicationId={thread.loan_application_id}
+            clientId={thread.loan?.client?.id ?? null}
+            photoPaths={propertyPhotos(thread.loan)}
+            title={clientName(thread)}
+          />
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span>

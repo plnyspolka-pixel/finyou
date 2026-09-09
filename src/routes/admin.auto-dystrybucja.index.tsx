@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { ClientFilesButton } from "@/components/admin/ClientFilesButton";
+import { propertyPhotos } from "@/lib/property-photos";
 import { toast } from "sonner";
 import {
   listAutoDistributionQueue,
@@ -502,6 +504,12 @@ function ProposalRow({
         <span className="ml-auto text-xs text-muted-foreground">
           {new Date(proposal.proposed_at).toLocaleString("pl-PL")}
         </span>
+        <ClientFilesButton
+          loanApplicationId={proposal.loan_application_id}
+          clientId={proposal.loan?.client?.id ?? null}
+          photoPaths={propertyPhotos(proposal.loan)}
+          title={loanLabel(proposal)}
+        />
       </div>
       <div className="text-sm text-muted-foreground">
         Trafi do {proposal.matches.length}{" "}
