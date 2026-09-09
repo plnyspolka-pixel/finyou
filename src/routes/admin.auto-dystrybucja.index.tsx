@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { ClientFilesButton } from "@/components/admin/ClientFilesButton";
 import { propertyPhotos } from "@/lib/property-photos";
+import { commissionSummary, pricingRuleForInstitution } from "@/lib/institution-pricing";
 import { toast } from "sonner";
 import {
   listAutoDistributionQueue,
@@ -481,6 +482,25 @@ function loanLabel(p: any): string {
   return [name || "Wniosek", prop?.city, prop?.land_register_number].filter(Boolean).join(" · ");
 }
 
+/**
+ * Nasza prowizja doliczana do finansowania — pokazywana tam, gdzie zapada
+ * decyzja o wysyłce, żeby nie liczyć jej w głowie ani nie szukać w mailach.
+ */
+function PricingHints({ names, payout }: { names: string[]; payout: number | null }) {
+  const rules = [...new Set(names)]
+    .map((n) => pricingRuleForInstitution(n))
+    .filter((r): r is NonNullable<typeof r> => !!r);
+  const unique = rules.filter((r, i) => rules.findIndex((x) => x.label === r.label) === i);
+  if (unique.length === 0) return null;
+  return (
+    <div className="space-y-0.5 rounded-md border border-dashed bg-muted/30 p-2 text-xs">
+      {unique.map((rule) => (
+        <div key={rule.label}>{commissionSummary(rule, payout)}</div>
+      ))}
+    </div>
+  );
+}
+
 function ProposalRow({
   proposal,
   busy,
@@ -511,6 +531,10 @@ function ProposalRow({
           title={loanLabel(proposal)}
         />
       </div>
+      <PricingHints
+        names={(proposal.matches ?? []).map((m: any) => m.name)}
+        payout={proposal.eligibility?.loan_amount ?? null}
+      />
       <div className="text-sm text-muted-foreground">
         Trafi do {proposal.matches.length}{" "}
         {proposal.matches.length === 1 ? "instytucji" : "instytucji"}:{" "}
