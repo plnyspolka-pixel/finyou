@@ -25,11 +25,12 @@ import {
   ExternalLink,
   FileText,
   Image as ImageIcon,
+  MessageCircle,
   RefreshCw,
   Undo2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
+import { MediaPreviewDialog, type MediaDialogTab } from "@/components/admin/MediaPreviewDialog";
 import { SourceIcon } from "@/components/admin/SourceIcon";
 import { compactKwNumber } from "@/lib/kw";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
@@ -392,9 +393,13 @@ export function ApplicationsPage({
     dir: "desc",
   });
   const [locFilter, setLocFilter] = useState<"all" | "high" | "standard" | "low_conf">("all");
-  const [preview, setPreview] = useState<{ id: string; paths: string[]; name: string } | null>(
-    null,
-  );
+  const [preview, setPreview] = useState<{
+    id: string;
+    paths: string[];
+    name: string;
+    clientId: string | null;
+    tab: MediaDialogTab;
+  } | null>(null);
   const backfillAttachmentsFn = useServerFn(backfillCommAttachmentDocuments);
 
   const load = async () => {
@@ -823,11 +828,30 @@ export function ApplicationsPage({
             id: r.id,
             paths: [...d.allPhotos, ...(r.commAttachmentPaths ?? [])],
             name: d.name,
+            clientId: r.client?.id ?? null,
+            tab: "pliki",
           })
         }
-        title="Podgląd"
+        title="Podgląd plików klienta"
       >
         <Eye className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0"
+        onClick={() =>
+          setPreview({
+            id: r.id,
+            paths: [...d.allPhotos, ...(r.commAttachmentPaths ?? [])],
+            name: d.name,
+            clientId: r.client?.id ?? null,
+            tab: "komunikacja",
+          })
+        }
+        title="Komunikacja z klientem"
+      >
+        <MessageCircle className="h-3.5 w-3.5" />
       </Button>
       <Button asChild size="sm" variant="ghost" className="h-8 px-2">
         <Link to={detailTo} params={{ id: r.id }}>
@@ -1018,6 +1042,8 @@ export function ApplicationsPage({
                             id: r.id,
                             paths: [...d.allPhotos, ...(r.commAttachmentPaths ?? [])],
                             name: d.name,
+                            clientId: r.client?.id ?? null,
+                            tab: "pliki",
                           })
                         }
                       />
@@ -1232,6 +1258,8 @@ export function ApplicationsPage({
                               id: r.id,
                               paths: [...d.allPhotos, ...(r.commAttachmentPaths ?? [])],
                               name: d.name,
+                              clientId: r.client?.id ?? null,
+                              tab: "pliki",
                             })
                           }
                         />
@@ -1250,11 +1278,15 @@ export function ApplicationsPage({
 
       {preview && (
         <MediaPreviewDialog
+          key={`${preview.id}:${preview.tab}`}
           open={!!preview}
           onOpenChange={(v) => !v && setPreview(null)}
           loanApplicationId={preview.id}
           photoPaths={preview.paths}
           title={`Podgląd — ${preview.name}`}
+          clientId={preview.clientId}
+          showCommunication
+          defaultTab={preview.tab}
         />
       )}
     </div>
