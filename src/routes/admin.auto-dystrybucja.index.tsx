@@ -1,6 +1,6 @@
 // Auto-dystrybucja — kolejka propozycji wysyłek do instytucji (zatwierdź /
 // odrzuć), kryteria kwotowe per instytucja i ustawienia globalne silnika.
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -26,7 +26,7 @@ import {
   listInstitutionQaThreads,
 } from "@/lib/institution-mail-agent/institution-mail.functions";
 
-export const Route = createFileRoute("/admin/auto-dystrybucja")({
+export const Route = createFileRoute("/admin/auto-dystrybucja/")({
   component: AutoDystrybucjaPage,
 });
 
@@ -39,7 +39,10 @@ function fmtPln(v: number | null | undefined): string {
   }).format(Number(v));
 }
 
-const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const STATUS_BADGE: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
   proposed: { label: "Do zatwierdzenia", variant: "default" },
   sending: { label: "Wysyłanie…", variant: "secondary" },
   approved_sent: { label: "Wysłane", variant: "secondary" },
@@ -206,8 +209,8 @@ function AutoDystrybucjaPage() {
       {/* Agent korespondencji: propozycje zmian kryteriów z maili */}
       <CriteriaProposalsCard />
 
-      {/* Agent korespondencji: pytania instytucja ↔ klient */}
-      <QaThreadsCard />
+      {/* Agent korespondencji: pytania instytucja ↔ klient (pełny widok: poziom 2) */}
+      <QaSummaryCard />
 
       {/* Pipeline analityczny — ostatnie przebiegi */}
       <PipelineRunsCard />
@@ -222,9 +225,15 @@ function AutoDystrybucjaPage() {
             <p className="text-sm text-muted-foreground">Brak rozstrzygniętych propozycji.</p>
           )}
           {decided.map((p: any) => {
-            const badge = STATUS_BADGE[p.status] ?? { label: p.status, variant: "outline" as const };
+            const badge = STATUS_BADGE[p.status] ?? {
+              label: p.status,
+              variant: "outline" as const,
+            };
             return (
-              <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm">
+              <div
+                key={p.id}
+                className="flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm"
+              >
                 <Badge variant={badge.variant}>{badge.label}</Badge>
                 <span className="font-medium">{loanLabel(p)}</span>
                 <span className="text-muted-foreground">{fmtPln(p.eligibility?.loan_amount)}</span>
@@ -300,10 +309,15 @@ function CriteriaProposalsCard() {
           Zastosowanie aktualizuje kryteria auto-dystrybucji.
         </p>
         {open.map((p: any) => (
-          <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-md border p-2.5 text-sm">
+          <div
+            key={p.id}
+            className="flex flex-wrap items-center gap-2 rounded-md border p-2.5 text-sm"
+          >
             <span className="font-medium">{p.investor_name}</span>
             <span className="text-muted-foreground">{describePatch(p.proposed_patch)}</span>
-            {p.summary && <span className="w-full text-xs text-muted-foreground">„{p.summary}"</span>}
+            {p.summary && (
+              <span className="w-full text-xs text-muted-foreground">„{p.summary}"</span>
+            )}
             <div className="ml-auto flex gap-2">
               <Button size="sm" disabled={busyId === p.id} onClick={() => onDecide(p.id, "apply")}>
                 Zastosuj
@@ -324,59 +338,60 @@ function CriteriaProposalsCard() {
   );
 }
 
-const QA_STATUS_LABELS: Record<string, string> = {
-  otwarte: "Czeka na odpowiedź klienta",
-  przekazane: "Odpowiedź przekazana instytucjom",
-  zamkniete: "Zamknięte",
+const QA_STATE_TONE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  zablokowane: "destructive",
+  do_wyslania: "default",
+  czeka: "default",
+  czesciowo: "secondary",
+  przekazane: "secondary",
+  zamkniete: "outline",
 };
 
-function QaThreadsCard() {
+/**
+ * Skrót do pełnego widoku pytań (poziom 2: /admin/auto-dystrybucja/pytania).
+ * Tutaj tylko licznik i to, co pali się na czerwono.
+ */
+function QaSummaryCard() {
   const fetchThreads = useServerFn(listInstitutionQaThreads);
   const { data: threads } = useQuery({
     queryKey: ["institution-qa-threads"],
     queryFn: () => fetchThreads(),
   });
-  if (!threads?.length) return null;
+  const rows = (threads ?? []) as any[];
+  const open = rows.filter((t) => t.status === "otwarte");
+  const blocked = rows.filter((t) => t.state?.needsAttention);
+  const waiting = rows.filter((t) => t.state?.key === "czeka");
+  const toSend = rows.filter((t) => t.state?.key === "do_wyslania");
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Pytania instytucji do klientów ({threads.length})</CardTitle>
+        <CardTitle>Pytania instytucji do klientów ({open.length})</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Agent scala pytania z maili instytucji, wysyła je klientowi jego kanałem (max raz na
-          dobę) i odsyła odpowiedzi do wszystkich pytających.
+          Agent scala pytania z maili instytucji (jedno pytanie = jeden temat, nawet gdy pyta o nie
+          kilka instytucji), wysyła je klientowi jego kanałem — maks. raz na dobę — i odsyła
+          odpowiedzi wszystkim pytającym.
         </p>
-        {threads.map((t: any) => {
-          const c = t.loan?.client;
-          const name = c ? [c.first_name, c.last_name].filter(Boolean).join(" ") : "Wniosek";
-          const qs = (t.questions ?? []) as Array<{ text: string; from: string[] }>;
-          return (
-            <div key={t.id} className="space-y-1 rounded-md border p-2.5 text-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={t.status === "otwarte" ? "default" : "secondary"}>
-                  {QA_STATUS_LABELS[t.status] ?? t.status}
-                </Badge>
-                <span className="font-medium">{name}</span>
-                {t.client_channel && (
-                  <span className="text-xs text-muted-foreground">kanał: {t.client_channel}</span>
-                )}
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {new Date(t.created_at).toLocaleString("pl-PL")}
-                </span>
-              </div>
-              <ul className="list-disc pl-5 text-muted-foreground">
-                {qs.map((q, i) => (
-                  <li key={i}>
-                    {q.text}{" "}
-                    <span className="text-xs">({(q.from ?? []).join(", ")})</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
+        <div className="flex flex-wrap items-center gap-2">
+          {blocked.length > 0 && (
+            <Badge variant="destructive">Wymaga reakcji: {blocked.length}</Badge>
+          )}
+          <Badge variant={QA_STATE_TONE.do_wyslania}>Do wysłania: {toSend.length}</Badge>
+          <Badge variant="secondary">Czeka na odpowiedź: {waiting.length}</Badge>
+          <Button asChild size="sm" variant="outline" className="ml-auto">
+            <Link to="/admin/auto-dystrybucja/pytania">Otwórz pytania i odpowiedzi</Link>
+          </Button>
+        </div>
+        {blocked.length > 0 && (
+          <p className="text-sm text-destructive">
+            {blocked.length === 1
+              ? "Jeden wątek nie dotarł"
+              : `${blocked.length} wątki nie dotarły`}{" "}
+            do klienta — powód znajdziesz w widoku pytań.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
@@ -413,7 +428,10 @@ function PipelineRunsCard() {
           const c = r.loan?.client;
           const name = c ? [c.first_name, c.last_name].filter(Boolean).join(" ") : r.kw_number;
           return (
-            <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm">
+            <div
+              key={r.id}
+              className="flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm"
+            >
               <Badge
                 variant={
                   r.status === "done" && !r.error
@@ -423,7 +441,13 @@ function PipelineRunsCard() {
                       : "destructive"
                 }
               >
-                {r.status === "done" ? (r.error ? "zakończony z błędami" : "gotowy") : r.status === "running" ? "w toku" : "błąd"}
+                {r.status === "done"
+                  ? r.error
+                    ? "zakończony z błędami"
+                    : "gotowy"
+                  : r.status === "running"
+                    ? "w toku"
+                    : "błąd"}
               </Badge>
               <span className="font-medium">{name}</span>
               <span className="font-mono text-xs text-muted-foreground">{r.kw_number}</span>
@@ -452,9 +476,7 @@ function loanLabel(p: any): string {
   const c = p.loan?.client;
   const name = c ? [c.first_name, c.last_name].filter(Boolean).join(" ") : null;
   const prop = Array.isArray(p.loan?.properties) ? p.loan.properties[0] : p.loan?.properties;
-  return [name || "Wniosek", prop?.city, prop?.land_register_number]
-    .filter(Boolean)
-    .join(" · ");
+  return [name || "Wniosek", prop?.city, prop?.land_register_number].filter(Boolean).join(" · ");
 }
 
 function ProposalRow({
@@ -585,7 +607,11 @@ function SettingsForm({
   onSave,
 }: {
   settings: { enabled: boolean; min_location_score: number; daily_send_limit: number };
-  onSave: (v: { enabled: boolean; minLocationScore: number; dailySendLimit: number }) => Promise<void>;
+  onSave: (v: {
+    enabled: boolean;
+    minLocationScore: number;
+    dailySendLimit: number;
+  }) => Promise<void>;
 }) {
   const [enabled, setEnabled] = useState(settings.enabled);
   const [minScore, setMinScore] = useState(String(settings.min_location_score));
@@ -600,11 +626,21 @@ function SettingsForm({
       </label>
       <div>
         <div className="mb-1 text-xs text-muted-foreground">Min. potencjał lokalizacji (0–100)</div>
-        <Input className="w-32" inputMode="numeric" value={minScore} onChange={(e) => setMinScore(e.target.value)} />
+        <Input
+          className="w-32"
+          inputMode="numeric"
+          value={minScore}
+          onChange={(e) => setMinScore(e.target.value)}
+        />
       </div>
       <div>
         <div className="mb-1 text-xs text-muted-foreground">Limit wysyłek / dobę</div>
-        <Input className="w-32" inputMode="numeric" value={limit} onChange={(e) => setLimit(e.target.value)} />
+        <Input
+          className="w-32"
+          inputMode="numeric"
+          value={limit}
+          onChange={(e) => setLimit(e.target.value)}
+        />
       </div>
       <Button
         size="sm"
