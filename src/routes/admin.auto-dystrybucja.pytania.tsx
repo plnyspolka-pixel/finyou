@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { ClientFilesButton } from "@/components/admin/ClientFilesButton";
 import { propertyPhotos } from "@/lib/property-photos";
+import { commissionSummary, pricingRuleForInstitution } from "@/lib/institution-pricing";
 import {
   getInstitutionMailSettings,
   setInstitutionMailOutboundPaused,
@@ -232,6 +233,25 @@ function OutboundGateCard({ pausedThreads }: { pausedThreads: number }) {
   );
 }
 
+/**
+ * Instytucje dopytują wprost, czy kwota zawiera prowizję — odpowiedź ma być
+ * pod ręką w wątku, a nie liczona za każdym razem od nowa.
+ */
+function PricingHints({ names, payout }: { names: string[]; payout: number | null }) {
+  const rules = [...new Set(names)]
+    .map((n) => pricingRuleForInstitution(n))
+    .filter((r): r is NonNullable<typeof r> => !!r);
+  const unique = rules.filter((r, i) => rules.findIndex((x) => x.label === r.label) === i);
+  if (unique.length === 0) return null;
+  return (
+    <div className="space-y-0.5 rounded-md border border-dashed bg-muted/30 p-2 text-xs">
+      {unique.map((rule) => (
+        <div key={rule.label}>{commissionSummary(rule, payout)}</div>
+      ))}
+    </div>
+  );
+}
+
 function ThreadCard({ thread }: { thread: any }) {
   const qc = useQueryClient();
   const sendNow = useServerFn(sendQaThreadNow);
@@ -337,6 +357,11 @@ function ThreadCard({ thread }: { thread: any }) {
             )}
           </div>
         )}
+
+        <PricingHints
+          names={[...questions, ...office].flatMap((q: any) => q.from ?? [])}
+          payout={thread.loan?.loan_amount ?? null}
+        />
 
         <div>
           <div className="mb-1 text-xs font-medium uppercase text-muted-foreground">

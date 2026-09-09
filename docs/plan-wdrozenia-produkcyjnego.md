@@ -509,6 +509,36 @@ maks. 2 przypomnienia); pytania, na które odpowiedź mamy u siebie (treść i
 aktualność KW, wzmianki, status wniosku), nie idą do klienta tylko do kolejki
 biura; żadnych obietnic wobec klienta poza przekazaniem pytań/oferty.
 
+### Prowizja doliczana do finansowania (właściciel, 09.09.2026)
+
+Reguły cenowe per instytucja żyją w `src/lib/institution-pricing.ts` (jedno
+miejsce, zmiana progów to jedna linia; testy w `institution-pricing.test.ts`).
+
+**NOVINA S.A.** — do wypłaty w przedziale 50 tys. – 1 mln zł doliczamy naszą
+prowizję:
+
+| Wypłata do klienta | Stawka |
+| --- | --- |
+| 50 000 – 100 000 zł | 7% |
+| 100 001 – 500 000 zł | 5% |
+| 500 001 – 1 000 000 zł | 3% |
+
+- **nie mniej niż 5 000 zł**,
+- prowizja zaokrąglana **w górę do pełnych tysięcy** (na naszą korzyść),
+- kwota, o którą prosi klient, to **wypłata do ręki** — prowizja idzie ponad
+  nią i podnosi kwotę pożyczki (wpisana w koszty pożyczki),
+- **koszt notariusza dolicza NOVINA** po swojej stronie, w kwocie pożyczki
+  powiększonej o koszty — my go nie liczymy,
+- poza przedziałem 50 tys. – 1 mln: bez automatu, prowizja ustalana ręcznie.
+
+Przykłady (z testów): 155 000 → prowizja 8 000 (5% = 7 750, w górę), pożyczka
+163 000. 60 000 → prowizja 5 000 (7% = 4 200, wchodzi minimum), pożyczka
+65 000. 900 000 → prowizja 27 000, pożyczka 927 000.
+
+Wyliczenie pokazuje się przy propozycji wysyłki w `/admin/auto-dystrybucja`
+i przy wątku pytań w `/admin/auto-dystrybucja/pytania` — tam, gdzie zapada
+decyzja i skąd instytucje dopytują o kwotę brutto.
+
 ### Decyzje podjęte (właściciel, 31.08.2026)
 
 1. **Tryb startu auto-dystrybucji**: rozruch z zatwierdzaniem jednym
