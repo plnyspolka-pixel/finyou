@@ -2,60 +2,19 @@
 // - createServerFn (admin "Sync Meta leads" w panelu)
 // - cron hooka /api/public/hooks/meta-leads-pull (co minutę)
 import { extractLoanAmount, extractPropertyTypeRaw } from "@/lib/meta-lead-answers.server";
+import {
+  buildClientLeadPayload,
+  forwardLeadToClient,
+} from "@/lib/meta-leads-client-forward.server";
+import {
+  normPhone,
+  splitName,
+  extractField,
+  extractPhone,
+  cleanName,
+} from "@/lib/meta-lead-fields";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
-
-function normPhone(p: string): string {
-  const s = String(p ?? "").replace(/\s|-/g, "");
-  if (s.startsWith("+")) return s;
-  const d = s.replace(/\D/g, "");
-  if (d.length === 9) return `+48${d}`;
-  if (d.length === 11 && d.startsWith("48")) return `+${d}`;
-  return s.startsWith("+") ? s : `+${d}`;
-}
-
-function splitName(full: string | null | undefined): { first: string; last: string } {
-  const t = String(full ?? "").trim();
-  if (!t) return { first: "Lead", last: "Meta" };
-  const parts = t.split(/\s+/);
-  return { first: parts[0], last: parts.slice(1).join(" ") || "—" };
-}
-
-function extractField(fd: any[], names: string[]): string | null {
-  if (!Array.isArray(fd)) return null;
-  for (const f of fd) {
-    const name = String(f.name ?? "").toLowerCase();
-    if (names.some((n) => name.includes(n))) {
-      return Array.isArray(f.values) ? f.values[0] : f.values;
-    }
-  }
-  return null;
-}
-
-// Odporny wychwyt telefonu: pola phone/telefon/…, a jeśli brak — 9-cyfrowy numer
-// z dowolnego pola formularza lub z nazwy (gdy numer wkleił się w imię/nazwisko).
-function extractPhone(fd: any[], nameFallback?: string | null): string | null {
-  const direct = extractField(fd, ["phone", "telefon", "tel", "mobile", "komórk", "komork"]);
-  const digits = (p: string | null) => (p ? p.replace(/\D/g, "") : "");
-  if (digits(direct).length >= 9) return direct;
-  const hay = [
-    ...(Array.isArray(fd)
-      ? fd.map((f) => (Array.isArray(f?.values) ? f.values.join(" ") : String(f?.values ?? "")))
-      : []),
-    String(nameFallback ?? ""),
-  ].join("  ");
-  const m = hay.match(/(?<!\d)(?:\+?48[\s-]?)?(\d{3}[\s-]?\d{3}[\s-]?\d{3})(?!\d)/);
-  return m ? m[0] : direct;
-}
-
-// Usuwa z nazwy wklejony numer telefonu (np. „Gadek691586905" → „Gadek").
-function cleanName(full: string | null | undefined): string | null {
-  const t = String(full ?? "")
-    .replace(/(?:\+?48[\s-]?)?\d[\d\s-]{7,}\d/g, " ")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-  return t || (full ?? null);
-}
 
 export async function runMetaLeadsSync(): Promise<{
   forms_discovered: number;
@@ -181,6 +140,43 @@ export async function runMetaLeadsSync(): Promise<{
 
           summary.leads_new += 1;
           const fd = lead.field_data ?? [];
+
+          // Formularz klienta zewnętrznego (kampania prowadzona z naszego konta dla
+          // klienta): lead leci prosto do jego panelu i NIE wchodzi w ścieżkę Finance
+          // You — bez wniosku, konta klienta, SMS-a z ofertą i telefonu voicebota.
+          const forwardUrl = (form as { client_forward_url?: string | null }).client_forward_url;
+          if (forwardUrl) {
+            const payload = buildClientLeadPayload({ ...lead, field_data: fd });
+            const wyslano = await forwardLeadToClient(
+              forwardUrl,
+              (form as { client_forward_secret?: string | null }).client_forward_secret ?? null,
+              payload,
+            );
+            await supabaseAdmin.from("meta_leads").upsert(
+              {
+                meta_lead_id: leadgenId,
+                meta_form_id: lead.form_id ?? formId,
+                meta_campaign_id: lead.campaign_id ?? null,
+                full_name: payload.imie,
+                email: payload.email,
+                phone: payload.telefon,
+                field_data: fd,
+                received_at: payload.utworzono,
+              },
+              { onConflict: "meta_lead_id" },
+            );
+            if (!wyslano.ok) {
+              // Lead jest zapisany u nas, ale nie doszedł do klienta — zostawiamy ślad
+              // na formularzu, żeby było to widać w panelu i dało się dosłać ręcznie.
+              summary.errors.push(`forward ${leadgenId}: ${wyslano.error}`);
+              await supabaseAdmin
+                .from("meta_lead_forms")
+                .update({ last_error: `lead ${leadgenId}: ${wyslano.error}`.slice(0, 500) })
+                .eq("meta_form_id", formId);
+            }
+            continue;
+          }
+
           const email = extractField(fd, ["email"]);
           const rawName = extractField(fd, ["name", "imię", "imie"]);
           const phone = extractPhone(fd, rawName);

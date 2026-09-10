@@ -290,13 +290,29 @@ export function buildCreativePayload(input: KreacjaInput): Record<string, unknow
   };
 }
 
+export type PytanieFormularza = { type: string };
+
 export type SzablonKampanii = {
   id: string;
   label: string;
   name: string;
   daily_budget: number;
-  landing_url: string;
-  optymalizacja_www: "konwersje" | "wejscia";
+  cel: CelKampanii;
+  /** Tylko dla `strona_www`. */
+  landing_url?: string;
+  optymalizacja_www?: "konwersje" | "wejscia";
+  /** Tylko dla `formularz_fb`. */
+  lead_form?: {
+    name: string;
+    questions: PytanieFormularza[];
+    privacy_policy: { url: string; link_text: string };
+    follow_up_action_url: string;
+  };
+  /**
+   * Audiencje remarketingowe Finance You. Dla kampanii klienta zewnętrznego
+   * zawsze `false` — jego reklama nie ma chodzić na naszym ruchu.
+   */
+  remarketing_fy: boolean;
   age_min: number;
   age_max: number;
   umiejscowienia: UmiejscowieniaTryb;
@@ -306,19 +322,7 @@ export type SzablonKampanii = {
   primary_text: string;
 };
 
-/** Gotowa kampania na formularz na stronie szalunki-lublin.pl. */
-export const SZABLON_SZALUNKI_LUBLIN: SzablonKampanii = {
-  id: "szalunki_lublin",
-  label: "Szalunki Lublin — zapytania ze strony",
-  name: "Szalunki Lublin — zapytania",
-  daily_budget: 50,
-  landing_url: "https://szalunki-lublin.pl",
-  // Na starcie piksel nie ma jeszcze danych, więc optymalizujemy pod wejścia.
-  optymalizacja_www: "wejscia",
-  age_min: 25,
-  age_max: 60,
-  umiejscowienia: "glowne",
-  cta_type: "GET_QUOTE",
+const TEKSTY_SZALUNKI = {
   headline: "Szalunki stropowe — Lublin i okolice",
   description: "Wycena tego samego dnia",
   primary_text:
@@ -327,11 +331,57 @@ export const SZABLON_SZALUNKI_LUBLIN: SzablonKampanii = {
     "i termin, oddzwonimy z wyceną tego samego dnia.",
 };
 
+/** Kampania prowadząca na formularz na stronie szalunki-lublin.pl. */
+export const SZABLON_SZALUNKI_LUBLIN: SzablonKampanii = {
+  id: "szalunki_lublin",
+  label: "Szalunki Lublin — zapytania ze strony",
+  name: "Szalunki Lublin — zapytania",
+  daily_budget: 50,
+  cel: "strona_www",
+  landing_url: "https://szalunki-lublin.pl",
+  // Na starcie piksel nie ma jeszcze danych, więc optymalizujemy pod wejścia.
+  optymalizacja_www: "wejscia",
+  remarketing_fy: false,
+  age_min: 25,
+  age_max: 60,
+  umiejscowienia: "glowne",
+  cta_type: "GET_QUOTE",
+  ...TEKSTY_SZALUNKI,
+};
+
+/**
+ * Kampania na formularz błyskawiczny Meta — klient zostawia kontakt bez wychodzenia
+ * z Facebooka. Formularz pyta tylko o imię i nazwisko oraz kontakt.
+ */
+export const SZABLON_SZALUNKI_FORMULARZ: SzablonKampanii = {
+  id: "szalunki_formularz",
+  label: "Szalunki Lublin — formularz błyskawiczny",
+  name: "Szalunki Lublin — formularz błyskawiczny",
+  daily_budget: 50,
+  cel: "formularz_fb",
+  lead_form: {
+    name: "Szalunki — zapytanie o wycenę",
+    questions: [{ type: "FULL_NAME" }, { type: "PHONE" }, { type: "EMAIL" }],
+    privacy_policy: {
+      url: "https://szalunki-lublin.pl/polityka-prywatnosci",
+      link_text: "Polityka prywatności",
+    },
+    follow_up_action_url: "https://szalunki-lublin.pl",
+  },
+  remarketing_fy: false,
+  age_min: 25,
+  age_max: 60,
+  umiejscowienia: "glowne",
+  cta_type: "GET_QUOTE",
+  ...TEKSTY_SZALUNKI,
+};
+
 export type SzkicFormularza = {
   name: string;
   daily_budget: number;
   targeting: Record<string, unknown>;
   creative: Record<string, unknown>;
+  lead_form?: Record<string, unknown>;
   [klucz: string]: unknown;
 };
 
@@ -347,17 +397,19 @@ export function zastosujSzablon(form: SzkicFormularza, s: SzablonKampanii): Szki
       age_max: s.age_max,
       umiejscowienia: s.umiejscowienia,
       poszerzanie_grupy: false,
+      remarketing: s.remarketing_fy,
     },
     creative: {
       ...form.creative,
-      cel: "strona_www",
-      landing_url: s.landing_url,
-      optymalizacja_www: s.optymalizacja_www,
+      cel: s.cel,
+      landing_url: s.landing_url ?? "",
+      optymalizacja_www: s.optymalizacja_www ?? "wejscia",
       cta_type: s.cta_type,
       headline: s.headline,
       description: s.description,
       primary_text: s.primary_text,
     },
+    lead_form: s.lead_form ? { ...s.lead_form } : (form.lead_form ?? {}),
   };
 }
 
@@ -368,6 +420,8 @@ export function sprawdzKampanie(input: {
   pixelId?: string | null;
   pageId?: string | null;
   budzetDzienny: number;
+  /** Adres polityki prywatności — Meta wymaga go w formularzu błyskawicznym. */
+  politykaUrl?: string | null;
   targeting?: { geo_locations?: unknown; umiejscowienia?: UmiejscowieniaTryb };
 }): string[] {
   const bledy: string[] = [];
@@ -384,6 +438,9 @@ export function sprawdzKampanie(input: {
       }
     }
     if (!input.pixelId) bledy.push("Wybierz albo utwórz piksel dla tej kampanii.");
+  } else if (!input.politykaUrl?.startsWith("https://")) {
+    // Meta odrzuca formularz błyskawiczny bez działającego linku do polityki.
+    bledy.push("Podaj adres polityki prywatności (https://) dla formularza.");
   }
   return bledy;
 }

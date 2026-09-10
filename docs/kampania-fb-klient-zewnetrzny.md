@@ -51,15 +51,44 @@ można potem dowolnie zmieniać lub usuwać.
 Klucze lokalizacji i identyfikatory zainteresowań zawsze pochodzą z wyszukiwarki
 Meta — nie są wpisane na sztywno w kodzie.
 
+## Formularz błyskawiczny dla klienta — dokąd trafiają leady
+
+Kampania na **formularz błyskawiczny** (Lead Ads) zbiera kontakty po stronie
+Facebooka. Te leady **nie są leadami Finance You** — nie zakładamy im wniosku
+pożyczkowego ani konta, nie dzwoni do nich voicebot i nie dostają SMS-a z ofertą
+pożyczki. Odcina je pole `client_forward_url` w tabeli `meta_lead_forms`:
+
+- puste → stara ścieżka Finance You (wniosek, konto, follow-upy, telefon);
+- ustawione → synchronizacja zapisuje leada w `meta_leads` (podgląd i ochrona
+  przed duplikatami) i wysyła go POST-em na adres panelu klienta, po czym kończy
+  przetwarzanie tego leada.
+
+Payload dla klienta: `meta_lead_id`, `imie`, `telefon`, `email`, `utworzono`,
+`kampania_id`, `reklama_id`, `formularz_id` oraz `pola` (komplet odpowiedzi).
+Sekret z `client_forward_secret` leci w nagłówku `x-lead-secret`, żeby panel
+klienta wiedział, że lead jest od nas.
+
+Gdy panel klienta nie odpowie, lead zostaje zapisany u nas, a błąd ląduje w
+`meta_lead_forms.last_error` i w podsumowaniu synchronizacji — widać go w panelu
+i można leada dosłać ręcznie.
+
 ## Gotowy szablon
 
-Przycisk **„Szablon: Szalunki Lublin — zapytania ze strony"** (krok 1) wypełnia
-od razu: nazwę kampanii, budżet 50 zł/dzień, tryb „formularz na stronie WWW",
-adres szalunki-lublin.pl, wiek 25–60, tylko główne kanały, wyłączone poszerzanie
-grupy, CTA „Otrzymaj wycenę" oraz nagłówek, opis i tekst reklamy. Nie rusza
-wybranego konta reklamowego, strony Facebook, piksela ani zainteresowań — te
-zostają takie, jakie ustawisz. Po wstawieniu szablonu zostaje: wybrać konto i
-stronę, utworzyć piksel, kliknąć preset lokalizacji i wgrać grafikę.
+W kroku 1 są dwa szablony kampanii dla szalunków:
+
+- **„Szalunki Lublin — formularz błyskawiczny"** — kampania na formularz Meta
+  pytający o imię i nazwisko, telefon i e-mail, z polityką prywatności klienta
+  (`szalunki-lublin.pl/polityka-prywatnosci`).
+- **„Szalunki Lublin — zapytania ze strony"** — reklama prowadzi na formularz na
+  stronie klienta, konwersje liczy piksel.
+
+Oba wypełniają nazwę kampanii, budżet 50 zł/dzień, wiek 25–60, tylko główne
+kanały, wyłączone poszerzanie grupy, CTA „Otrzymaj wycenę" oraz nagłówek, opis i
+tekst reklamy, i oba **wyłączają remarketing Finance You** — kampania klienta nie
+ma chodzić na naszym ruchu. Nie ruszają wybranego konta reklamowego, strony
+Facebook, piksela ani zainteresowań. Po wstawieniu szablonu zostaje: wybrać konto
+i stronę, kliknąć preset lokalizacji i wgrać grafikę (a dla wariantu ze stroną —
+utworzyć piksel).
 
 ## Krok po kroku: kampania na formularz na stronie klienta
 

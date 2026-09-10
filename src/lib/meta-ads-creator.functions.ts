@@ -292,6 +292,7 @@ export const publishAdDraft = createServerFn({ method: "POST" })
         pixelId,
         pageId: draft.page_id,
         budzetDzienny: Number(draft.daily_budget),
+        politykaUrl: (leadForm.privacy_policy as { url?: string } | undefined)?.url ?? null,
       });
       if (bledy.length) throw new Error(bledy.join(" "));
 

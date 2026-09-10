@@ -19,6 +19,7 @@ import {
   PRESET_LUBLIN_100KM,
   PRESET_BUDUJE_SIE,
   SZABLON_SZALUNKI_LUBLIN,
+  SZABLON_SZALUNKI_FORMULARZ,
   zastosujSzablon,
   sprawdzKampanie,
   MAX_PROMIEN_KM,
@@ -426,17 +427,22 @@ function FbCreatorDialog({
             <div>
               <div className="flex items-center justify-between gap-2">
                 <Label>Nazwa kampanii</Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setForm((f: typeof form) => zastosujSzablon(f, SZABLON_SZALUNKI_LUBLIN));
-                    toast.success("Wstawiono szablon — zostaje konto, strona i piksel");
-                  }}
-                >
-                  Szablon: {SZABLON_SZALUNKI_LUBLIN.label}
-                </Button>
+                <div className="flex gap-1">
+                  {[SZABLON_SZALUNKI_FORMULARZ, SZABLON_SZALUNKI_LUBLIN].map((szablon) => (
+                    <Button
+                      key={szablon.id}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setForm((f: typeof form) => zastosujSzablon(f, szablon));
+                        toast.success("Wstawiono szablon — zostaje konto, strona i piksel");
+                      }}
+                    >
+                      {szablon.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
               <Input
                 value={form.name}
@@ -1035,6 +1041,7 @@ function FbCreatorDialog({
                 pixelId: form.creative.pixel_id,
                 pageId: form.page_id,
                 budzetDzienny: Number(form.daily_budget),
+                politykaUrl: form.lead_form?.privacy_policy?.url,
               });
               return bledy.length ? (
                 <div className="rounded border border-destructive/50 bg-destructive/10 p-3">
@@ -1056,7 +1063,11 @@ function FbCreatorDialog({
               <strong>Cel:</strong>{" "}
               {naStrone
                 ? `formularz na stronie ${form.creative.landing_url || "—"} (piksel ${form.creative.pixel_id || "—"})`
-                : "formularz na Facebooku"}
+                : `formularz błyskawiczny na Facebooku: ${
+                    (form.lead_form?.questions ?? [])
+                      .map((q: { type: string }) => q.type)
+                      .join(", ") || "—"
+                  }`}
             </div>
             <div>
               <strong>Po publikacji:</strong>{" "}
