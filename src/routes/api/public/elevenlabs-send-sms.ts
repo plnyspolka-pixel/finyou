@@ -203,10 +203,15 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           error: result.error,
         });
 
+        // Pominięcie przez hamulec SMS (np. klient dostał dziś SMS powitalny) to nie
+        // awaria — zwracamy 200, żeby agent nie ponawiał wysyłki w kółko.
+        if (result.skipped) {
+          return json({ ok: true, sent: false, skipped: true, reason: result.reason ?? null });
+        }
         if (!result.ok) {
           return json({ ok: false, error: result.error ?? "SMS send failed" }, 502);
         }
-        return json({ ok: true, sid: result.sid ?? null, magic_link: false });
+        return json({ ok: true, sent: true, sid: result.sid ?? null, magic_link: false });
       },
     },
   },

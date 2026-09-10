@@ -46,6 +46,7 @@ import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
+import { Route as SCodeRouteImport } from './routes/s.$code'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as PozyczkiSlugRouteImport } from './routes/pozyczki.$slug'
@@ -452,6 +453,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const WniosekTokenRoute = WniosekTokenRouteImport.update({
   id: '/wniosek/$token',
   path: '/wniosek/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SCodeRoute = SCodeRouteImport.update({
+  id: '/s/$code',
+  path: '/s/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RCodeRoute = RCodeRouteImport.update({
@@ -1775,6 +1781,7 @@ export interface FileRoutesByFullPath {
   '/pozyczki/$slug': typeof PozyczkiSlugRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
+  '/s/$code': typeof SCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -2026,6 +2033,7 @@ export interface FileRoutesByTo {
   '/pozyczki/$slug': typeof PozyczkiSlugRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
+  '/s/$code': typeof SCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
   '/blog': typeof BlogIndexRoute
@@ -2288,6 +2296,7 @@ export interface FileRoutesById {
   '/pozyczki/$slug': typeof PozyczkiSlugRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
+  '/s/$code': typeof SCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -2551,6 +2560,7 @@ export interface FileRouteTypes {
     | '/pozyczki/$slug'
     | '/propozycje/$id'
     | '/r/$code'
+    | '/s/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
@@ -2802,6 +2812,7 @@ export interface FileRouteTypes {
     | '/pozyczki/$slug'
     | '/propozycje/$id'
     | '/r/$code'
+    | '/s/$code'
     | '/wniosek/$token'
     | '/admin'
     | '/blog'
@@ -3063,6 +3074,7 @@ export interface FileRouteTypes {
     | '/pozyczki/$slug'
     | '/propozycje/$id'
     | '/r/$code'
+    | '/s/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
@@ -3227,6 +3239,7 @@ export interface RootRouteChildren {
   PozyczkiSlugRoute: typeof PozyczkiSlugRoute
   PropozycjeIdRoute: typeof PropozycjeIdRoute
   RCodeRoute: typeof RCodeRoute
+  SCodeRoute: typeof SCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
   PosrednicyIndexRoute: typeof PosrednicyIndexRoute
@@ -3552,6 +3565,13 @@ declare module '@tanstack/react-router' {
       path: '/wniosek/$token'
       fullPath: '/wniosek/$token'
       preLoaderRoute: typeof WniosekTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s/$code': {
+      id: '/s/$code'
+      path: '/s/$code'
+      fullPath: '/s/$code'
+      preLoaderRoute: typeof SCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/r/$code': {
@@ -5591,6 +5611,7 @@ const rootRouteChildren: RootRouteChildren = {
   PozyczkiSlugRoute: PozyczkiSlugRoute,
   PropozycjeIdRoute: PropozycjeIdRoute,
   RCodeRoute: RCodeRoute,
+  SCodeRoute: SCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
   PosrednicyIndexRoute: PosrednicyIndexRoute,

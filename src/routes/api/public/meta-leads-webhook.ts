@@ -105,6 +105,7 @@ async function upsertClientAndApplication(opts: {
   loanApplicationId: string | null;
   clientId: string | null;
   returnLink: string | null;
+  returnToken: string | null;
   firstName: string | null;
 }> {
   let assignedUserId: string | null = null;
@@ -157,7 +158,13 @@ async function upsertClientAndApplication(opts: {
         error_message: `client insert: ${error?.message ?? "no row"}`,
         sent_payload: { email: opts.email, phone: opts.phone },
       });
-      return { loanApplicationId: null, clientId: null, returnLink: null, firstName: first };
+      return {
+        loanApplicationId: null,
+        clientId: null,
+        returnLink: null,
+        returnToken: null,
+        firstName: first,
+      };
     }
     clientId = inserted.id;
   } else {
@@ -230,7 +237,7 @@ async function upsertClientAndApplication(opts: {
       .single();
     if (appErr || !newApp) {
       console.error("[meta-leads-webhook] loan_applications insert error", appErr);
-      return { loanApplicationId: null, clientId, returnLink: null, firstName: first };
+      return { loanApplicationId: null, clientId, returnLink: null, returnToken, firstName: first };
     }
     loanApplicationId = newApp.id;
   } else {
@@ -240,7 +247,7 @@ async function upsertClientAndApplication(opts: {
       .eq("id", existingApp.id);
   }
 
-  return { loanApplicationId, clientId, returnLink, firstName: first };
+  return { loanApplicationId, clientId, returnLink, returnToken, firstName: first };
 }
 
 export const Route = createFileRoute("/api/public/meta-leads-webhook")({
@@ -356,8 +363,7 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                     meta_field_data: details.field_data,
                     return_link: capture.returnLink,
                     loan_amount: extractLoanAmount(details.field_data) ?? undefined,
-                    typ_nieruchomosci:
-                      extractPropertyTypeRaw(details.field_data) ?? undefined,
+                    typ_nieruchomosci: extractPropertyTypeRaw(details.field_data) ?? undefined,
                   },
                 });
                 if (capture.loanApplicationId) {
@@ -385,6 +391,27 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                   await scheduleFollowUpsForLead(unifiedLeadId);
                 } catch (e) {
                   console.error("[meta-leads-webhook] schedule follow-ups", e);
+                }
+              }
+
+              // JEDEN SMS na wejściu — krótka oferta + krótki link (financeyou.pl/s/<kod>),
+              // który przy kliknięciu rozwija się w świeży magic link. Idzie PRZED
+              // telefonem, więc hamulec SMS (1 automatyczny SMS / 24 h) odcina tego dnia
+              // zapowiedź rozmowy, SMS agenta i pierwszy krok kadencji.
+              // W try/catch — wysyłka nie może zablokować telefonu Ani.
+              if (phone) {
+                try {
+                  const { sendLeadWelcomeSms } = await import("@/lib/lead-welcome-sms.server");
+                  await sendLeadWelcomeSms({
+                    phone,
+                    email,
+                    leadId: unifiedLeadId,
+                    clientId: capture.clientId,
+                    loanApplicationId: capture.loanApplicationId,
+                    returnLinkToken: capture.returnToken,
+                  });
+                } catch (e) {
+                  console.error("[meta-leads-webhook] welcome sms", e);
                 }
               }
 

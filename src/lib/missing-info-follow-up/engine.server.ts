@@ -504,6 +504,7 @@ async function sendForState(
   let errorMsg: string | null = null;
   let subject: string | null = null;
   let content = "";
+  let skippedByGuard = false;
 
   if (channel === "email") {
     subject = composeEmailSubject(brief, vars);
@@ -547,6 +548,8 @@ async function sendForState(
     ok = res.ok;
     externalId = res.sid ?? null;
     errorMsg = res.error ?? null;
+    // Pominięcie przez hamulec SMS (limit/dedup/STOP) to nie awaria wysyłki.
+    if (res.skipped) skippedByGuard = true;
   } else {
     content = composeMessenger(brief, vars);
     // Kolejka messenger_outbox — wysyła ją follow-up-tick (co 15 min);
@@ -562,7 +565,13 @@ async function sendForState(
       .update({
         subject,
         content,
-        status: ok ? (channel === "messenger" ? "queued" : "sent") : "error",
+        status: ok
+          ? channel === "messenger"
+            ? "queued"
+            : "sent"
+          : skippedByGuard
+            ? "skipped"
+            : "error",
         external_id: externalId,
         error_message: errorMsg,
       })
