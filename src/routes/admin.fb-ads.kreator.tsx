@@ -18,6 +18,8 @@ import {
 import {
   PRESET_LUBLIN_100KM,
   PRESET_BUDUJE_SIE,
+  SZABLON_SZALUNKI_LUBLIN,
+  zastosujSzablon,
   sprawdzKampanie,
   MAX_PROMIEN_KM,
 } from "@/lib/meta-ad-targeting";
@@ -69,13 +71,16 @@ function FbCreatorPage() {
   const onPublish = async (id: string) => {
     if (
       !confirm(
-        "Opublikować kampanię na Facebooku? (utworzy się jako PAUSED — wymaga ręcznej aktywacji)",
+        "Opublikować kampanię na Facebooku? Szkic z ustawieniem „włącz od razu” wystartuje " +
+          "i zacznie wydawać budżet; pozostałe powstaną jako wstrzymane.",
       )
     )
       return;
     try {
-      await publish({ data: { id } });
-      toast.success("Opublikowano (PAUSED)");
+      const r = await publish({ data: { id } });
+      toast.success(
+        r.status === "ACTIVE" ? "Opublikowano i włączono (ACTIVE)" : "Opublikowano (PAUSED)",
+      );
       qc.invalidateQueries({ queryKey: ["fb-drafts"] });
     } catch (e: any) {
       toast.error(e.message);
@@ -419,7 +424,20 @@ function FbCreatorDialog({
         {step === 1 && (
           <div className="space-y-3">
             <div>
-              <Label>Nazwa kampanii</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Nazwa kampanii</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setForm((f: typeof form) => zastosujSzablon(f, SZABLON_SZALUNKI_LUBLIN));
+                    toast.success("Wstawiono szablon — zostaje konto, strona i piksel");
+                  }}
+                >
+                  Szablon: {SZABLON_SZALUNKI_LUBLIN.label}
+                </Button>
+              </div>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -575,6 +593,31 @@ function FbCreatorDialog({
                 value={form.daily_budget}
                 onChange={(e) => setForm({ ...form, daily_budget: Number(e.target.value) })}
               />
+            </div>
+            <div>
+              <Label>Po publikacji</Label>
+              <Select
+                value={form.creative.wlacz_od_razu ? "1" : "0"}
+                onValueChange={(v) =>
+                  setForm({ ...form, creative: { ...form.creative, wlacz_od_razu: v === "1" } })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">
+                    Zostaw wstrzymaną (włączysz ręcznie w Menedżerze reklam)
+                  </SelectItem>
+                  <SelectItem value="1">Włącz od razu — reklama rusza i wydaje budżet</SelectItem>
+                </SelectContent>
+              </Select>
+              {form.creative.wlacz_od_razu ? (
+                <div className="text-xs text-destructive mt-1">
+                  Kampania, zestaw i reklama powstaną jako ACTIVE — po akceptacji przez Meta zaczną
+                  wydawać {Number(form.daily_budget).toFixed(2)} PLN dziennie.
+                </div>
+              ) : null}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -1014,6 +1057,10 @@ function FbCreatorDialog({
               {naStrone
                 ? `formularz na stronie ${form.creative.landing_url || "—"} (piksel ${form.creative.pixel_id || "—"})`
                 : "formularz na Facebooku"}
+            </div>
+            <div>
+              <strong>Po publikacji:</strong>{" "}
+              {form.creative.wlacz_od_razu ? "od razu aktywna" : "wstrzymana"}
             </div>
             <div>
               <strong>Umiejscowienia:</strong>{" "}

@@ -9,7 +9,14 @@ import {
   zUtm,
   MAX_PROMIEN_KM,
   PRESET_LUBLIN_100KM,
+  SZABLON_SZALUNKI_LUBLIN,
+  statusPublikacji,
+  zastosujSzablon,
 } from "./meta-ad-targeting";
+
+/** Sięga po zagnieżdżone pole gotowego ciała żądania. */
+const pole = (obiekt: unknown, ...sciezka: string[]): unknown =>
+  sciezka.reduce<unknown>((acc, klucz) => (acc as Record<string, unknown>)[klucz], obiekt);
 
 describe("umiejscowienia", () => {
   it("tryb „główne kanały” to wyłącznie aktualności FB i feed IG", () => {
@@ -48,9 +55,11 @@ describe("lokalizacje", () => {
   });
 
   it("miasta trafiają do geo_locations w kilometrach", () => {
-    const geo = buildGeoLocations([{ key: "2490383", name: "Lublin", radius: 80 }]) as any;
-    expect(geo.cities).toEqual([{ key: "2490383", radius: 80, distance_unit: "kilometer" }]);
-    expect(geo.location_types).toEqual(["home", "recent"]);
+    const geo = buildGeoLocations([{ key: "2490383", name: "Lublin", radius: 80 }]);
+    expect(pole(geo, "cities")).toEqual([
+      { key: "2490383", radius: 80, distance_unit: "kilometer" },
+    ]);
+    expect(pole(geo, "location_types")).toEqual(["home", "recent"]);
   });
 
   it("bez miast zostaje cała Polska", () => {
@@ -79,7 +88,7 @@ describe("zestaw reklam", () => {
       ...bazowy,
       cel: "strona_www",
       pixelId: "777",
-    }) as any;
+    });
     expect(p.optimization_goal).toBe("OFFSITE_CONVERSIONS");
     expect(p.promoted_object).toEqual({ pixel_id: "777", custom_event_type: "LEAD" });
     expect(p.daily_budget).toBe(5000);
@@ -92,21 +101,21 @@ describe("zestaw reklam", () => {
       cel: "strona_www",
       pixelId: "777",
       optymalizacjaWww: "wejscia",
-    }) as any;
+    });
     expect(p.optimization_goal).toBe("LANDING_PAGE_VIEWS");
     expect(p.promoted_object).toEqual({ pixel_id: "777" });
   });
 
   it("formularz FB zostaje przy LEAD_GENERATION i stronie jako promowanym obiekcie", () => {
-    const p = buildAdSetPayload({ ...bazowy, cel: "formularz_fb" }) as any;
+    const p = buildAdSetPayload({ ...bazowy, cel: "formularz_fb" });
     expect(p.optimization_goal).toBe("LEAD_GENERATION");
     expect(p.promoted_object).toEqual({ page_id: "999" });
   });
 
   it("domyślnie nie pozwalamy Meta poszerzać grupy odbiorców", () => {
-    const p = buildAdSetPayload({ ...bazowy, cel: "formularz_fb" }) as any;
-    expect(p.targeting.targeting_automation).toEqual({ advantage_audience: 0 });
-    expect(p.targeting.facebook_positions).toEqual(["feed"]);
+    const p = buildAdSetPayload({ ...bazowy, cel: "formularz_fb" });
+    expect(pole(p, "targeting", "targeting_automation")).toEqual({ advantage_audience: 0 });
+    expect(pole(p, "targeting", "facebook_positions")).toEqual(["feed"]);
   });
 
   it("poszerzanie grupy da się włączyć świadomie", () => {
@@ -114,8 +123,70 @@ describe("zestaw reklam", () => {
       ...bazowy,
       cel: "formularz_fb",
       targeting: { ...bazowy.targeting, poszerzanie_grupy: true },
-    }) as any;
-    expect(p.targeting.targeting_automation).toEqual({ advantage_audience: 1 });
+    });
+    expect(pole(p, "targeting", "targeting_automation")).toEqual({ advantage_audience: 1 });
+  });
+});
+
+describe("status publikacji", () => {
+  it("domyślnie kampania powstaje wstrzymana", () => {
+    expect(statusPublikacji()).toBe("PAUSED");
+    expect(statusPublikacji(false)).toBe("PAUSED");
+    const p = buildAdSetPayload({
+      nazwa: "FY",
+      campaignId: "1",
+      budzetDzienny: 50,
+      pageId: "999",
+      cel: "formularz_fb",
+      targeting: {},
+    });
+    expect(p.status).toBe("PAUSED");
+  });
+
+  it("na wyraźne życzenie zestaw startuje jako aktywny", () => {
+    expect(statusPublikacji(true)).toBe("ACTIVE");
+    const p = buildAdSetPayload({
+      nazwa: "FY",
+      campaignId: "1",
+      budzetDzienny: 50,
+      pageId: "999",
+      cel: "formularz_fb",
+      wlaczOdRazu: true,
+      targeting: {},
+    });
+    expect(p.status).toBe("ACTIVE");
+  });
+});
+
+describe("szablon kampanii", () => {
+  const pusty = {
+    name: "",
+    daily_budget: 10,
+    targeting: { umiejscowienia: "auto", poszerzanie_grupy: true, interests: [{ id: "1" }] },
+    creative: { cel: "formularz_fb", headline: "" },
+    ad_account_id: "konto",
+    page_id: "strona",
+  };
+
+  it("szablon szalunków ustawia kampanię na formularz na stronie", () => {
+    const f = zastosujSzablon(pusty, SZABLON_SZALUNKI_LUBLIN);
+    expect(f.creative.cel).toBe("strona_www");
+    expect(f.creative.landing_url).toBe("https://szalunki-lublin.pl");
+    expect(f.daily_budget).toBe(50);
+    expect(f.targeting.umiejscowienia).toBe("glowne");
+    expect(f.targeting.poszerzanie_grupy).toBe(false);
+  });
+
+  it("szablon nie rusza konta, strony ani wybranych zainteresowań", () => {
+    const f = zastosujSzablon(pusty, SZABLON_SZALUNKI_LUBLIN);
+    expect(f.ad_account_id).toBe("konto");
+    expect(f.page_id).toBe("strona");
+    expect(f.targeting.interests).toEqual([{ id: "1" }]);
+  });
+
+  it("teksty reklamy mieszczą się w limitach Meta", () => {
+    expect(SZABLON_SZALUNKI_LUBLIN.headline.length).toBeLessThanOrEqual(40);
+    expect(SZABLON_SZALUNKI_LUBLIN.description.length).toBeLessThanOrEqual(30);
   });
 });
 
@@ -127,11 +198,13 @@ describe("kreacja", () => {
       cel: "strona_www",
       landingUrl: "https://szalunki-lublin.pl/",
       headline: "Wynajem szalunków",
-    }) as any;
-    const link = c.object_story_spec.link_data.link as string;
+    });
+    const link = pole(c, "object_story_spec", "link_data", "link") as string;
     expect(link).toContain("utm_source=facebook");
     expect(link).toContain("utm_medium=paid_social");
-    expect(c.object_story_spec.link_data.call_to_action).toEqual({ type: "GET_QUOTE" });
+    expect(pole(c, "object_story_spec", "link_data", "call_to_action")).toEqual({
+      type: "GET_QUOTE",
+    });
   });
 
   it("kampania z formularzem FB podpina identyfikator formularza", () => {
@@ -140,18 +213,18 @@ describe("kreacja", () => {
       pageId: "999",
       cel: "formularz_fb",
       leadFormId: "form-1",
-    }) as any;
-    expect(c.object_story_spec.link_data.call_to_action).toEqual({
+    });
+    expect(pole(c, "object_story_spec", "link_data", "call_to_action")).toEqual({
       type: "SIGN_UP",
       value: { lead_gen_form_id: "form-1" },
     });
   });
 
   it("kreacja nie zgadza się na automatyczne ulepszenia Meta", () => {
-    const c = buildCreativePayload({ nazwa: "FY", pageId: "999", cel: "formularz_fb" }) as any;
-    expect(c.degrees_of_freedom_spec.creative_features_spec.standard_enhancements).toEqual({
-      enroll_status: "OPT_OUT",
-    });
+    const c = buildCreativePayload({ nazwa: "FY", pageId: "999", cel: "formularz_fb" });
+    expect(
+      pole(c, "degrees_of_freedom_spec", "creative_features_spec", "standard_enhancements"),
+    ).toEqual({ enroll_status: "OPT_OUT" });
   });
 });
 

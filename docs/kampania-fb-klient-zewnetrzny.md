@@ -51,6 +51,16 @@ można potem dowolnie zmieniać lub usuwać.
 Klucze lokalizacji i identyfikatory zainteresowań zawsze pochodzą z wyszukiwarki
 Meta — nie są wpisane na sztywno w kodzie.
 
+## Gotowy szablon
+
+Przycisk **„Szablon: Szalunki Lublin — zapytania ze strony"** (krok 1) wypełnia
+od razu: nazwę kampanii, budżet 50 zł/dzień, tryb „formularz na stronie WWW",
+adres szalunki-lublin.pl, wiek 25–60, tylko główne kanały, wyłączone poszerzanie
+grupy, CTA „Otrzymaj wycenę" oraz nagłówek, opis i tekst reklamy. Nie rusza
+wybranego konta reklamowego, strony Facebook, piksela ani zainteresowań — te
+zostają takie, jakie ustawisz. Po wstawieniu szablonu zostaje: wybrać konto i
+stronę, utworzyć piksel, kliknąć preset lokalizacji i wgrać grafikę.
+
 ## Krok po kroku: kampania na formularz na stronie klienta
 
 1. **Krok 1 — Konto.** Nazwa kampanii, konto reklamowe (budżet jest liczony w
@@ -64,15 +74,18 @@ Meta — nie są wpisane na sztywno w kodzie.
 5. **Pod co optymalizować** — na starcie „Wejścia na stronę" (piksel nie ma
    jeszcze danych), po kilkudziesięciu zapytaniach przełącz kampanię na
    „Zdarzenie Lead z piksela".
-6. **Krok 2 — Budżet.** Budżet dzienny i ewentualne daty startu/końca.
+6. **Krok 2 — Budżet.** Budżet dzienny, ewentualne daty startu/końca oraz
+   **co ma się stać po publikacji**: domyślnie kampania zostaje wstrzymana,
+   ale można wybrać „Włącz od razu" — wtedy kampania, zestaw i reklama powstają
+   jako ACTIVE i po akceptacji przez Meta zaczynają wydawać budżet.
 7. **Krok 3 — Targetowanie.** Preset lokalizacji i zainteresowań, wiek, płeć,
    umiejscowienia.
 8. **Krok 4 — Kreacja.** Nagłówek, tekst, opis, CTA (dla strony WWW sensowne są
    „Otrzymaj wycenę" / „Skontaktuj się") i zdjęcie.
 9. **Krok 6 — Podgląd.** Kreator wypisze, czego brakuje do publikacji.
-10. **Publikuj.** Kampania, zestaw reklam i reklama powstają w Meta jako
-    **PAUSED** — trzeba je świadomie włączyć w Menedżerze reklam po sprawdzeniu
-    kreacji i rozliczeń.
+10. **Publikuj.** Domyślnie kampania, zestaw reklam i reklama powstają w Meta
+    jako **PAUSED** — włączasz je w Menedżerze reklam po sprawdzeniu kreacji i
+    rozliczeń. Z ustawieniem „Włącz od razu" startują aktywne.
 
 ## Co musi się znaleźć na stronie klienta
 
@@ -97,8 +110,10 @@ Bez tego kampania będzie działać, ale nie policzy konwersji:
 
 ## Ograniczenia, o których warto pamiętać
 
-- Kampania powstaje wyłącznie jako wstrzymana; włączenie i pilnowanie budżetu
-  jest po stronie człowieka.
+- Kampania domyślnie powstaje wstrzymana; „Włącz od razu" to świadomy wybór w
+  kroku 2 — od tego momentu pilnowanie budżetu jest po stronie człowieka.
+- Reklama i tak przechodzi weryfikację Meta, a konto reklamowe musi mieć
+  wpiętą metodę płatności — bez tego publikacja z ACTIVE się nie powiedzie.
 - `META_ACCESS_TOKEN` musi mieć uprawnienia `ads_management` do konta
   reklamowego, na którym tworzymy piksel i kampanię.
 - Konto reklamowe rozlicza się w swojej walucie — budżet 50 na koncie w EUR to

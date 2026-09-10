@@ -7,6 +7,7 @@ import {
   buildCreativePayload,
   buildGeoLocations,
   sprawdzKampanie,
+  statusPublikacji,
   przytnijPromien,
   PRESET_LUBLIN_100KM,
   PRESET_BUDUJE_SIE,
@@ -281,6 +282,9 @@ export const publishAdDraft = createServerFn({ method: "POST" })
       const landingUrl: string | null = creative.landing_url ?? null;
       const pixelId: string | null = creative.pixel_id ?? null;
       const optymalizacjaWww = creative.optymalizacja_www === "wejscia" ? "wejscia" : "konwersje";
+      // Domyślnie kampania powstaje wstrzymana; ACTIVE tylko na wyraźne życzenie.
+      const wlaczOdRazu = creative.wlacz_od_razu === true;
+      const status = statusPublikacji(wlaczOdRazu);
 
       const bledy = sprawdzKampanie({
         cel,
@@ -387,7 +391,7 @@ export const publishAdDraft = createServerFn({ method: "POST" })
       const camp = await metaPost(`/${actId}/campaigns`, {
         name: draft.name,
         objective,
-        status: "PAUSED",
+        status,
         special_ad_categories: "[]",
       });
 
@@ -409,6 +413,7 @@ export const publishAdDraft = createServerFn({ method: "POST" })
           pageId: draft.page_id,
           pixelId,
           optymalizacjaWww,
+          wlaczOdRazu,
           startTime: draft.start_time,
           endTime: draft.end_time,
           targeting: {
@@ -466,7 +471,7 @@ export const publishAdDraft = createServerFn({ method: "POST" })
         name: `${draft.name} - reklama`,
         adset_id: adset.id,
         creative: { creative_id: cr.id },
-        status: "PAUSED",
+        status,
       });
 
       await supabaseAdmin
@@ -483,7 +488,7 @@ export const publishAdDraft = createServerFn({ method: "POST" })
         })
         .eq("id", data.id);
 
-      return { ok: true, ad_id: ad.id };
+      return { ok: true, ad_id: ad.id, status };
     } catch (e: any) {
       await supabaseAdmin
         .from("meta_ad_drafts")

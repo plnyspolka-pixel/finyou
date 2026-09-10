@@ -160,9 +160,16 @@ export type AdSetInput = {
   pixelId?: string | null;
   /** Cel optymalizacji dla kampanii na stronę: zdarzenie LEAD albo wejścia na stronę. */
   optymalizacjaWww?: "konwersje" | "wejscia";
+  /** Publikacja od razu jako aktywna zamiast wstrzymanej. */
+  wlaczOdRazu?: boolean;
   startTime?: string | null;
   endTime?: string | null;
 };
+
+/** Status, z jakim tworzymy kampanię, zestaw i reklamę. */
+export function statusPublikacji(wlaczOdRazu?: boolean): "ACTIVE" | "PAUSED" {
+  return wlaczOdRazu ? "ACTIVE" : "PAUSED";
+}
 
 /** Ciało żądania POST /act_<id>/adsets. */
 export function buildAdSetPayload(input: AdSetInput): Record<string, unknown> {
@@ -199,7 +206,7 @@ export function buildAdSetPayload(input: AdSetInput): Record<string, unknown> {
       // 0 = bez automatycznego poszerzania grupy odbiorców przez Meta.
       targeting_automation: { advantage_audience: t.poszerzanie_grupy ? 1 : 0 },
     },
-    status: "PAUSED",
+    status: statusPublikacji(input.wlaczOdRazu),
     promoted_object,
     start_time: input.startTime ?? undefined,
     end_time: input.endTime ?? undefined,
@@ -279,6 +286,77 @@ export function buildCreativePayload(input: KreacjaInput): Record<string, unknow
     // jak ją przygotowaliśmy.
     degrees_of_freedom_spec: {
       creative_features_spec: { standard_enhancements: { enroll_status: "OPT_OUT" } },
+    },
+  };
+}
+
+export type SzablonKampanii = {
+  id: string;
+  label: string;
+  name: string;
+  daily_budget: number;
+  landing_url: string;
+  optymalizacja_www: "konwersje" | "wejscia";
+  age_min: number;
+  age_max: number;
+  umiejscowienia: UmiejscowieniaTryb;
+  cta_type: string;
+  headline: string;
+  description: string;
+  primary_text: string;
+};
+
+/** Gotowa kampania na formularz na stronie szalunki-lublin.pl. */
+export const SZABLON_SZALUNKI_LUBLIN: SzablonKampanii = {
+  id: "szalunki_lublin",
+  label: "Szalunki Lublin — zapytania ze strony",
+  name: "Szalunki Lublin — zapytania",
+  daily_budget: 50,
+  landing_url: "https://szalunki-lublin.pl",
+  // Na starcie piksel nie ma jeszcze danych, więc optymalizujemy pod wejścia.
+  optymalizacja_www: "wejscia",
+  age_min: 25,
+  age_max: 60,
+  umiejscowienia: "glowne",
+  cta_type: "GET_QUOTE",
+  headline: "Szalunki stropowe — Lublin i okolice",
+  description: "Wycena tego samego dnia",
+  primary_text:
+    "Budujesz dom? Wynajmiemy komplet szalunków stropowych — 1,49 zł netto za m² " +
+    "za dobę, z transportem na budowę. Lublin i okolice do 100 km. Zostaw metraż " +
+    "i termin, oddzwonimy z wyceną tego samego dnia.",
+};
+
+export type SzkicFormularza = {
+  name: string;
+  daily_budget: number;
+  targeting: Record<string, unknown>;
+  creative: Record<string, unknown>;
+  [klucz: string]: unknown;
+};
+
+/** Wypełnia szkic gotowymi ustawieniami; konto, strona i piksel zostają bez zmian. */
+export function zastosujSzablon(form: SzkicFormularza, s: SzablonKampanii): SzkicFormularza {
+  return {
+    ...form,
+    name: s.name,
+    daily_budget: s.daily_budget,
+    targeting: {
+      ...form.targeting,
+      age_min: s.age_min,
+      age_max: s.age_max,
+      umiejscowienia: s.umiejscowienia,
+      poszerzanie_grupy: false,
+    },
+    creative: {
+      ...form.creative,
+      cel: "strona_www",
+      landing_url: s.landing_url,
+      optymalizacja_www: s.optymalizacja_www,
+      cta_type: s.cta_type,
+      headline: s.headline,
+      description: s.description,
+      primary_text: s.primary_text,
     },
   };
 }
