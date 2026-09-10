@@ -537,6 +537,8 @@ export const performWindContact = createServerFn({ method: "POST" })
         phone: data.target,
         body: data.tresc,
         source: "windykacja",
+        // Wysyłka ręczna operatora windykacji — poza limitami hamulca SMS.
+        category: "critical",
       });
       status = res.ok ? "doreczone" : null;
       extra = { ok: res.ok, sid: res.sid ?? null, error: res.error ?? null, numer: data.target };

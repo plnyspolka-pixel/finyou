@@ -195,6 +195,8 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           phone,
           body,
           source: "elevenlabs_agent",
+          // SMS zamówiony przez klienta w trakcie rozmowy z Anią.
+          category: "conversational",
         });
 
         console.log("[elevenlabs-send-sms] sms result", {

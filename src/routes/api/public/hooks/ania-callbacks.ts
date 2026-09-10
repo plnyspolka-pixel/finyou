@@ -62,7 +62,7 @@ async function runBatch(force: boolean) {
     .select(
       `
       id, status, reminder_paused, last_reminder_at,
-      client:clients!inner(id, first_name, last_name, phone_normalized, phone, do_not_call)
+      client:clients!inner(id, first_name, last_name, phone_normalized, phone, do_not_call, do_not_sms)
     `,
     )
     .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
@@ -135,14 +135,24 @@ async function runBatch(force: boolean) {
     if (callRes.ok) called++;
     else skipped++;
 
-    // SMS — niezależnie od wyniku telefonu (klient zobaczy oba kanały).
-    const sms = await sendSmsInternal({
-      phone,
-      body: SMS_BODY,
-      source: "ania_callback_sms",
-    });
-    if (sms.ok) smsSent++;
-    else smsErrors++;
+    // SMS TYLKO wtedy, gdy telefon nie poszedł (throttle/quiet hours/błąd).
+    // Wcześniej leciał zawsze — klient dostawał zapowiedź rozmowy SMS-em, sam
+    // telefon i jeszcze prośbę o kontakt, dwa razy dziennie. Gdy dzwonimy,
+    // wystarczy rozmowa; SMS jest planem B.
+    let sms: { ok: boolean; error?: string; skipped?: boolean } = {
+      ok: false,
+      skipped: true,
+      error: "call placed",
+    };
+    if (!callRes.ok && loan.client?.do_not_sms !== true) {
+      sms = await sendSmsInternal({
+        phone,
+        body: SMS_BODY,
+        source: "ania_callback_sms",
+      });
+      if (sms.ok) smsSent++;
+      else smsErrors++;
+    }
 
     results.push({
       id: loan.id,

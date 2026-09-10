@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createClient } from "@supabase/supabase-js";
+import { evaluateSmsGuard, type SmsCategory } from "@/lib/sms-guard.server";
 
 function normalizePhone(input: string): string {
   const s = String(input ?? "").replace(/\s|-/g, "");
@@ -115,13 +116,22 @@ export function getCallingWindow(now: Date = new Date()): {
   };
 }
 
-/** Wysyła SMS przez Twilio (connector gateway). */
+/**
+ * Wysyła SMS przez Twilio (connector gateway).
+ *
+ * KAŻDY tor SMS-owy przechodzi tędy, więc tu (a nie w poszczególnych cronach)
+ * siedzi hamulec `evaluateSmsGuard`: okno godzinowe, limit dobowy/tygodniowy,
+ * dedup treści i STOP (`clients.do_not_sms`). `category` pozwala oznaczyć
+ * wysyłkę jako krytyczną (OTP, ręczna z panelu) albo konwersacyjną (odpowiedź
+ * na SMS klienta); domyślnie kategoria wynika ze źródła.
+ */
 export async function sendSmsInternal(opts: {
   phone: string;
   body: string;
   source: string;
   from?: string | null;
-}): Promise<{ ok: boolean; sid?: string; error?: string }> {
+  category?: SmsCategory;
+}): Promise<{ ok: boolean; sid?: string; error?: string; skipped?: boolean; reason?: string }> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   const twilioKey = process.env.TWILIO_API_KEY;
   if (!lovableKey) return { ok: false, error: "Brak LOVABLE_API_KEY" };
@@ -133,6 +143,29 @@ export async function sendSmsInternal(opts: {
 
   const phone = normalizePhone(opts.phone);
   const s = admin();
+
+  // HAMULEC — zanim cokolwiek poleci do Twilio.
+  const guard = await evaluateSmsGuard({
+    phoneNormalized: phone,
+    body: opts.body,
+    source: opts.source,
+    category: opts.category,
+  });
+  if (!guard.allowed) {
+    await s.from("automation_events").insert({
+      automation_type: "twilio_sms",
+      status: "skipped",
+      sent_payload: { to: phone, body: opts.body, source: opts.source },
+      response_payload: { blocked_by: "sms_guard", reason: guard.reason, detail: guard.detail },
+      error_message: guard.detail ?? guard.reason ?? "sms guard",
+    });
+    return {
+      ok: false,
+      skipped: true,
+      reason: guard.reason,
+      error: `SMS pominięty (${guard.reason}): ${guard.detail ?? ""}`.trim(),
+    };
+  }
 
   try {
     const res = await fetch("https://connector-gateway.lovable.dev/twilio/Messages.json", {
@@ -196,7 +229,15 @@ async function maybeSendSms(
     first_name: ctx.firstName ?? "",
     phone: ctx.phone,
   });
-  await sendSmsInternal({ phone: ctx.phone, body, source: ctx.source, from: settings.sms_from });
+  // Zapowiedź telefonu to wysyłka automatyczna — hamulec w `sendSmsInternal`
+  // pilnuje, żeby ten sam tekst nie leciał przy każdej kolejnej próbie dzwonienia.
+  await sendSmsInternal({
+    phone: ctx.phone,
+    body,
+    source: ctx.source,
+    from: settings.sms_from,
+    category: "automated",
+  });
 }
 
 /** Wywołuje wychodzące połączenie ElevenLabs (Twilio outbound). */

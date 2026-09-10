@@ -864,10 +864,12 @@ export async function processDueFollowUps(): Promise<{
           body: tplFn(vars),
           source: `follow_up_sms_${row.step_index}`,
         });
+        // Hamulec SMS (limit dobowy/dedup/STOP) to nie błąd wysyłki — taki krok
+        // zamykamy jako `skipped`, żeby nie wracał w kolejnych tickach.
         await s
           .from("lead_follow_up_schedule")
           .update({
-            status: r.ok ? "sent" : "error",
+            status: r.ok ? "sent" : r.skipped ? "skipped" : "error",
             sent_at: r.ok ? new Date().toISOString() : null,
             external_id: r.sid ?? null,
             error_message: r.ok ? null : (r.error ?? "send error"),
@@ -875,6 +877,7 @@ export async function processDueFollowUps(): Promise<{
           })
           .eq("id", row.id);
         if (r.ok) sent++;
+        else if (r.skipped) skipped++;
       } else if (row.channel === "call") {
         const phone = lead.phone_normalized;
         if (!phone) {

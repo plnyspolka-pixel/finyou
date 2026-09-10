@@ -58,6 +58,8 @@ export const sendPhoneOtp = createServerFn({ method: "POST" })
       phone: normalized,
       body: `Finance You: Twój kod weryfikacyjny to ${code}. Wazny 10 min.`,
       source: "phone_verification",
+      // Kod jednorazowy zamówiony przez klienta — poza limitami hamulca SMS.
+      category: "critical",
     });
     if (!sms.ok)
       return { ok: false as const, reason: "sms_failed" as const, error: sms.error ?? "sms_error" };

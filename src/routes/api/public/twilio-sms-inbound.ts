@@ -119,7 +119,14 @@ export const Route = createFileRoute("/api/public/twilio-sms-inbound")({
                 if (reply) {
                   // sendSmsInternal sam loguje wysyłkę w lead_communications.
                   const { sendSmsInternal } = await import("@/lib/voicebot.functions");
-                  await sendSmsInternal({ phone, body: reply, source: "sms_agent_reply" });
+                  await sendSmsInternal({
+                    phone,
+                    body: reply,
+                    source: "sms_agent_reply",
+                    // Odpowiedź na SMS klienta — bez okna godzinowego, ale z
+                    // bezpiecznikiem pętli w hamulcu SMS.
+                    category: "conversational",
+                  });
                 }
               }
             } catch (e: any) {
