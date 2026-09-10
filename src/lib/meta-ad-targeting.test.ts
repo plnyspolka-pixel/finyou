@@ -10,6 +10,7 @@ import {
   MAX_PROMIEN_KM,
   PRESET_LUBLIN_100KM,
   SZABLON_SZALUNKI_LUBLIN,
+  SZABLON_SZALUNKI_FORMULARZ,
   statusPublikacji,
   zastosujSzablon,
 } from "./meta-ad-targeting";
@@ -185,8 +186,34 @@ describe("szablon kampanii", () => {
   });
 
   it("teksty reklamy mieszczą się w limitach Meta", () => {
-    expect(SZABLON_SZALUNKI_LUBLIN.headline.length).toBeLessThanOrEqual(40);
-    expect(SZABLON_SZALUNKI_LUBLIN.description.length).toBeLessThanOrEqual(30);
+    for (const szablon of [SZABLON_SZALUNKI_LUBLIN, SZABLON_SZALUNKI_FORMULARZ]) {
+      expect(szablon.headline.length).toBeLessThanOrEqual(40);
+      expect(szablon.description.length).toBeLessThanOrEqual(30);
+    }
+  });
+
+  it("szablon formularza błyskawicznego pyta tylko o imię i kontakt", () => {
+    const f = zastosujSzablon(pusty, SZABLON_SZALUNKI_FORMULARZ);
+    expect(f.creative.cel).toBe("formularz_fb");
+    expect(f.lead_form?.questions).toEqual([
+      { type: "FULL_NAME" },
+      { type: "PHONE" },
+      { type: "EMAIL" },
+    ]);
+  });
+
+  it("formularz błyskawiczny linkuje politykę klienta, nie Finance You", () => {
+    const f = zastosujSzablon(pusty, SZABLON_SZALUNKI_FORMULARZ);
+    const polityka = (f.lead_form?.privacy_policy as { url: string }).url;
+    expect(polityka).toBe("https://szalunki-lublin.pl/polityka-prywatnosci");
+    expect(polityka).not.toContain("financeyou");
+  });
+
+  it("kampania klienta nie podpina remarketingu Finance You", () => {
+    for (const szablon of [SZABLON_SZALUNKI_LUBLIN, SZABLON_SZALUNKI_FORMULARZ]) {
+      expect(szablon.remarketing_fy).toBe(false);
+      expect(zastosujSzablon(pusty, szablon).targeting.remarketing).toBe(false);
+    }
   });
 });
 
@@ -259,6 +286,22 @@ describe("kontrola przed publikacją", () => {
       landingUrl: "http://szalunki-lublin.pl",
     });
     expect(bledy.join(" ")).toContain("https://");
+  });
+
+  it("formularz błyskawiczny bez polityki prywatności nie przejdzie", () => {
+    const bledy = sprawdzKampanie({ cel: "formularz_fb", pageId: "999", budzetDzienny: 50 });
+    expect(bledy.join(" ")).toContain("polityki prywatności");
+  });
+
+  it("formularz błyskawiczny z polityką klienta przechodzi", () => {
+    expect(
+      sprawdzKampanie({
+        cel: "formularz_fb",
+        pageId: "999",
+        budzetDzienny: 50,
+        politykaUrl: "https://szalunki-lublin.pl/polityka-prywatnosci",
+      }),
+    ).toEqual([]);
   });
 
   it("komplet danych nie zgłasza uwag", () => {
