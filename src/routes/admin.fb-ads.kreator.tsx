@@ -11,7 +11,18 @@ import {
   getAdDraft,
   deleteAdDraft,
   publishAdDraft,
+  listAdPixels,
+  createAdPixel,
+  suggestTargeting,
 } from "@/lib/meta-ads-creator.functions";
+import {
+  PRESET_LUBLIN_100KM,
+  PRESET_BUDUJE_SIE,
+  SZABLON_SZALUNKI_LUBLIN,
+  zastosujSzablon,
+  sprawdzKampanie,
+  MAX_PROMIEN_KM,
+} from "@/lib/meta-ad-targeting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -60,13 +71,16 @@ function FbCreatorPage() {
   const onPublish = async (id: string) => {
     if (
       !confirm(
-        "Opublikować kampanię na Facebooku? (utworzy się jako PAUSED — wymaga ręcznej aktywacji)",
+        "Opublikować kampanię na Facebooku? Szkic z ustawieniem „włącz od razu” wystartuje " +
+          "i zacznie wydawać budżet; pozostałe powstaną jako wstrzymane.",
       )
     )
       return;
     try {
-      await publish({ data: { id } });
-      toast.success("Opublikowano (PAUSED)");
+      const r = await publish({ data: { id } });
+      toast.success(
+        r.status === "ACTIVE" ? "Opublikowano i włączono (ACTIVE)" : "Opublikowano (PAUSED)",
+      );
       qc.invalidateQueries({ queryKey: ["fb-drafts"] });
     } catch (e: any) {
       toast.error(e.message);
@@ -226,6 +240,9 @@ function FbCreatorDialog({
     end_time: null,
     targeting: {
       geo_locations: { countries: ["PL"] },
+      cities: [],
+      umiejscowienia: "glowne",
+      poszerzanie_grupy: false,
       age_min: 25,
       age_max: 65,
       genders: undefined,
@@ -237,6 +254,10 @@ function FbCreatorDialog({
       description: "",
       image_url: "",
       cta_type: "SIGN_UP",
+      cel: "formularz_fb",
+      landing_url: "",
+      pixel_id: "",
+      optymalizacja_www: "konwersje",
     },
     lead_form: {
       name: "",
@@ -256,6 +277,75 @@ function FbCreatorDialog({
       });
     }
   }, [editingId, getDraft]);
+
+  const fetchPixels = useServerFn(listAdPixels);
+  const makePixel = useServerFn(createAdPixel);
+  const suggest = useServerFn(suggestTargeting);
+
+  const naStrone = form.creative?.cel === "strona_www";
+
+  const { data: pixels, refetch: refetchPixels } = useQuery({
+    queryKey: ["fb-pixels", form.ad_account_id],
+    queryFn: () => fetchPixels({ data: { ad_account_id: form.ad_account_id } }),
+    enabled: Boolean(form.ad_account_id) && naStrone,
+  });
+
+  type Miasto = { key: string; name: string; region?: string; radius: number };
+  type Piksel = { id: string; name: string };
+
+  const [nowyPiksel, setNowyPiksel] = useState("");
+  const utworzPiksel = async () => {
+    if (!form.ad_account_id) {
+      toast.error("Najpierw wybierz konto reklamowe");
+      return;
+    }
+    try {
+      const r = await makePixel({
+        data: {
+          ad_account_id: form.ad_account_id,
+          name: nowyPiksel.trim() || form.name || "Piksel kampanii",
+        },
+      });
+      setForm((f: typeof form) => ({ ...f, creative: { ...f.creative, pixel_id: r.id } }));
+      setNowyPiksel("");
+      await refetchPixels();
+      toast.success(`Utworzono piksel ${r.id}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const [presetLoading, setPresetLoading] = useState(false);
+  const wstawPreset = async () => {
+    setPresetLoading(true);
+    try {
+      const r = await suggest({
+        data: { geo: PRESET_LUBLIN_100KM.id, interests: PRESET_BUDUJE_SIE.id },
+      });
+      setForm((f: typeof form) => {
+        const stare = f.targeting.interests ?? [];
+        const nowe = r.interests.filter(
+          (i: { id: string }) => !stare.some((x: { id: string }) => x.id === i.id),
+        );
+        return {
+          ...f,
+          targeting: {
+            ...f.targeting,
+            cities: r.cities,
+            geo_locations: r.geo_locations ?? f.targeting.geo_locations,
+            interests: [...stare, ...nowe],
+          },
+        };
+      });
+      toast.success(
+        `Wstawiono ${r.cities.length} lokalizacji i ${r.interests.length} zainteresowań`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPresetLoading(false);
+    }
+  };
 
   const [intSearch, setIntSearch] = useState("");
   const [intResults, setIntResults] = useState<any[]>([]);
@@ -318,7 +408,7 @@ function FbCreatorDialog({
         </DialogHeader>
 
         <div className="flex gap-1 mb-2">
-          {["Konto", "Budżet", "Targetowanie", "Kreacja", "Formularz", "Podgląd"].map(
+          {["Konto", "Budżet", "Targetowanie", "Kreacja", "Formularz / strona", "Podgląd"].map(
             (label, i) => (
               <button
                 key={i}
@@ -334,7 +424,20 @@ function FbCreatorDialog({
         {step === 1 && (
           <div className="space-y-3">
             <div>
-              <Label>Nazwa kampanii</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Nazwa kampanii</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setForm((f: typeof form) => zastosujSzablon(f, SZABLON_SZALUNKI_LUBLIN));
+                    toast.success("Wstawiono szablon — zostaje konto, strona i piksel");
+                  }}
+                >
+                  Szablon: {SZABLON_SZALUNKI_LUBLIN.label}
+                </Button>
+              </div>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -381,6 +484,103 @@ function FbCreatorDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            <div>
+              <Label>Gdzie klient zostawia kontakt</Label>
+              <Select
+                value={form.creative.cel ?? "formularz_fb"}
+                onValueChange={(v) => setForm({ ...form, creative: { ...form.creative, cel: v } })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="formularz_fb">Formularz na Facebooku (Lead Ads)</SelectItem>
+                  <SelectItem value="strona_www">Formularz na stronie WWW (piksel)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {naStrone && (
+              <div className="space-y-3 rounded border p-3">
+                <div>
+                  <Label>Adres strony z formularzem</Label>
+                  <Input
+                    placeholder="https://szalunki-lublin.pl"
+                    value={form.creative.landing_url ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        creative: { ...form.creative, landing_url: e.target.value },
+                      })
+                    }
+                  />
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Do adresu dokleimy UTM-y (utm_source=facebook), żeby leady były podpisane
+                    źródłem.
+                  </div>
+                </div>
+                <div>
+                  <Label>Piksel</Label>
+                  <Select
+                    value={form.creative.pixel_id ?? ""}
+                    onValueChange={(v) =>
+                      setForm({ ...form, creative: { ...form.creative, pixel_id: v } })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Wybierz piksel" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pixels?.pixels.map((px: Piksel) => (
+                        <SelectItem key={px.id} value={px.id}>
+                          {px.name} ({px.id})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      placeholder="Nazwa nowego piksela"
+                      value={nowyPiksel}
+                      onChange={(e) => setNowyPiksel(e.target.value)}
+                    />
+                    <Button type="button" variant="outline" onClick={utworzPiksel}>
+                      <Plus className="h-3 w-3 mr-1" />
+                      Utwórz piksel
+                    </Button>
+                  </div>
+                  {form.creative.pixel_id && (
+                    <div className="text-xs text-muted-foreground mt-2">
+                      Wklej ten identyfikator na stronie klienta:{" "}
+                      <code>{form.creative.pixel_id}</code>. Formularz po wysłaniu ma zgłosić
+                      zdarzenie <code>Lead</code>.
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <Label>Pod co optymalizować</Label>
+                  <Select
+                    value={form.creative.optymalizacja_www ?? "konwersje"}
+                    onValueChange={(v) =>
+                      setForm({ ...form, creative: { ...form.creative, optymalizacja_www: v } })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="konwersje">
+                        Zdarzenie Lead z piksela (gdy piksel już zbiera dane)
+                      </SelectItem>
+                      <SelectItem value="wejscia">
+                        Wejścia na stronę (na start, zanim piksel się nauczy)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -393,6 +593,31 @@ function FbCreatorDialog({
                 value={form.daily_budget}
                 onChange={(e) => setForm({ ...form, daily_budget: Number(e.target.value) })}
               />
+            </div>
+            <div>
+              <Label>Po publikacji</Label>
+              <Select
+                value={form.creative.wlacz_od_razu ? "1" : "0"}
+                onValueChange={(v) =>
+                  setForm({ ...form, creative: { ...form.creative, wlacz_od_razu: v === "1" } })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">
+                    Zostaw wstrzymaną (włączysz ręcznie w Menedżerze reklam)
+                  </SelectItem>
+                  <SelectItem value="1">Włącz od razu — reklama rusza i wydaje budżet</SelectItem>
+                </SelectContent>
+              </Select>
+              {form.creative.wlacz_od_razu ? (
+                <div className="text-xs text-destructive mt-1">
+                  Kampania, zestaw i reklama powstaną jako ACTIVE — po akceptacji przez Meta zaczną
+                  wydawać {Number(form.daily_budget).toFixed(2)} PLN dziennie.
+                </div>
+              ) : null}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -526,7 +751,148 @@ function FbCreatorDialog({
                 ))}
               </div>
             </div>
-            <div className="text-xs text-muted-foreground">Lokalizacja: Polska (domyślnie)</div>
+            <div className="space-y-2 rounded border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Lokalizacja</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={presetLoading}
+                  onClick={wstawPreset}
+                >
+                  {presetLoading
+                    ? "Pobieram…"
+                    : `Preset: ${PRESET_LUBLIN_100KM.label} + buduje się`}
+                </Button>
+              </div>
+              {(form.targeting.cities ?? []).length ? (
+                <div className="space-y-1">
+                  {(form.targeting.cities ?? []).map((c: Miasto) => (
+                    <div key={c.key} className="flex items-center gap-2 text-sm">
+                      <span className="flex-1">
+                        {c.name}
+                        {c.region ? `, ${c.region}` : ""}
+                      </span>
+                      <Input
+                        type="number"
+                        min={10}
+                        max={MAX_PROMIEN_KM}
+                        className="w-24"
+                        value={c.radius}
+                        onChange={(e) => {
+                          const radius = Number(e.target.value);
+                          setForm((f: typeof form) => {
+                            const cities = (f.targeting.cities ?? []).map((x: Miasto) =>
+                              x.key === c.key ? { ...x, radius } : x,
+                            );
+                            return {
+                              ...f,
+                              targeting: {
+                                ...f.targeting,
+                                cities,
+                                geo_locations: {
+                                  cities: cities.map((x: Miasto) => ({
+                                    key: x.key,
+                                    radius: Math.min(MAX_PROMIEN_KM, Math.max(10, x.radius || 10)),
+                                    distance_unit: "kilometer",
+                                  })),
+                                  location_types: ["home", "recent"],
+                                },
+                              },
+                            };
+                          });
+                        }}
+                      />
+                      <span className="text-xs text-muted-foreground">km</span>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-destructive"
+                        onClick={() =>
+                          setForm((f: typeof form) => {
+                            const cities = (f.targeting.cities ?? []).filter(
+                              (x: Miasto) => x.key !== c.key,
+                            );
+                            return {
+                              ...f,
+                              targeting: {
+                                ...f.targeting,
+                                cities,
+                                geo_locations: cities.length
+                                  ? {
+                                      cities: cities.map((x: Miasto) => ({
+                                        key: x.key,
+                                        radius: x.radius,
+                                        distance_unit: "kilometer",
+                                      })),
+                                      location_types: ["home", "recent"],
+                                    }
+                                  : { countries: ["PL"] },
+                              },
+                            };
+                          })
+                        }
+                      >
+                        usuń
+                      </button>
+                    </div>
+                  ))}
+                  <div className="text-xs text-muted-foreground">
+                    Meta nie przyjmuje promienia większego niż {MAX_PROMIEN_KM} km wokół jednego
+                    miasta — dlatego „+100 km" składamy z kilku mniejszych okręgów.
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground">Lokalizacja: Polska (domyślnie)</div>
+              )}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label>Umiejscowienia</Label>
+                <Select
+                  value={form.targeting.umiejscowienia ?? "glowne"}
+                  onValueChange={(v) =>
+                    setForm({ ...form, targeting: { ...form.targeting, umiejscowienia: v } })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="glowne">
+                      Tylko główne kanały (aktualności FB + feed IG)
+                    </SelectItem>
+                    <SelectItem value="glowne_reels">Główne kanały + Reels</SelectItem>
+                    <SelectItem value="auto">Automat Meta (tylko FB i IG)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Audience Network i Messenger są wyłączone zawsze — to tam najczęściej przepalają
+                  się wyświetlenia.
+                </div>
+              </div>
+              <div>
+                <Label>Poszerzanie grupy przez Meta</Label>
+                <Select
+                  value={form.targeting.poszerzanie_grupy ? "1" : "0"}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      targeting: { ...form.targeting, poszerzanie_grupy: v === "1" },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Wyłączone (trzymamy się zainteresowań)</SelectItem>
+                    <SelectItem value="1">Włączone (Advantage+ audience)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         )}
 
@@ -599,7 +965,24 @@ function FbCreatorDialog({
           </div>
         )}
 
-        {step === 5 && (
+        {step === 5 && naStrone && (
+          <div className="space-y-2 text-sm">
+            <div className="rounded border p-3">
+              Ta kampania nie tworzy formularza na Facebooku — reklama prowadzi na{" "}
+              <strong>{form.creative.landing_url || "(brak adresu)"}</strong>, a konwersje liczy
+              piksel <strong>{form.creative.pixel_id || "(brak)"}</strong>.
+            </div>
+            <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+              <li>
+                Na stronie musi być wpięty ten piksel, a formularz po wysłaniu ma zgłaszać zdarzenie{" "}
+                <code>Lead</code>.
+              </li>
+              <li>Zgody i polityka prywatności obowiązują po stronie strony docelowej.</li>
+            </ul>
+          </div>
+        )}
+
+        {step === 5 && !naStrone && (
           <div className="space-y-3">
             <div>
               <Label>Nazwa formularza</Label>
@@ -645,8 +1028,55 @@ function FbCreatorDialog({
 
         {step === 6 && (
           <div className="space-y-2 text-sm">
+            {(() => {
+              const bledy = sprawdzKampanie({
+                cel: naStrone ? "strona_www" : "formularz_fb",
+                landingUrl: form.creative.landing_url,
+                pixelId: form.creative.pixel_id,
+                pageId: form.page_id,
+                budzetDzienny: Number(form.daily_budget),
+              });
+              return bledy.length ? (
+                <div className="rounded border border-destructive/50 bg-destructive/10 p-3">
+                  <div className="font-medium text-destructive">
+                    Do uzupełnienia przed publikacją:
+                  </div>
+                  <ul className="list-disc pl-5">
+                    {bledy.map((b) => (
+                      <li key={b}>{b}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null;
+            })()}
             <div>
               <strong>Nazwa:</strong> {form.name}
+            </div>
+            <div>
+              <strong>Cel:</strong>{" "}
+              {naStrone
+                ? `formularz na stronie ${form.creative.landing_url || "—"} (piksel ${form.creative.pixel_id || "—"})`
+                : "formularz na Facebooku"}
+            </div>
+            <div>
+              <strong>Po publikacji:</strong>{" "}
+              {form.creative.wlacz_od_razu ? "od razu aktywna" : "wstrzymana"}
+            </div>
+            <div>
+              <strong>Umiejscowienia:</strong>{" "}
+              {form.targeting.umiejscowienia === "auto"
+                ? "automat Meta (FB + IG)"
+                : form.targeting.umiejscowienia === "glowne_reels"
+                  ? "główne kanały + Reels"
+                  : "tylko główne kanały"}
+            </div>
+            <div>
+              <strong>Lokalizacje:</strong>{" "}
+              {(form.targeting.cities ?? []).length
+                ? (form.targeting.cities ?? [])
+                    .map((c: Miasto) => `${c.name} +${c.radius} km`)
+                    .join(", ")
+                : "Polska"}
             </div>
             <div>
               <strong>Budżet:</strong> {form.daily_budget} PLN/dzień
