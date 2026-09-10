@@ -43,44 +43,65 @@ export async function runMetaLeadsSync(): Promise<{
     errors: [] as string[],
   };
 
-  // 1) Odkryj strony + formularze
-  try {
-    const pagesRes = await fetch(
-      `${GRAPH}/me/accounts?fields=id,name,access_token&limit=100&access_token=${token}`,
-    );
-    const pagesJson: any = await pagesRes.json();
-    if (!pagesRes.ok) throw new Error(pagesJson?.error?.message ?? `pages ${pagesRes.status}`);
-    const pages: any[] = pagesJson?.data ?? [];
-    for (const page of pages) {
-      const pageToken = page.access_token ?? token;
-      const formsRes = await fetch(
-        `${GRAPH}/${page.id}/leadgen_forms?fields=id,name,status&limit=100&access_token=${pageToken}`,
+  // 1) Odkryj strony + formularze — najwyżej raz na godzinę.
+  // Każde odkrywanie to zapytanie o strony plus jedno o formularze dla KAŻDEJ strony.
+  // Limit aplikacji Meta (#4) skaluje się z liczbą użytkowników i dla wewnętrznej
+  // aplikacji jest mały, więc nie stać nas na to przy każdym przebiegu — nowe
+  // formularze i tak pojawiają się rzadko.
+  const { data: ostatnieOdkrycie } = await supabaseAdmin
+    .from("meta_lead_forms")
+    .select("last_synced_at")
+    .order("last_synced_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  const odkrywaj =
+    !ostatnieOdkrycie?.last_synced_at ||
+    Date.now() - new Date(ostatnieOdkrycie.last_synced_at).getTime() > 60 * 60 * 1000;
+
+  if (odkrywaj) {
+    try {
+      const pagesRes = await fetch(
+        `${GRAPH}/me/accounts?fields=id,name,access_token&limit=100&access_token=${token}`,
       );
-      const formsJson: any = await formsRes.json();
-      if (!formsRes.ok) {
-        summary.errors.push(`forms ${page.name}: ${formsJson?.error?.message}`);
-        continue;
-      }
-      for (const form of formsJson?.data ?? []) {
-        summary.forms_discovered += 1;
-        await supabaseAdmin.from("meta_lead_forms").upsert(
-          {
-            meta_form_id: String(form.id),
-            meta_page_id: String(page.id),
-            form_name: form.name ?? null,
-            page_name: page.name ?? null,
-            last_synced_at: new Date().toISOString(),
-          },
-          { onConflict: "meta_form_id" },
+      const pagesJson: any = await pagesRes.json();
+      if (!pagesRes.ok) throw new Error(pagesJson?.error?.message ?? `pages ${pagesRes.status}`);
+      const pages: any[] = pagesJson?.data ?? [];
+      for (const page of pages) {
+        const pageToken = page.access_token ?? token;
+        const formsRes = await fetch(
+          `${GRAPH}/${page.id}/leadgen_forms?fields=id,name,status&limit=100&access_token=${pageToken}`,
         );
+        const formsJson: any = await formsRes.json();
+        if (!formsRes.ok) {
+          summary.errors.push(`forms ${page.name}: ${formsJson?.error?.message}`);
+          continue;
+        }
+        for (const form of formsJson?.data ?? []) {
+          summary.forms_discovered += 1;
+          await supabaseAdmin.from("meta_lead_forms").upsert(
+            {
+              meta_form_id: String(form.id),
+              meta_page_id: String(page.id),
+              form_name: form.name ?? null,
+              page_name: page.name ?? null,
+              last_synced_at: new Date().toISOString(),
+            },
+            { onConflict: "meta_form_id" },
+          );
+        }
       }
+    } catch (e: any) {
+      summary.errors.push(`discover: ${e?.message ?? e}`);
     }
-  } catch (e: any) {
-    summary.errors.push(`discover: ${e?.message ?? e}`);
   }
 
   // 2) Pociągnij leady ze WSZYSTKICH wykrytych formularzy
-  const { data: enabledForms } = await supabaseAdmin.from("meta_lead_forms").select("*");
+  // Tylko włączone formularze — wyłączonych nie ma po co odpytywać, a każdy
+  // kosztuje osobne zapytanie do Graph API.
+  const { data: enabledForms } = await supabaseAdmin
+    .from("meta_lead_forms")
+    .select("*")
+    .eq("is_enabled", true);
 
   const { data: settings } = await supabaseAdmin
     .from("voicebot_settings")
@@ -89,16 +110,19 @@ export async function runMetaLeadsSync(): Promise<{
     .maybeSingle();
   const autoCall = settings && settings.call_trigger !== "manual";
 
-  // tokeny per strona (token strony > globalny)
+  // Tokeny per strona (token strony > globalny) — pobieramy tylko wtedy, gdy jest
+  // co ciągnąć; to kolejne zapytanie do Graph API.
   const pageTokens: Record<string, string> = {};
-  try {
-    const pagesRes = await fetch(
-      `${GRAPH}/me/accounts?fields=id,access_token&limit=100&access_token=${token}`,
-    );
-    const pj: any = await pagesRes.json();
-    for (const p of pj?.data ?? []) if (p.id && p.access_token) pageTokens[p.id] = p.access_token;
-  } catch {
-    /* noop */
+  if ((enabledForms ?? []).length) {
+    try {
+      const pagesRes = await fetch(
+        `${GRAPH}/me/accounts?fields=id,access_token&limit=100&access_token=${token}`,
+      );
+      const pj: any = await pagesRes.json();
+      for (const p of pj?.data ?? []) if (p.id && p.access_token) pageTokens[p.id] = p.access_token;
+    } catch {
+      /* noop */
+    }
   }
 
   for (const form of enabledForms ?? []) {
