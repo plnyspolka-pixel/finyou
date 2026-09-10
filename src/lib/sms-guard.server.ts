@@ -58,8 +58,12 @@ export function defaultSmsLimits(): SmsLimits {
 /** Źródła, które NIGDY nie podlegają limitom (człowiek albo akcja klienta). */
 const CRITICAL_SOURCES = new Set(["phone_verification", "panel_manual", "windykacja", "test"]);
 
-/** Źródła konwersacyjne — klient sam zaczął rozmowę / poprosił o SMS. */
-const CONVERSATIONAL_SOURCES = new Set(["sms_agent_reply", "elevenlabs_agent"]);
+/**
+ * Źródła konwersacyjne — odpowiedź na SMS, który klient sam do nas wysłał.
+ * `elevenlabs_agent` (link wysyłany przez Anię w trakcie rozmowy) świadomie tu
+ * NIE jest: na wejściu leada wystarczy jeden SMS powitalny z tym samym linkiem.
+ */
+const CONVERSATIONAL_SOURCES = new Set(["sms_agent_reply"]);
 
 export function classifySmsSource(source: string | null | undefined): SmsCategory {
   const s = String(source ?? "").trim();

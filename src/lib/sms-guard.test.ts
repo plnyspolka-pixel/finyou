@@ -41,15 +41,19 @@ describe("classifySmsSource", () => {
     expect(classifySmsSource("windykacja")).toBe("critical");
   });
 
-  it("odpowiedź agenta i SMS zamówiony w rozmowie to kanał konwersacyjny", () => {
+  it("odpowiedź na SMS klienta to kanał konwersacyjny", () => {
     expect(classifySmsSource("sms_agent_reply")).toBe("conversational");
-    expect(classifySmsSource("elevenlabs_agent")).toBe("conversational");
+  });
+
+  it("link wysyłany przez Anię w rozmowie podlega limitom (na wejściu wystarczy SMS powitalny)", () => {
+    expect(classifySmsSource("elevenlabs_agent")).toBe("automated");
   });
 
   it("wszystko inne (kadencja, callbacki, meta_lead) jest automatyczne", () => {
     expect(classifySmsSource("meta_lead")).toBe("automated");
     expect(classifySmsSource("follow_up_sms_3")).toBe("automated");
     expect(classifySmsSource("ania_callback_sms")).toBe("automated");
+    expect(classifySmsSource("lead_welcome")).toBe("automated");
     expect(classifySmsSource(null)).toBe("automated");
   });
 });

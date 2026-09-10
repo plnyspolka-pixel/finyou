@@ -260,6 +260,7 @@ export async function runMetaLeadsSync(): Promise<{
           // wniosek + return link
           let loanApplicationId: string | null = null;
           let returnLink: string | null = null;
+          let returnToken: string | null = null;
           const { data: existingApp } = await supabaseAdmin
             .from("loan_applications")
             .select("id, return_link, return_link_token")
@@ -272,12 +273,14 @@ export async function runMetaLeadsSync(): Promise<{
             loanApplicationId = existingApp.id;
             returnLink = magicLink ?? "https://financeyou.pl/klient";
             const tok = existingApp.return_link_token || crypto.randomUUID().replace(/-/g, "");
+            returnToken = tok;
             await supabaseAdmin
               .from("loan_applications")
               .update({ return_link_token: tok, return_link: returnLink })
               .eq("id", loanApplicationId);
           } else {
             const tok = crypto.randomUUID().replace(/-/g, "");
+            returnToken = tok;
             returnLink = magicLink ?? "https://financeyou.pl/klient";
             const { data: app } = await supabaseAdmin
               .from("loan_applications")
@@ -377,6 +380,24 @@ export async function runMetaLeadsSync(): Promise<{
             if (unified?.id) await scheduleFollowUpsForLead(unified.id);
           } catch (e: any) {
             summary.errors.push(`schedule follow-ups ${leadgenId}: ${e?.message}`);
+          }
+
+          // JEDEN SMS na wejściu — krótka oferta + krótki link (financeyou.pl/s/<kod>).
+          // Idempotentne per numer, więc webhook i ten pull-sync nie zdublują wysyłki;
+          // idzie przed telefonem, bo hamulec SMS przepuszcza 1 SMS automatyczny / 24 h.
+          if (phone) {
+            try {
+              const { sendLeadWelcomeSms } = await import("@/lib/lead-welcome-sms.server");
+              await sendLeadWelcomeSms({
+                phone,
+                email,
+                clientId,
+                loanApplicationId,
+                returnLinkToken: returnToken,
+              });
+            } catch (e: any) {
+              summary.errors.push(`welcome sms ${leadgenId}: ${e?.message}`);
+            }
           }
 
           // Telefon Ani OD RAZU po wejściu leada z Meta (to jedyny kanał z natychmiastowym

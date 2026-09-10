@@ -1,7 +1,8 @@
 // Sekwencja poganiania leada przez Anię — 365 dni, opadająco.
 // Mail: codziennie w 1. m-cu, co 3 dni w m-cach 2–3, co 7 dni w m-cach 4–6, co 14 dni do końca roku.
 // Telefon: intensywnie w tyg. 1, potem coraz rzadziej (łącznie ~26 prób / rok).
-// SMS: ~12 sms / rok (w punktach „kontrolnych": 1, 7, 14, 21, 30, 45, 60, 90, 120, 180, 240, 365).
+// SMS: ~12 sms / rok (w punktach „kontrolnych": 3, 7, 14, 21, 30, 45, 60, 90, 120, 180, 240, 365);
+//      dzień 1 obsługuje pojedynczy SMS powitalny wysyłany przy wejściu leada.
 // Telefon i SMS tylko 8:00–21:00 Europe/Warsaw, pon–pt (sobota/niedziela → przesuwane).
 // Mail o każdej porze (mail nie irytuje).
 //
@@ -13,6 +14,15 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { LEAD_TERMINAL_STATUSES, LEAD_CONTACT_WINDOW } from "./follow-up-config";
+
+/**
+ * `metadata.kind` wiersza harmonogramu, który ma wysłać SMS powitalny.
+ * Używamy go, gdy lead wpadł w nocy albo w niedzielę — wtedy zamiast gubić
+ * jedyny SMS wejściowy, planujemy go na najbliższe okno wysyłki.
+ */
+export const WELCOME_SMS_KIND = "lead_welcome";
+/** step_index zarezerwowany dla SMS-a powitalnego (kadencja startuje od 1). */
+export const WELCOME_SMS_STEP_INDEX = 0;
 
 function admin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -80,8 +90,10 @@ function buildCadence(): Slot[] {
     slots.push({ day: d, hourWarsaw: hour, channel: "call", stepIndex: callStep });
   }
 
-  // SMS: 12 punktów kontrolnych w roku
-  const smsDays = [1, 7, 14, 21, 30, 45, 60, 90, 120, 180, 240, 365];
+  // SMS: 12 punktów kontrolnych w roku. Dzień 1 NIE jest tu ujęty — na wejściu
+  // leada idzie pojedynczy SMS powitalny (lead-welcome-sms.server.ts), a kadencja
+  // dokłada się dopiero od 3. dnia.
+  const smsDays = [3, 7, 14, 21, 30, 45, 60, 90, 120, 180, 240, 365];
   for (const d of smsDays) {
     smsStep++;
     slots.push({ day: d, hourWarsaw: 11, channel: "sms", stepIndex: smsStep });
@@ -699,6 +711,7 @@ interface DueRow {
   lead_id: string;
   channel: Channel;
   step_index: number;
+  metadata: { kind?: string } | null;
 }
 
 export async function processDueFollowUps(): Promise<{
@@ -711,7 +724,7 @@ export async function processDueFollowUps(): Promise<{
 
   const { data: due } = await s
     .from("lead_follow_up_schedule")
-    .select("id, lead_id, channel, step_index")
+    .select("id, lead_id, channel, step_index, metadata")
     .eq("status", "pending")
     .lte("scheduled_at", now.toISOString())
     .order("scheduled_at", { ascending: true })
@@ -782,7 +795,9 @@ export async function processDueFollowUps(): Promise<{
     const firstName = lead.first_name ?? "";
     // Spróbuj świeży magic link (auto-zaloguje klienta do /klient). Fallback: financeyou.pl
     let returnLink = "https://financeyou.pl";
-    if (lead.email && (row.channel === "email" || row.channel === "sms")) {
+    const needsMagicLink =
+      row.channel === "email" || (row.channel === "sms" && row.metadata?.kind !== WELCOME_SMS_KIND);
+    if (lead.email && needsMagicLink) {
       try {
         const { ensureKlientAccountAndMagicLink } = await import("@/lib/client-magic-link.server");
         const r = await ensureKlientAccountAndMagicLink(lead.email, {
@@ -846,6 +861,44 @@ export async function processDueFollowUps(): Promise<{
           );
           sent++;
         }
+      } else if (row.channel === "sms" && row.metadata?.kind === WELCOME_SMS_KIND) {
+        // SMS powitalny, który przy wejściu leada trafił poza okno wysyłki
+        // (noc / niedziela) — teraz jest okno, więc idzie z aktualnym linkiem.
+        const { sendLeadWelcomeSms } = await import("@/lib/lead-welcome-sms.server");
+        const phone = lead.phone_normalized;
+        if (!phone) {
+          await s
+            .from("lead_follow_up_schedule")
+            .update({ status: "skipped", error_message: "no phone" })
+            .eq("id", row.id);
+          skipped++;
+          continue;
+        }
+        const r = await sendLeadWelcomeSms({
+          phone,
+          email: lead.email ?? null,
+          leadId: row.lead_id,
+          clientId: lead.client_id ?? null,
+          loanApplicationId: lead.loan_application_id ?? null,
+        });
+        // Okno hamulca SMS (8–20) jest węższe niż okno kadencji (8–21) —
+        // przy odbiciu wysyłka sama przestawia ten wiersz na kolejne okno,
+        // więc zostawiamy go w `pending` zamiast zamykać jako pominięty.
+        if (r.reason === "quiet_hours" || r.reason === "sunday") {
+          skipped++;
+          continue;
+        }
+        await s
+          .from("lead_follow_up_schedule")
+          .update({
+            status: r.ok ? "sent" : r.skipped ? "skipped" : "error",
+            sent_at: r.ok ? new Date().toISOString() : null,
+            error_message: r.ok ? null : (r.error ?? r.reason ?? "send error"),
+            attempts: 1,
+          })
+          .eq("id", row.id);
+        if (r.ok) sent++;
+        else skipped++;
       } else if (row.channel === "sms") {
         const phone = lead.phone_normalized;
         const smsCount = Object.keys(SMS_TEMPLATES).length;
@@ -923,7 +976,7 @@ export async function processDueFollowUps(): Promise<{
   return { processed: due.length, sent, skipped };
 }
 
-function nextWindowOpenAt(now: Date): Date {
+export function nextWindowOpenAt(now: Date): Date {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Warsaw",
     year: "numeric",

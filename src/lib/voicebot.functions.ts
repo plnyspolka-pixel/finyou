@@ -131,6 +131,8 @@ export async function sendSmsInternal(opts: {
   source: string;
   from?: string | null;
   category?: SmsCategory;
+  /** Dodatkowe pola do `lead_communications.metadata` (np. kod krótkiego linku). */
+  metadata?: Record<string, unknown>;
 }): Promise<{ ok: boolean; sid?: string; error?: string; skipped?: boolean; reason?: string }> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   const twilioKey = process.env.TWILIO_API_KEY;
@@ -196,7 +198,7 @@ export async function sendSmsInternal(opts: {
         status: res.ok ? "sent" : "failed",
         content: opts.body,
         externalId: json?.sid ?? null,
-        metadata: { from, source: opts.source },
+        metadata: { from, source: opts.source, ...(opts.metadata ?? {}) },
         errorMessage: res.ok ? null : (json?.message ?? `HTTP ${res.status}`),
       });
     } catch (e) {

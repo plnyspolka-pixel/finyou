@@ -22,11 +22,11 @@ każda wysyłka SMS w systemie.
 
 ### Kategorie
 
-| Kategoria        | Źródła                                                                                                                               | Zasady                                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `critical`       | `phone_verification` (OTP), `panel_manual`, `windykacja`, `test`                                                                     | bez limitów                                                                                       |
-| `conversational` | `sms_agent_reply` (odpowiedź na SMS klienta), `elevenlabs_agent` (SMS zamówiony w rozmowie)                                          | bez okna godzinowego; limit 8/24 h i blokada powtórki tej samej treści w 24 h (bezpiecznik pętli) |
-| `automated`      | cała reszta: `meta_lead`, `follow_up_sms_*`, `ania_callback_sms`, `saturday_reminder`, `missing_info_follow_up`, zapowiedzi telefonu | pełny zestaw reguł ↓                                                                              |
+| Kategoria        | Źródła                                                                                                                                                                   | Zasady                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `critical`       | `phone_verification` (OTP), `panel_manual`, `windykacja`, `test`                                                                                                         | bez limitów                                                                                       |
+| `conversational` | `sms_agent_reply` (odpowiedź na SMS, który klient sam wysłał)                                                                                                            | bez okna godzinowego; limit 8/24 h i blokada powtórki tej samej treści w 24 h (bezpiecznik pętli) |
+| `automated`      | cała reszta: `lead_welcome`, `meta_lead`, `follow_up_sms_*`, `ania_callback_sms`, `saturday_reminder`, `missing_info_follow_up`, `elevenlabs_agent`, zapowiedzi telefonu | pełny zestaw reguł ↓                                                                              |
 
 Kategoria wynika ze źródła (`classifySmsSource`); wywołujące mogą ją podać wprost
 parametrem `category` w `sendSmsInternal`.
@@ -60,6 +60,45 @@ Zmienne środowiskowe (wszystkie opcjonalne):
 | `SMS_WINDOW_START_HOUR`          | `8`       |
 | `SMS_WINDOW_END_HOUR`            | `20`      |
 
+## Jeden SMS na wejściu leada
+
+Nowy lead z Mety dostaje **dokładnie jedną** wiadomość:
+
+```
+Finance You: pozyczki pod zastaw nieruchomosci juz od 1,79% - kliknij: https://financeyou.pl/s/ab3x9k
+```
+
+- bez polskich znaków — z diakrytykami Twilio koduje SMS jako UCS-2 (70 znaków
+  na segment zamiast 160) i jedna wiadomość rozbiłaby się na dwie,
+- link jest krótki (`financeyou.pl/s/<kod>`), a nie surowym adresem
+  `…supabase.co/auth/v1/verify?token=…`, który zajmował kilka segmentów, wyglądał
+  jak phishing i wygasał po ~godzinie,
+- adres docelowy rozwiązujemy dopiero **przy kliknięciu**: gdy znamy maila
+  klienta, generujemy wtedy świeży magic link (link z SMS-a działa więc też po
+  kilku dniach); bez maila idziemy na `/wniosek/<token>`.
+
+Wysyłka: `src/lib/lead-welcome-sms.server.ts` (`sendLeadWelcomeSms`), wołana
+z webhooka Mety i z pull-syncu — idempotentnie per numer, **przed** telefonem
+Ani. Dzięki temu hamulec (1 SMS automatyczny / 24 h) odcina tego dnia zapowiedź
+rozmowy, SMS agenta ElevenLabs i pierwszy krok kadencji.
+
+Gdy lead wpadnie poza oknem (noc, niedziela), SMS nie ginie — ląduje
+w `lead_follow_up_schedule` (`channel: "sms"`, `step_index: 0`,
+`metadata.kind: "lead_welcome"`) i wychodzi, gdy okno się otworzy.
+
+Kadencja SMS-owa zaczyna się teraz od **3. dnia** (`smsDays`
+w `follow-up-plan.server.ts`), bo dzień 1 obsługuje SMS powitalny.
+
+### Krótkie linki
+
+Tabela `short_links` (migracja `20260910120000_short_links.sql`) + route
+`/s/$code` (`src/routes/s.$code.ts`). Kod ma 6 znaków z alfabetu bez mylących
+par (`0/O`, `1/l/I`). Każde kliknięcie podbija `click_count` i `last_clicked_at`
+— widać, które SMS-y realnie działają.
+
+Prefiksy w aplikacji: `/l/<slug>` to landing page, `/r/<kod>` to linki kampanii
+marketingowych, `/s/<kod>` to linki z SMS-ów.
+
 ## Zmiana w `ania-callbacks`
 
 Cron wysyłał SMS „proszę o kontakt" zawsze, także wtedy, gdy właśnie dzwonił —
@@ -71,3 +110,7 @@ i robił to 2× dziennie. Teraz SMS idzie **tylko wtedy, gdy telefon nie poszed�
 `src/lib/sms-guard.test.ts` — pokrywa klasyfikację źródeł, normalizację treści
 (magic linki), okno godzinowe, niedzielę, limity, STOP, pętlę konwersacyjną
 i pełny scenariusz z reklamacji (lead z Mety nie dostaje serii SMS-ów).
+
+`src/lib/lead-welcome-sms.test.ts` — treść SMS-a powitalnego (jeden segment
+GSM-7, oferta + link), kody krótkich linków i dowód, że po SMS-ie powitalnym nic
+innego tego dnia nie przejdzie.
