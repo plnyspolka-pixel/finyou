@@ -171,6 +171,30 @@ export function statusPublikacji(wlaczOdRazu?: boolean): "ACTIVE" | "PAUSED" {
   return wlaczOdRazu ? "ACTIVE" : "PAUSED";
 }
 
+/** Ciało żądania POST /act_<id>/campaigns. */
+export function buildCampaignPayload(input: {
+  nazwa: string;
+  cel: CelKampanii;
+  optymalizacjaWww?: "konwersje" | "wejscia";
+  wlaczOdRazu?: boolean;
+}): Record<string, unknown> {
+  // Optymalizacja pod wejścia na stronę żyje w celu "ruch"; leady (formularz
+  // błyskawiczny albo zdarzenie LEAD z piksela) — w celu "kontakty".
+  const objective =
+    input.cel === "strona_www" && input.optymalizacjaWww === "wejscia"
+      ? "OUTCOME_TRAFFIC"
+      : "OUTCOME_LEADS";
+  return {
+    name: input.nazwa,
+    objective,
+    status: statusPublikacji(input.wlaczOdRazu),
+    special_ad_categories: "[]",
+    // Meta wymaga jawnej deklaracji harmonogramu budżetu — bez tego pola
+    // tworzenie kampanii kończy się błędem o współdzieleniu budżetu.
+    is_budget_schedule_enabled: false,
+  };
+}
+
 /** Ciało żądania POST /act_<id>/adsets. */
 export function buildAdSetPayload(input: AdSetInput): Record<string, unknown> {
   const t = input.targeting ?? {};
@@ -253,14 +277,14 @@ export type KreacjaInput = {
 
 /** Ciało żądania POST /act_<id>/adcreatives. */
 export function buildCreativePayload(input: KreacjaInput): Record<string, unknown> {
+  // Także reklama z formularzem błyskawicznym musi wskazywać stronę reklamodawcy —
+  // Meta odrzuca kreację, w której linkiem jest adres profilu na Facebooku.
+  const link = zUtm(input.landingUrl ?? "", {
+    source: "facebook",
+    medium: "paid_social",
+    campaign: input.nazwa,
+  });
   const naStrone = input.cel === "strona_www";
-  const link = naStrone
-    ? zUtm(input.landingUrl ?? "", {
-        source: "facebook",
-        medium: "paid_social",
-        campaign: input.nazwa,
-      })
-    : `https://www.facebook.com/${input.pageId}`;
 
   const call_to_action = naStrone
     ? { type: input.ctaType ?? "GET_QUOTE" }
@@ -279,14 +303,11 @@ export function buildCreativePayload(input: KreacjaInput): Record<string, unknow
   if (input.imageHash) link_data.image_hash = input.imageHash;
   else if (input.imageUrl) link_data.picture = input.imageUrl;
 
+  // Nie wysyłamy `degrees_of_freedom_spec` z wypisaniem się z „ulepszeń" Meta —
+  // to pole zostało wycofane i Graph API odrzuca z nim całą kreację.
   return {
     name: `${input.nazwa} - kreacja`,
     object_story_spec: { page_id: input.pageId, link_data },
-    // Bez „ulepszeń" Meta (kadrowanie, dopiski, muzyka) — kreacja ma iść tak,
-    // jak ją przygotowaliśmy.
-    degrees_of_freedom_spec: {
-      creative_features_spec: { standard_enhancements: { enroll_status: "OPT_OUT" } },
-    },
   };
 }
 
@@ -359,6 +380,7 @@ export const SZABLON_SZALUNKI_FORMULARZ: SzablonKampanii = {
   name: "Szalunki Lublin — formularz błyskawiczny",
   daily_budget: 50,
   cel: "formularz_fb",
+  landing_url: "https://szalunki-lublin.pl",
   lead_form: {
     name: "Szalunki — zapytanie o wycenę",
     questions: [{ type: "FULL_NAME" }, { type: "PHONE" }, { type: "EMAIL" }],
@@ -427,16 +449,18 @@ export function sprawdzKampanie(input: {
   const bledy: string[] = [];
   if (!input.pageId) bledy.push("Wybierz stronę Facebook.");
   if (input.budzetDzienny < 5) bledy.push("Budżet dzienny musi wynosić co najmniej 5 PLN.");
-  if (input.cel === "strona_www") {
-    if (!input.landingUrl) bledy.push("Podaj adres strony z formularzem kontaktowym.");
-    else {
-      try {
-        const u = new URL(input.landingUrl);
-        if (u.protocol !== "https:") bledy.push("Adres strony musi zaczynać się od https://");
-      } catch {
-        bledy.push("Adres strony jest nieprawidłowy.");
-      }
+  // Link do strony reklamodawcy jest wymagany w obu wariantach — przy formularzu
+  // błyskawicznym trafia do kreacji, bo Meta nie przyjmuje adresu profilu FB.
+  if (!input.landingUrl) bledy.push("Podaj adres strony reklamodawcy.");
+  else {
+    try {
+      const u = new URL(input.landingUrl);
+      if (u.protocol !== "https:") bledy.push("Adres strony musi zaczynać się od https://");
+    } catch {
+      bledy.push("Adres strony jest nieprawidłowy.");
     }
+  }
+  if (input.cel === "strona_www") {
     if (!input.pixelId) bledy.push("Wybierz albo utwórz piksel dla tej kampanii.");
   } else if (!input.politykaUrl?.startsWith("https://")) {
     // Meta odrzuca formularz błyskawiczny bez działającego linku do polityki.
