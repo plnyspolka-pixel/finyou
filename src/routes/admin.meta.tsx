@@ -203,6 +203,7 @@ function MetaPage() {
                   <TableHead>CTR</TableHead>
                   <TableHead>Leady</TableHead>
                   <TableHead>CPL</TableHead>
+                  <TableHead>Zaktualizowano</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -222,6 +223,9 @@ function MetaPage() {
                     <TableCell>{Number(c.ctr ?? 0).toFixed(2)}%</TableCell>
                     <TableCell>{c.leads_count ?? 0}</TableCell>
                     <TableCell>{Number(c.cost_per_lead ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {c.last_synced_at ? formatDateTime(c.last_synced_at) : "—"}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

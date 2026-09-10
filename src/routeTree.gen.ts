@@ -251,6 +251,7 @@ import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './route
 import { Route as ApiPublicHooksPrMonitorTickRouteImport } from './routes/api/public/hooks/pr-monitor-tick'
 import { Route as ApiPublicHooksMissingInfoFollowUpTickRouteImport } from './routes/api/public/hooks/missing-info-follow-up-tick'
 import { Route as ApiPublicHooksMetaLeadsPullRouteImport } from './routes/api/public/hooks/meta-leads-pull'
+import { Route as ApiPublicHooksMetaAdsSyncTickRouteImport } from './routes/api/public/hooks/meta-ads-sync-tick'
 import { Route as ApiPublicHooksMessengerSyncForceRouteImport } from './routes/api/public/hooks/messenger-sync-force'
 import { Route as ApiPublicHooksLocationScoringTickRouteImport } from './routes/api/public/hooks/location-scoring-tick'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
@@ -1533,6 +1534,12 @@ const ApiPublicHooksMetaLeadsPullRoute =
     path: '/api/public/hooks/meta-leads-pull',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksMetaAdsSyncTickRoute =
+  ApiPublicHooksMetaAdsSyncTickRouteImport.update({
+    id: '/api/public/hooks/meta-ads-sync-tick',
+    path: '/api/public/hooks/meta-ads-sync-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksMessengerSyncForceRoute =
   ApiPublicHooksMessengerSyncForceRouteImport.update({
     id: '/api/public/hooks/messenger-sync-force',
@@ -1870,6 +1877,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
+  '/api/public/hooks/meta-ads-sync-tick': typeof ApiPublicHooksMetaAdsSyncTickRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
@@ -2121,6 +2129,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
+  '/api/public/hooks/meta-ads-sync-tick': typeof ApiPublicHooksMetaAdsSyncTickRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
@@ -2383,6 +2392,7 @@ export interface FileRoutesById {
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/location-scoring-tick': typeof ApiPublicHooksLocationScoringTickRoute
   '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
+  '/api/public/hooks/meta-ads-sync-tick': typeof ApiPublicHooksMetaAdsSyncTickRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/missing-info-follow-up-tick': typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
@@ -2646,6 +2656,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
+    | '/api/public/hooks/meta-ads-sync-tick'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/missing-info-follow-up-tick'
     | '/api/public/hooks/pr-monitor-tick'
@@ -2897,6 +2908,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
+    | '/api/public/hooks/meta-ads-sync-tick'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/missing-info-follow-up-tick'
     | '/api/public/hooks/pr-monitor-tick'
@@ -3158,6 +3170,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/location-scoring-tick'
     | '/api/public/hooks/messenger-sync-force'
+    | '/api/public/hooks/meta-ads-sync-tick'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/missing-info-follow-up-tick'
     | '/api/public/hooks/pr-monitor-tick'
@@ -3269,6 +3282,7 @@ export interface RootRouteChildren {
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
   ApiPublicHooksLocationScoringTickRoute: typeof ApiPublicHooksLocationScoringTickRoute
   ApiPublicHooksMessengerSyncForceRoute: typeof ApiPublicHooksMessengerSyncForceRoute
+  ApiPublicHooksMetaAdsSyncTickRoute: typeof ApiPublicHooksMetaAdsSyncTickRoute
   ApiPublicHooksMetaLeadsPullRoute: typeof ApiPublicHooksMetaLeadsPullRoute
   ApiPublicHooksMissingInfoFollowUpTickRoute: typeof ApiPublicHooksMissingInfoFollowUpTickRoute
   ApiPublicHooksPrMonitorTickRoute: typeof ApiPublicHooksPrMonitorTickRoute
@@ -4989,6 +5003,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksMetaLeadsPullRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/meta-ads-sync-tick': {
+      id: '/api/public/hooks/meta-ads-sync-tick'
+      path: '/api/public/hooks/meta-ads-sync-tick'
+      fullPath: '/api/public/hooks/meta-ads-sync-tick'
+      preLoaderRoute: typeof ApiPublicHooksMetaAdsSyncTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/messenger-sync-force': {
       id: '/api/public/hooks/messenger-sync-force'
       path: '/api/public/hooks/messenger-sync-force'
@@ -5640,6 +5661,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksLocationScoringTickRoute:
     ApiPublicHooksLocationScoringTickRoute,
   ApiPublicHooksMessengerSyncForceRoute: ApiPublicHooksMessengerSyncForceRoute,
+  ApiPublicHooksMetaAdsSyncTickRoute: ApiPublicHooksMetaAdsSyncTickRoute,
   ApiPublicHooksMetaLeadsPullRoute: ApiPublicHooksMetaLeadsPullRoute,
   ApiPublicHooksMissingInfoFollowUpTickRoute:
     ApiPublicHooksMissingInfoFollowUpTickRoute,
