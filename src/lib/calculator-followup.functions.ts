@@ -54,12 +54,15 @@ export const scheduleCalculatorEntryFollowup = createServerFn({ method: "POST" }
     }
 
     // Dedup #2: jakikolwiek telefon (każde źródło) do tego numeru w ostatnich 24 h.
+    // Filtrujemy po `started_at` — statusy końcowe z webhooka ElevenLabs
+    // (`zakonczona`, `nieodebrana`, `poczta_glosowa`, `blad`) nie mieściły się
+    // w dawnym `status in ("w_trakcie", "wykonane")` i dedup ich nie widział.
     const { data: anyRecent } = await supabaseAdmin
       .from("call_queue")
       .select("id, source")
       .eq("phone_normalized", phone)
-      .in("status", ["w_trakcie", "wykonane"])
-      .gte("created_at", cutoff)
+      .not("started_at", "is", null)
+      .gte("started_at", cutoff)
       .neq("source", "test")
       .limit(1);
     if (anyRecent && anyRecent.length > 0) {
