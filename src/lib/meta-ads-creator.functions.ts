@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { z } from "zod";
 import {
   buildAdSetPayload,
+  buildCampaignPayload,
   buildCreativePayload,
   buildGeoLocations,
   sprawdzKampanie,
@@ -385,16 +386,15 @@ export const publishAdDraft = createServerFn({ method: "POST" })
       }
 
       // 1) Campaign
-      // Optymalizacja pod wejścia na stronę żyje w celu "ruch"; leady (formularz
-      // FB albo zdarzenie LEAD z piksela) — w celu "kontakty".
-      const objective =
-        naStrone && optymalizacjaWww === "wejscia" ? "OUTCOME_TRAFFIC" : "OUTCOME_LEADS";
-      const camp = await metaPost(`/${actId}/campaigns`, {
-        name: draft.name,
-        objective,
-        status,
-        special_ad_categories: "[]",
-      });
+      const camp = await metaPost(
+        `/${actId}/campaigns`,
+        buildCampaignPayload({
+          nazwa: draft.name,
+          cel,
+          optymalizacjaWww,
+          wlaczOdRazu,
+        }),
+      );
 
       const useRemarketing = !naStrone && (targeting as any).remarketing !== false; // domyślnie włączone
       const customAudiences =
@@ -459,6 +459,7 @@ export const publishAdDraft = createServerFn({ method: "POST" })
           cel,
           landingUrl,
           leadFormId: form?.id ?? null,
+          imageHash: creative.image_hash,
           primaryText: creative.primary_text,
           headline: creative.headline,
           description: creative.description,

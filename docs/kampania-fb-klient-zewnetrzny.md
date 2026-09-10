@@ -137,6 +137,20 @@ Bez tego kampania będzie działać, ale nie policzy konwersji:
 4. **Polityka prywatności i zgody** — po stronie strony docelowej; przy
    formularzu na stronie Meta nie podstawia własnej zgody.
 
+## Czego Meta nie przyjmuje (nauczka z pierwszej publikacji)
+
+Pierwsza publikacja kampanii szalunkowej odbiła się trzy razy, zanim przeszła.
+Kod uwzględnia już wszystkie trzy poprawki:
+
+1. **Kampania musi deklarować harmonogram budżetu** — bez `is_budget_schedule_enabled`
+   Graph API odrzuca utworzenie kampanii błędem o współdzieleniu budżetu.
+2. **`degrees_of_freedom_spec` z wypisaniem się z „ulepszeń" jest wycofane** — pole
+   przestało być obsługiwane i Meta odrzuca z nim całą kreację. Wypisanie z
+   automatycznych ulepszeń trzeba dziś ustawić w Menedżerze reklam.
+3. **Link kreacji musi wskazywać stronę reklamodawcy**, także w reklamie z
+   formularzem błyskawicznym. Adres profilu na Facebooku (`facebook.com/<page_id>`)
+   jest odrzucany, dlatego adres strony jest wymagany w obu wariantach kampanii.
+
 ## Ograniczenia, o których warto pamiętać
 
 - Kampania domyślnie powstaje wstrzymana; „Włącz od razu" to świadomy wybór w

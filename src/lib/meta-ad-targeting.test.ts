@@ -4,6 +4,7 @@ import {
   buildGeoLocations,
   przytnijPromien,
   buildAdSetPayload,
+  buildCampaignPayload,
   buildCreativePayload,
   sprawdzKampanie,
   zUtm,
@@ -239,6 +240,7 @@ describe("kreacja", () => {
       nazwa: "FY",
       pageId: "999",
       cel: "formularz_fb",
+      landingUrl: "https://szalunki-lublin.pl",
       leadFormId: "form-1",
     });
     expect(pole(c, "object_story_spec", "link_data", "call_to_action")).toEqual({
@@ -247,11 +249,42 @@ describe("kreacja", () => {
     });
   });
 
-  it("kreacja nie zgadza się na automatyczne ulepszenia Meta", () => {
+  it("kreacja nie wysyła wycofanego pola ulepszeń — Meta odrzuca z nim całe żądanie", () => {
     const c = buildCreativePayload({ nazwa: "FY", pageId: "999", cel: "formularz_fb" });
-    expect(
-      pole(c, "degrees_of_freedom_spec", "creative_features_spec", "standard_enhancements"),
-    ).toEqual({ enroll_status: "OPT_OUT" });
+    expect(c.degrees_of_freedom_spec).toBeUndefined();
+  });
+
+  it("reklama z formularzem linkuje stronę reklamodawcy, nie profil na Facebooku", () => {
+    const c = buildCreativePayload({
+      nazwa: "Szalunki",
+      pageId: "999",
+      cel: "formularz_fb",
+      landingUrl: "https://szalunki-lublin.pl",
+      leadFormId: "form-1",
+    });
+    const link = pole(c, "object_story_spec", "link_data", "link") as string;
+    expect(link).toContain("szalunki-lublin.pl");
+    expect(link).not.toContain("facebook.com");
+  });
+});
+
+describe("kampania", () => {
+  it("deklaruje harmonogram budżetu — bez tego Meta odrzuca utworzenie kampanii", () => {
+    const c = buildCampaignPayload({ nazwa: "Szalunki", cel: "formularz_fb" });
+    expect(c.is_budget_schedule_enabled).toBe(false);
+    expect(c.objective).toBe("OUTCOME_LEADS");
+    expect(c.status).toBe("PAUSED");
+  });
+
+  it("wariant „wejścia na stronę” idzie celem ruch", () => {
+    const c = buildCampaignPayload({
+      nazwa: "Szalunki",
+      cel: "strona_www",
+      optymalizacjaWww: "wejscia",
+      wlaczOdRazu: true,
+    });
+    expect(c.objective).toBe("OUTCOME_TRAFFIC");
+    expect(c.status).toBe("ACTIVE");
   });
 });
 
@@ -275,6 +308,7 @@ describe("kontrola przed publikacją", () => {
     const bledy = sprawdzKampanie({ cel: "strona_www", pageId: "999", budzetDzienny: 50 });
     expect(bledy).toHaveLength(2);
     expect(bledy.join(" ")).toContain("piksel");
+    expect(bledy.join(" ")).toContain("adres strony");
   });
 
   it("adres bez https jest odrzucany", () => {
@@ -289,16 +323,32 @@ describe("kontrola przed publikacją", () => {
   });
 
   it("formularz błyskawiczny bez polityki prywatności nie przejdzie", () => {
-    const bledy = sprawdzKampanie({ cel: "formularz_fb", pageId: "999", budzetDzienny: 50 });
+    const bledy = sprawdzKampanie({
+      cel: "formularz_fb",
+      pageId: "999",
+      budzetDzienny: 50,
+      landingUrl: "https://szalunki-lublin.pl",
+    });
     expect(bledy.join(" ")).toContain("polityki prywatności");
   });
 
-  it("formularz błyskawiczny z polityką klienta przechodzi", () => {
+  it("formularz błyskawiczny bez adresu strony też nie przejdzie", () => {
+    const bledy = sprawdzKampanie({
+      cel: "formularz_fb",
+      pageId: "999",
+      budzetDzienny: 50,
+      politykaUrl: "https://szalunki-lublin.pl/polityka-prywatnosci",
+    });
+    expect(bledy.join(" ")).toContain("adres strony reklamodawcy");
+  });
+
+  it("formularz błyskawiczny z polityką i adresem przechodzi", () => {
     expect(
       sprawdzKampanie({
         cel: "formularz_fb",
         pageId: "999",
         budzetDzienny: 50,
+        landingUrl: "https://szalunki-lublin.pl",
         politykaUrl: "https://szalunki-lublin.pl/polityka-prywatnosci",
       }),
     ).toEqual([]);
