@@ -83,12 +83,15 @@ async function runBatch(force: boolean) {
   const phones = Array.from(
     new Set(candidates.map((l: any) => l.client.phone_normalized || l.client.phone)),
   );
+  // Po `started_at` (realne wybranie numeru), a nie po statusie — statusy końcowe
+  // z webhooka (`zakonczona`, `nieodebrana`, `poczta_glosowa`, `blad`) wypadały poza
+  // dawny filtr, więc cron nie widział, że przed chwilą już dzwoniliśmy.
   const { data: lastCalls } = await s
     .from("call_queue")
     .select("phone_normalized, created_at, started_at, status, result_summary, conversation_id")
     .in("phone_normalized", phones as string[])
-    .in("status", ["w_trakcie", "wykonane"])
-    .order("created_at", { ascending: false })
+    .not("started_at", "is", null)
+    .order("started_at", { ascending: false })
     .limit(2000);
 
   const lastByPhone = new Map<string, any>();
@@ -116,7 +119,8 @@ async function runBatch(force: boolean) {
         summary.includes("completed");
       const looksLikeNoPickup = Array.from(NO_PICKUP_OUTCOMES).some((k) => summary.includes(k));
       // Jeżeli ostatni telefon to "wykonane" + brak markerów no-pickup i są markery odebrane → pomijamy.
-      if (last.status === "wykonane" && looksLikeAnswered && !looksLikeNoPickup) {
+      const answeredStatus = last.status === "wykonane" || last.status === "zakonczona";
+      if (answeredStatus && looksLikeAnswered && !looksLikeNoPickup) {
         skipped++;
         results.push({ id: loan.id, skipped: "already_answered" });
         continue;

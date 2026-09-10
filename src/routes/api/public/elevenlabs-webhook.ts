@@ -211,8 +211,12 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
             })
             .eq("id", queueRow.id);
 
-          // === Zagęszczenie prób — szybki retry dla nieodebranych / błędów / poczty głosowej ===
+          // === Kolejna próba dla nieodebranych / błędów / poczty głosowej ===
           // Cap: max 6 prób retry per wniosek/telefon (oprócz oryginalnej sekwencji follow-up).
+          // Odstęp to DOBA, nie 20 minut: przy starym „zagęszczeniu" klient, który nie
+          // odebrał o 9:15, dostawał 6 telefonów do 11:15 (a z nimi zapowiedzi SMS-em).
+          // Doba to zarazem próg globalnego throttle w placeOutboundCallInternal, więc
+          // kolejna próba nie odbija się od hamulca.
           const isRetryable =
             outcome === "no_answer" ||
             outcome === "busy" ||
@@ -235,17 +239,11 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
               const alreadyRetried = retryCountQ.count ?? 0;
               const MAX_RETRIES = 6;
               if (alreadyRetried < MAX_RETRIES) {
-                // Odstęp: no_answer 20 min, busy 25 min, voicemail 45 min, failed 60 min
-                const offsetMin =
-                  outcome === "no_answer"
-                    ? 20
-                    : outcome === "busy"
-                      ? 25
-                      : outcome === "voicemail"
-                        ? 45
-                        : 60;
-                const candidate = new Date(Date.now() + offsetMin * 60_000);
-                const { getCallingWindow } = await import("@/lib/voicebot.functions");
+                const { getCallingWindow, CALL_MIN_GAP_MS } =
+                  await import("@/lib/voicebot.functions");
+                // +5 min ponad dobę, żeby próba nie wylądowała dokładnie na granicy
+                // throttle'a (który patrzy wstecz na równo 24 h).
+                const candidate = new Date(Date.now() + CALL_MIN_GAP_MS + 5 * 60_000);
                 const win = getCallingWindow(candidate);
                 const scheduledAt = win.allowed ? candidate : win.nextAllowedAt;
                 await supabase.from("call_queue").insert({

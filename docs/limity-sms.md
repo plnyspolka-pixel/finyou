@@ -99,6 +99,31 @@ par (`0/O`, `1/l/I`). Każde kliknięcie podbija `click_count` i `last_clicked_a
 Prefiksy w aplikacji: `/l/<slug>` to landing page, `/r/<kod>` to linki kampanii
 marketingowych, `/s/<kod>` to linki z SMS-ów.
 
+## Telefony: jeden na dobę, zapowiedź tylko przed pierwszym
+
+Zgłoszenie „chodziłem po stronie i znowu dostałem SMS i telefon" miało dwie
+przyczyny w torze telefonicznym:
+
+1. **Throttle nie widział zakończonych rozmów.** Filtr brzmiał
+   `status in ("w_trakcie", "wykonane")`, a webhook ElevenLabs zamyka rozmowę
+   statusem `zakonczona` / `nieodebrana` / `poczta_glosowa` / `blad`. Telefon
+   znikał z pola widzenia hamulca w chwili, w której się kończył. Teraz liczymy
+   po `started_at` (ustawianym tylko przy realnym wybraniu numeru), więc
+   placeholdery z kolejki niczego nie blokują, a odbyte rozmowy — blokują.
+2. **`auto_retry` co 20 minut.** Nieodebrany telefon planował kolejny za 20 min
+   (busy 25, poczta 45, błąd 60), przy limicie 6 prób — stąd seria od 9:15 do
+   11:15. Odstęp to teraz doba (+5 min ponad próg throttle'a), limit 6 prób
+   zostaje.
+
+Do tego zniknął wyjątek `ania_callback` („2× dziennie, min. 5 h") — obowiązuje
+**jeden telefon na dobę na numer, z każdego źródła** (poza `source: "test"`
+z panelu). Ten sam filtr po `started_at` poprawiono w cronie `ania-callbacks`
+i w dedupie `calculator-followup`.
+
+Zapowiedź „za chwilę zadzwoni Ania" wychodzi wyłącznie przed **pierwszym**
+telefonem na dany numer (`hasEverBeenCalled`). Przy kolejnych podejściach nic
+nie wnosiła, a klient dostawał ją raz po raz.
+
 ## Zmiana w `ania-callbacks`
 
 Cron wysyłał SMS „proszę o kontakt" zawsze, także wtedy, gdy właśnie dzwonił —

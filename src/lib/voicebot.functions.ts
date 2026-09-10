@@ -116,6 +116,25 @@ export function getCallingWindow(now: Date = new Date()): {
   };
 }
 
+/** Minimalny odstęp między telefonami do jednego numeru — z każdego źródła. */
+export const CALL_MIN_GAP_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Czy na ten numer szedł już KIEDYKOLWIEK telefon (rozpoznajemy po `started_at`,
+ * który ustawia tylko realne wybranie numeru). Zapowiedź „za chwilę zadzwoni Ania"
+ * ma sens wyłącznie przed pierwszą rozmową.
+ */
+async function hasEverBeenCalled(phoneNormalized: string): Promise<boolean> {
+  const { data } = await admin()
+    .from("call_queue")
+    .select("id")
+    .eq("phone_normalized", phoneNormalized)
+    .not("started_at", "is", null)
+    .neq("source", "test")
+    .limit(1);
+  return (data?.length ?? 0) > 0;
+}
+
 /**
  * Wysyła SMS przez Twilio (connector gateway).
  *
@@ -266,21 +285,30 @@ export async function placeOutboundCallInternal(opts: {
   const s = admin();
   const phone = normalizePhone(opts.phone);
 
-  // GLOBALNY THROTTLE: max 1 telefon na 24 h per numer (z dowolnego źródła).
-  // Wyjątek: `ania_callback` — Ania może dzwonić 2× dziennie do tych co nie odebrali,
-  // ale nie częściej niż raz na 5 godzin. Test (`source === "test"`) pomijamy.
+  // GLOBALNY THROTTLE: max 1 telefon na 24 h per numer, z KAŻDEGO źródła —
+  // `ania_callback` też (dawny wyjątek „2× dziennie, min. 5 h" był furtką, przez
+  // którą klient dostawał drugi telefon i drugą zapowiedź SMS tego samego ranka).
+  // Test (`source === "test"`) pomijamy.
+  //
+  // Liczymy po `started_at`, a NIE po statusie. Wcześniej filtr brzmiał
+  // `status in ("w_trakcie", "wykonane")`, ale webhook ElevenLabs zamyka rozmowę
+  // statusem `zakonczona` / `nieodebrana` / `poczta_glosowa` / `blad` — żadnego z nich
+  // nie było na liście, więc throttle przestawał widzieć telefon w chwili, w której
+  // rozmowa się kończyła. Efekt: lead, który nie odebrał, dostawał serię telefonów
+  // co 20 minut. `started_at` ustawia wyłącznie realne wybranie numeru (ten kod
+  // i backfill z ElevenLabs), więc placeholdery z kolejki (`oczekuje` → `blad`)
+  // niczego nie blokują i odrzucenie przez throttle nie przedłuża samo siebie.
   if (opts.source !== "test") {
-    const isCallback = opts.source === "ania_callback";
-    const minGapMs = isCallback ? 5 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const minGapMs = CALL_MIN_GAP_MS;
     const since = new Date(Date.now() - minGapMs).toISOString();
     const { data: recent } = await s
       .from("call_queue")
       .select("id, started_at, created_at, source")
       .eq("phone_normalized", phone)
-      .in("status", ["w_trakcie", "wykonane"])
-      .gte("created_at", since)
+      .not("started_at", "is", null)
+      .gte("started_at", since)
       .neq("source", "test")
-      .order("created_at", { ascending: false })
+      .order("started_at", { ascending: false })
       .limit(1);
     if (recent && recent.length > 0) {
       const last = recent[0];
@@ -353,12 +381,16 @@ export async function placeOutboundCallInternal(opts: {
       ? ((settings as any).document_reminder_agent_id as string)
       : settings.agent_id);
 
-  // SMS before call (jeśli włączone)
-  await maybeSendSms("before_call", {
-    phone,
-    source: opts.source,
-    firstName: opts.firstName,
-  }).catch(() => {});
+  // SMS „za chwilę zadzwoni Ania" — tylko przed PIERWSZYM telefonem na ten numer.
+  // Przy kolejnych podejściach zapowiedź nic nie wnosi, a klient dostawał ją
+  // ponownie przy każdej próbie (patrz zgłoszenie: ta sama treść o 9:15 i 11:15).
+  if (!(await hasEverBeenCalled(phone))) {
+    await maybeSendSms("before_call", {
+      phone,
+      source: opts.source,
+      firstName: opts.firstName,
+    }).catch(() => {});
+  }
 
   // Wpis do kolejki — status w_trakcie
   const { data: queueRow } = await s
