@@ -109,18 +109,22 @@ async function runBatch(force: boolean) {
     const phone = loan.client.phone_normalized || loan.client.phone;
     const last = lastByPhone.get(phone);
 
-    // Jeżeli był telefon, ale klient ODEBRAŁ (długa rozmowa) → pomijamy.
+    // Jeżeli klient ODEBRAŁ i rozmawiał → nie oddzwaniamy.
+    //
+    // Wcześniej ten warunek wymagał trafienia słowem kluczowym w
+    // `result_summary` ("rozmowa", "odebrana", "answered", "completed").
+    // Podsumowania z ElevenLabs przychodzą po angielsku i zwykle zaczynają się
+    // od "The conversation began…" / "An agent from Finance You…", więc lista
+    // prawie nigdy nie trafiała i cron oddzwaniał do ludzi, którzy dopiero co
+    // rozmawiali z Anią. Status z webhooka jest twardszym sygnałem niż zgadywanie
+    // po treści — `zakonczona` oznacza teraz rozmowę z człowiekiem (patrz
+    // `@/lib/call-outcome`), a marker no-pickup zostaje jako zabezpieczenie
+    // dla starych wierszy sprzed poprawki klasyfikacji.
     if (last) {
       const summary = String(last.result_summary ?? "").toLowerCase();
-      const looksLikeAnswered =
-        summary.includes("rozmowa") ||
-        summary.includes("odebrana") ||
-        summary.includes("answered") ||
-        summary.includes("completed");
       const looksLikeNoPickup = Array.from(NO_PICKUP_OUTCOMES).some((k) => summary.includes(k));
-      // Jeżeli ostatni telefon to "wykonane" + brak markerów no-pickup i są markery odebrane → pomijamy.
       const answeredStatus = last.status === "wykonane" || last.status === "zakonczona";
-      if (answeredStatus && looksLikeAnswered && !looksLikeNoPickup) {
+      if (answeredStatus && !looksLikeNoPickup) {
         skipped++;
         results.push({ id: loan.id, skipped: "already_answered" });
         continue;
