@@ -1,4 +1,6 @@
-// Cron tick: Ania pinguje leady, które ucichły.
+// Cron tick: Ania pinguje leady, które ucichły (Messenger / Instagram).
+// Kadencja mail/SMS/telefon z `lead_follow_up_schedule` ma osobny tick:
+// `/api/public/hooks/follow-up-plan-tick`.
 // Kadencja od ostatniego outboundu (bez nowego inboundu od klienta):
 //   +2h, +6h, +24h, +3d, +7d, +14d, +21d, +30d → potem stop.
 // Wywoływane przez pg_cron co 15 min na /api/public/hooks/follow-up-tick.
@@ -72,17 +74,10 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           console.error("[follow-up-tick] messenger backfill error", e);
         }
 
-        // Wysyłka zaplanowanych follow-upów (mail/SMS/telefon) z lead_follow_up_schedule.
-        // processDueFollowUps sam pilnuje okien godzinowych i statusów terminalnych.
-        try {
-          const { processDueFollowUps } = await import("@/lib/follow-up-plan.server");
-          const plan = await processDueFollowUps();
-          if (plan.processed || plan.sent || plan.skipped) {
-            console.log("[follow-up-tick] plan", JSON.stringify(plan));
-          }
-        } catch (e) {
-          console.error("[follow-up-tick] plan error", e);
-        }
+        // UWAGA: wysyłka z `lead_follow_up_schedule` (mail/SMS/telefon) NIE jest już
+        // tutaj — ma własny endpoint `/api/public/hooks/follow-up-plan-tick`.
+        // Doklejona do tego ticka przegrywała z synchronizacją Messengera:
+        // pg_net zrywa połączenie po 5 s i kadencja nie dochodziła do głosu.
 
         const now = Date.now();
         const cutoff = new Date(now - 31 * 24 * 3600_000).toISOString();
