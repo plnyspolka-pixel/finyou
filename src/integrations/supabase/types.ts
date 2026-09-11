@@ -3873,6 +3873,30 @@ export type Database = {
           },
         ]
       }
+      client_lead_forwards: {
+        Row: {
+          error: string | null
+          forwarded_at: string
+          meta_form_id: string
+          meta_lead_id: string
+          status: string
+        }
+        Insert: {
+          error?: string | null
+          forwarded_at?: string
+          meta_form_id: string
+          meta_lead_id: string
+          status?: string
+        }
+        Update: {
+          error?: string | null
+          forwarded_at?: string
+          meta_form_id?: string
+          meta_lead_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null

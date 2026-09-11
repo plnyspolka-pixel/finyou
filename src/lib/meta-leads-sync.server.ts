@@ -2,10 +2,7 @@
 // - createServerFn (admin "Sync Meta leads" w panelu)
 // - cron hooka /api/public/hooks/meta-leads-pull (co minutę)
 import { extractLoanAmount, extractPropertyTypeRaw } from "@/lib/meta-lead-answers.server";
-import {
-  buildClientLeadPayload,
-  forwardLeadToClient,
-} from "@/lib/meta-leads-client-forward.server";
+import { konfiguracjaKlienta, przekazLeadaKlientowi } from "@/lib/meta-leads-client-forward.server";
 import {
   normPhone,
   splitName,
@@ -168,34 +165,15 @@ export async function runMetaLeadsSync(): Promise<{
           // Formularz klienta zewnętrznego (kampania prowadzona z naszego konta dla
           // klienta): lead leci prosto do jego panelu i NIE wchodzi w ścieżkę Finance
           // You — bez wniosku, konta klienta, SMS-a z ofertą i telefonu voicebota.
-          const forwardUrl = (form as { client_forward_url?: string | null }).client_forward_url;
-          if (forwardUrl) {
-            const payload = buildClientLeadPayload({ ...lead, field_data: fd });
-            const wyslano = await forwardLeadToClient(
-              forwardUrl,
-              (form as { client_forward_secret?: string | null }).client_forward_secret ?? null,
-              payload,
-            );
-            await supabaseAdmin.from("meta_leads").upsert(
-              {
-                meta_lead_id: leadgenId,
-                meta_form_id: lead.form_id ?? formId,
-                meta_campaign_id: lead.campaign_id ?? null,
-                full_name: payload.imie,
-                email: payload.email,
-                phone: payload.telefon,
-                field_data: fd,
-                received_at: payload.utworzono,
-              },
-              { onConflict: "meta_lead_id" },
-            );
-            if (!wyslano.ok) {
-              // Lead jest zapisany u nas, ale nie doszedł do klienta — zostawiamy ślad
-              // na formularzu, żeby było to widać w panelu i dało się dosłać ręcznie.
-              summary.errors.push(`forward ${leadgenId}: ${wyslano.error}`);
+          // Nie zapisujemy go też u nas: w Finance You nie ma go nigdzie widzieć.
+          const klient = await konfiguracjaKlienta(lead.form_id ?? formId);
+          if (klient) {
+            const wynik = await przekazLeadaKlientowi(klient, { ...lead, field_data: fd });
+            if (!wynik.ok) {
+              summary.errors.push(`forward ${leadgenId}: ${wynik.error}`);
               await supabaseAdmin
                 .from("meta_lead_forms")
-                .update({ last_error: `lead ${leadgenId}: ${wyslano.error}`.slice(0, 500) })
+                .update({ last_error: `lead ${leadgenId}: ${wynik.error}`.slice(0, 500) })
                 .eq("meta_form_id", formId);
             }
             continue;

@@ -51,6 +51,24 @@ można potem dowolnie zmieniać lub usuwać.
 Klucze lokalizacji i identyfikatory zainteresowań zawsze pochodzą z wyszukiwarki
 Meta — nie są wpisane na sztywno w kodzie.
 
+## Dwie drogi wejścia leada — obie muszą być odcięte
+
+Leady z Meta wchodzą do systemu **dwiema niezależnymi drogami**:
+
+1. **webhook** `/api/public/meta-leads-webhook` — odpala się natychmiast po
+   wypełnieniu formularza,
+2. **synchronizacja** `runMetaLeadsSync` — cron co 15 minut, backup webhooka.
+
+Obie tworzą klienta, wniosek pożyczkowy, SMS i telefon voicebota. Zabezpieczenie
+tylko w jednej z nich jest bezwartościowe: przy pierwszej kampanii klienckiej
+blokada stała wyłącznie w synchronizacji, więc pierwszy lead przeszedł webhookiem
+całą ścieżką pożyczkową — człowiek pytający o szalunki dostał SMS „za chwilę
+zadzwoni nasza asystentka", telefon voicebota i wniosek pożyczkowy.
+
+Dlatego rozstrzyga **jedna wspólna bramka** `konfiguracjaKlienta()` w
+`meta-leads-client-forward.server.ts`, wołana w obu miejscach. Dokładając trzecią
+drogę wejścia, trzeba wywołać ją tak samo.
+
 ## Formularz błyskawiczny dla klienta — dokąd trafiają leady
 
 Kampania na **formularz błyskawiczny** (Lead Ads) zbiera kontakty po stronie
@@ -58,10 +76,14 @@ Facebooka. Te leady **nie są leadami Finance You** — nie zakładamy im wniosk
 pożyczkowego ani konta, nie dzwoni do nich voicebot i nie dostają SMS-a z ofertą
 pożyczki. Odcina je pole `client_forward_url` w tabeli `meta_lead_forms`:
 
-- puste → stara ścieżka Finance You (wniosek, konto, follow-upy, telefon);
-- ustawione → synchronizacja zapisuje leada w `meta_leads` (podgląd i ochrona
-  przed duplikatami) i wysyła go POST-em na adres panelu klienta, po czym kończy
-  przetwarzanie tego leada.
+- puste → ścieżka Finance You (wniosek, konto, follow-upy, telefon);
+- ustawione → lead leci POST-em do panelu klienta i na tym kończy przetwarzanie.
+
+**W Finance You nie zostaje po nim żaden ślad z danymi osobowymi** — nie ma go
+w `meta_leads`, w `leads`, wśród klientów ani wniosków. Jedyny zapis to wiersz
+w `client_lead_forwards`: identyfikator leada w Meta, identyfikator formularza,
+czas i status. Bez imienia, telefonu i adresu. Służy wyłącznie temu, żeby webhook
+i synchronizacja nie wysłały tego samego leada dwa razy — nie jest listą leadów.
 
 Payload dla klienta: `meta_lead_id`, `imie`, `telefon`, `email`, `utworzono`,
 `kampania_id`, `reklama_id`, `formularz_id` oraz `pola` (komplet odpowiedzi).
