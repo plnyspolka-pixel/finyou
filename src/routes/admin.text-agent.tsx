@@ -22,6 +22,7 @@ import { getTextAgentSettings, saveTextAgentSettings } from "@/lib/text-agent-se
 import {
   getProcessAgentsState,
   provisionProcessAgents,
+  syncProcessAgentPrompts,
 } from "@/lib/elevenlabs-agents.functions";
 import {
   listKnowledge,
@@ -44,8 +45,10 @@ const SURFACE_LABELS: Record<string, string> = {
 function ElevenLabsAgentsCard() {
   const fetchState = useServerFn(getProcessAgentsState);
   const provision = useServerFn(provisionProcessAgents);
+  const syncPrompts = useServerFn(syncProcessAgentPrompts);
   const [state, setState] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -68,8 +71,8 @@ function ElevenLabsAgentsCard() {
         <CardTitle>Agenty procesowe ElevenLabs</CardTitle>
         <CardDescription>
           Docelowo wszystkie boty procesowe działają jako agenty ElevenLabs. Gdy agent dla
-          powierzchni jest utworzony, widget na stronie/panelu automatycznie przełącza się na
-          niego; bez agenta działa dotychczasowy silnik tekstowy.
+          powierzchni jest utworzony, widget na stronie/panelu automatycznie przełącza się na niego;
+          bez agenta działa dotychczasowy silnik tekstowy.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -79,7 +82,9 @@ function ElevenLabsAgentsCard() {
               {state[s] ? "aktywny" : "brak agenta"}
             </Badge>
             <span>{SURFACE_LABELS[s]}</span>
-            {state[s] && <span className="font-mono text-xs text-muted-foreground">{state[s]}</span>}
+            {state[s] && (
+              <span className="font-mono text-xs text-muted-foreground">{state[s]}</span>
+            )}
           </div>
         ))}
         {!state.hasApiKey && (
@@ -102,7 +107,9 @@ function ElevenLabsAgentsCard() {
               try {
                 const res: any = await provision();
                 if (res.created?.length)
-                  toast.success(`Utworzono agentów: ${res.created.map((c: any) => c.surface).join(", ")}`);
+                  toast.success(
+                    `Utworzono agentów: ${res.created.map((c: any) => c.surface).join(", ")}`,
+                  );
                 if (res.errors?.length)
                   toast.error(res.errors.map((e: any) => `${e.surface}: ${e.error}`).join("; "));
                 await reload();
@@ -115,6 +122,43 @@ function ElevenLabsAgentsCard() {
           >
             {busy ? "Tworzę agentów…" : `Utwórz brakujących agentów (${missing.length})`}
           </Button>
+        )}
+        {state.hasApiKey && (
+          <div className="space-y-1 border-t border-border pt-3">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={syncing}
+              onClick={async () => {
+                setSyncing(true);
+                try {
+                  const res: any = await syncPrompts();
+                  if (res.updated?.length)
+                    toast.success(
+                      `Zaktualizowano prompt: ${res.updated.map((u: any) => u.surface).join(", ")}`,
+                    );
+                  if (res.errors?.length)
+                    toast.error(res.errors.map((e: any) => `${e.surface}: ${e.error}`).join("; "));
+                  if (res.phoneAgentOutOfSync)
+                    toast.warning(
+                      `Telefon dzwoni innym agentem (${res.phoneAgentOutOfSync}) — jego prompt zmienisz w konsoli ElevenLabs albo wpisz tu ID agenta A1.`,
+                    );
+                } catch (e: any) {
+                  toast.error(e?.message ?? "Błąd synchronizacji promptów");
+                } finally {
+                  setSyncing(false);
+                }
+              }}
+            >
+              {syncing ? "Wysyłam prompty…" : "Wyślij aktualne prompty do agentów"}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Prompt zapisany na tej stronie trafia do ElevenLabs dopiero po tym kliknięciu.
+              Wysyłamy go razem z zasadami kanałów (telefon, czat na stronie, rozmowa głosowa,
+              Messenger/Instagram, e-mail, SMS) — agent wybiera zestaw po zmiennej{" "}
+              <span className="font-mono">channel</span>.
+            </p>
+          </div>
         )}
         <p className="text-xs text-muted-foreground">
           Po utworzeniu agentów dopnij w konsoli ElevenLabs webhook tool:{" "}

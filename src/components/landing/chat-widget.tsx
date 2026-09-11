@@ -1,53 +1,13 @@
-import { createElement, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, X, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-// ── Tryb ElevenLabs ─────────────────────────────────────────────────────────
-// Gdy dla powierzchni skonfigurowano agenta ElevenLabs (/api/public/
-// agent-config), zamiast własnego czatu renderujemy osadzony widget
-// <elevenlabs-convai> z CDN (celowo nie @elevenlabs/react — bun.lock
-// przypięty do rejestru Lovable; ta sama decyzja co widget braków).
-const EL_WIDGET_SCRIPT_ID = "elevenlabs-convai-widget-script";
-const EL_WIDGET_SCRIPT_SRC = "https://elevenlabs.io/convai-widget/index.js";
-
-function ensureElWidgetScript() {
-  if (document.getElementById(EL_WIDGET_SCRIPT_ID)) return;
-  const script = document.createElement("script");
-  script.id = EL_WIDGET_SCRIPT_ID;
-  script.src = EL_WIDGET_SCRIPT_SRC;
-  script.async = true;
-  document.body.appendChild(script);
-}
-
-function useElevenLabsAgent(surface: string | null): string | null {
-  const [agentId, setAgentId] = useState<string | null>(null);
-  useEffect(() => {
-    if (!surface) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch(`/api/public/agent-config?surface=${surface}`);
-        const json: { agentId?: string | null } = await res.json();
-        if (!cancelled && json?.agentId) setAgentId(json.agentId);
-      } catch {
-        /* stary silnik pozostaje fallbackiem */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [surface]);
-  useEffect(() => {
-    if (agentId) ensureElWidgetScript();
-  }, [agentId]);
-  return agentId;
-}
+import { VoiceCallWidget } from "@/components/landing/voice-call-widget";
 
 type ChatMsg = { id?: string; role: "user" | "assistant" | "staff"; content: string };
 
 const STORAGE_KEY = "fy_chat_session_id";
 const GREETING =
-  "Cześć! 👋 Jestem asystentem Finance You. Napisz w czym mogę pomóc — pożyczka pod zastaw nieruchomości, kwota, dokumenty? Odpowiem od ręki.";
+  "Cześć! Tu Ania z Finance You. Pożyczamy pod zastaw nieruchomości, którą już masz — bez patrzenia na BIK. Powiedz, na co potrzebujesz pieniędzy, a podpowiem, czy i na jakich zasadach damy radę pomóc.";
 
 function getSessionId(storageKey: string): string {
   if (typeof window === "undefined") return "";
@@ -86,10 +46,9 @@ export function ChatWidget({
   title?: string;
   subtitle?: string;
 }) {
-  // Powierzchnia agenta ElevenLabs: chat klienta = intake (A1),
-  // chat inwestora instytucjonalnego = investor_info (A2).
-  const elSurface = endpoint.includes("investor-chat-widget") ? "investor_info" : "intake";
-  const elAgentId = useElevenLabsAgent(elSurface);
+  // Czat inwestorski nie dostaje rozmowy głosowej — tam liczy się treść na
+  // piśmie (warunki, FV), a nie rozmowa z Anią.
+  const voiceEnabled = !endpoint.includes("investor-chat-widget");
   const [open, setOpen] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -175,25 +134,30 @@ export function ChatWidget({
     }
   }
 
-  // Agent ElevenLabs skonfigurowany → osadzony widget zamiast własnego czatu.
-  // UWAGA: toole agenta deklarują zmienne lead_id/email/phone — muszą być
-  // przekazane ZAWSZE (puste dla anonima), inaczej widget odmawia startu
-  // rozmowy ("Missing required dynamic variables in tools").
-  if (elAgentId) {
-    return createElement("elevenlabs-convai", {
-      "agent-id": elAgentId,
-      "dynamic-variables": JSON.stringify({
-        source,
-        session_id: sessionId,
-        lead_id: "",
-        email: "",
-        phone: "",
-      }),
-    });
-  }
-
   return (
     <>
+      {/* Rozmowa głosowa — nasz własny widget (kanał voice_web: Ania mówi
+          krótko, nie przyjmuje dokumentów i kieruje do wniosku na stronie).
+          Zmienne lead_id/email/phone muszą iść ZAWSZE, choćby puste — toole
+          agenta ich wymagają ("Missing required dynamic variables in tools"). */}
+      {voiceEnabled && !open && (
+        <VoiceCallWidget
+          surface="intake"
+          onSwitchToChat={() => setOpen(true)}
+          dynamicVariables={{
+            channel: "voice_web",
+            channel_label: "rozmowa głosowa na stronie",
+            source,
+            session_id: sessionId,
+            lead_id: "",
+            first_name: "",
+            last_name: "",
+            email: "",
+            phone: "",
+          }}
+        />
+      )}
+
       {/* Przycisk otwierający */}
       {!open && (
         <button

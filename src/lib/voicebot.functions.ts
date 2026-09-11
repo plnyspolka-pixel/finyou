@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createClient } from "@supabase/supabase-js";
 import { evaluateSmsGuard, type SmsCategory } from "@/lib/sms-guard.server";
+import { channelDynamicVariables } from "@/lib/agent-channel-rules";
 
 function normalizePhone(input: string): string {
   const s = String(input ?? "").replace(/\s|-/g, "");
@@ -418,7 +419,14 @@ export async function placeOutboundCallInternal(opts: {
     };
     if (opts.dynamicVariables && Object.keys(opts.dynamicVariables).length > 0) {
       body.conversation_initiation_client_data = {
-        dynamic_variables: opts.dynamicVariables,
+        // Kanał dokładamy zawsze, gdy w ogóle wysyłamy zmienne: prompt agenta
+        // rozdziela zasady rozmowy po `channel` (telefon ≠ czat ≠ Messenger).
+        // Rozmowy bez własnych zmiennych dostają kanał z webhooka
+        // /hooks/elevenlabs-conversation-init.
+        dynamic_variables: {
+          ...channelDynamicVariables("voice_phone"),
+          ...opts.dynamicVariables,
+        },
       };
     }
     const res = await fetch("https://api.elevenlabs.io/v1/convai/twilio/outbound-call", {

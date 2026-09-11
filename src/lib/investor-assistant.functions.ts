@@ -43,9 +43,6 @@ export const sendInvestorAssistantMessage = createServerFn({ method: "POST" })
     await assertInvestorFullAccess(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Asystent jest chwilowo niedostępny.");
-
     const { data: investor } = await supabaseAdmin
       .from("investors")
       .select("first_name, last_name, investor_type")
@@ -79,6 +76,50 @@ export const sendInvestorAssistantMessage = createServerFn({ method: "POST" })
       ? `\n\n[KONTEKST CZŁONKA KLUBU]\nImię: ${investor.first_name ?? "?"}\nNazwisko: ${investor.last_name ?? "?"}\nTyp inwestora: ${investor.investor_type ?? "?"}`
       : "";
 
+    // ── Ścieżka ElevenLabs (agent A3) ──────────────────────────────────────
+    // Gdy agent panelu inwestora istnieje, odpowiada on — dzięki temu w panelu
+    // nie musimy osadzać obcego widgetu, żeby korzystać z tego samego bota.
+    // Każde niepowodzenie = cichy powrót do silnika poniżej.
+    let reply = "";
+    try {
+      const { getAgentIdForSurface } = await import("@/lib/elevenlabs-agents.server");
+      const agentId = await getAgentIdForSurface("investor_panel");
+      if (agentId) {
+        const recent = (history ?? []).slice(0, 16).reverse();
+        const historyBlock =
+          recent.length > 0
+            ? recent
+                .map(
+                  (m) =>
+                    `${m.role === "user" ? "INWESTOR" : "TY (asystent)"}: ${String(m.content ?? "")
+                      .replace(/\s+/g, " ")
+                      .slice(0, 600)}`,
+                )
+                .join("\n")
+            : "(brak wcześniejszych wiadomości)";
+        const { elevenLabsTextTurn } = await import("@/lib/elevenlabs-text-turn.server");
+        const { channelDynamicVariables } = await import("@/lib/agent-channel-rules");
+        const turn = await elevenLabsTextTurn({
+          agentId,
+          userMessage:
+            `[DOTYCHCZASOWA ROZMOWA — kontekst, nie odpowiadaj na nią ponownie]\n${historyBlock}\n\n` +
+            `[NOWA WIADOMOŚĆ — odpowiedz na nią]\n${data.message}`,
+          dynamicVariables: {
+            ...channelDynamicVariables("chat_inwestor"),
+            lead_id: "",
+            first_name: investor?.first_name ?? "",
+            last_name: investor?.last_name ?? "",
+            email: "",
+            phone: "",
+          },
+        });
+        if (turn.ok && turn.reply) reply = turn.reply;
+        else console.warn(`[investor-assistant] ElevenLabs fallback: ${turn.error ?? "unknown"}`);
+      }
+    } catch (e) {
+      console.error("[investor-assistant] ElevenLabs path error — fallback", e);
+    }
+
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       { role: "system", content: systemPrompt + userContext + knowledgeBlock },
     ];
@@ -87,18 +128,22 @@ export const sendInvestorAssistantMessage = createServerFn({ method: "POST" })
     }
     messages.push({ role: "user", content: data.message });
 
-    const res = await fetch(GATEWAY, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
-    });
-    if (!res.ok) {
-      const t = await res.text();
-      console.error(`[investor-assistant] gateway ${res.status}: ${t.slice(0, 300)}`);
-      throw new Error("Asystent jest chwilowo niedostępny. Spróbuj ponownie za chwilę.");
+    if (!reply) {
+      const apiKey = process.env.LOVABLE_API_KEY;
+      if (!apiKey) throw new Error("Asystent jest chwilowo niedostępny.");
+      const res = await fetch(GATEWAY, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        console.error(`[investor-assistant] gateway ${res.status}: ${t.slice(0, 300)}`);
+        throw new Error("Asystent jest chwilowo niedostępny. Spróbuj ponownie za chwilę.");
+      }
+      const json: any = await res.json();
+      reply = String(json?.choices?.[0]?.message?.content ?? "").trim();
     }
-    const json: any = await res.json();
-    const reply = String(json?.choices?.[0]?.message?.content ?? "").trim();
     if (!reply) throw new Error("Asystent jest chwilowo niedostępny. Spróbuj ponownie za chwilę.");
 
     const { error: insertError } = await supabaseAdmin.from("investor_assistant_messages").insert([

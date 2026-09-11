@@ -13,6 +13,11 @@
 // rozmowy (bez obietnic kontaktu analityka).
 import { createClient } from "@supabase/supabase-js";
 import { fetchAgentPrompt, type AgentVariant } from "@/lib/elevenlabs-text-agent.server";
+import {
+  AGENT_DYNAMIC_VARIABLE_DEFAULTS,
+  RAPPORT_RULES,
+  buildChannelRulesSection,
+} from "@/lib/agent-channel-rules";
 
 const EL_BASE = "https://api.elevenlabs.io/v1";
 
@@ -55,12 +60,55 @@ const INTAKE_HARD_RULES = `
 
 TWARDE ZASADY ROZMOWY (nadrzędne wobec reszty promptu):
 - NIGDY nie obiecuj, że "skontaktuje się analityk", że "oddzwonimy" ani żadnej formy kontaktu z naszej strony.
-- Prowadź KRÓTKĄ rozmowę: zbierz dane i dokumenty do wniosku, podziękuj, ustaw oczekiwania.
+- Nie przeciągaj rozmowy bez potrzeby, ale też nie zaczynaj od żądania danych — prowadź ją tak, jak opisuje sekcja "JAK PROWADZISZ ROZMOWĘ", i dopiero potem kompletuj wniosek.
 - Po przyjęciu kompletnego wniosku informuj: "Jeśli wniosek spotka się z zainteresowaniem inwestora, otrzyma Pan/Pani konkretną ofertę finansową. Brak oferty i brak pytań oznacza, że wniosek na razie nie spotkał się z zainteresowaniem."
 - Analityk odzywa się wyłącznie z inicjatywy firmy, z konkretną ofertą lub konkretnymi pytaniami — informujesz o tym, ale tego nie obiecujesz.`;
 
+/**
+ * Prompt agenta dla powierzchni: prompt z /admin/text-agent + wspólne zasady
+ * prowadzenia rozmowy + rozdzielenie kanałów (A1 obsługuje telefon, czat na
+ * stronie, widget głosowy i wiadomości, więc zasady kanałów dostaje wszystkie
+ * i wybiera po zmiennej {{channel}}) + twarde zasady A1.
+ */
+function buildAgentPrompt(surface: AgentSurface, basePrompt: string): string {
+  if (surface !== "intake") return basePrompt;
+  return basePrompt + RAPPORT_RULES + buildChannelRulesSection() + INTAKE_HARD_RULES;
+}
+
 function admin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+}
+
+/**
+ * POST do API ElevenLabs z domyślnymi wartościami zmiennych dynamicznych,
+ * a gdy API tego pola nie przyjmie (inna wersja schematu) — ponowienie bez
+ * niego. Dzięki temu zmiana nigdy nie blokuje utworzenia/aktualizacji agenta.
+ */
+async function elRequestWithPlaceholderFallback(
+  url: string,
+  apiKey: string,
+  buildBody: (agentPatch: Record<string, unknown>) => Record<string, unknown>,
+  method: "POST" | "PATCH" = "POST",
+): Promise<{ res: Response; json: any }> {
+  const post = async (agentPatch: Record<string, unknown>) => {
+    const res = await fetch(url, {
+      method,
+      headers: { "xi-api-key": apiKey, "content-type": "application/json" },
+      body: JSON.stringify(buildBody(agentPatch)),
+    });
+    const json: any = await res.json().catch(() => ({}));
+    return { res, json };
+  };
+
+  const withPlaceholders = await post({
+    dynamic_variables: { dynamic_variable_placeholders: AGENT_DYNAMIC_VARIABLE_DEFAULTS },
+  });
+  if (withPlaceholders.res.ok) return withPlaceholders;
+  console.warn(
+    "[el-agents] próba bez dynamic_variable_placeholders — API odrzuciło pole",
+    withPlaceholders.res.status,
+  );
+  return post({});
 }
 
 /** ID agenta dla powierzchni: env ma pierwszeństwo, potem voicebot_settings. */
@@ -106,27 +154,26 @@ export async function ensureElevenLabsProcessAgents(): Promise<EnsureAgentsResul
     }
     try {
       const fetched = await fetchAgentPrompt(SURFACE_VARIANT[surface]);
-      let prompt = fetched.prompt;
-      if (surface === "intake") prompt += INTAKE_HARD_RULES;
+      const prompt = buildAgentPrompt(surface, fetched.prompt);
 
-      const res = await fetch(`${EL_BASE}/convai/agents/create`, {
-        method: "POST",
-        headers: { "xi-api-key": apiKey, "content-type": "application/json" },
-        body: JSON.stringify({
+      const { res, json } = await elRequestWithPlaceholderFallback(
+        `${EL_BASE}/convai/agents/create`,
+        apiKey,
+        (agentPatch) => ({
           name: SURFACE_NAME[surface],
           conversation_config: {
             agent: {
               first_message: fetched.firstMessage ?? SURFACE_FIRST_MESSAGE[surface],
               language: "pl",
               prompt: { prompt },
+              ...agentPatch,
             },
             // Agenty nie-angielskie wymagają modelu turbo/flash v2_5 — bez tego
             // API odrzuca tworzenie ("Non-english Agents must use turbo or flash v2_5").
             tts: { model_id: "eleven_flash_v2_5" },
           },
         }),
-      });
-      const json: any = await res.json().catch(() => ({}));
+      );
       if (!res.ok || !json?.agent_id) {
         const msg = json?.detail?.message ?? json?.message ?? `ElevenLabs HTTP ${res.status}`;
         result.errors.push({ surface, error: String(msg) });
@@ -147,5 +194,93 @@ export async function ensureElevenLabsProcessAgents(): Promise<EnsureAgentsResul
       result.errors.push({ surface, error: e?.message ?? "błąd tworzenia agenta" });
     }
   }
+  return result;
+}
+
+export interface SyncPromptsResult {
+  updated: Array<{ surface: AgentSurface; agentId: string }>;
+  skipped: Array<{ surface: AgentSurface; reason: string }>;
+  errors: Array<{ surface: AgentSurface; error: string }>;
+  /** Agent telefoniczny (voicebot_settings.agent_id) inny niż A1 — jego prompt żyje w konsoli ElevenLabs. */
+  phoneAgentOutOfSync: string | null;
+}
+
+/**
+ * Wysyła AKTUALNY prompt (z /admin/text-agent + zasady kanałów) do istniejących
+ * agentów ElevenLabs. Bez tego zmiany w promptach działają wyłącznie dla nowo
+ * tworzonych agentów, a telefon i widgety jadą dalej na starej wersji.
+ */
+export async function syncElevenLabsAgentPrompts(): Promise<SyncPromptsResult> {
+  const result: SyncPromptsResult = {
+    updated: [],
+    skipped: [],
+    errors: [],
+    phoneAgentOutOfSync: null,
+  };
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) {
+    for (const surface of Object.keys(SURFACE_COLUMN) as AgentSurface[]) {
+      result.errors.push({ surface, error: "Brak ELEVENLABS_API_KEY" });
+    }
+    return result;
+  }
+  const s = admin();
+
+  for (const surface of Object.keys(SURFACE_COLUMN) as AgentSurface[]) {
+    const agentId = await getAgentIdForSurface(surface);
+    if (!agentId) {
+      result.skipped.push({ surface, reason: "brak agenta — najpierw go utwórz" });
+      continue;
+    }
+    try {
+      const fetched = await fetchAgentPrompt(SURFACE_VARIANT[surface]);
+      const prompt = buildAgentPrompt(surface, fetched.prompt);
+      const { res, json } = await elRequestWithPlaceholderFallback(
+        `${EL_BASE}/convai/agents/${encodeURIComponent(agentId)}`,
+        apiKey,
+        (agentPatch) => ({
+          conversation_config: {
+            agent: {
+              first_message: fetched.firstMessage ?? SURFACE_FIRST_MESSAGE[surface],
+              language: "pl",
+              prompt: { prompt },
+              ...agentPatch,
+            },
+          },
+        }),
+        "PATCH",
+      );
+      if (!res.ok) {
+        const msg = json?.detail?.message ?? json?.message ?? `ElevenLabs HTTP ${res.status}`;
+        result.errors.push({ surface, error: String(msg) });
+        continue;
+      }
+      await s.from("automation_events").insert({
+        automation_type: "elevenlabs_agent_prompt_synced",
+        status: "sent",
+        sent_payload: { purpose: surface, agent_id: agentId, prompt_length: prompt.length },
+        response_payload: { agent_id: agentId },
+      });
+      result.updated.push({ surface, agentId });
+    } catch (e: any) {
+      result.errors.push({ surface, error: e?.message ?? "błąd aktualizacji agenta" });
+    }
+  }
+
+  // Telefon: gdy voicebot dzwoni innym agentem niż A1, jego prompt (a więc i
+  // zasady kanału telefonicznego) nie jest tu zarządzany — sygnalizujemy to.
+  try {
+    const intakeId = await getAgentIdForSurface("intake");
+    const { data } = await (s as any)
+      .from("voicebot_settings")
+      .select("agent_id")
+      .eq("id", 1)
+      .maybeSingle();
+    const phoneAgentId = (data?.agent_id as string | null) ?? null;
+    if (phoneAgentId && phoneAgentId !== intakeId) result.phoneAgentOutOfSync = phoneAgentId;
+  } catch {
+    /* informacja poglądowa — brak nie jest błędem synchronizacji */
+  }
+
   return result;
 }

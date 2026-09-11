@@ -189,6 +189,7 @@ import { Route as InwestorAmlPonadprogoweRouteImport } from './routes/inwestor.a
 import { Route as InwestorAmlKlienciRouteImport } from './routes/inwestor.aml.klienci'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
 import { Route as ApiPublicYoutubeOauthCallbackRouteImport } from './routes/api/public/youtube-oauth-callback'
+import { Route as ApiPublicVoiceSessionRouteImport } from './routes/api/public/voice-session'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio-voice'
 import { Route as ApiPublicTwilioSmsInboundRouteImport } from './routes/api/public/twilio-sms-inbound'
 import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/public/twilio-recording'
@@ -1182,6 +1183,11 @@ const ApiPublicYoutubeOauthCallbackRoute =
     path: '/api/public/youtube-oauth-callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicVoiceSessionRoute = ApiPublicVoiceSessionRouteImport.update({
+  id: '/api/public/voice-session',
+  path: '/api/public/voice-session',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTwilioVoiceRoute = ApiPublicTwilioVoiceRouteImport.update({
   id: '/api/public/twilio-voice',
   path: '/api/public/twilio-voice',
@@ -1838,6 +1844,7 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio-sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/voice-session': typeof ApiPublicVoiceSessionRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
@@ -2091,6 +2098,7 @@ export interface FileRoutesByTo {
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio-sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/voice-session': typeof ApiPublicVoiceSessionRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
@@ -2355,6 +2363,7 @@ export interface FileRoutesById {
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio-sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/voice-session': typeof ApiPublicVoiceSessionRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
@@ -2620,6 +2629,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-recording'
     | '/api/public/twilio-sms-inbound'
     | '/api/public/twilio-voice'
+    | '/api/public/voice-session'
     | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
@@ -2873,6 +2883,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-recording'
     | '/api/public/twilio-sms-inbound'
     | '/api/public/twilio-voice'
+    | '/api/public/voice-session'
     | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
@@ -3136,6 +3147,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-recording'
     | '/api/public/twilio-sms-inbound'
     | '/api/public/twilio-voice'
+    | '/api/public/voice-session'
     | '/api/public/youtube-oauth-callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
@@ -3276,6 +3288,7 @@ export interface RootRouteChildren {
   ApiPublicTwilioRecordingRoute: typeof ApiPublicTwilioRecordingRoute
   ApiPublicTwilioSmsInboundRoute: typeof ApiPublicTwilioSmsInboundRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
+  ApiPublicVoiceSessionRoute: typeof ApiPublicVoiceSessionRoute
   ApiPublicYoutubeOauthCallbackRoute: typeof ApiPublicYoutubeOauthCallbackRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
@@ -4582,6 +4595,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicYoutubeOauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/voice-session': {
+      id: '/api/public/voice-session'
+      path: '/api/public/voice-session'
+      fullPath: '/api/public/voice-session'
+      preLoaderRoute: typeof ApiPublicVoiceSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/twilio-voice': {
       id: '/api/public/twilio-voice'
       path: '/api/public/twilio-voice'
@@ -5656,6 +5676,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTwilioRecordingRoute: ApiPublicTwilioRecordingRoute,
   ApiPublicTwilioSmsInboundRoute: ApiPublicTwilioSmsInboundRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
+  ApiPublicVoiceSessionRoute: ApiPublicVoiceSessionRoute,
   ApiPublicYoutubeOauthCallbackRoute: ApiPublicYoutubeOauthCallbackRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,

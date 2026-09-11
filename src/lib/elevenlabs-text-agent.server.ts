@@ -22,6 +22,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { normalizeKwNumber } from "./kw";
+import { RAPPORT_RULES, channelDynamicVariables, channelRules } from "./agent-channel-rules";
 
 const EL_BASE = "https://api.elevenlabs.io/v1";
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -346,7 +347,9 @@ export async function runAgentTurn(opts: {
           ? recent
               .map(
                 (h) =>
-                  `${h.direction === "inbound" ? "KLIENT" : "TY (asystent)"}: ${String(h.content ?? "")
+                  `${h.direction === "inbound" ? "KLIENT" : "TY (asystent)"}: ${String(
+                    h.content ?? "",
+                  )
                     .replace(/\s+/g, " ")
                     .slice(0, 600)}`,
               )
@@ -361,8 +364,8 @@ export async function runAgentTurn(opts: {
         agentId: elAgentId,
         userMessage: elMessage,
         dynamicVariables: {
+          ...channelDynamicVariables(opts.channel),
           lead_id: lead.id,
-          channel: opts.channel,
           first_name: lead.first_name ?? "",
           last_name: lead.last_name ?? "",
           email: lead.email ?? "",
@@ -380,7 +383,14 @@ export async function runAgentTurn(opts: {
     console.error("[el-text-agent] ElevenLabs path error — fallback", e);
   }
 
-  const { prompt: systemPrompt } = await fetchAgentPrompt(variant);
+  const { prompt: basePrompt } = await fetchAgentPrompt(variant);
+  // Zasady kanału dokładamy TU, a nie do promptu w bazie: jeden prompt
+  // obsługuje wszystkie kanały, a różnią się one tym, co w danym kanale w
+  // ogóle jest możliwe (załączniki, długość wypowiedzi, link do wniosku).
+  const systemPrompt =
+    variant === "klient"
+      ? basePrompt + RAPPORT_RULES + channelRules(opts.channel)
+      : basePrompt + channelRules(opts.channel);
 
   // Spersonalizowany link do formularza: świeży magic link (auto-login do /klient),
   // gdy znamy email leada; inaczej publiczny fallback. Prompt z DB używa
@@ -456,10 +466,16 @@ export async function runAgentTurn(opts: {
     );
     mark(!!(lead.phone_raw || lead.phone_normalized || appData.phone), "numer telefonu");
     mark(!!(lead.email || appData.email), "adres e-mail");
+    // Czat na stronie nie przyjmuje plików — checklist nie może kazać Ani
+    // prosić o zdjęcia tam, gdzie klient fizycznie ich nie wyśle.
+    const attachmentsHint =
+      opts.channel === "chat" || opts.channel === "sms"
+        ? `\nUWAGA: w tym kanale klient NIE prześle zdjęć ani dokumentów — tej pozycji nie da się tu uzupełnić. Zamiast o nią prosić, zaproponuj wypełnienie wniosku na stronie (tam dołącza się pliki).`
+        : "";
     checklistBlock =
       missing.length === 0
         ? `\n\n[STAN DANYCH — sprawdzony w bazie]\nKOMPLET: mamy wszystkie dane (${known.join(", ")}). Nie dopytuj o nic z tej listy. Sprawa przechodzi do analizy — poinformuj o tym klienta, jeśli jeszcze tego nie zrobiłeś. NIE wysyłaj linku do formularza ani financeyou.pl i NIE wywołuj send_application_link — nie ma już czego dokańczać.`
-        : `\n\n[STAN DANYCH — sprawdzony w bazie]\nMamy już: ${known.length ? known.join(", ") : "nic"}.\nBrakuje: ${missing.join(", ")}.\nNIE pytaj o nic z listy "mamy już". Dopytuj naturalnie o PIERWSZĄ brakującą pozycję (jedno pytanie na wiadomość), najpierw odpowiadając na pytanie klienta.`;
+        : `\n\n[STAN DANYCH — sprawdzony w bazie]\nMamy już: ${known.length ? known.join(", ") : "nic"}.\nBrakuje: ${missing.join(", ")}.\nNIE pytaj o nic z listy "mamy już". Dopytuj naturalnie o PIERWSZĄ brakującą pozycję (jedno pytanie na wiadomość), najpierw odpowiadając na pytanie klienta.${attachmentsHint}`;
   }
 
   // RAG: pobierz fragmenty bazy wiedzy najbardziej pasujące do wiadomości klienta.

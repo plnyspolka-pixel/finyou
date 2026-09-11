@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { loanStatusLabel } from "@/lib/loan-status";
 import { requireWebhookSecret } from "@/lib/cron-auth.server";
+import { channelDynamicVariables } from "@/lib/agent-channel-rules";
 
 /**
  * Conversation Initiation Webhook dla ElevenLabs.
@@ -97,7 +98,11 @@ async function handler({ request }: { request: Request }) {
   });
 
   // Domyślne wartości — wszystkie jako prymitywne typy (string/number/boolean).
+  // channel/channel_label: rozmowa przez telefon rządzi się innymi prawami niż
+  // czat czy Messenger (bez załączników, krótkie zdania, link SMS-em) —
+  // prompt agenta wybiera zestaw reguł po tej zmiennej.
   const dyn: Record<string, string | number | boolean> = {
+    ...channelDynamicVariables("voice_phone"),
     first_name: "",
     last_name: "",
     full_name: "",

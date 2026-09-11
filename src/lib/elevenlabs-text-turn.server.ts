@@ -16,7 +16,7 @@ export interface ElTextTurnResult {
 }
 
 /** Podpisany URL sesji (agenty tworzone przez API są prywatne). */
-async function getSignedUrl(agentId: string, apiKey: string): Promise<string | null> {
+export async function getSignedUrl(agentId: string, apiKey: string): Promise<string | null> {
   try {
     const res = await fetch(
       `${EL_BASE}/convai/conversation/get_signed_url?agent_id=${encodeURIComponent(agentId)}`,
