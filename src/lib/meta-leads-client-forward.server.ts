@@ -49,6 +49,77 @@ export function buildClientLeadPayload(lead: SurowyLead): LeadKlienta {
   };
 }
 
+export type KonfiguracjaKlienta = { url: string; secret: string | null };
+
+/**
+ * Zwraca konfigurację przekazywania, jeśli formularz należy do klienta zewnętrznego.
+ * `null` = zwykły formularz Finance You, lead idzie naszą ścieżką.
+ *
+ * To jedyna bramka rozstrzygająca, czy lead jest nasz, czy klienta — korzystają
+ * z niej obie drogi wejścia (webhook Meta i synchronizacja), żeby nie dało się
+ * zapomnieć o niej w jednej z nich.
+ */
+export async function konfiguracjaKlienta(
+  metaFormId: string | null | undefined,
+): Promise<KonfiguracjaKlienta | null> {
+  if (!metaFormId) return null;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("meta_lead_forms")
+    .select("client_forward_url, client_forward_secret")
+    .eq("meta_form_id", String(metaFormId))
+    .maybeSingle();
+  const wiersz = data as {
+    client_forward_url?: string | null;
+    client_forward_secret?: string | null;
+  } | null;
+  if (!wiersz?.client_forward_url) return null;
+  return { url: wiersz.client_forward_url, secret: wiersz.client_forward_secret ?? null };
+}
+
+/**
+ * Przekazuje leada do panelu klienta i odnotowuje sam fakt przekazania.
+ *
+ * W Finance You NIE zostaje żaden ślad z danymi osobowymi: ani w `meta_leads`,
+ * ani w `leads`, ani wśród klientów. Zapisujemy wyłącznie identyfikator leada
+ * w Meta, żeby webhook i synchronizacja nie wysłały tego samego dwa razy.
+ */
+export async function przekazLeadaKlientowi(
+  konfiguracja: KonfiguracjaKlienta,
+  lead: SurowyLead,
+): Promise<{ ok: boolean; pominiety?: boolean; error?: string }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const metaLeadId = String(lead.id);
+
+  const { data: juzWyslany } = await supabaseAdmin
+    .from("client_lead_forwards")
+    .select("meta_lead_id, status")
+    .eq("meta_lead_id", metaLeadId)
+    .maybeSingle();
+  if ((juzWyslany as { status?: string } | null)?.status === "wyslany") {
+    return { ok: true, pominiety: true };
+  }
+
+  const wynik = await forwardLeadToClient(
+    konfiguracja.url,
+    konfiguracja.secret,
+    buildClientLeadPayload(lead),
+  );
+
+  await supabaseAdmin.from("client_lead_forwards").upsert(
+    {
+      meta_lead_id: metaLeadId,
+      meta_form_id: String(lead.form_id ?? ""),
+      forwarded_at: new Date().toISOString(),
+      status: wynik.ok ? "wyslany" : "blad",
+      error: wynik.ok ? null : (wynik.error ?? "").slice(0, 500),
+    },
+    { onConflict: "meta_lead_id" },
+  );
+
+  return wynik;
+}
+
 /**
  * Wysyła leada na endpoint klienta. Nie rzuca — błąd wraca w wyniku, żeby jeden
  * niedostępny panel klienta nie wywracał całej synchronizacji.

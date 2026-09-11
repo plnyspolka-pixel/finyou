@@ -301,6 +301,33 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
               if (!leadgenId) continue;
               const details = await fetchLeadDetails(leadgenId);
               const fd = details.field_data ?? [];
+
+              // Formularz klienta zewnętrznego: lead NIE jest leadem Finance You.
+              // Wychodzi prosto do panelu klienta i nie zostawia u nas śladu —
+              // bez klienta, wniosku, SMS-a, telefonu i wpisu w meta_leads.
+              // Ta sama bramka stoi w synchronizacji (runMetaLeadsSync).
+              const formIdKlienta = v.form_id ?? details.form_id ?? null;
+              const { konfiguracjaKlienta, przekazLeadaKlientowi } =
+                await import("@/lib/meta-leads-client-forward.server");
+              const klient = await konfiguracjaKlienta(formIdKlienta);
+              if (klient) {
+                const wynik = await przekazLeadaKlientowi(klient, {
+                  id: leadgenId,
+                  created_time: details.created_time,
+                  form_id: formIdKlienta,
+                  campaign_id: v.campaign_id ?? details.campaign_id ?? null,
+                  ad_id: v.ad_id ?? details.ad_id ?? null,
+                  field_data: fd,
+                });
+                if (!wynik.ok) {
+                  console.error(
+                    `[meta-webhook] przekazanie leada ${leadgenId} nie powiodło się`,
+                    wynik.error,
+                  );
+                }
+                continue;
+              }
+
               const email = extractField(fd, ["email"]);
               const rawName = extractField(fd, ["name", "imię", "imie"]);
               const phone = extractPhone(fd, rawName);
