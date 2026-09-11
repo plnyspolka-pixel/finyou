@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { createHmac, timingSafeEqual } from "crypto";
+import { classifyCallOutcome, shouldRetryCall } from "@/lib/call-outcome";
 
 // Webhook ElevenLabs — odbiera wynik rozmowy i zapisuje do kolejki.
 // Weryfikuje podpis HMAC z nagłówka `ElevenLabs-Signature` (format: t=...,v0=...).
@@ -104,24 +105,15 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
               body?.call_duration_secs,
           ) || null;
 
-        function classifyOutcome(): { outcome: string; label: string } {
-          const d = (disconnectionReason || "").toLowerCase();
-          const s = (callStatus || "").toLowerCase();
-          const succ = (callSuccessful || "").toLowerCase();
-          if (d.includes("no_answer") || d.includes("noanswer") || s === "no-answer")
-            return { outcome: "no_answer", label: "Nieodebrana" };
-          if (d.includes("busy")) return { outcome: "busy", label: "Zajęte" };
-          if (d.includes("voicemail") || d.includes("machine"))
-            return { outcome: "voicemail", label: "Poczta głosowa" };
-          if (d.includes("failed") || s === "failed" || succ === "failure")
-            return { outcome: "failed", label: "Błąd połączenia" };
-          if ((durationSec ?? 0) < 5 && (d || s))
-            return { outcome: "no_answer", label: "Nieodebrana" };
-          if (succ === "success" || (durationSec ?? 0) >= 5)
-            return { outcome: "answered", label: "Odebrana" };
-          return { outcome: "completed", label: "Zakończona" };
-        }
-        const { outcome, label: outcomeLabel } = classifyOutcome();
+        // Klasyfikacja siedzi w `@/lib/call-outcome` (z testami). Kluczowe:
+        // `call_successful` to ocena JAKOŚCI rozmowy przez agenta, a nie wynik
+        // połączenia — nie może decydować o tym, czy ktoś odebrał.
+        const { outcome, label: outcomeLabel } = classifyCallOutcome({
+          disconnectionReason,
+          callStatus,
+          callSuccessful,
+          durationSec,
+        });
 
         // ── Wyciąganie wyników data collection z ElevenLabs ──────────────────
         // ElevenLabs zwraca: analysis.data_collection_results = { field: { value, rationale, ... } }
@@ -191,15 +183,13 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           const queueStatus =
             outcome === "answered"
               ? "zakonczona"
-              : outcome === "no_answer"
+              : outcome === "no_answer" || outcome === "busy"
                 ? "nieodebrana"
-                : outcome === "busy"
-                  ? "nieodebrana"
-                  : outcome === "voicemail"
-                    ? "poczta_glosowa"
-                    : outcome === "failed"
-                      ? "blad"
-                      : "zakonczona";
+                : outcome === "voicemail"
+                  ? "poczta_glosowa"
+                  : outcome === "failed"
+                    ? "blad"
+                    : "zakonczona";
           await supabase
             .from("call_queue")
             .update({
@@ -217,12 +207,9 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           // odebrał o 9:15, dostawał 6 telefonów do 11:15 (a z nimi zapowiedzi SMS-em).
           // Doba to zarazem próg globalnego throttle w placeOutboundCallInternal, więc
           // kolejna próba nie odbija się od hamulca.
-          const isRetryable =
-            outcome === "no_answer" ||
-            outcome === "busy" ||
-            outcome === "voicemail" ||
-            outcome === "failed";
-          if (isRetryable) {
+          // Po rozmowie z człowiekiem nie oddzwaniamy — nawet gdy agent uznał ją
+          // za nieudaną (patrz `shouldRetryCall`).
+          if (shouldRetryCall(outcome, durationSec)) {
             try {
               let cntQ = supabase
                 .from("call_queue")
