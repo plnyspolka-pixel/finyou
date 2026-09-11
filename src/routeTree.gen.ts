@@ -259,6 +259,7 @@ import { Route as ApiPublicHooksLoanReminderEmailsTickRouteImport } from './rout
 import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/api/public/hooks/loan-reminder-emails'
 import { Route as ApiPublicHooksInstitutionMailTickRouteImport } from './routes/api/public/hooks/institution-mail-tick'
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
+import { Route as ApiPublicHooksFollowUpPlanTickRouteImport } from './routes/api/public/hooks/follow-up-plan-tick'
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
@@ -1581,6 +1582,12 @@ const ApiPublicHooksFollowUpTickRoute =
     path: '/api/public/hooks/follow-up-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksFollowUpPlanTickRoute =
+  ApiPublicHooksFollowUpPlanTickRouteImport.update({
+    id: '/api/public/hooks/follow-up-plan-tick',
+    path: '/api/public/hooks/follow-up-plan-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksElevenlabsConversationInitRoute =
   ApiPublicHooksElevenlabsConversationInitRouteImport.update({
     id: '/api/public/hooks/elevenlabs-conversation-init',
@@ -1870,6 +1877,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
+  '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
@@ -2122,6 +2130,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
+  '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
@@ -2385,6 +2394,7 @@ export interface FileRoutesById {
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
+  '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
@@ -2649,6 +2659,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
+    | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/loan-reminder-emails'
@@ -2901,6 +2912,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
+    | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/loan-reminder-emails'
@@ -3163,6 +3175,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
+    | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/loan-reminder-emails'
@@ -3275,6 +3288,7 @@ export interface RootRouteChildren {
   ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
+  ApiPublicHooksFollowUpPlanTickRoute: typeof ApiPublicHooksFollowUpPlanTickRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
   ApiPublicHooksInstitutionMailTickRoute: typeof ApiPublicHooksInstitutionMailTickRoute
   ApiPublicHooksLoanReminderEmailsRoute: typeof ApiPublicHooksLoanReminderEmailsRoute
@@ -5058,6 +5072,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksFollowUpTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/follow-up-plan-tick': {
+      id: '/api/public/hooks/follow-up-plan-tick'
+      path: '/api/public/hooks/follow-up-plan-tick'
+      fullPath: '/api/public/hooks/follow-up-plan-tick'
+      preLoaderRoute: typeof ApiPublicHooksFollowUpPlanTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/elevenlabs-conversation-init': {
       id: '/api/public/hooks/elevenlabs-conversation-init'
       path: '/api/public/hooks/elevenlabs-conversation-init'
@@ -5651,6 +5672,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:
     ApiPublicHooksElevenlabsConversationInitRoute,
+  ApiPublicHooksFollowUpPlanTickRoute: ApiPublicHooksFollowUpPlanTickRoute,
   ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
   ApiPublicHooksInstitutionMailTickRoute:
     ApiPublicHooksInstitutionMailTickRoute,
