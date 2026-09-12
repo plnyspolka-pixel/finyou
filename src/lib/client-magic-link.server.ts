@@ -29,47 +29,21 @@ export async function ensureKlientAccountAndMagicLink(
   if (!email) return { userId: null, magicLink: null, created: false, role, error: "no email" };
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  let userId: string | null = null;
-  let created = false;
-  try {
-    const { data: createRes, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: {
-        first_name: meta.firstName ?? null,
-        last_name: meta.lastName ?? null,
-        source: meta.source ?? "meta_lead",
-        intended_role: role,
-      },
-    });
-    if (createRes?.user?.id) {
-      userId = createRes.user.id;
-      created = true;
-    } else if (
-      createErr &&
-      !String(createErr.message ?? "")
-        .toLowerCase()
-        .includes("registered")
-    ) {
-      return { userId: null, magicLink: null, created: false, role, error: createErr.message };
-    }
-  } catch (e: any) {
-    return { userId: null, magicLink: null, created: false, role, error: e?.message ?? String(e) };
-  }
-
-  if (!userId) {
-    let page = 1;
-    while (page <= 20 && !userId) {
-      const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
-      const found = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email.toLowerCase());
-      if (found) {
-        userId = found.id;
-        break;
-      }
-      if (!list?.users?.length || list.users.length < 200) break;
-      page++;
-    }
-  }
+  // Uwaga: konto dla tego adresu może już istnieć. `ensureAuthUser` sam to
+  // rozpoznaje — również wtedy, gdy GoTrue zamiast „already registered" zwróci
+  // 500 `unexpected_failure` z naruszeniem unikalności `users_email_partial_key`.
+  const { ensureAuthUser } = await import("@/lib/auth-users.server");
+  const ensured = await ensureAuthUser({
+    email,
+    userMetadata: {
+      first_name: meta.firstName ?? null,
+      last_name: meta.lastName ?? null,
+      source: meta.source ?? "meta_lead",
+      intended_role: role,
+    },
+  });
+  const userId: string | null = ensured.userId;
+  const created = ensured.created;
 
   if (userId) {
     await supabaseAdmin
@@ -105,6 +79,13 @@ export async function ensureKlientAccountAndMagicLink(
     if (!linkErr) magicLink = (linkRes?.properties as any)?.action_link ?? null;
   } catch {
     /* noop */
+  }
+
+  // `generateLink` działa po adresie, więc potrafi się udać nawet wtedy, gdy
+  // nie rozpoznaliśmy konta (np. baza większa niż limit stron w wyszukiwaniu).
+  // Błąd zgłaszamy dopiero, gdy nie mamy ani konta, ani linku.
+  if (!userId && !magicLink) {
+    return { userId: null, magicLink: null, created: false, role, error: ensured.error };
   }
 
   return { userId, magicLink, created, role };

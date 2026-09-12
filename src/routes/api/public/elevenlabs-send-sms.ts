@@ -67,27 +67,23 @@ async function generateAutoLoginLink(input: {
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const emailNorm = input.email.toLowerCase().trim();
 
-  // Znajdź lub utwórz użytkownika
-  let userId: string | null = null;
-  const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
-  const existing = list?.users?.find((u) => (u.email ?? "").toLowerCase() === emailNorm);
-  if (existing) {
-    userId = existing.id;
-  } else {
-    const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
-      email: emailNorm,
-      email_confirm: true,
-      user_metadata: {
-        first_name: input.first_name,
-        last_name: input.last_name,
-        phone: input.phone,
-      },
-    });
-    if (cErr || !created.user) {
-      return { ok: false, error: "Nie udało się utworzyć użytkownika: " + (cErr?.message ?? "") };
-    }
-    userId = created.user.id;
+  // Znajdź lub utwórz użytkownika. Wcześniej przeszukiwana była TYLKO pierwsza
+  // strona listy (200 kont) — dla starszego klienta z dalszej strony kod szedł
+  // w `createUser`, dostawał naruszenie unikalności adresu i zwracał twardy
+  // błąd zamiast linku do logowania.
+  const { ensureAuthUser } = await import("@/lib/auth-users.server");
+  const ensured = await ensureAuthUser({
+    email: emailNorm,
+    userMetadata: {
+      first_name: input.first_name,
+      last_name: input.last_name,
+      phone: input.phone,
+    },
+  });
+  if (!ensured.userId) {
+    return { ok: false, error: "Nie udało się utworzyć użytkownika: " + (ensured.error ?? "") };
   }
+  const userId: string = ensured.userId;
 
   // Wypełnij profil
   await supabaseAdmin.from("profiles").upsert(

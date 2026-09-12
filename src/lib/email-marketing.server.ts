@@ -1,6 +1,7 @@
 // Server-only helpers for email marketing (Resend + AI + segments)
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { wrapBrandedEmail, isAlreadyBranded } from "./email-branding.server";
+import { fetchAllPaged } from "./supabase-paging.server";
 
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
 
@@ -17,20 +18,22 @@ export async function resolveSegmentRecipients(
 ): Promise<
   Array<{ id: string; email: string; first_name: string | null; last_name: string | null }>
 > {
-  let q = supabaseAdmin
-    .from("email_subscribers")
-    .select("id,email,first_name,last_name")
-    .eq("status", "active");
+  // Stronami, nie jednym `.limit(10000)` — przy większej bazie subskrybentów
+  // pojedyncze zapytanie wpadało w `statement timeout` (57014) i wysyłka padała.
+  return fetchAllPaged((from, to) => {
+    let q = supabaseAdmin
+      .from("email_subscribers")
+      .select("id,email,first_name,last_name")
+      .eq("status", "active");
 
-  if (filters.status?.length) q = q.in("status", filters.status);
-  if (filters.tags?.length) q = q.overlaps("tags", filters.tags);
-  if (filters.sources?.length) q = q.in("source", filters.sources);
-  if (filters.createdFrom) q = q.gte("created_at", filters.createdFrom);
-  if (filters.createdTo) q = q.lte("created_at", filters.createdTo);
+    if (filters.status?.length) q = q.in("status", filters.status);
+    if (filters.tags?.length) q = q.overlaps("tags", filters.tags);
+    if (filters.sources?.length) q = q.in("source", filters.sources);
+    if (filters.createdFrom) q = q.gte("created_at", filters.createdFrom);
+    if (filters.createdTo) q = q.lte("created_at", filters.createdTo);
 
-  const { data, error } = await q.limit(10000);
-  if (error) throw new Error(error.message);
-  return data ?? [];
+    return q.order("id", { ascending: true }).range(from, to);
+  });
 }
 
 export async function sendViaResend(payload: {

@@ -11,6 +11,10 @@ export const UNIFIED_BUCKET = CLIENT_FILES_BUCKET;
 export type UploadContext =
   | { context: "property"; applicationId: string }
   | { context: "document"; applicationId: string; docType?: string }
+  // Dokument klienta NIEprzypięty do wniosku (raport BIK) — kluczem jest sam
+  // użytkownik. Osobny wariant, bo wcześniej przekazywano tu `user.id` jako
+  // `applicationId` i polityka RLS bucketu odbijała każdy taki upload.
+  | { context: "client-document"; userId: string; docType?: string }
   | { context: "attachment"; messageId?: string; ownerId?: string }
   | { context: "avatar"; userId: string }
   | { context: "marketing"; materialId?: string }
@@ -46,6 +50,8 @@ function pathFor(ctx: UploadContext, fileName: string): string {
       return `property/${ctx.applicationId}/${stamp}-${safe}`;
     case "document":
       return `documents/${ctx.applicationId}/${ctx.docType ?? "misc"}/${stamp}-${safe}`;
+    case "client-document":
+      return `documents/${ctx.userId}/${ctx.docType ?? "misc"}/${stamp}-${safe}`;
     case "attachment":
       return `attachments/${ctx.messageId ?? ctx.ownerId ?? "misc"}/${stamp}-${safe}`;
     case "avatar":

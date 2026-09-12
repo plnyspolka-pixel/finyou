@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { fetchAllPaged } from "@/lib/supabase-paging.server";
 import { z } from "zod";
 
 const SENDER_DOMAIN = "notify.financeyou.pl";
@@ -75,15 +76,38 @@ function renderTemplate(html: string, vars: Record<string, string>) {
 }
 
 // ============ AUDIENCE ============
+// Wszystkie odczyty audiencji idą stronami — jedno zapytanie na kilka tysięcy
+// wierszy potrafiło wpaść w `statement timeout` i wywrócić całą wysyłkę.
+function clientsPage(from: number, to: number) {
+  return supabaseAdmin
+    .from("clients")
+    .select("email, first_name, last_name, consent_marketing")
+    .not("email", "is", null)
+    .order("id", { ascending: true })
+    .range(from, to);
+}
+
+function investorsPage(from: number, to: number) {
+  return supabaseAdmin
+    .from("investors")
+    .select("email, first_name, last_name, company_name")
+    .not("email", "is", null)
+    .order("id", { ascending: true })
+    .range(from, to);
+}
+
 async function fetchAudience(type: string, filter: Record<string, unknown>) {
   if (type === "leady") {
-    const q = supabaseAdmin
-      .from("loan_applications")
-      .select(
-        "id, client_id, status, clients!inner(email, first_name, last_name, consent_email, consent_marketing)",
-      );
-    const { data } = await q.limit(5000);
-    return (data ?? [])
+    const rows = await fetchAllPaged((from, to) =>
+      supabaseAdmin
+        .from("loan_applications")
+        .select(
+          "id, client_id, status, clients!inner(email, first_name, last_name, consent_email, consent_marketing)",
+        )
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
+    return rows
       .filter((r: any) => r.clients?.email && r.clients?.consent_marketing !== false)
       .map((r: any) => ({
         email: r.clients.email,
@@ -91,47 +115,25 @@ async function fetchAudience(type: string, filter: Record<string, unknown>) {
       }));
   }
   if (type === "klienci") {
-    const { data } = await supabaseAdmin
-      .from("clients")
-      .select("email, first_name, last_name, consent_marketing")
-      .not("email", "is", null)
-      .limit(5000);
-    return (data ?? [])
+    const rows = await fetchAllPaged(clientsPage);
+    return rows
       .filter((c) => c.consent_marketing !== false)
       .map((c) => ({ email: c.email!, name: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() }));
   }
   if (type === "inwestorzy") {
-    const { data } = await supabaseAdmin
-      .from("investors")
-      .select("email, first_name, last_name, company_name")
-      .not("email", "is", null)
-      .limit(5000);
-    return (data ?? []).map((i) => ({
+    const rows = await fetchAllPaged(investorsPage);
+    return rows.map((i) => ({
       email: i.email!,
       name: i.company_name ?? `${i.first_name ?? ""} ${i.last_name ?? ""}`.trim(),
     }));
   }
   if (type === "wszyscy") {
-    const [a, b, c] = await Promise.all([
-      supabaseAdmin
-        .from("clients")
-        .select("email, first_name, last_name, consent_marketing")
-        .not("email", "is", null)
-        .limit(5000),
-      supabaseAdmin
-        .from("investors")
-        .select("email, first_name, last_name, company_name")
-        .not("email", "is", null)
-        .limit(5000),
-      Promise.resolve({ data: [] as any[] }),
-    ]);
+    const [a, b] = await Promise.all([fetchAllPaged(clientsPage), fetchAllPaged(investorsPage)]);
     const list: { email: string; name: string }[] = [];
-    (a.data ?? [])
-      .filter((x) => x.consent_marketing !== false)
-      .forEach((x) =>
-        list.push({ email: x.email!, name: `${x.first_name ?? ""} ${x.last_name ?? ""}`.trim() }),
-      );
-    (b.data ?? []).forEach((x) =>
+    a.filter((x) => x.consent_marketing !== false).forEach((x) =>
+      list.push({ email: x.email!, name: `${x.first_name ?? ""} ${x.last_name ?? ""}`.trim() }),
+    );
+    b.forEach((x) =>
       list.push({
         email: x.email!,
         name: x.company_name ?? `${x.first_name ?? ""} ${x.last_name ?? ""}`.trim(),
