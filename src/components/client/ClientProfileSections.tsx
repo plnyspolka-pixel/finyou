@@ -682,8 +682,8 @@ export function ClientProfileSections({
                         let uploadedPath: string;
                         try {
                           const res = await uploadFile(file, {
-                            context: "document",
-                            applicationId: user.id,
+                            context: "client-document",
+                            userId: user.id,
                             docType: "bik",
                           });
                           uploadedPath = res.path;
