@@ -1,6 +1,7 @@
 // Sekwencja poganiania leada przez Anię — 365 dni, opadająco.
 // Mail: codziennie w 1. m-cu, co 3 dni w m-cach 2–3, co 7 dni w m-cach 4–6, co 14 dni do końca roku.
-// Telefon: intensywnie w tyg. 1, potem coraz rzadziej (łącznie ~26 prób / rok).
+// Telefon: intensywnie w tyg. 1, potem coraz rzadziej (łącznie ~26 prób / rok),
+//          w godzinach 13/19/17 (patrz CALL_HOURS_WARSAW — dobrane z danych).
 // SMS: ~12 sms / rok (w punktach „kontrolnych": 3, 7, 14, 21, 30, 45, 60, 90, 120, 180, 240, 365);
 //      dzień 1 obsługuje pojedynczy SMS powitalny wysyłany przy wejściu leada.
 // Telefon i SMS tylko 8:00–21:00 Europe/Warsaw, pon–pt (sobota/niedziela → przesuwane).
@@ -38,6 +39,23 @@ interface Slot {
 }
 
 // === SEKWENCJA — generowana, opadająca przez cały rok ===
+/**
+ * Godziny telefonów, rotacyjnie kolejnymi krokami kadencji.
+ *
+ * Dobrane z 30 dni produkcji (odsetek połączeń, w których ktoś realnie odebrał):
+ * 19:00 — 53%, 20:00 — 50%, 13:00 — 46%, 16:00 — 42%, 17:00 — 33%,
+ * 10:00 — 40%, 12:00 — 39%, 11:00 — 35%. Kadencja waliła dotąd w 11:00–13:00,
+ * czyli w najgorszy z tych przedziałów.
+ *
+ * Wieczorne próbki są małe (15–18 telefonów), więc zamiast wrzucać wszystko na
+ * 19:00 rotujemy trzema godzinami — ruch idzie w lepsze okna, a dane dalej się
+ * zbierają. Koniec okna kontaktu to 21:00 (LEAD_CONTACT_WINDOW), więc 19:00
+ * mieści się z zapasem.
+ *
+ * Dzień 1 ma dwa telefony: krok 1 o 13:00 i krok 2 o 19:00.
+ */
+const CALL_HOURS_WARSAW = [13, 19, 17] as const;
+
 function buildCadence(): Slot[] {
   const slots: Slot[] = [];
   let emailStep = 0;
@@ -85,8 +103,7 @@ function buildCadence(): Slot[] {
   ];
   for (const d of callDays) {
     callStep++;
-    // dwa telefony w dniu 1 — drugi po południu
-    const hour = callStep === 2 ? 15 : 11 + (callStep % 3);
+    const hour = CALL_HOURS_WARSAW[(callStep - 1) % CALL_HOURS_WARSAW.length];
     slots.push({ day: d, hourWarsaw: hour, channel: "call", stepIndex: callStep });
   }
 
