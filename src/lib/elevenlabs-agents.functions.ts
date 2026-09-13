@@ -36,3 +36,15 @@ export const provisionProcessAgents = createServerFn({ method: "POST" })
     const { ensureElevenLabsProcessAgents } = await import("@/lib/elevenlabs-agents.server");
     return ensureElevenLabsProcessAgents();
   });
+
+/**
+ * Wysyła aktualne prompty (z zasadami kanałów) do już istniejących agentów.
+ * Bez tego zmiany w promptach obejmują wyłącznie nowo tworzone agenty.
+ */
+export const syncProcessAgentPrompts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase as any, context.userId);
+    const { syncElevenLabsAgentPrompts } = await import("@/lib/elevenlabs-agents.server");
+    return syncElevenLabsAgentPrompts();
+  });
