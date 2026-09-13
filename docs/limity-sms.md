@@ -124,6 +124,30 @@ Zapowiedź „za chwilę zadzwoni Ania" wychodzi wyłącznie przed **pierwszym**
 telefonem na dany numer (`hasEverBeenCalled`). Przy kolejnych podejściach nic
 nie wnosiła, a klient dostawał ją raz po raz.
 
+## Godziny telefonów dobrane z danych
+
+Kadencja dzwoniła w 11:00–13:00. Z 30 dni produkcji wychodzi, że to najsłabsze
+okno: 11:00 — 35% odebranych, 12:00 — 39%, podczas gdy 13:00 — 46%, 19:00 — 53%,
+20:00 — 50%. Telefony rotują teraz trzema godzinami (`CALL_HOURS_WARSAW`
+w `follow-up-plan.server.ts`): **13, 19, 17**. Rotacja zamiast jednej godziny,
+bo wieczorne próbki są małe (15–18 telefonów) — ruch idzie w lepsze okna, a dane
+dalej się zbierają. Dzień 1: krok 1 o 13:00, krok 2 o 19:00.
+
+## Wynik rozmowy: `call_successful` to ocena jakości, nie połączenia
+
+`classifyCallOutcome` (`src/lib/call-outcome.ts`) rozstrzyga po faktach
+o połączeniu — poczta głosowa, długość rozmowy, brak odpowiedzi — a ocena agenta
+(`call_successful`) zostaje wyłącznie metadaną. Wcześniej `succ === "failure"`
+było sprawdzane przed długością rozmowy, więc rozmowa 291-sekundowa, w której
+klient poprosił o 300 tys. pod zastaw domu, wisiała jako „Błąd połączenia".
+
+Historia została przeliczona 13.09.2026: 376 rozmów (od 9 czerwca, 122 numery,
+średnio 32 s) przeszło z `blad` na `zakonczona` w `call_queue` i na „Odebrana"
+w `lead_communications`. Przeliczone wiersze mają w `metadata` znacznik
+`reclassified_at` / `reclassified_from`. Obraz 30 dni po poprawce: 57,8% nikt
+nie odebrał, 26,9% poczta głosowa, **14,0% rozmowa z człowiekiem**, 1,4% realny
+błąd połączenia.
+
 ## Zmiana w `ania-callbacks`
 
 Cron wysyłał SMS „proszę o kontakt" zawsze, także wtedy, gdy właśnie dzwonił —
