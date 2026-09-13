@@ -8,6 +8,8 @@
 // próbie telefonu, SMS z magic linkiem, SMS z kadencji dnia 1 i SMS z callbacków.
 //
 // Reguły (kategoria zależy od źródła):
+//   • stop-klatka   — `voicebot_settings.sms_outbound_paused` zatrzymuje WSZYSTKO
+//                     poza `critical` (a z `sms_pause_includes_critical` również je).
 //   • critical      — OTP, wysyłka ręczna z panelu, windykacja, test: bez limitów.
 //   • conversational— odpowiedź na SMS klienta / SMS zamówiony przez Anię w trakcie
 //                     rozmowy: limit antypętlowy, bez okna godzinowego.
@@ -103,6 +105,7 @@ export interface RecentSms {
 }
 
 export type SmsBlockReason =
+  | "paused"
   | "opt_out"
   | "quiet_hours"
   | "sunday"
@@ -126,6 +129,45 @@ export interface SmsDecisionInput {
   recent: RecentSms[];
   optedOut: boolean;
   limits?: SmsLimits;
+}
+
+/** Stan stop-klatki z `voicebot_settings` (kolumny `sms_*_paused`). */
+export interface SmsPauseState {
+  paused: boolean;
+  includesCritical: boolean;
+}
+
+/**
+ * Czy stop-klatka blokuje tę wysyłkę. Odrębnie od `decideSms`, bo pauza stoi
+ * PONAD wszystkim — limitami, oknem godzinowym, kategorią. `critical` (OTP,
+ * ręczna wysyłka z panelu, windykacja) przechodzi tylko dopóki pauza nie jest
+ * rozszerzona jawnym `sms_pause_includes_critical`.
+ */
+export function pauseBlocks(category: SmsCategory, state: SmsPauseState): boolean {
+  if (!state.paused) return false;
+  if (category === "critical") return state.includesCritical;
+  return true;
+}
+
+/** Odczyt stop-klatki. Przy błędzie odczytu ZAMYKAMY się dla nie-krytycznych. */
+export async function smsPauseState(): Promise<SmsPauseState> {
+  try {
+    const { data, error } = await admin()
+      .from("voicebot_settings")
+      .select("sms_outbound_paused, sms_pause_includes_critical")
+      .eq("id", 1)
+      .maybeSingle();
+    if (error) throw error;
+    return {
+      paused: data?.sms_outbound_paused === true,
+      includesCritical: data?.sms_pause_includes_critical === true,
+    };
+  } catch (e) {
+    // Nie wiemy, czy wolno wysyłać → nie wysyłamy niczego poza krytycznym.
+    // Cisza jest odwracalna, zalew SMS-ów do klientów nie.
+    console.error("[sms-guard] nie udało się odczytać stop-klatki, blokuję nie-krytyczne", e);
+    return { paused: true, includesCritical: false };
+  }
 }
 
 /** Czysta decyzja — bez I/O, testowalna. */
@@ -256,6 +298,18 @@ export async function evaluateSmsGuard(opts: {
   now?: Date;
 }): Promise<SmsDecision> {
   const category = opts.category ?? classifySmsSource(opts.source);
+
+  const pause = await smsPauseState();
+  if (pauseBlocks(category, pause)) {
+    return {
+      allowed: false,
+      reason: "paused",
+      detail: pause.includesCritical
+        ? "Wysyłka SMS zatrzymana (stop-klatka obejmuje też wysyłki krytyczne)"
+        : "Wysyłka SMS zatrzymana (voicebot_settings.sms_outbound_paused)",
+    };
+  }
+
   if (category === "critical") return { allowed: true };
 
   const limits = defaultSmsLimits();
