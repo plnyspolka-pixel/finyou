@@ -54,5 +54,22 @@ export const saveTextAgentSettings = createServerFn({ method: "POST" })
       updated_by: context.userId,
     });
     if (error) throw new Error(error.message);
-    return { ok: true };
+
+    // Zapis promptu = natychmiastowa wysyłka do agentów ElevenLabs. Bez tego
+    // nowa treść działa tylko w naszym silniku tekstowym, a Messenger i telefon
+    // (prowadzone przez agenta) zostają na starej wersji do następnej rozmowy.
+    let syncedToElevenLabs = false;
+    let syncError: string | null = null;
+    try {
+      const { clearAgentPromptCache } = await import("@/lib/elevenlabs-text-agent.server");
+      clearAgentPromptCache(data.variant);
+      const { ensureAgentPromptsFresh } = await import("@/lib/elevenlabs-agents.server");
+      await ensureAgentPromptsFresh(true);
+      syncedToElevenLabs = true;
+    } catch (e: any) {
+      syncError = e?.message ?? "nie udało się wysłać promptu do ElevenLabs";
+      console.error("[text-agent-settings] sync promptu", e);
+    }
+
+    return { ok: true, syncedToElevenLabs, syncError };
   });

@@ -153,9 +153,11 @@ function ElevenLabsAgentsCard() {
               {syncing ? "Wysyłam prompty…" : "Wyślij aktualne prompty do agentów"}
             </Button>
             <p className="text-xs text-muted-foreground">
-              Prompt zapisany na tej stronie trafia do ElevenLabs dopiero po tym kliknięciu.
-              Wysyłamy go razem z zasadami kanałów (telefon, czat na stronie, rozmowa głosowa,
-              Messenger/Instagram, e-mail, SMS) — agent wybiera zestaw po zmiennej{" "}
+              Zwykle nie trzeba tego klikać: prompt idzie do ElevenLabs automatycznie przy zapisie,
+              a przed rozmową system i tak sprawdza, czy agent ma aktualną wersję. Ten przycisk
+              wymusza wysyłkę od razu — przydaje się, gdy prompt zmieniono ręcznie w konsoli
+              ElevenLabs. Wysyłamy go razem z zasadami kanałów (telefon, czat na stronie, rozmowa
+              głosowa, Messenger/Instagram, e-mail, SMS) — agent wybiera zestaw po zmiennej{" "}
               <span className="font-mono">channel</span>.
             </p>
           </div>
@@ -230,8 +232,14 @@ function PromptTab({ variant }: { variant: AgentVariant }) {
   const onSave = async () => {
     setSaving(true);
     try {
-      await save({ data: { systemPrompt, firstMessage, variant } });
-      toast.success("Zapisano prompt agenta");
+      const res: any = await save({ data: { systemPrompt, firstMessage, variant } });
+      if (res?.syncedToElevenLabs) {
+        toast.success("Zapisano prompt i wysłano go do agentów ElevenLabs");
+      } else {
+        toast.warning(
+          `Zapisano prompt, ale nie poszedł do ElevenLabs${res?.syncError ? `: ${res.syncError}` : ""}. Użyj przycisku „Wyślij aktualne prompty do agentów”.`,
+        );
+      }
       setUpdatedAt(new Date().toISOString());
     } catch (e: any) {
       toast.error(e?.message ?? "Błąd zapisu");

@@ -75,11 +75,17 @@ Jak trafia do agentów:
   wychodzące voicebota.
 - **Silnik tekstowy (fallback)** — `runAgentTurn` dokleja do promptu wyłącznie
   reguły bieżącego kanału (`channelRules`).
-- **Aktualizacja istniejących agentów** — przycisk „Wyślij aktualne prompty do
-  agentów" na `/admin/text-agent` (`syncElevenLabsAgentPrompts`). Bez niego
-  zmiana promptu obejmuje tylko nowo tworzone agenty. Jeśli telefon dzwoni
-  agentem innym niż A1 (`voicebot_settings.agent_id`), wynik synchronizacji to
-  sygnalizuje — jego prompt żyje w konsoli ElevenLabs.
+- **Aktualizacja istniejących agentów dzieje się sama.** Zapis promptu na
+  `/admin/text-agent` od razu wysyła go do ElevenLabs, a przed rozmową
+  (`runAgentTurn` oraz webhook telefoniczny) leci jeszcze `ensureAgentPromptsFresh`.
+  Porównujemy odcisk promptu z `voicebot_settings.agent_prompt_hashes`: gdy się
+  zgadza, nie ma żadnego zapytania do ElevenLabs; gdy się różni — prompt jedzie
+  do agenta. Sprawdzanie jest dławione (5 minut na proces) i zawężone do
+  powierzchni prowadzącej rozmowę, więc nie obciąża tury.
+  Przycisk „Wyślij aktualne prompty do agentów" został jako wymuszenie (przydaje
+  się, gdy ktoś zmienił prompt ręcznie w konsoli ElevenLabs). Jeśli telefon
+  dzwoni agentem innym niż A1 (`voicebot_settings.agent_id`), wynik
+  synchronizacji to sygnalizuje — tamten prompt żyje w konsoli ElevenLabs.
 
 ## Narzędzia agentów (webhook toole)
 

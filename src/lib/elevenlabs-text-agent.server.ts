@@ -332,7 +332,8 @@ export async function runAgentTurn(opts: {
   // ostatnie wiadomości wątku idą w treści jako kontekst przed nową
   // wiadomością. Każde niepowodzenie = cichy powrót do silnika poniżej.
   try {
-    const { getAgentIdForSurface } = await import("./elevenlabs-agents.server");
+    const { getAgentIdForSurface, ensureAgentPromptsFresh } =
+      await import("./elevenlabs-agents.server");
     const surface =
       variant === "inwestor"
         ? ("investor_info" as const)
@@ -341,6 +342,10 @@ export async function runAgentTurn(opts: {
           : ("intake" as const);
     const elAgentId = await getAgentIdForSurface(surface);
     if (elAgentId) {
+      // Prompt zapisany w panelu ma trafić do agenta bez klikania czegokolwiek.
+      // Sprawdzenie jest dławione w czasie i dotyczy tylko tej powierzchni;
+      // bez zmiany promptu nie leci żadne zapytanie do ElevenLabs.
+      await ensureAgentPromptsFresh(false, [surface]).catch(() => {});
       const recent = (history ?? []).slice(-16);
       const historyBlock =
         recent.length > 0
