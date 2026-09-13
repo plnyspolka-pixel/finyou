@@ -5,6 +5,7 @@ import {
   normalizeSmsBody,
   type RecentSms,
   type SmsLimits,
+  pauseBlocks,
 } from "./sms-guard.server";
 
 const LIMITS: SmsLimits = {
@@ -187,5 +188,31 @@ describe("decideSms — kanał konwersacyjny", () => {
   it("respektuje STOP", () => {
     const d = decide({ category: "conversational", body: "cokolwiek", optedOut: true });
     expect(d).toMatchObject({ allowed: false, reason: "opt_out" });
+  });
+});
+
+describe("stop-klatka SMS", () => {
+  const wylaczona = { paused: false, includesCritical: false };
+  const wlaczona = { paused: true, includesCritical: false };
+  const wlaczonaZeWszystkim = { paused: true, includesCritical: true };
+
+  it("wyłączona nie zmienia niczego", () => {
+    expect(pauseBlocks("automated", wylaczona)).toBe(false);
+    expect(pauseBlocks("conversational", wylaczona)).toBe(false);
+    expect(pauseBlocks("critical", wylaczona)).toBe(false);
+  });
+
+  it("zatrzymuje kadencję i odpowiedzi agenta", () => {
+    expect(pauseBlocks("automated", wlaczona)).toBe(true);
+    expect(pauseBlocks("conversational", wlaczona)).toBe(true);
+  });
+
+  it("domyślnie przepuszcza OTP i ręczną wysyłkę z panelu", () => {
+    expect(pauseBlocks("critical", wlaczona)).toBe(false);
+  });
+
+  it("rozszerzona obejmuje także wysyłki krytyczne", () => {
+    expect(pauseBlocks("critical", wlaczonaZeWszystkim)).toBe(true);
+    expect(pauseBlocks("automated", wlaczonaZeWszystkim)).toBe(true);
   });
 });
