@@ -192,9 +192,10 @@ describe("decideSms — kanał konwersacyjny", () => {
 });
 
 describe("stop-klatka SMS", () => {
-  const wylaczona = { paused: false, includesCritical: false };
-  const wlaczona = { paused: true, includesCritical: false };
-  const wlaczonaZeWszystkim = { paused: true, includesCritical: true };
+  const wylaczona = { paused: false, includesCritical: false, includesConversational: false };
+  const wlaczona = { paused: true, includesCritical: false, includesConversational: false };
+  const zKrytycznymi = { paused: true, includesCritical: true, includesConversational: false };
+  const zOdpowiedziami = { paused: true, includesCritical: false, includesConversational: true };
 
   it("wyłączona nie zmienia niczego", () => {
     expect(pauseBlocks("automated", wylaczona)).toBe(false);
@@ -202,17 +203,23 @@ describe("stop-klatka SMS", () => {
     expect(pauseBlocks("critical", wylaczona)).toBe(false);
   });
 
-  it("zatrzymuje kadencję i odpowiedzi agenta", () => {
+  it("zatrzymuje follow-upy wysyłane z inicjatywy systemu", () => {
     expect(pauseBlocks("automated", wlaczona)).toBe(true);
-    expect(pauseBlocks("conversational", wlaczona)).toBe(true);
+  });
+
+  it("odpowiedź na SMS klienta przechodzi — nie zostawiamy pytania bez reakcji", () => {
+    expect(pauseBlocks("conversational", wlaczona)).toBe(false);
   });
 
   it("domyślnie przepuszcza OTP i ręczną wysyłkę z panelu", () => {
     expect(pauseBlocks("critical", wlaczona)).toBe(false);
   });
 
-  it("rozszerzona obejmuje także wysyłki krytyczne", () => {
-    expect(pauseBlocks("critical", wlaczonaZeWszystkim)).toBe(true);
-    expect(pauseBlocks("automated", wlaczonaZeWszystkim)).toBe(true);
+  it("każde rozszerzenie pauzy działa osobno", () => {
+    expect(pauseBlocks("critical", zKrytycznymi)).toBe(true);
+    expect(pauseBlocks("conversational", zKrytycznymi)).toBe(false);
+    expect(pauseBlocks("conversational", zOdpowiedziami)).toBe(true);
+    expect(pauseBlocks("critical", zOdpowiedziami)).toBe(false);
+    expect(pauseBlocks("automated", zOdpowiedziami)).toBe(true);
   });
 });
