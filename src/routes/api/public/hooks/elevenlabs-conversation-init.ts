@@ -68,6 +68,15 @@ async function handler({ request }: { request: Request }) {
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+  // Telefon obsługuje agent ElevenLabs — zanim zacznie mówić, upewnij się, że
+  // ma aktualny prompt (dławione, bez zmiany promptu nic nie robi).
+  try {
+    const { ensureAgentPromptsFresh } = await import("@/lib/elevenlabs-agents.server");
+    await ensureAgentPromptsFresh(false, ["intake"]);
+  } catch (e) {
+    console.error("[el-conv-init] auto-sync promptu", e);
+  }
+
   let payload: any = {};
   try {
     if (request.method === "POST") {

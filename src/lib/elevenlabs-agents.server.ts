@@ -197,6 +197,51 @@ export async function ensureElevenLabsProcessAgents(): Promise<EnsureAgentsResul
   return result;
 }
 
+/** Odcisk promptu — po nim poznajemy, czy agent w ElevenLabs jest aktualny. */
+async function promptFingerprint(prompt: string, firstMessage: string): Promise<string> {
+  const data = new TextEncoder().encode(`${firstMessage}\u0000${prompt}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 32);
+}
+
+/**
+ * Odciski promptów ostatnio WYSŁANYCH do agentów — jeden mały wiersz ustawień
+ * (voicebot_settings.agent_prompt_hashes), żeby sprawdzenie przed rozmową
+ * kosztowało jedno zapytanie, a nie przeszukiwanie logu zdarzeń.
+ */
+async function readPromptHashes(s: ReturnType<typeof admin>): Promise<Record<string, string>> {
+  try {
+    const { data } = await (s as any)
+      .from("voicebot_settings")
+      .select("agent_prompt_hashes")
+      .eq("id", 1)
+      .maybeSingle();
+    const raw = data?.agent_prompt_hashes;
+    return raw && typeof raw === "object" ? (raw as Record<string, string>) : {};
+  } catch {
+    // Brak kolumny (migracja jeszcze nie poszła) = traktuj jak brak odcisków:
+    // synchronizacja po prostu wyśle prompt.
+    return {};
+  }
+}
+
+async function writePromptHash(
+  s: ReturnType<typeof admin>,
+  hashes: Record<string, string>,
+  surface: AgentSurface,
+  fingerprint: string,
+): Promise<void> {
+  hashes[surface] = fingerprint;
+  try {
+    await (s as any).from("voicebot_settings").update({ agent_prompt_hashes: hashes }).eq("id", 1);
+  } catch (e) {
+    console.error("[el-agents] zapis odcisku promptu", e);
+  }
+}
+
 export interface SyncPromptsResult {
   updated: Array<{ surface: AgentSurface; agentId: string }>;
   skipped: Array<{ surface: AgentSurface; reason: string }>;
@@ -210,7 +255,9 @@ export interface SyncPromptsResult {
  * agentów ElevenLabs. Bez tego zmiany w promptach działają wyłącznie dla nowo
  * tworzonych agentów, a telefon i widgety jadą dalej na starej wersji.
  */
-export async function syncElevenLabsAgentPrompts(): Promise<SyncPromptsResult> {
+export async function syncElevenLabsAgentPrompts(
+  opts: { onlyIfChanged?: boolean; surfaces?: AgentSurface[] } = {},
+): Promise<SyncPromptsResult> {
   const result: SyncPromptsResult = {
     updated: [],
     skipped: [],
@@ -225,8 +272,10 @@ export async function syncElevenLabsAgentPrompts(): Promise<SyncPromptsResult> {
     return result;
   }
   const s = admin();
+  const surfaces = opts.surfaces ?? (Object.keys(SURFACE_COLUMN) as AgentSurface[]);
+  const hashes = opts.onlyIfChanged ? await readPromptHashes(s) : {};
 
-  for (const surface of Object.keys(SURFACE_COLUMN) as AgentSurface[]) {
+  for (const surface of surfaces) {
     const agentId = await getAgentIdForSurface(surface);
     if (!agentId) {
       result.skipped.push({ surface, reason: "brak agenta — najpierw go utwórz" });
@@ -235,13 +284,24 @@ export async function syncElevenLabsAgentPrompts(): Promise<SyncPromptsResult> {
     try {
       const fetched = await fetchAgentPrompt(SURFACE_VARIANT[surface]);
       const prompt = buildAgentPrompt(surface, fetched.prompt);
+      const firstMessage = fetched.firstMessage ?? SURFACE_FIRST_MESSAGE[surface];
+      const fingerprint = await promptFingerprint(prompt, firstMessage);
+
+      // Tryb automatyczny: wysyłamy tylko wtedy, gdy prompt różni się od tego,
+      // który ostatnio poszedł do ElevenLabs. Dzięki temu można to wołać przy
+      // każdej rozmowie — bez zmiany promptu nie ma żadnego zapytania do API.
+      if (opts.onlyIfChanged && hashes[surface] === fingerprint) {
+        result.skipped.push({ surface, reason: "prompt bez zmian" });
+        continue;
+      }
+
       const { res, json } = await elRequestWithPlaceholderFallback(
         `${EL_BASE}/convai/agents/${encodeURIComponent(agentId)}`,
         apiKey,
         (agentPatch) => ({
           conversation_config: {
             agent: {
-              first_message: fetched.firstMessage ?? SURFACE_FIRST_MESSAGE[surface],
+              first_message: firstMessage,
               language: "pl",
               prompt: { prompt },
               ...agentPatch,
@@ -255,10 +315,16 @@ export async function syncElevenLabsAgentPrompts(): Promise<SyncPromptsResult> {
         result.errors.push({ surface, error: String(msg) });
         continue;
       }
+      await writePromptHash(s, hashes, surface, fingerprint);
       await s.from("automation_events").insert({
         automation_type: "elevenlabs_agent_prompt_synced",
         status: "sent",
-        sent_payload: { purpose: surface, agent_id: agentId, prompt_length: prompt.length },
+        sent_payload: {
+          purpose: surface,
+          agent_id: agentId,
+          prompt_length: prompt.length,
+          prompt_hash: fingerprint,
+        },
         response_payload: { agent_id: agentId },
       });
       result.updated.push({ surface, agentId });
@@ -283,4 +349,54 @@ export async function syncElevenLabsAgentPrompts(): Promise<SyncPromptsResult> {
   }
 
   return result;
+}
+
+// ── Automatyczna synchronizacja promptów ────────────────────────────────────
+// Prompt edytowany na /admin/text-agent musi trafić do agenta w ElevenLabs,
+// inaczej Messenger i telefon (obsługiwane przez agenta, nie przez nasz silnik)
+// jadą dalej na starej wersji. Zamiast wymagać kliknięcia w panelu, sprawdzamy
+// to sami przy rozmowach: porównanie odcisku promptu to jedno tanie zapytanie
+// do bazy, a zapytanie do ElevenLabs leci wyłącznie wtedy, gdy prompt naprawdę
+// się zmienił.
+const FRESHNESS_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+let lastFreshnessCheckAt = 0;
+let freshnessCheckInFlight: Promise<void> | null = null;
+
+/**
+ * Dopilnowuje, żeby agenty ElevenLabs miały aktualny prompt. Bezpieczne do
+ * wołania przy każdej rozmowie: dławione w czasie, bez zmiany promptu nie robi
+ * nic, a każdy błąd jest połykany (rozmowa ma się odbyć mimo wszystko).
+ *
+ * @param force pomija dławienie czasowe (używane po zapisie promptu w panelu).
+ */
+export async function ensureAgentPromptsFresh(
+  force = false,
+  surfaces?: AgentSurface[],
+): Promise<void> {
+  if (!process.env.ELEVENLABS_API_KEY) return;
+  const now = Date.now();
+  if (!force && now - lastFreshnessCheckAt < FRESHNESS_CHECK_INTERVAL_MS) return;
+  if (freshnessCheckInFlight) return freshnessCheckInFlight;
+
+  lastFreshnessCheckAt = now;
+  freshnessCheckInFlight = (async () => {
+    try {
+      const res = await syncElevenLabsAgentPrompts({ onlyIfChanged: true, surfaces });
+      if (res.updated.length > 0) {
+        console.log(
+          `[el-agents] prompt zsynchronizowany automatycznie: ${res.updated
+            .map((u) => u.surface)
+            .join(", ")}`,
+        );
+      }
+      for (const e of res.errors) {
+        console.error(`[el-agents] auto-sync ${e.surface}: ${e.error}`);
+      }
+    } catch (e) {
+      console.error("[el-agents] auto-sync nie powiódł się", e);
+    } finally {
+      freshnessCheckInFlight = null;
+    }
+  })();
+  return freshnessCheckInFlight;
 }
