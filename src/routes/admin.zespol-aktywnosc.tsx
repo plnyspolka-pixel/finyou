@@ -8,6 +8,14 @@ import {
   type TeamMember,
   type TeamActivityRow,
 } from "@/lib/team-activity.functions";
+import { OperatorActivitySummary } from "@/components/admin/operator-activity-summary";
+import {
+  ROLE_FILTERS,
+  ROLE_LABELS,
+  formatRelativeDay,
+  matchesRoleFilter,
+  type RoleFilter,
+} from "@/lib/operator-activity";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,29 +34,6 @@ export const Route = createFileRoute("/admin/zespol-aktywnosc")({
   component: TeamActivityPage,
 });
 
-const ROLE_LABELS: Record<string, string> = {
-  administrator: "Administrator",
-  operator: "Operator",
-  operator_wewnetrzny: "Operator wewnętrzny",
-  posrednik: "Pośrednik",
-};
-
-type RoleFilter = "all" | "operator" | "posrednik" | "administrator";
-
-const FILTERS: { key: RoleFilter; label: string }[] = [
-  { key: "all", label: "Wszyscy" },
-  { key: "operator", label: "Operatorzy" },
-  { key: "posrednik", label: "Pośrednicy" },
-  { key: "administrator", label: "Administratorzy" },
-];
-
-function matchesFilter(role: string | null | undefined, filter: RoleFilter) {
-  if (filter === "all") return true;
-  if (!role) return false;
-  if (filter === "operator") return role === "operator" || role === "operator_wewnetrzny";
-  return role === filter;
-}
-
 function eventIcon(row: TeamActivityRow) {
   if (!row.user_id) return Bot;
   switch (row.event_type) {
@@ -63,16 +48,6 @@ function eventIcon(row: TeamActivityRow) {
     default:
       return UserCog;
   }
-}
-
-function formatRelative(iso: string | null) {
-  if (!iso) return "nigdy";
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-  if (days <= 0) return "dziś";
-  if (days === 1) return "wczoraj";
-  if (days < 30) return `${days} dni temu`;
-  return new Date(iso).toLocaleDateString("pl-PL");
 }
 
 function dayLabel(iso: string) {
@@ -109,10 +84,10 @@ function TeamActivityPage() {
   const rows = (activityQ.data ?? []) as TeamActivityRow[];
 
   const filteredMembers = members.filter((m) =>
-    filter === "all" ? true : m.roles.some((r) => matchesFilter(r, filter)),
+    filter === "all" ? true : m.roles.some((r) => matchesRoleFilter(r, filter)),
   );
   const filteredRows = rows.filter((r) =>
-    filter === "all" ? true : matchesFilter(r.user_role, filter),
+    filter === "all" ? true : matchesRoleFilter(r.user_role, filter),
   );
 
   const hasBrokers = members.some((m) => m.roles.includes("posrednik"));
@@ -164,7 +139,7 @@ function TeamActivityPage() {
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
+        {ROLE_FILTERS.map((f) => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
@@ -178,6 +153,8 @@ function TeamActivityPage() {
           </button>
         ))}
       </div>
+
+      <OperatorActivitySummary filter={filter} />
 
       <Card>
         <CardHeader>
@@ -208,8 +185,8 @@ function TeamActivityPage() {
                     ))}
                   </div>
                   <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
-                    <div>Ostatnie logowanie: {formatRelative(m.last_sign_in_at)}</div>
-                    <div>Ostatnie działanie: {formatRelative(m.last_action_at)}</div>
+                    <div>Ostatnie logowanie: {formatRelativeDay(m.last_sign_in_at)}</div>
+                    <div>Ostatnie działanie: {formatRelativeDay(m.last_action_at)}</div>
                     <div>Działań (30 dni): {m.actions_30d}</div>
                   </div>
                 </div>

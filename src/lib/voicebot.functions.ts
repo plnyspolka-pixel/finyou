@@ -789,7 +789,7 @@ export const sendSmsToLead = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const s = admin();
     const { data: lead } = await s
       .from("leads")
@@ -799,5 +799,13 @@ export const sendSmsToLead = createServerFn({ method: "POST" })
     const phone = lead?.phone_normalized || lead?.phone_raw;
     if (!phone) return { ok: false, error: "Lead nie ma numeru telefonu" };
     // sendSmsInternal sam loguje wysyłkę w lead_communications (po numerze).
-    return await sendSmsInternal({ phone, body: data.body, source: "panel_manual" });
+    // `sent_by` to ten sam ślad, co przy mailu i Messengerze ze skrzynki:
+    // odróżnia SMS wystukany przez człowieka od wysyłki automatu i wnosi go
+    // do podsumowania aktywności operatorów.
+    return await sendSmsInternal({
+      phone,
+      body: data.body,
+      source: "panel_manual",
+      metadata: { sent_by: context.userId },
+    });
   });
