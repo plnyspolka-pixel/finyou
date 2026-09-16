@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  INTAKE_PROCESS_RULES,
+  NO_INVENTED_CONTACT_RULES,
   buildChannelRulesSection,
   channelDynamicVariables,
   channelLabel,
@@ -53,5 +55,21 @@ describe("agent-channel-rules", () => {
       channel: "email",
       channel_label: "e-mail",
     });
+  });
+});
+
+describe("twarde zasady botów przyjmujących wniosek", () => {
+  it("zakazują zmyślania danych kontaktowych i podają wyłącznie prawdziwy kontakt", () => {
+    expect(NO_INVENTED_CONTACT_RULES).toMatch(/NIGDY nie podajesz numeru telefonu/);
+    expect(NO_INVENTED_CONTACT_RULES).toContain("+48 732 059 898");
+    expect(NO_INVENTED_CONTACT_RULES).toContain("kontakt@financeyou.pl");
+  });
+
+  it("opisują proces tak, jak działa: komplet wniosku, kontakt od inwestora", () => {
+    expect(INTAKE_PROCESS_RULES).toMatch(/INWESTOR kontaktuje się z klientem/);
+    expect(INTAKE_PROCESS_RULES).toMatch(/KOMPLETNY wniosek/);
+    // Żadnych obietnic kontaktu z naszej strony.
+    expect(INTAKE_PROCESS_RULES).toMatch(/NIGDY nie obiecujesz kontaktu z naszej strony/);
+    expect(INTAKE_PROCESS_RULES).toMatch(/analityk się odezwie/); // wymienione jako ZAKAZANE
   });
 });
