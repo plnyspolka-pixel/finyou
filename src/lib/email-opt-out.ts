@@ -1,0 +1,231 @@
+// Rozpoznawanie prośby o zaprzestanie korespondencji w mailu przychodzącym.
+// Czyste heurystyki (bez bazy) — testowane w email-opt-out.test.ts.
+//
+// Powód: kilkukrotnie zdarzyło się, że klient napisał wprost „proszę przestać
+// do mnie pisać", a automaty (drip przypomnień, follow-up braków, kampanie)
+// pisały dalej, bo wypis był możliwy TYLKO przez link w stopce. Ten moduł jest
+// wejściem dla strażnika: jak klient mówi „dość" — to dość, niezależnie od
+// tego, czy kliknął link, czy odpisał zwykłym zdaniem.
+
+/** Twardość wypisu: `soft` blokuje marketing, `hard` — również maile obsługowe. */
+export type OptOutStrength = "soft" | "hard";
+
+export interface OptOutMatch {
+  /** Nazwa sygnału (do logów i metadanych suppression). */
+  signal: string;
+  /** Dopasowany fragment treści — operator widzi, na co zareagował strażnik. */
+  phrase: string;
+  strength: OptOutStrength;
+}
+
+/** Prośba o zaprzestanie wysyłki — zwykła rezygnacja. */
+const OPT_OUT_PATTERNS: { signal: string; re: RegExp }[] = [
+  // Wprost „wypisz mnie"
+  { signal: "wypis_pl", re: /wypisz(cie)?\s+(mnie|nas|m[óo]j\s+adres)/i },
+  { signal: "wypis_pl", re: /(prosz[ęe]|chc[ęe])\s+(mnie\s+|nas\s+|si[ęe]\s+)?wypisa[ćc]/i },
+  { signal: "wypis_pl", re: /wypisuj[ęe]\s+si[ęe]/i },
+  { signal: "wypis_pl", re: /odsubskrybuj/i },
+  // Rezygnacja
+  { signal: "rezygnacja_pl", re: /rezygnuj[ęe]\s+(z|ze)\b/i },
+  { signal: "rezygnacja_pl", re: /(prosz[ęe]|wnosz[ęe])\s+o\s+rezygnacj/i },
+  // Żądanie zaprzestania
+  {
+    signal: "zaprzestanie_pl",
+    re: /zaprzesta[ńn]cie|zaprzestania\s+(wysy[łl]|kontakt|przesy[łl])/i,
+  },
+  { signal: "zaprzestanie_pl", re: /prosz[ęe]\s+o\s+zaprzestanie/i },
+  {
+    signal: "zaprzestanie_pl",
+    re: /przesta[ńn]cie\s+(do\s+mnie\s+)?(pisa[ćc]|wysy[łl]a[ćc]|dzwoni[ćc]|spamowa[ćc])/i,
+  },
+  {
+    signal: "zaprzestanie_pl",
+    re: /prosz[ęe]\s+(wi[ęe]cej\s+)?nie\s+(pisa[ćc]|wysy[łl]a[ćc]|kontaktowa[ćc])/i,
+  },
+  {
+    signal: "zaprzestanie_pl",
+    re: /nie\s+(pisz|piszcie|wysy[łl]ajcie|kontaktujcie)\s+(do\s+mnie|si[ęe]|wi[ęe]cej)/i,
+  },
+  { signal: "zaprzestanie_pl", re: /nie\s+kontaktujcie\s+si[ęe]/i },
+  // „Nie chcę / nie życzę sobie"
+  {
+    signal: "nie_chce_pl",
+    re: /nie\s+(chc[ęe]|[żz]ycz[ęe]\s+sobie)\s+(wi[ęe]cej\s+)?(otrzymywa[ćc]|dostawa[ćc]|[żz]adnych|maili|wiadomo[śs]ci|newslettera|kontaktu|oferty|ofert)/i,
+  },
+  {
+    signal: "nie_chce_pl",
+    re: /nie\s+jestem\s+zainteresowany.{0,40}(nie\s+pisz|prosz[ęe]\s+nie|wi[ęe]cej)/i,
+  },
+  // Usunięcie z bazy / listy
+  { signal: "usun_z_bazy_pl", re: /usu[ńn](cie)?\s+(mnie|m[óo]j\s+(adres|e-?mail)|moje\s+dane)/i },
+  {
+    signal: "usun_z_bazy_pl",
+    re: /(wykre[śs]lcie|zabierzcie|skre[śs]lcie)\s+(mnie|m[óo]j\s+adres)/i,
+  },
+  {
+    signal: "usun_z_bazy_pl",
+    re: /(z|ze)\s+(wasz[ej]{0,2}\s+)?(bazy|listy)\s+(mailingowej|adresowej|wysy[łl]kowej)/i,
+  },
+  // „Mam dość"
+  // „Mam dość" tylko jako zamknięta myśl — „mam dość dobre zabezpieczenie"
+  // to nie rezygnacja.
+  {
+    signal: "dosc_pl",
+    re: /(mam|mamy)\s+(ju[żz]\s+)?do[sś][ćc](?=\s*(?:[!.,;]|$|tego\b|tych\b|waszych\b|spamu\b|maili\b|wiadomo))/im,
+  },
+  { signal: "dosc_pl", re: /(do[śs][ćc]|dosy[ćc])\s+(ju[żz]\s+)?(tego|tych\s+maili|spamu)/i },
+  { signal: "dosc_pl", re: /^\s*(do[śs][ćc]|dosy[ćc]|stop|koniec)\s*[!.]*\s*$/im },
+  // Angielski (klienci zagraniczni / klienty pocztowe z szablonem). Celowo bez
+  // samego słowa „unsubscribe" — stopki firmowe w odpowiedziach klientów mają
+  // je w treści i każdy taki mail wyglądałby na rezygnację.
+  { signal: "optout_en", re: /(please\s+)?unsubscribe\s+(me|us)\b/i },
+  { signal: "optout_en", re: /^\s*unsubscribe\s*[!.]*\s*$/im },
+  { signal: "optout_en", re: /(want|wish)\s+to\s+unsubscribe/i },
+  { signal: "optout_en", re: /\bi\s+opt[- ]?out\b/i },
+  { signal: "optout_en", re: /opt\s*-?\s*out\s+(me|of)\b/i },
+  { signal: "optout_en", re: /remove\s+me\s+from\s+(your\s+)?(list|mailing|database)/i },
+  { signal: "optout_en", re: /take\s+me\s+off\s+(your\s+)?(list|mailing)/i },
+  { signal: "optout_en", re: /stop\s+(emailing|sending|contacting)\s+me/i },
+  { signal: "optout_en", re: /do\s+not\s+(contact|email)\s+me/i },
+];
+
+/**
+ * Sygnały twarde — klient nie tylko prosi o spokój, ale powołuje się na RODO
+ * albo grozi skargą. Takie adresy blokujemy w KAŻDEJ kategorii (również maile
+ * obsługowe), dopóki człowiek nie zdejmie blokady w panelu.
+ */
+const HARD_OPT_OUT_PATTERNS: { signal: string; re: RegExp }[] = [
+  { signal: "rodo", re: /\brodo\b/i },
+  { signal: "rodo", re: /\bgdpr\b/i },
+  {
+    signal: "rodo",
+    re: /[żz][ąa]dam\s+(natychmiastowego\s+)?(usuni[ęe]cia|zaprzestania|wykre[śs]lenia)/i,
+  },
+  { signal: "rodo", re: /prawo\s+do\s+bycia\s+zapomnianym/i },
+  { signal: "rodo", re: /cofam\s+zgod[ęe]/i },
+  { signal: "rodo", re: /sprzeciw\s+wobec\s+przetwarzania/i },
+  { signal: "skarga", re: /\buodo\b|\buokik\b|urz[ęe]d\s+ochrony\s+danych/i },
+  {
+    signal: "skarga",
+    re: /(zg[łl]osz[ęe]|zawiadomi[ęe]|skarg[aęe])\b.{0,40}(uodo|uokik|urz[ęe]d|organ)/i,
+  },
+  { signal: "skarga", re: /(zg[łl]aszam|zg[łl]osz[ęe])\s+(to\s+)?(jako\s+)?spam/i },
+  {
+    signal: "skarga",
+    re: /(m[óo]j\s+)?(prawnik|adwokat|radca\s+prawny)\s+(si[ęe]\s+)?(skontaktuje|zajmie|napisze)/i,
+  },
+  { signal: "skarga", re: /kroki\s+prawne|na\s+drog[ęe]\s+s[ąa]dow/i },
+];
+
+/**
+ * Granice cytowanej historii wątku i podpisu — poniżej nich treść nie jest już
+ * własną wypowiedzią nadawcy (cytat naszego maila, stopka firmowa z linkami).
+ */
+const QUOTE_BOUNDARIES: RegExp[] = [
+  /^\s*>/m,
+  /^--\s*$/m,
+  /^\s*-{2,}\s*(Original Message|Wiadomo[śs][ćc] oryginalna|Forwarded message|Przekazana wiadomo[śs][ćc])/im,
+  /^\s*(Od|From)\s*:\s*.+$/im,
+  /^\s*W\s+dniu\s+.+\s+napisa[łl]/im,
+  /^\s*(Dnia|Data)\s+.+\s+napisa[łl]/im,
+  /^\s*On\s+.+\s+wrote\s*:/im,
+  /^\s*Wys[łl]ane\s+z\s+(mojego\s+)?(iPhone|iPad|Yahoo|Poczty)/im,
+];
+
+/**
+ * Odcina cytowaną historię wątku. Bez tego każda odpowiedź na naszego maila
+ * wyglądałaby na rezygnację — nasza własna stopka zawiera „Wypisz mnie".
+ */
+export function stripQuotedReply(text: string): string {
+  let cut = text.length;
+  for (const re of QUOTE_BOUNDARIES) {
+    const m = re.exec(text);
+    if (m && m.index < cut) cut = m.index;
+  }
+  return text.slice(0, cut).trim();
+}
+
+/**
+ * Czy wiadomość od klienta to prośba o zaprzestanie korespondencji?
+ * Analizujemy temat + własną treść odpowiedzi (bez cytatu), maks. 2000 znaków —
+ * dalej zaczyna się zwykle podpis i historia korespondencji.
+ */
+export function detectOptOut(input: {
+  subject?: string | null;
+  text?: string | null;
+}): OptOutMatch | null {
+  const own = stripQuotedReply(String(input.text ?? "")).slice(0, 2000);
+  const haystack = [String(input.subject ?? ""), own].filter(Boolean).join("\n");
+  if (!haystack.trim()) return null;
+
+  for (const { signal, re } of HARD_OPT_OUT_PATTERNS) {
+    const m = re.exec(haystack);
+    if (m) return { signal, phrase: m[0].slice(0, 120), strength: "hard" };
+  }
+  for (const { signal, re } of OPT_OUT_PATTERNS) {
+    const m = re.exec(haystack);
+    if (m) return { signal, phrase: m[0].slice(0, 120), strength: "soft" };
+  }
+  return null;
+}
+
+/**
+ * Kategoria wysyłki. `transactional` to maile wynikające z umowy albo z akcji
+ * klienta (dostęp po płatności, dokumenty, harmonogram, potwierdzenie wniosku).
+ * Reszta — marketing, przypomnienia, follow-upy, auto-odpowiedzi — to
+ * `automated` i każdy wypis je zatrzymuje.
+ */
+export type EmailCategory = "automated" | "transactional";
+
+/** Powody blokady, których nie przebija nawet mail wynikający z umowy. */
+const ALWAYS_BLOCKING_REASONS = new Set([
+  "bounce",
+  "complaint",
+  "loop_detected",
+  "bot_detected",
+  "repeated_content",
+]);
+
+export interface EmailSendDecisionInput {
+  /**
+   * Wpis z suppressed_emails, jeśli adres jest na liście blokad. `unblocked`
+   * oznacza wypis cofnięty ręcznie w panelu — wpis zostaje w bazie jako ślad,
+   * ale już nie blokuje.
+   */
+  suppression?: { reason: string; hard?: boolean; unblocked?: boolean } | null;
+  /** clients.do_not_email — wypis zapisany w kartotece klienta. */
+  doNotEmail?: boolean;
+  category: EmailCategory;
+}
+
+export interface EmailSendDecision {
+  allowed: boolean;
+  reason?: string;
+  detail?: string;
+}
+
+/**
+ * Czysta reguła strażnika: czy wolno wysłać maila. Wersja z bazą to
+ * `canSendEmail` w email-unsubscribe.server.ts.
+ */
+export function decideEmailSend(input: EmailSendDecisionInput): EmailSendDecision {
+  const { suppression, doNotEmail, category } = input;
+
+  if (suppression && !suppression.unblocked) {
+    const reason = suppression.reason || "unsubscribe";
+    if (suppression.hard === true || ALWAYS_BLOCKING_REASONS.has(reason)) {
+      return {
+        allowed: false,
+        reason: `suppressed:${reason}`,
+        detail: suppression.hard ? "hard" : "technical",
+      };
+    }
+    if (category !== "transactional") return { allowed: false, reason: `suppressed:${reason}` };
+  }
+
+  if (doNotEmail && category !== "transactional") {
+    return { allowed: false, reason: "do_not_email" };
+  }
+
+  return { allowed: true };
+}

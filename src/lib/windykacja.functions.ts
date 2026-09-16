@@ -550,6 +550,7 @@ export const performWindContact = createServerFn({ method: "POST" })
       const res = await sendResendEmail({
         to: data.target,
         subject: data.subject || "Finance You — windykacja",
+        category: "transactional",
         text: data.tresc,
       });
       status = res.ok ? "doreczone" : null;

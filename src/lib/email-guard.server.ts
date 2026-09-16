@@ -2,6 +2,8 @@
 // Używane PRZED każdą odpowiedzią auto-agenta i (opcjonalnie) przed wysyłką maila.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { looksLikeAutoMessage, isAutoReplySubject, isRepetitiveInbound } from "@/lib/bot-detection";
+import { detectOptOut } from "@/lib/email-opt-out";
+import { applyOptOut } from "@/lib/email-unsubscribe.server";
 
 function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -157,6 +159,58 @@ async function recentInboundEmails(leadId: string, limit = 10): Promise<string[]
   return (data ?? []).map((r) => r.content ?? "");
 }
 
+/**
+ * STRAŻNIK „dość to dość": klient napisał wprost, żeby przestać do niego pisać.
+ * Wywoływane dla KAŻDEGO maila przychodzącego — również takiego, który trafia
+ * na inną ścieżkę niż auto-odpowiedź (np. odpowiedź inwestora na dystrybucję
+ * oferty). Wypis obejmuje wszystkie silniki mailowe naraz.
+ *
+ * Zwraca dopasowany sygnał albo null, jeśli to zwykła wiadomość.
+ */
+export async function handleInboundOptOut(params: {
+  fromEmail: string | null | undefined;
+  subject?: string | null;
+  bodyText?: string | null;
+  leadId?: string | null;
+  channel?: string;
+}): Promise<{ optedOut: boolean; signal?: string; strength?: "soft" | "hard" }> {
+  const { fromEmail, subject, bodyText, leadId } = params;
+  if (!fromEmail) return { optedOut: false };
+  const match = detectOptOut({ subject, text: bodyText });
+  if (!match) return { optedOut: false };
+
+  try {
+    await applyOptOut({
+      email: fromEmail,
+      source: params.channel ? `inbound_${params.channel}` : "inbound_reply",
+      strength: match.strength,
+      signal: match.signal,
+      phrase: match.phrase,
+      metadata: { lead_id: leadId ?? null, subject: subject ?? null },
+    });
+  } catch (e) {
+    console.error("[email-guard] opt-out apply failed", e);
+    return { optedOut: false };
+  }
+
+  // Sprawa idzie do człowieka — automat już nic tu nie napisze.
+  if (leadId) await markLeadOptedOut(leadId);
+  return { optedOut: true, signal: match.signal, strength: match.strength };
+}
+
+/**
+ * Oznacza leada do obsługi ręcznej po wypisie. Osobno od `handleInboundOptOut`,
+ * bo webhooki rozpoznają wypis zanim dopasują leada — a sam wypis jest już
+ * wtedy zapisany i nie ma po co robić go drugi raz.
+ */
+export async function markLeadOptedOut(leadId: string): Promise<void> {
+  try {
+    await admin().from("leads").update({ status: "wymaga_kontaktu" }).eq("id", leadId);
+  } catch (e) {
+    console.error("[email-guard] flag opt-out lead failed", e);
+  }
+}
+
 /** Łączny test — czy wolno odpowiedzieć autoresponderem na ten mail. */
 export async function shouldSkipAutoReply(params: {
   leadId: string;
@@ -169,6 +223,17 @@ export async function shouldSkipAutoReply(params: {
   const { leadId, fromEmail, headers, threadIds = [], subject, bodyText } = params;
   if (isSystemSender(fromEmail)) return { skip: true, reason: "system_sender" };
   if (isAutoReplyHeaders(headers)) return { skip: true, reason: "auto_reply_headers" };
+
+  // „Dość" od klienta ma pierwszeństwo przed każdą inną regułą — wypisujemy
+  // adres i milkniemy, zamiast generować kolejną odpowiedź AI.
+  const optOut = await handleInboundOptOut({
+    leadId,
+    fromEmail,
+    subject,
+    bodyText,
+    channel: "email",
+  });
+  if (optOut.optedOut) return { skip: true, reason: `opt_out:${optOut.signal}` };
 
   // Mail od zarejestrowanego inwestora — bot kliencki milczy, sprawę przejmuje
   // człowiek. Flagujemy leada, żeby wiadomość nie utonęła bez odpowiedzi.

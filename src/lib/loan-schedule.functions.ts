@@ -42,6 +42,7 @@ export const sendLoanScheduleToClient = createServerFn({ method: "POST" })
     const res = await sendResendEmail({
       to: data.to,
       subject: data.subject,
+      category: "transactional",
       html: data.html,
       text: data.text,
       fromName: "Finance You",

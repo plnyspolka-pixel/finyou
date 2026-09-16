@@ -219,6 +219,7 @@ export const deliverLegalPack = createServerFn({ method: "POST" })
     const sent = await sendResendEmail({
       to: email,
       subject: "Finance You — pakiet dokumentów inwestora (trwały nośnik)",
+      category: "transactional",
       text,
       attachments: docs.map((d: any) => ({
         filename: d.docx_filename,
@@ -371,6 +372,7 @@ export const acceptLegalDocument = createServerFn({ method: "POST" })
         await sendResendEmail({
           to: investor.email,
           subject: `Potwierdzenie akceptacji: ${doc.title} (${doc.version})`,
+          category: "transactional",
           text:
             `Potwierdzamy akceptację dokumentu w formie dokumentowej.\n\n` +
             `Dokument: ${doc.title}\nWersja: ${doc.version}\nSHA-256: ${doc.sha256}\n` +

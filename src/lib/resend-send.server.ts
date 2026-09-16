@@ -1,7 +1,17 @@
 // Wysyłka maili wychodzących przez Resend (przez Lovable connector gateway).
 // Każdy mail jest automatycznie obrandowany (logo + wordmark + linki),
 // chyba że html ma marker data-fy-branded lub przekazano noBranding=true.
+//
+// Każdy mail dostaje też link „Wypisz mnie" w stopce i nagłówki List-Unsubscribe
+// (one-click w Gmailu/Outlooku) — adresat nie musi prosić o wypis mailem, żeby
+// przestać dostawać wiadomości.
 import { wrapBrandedEmail, isAlreadyBranded } from "./email-branding.server";
+import {
+  canSendEmail,
+  unsubscribeUrlFor,
+  unsubscribeHeaders,
+  type EmailCategory,
+} from "./email-unsubscribe.server";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/resend";
 
@@ -19,6 +29,12 @@ export async function sendResendEmail(opts: {
   replyTo?: string;
   noBranding?: boolean;
   unsubscribeUrl?: string;
+  /**
+   * `transactional` — mail wynikający z umowy albo z akcji klienta (dostęp po
+   * płatności, dokumenty, harmonogram, windykacja): dochodzi mimo zwykłego
+   * wypisu. Domyślnie `automated`, czyli wypis go zatrzymuje.
+   */
+  category?: EmailCategory;
   showReplyHint?: boolean;
   /** Prawdziwe załączniki maila (base64) — a nie linki w treści. */
   attachments?: Array<{ filename: string; content: string; contentType?: string }>;
@@ -34,20 +50,37 @@ export async function sendResendEmail(opts: {
     return { ok: false, error: "missing_subject" };
   }
 
-  // Ochrona przed pętlami: nie wysyłaj do adresów na liście suppressed_emails
+  // Strażnik: wypis klienta, skarga spam, bounce, pętla bot-bot. Kategoria
+  // `transactional` przechodzi mimo zwykłego wypisu — twarda blokada nie.
+  const category: EmailCategory = opts.category ?? "automated";
   try {
-    const { isSuppressed } = await import("./email-guard.server");
-    if (await isSuppressed(opts.to)) {
-      console.warn(`[resend-send] skip suppressed recipient: ${opts.to}`);
-      return { ok: false, error: "recipient_suppressed" };
+    const decision = await canSendEmail(opts.to, category);
+    if (!decision.allowed) {
+      console.warn(`[resend-send] blocked recipient: ${opts.to} (${decision.reason})`);
+      return { ok: false, error: `blocked:${decision.reason}` };
     }
   } catch (e) {
-    console.error("[resend-send] suppression check failed", e);
+    console.error("[resend-send] send guard failed", e);
   }
 
   const headers: Record<string, string> = {};
   if (opts.inReplyTo) headers["In-Reply-To"] = opts.inReplyTo;
   if (opts.references) headers["References"] = opts.references;
+
+  // Link wypisu — własny (np. z konkretnej kadencji) albo trwały token adresu.
+  let unsubscribeUrl = opts.unsubscribeUrl;
+  if (!unsubscribeUrl) {
+    try {
+      unsubscribeUrl = (await unsubscribeUrlFor(opts.to)) ?? undefined;
+    } catch (e) {
+      console.error("[resend-send] unsubscribe url failed", e);
+    }
+  }
+  try {
+    Object.assign(headers, await unsubscribeHeaders(opts.to));
+  } catch (e) {
+    console.error("[resend-send] unsubscribe headers failed", e);
+  }
 
   // Automatyczne brandowanie
   let finalHtml = opts.html;
@@ -55,7 +88,7 @@ export async function sendResendEmail(opts: {
     finalHtml = wrapBrandedEmail({
       innerHtml: opts.html, // jeśli nie ma html, wrapper użyje text
       text: opts.html ? undefined : opts.text,
-      unsubscribeUrl: opts.unsubscribeUrl,
+      unsubscribeUrl,
       showReplyHint: opts.showReplyHint,
     });
   }
@@ -100,6 +133,7 @@ export async function sendResendEmail(opts: {
       error_message: res.ok ? null : `${res.status}: ${JSON.stringify(json).slice(0, 500)}`,
       metadata: {
         subject: opts.subject,
+        category,
         from_name: opts.fromName ?? null,
         reply_to: opts.replyTo ?? null,
         attachments: opts.attachments?.map((a) => a.filename) ?? null,

@@ -43,6 +43,7 @@ import {
   Download,
   BarChart3,
   Loader2,
+  ShieldBan,
 } from "lucide-react";
 import {
   listSubscribers,
@@ -57,6 +58,8 @@ import {
   deleteCampaign,
   sendCampaign,
   generateCampaignCopy,
+  listSuppressions,
+  removeSuppression,
 } from "@/lib/email-marketing.functions";
 
 export const Route = createFileRoute("/admin/marketing/email")({
@@ -88,6 +91,10 @@ function EmailMarketingPage() {
             <BarChart3 className="h-4 w-4 mr-2" />
             Segmenty
           </TabsTrigger>
+          <TabsTrigger value="suppressions">
+            <ShieldBan className="h-4 w-4 mr-2" />
+            Wypisani
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="campaigns" className="mt-4">
           <CampaignsTab />
@@ -98,8 +105,94 @@ function EmailMarketingPage() {
         <TabsContent value="segments" className="mt-4">
           <SegmentsTab />
         </TabsContent>
+        <TabsContent value="suppressions" className="mt-4">
+          <SuppressionsTab />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// ============== Wypisani / zablokowani ==============
+
+function SuppressionsTab() {
+  const list = useServerFn(listSuppressions);
+  const remove = useServerFn(removeSuppression);
+  const { data, refetch, isLoading } = useQuery({
+    queryKey: ["email-suppressions"],
+    queryFn: () => list(),
+  });
+  const rows = data?.suppressions ?? [];
+
+  const unblock = async (email: string) => {
+    if (!confirm(`Odblokować ${email}? Adres znów zacznie dostawać wiadomości.`)) return;
+    try {
+      await remove({ data: { email } });
+      toast.success("Odblokowano");
+      refetch();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się odblokować");
+    }
+  };
+
+  const reasonLabel: Record<string, string> = {
+    unsubscribe: "wypis",
+    complaint: "skarga / RODO",
+    bounce: "adres nie istnieje",
+    loop_detected: "pętla bot-bot",
+    bot_detected: "bot",
+    repeated_content: "powtarzana treść",
+    manual: "ręcznie",
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ShieldBan className="h-5 w-5" /> Adresy, które nie dostają maili
+        </CardTitle>
+        <CardDescription>
+          Klient napisał „dość" albo kliknął wypis — strażnik blokuje wszystkie automaty naraz.
+          Blokada oznaczona jako twarda (skarga spam, RODO) zatrzymuje też maile obsługowe. Odblokuj
+          tylko wtedy, gdy wypis był pomyłką.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Wczytywanie…
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="text-muted-foreground">Nikt nie jest wypisany.</p>
+        ) : (
+          <div className="space-y-2">
+            {rows.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-start justify-between gap-3 rounded-md border p-3"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium break-all">{r.email}</span>
+                    <Badge variant={r.hard ? "destructive" : "secondary"}>
+                      {reasonLabel[r.reason] ?? r.reason}
+                    </Badge>
+                    {r.source && <Badge variant="outline">{r.source}</Badge>}
+                  </div>
+                  {r.phrase && <p className="text-sm text-muted-foreground mt-1">„{r.phrase}"</p>}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {new Date(r.created_at).toLocaleString("pl-PL")}
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => unblock(r.email)}>
+                  Odblokuj
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

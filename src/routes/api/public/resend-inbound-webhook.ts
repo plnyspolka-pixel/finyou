@@ -11,7 +11,12 @@ import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendResendEmail } from "@/lib/resend-send.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
-import { shouldSkipAutoReply, normalizeHeaders } from "@/lib/email-guard.server";
+import {
+  shouldSkipAutoReply,
+  normalizeHeaders,
+  handleInboundOptOut,
+  markLeadOptedOut,
+} from "@/lib/email-guard.server";
 import { routeInboundOfferReply } from "@/lib/offer-replies.server";
 
 // Svix signature: header `svix-signature` = "v1,<base64sig> v1,<base64sig> ..."
@@ -144,10 +149,20 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
 
         if (!fromEmail) return new Response("no sender", { status: 200 });
 
+        // STRAŻNIK „dość to dość" — zanim wiadomość pójdzie gdziekolwiek dalej.
+        // Dotyczy też odpowiedzi inwestora na dystrybucję oferty: kto prosi
+        // o spokój, dostaje spokój na każdej ścieżce.
+        const optOut = await handleInboundOptOut({
+          fromEmail,
+          subject,
+          bodyText: text,
+          channel: "email",
+        });
+
         // ODPOWIEDŹ INWESTORA NA DYSTRYBUCJĘ OFERTY: mail na alias
         // oferta+<distribution_id>@... (lub wątek naszego maila wychodzącego)
         // trafia na kartę wniosku — bez ścieżki leadowej i auto-odpowiedzi AI.
-        {
+        if (!optOut.optedOut) {
           const recipientsRaw = [data.to, data.To, data.cc, data.Cc, data.delivered_to]
             .flatMap((v: any) => (Array.isArray(v) ? v : v ? [v] : []))
             .map((v: any) => (typeof v === "string" ? v : (v?.email ?? "")))
@@ -276,6 +291,14 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
           });
         } catch (e) {
           console.error("[resend-inbound] enrichment error", e);
+        }
+
+        // Klient poprosił o zaprzestanie — wiadomość jest zalogowana na leadzie,
+        // ale żaden automat już nic nie odpisze.
+        if (optOut.optedOut) {
+          await markLeadOptedOut(leadId);
+          console.warn(`[resend-inbound] opt-out ${fromEmail} (${optOut.signal})`);
+          return new Response(`opt_out:${optOut.signal}`, { status: 200 });
         }
 
         // OCHRONA PRZED PĘTLAMI — sprawdź zanim auto-agent odpowie

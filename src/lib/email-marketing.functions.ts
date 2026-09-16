@@ -272,7 +272,7 @@ export const sendCampaign = createServerFn({ method: "POST" })
 
     // Tryb testowy — 1 mail na podany adres
     if (data.test_email) {
-      await sendViaResend({
+      const test = await sendViaResend({
         from: `${campaign.from_name} <${campaign.from_email}>`,
         to: data.test_email,
         subject: `[TEST] ${campaign.subject}`,
@@ -283,6 +283,7 @@ export const sendCampaign = createServerFn({ method: "POST" })
           { name: "mode", value: "test" },
         ],
       });
+      if (test.blocked) throw new Error(`Adres testowy jest wypisany (${test.reason})`);
       return { sent: 1, mode: "test" };
     }
 
@@ -318,9 +319,14 @@ export const sendCampaign = createServerFn({ method: "POST" })
 
     let sent = 0;
     let failed = 0;
+    let skipped = 0;
     for (const r of recipients) {
       try {
-        const { id: resendId } = await sendViaResend({
+        const {
+          id: resendId,
+          blocked,
+          reason,
+        } = await sendViaResend({
           from: `${campaign.from_name} <${campaign.from_email}>`,
           to: r.email,
           subject: campaign.subject,
@@ -329,6 +335,19 @@ export const sendCampaign = createServerFn({ method: "POST" })
           tags: [{ name: "campaign", value: data.campaign_id }],
           headers: { "X-Campaign-Id": data.campaign_id, "X-Subscriber-Id": r.id },
         });
+        if (blocked) {
+          // Klient poprosił o spokój — mail nie wychodzi, ale zostaje ślad.
+          await context.supabase.from("email_campaign_recipients").insert({
+            campaign_id: data.campaign_id,
+            recipient_email: r.email,
+            recipient_name: [r.first_name, r.last_name].filter(Boolean).join(" ") || null,
+            subscriber_id: r.id,
+            status: "pominiety",
+            error_message: `pominięty: ${reason}`,
+          });
+          skipped++;
+          continue;
+        }
         await context.supabase.from("email_campaign_recipients").insert({
           campaign_id: data.campaign_id,
           recipient_email: r.email,
@@ -363,7 +382,7 @@ export const sendCampaign = createServerFn({ method: "POST" })
       })
       .eq("id", data.campaign_id);
 
-    return { sent, failed, total: recipients.length };
+    return { sent, failed, skipped, total: recipients.length };
   });
 
 export const getCampaignStats = createServerFn({ method: "GET" })
@@ -391,4 +410,74 @@ export const getCampaignStats = createServerFn({ method: "GET" })
       openRate: sent ? (opened / sent) * 100 : 0,
       clickRate: sent ? (clicked / sent) * 100 : 0,
     };
+  });
+
+// ---------------- Wypisani / zablokowani ----------------
+// Podgląd dla operatora: kto i dlaczego przestał dostawać maile. Blokada „hard"
+// (skarga spam, RODO) wymaga świadomej decyzji człowieka, żeby ją zdjąć.
+
+export const listSuppressions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("suppressed_emails")
+      .select("id, email, reason, metadata, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (error) throw new Error(error.message);
+    return {
+      // Wpisy cofnięte w panelu zostają w bazie jako ślad, ale nie są już blokadą.
+      suppressions: (data ?? [])
+        .filter((r) => !(r.metadata as any)?.unblocked_at)
+        .map((r) => ({
+          id: r.id,
+          email: r.email,
+          reason: r.reason,
+          created_at: r.created_at,
+          source: ((r.metadata as any)?.source as string | null) ?? null,
+          phrase: ((r.metadata as any)?.phrase as string | null) ?? null,
+          hard: (r.metadata as any)?.hard === true,
+        })),
+    };
+  });
+
+export const removeSuppression = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ email: z.string().email() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = data.email.toLowerCase().trim();
+    // Odblokowanie to cofnięcie pomyłki. Wpis na liście blokad ZOSTAJE (tabela
+    // jest z założenia append-only i stanowi ślad na wypadek sporu) — dostaje
+    // tylko znacznik `unblocked_at`, który strażnik czyta jako „już nie blokuje".
+    const { data: existing } = await supabaseAdmin
+      .from("suppressed_emails")
+      .select("metadata")
+      .eq("email", email)
+      .maybeSingle();
+    await supabaseAdmin
+      .from("suppressed_emails")
+      .update({
+        metadata: {
+          ...((existing?.metadata as Record<string, unknown>) ?? {}),
+          unblocked_at: new Date().toISOString(),
+          hard: false,
+        },
+      })
+      .eq("email", email);
+    const untyped = supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient;
+    await untyped
+      .from("comms_suppressions")
+      .delete()
+      .eq("channel", "email")
+      .eq("identifier", email);
+    await supabaseAdmin.from("clients").update({ do_not_email: false }).ilike("email", email);
+    await supabaseAdmin.from("automation_events").insert({
+      automation_type: "email_opt_out",
+      status: "unblocked",
+      sent_payload: { email },
+      response_payload: { source: "panel" },
+    });
+    return { ok: true };
   });
