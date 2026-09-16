@@ -46,7 +46,7 @@ export interface BrandOptions {
 /**
  * Stopka ZAWSZE mówi, jak przestać dostawać wiadomości. Jest link — wypis jest
  * jednym kliknięciem; nie ma (np. wysyłka bez adresu w bazie) — podajemy drogę
- * przez odpowiedź, którą i tak rozpoznaje strażnik w email-opt-out.
+ * przez odpowiedź, którą i tak rozpoznaje strażnik w opt-out.ts.
  */
 function unsubscribeFooter(unsubscribeUrl?: string): string {
   if (unsubscribeUrl) {

@@ -9,12 +9,13 @@
 // newslettera, przypomnienia o wniosku), żeby żaden silnik nie pisał dalej.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
-import { decideEmailSend, type EmailCategory, type OptOutStrength } from "./email-opt-out";
+import { decideSend, type SendCategory, type OptOutStrength } from "./opt-out";
 
-export type { EmailCategory } from "./email-opt-out";
+/** Kategoria wysyłki maila — alias wspólnego typu z opt-out.ts. */
+export type EmailCategory = SendCategory;
 
-/** Wynik strażnika wysyłki (reguła: decideEmailSend w email-opt-out.ts). */
-export type SendDecision = ReturnType<typeof decideEmailSend>;
+/** Wynik strażnika wysyłki (reguła: decideSend w opt-out.ts). */
+export type SendDecision = ReturnType<typeof decideSend>;
 
 function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -38,7 +39,7 @@ function normalize(email: string | null | undefined): string {
  */
 export async function canSendEmail(
   email: string | null | undefined,
-  category: EmailCategory = "automated",
+  category: SendCategory = "automated",
 ): Promise<SendDecision> {
   const addr = normalize(email);
   if (!addr) return { allowed: false, reason: "missing_recipient" };
@@ -58,7 +59,7 @@ export async function canSendEmail(
     .limit(1)
     .maybeSingle();
 
-  return decideEmailSend({
+  return decideSend({
     suppression: sup
       ? {
           reason: String(sup.reason ?? "unsubscribe"),

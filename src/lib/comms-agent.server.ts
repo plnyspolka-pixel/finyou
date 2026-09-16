@@ -426,7 +426,14 @@ export async function sendMessengerReplyToLead(args: {
   if (!recipientId)
     throw new Error("Ten lead nie ma zapisanego identyfikatora Messenger/Instagram.");
 
-  const send = await sendMetaMessage({ recipientId, text: args.body, platform });
+  // Pisze człowiek z panelu — przechodzi mimo zwykłego wyciszenia (twarda
+  // blokada po RODO/skardze zatrzyma i to).
+  const send = await sendMetaMessage({
+    recipientId,
+    text: args.body,
+    platform,
+    category: "transactional",
+  });
 
   await logLeadCommunication({
     leadId: args.leadId,

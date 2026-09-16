@@ -413,70 +413,156 @@ export const getCampaignStats = createServerFn({ method: "GET" })
   });
 
 // ---------------- Wypisani / zablokowani ----------------
-// Podgląd dla operatora: kto i dlaczego przestał dostawać maile. Blokada „hard"
-// (skarga spam, RODO) wymaga świadomej decyzji człowieka, żeby ją zdjąć.
+// Podgląd dla operatora: kto i dlaczego przestał dostawać wiadomości — poczta
+// i kanały Meta (Messenger/Instagram) w jednym miejscu. Blokada „hard" (skarga
+// spam, RODO) wymaga świadomej decyzji człowieka, żeby ją zdjąć.
+
+export type SuppressionChannel = "email" | "messenger" | "instagram";
 
 export const listSuppressions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
-      .from("suppressed_emails")
-      .select("id, email, reason, metadata, created_at")
-      .order("created_at", { ascending: false })
-      .limit(500);
+    const untyped = supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient;
+
+    const [{ data: emails, error }, { data: channels }] = await Promise.all([
+      supabaseAdmin
+        .from("suppressed_emails")
+        .select("id, email, reason, metadata, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500),
+      untyped
+        .from("comms_suppressions")
+        .select("id, channel, identifier, reason, metadata, expires_at, created_at")
+        .in("channel", ["messenger", "instagram"])
+        .order("created_at", { ascending: false })
+        .limit(500),
+    ]);
     if (error) throw new Error(error.message);
+
+    // PSID sam w sobie nic operatorowi nie mówi — podstawiamy imię i nazwisko leada.
+    const ids = (channels ?? []).map((r: any) => r.identifier);
+    const names = new Map<string, string>();
+    if (ids.length) {
+      const { data: leads } = await supabaseAdmin
+        .from("leads")
+        .select("first_name, last_name, messenger_psid, instagram_igsid")
+        .or(`messenger_psid.in.(${ids.join(",")}),instagram_igsid.in.(${ids.join(",")})`);
+      for (const l of leads ?? []) {
+        const label = [l.first_name, l.last_name].filter(Boolean).join(" ");
+        if (!label) continue;
+        if (l.messenger_psid) names.set(l.messenger_psid, label);
+        if (l.instagram_igsid) names.set(l.instagram_igsid, label);
+      }
+    }
+
+    // Wpisy cofnięte w panelu zostają w bazie jako ślad, ale nie są już blokadą.
+    const emailRows = (emails ?? [])
+      .filter((r) => !(r.metadata as any)?.unblocked_at)
+      .map((r) => ({
+        id: r.id,
+        channel: "email" as SuppressionChannel,
+        identifier: r.email,
+        label: r.email,
+        reason: r.reason,
+        created_at: r.created_at,
+        source: ((r.metadata as any)?.source as string | null) ?? null,
+        phrase: ((r.metadata as any)?.phrase as string | null) ?? null,
+        hard: (r.metadata as any)?.hard === true,
+      }));
+
+    const channelRows = (channels ?? [])
+      .filter((r: any) => !r.metadata?.unblocked_at)
+      .filter((r: any) => !r.expires_at || new Date(r.expires_at).getTime() >= Date.now())
+      .map((r: any) => ({
+        id: r.id,
+        channel: r.channel as SuppressionChannel,
+        identifier: r.identifier,
+        label: names.get(r.identifier) ?? r.identifier,
+        reason: r.reason,
+        created_at: r.created_at,
+        source: (r.metadata?.source as string | null) ?? null,
+        phrase: (r.metadata?.phrase as string | null) ?? null,
+        hard: r.metadata?.hard === true,
+      }));
+
     return {
-      // Wpisy cofnięte w panelu zostają w bazie jako ślad, ale nie są już blokadą.
-      suppressions: (data ?? [])
-        .filter((r) => !(r.metadata as any)?.unblocked_at)
-        .map((r) => ({
-          id: r.id,
-          email: r.email,
-          reason: r.reason,
-          created_at: r.created_at,
-          source: ((r.metadata as any)?.source as string | null) ?? null,
-          phrase: ((r.metadata as any)?.phrase as string | null) ?? null,
-          hard: (r.metadata as any)?.hard === true,
-        })),
+      suppressions: [...emailRows, ...channelRows].sort((a, b) =>
+        a.created_at < b.created_at ? 1 : -1,
+      ),
     };
   });
 
 export const removeSuppression = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ email: z.string().email() }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        channel: z.enum(["email", "messenger", "instagram"]).default("email"),
+        identifier: z.string().min(1).max(320),
+      })
+      .parse(d),
+  )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const email = data.email.toLowerCase().trim();
-    // Odblokowanie to cofnięcie pomyłki. Wpis na liście blokad ZOSTAJE (tabela
-    // jest z założenia append-only i stanowi ślad na wypadek sporu) — dostaje
-    // tylko znacznik `unblocked_at`, który strażnik czyta jako „już nie blokuje".
-    const { data: existing } = await supabaseAdmin
-      .from("suppressed_emails")
-      .select("metadata")
-      .eq("email", email)
-      .maybeSingle();
-    await supabaseAdmin
-      .from("suppressed_emails")
-      .update({
-        metadata: {
-          ...((existing?.metadata as Record<string, unknown>) ?? {}),
-          unblocked_at: new Date().toISOString(),
-          hard: false,
-        },
-      })
-      .eq("email", email);
     const untyped = supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient;
-    await untyped
-      .from("comms_suppressions")
-      .delete()
-      .eq("channel", "email")
-      .eq("identifier", email);
-    await supabaseAdmin.from("clients").update({ do_not_email: false }).ilike("email", email);
+    const identifier =
+      data.channel === "email" ? data.identifier.toLowerCase().trim() : data.identifier.trim();
+    const unblockedAt = new Date().toISOString();
+
+    // Odblokowanie to cofnięcie pomyłki. Wpisy ZOSTAJĄ (lista blokad jest
+    // z założenia append-only i stanowi ślad na wypadek sporu) — dostają tylko
+    // znacznik `unblocked_at`, który strażnicy czytają jako „już nie blokuje".
+    const unblockChannel = async (channel: string, id: string) => {
+      const { data: row } = await untyped
+        .from("comms_suppressions")
+        .select("metadata")
+        .eq("channel", channel)
+        .eq("identifier", id)
+        .maybeSingle();
+      if (!row) return;
+      await untyped
+        .from("comms_suppressions")
+        .update({
+          metadata: {
+            ...((row.metadata as Record<string, unknown>) ?? {}),
+            unblocked_at: unblockedAt,
+            hard: false,
+          },
+        })
+        .eq("channel", channel)
+        .eq("identifier", id);
+    };
+
+    if (data.channel === "email") {
+      const { data: existing } = await supabaseAdmin
+        .from("suppressed_emails")
+        .select("metadata")
+        .eq("email", identifier)
+        .maybeSingle();
+      await supabaseAdmin
+        .from("suppressed_emails")
+        .update({
+          metadata: {
+            ...((existing?.metadata as Record<string, unknown>) ?? {}),
+            unblocked_at: unblockedAt,
+            hard: false,
+          },
+        })
+        .eq("email", identifier);
+      await unblockChannel("email", identifier);
+      await supabaseAdmin
+        .from("clients")
+        .update({ do_not_email: false })
+        .ilike("email", identifier);
+    } else {
+      await unblockChannel(data.channel, identifier);
+    }
+
     await supabaseAdmin.from("automation_events").insert({
-      automation_type: "email_opt_out",
+      automation_type: data.channel === "email" ? "email_opt_out" : "channel_opt_out",
       status: "unblocked",
-      sent_payload: { email },
+      sent_payload: { channel: data.channel, identifier },
       response_payload: { source: "panel" },
     });
     return { ok: true };

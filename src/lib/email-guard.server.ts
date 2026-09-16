@@ -2,7 +2,7 @@
 // Używane PRZED każdą odpowiedzią auto-agenta i (opcjonalnie) przed wysyłką maila.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { looksLikeAutoMessage, isAutoReplySubject, isRepetitiveInbound } from "@/lib/bot-detection";
-import { detectOptOut } from "@/lib/email-opt-out";
+import { detectOptOut } from "@/lib/opt-out";
 import { applyOptOut } from "@/lib/email-unsubscribe.server";
 
 function admin(): SupabaseClient {

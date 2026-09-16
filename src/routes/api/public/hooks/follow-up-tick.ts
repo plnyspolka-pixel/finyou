@@ -227,6 +227,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
               recipientId: psid,
               text: replyText,
               platform: "messenger",
+              proactive: true,
             });
             sendOk = r.ok;
             sendId = r.messageId ?? null;
@@ -238,6 +239,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
               recipientId: igsid,
               text: replyText,
               platform: "instagram",
+              proactive: true,
             });
             sendOk = r.ok;
             sendId = r.messageId ?? null;

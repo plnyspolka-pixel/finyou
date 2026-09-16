@@ -1,6 +1,9 @@
-# Wypis mailowy — stopka „Wypisz mnie" i strażnik „dość to dość"
+# Wypis z korespondencji — „Wypisz mnie", STOP i strażnik „dość to dość"
 
-## Problem
+Dotyczy poczty (Resend, Mailgun, kolejka Lovable) oraz kanałów Meta
+(Messenger, Instagram Direct). SMS-y mają własny hamulec — `docs/limity-sms.md`.
+
+## Problem (poczta)
 
 1. **Nie było jak się wypisać.** Link „Wypisz mnie" w stopce pojawiał się tylko
    wtedy, gdy wywołujący sam podał `unsubscribeUrl` — robiły to dwa silniki
@@ -20,7 +23,7 @@
 
 `src/lib/email-unsubscribe.server.ts` — jedno miejsce, które generuje link
 wypisu, wykonuje wypis i odpowiada na pytanie „czy wolno wysłać maila na ten
-adres". Czyste reguły (bez bazy, testowalne) siedzą w `src/lib/email-opt-out.ts`.
+adres". Czyste reguły (bez bazy, testowalne) siedzą w `src/lib/opt-out.ts`.
 
 ### 1. Stopka i nagłówki w każdym mailu
 
@@ -79,20 +82,66 @@ cofnięciu zgody czy groźbie skargi do UODO/UOKiK. Techniczne powody (`bounce`,
 `loop_detected`, `bot_detected`, `repeated_content`) blokują wszystko, tak jak
 wcześniej.
 
-Reguła jest czysta i przetestowana: `decideEmailSend` w `email-opt-out.ts`
-(testy: `src/lib/email-opt-out.test.ts`).
+Reguła jest czysta i przetestowana: `decideSend` w `opt-out.ts`
+(testy: `src/lib/opt-out.test.ts`).
 
 ### 4. Panel
 
-`Marketing → Email → Wypisani` pokazuje zablokowane adresy z powodem, źródłem
-i cytatem z wiadomości klienta. Przycisk **Odblokuj** cofa pomyłkowy wypis: wpis na liście blokad zostaje jako
+`Marketing → Email → Wypisani` pokazuje w jednym miejscu adresy e-mail oraz
+profile Messengera/Instagrama (po imieniu i nazwisku leada, nie po PSID) —
+z kanałem, powodem, źródłem i cytatem z wiadomości klienta. Przycisk **Odblokuj** cofa pomyłkowy wypis: wpis na liście blokad zostaje jako
 ślad (tabela jest append-only), ale dostaje znacznik `unblocked_at`, który
 strażnik czyta jako „już nie blokuje". Do świadomej decyzji operatora.
 
+## Messenger i Instagram
+
+Ten sam problem był na kanałach Meta: `bot-loop-guard` rozpoznawał **boty**
+(pętle, lawiny, ping-pong), ale nie rozpoznawał **człowieka, który prosi
+o spokój**. Klient pisał „dajcie mi spokój", a nudge z `follow-up-tick` szedł
+dalej, bo nic tego nie zapisywało.
+
+- **Odpowiednik stopki.** Messenger nie ma stopki, więc wiadomości **proaktywne**
+  (kolejka `messenger_outbox`, nudge'e z `follow-up-tick`) dostają dopisek
+  „Napisz STOP, jeśli nie chcesz więcej wiadomości." — `withOptOutHint`
+  w `messenger-opt-out.server.ts`. Odpowiedzi w trwającej rozmowie i wiadomości
+  pisane ręcznie przez operatora dopisku nie dostają: klient właśnie z nami
+  rozmawia.
+- **Rozpoznanie odmowy.** Ten sam `detectOptOut` co w poczcie, wzbogacony
+  o potoczne zwroty, którymi ludzie odmawiają na czacie („dajcie mi spokój",
+  „odczepcie się", „zablokuję to konto"). Samo „STOP" też działa.
+- **Wpięcie.** `handleInboundChannelOptOut` na początku
+  `shouldSkipMessengerAutoReply` — przed wszystkimi heurystykami botowymi,
+  więc obejmuje też odpowiedzi pod komentarzami na fanpage'u (publiczna
+  odpowiedź + private reply). Wiadomość zostaje zalogowana w skrzynce, agent
+  milczy, lead dostaje status `wymaga_kontaktu`.
+- **Blokada wysyłki.** `canSendMetaMessage` w `sendMetaMessage`, czyli
+  w jedynym miejscu, przez które wychodzi każda wiadomość Meta.
+- **Kaskada na inne kanały.** „Dość" napisane na Messengerze wycisza też e-mail
+  (pełny `applyOptOut`) i SMS-y (`clients.do_not_sms`) tego samego leada.
+  Klient prosi o spokój od nas, a nie od jednej aplikacji. Telefonów nie
+  ruszamy — „przestańcie pisać" to nie to samo co „nie dzwońcie".
+
+### Kategorie na kanałach Meta
+
+| Kategoria       | Co to jest                                                         | Wypis klienta | Twarda blokada |
+| --------------- | ------------------------------------------------------------------ | ------------- | -------------- |
+| `automated`     | agent, nudge'e follow-up, kolejka outbox, odpowiedzi na komentarze | blokuje       | blokuje        |
+| `transactional` | wiadomość napisana ręcznie przez operatora w panelu                | przepuszcza   | blokuje        |
+
+Wyciszenia **techniczne** z `bot-loop-guard` (`bot_detected`, `loop_detected`)
+działają tu jak zwykły wypis: automat milczy, ale człowiek z panelu może
+napisać. To heurystyki, a nie decyzja klienta — nie mogą zamykać drogi
+operatorowi.
+
 ## Czego to NIE robi
 
-- Nie blokuje SMS-ów ani telefonów — to osobny hamulec (`docs/limity-sms.md`,
-  `clients.do_not_sms`, `do_not_call`). Wypis mailowy dotyczy tylko poczty.
+- Nie blokuje telefonów. Wypis wycisza pisanie (poczta, Messenger/Instagram,
+  SMS przez `clients.do_not_sms`), ale `do_not_call` zostaje decyzją operatora.
+- Nie rusza SMS-owego hamulca poza flagą STOP — limity i okna godzinowe opisuje
+  `docs/limity-sms.md`.
+- Private reply pod komentarzem (`sendPrivateReplyToComment`) adresuje Meta po
+  `comment_id`, więc nie zna PSID i nie sprawdza listy blokad sam z siebie —
+  chroni go strażnik wyżej, w `shouldSkipMessengerAutoReply`.
 - Nie kasuje danych klienta. Żądanie RODO ustawia twardą blokadę i flaguje leada
   do obsługi przez człowieka — usunięcie danych zostaje decyzją operatora.
 - Nie wysyła maila z potwierdzeniem wypisu. Klient prosił o ciszę, więc dostaje

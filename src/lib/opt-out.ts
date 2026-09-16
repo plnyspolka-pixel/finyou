@@ -1,11 +1,13 @@
-// Rozpoznawanie prośby o zaprzestanie korespondencji w mailu przychodzącym.
-// Czyste heurystyki (bez bazy) — testowane w email-opt-out.test.ts.
+// Rozpoznawanie prośby o zaprzestanie kontaktu w wiadomości przychodzącej.
+// Wspólne dla e-maila i Messengera/Instagrama — klient pisze to samo, niezależnie
+// od kanału. Czyste heurystyki (bez bazy) — testowane w opt-out.test.ts.
 //
 // Powód: kilkukrotnie zdarzyło się, że klient napisał wprost „proszę przestać
-// do mnie pisać", a automaty (drip przypomnień, follow-up braków, kampanie)
-// pisały dalej, bo wypis był możliwy TYLKO przez link w stopce. Ten moduł jest
-// wejściem dla strażnika: jak klient mówi „dość" — to dość, niezależnie od
-// tego, czy kliknął link, czy odpisał zwykłym zdaniem.
+// do mnie pisać", a automaty (drip przypomnień, follow-up braków, kampanie,
+// nudge'e na Messengerze) pisały dalej, bo wypis był możliwy TYLKO przez link
+// w stopce maila. Ten moduł jest wejściem dla strażnika: jak klient mówi
+// „dość" — to dość, w każdym kanale i niezależnie od tego, czy kliknął link,
+// czy napisał zwykłe zdanie.
 
 /** Twardość wypisu: `soft` blokuje marketing, `hard` — również maile obsługowe. */
 export type OptOutStrength = "soft" | "hard";
@@ -75,6 +77,14 @@ const OPT_OUT_PATTERNS: { signal: string; re: RegExp }[] = [
   },
   { signal: "dosc_pl", re: /(do[śs][ćc]|dosy[ćc])\s+(ju[żz]\s+)?(tego|tych\s+maili|spamu)/i },
   { signal: "dosc_pl", re: /^\s*(do[śs][ćc]|dosy[ćc]|stop|koniec)\s*[!.]*\s*$/im },
+  // Potoczne odmowy — na Messengerze/Instagramie ludzie piszą krócej niż mailem.
+  { signal: "spokoj_pl", re: /daj(cie)?\s+(mi\s+)?(ju[żz]\s+)?spok[óo]j/i },
+  { signal: "spokoj_pl", re: /o\s+[śs]wi[ęe]ty\s+spok[óo]j/i },
+  { signal: "spokoj_pl", re: /odczep(cie)?\s+si[ęe]/i },
+  { signal: "spokoj_pl", re: /przesta[ńn]cie\s+mnie\s+nachodzi[ćc]|nie\s+nachodzcie/i },
+  { signal: "spokoj_pl", re: /(odwal\s+si[ęe]|spadaj(cie)?)\b/i },
+  { signal: "spokoj_pl", re: /zablokuj[ęe]\s+(was|to\s+konto|ten\s+profil)/i },
+
   // Angielski (klienci zagraniczni / klienty pocztowe z szablonem). Celowo bez
   // samego słowa „unsubscribe" — stopki firmowe w odpowiedziach klientów mają
   // je w treści i każdy taki mail wyglądałby na rezygnację.
@@ -170,12 +180,13 @@ export function detectOptOut(input: {
 }
 
 /**
- * Kategoria wysyłki. `transactional` to maile wynikające z umowy albo z akcji
- * klienta (dostęp po płatności, dokumenty, harmonogram, potwierdzenie wniosku).
- * Reszta — marketing, przypomnienia, follow-upy, auto-odpowiedzi — to
- * `automated` i każdy wypis je zatrzymuje.
+ * Kategoria wysyłki. `transactional` to wiadomości wynikające z umowy, z akcji
+ * klienta albo napisane ręcznie przez operatora (dostęp po płatności, dokumenty,
+ * harmonogram, potwierdzenie wniosku, odpowiedź człowieka z panelu). Reszta —
+ * marketing, przypomnienia, follow-upy, odpowiedzi bota — to `automated`
+ * i każdy wypis je zatrzymuje.
  */
-export type EmailCategory = "automated" | "transactional";
+export type SendCategory = "automated" | "transactional";
 
 /** Powody blokady, których nie przebija nawet mail wynikający z umowy. */
 const ALWAYS_BLOCKING_REASONS = new Set([
@@ -186,7 +197,7 @@ const ALWAYS_BLOCKING_REASONS = new Set([
   "repeated_content",
 ]);
 
-export interface EmailSendDecisionInput {
+export interface SendDecisionInput {
   /**
    * Wpis z suppressed_emails, jeśli adres jest na liście blokad. `unblocked`
    * oznacza wypis cofnięty ręcznie w panelu — wpis zostaje w bazie jako ślad,
@@ -195,10 +206,10 @@ export interface EmailSendDecisionInput {
   suppression?: { reason: string; hard?: boolean; unblocked?: boolean } | null;
   /** clients.do_not_email — wypis zapisany w kartotece klienta. */
   doNotEmail?: boolean;
-  category: EmailCategory;
+  category: SendCategory;
 }
 
-export interface EmailSendDecision {
+export interface SendDecision {
   allowed: boolean;
   reason?: string;
   detail?: string;
@@ -208,7 +219,7 @@ export interface EmailSendDecision {
  * Czysta reguła strażnika: czy wolno wysłać maila. Wersja z bazą to
  * `canSendEmail` w email-unsubscribe.server.ts.
  */
-export function decideEmailSend(input: EmailSendDecisionInput): EmailSendDecision {
+export function decideSend(input: SendDecisionInput): SendDecision {
   const { suppression, doNotEmail, category } = input;
 
   if (suppression && !suppression.unblocked) {

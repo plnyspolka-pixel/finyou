@@ -124,10 +124,10 @@ function SuppressionsTab() {
   });
   const rows = data?.suppressions ?? [];
 
-  const unblock = async (email: string) => {
-    if (!confirm(`Odblokować ${email}? Adres znów zacznie dostawać wiadomości.`)) return;
+  const unblock = async (row: { channel: string; identifier: string; label: string }) => {
+    if (!confirm(`Odblokować ${row.label}? Znów zacznie dostawać wiadomości.`)) return;
     try {
-      await remove({ data: { email } });
+      await remove({ data: { channel: row.channel as "email", identifier: row.identifier } });
       toast.success("Odblokowano");
       refetch();
     } catch (e) {
@@ -135,8 +135,15 @@ function SuppressionsTab() {
     }
   };
 
+  const channelLabel: Record<string, string> = {
+    email: "e-mail",
+    messenger: "Messenger",
+    instagram: "Instagram",
+  };
+
   const reasonLabel: Record<string, string> = {
     unsubscribe: "wypis",
+    opt_out: "wypis",
     complaint: "skarga / RODO",
     bounce: "adres nie istnieje",
     loop_detected: "pętla bot-bot",
@@ -173,7 +180,8 @@ function SuppressionsTab() {
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium break-all">{r.email}</span>
+                    <span className="font-medium break-all">{r.label}</span>
+                    <Badge variant="outline">{channelLabel[r.channel] ?? r.channel}</Badge>
                     <Badge variant={r.hard ? "destructive" : "secondary"}>
                       {reasonLabel[r.reason] ?? r.reason}
                     </Badge>
@@ -184,7 +192,7 @@ function SuppressionsTab() {
                     {new Date(r.created_at).toLocaleString("pl-PL")}
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => unblock(r.email)}>
+                <Button variant="outline" size="sm" onClick={() => unblock(r)}>
                   Odblokuj
                 </Button>
               </div>

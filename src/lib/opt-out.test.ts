@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { decideEmailSend, detectOptOut, stripQuotedReply } from "./email-opt-out";
+import { decideSend, detectOptOut, stripQuotedReply } from "./opt-out";
 
 describe("stripQuotedReply", () => {
   it("odcina cytat po nagłówku 'Od:'", () => {
@@ -37,6 +37,9 @@ describe("detectOptOut — rozpoznaje rezygnację", () => {
     ["mam dość", "Mam dość tych maili, ile można."],
     ["samo dość", "DOŚĆ!"],
     ["stop", "stop"],
+    ["dajcie spokój", "Dajcie mi spokój."],
+    ["odczepcie się", "Odczepcie się ode mnie."],
+    ["zablokuję", "Jeszcze jedna wiadomość i zablokuję to konto."],
     ["angielski", "Please unsubscribe me."],
     ["remove me", "Remove me from your mailing list."],
   ];
@@ -82,6 +85,8 @@ describe("detectOptOut — brak fałszywych alarmów", () => {
     "Dziękuję za ofertę, zastanowię się i odezwę.",
     "Mam dość dobre zabezpieczenie — mieszkanie bez hipoteki.",
     "Proszę o przesłanie umowy do podpisu.",
+    "Spokojnie, mam czas — odezwę się w przyszłym tygodniu.",
+    "Czy mogę zablokować oprocentowanie na 12 miesięcy?",
   ];
   for (const text of negatives) {
     it(text.slice(0, 40), () => {
@@ -111,26 +116,26 @@ describe("detectOptOut — brak fałszywych alarmów", () => {
   });
 });
 
-describe("decideEmailSend — strażnik wysyłki", () => {
+describe("decideSend — strażnik wysyłki", () => {
   it("przepuszcza adres bez blokady", () => {
-    expect(decideEmailSend({ category: "automated" })).toEqual({ allowed: true });
+    expect(decideSend({ category: "automated" })).toEqual({ allowed: true });
   });
 
   it("blokuje marketing po wypisie", () => {
     expect(
-      decideEmailSend({ suppression: { reason: "unsubscribe" }, category: "automated" }),
+      decideSend({ suppression: { reason: "unsubscribe" }, category: "automated" }),
     ).toMatchObject({ allowed: false, reason: "suppressed:unsubscribe" });
   });
 
   it("przepuszcza mail z umowy mimo zwykłego wypisu", () => {
     expect(
-      decideEmailSend({ suppression: { reason: "unsubscribe" }, category: "transactional" }),
+      decideSend({ suppression: { reason: "unsubscribe" }, category: "transactional" }),
     ).toEqual({ allowed: true });
   });
 
   it("twarda blokada zatrzymuje także maile z umowy", () => {
     expect(
-      decideEmailSend({
+      decideSend({
         suppression: { reason: "unsubscribe", hard: true },
         category: "transactional",
       }),
@@ -139,33 +144,33 @@ describe("decideEmailSend — strażnik wysyłki", () => {
 
   it("skarga spam blokuje wszystko", () => {
     expect(
-      decideEmailSend({ suppression: { reason: "complaint" }, category: "transactional" }),
+      decideSend({ suppression: { reason: "complaint" }, category: "transactional" }),
     ).toMatchObject({ allowed: false, reason: "suppressed:complaint" });
   });
 
   it("odbicie i pętla bot-bot blokują wszystko", () => {
     for (const reason of ["bounce", "loop_detected", "bot_detected", "repeated_content"]) {
-      expect(decideEmailSend({ suppression: { reason }, category: "transactional" }).allowed).toBe(
+      expect(decideSend({ suppression: { reason }, category: "transactional" }).allowed).toBe(
         false,
       );
     }
   });
 
   it("do_not_email z kartoteki blokuje automaty, przepuszcza umowę", () => {
-    expect(decideEmailSend({ doNotEmail: true, category: "automated" })).toMatchObject({
+    expect(decideSend({ doNotEmail: true, category: "automated" })).toMatchObject({
       allowed: false,
       reason: "do_not_email",
     });
-    expect(decideEmailSend({ doNotEmail: true, category: "transactional" })).toEqual({
+    expect(decideSend({ doNotEmail: true, category: "transactional" })).toEqual({
       allowed: true,
     });
   });
 });
 
-describe("decideEmailSend — cofnięty wypis", () => {
+describe("decideSend — cofnięty wypis", () => {
   it("wpis oznaczony jako odblokowany nie blokuje", () => {
     expect(
-      decideEmailSend({
+      decideSend({
         suppression: { reason: "unsubscribe", unblocked: true },
         category: "automated",
       }),
