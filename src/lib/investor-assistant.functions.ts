@@ -146,6 +146,20 @@ export const sendInvestorAssistantMessage = createServerFn({ method: "POST" })
     }
     if (!reply) throw new Error("Asystent jest chwilowo niedostępny. Spróbuj ponownie za chwilę.");
 
+    // Ten sam bezpiecznik co w botach klienckich: żadnych zmyślonych numerów
+    // i adresów w odpowiedzi dla członka Klubu.
+    const { guardOutboundContactDetails } = await import("@/lib/bot-contact-guard");
+    const guarded = guardOutboundContactDetails(reply, {
+      knownText: [...(history ?? []).map((m) => m.content), data.message],
+    });
+    if (guarded.redactions.length > 0) {
+      console.warn(
+        "[investor-assistant] wycięto zmyślone dane kontaktowe: " +
+          guarded.redactions.map((r) => `${r.kind}=${r.value}`).join(", "),
+      );
+    }
+    reply = guarded.text;
+
     const { error: insertError } = await supabaseAdmin.from("investor_assistant_messages").insert([
       { user_id: context.userId, role: "user", content: data.message },
       { user_id: context.userId, role: "assistant", content: reply },

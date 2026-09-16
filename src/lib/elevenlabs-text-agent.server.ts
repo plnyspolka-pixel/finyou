@@ -22,7 +22,14 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { normalizeKwNumber } from "./kw";
-import { RAPPORT_RULES, channelDynamicVariables, channelRules } from "./agent-channel-rules";
+import {
+  INTAKE_PROCESS_RULES,
+  NO_INVENTED_CONTACT_RULES,
+  RAPPORT_RULES,
+  channelDynamicVariables,
+  channelRules,
+} from "./agent-channel-rules";
+import { guardOutboundContactDetails } from "./bot-contact-guard";
 
 const EL_BASE = "https://api.elevenlabs.io/v1";
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -114,7 +121,7 @@ Twoim celem jest:
 
 KLIENT WYBRAŁ CZAT — KONIEC Z LINKIEM DO FORMULARZA:
 - Jeżeli klient napisał, że chce przesłać dane lub dokumenty "tutaj" / w rozmowie, ALBO już przesłał w rozmowie cokolwiek (zdjęcia, numer KW, dokumenty) — od tego momentu NIE wspominaj o formularzu ani financeyou.pl, NIE wysyłaj linku i NIE wywołuj send_application_link. Zbieraj wszystko bezpośrednio w rozmowie.
-- Gdy dane są kompletne — poinformuj tylko, że sprawa przechodzi do analizy i analityk się odezwie. Zero linków.
+- Gdy dane są kompletne — poinformuj, że wniosek jest kompletny i trafia do inwestorów; jeśli sprawa kogoś zainteresuje, inwestor odezwie się z konkretną ofertą. Nie obiecuj kontaktu z naszej strony. Zero linków.
 
 NIE FINANSUJEMY ZAKUPU NIERUCHOMOŚCI:
 - Finance You udziela pożyczek WYŁĄCZNIE pod zastaw nieruchomości, którą klient JUŻ POSIADA. Nie pomagamy w uzyskaniu pożyczki na zakup nieruchomości (mieszkania, domu, działki, lokalu); kupowana nieruchomość nie może być zabezpieczeniem.
@@ -301,6 +308,39 @@ export type AgentReply = {
  * - wykonuje tool calls (update_lead_data / send_application_link),
  * - zwraca finalną odpowiedź tekstową do wysłania klientowi.
  */
+/**
+ * Każda odpowiedź bota przechodzi przez bezpiecznik zmyślonych danych
+ * kontaktowych (bot podał kiedyś klientowi wymyślony numer telefonu).
+ * Dozwolone zostaje to, co klient sam napisał, oraz dane Finance You.
+ * Wycięcie logujemy — żeby było widać, że model próbował.
+ */
+async function guardReply(
+  s: SupabaseClient,
+  leadId: string,
+  channel: string,
+  reply: string,
+  knownText: Array<string | null | undefined>,
+): Promise<string> {
+  const guarded = guardOutboundContactDetails(reply, { knownText });
+  if (guarded.redactions.length === 0) return guarded.text;
+
+  console.warn(
+    `[el-text-agent] wycięto zmyślone dane kontaktowe (${channel}): ` +
+      guarded.redactions.map((r) => `${r.kind}=${r.value}`).join(", "),
+  );
+  try {
+    await s.from("automation_events").insert({
+      automation_type: "bot_zmyslone_dane_kontaktowe",
+      status: "skipped",
+      sent_payload: { lead_id: leadId, channel, redactions: guarded.redactions },
+      response_payload: { used_fallback: guarded.usedFallback },
+    });
+  } catch (e) {
+    console.error("[el-text-agent] log wycięcia danych kontaktowych", e);
+  }
+  return guarded.text;
+}
+
 export async function runAgentTurn(opts: {
   leadId: string;
   channel: "messenger" | "instagram" | "email" | "chat" | "chat_inwestor" | "sms";
@@ -378,7 +418,14 @@ export async function runAgentTurn(opts: {
         },
       });
       if (turn.ok && turn.reply) {
-        return { reply: turn.reply, toolCalls: [] };
+        const safeReply = await guardReply(s, opts.leadId, opts.channel, turn.reply, [
+          ...(history ?? []).map((h) => h.content),
+          opts.userMessage,
+          lead.email,
+          lead.phone_raw,
+          lead.phone_normalized,
+        ]);
+        return { reply: safeReply, toolCalls: [] };
       }
       console.warn(
         `[el-text-agent] ElevenLabs turn fallback (${surface}): ${turn.error ?? "unknown"}`,
@@ -392,10 +439,17 @@ export async function runAgentTurn(opts: {
   // Zasady kanału dokładamy TU, a nie do promptu w bazie: jeden prompt
   // obsługuje wszystkie kanały, a różnią się one tym, co w danym kanale w
   // ogóle jest możliwe (załączniki, długość wypowiedzi, link do wniosku).
+  // Twarde zasady (zero obietnic kontaktu, zero zmyślonych numerów) muszą być
+  // TU tak samo jak w prompcie agenta ElevenLabs — inaczej silnik zapasowy
+  // odpowiada bez nich i to on zmyśla.
   const systemPrompt =
     variant === "klient"
-      ? basePrompt + RAPPORT_RULES + channelRules(opts.channel)
-      : basePrompt + channelRules(opts.channel);
+      ? basePrompt +
+        RAPPORT_RULES +
+        channelRules(opts.channel) +
+        INTAKE_PROCESS_RULES +
+        NO_INVENTED_CONTACT_RULES
+      : basePrompt + channelRules(opts.channel) + NO_INVENTED_CONTACT_RULES;
 
   // Spersonalizowany link do formularza: świeży magic link (auto-login do /klient),
   // gdy znamy email leada; inaczej publiczny fallback. Prompt z DB używa
@@ -555,10 +609,16 @@ export async function runAgentTurn(opts: {
 
     const calls = msg.tool_calls ?? [];
     if (calls.length === 0) {
-      return {
-        reply: String(msg.content ?? "").trim() || "Dziękuję za wiadomość.",
-        toolCalls: toolResults,
-      };
+      const reply = String(msg.content ?? "").trim() || "Dziękuję za wiadomość.";
+      const safeReply = await guardReply(s, opts.leadId, opts.channel, reply, [
+        ...(history ?? []).map((h) => h.content),
+        opts.userMessage,
+        lead.email,
+        lead.phone_raw,
+        lead.phone_normalized,
+        applicationLink,
+      ]);
+      return { reply: safeReply, toolCalls: toolResults };
     }
 
     messages.push({ role: "assistant", content: msg.content ?? "", tool_calls: calls });

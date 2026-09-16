@@ -15,6 +15,8 @@ import { createClient } from "@supabase/supabase-js";
 import { fetchAgentPrompt, type AgentVariant } from "@/lib/elevenlabs-text-agent.server";
 import {
   AGENT_DYNAMIC_VARIABLE_DEFAULTS,
+  INTAKE_PROCESS_RULES,
+  NO_INVENTED_CONTACT_RULES,
   RAPPORT_RULES,
   buildChannelRulesSection,
 } from "@/lib/agent-channel-rules";
@@ -56,13 +58,10 @@ const SURFACE_FIRST_MESSAGE: Record<AgentSurface, string> = {
 };
 
 /** Twarde zasady rozmowy A1 (decyzja właściciela) — doklejane do promptu. */
-const INTAKE_HARD_RULES = `
-
-TWARDE ZASADY ROZMOWY (nadrzędne wobec reszty promptu):
-- NIGDY nie obiecuj, że "skontaktuje się analityk", że "oddzwonimy" ani żadnej formy kontaktu z naszej strony.
-- Nie przeciągaj rozmowy bez potrzeby, ale też nie zaczynaj od żądania danych — prowadź ją tak, jak opisuje sekcja "JAK PROWADZISZ ROZMOWĘ", i dopiero potem kompletuj wniosek.
-- Po przyjęciu kompletnego wniosku informuj: "Jeśli wniosek spotka się z zainteresowaniem inwestora, otrzyma Pan/Pani konkretną ofertę finansową. Brak oferty i brak pytań oznacza, że wniosek na razie nie spotkał się z zainteresowaniem."
-- Analityk odzywa się wyłącznie z inicjatywy firmy, z konkretną ofertą lub konkretnymi pytaniami — informujesz o tym, ale tego nie obiecujesz.`;
+const INTAKE_HARD_RULES =
+  INTAKE_PROCESS_RULES +
+  `
+- Nie przeciągaj rozmowy bez potrzeby, ale też nie zaczynaj od żądania danych — prowadź ją tak, jak opisuje sekcja "JAK PROWADZISZ ROZMOWĘ", i dopiero potem kompletuj wniosek.`;
 
 /**
  * Prompt agenta dla powierzchni: prompt z /admin/text-agent + wspólne zasady
@@ -71,8 +70,15 @@ TWARDE ZASADY ROZMOWY (nadrzędne wobec reszty promptu):
  * i wybiera po zmiennej {{channel}}) + twarde zasady A1.
  */
 function buildAgentPrompt(surface: AgentSurface, basePrompt: string): string {
-  if (surface !== "intake") return basePrompt;
-  return basePrompt + RAPPORT_RULES + buildChannelRulesSection() + INTAKE_HARD_RULES;
+  // Zakaz zmyślania danych kontaktowych dotyczy każdego agenta.
+  if (surface !== "intake") return basePrompt + NO_INVENTED_CONTACT_RULES;
+  return (
+    basePrompt +
+    RAPPORT_RULES +
+    buildChannelRulesSection() +
+    INTAKE_HARD_RULES +
+    NO_INVENTED_CONTACT_RULES
+  );
 }
 
 function admin() {

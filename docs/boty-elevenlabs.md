@@ -87,6 +87,30 @@ Jak trafia do agentów:
   dzwoni agentem innym niż A1 (`voicebot_settings.agent_id`), wynik
   synchronizacji to sygnalizuje — tamten prompt żyje w konsoli ElevenLabs.
 
+## Zmyślone dane kontaktowe — bezpiecznik
+
+Bot podał kiedyś klientowi na Messengerze numer telefonu, którego nie ma w
+naszych danych (zmyślił go). Prompt sam tego nie gwarantuje, więc obrona jest
+dwuwarstwowa:
+
+1. **Prompt** — `NO_INVENTED_CONTACT_RULES` (każdy agent) zakazuje podawania
+   jakiegokolwiek numeru, e-maila i adresu spoza rozmowy i danych Finance You;
+   `INTAKE_PROCESS_RULES` opisuje proces tak, jak działa: klient składa
+   KOMPLETNY wniosek, a jeśli sprawa zainteresuje inwestora, to **inwestor**
+   kontaktuje się z klientem. Żadnego „analityk się odezwie" ani „oddzwonimy".
+   Oba bloki trafiają i do agenta ElevenLabs, i do silnika zapasowego —
+   wcześniej twarde zasady miał wyłącznie agent.
+2. **Kod** — `src/lib/bot-contact-guard.ts` filtruje KAŻDĄ wychodzącą
+   wiadomość (`runAgentTurn`, obie ścieżki, oraz asystent panelu inwestora).
+   Zostaje numer/e-mail/adres, który należy do Finance You albo pojawił się
+   wcześniej w rozmowie lub w danych leada; wszystko inne wycina razem ze
+   zdaniem, w którym padło. Gdy nie zostaje nic sensownego — idzie zdanie
+   zastępcze. Kwoty (`360 000 zł`), numery KW i NIP nie są ruszane.
+   Każde wycięcie ląduje w `automation_events` jako
+   `bot_zmyslone_dane_kontaktowe` — widać, gdy model próbuje.
+
+Rozmowy głosowej nie da się filtrować po fakcie, więc tam chroni sam prompt.
+
 ## Narzędzia agentów (webhook toole)
 
 Jeden endpoint: `POST /api/public/agent-tools` (nagłówek
