@@ -47,6 +47,33 @@ instrukcję zamiast błędu (`status: "not_configured"`).
 | `DIDIT_API_BASE` | (opcjonalnie) nadpisanie bazy API, domyślnie `https://verification.didit.me`. |
 | `DIDIT_APP_URL` | (opcjonalnie) publiczny adres aplikacji dla callbacku, domyślnie `https://app.financeyou.pl`. |
 | `DIDIT_WORKFLOW_ID` | (opcjonalnie) wspólny fallback, gdy nie podano KYC/KYB. |
+| `DIDIT_WORKFLOW_ID_KYC_LITE` | Workflow **z darmowej półki** (tylko `OCR + LIVENESS + FACE_MATCH`) dla potwierdzenia tożsamości samego inwestora w pakiecie umów. |
+| `DIDIT_WORKFLOW_ID_KYB_LITE` | (opcjonalnie) odpowiednik LITE dla firmy. |
+| `DIDIT_WORKFLOW_ID_LITE` | (opcjonalnie) wspólny fallback dla workflow LITE. |
+
+### Darmowy limit vs. kredyty (błąd „You don't have enough credits")
+
+Darmowy plan Didit („free forever", ~500 weryfikacji miesięcznie) obejmuje
+**wyłącznie**: ID Verification (OCR dokumentu), Liveness i Face Match. Kroki
+`AML`, `IP_ANALYSIS`, `KYB_REGISTRY`, `KYB_DOCUMENTS`, `PROOF_OF_ADDRESS`, `NFC`
+itd. są **płatne i zużywają kredyty**. Dlatego sesja utworzona dla workflow
+`KYC + AML + IP_ANALYSIS` kończy się błędem
+`You don't have enough credits to perform this request` **nawet przy zerowym
+zużyciu darmowego limitu** — to nie jest błąd integracji.
+
+Co z tym zrobić:
+
+1. W konsoli Didit utwórz i opublikuj drugi workflow zawierający tylko
+   `OCR + LIVENESS + FACE_MATCH` (bez AML i IP analysis).
+2. Jego ID ustaw jako `DIDIT_WORKFLOW_ID_KYC_LITE` — krok 1. pakietu umów
+   (`/inwestor/umowy`, potwierdzenie tożsamości inwestora) użyje go zamiast
+   workflow AML i zmieści się w darmowym limicie.
+3. Moduł AML (`/inwestor/aml/klienci`) dalej używa pełnego workflow
+   `DIDIT_WORKFLOW_ID_KYC` / `_KYB` — tam screening AML jest celem, więc te
+   weryfikacje wymagają doładowania konta na <https://business.didit.me>.
+
+Gdy Didit odrzuci sesję z braku kredytów, backend zwraca `status: "no_credits"`
+(zamiast surowego błędu po angielsku), a UI pokazuje instrukcję po polsku.
 
 ### Zasoby już utworzone w koncie „Finance You sp z oo" (Sandbox)
 

@@ -72,6 +72,15 @@ export function DiditKycPanel({ customer }: { customer: Customer }) {
         toast.warning("Integracja Didit nie jest skonfigurowana (brak klucza/workflow).");
         return;
       }
+      if (res.status === "no_credits") {
+        toast.error("Konto Didit bez kredytów na ten workflow", {
+          description:
+            "Workflow AML/KYB zawiera płatne kroki (AML, IP analysis, KYB) — " +
+            "darmowy plan obejmuje tylko dokument + liveness + face match. " +
+            "Doładuj konto na business.didit.me albo użyj workflow bez kroków płatnych.",
+        });
+        return;
+      }
       if (res.status === "ok") {
         window.open(res.url, "_blank", "noopener,noreferrer");
         toast.success(`Sesja ${kindLabel} utworzona — otwarto link weryfikacji`);

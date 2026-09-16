@@ -146,6 +146,17 @@ function IdentificationStep({ state, onDone }: { state: any; onDone: () => void 
     onSuccess: (res: any) => {
       if (res.status === "not_configured") {
         toast.error("Weryfikacja Didit nie jest jeszcze skonfigurowana.");
+      } else if (res.status === "no_credits") {
+        toast.error("Didit: brak kredytów na tę weryfikację", {
+          description: res.usingPaidWorkflow
+            ? "Używany jest workflow AML z płatnymi krokami (AML + IP analysis). " +
+              "Darmowy pakiet (500 weryfikacji/mies.) obejmuje tylko dokument + " +
+              "liveness + face match — ustaw DIDIT_WORKFLOW_ID_KYC_LITE na workflow " +
+              "bez kroków płatnych albo doładuj konto na business.didit.me."
+            : "Darmowy pakiet weryfikacji na koncie Didit został wyczerpany — " +
+              "doładuj konto na business.didit.me. Umowy możesz zaakceptować " +
+              "bez potwierdzenia tożsamości (krok opcjonalny).",
+        });
       } else if (res.status === "already_approved") {
         toast.success("Twoja tożsamość jest już potwierdzona.");
         onDone();
@@ -547,8 +558,8 @@ function OrderForm({ state, onDone }: { state: any; onDone: () => void }) {
     >
       {!ready ? (
         <p className="text-sm text-muted-foreground">
-          Formularz Zlecenia jest nieaktywny — najpierw zaakceptuj komplet dokumentów pakietu
-          (kroki 1–5).
+          Formularz Zlecenia jest nieaktywny — najpierw zaakceptuj komplet dokumentów pakietu (kroki
+          1–5).
         </p>
       ) : (
         <div className="space-y-4">

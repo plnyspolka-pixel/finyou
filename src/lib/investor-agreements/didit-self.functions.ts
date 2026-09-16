@@ -25,13 +25,16 @@ export const startInvestorSelfVerification = createServerFn({ method: "POST" })
     const {
       hasDiditConfig,
       createDiditSession,
-      selectWorkflowId,
+      selectSelfWorkflowId,
       diditAppUrl,
+      DiditCreditsError,
     } = await import("@/lib/didit.server");
     if (!hasDiditConfig()) return { status: "not_configured" as const };
 
     const kind = data.entityType === "firma" ? "kyb" : "kyc";
-    const workflowId = selectWorkflowId(kind as any);
+    // Workflow z darmowej półki Didit (dokument + liveness + face match);
+    // fallback na pełny workflow AML, gdy LITE nie jest ustawiony.
+    const workflowId = selectSelfWorkflowId(kind as any);
     if (!workflowId) return { status: "not_configured" as const, missingWorkflow: kind };
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -58,13 +61,30 @@ export const startInvestorSelfVerification = createServerFn({ method: "POST" })
     }
 
     const base = (data.callbackBase ?? diditAppUrl()).replace(/\/+$/, "");
-    const session = await createDiditSession({
-      workflowId,
-      vendorData,
-      callback: `${base}/inwestor/umowy?didit=return`,
-      language: "pl",
-      metadata: { purpose: "investor_agreements", user_id: userId, app: "finance-you" },
-    });
+    let session;
+    try {
+      session = await createDiditSession({
+        workflowId,
+        vendorData,
+        callback: `${base}/inwestor/umowy?didit=return`,
+        language: "pl",
+        metadata: { purpose: "investor_agreements", user_id: userId, app: "finance-you" },
+      });
+    } catch (e) {
+      // Brak kredytów to stan konta Didit, nie awaria aplikacji — UI pokazuje
+      // instrukcję (darmowy plan nie obejmuje kroków AML/IP/KYB).
+      if (e instanceof DiditCreditsError) {
+        return {
+          status: "no_credits" as const,
+          usingPaidWorkflow:
+            !process.env.DIDIT_WORKFLOW_ID_KYC_LITE &&
+            !process.env.DIDIT_WORKFLOW_ID_KYB_LITE &&
+            !process.env.DIDIT_WORKFLOW_ID_LITE,
+          detail: e.detail,
+        };
+      }
+      throw e;
+    }
 
     const { error: insErr } = await loose(supabaseAdmin).from("didit_verifications").insert({
       user_id: userId,

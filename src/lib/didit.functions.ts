@@ -10,6 +10,7 @@ import {
   hasDiditConfig,
   selectWorkflowId,
   diditAppUrl,
+  DiditCreditsError,
   type DiditWorkflowKind,
 } from "@/lib/didit.server";
 
@@ -74,19 +75,29 @@ export const startDiditVerification = createServerFn({ method: "POST" })
     const contactDetails: Record<string, unknown> = {};
     if (customer.email) contactDetails.email = customer.email;
 
-    const session = await createDiditSession({
-      workflowId,
-      vendorData: String(customer.id),
-      callback,
-      language: data.language ?? "pl",
-      contactDetails: Object.keys(contactDetails).length ? contactDetails : undefined,
-      metadata: {
-        aml_customer_id: customer.id,
-        entity_type: customer.entity_type,
-        display_name: customerLabel(customer),
-        app: "finance-you",
-      },
-    });
+    let session;
+    try {
+      session = await createDiditSession({
+        workflowId,
+        vendorData: String(customer.id),
+        callback,
+        language: data.language ?? "pl",
+        contactDetails: Object.keys(contactDetails).length ? contactDetails : undefined,
+        metadata: {
+          aml_customer_id: customer.id,
+          entity_type: customer.entity_type,
+          display_name: customerLabel(customer),
+          app: "finance-you",
+        },
+      });
+    } catch (e) {
+      // Workflow AML/KYB zawiera płatne kroki — bez kredytów Didit odrzuca
+      // sesję. Zwracamy status zamiast surowego błędu z API (po angielsku).
+      if (e instanceof DiditCreditsError) {
+        return { status: "no_credits" as const, detail: e.detail, workflowType: kind };
+      }
+      throw e;
+    }
 
     const row = {
       user_id: userId,

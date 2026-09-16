@@ -67,6 +67,47 @@ export function selectWorkflowId(kind: DiditWorkflowKind): string | null {
   return process.env.DIDIT_WORKFLOW_ID_KYC || fallback;
 }
 
+/**
+ * Workflow dla POTWIERDZENIA TOŻSAMOŚCI SAMEGO INWESTORA (pakiet umów).
+ *
+ * Darmowy plan Didit („free forever", ~500 weryfikacji/mies.) obejmuje wyłącznie
+ * ID Verification + Liveness + Face Match. Kroki AML / IP_ANALYSIS / KYB są
+ * płatne i zużywają kredyty — sesja z takim workflow kończy się błędem
+ * „You don't have enough credits…" nawet przy nietkniętym darmowym limicie.
+ *
+ * W kroku 1. umów potrzebujemy tylko „czy to naprawdę ta osoba" (komparycja),
+ * a nie screeningu AML — dlatego domyślnie celujemy w workflow z darmowej
+ * półki (DIDIT_WORKFLOW_ID_KYC_LITE / _KYB_LITE), a dopiero gdy go nie ma,
+ * schodzimy do pełnego workflow modułu AML.
+ */
+export function selectSelfWorkflowId(kind: DiditWorkflowKind): string | null {
+  const lite =
+    kind === "kyb"
+      ? process.env.DIDIT_WORKFLOW_ID_KYB_LITE
+      : process.env.DIDIT_WORKFLOW_ID_KYC_LITE;
+  return lite || process.env.DIDIT_WORKFLOW_ID_LITE || selectWorkflowId(kind);
+}
+
+/**
+ * Błąd „brak kredytów" z API Didit. Wyodrębniony, bo nie jest awarią integracji
+ * — to stan konta Didit (wyczerpany pakiet albo workflow z płatnymi krokami),
+ * który UI ma pokazać jako instrukcję, a nie jako surowy błąd po angielsku.
+ */
+export class DiditCreditsError extends Error {
+  readonly code = "no_credits" as const;
+  constructor(public readonly detail: string) {
+    super(
+      "Didit: konto nie ma kredytów na tę weryfikację. Darmowy plan obejmuje " +
+        "tylko dokument + liveness + face match — kroki AML/IP/KYB są płatne.",
+    );
+    this.name = "DiditCreditsError";
+  }
+}
+
+export function isDiditCreditsMessage(msg: string): boolean {
+  return /enough credits|insufficient credits|no credits|out of credits|top ?up/i.test(msg);
+}
+
 function requireApiKey(): string {
   const key = process.env.DIDIT_API_KEY;
   if (!key) throw new Error("Brak konfiguracji Didit (DIDIT_API_KEY).");
@@ -159,6 +200,7 @@ export async function createDiditSession(input: {
       (json.error as string) ||
       text ||
       `HTTP ${res.status}`;
+    if (isDiditCreditsMessage(msg)) throw new DiditCreditsError(msg);
     throw new Error(`Didit: nie udało się utworzyć sesji (${msg})`);
   }
 
