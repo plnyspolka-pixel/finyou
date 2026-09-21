@@ -21,15 +21,52 @@ export function requireAuth(ctx: ToolContext) {
   }
 }
 
-export function ok(payload: unknown, structured?: Record<string, unknown>) {
+/** Blok treści w wyniku narzędzia: tekst, obraz (base64) albo link do zasobu. */
+export type ContentBlock =
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mimeType: string }
+  | { type: "resource_link"; uri: string; name: string; mimeType?: string; description?: string };
+
+export function ok(
+  payload: unknown,
+  structured?: Record<string, unknown>,
+  extra: ContentBlock[] = [],
+) {
+  const content: ContentBlock[] = [
+    { type: "text", text: JSON.stringify(payload, null, 2) },
+    ...extra,
+  ];
   return {
-    content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }],
+    content,
     structuredContent:
       structured ??
       (typeof payload === "object" && payload !== null
         ? (payload as Record<string, unknown>)
         : { value: payload }),
   };
+}
+
+/**
+ * `ok` z dodatkowymi blokami (obrazy do podglądu w czacie, linki do plików).
+ * Claude.ai / Claude Code pokazują obrazy inline; klienci bez obsługi
+ * obrazów widzą sam tekst.
+ */
+export function okWith(
+  payload: unknown,
+  extra: ContentBlock[],
+  structured?: Record<string, unknown>,
+) {
+  return ok(payload, structured, extra);
+}
+
+/** Link do pliku (wideo, audio) jako blok wyniku — klient pokazuje go jako zasób. */
+export function linkBlock(
+  uri: string | null | undefined,
+  name: string,
+  mimeType?: string,
+  description?: string,
+): ContentBlock[] {
+  return uri ? [{ type: "resource_link", uri, name, mimeType, description }] : [];
 }
 
 export function fail(msg: string) {

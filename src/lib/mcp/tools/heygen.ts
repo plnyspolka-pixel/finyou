@@ -15,7 +15,9 @@ import {
   fail,
   handle,
   insertOne,
+  linkBlock,
   ok,
+  okWith,
   oneOf,
   patchOf,
   requireRolesAdmin,
@@ -37,6 +39,44 @@ const RESOLUTION = ["720p", "1080p"] as const;
 const CAPTIONS = ["burned", "sidecar", "off"] as const;
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/**
+ * Bloki podglądu do wyniku: miniatura (obraz), animowany GIF gotowego filmu
+ * (HeyGen v1) i link do pliku wideo. Klient bez obsługi obrazów zobaczy sam
+ * tekst z linkami — podgląd nigdy nie psuje wyniku.
+ */
+async function previewBlocks(
+  enabled: boolean,
+  v: {
+    videoId: string | null;
+    completed: boolean;
+    thumbnailUrl: string | null;
+    gifUrl: string | null;
+    videoUrl: string | null;
+    name: string;
+  },
+) {
+  const blocks = linkBlock(
+    v.videoUrl,
+    `${v.name}.mp4`,
+    "video/mp4",
+    "Gotowy film — otwórz w przeglądarce.",
+  );
+  if (!enabled) return blocks;
+  const { fetchImageBlock } = await import("@/lib/media-storage.server");
+  const thumb = await fetchImageBlock(v.thumbnailUrl);
+  if (thumb) blocks.push(thumb);
+  if (v.completed && v.videoId) {
+    let gifUrl = v.gifUrl;
+    if (!gifUrl) {
+      const hg = await import("@/lib/heygen-api.server");
+      gifUrl = await hg.getVideoGif(v.videoId);
+    }
+    const gif = await fetchImageBlock(gifUrl, 6 * 1024 * 1024);
+    if (gif) blocks.push(gif);
+  }
+  return blocks;
+}
 
 async function defaults() {
   const { HEYGEN_AVATARS, FILIP_VOICE_ID } = await import("@/lib/heygen-avatars");
@@ -136,6 +176,10 @@ export const listHeygenAvatars = defineTool({
     kind: z.enum(["avatar", "talking_photo"]).optional(),
     search: z.string().min(1).optional().describe("Fraza w nazwie / grupie."),
     limit: z.number().int().min(1).max(500).default(50),
+    preview: z
+      .boolean()
+      .default(false)
+      .describe("Pokaż w czacie podglądy (obrazy) pierwszych 6 awatarów z wyniku."),
   },
   annotations: READ,
   handler: (a, ctx: ToolContext) =>
@@ -153,11 +197,18 @@ export const listHeygenAvatars = defineTool({
           (i) => i.name.toLowerCase().includes(q) || (i.group ?? "").toLowerCase().includes(q),
         );
       }
-      return ok({
-        total: items.length,
-        default_avatar_id: d.avatarId,
-        avatars: items.slice(0, a.limit),
-      });
+      const avatars = items.slice(0, a.limit);
+      const payload = { total: items.length, default_avatar_id: d.avatarId, avatars };
+      if (!a.preview) return ok(payload);
+      const { fetchImageBlocks } = await import("@/lib/media-storage.server");
+      const images = await fetchImageBlocks(
+        avatars.map((i) => i.preview),
+        { max: 6 },
+      );
+      return okWith(
+        { ...payload, preview_of: avatars.slice(0, 6).map((i) => `${i.name} (${i.id})`) },
+        images,
+      );
     }),
 });
 
@@ -198,6 +249,7 @@ export const searchHeygenStock = defineTool({
     query: z.string().min(2).max(100),
     type: z.enum(["image", "video", "icon"]).default("image"),
     limit: z.number().int().min(1).max(50).default(20),
+    preview: z.boolean().default(false).describe("Pokaż w czacie pierwsze 4 grafiki z wyniku."),
   },
   annotations: READ,
   handler: (a, ctx: ToolContext) =>
@@ -205,7 +257,13 @@ export const searchHeygenStock = defineTool({
       await requireTeam(ctx);
       const hg = await import("@/lib/heygen-api.server");
       const items = await hg.searchStock(a.query, { type: a.type, limit: a.limit });
-      return ok({ total: items.length, items });
+      if (!a.preview) return ok({ total: items.length, items });
+      const { fetchImageBlocks } = await import("@/lib/media-storage.server");
+      const images = await fetchImageBlocks(
+        items.map((i) => i.thumbnail_url ?? (a.type === "image" ? i.url : null)),
+        { max: 4 },
+      );
+      return okWith({ total: items.length, items }, images);
     }),
 });
 
@@ -241,6 +299,10 @@ export const getHeygenVideo = defineTool({
       .enum(["captioned", "clean"])
       .default("captioned")
       .describe("Który plik skopiować: z napisami (jeśli jest) czy czysty."),
+    preview: z
+      .boolean()
+      .default(true)
+      .describe("Pokaż w czacie miniaturę i animowany podgląd GIF gotowego filmu."),
   },
   annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
   handler: (a, ctx: ToolContext) =>
@@ -249,13 +311,24 @@ export const getHeygenVideo = defineTool({
       const hg = await import("@/lib/heygen-api.server");
       const v = await hg.getVideo(a.video_id);
       const { raw: _raw, ...video } = v;
-      if (!a.store) return ok({ ...video });
+      const blocks = await previewBlocks(a.preview, {
+        videoId: v.video_id,
+        completed: v.status === "completed",
+        thumbnailUrl: v.thumbnail_url,
+        gifUrl: v.gif_url,
+        videoUrl: v.captioned_video_url ?? v.video_url,
+        name: v.title ?? v.video_id,
+      });
+      if (!a.store) return okWith({ ...video }, blocks);
       if (v.status !== "completed")
-        return ok({
-          ...video,
-          stored: null,
-          note: "Film nie jest jeszcze gotowy — zapis do Storage dopiero przy status=completed.",
-        });
+        return okWith(
+          {
+            ...video,
+            stored: null,
+            note: "Film nie jest jeszcze gotowy — zapis do Storage dopiero przy status=completed.",
+          },
+          blocks,
+        );
       const url = (a.variant === "captioned" ? v.captioned_video_url : null) ?? v.video_url;
       if (!url) return fail("HeyGen nie zwrócił adresu pliku.");
       const { fetchBytes, storeMedia } = await import("@/lib/media-storage.server");
@@ -267,11 +340,14 @@ export const getHeygenVideo = defineTool({
         name: v.title ?? v.video_id,
         ext: "mp4",
       });
-      return ok({
-        ...video,
-        stored,
-        stored_variant: url === v.captioned_video_url ? "captioned" : "clean",
-      });
+      return okWith(
+        {
+          ...video,
+          stored,
+          stored_variant: url === v.captioned_video_url ? "captioned" : "clean",
+        },
+        blocks,
+      );
     }),
 });
 
@@ -513,7 +589,13 @@ export const getStudioJob = defineTool({
   title: "Get studio video job",
   description:
     "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status, plan scen, wideo (czyste i z napisami), miniatura, napisy, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`). Tylko administrator/operator.",
-  inputSchema: { id: z.string().uuid() },
+  inputSchema: {
+    id: z.string().uuid(),
+    preview: z
+      .boolean()
+      .default(true)
+      .describe("Pokaż w czacie miniaturę i animowany podgląd gotowego filmu (do akceptacji)."),
+  },
   annotations: READ,
   handler: (a, ctx: ToolContext) =>
     handle(async () => {
@@ -523,7 +605,7 @@ export const getStudioJob = defineTool({
         "studio_video_jobs",
       );
       if (!job) return fail("Nie znaleziono zadania.");
-      let live: unknown = null;
+      let live: Record<string, any> | null = null;
       if (job.heygen_video_id && ["rendering", "uploading"].includes(job.status)) {
         try {
           const hg = await import("@/lib/heygen-api.server");
@@ -533,7 +615,15 @@ export const getStudioJob = defineTool({
           live = { error: errMsg(e) };
         }
       }
-      return ok({ job, live });
+      const blocks = await previewBlocks(a.preview, {
+        videoId: job.heygen_video_id,
+        completed: job.status === "ready" || live?.status === "completed",
+        thumbnailUrl: job.thumbnail_url ?? live?.thumbnail_url ?? null,
+        gifUrl: live?.gif_url ?? null,
+        videoUrl: job.video_url ?? live?.captioned_video_url ?? live?.video_url ?? null,
+        name: job.publish_title || job.prompt.slice(0, 80),
+      });
+      return okWith({ job, live }, blocks);
     }),
 });
 
@@ -601,7 +691,9 @@ export const generateStudioImage = defineTool({
       await requireTeam(ctx);
       const { generateStudioImage: gen } = await import("@/lib/studio-ai.server");
       const r = await gen(a.prompt, actorId(ctx));
-      return ok({ ok: true, ...r });
+      const { fetchImageBlock } = await import("@/lib/media-storage.server");
+      const img = await fetchImageBlock(r.image_url);
+      return okWith({ ok: true, ...r }, img ? [img] : []);
     }),
 });
 

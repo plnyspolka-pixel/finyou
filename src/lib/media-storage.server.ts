@@ -129,3 +129,40 @@ export async function fetchBytes(
   if (bytes.byteLength > maxBytes) throw new Error(`Plik za duży (limit ${maxBytes} B).`);
   return { bytes, contentType: res.headers.get("content-type") ?? "application/octet-stream" };
 }
+
+const INLINE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+
+/**
+ * Pobiera obraz spod adresu i zwraca blok `image` (base64) do wyniku
+ * narzędzia MCP — podgląd inline w czacie. `null`, gdy to nie obraz, jest za
+ * duży albo pobranie się nie powiodło (podgląd nigdy nie psuje wyniku).
+ */
+export async function fetchImageBlock(
+  url: string | null | undefined,
+  maxBytes = 3 * 1024 * 1024,
+): Promise<{ type: "image"; data: string; mimeType: string } | null> {
+  if (!url) return null;
+  try {
+    const { bytes, contentType } = await fetchBytes(url, maxBytes);
+    let mime = contentType.split(";")[0].trim().toLowerCase();
+    if (!mime.startsWith("image/")) {
+      const ext = /\.(png|jpe?g|webp|gif)(?:$|\?)/i.exec(url)?.[1]?.toLowerCase();
+      if (!ext) return null;
+      mime = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
+    }
+    if (!INLINE_IMAGE_TYPES.has(mime)) return null;
+    return { type: "image", data: Buffer.from(bytes).toString("base64"), mimeType: mime };
+  } catch {
+    return null;
+  }
+}
+
+/** Kilka obrazów naraz (pomija te, których nie da się pokazać). */
+export async function fetchImageBlocks(
+  urls: (string | null | undefined)[],
+  opts: { max?: number; maxBytes?: number } = {},
+): Promise<{ type: "image"; data: string; mimeType: string }[]> {
+  const picked = urls.filter((u): u is string => Boolean(u)).slice(0, opts.max ?? 4);
+  const blocks = await Promise.all(picked.map((u) => fetchImageBlock(u, opts.maxBytes)));
+  return blocks.filter((b): b is NonNullable<typeof b> => b !== null);
+}

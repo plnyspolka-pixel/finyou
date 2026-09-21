@@ -290,6 +290,16 @@ export async function getVideo(videoId: string): Promise<HeygenVideo> {
   };
 }
 
+/** Animowany podgląd GIF (API v1 zwraca `gif_url` dla gotowych filmów); `null`, gdy brak. */
+export async function getVideoGif(videoId: string): Promise<string | null> {
+  try {
+    const d = await heygenData("/v1/video_status.get", { query: { video_id: videoId } });
+    return typeof d?.gif_url === "string" && d.gif_url ? d.gif_url : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function deleteVideo(videoId: string): Promise<void> {
   try {
     await heygenRequest(`/v3/videos/${encodeURIComponent(videoId)}`, { method: "DELETE" });

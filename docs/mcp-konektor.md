@@ -372,6 +372,23 @@ Typowy przebieg w czacie: `generate_studio_script` → poprawki → `create_stud
 albo `queue_youtube_publication` / `queue_social_publication` z linkiem z
 `get_heygen_video {store: true}`.
 
+**Podgląd i akceptacja w czacie.** Protokół MCP przenosi w wyniku narzędzia
+tekst, obrazy i linki do zasobów — nie odtwarza wideo ani audio. Dlatego
+narzędzia zwracają do podglądu to, co da się pokazać w rozmowie:
+
+- `get_studio_job` i `get_heygen_video` (domyślnie `preview=true`) dołączają
+  miniaturę filmu, animowany GIF gotowego renderu (z API HeyGen v1, gdy jest
+  dostępny) oraz link do pliku MP4 jako zasób; Claude.ai i Claude Code
+  pokazują obrazy inline, film otwiera się po kliknięciu linku;
+- `generate_studio_image` pokazuje wygenerowaną grafikę od razu;
+- `list_heygen_avatars {preview: true}` i `search_heygen_stock {preview: true}`
+  pokazują podglądy awatarów / grafik ze stocku (do 6 / 4 obrazów).
+
+Akceptacja: agent pokazuje scenariusz, miniaturę i GIF, a publikacja rusza
+dopiero po Twoim „publikuj” — klient MCP dodatkowo pyta o zgodę przed
+`publish_studio_job`, więc nic nie wychodzi bez kliknięcia. ChatGPT może nie
+renderować obrazów z konektorów — tam zostaje link do pliku.
+
 **Kalkulatory**
 
 | Narzędzie                      | Co daje                                              |
