@@ -495,7 +495,7 @@ export const getInstagramAccountInsights = defineTool({
   name: "get_instagram_account_insights",
   title: "Get Instagram account insights",
   description:
-    "Statystyki konta Instagram w okresie: zasięg, obserwujący, wejścia na profil, zaangażowane konta, interakcje. Domyślnie ostatnie 7 dni po dniach. Tylko administrator/operator.",
+    "Statystyki konta Instagram: dla okresu dziennego zasięg, obserwujący, wejścia na profil, zaangażowane konta, interakcje; dla week / days_28 Meta udostępnia tylko zasięg. Domyślnie ostatnie 7 dni po dniach. Tylko administrator/operator.",
   inputSchema: {
     period: z.enum(["day", "week", "days_28"]).default("day"),
     since: z.string().optional(),

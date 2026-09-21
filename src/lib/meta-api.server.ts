@@ -338,12 +338,13 @@ export async function getIgAccountInsights(
   } = {},
 ) {
   const period = opts.period ?? "day";
-  // profile_views Meta zwraca tylko dla okresu dziennego; przy week / days_28
-  // pomijamy je w domyślnej liście zamiast dostać błąd (#100).
+  // Poza okresem dziennym Meta przyjmuje tylko `reach` (follower_count,
+  // profile_views, accounts_engaged, total_interactions → błąd #100 dla
+  // week / days_28), więc domyślna lista zależy od okresu.
   const defaults =
     period === "day"
       ? "reach,follower_count,profile_views,accounts_engaged,total_interactions"
-      : "reach,follower_count,accounts_engaged,total_interactions";
+      : "reach";
   const metrics = (opts.metrics ?? defaults)
     .split(",")
     .map((m) => m.trim())
