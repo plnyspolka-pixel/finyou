@@ -98,7 +98,7 @@ export type HeygenVideoResult = {
 // Wysyła `POST /v3/videos` i schodzi po drabinie napisów, gdy HeyGen odrzuci
 // ich konfigurację. Odrzucony styl nie może od razu kasować napisów w ogóle —
 // wcześniej jeden 422 na `style` gasił je całkowicie.
-async function sendVideoCreate(
+export async function sendVideoCreate(
   base: Record<string, unknown>,
   want: CaptionMode,
 ): Promise<HeygenVideoResult> {

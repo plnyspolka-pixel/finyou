@@ -15,7 +15,9 @@ kryteria instytucji, dostępy, windykacja, treści) oraz wysyła wiadomości
 ElevenLabs (Ania, A1–A3), generuje głos, muzykę, dubbing i wideo, sięga do
 Twilio (SMS-y, połączenia, nagrania), prowadzi Facebooka, Instagram, Messenger
 i Meta Ads (posty, komentarze, statystyki, kampanie, formularze leadów, piksel)
-oraz kanał YouTube (filmy, komentarze, kolejka Shorts). Nic nie dzieje się
+oraz kanał YouTube (filmy, komentarze, kolejka Shorts), a przez HeyGen
+produkuje filmy z awatarem (Studio publikacji, Awatar FAQ, szablony,
+tłumaczenia). Nic nie dzieje się
 automatycznie: każdy zapis to wywołanie na polecenie użytkownika w czacie, a
 klient MCP (Claude.ai / ChatGPT) prosi o potwierdzenie przed każdym narzędziem
 zapisującym. Żadnych cyklicznych maili ani pushy z tego modułu.
@@ -37,6 +39,8 @@ zapisującym. Żadnych cyklicznych maili ani pushy z tego modułu.
 | Klient Meta Graph API (strona, IG, Ads, CAPI)      | `src/lib/meta-api.server.ts`                                                                                                                                            |
 | Klient YouTube Data API v3 (token kanału)          | `src/lib/youtube-api.server.ts`                                                                                                                                         |
 | Narzędzia Meta i YouTube                           | `src/lib/mcp/tools/meta.ts`, `src/lib/mcp/tools/youtube.ts`                                                                                                             |
+| Klient API HeyGen (awatary, filmy, szablony)       | `src/lib/heygen-api.server.ts` (render studyjny reużywa `src/lib/avatar-faq.server.ts`)                                                                                 |
+| Narzędzia HeyGen, Studio publikacji i Awatar FAQ   | `src/lib/mcp/tools/heygen.ts`                                                                                                                                           |
 | Trasy protokołu (generowane przez plugin)          | `src/routes/[.mcp]/*`, `src/routes/[.well-known]/*`, `src/routes/mcp.ts`                                                                                                |
 | Strona zgody OAuth                                 | `src/routes/[.]lovable.oauth.consent.tsx` (`/.lovable/oauth/consent`)                                                                                                   |
 | Manifest narzędzi (generowany)                     | `.lovable/mcp/manifest.json`                                                                                                                                            |
@@ -340,6 +344,34 @@ trzeba **raz ponownie połączyć** w panelu; upload i odczyt działają na star
 | `queue_youtube_publication`, `cancel_youtube_queue_item`, `publish_youtube_queue_item_now` | Kolejka Shorts z panelu: dodanie (MP4 https, pion 9:16), anulowanie, publikacja od ręki. |
 | `youtube_api_request`                                                                      | Dowolne wywołanie YouTube Data API v3 tokenem kanału.                                    |
 
+**HeyGen — filmy z awatarem, Studio publikacji, Awatar FAQ** (administrator/
+operator; usuwanie, wpisy Awatara FAQ i ogólne wywołanie — administrator).
+Klucz: `HEYGEN_API_KEY`; lektor domyślnie z ElevenLabs (głos Filipa), awatar
+domyślnie digital twin Filipa. Generowanie zużywa kredyty HeyGen.
+
+| Narzędzie                                                                             | Co daje                                                                                                                                              |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `heygen_status`                                                                       | Klucz, pozostałe kredyty, liczba awatarów, domyślny awatar i głos, zadania Studia po statusach (ostatni błąd), filmy Awatara FAQ.                    |
+| `list_heygen_avatars`, `list_heygen_voices`, `search_heygen_stock`                    | Własne i publiczne awatary (podgląd), głosy wbudowane HeyGen (filtr języka), biblioteka stocku (grafiki, klipy).                                     |
+| `list_heygen_videos`, `get_heygen_video`                                              | Filmy na koncie; status jednego filmu z linkami (czysty / z napisami / SRT); `store=true` kopiuje gotowy plik do Storage (linki HeyGen wygasają).    |
+| `generate_avatar_video`                                                               | Film awatara poza kolejką: tekst (ElevenLabs albo głos HeyGen), gotowe audio (URL / asset); kadr 9:16 / 16:9 / 1:1, napisy wypalone lub SRT.         |
+| `upload_heygen_asset`                                                                 | Plik spod https (audio, obraz, wideo) do biblioteki HeyGen → asset_id.                                                                               |
+| `list_heygen_templates`, `get_heygen_template`, `generate_heygen_template_video`      | Szablony ze zmiennymi i generowanie filmu z szablonu.                                                                                                |
+| `list_heygen_translate_languages`, `translate_heygen_video`, `get_heygen_translation` | Tłumaczenie filmu (dubbing z synchronizacją ust) i status z linkiem (`store=true`).                                                                  |
+| `delete_heygen_video`                                                                 | Usuwa film z konta HeyGen (admin).                                                                                                                   |
+| `generate_studio_script`, `generate_studio_prompts`, `generate_studio_image`          | Scenariusz mówiony + tytuł/opis/hashtagi (AI albo baza 250 pytań Shorts), pomysły na treści, grafika AI do galerii Studia (`list_studio_images`).    |
+| `create_studio_video_job`, `get_studio_job`, `update_studio_job`                      | Zadanie Studia (prompt / scenariusz / pytanie z bazy, awatar, głos, napisy, przebitki, auto-publikacja); od razu (`start_now`) albo w kolejce ticka. |
+| `retry_studio_job`, `delete_studio_job`, `poll_studio_jobs`, `run_studio_video_tick`  | Powtórka nieudanego, usunięcie (admin), domknięcie renderów, przebieg ticka od ręki (przetwarza 2 zadania z kolejki).                                |
+| `publish_studio_job`                                                                  | Gotowy film ze Studia do kolejek YouTube / Facebook / Instagram — tick publikuje zaraz potem (realna publikacja, po potwierdzeniu).                  |
+| `list_avatar_faqs`, `create_avatar_faq`, `update_avatar_faq`, `delete_avatar_faq`     | Wpisy Awatara FAQ (Filip na stronie): pytanie, odpowiedź czytana przez awatara, kolejność, publikacja (admin).                                       |
+| `generate_avatar_faq_video`, `poll_avatar_faq_video`                                  | Film do wpisu FAQ (ElevenLabs → HeyGen) i zapis gotowego linku (admin).                                                                              |
+| `heygen_api_request`                                                                  | Dowolne wywołanie API HeyGen v1/v2/v3 (Avatar IV, grupy awatarów, webhooki…); binaria do Storage.                                                    |
+
+Typowy przebieg w czacie: `generate_studio_script` → poprawki → `create_studio_video_job`
+(`start_now=true`) → `get_studio_job` / `poll_studio_jobs` → `publish_studio_job`
+albo `queue_youtube_publication` / `queue_social_publication` z linkiem z
+`get_heygen_video {store: true}`.
+
 **Kalkulatory**
 
 | Narzędzie                      | Co daje                                              |
@@ -439,7 +471,8 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
    META_PAGE_ID + META_PAGE_ACCESS_TOKEN (strona, Messenger, formularze), META_IG_USER_ID +
    META_IG_PAGE_ACCESS_TOKEN (Instagram), META_ACCESS_TOKEN (Meta Ads), FB_PIXEL_ACCESS_TOKEN
    (Conversions API), YOUTUBE_CLIENT_ID + YOUTUBE_CLIENT_SECRET (+ YOUTUBE_REDIRECT_URI, jeśli inny
-   niż domyślny), ELEVENLABS_API_KEY (boty, głos, media) i AGENT_TOOLS_SECRET. Nie pokazuj mi
+   niż domyślny), ELEVENLABS_API_KEY (boty, głos, media), HEYGEN_API_KEY (filmy z awatarem)
+   i AGENT_TOOLS_SECRET. Nie pokazuj mi
    wartości sekretów, tylko czy są. Sprawdź w Meta (Business → Użytkownicy systemowi / token strony),
    czy token strony ma pages_manage_posts, pages_manage_engagement, pages_messaging,
    read_insights, leads_retrieval, a token IG instagram_content_publish,
@@ -510,7 +543,19 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
       list_youtube_comments albo update_youtube_video zwraca 403 z podpowiedzią o zakresie —
       to oczekiwane do czasu ponownego połączenia kanału; wpisz to w raporcie. NIE wołaj
       update_youtube_video, reply_youtube_comment, delete_youtube_video ani
-      publish_youtube_queue_item_now.
+      publish_youtube_queue_item_now;
+   m) HEYGEN: tools/call heygen_status → api_key_configured:true, quota z kredytami, awatary
+      (mine ≥ 1, w tym awatar Filipa), zadania Studia po statusach; list_heygen_avatars {} →
+      własne awatary; list_heygen_voices {language: "Polish"} → głosy; list_heygen_videos
+      {limit: 5} → filmy; get_heygen_video {video_id: <id gotowego filmu z listy>} → status
+      completed z video_url; list_studio_jobs {limit: 5} i list_avatar_faqs {limit: 5} → wiersze;
+      generate_studio_script {prompt: "Czy mogę dostać pożyczkę pod dom z hipoteką?"} → scenariusz,
+      tytuł, opis, hashtagi (nic nie zapisuje). ZAPIS: create_studio_video_job {prompt: "Test MCP",
+      script: "To jest test konektora Finance You. Dziękuję.", publish_title: "Test MCP",
+      start_now: false} → zadanie w statusie queued (NIE uruchamiaj run_studio_video_tick ani
+      start_now — zużywają kredyty), potem delete_studio_job {id} → usunięte. NIE wołaj
+      generate_avatar_video, publish_studio_job, generate_avatar_faq_video ani
+      delete_heygen_video.
    Po testach usuń lead testowy (albo zostaw oznaczony jako zły z powodem "test") i link testowy.
 
 6. Raport dla mnie: tabela kroków 1–5 z ✅/❌, dokładne odpowiedzi z punktu 4, id leada testowego,

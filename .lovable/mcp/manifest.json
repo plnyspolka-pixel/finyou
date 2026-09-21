@@ -10488,6 +10488,1284 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "outputSchema": null
+      },
+      {
+        "name": "heygen_status",
+        "title": "HeyGen status",
+        "description": "Stan integracji HeyGen: klucz API, pozostałe kredyty, liczba awatarów (moje / publiczne / ze zdjęcia), domyślny awatar i głos (Filip), zadania Studia po statusach z ostatnim błędem, filmy Awatar FAQ. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_heygen_avatars",
+        "title": "List HeyGen avatars",
+        "description": "Awatary dostępne na koncie HeyGen: własne (digital twin Filipa, grupy, awatary ze zdjęć) i publiczne — id, nazwa, rodzaj, podgląd. Domyślnie tylko własne; `mine_only=false` dodaje publiczne (kilkaset). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "mine_only": {
+              "type": "boolean",
+              "default": true
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "avatar",
+                "talking_photo"
+              ]
+            },
+            "search": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Fraza w nazwie / grupie."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_heygen_voices",
+        "title": "List HeyGen voices",
+        "description": "Głosy wbudowane HeyGen (do `generate_avatar_video` z `heygen_voice_id`): id, nazwa, język, płeć, próbka. Domyślny lektor Finance You to głos ElevenLabs (Filip) — tych głosów używa się, gdy tekst ma czytać HeyGen. Filtr `language` np. `Polish`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "language": {
+              "type": "string",
+              "minLength": 2
+            },
+            "gender": {
+              "type": "string",
+              "enum": [
+                "male",
+                "female"
+              ]
+            },
+            "search": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_heygen_stock",
+        "title": "Search HeyGen stock library",
+        "description": "Szuka w bibliotece stocku HeyGen (grafiki, ikony, klipy) po frazie po angielsku — do przebitek i teł. Zwraca adresy plików. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "image",
+                "video",
+                "icon"
+              ],
+              "default": "image"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_heygen_videos",
+        "title": "List HeyGen videos",
+        "description": "Filmy na koncie HeyGen (wszystkie, także spoza Studia): id, status, tytuł, typ, data, miniatura. Stronicowanie `token`. Powiązanie z zadaniami Studia: kolumna heygen_video_id w `list_studio_jobs`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "token": {
+              "type": "string",
+              "description": "`next_token` z poprzedniej strony."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_heygen_video",
+        "title": "Get HeyGen video status",
+        "description": "Status i pliki jednego filmu HeyGen: status (pending / processing / completed / failed), link do wideo (czysty master i wersja z wypalonymi napisami), miniatura, napisy SRT, długość, błąd. Linki HeyGen wygasają po ~7 dniach — `store=true` kopiuje gotowy plik do Storage (trwały publiczny link, np. do `queue_youtube_publication`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "video_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "store": {
+              "type": "boolean",
+              "default": false
+            },
+            "variant": {
+              "type": "string",
+              "enum": [
+                "captioned",
+                "clean"
+              ],
+              "default": "captioned",
+              "description": "Który plik skopiować: z napisami (jeśli jest) czy czysty."
+            }
+          },
+          "required": [
+            "video_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_avatar_video",
+        "title": "Generate avatar video (HeyGen)",
+        "description": "Zleca HeyGen film z awatarem poza kolejką Studia. Źródło lektora: `script` (tekst → głos ElevenLabs, domyślnie Filip; z `heygen_voice_id` czyta HeyGen), `audio_url` (gotowe MP3/WAV https) albo `audio_asset_id`. Awatar domyślnie digital twin Filipa, kadr 9:16 720p, napisy jako plik SRT (`captions=burned` wypala w obrazie — do rolek). Zwraca video_id do `get_heygen_video` (render trwa kilka minut). Zużywa kredyty HeyGen. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "script": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 5000
+            },
+            "audio_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "audio_asset_id": {
+              "type": "string"
+            },
+            "avatar_id": {
+              "type": "string",
+              "description": "Domyślnie awatar Filipa."
+            },
+            "voice_id": {
+              "type": "string",
+              "description": "Głos ElevenLabs dla `script` (domyślnie Filip)."
+            },
+            "heygen_voice_id": {
+              "type": "string",
+              "description": "Głos HeyGen — wtedy tekst czyta HeyGen zamiast ElevenLabs."
+            },
+            "character_kind": {
+              "type": "string",
+              "enum": [
+                "avatar",
+                "talking_photo"
+              ],
+              "default": "avatar"
+            },
+            "aspect_ratio": {
+              "type": "string",
+              "enum": [
+                "9:16",
+                "16:9",
+                "1:1"
+              ],
+              "default": "9:16"
+            },
+            "resolution": {
+              "type": "string",
+              "enum": [
+                "720p",
+                "1080p"
+              ],
+              "default": "720p"
+            },
+            "captions": {
+              "type": "string",
+              "enum": [
+                "burned",
+                "sidecar",
+                "off"
+              ],
+              "default": "sidecar"
+            },
+            "background_color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$",
+              "default": "#101728"
+            },
+            "background_image_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Tylko z `heygen_voice_id`."
+            },
+            "background_video_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Tylko z `heygen_voice_id`."
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "speed": {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 1.5
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upload_heygen_asset",
+        "title": "Upload asset to HeyGen",
+        "description": "Wgrywa plik spod adresu https (audio, obraz, wideo; do 100 MB) do biblioteki HeyGen i zwraca asset_id — do `generate_avatar_video` (`audio_asset_id`) albo `heygen_api_request`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "filename": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_heygen_templates",
+        "title": "List HeyGen templates",
+        "description": "Szablony wideo na koncie HeyGen (id, nazwa, miniatura) — do `generate_heygen_template_video`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_heygen_template",
+        "title": "Get HeyGen template",
+        "description": "Szczegóły szablonu HeyGen wraz ze zmiennymi (teksty, obrazy, wideo, awatary), które można podstawić przy generowaniu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "template_id": {
+              "type": "string",
+              "minLength": 5
+            }
+          },
+          "required": [
+            "template_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_heygen_template_video",
+        "title": "Generate video from HeyGen template",
+        "description": "Generuje film z szablonu HeyGen z podstawionymi zmiennymi (`variables` w formacie z `get_heygen_template`). Zwraca video_id do `get_heygen_video`. Zużywa kredyty. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "template_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "variables": {
+              "type": "object",
+              "additionalProperties": {},
+              "default": {}
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "caption": {
+              "type": "boolean",
+              "default": false
+            },
+            "aspect_ratio": {
+              "type": "string",
+              "enum": [
+                "9:16",
+                "16:9",
+                "1:1"
+              ]
+            },
+            "resolution": {
+              "type": "string",
+              "enum": [
+                "720p",
+                "1080p"
+              ],
+              "default": "720p"
+            }
+          },
+          "required": [
+            "template_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_heygen_translate_languages",
+        "title": "List HeyGen translation languages",
+        "description": "Języki docelowe tłumaczenia wideo HeyGen (do `translate_heygen_video`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "translate_heygen_video",
+        "title": "Translate video (HeyGen)",
+        "description": "Zleca HeyGen tłumaczenie filmu spod adresu https na inny język (dubbing z synchronizacją ust; `translate_audio_only=true` tylko ścieżka audio). Zwraca video_translate_id do `get_heygen_translation`. Zużywa kredyty. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "video_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "output_language": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Nazwa języka z `list_heygen_translate_languages`, np. `English`."
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "translate_audio_only": {
+              "type": "boolean",
+              "default": false
+            },
+            "speaker_num": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          },
+          "required": [
+            "video_url",
+            "output_language"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_heygen_translation",
+        "title": "Get HeyGen translation status",
+        "description": "Status tłumaczenia wideo HeyGen i link do gotowego pliku. `store=true` kopiuje gotowy plik do Storage. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "translate_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "store": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "translate_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_heygen_video",
+        "title": "Delete HeyGen video",
+        "description": "Usuwa film z konta HeyGen — nieodwracalnie (kopie w Storage i w kolejkach publikacji zostają). Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "video_id": {
+              "type": "string",
+              "minLength": 5
+            }
+          },
+          "required": [
+            "video_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_studio_job",
+        "title": "Get studio video job",
+        "description": "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status, plan scen, wideo (czyste i z napisami), miniatura, napisy, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_studio_script",
+        "title": "Generate studio script (AI)",
+        "description": "Pisze scenariusz mówiony (60–140 słów, hook, bez didaskaliów) dla krótkiego wideo z awatarem z promptu — plus tytuł, opis i hashtagi do publikacji. `question_id` z bazy 250 pytań Shorts daje gotowy, sprawdzony scenariusz bez AI. Nic nie zapisuje — wynik możesz przekazać do `create_studio_video_job`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 2000
+            },
+            "question_id": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_studio_prompts",
+        "title": "Generate studio prompt ideas (AI)",
+        "description": "Generuje pomysły (prompty) na wideo z awatarem, grafiki albo posty social na zadany temat. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "video",
+                "image",
+                "social"
+              ],
+              "default": "video"
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 5
+            }
+          },
+          "required": [
+            "topic"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_studio_image",
+        "title": "Generate studio image (AI)",
+        "description": "Generuje grafikę AI z promptu (po angielsku działa najlepiej), zapisuje ją w Storage i w galerii Studia (`list_studio_images`); zwraca publiczny link — np. na tło, do posta albo `publish_facebook_post`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 1000
+            }
+          },
+          "required": [
+            "prompt"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_studio_images",
+        "title": "List studio images",
+        "description": "Galeria grafik AI ze Studia: prompt, publiczny link, autor, data. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w prompcie."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_studio_video_job",
+        "title": "Create studio video job",
+        "description": "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 2000,
+              "description": "Temat / brief odcinka."
+            },
+            "script": {
+              "type": "string",
+              "maxLength": 5000,
+              "description": "Gotowy tekst lektora; pusty = AI."
+            },
+            "question_id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "avatar_id": {
+              "type": "string"
+            },
+            "voice_id": {
+              "type": "string",
+              "description": "Głos ElevenLabs; domyślnie Filip."
+            },
+            "captions": {
+              "type": "boolean",
+              "default": true
+            },
+            "dynamic_scenes": {
+              "type": "boolean",
+              "default": false,
+              "description": "Przebitki ze stocku między ujęciami awatara."
+            },
+            "auto_publish_platforms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "youtube",
+                  "facebook_post",
+                  "facebook_reels",
+                  "instagram_reels"
+                ]
+              },
+              "default": []
+            },
+            "publish_privacy": {
+              "type": "string",
+              "enum": [
+                "public",
+                "unlisted",
+                "private"
+              ],
+              "default": "public"
+            },
+            "publish_title": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "publish_description": {
+              "type": "string",
+              "maxLength": 5000
+            },
+            "start_now": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_studio_job",
+        "title": "Update studio video job",
+        "description": "Zmienia zadanie Studia: scenariusz, awatar, głos, napisy i przebitki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "script": {
+              "type": "string",
+              "maxLength": 5000
+            },
+            "avatar_id": {
+              "type": "string"
+            },
+            "voice_id": {
+              "type": "string"
+            },
+            "captions": {
+              "type": "boolean"
+            },
+            "dynamic_scenes": {
+              "type": "boolean"
+            },
+            "publish_title": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "publish_description": {
+              "type": "string",
+              "maxLength": 5000
+            },
+            "publish_privacy": {
+              "type": "string",
+              "enum": [
+                "public",
+                "unlisted",
+                "private"
+              ]
+            },
+            "auto_publish_platforms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "youtube",
+                  "facebook_post",
+                  "facebook_reels",
+                  "instagram_reels"
+                ]
+              }
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "retry_studio_job",
+        "title": "Retry failed studio job",
+        "description": "Wraca nieudane zadanie Studia (failed) do kolejki: czyści błąd i poprzedni render, tick lub `run_studio_video_tick` przetworzy je ponownie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_studio_job",
+        "title": "Delete studio video job",
+        "description": "Usuwa zadanie Studia z panelu (film w HeyGen i wpisy w kolejkach publikacji zostają). Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "publish_studio_job",
+        "title": "Publish studio video to channels",
+        "description": "Wysyła gotowy film ze Studia (status ready) do kolejek publikacji: YouTube Shorts i/lub Facebook (post, rolka) i Instagram (rolka) — tick opublikuje je zaraz potem bez dalszego udziału człowieka. To realna publikacja; użyj po potwierdzeniu tytułu, opisu i kanałów. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": false,
+          "destructiveHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "platforms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "youtube",
+                  "facebook_post",
+                  "facebook_reels",
+                  "instagram_reels"
+                ]
+              },
+              "minItems": 1
+            },
+            "publish_privacy": {
+              "type": "string",
+              "enum": [
+                "public",
+                "unlisted",
+                "private"
+              ],
+              "description": "Prywatność na YouTube."
+            },
+            "publish_title": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "publish_description": {
+              "type": "string",
+              "maxLength": 5000
+            }
+          },
+          "required": [
+            "id",
+            "platforms"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "poll_studio_jobs",
+        "title": "Poll rendering studio jobs",
+        "description": "Odpytuje HeyGen o wszystkie zadania Studia w statusie rendering i domyka gotowe (zapis linków, auto-publikacja jeśli ustawiona) albo nieudane. To, co robi tick co 10 min — bez czekania. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "run_studio_video_tick",
+        "title": "Run studio video tick now",
+        "description": "Uruchamia od razu pełny przebieg ticka Studia: przetwarza do 2 zadań z kolejki (scenariusz AI → głos → render HeyGen; zużywa kredyty) i domyka rendery. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_avatar_faqs",
+        "title": "List avatar FAQ entries",
+        "description": "Pytania Awatara FAQ (Filip na stronie): pytanie, odpowiedź czytana przez awatara, kolejność, intro, publikacja, status filmu HeyGen, linki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "published": {
+              "type": "boolean",
+              "description": "Tylko opublikowane / nieopublikowane."
+            },
+            "video_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status filmu (idle, generating_audio, uploading, rendering, ready, failed)."
+            },
+            "search": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w pytaniu lub odpowiedzi."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Ile wierszy (domyślnie 50, maks. 200)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_avatar_faq",
+        "title": "Create avatar FAQ entry",
+        "description": "Dodaje pytanie do Awatara FAQ (bez filmu; nieopublikowane, dopóki nie ustawisz `is_published`). Film generuje `generate_avatar_faq_video`. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "question": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 300
+            },
+            "answer_text": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3000,
+              "description": "Tekst, który czyta awatar."
+            },
+            "sort_order": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "is_intro": {
+              "type": "boolean",
+              "default": false
+            },
+            "is_published": {
+              "type": "boolean",
+              "default": false
+            },
+            "avatar_id": {
+              "type": "string"
+            },
+            "voice_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "question",
+            "answer_text"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_avatar_faq",
+        "title": "Update avatar FAQ entry",
+        "description": "Zmienia pytanie Awatara FAQ: treść, odpowiedź (po zmianie odpowiedzi wygeneruj film ponownie), kolejność, intro, publikację, awatar, głos. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "question": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 300
+            },
+            "answer_text": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3000
+            },
+            "sort_order": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "is_intro": {
+              "type": "boolean"
+            },
+            "is_published": {
+              "type": "boolean"
+            },
+            "avatar_id": {
+              "type": "string"
+            },
+            "voice_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_avatar_faq_video",
+        "title": "Generate avatar FAQ video",
+        "description": "Generuje film Awatara FAQ dla wpisu: odpowiedź → głos ElevenLabs → HeyGen (awatar i głos z wpisu). Status śledzi `poll_avatar_faq_video`; gotowy film pojawia się na stronie po opublikowaniu wpisu. Zużywa kredyty. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "faq_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "faq_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "poll_avatar_faq_video",
+        "title": "Poll avatar FAQ video",
+        "description": "Sprawdza w HeyGen status filmu wpisu Awatara FAQ i zapisuje gotowy link / błąd we wpisie. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "faq_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "faq_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_avatar_faq",
+        "title": "Delete avatar FAQ entry",
+        "description": "Usuwa wpis Awatara FAQ (znika ze strony). Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "heygen_api_request",
+        "title": "Raw HeyGen API request",
+        "description": "Dowolne wywołanie API HeyGen (ścieżka /v1/…, /v2/… albo /v3/…; GET/POST/PUT/DELETE; parametry zapytania; body JSON) — do funkcji bez dedykowanego narzędzia (Avatar IV, grupy awatarów, webhooki, foldery). `host=upload` kieruje na upload.heygen.com. Odpowiedź binarna trafia do Storage jako podpisany link. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^\\/v[123]\\/"
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE"
+              ],
+              "default": "GET"
+            },
+            "query": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            },
+            "json": {},
+            "host": {
+              "type": "string",
+              "enum": [
+                "api",
+                "upload"
+              ],
+              "default": "api"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
       }
     ]
   }
