@@ -17,7 +17,8 @@ Twilio (SMS-y, połączenia, nagrania), prowadzi Facebooka, Instagram, Messenger
 i Meta Ads (posty, komentarze, statystyki, kampanie, formularze leadów, piksel)
 oraz kanał YouTube (filmy, komentarze, kolejka Shorts), a przez HeyGen
 produkuje filmy z awatarem (Studio publikacji, Awatar FAQ, szablony,
-tłumaczenia). Nic nie dzieje się
+tłumaczenia), a z Google Search Console, GA4 i PageSpeed czyta, jak strona
+się pozycjonuje i ile ma ruchu. Nic nie dzieje się
 automatycznie: każdy zapis to wywołanie na polecenie użytkownika w czacie, a
 klient MCP (Claude.ai / ChatGPT) prosi o potwierdzenie przed każdym narzędziem
 zapisującym. Żadnych cyklicznych maili ani pushy z tego modułu.
@@ -41,6 +42,9 @@ zapisującym. Żadnych cyklicznych maili ani pushy z tego modułu.
 | Narzędzia Meta i YouTube                           | `src/lib/mcp/tools/meta.ts`, `src/lib/mcp/tools/youtube.ts`                                                                                                             |
 | Klient API HeyGen (awatary, filmy, szablony)       | `src/lib/heygen-api.server.ts` (render studyjny reużywa `src/lib/avatar-faq.server.ts`)                                                                                 |
 | Narzędzia HeyGen, Studio publikacji i Awatar FAQ   | `src/lib/mcp/tools/heygen.ts`                                                                                                                                           |
+| Uwierzytelnienie Google (konto usługi / OAuth)     | `src/lib/google-auth.server.ts`                                                                                                                                         |
+| Klient Search Console, Indexing, GA4, PageSpeed    | `src/lib/google-search.server.ts`                                                                                                                                       |
+| Narzędzia Google (pozycjonowanie, ruch)            | `src/lib/mcp/tools/google.ts`                                                                                                                                           |
 | Trasy protokołu (generowane przez plugin)          | `src/routes/[.mcp]/*`, `src/routes/[.well-known]/*`, `src/routes/mcp.ts`                                                                                                |
 | Strona zgody OAuth                                 | `src/routes/[.]lovable.oauth.consent.tsx` (`/.lovable/oauth/consent`)                                                                                                   |
 | Manifest narzędzi (generowany)                     | `.lovable/mcp/manifest.json`                                                                                                                                            |
@@ -382,12 +386,51 @@ narzędzia zwracają do podglądu to, co da się pokazać w rozmowie:
   pokazują obrazy inline, film otwiera się po kliknięciu linku;
 - `generate_studio_image` pokazuje wygenerowaną grafikę od razu;
 - `list_heygen_avatars {preview: true}` i `search_heygen_stock {preview: true}`
-  pokazują podglądy awatarów / grafik ze stocku (do 6 / 4 obrazów).
+  pokazują podglądy awatarów / grafik ze stocku (do 6 / 4 obrazów);
+- to samo w Meta i YouTube: `get_instagram_media`, `get_facebook_post` i
+  `get_youtube_video` pokazują obraz / kadr / miniaturę domyślnie, a listy
+  (`list_instagram_media`, `list_facebook_posts`, `list_meta_ads`,
+  `list_youtube_videos`, `get_messenger_conversation` — załączniki klienta)
+  po podaniu `preview: true` (do 4 obrazów);
+- listy z panelu z kolumną obrazu też mają `preview: true`:
+  `list_studio_images`, `list_studio_jobs`, `list_avatar_faqs`,
+  `list_social_posts`, `list_publish_queue`.
 
 Akceptacja: agent pokazuje scenariusz, miniaturę i GIF, a publikacja rusza
 dopiero po Twoim „publikuj” — klient MCP dodatkowo pyta o zgodę przed
 `publish_studio_job`, więc nic nie wychodzi bez kliknięcia. ChatGPT może nie
 renderować obrazów z konektorów — tam zostaje link do pliku.
+
+**Google — pozycjonowanie i ruch** (administrator/operator; usuwanie map
+witryny, Indexing API i ogólne wywołanie — administrator). Uwierzytelnienie:
+konto usługi `GOOGLE_SERVICE_ACCOUNT_JSON` (zalecane) albo token kanału YouTube
+połączonego w panelu (zgoda obejmuje teraz Search Console, GA4 i Indexing).
+Witryna: `GSC_SITE_URL` (domyślnie `sc-domain:financeyou.pl`), GA4:
+`GA4_PROPERTY_ID`, PageSpeed opcjonalnie `PAGESPEED_API_KEY`.
+
+| Narzędzie                                                | Co daje                                                                                                                                     |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `google_search_status`                                   | Sposób uwierzytelnienia, e-mail konta usługi (do dodania w GSC / GA4), witryny z uprawnieniami, mapy witryny, aktywni użytkownicy GA4.      |
+| `get_search_performance`                                 | Kliknięcia, wyświetlenia, CTR, pozycja w dowolnym podziale (zapytanie, strona, kraj, urządzenie, data, wygląd) z filtrami.                  |
+| `get_search_trend`                                       | Dzień po dniu i tygodniami + porównanie z poprzednim okresem (zmiany w %).                                                                  |
+| `get_top_queries`, `get_top_pages`                       | Najważniejsze frazy i podstrony; rozkład pozycji (top 3 / top 10 / 11–20 / 21–50 / dalej).                                                  |
+| `get_page_search_data`, `get_query_pages`                | Wszystko o jednej podstronie (frazy, urządzenia, kraje, trend) albo o jednej frazie (które strony rankują, warianty frazy).                 |
+| `compare_search_periods`                                 | Co urosło, a co spadło: wzrosty, spadki, poprawa / pogorszenie pozycji, nowe i utracone frazy lub strony.                                   |
+| `list_sitemaps`, `submit_sitemap`, `delete_sitemap`      | Mapy witryny: zgłoszone / zaindeksowane adresy, błędy; zgłoszenie sitemap.xml; usunięcie (admin).                                           |
+| `inspect_url`                                            | Inspekcja adresu: czy w indeksie, werdykt, ostatnie skanowanie, kanoniczny, robots, mobile, wyniki rozszerzone (limit 2000 / dzień).        |
+| `request_google_indexing`, `get_google_indexing_status`  | Indexing API: zgłoszenie adresu (admin; Google przewiduje to dla ofert pracy i transmisji, dla innych stron bywa ignorowane) i jego status. |
+| `get_site_traffic`, `get_ga4_report`, `get_ga4_realtime` | GA4: sesje, użytkownicy, odsłony, zaangażowanie, konwersje, kanały, źródła, strony, wejścia; dowolny raport; kto jest teraz na stronie.     |
+| `get_pagespeed`                                          | Lighthouse: wydajność, SEO, dostępność, dobre praktyki, Core Web Vitals (lab i realni użytkownicy), okazje do poprawy, oblane audyty SEO.   |
+| `google_api_request`                                     | Dowolne uwierzytelnione wywołanie `https://*.googleapis.com/…` z wybranymi zakresami (admin).                                               |
+
+Konfiguracja Google Cloud (raz): w projekcie z kluczem OAuth YouTube włącz
+**Search Console API**, **Google Analytics Data API** i **Web Search Indexing
+API**; utwórz konto usługi, pobierz klucz JSON i wklej go jako
+`GOOGLE_SERVICE_ACCOUNT_JSON`; e-mail konta usługi dodaj w Search Console
+(Ustawienia → Użytkownicy i uprawnienia → Pełny; dla Indexing API: Właściciel)
+i w GA4 (Administracja → Dostęp do usługi → Wyświetlający). Bez konta usługi
+wystarczy ponownie połączyć kanał YouTube w panelu kontem Google, które ma
+dostęp do Search Console i GA4.
 
 **Kalkulatory**
 
@@ -488,8 +531,10 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
    META_PAGE_ID + META_PAGE_ACCESS_TOKEN (strona, Messenger, formularze), META_IG_USER_ID +
    META_IG_PAGE_ACCESS_TOKEN (Instagram), META_ACCESS_TOKEN (Meta Ads), FB_PIXEL_ACCESS_TOKEN
    (Conversions API), YOUTUBE_CLIENT_ID + YOUTUBE_CLIENT_SECRET (+ YOUTUBE_REDIRECT_URI, jeśli inny
-   niż domyślny), ELEVENLABS_API_KEY (boty, głos, media), HEYGEN_API_KEY (filmy z awatarem)
-   i AGENT_TOOLS_SECRET. Nie pokazuj mi
+   niż domyślny), ELEVENLABS_API_KEY (boty, głos, media), HEYGEN_API_KEY (filmy z awatarem),
+   GOOGLE_SERVICE_ACCOUNT_JSON (Search Console / GA4 — jeśli go nie ma, napisz to w raporcie:
+   dodam konto usługi albo połączę kanał YouTube ponownie), GA4_PROPERTY_ID (numer usługi GA4),
+   opcjonalnie GSC_SITE_URL i PAGESPEED_API_KEY, oraz AGENT_TOOLS_SECRET. Nie pokazuj mi
    wartości sekretów, tylko czy są. Sprawdź w Meta (Business → Użytkownicy systemowi / token strony),
    czy token strony ma pages_manage_posts, pages_manage_engagement, pages_messaging,
    read_insights, leads_retrieval, a token IG instagram_content_publish,
@@ -572,7 +617,15 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
       start_now: false} → zadanie w statusie queued (NIE uruchamiaj run_studio_video_tick ani
       start_now — zużywają kredyty), potem delete_studio_job {id} → usunięte. NIE wołaj
       generate_avatar_video, publish_studio_job, generate_avatar_faq_video ani
-      delete_heygen_video.
+      delete_heygen_video;
+   n) GOOGLE: tools/call google_search_status → auth_method, site_url, lista witryn z
+      uprawnieniami (jeśli sites_error mówi o braku dostępu — wpisz w raporcie e-mail konta
+      usługi z odpowiedzi, żebym dodał go w Search Console i GA4); get_search_trend {days: 28}
+      → dzienne wiersze i porównanie; get_top_queries {limit: 10} → frazy z pozycjami;
+      get_top_pages {limit: 10} → strony; inspect_url {url: "https://financeyou.pl/"} → werdykt
+      indeksowania; get_site_traffic {days: 7} → sesje i kanały (jeśli GA4_PROPERTY_ID jest);
+      get_pagespeed {} → wyniki Lighthouse. NIE wołaj submit_sitemap, delete_sitemap ani
+      request_google_indexing;
    Po testach usuń lead testowy (albo zostaw oznaczony jako zły z powodem "test") i link testowy.
 
 6. Raport dla mnie: tabela kroków 1–5 z ✅/❌, dokładne odpowiedzi z punktu 4, id leada testowego,

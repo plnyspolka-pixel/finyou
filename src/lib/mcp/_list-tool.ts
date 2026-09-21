@@ -17,6 +17,7 @@ import {
   ilikeAny,
   isoDate,
   ok,
+  okWith,
   requireRoles,
   requireTeam,
   requireUser,
@@ -57,6 +58,8 @@ export type ListToolDef = {
   /** Ostatnie przekształcenie wierszy przed zwróceniem. */
   map?: (row: Record<string, any>) => Record<string, any>;
   openWorld?: boolean;
+  /** Kolumna z adresem obrazu — włącza wejście `preview` (obrazy inline w czacie). */
+  preview?: { column: string; max?: number };
 };
 
 /** Filtr równości. */
@@ -123,6 +126,12 @@ export function defineListTool(def: ListToolDef) {
     .min(0)
     .optional()
     .describe("Przesunięcie do stronicowania (domyślnie 0).");
+  if (def.preview) {
+    shape.preview = z
+      .boolean()
+      .optional()
+      .describe(`Pokaż w czacie obrazy z wyników (do ${def.preview.max ?? 4}).`);
+  }
 
   return defineTool({
     name: def.name,
@@ -162,12 +171,22 @@ export function defineListTool(def: ListToolDef) {
         let rows = (data ?? []) as Record<string, any>[];
         for (const a of def.attach ?? []) rows = await attach(client, rows, a);
         if (def.map) rows = rows.map(def.map);
-        return ok({
+        const payload = {
           [def.resultKey]: rows,
           total: typeof count === "number" ? count : rows.length,
           limit,
           offset,
-        });
+        };
+        if (def.preview && args.preview) {
+          const { fetchImageBlocks } = await import("@/lib/media-storage.server");
+          const col = def.preview.column;
+          const images = await fetchImageBlocks(
+            rows.map((r) => r[col]),
+            { max: def.preview.max ?? 4 },
+          );
+          return okWith(payload, images);
+        }
+        return ok(payload);
       }),
   });
 }

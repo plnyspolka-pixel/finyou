@@ -26,6 +26,12 @@ const OAUTH_SCOPES = [
   // Edycja filmów, odpowiedzi na komentarze i usuwanie (konektor MCP) —
   // po dodaniu zakresu kanał trzeba raz ponownie połączyć w panelu.
   "https://www.googleapis.com/auth/youtube.force-ssl",
+  // Search Console, GA4 i Indexing API dla konektora MCP (narzędzia Google) —
+  // alternatywa dla konta usługi GOOGLE_SERVICE_ACCOUNT_JSON; wymaga
+  // ponownego połączenia kanału kontem z dostępem do tych usług.
+  "https://www.googleapis.com/auth/webmasters",
+  "https://www.googleapis.com/auth/analytics.readonly",
+  "https://www.googleapis.com/auth/indexing",
 ].join(" ");
 
 // Bufor zamiast streamingu: resumable PUT wymaga znanego Content-Length,

@@ -13,6 +13,7 @@ import {
   handle,
   isoDate,
   ok,
+  okWith,
   requireRolesAdmin,
   requireTeam,
   requireTeamAdmin,
@@ -97,14 +98,23 @@ export const listYoutubeVideos = defineTool({
   inputSchema: {
     limit: z.number().int().min(1).max(50).optional(),
     page_token: z.string().optional(),
+    preview: z.boolean().default(false).describe("Pokaż w czacie do 4 miniatur z wyniku."),
   },
   annotations: READ,
-  handler: ({ limit, page_token }, ctx: ToolContext) =>
+  handler: ({ limit, page_token, preview }, ctx: ToolContext) =>
     handle(async () => {
       await requireTeam(ctx);
       const yt = await import("@/lib/youtube-api.server");
       const r = await yt.listMyVideos({ limit: clampLimit(limit, 25, 50), pageToken: page_token });
-      return ok({ videos: r.videos.map(videoSummary), next_page_token: r.nextPageToken });
+      const videos = r.videos.map(videoSummary);
+      const { fetchImageBlocks } = await import("@/lib/media-storage.server");
+      const images = preview
+        ? await fetchImageBlocks(
+            videos.map((v) => v.thumbnail),
+            { max: 4 },
+          )
+        : [];
+      return okWith({ videos, next_page_token: r.nextPageToken }, images);
     }),
 });
 
@@ -128,22 +138,31 @@ export const getYoutubeVideo = defineTool({
   title: "Get video details",
   description:
     "Pełne dane filmu: tytuł, opis, tagi, kategoria, prywatność, statystyki, długość, status przetwarzania. Tylko administrator/operator.",
-  inputSchema: { video_id: z.string().min(5) },
+  inputSchema: {
+    video_id: z.string().min(5),
+    preview: z.boolean().default(true).describe("Pokaż miniaturę filmu w czacie."),
+  },
   annotations: READ,
-  handler: ({ video_id }, ctx: ToolContext) =>
+  handler: ({ video_id, preview }, ctx: ToolContext) =>
     handle(async () => {
       await requireTeam(ctx);
       const yt = await import("@/lib/youtube-api.server");
       const v = (await yt.listVideos([video_id]))[0];
       if (!v) return fail("Nie znaleziono filmu.");
-      return ok({
-        ...videoSummary(v),
-        description: v.snippet?.description,
-        category_id: v.snippet?.categoryId,
-        made_for_kids: v.status?.selfDeclaredMadeForKids,
-        publish_at: v.status?.publishAt ?? null,
-        license: v.status?.license,
-      });
+      const summary = videoSummary(v);
+      const { fetchImageBlock } = await import("@/lib/media-storage.server");
+      const img = preview ? await fetchImageBlock(summary.thumbnail) : null;
+      return okWith(
+        {
+          ...summary,
+          description: v.snippet?.description,
+          category_id: v.snippet?.categoryId,
+          made_for_kids: v.status?.selfDeclaredMadeForKids,
+          publish_at: v.status?.publishAt ?? null,
+          license: v.status?.license,
+        },
+        img ? [img] : [],
+      );
     }),
 });
 

@@ -15,6 +15,7 @@ import {
   handle,
   isoDate,
   ok,
+  okWith,
   requireRolesAdmin,
   requireTeam,
   requireTeamAdmin,
@@ -64,6 +65,18 @@ function igMedia(m: any) {
     comments: m?.comments_count ?? 0,
     media_url: m?.media_url ?? m?.thumbnail_url ?? null,
   };
+}
+
+/** Obraz do podglądu wpisu IG: kadr dla wideo, plik dla zdjęcia / karuzeli. */
+function igImageUrl(m: any): string | null {
+  return m?.media_type === "VIDEO"
+    ? (m?.thumbnail_url ?? null)
+    : (m?.media_url ?? m?.thumbnail_url ?? null);
+}
+
+async function previewImages(urls: (string | null | undefined)[], max = 4) {
+  const { fetchImageBlocks } = await import("@/lib/media-storage.server");
+  return fetchImageBlocks(urls, { max });
 }
 
 function adsInsights(rows: any[]) {
@@ -184,6 +197,7 @@ export const listFacebookPosts = defineTool({
       .boolean()
       .default(false)
       .describe("Tylko zaplanowane / nieopublikowane."),
+    preview: z.boolean().default(false).describe("Pokaż w czacie do 4 grafik z wyniku."),
   },
   annotations: READ,
   handler: (a, ctx: ToolContext) =>
@@ -196,7 +210,8 @@ export const listFacebookPosts = defineTool({
         until: isoDate(a.until, "until"),
         includeUnpublished: a.include_unpublished,
       });
-      return ok({ posts: rows.map(fbPost) });
+      const images = a.preview ? await previewImages(rows.map((p: any) => p?.full_picture)) : [];
+      return okWith({ posts: rows.map(fbPost) }, images);
     }),
 });
 
@@ -208,9 +223,10 @@ export const getFacebookPost = defineTool({
   inputSchema: {
     post_id: z.string().min(5),
     metrics: z.string().optional().describe("Własna lista metryk insights po przecinku."),
+    preview: z.boolean().default(true).describe("Pokaż grafikę posta w czacie."),
   },
   annotations: READ,
-  handler: ({ post_id, metrics }, ctx: ToolContext) =>
+  handler: ({ post_id, metrics, preview }, ctx: ToolContext) =>
     handle(async () => {
       await requireTeam(ctx);
       const m = await import("@/lib/meta-api.server");
@@ -221,13 +237,18 @@ export const getFacebookPost = defineTool({
           .getPostInsights(post_id, metrics)
           .catch((e) => (errors.push(`insights: ${(e as Error).message}`), [] as any[])),
       ]);
-      return ok({
-        ...fbPost(post),
-        message_full: post?.message ?? post?.story ?? null,
-        attachments: post?.attachments?.data ?? [],
-        insights: insightsToMap(insights),
-        errors,
-      });
+      const { fetchImageBlock } = await import("@/lib/media-storage.server");
+      const img = preview ? await fetchImageBlock(post?.full_picture) : null;
+      return okWith(
+        {
+          ...fbPost(post),
+          message_full: post?.message ?? post?.story ?? null,
+          attachments: post?.attachments?.data ?? [],
+          insights: insightsToMap(insights),
+          errors,
+        },
+        img ? [img] : [],
+      );
     }),
 });
 
@@ -396,6 +417,7 @@ export const listInstagramMedia = defineTool({
     limit: z.number().int().min(1).max(100).optional(),
     since: z.string().optional(),
     until: z.string().optional(),
+    preview: z.boolean().default(false).describe("Pokaż w czacie do 4 obrazów z wyniku."),
   },
   annotations: READ,
   handler: (a, ctx: ToolContext) =>
@@ -407,7 +429,8 @@ export const listInstagramMedia = defineTool({
         since: isoDate(a.since, "since"),
         until: isoDate(a.until, "until"),
       });
-      return ok({ media: rows.map(igMedia) });
+      const images = a.preview ? await previewImages(rows.map(igImageUrl)) : [];
+      return okWith({ media: rows.map(igMedia) }, images);
     }),
 });
 
@@ -422,9 +445,10 @@ export const getInstagramMedia = defineTool({
       .string()
       .optional()
       .describe("Własna lista metryk po przecinku (zależy od typu media)."),
+    preview: z.boolean().default(true).describe("Pokaż obraz / kadr w czacie."),
   },
   annotations: READ,
-  handler: ({ media_id, metrics }, ctx: ToolContext) =>
+  handler: ({ media_id, metrics, preview }, ctx: ToolContext) =>
     handle(async () => {
       await requireTeam(ctx);
       const m = await import("@/lib/meta-api.server");
@@ -435,12 +459,17 @@ export const getInstagramMedia = defineTool({
           .getIgMediaInsights(media_id, metrics)
           .catch((e) => (errors.push(`insights: ${(e as Error).message}`), [] as any[])),
       ]);
-      return ok({
-        ...igMedia(media),
-        caption_full: media?.caption ?? null,
-        insights: insightsToMap(insights),
-        errors,
-      });
+      const { fetchImageBlock } = await import("@/lib/media-storage.server");
+      const img = preview ? await fetchImageBlock(igImageUrl(media)) : null;
+      return okWith(
+        {
+          ...igMedia(media),
+          caption_full: media?.caption ?? null,
+          insights: insightsToMap(insights),
+          errors,
+        },
+        img ? [img] : [],
+      );
     }),
 });
 
@@ -682,12 +711,13 @@ export const getMessengerConversation = defineTool({
   description:
     "Wiadomości jednej rozmowy z Graph API (nadawca, treść, załączniki, czas). Odpowiadanie: `send_messenger_message` po lead_id. Tylko administrator/operator.",
   inputSchema: {
+    preview: z.boolean().default(false).describe("Pokaż w czacie do 4 obrazów z załączników."),
     conversation_id: z.string().min(5),
     platform: z.enum(["messenger", "instagram"]).default("messenger"),
     limit: z.number().int().min(1).max(100).optional(),
   },
   annotations: READ,
-  handler: ({ conversation_id, platform, limit }, ctx: ToolContext) =>
+  handler: ({ conversation_id, platform, limit, preview }, ctx: ToolContext) =>
     handle(async () => {
       await requireTeam(ctx);
       const m = await import("@/lib/meta-api.server");
@@ -695,20 +725,24 @@ export const getMessengerConversation = defineTool({
         platform,
         limit: clampLimit(limit, 50, 100),
       });
-      return ok({
-        messages: rows.reverse().map((x: any) => ({
-          message_id: x.id,
-          from: x.from?.name ?? x.from?.username ?? null,
-          from_id: x.from?.id ?? null,
-          message: x.message ?? "",
-          created_time: x.created_time,
-          attachments: (x.attachments?.data ?? []).map((att: any) => ({
-            name: att.name,
-            mime_type: att.mime_type,
-            url: att.file_url ?? att.image_data?.url ?? null,
-          })),
+      const messages = rows.reverse().map((x: any) => ({
+        message_id: x.id,
+        from: x.from?.name ?? x.from?.username ?? null,
+        from_id: x.from?.id ?? null,
+        message: x.message ?? "",
+        created_time: x.created_time,
+        attachments: (x.attachments?.data ?? []).map((att: any) => ({
+          name: att.name,
+          mime_type: att.mime_type,
+          url: att.file_url ?? att.image_data?.url ?? null,
         })),
-      });
+      }));
+      const images = preview
+        ? await previewImages(
+            messages.flatMap((mm: any) => mm.attachments.map((at: any) => at.url as string | null)),
+          )
+        : [];
+      return okWith({ messages }, images);
     }),
 });
 
@@ -833,6 +867,7 @@ export const listMetaAds = defineTool({
     parent_id: z.string().min(3).describe("Id zestawu, kampanii albo konta (act_…)."),
     date_preset: z.string().default("last_30d"),
     limit: z.number().int().min(1).max(200).optional(),
+    preview: z.boolean().default(false).describe("Pokaż w czacie do 4 miniatur kreacji."),
   },
   annotations: READ,
   handler: (a, ctx: ToolContext) =>
@@ -845,21 +880,23 @@ export const listMetaAds = defineTool({
         datePreset: a.date_preset,
         limit: clampLimit(a.limit, 50, 200),
       });
-      return ok({
-        ads: rows.map((x: any) => ({
-          ad_id: x.id,
-          name: x.name,
-          adset_id: x.adset_id,
-          campaign_id: x.campaign_id,
-          status: x.status,
-          effective_status: x.effective_status,
-          created_time: x.created_time,
-          creative: x.creative
-            ? { id: x.creative.id, name: x.creative.name, thumbnail_url: x.creative.thumbnail_url }
-            : null,
-          results: adsInsights(x.insights?.data ?? [])[0] ?? null,
-        })),
-      });
+      const images = a.preview
+        ? await previewImages(rows.map((x: any) => x?.creative?.thumbnail_url))
+        : [];
+      const ads = rows.map((x: any) => ({
+        ad_id: x.id,
+        name: x.name,
+        adset_id: x.adset_id,
+        campaign_id: x.campaign_id,
+        status: x.status,
+        effective_status: x.effective_status,
+        created_time: x.created_time,
+        creative: x.creative
+          ? { id: x.creative.id, name: x.creative.name, thumbnail_url: x.creative.thumbnail_url }
+          : null,
+        results: adsInsights(x.insights?.data ?? [])[0] ?? null,
+      }));
+      return okWith({ ads }, images);
     }),
 });
 

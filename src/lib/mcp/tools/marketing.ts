@@ -209,6 +209,7 @@ export const listSocialPosts = defineListTool({
     "id, platform, status, content, hashtags, image_url, link_url, campaign, scheduled_at, published_at, created_at",
   resultKey: "posts",
   access: "team",
+  preview: { column: "image_url", max: 4 },
   filters: {
     platform: text("platform", "Platforma."),
     status: text("status", "Status posta."),
@@ -228,6 +229,7 @@ export const listPublishQueue = defineListTool({
   resultKey: "queue",
   access: "team",
   order: { column: "scheduled_at", ascending: false },
+  preview: { column: "image_url", max: 4 },
   filters: {
     platform: text("platform", "Platforma."),
     status: text("status", "Status wpisu w kolejce."),
@@ -433,6 +435,7 @@ export const listStudioJobs = defineListTool({
   resultKey: "jobs",
   access: "team",
   order: { column: "updated_at", ascending: false },
+  preview: { column: "thumbnail_url", max: 4 },
   filters: {
     status: text("status", "Status zadania."),
   },

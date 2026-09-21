@@ -1033,6 +1033,7 @@ export const listStudioImages = defineListTool({
   resultKey: "images",
   access: "team",
   order: { column: "created_at", ascending: false },
+  preview: { column: "image_url", max: 4 },
   filters: { search: search(["prompt"], "Fraza w prompcie.") },
 });
 
@@ -1049,6 +1050,7 @@ export const listAvatarFaqs = defineListTool({
   resultKey: "faqs",
   access: "team",
   order: { column: "sort_order", ascending: true },
+  preview: { column: "thumbnail_url", max: 4 },
   defaultLimit: 50,
   maxLimit: 200,
   filters: {

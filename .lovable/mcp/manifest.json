@@ -3675,6 +3675,10 @@
               "type": "integer",
               "minimum": 0,
               "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            },
+            "preview": {
+              "type": "boolean",
+              "description": "Pokaż w czacie obrazy z wyników (do 4)."
             }
           },
           "additionalProperties": false,
@@ -3714,6 +3718,10 @@
               "type": "integer",
               "minimum": 0,
               "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            },
+            "preview": {
+              "type": "boolean",
+              "description": "Pokaż w czacie obrazy z wyników (do 4)."
             }
           },
           "additionalProperties": false,
@@ -4116,6 +4124,10 @@
               "type": "integer",
               "minimum": 0,
               "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            },
+            "preview": {
+              "type": "boolean",
+              "description": "Pokaż w czacie obrazy z wyników (do 4)."
             }
           },
           "additionalProperties": false,
@@ -8989,6 +9001,11 @@
               "type": "boolean",
               "default": false,
               "description": "Tylko zaplanowane / nieopublikowane."
+            },
+            "preview": {
+              "type": "boolean",
+              "default": false,
+              "description": "Pokaż w czacie do 4 grafik z wyniku."
             }
           },
           "additionalProperties": false,
@@ -9015,6 +9032,11 @@
             "metrics": {
               "type": "string",
               "description": "Własna lista metryk insights po przecinku."
+            },
+            "preview": {
+              "type": "boolean",
+              "default": true,
+              "description": "Pokaż grafikę posta w czacie."
             }
           },
           "required": [
@@ -9251,6 +9273,11 @@
             },
             "until": {
               "type": "string"
+            },
+            "preview": {
+              "type": "boolean",
+              "default": false,
+              "description": "Pokaż w czacie do 4 obrazów z wyniku."
             }
           },
           "additionalProperties": false,
@@ -9277,6 +9304,11 @@
             "metrics": {
               "type": "string",
               "description": "Własna lista metryk po przecinku (zależy od typu media)."
+            },
+            "preview": {
+              "type": "boolean",
+              "default": true,
+              "description": "Pokaż obraz / kadr w czacie."
             }
           },
           "required": [
@@ -9540,6 +9572,11 @@
         "inputSchema": {
           "type": "object",
           "properties": {
+            "preview": {
+              "type": "boolean",
+              "default": false,
+              "description": "Pokaż w czacie do 4 obrazów z załączników."
+            },
             "conversation_id": {
               "type": "string",
               "minLength": 5
@@ -9687,6 +9724,11 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 200
+            },
+            "preview": {
+              "type": "boolean",
+              "default": false,
+              "description": "Pokaż w czacie do 4 miniatur kreacji."
             }
           },
           "required": [
@@ -10082,6 +10124,11 @@
             },
             "page_token": {
               "type": "string"
+            },
+            "preview": {
+              "type": "boolean",
+              "default": false,
+              "description": "Pokaż w czacie do 4 miniatur z wyniku."
             }
           },
           "additionalProperties": false,
@@ -10134,6 +10181,11 @@
             "video_id": {
               "type": "string",
               "minLength": 5
+            },
+            "preview": {
+              "type": "boolean",
+              "default": true,
+              "description": "Pokaż miniaturę filmu w czacie."
             }
           },
           "required": [
@@ -11203,6 +11255,10 @@
               "type": "integer",
               "minimum": 0,
               "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            },
+            "preview": {
+              "type": "boolean",
+              "description": "Pokaż w czacie obrazy z wyników (do 4)."
             }
           },
           "additionalProperties": false,
@@ -11543,6 +11599,10 @@
               "type": "integer",
               "minimum": 0,
               "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            },
+            "preview": {
+              "type": "boolean",
+              "description": "Pokaż w czacie obrazy z wyników (do 4)."
             }
           },
           "additionalProperties": false,
@@ -11781,6 +11841,881 @@
           },
           "required": [
             "path"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "google_search_status",
+        "title": "Google Search Console / GA4 status",
+        "description": "Stan integracji Google: sposób uwierzytelnienia (konto usługi albo OAuth kanału YouTube), e-mail konta usługi do dodania w Search Console / GA4, skonfigurowana witryna, witryny widoczne dla konta z poziomem uprawnień, mapy witryny, usługa GA4. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_search_performance",
+        "title": "Search Console performance",
+        "description": "Wyniki financeyou.pl w wyszukiwarce Google (Search Console) za okres: kliknięcia, wyświetlenia, CTR, średnia pozycja — w podziale na wybrane wymiary (query, page, country, device, date, searchAppearance; można łączyć, np. query+page). Filtry po fragmencie adresu, frazie, kraju, urządzeniu. Dane mają 1–3 dni opóźnienia. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "dimensions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "query",
+                  "page",
+                  "country",
+                  "device",
+                  "date",
+                  "searchAppearance"
+                ]
+              },
+              "minItems": 0,
+              "maxItems": 3,
+              "default": [
+                "query"
+              ]
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 480,
+              "default": 28,
+              "description": "Ostatnie N dni (do wczoraj)."
+            },
+            "start_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Alternatywnie: zakres od (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "$ref": "#/properties/start_date",
+              "description": "Zakres do (YYYY-MM-DD)."
+            },
+            "page_contains": {
+              "type": "string",
+              "description": "Tylko adresy zawierające fragment (np. `/blog/`)."
+            },
+            "query_contains": {
+              "type": "string",
+              "description": "Tylko zapytania zawierające frazę."
+            },
+            "country": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3,
+              "description": "Kod kraju ISO-3166-1 alpha-3, np. `pol`."
+            },
+            "device": {
+              "type": "string",
+              "enum": [
+                "desktop",
+                "mobile",
+                "tablet"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "web",
+                "image",
+                "video",
+                "news",
+                "discover",
+                "googleNews"
+              ],
+              "default": "web"
+            },
+            "order_by": {
+              "type": "string",
+              "enum": [
+                "clicks",
+                "impressions",
+                "ctr",
+                "position"
+              ],
+              "default": "clicks"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 50
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_search_trend",
+        "title": "Search trend (daily)",
+        "description": "Trend widoczności w Google dzień po dniu (kliknięcia, wyświetlenia, CTR, pozycja) za ostatnie N dni plus porównanie z poprzednim okresem tej samej długości (zmiany w %). Opcjonalnie tylko dla fragmentu adresu albo frazy. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 480,
+              "default": 28,
+              "description": "Ostatnie N dni (do wczoraj)."
+            },
+            "start_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Alternatywnie: zakres od (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "$ref": "#/properties/start_date",
+              "description": "Zakres do (YYYY-MM-DD)."
+            },
+            "page_contains": {
+              "type": "string",
+              "description": "Tylko adresy zawierające fragment (np. `/blog/`)."
+            },
+            "query_contains": {
+              "type": "string",
+              "description": "Tylko zapytania zawierające frazę."
+            },
+            "country": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3,
+              "description": "Kod kraju ISO-3166-1 alpha-3, np. `pol`."
+            },
+            "device": {
+              "type": "string",
+              "enum": [
+                "desktop",
+                "mobile",
+                "tablet"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_top_queries",
+        "title": "Top search queries",
+        "description": "Najważniejsze zapytania, na które financeyou.pl pojawia się w Google: kliknięcia, wyświetlenia, CTR, pozycja; rozkład pozycji (top 3 / top 10 / 11–20 / 21–50 / dalej). Filtr `page_contains` zawęża do podstrony, `min_impressions` odcina szum. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 480,
+              "default": 28,
+              "description": "Ostatnie N dni (do wczoraj)."
+            },
+            "start_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Alternatywnie: zakres od (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "$ref": "#/properties/start_date",
+              "description": "Zakres do (YYYY-MM-DD)."
+            },
+            "page_contains": {
+              "type": "string",
+              "description": "Tylko adresy zawierające fragment (np. `/blog/`)."
+            },
+            "query_contains": {
+              "type": "string",
+              "description": "Tylko zapytania zawierające frazę."
+            },
+            "country": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3,
+              "description": "Kod kraju ISO-3166-1 alpha-3, np. `pol`."
+            },
+            "device": {
+              "type": "string",
+              "enum": [
+                "desktop",
+                "mobile",
+                "tablet"
+              ]
+            },
+            "min_impressions": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "order_by": {
+              "type": "string",
+              "enum": [
+                "clicks",
+                "impressions",
+                "position"
+              ],
+              "default": "clicks"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 50
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_top_pages",
+        "title": "Top pages in search",
+        "description": "Podstrony financeyou.pl z największym ruchem z Google: kliknięcia, wyświetlenia, CTR, pozycja. Filtr `query_contains` pokazuje, które strony rankują na frazę. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 480,
+              "default": 28,
+              "description": "Ostatnie N dni (do wczoraj)."
+            },
+            "start_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Alternatywnie: zakres od (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "$ref": "#/properties/start_date",
+              "description": "Zakres do (YYYY-MM-DD)."
+            },
+            "page_contains": {
+              "type": "string",
+              "description": "Tylko adresy zawierające fragment (np. `/blog/`)."
+            },
+            "query_contains": {
+              "type": "string",
+              "description": "Tylko zapytania zawierające frazę."
+            },
+            "country": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3,
+              "description": "Kod kraju ISO-3166-1 alpha-3, np. `pol`."
+            },
+            "device": {
+              "type": "string",
+              "enum": [
+                "desktop",
+                "mobile",
+                "tablet"
+              ]
+            },
+            "order_by": {
+              "type": "string",
+              "enum": [
+                "clicks",
+                "impressions",
+                "position"
+              ],
+              "default": "clicks"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 50
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_page_search_data",
+        "title": "Search data for one page",
+        "description": "Wszystko o jednej podstronie w Google: sumy za okres, porównanie z poprzednim okresem, trend dzienny, zapytania, na które się pojawia (z pozycjami), podział na urządzenia i kraje. `page` to pełny adres albo fragment ścieżki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pełny URL albo fragment ścieżki, np. `/pozyczka-pod-zastaw`."
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 480,
+              "default": 28,
+              "description": "Ostatnie N dni (do wczoraj)."
+            },
+            "start_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Alternatywnie: zakres od (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "$ref": "#/properties/start_date",
+              "description": "Zakres do (YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 40
+            }
+          },
+          "required": [
+            "page"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_query_pages",
+        "title": "Pages ranking for a query",
+        "description": "Dla jednej frazy (dokładnej albo zawierającej): które podstrony financeyou.pl rankują, z jaką pozycją i CTR, trend dzienny i porównanie z poprzednim okresem. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2
+            },
+            "exact": {
+              "type": "boolean",
+              "default": false,
+              "description": "Dokładna fraza zamiast „zawiera”."
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 480,
+              "default": 28,
+              "description": "Ostatnie N dni (do wczoraj)."
+            },
+            "start_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Alternatywnie: zakres od (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "$ref": "#/properties/start_date",
+              "description": "Zakres do (YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "compare_search_periods",
+        "title": "Compare search periods",
+        "description": "Co urosło, a co spadło w Google: porównuje zapytania albo strony z ostatnich N dni z poprzednim okresem tej samej długości — zmiana kliknięć, wyświetleń i pozycji, plus nowe i utracone pozycje. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "dimension": {
+              "type": "string",
+              "enum": [
+                "query",
+                "page"
+              ],
+              "default": "query"
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 7,
+              "maximum": 180,
+              "default": 28
+            },
+            "page_contains": {
+              "type": "string",
+              "description": "Tylko adresy zawierające fragment (np. `/blog/`)."
+            },
+            "query_contains": {
+              "type": "string",
+              "description": "Tylko zapytania zawierające frazę."
+            },
+            "country": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3,
+              "description": "Kod kraju ISO-3166-1 alpha-3, np. `pol`."
+            },
+            "device": {
+              "type": "string",
+              "enum": [
+                "desktop",
+                "mobile",
+                "tablet"
+              ]
+            },
+            "min_impressions": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 20,
+              "description": "Minimalne wyświetlenia w którymkolwiek okresie."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 25,
+              "description": "Ile pozycji w każdej z list (wzrosty, spadki, nowe, utracone)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_sitemaps",
+        "title": "List sitemaps",
+        "description": "Mapy witryny zgłoszone w Search Console: ostatnie zgłoszenie i pobranie, liczba adresów zgłoszonych i zaindeksowanych, błędy, ostrzeżenia. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "submit_sitemap",
+        "title": "Submit sitemap",
+        "description": "Zgłasza (lub ponownie zgłasza) mapę witryny w Search Console — domyślnie https://financeyou.pl/sitemap.xml. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sitemap_url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_sitemap",
+        "title": "Delete sitemap",
+        "description": "Usuwa mapę witryny z Search Console (Google przestaje z niej korzystać). Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sitemap_url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "sitemap_url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "inspect_url",
+        "title": "Inspect URL (index status)",
+        "description": "Inspekcja adresu w Google (jak w Search Console): czy jest w indeksie, werdykt, stan indeksowania, ostatnie skanowanie, robots.txt, kanoniczny wg Google i wg strony, mapa witryny, z których stron Google trafił, przydatność mobilna i wyniki rozszerzone. Limit Google: 2000 inspekcji dziennie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "request_google_indexing",
+        "title": "Request Google indexing",
+        "description": "Zgłasza adres do Google przez Indexing API (URL_UPDATED — nowa / zmieniona strona, URL_DELETED — usunięta). Uwaga: Google oficjalnie przewiduje to API dla stron z ofertami pracy i transmisjami; dla innych stron zgłoszenie bywa ignorowane. Konto usługi musi być właścicielem witryny w Search Console. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "URL_UPDATED",
+                "URL_DELETED"
+              ],
+              "default": "URL_UPDATED"
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_google_indexing_status",
+        "title": "Indexing API notification status",
+        "description": "Ostatnie zgłoszenia adresu przez Indexing API (kiedy i jakiego typu). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_site_traffic",
+        "title": "Site traffic (GA4)",
+        "description": "Ruch na financeyou.pl z Google Analytics 4 za okres: sesje, użytkownicy (w tym nowi), odsłony, współczynnik zaangażowania, średni czas, konwersje; porównanie z poprzednim okresem; dzień po dniu; kanały (organic, direct, paid, social…); źródła; najpopularniejsze strony; strony wejścia. Wymaga GA4_PROPERTY_ID. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 480,
+              "default": 28,
+              "description": "Ostatnie N dni (do wczoraj)."
+            },
+            "start_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Alternatywnie: zakres od (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "$ref": "#/properties/start_date",
+              "description": "Zakres do (YYYY-MM-DD)."
+            },
+            "page_contains": {
+              "type": "string",
+              "description": "Tylko strony, których ścieżka zawiera fragment."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_ga4_report",
+        "title": "GA4 custom report",
+        "description": "Dowolny raport GA4 (Analytics Data API): wymiary (np. pagePath, sessionSource, city, deviceCategory, eventName) i metryki (np. sessions, totalUsers, screenPageViews, eventCount, conversions, engagementRate) za okres, z sortowaniem i filtrem po wymiarze. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "dimensions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maxItems": 9,
+              "default": []
+            },
+            "metrics": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1,
+              "maxItems": 10
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 480,
+              "default": 28,
+              "description": "Ostatnie N dni (do wczoraj)."
+            },
+            "start_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Alternatywnie: zakres od (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "$ref": "#/properties/start_date",
+              "description": "Zakres do (YYYY-MM-DD)."
+            },
+            "order_by_metric": {
+              "type": "string"
+            },
+            "filter_dimension": {
+              "type": "string"
+            },
+            "filter_value": {
+              "type": "string"
+            },
+            "filter_match": {
+              "type": "string",
+              "enum": [
+                "EXACT",
+                "CONTAINS",
+                "BEGINS_WITH"
+              ],
+              "default": "CONTAINS"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 50
+            }
+          },
+          "required": [
+            "metrics"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_ga4_realtime",
+        "title": "GA4 realtime",
+        "description": "Kto jest teraz na stronie (ostatnie 30 min): aktywni użytkownicy łącznie, po stronach, krajach i urządzeniach. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_pagespeed",
+        "title": "PageSpeed Insights",
+        "description": "Ocena strony wg Google PageSpeed / Lighthouse: wyniki 0–100 (wydajność, SEO, dostępność, dobre praktyki), Core Web Vitals z laboratorium i z realnych użytkowników (LCP, INP, CLS), największe okazje do poprawy, oblane audyty SEO. Domyślnie strona główna, mobile. Trwa 20–60 s. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "strategy": {
+              "type": "string",
+              "enum": [
+                "mobile",
+                "desktop"
+              ],
+              "default": "mobile"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "google_api_request",
+        "title": "Raw Google API request",
+        "description": "Dowolne uwierzytelnione wywołanie API Google pod https://*.googleapis.com/… (GET/POST/PUT/DELETE, parametry, body JSON) z wybranymi zakresami (webmasters, analytics, indexing) — do funkcji bez dedykowanego narzędzia. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https:\\/\\/[a-z0-9.-]*googleapis\\.com\\/"
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE"
+              ],
+              "default": "GET"
+            },
+            "query": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            },
+            "json": {},
+            "scopes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "webmasters",
+                  "webmastersReadonly",
+                  "analytics",
+                  "indexing"
+                ]
+              },
+              "minItems": 1,
+              "default": [
+                "webmastersReadonly"
+              ]
+            }
+          },
+          "required": [
+            "url"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
