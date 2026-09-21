@@ -4,7 +4,7 @@
 // obsłużyć te same zdarzenia — Facebook dostarcza wszystko na JEDEN URL,
 // więc niezależnie od tego, który webhook jest skonfigurowany, bot zadziała.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { upsertLeadFromSource, logLeadCommunication } from "@/lib/lead-comms.server";
+import { findLeadIdBy, upsertLeadFromSource, logLeadCommunication } from "@/lib/lead-comms.server";
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendMetaMessage } from "@/lib/meta-send.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
@@ -19,13 +19,9 @@ async function findOrCreateLeadByPsid(opts: {
   platform: "messenger" | "instagram";
 }): Promise<string | null> {
   const col = opts.platform === "messenger" ? "messenger_psid" : "instagram_igsid";
-  // 1) Istniejący lead z tym PSID/IGSID
-  const { data: existing } = await supabaseAdmin
-    .from("leads")
-    .select("id")
-    .eq(col, opts.senderId)
-    .maybeSingle();
-  if (existing?.id) return existing.id;
+  // 1) Istniejący lead z tym PSID/IGSID (najstarszy; bez maybeSingle — patrz findLeadIdBy)
+  const existingId = await findLeadIdBy(col, opts.senderId);
+  if (existingId) return existingId;
 
   // 2) Spróbuj scalić z istniejącym leadem po imieniu i nazwisku (np. Meta ad
   //    lead ma first_name+last_name, ale jeszcze bez PSID). Dzięki temu

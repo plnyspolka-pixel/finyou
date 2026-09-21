@@ -6,6 +6,26 @@ function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
+/**
+ * Najstarszy lead z daną wartością kolumny (PSID, IGSID, id wniosku…).
+ * Celowo bez `maybeSingle()`: przy dwóch pasujących wierszach maybeSingle
+ * zwraca błąd i pusty wynik, a wywołujący zakładał wtedy kolejnego leada —
+ * tak powstało 51 duplikatów jednej rozmowy Messenger w ciągu jednego dnia.
+ */
+export async function findLeadIdBy(col: string, value: string): Promise<string | null> {
+  const { data, error } = await admin()
+    .from("leads")
+    .select("id")
+    .eq(col, value)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  if (error) {
+    console.warn(`[lead-comms] findLeadIdBy ${col} failed`, error.message);
+    return null;
+  }
+  return data?.[0]?.id ?? null;
+}
+
 export async function findLeadId(opts: {
   loanApplicationId?: string | null;
   clientId?: string | null;
@@ -21,8 +41,8 @@ export async function findLeadId(opts: {
   if (opts.metaLeadId) tries.push(["meta_lead_id", opts.metaLeadId]);
   if (opts.investorId) tries.push(["investor_id", opts.investorId]);
   for (const [col, val] of tries) {
-    const { data } = await s.from("leads").select("id").eq(col, val).maybeSingle();
-    if (data?.id) return data.id;
+    const id = await findLeadIdBy(col, val);
+    if (id) return id;
   }
   if (opts.phoneNormalized) {
     const { data } = await s
