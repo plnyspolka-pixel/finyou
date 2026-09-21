@@ -125,6 +125,8 @@ export const metaStatus = defineTool({
     handle(async () => {
       await requireTeam(ctx);
       const m = await import("@/lib/meta-api.server");
+      const { metaTokenHealth } = await import("@/lib/meta-tokens.server");
+      const health = await metaTokenHealth();
       const env = m.metaEnv();
       const errors: string[] = [];
       const [page, ig, accounts] = await Promise.all([
@@ -141,6 +143,8 @@ export const metaStatus = defineTool({
           : ([] as any[]),
       ]);
       return ok({
+        token_health: health,
+
         configured: {
           page_token: env.hasPageToken,
           instagram_token: env.hasIgToken,
@@ -1271,7 +1275,35 @@ export const metaApiRequest = defineTool({
     }),
 });
 
+export const metaRefreshTokens = defineTool({
+  name: "meta_refresh_tokens",
+  title: "Refresh Meta tokens from system user",
+  description:
+    "Wymusza wyprowadzenie tokenów strony / Instagrama z tokena użytkownika systemowego (META_SYSTEM_USER_TOKEN) i pokazuje zdrowie wszystkich tokenów Meta (ważność, wygaśnięcie, zakresy). Użyj po dodaniu sekretu albo gdy meta_status zgłasza nieważny token. Tylko administrator.",
+  inputSchema: {},
+  annotations: WRITE_IDEMPOTENT,
+  handler: (_a, ctx: ToolContext) =>
+    handle(async () => {
+      await requireRolesAdmin(ctx, ADMIN_ONLY);
+      const { ensureMetaTokens, metaTokenHealth } = await import("@/lib/meta-tokens.server");
+      const state = await ensureMetaTokens({ force: true });
+      const health = await metaTokenHealth();
+      return ok({
+        page_id: state.pageId,
+        page_name: state.pageName,
+        ig_user_id: state.igUserId,
+        replaced_in_process: state.replaced,
+        ...health,
+        note:
+          state.source === "system_user"
+            ? "Tokeny wyprowadzone z użytkownika systemowego działają w tym procesie; każdy nowy proces serwera wyprowadza je sam przy pierwszym wywołaniu Graph."
+            : "Brak META_SYSTEM_USER_TOKEN albo nie było potrzeby podmiany — patrz warnings.",
+      });
+    }),
+});
+
 export const metaTools = [
+  metaRefreshTokens,
   metaStatus,
   listFacebookPosts,
   getFacebookPost,

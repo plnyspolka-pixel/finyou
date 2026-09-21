@@ -1,3 +1,4 @@
+import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 // Publiczna odpowiedź pod komentarzem + Private Reply (Messenger) na komentarz.
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -5,6 +6,7 @@ export async function replyToCommentPublic(opts: {
   commentId: string;
   text: string;
 }): Promise<{ ok: boolean; id?: string; error?: string }> {
+  await ensureMetaTokens();
   const token = process.env.META_PAGE_ACCESS_TOKEN ?? process.env.META_ACCESS_TOKEN;
   if (!token) return { ok: false, error: "META_PAGE_ACCESS_TOKEN / META_ACCESS_TOKEN missing" };
   const res = await fetch(
@@ -24,6 +26,7 @@ export async function sendPrivateReplyToComment(opts: {
   commentId: string;
   text: string;
 }): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  await ensureMetaTokens();
   const token = process.env.META_PAGE_ACCESS_TOKEN ?? process.env.META_ACCESS_TOKEN;
   if (!token) return { ok: false, error: "META_PAGE_ACCESS_TOKEN / META_ACCESS_TOKEN missing" };
   const res = await fetch(`${GRAPH}/me/messages?access_token=${encodeURIComponent(token)}`, {

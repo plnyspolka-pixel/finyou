@@ -2,6 +2,7 @@
 // - createServerFn (admin "Sync Meta leads" w panelu)
 // - cron hooka /api/public/hooks/meta-leads-pull (co minutę)
 import { extractLoanAmount, extractPropertyTypeRaw } from "@/lib/meta-lead-answers.server";
+import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 import { konfiguracjaKlienta, przekazLeadaKlientowi } from "@/lib/meta-leads-client-forward.server";
 import {
   normPhone,
@@ -20,7 +21,8 @@ export async function runMetaLeadsSync(): Promise<{
   calls_queued: number;
   errors: string[];
 }> {
-  const token = process.env.META_ACCESS_TOKEN;
+  await ensureMetaTokens();
+  const token = process.env.META_ACCESS_TOKEN ?? process.env.META_SYSTEM_USER_TOKEN;
   if (!token) throw new Error("META_ACCESS_TOKEN nie jest ustawiony");
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

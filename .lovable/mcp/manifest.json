@@ -8958,6 +8958,23 @@
         "outputSchema": null
       },
       {
+        "name": "meta_refresh_tokens",
+        "title": "Refresh Meta tokens from system user",
+        "description": "Wymusza wyprowadzenie tokenów strony / Instagrama z tokena użytkownika systemowego (META_SYSTEM_USER_TOKEN) i pokazuje zdrowie wszystkich tokenów Meta (ważność, wygaśnięcie, zakresy). Użyj po dodaniu sekretu albo gdy meta_status zgłasza nieważny token. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
         "name": "meta_status",
         "title": "Meta (Facebook / Instagram / Ads) status",
         "description": "Stan integracji Meta: które tokeny są ustawione (strona, Instagram, reklamy, piksel), strona (nazwa, obserwujący), konto Instagram (nazwa, obserwujący, liczba postów), konta reklamowe z API. Tylko administrator/operator.",

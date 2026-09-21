@@ -324,6 +324,34 @@ formularze), `META_IG_PAGE_ACCESS_TOKEN` (Instagram; gdy pusty — token strony)
 | `send_meta_conversion_event`                                                            | Zdarzenie do piksela (Conversions API) — e-mail i telefon haszowane po stronie serwera (admin).                                |
 | `meta_api_request`                                                                      | Dowolne wywołanie Graph API wybranym tokenem (GET/POST/DELETE).                                                                |
 
+**Token Meta na stałe.** Tokeny strony i Instagrama wygenerowane „na
+osobę” wygasają albo giną przy zmianie hasła tej osoby (tak wygasł token
+Instagrama). Rozwiązanie: **użytkownik systemowy** w Business Managerze i jego
+token z wygaśnięciem „nigdy”:
+
+1. https://business.facebook.com/settings → Użytkownicy → Użytkownicy systemowi
+   → Dodaj (rola: Administrator), np. „financeyou-serwer”.
+2. Przypisz zasoby (Przypisz zasoby): stronę Finance You (pełna kontrola), konto
+   Instagram, konto reklamowe, piksel i aplikację Finance You (pełna kontrola).
+3. Wygeneruj token: wybierz aplikację, wygaśnięcie **Nigdy**, zaznacz
+   uprawnienia: `pages_show_list`, `pages_read_engagement`,
+   `pages_read_user_content`, `pages_manage_posts`, `pages_manage_engagement`,
+   `pages_manage_metadata`, `pages_messaging`, `read_insights`,
+   `instagram_basic`, `instagram_content_publish`, `instagram_manage_comments`,
+   `instagram_manage_insights`, `instagram_manage_messages`,
+   `business_management`, `leads_retrieval`, `ads_read`, `ads_management`.
+4. Wklej token jako sekret `META_SYSTEM_USER_TOKEN` (Lovable → Ustawienia
+   projektu → Secrets). Stare `META_PAGE_ACCESS_TOKEN`,
+   `META_IG_PAGE_ACCESS_TOKEN` i `META_ACCESS_TOKEN` można zostawić — serwer
+   sprawdza je raz na godzinę i gdy Graph je odrzuci, sam podstawia tokeny
+   wyprowadzone z użytkownika systemowego (`src/lib/meta-tokens.server.ts`,
+   wołane na każdej ścieżce do Graph: webhooki, ticki, panel, MCP). Można je też
+   usunąć — wtedy wszystko idzie z tokena systemowego.
+5. W czacie: `meta_refresh_tokens` (admin) wymusza wyprowadzenie od razu, a
+   `meta_status` pokazuje `token_health`: ważność, datę wygaśnięcia („never”
+   dla tokena systemowego), zakresy i ostrzeżenia. `META_APP_SECRET` w
+   sekretach pozwala sprawdzać tokeny przez `/debug_token` bez ograniczeń.
+
 Uprawnienia tokenów Meta potrzebne do pełnego zakresu: `pages_read_engagement`,
 `pages_read_user_content`, `pages_manage_posts`, `pages_manage_engagement`,
 `pages_messaging`, `read_insights`, `instagram_basic`,
@@ -530,8 +558,10 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
    Upewnij się, że w środowisku serwera są: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,
    SUPABASE_SERVICE_ROLE_KEY (narzędzia MCP czytają je z process.env), a do wysyłek:
    LOVABLE_API_KEY + RESEND_API_KEY (e-mail), TWILIO_API_KEY (SMS, połączenia, nagrania),
-   META_PAGE_ID + META_PAGE_ACCESS_TOKEN (strona, Messenger, formularze), META_IG_USER_ID +
-   META_IG_PAGE_ACCESS_TOKEN (Instagram), META_ACCESS_TOKEN (Meta Ads), FB_PIXEL_ACCESS_TOKEN
+   META_SYSTEM_USER_TOKEN (token użytkownika systemowego „nigdy nie wygasa” — zastępuje tokeny
+   strony / Instagrama / reklam, gdy te wygasną), META_PAGE_ID + META_PAGE_ACCESS_TOKEN (strona,
+   Messenger, formularze), META_IG_USER_ID + META_IG_PAGE_ACCESS_TOKEN (Instagram),
+   META_ACCESS_TOKEN (Meta Ads), FB_PIXEL_ACCESS_TOKEN
    (Conversions API), YOUTUBE_CLIENT_ID + YOUTUBE_CLIENT_SECRET (+ YOUTUBE_REDIRECT_URI, jeśli inny
    niż domyślny), ELEVENLABS_API_KEY (boty, głos, media), HEYGEN_API_KEY (filmy z awatarem),
    GOOGLE_SERVICE_ACCOUNT_JSON (Search Console / GA4 — jeśli go nie ma, napisz to w raporcie:
@@ -592,7 +622,8 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
    j) TWILIO: tools/call twilio_status → configured:true, saldo, numery; list_twilio_messages
       {limit: 5} → historia SMS; list_twilio_calls {limit: 5} → połączenia; get_twilio_usage
       {category: "sms"} → zużycie; NIE wołaj twilio_place_call na prawdziwe numery;
-   k) META: tools/call meta_status → tokeny ustawione, strona i konto IG z liczbą obserwujących;
+   k) META: tools/call meta_status → tokeny ustawione, token_health bez ostrzeżeń (przy
+      META_SYSTEM_USER_TOKEN: expires_at "never"), strona i konto IG z liczbą obserwujących;
       list_facebook_posts {limit: 3} → ostatnie posty; get_facebook_page_insights {} → statystyki;
       list_instagram_media {limit: 3} → wpisy; list_messenger_conversations {limit: 3} → rozmowy;
       list_meta_ad_accounts {} → konta; get_meta_campaigns_live {limit: 5} → kampanie z wynikami;
