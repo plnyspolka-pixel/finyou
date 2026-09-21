@@ -303,50 +303,73 @@ async function debugToken(
 
 export type MetaPixelAccess = {
   pixel_id: string;
+  /** Piksel jest widoczny którymś z tokenów serwera. */
   ok: boolean;
+  /** Który token odczytał metadane piksela. */
+  via: "FB_PIXEL_ACCESS_TOKEN" | "META_ACCESS_TOKEN" | "META_SYSTEM_USER_TOKEN" | null;
+  /** Czy sam token piksela czyta metadane (token z Events Manager zwykle tylko wysyła zdarzenia). */
+  pixel_token_reads: boolean | null;
   name: string | null;
   last_fired_time: string | null;
   error: string | null;
+  note: string | null;
 };
 
-/** Czy token piksela (po samonaprawie) widzi dany piksel — `GET /{pixel-id}`. */
+/**
+ * Czy serwer widzi dany piksel — `GET /{pixel-id}` tokenem piksela, a gdy ten
+ * nie ma `ads_read` (token z Events Manager ma tylko zakres wysyłki), tokenem
+ * użytkownika systemowego. Wysyłka zdarzeń (Conversions API) nie wymaga
+ * odczytu metadanych, więc `pixel_token_reads: false` to nie błąd.
+ */
 export async function pixelAccess(pixelId: string): Promise<MetaPixelAccess> {
-  const token = process.env.FB_PIXEL_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN || "";
-  if (!token)
-    return {
-      pixel_id: pixelId,
-      ok: false,
-      name: null,
-      last_fired_time: null,
-      error: "brak tokena",
-    };
-  try {
-    const r = await graphGet(pixelId, { fields: "id,name,last_fired_time", access_token: token });
-    if (!r.ok) {
-      return {
-        pixel_id: pixelId,
-        ok: false,
-        name: null,
-        last_fired_time: null,
-        error: r.json?.error?.message ?? `HTTP ${r.status}`,
-      };
+  const env = process.env;
+  const candidates: [MetaPixelAccess["via"], string][] = [];
+  const seen = new Set<string>();
+  for (const [name, value] of [
+    ["FB_PIXEL_ACCESS_TOKEN", env.FB_PIXEL_ACCESS_TOKEN],
+    ["META_ACCESS_TOKEN", env.META_ACCESS_TOKEN],
+    ["META_SYSTEM_USER_TOKEN", env.META_SYSTEM_USER_TOKEN],
+  ] as const) {
+    if (value && !seen.has(value)) {
+      seen.add(value);
+      candidates.push([name, value]);
     }
-    return {
-      pixel_id: pixelId,
-      ok: true,
-      name: r.json?.name ?? null,
-      last_fired_time: r.json?.last_fired_time ?? null,
-      error: null,
-    };
-  } catch (e) {
-    return {
-      pixel_id: pixelId,
-      ok: false,
-      name: null,
-      last_fired_time: null,
-      error: e instanceof Error ? e.message : String(e),
-    };
   }
+  const result: MetaPixelAccess = {
+    pixel_id: pixelId,
+    ok: false,
+    via: null,
+    pixel_token_reads: env.FB_PIXEL_ACCESS_TOKEN ? false : null,
+    name: null,
+    last_fired_time: null,
+    error: candidates.length ? null : "brak tokena",
+    note: null,
+  };
+  let pixelTokenError: string | null = null;
+  for (const [name, token] of candidates) {
+    let error: string;
+    try {
+      const r = await graphGet(pixelId, { fields: "id,name,last_fired_time", access_token: token });
+      if (r.ok) {
+        result.ok = true;
+        result.via = name;
+        result.name = r.json?.name ?? null;
+        result.last_fired_time = r.json?.last_fired_time ?? null;
+        result.error = null;
+        if (name === "FB_PIXEL_ACCESS_TOKEN") result.pixel_token_reads = true;
+        else if (env.FB_PIXEL_ACCESS_TOKEN) {
+          result.note = `FB_PIXEL_ACCESS_TOKEN nie czyta metadanych piksela (${pixelTokenError ?? "brak ads_read"}) — to normalne dla tokena z Events Manager, który służy tylko do wysyłki zdarzeń; odczyt idzie przez ${name}.`;
+        }
+        return result;
+      }
+      error = r.json?.error?.message ?? `HTTP ${r.status}`;
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+    if (name === "FB_PIXEL_ACCESS_TOKEN") pixelTokenError = error;
+    result.error = error;
+  }
+  return result;
 }
 
 export async function metaTokenHealth(opts: { pixelIds?: string[] } = {}): Promise<{
@@ -402,7 +425,10 @@ export async function metaTokenHealth(opts: { pixelIds?: string[] } = {}): Promi
     );
   }
   for (const p of pixels) {
-    if (!p.ok) warnings.push(`Piksel ${p.pixel_id}: brak dostępu (${p.error ?? "Graph odrzuca"}).`);
+    if (!p.ok)
+      warnings.push(
+        `Piksel ${p.pixel_id}: żaden token serwera go nie widzi (${p.error ?? "Graph odrzuca"}) — sprawdź przypisanie piksela do użytkownika systemowego w Business Managerze.`,
+      );
   }
   const userTok = tokens.find((t) => t.name === "META_ACCESS_TOKEN");
   const userIsSystem = userTok?.type === "SYSTEM_USER" && userTok.valid === true;
