@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "finance-you-mcp",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "title": "Finance You"
     },
     "tools": [
@@ -867,6 +867,135 @@
             "thread_id",
             "body",
             "sender_role"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_updates_since",
+        "title": "What's new since",
+        "description": "Raport „co nowego” na Finance You od wskazanego momentu: nowe leady, nowe wnioski pożyczkowe, wiadomości przychodzące od klientów i inwestorów (e-mail, Messenger, czat, SMS, telefon), nowe oferty inwestorów, odpowiedzi instytucji finansujących i opłacone dostępy. Zwraca liczniki, listy z linkami do panelu oraz `next_since` do użycia przy kolejnym wywołaniu. Bez `since` bierze ostatnią godzinę. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "since": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Początek okna (ISO 8601, np. 2026-09-21T10:00:00Z). Domyślnie 60 minut wstecz."
+            },
+            "until": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Koniec okna (ISO 8601). Domyślnie teraz."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maksymalna liczba pozycji na sekcję (domyślnie 20). Liczniki są zawsze pełne."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_inbox_threads",
+        "title": "List inbox threads",
+        "description": "Skrzynka zespołu Finance You: wątki korespondencji z klientami i inwestorami (e-mail, Messenger/Instagram, czat na stronie, czat inwestora, SMS, WhatsApp), najświeższe pierwsze — jeden wątek = jedna osoba, niezależnie od kanału. `only_awaiting_reply` zwraca tylko wątki, w których ostatnie słowo ma klient. Zwraca `lead_id` potrzebny do `read_inbox_thread`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "channel": {
+              "type": "string",
+              "enum": [
+                "email",
+                "messenger",
+                "chat",
+                "chat_inwestor",
+                "sms",
+                "whatsapp"
+              ],
+              "description": "Filtr kanału. Pomiń, by dostać wszystkie."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: imię, nazwisko, e-mail, telefon albo treść wiadomości."
+            },
+            "only_awaiting_reply": {
+              "type": "boolean",
+              "description": "Tylko wątki czekające na odpowiedź zespołu (domyślnie false)."
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "description": "Ile dni wstecz (domyślnie 30)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60,
+              "description": "Ile wątków (domyślnie 25)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "read_inbox_thread",
+        "title": "Read inbox thread",
+        "description": "Cała historia korespondencji z jedną osobą (klientem lub inwestorem) ze wszystkich kanałów, chronologicznie: e-maile, Messenger/Instagram, czat, SMS, notatki z rozmów. Zwraca też dane leada (kto, e-mail, telefon, typ, status). `lead_id` bierz z `list_inbox_threads` albo `get_updates_since`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Id leada (uuid)."
+            },
+            "channel": {
+              "type": "string",
+              "enum": [
+                "email",
+                "messenger",
+                "chat",
+                "chat_inwestor",
+                "sms",
+                "whatsapp"
+              ],
+              "description": "Filtr kanału (opcjonalnie)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Ile ostatnich wiadomości (domyślnie 60)."
+            }
+          },
+          "required": [
+            "lead_id"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"

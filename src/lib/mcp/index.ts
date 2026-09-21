@@ -30,15 +30,18 @@ import calculateLoanInstallment from "./tools/calculate-loan-installment";
 import listChatThreads from "./tools/list-chat-threads";
 import listChatMessages from "./tools/list-chat-messages";
 import sendChatMessage from "./tools/send-chat-message";
+import getUpdatesSince from "./tools/get-updates-since";
+import listInboxThreads from "./tools/list-inbox-threads";
+import readInboxThread from "./tools/read-inbox-thread";
 
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
 export default defineMcp({
   name: "finance-you-mcp",
   title: "Finance You",
-  version: "0.2.0",
+  version: "0.3.0",
   instructions:
-    "Narzędzia platformy Finance You (pożyczki pozabankowe + inwestycje). Obejmują CRM (leady, klienci, wnioski, oferty inwestorów), treści (blog, FAQ, landing pages, materiały marketingowe, szkolenia), program pośredników, windykację, czat klient↔inwestor oraz kalkulator raty. Widoczność danych ograniczają polityki RLS bazy — użytkownik widzi tylko to, do czego ma uprawnienia.",
+    "Narzędzia platformy Finance You (pożyczki pozabankowe + inwestycje). Obejmują CRM (leady, klienci, wnioski, oferty inwestorów), treści (blog, FAQ, landing pages, materiały marketingowe, szkolenia), program pośredników, windykację, czat klient↔inwestor oraz kalkulator raty. Dla zespołu (administrator/operator): `get_updates_since` — raport „co nowego” od wskazanego momentu (zacznij od niego, gdy użytkownik pyta o nowości; zapamiętaj `next_since` na kolejne pytanie), `list_inbox_threads` — skrzynka z wątkami czekającymi na odpowiedź, `read_inbox_thread` — pełna korespondencja z jedną osobą. Widoczność danych ograniczają polityki RLS bazy — użytkownik widzi tylko to, do czego ma uprawnienia.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
@@ -74,5 +77,8 @@ export default defineMcp({
     listChatThreads,
     listChatMessages,
     sendChatMessage,
+    getUpdatesSince,
+    listInboxThreads,
+    readInboxThread,
   ],
 });
