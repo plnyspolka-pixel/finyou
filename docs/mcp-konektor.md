@@ -11,7 +11,9 @@ jest wyłącznie financeyou.pl i baza; Lovable dostarcza tylko bibliotekę
 Konektor działa **w obie strony**: agent czyta dane i wykonuje akcje panelu
 (edycja leadów, klientów i wniosków, decyzje o ofertach i propozycjach,
 kryteria instytucji, dostępy, windykacja, treści) oraz wysyła wiadomości
-(e-mail, SMS, Messenger, czat, odpowiedź instytucji). Nic nie dzieje się
+(e-mail, SMS, Messenger, czat, odpowiedź instytucji), a także steruje botami
+ElevenLabs (Ania, A1–A3), generuje głos, muzykę, dubbing i wideo oraz sięga do
+Twilio (SMS-y, połączenia, nagrania). Nic nie dzieje się
 automatycznie: każdy zapis to wywołanie na polecenie użytkownika w czacie, a
 klient MCP (Claude.ai / ChatGPT) prosi o potwierdzenie przed każdym narzędziem
 zapisującym. Żadnych cyklicznych maili ani pushy z tego modułu.
@@ -26,6 +28,10 @@ zapisującym. Żadnych cyklicznych maili ani pushy z tego modułu.
 | Fabryka narzędzi „lista z filtrami"                | `src/lib/mcp/_list-tool.ts`                                                                                                                                             |
 | Helpery: role, klient z tokenem, dołączanie danych | `src/lib/mcp/_helpers.ts`                                                                                                                                               |
 | Rdzeń raportu „co nowego"                          | `src/lib/activity-digest.server.ts` (+ test)                                                                                                                            |
+| Klient API ElevenLabs (do panelu i MCP)            | `src/lib/elevenlabs-api.server.ts`                                                                                                                                      |
+| Klient REST Twilio przez bramkę Lovable            | `src/lib/twilio-api.server.ts`                                                                                                                                          |
+| Zapis mediów do Storage (link publiczny/podpisany) | `src/lib/media-storage.server.ts`                                                                                                                                       |
+| Narzędzia ElevenLabs i Twilio                      | `src/lib/mcp/tools/elevenlabs.ts`, `src/lib/mcp/tools/twilio.ts`                                                                                                        |
 | Trasy protokołu (generowane przez plugin)          | `src/routes/[.mcp]/*`, `src/routes/[.well-known]/*`, `src/routes/mcp.ts`                                                                                                |
 | Strona zgody OAuth                                 | `src/routes/[.]lovable.oauth.consent.tsx` (`/.lovable/oauth/consent`)                                                                                                   |
 | Manifest narzędzi (generowany)                     | `.lovable/mcp/manifest.json`                                                                                                                                            |
@@ -228,6 +234,56 @@ OTP, dane bankowe partnerów) nie są zwracane.
 | `list_generated_documents`, `list_document_templates` | Wygenerowane dokumenty i szablony.                  |
 | `list_loan_reminder_sends`                            | Maile przypominające (otwarcia, kliknięcia).        |
 
+**ElevenLabs — boty, głos, media, wideo** (administrator/operator; konfiguracja i
+ogólne wywołanie — administrator)
+
+| Narzędzie                                                                                                 | Co daje                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eleven_status`                                                                                           | Klucz, plan i zużycie znaków, agenty per powierzchnia, numer, ustawienia dzwonienia/SMS, okno godzinowe, konfiguracja wideo.                          |
+| `eleven_list_agents`, `eleven_get_agent`, `eleven_update_agent`                                           | Agenty na koncie (z rolą A1/A2/A3/telefon), pełna konfiguracja, edycja dowolnego agenta.                                                              |
+| `get_text_agent_prompt`, `update_text_agent_prompt`, `sync_voice_agent_prompts`, `provision_voice_agents` | Prompty botów jak w /admin/text-agent: odczyt, zapis z natychmiastową wysyłką do ElevenLabs, wymuszona synchronizacja, tworzenie brakujących agentów. |
+| `eleven_list_conversations`, `eleven_get_conversation`, `eleven_get_conversation_audio`                   | Rozmowy z API (z dopiętym leadem), transkrypt tura po turze z analizą, nagranie jako podpisany link.                                                  |
+| `get_voice_call_stats`, `get_voicebot_settings`\*, `update_voicebot_settings`                             | Statystyki telefonów, ustawienia voicebota i SMS (agent, numer, wyzwalacze, ponowienia).                                                              |
+| `place_voice_call`, `ask_voice_agent`                                                                     | Telefon botem Anią TERAZ (limit 1/24 h na numer, okno godzinowe); tura testowa z agentem bez wysyłki.                                                 |
+| `list_text_agent_knowledge`, `search_text_agent_knowledge`, `add_/update_/delete_text_agent_knowledge`    | Wiedza botów (silnik tekstowy, RAG) — przegląd, szukanie semantyczne, edycja z embeddingiem.                                                          |
+| `eleven_list_knowledge_base`, `eleven_add_knowledge_text`, `eleven_add_knowledge_url`                     | Baza wiedzy w ElevenLabs, dodawanie dokumentów i dopinanie do agenta.                                                                                 |
+| `eleven_list_voices`, `eleven_list_phone_numbers`                                                         | Głosy na koncie, numery podpięte do agentów.                                                                                                          |
+| `text_to_speech`, `speech_to_text`                                                                        | Lektor z tekstu (link MP3 w Storage), transkrypcja nagrania (Scribe, polski, mówcy).                                                                  |
+| `generate_sound_effect`, `compose_music`                                                                  | Efekt dźwiękowy z opisu, utwór muzyczny (podkład pod film/reklamę).                                                                                   |
+| `create_dubbing`, `get_dubbing`, `get_dubbed_file`                                                        | Dubbing filmu/nagrania na inny język (link YouTube/Vimeo albo plik), status, gotowy plik jako link.                                                   |
+| `generate_video`, `get_video_status`                                                                      | Generowanie wideo z opisu przez API ElevenLabs — endpoint konfigurowalny (patrz niżej).                                                               |
+| `eleven_api_request`                                                                                      | Dowolne wywołanie API ElevenLabs (nowe funkcje bez zmiany kodu; binaria trafiają do Storage).                                                         |
+
+\* `get_voicebot_settings` to część `eleven_status`; ustawienia zmienia
+`update_voicebot_settings`.
+
+**Wideo w ElevenLabs.** Ta wersja kodu powstała bez dostępu do dokumentacji API
+wideo (sieć sesji), a ElevenLabs zmienia te ścieżki (modele partnerskie). Dlatego
+ścieżki są konfiguracją, nie kodem: `ELEVENLABS_VIDEO_CREATE_PATH` (POST, body
+z `generate_video` przekazywane 1:1), `ELEVENLABS_VIDEO_STATUS_PATH` (GET, `{id}`
+w ścieżce) i opcjonalnie `ELEVENLABS_VIDEO_ID_FIELD`. Do czasu ustawienia zmiennych
+narzędzia wideo zwracają instrukcję, a `eleven_api_request` pozwala wywołać dowolny
+endpoint od ręki z parametrami z dokumentacji. Media (TTS, muzyka, dubbing, wideo)
+lądują w buckecie `studio-media` (publiczny), nagrania rozmów w `documents`
+(link podpisany na godzinę).
+
+**Twilio — SMS, połączenia, nagrania** (administrator/operator; ogólne wywołanie —
+administrator)
+
+| Narzędzie                                        | Co daje                                                                                      |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `twilio_status`                                  | Klucze, saldo, numery, nadawca SMS.                                                          |
+| `list_twilio_messages`, `get_twilio_message`     | Historia SMS (kierunek, status dostarczenia, błędy, cena), pojedyncza wiadomość.             |
+| `list_twilio_calls`, `get_twilio_call`           | Połączenia (w tym rozmowy voicebota) ze statusem, czasem, ceną.                              |
+| `list_twilio_recordings`, `get_twilio_recording` | Nagrania (np. wiadomości głosowe) i plik MP3 jako podpisany link.                            |
+| `list_twilio_phone_numbers`, `get_twilio_usage`  | Numery z webhookami, zużycie i koszty po kategoriach.                                        |
+| `twilio_place_call`                              | Telefon z odczytanym komunikatem (pl-PL) albo z TwiML — realne połączenie, po potwierdzeniu. |
+| `twilio_api_request`                             | Dowolny zasób REST Twilio (GET/POST/DELETE).                                                 |
+
+SMS do klienta wysyła `send_sms` (ze strażnikami „dość to dość", blokad i
+limitów); narzędzia Twilio powyżej służą do historii, nagrań, kosztów i połączeń
+z komunikatem.
+
 **Kalkulatory**
 
 | Narzędzie                      | Co daje                                              |
@@ -323,8 +379,14 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
      https://claude.ai/api/mcp/auth_callback i https://chatgpt.com/connector_platform_oauth_redirect.
    Upewnij się, że w środowisku serwera są: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,
    SUPABASE_SERVICE_ROLE_KEY (narzędzia MCP czytają je z process.env), a do wysyłek:
-   LOVABLE_API_KEY + RESEND_API_KEY (e-mail), TWILIO_API_KEY (SMS), META_PAGE_ACCESS_TOKEN /
-   META_IG_PAGE_ACCESS_TOKEN (Messenger). Nie pokazuj mi wartości sekretów, tylko czy są.
+   LOVABLE_API_KEY + RESEND_API_KEY (e-mail), TWILIO_API_KEY (SMS, połączenia, nagrania),
+   META_PAGE_ACCESS_TOKEN / META_IG_PAGE_ACCESS_TOKEN (Messenger), ELEVENLABS_API_KEY (boty, głos,
+   media) i AGENT_TOOLS_SECRET. Nie pokazuj mi wartości sekretów, tylko czy są.
+   Wideo ElevenLabs: sprawdź w aktualnej dokumentacji API ElevenLabs (docs → API reference), pod
+   jakimi ścieżkami działa generowanie wideo (create + status/result) i jakie pola przyjmuje body;
+   ustaw ELEVENLABS_VIDEO_CREATE_PATH (np. /v1/…), ELEVENLABS_VIDEO_STATUS_PATH (z {id}) oraz —
+   jeśli identyfikator zadania nie nazywa się id/video_id/generation_id/job_id — ELEVENLABS_VIDEO_ID_FIELD.
+   Jeśli API wideo nie jest jeszcze publicznie dostępne, napisz to wprost i zostaw zmienne puste.
 
 3. Opublikuj aplikację (Publish / Update), tak żeby financeyou.pl serwował aktualny build.
 
@@ -356,7 +418,18 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
       {to, subject: "Test MCP", body: "Test wysyłki przez konektor"} → ok:true i wpis w skrzynce
       panelu; NIE wysyłaj nic do prawdziwych klientów ani instytucji;
    h) sprawdź odmowę: tym samym tokenem, ale kontem bez roli zespołu (np. testowy inwestor),
-      tools/call list_leads → błąd "Wymagane uprawnienia administrator/operator".
+      tools/call list_leads → błąd "Wymagane uprawnienia administrator/operator";
+   i) ELEVENLABS: tools/call eleven_status → api_key_configured:true, subscription z planem, agenty;
+      eleven_list_agents → lista z rolami A1/A2/A3/telefon; eleven_list_conversations {limit: 3} →
+      ostatnie rozmowy; text_to_speech {text: "Test lektora Finance You"} → publiczny link MP3, który
+      da się odtworzyć; ask_voice_agent {surface: "intake", message: "Dzień dobry, chcę pożyczkę
+      pod dom"} → odpowiedź agenta; NIE wołaj place_voice_call na prawdziwe numery (tylko numer
+      testowy zespołu, jeśli go masz); generate_video → jeśli zmienne wideo są ustawione, zleć krótki
+      test (5 s, 16:9) i sprawdź get_video_status, jeśli nie — potwierdź, że narzędzie zwraca
+      instrukcję konfiguracji;
+   j) TWILIO: tools/call twilio_status → configured:true, saldo, numery; list_twilio_messages
+      {limit: 5} → historia SMS; list_twilio_calls {limit: 5} → połączenia; get_twilio_usage
+      {category: "sms"} → zużycie; NIE wołaj twilio_place_call na prawdziwe numery.
    Po testach usuń lead testowy (albo zostaw oznaczony jako zły z powodem "test") i link testowy.
 
 6. Raport dla mnie: tabela kroków 1–5 z ✅/❌, dokładne odpowiedzi z punktu 4, id leada testowego,

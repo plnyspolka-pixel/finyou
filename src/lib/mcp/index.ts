@@ -50,6 +50,8 @@ import { writesCommsTools } from "./tools/writes-comms";
 import { writesInvestorsTools } from "./tools/writes-investors";
 import { writesFinanceTools } from "./tools/writes-finance";
 import { writesMarketingTools } from "./tools/writes-marketing";
+import { elevenLabsTools } from "./tools/elevenlabs";
+import { twilioTools } from "./tools/twilio";
 
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
@@ -58,7 +60,7 @@ export default defineMcp({
   title: "Finance You",
   version: "0.3.0",
   instructions:
-    "Narzędzia platformy Finance You (pożyczki pozabankowe + inwestycje). Obejmują CRM (leady, klienci, wnioski, oferty inwestorów), treści (blog, FAQ, landing pages, materiały marketingowe, szkolenia), program pośredników, windykację, czat klient↔inwestor oraz kalkulator raty. Dla zespołu (administrator/operator): `get_updates_since` — raport „co nowego” od wskazanego momentu (zacznij od niego, gdy użytkownik pyta o nowości; zapamiętaj `next_since` na kolejne pytanie), `list_inbox_threads` — skrzynka z wątkami czekającymi na odpowiedź, `read_inbox_thread` — pełna korespondencja z jedną osobą. Narzędzia działają w obie strony: poza odczytem są akcje panelu (edycja leadów, klientów, wniosków, decyzje o ofertach i propozycjach, kryteria instytucji, dostępy, windykacja, treści) oraz wysyłki (`send_email`, `send_sms`, `send_messenger_message`, `send_chat_reply`, `reply_institution_thread`). Każdy zapis wykonuj tylko na wyraźne polecenie użytkownika; przed wysyłką wiadomości pokaż dokładną treść i poczekaj na potwierdzenie. Widoczność danych ograniczają polityki RLS bazy i role — użytkownik widzi i zmienia tylko to, do czego ma uprawnienia.",
+    "Narzędzia platformy Finance You (pożyczki pozabankowe + inwestycje). Obejmują CRM (leady, klienci, wnioski, oferty inwestorów), treści (blog, FAQ, landing pages, materiały marketingowe, szkolenia), program pośredników, windykację, czat klient↔inwestor oraz kalkulator raty. Dla zespołu (administrator/operator): `get_updates_since` — raport „co nowego” od wskazanego momentu (zacznij od niego, gdy użytkownik pyta o nowości; zapamiętaj `next_since` na kolejne pytanie), `list_inbox_threads` — skrzynka z wątkami czekającymi na odpowiedź, `read_inbox_thread` — pełna korespondencja z jedną osobą. Narzędzia działają w obie strony: poza odczytem są akcje panelu (edycja leadów, klientów, wniosków, decyzje o ofertach i propozycjach, kryteria instytucji, dostępy, windykacja, treści) oraz wysyłki (`send_email`, `send_sms`, `send_messenger_message`, `send_chat_reply`, `reply_institution_thread`). Boty i głos ElevenLabs: `eleven_status`, `eleven_list_agents`, `get_text_agent_prompt` / `update_text_agent_prompt`, `eleven_get_conversation` (transkrypty), `place_voice_call` (telefon Anią — realne połączenie), `ask_voice_agent` (tura testowa), `text_to_speech`, `speech_to_text`, `compose_music`, `create_dubbing`, `generate_video`; Twilio: `twilio_status`, `list_twilio_messages`, `list_twilio_calls`, `get_twilio_recording`, `twilio_place_call`. Każdy zapis wykonuj tylko na wyraźne polecenie użytkownika; przed wysyłką wiadomości pokaż dokładną treść i poczekaj na potwierdzenie. Widoczność danych ograniczają polityki RLS bazy i role — użytkownik widzi i zmienia tylko to, do czego ma uprawnienia.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
@@ -114,5 +116,7 @@ export default defineMcp({
     ...writesInvestorsTools,
     ...writesFinanceTools,
     ...writesMarketingTools,
+    ...elevenLabsTools,
+    ...twilioTools,
   ],
 });

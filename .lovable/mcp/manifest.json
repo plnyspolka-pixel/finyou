@@ -7250,6 +7250,1700 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "outputSchema": null
+      },
+      {
+        "name": "eleven_status",
+        "title": "ElevenLabs status",
+        "description": "Stan integracji ElevenLabs: klucz API, plan i zużycie znaków, agenty przypisane do powierzchni (A1 intake, A2 investor_info, A3 investor_panel, telefon, przypomnienia), numer telefonu voicebota, ustawienia dzwonienia i SMS, aktualne okno godzinowe dzwonienia, sekret webhook tooli. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_list_agents",
+        "title": "List ElevenLabs agents",
+        "description": "Agenty konwersacyjne na koncie ElevenLabs z oznaczeniem, którą powierzchnię Finance You obsługują (A1/A2/A3, telefon, przypomnienia). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_get_agent",
+        "title": "Get ElevenLabs agent config",
+        "description": "Konfiguracja agenta ElevenLabs: nazwa, pierwsza wiadomość, język, prompt systemowy, model LLM, głos, narzędzia (webhook toole), dokumenty bazy wiedzy. `full=true` zwraca surowy JSON. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "agent_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "full": {
+              "type": "boolean",
+              "default": false
+            },
+            "prompt_max_chars": {
+              "type": "integer",
+              "minimum": 200,
+              "maximum": 60000,
+              "default": 8000
+            }
+          },
+          "required": [
+            "agent_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_list_conversations",
+        "title": "List ElevenLabs conversations",
+        "description": "Rozmowy agentów ElevenLabs (telefon, czat, Messenger przez turę tekstową) z API: agent, status, start, czas trwania, wynik, liczba wiadomości — z dopiętym leadem, jeśli rozmowa jest w historii komunikacji. Filtry: agent, daty, wynik. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            },
+            "since": {
+              "type": "string",
+              "description": "Rozpoczęte od (ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string"
+            },
+            "call_successful": {
+              "type": "string",
+              "enum": [
+                "success",
+                "failure",
+                "unknown"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "description": "`next_cursor` z poprzedniej strony."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_get_conversation",
+        "title": "Get ElevenLabs conversation (transcript)",
+        "description": "Pełna rozmowa z API ElevenLabs: transkrypt tura po turze (z wywołaniami narzędzi), analiza (podsumowanie, ocena kryteriów, zebrane dane), metadane (czas, koszt, telefon) oraz powiązany lead i wpis kolejki połączeń. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "conversation_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "include_raw": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "conversation_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_get_conversation_audio",
+        "title": "Get conversation recording (audio link)",
+        "description": "Pobiera nagranie rozmowy z ElevenLabs i zwraca podpisany link do pliku (ważny godzinę). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "conversation_id": {
+              "type": "string",
+              "minLength": 5
+            }
+          },
+          "required": [
+            "conversation_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_list_voices",
+        "title": "List ElevenLabs voices",
+        "description": "Głosy dostępne na koncie ElevenLabs (do TTS i agentów): id, nazwa, kategoria, etykiety, próbka. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_list_phone_numbers",
+        "title": "List ElevenLabs phone numbers",
+        "description": "Numery telefonów podpięte do agentów w ElevenLabs (Twilio/SIP): numer, etykieta, id, przypisany agent. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_list_knowledge_base",
+        "title": "List ElevenLabs knowledge base",
+        "description": "Dokumenty bazy wiedzy agentów w ElevenLabs: id, nazwa, typ (tekst/url/plik), rozmiar, agenty, które z nich korzystają. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_text_agent_prompt",
+        "title": "Get bot prompt (klient / inwestor / inwestor_prywatny)",
+        "description": "Prompt systemowy i pierwsza wiadomość bota dla wariantu: klient (A1 intake — czat, Messenger, e-mail, telefon), inwestor (A2), inwestor_prywatny (A3) — z edytora /admin/text-agent. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "variant": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor",
+                "inwestor_prywatny"
+              ],
+              "default": "klient"
+            },
+            "full": {
+              "type": "boolean",
+              "default": false,
+              "description": "Cały prompt (domyślnie do 8000 znaków)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_text_agent_knowledge",
+        "title": "List bot knowledge entries",
+        "description": "Wpisy wiedzy botów (silnik tekstowy / RAG): tytuł, treść, grupa (klient / inwestor / wspolna). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Grupa: klient, inwestor, wspolna."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w tytule lub treści."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_text_agent_knowledge",
+        "title": "Semantic search in bot knowledge",
+        "description": "Wyszukiwanie semantyczne (embeddingi) w wiedzy botów — to, co bot dostałby do kontekstu przy takim pytaniu klienta. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor"
+              ],
+              "default": "klient"
+            },
+            "k": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 4
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_voice_call_stats",
+        "title": "Get voicebot call statistics",
+        "description": "Statystyki telefonów voicebota w okresie (domyślnie 7 dni): kolejka po statusie i źródle, rozmowy po wyniku (odebrane, nieodebrane, poczta, błąd), średni i łączny czas rozmów, po dniach. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "since": {
+              "type": "string",
+              "description": "Od (ISO 8601 lub YYYY-MM-DD; domyślnie 7 dni wstecz)."
+            },
+            "until": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_voicebot_settings",
+        "title": "Update voicebot settings",
+        "description": "Ustawienia voicebota i SMS: agent telefoniczny, numer (phone_number_id z ElevenLabs), wyzwalacz dzwonienia (auto / manual / auto_retry), opóźnienia i ponowienia, SMS (włączony, nadawca, szablon, wyzwalacz) oraz agenty powierzchni A1/A2/A3 i przypomnień. Zmienia tylko podane pola. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "agent_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "agent_phone_number_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "document_reminder_agent_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "intake_agent_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "investor_info_agent_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "investor_panel_agent_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "call_trigger": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "manual",
+                "auto_retry"
+              ]
+            },
+            "call_delay_seconds": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 86400
+            },
+            "retry_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "retry_delay_minutes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1440
+            },
+            "sms_enabled": {
+              "type": "boolean"
+            },
+            "sms_from": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sms_template": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 1000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sms_delay_seconds": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 86400
+            },
+            "sms_trigger": {
+              "type": "string",
+              "enum": [
+                "before_call",
+                "after_call",
+                "on_failure",
+                "off"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_text_agent_prompt",
+        "title": "Update bot prompt and push to ElevenLabs",
+        "description": "Zmienia prompt systemowy i/lub pierwszą wiadomość bota dla wariantu (klient = A1, inwestor = A2, inwestor_prywatny = A3), czyści cache i od razu wysyła prompt do agenta w ElevenLabs (z regułami kanałów), tak jak zapis w /admin/text-agent. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "variant": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor",
+                "inwestor_prywatny"
+              ]
+            },
+            "system_prompt": {
+              "type": "string",
+              "minLength": 20,
+              "maxLength": 60000
+            },
+            "first_message": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 1000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "variant"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "sync_voice_agent_prompts",
+        "title": "Push current prompts to ElevenLabs agents",
+        "description": "Wymusza wysłanie aktualnych promptów (z regułami kanałów) do agentów A1–A3 w ElevenLabs — np. gdy ktoś zmienił prompt ręcznie w konsoli. Zwraca, co zaktualizowano, pominięto i czy telefon dzwoni innym agentem niż A1. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "surfaces": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "intake",
+                  "investor_info",
+                  "investor_panel"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "provision_voice_agents",
+        "title": "Create missing ElevenLabs process agents",
+        "description": "Tworzy przez API brakujące agenty procesowe A1/A2/A3 z aktualnymi promptami i zapisuje ich id w ustawieniach (idempotentne — istniejące pomija). Webhook toole dopina się potem w konsoli ElevenLabs. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_update_agent",
+        "title": "Update ElevenLabs agent (any)",
+        "description": "Bezpośrednia edycja dowolnego agenta w ElevenLabs (np. telefonicznego lub windykacyjnego): nazwa, pierwsza wiadomość, prompt, język, model LLM, głos, model TTS. Dla A1–A3 prompt edytuj przez `update_text_agent_prompt`, bo inaczej synchronizacja nadpisze go promptem z panelu. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "agent_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "first_message": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "prompt": {
+              "type": "string",
+              "maxLength": 60000
+            },
+            "language": {
+              "type": "string",
+              "maxLength": 10
+            },
+            "llm": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "voice_id": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "tts_model_id": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "required": [
+            "agent_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_text_agent_knowledge",
+        "title": "Add bot knowledge entry",
+        "description": "Dodaje wpis wiedzy botów (z embeddingiem do wyszukiwania semantycznego): tytuł, treść, grupa. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200
+            },
+            "content": {
+              "type": "string",
+              "minLength": 10,
+              "maxLength": 20000
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor",
+                "wspolna"
+              ],
+              "default": "klient"
+            }
+          },
+          "required": [
+            "title",
+            "content"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_text_agent_knowledge",
+        "title": "Update bot knowledge entry",
+        "description": "Edytuje wpis wiedzy botów (tytuł, treść, grupa) i przelicza embedding. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200
+            },
+            "content": {
+              "type": "string",
+              "minLength": 10,
+              "maxLength": 20000
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor",
+                "wspolna"
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_text_agent_knowledge",
+        "title": "Delete bot knowledge entry",
+        "description": "Usuwa wpis wiedzy botów. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_add_knowledge_text",
+        "title": "Add text document to ElevenLabs knowledge base",
+        "description": "Dodaje dokument tekstowy do bazy wiedzy ElevenLabs (agenci ConvAI) i opcjonalnie dopina go do wskazanego agenta. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200
+            },
+            "text": {
+              "type": "string",
+              "minLength": 20,
+              "maxLength": 200000
+            },
+            "agent_id": {
+              "type": "string",
+              "description": "Dopnij dokument do tego agenta."
+            }
+          },
+          "required": [
+            "name",
+            "text"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_add_knowledge_url",
+        "title": "Add URL document to ElevenLabs knowledge base",
+        "description": "Dodaje stronę (URL) do bazy wiedzy ElevenLabs i opcjonalnie dopina do agenta. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "agent_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "place_voice_call",
+        "title": "Place voicebot call now (ElevenLabs)",
+        "description": "Dzwoni TERAZ do klienta botem Anią (agent ElevenLabs przez Twilio): numer albo lead / wniosek, imię i zmienne dynamiczne dla agenta, opcjonalnie inny agent. Obowiązuje limit 1 telefon / 24 h na numer i okno godzinowe. To realny telefon — użyj tylko na wyraźne polecenie użytkownika. Zaplanowany telefon w kolejce daje `queue_call`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "phone": {
+              "type": "string",
+              "minLength": 9,
+              "maxLength": 20
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "first_name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "dynamic_variables": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "agent_id": {
+              "type": "string",
+              "description": "Inny agent niż domyślny telefoniczny."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "ask_voice_agent",
+        "title": "Ask an ElevenLabs agent (test turn)",
+        "description": "Jedna tura tekstowa z agentem ElevenLabs (bez historii leada, nic nie jest wysyłane do klientów) — do testowania promptu: „co Ania odpowie na …”. Podaj agent_id albo powierzchnię (intake / investor_info / investor_panel). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            },
+            "agent_id": {
+              "type": "string"
+            },
+            "surface": {
+              "type": "string",
+              "enum": [
+                "intake",
+                "investor_info",
+                "investor_panel"
+              ]
+            },
+            "channel": {
+              "type": "string",
+              "maxLength": 40,
+              "default": "chat",
+              "description": "Zmienna `channel` dla reguł kanału (chat, messenger, email, sms, voice_phone)."
+            },
+            "dynamic_variables": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "message"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "text_to_speech",
+        "title": "Text to speech (ElevenLabs)",
+        "description": "Generuje nagranie głosowe z tekstu (do 5000 znaków) wybranym głosem (domyślnie głos z ustawień / Filip) i zwraca publiczny link MP3 w Storage. Do nagrań IVR, lektora wideo, wiadomości głosowych. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 5000
+            },
+            "voice_id": {
+              "type": "string"
+            },
+            "model_id": {
+              "type": "string",
+              "default": "eleven_multilingual_v2"
+            },
+            "output_format": {
+              "type": "string",
+              "default": "mp3_44100_128"
+            },
+            "stability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "similarity_boost": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "speed": {
+              "type": "number",
+              "minimum": 0.7,
+              "maximum": 1.2
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 60,
+              "description": "Nazwa pliku."
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "speech_to_text",
+        "title": "Speech to text (ElevenLabs Scribe)",
+        "description": "Transkrybuje nagranie (adres http(s) do pliku audio/wideo, do 50 MB) modelem Scribe; domyślnie polski, opcjonalnie z rozdzieleniem mówców. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "audio_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "language_code": {
+              "type": "string",
+              "maxLength": 10,
+              "default": "pol"
+            },
+            "diarize": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "audio_url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_sound_effect",
+        "title": "Generate sound effect (ElevenLabs)",
+        "description": "Generuje efekt dźwiękowy z opisu (0,5–22 s) i zwraca publiczny link MP3. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            },
+            "duration_seconds": {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 22
+            },
+            "prompt_influence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "compose_music",
+        "title": "Compose music (ElevenLabs Music)",
+        "description": "Komponuje utwór z opisu (10–300 s), np. podkład pod film lub reklamę, i zwraca publiczny link MP3. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 2000
+            },
+            "length_seconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 300,
+              "default": 30
+            }
+          },
+          "required": [
+            "prompt"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_dubbing",
+        "title": "Dub a video / audio into another language",
+        "description": "Zleca dubbing filmu lub nagrania (ElevenLabs Dubbing): źródło to link YouTube/Vimeo/TikTok/X albo bezpośredni adres pliku (mp4/mp3, do 100 MB — wtedy plik jest pobierany i wysyłany), język docelowy (np. en, de, uk), opcjonalnie język źródłowy i liczba mówców. Zwraca id zadania; status daje `get_dubbing`, gotowy plik `get_dubbed_file`. Zużywa kredyty. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "source_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "target_lang": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 10
+            },
+            "source_lang": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 10
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "num_speakers": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "watermark": {
+              "type": "boolean",
+              "default": true,
+              "description": "Znak wodny (tańszy dubbing)."
+            },
+            "highest_resolution": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "source_url",
+            "target_lang"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_dubbing",
+        "title": "Get dubbing status",
+        "description": "Status zadania dubbingu: nazwa, status (dubbing / dubbed / failed), języki docelowe, błąd. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "dubbing_id": {
+              "type": "string",
+              "minLength": 5
+            }
+          },
+          "required": [
+            "dubbing_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_dubbed_file",
+        "title": "Get dubbed file (link)",
+        "description": "Pobiera gotowy zdubbingowany plik (wideo mp4 lub audio) w podanym języku i zwraca publiczny link w Storage. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "dubbing_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "language_code": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 10
+            }
+          },
+          "required": [
+            "dubbing_id",
+            "language_code"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_video",
+        "title": "Generate video (ElevenLabs)",
+        "description": "Zleca wygenerowanie wideo z opisu przez API ElevenLabs (opcjonalnie model, długość, proporcje, rozdzielczość, obraz startowy, dodatkowe pola 1:1). Ścieżka endpointu pochodzi z ELEVENLABS_VIDEO_CREATE_PATH albo z `endpoint_path`; bez konfiguracji narzędzie zwraca instrukcję. Zwraca odpowiedź API i `job_id` do `get_video_status`. Zużywa kredyty. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 4000
+            },
+            "model": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "duration_seconds": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 120
+            },
+            "aspect_ratio": {
+              "type": "string",
+              "maxLength": 10,
+              "description": "np. 16:9, 9:16, 1:1"
+            },
+            "resolution": {
+              "type": "string",
+              "maxLength": 10,
+              "description": "np. 720p, 1080p"
+            },
+            "image_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Obraz startowy (image-to-video)."
+            },
+            "extra": {
+              "type": "object",
+              "additionalProperties": {},
+              "description": "Dodatkowe pola body przekazywane bez zmian."
+            },
+            "endpoint_path": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Nadpisanie ścieżki, np. /v1/…"
+            }
+          },
+          "required": [
+            "prompt"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_video_status",
+        "title": "Get video generation status",
+        "description": "Status zadania wideo (ELEVENLABS_VIDEO_STATUS_PATH z {id} albo `endpoint_path`). Gdy API zwraca gotowy plik, zapisuje go w Storage i zwraca publiczny link; gdy JSON — zwraca go z wykrytym adresem wideo. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "endpoint_path": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "eleven_api_request",
+        "title": "ElevenLabs API request (generic)",
+        "description": "Dowolne wywołanie API ElevenLabs (ścieżka /v1/… lub /v2/…, GET/POST/PATCH/DELETE, parametry, body JSON) — do funkcji, które nie mają jeszcze osobnego narzędzia (np. nowe API wideo, historia generacji, modele, ustawienia agentów). Odpowiedzi binarne trafiają do Storage jako publiczny link. Klucz zostaje na serwerze. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": [
+                "GET",
+                "POST",
+                "PATCH",
+                "PUT",
+                "DELETE"
+              ],
+              "default": "GET"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 4,
+              "maxLength": 300
+            },
+            "query": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            },
+            "json": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "twilio_status",
+        "title": "Twilio status",
+        "description": "Stan integracji Twilio: czy klucze są skonfigurowane, saldo konta, numery przypisane do konta, domyślny nadawca SMS (z ustawień voicebota). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_twilio_messages",
+        "title": "List Twilio SMS messages",
+        "description": "Historia SMS-ów z Twilio (wysłane i odebrane): nadawca, odbiorca, kierunek, status dostarczenia, treść, kod błędu, cena. Filtry: numer, zakres dat. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": "string",
+              "description": "Numer odbiorcy w formacie E.164, np. +48600100200."
+            },
+            "from": {
+              "type": "string",
+              "description": "Numer nadawcy (E.164)."
+            },
+            "since": {
+              "type": "string",
+              "description": "Wysłane od (data, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Wysłane do."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_twilio_message",
+        "title": "Get Twilio SMS message",
+        "description": "Pełne dane jednego SMS-a z Twilio po SID (status, treść, błędy, cena). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sid": {
+              "type": "string",
+              "minLength": 10
+            }
+          },
+          "required": [
+            "sid"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_twilio_calls",
+        "title": "List Twilio calls",
+        "description": "Połączenia w Twilio (przychodzące i wychodzące, w tym rozmowy voicebota): numery, kierunek, status, czas trwania, cena, kto odebrał. Filtry: numer, status, zakres dat. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": "string"
+            },
+            "from": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "ringing",
+                "in-progress",
+                "completed",
+                "busy",
+                "failed",
+                "no-answer",
+                "canceled"
+              ]
+            },
+            "since": {
+              "type": "string",
+              "description": "Rozpoczęte od (ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_twilio_call",
+        "title": "Get Twilio call",
+        "description": "Pełne dane jednego połączenia Twilio po SID. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sid": {
+              "type": "string",
+              "minLength": 10
+            }
+          },
+          "required": [
+            "sid"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_twilio_recordings",
+        "title": "List Twilio recordings",
+        "description": "Nagrania rozmów w Twilio (np. wiadomości głosowe zostawione na numerze firmy): SID, połączenie, długość, data. Plik daje `get_twilio_recording`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "call_sid": {
+              "type": "string"
+            },
+            "since": {
+              "type": "string",
+              "description": "Utworzone od (ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_twilio_recording",
+        "title": "Get Twilio recording (audio link)",
+        "description": "Pobiera nagranie z Twilio i zwraca podpisany link do pliku MP3 (ważny godzinę). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sid": {
+              "type": "string",
+              "minLength": 10
+            }
+          },
+          "required": [
+            "sid"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_twilio_phone_numbers",
+        "title": "List Twilio phone numbers",
+        "description": "Numery na koncie Twilio: numer, nazwa, możliwości (głos/SMS/MMS), webhooki głosu i SMS. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_twilio_usage",
+        "title": "Get Twilio usage",
+        "description": "Zużycie i koszty Twilio w okresie po kategoriach (sms, sms-outbound, calls, calls-outbound, recordings…). Bez kategorii — wszystkie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "category": {
+              "type": "string",
+              "description": "np. sms, sms-outbound, sms-inbound, calls, calls-outbound, calls-inbound, recordings, totalprice"
+            },
+            "since": {
+              "type": "string",
+              "description": "Od (YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Do (YYYY-MM-DD)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "twilio_place_call",
+        "title": "Place a Twilio call with a spoken message",
+        "description": "Dzwoni z numeru firmy i odczytuje komunikat po polsku (syntezator Twilio), albo odtwarza TwiML z podanego adresu. To realny telefon do prawdziwej osoby — użyj TYLKO po tym, jak użytkownik zobaczył treść komunikatu i wyraźnie kazał zadzwonić. Rozmowę z botem Anią zleca `place_voice_call` (ElevenLabs). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": "string",
+              "minLength": 9,
+              "description": "Numer E.164, np. +48600100200."
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Alternatywnie lead — numer z rekordu."
+            },
+            "message": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 1500,
+              "description": "Komunikat do odczytania (pl-PL)."
+            },
+            "twiml_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Alternatywnie adres TwiML."
+            },
+            "from": {
+              "type": "string",
+              "description": "Numer nadawcy; domyślnie nadawca SMS z ustawień voicebota."
+            },
+            "record": {
+              "type": "boolean",
+              "default": false,
+              "description": "Nagrywać rozmowę."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "twilio_api_request",
+        "title": "Twilio API request (generic)",
+        "description": "Dowolne wywołanie REST Twilio względem konta (np. `Messages.json`, `Calls/CA….json`, `Usage/Records/LastMonth.json`, `IncomingPhoneNumbers.json`), GET/POST/DELETE z parametrami zapytania lub formularza. Odpowiedzi binarne trafiają do Storage jako podpisany link. Klucze zostają na serwerze. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": [
+                "GET",
+                "POST",
+                "DELETE"
+              ],
+              "default": "GET"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 300,
+              "description": "Ścieżka zasobu względem konta, np. Messages.json."
+            },
+            "query": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            },
+            "form": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              },
+              "description": "Pola formularza dla POST."
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
       }
     ]
   }
