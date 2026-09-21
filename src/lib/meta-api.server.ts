@@ -313,6 +313,21 @@ export async function getIgMediaInsights(mediaId: string, metrics?: string) {
   return (json?.data ?? []) as any[];
 }
 
+/** Metryki konta IG, które nowe API zwraca tylko z `metric_type=total_value`. */
+const IG_TOTAL_VALUE_METRICS = new Set([
+  "profile_views",
+  "accounts_engaged",
+  "total_interactions",
+  "likes",
+  "comments",
+  "shares",
+  "saves",
+  "replies",
+  "follows_and_unfollows",
+  "profile_links_taps",
+  "website_clicks",
+]);
+
 export async function getIgAccountInsights(
   opts: {
     metrics?: string;
@@ -322,18 +337,43 @@ export async function getIgAccountInsights(
     metricType?: string;
   } = {},
 ) {
-  const json = await graphRequest(`${requireIgUserId()}/insights`, {
-    query: {
-      metric:
-        opts.metrics ?? "reach,follower_count,profile_views,accounts_engaged,total_interactions",
-      period: opts.period ?? "day",
-      metric_type: opts.metricType,
-      since: toUnix(opts.since),
-      until: toUnix(opts.until),
-    },
-    token: "ig",
-  });
-  return (json?.data ?? []) as any[];
+  const metrics = (
+    opts.metrics ?? "reach,follower_count,profile_views,accounts_engaged,total_interactions"
+  )
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  const base = {
+    period: opts.period ?? "day",
+    since: toUnix(opts.since),
+    until: toUnix(opts.until),
+  };
+  const path = `${requireIgUserId()}/insights`;
+  if (opts.metricType) {
+    const json = await graphRequest(path, {
+      query: { ...base, metric: metrics.join(","), metric_type: opts.metricType },
+      token: "ig",
+    });
+    return (json?.data ?? []) as any[];
+  }
+  // Meta wymaga metric_type=total_value dla części metryk, a follower_count
+  // przyjmuje tylko szereg czasowy — dlatego dwa zapytania i scalony wynik.
+  const series = metrics.filter((m) => !IG_TOTAL_VALUE_METRICS.has(m));
+  const totals = metrics.filter((m) => IG_TOTAL_VALUE_METRICS.has(m));
+  const calls: Promise<any>[] = [];
+  if (series.length) {
+    calls.push(graphRequest(path, { query: { ...base, metric: series.join(",") }, token: "ig" }));
+  }
+  if (totals.length) {
+    calls.push(
+      graphRequest(path, {
+        query: { ...base, metric: totals.join(","), metric_type: "total_value" },
+        token: "ig",
+      }),
+    );
+  }
+  const results = await Promise.all(calls);
+  return results.flatMap((json) => (json?.data ?? []) as any[]);
 }
 
 export async function listIgComments(mediaId: string, limit = 50) {

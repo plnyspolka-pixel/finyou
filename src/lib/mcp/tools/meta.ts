@@ -28,6 +28,11 @@ const READ = { readOnlyHint: true, idempotentHint: true, openWorldHint: true } a
 const insightsToMap = (rows: any[]) => {
   const out: Record<string, unknown> = {};
   for (const r of rows) {
+    if (r?.total_value && typeof r.total_value === "object") {
+      // metric_type=total_value: jedna liczba za cały okres (nowe API Instagrama)
+      out[r?.name] = r.total_value.value ?? r.total_value;
+      continue;
+    }
     const vals = r?.values ?? [];
     out[r?.name] =
       vals.length === 1
