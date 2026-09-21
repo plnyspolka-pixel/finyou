@@ -141,7 +141,11 @@ export const umowaHbAssistant = createServerFn({ method: "POST" })
     const res = await fetch(GATEWAY, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: GEMINI_PRO, messages, response_format: { type: "json_object" } }),
+      body: JSON.stringify({
+        model: GEMINI_PRO,
+        messages,
+        response_format: { type: "json_object" },
+      }),
     });
     if (res.status === 429) throw new Error("Zbyt wiele zapytań do AI. Spróbuj za chwilę.");
     if (res.status === 402) throw new Error("Wyczerpany limit AI. Doładuj środki w Lovable Cloud.");

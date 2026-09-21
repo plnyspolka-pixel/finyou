@@ -11,16 +11,11 @@ export const Route = createFileRoute("/api/public/hooks/institution-mail-tick")(
         const unauth = requireCronSecret(request);
         if (unauth) return unauth;
 
-        const { runInstitutionMailAgent } = await import(
-          "@/lib/institution-mail-agent/engine.server"
-        );
+        const { runInstitutionMailAgent } =
+          await import("@/lib/institution-mail-agent/engine.server");
         try {
           const result = await runInstitutionMailAgent();
-          if (
-            result.inbox.classified ||
-            result.outreach.sent ||
-            result.forwarding.forwarded
-          ) {
+          if (result.inbox.classified || result.outreach.sent || result.forwarding.forwarded) {
             console.log("[institution-mail-tick]", JSON.stringify(result));
           }
           return Response.json({ ok: true, ...result });

@@ -4,7 +4,7 @@
 // Wywołania Dilisense wyłącznie przez backend — klucz w sekretach.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
 import {
   BLOCKING_RESOLUTIONS,
   type AmlHitResolution,
@@ -48,7 +48,7 @@ function customerDisplayName(c: any): string {
 }
 
 export const listAmlCustomers = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async ({ context }) => {
     const { data, error } = await loose(context.supabase)
       .from("aml_customers")
@@ -60,7 +60,7 @@ export const listAmlCustomers = createServerFn({ method: "POST" })
   });
 
 export const upsertAmlCustomer = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => CustomerInput.parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -158,7 +158,7 @@ export const upsertAmlCustomer = createServerFn({ method: "POST" })
 
 // ── CRBR: pobranie beneficjentów i reprezentantów do profilu AML ─────
 export const fetchCrbrForAmlCustomer = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => z.object({ customerId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -255,7 +255,7 @@ export const fetchCrbrForAmlCustomer = createServerFn({ method: "POST" })
  * Brak trafień = 'clear' (można zawrzeć umowę). Trafienia = 'review_required'.
  */
 export const runAmlScreening = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => z.object({ customerId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -377,7 +377,7 @@ export const runAmlScreening = createServerFn({ method: "POST" })
   });
 
 export const listAmlScreenings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z.object({ customerId: z.string().uuid().optional() }).parse(data ?? {}),
   )
@@ -399,7 +399,7 @@ export const listAmlScreenings = createServerFn({ method: "POST" })
  * nierozstrzygnięte blokuje zawarcie umowy (status 'blocked').
  */
 export const resolveAmlScreening = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z
       .object({
@@ -475,7 +475,7 @@ export const resolveAmlScreening = createServerFn({ method: "POST" })
 
 // ── Oceny ryzyka ─────────────────────────────────────────────────────
 export const proposeAmlRisk = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => z.object({ customerId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }): Promise<{ proposal: RiskProposal }> => {
     const db = loose(context.supabase);
@@ -517,7 +517,7 @@ export const proposeAmlRisk = createServerFn({ method: "POST" })
   });
 
 export const decideAmlRisk = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z
       .object({
@@ -577,7 +577,7 @@ export const decideAmlRisk = createServerFn({ method: "POST" })
   });
 
 export const listAmlRiskAssessments = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async ({ context }) => {
     const { data, error } = await loose(context.supabase)
       .from("aml_risk_assessments")

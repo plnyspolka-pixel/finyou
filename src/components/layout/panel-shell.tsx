@@ -151,9 +151,7 @@ export function PanelShell({
         to={sectionTarget(s)}
         onClick={onNavigate}
         className={`relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-          active
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "hover:bg-sidebar-accent/60"
+          active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/60"
         }`}
       >
         {active && (

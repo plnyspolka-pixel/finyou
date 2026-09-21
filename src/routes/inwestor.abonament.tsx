@@ -14,7 +14,8 @@ import {
   listAccessProducts,
   type AccessStateResult,
 } from "@/lib/access/state.functions";
-import { formatWarsawDate, type AccessProduct } from "@/lib/access/core";
+import { formatGroszPln, formatWarsawDate, type AccessProduct } from "@/lib/access/core";
+import { TIER_PRESENTATION, PRODUCT_OKAZJA_UNLOCK } from "@/lib/investor-plan/plans";
 
 export const Route = createFileRoute("/inwestor/abonament")({
   validateSearch: (
@@ -28,18 +29,9 @@ export const Route = createFileRoute("/inwestor/abonament")({
   component: InwestorAbonament,
 });
 
+// Zakres pakietu PRO (180 dni) — spójny z lib/investor-plan/plans.ts.
 const FEATURES: Record<number, string[]> = {
-  30: [
-    "Pełne dane wszystkich dostępnych ofert",
-    "Dokumenty, KW, analizy i wyceny",
-    "Składanie ofert, czat i umowy",
-    "Windykacja i Akademia Inwestora",
-  ],
-  365: [
-    "Wszystko z pakietu 30-dniowego",
-    "Pełny rok bez przerw w dostępie",
-    "Priorytetowe wsparcie",
-  ],
+  180: TIER_PRESENTATION.pro.bullets,
 };
 
 function InwestorAbonament() {
@@ -76,9 +68,9 @@ function InwestorAbonament() {
   return (
     <div className="space-y-6">
       <FancyPageHeader
-        eyebrow="Dostęp"
-        title="Pełny dostęp inwestora"
-        subtitle="Jednorazowa płatność przedłuża dostęp o określoną liczbę dni. Bez automatycznych odnowień."
+        eyebrow="Pakiety"
+        title="Podstawowy i PRO"
+        subtitle="Konto Podstawowe nie ma opłat stałych — płacisz tylko za okazję, którą bierzesz. PRO to ten sam zakres bez opłat jednostkowych plus Akademia, compliance, AML, windykacja AI, raporty bez limitu i pierwszeństwo ofert."
       />
 
       {tpay && payment && (
@@ -126,18 +118,22 @@ function InwestorAbonament() {
       )}
 
       {state && !hasActive && (
-        <Card>
+        <Card className="border-slate-300">
           <CardHeader>
-            <CardTitle className="text-base">Konto darmowe — masz je zawsze, bez opłat</CardTitle>
+            <CardTitle className="text-base">Pakiet Podstawowy — 0 zł, masz go zawsze</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-1">
-            <p>
-              • anonimowe zajawki ofert — po pozytywnej <b>weryfikacji tożsamości (KYC)</b>,
-            </p>
-            <p>• kalkulator pożyczki oraz 3 darmowe lekcje Akademii Inwestora.</p>
-            <p>
-              Pełne dane ofert, dokumenty, księga wieczysta i składanie ofert wymagają pełnego
-              dostępu.
+          <CardContent className="space-y-1 text-sm text-muted-foreground">
+            {TIER_PRESENTATION.podstawowy.bullets.map((b) => (
+              <p key={b}>• {b}</p>
+            ))}
+            <p className="pt-1">
+              Odblokowanie pojedynczej okazji:{" "}
+              <b>
+                {formatGroszPln(
+                  products.find((p) => p.code === PRODUCT_OKAZJA_UNLOCK)?.amount_grosz ?? 150000,
+                )}
+              </b>{" "}
+              brutto — kupujesz je przy konkretnym projekcie w zakładce „Umowy i Zlecenia".
             </p>
           </CardContent>
         </Card>

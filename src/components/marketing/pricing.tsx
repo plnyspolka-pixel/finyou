@@ -40,8 +40,10 @@ export function MarketingPricing({
   featuresByDuration,
   fallback,
 }: Props) {
+  // Produkty „unlock" (zakup jednej okazji) nie są pakietem czasowym i nie
+  // trafiają do cennika na stronie.
   const active = (products ?? [])
-    .filter((p) => p.active)
+    .filter((p) => p.active && p.kind !== "unlock" && p.duration_days != null)
     .sort((a, b) => a.sort_order - b.sort_order);
   if (active.length === 0) {
     return <>{fallback ?? null}</>;
@@ -65,7 +67,8 @@ export function MarketingPricing({
     >
       {active.map((p) => {
         const best = p.duration_days === 365 && savings > 0;
-        const feats = featuresByDuration?.[p.duration_days] ?? [];
+        const days = p.duration_days as number;
+        const feats = featuresByDuration?.[days] ?? [];
         return (
           <div
             key={p.id}
@@ -130,9 +133,7 @@ export function MarketingPricing({
                 <span style={{ fontSize: "2.2rem", fontWeight: 900 }}>
                   {formatGroszPln(p.amount_grosz)}
                 </span>
-                <span style={{ fontSize: "0.85rem", opacity: 0.8 }}>
-                  {periodLabel(p.duration_days)}
-                </span>
+                <span style={{ fontSize: "0.85rem", opacity: 0.8 }}>{periodLabel(days)}</span>
               </div>
               {best && savings > 0 && (
                 <div
@@ -158,7 +159,7 @@ export function MarketingPricing({
                     flex: 1,
                   }}
                 >
-                  {feats.map((f) => (
+                  {feats.map((f: string) => (
                     <li key={f} style={{ display: "flex", gap: 10, fontSize: "0.9rem" }}>
                       <BrandIcon name="check" size={18} />
                       <span>{f}</span>

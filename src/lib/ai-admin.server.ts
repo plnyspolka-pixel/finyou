@@ -130,9 +130,12 @@ export async function buildMemoryBlock(limit: number): Promise<{ text: string; c
   const ids = data.map((m) => `'${m.id}'`).join(",");
   // PostgREST nie umie `uses = uses + 1`, więc jednym SQL-em przez RPC.
   await supabaseAdmin
-    .rpc("exec_admin_any" as never, {
-      _sql: `UPDATE public.ai_admin_memory SET uses = uses + 1, last_used_at = now() WHERE id IN (${ids})`,
-    } as never)
+    .rpc(
+      "exec_admin_any" as never,
+      {
+        _sql: `UPDATE public.ai_admin_memory SET uses = uses + 1, last_used_at = now() WHERE id IN (${ids})`,
+      } as never,
+    )
     .then(
       () => undefined,
       () => undefined, // licznik jest statystyką — jego błąd nie może psuć rozmowy
@@ -932,8 +935,7 @@ export async function runTool(
         return { ok: false, output: null, error: `Nieznany rodzaj wpisu: ${kind}` };
       if (!title || !content)
         return { ok: false, output: null, error: "Tytuł i treść są wymagane." };
-      if (title.length > 120)
-        return { ok: false, output: null, error: "Tytuł max 120 znaków." };
+      if (title.length > 120) return { ok: false, output: null, error: "Tytuł max 120 znaków." };
       const weight = Math.max(0, Math.min(100, Number(call.input.weight ?? 0) || 0));
       const saved = await upsertMemoryEntry({
         kind,
@@ -1246,13 +1248,15 @@ export async function checkAnthropicEngine(model: string): Promise<{
 
   let pingOk = false;
   let pingError: string | undefined;
-  let ping: {
-    model: string;
-    stop_reason: string | null;
-    input_tokens: number;
-    output_tokens: number;
-    reply: string;
-  } | undefined;
+  let ping:
+    | {
+        model: string;
+        stop_reason: string | null;
+        input_tokens: number;
+        output_tokens: number;
+        reply: string;
+      }
+    | undefined;
   try {
     const raw = (await postAnthropic({
       model,
@@ -1412,8 +1416,12 @@ export async function distillConversation(args: {
   for (const entry of memories) {
     if (!entry || typeof entry !== "object") continue;
     const e = entry as Record<string, unknown>;
-    const title = String(e.title ?? "").trim().slice(0, 120);
-    const content = String(e.content ?? "").trim().slice(0, 2000);
+    const title = String(e.title ?? "")
+      .trim()
+      .slice(0, 120);
+    const content = String(e.content ?? "")
+      .trim()
+      .slice(0, 2000);
     const kind = MEMORY_KINDS.includes(String(e.kind) as MemoryKind) ? String(e.kind) : "fakt";
     if (!title || !content) continue;
     try {
@@ -1432,8 +1440,12 @@ export async function distillConversation(args: {
     }
   }
 
-  const summary = String(parsed.summary ?? "").trim().slice(0, 2000);
-  const newTitle = String(parsed.title ?? "").trim().slice(0, 60);
+  const summary = String(parsed.summary ?? "")
+    .trim()
+    .slice(0, 2000);
+  const newTitle = String(parsed.title ?? "")
+    .trim()
+    .slice(0, 60);
   await supabaseAdmin
     .from("ai_admin_conversations")
     .update({

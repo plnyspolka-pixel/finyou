@@ -13,12 +13,7 @@ import {
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  accentClasses,
-  adminSections,
-  allAdminNavItems,
-  type AccentKey,
-} from "@/lib/admin-nav";
+import { accentClasses, adminSections, allAdminNavItems, type AccentKey } from "@/lib/admin-nav";
 
 /** Zdarzenie otwierające wyszukiwarkę — triggery nie potrzebują wspólnego kontekstu. */
 const OPEN_EVENT = "fy:admin-search-open";
@@ -49,14 +44,10 @@ function normalizeSearchText(s: string): string {
 
 /** Provider modułów panelu — indeks z `admin-nav.ts`, opcjonalnie zawężony do ról. */
 function createModulesProvider(allowedPaths?: string[]): SearchProvider {
-  const items = allAdminNavItems.filter(
-    (it) => !allowedPaths || allowedPaths.includes(it.to),
-  );
+  const items = allAdminNavItems.filter((it) => !allowedPaths || allowedPaths.includes(it.to));
   const indexed = items.map((it) => ({
     item: it,
-    haystack: normalizeSearchText(
-      [it.label, it.sectionLabel, it.to, ...it.synonyms].join(" "),
-    ),
+    haystack: normalizeSearchText([it.label, it.sectionLabel, it.to, ...it.synonyms].join(" ")),
   }));
   return {
     id: "modules",
@@ -146,11 +137,7 @@ export function AdminSearchDialog({ allowedPaths }: AdminSearchDialogProps) {
       <DialogContent className="h-dvh w-screen max-w-none gap-0 rounded-none p-0 sm:h-auto sm:w-full sm:max-w-xl sm:rounded-lg">
         <DialogTitle className="sr-only">Wyszukiwarka modułów</DialogTitle>
         <Command shouldFilter={false} className="h-full">
-          <CommandInput
-            placeholder="Szukaj modułów…"
-            value={query}
-            onValueChange={setQuery}
-          />
+          <CommandInput placeholder="Szukaj modułów…" value={query} onValueChange={setQuery} />
           <CommandList className="max-h-none flex-1 sm:max-h-[60vh]">
             <CommandEmpty>Brak wyników.</CommandEmpty>
             {grouped.map(([sectionId, group]) => {

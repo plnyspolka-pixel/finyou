@@ -53,8 +53,7 @@ async function loadHistory(sessionId: string) {
     .limit(200);
   return (data ?? []).map((m) => {
     const meta = (m.metadata ?? {}) as Record<string, any>;
-    const role =
-      m.direction === "inbound" ? "user" : meta.sent_by ? "staff" : "assistant";
+    const role = m.direction === "inbound" ? "user" : meta.sent_by ? "staff" : "assistant";
     return { id: m.id, role, content: m.content ?? "", created_at: m.created_at };
   });
 }

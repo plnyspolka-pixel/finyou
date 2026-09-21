@@ -156,9 +156,8 @@ export const Route = createFileRoute("/api/public/agent-tools")({
               .select("status")
               .eq("id", applicationId)
               .maybeSingle();
-            const { clientLoanStatusView, describeLoanStatusForAgent } = await import(
-              "@/lib/loan-status"
-            );
+            const { clientLoanStatusView, describeLoanStatusForAgent } =
+              await import("@/lib/loan-status");
             const view = clientLoanStatusView(app?.status);
             return Response.json({
               ok: true,
@@ -180,9 +179,8 @@ export const Route = createFileRoute("/api/public/agent-tools")({
             if (!applicationId) {
               return Response.json({ ok: true, result: { has_application: false, items: [] } });
             }
-            const { buildBriefBundles } = await import(
-              "@/lib/missing-info-follow-up/engine.server"
-            );
+            const { buildBriefBundles } =
+              await import("@/lib/missing-info-follow-up/engine.server");
             const bundles = await buildBriefBundles([applicationId]);
             const brief = bundles.get(applicationId)?.brief;
             return Response.json({
@@ -201,14 +199,14 @@ export const Route = createFileRoute("/api/public/agent-tools")({
 
           // ── Faktura na żądanie ─────────────────────────────────────────────
           if (tool === "issue_invoice") {
-            const { issueInvoiceOnDemand } = await import(
-              "@/lib/invoicing/invoice-on-demand.server"
-            );
+            const { issueInvoiceOnDemand } =
+              await import("@/lib/invoicing/invoice-on-demand.server");
             const result = await issueInvoiceOnDemand({
               nip: String(args?.nip ?? ""),
               email: String(args?.email ?? ""),
               description: String(args?.opis ?? args?.description ?? ""),
-              grossAmount: typeof args?.kwota === "number" ? args.kwota : (args?.gross_amount ?? null),
+              grossAmount:
+                typeof args?.kwota === "number" ? args.kwota : (args?.gross_amount ?? null),
               productCode: args?.product_code ?? null,
               buyerName: args?.nazwa_firmy ?? args?.buyer_name ?? null,
               buyerStreet: args?.adres ?? null,

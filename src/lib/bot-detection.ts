@@ -32,7 +32,10 @@ const AUTO_MESSAGE_PATTERNS: { signal: string; re: RegExp }[] = [
   { signal: "out_of_office", re: /obecnie\s+jestem\s+niedost[ęe]pn/i },
   // Automatyczne powitania stron/firm ("odpowiemy wkrótce")
   { signal: "instant_greeting", re: /dzi[ęe]kujemy\s+za\s+(wiadomo[śs][ćc]|kontakt)/i },
-  { signal: "instant_greeting", re: /odpowiemy\s+(najszybciej|tak\s+szybko|wkr[óo]tce|w\s+ci[ąa]gu)/i },
+  {
+    signal: "instant_greeting",
+    re: /odpowiemy\s+(najszybciej|tak\s+szybko|wkr[óo]tce|w\s+ci[ąa]gu)/i,
+  },
   { signal: "instant_greeting", re: /thank\s+you\s+for\s+(your\s+message|contacting)/i },
   { signal: "instant_greeting", re: /we('|w)?ll\s+get\s+back\s+to\s+you/i },
   // Zwroty niedostarczonych wiadomości (bounce w treści)

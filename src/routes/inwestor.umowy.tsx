@@ -1,21 +1,18 @@
-// Kreator pakietu umów inwestora (FY-LEGAL-2026-09-04) — Etap U1.
-// Sekwencja z paczki prawnika: identyfikacja → doręczenie na trwałym nośniku
-// → Umowa ramowa v5 → NDA v5 → RODO v4 → Formularz Zlecenia (Zał. 7).
+// JEDEN pipeline inwestora (pakiet FY-LEGAL-2026-09-04 + cennik 2026-09):
+//   1. Dane pożyczkodawcy (osoba fizyczna / JDG / spółka, wyszukiwarka GUS/KRS)
+//   2. Rachunek bankowy do spłaty pożyczki (wymuszony)
+//   3. Weryfikacja tożsamości — KYC Didit
+//   4. Screening list sankcyjnych i PEP (Dilisense)
+//   5. Doręczenie pakietu na trwałym nośniku
+//   6. Ramowa umowa pośrednictwa  7. NDA  8. RODO
+//   9. Zlecenie poszukiwania okazji
+// Kolejność liczy computeInvestorPipeline (ta sama funkcja po stronie serwera),
 // § 15 ust. 7: żaden checkbox nie startuje zaznaczony.
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  BadgeCheck,
-  CheckCircle2,
-  Circle,
-  FileText,
-  Loader2,
-  Lock,
-  Mail,
-  ShieldCheck,
-} from "lucide-react";
+import { BadgeCheck, FileText, Loader2, Mail, ShieldCheck, Sparkles } from "lucide-react";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,28 +28,45 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import {
   getMyLegalPackState,
   getLegalDocumentText,
-  saveLegalIdentification,
   deliverLegalPack,
   acceptLegalDocument,
   submitInvestorOrder,
   withdrawInvestorOrder,
 } from "@/lib/investor-agreements/legal-pack.functions";
+import { getInvestorPipelineState } from "@/lib/investor-agreements/pipeline.functions";
+import { getMyInvestorPlan } from "@/lib/investor-plan/plan.functions";
 import {
   startInvestorSelfVerification,
   getMyInvestorVerification,
 } from "@/lib/investor-agreements/didit-self.functions";
 import { OrderCycleSection } from "@/components/inwestor/order-cycle";
+import { PipelineProgress, PipelineStepCard } from "@/components/inwestor/pipeline-stepper";
+import {
+  LenderDataStep,
+  RepaymentAccountStep,
+  SanctionsScreeningStep,
+} from "@/components/inwestor/pipeline-steps";
+import { TpayReturnStatus } from "@/components/access/TpayReturnStatus";
+import { formatGroszPln } from "@/lib/access/core";
+import { TIER_PRESENTATION } from "@/lib/investor-plan/plans";
+import type { PipelineStep, PipelineStepKey } from "@/lib/investor-plan/pipeline";
 
 export const Route = createFileRoute("/inwestor/umowy")({
-  component: UmowyPage,
+  validateSearch: (search: Record<string, unknown>): { tpay?: string; payment?: string } => ({
+    tpay: typeof search.tpay === "string" ? search.tpay : undefined,
+    payment: typeof search.payment === "string" ? search.payment : undefined,
+  }),
+  component: PipelinePage,
 });
 
 const ORDER_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
-  zlozone: { label: "Złożone — czekamy na decyzję (2 dni robocze)", tone: "bg-amber-100 text-amber-800" },
+  zlozone: {
+    label: "Złożone — czekamy na decyzję (2 dni robocze)",
+    tone: "bg-amber-100 text-amber-800",
+  },
   przyjete: { label: "Przyjęte", tone: "bg-emerald-100 text-emerald-800" },
   wykonane: { label: "Wykonane", tone: "bg-blue-100 text-blue-800" },
   wygasle: { label: "Wygasłe", tone: "bg-slate-100 text-slate-600" },
@@ -64,78 +78,238 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : "Wystąpił błąd";
 }
 
-function UmowyPage() {
+function PipelinePage() {
+  const { tpay, payment } = useSearch({ from: "/inwestor/umowy" });
   const qc = useQueryClient();
-  const fetchState = useServerFn(getMyLegalPackState);
-  const { data: state, isLoading } = useQuery({
-    queryKey: ["legal-pack-state"],
-    queryFn: () => fetchState(),
-  });
-  const refresh = () => qc.invalidateQueries({ queryKey: ["legal-pack-state"] });
+  const fetchLegal = useServerFn(getMyLegalPackState);
+  const fetchPipeline = useServerFn(getInvestorPipelineState);
+  const fetchPlan = useServerFn(getMyInvestorPlan);
 
-  if (isLoading || !state) {
+  const legalQ = useQuery({ queryKey: ["legal-pack-state"], queryFn: () => fetchLegal() });
+  const pipeQ = useQuery({ queryKey: ["investor-pipeline"], queryFn: () => fetchPipeline() });
+  const planQ = useQuery({ queryKey: ["investor-plan"], queryFn: () => fetchPlan() });
+
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["legal-pack-state"] });
+    void qc.invalidateQueries({ queryKey: ["investor-pipeline"] });
+    void qc.invalidateQueries({ queryKey: ["investor-plan"] });
+  };
+
+  if (legalQ.isLoading || pipeQ.isLoading || !legalQ.data || !pipeQ.data) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wczytywanie pakietu…
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wczytywanie pipeline'u…
       </div>
     );
   }
 
+  const legal = legalQ.data as any;
+  const pipe = pipeQ.data;
+  const plan = planQ.data;
+  const steps = pipe.pipeline.steps;
+  const step = (key: PipelineStepKey): PipelineStep =>
+    steps.find((s) => s.key === key) as PipelineStep;
+
+  const docByCode = (code: string) =>
+    (legal.documents ?? []).find((d: any) => d.code === code && d.active) ?? null;
+
+  const tier = TIER_PRESENTATION[pipe.tier];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <FancyPageHeader
-        eyebrow="Dokumenty"
-        title="Umowy inwestora"
-        subtitle="Pakiet FY-LEGAL-2026-09-04: Umowa ramowa, NDA i umowa danych osobowych — akceptacja w formie dokumentowej, potem Formularz Zlecenia."
+        eyebrow="Pipeline inwestora"
+        title="Od danych pożyczkodawcy do Zlecenia"
+        subtitle="Dziewięć kroków w jednym miejscu: dane stron, rachunek do spłaty, KYC, screening sankcyjny, komplet umów i Zlecenie poszukiwania okazji."
       />
 
-      {!state.packActive ? (
-        <Card>
-          <CardContent className="flex items-center gap-3 py-6 text-sm text-muted-foreground">
-            <Lock className="h-5 w-5 shrink-0" />
-            Pakiet dokumentów jest w przygotowaniu (przegląd kancelarii). Akceptacja i składanie
-            Zleceń będą możliwe po jego aktywacji — damy znać e-mailem.
+      {tpay && payment ? (
+        <TpayReturnStatus paymentId={payment} tpayParam={tpay} onPaid={refresh} />
+      ) : null}
+
+      <PipelineProgress steps={steps} progress={pipe.pipeline.progress} tierLabel={tier.name} />
+
+      <PlanBanner tier={pipe.tier} plan={plan} />
+
+      {!legal.packActive ? (
+        <Card className="border-amber-300 bg-amber-50/40">
+          <CardContent className="py-4 text-sm text-amber-900">
+            Pakiet dokumentów jest w przygotowaniu (przegląd kancelarii). Kroki 5–9 odblokujemy po
+            jego aktywacji — damy znać e-mailem. Kroki 1–4 możesz przejść już teraz.
           </CardContent>
         </Card>
       ) : null}
 
-      <IdentificationStep state={state} onDone={refresh} />
-      {state.packActive ? (
-        <>
-          <DeliveryStep state={state} onDone={refresh} />
-          <AcceptanceSteps state={state} onDone={refresh} />
-          <OrderForm state={state} onDone={refresh} />
-        </>
-      ) : null}
-      <OrdersList state={state} onDone={refresh} />
-      {/* Etap U2: Dopasowania (teaser → Karta Leada → Ujawnienie → rezerwacja),
-          odstąpienie Konsumenta i przystąpienia spółek do NDA. */}
-      {state.packActive ? <OrderCycleSection /> : null}
+      <PipelineStepCard step={step("dane_pozyczkodawcy")}>
+        <LenderDataStep investor={pipe.investor} onDone={refresh} />
+      </PipelineStepCard>
+
+      <PipelineStepCard step={step("rachunek_splaty")}>
+        <RepaymentAccountStep bank={pipe.bank} onDone={refresh} />
+      </PipelineStepCard>
+
+      <PipelineStepCard step={step("kyc")}>
+        <KycStep pipe={pipe} onDone={refresh} />
+      </PipelineStepCard>
+
+      <PipelineStepCard step={step("screening")}>
+        <SanctionsScreeningStep
+          screening={pipe.screening}
+          kycApproved={pipe.input.kycStatus === "approved"}
+          onDone={refresh}
+        />
+      </PipelineStepCard>
+
+      <PipelineStepCard step={step("doreczenie")}>
+        <DeliveryStep state={legal} onDone={refresh} />
+      </PipelineStepCard>
+
+      {(["umowa_ramowa", "nda", "rodo"] as const).map((code) => {
+        const doc = docByCode(code);
+        const s = step(code);
+        if (!doc) {
+          return (
+            <PipelineStepCard key={code} step={s}>
+              <p className="text-sm text-muted-foreground">
+                Dokument nie jest jeszcze aktywny w rejestrze.
+              </p>
+            </PipelineStepCard>
+          );
+        }
+        return (
+          <PipelineStepCard key={code} step={s}>
+            <DocumentStep
+              doc={doc}
+              locked={s.state === "zablokowany"}
+              investor={pipe.investor}
+              onDone={refresh}
+            />
+          </PipelineStepCard>
+        );
+      })}
+
+      <PipelineStepCard step={step("zlecenie")}>
+        <OrderForm
+          canSubmit={pipe.pipeline.canSubmitOrder}
+          isConsumer={pipe.input.isConsumer}
+          onDone={refresh}
+        />
+      </PipelineStepCard>
+
+      <OrdersList state={legal} onDone={refresh} />
+
+      {/* Cykl Zlecenie–Projekt: teaser → Karta Leada → Ujawnienie → rezerwacja. */}
+      {legal.packActive ? <OrderCycleSection /> : null}
+
+      <SuccessFeesList plan={plan} />
     </div>
   );
 }
 
-// ── Krok 1: identyfikacja ────────────────────────────────────────────────────
+// ── Opłaty sukcesu PRO widoczne dla inwestora ────────────────────────────────
 
-function IdentificationStep({ state, onDone }: { state: any; onDone: () => void }) {
-  const investor = state.investor;
-  const save = useServerFn(saveLegalIdentification);
+const FEE_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
+  wstrzymana: {
+    label: "Wstrzymana — nie do zapłaty",
+    tone: "bg-amber-100 text-amber-900",
+  },
+  naliczona: { label: "Naliczona", tone: "bg-blue-100 text-blue-900" },
+  zafakturowana: { label: "Zafakturowana", tone: "bg-indigo-100 text-indigo-900" },
+  oplacona: { label: "Opłacona", tone: "bg-emerald-100 text-emerald-900" },
+  anulowana: { label: "Anulowana", tone: "bg-slate-100 text-slate-600" },
+};
+
+function SuccessFeesList({ plan }: { plan: any }) {
+  const fees = (plan?.successFees ?? []) as any[];
+  if (fees.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">
+          Opłaty sukcesu ({(plan?.successFeeBps ?? 500) / 100}% kwoty udzielonej pożyczki)
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {fees.map((f) => {
+          const st = FEE_STATUS_LABELS[f.status] ?? { label: f.status, tone: "bg-slate-100" };
+          return (
+            <div
+              key={f.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3 text-sm"
+            >
+              <div>
+                <div className="font-medium">
+                  {formatGroszPln(f.feeGrosz)} od {f.loanAmountPln.toLocaleString("pl-PL")} zł
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {new Date(f.createdAt).toLocaleDateString("pl-PL")}
+                </div>
+              </div>
+              <Badge className={st.tone}>{st.label}</Badge>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Baner pakietu ────────────────────────────────────────────────────────────
+
+function PlanBanner({ tier, plan }: { tier: "podstawowy" | "pro"; plan: any }) {
+  const p = TIER_PRESENTATION[tier];
+  const isPro = tier === "pro";
+  return (
+    <Card
+      className="overflow-hidden border-0 text-white"
+      style={{
+        background: isPro
+          ? "linear-gradient(115deg, oklch(0.36 0.16 285), oklch(0.48 0.18 250) 55%, oklch(0.62 0.15 205))"
+          : "linear-gradient(115deg, oklch(0.30 0.08 265), oklch(0.38 0.10 250))",
+      }}
+    >
+      <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] opacity-85">
+            <Sparkles className="h-3.5 w-3.5" /> Pakiet {p.name}
+          </div>
+          <p className="max-w-2xl text-sm opacity-90">{p.tagline}</p>
+          {isPro && plan?.activeUntil ? (
+            <p className="text-xs opacity-75">
+              Aktywny do {new Date(plan.activeUntil).toLocaleDateString("pl-PL")} · {plan.daysLeft}{" "}
+              dni · opłata sukcesu {(plan.successFeeBps ?? 500) / 100}% od udzielonej pożyczki
+            </p>
+          ) : (
+            <p className="text-xs opacity-75">
+              Odblokowanie pojedynczej okazji: {formatGroszPln(plan?.unlockPriceGrosz ?? 150000)} ·
+              pakiet PRO: 3 000 zł / 6 miesięcy + 5% od udzielonej pożyczki
+            </p>
+          )}
+        </div>
+        {!isPro ? (
+          <Button
+            variant="secondary"
+            className="bg-white text-slate-900 hover:bg-white/90"
+            onClick={() => {
+              window.location.href = "/inwestor/abonament?product=investor_pro_180d";
+            }}
+          >
+            Przejdź na PRO
+          </Button>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Krok 3: KYC Didit ────────────────────────────────────────────────────────
+
+function KycStep({ pipe, onDone }: { pipe: any; onDone: () => void }) {
   const startDidit = useServerFn(startInvestorSelfVerification);
   const fetchDidit = useServerFn(getMyInvestorVerification);
-  const [variant, setVariant] = useState<string>(investor?.entity_variant ?? "");
-  const [consumer, setConsumer] = useState<boolean>(Boolean(investor?.is_consumer));
+  const variant = pipe.investor?.entity_variant as string | undefined;
 
-  const saveMut = useMutation({
-    mutationFn: () =>
-      save({ data: { entityVariant: variant as any, isConsumer: consumer } }),
-    onSuccess: () => {
-      toast.success("Zapisano identyfikację");
-      onDone();
-    },
-    onError: (e) => toast.error(errMsg(e)),
-  });
-
-  const diditMut = useMutation({
+  const startMut = useMutation({
     mutationFn: () =>
       startDidit({
         data: {
@@ -163,103 +337,49 @@ function IdentificationStep({ state, onDone }: { state: any; onDone: () => void 
       else toast.info("Weryfikacja jeszcze nie zakończona.");
       onDone();
     },
+    onError: (e) => toast.error(errMsg(e)),
   });
 
-  const done = Boolean(investor?.entity_variant) && investor?.is_consumer != null;
-  const diditApproved = state.didit?.status === "Approved";
+  const approved = pipe.input.kycStatus === "approved";
 
   return (
-    <StepCard
-      index={1}
-      title="Identyfikacja strony"
-      done={done}
-      subtitle="Wariant strony umowy i status Konsumenta; opcjonalnie potwierdzenie tożsamości (Didit)."
-    >
-      {!investor ? (
-        <p className="text-sm text-muted-foreground">
-          Najpierw uzupełnij profil inwestora (zakładka Profil) — imię i nazwisko / firma, adres,
-          PESEL / NIP, e-mail i telefon.
-        </p>
+    <div className="space-y-3">
+      {approved ? (
+        <Badge className="bg-emerald-100 text-emerald-800">
+          <BadgeCheck className="mr-1 h-3.5 w-3.5" /> Tożsamość potwierdzona
+          {pipe.kyc?.fullName ? ` — ${pipe.kyc.fullName}` : ""}
+        </Badge>
       ) : (
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Wariant strony</Label>
-              <Select value={variant} onValueChange={setVariant}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Wybierz…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="osoba_fizyczna">Osoba fizyczna</SelectItem>
-                  <SelectItem value="jdg">Jednoosobowa działalność gospodarcza</SelectItem>
-                  <SelectItem value="osoba_prawna">Osoba prawna (spółka)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end gap-2 pb-1">
-              <Checkbox
-                id="is-consumer"
-                checked={consumer}
-                disabled={variant === "osoba_prawna"}
-                onCheckedChange={(v) => setConsumer(v === true)}
-              />
-              <Label htmlFor="is-consumer" className="text-sm font-normal leading-snug">
-                Jestem Konsumentem (zawieram umowę bez bezpośredniego związku z działalnością
-                gospodarczą lub zawodową)
-              </Label>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            disabled={!pipe.input.lenderDataCompleted || startMut.isPending}
+            onClick={() => startMut.mutate()}
+          >
+            {startMut.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <ShieldCheck className="mr-2 h-4 w-4" />
+            )}
+            Potwierdź tożsamość (Didit)
+          </Button>
+          {pipe.kyc ? (
             <Button
               size="sm"
-              disabled={!variant || saveMut.isPending}
-              onClick={() => saveMut.mutate()}
+              variant="ghost"
+              disabled={checkMut.isPending}
+              onClick={() => checkMut.mutate()}
             >
-              {saveMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Zapisz identyfikację
+              Odśwież status weryfikacji
             </Button>
-            {diditApproved ? (
-              <Badge className="bg-emerald-100 text-emerald-800">
-                <BadgeCheck className="mr-1 h-3.5 w-3.5" /> Tożsamość potwierdzona (Didit)
-              </Badge>
-            ) : (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!variant || diditMut.isPending}
-                  onClick={() => diditMut.mutate()}
-                >
-                  <ShieldCheck className="mr-2 h-4 w-4" /> Potwierdź tożsamość (Didit)
-                </Button>
-                {state.didit ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={checkMut.isPending}
-                    onClick={() => checkMut.mutate()}
-                  >
-                    Odśwież status weryfikacji
-                  </Button>
-                ) : null}
-              </>
-            )}
-          </div>
-          {state.didit?.personal?.fullName ? (
-            <p className="text-xs text-muted-foreground">
-              Dane potwierdzone: {state.didit.personal.fullName}
-              {state.didit.personal.documentNumber
-                ? ` · dokument ${state.didit.personal.documentNumber}`
-                : ""}
-            </p>
           ) : null}
         </div>
       )}
-    </StepCard>
+    </div>
   );
 }
 
-// ── Krok 2: doręczenie na trwałym nośniku ────────────────────────────────────
+// ── Krok 5: doręczenie na trwałym nośniku ────────────────────────────────────
 
 function DeliveryStep({ state, onDone }: { state: any; onDone: () => void }) {
   const deliver = useServerFn(deliverLegalPack);
@@ -273,16 +393,12 @@ function DeliveryStep({ state, onDone }: { state: any; onDone: () => void }) {
   });
   const isConsumer = Boolean(state.investor?.is_consumer);
   return (
-    <StepCard
-      index={2}
-      title="Doręczenie pakietu na trwałym nośniku"
-      done={state.hasDelivery}
-      subtitle={
-        isConsumer
-          ? "Jako Konsument musisz otrzymać informacje przedumowne (Załącznik nr 3 i 4) e-mailem PRZED akceptacją Umowy ramowej."
-          : "Wysyłamy komplet dokumentów (DOCX) na Twój e-mail — kopia do zachowania."
-      }
-    >
+    <div className="space-y-2">
+      <p className="text-sm text-muted-foreground">
+        {isConsumer
+          ? "Jako Konsument musisz otrzymać informacje przedumowne (Załączniki nr 3 i 4) e-mailem PRZED akceptacją Umowy ramowej."
+          : "Wysyłamy komplet dokumentów (DOCX) na Twój e-mail — kopia do zachowania."}
+      </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button size="sm" variant="outline" disabled={mut.isPending} onClick={() => mut.mutate()}>
           {mut.isPending ? (
@@ -300,18 +416,18 @@ function DeliveryStep({ state, onDone }: { state: any; onDone: () => void }) {
           </span>
         ) : null}
       </div>
-    </StepCard>
+    </div>
   );
 }
 
-// ── Kroki 3–5: akceptacje dokumentów ─────────────────────────────────────────
+// ── Kroki 6–8: akceptacja dokumentów ─────────────────────────────────────────
 
-const DOC_STEP_INDEX: Record<string, number> = { umowa_ramowa: 3, nda: 4, rodo: 5 };
 const DOC_STATEMENTS: Record<string, Array<{ key: string; label: string }>> = {
   umowa_ramowa: [
     {
       key: "nieodplatnosc_uslugi",
-      label: "Przyjmuję do wiadomości, że usługa pośrednictwa jest dla mnie nieodpłatna (prowizję płaci Klient).",
+      label:
+        "Przyjmuję do wiadomości zasady rozliczenia opisane w Umowie ramowej (Prowizja Klientowska obciąża Klienta).",
     },
     {
       key: "mechanizm_zabezpieczenia_prowizji",
@@ -336,39 +452,15 @@ const DOC_STATEMENTS: Record<string, Array<{ key: string; label: string }>> = {
   ],
 };
 
-function AcceptanceSteps({ state, onDone }: { state: any; onDone: () => void }) {
-  const docs = (state.documents ?? []).filter((d: any) => d.active);
-  const identified = Boolean(state.investor?.entity_variant);
-  return (
-    <>
-      {docs.map((doc: any, i: number) => {
-        const prevAccepted = docs.slice(0, i).every((d: any) => d.accepted);
-        return (
-          <DocumentStep
-            key={doc.code}
-            doc={doc}
-            locked={!identified || !prevAccepted}
-            isConsumer={Boolean(state.investor?.is_consumer)}
-            hasDelivery={state.hasDelivery}
-            onDone={onDone}
-          />
-        );
-      })}
-    </>
-  );
-}
-
 function DocumentStep({
   doc,
   locked,
-  isConsumer,
-  hasDelivery,
+  investor,
   onDone,
 }: {
   doc: any;
   locked: boolean;
-  isConsumer: boolean;
-  hasDelivery: boolean;
+  investor: Record<string, any> | null;
   onDone: () => void;
 }) {
   const fetchText = useServerFn(getLegalDocumentText);
@@ -387,11 +479,9 @@ function DocumentStep({
 
   const stmts = DOC_STATEMENTS[doc.code] ?? [];
   const allStatements = stmts.every((s) => statements[s.key]);
-  const consumerBlocked = doc.code === "umowa_ramowa" && isConsumer && !hasDelivery;
 
   const mut = useMutation({
-    mutationFn: () =>
-      accept({ data: { code: doc.code, confirmed: true as const, statements } }),
+    mutationFn: () => accept({ data: { code: doc.code, confirmed: true as const, statements } }),
     onSuccess: () => {
       toast.success(`Zaakceptowano: ${doc.title}`);
       onDone();
@@ -399,105 +489,155 @@ function DocumentStep({
     onError: (e) => toast.error(errMsg(e)),
   });
 
-  return (
-    <StepCard
-      index={DOC_STEP_INDEX[doc.code] ?? 0}
-      title={`${doc.title} (${doc.version})`}
-      done={doc.accepted}
-      subtitle={`SHA-256: ${String(doc.sha256).slice(0, 16)}… · forma dokumentowa z pełnym śladem audytowym`}
-    >
-      {doc.accepted ? (
-        <p className="text-sm text-emerald-700">
+  if (doc.accepted) {
+    return (
+      <div className="space-y-1 text-sm">
+        <p className="text-emerald-700">
           Zaakceptowano {doc.accepted_at ? new Date(doc.accepted_at).toLocaleString("pl-PL") : ""}.
-          Potwierdzenie wysłaliśmy e-mailem.
+          Potwierdzenie wysłaliśmy e-mailem, protokół akceptacji jest przypisany do Twojego konta.
         </p>
-      ) : locked ? (
-        <p className="text-sm text-muted-foreground">
-          Najpierw ukończ poprzednie kroki (identyfikacja i wcześniejsze dokumenty — kolejność:
-          Umowa ramowa → NDA → RODO).
+        <p className="text-xs text-muted-foreground">
+          Wersja {doc.version} · SHA-256: {String(doc.sha256).slice(0, 16)}…
         </p>
+      </div>
+    );
+  }
+
+  if (locked) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Dokument odblokuje się po ukończeniu wcześniejszych kroków pipeline'u.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <ComparisonPreview investor={investor} />
+      {!open ? (
+        <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+          <FileText className="mr-2 h-4 w-4" /> Wyświetl pełną treść ({doc.version})
+        </Button>
       ) : (
-        <div className="space-y-3">
-          {consumerBlocked ? (
-            <p className="text-sm text-amber-700">
-              Jako Konsument najpierw użyj kroku 2 („Wyślij pakiet na e-mail") — informacje
-              przedumowne muszą być doręczone przed akceptacją.
-            </p>
-          ) : null}
-          {!open ? (
-            <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-              <FileText className="mr-2 h-4 w-4" /> Wyświetl pełną treść
-            </Button>
-          ) : (
-            <>
-              <div className="max-h-96 overflow-y-auto rounded-md border bg-muted/30 p-4 text-xs whitespace-pre-wrap leading-relaxed">
-                {text?.content_text ?? "Wczytywanie treści…"}
+        <>
+          <div className="max-h-96 overflow-y-auto rounded-xl border bg-muted/30 p-4 text-xs leading-relaxed whitespace-pre-wrap">
+            {(text as any)?.content_text ?? "Wczytywanie treści…"}
+          </div>
+          <div className="space-y-2">
+            {stmts.map((s) => (
+              <div key={s.key} className="flex items-start gap-2">
+                <Checkbox
+                  id={`${doc.code}-${s.key}`}
+                  checked={Boolean(statements[s.key])}
+                  onCheckedChange={(v) =>
+                    setStatements((prev) => ({ ...prev, [s.key]: v === true }))
+                  }
+                />
+                <Label
+                  htmlFor={`${doc.code}-${s.key}`}
+                  className="text-xs font-normal leading-snug"
+                >
+                  {s.label}
+                </Label>
               </div>
-              <div className="space-y-2">
-                {stmts.map((s) => (
-                  <div key={s.key} className="flex items-start gap-2">
-                    <Checkbox
-                      id={`${doc.code}-${s.key}`}
-                      checked={Boolean(statements[s.key])}
-                      onCheckedChange={(v) =>
-                        setStatements((prev) => ({ ...prev, [s.key]: v === true }))
-                      }
-                    />
-                    <Label
-                      htmlFor={`${doc.code}-${s.key}`}
-                      className="text-xs font-normal leading-snug"
-                    >
-                      {s.label}
-                    </Label>
-                  </div>
-                ))}
-                <div className="flex items-start gap-2">
-                  <Checkbox
-                    id={`${doc.code}-confirm`}
-                    checked={confirmed}
-                    onCheckedChange={(v) => setConfirmed(v === true)}
-                  />
-                  <Label
-                    htmlFor={`${doc.code}-confirm`}
-                    className="text-xs font-normal leading-snug"
-                  >
-                    Zapoznałem/-am się z pełną treścią dokumentu i akceptuję ją w formie
-                    dokumentowej.
-                  </Label>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                disabled={!confirmed || !allStatements || consumerBlocked || mut.isPending}
-                onClick={() => mut.mutate()}
-              >
-                {mut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Akceptuję dokument
-              </Button>
-            </>
-          )}
-        </div>
+            ))}
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id={`${doc.code}-confirm`}
+                checked={confirmed}
+                onCheckedChange={(v) => setConfirmed(v === true)}
+              />
+              <Label htmlFor={`${doc.code}-confirm`} className="text-xs font-normal leading-snug">
+                Zapoznałem/-am się z pełną treścią dokumentu i podpisuję go w formie dokumentowej.
+              </Label>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            disabled={!confirmed || !allStatements || mut.isPending}
+            onClick={() => mut.mutate()}
+          >
+            {mut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Podpisuję i akceptuję
+          </Button>
+        </>
       )}
-    </StepCard>
+    </div>
   );
 }
 
-// ── Krok 7: Formularz Zlecenia ───────────────────────────────────────────────
+/** Komparycja wypełniona danymi z kroku 1 — inwestor widzi, co podpisuje. */
+function ComparisonPreview({ investor }: { investor: Record<string, any> | null }) {
+  if (!investor) return null;
+  const isCompany = investor.entity_variant !== "osoba_fizyczna";
+  const rows: [string, string | null][] = [
+    [
+      isCompany ? "Firma" : "Imię i nazwisko",
+      isCompany
+        ? investor.company_name
+        : [investor.first_name, investor.last_name].filter(Boolean).join(" ") || null,
+    ],
+    [
+      isCompany ? "NIP / KRS" : "PESEL",
+      isCompany ? [investor.nip, investor.krs].filter(Boolean).join(" / ") || null : investor.pesel,
+    ],
+    [
+      "Adres",
+      [investor.street, [investor.postal_code, investor.city].filter(Boolean).join(" ")]
+        .filter(Boolean)
+        .join(", ") || null,
+    ],
+    ["Rachunek do spłaty", investor.bank_account ?? null],
+    [
+      "Reprezentacja",
+      [
+        investor.representative_first_name,
+        investor.representative_last_name,
+        investor.representative_role,
+      ]
+        .filter(Boolean)
+        .join(" ") || null,
+    ],
+  ];
+  return (
+    <div className="rounded-xl border bg-muted/20 p-3">
+      <div className="text-[0.68rem] font-bold uppercase tracking-wide text-muted-foreground">
+        Komparycja wypełniona przez system
+      </div>
+      <dl className="mt-2 grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
+        {rows
+          .filter(([, v]) => Boolean(v))
+          .map(([k, v]) => (
+            <div key={k} className="flex gap-2">
+              <dt className="text-muted-foreground">{k}:</dt>
+              <dd className="font-medium">{v}</dd>
+            </div>
+          ))}
+      </dl>
+    </div>
+  );
+}
 
-function OrderForm({ state, onDone }: { state: any; onDone: () => void }) {
+// ── Krok 9: Formularz Zlecenia ───────────────────────────────────────────────
+
+function OrderForm({
+  canSubmit,
+  isConsumer,
+  onDone,
+}: {
+  canSubmit: boolean;
+  isConsumer: boolean;
+  onDone: () => void;
+}) {
   const submit = useServerFn(submitInvestorOrder);
   const [amount, setAmount] = useState("");
   const [period, setPeriod] = useState("");
   const [yieldMin, setYieldMin] = useState("");
   const [validity, setValidity] = useState<string>("60");
   const [consumerChoice, setConsumerChoice] = useState<string>("");
-  // Oświadczenia — startują puste (§ 15 ust. 7).
   const [s1, setS1] = useState(false);
   const [s2, setS2] = useState(false);
   const [s3, setS3] = useState(false);
-
-  const isConsumer = Boolean(state.investor?.is_consumer);
-  const ready = state.packComplete;
 
   const mut = useMutation({
     mutationFn: () =>
@@ -529,6 +669,14 @@ function OrderForm({ state, onDone }: { state: any; onDone: () => void }) {
     onError: (e) => toast.error(errMsg(e)),
   });
 
+  if (!canSubmit) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Formularz Zlecenia odblokuje się, gdy wszystkie wcześniejsze kroki będą zielone.
+      </p>
+    );
+  }
+
   const valid =
     Number(amount) > 0 &&
     Number(period) > 0 &&
@@ -539,127 +687,113 @@ function OrderForm({ state, onDone }: { state: any; onDone: () => void }) {
     (!isConsumer || consumerChoice !== "");
 
   return (
-    <StepCard
-      index={7}
-      title="Formularz Zlecenia (Załącznik nr 7)"
-      done={false}
-      subtitle="Kwota ± 15%, maksymalny okres, minimalny zysk roczny i termin ważności. Finance You przyjmuje lub odmawia w 2 dni robocze; jednocześnie mogą być przyjęte maksymalnie 3 Zlecenia."
-    >
-      {!ready ? (
-        <p className="text-sm text-muted-foreground">
-          Formularz Zlecenia jest nieaktywny — najpierw zaakceptuj komplet dokumentów pakietu
-          (kroki 1–5).
-        </p>
-      ) : (
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label>Kwota inwestycji (zł, ± 15%)</Label>
-              <Input
-                type="number"
-                min={1}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="np. 200000"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Maks. okres (miesiące)</Label>
-              <Input
-                type="number"
-                min={1}
-                max={360}
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                placeholder="np. 24"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Min. zysk roczny (%)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                step="0.1"
-                value={yieldMin}
-                onChange={(e) => setYieldMin(e.target.value)}
-                placeholder="np. 12"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Termin ważności</Label>
-              <Select value={validity} onValueChange={setValidity}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30 dni</SelectItem>
-                  <SelectItem value="60">60 dni</SelectItem>
-                  <SelectItem value="90">90 dni</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {[
-              {
-                v: s1,
-                set: setS1,
-                id: "o1",
-                label:
-                  "Składam Zlecenie na podstawie Ramowej umowy pośrednictwa finansowego (pakiet FY-LEGAL-2026-09-04).",
-              },
-              {
-                v: s2,
-                set: setS2,
-                id: "o2",
-                label:
-                  "Zobowiązuję się samodzielnie zweryfikować status przedsiębiorcy Klienta i Cel Gospodarczy Finansowania (§ 6 ust. 1 pkt 9).",
-              },
-              {
-                v: s3,
-                set: setS3,
-                id: "o3",
-                label:
-                  "Przyjmuję do wiadomości, że Projekty przedstawiane są wyłącznie w wykonaniu przyjętego Zlecenia.",
-              },
-            ].map((o) => (
-              <div key={o.id} className="flex items-start gap-2">
-                <Checkbox id={o.id} checked={o.v} onCheckedChange={(v) => o.set(v === true)} />
-                <Label htmlFor={o.id} className="text-xs font-normal leading-snug">
-                  {o.label}
-                </Label>
-              </div>
-            ))}
-          </div>
-
-          {isConsumer ? (
-            <div className="space-y-1.5">
-              <Label>Wybór Konsumenta (§ 15 ust. 3 — dotyczy tego Zlecenia)</Label>
-              <Select value={consumerChoice} onValueChange={setConsumerChoice}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Wybierz…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="start_po_14_dniach">
-                    Rozpoczęcie wykonywania po upływie 14-dniowego terminu odstąpienia
-                  </SelectItem>
-                  <SelectItem value="zadanie_startu_przed_14">
-                    Żądam rozpoczęcia wykonywania przed upływem terminu odstąpienia
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-
-          <Button disabled={!valid || mut.isPending} onClick={() => mut.mutate()}>
-            {mut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Złóż Zlecenie
-          </Button>
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Kwota inwestycji (zł, ± 15%)</Label>
+          <Input
+            type="number"
+            min={1}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="np. 200000"
+          />
         </div>
-      )}
-    </StepCard>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Maks. okres (miesiące)</Label>
+          <Input
+            type="number"
+            min={1}
+            max={360}
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            placeholder="np. 24"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Min. zysk roczny (%)</Label>
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            step="0.1"
+            value={yieldMin}
+            onChange={(e) => setYieldMin(e.target.value)}
+            placeholder="np. 12"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Termin ważności</Label>
+          <Select value={validity} onValueChange={setValidity}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="30">30 dni</SelectItem>
+              <SelectItem value="60">60 dni</SelectItem>
+              <SelectItem value="90">90 dni</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {[
+          {
+            v: s1,
+            set: setS1,
+            id: "o1",
+            label:
+              "Składam Zlecenie na podstawie Ramowej umowy pośrednictwa (pakiet FY-LEGAL-2026-09-04).",
+          },
+          {
+            v: s2,
+            set: setS2,
+            id: "o2",
+            label:
+              "Zobowiązuję się samodzielnie zweryfikować status przedsiębiorcy Klienta i Cel Gospodarczy Finansowania (§ 6 ust. 1 pkt 9).",
+          },
+          {
+            v: s3,
+            set: setS3,
+            id: "o3",
+            label:
+              "Przyjmuję do wiadomości, że Projekty przedstawiane są wyłącznie w wykonaniu przyjętego Zlecenia.",
+          },
+        ].map((o) => (
+          <div key={o.id} className="flex items-start gap-2">
+            <Checkbox id={o.id} checked={o.v} onCheckedChange={(v) => o.set(v === true)} />
+            <Label htmlFor={o.id} className="text-xs font-normal leading-snug">
+              {o.label}
+            </Label>
+          </div>
+        ))}
+      </div>
+
+      {isConsumer ? (
+        <div className="space-y-1.5">
+          <Label className="text-xs">Wybór Konsumenta (§ 15 ust. 3 — dotyczy tego Zlecenia)</Label>
+          <Select value={consumerChoice} onValueChange={setConsumerChoice}>
+            <SelectTrigger>
+              <SelectValue placeholder="Wybierz…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="start_po_14_dniach">
+                Rozpoczęcie wykonywania po upływie 14-dniowego terminu odstąpienia
+              </SelectItem>
+              <SelectItem value="zadanie_startu_przed_14">
+                Żądam rozpoczęcia wykonywania przed upływem terminu odstąpienia
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+
+      <Button disabled={!valid || mut.isPending} onClick={() => mut.mutate()}>
+        {mut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        Złóż Zlecenie
+      </Button>
+    </div>
   );
 }
 
@@ -720,39 +854,6 @@ function OrdersList({ state, onDone }: { state: any; onDone: () => void }) {
           );
         })}
       </CardContent>
-    </Card>
-  );
-}
-
-// ── Wspólna karta kroku ──────────────────────────────────────────────────────
-
-function StepCard({
-  index,
-  title,
-  subtitle,
-  done,
-  children,
-}: {
-  index: number;
-  title: string;
-  subtitle?: string;
-  done: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card className={cn(done && "border-emerald-200")}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          {done ? (
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-          ) : (
-            <Circle className="h-5 w-5 text-muted-foreground" />
-          )}
-          <span className="text-muted-foreground">Krok {index}.</span> {title}
-        </CardTitle>
-        {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
-      </CardHeader>
-      <CardContent>{children}</CardContent>
     </Card>
   );
 }

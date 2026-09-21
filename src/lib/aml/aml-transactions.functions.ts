@@ -8,7 +8,7 @@
 //    inwestor (confirmAmlTransactionExecution).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
 import {
   AML_THRESHOLD_EUR,
   CASH_TRANSACTION_TYPES,
@@ -113,7 +113,7 @@ async function processExecutedTransaction(db: Loose, tx: any, userId: string): P
 }
 
 export const listAmlTransactions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async ({ context }) => {
     const { data, error } = await loose(context.supabase)
       .from("aml_transactions")
@@ -126,7 +126,7 @@ export const listAmlTransactions = createServerFn({ method: "POST" })
   });
 
 export const upsertAmlTransaction = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => TransactionInput.parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -194,7 +194,7 @@ export const upsertAmlTransaction = createServerFn({ method: "POST" })
 
 /** Potwierdzenie faktycznego wykonania transakcji przez inwestora. */
 export const confirmAmlTransactionExecution = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => z.object({ transactionId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -225,7 +225,7 @@ export const confirmAmlTransactionExecution = createServerFn({ method: "POST" })
 
 // ── Rejestr ponadprogowy ─────────────────────────────────────────────
 export const listAmlThresholdEntries = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async ({ context }) => {
     const { data, error } = await loose(context.supabase)
       .from("aml_threshold_entries")
@@ -240,7 +240,7 @@ export const listAmlThresholdEntries = createServerFn({ method: "POST" })
   });
 
 export const decideAmlThresholdEntry = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z
       .object({

@@ -151,7 +151,11 @@ export async function processAnalysisPipelineRuns(): Promise<PipelineProcessResu
       result.errors += 1;
       await (supabaseAdmin as any)
         .from("analysis_pipeline_runs")
-        .update({ status: "error", error: e?.message ?? "błąd", finished_at: new Date().toISOString() })
+        .update({
+          status: "error",
+          error: e?.message ?? "błąd",
+          finished_at: new Date().toISOString(),
+        })
         .eq("id", run.id);
     }
   }
@@ -241,16 +245,18 @@ async function advanceRun(run: {
           city: prop?.city ?? null,
           voivodeship: prop?.voivodeship ?? null,
         });
-        const { error: saveErr } = await (supabaseAdmin as any).from("coowner_registry_checks").upsert(
-          {
-            application_id: run.loan_application_id,
-            kw_number: coResult.kwNumber,
-            result_json: coResult as any,
-            warnings: coResult.warnings,
-            created_by: null,
-          },
-          { onConflict: "application_id" },
-        );
+        const { error: saveErr } = await (supabaseAdmin as any)
+          .from("coowner_registry_checks")
+          .upsert(
+            {
+              application_id: run.loan_application_id,
+              kw_number: coResult.kwNumber,
+              result_json: coResult as any,
+              warnings: coResult.warnings,
+              created_by: null,
+            },
+            { onConflict: "application_id" },
+          );
         if (saveErr) throw new Error(saveErr.message);
         markStep(steps, "coowners", "done");
       } catch (e: any) {
@@ -290,7 +296,8 @@ async function advanceRun(run: {
             requestedCashAmount: amount,
             newLoanExposure: amount,
             requestedMortgageSum: amount,
-            acceptedPropertyValue: prop?.estimated_value != null ? Number(prop.estimated_value) : null,
+            acceptedPropertyValue:
+              prop?.estimated_value != null ? Number(prop.estimated_value) : null,
             borrower: null,
             declaredCollateralProviders: [],
             seniorCreditorCertificate: null,
@@ -309,9 +316,8 @@ async function advanceRun(run: {
   // ── Krok 4: analiza ryzyka ─────────────────────────────────────────────────
   if (steps.risk.status === "pending") {
     try {
-      const { runInvestmentRiskAssessmentCore } = await import(
-        "@/lib/risk-assessment/risk-assessment.functions"
-      );
+      const { runInvestmentRiskAssessmentCore } =
+        await import("@/lib/risk-assessment/risk-assessment.functions");
       await runInvestmentRiskAssessmentCore(supabaseAdmin as any, run.loan_application_id, {});
       markStep(steps, "risk", "done");
     } catch (e: any) {

@@ -12,7 +12,7 @@
 //     przygotowanego zgłoszenia.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
 import type { GiifReportPayload } from "@/lib/aml/aml-types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
@@ -28,7 +28,7 @@ function customerName(c: any): string {
 
 // ── 1. Przygotowanie zgłoszenia (bez podpisu) ────────────────────────
 export const prepareGiifReport = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z
       .object({
@@ -208,7 +208,7 @@ export const prepareGiifReport = createServerFn({ method: "POST" })
 
 /** Aktualizacja ładunku (uzasadnienie, strony, korekty) przed wygenerowaniem. */
 export const updateGiifReportPayload = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z
       .object({ reportId: z.string().uuid(), payload: z.record(z.string(), z.unknown()) })
@@ -232,7 +232,7 @@ export const updateGiifReportPayload = createServerFn({ method: "POST" })
 
 // ── 2. Generowanie XML + PDF, wersja i hash ──────────────────────────
 export const generateGiifDocuments = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => z.object({ reportId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -354,7 +354,7 @@ export const generateGiifDocuments = createServerFn({ method: "POST" })
 
 /** Zatwierdzenie treści zgłoszenia (nadal bez podpisu). */
 export const approveGiifReportContent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => z.object({ reportId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -387,7 +387,7 @@ export const approveGiifReportContent = createServerFn({ method: "POST" })
 
 /** Linki do pobrania przygotowanego pakietu (XML, PDF, UPO). */
 export const getGiifReportDownloads = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => z.object({ reportId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -416,7 +416,7 @@ export const getGiifReportDownloads = createServerFn({ method: "POST" })
   });
 
 export const listGiifReports = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async ({ context }) => {
     const { data, error } = await loose(context.supabase)
       .from("aml_reports")
@@ -436,7 +436,7 @@ export const listGiifReports = createServerFn({ method: "POST" })
  * KONTEKSTOWO, bez porzucania zgłoszenia.
  */
 export const startGiifSubmission = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => z.object({ reportId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -496,7 +496,7 @@ export const startGiifSubmission = createServerFn({ method: "POST" })
  * certyfikatem GIIF → kolejka wysyłki mTLS (idempotency, ponowienia).
  */
 export const uploadSignedGiifReport = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z.object({ reportId: z.string().uuid(), signedBase64: z.string().min(1) }).parse(data),
   )
@@ -615,7 +615,7 @@ export const uploadSignedGiifReport = createServerFn({ method: "POST" })
 
 /** Ręczne odświeżenie statusów + pobranie UPO. */
 export const refreshGiifStatuses = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async () => {
     const { processSubmissionQueue, pollSubmittedReports } =
       await import("@/lib/aml/giif-connector.server");
@@ -631,7 +631,7 @@ export const refreshGiifStatuses = createServerFn({ method: "POST" })
  * nigdy do frontendu).
  */
 export const giifRegistrationPrepare = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async ({ context }) => {
     const db = loose(context.supabase);
     const { data: settings } = await db
@@ -734,7 +734,7 @@ export const giifRegistrationPrepare = createServerFn({ method: "POST" })
 
 /** Krok kreatora: odbiór podpisanych dokumentów rejestracyjnych + wysyłka do SI*GIIF. */
 export const giifRegistrationSubmit = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z
       .object({
@@ -826,7 +826,7 @@ export const giifRegistrationSubmit = createServerFn({ method: "POST" })
  * wraca do przygotowanego zgłoszenia.
  */
 export const giifRegistrationFinish = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z
       .object({

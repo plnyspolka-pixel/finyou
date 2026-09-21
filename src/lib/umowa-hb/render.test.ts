@@ -5,9 +5,7 @@ import { WZOR_UMOWY_DOCX_B64 } from "./wzor-docx.b64";
 import { renderujXml, renderujTekst, type WzorData } from "./render";
 import { xmlToPlainText } from "@/lib/document-fields";
 
-const XML = new PizZip(WZOR_UMOWY_DOCX_B64, { base64: true })
-  .file("word/document.xml")!
-  .asText();
+const XML = new PizZip(WZOR_UMOWY_DOCX_B64, { base64: true }).file("word/document.xml")!.asText();
 
 const baseData = (over: Partial<WzorData> = {}): WzorData => ({
   pola: {
@@ -17,10 +15,32 @@ const baseData = (over: Partial<WzorData> = {}): WzorData => ({
     numer_kw: "LU1I/00012345/6",
     ...(over.pola ?? {}),
   },
-  flagi: { ma_poreczyciela: false, wyplata_gotowka: false, roszczenie_oproznione_miejsce: false, ma_posrednika: false, ...(over.flagi ?? {}) },
+  flagi: {
+    ma_poreczyciela: false,
+    wyplata_gotowka: false,
+    roszczenie_oproznione_miejsce: false,
+    ma_posrednika: false,
+    ...(over.flagi ?? {}),
+  },
   raty: over.raty ?? [
-    { nr: "1", data: "05.09.2026", kapital: "8 000,00", odsetki: "500,00", rata_prowizji: "200,00", rata_laczna: "8 700,00", saldo: "92 000,00" },
-    { nr: "2", data: "05.10.2026", kapital: "8 000,00", odsetki: "450,00", rata_prowizji: "200,00", rata_laczna: "8 650,00", saldo: "84 000,00" },
+    {
+      nr: "1",
+      data: "05.09.2026",
+      kapital: "8 000,00",
+      odsetki: "500,00",
+      rata_prowizji: "200,00",
+      rata_laczna: "8 700,00",
+      saldo: "92 000,00",
+    },
+    {
+      nr: "2",
+      data: "05.10.2026",
+      kapital: "8 000,00",
+      odsetki: "450,00",
+      rata_prowizji: "200,00",
+      rata_laczna: "8 650,00",
+      saldo: "84 000,00",
+    },
   ],
 });
 
@@ -41,8 +61,16 @@ describe("renderer wzoru umowy (Handlebars-DOCX)", () => {
   });
 
   it("klauzula poręczyciela: wyłączona gdy flaga false, włączona gdy true", () => {
-    expect(renderujTekst(XML, baseData({ flagi: { ma_poreczyciela: false } as any })).includes("Poręczycielem")).toBe(false);
-    expect(renderujTekst(XML, baseData({ flagi: { ma_poreczyciela: true } as any })).includes("Poręczycielem")).toBe(true);
+    expect(
+      renderujTekst(XML, baseData({ flagi: { ma_poreczyciela: false } as any })).includes(
+        "Poręczycielem",
+      ),
+    ).toBe(false);
+    expect(
+      renderujTekst(XML, baseData({ flagi: { ma_poreczyciela: true } as any })).includes(
+        "Poręczycielem",
+      ),
+    ).toBe(true);
   });
 
   it("harmonogram: wiersz {{#each raty}} powtarza się per rata", () => {

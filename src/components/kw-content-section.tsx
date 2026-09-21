@@ -87,7 +87,8 @@ export function KwContentSection({
   const setPasteOpen = (v: boolean) => {
     _setPasteOpen(v);
     try {
-      v ? sessionStorage.setItem(pasteOpenKey, "1") : sessionStorage.removeItem(pasteOpenKey);
+      if (v) sessionStorage.setItem(pasteOpenKey, "1");
+      else sessionStorage.removeItem(pasteOpenKey);
     } catch {}
   };
 

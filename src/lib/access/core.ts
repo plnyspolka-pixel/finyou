@@ -4,6 +4,12 @@
 export type AccessAudience = "investor" | "broker";
 export type BuyerType = "person" | "company";
 
+/** Rodzaj produktu: czasowy dostęp albo jednorazowe odblokowanie okazji. */
+export type AccessProductKind = "access" | "unlock";
+
+/** Pakiet inwestora, do którego należy produkt. */
+export type AccessTier = "podstawowy" | "pro";
+
 export type AccessPaymentStatus =
   | "created"
   | "pending"
@@ -18,11 +24,21 @@ export interface AccessProduct {
   code: string;
   audience: AccessAudience;
   label: string;
-  duration_days: number;
+  /** null dla produktów `kind = "unlock"` (zakup jednej okazji, bez okresu). */
+  duration_days: number | null;
   amount_grosz: number;
   currency: string;
   active: boolean;
   sort_order: number;
+  kind: AccessProductKind;
+  tier: AccessTier | null;
+  /** Opłata sukcesu w punktach bazowych (500 = 5%) — tylko pakiet PRO. */
+  success_fee_bps: number;
+}
+
+/** Produkty dające czasowy dostęp (z okresem ważności). */
+export function isAccessProduct(p: AccessProduct): p is AccessProduct & { duration_days: number } {
+  return p.kind === "access" && typeof p.duration_days === "number";
 }
 
 /** Stare identyfikatory planów — obsługiwane wyłącznie przez webhook dla

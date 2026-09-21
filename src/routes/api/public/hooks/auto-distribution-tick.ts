@@ -11,9 +11,8 @@ export const Route = createFileRoute("/api/public/hooks/auto-distribution-tick")
         const unauth = requireCronSecret(request);
         if (unauth) return unauth;
 
-        const { syncAutoDistributionProposals } = await import(
-          "@/lib/auto-distribution/engine.server"
-        );
+        const { syncAutoDistributionProposals } =
+          await import("@/lib/auto-distribution/engine.server");
         try {
           const result = await syncAutoDistributionProposals();
           if (!("disabled" in result) && (result.proposed || result.refreshed)) {

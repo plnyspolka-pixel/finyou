@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
 
 // ════════════════════════════════════════════════════════════════════
 // AUTOMATYCZNE ODCZYTYWANIE PISM WINDYKACYJNYCH ZE ZDJĘCIA.
@@ -119,7 +119,7 @@ function empty(reason: WindOcrResult["reason"]): WindOcrResult {
 }
 
 export const analyzeWindDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((input) =>
     z
       .object({
@@ -264,7 +264,7 @@ function emptyContract(reason: WindOcrResult["reason"]): WindContractData {
 }
 
 export const analyzeWindContract = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((input) =>
     z
       .object({

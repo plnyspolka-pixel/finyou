@@ -269,7 +269,6 @@ function MarketingMaterialsPage() {
                         {!url ? (
                           <div className="text-muted-foreground">...</div>
                         ) : m.media_type === "image" ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img src={url} alt={m.title} className="w-full h-full object-contain" />
                         ) : (
                           <video

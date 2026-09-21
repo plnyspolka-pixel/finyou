@@ -22,6 +22,8 @@ export const PRIVACY_VERSION = "polityka-prywatnosci-v1";
 
 const CheckoutSchema = z.object({
   productCode: z.string().trim().min(1).max(80),
+  /** Wymagane dla produktów `kind = "unlock"` — okazja, którą odblokowujemy. */
+  matchId: z.string().uuid().optional(),
   buyerType: z.enum(["person", "company"]),
   buyerName: z.string().trim().min(1).max(300),
   buyerEmail: z.string().trim().email().max(255),
@@ -81,6 +83,59 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
       }
       const audience = product.audience as AccessAudience;
 
+      // 1b) Zakup jednej okazji: Dopasowanie musi należeć do kupującego,
+      //     mieć ujawnione dane i nie być jeszcze odblokowane.
+      let unlockMatchId: string | null = null;
+      if (product.kind === "unlock") {
+        if (!data.matchId) {
+          return { error: "Brak wskazanej okazji do odblokowania." };
+        }
+        const { data: match } = await db
+          .from("investor_order_matches")
+          .select("id, status, order_id")
+          .eq("id", data.matchId)
+          .maybeSingle();
+        if (!match) {
+          return { error: "Nie znaleziono okazji." };
+        }
+        const { data: order } = await db
+          .from("investor_orders")
+          .select("user_id")
+          .eq("id", match.order_id)
+          .maybeSingle();
+        if (order?.user_id !== userId) {
+          return { error: "Ta okazja nie należy do Twojego Zlecenia." };
+        }
+        if (["odrzucone", "przekazane", "wygasle"].includes(String(match.status))) {
+          return { error: "Ta okazja nie jest już dostępna." };
+        }
+        const { data: already } = await db
+          .from("investor_opportunity_unlocks")
+          .select("id")
+          .eq("match_id", data.matchId)
+          .maybeSingle();
+        if (already) {
+          return { error: "Ta okazja jest już odblokowana." };
+        }
+        // Druga rozpoczęta płatność za tę samą okazję skończyłaby się podwójnym
+        // obciążeniem (odblokowanie jest unikalne po match_id) — blokujemy ją
+        // tutaj, a webhook ma dodatkowo własne zabezpieczenie.
+        const { data: inFlight } = await db
+          .from("access_payments")
+          .select("id")
+          .eq("unlock_match_id", data.matchId)
+          .in("status", ["created", "pending"])
+          .limit(1)
+          .maybeSingle();
+        if (inFlight) {
+          return {
+            error:
+              "Płatność za tę okazję jest już rozpoczęta — dokończ ją albo odczekaj, aż wygaśnie.",
+          };
+        }
+        unlockMatchId = data.matchId;
+      }
+
       // 2) Zgodność produktu z rolą kupującego.
       const { getUserRoles, isExternalPartner, isInternalStaff } = await import("./guards.server");
       const [roles, partner, staff] = await Promise.all([
@@ -128,6 +183,7 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
           buyer_postal_code: data.buyerPostalCode.trim(),
           buyer_city: data.buyerCity.trim(),
           buyer_country: (data.buyerCountry || "PL").toUpperCase(),
+          unlock_match_id: unlockMatchId,
           consents,
         })
         .select("id")
@@ -141,7 +197,12 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
       // 4) Transakcja w Tpay. W crc/hiddenDescription zapisujemy wewnętrzny
       //    UUID płatności — webhook czyta wszystko z bazy, nie z przeglądarki.
       const base = resolveAppBaseUrl();
-      const panel = audience === "investor" ? "/inwestor/abonament" : "/posrednik/abonament";
+      const panel =
+        product.kind === "unlock"
+          ? "/inwestor/umowy"
+          : audience === "investor"
+            ? "/inwestor/abonament"
+            : "/posrednik/abonament";
       const successUrl = `${base}${panel}?tpay=success&payment=${paymentId}`;
       const errorUrl = `${base}${panel}?tpay=error&payment=${paymentId}`;
       const notifyUrl = `${base}/api/public/payments/tpay-webhook`;

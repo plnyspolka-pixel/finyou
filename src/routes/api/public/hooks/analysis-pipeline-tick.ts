@@ -12,9 +12,8 @@ export const Route = createFileRoute("/api/public/hooks/analysis-pipeline-tick")
         const unauth = requireCronSecret(request);
         if (unauth) return unauth;
 
-        const { syncAnalysisPipelineRuns, processAnalysisPipelineRuns } = await import(
-          "@/lib/analysis-pipeline/engine.server"
-        );
+        const { syncAnalysisPipelineRuns, processAnalysisPipelineRuns } =
+          await import("@/lib/analysis-pipeline/engine.server");
         try {
           const sync = await syncAnalysisPipelineRuns();
           const processing = await processAnalysisPipelineRuns();

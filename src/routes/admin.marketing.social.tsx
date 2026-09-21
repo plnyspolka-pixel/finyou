@@ -323,7 +323,6 @@ function SocialAdmin() {
                   </div>
                 </div>
                 {form.image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={form.image_url}
                     alt="Podgląd"

@@ -300,6 +300,53 @@ class FakeDbImpl implements FakeDb {
       return { ok: false, reason: "transaction_id_mismatch" };
     }
 
+    // Zakup jednej okazji (kind = 'unlock'): bez uprawnienia czasowego —
+    // odpowiednik gałęzi z process_access_payment_paid.
+    if (product.kind === "unlock") {
+      if (!payment.unlock_match_id) {
+        payment.failure_reason = "unlock_match_missing";
+        payment.needs_review = true;
+        return { ok: false, reason: "unlock_match_missing" };
+      }
+      const nowIso = this.now().toISOString();
+      this.tables.investor_opportunity_unlocks = this.tables.investor_opportunity_unlocks ?? [];
+      const already = this.tables.investor_opportunity_unlocks.find(
+        (u) => u.match_id === payment.unlock_match_id,
+      );
+      if (!already) {
+        this.tables.investor_opportunity_unlocks.push({
+          id: fakeUuid(),
+          user_id: payment.user_id,
+          match_id: payment.unlock_match_id,
+          payment_id: payment.id,
+          amount_grosz: params._paid_amount_grosz,
+          source: "platnosc",
+          unlocked_at: nowIso,
+        });
+      } else if (already.payment_id !== payment.id) {
+        // Druga płatność za tę samą okazję: księgujemy, ale oznaczamy do zwrotu.
+        payment.needs_review = true;
+        payment.failure_reason = "unlock_already_owned: okazja odblokowana wcześniej — do zwrotu";
+      }
+      payment.status = "paid";
+      payment.paid_amount_grosz = params._paid_amount_grosz;
+      payment.provider_transaction_id =
+        payment.provider_transaction_id ?? params._provider_transaction_id ?? null;
+      payment.granted_from = nowIso;
+      payment.granted_until = nowIso;
+      payment.processed_at = nowIso;
+      return {
+        ok: true,
+        alreadyProcessed: false,
+        kind: "unlock",
+        matchId: payment.unlock_match_id,
+        grantedFrom: nowIso,
+        grantedUntil: nowIso,
+        userId: payment.user_id,
+        audience: payment.audience,
+      };
+    }
+
     this.tables.access_entitlements = this.tables.access_entitlements ?? [];
     let ent = this.tables.access_entitlements.find(
       (e) => e.user_id === payment.user_id && e.audience === payment.audience,

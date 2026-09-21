@@ -152,16 +152,18 @@ export function LeadDetailView({
 
         <TabsContent value="komunikacja" className="space-y-3">
           <Card className="p-3 flex flex-wrap gap-2">
-            {["all", "voicebot_call", "sms", "email", "messenger", "chat", "manual_note"].map((f) => (
-              <Button
-                key={f}
-                size="sm"
-                variant={filter === f ? "default" : "outline"}
-                onClick={() => setFilter(f)}
-              >
-                {f === "all" ? "Wszystko" : (channelLabel[f] ?? f)}
-              </Button>
-            ))}
+            {["all", "voicebot_call", "sms", "email", "messenger", "chat", "manual_note"].map(
+              (f) => (
+                <Button
+                  key={f}
+                  size="sm"
+                  variant={filter === f ? "default" : "outline"}
+                  onClick={() => setFilter(f)}
+                >
+                  {f === "all" ? "Wszystko" : (channelLabel[f] ?? f)}
+                </Button>
+              ),
+            )}
           </Card>
 
           <SmsPanel leadId={id} lead={lead} communications={communications} />

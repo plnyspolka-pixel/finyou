@@ -22,12 +22,8 @@ export const startInvestorSelfVerification = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const {
-      hasDiditConfig,
-      createDiditSession,
-      selectWorkflowId,
-      diditAppUrl,
-    } = await import("@/lib/didit.server");
+    const { hasDiditConfig, createDiditSession, selectWorkflowId, diditAppUrl } =
+      await import("@/lib/didit.server");
     if (!hasDiditConfig()) return { status: "not_configured" as const };
 
     const kind = data.entityType === "firma" ? "kyb" : "kyc";
@@ -66,18 +62,20 @@ export const startInvestorSelfVerification = createServerFn({ method: "POST" })
       metadata: { purpose: "investor_agreements", user_id: userId, app: "finance-you" },
     });
 
-    const { error: insErr } = await loose(supabaseAdmin).from("didit_verifications").insert({
-      user_id: userId,
-      aml_customer_id: null,
-      vendor_data: vendorData,
-      session_id: session.sessionId,
-      session_number: session.sessionNumber,
-      workflow_id: session.workflowId,
-      workflow_type: kind,
-      status: session.status,
-      verification_url: session.url,
-      metadata: { purpose: "investor_agreements" },
-    });
+    const { error: insErr } = await loose(supabaseAdmin)
+      .from("didit_verifications")
+      .insert({
+        user_id: userId,
+        aml_customer_id: null,
+        vendor_data: vendorData,
+        session_id: session.sessionId,
+        session_number: session.sessionNumber,
+        workflow_id: session.workflowId,
+        workflow_type: kind,
+        status: session.status,
+        verification_url: session.url,
+        metadata: { purpose: "investor_agreements" },
+      });
     if (insErr) throw new Error(insErr.message);
 
     return { status: "ok" as const, sessionId: session.sessionId, url: session.url };

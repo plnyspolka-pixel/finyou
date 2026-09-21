@@ -5,7 +5,7 @@
 // ponownego wpisywania danych). Braki w profilu to ostrzeżenie, nie blokada.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
 import type { AmlInstitution, AmlPerson, AmlProfileGaps } from "@/lib/aml/aml-types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
@@ -133,7 +133,7 @@ async function toView(row: any): Promise<AmlSettingsView> {
  * z danych profilu inwestora — inwestor niczego nie wpisuje ponownie.
  */
 export const getAmlSettings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async ({ context }): Promise<AmlSettingsView> => {
     const db = loose(context.supabase);
     const { data: existing } = await db
@@ -200,7 +200,7 @@ const UpdateSettingsInput = z.object({
 });
 
 export const updateAmlSettings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => UpdateSettingsInput.parse(data))
   .handler(async ({ data, context }): Promise<AmlSettingsView> => {
     const db = loose(context.supabase);
@@ -246,7 +246,7 @@ export interface AmlOverview {
 
 /** Liczniki na ekran Przegląd. */
 export const getAmlOverview = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async ({ context }): Promise<AmlOverview> => {
     const db = loose(context.supabase);
     const uid = context.userId;

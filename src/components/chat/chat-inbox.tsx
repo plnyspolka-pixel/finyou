@@ -48,7 +48,11 @@ export function ChatInbox({ title = "Czat na stronie", renderLeadLink }: ChatInb
   const bottomRef = useRef<HTMLDivElement>(null);
   const sendFn = useServerFn(sendChatReply);
 
-  const { data: messages, refetch, isFetching } = useQuery({
+  const {
+    data: messages,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ["chat-inbox"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -173,7 +177,12 @@ export function ChatInbox({ title = "Czat na stronie", renderLeadLink }: ChatInb
         <Card className="p-3">
           <div className="relative mb-3">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Szukaj konwersacji…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-8" />
+            <Input
+              placeholder="Szukaj konwersacji…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-8"
+            />
           </div>
           <ScrollArea className="h-[calc(100vh-280px)]">
             <div className="space-y-1">
@@ -182,7 +191,9 @@ export function ChatInbox({ title = "Czat na stronie", renderLeadLink }: ChatInb
               )}
               {filteredConvs.map((c) => {
                 const active = c.key === selectedKey;
-                const name = `${c.lead?.first_name ?? ""} ${c.lead?.last_name ?? ""}`.trim() || "Gość ze strony";
+                const name =
+                  `${c.lead?.first_name ?? ""} ${c.lead?.last_name ?? ""}`.trim() ||
+                  "Gość ze strony";
                 return (
                   <button
                     key={c.key}
@@ -201,9 +212,17 @@ export function ChatInbox({ title = "Czat na stronie", renderLeadLink }: ChatInb
                       {(c.last.content ?? "").slice(0, 80) || "—"}
                     </div>
                     <div className="flex items-center gap-1 mt-1">
-                      <Badge variant="secondary" className="text-[10px] h-4">Czat WWW</Badge>
-                      <Badge variant="outline" className="text-[10px] h-4">{c.count} wiad.</Badge>
-                      {!c.leadId && <Badge variant="outline" className="text-[10px] h-4">bez leada</Badge>}
+                      <Badge variant="secondary" className="text-[10px] h-4">
+                        Czat WWW
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] h-4">
+                        {c.count} wiad.
+                      </Badge>
+                      {!c.leadId && (
+                        <Badge variant="outline" className="text-[10px] h-4">
+                          bez leada
+                        </Badge>
+                      )}
                     </div>
                   </button>
                 );
@@ -213,12 +232,15 @@ export function ChatInbox({ title = "Czat na stronie", renderLeadLink }: ChatInb
         </Card>
 
         <Card className="p-4 flex flex-col">
-          {!selectedKey && <div className="text-sm text-muted-foreground">Wybierz konwersację po lewej.</div>}
+          {!selectedKey && (
+            <div className="text-sm text-muted-foreground">Wybierz konwersację po lewej.</div>
+          )}
           {selectedKey && (
             <>
               <div className="flex items-center justify-between border-b pb-3 mb-3">
                 <div className="text-lg font-semibold">
-                  {`${selectedLead?.first_name ?? ""} ${selectedLead?.last_name ?? ""}`.trim() || "Gość ze strony"}
+                  {`${selectedLead?.first_name ?? ""} ${selectedLead?.last_name ?? ""}`.trim() ||
+                    "Gość ze strony"}
                 </div>
                 {selectedLeadId && renderLeadLink?.(selectedLeadId)}
               </div>
@@ -230,16 +252,27 @@ export function ChatInbox({ title = "Czat na stronie", renderLeadLink }: ChatInb
                     const meta = (m.metadata ?? {}) as Record<string, any>;
                     const isBot = !inbound && !meta.sent_by;
                     return (
-                      <div key={m.id} className={`flex ${inbound ? "justify-start" : "justify-end"}`}>
-                        <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
-                          inbound
-                            ? "bg-muted"
-                            : isBot
-                            ? "bg-blue-500/10 border border-blue-500/30"
-                            : "bg-primary text-primary-foreground"
-                        }`}>
+                      <div
+                        key={m.id}
+                        className={`flex ${inbound ? "justify-start" : "justify-end"}`}
+                      >
+                        <div
+                          className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
+                            inbound
+                              ? "bg-muted"
+                              : isBot
+                                ? "bg-blue-500/10 border border-blue-500/30"
+                                : "bg-primary text-primary-foreground"
+                          }`}
+                        >
                           <div className="flex items-center gap-1 text-[10px] opacity-70 mb-1">
-                            {inbound ? <UserIcon className="h-3 w-3" /> : isBot ? <Bot className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+                            {inbound ? (
+                              <UserIcon className="h-3 w-3" />
+                            ) : isBot ? (
+                              <Bot className="h-3 w-3" />
+                            ) : (
+                              <Send className="h-3 w-3" />
+                            )}
                             <span>{inbound ? "Klient" : isBot ? "Bot" : "Operator"}</span>
                             <span>·</span>
                             <span>{new Date(m.created_at).toLocaleString("pl-PL")}</span>
@@ -273,7 +306,9 @@ export function ChatInbox({ title = "Czat na stronie", renderLeadLink }: ChatInb
                       }}
                     />
                     <div className="flex items-center justify-between">
-                      <div className="text-[10px] text-muted-foreground">Cmd/Ctrl + Enter — wyślij</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        Cmd/Ctrl + Enter — wyślij
+                      </div>
                       <Button
                         size="sm"
                         onClick={() => sendMut.mutate(reply.trim())}

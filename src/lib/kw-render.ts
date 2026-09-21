@@ -124,7 +124,7 @@ function table(_title: string, rowsHtml: string): string | null {
 export function formatKwAmount(n: number): string {
   return n
     .toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    .replace(/[  ]/g, " ");
+    .replace(/[\u00A0\u202F]/g, " ");
 }
 
 function renderDzial1o(d: NonNullable<KwExtraction["dzial1o"]>): string | null {

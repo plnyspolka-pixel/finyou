@@ -5,7 +5,6 @@ import {
   Section,
   SectionHead,
   FeatureGrid,
-  PricingCard,
   FAQ,
   ComplianceNote,
   CTASection,
@@ -15,7 +14,7 @@ import { MktBadge, MktButton, Eyebrow } from "@/components/marketing/primitives"
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
-import { MarketingPricing } from "@/components/marketing/pricing";
+import { InvestorPricing } from "@/components/marketing/investor-pricing";
 import { ChatWidget } from "@/components/landing/chat-widget";
 import { LeadsTable } from "@/routes/embed.leady";
 import { listAccessProducts } from "@/lib/access/state.functions";
@@ -43,20 +42,64 @@ async function loadPublicLeads(): Promise<PublicLead[]> {
   }
 }
 
-const PRICING_FEATURES: Record<number, string[]> = {
-  30: [
-    "Dostęp do spraw klientów",
-    "Akademia inwestora",
-    "Wzory dokumentów i procedury",
-    "Narzędzia AI + CRM",
-    "Wsparcie compliance",
-  ],
-  365: [
-    "Wszystko z pakietu 30-dniowego",
-    "Pełny rok bez przerw w dostępie",
-    "Priorytetowe wsparcie",
-  ],
-};
+// Kroki pipeline'u pokazywane na stronie — ta sama kolejność co w panelu
+// (src/lib/investor-plan/pipeline.ts).
+const PIPELINE_STEPS: { n: number; t: string; d: string; hue: number }[] = [
+  {
+    n: 1,
+    t: "Dane pożyczkodawcy",
+    d: "Osoba fizyczna, JDG albo spółka. Dla firm dane pobieramy z GUS i KRS po NIP, REGON lub numerze KRS.",
+    hue: 262,
+  },
+  {
+    n: 2,
+    t: "Rachunek do spłaty",
+    d: "Obowiązkowy numer NRB/IBAN, na który pożyczkobiorca spłaca pożyczkę. Trafia do umowy i harmonogramu.",
+    hue: 217,
+  },
+  {
+    n: 3,
+    t: "Weryfikacja tożsamości",
+    d: "Zdalne KYC — dokument i selfie, bez wizyty i bez papierów.",
+    hue: 190,
+  },
+  {
+    n: 4,
+    t: "Screening list sankcyjnych",
+    d: "Sankcje, PEP i listy ostrzegawcze sprawdzamy u wyspecjalizowanego dostawcy — to osobne badanie niż KYC.",
+    hue: 160,
+  },
+  {
+    n: 5,
+    t: "Doręczenie pakietu",
+    d: "Komplet dokumentów na trwałym nośniku e-mailem, zanim cokolwiek podpiszesz.",
+    hue: 130,
+  },
+  {
+    n: 6,
+    t: "Umowy wypełnione przez system",
+    d: "Komparycję umowy ramowej, NDA i umowy RODO wypełniamy Twoimi zweryfikowanymi danymi.",
+    hue: 86,
+  },
+  {
+    n: 7,
+    t: "Podpis i akceptacja",
+    d: "Forma dokumentowa z pełnym śladem audytowym: wersja, skrót SHA-256, czas, IP i urządzenie.",
+    hue: 48,
+  },
+  {
+    n: 8,
+    t: "Dokumenty przypisane do konta",
+    d: "Komplet zostaje przy Tobie w panelu i w potwierdzeniach e-mail — zawsze pod ręką.",
+    hue: 28,
+  },
+  {
+    n: 9,
+    t: "Zlecenie poszukiwania okazji",
+    d: "Kwota ± 15%, maksymalny okres, minimalny zysk roczny i termin ważności. Od tego momentu szukamy dla Ciebie.",
+    hue: 8,
+  },
+];
 
 export const Route = createFileRoute("/dla-inwestora")({
   loader: async () => {
@@ -71,7 +114,7 @@ export const Route = createFileRoute("/dla-inwestora")({
       {
         name: "description",
         content:
-          "Dołącz do Klubu Inwestorów Hipotecznych Finance You: możliwość składania Zleceń, Akademia inwestora, wzory dokumentów, narzędzia AI, CRM i wsparcie compliance.",
+          "Klub Inwestorów Hipotecznych Finance You: konto Podstawowe bez opłat stałych (płacisz za okazję) i pakiet PRO — 3 000 zł / 6 miesięcy + 5% od udzielonej pożyczki.",
       },
       { property: "og:title", content: "Dla inwestorów — Finance You" },
       {
@@ -86,21 +129,47 @@ export const Route = createFileRoute("/dla-inwestora")({
   component: InvestorLanding,
 });
 
+// Zakres pakietu Podstawowego (0 zł) — to dostaje każde konto po przejściu
+// pipeline'u; dopłata dotyczy wyłącznie odblokowania konkretnej okazji.
 const GET: FeatureItemData[] = [
-  { icon: "access", t: "Dostęp do spraw", d: "Zgłoszenia klientów szukających finansowania." },
   {
-    icon: "training",
-    t: "Szkolenie",
-    d: "Akademia inwestora — od podstaw do zaawansowanych zagadnień.",
+    icon: "access",
+    t: "Zlecenie okazji",
+    d: "Składasz Zlecenie, my szukamy pasujących projektów.",
   },
-  { icon: "dossier", t: "Dokumenty", d: "Gotowe wzory i szablony operacyjne." },
-  { icon: "procedures", t: "Procedury", d: "Uporządkowany, powtarzalny proces działania." },
-  { icon: "knowledge", t: "Baza wiedzy", d: "Materiały o analizie nieruchomości i zabezpieczeń." },
-  { icon: "aibrain", t: "AI do obsługi procesu", d: "Automatyzacja komunikacji i przypomnień." },
-  { icon: "crmfolder", t: "CRM", d: "Statusy spraw i historia działań w jednym miejscu." },
-  { icon: "shieldcheck", t: "Compliance", d: "Wsparcie w zakresie AML, RODO i dokumentacji." },
-  { icon: "community", t: "Społeczność", d: "Dostęp do klubu i wymiany doświadczeń." },
-  { icon: "updates", t: "Aktualizacje", d: "Nowe materiały i rozwój narzędzi." },
+  {
+    icon: "shieldcheck",
+    t: "KYC i listy sankcyjne",
+    d: "Weryfikacja tożsamości i screening sankcji/PEP w jednym procesie.",
+  },
+  { icon: "dossier", t: "Umowy wypełnione przez system", d: "Komparycja, podpis i ślad audytowy." },
+  {
+    icon: "procedures",
+    t: "Wyłączność na okazję",
+    d: "Zdecydowany klient zarezerwowany tylko dla Ciebie.",
+  },
+  { icon: "knowledge", t: "Raport o inwestycji", d: "Nieruchomość, zabezpieczenie, LTV i ryzyko." },
+  {
+    icon: "status",
+    t: "Zaakceptowany harmonogram",
+    d: "Plan spłat potwierdzony przez pożyczkobiorcę.",
+  },
+  { icon: "chat", t: "Dane kontaktowe", d: "Bezpośredni kontakt po odblokowaniu okazji." },
+  {
+    icon: "documents",
+    t: "Generator umowy pożyczki",
+    d: "Gotowy dokument na podstawie Twoich danych.",
+  },
+];
+
+// Zakres wyłącznie pakietu PRO.
+const PRO_ONLY: FeatureItemData[] = [
+  { icon: "training", t: "Akademia inwestora", d: "Siedem modułów — od strategii po windykację." },
+  { icon: "shieldcheck", t: "Kalkulator compliance", d: "Limity kosztów i zgodność warunków." },
+  { icon: "complianceAml", t: "Moduł AML", d: "Klienci, transakcje, ryzyko, zgłoszenia i UPO." },
+  { icon: "aibrain", t: "Windykacja AI", d: "Sześć etapów od pierwszego kontaktu po egzekucję." },
+  { icon: "knowledge", t: "Raporty bez limitu", d: "Nielimitowana liczba pełnych raportów." },
+  { icon: "updates", t: "Pierwszeństwo ofert", d: "Wybierasz z puli przed pozostałymi." },
 ];
 
 const AKADEMIA: TwoColSlide[] = [
@@ -290,8 +359,20 @@ const FAQS = [
     a: "Nie. Materiały mają charakter edukacyjny i informacyjny. Decyzje inwestycyjne podejmujesz samodzielnie.",
   },
   {
-    q: "Co dokładnie dostaję w klubie?",
-    a: "Dostęp do spraw, szkolenia, wzory dokumentów, procedury, bazę wiedzy, narzędzia AI, CRM oraz wsparcie compliance.",
+    q: "Ile to kosztuje?",
+    a: "Konto w pakiecie Podstawowym jest bez opłat stałych — płacisz wyłącznie za odblokowanie konkretnej okazji (wyłączność, raport o inwestycji, zaakceptowany harmonogram i dane kontaktowe). Pakiet PRO kosztuje 3 000 zł brutto za 6 miesięcy plus 5% kwoty udzielonej pożyczki i nie ma opłat za pojedyncze okazje.",
+  },
+  {
+    q: "Co dokładnie dostaję w pakiecie Podstawowym?",
+    a: "Pełny pipeline (dane pożyczkodawcy, rachunek do spłaty, weryfikacja tożsamości, screening list sankcyjnych, komplet umów wypełnionych przez system), składanie Zleceń, możliwość zakupu okazji na wyłączność wraz z raportem, harmonogramem zaakceptowanym przez pożyczkobiorcę i danymi kontaktowymi, a także generator umowy pożyczki.",
+  },
+  {
+    q: "Czym różni się pakiet PRO?",
+    a: "PRO zawiera wszystko z pakietu Podstawowego bez opłat za pojedyncze okazje, a dodatkowo Akademię inwestora, kalkulator compliance, moduł AML, moduł windykacji AI, nielimitowaną liczbę pełnych raportów oraz pierwszeństwo wyboru ofert.",
+  },
+  {
+    q: "Jak wygląda proces zanim zobaczę pierwszą okazję?",
+    a: "To jeden pipeline w panelu: podajesz dane pożyczkodawcy (dla firm pobieramy je z GUS/KRS po NIP lub KRS), wskazujesz obowiązkowy rachunek do spłaty pożyczki, przechodzisz zdalną weryfikację tożsamości, my uruchamiamy screening list sankcyjnych i PEP, następnie system wypełnia dokumenty Twoimi danymi, a Ty je podpisujesz i akceptujesz. Na końcu składasz Zlecenie.",
   },
   {
     q: "Czy mogę finansować sprawy klientów?",
@@ -445,16 +526,106 @@ function LeadsSection({ leads }: { leads: PublicLead[] }) {
 // Kotwice z nagłówka (#akademia, #ochrona, #windykacja-ai, #cennik) wybierają
 // odpowiednią zakładkę i przewijają do pasa zakładek — sekcje nie mają już
 // własnych id na stronie.
-type InvestorTabKey = "oferty" | "system" | "akademia" | "ochrona" | "windykacja" | "cennik";
+type InvestorTabKey =
+  | "oferty"
+  | "pipeline"
+  | "system"
+  | "akademia"
+  | "ochrona"
+  | "windykacja"
+  | "cennik";
 
 const INVESTOR_TABS: { key: InvestorTabKey; hash: string; label: string }[] = [
   { key: "oferty", hash: "#oferty", label: "Oferty" },
+  { key: "pipeline", hash: "#pipeline", label: "Jak to działa" },
   { key: "system", hash: "#system-inwestora", label: "Inteligentny system" },
   { key: "akademia", hash: "#akademia", label: "Akademia inwestora" },
   { key: "ochrona", hash: "#ochrona", label: "7 warstw ochrony" },
   { key: "windykacja", hash: "#windykacja-ai", label: "Windykacja AI" },
   { key: "cennik", hash: "#cennik", label: "Cennik" },
 ];
+
+// Jeden pipeline — kolorowa oś kroków, te same etapy co w panelu inwestora.
+function PipelineSection() {
+  return (
+    <Section>
+      <SectionHead
+        center
+        eyebrow="Jeden pipeline"
+        title="Od rejestracji do Zlecenia — dziewięć kroków"
+        sub="Dane pożyczkodawcy, rachunek do spłaty, weryfikacja tożsamości, screening list sankcyjnych, komplet umów wypełnionych przez system i Zlecenie poszukiwania okazji. Wszystko w jednym miejscu, bez papierów."
+      />
+      <div
+        className="fy-pipeline"
+        style={{
+          marginTop: "2.5rem",
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0,1fr))",
+          gap: "0.9rem",
+        }}
+      >
+        {PIPELINE_STEPS.map((s) => (
+          <div
+            key={s.n}
+            style={{
+              position: "relative",
+              overflow: "hidden",
+              borderRadius: "var(--radius-2xl)",
+              border: `1px solid oklch(0.62 0.16 ${s.hue} / 0.3)`,
+              background: "var(--card)",
+              boxShadow: "var(--shadow-sm)",
+              padding: "1.1rem 1.1rem 1.1rem 1.4rem",
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                insetBlock: 0,
+                left: 0,
+                width: 6,
+                background: `linear-gradient(180deg, oklch(0.70 0.17 ${s.hue}), oklch(0.54 0.19 ${s.hue + 18}))`,
+              }}
+            />
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span
+                style={{
+                  display: "grid",
+                  placeItems: "center",
+                  width: 30,
+                  height: 30,
+                  borderRadius: 999,
+                  fontSize: "0.82rem",
+                  fontWeight: 900,
+                  color: "#fff",
+                  background: `linear-gradient(135deg, oklch(0.68 0.17 ${s.hue}), oklch(0.50 0.19 ${s.hue + 20}))`,
+                }}
+              >
+                {s.n}
+              </span>
+              <span style={{ fontWeight: 800, fontSize: "0.96rem" }}>{s.t}</span>
+            </div>
+            <p
+              style={{
+                marginTop: "0.6rem",
+                fontSize: "0.85rem",
+                lineHeight: 1.55,
+                color: "var(--muted-foreground)",
+              }}
+            >
+              {s.d}
+            </p>
+          </div>
+        ))}
+      </div>
+      <ComplianceNote style={{ marginTop: "2rem" }}>
+        Zakres i kolejność kroków wynikają z pakietu umownego Finance You oraz obowiązków w zakresie
+        przeciwdziałania praniu pieniędzy. Weryfikacja tożsamości i screening list sankcyjnych
+        realizowane są przez wyspecjalizowanych dostawców.
+      </ComplianceNote>
+    </Section>
+  );
+}
 
 function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: AccessProduct[] }) {
   const [active, setActive] = useState<InvestorTabKey>("oferty");
@@ -538,6 +709,8 @@ function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: Acce
 
       {active === "oferty" && <LeadsSection leads={leads} />}
 
+      {active === "pipeline" && <PipelineSection />}
+
       {active === "system" && (
         <Section>
           <SmartOfferSlider />
@@ -599,40 +772,17 @@ function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: Acce
           <SectionHead
             center
             eyebrow="Cennik"
-            title="Klub Inwestorów Hipotecznych"
-            sub="Jednorazowa płatność za czasowy dostęp — bez automatycznych odnowień."
+            title="Dwa pakiety — Podstawowy i PRO"
+            sub="W Podstawowym zakładasz konto bez opłat stałych, składasz Zlecenie i płacisz tylko za okazję, którą bierzesz. PRO to ten sam zakres bez opłat jednostkowych plus pełny warsztat inwestora."
           />
           <div style={{ marginTop: "2.5rem" }}>
-            <MarketingPricing
-              products={products}
-              audience="investor"
-              ctaLabel="Wykup dostęp"
-              featuresByDuration={PRICING_FEATURES}
-              fallback={
-                <PricingCard
-                  eyebrow="Klub Inwestorów Hipotecznych"
-                  title="Pełny dostęp inwestora"
-                  price="999 zł"
-                  period="/ 30 dni"
-                  cta="Dołącz do Klubu"
-                  href={JOIN}
-                  features={[
-                    "Dostęp do spraw klientów",
-                    "Akademia inwestora",
-                    "Wzory dokumentów i procedury",
-                    "Narzędzia AI + CRM",
-                    "Wsparcie compliance",
-                    "Dostęp do społeczności",
-                  ]}
-                  note="Ceny brutto. Dostęp roczny: 5 999 zł / 365 dni. Materiały mają charakter edukacyjny i informacyjny."
-                />
-              }
-            />
+            <InvestorPricing products={products} />
           </div>
           <ComplianceNote style={{ marginTop: "2rem" }}>
-            Ceny brutto (PLN). Zakup wymaga konta inwestora — po wybraniu pakietu przejdziesz do
-            bezpiecznej płatności Tpay, a faktura zostanie wystawiona automatycznie. Materiały mają
-            charakter edukacyjny i informacyjny.
+            Ceny brutto (PLN). Pakiet PRO: 3 000 zł za 180 dni dostępu oraz 5% kwoty udzielonej
+            pożyczki, płatne po jej uruchomieniu. Zakup wymaga konta inwestora — po wybraniu pakietu
+            przejdziesz do bezpiecznej płatności Tpay, a faktura zostanie wystawiona automatycznie.
+            Materiały mają charakter edukacyjny i informacyjny, a Finance You nie gwarantuje zysku.
           </ComplianceNote>
         </Section>
       )}
@@ -649,9 +799,24 @@ function InvestorLanding() {
       <InvestorTabs leads={leads} products={products} />
 
       <Section>
-        <SectionHead eyebrow="Co otrzymujesz" title="Wszystko, czego potrzebuje inwestor" />
+        <SectionHead
+          eyebrow="Pakiet Podstawowy"
+          title="Konto bez opłat stałych — płacisz za okazję, którą bierzesz"
+          sub="Po przejściu pipeline'u składasz Zlecenie. Gdy znajdziemy projekt, kupujesz go na wyłączność razem z raportem, harmonogramem i kontaktem."
+        />
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={GET} icon3d />
+        </div>
+      </Section>
+
+      <Section tint>
+        <SectionHead
+          eyebrow="Pakiet PRO"
+          title="To samo bez opłat za okazje — plus pełny warsztat"
+          sub="3 000 zł za 6 miesięcy i 5% od udzielonej pożyczki. Akademia, compliance, AML, windykacja AI, raporty bez limitu i pierwszeństwo wyboru ofert."
+        />
+        <div style={{ marginTop: "2.5rem" }}>
+          <FeatureGrid items={PRO_ONLY} cols={3} icon3d />
         </div>
       </Section>
 

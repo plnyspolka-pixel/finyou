@@ -2,7 +2,7 @@
 // ryzyka, transakcji, rejestru ponadprogowego albo ręcznie.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 type Loose = { from: (t: string) => any; rpc: (fn: string, args?: Record<string, unknown>) => any };
@@ -39,7 +39,7 @@ const CaseInput = z.object({
 });
 
 export const listAmlCases = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async ({ context }) => {
     const { data, error } = await loose(context.supabase)
       .from("aml_cases")
@@ -52,7 +52,7 @@ export const listAmlCases = createServerFn({ method: "POST" })
   });
 
 export const getAmlCase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => z.object({ caseId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -93,7 +93,7 @@ export const getAmlCase = createServerFn({ method: "POST" })
   });
 
 export const upsertAmlCase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) => CaseInput.parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -170,7 +170,7 @@ export const upsertAmlCase = createServerFn({ method: "POST" })
   });
 
 export const setAmlCaseStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z
       .object({
@@ -233,7 +233,7 @@ export const setAmlCaseStatus = createServerFn({ method: "POST" })
 
 /** Załącznik do sprawy/zgłoszenia — plik przesyłany w base64 do prywatnego Storage. */
 export const addAmlAttachment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z
       .object({
@@ -289,7 +289,7 @@ export const addAmlAttachment = createServerFn({ method: "POST" })
 
 /** Historia audytu (nieusuwalna) — do ekranów historii. */
 export const listAmlAudit = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((data) =>
     z
       .object({ entityType: z.string().optional(), entityId: z.string().uuid().optional() })

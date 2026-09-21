@@ -324,7 +324,7 @@ export function InwestorProfil() {
     const showRepresentation = f.entity_type === "firma" && !isJdg;
     const normalizedAccount = (() => {
       const c = detectPolishBankAccount(f.bank_account);
-      return c.success ? c.normalized : f.bank_account.replace(/[\s\-]/g, "").toUpperCase() || null;
+      return c.success ? c.normalized : f.bank_account.replace(/[\s-]/g, "").toUpperCase() || null;
     })();
     // Map entity_type → legacy investor_type (NOT NULL column)
     const investorType = f.entity_type === "firma" ? "instytucjonalny" : "indywidualny";

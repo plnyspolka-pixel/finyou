@@ -21,9 +21,11 @@ import {
 
 interface Props {
   product: AccessProduct;
+  /** Wymagane dla produktu „unlock" — okazja, którą odblokowuje ta płatność. */
+  matchId?: string;
 }
 
-export function TpayAccessCheckoutForm({ product }: Props) {
+export function TpayAccessCheckoutForm({ product, matchId }: Props) {
   const checkoutFn = useServerFn(createAccessCheckout);
   const gusFn = useServerFn(gusCompanyLookup);
 
@@ -93,6 +95,7 @@ export function TpayAccessCheckoutForm({ product }: Props) {
       const res = await checkoutFn({
         data: {
           productCode: product.code,
+          matchId,
           buyerType,
           buyerName: buyerName.trim(),
           buyerEmail: buyerEmail.trim(),
@@ -126,8 +129,12 @@ export function TpayAccessCheckoutForm({ product }: Props) {
         <div className="text-sm text-muted-foreground">{product.label}</div>
         <div className="text-3xl font-bold mt-1">{formatGroszPln(product.amount_grosz)} brutto</div>
         <div className="text-xs text-muted-foreground mt-1">
-          Płatność jednorazowa · dostęp na {product.duration_days} dni. Zostaniesz przeniesiony do
-          bezpiecznej bramki płatności Tpay (BLIK, karta, szybki przelew).
+          Płatność jednorazowa ·{" "}
+          {product.duration_days
+            ? `dostęp na ${product.duration_days} dni`
+            : "jednorazowe odblokowanie okazji"}
+          . Zostaniesz przeniesiony do bezpiecznej bramki płatności Tpay (BLIK, karta, szybki
+          przelew).
         </div>
       </div>
 

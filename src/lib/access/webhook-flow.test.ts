@@ -79,6 +79,32 @@ function seedCatalog() {
       active: true,
     },
     {
+      id: "pro180",
+      code: "investor_pro_180d",
+      audience: "investor",
+      label: "Pakiet PRO inwestora — 6 miesięcy",
+      duration_days: 180,
+      amount_grosz: 300000,
+      currency: "PLN",
+      active: true,
+      kind: "access",
+      tier: "pro",
+      success_fee_bps: 500,
+    },
+    {
+      id: "unlock",
+      code: "investor_okazja_unlock",
+      audience: "investor",
+      label: "Okazja na wyłączność — raport, harmonogram i kontakt",
+      duration_days: null,
+      amount_grosz: 150000,
+      currency: "PLN",
+      active: true,
+      kind: "unlock",
+      tier: "podstawowy",
+      success_fee_bps: 0,
+    },
+    {
       id: "b30",
       code: "broker_access_30d",
       audience: "broker",
@@ -424,6 +450,115 @@ describe("webhook Tpay — zwroty i finalność płatności", () => {
 
     expect(db().tables.access_payments[0].status).toBe("refunded"); // finalny
     expect(db().tables.access_entitlements[0].active_until).toBe(untilAfterPaid); // bez drugiego przedłużenia
+  });
+});
+
+describe("webhook Tpay — cennik inwestora 2026-09", () => {
+  it("pakiet PRO: 3 000 zł daje 180 dni dostępu", async () => {
+    const paymentId = seedPayment({
+      product_id: "pro180",
+      expected_amount_grosz: 300000,
+      provider_transaction_id: "tr_PRO",
+    });
+    tpayCorrect("tr_PRO", paymentId, 3000);
+
+    expect(await handleTpayNotification({ tr_id: "tr_PRO" })).toBe("TRUE");
+
+    const payment = db().tables.access_payments[0];
+    expect(payment.status).toBe("paid");
+    // 1 sierpnia + 180 dni = 28 stycznia 2027.
+    expect(payment.granted_until).toBe("2027-01-28T12:00:00.000Z");
+    expect(db().tables.access_entitlements[0].active_until).toBe("2027-01-28T12:00:00.000Z");
+  });
+
+  it("zakup okazji: odblokowanie zamiast dostępu czasowego", async () => {
+    const matchId = "22222222-2222-4222-8222-222222222222";
+    const paymentId = seedPayment({
+      product_id: "unlock",
+      expected_amount_grosz: 150000,
+      unlock_match_id: matchId,
+      provider_transaction_id: "tr_UNLOCK",
+    });
+    tpayCorrect("tr_UNLOCK", paymentId, 1500);
+
+    expect(await handleTpayNotification({ tr_id: "tr_UNLOCK" })).toBe("TRUE");
+
+    const payment = db().tables.access_payments[0];
+    expect(payment.status).toBe("paid");
+    // Zakup okazji NIE tworzy ani nie przedłuża uprawnienia czasowego.
+    expect(db().tables.access_entitlements ?? []).toHaveLength(0);
+
+    const unlocks = db().tables.investor_opportunity_unlocks ?? [];
+    expect(unlocks).toHaveLength(1);
+    expect(unlocks[0].match_id).toBe(matchId);
+    expect(unlocks[0].user_id).toBe(USER);
+    expect(unlocks[0].amount_grosz).toBe(150000);
+
+    // Faktura za okazję powstaje tak samo jak za pakiet czasowy.
+    expect(db().tables.sales_invoices[0]?.invoice_number).toBe("FY/2026/0001");
+  });
+
+  it("zakup okazji bez wskazanego Dopasowania nie przechodzi i idzie do wyjaśnienia", async () => {
+    const paymentId = seedPayment({
+      product_id: "unlock",
+      expected_amount_grosz: 150000,
+      unlock_match_id: null,
+      provider_transaction_id: "tr_BAD",
+    });
+    tpayCorrect("tr_BAD", paymentId, 1500);
+
+    await handleTpayNotification({ tr_id: "tr_BAD" });
+
+    const payment = db().tables.access_payments[0];
+    expect(payment.status).not.toBe("paid");
+    expect(payment.failure_reason).toBe("unlock_match_missing");
+    expect(payment.needs_review).toBe(true);
+    expect(db().tables.investor_opportunity_unlocks ?? []).toHaveLength(0);
+  });
+
+  it("druga płatność za tę samą okazję trafia do wyjaśnienia (zwrot)", async () => {
+    const matchId = "44444444-4444-4444-8444-444444444444";
+    const first = seedPayment({
+      product_id: "unlock",
+      expected_amount_grosz: 150000,
+      unlock_match_id: matchId,
+      provider_transaction_id: "tr_U1",
+    });
+    tpayCorrect("tr_U1", first, 1500);
+    await handleTpayNotification({ tr_id: "tr_U1" });
+
+    const second = seedPayment({
+      product_id: "unlock",
+      expected_amount_grosz: 150000,
+      unlock_match_id: matchId,
+      provider_transaction_id: "tr_U2",
+    });
+    tpayCorrect("tr_U2", second, 1500);
+    await handleTpayNotification({ tr_id: "tr_U2" });
+
+    expect(db().tables.investor_opportunity_unlocks).toHaveLength(1);
+    const dup = db().tables.access_payments.find((p: any) => p.id === second);
+    expect(dup).toBeTruthy();
+    expect(dup?.status).toBe("paid");
+    expect(dup?.needs_review).toBe(true);
+    expect(dup?.failure_reason).toMatch(/unlock_already_owned/);
+  });
+
+  it("podwójne powiadomienie o zakupie okazji nie dubluje odblokowania", async () => {
+    const matchId = "33333333-3333-4333-8333-333333333333";
+    const paymentId = seedPayment({
+      product_id: "unlock",
+      expected_amount_grosz: 150000,
+      unlock_match_id: matchId,
+      provider_transaction_id: "tr_DUP",
+    });
+    tpayCorrect("tr_DUP", paymentId, 1500);
+
+    await handleTpayNotification({ tr_id: "tr_DUP" });
+    await handleTpayNotification({ tr_id: "tr_DUP" });
+
+    expect(db().tables.investor_opportunity_unlocks).toHaveLength(1);
+    expect(db().tables.sales_invoices).toHaveLength(1);
   });
 });
 

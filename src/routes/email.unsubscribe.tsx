@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { applyOptOut } from "@/lib/email-unsubscribe.server";
 
 // Wypis z korespondencji mailowej. Trzy źródła linków:
 //   ?t=<email_unsubscribe_tokens.token>    — stopka KAŻDEGO maila (trwały token)
@@ -75,6 +74,10 @@ const unsubscribeFn = createServerFn({ method: "POST" })
     }
 
     if (email) {
+      // Import dynamiczny wewnątrz handlera: moduł .server ciągnie node:crypto,
+      // a plik route'u trafia też do bundla przeglądarki — statyczny import
+      // wywracał `vite build` („randomBytes is not exported by __vite-browser-external").
+      const { applyOptOut } = await import("@/lib/email-unsubscribe.server");
       await applyOptOut({ email, source, signal: "link", strength: "soft" });
       return { ok: true, email };
     }

@@ -153,18 +153,15 @@ export const CLIENT_STATUS_DESCRIPTIONS: Record<LoanStatus, string> = {
     "Brakuje jeszcze części danych. Sprawdź listę poniżej i uzupełnij braki — kompletny wniosek trafia do inwestorów.",
   brak_zdjec_dokumentow:
     "Brakuje jeszcze części danych. Sprawdź listę poniżej i uzupełnij braki — kompletny wniosek trafia do inwestorów.",
-  kontakt:
-    "Doprecyzowujemy szczegóły Twojego wniosku. Uzupełnij ewentualne braki z listy poniżej.",
+  kontakt: "Doprecyzowujemy szczegóły Twojego wniosku. Uzupełnij ewentualne braki z listy poniżej.",
   kompletowanie_danych:
     "Brakuje jeszcze części danych. Sprawdź listę poniżej i uzupełnij braki — kompletny wniosek trafia do inwestorów.",
   szukamy_inwestora:
     "Twój wniosek jest przedstawiany inwestorom. Jeśli spotka się z zainteresowaniem, otrzymasz konkretną ofertę finansową. Brak oferty oznacza, że wniosek na razie nie wzbudził zainteresowania.",
   warunki_zaakceptowane:
     "Warunki oferty zostały zaakceptowane. Przygotowujemy dokumenty do kolejnego kroku.",
-  dokumenty_przygotowanie_umowy:
-    "Przygotowujemy dokumenty i treść umowy pożyczki.",
-  notariusz:
-    "Umowa jest u notariusza — trwa podpisanie i ustanowienie zabezpieczeń.",
+  dokumenty_przygotowanie_umowy: "Przygotowujemy dokumenty i treść umowy pożyczki.",
+  notariusz: "Umowa jest u notariusza — trwa podpisanie i ustanowienie zabezpieczeń.",
   zamkniete: "Sprawa została zakończona.",
 };
 

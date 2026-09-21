@@ -105,7 +105,11 @@ export function extractDiditPersonalData(decision: unknown): DiditPersonalData {
     lastName: last,
     documentType: pick(idv.document_type, d.document_type),
     documentNumber: pick(idv.document_number, d.document_number),
-    personalNumber: pick(idv.personal_number, idv.personal_identification_number, d.personal_number),
+    personalNumber: pick(
+      idv.personal_number,
+      idv.personal_identification_number,
+      d.personal_number,
+    ),
     dateOfBirth: pick(idv.date_of_birth, d.date_of_birth, idv.birth_date),
     address: pick(
       idv.address,

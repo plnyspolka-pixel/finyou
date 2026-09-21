@@ -133,7 +133,7 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
           if (file && typeof (file as any).arrayBuffer === "function") {
             const f = file as File;
             const buf = new Uint8Array(await f.arrayBuffer());
-            const safeName = f.name.replace(/[^\w.\-]+/g, "_");
+            const safeName = f.name.replace(/[^\w.-]+/g, "_");
             const path = `leads/${leadId}/${Date.now()}-${safeName}`;
             const { error } = await supabaseAdmin.storage
               .from(CLIENT_FILES_BUCKET)

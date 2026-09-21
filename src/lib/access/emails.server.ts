@@ -14,17 +14,26 @@ export async function sendPaymentConfirmedEmail(opts: {
   amountGrosz: number;
   grantedUntil: string | Date;
   audience: AccessAudience;
+  /** Zakup jednej okazji — bez okresu ważności, inna treść potwierdzenia. */
+  kind?: "access" | "unlock";
 }): Promise<void> {
   const base = resolveAppBaseUrl();
   const until = formatWarsawDate(opts.grantedUntil, true);
-  const subject = "Płatność potwierdzona — dostęp aktywny | Finance You";
+  const isUnlock = opts.kind === "unlock";
+  const subject = isUnlock
+    ? "Płatność potwierdzona — okazja odblokowana | Finance You"
+    : "Płatność potwierdzona — dostęp aktywny | Finance You";
   const text = `Dzień dobry,
 
 potwierdzamy zaksięgowanie płatności ${formatGroszPln(opts.amountGrosz)} za pakiet: ${opts.productLabel}.
 
-Twój pełny dostęp jest aktywny do: ${until} (czas polski).
+${
+  isUnlock
+    ? "Okazja została odblokowana — w panelu znajdziesz raport o inwestycji, harmonogram zaakceptowany przez pożyczkobiorcę oraz dane kontaktowe. Wyłączność obowiązuje zgodnie z regulaminem cyklu Zleceń."
+    : `Twój pełny dostęp jest aktywny do: ${until} (czas polski).`
+}
 
-Panel: ${base}${panelPath(opts.audience)}
+Panel: ${base}${isUnlock ? "/inwestor/umowy" : panelPath(opts.audience)}
 
 Fakturę wyślemy osobnym e-mailem i znajdziesz ją w zakładce „Płatności i faktury".
 

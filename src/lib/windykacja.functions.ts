@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
 import { buildWindDocument, type DocContext } from "@/lib/windykacja-documents";
 import type {
   WindPath,
@@ -145,7 +145,7 @@ function daysOverdue(termin?: string | null): number {
 
 // ── Dashboard: sprawy + zdarzenia (lite) ─────────────────────────────
 export const listWindDashboard = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async ({ context }) => {
     const db = loose(context.supabase);
     const { data: cases, error } = await db
@@ -179,7 +179,7 @@ export const listWindDashboard = createServerFn({ method: "GET" })
 
 // ── Pełna sprawa ─────────────────────────────────────────────────────
 export const getWindCase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: { caseId: string }) => z.object({ caseId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -260,7 +260,7 @@ const createSchema = z.object({
 });
 
 export const createWindCase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) => createSchema.parse(d))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -373,7 +373,7 @@ export const createWindCase = createServerFn({ method: "POST" })
 
 // ── Edycja: borrower / loan / case ───────────────────────────────────
 export const updateWindBorrower = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: { id: string; patch: Record<string, unknown> }) =>
     z.object({ id: z.string().uuid(), patch: z.record(z.string(), z.unknown()) }).parse(d),
   )
@@ -387,7 +387,7 @@ export const updateWindBorrower = createServerFn({ method: "POST" })
   });
 
 export const updateWindLoan = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: { id: string; patch: Record<string, unknown> }) =>
     z.object({ id: z.string().uuid(), patch: z.record(z.string(), z.unknown()) }).parse(d),
   )
@@ -401,7 +401,7 @@ export const updateWindLoan = createServerFn({ method: "POST" })
   });
 
 export const updateWindCase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: { id: string; patch: Record<string, unknown> }) =>
     z.object({ id: z.string().uuid(), patch: z.record(z.string(), z.unknown()) }).parse(d),
   )
@@ -416,7 +416,7 @@ export const updateWindCase = createServerFn({ method: "POST" })
 
 // ── Zmiana etapu / ścieżki (zapisuje zdarzenie) ──────────────────────
 export const changeWindStage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
     z
       .object({
@@ -455,7 +455,7 @@ export const changeWindStage = createServerFn({ method: "POST" })
 // Decyduje o logice finansowej: po wypowiedzeniu odsetki za opóźnienie
 // naliczamy od CAŁOŚCI, przed — tylko od zaległych rat.
 export const setWindTermination = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
     z
       .object({
@@ -510,7 +510,7 @@ export const setWindTermination = createServerFn({ method: "POST" })
 
 // ── Działanie kontaktowe: SMS / e-mail / telefon ─────────────────────
 export const performWindContact = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
     z
       .object({
@@ -588,7 +588,7 @@ export const performWindContact = createServerFn({ method: "POST" })
 
 // ── Pismo nadane (manualne) ──────────────────────────────────────────
 export const addWindPismoNadane = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
     z
       .object({
@@ -627,7 +627,7 @@ export const addWindPismoNadane = createServerFn({ method: "POST" })
 
 // ── Aktualizacja doręczenia (osobne zdarzenie — append-only) ─────────
 export const addWindDelivery = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
     z
       .object({
@@ -671,7 +671,7 @@ export const addWindDelivery = createServerFn({ method: "POST" })
 
 // ── Wpłata (zdarzenie + aktualizacja salda) ──────────────────────────
 export const addWindWplata = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
     z
       .object({
@@ -733,7 +733,7 @@ export const addWindWplata = createServerFn({ method: "POST" })
 
 // ── Notatka ──────────────────────────────────────────────────────────
 export const addWindNotatka = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
     z.object({ caseId: z.string().uuid(), tresc: z.string().min(1) }).parse(d),
   )
@@ -757,7 +757,7 @@ export const addWindNotatka = createServerFn({ method: "POST" })
 
 // ── Generowanie dokumentu (szablon + zdarzenie) ──────────────────────
 export const generateWindDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
     z
       .object({
@@ -841,7 +841,7 @@ export const generateWindDocument = createServerFn({ method: "POST" })
 // (Sam plik DOCX powstaje przez generateDocxFromTemplate; tu wiążemy go ze
 //  sprawą: zdarzenie dowodowe + wpis dokumentu z linkiem do pliku.)
 export const recordWindGeneratedDoc = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
     z
       .object({
@@ -902,7 +902,7 @@ export const recordWindGeneratedDoc = createServerFn({ method: "POST" })
 // dla konkretnego pisma wygenerowanego w systemie. Skan zostaje przypięty
 // do dokumentu, a w osi czasu powstaje zdarzenie dowodowe.
 export const attachWindDocProof = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
     z
       .object({
@@ -968,7 +968,7 @@ export const attachWindDocProof = createServerFn({ method: "POST" })
 
 // ── Seed danych demonstracyjnych ─────────────────────────────────────
 export const seedWindDemo = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .handler(async ({ context }) => {
     const db = loose(context.supabase);
     const author = context.claims?.email ?? null;

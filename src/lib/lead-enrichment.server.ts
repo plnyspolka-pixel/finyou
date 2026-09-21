@@ -23,7 +23,7 @@ export type ExtractedFacts = {
 // Dopuszczamy opcjonalny separator (spacja / ukośnik / kropka / myślnik)
 // pomiędzy cyfrą wydziału a literą oznaczenia zamiejscowego.
 const KW_RE =
-  /\b([A-ZŁŃŚŻŹĄĆĘÓ0-9]{2}\d)[\s\/\\.-]?([A-Z0-9])[\s\/\\.-]{0,3}(\d{7,8})[\s\/\\.-]{0,3}(\d)\b/g;
+  /\b([A-ZŁŃŚŻŹĄĆĘÓ0-9]{2}\d)[\s/\\.-]?([A-Z0-9])[\s/\\.-]{0,3}(\d{7,8})[\s/\\.-]{0,3}(\d)\b/g;
 
 // Fragmenty, w których cyfry na pewno nie są kwotą — maile przychodzą często
 // jako surowy HTML/CSS (kolory hex typu #951246), a adresy e-mail i linki
@@ -67,9 +67,9 @@ const NAME_RE = new RegExp(
 // Wiadomość powitalna z reklamy leadowej FB — Messenger wstawia blok:
 // "Full name: Michał Szpak\nPhone number: 609 657 140\nEmail: x@y.pl".
 // To najpewniejsze źródło danych, parsujemy je wprost.
-const FORM_NAME_RE = /(?:Full name|Imi[ęe] i nazwisko|Name)\s*[:\-]\s*([^\n\r]{2,60})/i;
-const FORM_PHONE_RE = /(?:Phone(?: number)?|Telefon|Nr telefonu)\s*[:\-]\s*(\+?[\d][\d \-]{7,17})/i;
-const FORM_EMAIL_RE = /E-?mail\s*[:\-]\s*([\w.+-]+@[\w-]+(?:\.[\w-]+)+)/i;
+const FORM_NAME_RE = /(?:Full name|Imi[ęe] i nazwisko|Name)\s*[:-]\s*([^\n\r]{2,60})/i;
+const FORM_PHONE_RE = /(?:Phone(?: number)?|Telefon|Nr telefonu)\s*[:-]\s*(\+?[\d][\d -]{7,17})/i;
+const FORM_EMAIL_RE = /E-?mail\s*[:-]\s*([\w.+-]+@[\w-]+(?:\.[\w-]+)+)/i;
 
 function normalizePhone(p: string): string | null {
   const digits = p.replace(/\D/g, "");

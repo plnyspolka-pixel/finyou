@@ -24,20 +24,25 @@ export function AccessPlanCards({
   const savings =
     monthly && yearly ? yearlySavingsGrosz(monthly.amount_grosz, yearly.amount_grosz) : 0;
 
+  // Produkty „unlock" (zakup jednej okazji) kupuje się z poziomu okazji,
+  // nie z cennika — tutaj pokazujemy wyłącznie pakiety czasowe.
+  const timed = products.filter((p) => p.kind !== "unlock" && p.duration_days != null);
+
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      {products.map((p) => {
-        const isYearly = p.duration_days === 365;
+      {timed.map((p) => {
+        const days = p.duration_days as number;
+        const isYearly = days === 365;
         return (
           <Card key={p.code} className={isYearly ? "border-primary shadow-lg" : ""}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                Pełny dostęp – {p.duration_days} dni
+                Pełny dostęp – {days} dni
                 {isYearly && <Badge>Najlepsza oferta</Badge>}
               </CardTitle>
               <div className="text-3xl font-bold">{formatGroszPln(p.amount_grosz)} brutto</div>
               <div className="text-xs text-muted-foreground">
-                Płatność jednorazowa · dokładnie {p.duration_days} dni dostępu
+                Płatność jednorazowa · dokładnie {days} dni dostępu
               </div>
               {isYearly && savings > 0 && (
                 <div className="text-xs font-medium text-emerald-700">
@@ -46,9 +51,9 @@ export function AccessPlanCards({
               )}
             </CardHeader>
             <CardContent className="space-y-3">
-              {featuresByDuration?.[p.duration_days] && (
+              {featuresByDuration?.[days] && (
                 <ul className="text-sm space-y-1 text-muted-foreground">
-                  {featuresByDuration[p.duration_days].map((f) => (
+                  {featuresByDuration[days].map((f: string) => (
                     <li key={f}>• {f}</li>
                   ))}
                 </ul>
@@ -59,7 +64,7 @@ export function AccessPlanCards({
                 onClick={() => onSelect(p)}
               >
                 {hasActiveAccess
-                  ? `Przedłuż o ${p.duration_days} dni`
+                  ? `Przedłuż o ${days} dni`
                   : isYearly
                     ? "Wykup dostęp na rok"
                     : "Wykup dostęp"}
