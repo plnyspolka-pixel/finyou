@@ -6,7 +6,7 @@
  *   META_PAGE_ACCESS_TOKEN   — strona (posty, komentarze, Messenger, IG przez stronę)
  *   META_IG_PAGE_ACCESS_TOKEN — Instagram (gdy inny niż strony)
  *   META_ACCESS_TOKEN        — użytkownik/system (konta reklamowe, kampanie)
- *   FB_PIXEL_ACCESS_TOKEN    — Conversions API
+ *   FB_PIXEL_ACCESS_TOKEN    — Conversions API (gdy nieważny, `ensureMetaTokens` podstawia token systemowy)
  *   META_PAGE_ID, META_IG_USER_ID — identyfikatory strony i konta IG
  *
  * Używany przez narzędzia MCP (`src/lib/mcp/tools/meta.ts`) i dostępny dla
@@ -27,7 +27,8 @@ export function metaEnv() {
   const pageToken = process.env.META_PAGE_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN || "";
   const igToken = process.env.META_IG_PAGE_ACCESS_TOKEN || pageToken;
   const userToken = process.env.META_ACCESS_TOKEN || pageToken;
-  const pixelToken = process.env.FB_PIXEL_ACCESS_TOKEN || pageToken;
+  // Piksel: własny token, a bez niego token użytkownika/systemowy (token strony nie ma ads_management).
+  const pixelToken = process.env.FB_PIXEL_ACCESS_TOKEN || userToken;
   return {
     pageId: process.env.META_PAGE_ID || "",
     igUserId: process.env.META_IG_USER_ID || "",

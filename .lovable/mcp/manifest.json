@@ -8960,7 +8960,7 @@
       {
         "name": "meta_refresh_tokens",
         "title": "Refresh Meta tokens from system user",
-        "description": "Wymusza wyprowadzenie tokenów strony / Instagrama z tokena użytkownika systemowego (META_SYSTEM_USER_TOKEN) i pokazuje zdrowie wszystkich tokenów Meta (ważność, wygaśnięcie, zakresy). Użyj po dodaniu sekretu albo gdy meta_status zgłasza nieważny token. Tylko administrator.",
+        "description": "Wymusza wyprowadzenie tokenów strony / Instagrama z tokena użytkownika systemowego (META_SYSTEM_USER_TOKEN), sprawdza token piksela (nieważny → Conversions API idzie tokenem systemowym) i pokazuje zdrowie wszystkich tokenów Meta (ważność, wygaśnięcie, zakresy) oraz dostęp do podanych pikseli. Użyj po dodaniu sekretu albo gdy meta_status zgłasza nieważny token. Tylko administrator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -8968,9 +8968,19 @@
           "openWorldHint": false
         },
         "inputSchema": {
-          "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
-          "properties": {}
+          "properties": {
+            "pixel_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 5
+              },
+              "maxItems": 10
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "outputSchema": null
       },

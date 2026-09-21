@@ -128,10 +128,20 @@ export const metaStatus = defineTool({
   annotations: READ,
   handler: (_i, ctx: ToolContext) =>
     handle(async () => {
-      await requireTeam(ctx);
+      const s = await requireTeam(ctx);
       const m = await import("@/lib/meta-api.server");
       const { metaTokenHealth } = await import("@/lib/meta-tokens.server");
-      const health = await metaTokenHealth();
+      // Piksele z ustawień śledzenia — meta_status sprawdzi, czy token piksela je widzi.
+      const { data: tracking } = await s
+        .from("tracking_settings")
+        .select("client_pixel_id, investor_pixel_id")
+        .eq("id", 1)
+        .maybeSingle();
+      const pixelIds = [
+        (tracking as { client_pixel_id?: string | null } | null)?.client_pixel_id,
+        (tracking as { investor_pixel_id?: string | null } | null)?.investor_pixel_id,
+      ].filter((v): v is string => Boolean(v));
+      const health = await metaTokenHealth({ pixelIds });
       const env = m.metaEnv();
       const errors: string[] = [];
       const [page, ig, accounts] = await Promise.all([
@@ -1284,15 +1294,17 @@ export const metaRefreshTokens = defineTool({
   name: "meta_refresh_tokens",
   title: "Refresh Meta tokens from system user",
   description:
-    "Wymusza wyprowadzenie tokenów strony / Instagrama z tokena użytkownika systemowego (META_SYSTEM_USER_TOKEN) i pokazuje zdrowie wszystkich tokenów Meta (ważność, wygaśnięcie, zakresy). Użyj po dodaniu sekretu albo gdy meta_status zgłasza nieważny token. Tylko administrator.",
-  inputSchema: {},
+    "Wymusza wyprowadzenie tokenów strony / Instagrama z tokena użytkownika systemowego (META_SYSTEM_USER_TOKEN), sprawdza token piksela (nieważny → Conversions API idzie tokenem systemowym) i pokazuje zdrowie wszystkich tokenów Meta (ważność, wygaśnięcie, zakresy) oraz dostęp do podanych pikseli. Użyj po dodaniu sekretu albo gdy meta_status zgłasza nieważny token. Tylko administrator.",
+  inputSchema: {
+    pixel_ids: z.array(z.string().min(5)).max(10).optional(),
+  },
   annotations: WRITE_IDEMPOTENT,
-  handler: (_a, ctx: ToolContext) =>
+  handler: (a, ctx: ToolContext) =>
     handle(async () => {
       await requireRolesAdmin(ctx, ADMIN_ONLY);
       const { ensureMetaTokens, metaTokenHealth } = await import("@/lib/meta-tokens.server");
       const state = await ensureMetaTokens({ force: true });
-      const health = await metaTokenHealth();
+      const health = await metaTokenHealth({ pixelIds: a.pixel_ids });
       return ok({
         page_id: state.pageId,
         page_name: state.pageName,

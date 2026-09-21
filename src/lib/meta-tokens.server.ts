@@ -9,7 +9,10 @@
  * META_IG_PAGE_ACCESS_TOKEN, META_ACCESS_TOKEN oraz META_PAGE_ID /
  * META_IG_USER_ID, gdy puste). Dzięki temu wszystkie moduły czytające
  * `process.env` (webhooki, ticki, panel, MCP) dostają ważny token bez zmian
- * w swoim kodzie.
+ * w swoim kodzie. Token piksela (`FB_PIXEL_ACCESS_TOKEN`, Conversions API)
+ * jest sprawdzany tak samo i — gdy Graph go odrzuci — zastępowany tokenem
+ * użytkownika systemowego, który ma `ads_management` do piksela w tym samym
+ * Business Managerze.
  *
  * `ensureMetaTokens()` jest tanie: wynik trzyma się w pamięci przez godzinę,
  * a ręcznie ustawione tokeny są podmieniane tylko wtedy, gdy Graph zgłosi,
@@ -32,6 +35,8 @@ export type MetaTokensState = {
   pageName: string | null;
   igUserId: string | null;
   replaced: string[];
+  /** Skąd pochodzi token piksela używany w tej chwili. */
+  pixel: "env" | "system_user" | "none";
   error: string | null;
 };
 
@@ -99,6 +104,7 @@ async function refresh(force: boolean): Promise<MetaTokensState> {
     pageName: null,
     igUserId: env.META_IG_USER_ID || null,
     replaced,
+    pixel: env.FB_PIXEL_ACCESS_TOKEN ? "env" : "none",
     error: null,
   };
   const explicitSys = env.META_SYSTEM_USER_TOKEN?.trim() || "";
@@ -106,12 +112,13 @@ async function refresh(force: boolean): Promise<MetaTokensState> {
     return { ...base, source: env.META_PAGE_ACCESS_TOKEN ? "env" : "none" };
   }
 
-  const [pageOk, igOk, userOk] = await Promise.all([
+  const [pageOk, igOk, userOk, pixelOk] = await Promise.all([
     env.META_PAGE_ACCESS_TOKEN ? tokenWorks(env.META_PAGE_ACCESS_TOKEN) : Promise.resolve(false),
     env.META_IG_PAGE_ACCESS_TOKEN
       ? tokenWorks(env.META_IG_PAGE_ACCESS_TOKEN)
       : Promise.resolve(false),
     env.META_ACCESS_TOKEN ? tokenWorks(env.META_ACCESS_TOKEN) : Promise.resolve(false),
+    env.FB_PIXEL_ACCESS_TOKEN ? tokenWorks(env.FB_PIXEL_ACCESS_TOKEN) : Promise.resolve(null),
   ]);
   // Źródło tokenów strony: osobny sekret, a gdy go nie ma — META_ACCESS_TOKEN,
   // o ile działa (w Finance You to token użytkownika systemowego, „nigdy nie wygasa”).
@@ -129,6 +136,13 @@ async function refresh(force: boolean): Promise<MetaTokensState> {
         ? "META_ACCESS_TOKEN jest nieważny, a META_SYSTEM_USER_TOKEN nie jest ustawiony — nie ma z czego wyprowadzić tokenów strony."
         : null,
     };
+  }
+  // Token piksela: gdy Graph go odrzuca, Conversions API idzie tokenem
+  // użytkownika systemowego (ważny token z innej aplikacji zostaje, jak jest).
+  if (pixelOk === false) {
+    env.FB_PIXEL_ACCESS_TOKEN = sys;
+    replaced.push("FB_PIXEL_ACCESS_TOKEN");
+    base.pixel = "system_user";
   }
   const needPage = force || pageOk === false;
   const needIg = force || igOk === false;
@@ -197,6 +211,7 @@ export async function ensureMetaTokens(opts: { force?: boolean } = {}): Promise<
       pageName: null,
       igUserId: process.env.META_IG_USER_ID || null,
       replaced: [],
+      pixel: process.env.FB_PIXEL_ACCESS_TOKEN ? ("env" as const) : ("none" as const),
       error: e instanceof Error ? e.message : String(e),
     }))
     .then((s) => {
@@ -217,6 +232,8 @@ export type MetaTokenHealth = {
   name: string;
   configured: boolean;
   preview: string | null;
+  /** Nazwa innej zmiennej z tym samym tokenem (np. piksel podmieniony na token systemowy). */
+  same_as: string | null;
   valid: boolean | null;
   type: string | null;
   expires_at: string | "never" | null;
@@ -230,7 +247,7 @@ const mask = (t: string) => `${t.slice(0, 6)}…${t.slice(-4)}`;
 
 async function debugToken(
   token: string,
-): Promise<Omit<MetaTokenHealth, "name" | "configured" | "preview">> {
+): Promise<Omit<MetaTokenHealth, "name" | "configured" | "preview" | "same_as">> {
   const appId = process.env.META_APP_ID;
   const appSecret = process.env.META_APP_SECRET;
   const inspector = appId && appSecret ? `${appId}|${appSecret}` : token;
@@ -284,12 +301,62 @@ async function debugToken(
   }
 }
 
-export async function metaTokenHealth(): Promise<{
+export type MetaPixelAccess = {
+  pixel_id: string;
+  ok: boolean;
+  name: string | null;
+  last_fired_time: string | null;
+  error: string | null;
+};
+
+/** Czy token piksela (po samonaprawie) widzi dany piksel — `GET /{pixel-id}`. */
+export async function pixelAccess(pixelId: string): Promise<MetaPixelAccess> {
+  const token = process.env.FB_PIXEL_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN || "";
+  if (!token)
+    return {
+      pixel_id: pixelId,
+      ok: false,
+      name: null,
+      last_fired_time: null,
+      error: "brak tokena",
+    };
+  try {
+    const r = await graphGet(pixelId, { fields: "id,name,last_fired_time", access_token: token });
+    if (!r.ok) {
+      return {
+        pixel_id: pixelId,
+        ok: false,
+        name: null,
+        last_fired_time: null,
+        error: r.json?.error?.message ?? `HTTP ${r.status}`,
+      };
+    }
+    return {
+      pixel_id: pixelId,
+      ok: true,
+      name: r.json?.name ?? null,
+      last_fired_time: r.json?.last_fired_time ?? null,
+      error: null,
+    };
+  } catch (e) {
+    return {
+      pixel_id: pixelId,
+      ok: false,
+      name: null,
+      last_fired_time: null,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+export async function metaTokenHealth(opts: { pixelIds?: string[] } = {}): Promise<{
   source: MetaTokenSource;
   derived_from: MetaTokensState["derivedFrom"];
   replaced: string[];
+  pixel: MetaTokensState["pixel"];
   error: string | null;
   tokens: MetaTokenHealth[];
+  pixels: MetaPixelAccess[];
   warnings: string[];
 }> {
   const s = await ensureMetaTokens();
@@ -301,6 +368,7 @@ export async function metaTokenHealth(): Promise<{
     ["FB_PIXEL_ACCESS_TOKEN", process.env.FB_PIXEL_ACCESS_TOKEN],
   ];
   const cache = new Map<string, ReturnType<typeof debugToken>>();
+  const firstName = new Map<string, string>();
   const tokens: MetaTokenHealth[] = [];
   for (const [name, value] of entries) {
     if (!value) {
@@ -308,6 +376,7 @@ export async function metaTokenHealth(): Promise<{
         name,
         configured: false,
         preview: null,
+        same_as: null,
         valid: null,
         type: null,
         expires_at: null,
@@ -320,9 +389,21 @@ export async function metaTokenHealth(): Promise<{
     }
     if (!cache.has(value)) cache.set(value, debugToken(value));
     const h = await cache.get(value)!;
-    tokens.push({ name, configured: true, preview: mask(value), ...h });
+    const sameAs = firstName.get(value) ?? null;
+    if (!sameAs) firstName.set(value, name);
+    tokens.push({ name, configured: true, preview: mask(value), same_as: sameAs, ...h });
   }
+  const pixelIds = Array.from(new Set((opts.pixelIds ?? []).map((v) => v.trim()).filter(Boolean)));
+  const pixels = await Promise.all(pixelIds.map((id) => pixelAccess(id)));
   const warnings: string[] = [];
+  if (s.pixel === "system_user") {
+    warnings.push(
+      "FB_PIXEL_ACCESS_TOKEN jest nieważny — Conversions API używa tokena użytkownika systemowego; wygeneruj nowy token w Events Manager (ten sam Business Manager) albo usuń sekret.",
+    );
+  }
+  for (const p of pixels) {
+    if (!p.ok) warnings.push(`Piksel ${p.pixel_id}: brak dostępu (${p.error ?? "Graph odrzuca"}).`);
+  }
   const userTok = tokens.find((t) => t.name === "META_ACCESS_TOKEN");
   const userIsSystem = userTok?.type === "SYSTEM_USER" && userTok.valid === true;
   if (!process.env.META_SYSTEM_USER_TOKEN && !userIsSystem) {
@@ -342,8 +423,10 @@ export async function metaTokenHealth(): Promise<{
     source: s.source,
     derived_from: s.derivedFrom,
     replaced: s.replaced,
+    pixel: s.pixel,
     error: s.error,
     tokens,
+    pixels,
     warnings,
   };
 }
