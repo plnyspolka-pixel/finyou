@@ -24,6 +24,7 @@
 //   * istniejący kontener IG jest ponawiany zamiast tworzenia nowego.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 import {
   classifyGraphError,
   formatNextAttempt,
@@ -346,6 +347,7 @@ export async function processSocialQueueItem(
   deferred?: boolean;
   error?: string;
 }> {
+  await ensureMetaTokens();
   const { data: claimed, error: claimErr } = await supabaseAdmin
     .from("social_publish_queue")
     .update({ status: "publishing" })

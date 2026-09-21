@@ -1,3 +1,4 @@
+import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 // Pobieranie profilu użytkownika z Meta Graph API po PSID (Messenger)
 // lub IGSID (Instagram). Facebook udostępnia stronie imię i nazwisko
 // rozmówcy, więc lead może być od razu podpisany danymi klienta.
@@ -12,6 +13,7 @@ export async function fetchMetaUserProfile(opts: {
   userId: string; // PSID (Messenger) lub IGSID (Instagram)
   platform: "messenger" | "instagram";
 }): Promise<MetaUserProfile | null> {
+  await ensureMetaTokens();
   const token =
     (opts.platform === "instagram" ? process.env.META_IG_PAGE_ACCESS_TOKEN : undefined) ??
     process.env.META_PAGE_ACCESS_TOKEN ??

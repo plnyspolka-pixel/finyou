@@ -3,6 +3,7 @@
 // Jedyne miejsce, przez które wychodzi każda wiadomość na kanałach Meta — więc
 // tutaj siedzi strażnik wypisu (klient powiedział „dość") i dopisek „napisz
 // STOP" do wiadomości proaktywnych, czyli odpowiednik stopki maila.
+import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 import {
   canSendMetaMessage,
   withOptOutHint,
@@ -41,6 +42,7 @@ export async function sendMetaMessage(opts: {
   }
 
   const text = opts.proactive ? withOptOutHint(opts.text) : opts.text;
+  await ensureMetaTokens();
   // Preferuj token dedykowany dla platformy (IG ma osobny), potem ogólny Page token, potem fallback.
   const token =
     (opts.platform === "instagram" ? process.env.META_IG_PAGE_ACCESS_TOKEN : undefined) ??

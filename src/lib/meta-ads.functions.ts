@@ -5,7 +5,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 function getToken() {
-  const t = process.env.META_ACCESS_TOKEN;
+  const t = process.env.META_ACCESS_TOKEN || process.env.META_SYSTEM_USER_TOKEN;
   if (!t) throw new Error("META_ACCESS_TOKEN nie jest ustawiony");
   return t;
 }

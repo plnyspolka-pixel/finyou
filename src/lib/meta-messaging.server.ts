@@ -13,6 +13,7 @@ import { replyToCommentPublic, sendPrivateReplyToComment } from "@/lib/meta-comm
 import { fetchMetaUserProfile } from "@/lib/meta-profile.server";
 import { ocrLeadAttachmentsAndEnrich, fillLeadNameFromKw } from "@/lib/lead-doc-intel.server";
 import { shouldSkipMessengerAutoReply } from "@/lib/bot-loop-guard.server";
+import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 
 async function findOrCreateLeadByPsid(opts: {
   senderId: string;
@@ -112,6 +113,7 @@ async function ensureLeadNameFromMetaProfile(opts: {
  * z obu endpointów bez podwójnego przetwarzania leadów.
  */
 export async function handleMetaMessagingBody(body: any): Promise<void> {
+  await ensureMetaTokens();
   const platform: "messenger" | "instagram" =
     body?.object === "instagram" ? "instagram" : "messenger";
   for (const entry of body?.entry ?? []) {

@@ -15,6 +15,7 @@
  */
 import { createHash } from "node:crypto";
 import { classifyGraphError, parseUsageRetryMinutes } from "@/lib/meta-graph-errors";
+import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 
 export const GRAPH_VERSION = "v21.0";
 const GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
@@ -35,6 +36,7 @@ export function metaEnv() {
     hasIgToken: Boolean(process.env.META_IG_PAGE_ACCESS_TOKEN || pageToken),
     hasUserToken: Boolean(process.env.META_ACCESS_TOKEN),
     hasPixelToken: Boolean(process.env.FB_PIXEL_ACCESS_TOKEN),
+    hasSystemUserToken: Boolean(process.env.META_SYSTEM_USER_TOKEN),
     tokens: { page: pageToken, ig: igToken, user: userToken, pixel: pixelToken },
   };
 }
@@ -85,6 +87,7 @@ export async function graphRequest(path: string, opts: GraphRequestOptions = {})
   if (!/^[A-Za-z0-9_./%-]+$/.test(clean) || clean.includes("..")) {
     throw new Error("Nieprawidłowa ścieżka Graph API.");
   }
+  if (typeof opts.token !== "object") await ensureMetaTokens();
   const token = typeof opts.token === "object" ? opts.token.raw : metaToken(opts.token ?? "page");
   const url = new URL(`${GRAPH}/${clean}`);
   for (const [k, v] of Object.entries(opts.query ?? {})) {

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { placeOutboundCallInternal } from "@/lib/voicebot.functions";
@@ -20,7 +21,8 @@ function verifyMetaSig(body: string, signature: string | null, secret: string): 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 async function fetchLeadDetails(leadgenId: string) {
-  const token = process.env.META_ACCESS_TOKEN!;
+  await ensureMetaTokens();
+  const token = (process.env.META_ACCESS_TOKEN ?? process.env.META_SYSTEM_USER_TOKEN)!;
   const res = await fetch(
     `${GRAPH}/${leadgenId}?access_token=${token}&fields=id,created_time,field_data,form_id,campaign_id,ad_id`,
   );
@@ -503,7 +505,7 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                   let formName: string | null = null;
                   try {
                     const fr = await fetch(
-                      `${GRAPH}/${formId}?access_token=${process.env.META_ACCESS_TOKEN}&fields=name`,
+                      `${GRAPH}/${formId}?access_token=${process.env.META_ACCESS_TOKEN ?? process.env.META_SYSTEM_USER_TOKEN}&fields=name`,
                     );
                     if (fr.ok) formName = (await fr.json())?.name ?? null;
                   } catch {

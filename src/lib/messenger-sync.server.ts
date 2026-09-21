@@ -7,6 +7,7 @@
 // leada po PSID/IGSID i dopisuje brakujące wiadomości (dedup po external_id
 // = message id). Idempotentne — ponowne uruchomienie nie duplikuje wiadomości.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 import { findLeadIdBy, upsertLeadFromSource } from "@/lib/lead-comms.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { ocrLeadAttachmentsAndEnrich } from "@/lib/lead-doc-intel.server";
@@ -303,6 +304,7 @@ export async function syncMessengerConversations(opts?: {
     errors: [],
     webhook: [],
   };
+  await ensureMetaTokens();
   const rootToken =
     process.env.META_ACCESS_TOKEN ??
     process.env.META_PAGE_ACCESS_TOKEN ??
@@ -356,6 +358,7 @@ export async function backfillGraphSyncAttachments(opts?: {
     kwFound: 0,
     errors: [],
   };
+  await ensureMetaTokens();
   const rootToken =
     process.env.META_ACCESS_TOKEN ??
     process.env.META_PAGE_ACCESS_TOKEN ??
