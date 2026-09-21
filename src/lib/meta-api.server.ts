@@ -337,14 +337,19 @@ export async function getIgAccountInsights(
     metricType?: string;
   } = {},
 ) {
-  const metrics = (
-    opts.metrics ?? "reach,follower_count,profile_views,accounts_engaged,total_interactions"
-  )
+  const period = opts.period ?? "day";
+  // profile_views Meta zwraca tylko dla okresu dziennego; przy week / days_28
+  // pomijamy je w domyślnej liście zamiast dostać błąd (#100).
+  const defaults =
+    period === "day"
+      ? "reach,follower_count,profile_views,accounts_engaged,total_interactions"
+      : "reach,follower_count,accounts_engaged,total_interactions";
+  const metrics = (opts.metrics ?? defaults)
     .split(",")
     .map((m) => m.trim())
     .filter(Boolean);
   const base = {
-    period: opts.period ?? "day",
+    period,
     since: toUnix(opts.since),
     until: toUnix(opts.until),
   };
