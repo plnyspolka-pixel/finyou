@@ -7,7 +7,7 @@
 // leada po PSID/IGSID i dopisuje brakujące wiadomości (dedup po external_id
 // = message id). Idempotentne — ponowne uruchomienie nie duplikuje wiadomości.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { upsertLeadFromSource } from "@/lib/lead-comms.server";
+import { findLeadIdBy, upsertLeadFromSource } from "@/lib/lead-comms.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { ocrLeadAttachmentsAndEnrich } from "@/lib/lead-doc-intel.server";
 import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
@@ -146,12 +146,8 @@ async function findOrCreateLead(opts: {
   name: string | null;
 }): Promise<{ leadId: string | null; created: boolean }> {
   const col = opts.platform === "messenger" ? "messenger_psid" : "instagram_igsid";
-  const { data: existing } = await supabaseAdmin
-    .from("leads")
-    .select("id")
-    .eq(col, opts.senderId)
-    .maybeSingle();
-  if (existing?.id) return { leadId: existing.id, created: false };
+  const existingId = await findLeadIdBy(col, opts.senderId);
+  if (existingId) return { leadId: existingId, created: false };
   const { first, last } = splitName(opts.name);
   if (first && last) {
     const { data: match } = await supabaseAdmin
