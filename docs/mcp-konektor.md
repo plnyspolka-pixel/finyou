@@ -359,10 +359,14 @@ never`), nie trzeba nic generować — serwer wyprowadza z niego tokeny strony
    aplikacji Meta niż reszta — działa, dopóki Graph go przyjmuje. Serwer
    sprawdza go razem z resztą; gdy jest nieważny, wysyłka zdarzeń idzie
    tokenem użytkownika systemowego (`token_health.pixel: system_user`,
-   ostrzeżenie w `warnings`). `meta_status` pokazuje też `pixels`: czy token
-   widzi piksele z ustawień śledzenia (nazwa, `last_fired_time`). Nowy token
-   piksela: Events Manager → piksel → Ustawienia → Conversions API → Wygeneruj
-   token dostępu (ten sam Business Manager).
+   ostrzeżenie w `warnings`). `meta_status` pokazuje też `pixels`: czy serwer
+   widzi piksele z ustawień śledzenia (nazwa, `last_fired_time`, `via` — który
+   token je odczytał). Token z Events Manager ma tylko zakres wysyłki
+   (`read_ads_dataset_quality`), więc `pixel_token_reads: false` jest normalne
+   — wysyłka zdarzeń działa (test: `send_meta_conversion_event` z
+   `test_event_code` → `events_received: 1`), a metadane czyta token
+   systemowy. Nowy token piksela (tylko gdy `valid: false`): Events Manager →
+   piksel → Ustawienia → Conversions API → Wygeneruj token dostępu.
 
 Uprawnienia tokenów Meta potrzebne do pełnego zakresu: `pages_read_engagement`,
 `pages_read_user_content`, `pages_manage_posts`, `pages_manage_engagement`,
