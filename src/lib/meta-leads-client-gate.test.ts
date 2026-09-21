@@ -82,7 +82,9 @@ describe("rozpoznanie formularza klienta", () => {
 
 describe("przekazanie leada klientowi", () => {
   it("wysyła leada i zapisuje tylko identyfikatory — bez danych osobowych", async () => {
-    const fetchMock = vi.fn(async () => new Response("ok", { status: 200 }));
+    const fetchMock = vi.fn(
+      async (_url: string, _init?: RequestInit) => new Response("ok", { status: 200 }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const wynik = await przekazLeadaKlientowi(
@@ -117,7 +119,9 @@ describe("przekazanie leada klientowi", () => {
 
   it("lead już przekazany nie leci drugi raz", async () => {
     jużPrzekazany = { meta_lead_id: "lead-1", status: "wyslany" };
-    const fetchMock = vi.fn(async () => new Response("ok", { status: 200 }));
+    const fetchMock = vi.fn(
+      async (_url: string, _init?: RequestInit) => new Response("ok", { status: 200 }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const wynik = await przekazLeadaKlientowi(

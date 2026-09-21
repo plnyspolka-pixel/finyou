@@ -256,7 +256,7 @@ export const getFacebookPageInsights = defineTool({
   name: "get_facebook_page_insights",
   title: "Get Facebook page insights",
   description:
-    "Statystyki strony (dziennie / tygodniowo / 28 dni): wyświetlenia, zasięg, zaangażowanie postów, fani, wejścia na stronę, nowi obserwujący. Domyślnie ostatnie 7 dni. Tylko administrator/operator.",
+    "Statystyki strony (dziennie / tygodniowo / 28 dni): wyświetlenia, zasięg, zaangażowanie postów, fani (własna lista metryk przez `metrics`). Domyślnie ostatnie 7 dni. Tylko administrator/operator.",
   inputSchema: {
     period: z.enum(["day", "week", "days_28"]).default("day"),
     since: z.string().optional(),
@@ -311,19 +311,28 @@ export const publishFacebookPostTool = defineTool({
   name: "publish_facebook_post",
   title: "Publish / schedule Facebook post",
   description:
-    "Publikuje post na stronie firmowej: tekst (z linkiem), zdjęcie (image_url) albo wideo (video_url). Ze `scheduled_at` post jest zaplanowany (10 min – 75 dni do przodu). To publiczna publikacja — użyj po tym, jak użytkownik zobaczył treść i kazał opublikować. Tylko administrator/operator.",
+    "Publikuje post na stronie firmowej: tekst (z linkiem), zdjęcie (image_url) albo wideo (video_url). Ze `scheduled_at` post jest zaplanowany (10 minut – 29 dni do przodu; Meta odrzuca dalsze terminy). To publiczna publikacja — użyj po tym, jak użytkownik zobaczył treść i kazał opublikować. Tylko administrator/operator.",
   inputSchema: {
     message: z.string().max(5000).default(""),
     link: z.string().url().optional(),
     image_url: z.string().url().optional(),
     video_url: z.string().url().optional(),
     title: z.string().max(200).optional().describe("Tytuł wideo."),
-    scheduled_at: z.string().optional().describe("Termin publikacji (ISO 8601)."),
+    scheduled_at: z
+      .string()
+      .optional()
+      .describe("Termin publikacji (ISO 8601), od 10 minut do 29 dni od teraz."),
   },
   annotations: SENDS,
   handler: (a, ctx: ToolContext) =>
     handle(async () => {
       const s = await requireTeamAdmin(ctx);
+      const scheduledAt = isoDate(a.scheduled_at, "scheduled_at");
+      if (scheduledAt) {
+        const delta = new Date(scheduledAt).getTime() - Date.now();
+        if (delta < 10 * 60_000 || delta > 29 * 86_400_000)
+          return fail("Termin publikacji musi być od 10 minut do 29 dni od teraz (limit Meta).");
+      }
       const m = await import("@/lib/meta-api.server");
       const r = await m.publishFacebookPost({
         message: a.message,
@@ -331,7 +340,7 @@ export const publishFacebookPostTool = defineTool({
         imageUrl: a.image_url,
         videoUrl: a.video_url,
         title: a.title,
-        scheduledAt: isoDate(a.scheduled_at, "scheduled_at"),
+        scheduledAt,
       });
       await s.from("automation_events").insert({
         automation_type: "facebook_post_mcp",

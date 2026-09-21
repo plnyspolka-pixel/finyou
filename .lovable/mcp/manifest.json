@@ -9050,7 +9050,7 @@
       {
         "name": "get_facebook_page_insights",
         "title": "Get Facebook page insights",
-        "description": "Statystyki strony (dziennie / tygodniowo / 28 dni): wyświetlenia, zasięg, zaangażowanie postów, fani, wejścia na stronę, nowi obserwujący. Domyślnie ostatnie 7 dni. Tylko administrator/operator.",
+        "description": "Statystyki strony (dziennie / tygodniowo / 28 dni): wyświetlenia, zasięg, zaangażowanie postów, fani (własna lista metryk przez `metrics`). Domyślnie ostatnie 7 dni. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -9117,7 +9117,7 @@
       {
         "name": "publish_facebook_post",
         "title": "Publish / schedule Facebook post",
-        "description": "Publikuje post na stronie firmowej: tekst (z linkiem), zdjęcie (image_url) albo wideo (video_url). Ze `scheduled_at` post jest zaplanowany (10 min – 75 dni do przodu). To publiczna publikacja — użyj po tym, jak użytkownik zobaczył treść i kazał opublikować. Tylko administrator/operator.",
+        "description": "Publikuje post na stronie firmowej: tekst (z linkiem), zdjęcie (image_url) albo wideo (video_url). Ze `scheduled_at` post jest zaplanowany (10 minut – 29 dni do przodu; Meta odrzuca dalsze terminy). To publiczna publikacja — użyj po tym, jak użytkownik zobaczył treść i kazał opublikować. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -9151,7 +9151,7 @@
             },
             "scheduled_at": {
               "type": "string",
-              "description": "Termin publikacji (ISO 8601)."
+              "description": "Termin publikacji (ISO 8601), od 10 minut do 29 dni od teraz."
             }
           },
           "additionalProperties": false,

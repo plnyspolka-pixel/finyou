@@ -186,8 +186,7 @@ export async function getPageInsights(
   const json = await graphRequest(`${requirePageId()}/insights`, {
     query: {
       metric:
-        opts.metrics ??
-        "page_impressions,page_impressions_unique,page_post_engagements,page_fans,page_views_total,page_daily_follows",
+        opts.metrics ?? "page_impressions,page_impressions_unique,page_post_engagements,page_fans",
       period: opts.period ?? "day",
       since: toUnix(opts.since),
       until: toUnix(opts.until),
@@ -224,7 +223,7 @@ export async function deleteObject(objectId: string, token: MetaTokenKind = "pag
 
 /**
  * Publikacja posta na stronie: tekst (z linkiem), zdjęcie albo wideo; z
- * `scheduledAt` post jest zaplanowany (10 min – 75 dni do przodu).
+ * `scheduledAt` post jest zaplanowany (Meta przyjmuje 10 min – 30 dni do przodu).
  */
 export async function publishFacebookPost(opts: {
   message: string;
