@@ -46,7 +46,9 @@ async function assertAdmin(supabase: any, userId: string) {
 }
 
 /** Wersje dokumentów pakietu do dziennika i Karty Leada. */
-async function packDocumentVersions(db: any): Promise<Array<{ code: string; version: string; sha256: string }>> {
+async function packDocumentVersions(
+  db: any,
+): Promise<Array<{ code: string; version: string; sha256: string }>> {
   const { data } = await loose(db)
     .from("legal_documents")
     .select("code, version, sha256, active, sort_order")
@@ -72,22 +74,26 @@ async function logCycleEvent(
   },
 ) {
   const docs = await packDocumentVersions(db);
-  await loose(db).from("investor_order_events").insert({
-    match_id: input.matchId ?? null,
-    order_id: input.orderId ?? null,
-    event_type: input.type,
-    payload: input.payload ?? {},
-    document_versions: docs,
-    actor: input.actor ?? null,
-    actor_kind: input.actorKind ?? "system",
-  });
+  await loose(db)
+    .from("investor_order_events")
+    .insert({
+      match_id: input.matchId ?? null,
+      order_id: input.orderId ?? null,
+      event_type: input.type,
+      payload: input.payload ?? {},
+      document_versions: docs,
+      actor: input.actor ?? null,
+      actor_kind: input.actorKind ?? "system",
+    });
 }
 
 /** Teaser anonimowy — te same bezpieczne pola co investor_offer_teasers(). */
 async function buildTeaser(db: any, applicationId: string) {
   const { data: la } = await loose(db)
     .from("loan_applications")
-    .select("id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, deleted_at")
+    .select(
+      "id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, deleted_at",
+    )
     .eq("id", applicationId)
     .maybeSingle();
   if (!la || la.deleted_at) throw new Error("Nie znaleziono wniosku (Projektu).");
@@ -121,7 +127,12 @@ async function myMatch(db: any, userId: string, matchId: string) {
   return m;
 }
 
-async function transition(db: any, match: any, to: MatchStatus, patch: Record<string, unknown> = {}) {
+async function transition(
+  db: any,
+  match: any,
+  to: MatchStatus,
+  patch: Record<string, unknown> = {},
+) {
   if (!canTransition(match.status as MatchStatus, to)) {
     throw new Error(`Przejście ${match.status} → ${to} jest niedozwolone.`);
   }
@@ -281,7 +292,8 @@ export const acceptKartaLeada = createServerFn({ method: "POST" })
     const { data: complete } = await loose(supabaseAdmin).rpc("investor_legal_pack_complete", {
       _user_id: userId,
     });
-    if (!complete) throw new Error("Najpierw zaakceptuj komplet dokumentów pakietu (/inwestor/umowy).");
+    if (!complete)
+      throw new Error("Najpierw zaakceptuj komplet dokumentów pakietu (/inwestor/umowy).");
 
     const { data: investor } = await loose(supabaseAdmin)
       .from("investors")
@@ -358,7 +370,11 @@ export const requestDisclosure = createServerFn({ method: "POST" })
       actor: userId,
       actorKind: "inwestor",
     });
-    return { ok: true, applicationId: m.application_id, reservationExpiresAt: expires.toISOString() };
+    return {
+      ok: true,
+      applicationId: m.application_id,
+      reservationExpiresAt: expires.toISOString(),
+    };
   });
 
 /** Jednorazowe przedłużenie rezerwacji o 12 h. */
@@ -455,7 +471,8 @@ export const submitConsumerWithdrawal = createServerFn({ method: "POST" })
       .order("accepted_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (!acceptance) throw new Error("Brak zaakceptowanej Umowy ramowej, od której można odstąpić.");
+    if (!acceptance)
+      throw new Error("Brak zaakceptowanej Umowy ramowej, od której można odstąpić.");
     if (!isWithinWithdrawalWindow(new Date(acceptance.accepted_at), new Date())) {
       throw new Error(
         "14-dniowy termin odstąpienia upłynął. Skontaktuj się z nami — sprawę rozpatrzymy indywidualnie.",
@@ -538,24 +555,26 @@ export const submitNdaAccession = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!nda) throw new Error("Brak dokumentu NDA w rejestrze.");
     const { ip, userAgent } = requestMeta();
-    const { error } = await loose(supabaseAdmin).from("nda_accessions").insert({
-      user_id: userId,
-      company_name: data.companyName,
-      registry_no: data.registryNo ?? null,
-      nip: data.nip ?? null,
-      address: data.address ?? null,
-      representative: data.representative ?? null,
-      project_refs: data.projectRefs,
-      nda_version: nda.version,
-      nda_sha256: nda.sha256,
-      statements: {
-        przystapienie_do_obowiazkow_odbiorcy: true,
-        odpowiedzialnosc_solidarna: true,
-        brak_automatycznego_dostepu_do_konta: true,
-      },
-      ip,
-      user_agent: userAgent,
-    });
+    const { error } = await loose(supabaseAdmin)
+      .from("nda_accessions")
+      .insert({
+        user_id: userId,
+        company_name: data.companyName,
+        registry_no: data.registryNo ?? null,
+        nip: data.nip ?? null,
+        address: data.address ?? null,
+        representative: data.representative ?? null,
+        project_refs: data.projectRefs,
+        nda_version: nda.version,
+        nda_sha256: nda.sha256,
+        statements: {
+          przystapienie_do_obowiazkow_odbiorcy: true,
+          odpowiedzialnosc_solidarna: true,
+          brak_automatycznego_dostepu_do_konta: true,
+        },
+        ip,
+        user_agent: userAgent,
+      });
     if (error) throw new Error(error.message);
     await logCycleEvent(supabaseAdmin, {
       type: "przystapienie_nda_zgloszone",
@@ -577,41 +596,50 @@ export const getOrderCycleAdminState = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { CANDIDATE_DB_STATUSES } = await import("@/lib/auto-distribution/engine.server");
 
-    const [{ data: orders }, { data: matches }, { data: events }, { data: accessions }, { data: withdrawals }] =
-      await Promise.all([
-        loose(supabaseAdmin)
-          .from("investor_orders")
-          .select("id, order_seq, user_id, amount_pln, max_period_months, min_annual_yield, status, expires_at")
-          .eq("status", "przyjete")
-          .order("order_seq"),
-        loose(supabaseAdmin)
-          .from("investor_order_matches")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(200),
-        loose(supabaseAdmin)
-          .from("investor_order_events")
-          .select("id, match_id, order_id, event_type, payload, actor_kind, created_at")
-          .order("created_at", { ascending: false })
-          .limit(100),
-        loose(supabaseAdmin)
-          .from("nda_accessions")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(50),
-        loose(supabaseAdmin)
-          .from("consumer_withdrawals")
-          .select("*")
-          .order("submitted_at", { ascending: false })
-          .limit(50),
-      ]);
+    const [
+      { data: orders },
+      { data: matches },
+      { data: events },
+      { data: accessions },
+      { data: withdrawals },
+    ] = await Promise.all([
+      loose(supabaseAdmin)
+        .from("investor_orders")
+        .select(
+          "id, order_seq, user_id, amount_pln, max_period_months, min_annual_yield, status, expires_at",
+        )
+        .eq("status", "przyjete")
+        .order("order_seq"),
+      loose(supabaseAdmin)
+        .from("investor_order_matches")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200),
+      loose(supabaseAdmin)
+        .from("investor_order_events")
+        .select("id, match_id, order_id, event_type, payload, actor_kind, created_at")
+        .order("created_at", { ascending: false })
+        .limit(100),
+      loose(supabaseAdmin)
+        .from("nda_accessions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50),
+      loose(supabaseAdmin)
+        .from("consumer_withdrawals")
+        .select("*")
+        .order("submitted_at", { ascending: false })
+        .limit(50),
+    ]);
     await expireStaleReservations(supabaseAdmin, matches ?? []);
 
     // Sugestie Dopasowań: kompletne wnioski w kwocie ± 15% Zlecenia,
     // bez aktywnego obiegu (wyłączność sekwencyjna).
     const activeAppIds = new Set(
       (matches ?? [])
-        .filter((m: any) => ["dopasowane", "teaser", "karta_leada", "rezerwacja"].includes(m.status))
+        .filter((m: any) =>
+          ["dopasowane", "teaser", "karta_leada", "rezerwacja"].includes(m.status),
+        )
         .map((m: any) => m.application_id),
     );
     const { data: apps } = await loose(supabaseAdmin)
@@ -667,7 +695,8 @@ export const createMatch = createServerFn({ method: "POST" })
       .eq("id", data.orderId)
       .maybeSingle();
     if (!order) throw new Error("Nie znaleziono Zlecenia.");
-    if (order.status !== "przyjete") throw new Error(`Zlecenie ma status ${order.status} (wymagane: przyjęte).`);
+    if (order.status !== "przyjete")
+      throw new Error(`Zlecenie ma status ${order.status} (wymagane: przyjęte).`);
     if (order.expires_at && new Date(order.expires_at).getTime() < Date.now()) {
       throw new Error("Zlecenie wygasło.");
     }
@@ -773,7 +802,8 @@ export const approveTransferCard = createServerFn({ method: "POST" })
     if (m.transfer_card_approved_at) return { ok: true, already: true };
     const card = {
       projekt_ref: m.project_ref,
-      podstawa: "Umowa udostępniania i ochrony danych osobowych (Moduł A — odrębni administratorzy)",
+      podstawa:
+        "Umowa udostępniania i ochrony danych osobowych (Moduł A — odrębni administratorzy)",
       kategorie_danych:
         "dane identyfikacyjne klienta i właściciela nieruchomości, dane nieruchomości (adres, nr KW), dokumentacja finansowa i prawna Projektu",
       cel: "ocena, negocjowanie i ewentualne wykonanie Projektu w wykonaniu przyjętego Zlecenia",
@@ -867,7 +897,8 @@ export const confirmZal6 = createServerFn({ method: "POST" })
       .eq("id", data.matchId)
       .maybeSingle();
     if (!m) throw new Error("Nie znaleziono Dopasowania.");
-    if (m.status !== "transakcja") throw new Error("Zał. 6 potwierdza się dla Dopasowania w Transakcji.");
+    if (m.status !== "transakcja")
+      throw new Error("Zał. 6 potwierdza się dla Dopasowania w Transakcji.");
     const provision = clientProvisionPln(data.payoutAmountPln);
     const { error } = await loose(supabaseAdmin)
       .from("investor_order_matches")

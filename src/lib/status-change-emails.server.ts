@@ -59,7 +59,13 @@ export async function processStatusChangeEmails(): Promise<StatusEmailTickResult
 }
 
 async function handleRow(
-  row: { id: string; loan_application_id: string; old_status: string | null; new_status: string; changed_at: string },
+  row: {
+    id: string;
+    loan_application_id: string;
+    old_status: string | null;
+    new_status: string;
+    changed_at: string;
+  },
   oldestAllowedMs: number,
 ): Promise<"sent" | "skipped"> {
   // Wpis startowy (założenie wniosku) i stare zaległości — bez maila.

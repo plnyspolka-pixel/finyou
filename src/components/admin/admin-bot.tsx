@@ -502,8 +502,8 @@ export function AdminBot({ className, compact = false, headerActions }: AdminBot
                 <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
                   Napisz, co mam zrobić. Mogę odpytać bazę, policzyć, poprawić dane po Twoim
                   potwierdzeniu, przeczytać korespondencję z klientami i inwestorami (mail,
-                  Messenger, czat) i przygotować odpowiedź — wyślę ją dopiero, gdy powiesz
-                  „wyślij". Wszystkie rozmowy zapisuję, a trwałe ustalenia trafiają do pamięci.
+                  Messenger, czat) i przygotować odpowiedź — wyślę ją dopiero, gdy powiesz „wyślij".
+                  Wszystkie rozmowy zapisuję, a trwałe ustalenia trafiają do pamięci.
                 </div>
                 {!compact && (
                   <div className="flex flex-wrap gap-1.5">

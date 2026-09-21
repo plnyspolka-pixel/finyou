@@ -139,7 +139,9 @@ export async function syncAutoDistributionProposals(): Promise<SyncResult | { di
       .eq("is_active", true),
     (supabaseAdmin as any)
       .from("investor_distribution_criteria")
-      .select("investor_id, min_amount, max_amount, auto_send_enabled, accepting_applications, paused_until"),
+      .select(
+        "investor_id, min_amount, max_amount, auto_send_enabled, accepting_applications, paused_until",
+      ),
   ]);
   const criteriaByInvestor = new Map<string, any>(
     ((criteriaRows ?? []) as any[]).map((c) => [c.investor_id, c]),
@@ -150,7 +152,8 @@ export async function syncAutoDistributionProposals(): Promise<SyncResult | { di
     const brief = bundles.get(loan.id)?.brief;
     if (!brief || brief.items.length > 0) continue; // niekompletny — nie kwalifikuje się
 
-    const score = loan.location_potential_score == null ? 40 : Number(loan.location_potential_score);
+    const score =
+      loan.location_potential_score == null ? 40 : Number(loan.location_potential_score);
     if (score < settings.min_location_score) continue;
     result.eligible += 1;
 
@@ -201,9 +204,7 @@ export async function syncAutoDistributionProposals(): Promise<SyncResult | { di
       .maybeSingle();
 
     if (open) {
-      const prev = JSON.stringify(
-        ((open.matches ?? []) as any[]).map((m) => m.investor_id).sort(),
-      );
+      const prev = JSON.stringify(((open.matches ?? []) as any[]).map((m) => m.investor_id).sort());
       const next = JSON.stringify(matches.map((m) => m.investor_id).sort());
       if (prev !== next) {
         await (supabaseAdmin as any)
@@ -258,7 +259,8 @@ export async function approveProposal(
   }
 
   const investorIds = ((proposal.matches ?? []) as ProposalMatch[]).map((m) => m.investor_id);
-  if (investorIds.length === 0) return { ok: false, error: "Propozycja nie ma dopasowanych instytucji" };
+  if (investorIds.length === 0)
+    return { ok: false, error: "Propozycja nie ma dopasowanych instytucji" };
 
   // Atomowe przejęcie propozycji — dwa równoległe zatwierdzenia nie mogą
   // wysłać maili podwójnie (update warunkowany statusem 'proposed').

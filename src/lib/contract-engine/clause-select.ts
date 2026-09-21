@@ -30,7 +30,10 @@ function snippetZKlauzuli(k: any): string {
     k.tekst_wielokrotna_naglowek ??
     k.tekst_wielokrotna_pozycja ??
     "";
-  const plain = raw.replace(/\{\{[^}]+\}\}/g, "…").replace(/\s+/g, " ").trim();
+  const plain = raw
+    .replace(/\{\{[^}]+\}\}/g, "…")
+    .replace(/\s+/g, " ")
+    .trim();
   return plain.length > 160 ? plain.slice(0, 159).trimEnd() + "…" : plain;
 }
 

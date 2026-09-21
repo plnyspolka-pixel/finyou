@@ -11,12 +11,16 @@ describe("looksLikeAutoMessage", () => {
   it("wykrywa polskie autorespondery", () => {
     expect(looksLikeAutoMessage("To jest automatyczna odpowiedź. Wrócę 5 sierpnia.")).toBeTruthy();
     expect(looksLikeAutoMessage("Odpowiedź automatyczna: dziękuję za maila")).toBeTruthy();
-    expect(looksLikeAutoMessage("Wiadomość wygenerowana automatycznie, prosimy nie odpowiadać")).toBeTruthy();
+    expect(
+      looksLikeAutoMessage("Wiadomość wygenerowana automatycznie, prosimy nie odpowiadać"),
+    ).toBeTruthy();
     expect(looksLikeAutoMessage("Obecnie przebywam na urlopie do 12.08")).toBeTruthy();
   });
 
   it("wykrywa angielskie autorespondery i bounce", () => {
-    expect(looksLikeAutoMessage("This is an automated message, do not reply to this email")).toBeTruthy();
+    expect(
+      looksLikeAutoMessage("This is an automated message, do not reply to this email"),
+    ).toBeTruthy();
     expect(looksLikeAutoMessage("I am currently out of office until Monday")).toBeTruthy();
     expect(looksLikeAutoMessage("Mail delivery failed: returning message to sender")).toBeTruthy();
     expect(looksLikeAutoMessage("Delivery Status Notification (Failure)")).toBeTruthy();
@@ -29,13 +33,19 @@ describe("looksLikeAutoMessage", () => {
   });
 
   it("wykrywa automatyczne powitania stron ('odpowiemy wkrótce')", () => {
-    expect(looksLikeAutoMessage("Dziękujemy za wiadomość! Odpowiemy najszybciej jak to możliwe.")).toBeTruthy();
-    expect(looksLikeAutoMessage("Thank you for contacting us. We'll get back to you soon.")).toBeTruthy();
+    expect(
+      looksLikeAutoMessage("Dziękujemy za wiadomość! Odpowiemy najszybciej jak to możliwe."),
+    ).toBeTruthy();
+    expect(
+      looksLikeAutoMessage("Thank you for contacting us. We'll get back to you soon."),
+    ).toBeTruthy();
   });
 
   it("nie łapie normalnych wiadomości klientów", () => {
     expect(looksLikeAutoMessage("Dzień dobry, potrzebuję pożyczki 200 000 zł pod dom")).toBeNull();
-    expect(looksLikeAutoMessage("Dziękuję za wiadomość, przesyłam dokumenty w załączniku")).toBeNull();
+    expect(
+      looksLikeAutoMessage("Dziękuję za wiadomość, przesyłam dokumenty w załączniku"),
+    ).toBeNull();
     expect(looksLikeAutoMessage("Kiedy mogę spodziewać się decyzji?")).toBeNull();
     expect(looksLikeAutoMessage("ok")).toBeNull();
     expect(looksLikeAutoMessage("")).toBeNull();

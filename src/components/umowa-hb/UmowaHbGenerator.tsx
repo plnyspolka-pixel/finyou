@@ -22,11 +22,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
-import {
-  previewUmowaHb,
-  generateUmowaHb,
-  umowaHbAssistant,
-} from "@/lib/umowa-hb.functions";
+import { previewUmowaHb, generateUmowaHb, umowaHbAssistant } from "@/lib/umowa-hb.functions";
 import { GRUPY_POL, FLAGI, type WzorData } from "@/lib/umowa-hb/render";
 import { readCalcHandoff, onCalcHandoffChange } from "@/lib/loan-calc-handoff";
 import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
@@ -39,7 +35,10 @@ const pln = (n: number) =>
   );
 
 /** LoanCalcPayload → wiersze harmonogramu + kilka pól warunków. */
-function zKalkulatora(p: LoanCalcPayload): { pola: Record<string, string>; raty: WzorData["raty"] } {
+function zKalkulatora(p: LoanCalcPayload): {
+  pola: Record<string, string>;
+  raty: WzorData["raty"];
+} {
   const raty = (p.schedule ?? []).map((r) => ({
     nr: String(r.idx),
     data: r.date,
@@ -117,7 +116,10 @@ export function UmowaHbGenerator() {
       setMessages([...next, { role: "assistant", content: res.reply }]);
     } catch (e: any) {
       toast.error(e?.message ?? "Błąd asystenta");
-      setMessages([...next, { role: "assistant", content: "Przepraszam, wystąpił błąd. Spróbuj ponownie." }]);
+      setMessages([
+        ...next,
+        { role: "assistant", content: "Przepraszam, wystąpił błąd. Spróbuj ponownie." },
+      ]);
     } finally {
       setThinking(false);
     }
@@ -251,8 +253,17 @@ export function UmowaHbGenerator() {
                   className="resize-none text-sm"
                   disabled={thinking}
                 />
-                <Button size="icon" onClick={() => void send()} disabled={thinking || !input.trim()} aria-label="Wyślij">
-                  {thinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                <Button
+                  size="icon"
+                  onClick={() => void send()}
+                  disabled={thinking || !input.trim()}
+                  aria-label="Wyślij"
+                >
+                  {thinking ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
@@ -264,14 +275,22 @@ export function UmowaHbGenerator() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">Klauzule opcjonalne</CardTitle>
-              <Button variant="outline" size="sm" onClick={loadFromCalculator} disabled={!handoffReady}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadFromCalculator}
+                disabled={!handoffReady}
+              >
                 <Calculator className="mr-2 h-4 w-4" />
                 {raty.length ? `Harmonogram: ${raty.length} rat` : "Wczytaj z kalkulatora"}
               </Button>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
               {FLAGI.map((f) => (
-                <label key={f.key} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+                <label
+                  key={f.key}
+                  className="flex items-center justify-between gap-3 rounded-md border px-3 py-2"
+                >
                   <span className="text-sm">{f.label}</span>
                   <Switch checked={!!flagi[f.key]} onCheckedChange={(v) => setFlaga(f.key, v)} />
                 </label>
@@ -329,10 +348,15 @@ export function UmowaHbGenerator() {
             </CardHeader>
             <CardContent>
               {preview ? (
-                <Textarea readOnly value={preview} className="min-h-[520px] font-mono text-xs leading-relaxed" />
+                <Textarea
+                  readOnly
+                  value={preview}
+                  className="min-h-[520px] font-mono text-xs leading-relaxed"
+                />
               ) : (
                 <p className="py-8 text-center text-sm text-muted-foreground">
-                  Kliknij „Podgląd”, aby zobaczyć złożoną umowę. Niewypełnione pola pozostają jako {"{{"}
+                  Kliknij „Podgląd”, aby zobaczyć złożoną umowę. Niewypełnione pola pozostają jako{" "}
+                  {"{{"}
                   pole{"}}"}.
                 </p>
               )}

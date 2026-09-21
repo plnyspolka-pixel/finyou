@@ -19,7 +19,9 @@ export const listAnalysisPipelineRuns = createServerFn({ method: "GET" })
 
     const { data: runs, error } = await (supabaseAdmin as any)
       .from("analysis_pipeline_runs")
-      .select("id, loan_application_id, kw_number, status, steps, trigger_reason, error, started_at, finished_at")
+      .select(
+        "id, loan_application_id, kw_number, status, steps, trigger_reason, error, started_at, finished_at",
+      )
       .order("started_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);
@@ -32,7 +34,10 @@ export const listAnalysisPipelineRuns = createServerFn({ method: "GET" })
           .in("id", loanIds as string[])
       : { data: [] };
     const loanById = new Map((loans ?? []).map((l: any) => [l.id, l]));
-    return (runs ?? []).map((r: any) => ({ ...r, loan: loanById.get(r.loan_application_id) ?? null }));
+    return (runs ?? []).map((r: any) => ({
+      ...r,
+      loan: loanById.get(r.loan_application_id) ?? null,
+    }));
   });
 
 /** Ręczne uruchomienie pipeline'u dla wniosku (re-run z panelu). */
@@ -55,7 +60,11 @@ export const startAnalysisPipelineRun = createServerFn({ method: "POST" })
     // Ręczny re-run zamyka ewentualny trwający przebieg i otwiera nowy.
     await (supabaseAdmin as any)
       .from("analysis_pipeline_runs")
-      .update({ status: "error", error: "Przerwane ręcznym ponowieniem", finished_at: new Date().toISOString() })
+      .update({
+        status: "error",
+        error: "Przerwane ręcznym ponowieniem",
+        finished_at: new Date().toISOString(),
+      })
       .eq("loan_application_id", data.applicationId)
       .eq("status", "running");
 

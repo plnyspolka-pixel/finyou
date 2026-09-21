@@ -50,32 +50,37 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [{ data: docs }, { data: acceptances }, { data: deliveries }, { data: orders }, investor] =
-      await Promise.all([
-        loose(supabaseAdmin)
-          .from("legal_documents")
-          .select("code, package_id, version, title, sort_order, sha256, active, docx_filename")
-          .order("sort_order"),
-        loose(supabaseAdmin)
-          .from("investor_agreement_acceptances")
-          .select("document_code, version, sha256, accepted_at")
-          .eq("user_id", userId),
-        loose(supabaseAdmin)
-          .from("legal_deliveries")
-          .select("id, document_codes, email, message_id, purpose, delivered_at")
-          .eq("user_id", userId)
-          .order("delivered_at", { ascending: false })
-          .limit(5),
-        loose(supabaseAdmin)
-          .from("investor_orders")
-          .select(
-            "id, order_seq, amount_pln, max_period_months, min_annual_yield, validity_days, status, consumer_choice, submitted_at, decided_at, expires_at, rejection_reason",
-          )
-          .eq("user_id", userId)
-          .order("submitted_at", { ascending: false })
-          .limit(20),
-        myInvestorRow(supabaseAdmin, userId),
-      ]);
+    const [
+      { data: docs },
+      { data: acceptances },
+      { data: deliveries },
+      { data: orders },
+      investor,
+    ] = await Promise.all([
+      loose(supabaseAdmin)
+        .from("legal_documents")
+        .select("code, package_id, version, title, sort_order, sha256, active, docx_filename")
+        .order("sort_order"),
+      loose(supabaseAdmin)
+        .from("investor_agreement_acceptances")
+        .select("document_code, version, sha256, accepted_at")
+        .eq("user_id", userId),
+      loose(supabaseAdmin)
+        .from("legal_deliveries")
+        .select("id, document_codes, email, message_id, purpose, delivered_at")
+        .eq("user_id", userId)
+        .order("delivered_at", { ascending: false })
+        .limit(5),
+      loose(supabaseAdmin)
+        .from("investor_orders")
+        .select(
+          "id, order_seq, amount_pln, max_period_months, min_annual_yield, validity_days, status, consumer_choice, submitted_at, decided_at, expires_at, rejection_reason",
+        )
+        .eq("user_id", userId)
+        .order("submitted_at", { ascending: false })
+        .limit(20),
+      myInvestorRow(supabaseAdmin, userId),
+    ]);
 
     const activeDocs = (docs ?? []).filter((d: any) => d.active);
     const acceptedSet = new Set(
@@ -85,9 +90,8 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
       ...d,
       accepted: acceptedSet.has(`${d.code}:${d.version}:${d.sha256}`),
       accepted_at:
-        (acceptances ?? []).find(
-          (a: any) => a.document_code === d.code && a.version === d.version,
-        )?.accepted_at ?? null,
+        (acceptances ?? []).find((a: any) => a.document_code === d.code && a.version === d.version)
+          ?.accepted_at ?? null,
     }));
 
     // Weryfikacja Didit samego inwestora (komparycja z danymi potwierdzonymi).
@@ -102,13 +106,17 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
 
     const packActive = activeDocs.length > 0;
     const packComplete =
-      packActive && activeDocs.every((d: any) => acceptedSet.has(`${d.code}:${d.version}:${d.sha256}`));
+      packActive &&
+      activeDocs.every((d: any) => acceptedSet.has(`${d.code}:${d.version}:${d.sha256}`));
     const hasDelivery = (deliveries ?? []).length > 0;
 
     // Leniwe wygaszanie: przyjęte zlecenia po terminie ważności.
     const now = Date.now();
     const staleIds = (orders ?? [])
-      .filter((o: any) => o.status === "przyjete" && o.expires_at && new Date(o.expires_at).getTime() < now)
+      .filter(
+        (o: any) =>
+          o.status === "przyjete" && o.expires_at && new Date(o.expires_at).getTime() < now,
+      )
       .map((o: any) => o.id);
     if (staleIds.length > 0) {
       await loose(supabaseAdmin)
@@ -224,19 +232,20 @@ export const deliverLegalPack = createServerFn({ method: "POST" })
       attachments: docs.map((d: any) => ({
         filename: d.docx_filename,
         content: d.docx_base64,
-        contentType:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       })),
     });
     if (!sent.ok) throw new Error(sent.error ?? "Nie udało się wysłać pakietu.");
 
-    const { error: insErr } = await loose(supabaseAdmin).from("legal_deliveries").insert({
-      user_id: userId,
-      document_codes: docs.map((d: any) => d.code),
-      email,
-      message_id: sent.id ?? null,
-      purpose: "informacja_przedumowna",
-    });
+    const { error: insErr } = await loose(supabaseAdmin)
+      .from("legal_deliveries")
+      .insert({
+        user_id: userId,
+        document_codes: docs.map((d: any) => d.code),
+        email,
+        message_id: sent.id ?? null,
+        purpose: "informacja_przedumowna",
+      });
     if (insErr) throw new Error(insErr.message);
     return { ok: true, messageId: sent.id ?? null, email };
   });
@@ -260,7 +269,9 @@ export const acceptLegalDocument = createServerFn({ method: "POST" })
 
     const investor = await myInvestorRow(supabaseAdmin, userId);
     if (!investor?.entity_variant || investor.is_consumer == null) {
-      throw new Error("Najpierw uzupełnij krok identyfikacji (wariant strony i status Konsumenta).");
+      throw new Error(
+        "Najpierw uzupełnij krok identyfikacji (wariant strony i status Konsumenta).",
+      );
     }
     // Pipeline jest sekwencyjny również po stronie serwera: komparycję umowy
     // wypełniamy danymi, które przeszły już weryfikację (kroki 1–4).
@@ -301,7 +312,8 @@ export const acceptLegalDocument = createServerFn({ method: "POST" })
           .eq("document_code", prev.code)
           .eq("version", prev.version)
           .maybeSingle();
-        if (!prevAcc) throw new Error("Dokumenty akceptuje się w kolejności: Umowa ramowa → NDA → RODO.");
+        if (!prevAcc)
+          throw new Error("Dokumenty akceptuje się w kolejności: Umowa ramowa → NDA → RODO.");
       }
     }
 
@@ -474,14 +486,16 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
         .from("legal_documents")
         .select("code, version, sha256")
         .eq("active", true);
-      await loose(supabaseAdmin).from("investor_order_events").insert({
-        order_id: inserted.id,
-        event_type: "zlecenie_zlozone",
-        payload: { order_no: `FY-Z-${inserted.order_seq}` },
-        document_versions: docs ?? [],
-        actor: userId,
-        actor_kind: "inwestor",
-      });
+      await loose(supabaseAdmin)
+        .from("investor_order_events")
+        .insert({
+          order_id: inserted.id,
+          event_type: "zlecenie_zlozone",
+          payload: { order_no: `FY-Z-${inserted.order_seq}` },
+          document_versions: docs ?? [],
+          actor: userId,
+          actor_kind: "inwestor",
+        });
     } catch (e) {
       console.error("[legal-pack] order event log failed", e);
     }
@@ -605,13 +619,15 @@ export const decideInvestorOrder = createServerFn({ method: "POST" })
         .eq("status", "zlozone");
       if (error) throw new Error(error.message);
       try {
-        await loose(supabaseAdmin).from("investor_order_events").insert({
-          order_id: order.id,
-          event_type: "zlecenie_przyjete",
-          payload: { expires_at: expires.toISOString() },
-          actor: context.userId,
-          actor_kind: "admin",
-        });
+        await loose(supabaseAdmin)
+          .from("investor_order_events")
+          .insert({
+            order_id: order.id,
+            event_type: "zlecenie_przyjete",
+            payload: { expires_at: expires.toISOString() },
+            actor: context.userId,
+            actor_kind: "admin",
+          });
       } catch (e) {
         console.error("[legal-pack] order event log failed", e);
       }

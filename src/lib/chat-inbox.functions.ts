@@ -11,10 +11,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const sendChatReply = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      leadId: z.string().uuid(),
-      body: z.string().min(1).max(4000),
-    }).parse(input),
+    z
+      .object({
+        leadId: z.string().uuid(),
+        body: z.string().min(1).max(4000),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const [{ data: isAdmin }, { data: isOperator }] = await Promise.all([

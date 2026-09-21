@@ -53,8 +53,7 @@ export function SectionTabs() {
     const subsections = section.subsections
       .map((sub) => ({ ...sub, items: sub.items.filter(allowed) }))
       .filter((sub) => sub.items.length > 0);
-    const activeSub =
-      subsections.find((sub) => sub.items.some(itemActive)) ?? subsections[0];
+    const activeSub = subsections.find((sub) => sub.items.some(itemActive)) ?? subsections[0];
     if (!activeSub) return null;
     return (
       <div className="border-b bg-background">

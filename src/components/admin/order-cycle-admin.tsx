@@ -92,7 +92,10 @@ function SuggestionsCard({ data, onDone }: { data: any; onDone: () => void }) {
             <div key={s.orderId} className="space-y-2 rounded-md border p-3 text-sm">
               <div className="font-medium">Zlecenie FY-Z-{s.orderSeq}</div>
               {s.applications.map((a: any) => (
-                <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div
+                  key={a.id}
+                  className="flex flex-wrap items-center justify-between gap-2 text-xs"
+                >
                   <span>
                     Wniosek {String(a.id).slice(0, 8)}… ·{" "}
                     {a.loan_amount ? `${Number(a.loan_amount).toLocaleString("pl-PL")} zł` : "—"} ·{" "}
@@ -188,12 +191,22 @@ function MatchesCard({ data, onDone }: { data: any; onDone: () => void }) {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {m.status === "dopasowane" ? (
-                  <Button size="sm" variant="outline" disabled={releaseMut.isPending} onClick={() => releaseMut.mutate(m.id)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={releaseMut.isPending}
+                    onClick={() => releaseMut.mutate(m.id)}
+                  >
                     Udostępnij teaser
                   </Button>
                 ) : null}
                 {!m.transfer_card_approved_at && ["teaser", "karta_leada"].includes(m.status) ? (
-                  <Button size="sm" variant="outline" disabled={approveMut.isPending} onClick={() => approveMut.mutate(m.id)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={approveMut.isPending}
+                    onClick={() => approveMut.mutate(m.id)}
+                  >
                     <ShieldCheck className="mr-2 h-3.5 w-3.5" /> Zatwierdź Kartę Transferu
                   </Button>
                 ) : null}
@@ -239,7 +252,9 @@ function MatchesCard({ data, onDone }: { data: any; onDone: () => void }) {
                       size="sm"
                       variant="outline"
                       disabled={!Number(payouts[m.id]) || zal6Mut.isPending}
-                      onClick={() => zal6Mut.mutate({ matchId: m.id, payoutAmountPln: Number(payouts[m.id]) })}
+                      onClick={() =>
+                        zal6Mut.mutate({ matchId: m.id, payoutAmountPln: Number(payouts[m.id]) })
+                      }
                     >
                       Potwierdź Zał. 6 (7% / min 5000 zł)
                     </Button>
@@ -277,15 +292,23 @@ function NdaAccessionsCard({ accessions, onDone }: { accessions: any[]; onDone: 
       </CardHeader>
       <CardContent className="space-y-2">
         {accessions.map((a: any) => (
-          <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-xs">
+          <div
+            key={a.id}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-xs"
+          >
             <span>
-              {a.company_name} {a.nip ? `· NIP ${a.nip}` : ""} · inwestor {String(a.user_id).slice(0, 8)}… ·
-              NDA {a.nda_version}
+              {a.company_name} {a.nip ? `· NIP ${a.nip}` : ""} · inwestor{" "}
+              {String(a.user_id).slice(0, 8)}… · NDA {a.nda_version}
             </span>
             {a.confirmed_at ? (
               <Badge className="bg-emerald-100 text-emerald-800">potwierdzone</Badge>
             ) : (
-              <Button size="sm" variant="outline" disabled={mut.isPending} onClick={() => mut.mutate(a.id)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={mut.isPending}
+                onClick={() => mut.mutate(a.id)}
+              >
                 Potwierdź przystąpienie
               </Button>
             )}
@@ -314,15 +337,23 @@ function WithdrawalsCard({ withdrawals, onDone }: { withdrawals: any[]; onDone: 
       </CardHeader>
       <CardContent className="space-y-2">
         {withdrawals.map((w: any) => (
-          <div key={w.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-xs">
+          <div
+            key={w.id}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-xs"
+          >
             <span>
-              {new Date(w.submitted_at).toLocaleString("pl-PL")} · użytkownik {String(w.user_id).slice(0, 8)}… ·{" "}
-              {w.document_code} {w.document_version ?? ""}
+              {new Date(w.submitted_at).toLocaleString("pl-PL")} · użytkownik{" "}
+              {String(w.user_id).slice(0, 8)}… · {w.document_code} {w.document_version ?? ""}
             </span>
             {w.acknowledged_at ? (
               <Badge className="bg-slate-100 text-slate-600">odnotowane</Badge>
             ) : (
-              <Button size="sm" variant="outline" disabled={mut.isPending} onClick={() => mut.mutate(w.id)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={mut.isPending}
+                onClick={() => mut.mutate(w.id)}
+              >
                 Odnotuj
               </Button>
             )}

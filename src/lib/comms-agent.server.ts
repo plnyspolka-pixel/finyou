@@ -56,10 +56,7 @@ const CONVERSATION_CHANNELS = [
 ] as const;
 
 function snippet(s: string | null, len = 220): string {
-  return (s ?? "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, len);
+  return (s ?? "").replace(/\s+/g, " ").trim().slice(0, len);
 }
 
 function attachmentNames(raw: unknown): string[] {
@@ -562,9 +559,7 @@ export async function listOfferThreads(args: {
       i.id,
       {
         name:
-          i.company_name ||
-          [i.first_name, i.last_name].filter(Boolean).join(" ") ||
-          "(bez nazwy)",
+          i.company_name || [i.first_name, i.last_name].filter(Boolean).join(" ") || "(bez nazwy)",
         email: i.email,
       },
     ]),

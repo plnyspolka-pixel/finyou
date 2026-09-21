@@ -27,7 +27,9 @@ describe("matchInvestorToAmount", () => {
   });
 
   it("zawieszenie przyjmowania wniosków blokuje niezależnie od kwoty", () => {
-    expect(matchInvestorToAmount({ ...base, accepting_applications: false }, 200000).ok).toBe(false);
+    expect(matchInvestorToAmount({ ...base, accepting_applications: false }, 200000).ok).toBe(
+      false,
+    );
   });
 
   it("wyłączona auto-wysyłka blokuje", () => {
