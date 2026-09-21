@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { dispatchScheduledCampaigns } from "@/lib/mailing.functions";
+import { dispatchScheduledCampaigns } from "@/lib/mailing.server";
 import { requireCronSecret } from "@/lib/cron-auth.server";
 
 export const Route = createFileRoute("/api/public/hooks/dispatch-campaigns")({

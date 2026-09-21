@@ -54,7 +54,7 @@ export const POLISH_BANKS: Record<string, string> = {
 
 export function cleanAccountInput(raw: string): string {
   return (raw ?? "")
-    .replace(/[\s\-]/g, "")
+    .replace(/[\s-]/g, "")
     .replace(/[^0-9A-Za-z]/g, "")
     .toUpperCase();
 }

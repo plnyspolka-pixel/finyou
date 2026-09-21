@@ -7,7 +7,7 @@ export const KW_FULL_RE = /^[A-Z0-9]{2}\d[A-Z0-9]\/\d{7,8}\/\d$/;
 
 /** Wyszukiwanie numeru KW wewnątrz dłuższego tekstu (separatory: / \ . - spacja). */
 const KW_SEARCH_RE =
-  /\b([A-ZŁŃŚŻŹĄĆĘÓ0-9]{2}\d[A-Z0-9])[\s\/\\.-]{0,3}(\d{7,8})[\s\/\\.-]{0,3}(\d)\b/;
+  /\b([A-ZŁŃŚŻŹĄĆĘÓ0-9]{2}\d[A-Z0-9])[\s/\\.-]{0,3}(\d{7,8})[\s/\\.-]{0,3}(\d)\b/;
 
 /**
  * Normalizuje surowy zapis numeru KW do postaci "XXXX/NNNNNNNN/C".

@@ -10,6 +10,7 @@ export function MicrosoftClarity() {
       c[a] =
         c[a] ||
         function () {
+          // eslint-disable-next-line prefer-rest-params -- oficjalny snippet Clarity, kolejka czyta `arguments`
           (c[a].q = c[a].q || []).push(arguments);
         };
       const t = l.createElement(r) as HTMLScriptElement;

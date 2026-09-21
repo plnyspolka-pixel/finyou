@@ -55,7 +55,7 @@ type Tok =
   | { t: "rparen" };
 
 // znaki dozwolone w warunku (odpowiednik _DOZWOLONE z Pythona)
-const DOZWOLONE = /^[\w\s.[\]'\"()=!<>+\-*/,À-￿]*$/;
+const DOZWOLONE = /^[\w\s.[\]'"()=!<>+\-*/,À-￿]*$/;
 const IDENT_START = /[A-Za-z_À-￿]/;
 const IDENT_CHAR = /[\w.À-￿]/;
 

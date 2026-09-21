@@ -174,7 +174,7 @@ async function storeReplyAttachments(
         mime = mime ?? res.headers.get("content-type");
       }
       if (!buf) continue;
-      const safeName = (a.name || `plik-${Date.now()}`).replace(/[^\w.\-]+/g, "_");
+      const safeName = (a.name || `plik-${Date.now()}`).replace(/[^\w.-]+/g, "_");
       const path = `offer-replies/${storageKey}/${Date.now()}-${safeName}`;
       const { error } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET).upload(path, buf, {
         contentType: mime ?? "application/octet-stream",

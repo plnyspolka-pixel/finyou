@@ -29,7 +29,7 @@ export async function downloadAndStore(opts: {
     // Rozszerzenie także w NAZWIE (nie tylko w ścieżce) — file_name bez ".jpg"
     // sprawiał, że UI nie rozpoznawał obrazka i nie pokazywał miniatury.
     const safeName =
-      (opts.filename ?? `file-${Date.now()}`).replace(/[^\w.\-]+/g, "_") +
+      (opts.filename ?? `file-${Date.now()}`).replace(/[^\w.-]+/g, "_") +
       ((opts.filename ?? "").includes(".") ? "" : ext);
     const path = `leads/${opts.leadId}/${Date.now()}-${safeName}`;
     const mime = opts.mime ?? res.headers.get("content-type") ?? "application/octet-stream";

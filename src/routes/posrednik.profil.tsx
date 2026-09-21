@@ -170,7 +170,6 @@ export function BrokerProfile() {
               <div className="relative">
                 <div className="grid h-28 w-28 place-items-center overflow-hidden rounded-full border border-white/20 bg-white/10 shadow-lg shadow-primary/20">
                   {avatarPreview ? (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={avatarPreview}
                       alt="Twoje zdjęcie"

@@ -98,7 +98,7 @@ ODPOWIEDŹ — wyłącznie poprawny JSON, bez markdown, bez backticków:
   "privateListings": <liczba ofert prywatnych>,
   "medianPricePerM2": <mediana ceny ofertowej zł/m² lub null>,
   "offers": [
-    { "title": "<tytuł>", "url": "<url lub \"\">", "source": "<domena portalu>", "postedBy": "agency|private|unknown", "pricePln": <liczba lub null>, "areaM2": <liczba lub null>, "pricePerM2": <liczba lub null> }
+    { "title": "<tytuł>", "url": "<url lub "">", "source": "<domena portalu>", "postedBy": "agency|private|unknown", "pricePln": <liczba lub null>, "areaM2": <liczba lub null>, "pricePerM2": <liczba lub null> }
   ]
 }
 Zwróć do 12 najbardziej reprezentatywnych ofert w polu "offers". Liczby (totalActiveListings/agencyListings/privateListings) mają odzwierciedlać realną podaż w okolicy, nawet jeśli w "offers" podasz tylko próbkę.`;

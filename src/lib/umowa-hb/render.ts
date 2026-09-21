@@ -14,7 +14,6 @@
  * końcu odwołania i pola.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { xmlToPlainText } from "@/lib/document-fields";
 
 export interface WzorData {
@@ -200,9 +199,8 @@ function numeruj(xml: string): { xml: string; etykiety: Record<string, number> }
 // ── 4. odwołania {{ref "label"}} ─────────────────────────────
 function rozwinRef(xml: string, etykiety: Record<string, number>): string {
   // Cudzysłowy w XML to &quot; (Word). Dopuszczamy też zwykłe ".
-  return xml.replace(
-    /\{\{ref\s+(?:&quot;|")([\w-]+)(?:&quot;|")\}\}/g,
-    (whole, label: string) => (etykiety[label] != null ? String(etykiety[label]) : whole),
+  return xml.replace(/\{\{ref\s+(?:&quot;|")([\w-]+)(?:&quot;|")\}\}/g, (whole, label: string) =>
+    etykiety[label] != null ? String(etykiety[label]) : whole,
   );
 }
 
@@ -389,4 +387,3 @@ export const GRUPY_POL: GrupaPol[] = [
 export function wszystkiePola(): PoleWzoru[] {
   return GRUPY_POL.flatMap((g) => g.pola);
 }
-
