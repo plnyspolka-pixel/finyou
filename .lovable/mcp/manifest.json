@@ -9339,7 +9339,7 @@
       {
         "name": "get_instagram_account_insights",
         "title": "Get Instagram account insights",
-        "description": "Statystyki konta Instagram w okresie: zasięg, obserwujący, wejścia na profil, zaangażowane konta, interakcje. Domyślnie ostatnie 7 dni po dniach. Tylko administrator/operator.",
+        "description": "Statystyki konta Instagram: dla okresu dziennego zasięg, obserwujący, wejścia na profil, zaangażowane konta, interakcje; dla week / days_28 Meta udostępnia tylko zasięg. Domyślnie ostatnie 7 dni po dniach. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
