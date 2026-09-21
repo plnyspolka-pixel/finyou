@@ -185,8 +185,7 @@ export async function getPageInsights(
 ) {
   const json = await graphRequest(`${requirePageId()}/insights`, {
     query: {
-      metric:
-        opts.metrics ?? "page_impressions,page_impressions_unique,page_post_engagements,page_fans",
+      metric: opts.metrics ?? "page_post_engagements,page_follows,page_daily_follows_unique",
       period: opts.period ?? "day",
       since: toUnix(opts.since),
       until: toUnix(opts.until),
