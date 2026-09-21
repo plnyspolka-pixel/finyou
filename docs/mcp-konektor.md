@@ -514,8 +514,10 @@ działa w obie strony (odczyt i zapis) dla Claude.ai / ChatGPT. Kod jest już w 
 narzędzi od nowa, NIE zmieniaj plików w src/lib/mcp ani .lovable/mcp/manifest.json, NIE dodawaj
 cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, konfiguracja i testy.
 
-1. Sprawdź, że po synchronizacji z GitHub masz: src/lib/mcp/index.ts (ok. 174 narzędzia, w tym
-   57 zapisujących), src/lib/mcp/_list-tool.ts, src/lib/mcp/tools/writes-*.ts, scripts/check-mcp.ts,
+1. Sprawdź, że po synchronizacji z GitHub masz: src/lib/mcp/index.ts (318 narzędzi wg
+   .lovable/mcp/manifest.json), src/lib/mcp/_list-tool.ts, src/lib/mcp/tools/{writes-*,elevenlabs,
+   twilio,meta,youtube,heygen,google}.ts, src/lib/{elevenlabs-api,twilio-api,meta-api,youtube-api,
+   heygen-api,google-auth,google-search,media-storage}.server.ts, scripts/check-mcp.ts,
    docs/mcp-konektor.md. Build (bun run build) ma przechodzić. Nie formatuj ręcznie plików
    generowanych przez plugin (src/routes/[.mcp]/*, src/routes/[.well-known]/*, src/routes/mcp.ts).
 
