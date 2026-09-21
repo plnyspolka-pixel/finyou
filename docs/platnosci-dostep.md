@@ -5,12 +5,18 @@ odnowień, punktów i opłat za pojedynczą ofertę/lead.
 
 ## Katalog produktów (`access_products`)
 
-| Kod | Odbiorca | Cena brutto | Dni |
-| --- | --- | --- | --- |
-| `investor_access_30d` | inwestor | 999 zł (`99900` gr) | 30 |
-| `investor_access_365d` | inwestor | 5 999 zł (`599900` gr) | 365 |
-| `broker_access_30d` | pośrednik | 499 zł (`49900` gr) | 30 |
-| `broker_access_365d` | pośrednik | 2 999 zł (`299900` gr) | 365 |
+| Kod | Odbiorca | Cena brutto | Dni | Rodzaj |
+| --- | --- | --- | --- | --- |
+| `investor_pro_180d` | inwestor | 3 000 zł (`300000` gr) | 180 | `access`, `tier='pro'`, `success_fee_bps=500` |
+| `investor_okazja_unlock` | inwestor | 1 500 zł (`150000` gr) | — | `unlock` (zakup jednej okazji) |
+| `broker_access_30d` | pośrednik | 499 zł (`49900` gr) | 30 | `access` |
+| `broker_access_365d` | pośrednik | 2 999 zł (`299900` gr) | 365 | `access` |
+
+Cennik inwestora (pakiety Podstawowy / PRO, opłata sukcesu 5%, bramki modułów
+PRO i jeden pipeline onboardingu) opisuje `docs/cennik-inwestora.md`.
+Produkty `investor_access_30d` i `investor_access_365d` (999 zł / 5 999 zł)
+są **nieaktywne** od 21 września 2026 r. — rekordy zostają wyłącznie dla
+historycznych płatności i faktur.
 
 Konto darmowe pośrednika (`broker_free`) nie jest produktem — wynika z roli
 `posrednik` / aktywnego rekordu `affiliate_partners` i nie wygasa.
@@ -23,12 +29,18 @@ transakcji rozpoczętych przed wdrożeniem.
    wyłącznie kod produktu + typ/dane nabywcy + zgody. Cena, waluta i liczba dni
    są czytane z katalogu na serwerze. Powstaje rekord `access_payments`
    (status `created` → `pending`), a w `crc` Tpay zapisujemy **UUID płatności**.
+   Dla produktu `kind = 'unlock'` klient przesyła dodatkowo `matchId`;
+   serwer weryfikuje, że Dopasowanie należy do Zlecenia kupującego, nie jest
+   zamknięte i nie zostało już odblokowane, po czym zapisuje
+   `access_payments.unlock_match_id`.
 2. Webhook `/api/public/payments/tpay-webhook` → `handleTpayNotification`
    (src/lib/access/webhook-core.server.ts): pobiera transakcję z API Tpay
    (nie ufa powiadomieniu), po `status=correct` wywołuje SQL RPC
    `process_access_payment_paid` — **atomowo i idempotentnie** (FOR UPDATE na
    płatności i uprawnieniu, weryfikacja kwoty w groszach, przedłużenie od
-   bieżącego `active_until` albo od teraz).
+   bieżącego `active_until` albo od teraz). Produkt `kind = 'unlock'` nie
+   przedłuża uprawnienia — zamiast tego wstawia wiersz do
+   `investor_opportunity_unlocks` (unikalny po `match_id`).
 3. Post-processing (best-effort, nie cofa dostępu): e-mail potwierdzenia,
    automatyczna faktura (firma → z NIP; osoba prywatna → imienna z pełnym
    adresem, bez NIP) + e-mail z fakturą, zdarzenie programu partnerskiego

@@ -36,7 +36,7 @@ async function myInvestorRow(supabaseAdmin: any, userId: string) {
   const { data } = await supabaseAdmin
     .from("investors")
     .select(
-      "id, user_id, first_name, last_name, company_name, email, phone, pesel, nip, krs, regon, address, street, city, postal_code, legal_form, representative_first_name, representative_last_name, representative_role, entity_variant, is_consumer",
+      "id, user_id, first_name, last_name, company_name, email, phone, pesel, nip, krs, regon, address, street, city, postal_code, legal_form, representative_first_name, representative_last_name, representative_role, entity_variant, is_consumer, bank_account, bank_account_bank_name, bank_account_confirmed_at, lender_data_completed_at, screening_result",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -262,6 +262,21 @@ export const acceptLegalDocument = createServerFn({ method: "POST" })
     if (!investor?.entity_variant || investor.is_consumer == null) {
       throw new Error("Najpierw uzupełnij krok identyfikacji (wariant strony i status Konsumenta).");
     }
+    // Pipeline jest sekwencyjny również po stronie serwera: komparycję umowy
+    // wypełniamy danymi, które przeszły już weryfikację (kroki 1–4).
+    if (!investor.lender_data_completed_at) {
+      throw new Error("Najpierw uzupełnij krok 1 — dane pożyczkodawcy.");
+    }
+    if (!investor.bank_account || !investor.bank_account_confirmed_at) {
+      throw new Error("Najpierw podaj rachunek do spłaty pożyczki (krok 2).");
+    }
+    if (investor.screening_result !== "clear") {
+      throw new Error(
+        investor.screening_result
+          ? "Screening list sankcyjnych wymaga analizy Finance You — dokumenty odblokujemy po jej zakończeniu."
+          : "Najpierw przejdź weryfikację tożsamości i screening list sankcyjnych (kroki 3–4).",
+      );
+    }
 
     const { data: doc } = await loose(supabaseAdmin)
       .from("legal_documents")
@@ -339,8 +354,11 @@ export const acceptLegalDocument = createServerFn({ method: "POST" })
           .join(" "),
         entity_variant: investor.entity_variant,
         is_consumer: investor.is_consumer,
+        bank_account: investor.bank_account,
+        bank_account_bank_name: investor.bank_account_bank_name,
       },
       didit: didit ? extractDiditPersonalData(didit.decision) : null,
+      screening: { result: investor.screening_result },
     };
 
     const { error: insErr } = await loose(supabaseAdmin)
@@ -417,12 +435,15 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Bramka: komplet kroków 1–5.
-    const { data: complete } = await loose(supabaseAdmin).rpc("investor_legal_pack_complete", {
+    // Bramka: komplet pipeline'u (dane pożyczkodawcy, rachunek do spłaty,
+    // KYC, screening sankcyjny i pakiet dokumentów).
+    const { data: complete } = await loose(supabaseAdmin).rpc("investor_pipeline_complete", {
       _user_id: userId,
     });
     if (!complete) {
-      throw new Error("Formularz Zlecenia jest nieaktywny — najpierw zaakceptuj komplet dokumentów pakietu.");
+      throw new Error(
+        "Zlecenie jest nieaktywne — dokończ pipeline inwestora (dane pożyczkodawcy, rachunek do spłaty, KYC, screening i komplet dokumentów).",
+      );
     }
 
     const investor = await myInvestorRow(supabaseAdmin, userId);
@@ -499,7 +520,9 @@ export const getLegalPackAdminState = createServerFn({ method: "GET" })
     const [{ data: docs }, { data: acceptances }, { data: orders }] = await Promise.all([
       loose(supabaseAdmin)
         .from("legal_documents")
-        .select("code, package_id, version, title, sort_order, sha256, active, updated_at")
+        .select(
+          "code, package_id, version, title, sort_order, sha256, active, allows_investor_fees, updated_at",
+        )
         .order("sort_order"),
       loose(supabaseAdmin)
         .from("investor_agreement_acceptances")

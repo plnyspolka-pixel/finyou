@@ -45,7 +45,9 @@ export const listAccessProducts = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: products, error } = await (supabaseAdmin as any)
       .from("access_products")
-      .select("id,code,audience,label,duration_days,amount_grosz,currency,active,sort_order")
+      .select(
+        "id,code,audience,label,duration_days,amount_grosz,currency,active,sort_order,kind,tier,success_fee_bps",
+      )
       .eq("audience", data.audience)
       .eq("active", true)
       .order("sort_order", { ascending: true });

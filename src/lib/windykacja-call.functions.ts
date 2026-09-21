@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
 
 // ════════════════════════════════════════════════════════════════════
 // TELEFON WINDYKACYJNY Z SYSTEMU — agent ElevenLabs dzwoniący w imieniu
@@ -114,7 +114,7 @@ function kwotaSlownie(n: number): string {
 
 // ── Telefon windykacyjny (bot dzwoni w imieniu inwestora) ────────────
 export const placeWindCollectionCall = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
     z
       .object({

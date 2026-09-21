@@ -55,10 +55,11 @@ export async function runPaidPostProcessing(
 
   const { data: product } = await db
     .from("access_products")
-    .select("label")
+    .select("label,kind")
     .eq("id", payment.product_id)
     .maybeSingle();
   const productLabel = product?.label ?? "Dostęp do platformy Finance You";
+  const productKind = product?.kind === "unlock" ? ("unlock" as const) : ("access" as const);
   const amountGrosz = Number(payment.paid_amount_grosz ?? payment.expected_amount_grosz);
 
   // 1) Potwierdzenie płatności e-mailem.
@@ -71,6 +72,7 @@ export async function runPaidPostProcessing(
         amountGrosz,
         grantedUntil: payment.granted_until,
         audience: payment.audience,
+        kind: productKind,
       });
     } catch (e) {
       console.error("[tpay-webhook] confirmation email failed", (e as Error).message);

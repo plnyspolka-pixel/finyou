@@ -473,6 +473,8 @@
   .fy-grid { grid-template-columns: 1fr 1fr !important; }
   .fy-modules { grid-template-columns: repeat(3, 1fr) !important; }
   .fy-steps { grid-template-columns: 1fr 1fr !important; }
+  /* Oś pipeline'u inwestora: 3 kolumny → 2 na tablecie. */
+  .fy-pipeline { grid-template-columns: 1fr 1fr !important; }
   .fy-compare { grid-template-columns: 1fr !important; }
   .fy-foot { grid-template-columns: 1fr 1fr !important; }
   .fy-nav-desktop { display: none !important; }
@@ -480,7 +482,7 @@
   .fy-sticky { display: block !important; }
 }
 @media (max-width: 560px) {
-  .fy-grid, .fy-modules, .fy-steps, .fy-foot { grid-template-columns: 1fr !important; }
+  .fy-grid, .fy-modules, .fy-steps, .fy-foot, .fy-pipeline { grid-template-columns: 1fr !important; }
   .fy-form-grid { grid-template-columns: 1fr !important; }
 }
 

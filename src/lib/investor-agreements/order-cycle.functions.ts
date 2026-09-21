@@ -13,6 +13,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { AccessProduct } from "@/lib/access/core";
 import {
   buildKartaLeada,
   canTransition,
@@ -218,8 +219,29 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
+    // Cennik: pakiet inwestora + lista okazji już wykupionych (Podstawowy)
+    // — UI pokazuje na tej podstawie przycisk zakupu albo pełne dane.
+    const [{ data: tier }, { data: unlocks }, { data: unlockProduct }] = await Promise.all([
+      loose(supabaseAdmin).rpc("investor_tier", { _user_id: userId }),
+      loose(supabaseAdmin)
+        .from("investor_opportunity_unlocks")
+        .select("match_id")
+        .eq("user_id", userId),
+      loose(supabaseAdmin)
+        .from("access_products")
+        .select(
+          "id,code,audience,label,duration_days,amount_grosz,currency,active,sort_order,kind,tier,success_fee_bps",
+        )
+        .eq("code", "investor_okazja_unlock")
+        .eq("active", true)
+        .maybeSingle(),
+    ]);
+
     const acceptedAt = acceptance?.accepted_at ? new Date(acceptance.accepted_at) : null;
     return {
+      tier: (tier as string) === "pro" ? ("pro" as const) : ("podstawowy" as const),
+      unlockedMatchIds: ((unlocks ?? []) as { match_id: string }[]).map((u) => u.match_id),
+      unlockProduct: (unlockProduct ?? null) as AccessProduct | null,
       orders: orders ?? [],
       // Teaser widoczny dopiero po udostępnieniu (status >= teaser).
       matches: matches.filter((m: any) => m.status !== "dopasowane"),
@@ -309,6 +331,17 @@ export const requestDisclosure = createServerFn({ method: "POST" })
     if (!m.transfer_card_approved_at) {
       throw new Error(
         "Karta Transferu Danych dla tego Projektu czeka na zatwierdzenie przez Finance You — damy znać, gdy Ujawnienie będzie możliwe.",
+      );
+    }
+    // Cennik: PRO ma okazje w pakiecie, Podstawowy wykupuje każdą osobno
+    // (wyłączność + raport + harmonogram + dane kontaktowe).
+    const { data: canOpen } = await loose(supabaseAdmin).rpc("investor_can_open_match", {
+      _user_id: userId,
+      _match_id: m.id,
+    });
+    if (!canOpen) {
+      throw new Error(
+        "UNLOCK_REQUIRED: Odsłonięcie danych Projektu wymaga wykupienia tej okazji albo pakietu PRO.",
       );
     }
     const now = new Date();
@@ -846,15 +879,34 @@ export const confirmZal6 = createServerFn({ method: "POST" })
       })
       .eq("id", m.id);
     if (error) throw new Error(error.message);
+    // Pakiet PRO: opłata sukcesu 5% kwoty udzielonej pożyczki. Rejestrowana
+    // ze statusem `wstrzymana`, dopóki aktywna Umowa ramowa nie dopuszcza
+    // wynagrodzenia od Inwestora (§ 7) — nie generuje wezwania ani faktury.
+    let successFee: { feeGrosz: number; status: string } | null = null;
+    try {
+      const { registerSuccessFee } = await import("@/lib/investor-plan/plan.functions");
+      const res = await registerSuccessFee({
+        matchId: m.id,
+        loanAmountPln: data.payoutAmountPln,
+      });
+      if (res) successFee = { feeGrosz: res.feeGrosz, status: res.status };
+    } catch (e) {
+      console.error("[order-cycle] success fee registration failed", e);
+    }
+
     await logCycleEvent(supabaseAdmin, {
       matchId: m.id,
       orderId: m.order_id,
       type: "zal6_potwierdzony",
-      payload: { payout_amount_pln: data.payoutAmountPln, provision_amount_pln: provision },
+      payload: {
+        payout_amount_pln: data.payoutAmountPln,
+        provision_amount_pln: provision,
+        oplata_sukcesu_pro: successFee,
+      },
       actor: context.userId,
       actorKind: "admin",
     });
-    return { ok: true, provisionAmountPln: provision };
+    return { ok: true, provisionAmountPln: provision, successFee };
   });
 
 export const confirmNdaAccession = createServerFn({ method: "POST" })

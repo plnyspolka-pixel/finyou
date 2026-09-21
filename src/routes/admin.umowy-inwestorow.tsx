@@ -19,6 +19,7 @@ import {
   decideInvestorOrder,
 } from "@/lib/investor-agreements/legal-pack.functions";
 import { OrderCycleAdminSection } from "@/components/admin/order-cycle-admin";
+import { SuccessFeesCard } from "@/components/admin/success-fees-card";
 
 export const Route = createFileRoute("/admin/umowy-inwestorow")({
   component: AdminUmowyPage,
@@ -57,6 +58,8 @@ function AdminUmowyPage() {
       {/* Etap U2: cykl Zlecenie–Projekt (Dopasowania, Karta Transferu,
           decyzje, Zał. 6, przystąpienia NDA, odstąpienia, dziennik). */}
       <OrderCycleAdminSection />
+      {/* Cennik 2026-09: opłata sukcesu PRO 5% kwoty udzielonej pożyczki. */}
+      <SuccessFeesCard />
       <AcceptancesCard state={state} />
     </div>
   );
@@ -147,7 +150,9 @@ function DocumentRow({ doc }: { doc: any }) {
             {open ? "Zamknij podgląd" : "Podgląd treści"}
           </Button>
           <Badge
-            className={doc.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}
+            className={
+              doc.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+            }
           >
             {doc.active ? "aktywny" : "uśpiony"}
           </Badge>
