@@ -8944,6 +8944,1550 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "outputSchema": null
+      },
+      {
+        "name": "meta_status",
+        "title": "Meta (Facebook / Instagram / Ads) status",
+        "description": "Stan integracji Meta: które tokeny są ustawione (strona, Instagram, reklamy, piksel), strona (nazwa, obserwujący), konto Instagram (nazwa, obserwujący, liczba postów), konta reklamowe z API. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_facebook_posts",
+        "title": "List Facebook page posts",
+        "description": "Posty na stronie firmowej (także zaplanowane przy `include_unpublished`): treść, data, link, udostępnienia, polubienia, komentarze. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "since": {
+              "type": "string",
+              "description": "Od (ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string"
+            },
+            "include_unpublished": {
+              "type": "boolean",
+              "default": false,
+              "description": "Tylko zaplanowane / nieopublikowane."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_facebook_post",
+        "title": "Get Facebook post with insights",
+        "description": "Jeden post ze strony: pełna treść, załączniki, reakcje oraz statystyki (zasięg, zaangażowanie, kliknięcia, reakcje po typie). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "post_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "metrics": {
+              "type": "string",
+              "description": "Własna lista metryk insights po przecinku."
+            }
+          },
+          "required": [
+            "post_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_facebook_page_insights",
+        "title": "Get Facebook page insights",
+        "description": "Statystyki strony (dziennie / tygodniowo / 28 dni): wyświetlenia, zasięg, zaangażowanie postów, fani, wejścia na stronę, nowi obserwujący. Domyślnie ostatnie 7 dni. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "period": {
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "days_28"
+              ],
+              "default": "day"
+            },
+            "since": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string"
+            },
+            "metrics": {
+              "type": "string",
+              "description": "Własna lista metryk po przecinku."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_facebook_comments",
+        "title": "List comments (Facebook post)",
+        "description": "Komentarze pod postem na Facebooku: autor, treść, polubienia, odpowiedzi, ukryte. `object_id` to id posta albo komentarza (odpowiedzi). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "object_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "required": [
+            "object_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "publish_facebook_post",
+        "title": "Publish / schedule Facebook post",
+        "description": "Publikuje post na stronie firmowej: tekst (z linkiem), zdjęcie (image_url) albo wideo (video_url). Ze `scheduled_at` post jest zaplanowany (10 min – 75 dni do przodu). To publiczna publikacja — użyj po tym, jak użytkownik zobaczył treść i kazał opublikować. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "maxLength": 5000,
+              "default": ""
+            },
+            "link": {
+              "type": "string",
+              "format": "uri"
+            },
+            "image_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "video_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Tytuł wideo."
+            },
+            "scheduled_at": {
+              "type": "string",
+              "description": "Termin publikacji (ISO 8601)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_facebook_post",
+        "title": "Delete Facebook post",
+        "description": "Usuwa post ze strony (także zaplanowany). Nieodwracalne. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "post_id": {
+              "type": "string",
+              "minLength": 5
+            }
+          },
+          "required": [
+            "post_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "reply_facebook_comment",
+        "title": "Reply to Facebook comment",
+        "description": "Publiczna odpowiedź pod komentarzem na stronie (albo prywatna wiadomość Messenger do autora komentarza przy `private=true`). Realna publikacja — po potwierdzeniu treści. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "comment_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 7000
+            },
+            "private": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "comment_id",
+            "text"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "hide_facebook_comment",
+        "title": "Hide / unhide Facebook comment",
+        "description": "Ukrywa (lub przywraca) komentarz pod postem strony. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "comment_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "hidden": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "required": [
+            "comment_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_instagram_media",
+        "title": "List Instagram media",
+        "description": "Posty, rolki i karuzele na koncie Instagram: podpis, typ, link, polubienia, komentarze, data. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "since": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_instagram_media",
+        "title": "Get Instagram media with insights",
+        "description": "Jeden post / rolka z Instagrama z podpisem i statystykami (wyświetlenia, zasięg, polubienia, komentarze, udostępnienia, zapisania, interakcje). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "media_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "metrics": {
+              "type": "string",
+              "description": "Własna lista metryk po przecinku (zależy od typu media)."
+            }
+          },
+          "required": [
+            "media_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_instagram_account_insights",
+        "title": "Get Instagram account insights",
+        "description": "Statystyki konta Instagram w okresie: zasięg, obserwujący, wejścia na profil, zaangażowane konta, interakcje. Domyślnie ostatnie 7 dni po dniach. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "period": {
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "days_28"
+              ],
+              "default": "day"
+            },
+            "since": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string"
+            },
+            "metrics": {
+              "type": "string"
+            },
+            "metric_type": {
+              "type": "string",
+              "enum": [
+                "total_value",
+                "time_series"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_instagram_comments",
+        "title": "List Instagram comments",
+        "description": "Komentarze pod postem / rolką na Instagramie z odpowiedziami. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "media_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "required": [
+            "media_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "reply_instagram_comment",
+        "title": "Reply to Instagram comment",
+        "description": "Publiczna odpowiedź pod komentarzem na Instagramie — po potwierdzeniu treści. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "comment_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2200
+            }
+          },
+          "required": [
+            "comment_id",
+            "message"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "hide_instagram_comment",
+        "title": "Hide / unhide Instagram comment",
+        "description": "Ukrywa (lub przywraca) komentarz na Instagramie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "comment_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "hidden": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "required": [
+            "comment_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "publish_instagram_post",
+        "title": "Publish Instagram post / reel / story",
+        "description": "Publikuje na Instagramie zdjęcie (image_url, JPG) albo wideo jako rolkę (video_url, MP4 pion 9:16) lub story. Zdjęcia publikują się od razu; wideo Instagram przetwarza — narzędzie czeka do ~60 s, a jeśli nie zdąży, zwraca `creation_id` do dokończenia przez `publish_instagram_container`. Publiczna publikacja — po potwierdzeniu treści. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "caption": {
+              "type": "string",
+              "maxLength": 2200,
+              "default": ""
+            },
+            "image_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "video_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "media_type": {
+              "type": "string",
+              "enum": [
+                "IMAGE",
+                "REELS",
+                "STORIES"
+              ]
+            },
+            "share_to_feed": {
+              "type": "boolean",
+              "description": "Dla rolek: pokazać też w siatce profilu."
+            },
+            "cover_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Okładka rolki."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "publish_instagram_container",
+        "title": "Finish Instagram publication (container)",
+        "description": "Sprawdza status kontenera mediów Instagram (`creation_id` z `publish_instagram_post`) i publikuje go, gdy jest gotowy. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "creation_id": {
+              "type": "string",
+              "minLength": 5
+            }
+          },
+          "required": [
+            "creation_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_messenger_conversations",
+        "title": "List Messenger / Instagram Direct conversations (API)",
+        "description": "Rozmowy strony w Messengerze albo Instagram Direct prosto z Graph API: uczestnik, ostatnia wiadomość, nieprzeczytane, liczba wiadomości, czy można odpisać (okno 24 h). Historia w CRM jest w `list_inbox_threads`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "platform": {
+              "type": "string",
+              "enum": [
+                "messenger",
+                "instagram"
+              ],
+              "default": "messenger"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_messenger_conversation",
+        "title": "Get Messenger / Direct conversation messages (API)",
+        "description": "Wiadomości jednej rozmowy z Graph API (nadawca, treść, załączniki, czas). Odpowiadanie: `send_messenger_message` po lead_id. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "conversation_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "platform": {
+              "type": "string",
+              "enum": [
+                "messenger",
+                "instagram"
+              ],
+              "default": "messenger"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "required": [
+            "conversation_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_meta_ad_accounts",
+        "title": "List Meta ad accounts (API)",
+        "description": "Konta reklamowe dostępne dla tokena: id, nazwa, waluta, status, wydano, saldo. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_meta_campaigns_live",
+        "title": "List Meta campaigns with results (live API)",
+        "description": "Kampanie z konta reklamowego prosto z API z wynikami za okres (domyślnie 30 dni): status, budżety, wydatki, zasięg, kliknięcia, CTR, CPC, leady, koszt leada. Zsynchronizowane lokalnie dane daje `list_meta_campaigns`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "account_id": {
+              "type": "string",
+              "minLength": 3,
+              "description": "Id konta (z list_meta_ad_accounts), z lub bez act_."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "PAUSED",
+                "ARCHIVED",
+                "DELETED"
+              ]
+            },
+            "date_preset": {
+              "type": "string",
+              "default": "last_30d",
+              "description": "np. today, yesterday, last_7d, last_30d, this_month, last_month, maximum"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "required": [
+            "account_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_meta_adsets",
+        "title": "List Meta ad sets",
+        "description": "Zestawy reklam kampanii albo konta (podaj campaign_id lub account_id): status, budżet, cel optymalizacji, targetowanie, wyniki za okres. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "parent_id": {
+              "type": "string",
+              "minLength": 3,
+              "description": "Id kampanii albo konta (act_…)."
+            },
+            "date_preset": {
+              "type": "string",
+              "default": "last_30d"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "required": [
+            "parent_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_meta_ads",
+        "title": "List Meta ads",
+        "description": "Reklamy w zestawie / kampanii / koncie: nazwa, status, kreacja (miniatura), wyniki za okres. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "parent_id": {
+              "type": "string",
+              "minLength": 3,
+              "description": "Id zestawu, kampanii albo konta (act_…)."
+            },
+            "date_preset": {
+              "type": "string",
+              "default": "last_30d"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "required": [
+            "parent_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_meta_ads_insights",
+        "title": "Get Meta ads insights (any level)",
+        "description": "Wyniki reklamowe dla konta / kampanii / zestawu / reklamy w okresie (preset albo zakres dat), opcjonalnie z podziałem (age, gender, publisher_platform, region, dzień). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "object_id": {
+              "type": "string",
+              "minLength": 3,
+              "description": "Id konta (act_… lub liczba), kampanii, zestawu albo reklamy."
+            },
+            "date_preset": {
+              "type": "string",
+              "description": "np. last_7d, last_30d, this_month; pomiń, gdy podajesz since/until."
+            },
+            "since": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string"
+            },
+            "level": {
+              "type": "string",
+              "enum": [
+                "account",
+                "campaign",
+                "adset",
+                "ad"
+              ]
+            },
+            "breakdowns": {
+              "type": "string",
+              "description": "np. age,gender albo publisher_platform albo region"
+            },
+            "time_increment": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "description": "Podział na dni (1 = dziennie)."
+            }
+          },
+          "required": [
+            "object_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_meta_ad_status",
+        "title": "Pause / activate / archive campaign, ad set or ad",
+        "description": "Zmienia status obiektu reklamowego (kampania, zestaw, reklama): ACTIVE (wznów — zaczyna wydawać budżet), PAUSED, ARCHIVED. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "object_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "PAUSED",
+                "ARCHIVED"
+              ]
+            }
+          },
+          "required": [
+            "object_id",
+            "status"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_meta_ad_budget",
+        "title": "Update campaign / ad set budget or name",
+        "description": "Zmienia budżet dzienny lub całkowity (w PLN) albo nazwę kampanii / zestawu reklam. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "object_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "daily_budget_pln": {
+              "type": "number",
+              "minimum": 1
+            },
+            "lifetime_budget_pln": {
+              "type": "number",
+              "minimum": 1
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "object_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "sync_meta_ads",
+        "title": "Sync Meta ad accounts & campaigns to CRM",
+        "description": "Pobiera z API konta reklamowe i kampanie z wynikami (maximum) i zapisuje w tabelach panelu (meta_ad_accounts, meta_campaigns) — to samo co przycisk synchronizacji w /admin/meta. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_meta_lead_forms_live",
+        "title": "List Meta lead forms (API)",
+        "description": "Formularze Lead Ads strony prosto z API: nazwa, status, liczba leadów, data. Przypisania i statystyki lokalne: tabela meta_lead_forms w panelu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_meta_form_leads",
+        "title": "Get leads of a Meta lead form (API)",
+        "description": "Zgłoszenia z formularza Lead Ads prosto z API (pola odpowiedzi, reklama, kampania, czas). Zsynchronizowane leady w CRM daje `list_meta_leads`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "form_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "since": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "form_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "sync_meta_leads",
+        "title": "Pull new Meta leads into CRM now",
+        "description": "Uruchamia pobranie nowych leadów z formularzy Meta do CRM (to samo co tick co minutę): zakłada leady i wnioski. UWAGA: dla nowych leadów odpala standardową obsługę (SMS powitalny, telefon voicebota wg ustawień). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "send_meta_conversion_event",
+        "title": "Send Meta Conversions API event",
+        "description": "Wysyła zdarzenie konwersji do piksela Meta (Conversions API): nazwa zdarzenia (Lead, Purchase, CompleteRegistration…), dane użytkownika (e-mail, telefon — haszowane po stronie serwera), wartość, kod testowy. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "pixel_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "event_name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "first_name": {
+              "type": "string"
+            },
+            "last_name": {
+              "type": "string"
+            },
+            "external_id": {
+              "type": "string"
+            },
+            "event_source_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "action_source": {
+              "type": "string",
+              "enum": [
+                "website",
+                "system_generated",
+                "phone_call",
+                "chat",
+                "email",
+                "other"
+              ],
+              "default": "system_generated"
+            },
+            "value": {
+              "type": "number"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            },
+            "custom_data": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "test_event_code": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "pixel_id",
+            "event_name"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "meta_api_request",
+        "title": "Meta Graph API request (generic)",
+        "description": "Dowolne wywołanie Graph API (ścieżka bez wersji, np. `me/accounts`, `{page-id}/feed`, `act_123/adsets`; GET/POST/DELETE; parametry; pola formularza) z wybranym tokenem (page / ig / user / pixel). Tokeny zostają na serwerze. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": [
+                "GET",
+                "POST",
+                "DELETE"
+              ],
+              "default": "GET"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 300
+            },
+            "token": {
+              "type": "string",
+              "enum": [
+                "page",
+                "ig",
+                "user",
+                "pixel"
+              ],
+              "default": "page"
+            },
+            "query": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            },
+            "form": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "youtube_status",
+        "title": "YouTube status",
+        "description": "Stan integracji YouTube: czy klient OAuth jest skonfigurowany i kanał połączony, dane kanału (nazwa, subskrybenci, filmy, wyświetlenia), ostatni błąd, kolejka Shorts po statusie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_youtube_videos",
+        "title": "List channel videos",
+        "description": "Filmy na kanale (najnowsze pierwsze) ze statystykami: wyświetlenia, polubienia, komentarze, prywatność, długość. Stronicowanie `page_token`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "page_token": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_youtube_videos",
+        "title": "Search my videos",
+        "description": "Szukanie filmów na kanale po frazie (tytuł/opis). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_youtube_video",
+        "title": "Get video details",
+        "description": "Pełne dane filmu: tytuł, opis, tagi, kategoria, prywatność, statystyki, długość, status przetwarzania. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "video_id": {
+              "type": "string",
+              "minLength": 5
+            }
+          },
+          "required": [
+            "video_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_youtube_comments",
+        "title": "List video comments",
+        "description": "Komentarze pod filmem (wątki z odpowiedziami): autor, treść, polubienia, data. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "video_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "order": {
+              "type": "string",
+              "enum": [
+                "time",
+                "relevance"
+              ],
+              "default": "time"
+            },
+            "search": {
+              "type": "string"
+            },
+            "page_token": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "video_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_youtube_playlists",
+        "title": "List playlists",
+        "description": "Playlisty kanału: tytuł, liczba filmów, prywatność. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_youtube_video",
+        "title": "Update video metadata",
+        "description": "Zmienia tytuł, opis, tagi, kategorię, prywatność (public / unlisted / private) albo termin publikacji filmu. Zmiana prywatności na public jest widoczna od razu. Wymaga zakresu youtube.force-ssl (ponowne połączenie kanału po aktualizacji). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "video_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 5000
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maxItems": 50
+            },
+            "category_id": {
+              "type": "string",
+              "maxLength": 5
+            },
+            "privacy_status": {
+              "type": "string",
+              "enum": [
+                "public",
+                "unlisted",
+                "private"
+              ]
+            },
+            "publish_at": {
+              "type": "string",
+              "description": "Zaplanowana publikacja (ISO 8601; film musi być private)."
+            }
+          },
+          "required": [
+            "video_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "reply_youtube_comment",
+        "title": "Reply to a YouTube comment",
+        "description": "Publikuje odpowiedź pod komentarzem (widoczna publicznie od razu) — użyj tylko po tym, jak użytkownik zobaczył treść i kazał wysłać. Wymaga zakresu youtube.force-ssl. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "comment_id": {
+              "type": "string",
+              "minLength": 5
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 10000
+            }
+          },
+          "required": [
+            "comment_id",
+            "text"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_youtube_video",
+        "title": "Delete video",
+        "description": "Usuwa film z kanału — nieodwracalnie. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "video_id": {
+              "type": "string",
+              "minLength": 5
+            }
+          },
+          "required": [
+            "video_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "queue_youtube_publication",
+        "title": "Queue a Short for publication",
+        "description": "Dodaje film (MP4 pod adresem https, do 100 MB, pion 9:16) do kolejki publikacji Shorts: tytuł (dostaje #Shorts), opis, tagi, prywatność, termin. Tick opublikuje go o zadanej porze bez dalszego udziału człowieka. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "source_video_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 5000,
+              "default": ""
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maxItems": 30
+            },
+            "privacy_status": {
+              "type": "string",
+              "enum": [
+                "public",
+                "unlisted",
+                "private"
+              ],
+              "default": "public"
+            },
+            "scheduled_at": {
+              "type": "string",
+              "description": "Kiedy opublikować (ISO 8601); domyślnie od razu w najbliższym ticku."
+            }
+          },
+          "required": [
+            "title",
+            "source_video_url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "cancel_youtube_queue_item",
+        "title": "Cancel queued Short",
+        "description": "Anuluje wpis w kolejce Shorts, który jeszcze nie został opublikowany (pending / failed). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "queue_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "publish_youtube_queue_item_now",
+        "title": "Publish queued Short now",
+        "description": "Publikuje wpis z kolejki od razu (upload na kanał) zamiast czekać na termin. Realna publikacja. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "queue_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "youtube_api_request",
+        "title": "YouTube Data API request (generic)",
+        "description": "Dowolne wywołanie YouTube Data API v3 na tokenie kanału (ścieżka np. /videos, /channels, /commentThreads, /playlistItems; GET/POST/PUT/DELETE; parametry; body JSON). Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": [
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE"
+              ],
+              "default": "GET"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200
+            },
+            "query": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            },
+            "json": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
       }
     ]
   }

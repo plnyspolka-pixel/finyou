@@ -23,6 +23,9 @@ const YT_UPLOAD_URL =
 const OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/youtube.upload",
   "https://www.googleapis.com/auth/youtube.readonly",
+  // Edycja filmów, odpowiedzi na komentarze i usuwanie (konektor MCP) —
+  // po dodaniu zakresu kanał trzeba raz ponownie połączyć w panelu.
+  "https://www.googleapis.com/auth/youtube.force-ssl",
 ].join(" ");
 
 // Bufor zamiast streamingu: resumable PUT wymaga znanego Content-Length,

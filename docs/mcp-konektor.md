@@ -12,8 +12,10 @@ Konektor działa **w obie strony**: agent czyta dane i wykonuje akcje panelu
 (edycja leadów, klientów i wniosków, decyzje o ofertach i propozycjach,
 kryteria instytucji, dostępy, windykacja, treści) oraz wysyła wiadomości
 (e-mail, SMS, Messenger, czat, odpowiedź instytucji), a także steruje botami
-ElevenLabs (Ania, A1–A3), generuje głos, muzykę, dubbing i wideo oraz sięga do
-Twilio (SMS-y, połączenia, nagrania). Nic nie dzieje się
+ElevenLabs (Ania, A1–A3), generuje głos, muzykę, dubbing i wideo, sięga do
+Twilio (SMS-y, połączenia, nagrania), prowadzi Facebooka, Instagram, Messenger
+i Meta Ads (posty, komentarze, statystyki, kampanie, formularze leadów, piksel)
+oraz kanał YouTube (filmy, komentarze, kolejka Shorts). Nic nie dzieje się
 automatycznie: każdy zapis to wywołanie na polecenie użytkownika w czacie, a
 klient MCP (Claude.ai / ChatGPT) prosi o potwierdzenie przed każdym narzędziem
 zapisującym. Żadnych cyklicznych maili ani pushy z tego modułu.
@@ -32,6 +34,9 @@ zapisującym. Żadnych cyklicznych maili ani pushy z tego modułu.
 | Klient REST Twilio przez bramkę Lovable            | `src/lib/twilio-api.server.ts`                                                                                                                                          |
 | Zapis mediów do Storage (link publiczny/podpisany) | `src/lib/media-storage.server.ts`                                                                                                                                       |
 | Narzędzia ElevenLabs i Twilio                      | `src/lib/mcp/tools/elevenlabs.ts`, `src/lib/mcp/tools/twilio.ts`                                                                                                        |
+| Klient Meta Graph API (strona, IG, Ads, CAPI)      | `src/lib/meta-api.server.ts`                                                                                                                                            |
+| Klient YouTube Data API v3 (token kanału)          | `src/lib/youtube-api.server.ts`                                                                                                                                         |
+| Narzędzia Meta i YouTube                           | `src/lib/mcp/tools/meta.ts`, `src/lib/mcp/tools/youtube.ts`                                                                                                             |
 | Trasy protokołu (generowane przez plugin)          | `src/routes/[.mcp]/*`, `src/routes/[.well-known]/*`, `src/routes/mcp.ts`                                                                                                |
 | Strona zgody OAuth                                 | `src/routes/[.]lovable.oauth.consent.tsx` (`/.lovable/oauth/consent`)                                                                                                   |
 | Manifest narzędzi (generowany)                     | `.lovable/mcp/manifest.json`                                                                                                                                            |
@@ -284,6 +289,57 @@ SMS do klienta wysyła `send_sms` (ze strażnikami „dość to dość", blokad 
 limitów); narzędzia Twilio powyżej służą do historii, nagrań, kosztów i połączeń
 z komunikatem.
 
+**Meta — Facebook, Instagram, Messenger, reklamy, formularze** (administrator/
+operator; usuwanie postów, status i budżet reklam, piksel i ogólne wywołanie —
+administrator). Tokeny: `META_PAGE_ACCESS_TOKEN` (strona, Messenger,
+formularze), `META_IG_PAGE_ACCESS_TOKEN` (Instagram; gdy pusty — token strony),
+`META_ACCESS_TOKEN` (reklamy), `FB_PIXEL_ACCESS_TOKEN` (Conversions API) oraz
+`META_PAGE_ID`, `META_IG_USER_ID`. `meta_status` pokazuje, które są ustawione.
+
+| Narzędzie                                                                               | Co daje                                                                                                                        |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `meta_status`                                                                           | Tokeny, strona i konto IG (obserwujący), konta reklamowe, formularze, ostatnia synchronizacja leadów.                          |
+| `list_facebook_posts`, `get_facebook_post`                                              | Posty strony (także zaplanowane) z reakcjami; jeden post ze statystykami (zasięg, zaangażowanie, kliknięcia).                  |
+| `get_facebook_page_insights`                                                            | Statystyki strony za okres: wyświetlenia, zasięg, fani, nowi obserwujący.                                                      |
+| `list_facebook_comments`                                                                | Komentarze pod postem (z odpowiedziami, ukryte).                                                                               |
+| `publish_facebook_post`                                                                 | Post tekstowy / z linkiem / zdjęciem / wideo, od razu albo zaplanowany (`scheduled_at`).                                       |
+| `reply_facebook_comment`, `hide_facebook_comment`, `delete_facebook_post`               | Publiczna odpowiedź albo prywatna wiadomość do autora (`private`), ukrycie komentarza, usunięcie posta (admin).                |
+| `list_instagram_media`, `get_instagram_media`                                           | Posty, rolki, karuzele; jeden wpis ze statystykami (zasięg, zapisania, udostępnienia).                                         |
+| `get_instagram_account_insights`                                                        | Zasięg, obserwujący, wejścia na profil, interakcje w okresie.                                                                  |
+| `list_instagram_comments`, `reply_instagram_comment`, `hide_instagram_comment`          | Komentarze pod wpisem, publiczna odpowiedź, ukrycie.                                                                           |
+| `publish_instagram_post`, `publish_instagram_container`                                 | Zdjęcie (od razu), rolka lub story z wideo (kontener → gotowość → publikacja; przy dłuższym przetwarzaniu dokończ drugim).     |
+| `list_messenger_conversations`, `get_messenger_conversation`                            | Rozmowy strony w Messengerze / Instagram Direct prosto z Graph (nieprzeczytane, okno 24 h); odpisuje `send_messenger_message`. |
+| `list_meta_ad_accounts`, `get_meta_campaigns_live`, `list_meta_adsets`, `list_meta_ads` | Konta, kampanie, zestawy i reklamy z wynikami za okres prosto z API (`list_meta_campaigns` — dane z synchronizacji).           |
+| `get_meta_ads_insights`                                                                 | Wyniki konta / kampanii / zestawu / reklamy z podziałem (wiek, płeć, platforma, region) i po dniach.                           |
+| `update_meta_ad_status`, `update_meta_ad_budget`, `sync_meta_ads`                       | Wstrzymanie / wznowienie / archiwizacja, budżet dzienny lub całkowity, nazwa (admin); zapis kampanii do tabel panelu.          |
+| `list_meta_lead_forms_live`, `get_meta_form_leads`, `sync_meta_leads`                   | Formularze Lead Ads i zgłoszenia prosto z API; pobranie nowych leadów do CRM (uwaga: nowe leady dostają SMS/voicebot).         |
+| `send_meta_conversion_event`                                                            | Zdarzenie do piksela (Conversions API) — e-mail i telefon haszowane po stronie serwera (admin).                                |
+| `meta_api_request`                                                                      | Dowolne wywołanie Graph API wybranym tokenem (GET/POST/DELETE).                                                                |
+
+Uprawnienia tokenów Meta potrzebne do pełnego zakresu: `pages_read_engagement`,
+`pages_read_user_content`, `pages_manage_posts`, `pages_manage_engagement`,
+`pages_messaging`, `read_insights`, `instagram_basic`,
+`instagram_content_publish`, `instagram_manage_comments`,
+`instagram_manage_insights`, `ads_read`, `ads_management`, `leads_retrieval`.
+Bez danego uprawnienia narzędzie zwraca czytelny błąd Graph z kodem.
+
+**YouTube** (administrator/operator; usuwanie filmu — administrator). Działa na
+tokenie kanału połączonego w panelu (YouTube Shorts → Połącz), odświeżanym z
+`refresh_token`. Edycja filmów, odpowiedzi na komentarze i usuwanie wymagają
+zakresu `youtube.force-ssl` — dodany do zgody OAuth w tej wersji, więc kanał
+trzeba **raz ponownie połączyć** w panelu; upload i odczyt działają na starej zgodzie.
+
+| Narzędzie                                                                                  | Co daje                                                                                  |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `youtube_status`                                                                           | Konfiguracja OAuth, połączenie kanału, dane kanału, ostatni błąd, stan kolejki Shorts.   |
+| `list_youtube_videos`, `search_youtube_videos`, `get_youtube_video`                        | Filmy ze statystykami (stronicowanie), szukanie po frazie, pełne dane jednego filmu.     |
+| `list_youtube_comments`, `list_youtube_playlists`                                          | Wątki komentarzy z odpowiedziami; playlisty kanału.                                      |
+| `update_youtube_video`                                                                     | Tytuł, opis, tagi, kategoria, prywatność, termin publikacji.                             |
+| `reply_youtube_comment`                                                                    | Publiczna odpowiedź pod komentarzem — po potwierdzeniu treści.                           |
+| `delete_youtube_video`                                                                     | Usuwa film — nieodwracalnie (admin).                                                     |
+| `queue_youtube_publication`, `cancel_youtube_queue_item`, `publish_youtube_queue_item_now` | Kolejka Shorts z panelu: dodanie (MP4 https, pion 9:16), anulowanie, publikacja od ręki. |
+| `youtube_api_request`                                                                      | Dowolne wywołanie YouTube Data API v3 tokenem kanału.                                    |
+
 **Kalkulatory**
 
 | Narzędzie                      | Co daje                                              |
@@ -380,8 +436,17 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
    Upewnij się, że w środowisku serwera są: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,
    SUPABASE_SERVICE_ROLE_KEY (narzędzia MCP czytają je z process.env), a do wysyłek:
    LOVABLE_API_KEY + RESEND_API_KEY (e-mail), TWILIO_API_KEY (SMS, połączenia, nagrania),
-   META_PAGE_ACCESS_TOKEN / META_IG_PAGE_ACCESS_TOKEN (Messenger), ELEVENLABS_API_KEY (boty, głos,
-   media) i AGENT_TOOLS_SECRET. Nie pokazuj mi wartości sekretów, tylko czy są.
+   META_PAGE_ID + META_PAGE_ACCESS_TOKEN (strona, Messenger, formularze), META_IG_USER_ID +
+   META_IG_PAGE_ACCESS_TOKEN (Instagram), META_ACCESS_TOKEN (Meta Ads), FB_PIXEL_ACCESS_TOKEN
+   (Conversions API), YOUTUBE_CLIENT_ID + YOUTUBE_CLIENT_SECRET (+ YOUTUBE_REDIRECT_URI, jeśli inny
+   niż domyślny), ELEVENLABS_API_KEY (boty, głos, media) i AGENT_TOOLS_SECRET. Nie pokazuj mi
+   wartości sekretów, tylko czy są. Sprawdź w Meta (Business → Użytkownicy systemowi / token strony),
+   czy token strony ma pages_manage_posts, pages_manage_engagement, pages_messaging,
+   read_insights, leads_retrieval, a token IG instagram_content_publish,
+   instagram_manage_comments, instagram_manage_insights — brakujące dopisz w raporcie.
+   YouTube: w tej wersji zgoda OAuth prosi dodatkowo o zakres youtube.force-ssl (edycja filmów,
+   komentarze); po publikacji przypomnij mi, że muszę raz ponownie połączyć kanał w panelu
+   (YouTube Shorts → Połącz).
    Wideo ElevenLabs: sprawdź w aktualnej dokumentacji API ElevenLabs (docs → API reference), pod
    jakimi ścieżkami działa generowanie wideo (create + status/result) i jakie pola przyjmuje body;
    ustaw ELEVENLABS_VIDEO_CREATE_PATH (np. /v1/…), ELEVENLABS_VIDEO_STATUS_PATH (z {id}) oraz —
@@ -429,7 +494,23 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
       instrukcję konfiguracji;
    j) TWILIO: tools/call twilio_status → configured:true, saldo, numery; list_twilio_messages
       {limit: 5} → historia SMS; list_twilio_calls {limit: 5} → połączenia; get_twilio_usage
-      {category: "sms"} → zużycie; NIE wołaj twilio_place_call na prawdziwe numery.
+      {category: "sms"} → zużycie; NIE wołaj twilio_place_call na prawdziwe numery;
+   k) META: tools/call meta_status → tokeny ustawione, strona i konto IG z liczbą obserwujących;
+      list_facebook_posts {limit: 3} → ostatnie posty; get_facebook_page_insights {} → statystyki;
+      list_instagram_media {limit: 3} → wpisy; list_messenger_conversations {limit: 3} → rozmowy;
+      list_meta_ad_accounts {} → konta; get_meta_campaigns_live {limit: 5} → kampanie z wynikami;
+      list_meta_lead_forms_live {} → formularze. ZAPIS tylko bezpieczny: publish_facebook_post
+      {message: "Test MCP — do usunięcia", scheduled_at: <data za 30 dni>} → zaplanowany post
+      (id), potem delete_facebook_post {post_id} → usunięty. NIE publikuj nic od razu, NIE
+      odpowiadaj na prawdziwe komentarze, NIE zmieniaj statusu ani budżetu kampanii, NIE wołaj
+      sync_meta_leads (odpala SMS/voicebot do nowych leadów) ani send_meta_conversion_event;
+   l) YOUTUBE: tools/call youtube_status → configured:true, kanał połączony, dane kanału;
+      list_youtube_videos {limit: 5} → filmy ze statystykami; list_youtube_comments
+      {video_id: <id z listy>} → komentarze; list_youtube_playlists {} → playlisty. Jeśli
+      list_youtube_comments albo update_youtube_video zwraca 403 z podpowiedzią o zakresie —
+      to oczekiwane do czasu ponownego połączenia kanału; wpisz to w raporcie. NIE wołaj
+      update_youtube_video, reply_youtube_comment, delete_youtube_video ani
+      publish_youtube_queue_item_now.
    Po testach usuń lead testowy (albo zostaw oznaczony jako zły z powodem "test") i link testowy.
 
 6. Raport dla mnie: tabela kroków 1–5 z ✅/❌, dokładne odpowiedzi z punktu 4, id leada testowego,
