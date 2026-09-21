@@ -310,7 +310,7 @@ formularze), `META_IG_PAGE_ACCESS_TOKEN` (Instagram; gdy pusty — token strony)
 | `list_facebook_posts`, `get_facebook_post`                                              | Posty strony (także zaplanowane) z reakcjami; jeden post ze statystykami (zasięg, zaangażowanie, kliknięcia).                  |
 | `get_facebook_page_insights`                                                            | Statystyki strony za okres: wyświetlenia, zasięg, fani, nowi obserwujący.                                                      |
 | `list_facebook_comments`                                                                | Komentarze pod postem (z odpowiedziami, ukryte).                                                                               |
-| `publish_facebook_post`                                                                 | Post tekstowy / z linkiem / zdjęciem / wideo, od razu albo zaplanowany (`scheduled_at`).                                       |
+| `publish_facebook_post`                                                                 | Post tekstowy / z linkiem / zdjęciem / wideo, od razu albo zaplanowany (`scheduled_at`, 10 min – 29 dni).                      |
 | `reply_facebook_comment`, `hide_facebook_comment`, `delete_facebook_post`               | Publiczna odpowiedź albo prywatna wiadomość do autora (`private`), ukrycie komentarza, usunięcie posta (admin).                |
 | `list_instagram_media`, `get_instagram_media`                                           | Posty, rolki, karuzele; jeden wpis ze statystykami (zasięg, zapisania, udostępnienia).                                         |
 | `get_instagram_account_insights`                                                        | Zasięg, obserwujący, wejścia na profil, interakcje w okresie.                                                                  |
@@ -597,7 +597,7 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
       list_instagram_media {limit: 3} → wpisy; list_messenger_conversations {limit: 3} → rozmowy;
       list_meta_ad_accounts {} → konta; get_meta_campaigns_live {limit: 5} → kampanie z wynikami;
       list_meta_lead_forms_live {} → formularze. ZAPIS tylko bezpieczny: publish_facebook_post
-      {message: "Test MCP — do usunięcia", scheduled_at: <data za 30 dni>} → zaplanowany post
+      {message: "Test MCP — do usunięcia", scheduled_at: <data za 7 dni>} → zaplanowany post
       (id), potem delete_facebook_post {post_id} → usunięty. NIE publikuj nic od razu, NIE
       odpowiadaj na prawdziwe komentarze, NIE zmieniaj statusu ani budżetu kampanii, NIE wołaj
       sync_meta_leads (odpala SMS/voicebot do nowych leadów) ani send_meta_conversion_event;
