@@ -20,8 +20,49 @@ export const SCOPES = {
 const WM = "https://www.googleapis.com/webmasters/v3";
 const enc = encodeURIComponent;
 
+/** Wartość z `GSC_SITE_URL` albo domyślna usługa domenowa (bez sprawdzania w Google). */
 export function gscSiteUrl(): string {
   return process.env.GSC_SITE_URL?.trim() || `sc-domain:${new URL(SITE_URL).hostname}`;
+}
+
+let siteCache: { at: number; url: string; source: "env" | "auto" | "fallback" } | null = null;
+
+/**
+ * Usługa Search Console do zapytań: `GSC_SITE_URL`, a gdy go nie ma — pierwsza
+ * z listy witryn konta, która pasuje do financeyou.pl (domenowa `sc-domain:`,
+ * potem `https://…/`, `https://www.…/`, `http://…/`). Wynik trzyma się godzinę.
+ */
+export async function resolveGscSiteUrl(): Promise<{
+  url: string;
+  source: "env" | "auto" | "fallback";
+}> {
+  const explicit = process.env.GSC_SITE_URL?.trim();
+  if (explicit) return { url: explicit, source: "env" };
+  if (siteCache && Date.now() - siteCache.at < 60 * 60_000) return siteCache;
+  const host = new URL(SITE_URL).hostname;
+  const candidates = [
+    `sc-domain:${host}`,
+    `${SITE_URL.replace(/\/+$/, "")}/`,
+    `https://www.${host}/`,
+    `http://${host}/`,
+    `http://www.${host}/`,
+  ];
+  try {
+    const sites = await listSites();
+    const owned = sites.filter((x) => x.permissionLevel !== "siteUnverifiedUser");
+    const found = candidates.find((c) => owned.some((x) => x.siteUrl === c));
+    if (found) {
+      siteCache = { at: Date.now(), url: found, source: "auto" };
+      return siteCache;
+    }
+  } catch {
+    // brak dostępu do listy — użyj domyślnej wartości
+  }
+  return { url: candidates[0], source: "fallback" };
+}
+
+async function siteUrl(): Promise<string> {
+  return (await resolveGscSiteUrl()).url;
 }
 
 export function ga4PropertyId(): string | null {
@@ -107,7 +148,7 @@ export async function searchAnalytics(opts: {
       },
     ];
   }
-  const j = await googleRequest(`${WM}/sites/${enc(gscSiteUrl())}/searchAnalytics/query`, {
+  const j = await googleRequest(`${WM}/sites/${enc(await siteUrl())}/searchAnalytics/query`, {
     method: "POST",
     json: body,
     scopes: [SCOPES.webmastersReadonly],
@@ -145,21 +186,21 @@ export type Sitemap = {
 };
 
 export async function listSitemaps(): Promise<Sitemap[]> {
-  const j = await googleRequest(`${WM}/sites/${enc(gscSiteUrl())}/sitemaps`, {
+  const j = await googleRequest(`${WM}/sites/${enc(await siteUrl())}/sitemaps`, {
     scopes: [SCOPES.webmastersReadonly],
   });
   return (j?.sitemap ?? []) as Sitemap[];
 }
 
 export async function submitSitemap(feedpath: string): Promise<void> {
-  await googleRequest(`${WM}/sites/${enc(gscSiteUrl())}/sitemaps/${enc(feedpath)}`, {
+  await googleRequest(`${WM}/sites/${enc(await siteUrl())}/sitemaps/${enc(feedpath)}`, {
     method: "PUT",
     scopes: [SCOPES.webmasters],
   });
 }
 
 export async function deleteSitemap(feedpath: string): Promise<void> {
-  await googleRequest(`${WM}/sites/${enc(gscSiteUrl())}/sitemaps/${enc(feedpath)}`, {
+  await googleRequest(`${WM}/sites/${enc(await siteUrl())}/sitemaps/${enc(feedpath)}`, {
     method: "DELETE",
     scopes: [SCOPES.webmasters],
   });
@@ -170,7 +211,7 @@ export async function inspectUrl(url: string, languageCode = "pl"): Promise<any>
     "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect",
     {
       method: "POST",
-      json: { inspectionUrl: url, siteUrl: gscSiteUrl(), languageCode },
+      json: { inspectionUrl: url, siteUrl: await siteUrl(), languageCode },
       scopes: [SCOPES.webmasters],
     },
   );

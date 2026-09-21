@@ -146,7 +146,10 @@ export const googleSearchStatus = defineTool({
       const out: Record<string, unknown> = {
         auth_method: auth.googleAuthMethod(),
         service_account_email: sa?.client_email ?? null,
-        site_url: g.gscSiteUrl(),
+        site_url: (await g.resolveGscSiteUrl()).url,
+        site_url_source: (await g.resolveGscSiteUrl()).source,
+        site_url_hint:
+          "Bez GSC_SITE_URL konektor wybiera pierwszą pasującą usługę z listy witryn konta (domenowa, potem https://financeyou.pl/).",
         ga4_property_id: g.ga4PropertyId(),
         pagespeed_key: Boolean(process.env.PAGESPEED_API_KEY),
         setup: sa
@@ -156,8 +159,8 @@ export const googleSearchStatus = defineTool({
       try {
         const sites = await g.listSites();
         out.sites = sites;
-        out.site_permission =
-          sites.find((s) => s.siteUrl === g.gscSiteUrl())?.permissionLevel ?? null;
+        const resolved = (await g.resolveGscSiteUrl()).url;
+        out.site_permission = sites.find((s) => s.siteUrl === resolved)?.permissionLevel ?? null;
       } catch (e) {
         out.sites_error = (e as Error).message;
       }
@@ -227,7 +230,7 @@ export const getSearchPerformance = defineTool({
           : (y as any)[a.order_by] - (x as any)[a.order_by],
       );
       return ok({
-        site: g.gscSiteUrl(),
+        site: (await g.resolveGscSiteUrl()).url,
         range,
         dimensions: a.dimensions,
         totals: g.totals(rows),
@@ -273,7 +276,7 @@ export const getSearchTrend = defineTool({
         weekly[monday].impressions += r.impressions;
       }
       return ok({
-        site: g.gscSiteUrl(),
+        site: (await g.resolveGscSiteUrl()).url,
         range,
         previous_range: prev,
         comparison: compareTotals(curT, prevT),
@@ -325,7 +328,7 @@ export const getTopQueries = defineTool({
           : (y as any)[a.order_by] - (x as any)[a.order_by],
       );
       return ok({
-        site: g.gscSiteUrl(),
+        site: (await g.resolveGscSiteUrl()).url,
         range,
         total_queries: rows.length,
         totals: g.totals(rows),
@@ -370,7 +373,7 @@ export const getTopPages = defineTool({
           : (y as any)[a.order_by] - (x as any)[a.order_by],
       );
       return ok({
-        site: g.gscSiteUrl(),
+        site: (await g.resolveGscSiteUrl()).url,
         range,
         total_pages: rows.length,
         totals: g.totals(rows),
@@ -421,7 +424,7 @@ export const getPageSearchData = defineTool({
         g.searchAnalytics({ ...range, dimensions: ["country"], filters, rowLimit: 10 }),
       ]);
       return ok({
-        site: g.gscSiteUrl(),
+        site: (await g.resolveGscSiteUrl()).url,
         page: a.page,
         range,
         comparison: compareTotals(g.totals(daily), g.totals(before)),
@@ -491,7 +494,7 @@ export const getQueryPages = defineTool({
           : g.searchAnalytics({ ...range, dimensions: ["query"], filters, rowLimit: 30 }),
       ]);
       return ok({
-        site: g.gscSiteUrl(),
+        site: (await g.resolveGscSiteUrl()).url,
         query: a.query,
         exact: a.exact,
         range,
@@ -578,7 +581,7 @@ export const compareSearchPeriods = defineTool({
         .filter((r) => Math.max(r.impressions, r.impressions_prev) >= a.min_impressions);
       const both = joined.filter((r) => r.status === "both");
       return ok({
-        site: g.gscSiteUrl(),
+        site: (await g.resolveGscSiteUrl()).url,
         dimension: a.dimension,
         range,
         previous_range: prev,
@@ -623,7 +626,7 @@ export const listSitemaps = defineTool({
       const g = await import("@/lib/google-search.server");
       const maps = await g.listSitemaps();
       return ok({
-        site: g.gscSiteUrl(),
+        site: (await g.resolveGscSiteUrl()).url,
         sitemaps: maps.map((m) => ({
           path: m.path,
           last_submitted: m.lastSubmitted ?? null,
@@ -656,7 +659,12 @@ export const submitSitemap = defineTool({
       const { SITE_URL } = await import("@/lib/seo/company");
       const url = a.sitemap_url ?? `${SITE_URL}/sitemap.xml`;
       await g.submitSitemap(url);
-      return ok({ ok: true, submitted: url, site: g.gscSiteUrl(), actor: actorId(ctx) });
+      return ok({
+        ok: true,
+        submitted: url,
+        site: (await g.resolveGscSiteUrl()).url,
+        actor: actorId(ctx),
+      });
     }),
 });
 

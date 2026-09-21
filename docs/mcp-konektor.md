@@ -437,7 +437,8 @@ renderować obrazów z konektorów — tam zostaje link do pliku.
 witryny, Indexing API i ogólne wywołanie — administrator). Uwierzytelnienie:
 konto usługi `GOOGLE_SERVICE_ACCOUNT_JSON` (zalecane) albo token kanału YouTube
 połączonego w panelu (zgoda obejmuje teraz Search Console, GA4 i Indexing).
-Witryna: `GSC_SITE_URL` (domyślnie `sc-domain:financeyou.pl`), GA4:
+Witryna: `GSC_SITE_URL` albo automatycznie pierwsza pasująca usługa z listy
+witryn konta (`sc-domain:financeyou.pl`, potem `https://financeyou.pl/`), GA4:
 `GA4_PROPERTY_ID`, PageSpeed opcjonalnie `PAGESPEED_API_KEY`.
 
 | Narzędzie                                                | Co daje                                                                                                                                     |
