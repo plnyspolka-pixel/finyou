@@ -30,7 +30,7 @@ Fakturę wyślemy osobnym e-mailem i znajdziesz ją w zakładce „Płatności i
 
 Pozdrawiamy,
 Zespół Finance You`;
-  await sendResendEmail({ to: opts.to, subject, text });
+  await sendResendEmail({ to: opts.to, subject, text, category: "transactional" });
 }
 
 export async function sendInvoiceIssuedEmail(opts: {
@@ -55,7 +55,7 @@ Faktura jest też dostępna w Twoim panelu w zakładce „Płatności i faktury"
 
 Pozdrawiamy,
 Zespół Finance You`;
-  await sendResendEmail({ to: opts.to, subject, text });
+  await sendResendEmail({ to: opts.to, subject, text, category: "transactional" });
 }
 
 export async function sendExpiryReminderEmail(opts: {
@@ -79,7 +79,7 @@ Po przedłużeniu nowy okres doliczymy do końca bieżącego — nic nie przepad
 
 Pozdrawiamy,
 Zespół Finance You`;
-  await sendResendEmail({ to: opts.to, subject, text });
+  await sendResendEmail({ to: opts.to, subject, text, category: "transactional" });
 }
 
 export async function sendAccessExpiredEmail(opts: {
@@ -107,7 +107,7 @@ W darmowej wersji nadal możesz: prowadzić do 5 własnych ofert, korzystać z b
 
 Pozdrawiamy,
 Zespół Finance You`;
-  await sendResendEmail({ to: opts.to, subject, text });
+  await sendResendEmail({ to: opts.to, subject, text, category: "transactional" });
 }
 
 export async function sendManualAccessChangeEmail(opts: {
@@ -135,7 +135,7 @@ Panel: ${base}${panelPath(opts.audience)}
 
 Pozdrawiamy,
 Zespół Finance You`;
-  await sendResendEmail({ to: opts.to, subject, text });
+  await sendResendEmail({ to: opts.to, subject, text, category: "transactional" });
 }
 
 export async function sendPaymentIssueEmail(opts: { to: string; reason: string }): Promise<void> {
@@ -148,5 +148,5 @@ Skontaktujemy się z Tobą, a w razie pytań możesz odpisać na tę wiadomość
 
 Pozdrawiamy,
 Zespół Finance You`;
-  await sendResendEmail({ to: opts.to, subject, text });
+  await sendResendEmail({ to: opts.to, subject, text, category: "transactional" });
 }

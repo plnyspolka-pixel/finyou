@@ -302,6 +302,8 @@ Zespół Finance You`;
         html: clientHtml,
         replyTo: "kontakt@financeyou.pl",
         showReplyHint: true,
+        // Potwierdzenie złożenia wniosku — odpowiedź na akcję klienta.
+        category: "transactional",
       });
       await logLeadCommunication({
         loanApplicationId: loan.id,
@@ -355,6 +357,8 @@ Podgląd w panelu: ${adminUrl}`;
         html: teamHtml,
         replyTo: data.email,
         noBranding: true,
+        // Powiadomienie wewnętrzne dla zespołu — nigdy nie podlega wypisowi.
+        category: "transactional",
       });
     } catch (err) {
       console.error("[landing-application] notification emails failed", err);

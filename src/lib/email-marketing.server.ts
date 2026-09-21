@@ -2,6 +2,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { wrapBrandedEmail, isAlreadyBranded } from "./email-branding.server";
 import { fetchAllPaged } from "./supabase-paging.server";
+import { canSendEmail, unsubscribeUrlFor, unsubscribeHeaders } from "./email-unsubscribe.server";
 
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
 
@@ -45,15 +46,31 @@ export async function sendViaResend(payload: {
   reply_to?: string;
   tags?: { name: string; value: string }[];
   headers?: Record<string, string>;
-}): Promise<{ id: string }> {
+}): Promise<{ id: string; blocked?: true; reason?: string }> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   const resendKey = process.env.RESEND_API_KEY;
   if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
   if (!resendKey) throw new Error("RESEND_API_KEY missing");
 
-  const brandedHtml = isAlreadyBranded(payload.html)
-    ? payload.html
-    : wrapBrandedEmail({ innerHtml: payload.html });
+  // Kampanie i mailingi to zawsze kategoria `automated` — wypisany adres nie
+  // dostaje ich nigdy, niezależnie od tego, z której listy pochodzi.
+  const decision = await canSendEmail(payload.to, "automated");
+  if (!decision.allowed) {
+    console.warn(`[email-marketing] blocked recipient: ${payload.to} (${decision.reason})`);
+    return { id: "", blocked: true, reason: decision.reason };
+  }
+
+  const unsubscribeUrl = (await unsubscribeUrlFor(payload.to)) ?? undefined;
+  // Copy z AI ma w treści placeholder {{unsubscribe_url}} — dotąd nikt go nie
+  // podstawiał i do klientów szedł martwy link.
+  const withUnsub = (html: string) =>
+    unsubscribeUrl ? html.replaceAll("{{unsubscribe_url}}", unsubscribeUrl) : html;
+
+  const rawHtml = withUnsub(payload.html);
+  const brandedHtml = isAlreadyBranded(rawHtml)
+    ? rawHtml
+    : wrapBrandedEmail({ innerHtml: rawHtml, unsubscribeUrl });
+  const headers = { ...(await unsubscribeHeaders(payload.to)), ...(payload.headers ?? {}) };
 
   const res = await fetch(`${RESEND_GATEWAY}/emails`, {
     method: "POST",
@@ -67,10 +84,10 @@ export async function sendViaResend(payload: {
       to: [payload.to],
       subject: payload.subject,
       html: brandedHtml,
-      text: payload.text,
+      text: payload.text ? withUnsub(payload.text) : undefined,
       reply_to: payload.reply_to,
       tags: payload.tags,
-      headers: payload.headers,
+      headers,
     }),
   });
 

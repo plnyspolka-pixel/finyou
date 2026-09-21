@@ -234,6 +234,41 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
               }
             }
 
+            // Strażnik wypisu — ten tor omijał listę blokad i wypisany klient
+            // dostawał maile z kolejki mimo „dość" wysłanego mailem.
+            const recipientAddress = (payload.to.match(/<([^>]+)>/)?.[1] ?? payload.to).trim();
+            const { canSendEmail } = await import("@/lib/email-unsubscribe.server");
+            const guard = await canSendEmail(
+              recipientAddress,
+              payload.purpose === "transactional" ? "transactional" : "automated",
+            );
+            if (!guard.allowed) {
+              console.warn("Skipping blocked recipient", {
+                queue,
+                msg_id: msg.msg_id,
+                reason: guard.reason,
+              });
+              await supabase.from("email_send_log").insert({
+                message_id: payload.message_id,
+                template_name: payload.label || queue,
+                recipient_email: recipientAddress,
+                status: "blocked",
+                error_message: guard.reason ?? "blocked",
+              });
+              const { error: blockedDelError } = await supabase.rpc("delete_email", {
+                queue_name: queue,
+                message_id: msg.msg_id,
+              });
+              if (blockedDelError) {
+                console.error("Failed to delete blocked message from queue", {
+                  queue,
+                  msg_id: msg.msg_id,
+                  error: blockedDelError,
+                });
+              }
+              continue;
+            }
+
             try {
               await sendLovableEmail(
                 {

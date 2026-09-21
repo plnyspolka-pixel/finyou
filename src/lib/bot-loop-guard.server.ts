@@ -2,11 +2,7 @@
 // Wywoływane PRZED odpowiedzią auto-agenta na wiadomość przychodzącą.
 // Odpowiednik email-guard.server.ts dla kanałów Meta (klucz: PSID/IGSID).
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import {
-  looksLikeAutoMessage,
-  isRepetitiveInbound,
-  countFastPingPong,
-} from "@/lib/bot-detection";
+import { looksLikeAutoMessage, isRepetitiveInbound, countFastPingPong } from "@/lib/bot-detection";
 
 function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -19,16 +15,20 @@ const BURST_LIMIT = 20; // >=20 wiadomości (in+out) w oknie => pętla
 const FAST_PINGPONG_LIMIT = 3; // >=3 odpowiedzi przychodzące <5s po naszej => bot
 const AUTO_CONTENT_STRIKES = 2; // >=2 wiadomości z sygnaturą automatu w 24h => wyciszenie
 
-/** Czy rozmówca (PSID/IGSID) jest wyciszony? Wpisy z expires_at w przeszłości ignorujemy. */
+/**
+ * Czy rozmówca (PSID/IGSID) jest wyciszony? Wpisy z expires_at w przeszłości
+ * oraz cofnięte ręcznie w panelu (`metadata.unblocked_at`) nie liczą się.
+ */
 export async function isChannelSuppressed(channel: string, identifier: string): Promise<boolean> {
   const { data } = await admin()
     .from("comms_suppressions")
-    .select("id, expires_at")
+    .select("id, expires_at, metadata")
     .eq("channel", channel)
     .eq("identifier", identifier)
     .maybeSingle();
   if (!data) return false;
   if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) return false;
+  if ((data.metadata as any)?.unblocked_at) return false;
   return true;
 }
 
@@ -70,6 +70,12 @@ export async function shouldSkipMessengerAutoReply(params: {
 }): Promise<{ skip: boolean; reason?: string }> {
   const { leadId, senderId, platform, text } = params;
   const s = admin();
+
+  // 0) „Dość" od klienta ma pierwszeństwo przed każdą heurystyką — wyciszamy
+  //    rozmówcę (i pozostałe kanały tego leada) zamiast szukać w treści bota.
+  const { handleInboundChannelOptOut } = await import("@/lib/messenger-opt-out.server");
+  const optOut = await handleInboundChannelOptOut({ platform, senderId, leadId, text });
+  if (optOut.optedOut) return { skip: true, reason: `opt_out:${optOut.signal}` };
 
   // 1) Wyciszony wcześniej (wykryty bot / decyzja operatora)
   if (await isChannelSuppressed(platform, senderId)) {

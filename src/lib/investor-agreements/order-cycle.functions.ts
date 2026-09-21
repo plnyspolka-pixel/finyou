@@ -465,6 +465,7 @@ export const submitConsumerWithdrawal = createServerFn({ method: "POST" })
         await sendResendEmail({
           to: investor.email,
           subject: "Potwierdzenie odstąpienia od Umowy ramowej",
+          category: "transactional",
           text:
             `Potwierdzamy otrzymanie oświadczenia o odstąpieniu od Ramowej umowy pośrednictwa finansowego ` +
             `(forma dokumentowa, ${new Date().toISOString()} UTC).\n\n` +

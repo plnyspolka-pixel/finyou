@@ -76,6 +76,9 @@ export const Route = createFileRoute("/api/public/resend-webhook")({
           case "email.complained":
             patch.complained_at = now;
             break;
+          case "email.unsubscribed":
+            patch.status = "wypisany";
+            break;
           default:
             return new Response("ignored", { status: 200 });
         }
@@ -90,6 +93,7 @@ export const Route = createFileRoute("/api/public/resend-webhook")({
           if (type === "email.clicked") prPatch.status = "clicked";
           if (type === "email.bounced") prPatch.status = "bounced";
           if (type === "email.complained") prPatch.status = "complained";
+          if (type === "email.unsubscribed") prPatch.status = "unsubscribed";
           const untyped =
             supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient;
           await untyped.from("pr_outreach_log").update(prPatch).eq("resend_id", resendId);
@@ -105,6 +109,33 @@ export const Route = createFileRoute("/api/public/resend-webhook")({
           .select("campaign_id, recipient_email")
           .maybeSingle();
 
+        // Skarga „to spam" i wypis z nagłówka List-Unsubscribe to najmocniejsze
+        // „dość", jakie klient może wysłać — adres blokujemy od razu, nie czekając
+        // na to, aż ktoś zajrzy w statystyki kampanii.
+        if (["email.complained", "email.bounced", "email.unsubscribed"].includes(type)) {
+          const recipient =
+            (Array.isArray(data.to) ? data.to[0] : (data.to ?? data.email)) ?? rec?.recipient_email;
+          if (recipient) {
+            try {
+              if (type === "email.bounced") {
+                const { addSuppression } = await import("@/lib/email-guard.server");
+                await addSuppression(String(recipient), "bounce", { resend_id: resendId });
+              } else {
+                const { applyOptOut } = await import("@/lib/email-unsubscribe.server");
+                await applyOptOut({
+                  email: String(recipient),
+                  source: type === "email.complained" ? "spam_complaint" : "list_unsubscribe",
+                  strength: type === "email.complained" ? "hard" : "soft",
+                  signal: type,
+                  metadata: { resend_id: resendId },
+                });
+              }
+            } catch (e) {
+              console.error("[resend-webhook] suppression failed", e);
+            }
+          }
+        }
+
         // Zaktualizuj liczniki kampanii
         if (rec?.campaign_id) {
           const counterField =
@@ -118,7 +149,9 @@ export const Route = createFileRoute("/api/public/resend-webhook")({
                     ? "bounced_count"
                     : type === "email.complained"
                       ? "complained_count"
-                      : null;
+                      : type === "email.unsubscribed"
+                        ? "unsubscribed_count"
+                        : null;
           if (counterField) {
             const { data: camp } = await supabaseAdmin
               .from("email_campaigns")

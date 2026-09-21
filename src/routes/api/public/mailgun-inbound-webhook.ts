@@ -11,7 +11,11 @@ import { sendResendEmail } from "@/lib/resend-send.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
-import { shouldSkipAutoReply } from "@/lib/email-guard.server";
+import {
+  shouldSkipAutoReply,
+  handleInboundOptOut,
+  markLeadOptedOut,
+} from "@/lib/email-guard.server";
 import { routeInboundOfferReply } from "@/lib/offer-replies.server";
 
 function verifyMailgun(timestamp: string, token: string, signature: string): boolean {
@@ -59,16 +63,28 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
 
         if (!fromEmail) return new Response("no sender", { status: 200 });
 
+        // STRAŻNIK „dość to dość" — przed każdą dalszą ścieżką (patrz
+        // resend-inbound-webhook: ta sama reguła na obu torach poczty).
+        const optOut = await handleInboundOptOut({
+          fromEmail,
+          subject,
+          bodyText: text,
+          channel: "email",
+        });
+
         // ODPOWIEDŹ INWESTORA NA DYSTRYBUCJĘ OFERTY: alias oferta+<uuid>@ lub
         // wątek naszego maila — trafia na kartę wniosku, bez ścieżki leadowej.
-        {
+        if (!optOut.optedOut) {
           const recipientsRaw = [
             String(form.get("recipient") ?? ""),
             String(form.get("To") ?? form.get("to") ?? ""),
             String(form.get("Cc") ?? form.get("cc") ?? ""),
           ].filter(Boolean);
-          const replyAttachments: Array<{ name: string; mime?: string | null; buffer: Uint8Array }> =
-            [];
+          const replyAttachments: Array<{
+            name: string;
+            mime?: string | null;
+            buffer: Uint8Array;
+          }> = [];
           const attCount = parseInt(String(form.get("attachment-count") ?? "0"), 10);
           for (let i = 1; i <= attCount; i++) {
             const file = form.get(`attachment-${i}`);
@@ -186,6 +202,13 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
           });
         } catch (e) {
           console.error("[mailgun-inbound] enrichment error", e);
+        }
+
+        // Klient poprosił o zaprzestanie — logujemy wiadomość i milkniemy.
+        if (optOut.optedOut) {
+          await markLeadOptedOut(leadId);
+          console.warn(`[mailgun-inbound] opt-out ${fromEmail} (${optOut.signal})`);
+          return new Response(`opt_out:${optOut.signal}`, { status: 200 });
         }
 
         // OCHRONA PRZED PĘTLAMI — sprawdź nagłówki/suppression/rate-limit/pętle

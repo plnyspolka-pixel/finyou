@@ -269,6 +269,7 @@ import { Route as ApiPublicHooksAniaCallbacksRouteImport } from './routes/api/pu
 import { Route as ApiPublicHooksAnalysisPipelineTickRouteImport } from './routes/api/public/hooks/analysis-pipeline-tick'
 import { Route as ApiPublicHooksAffiliateEventsTickRouteImport } from './routes/api/public/hooks/affiliate-events-tick'
 import { Route as ApiPublicHooksAccessExpiryTickRouteImport } from './routes/api/public/hooks/access-expiry-tick'
+import { Route as ApiPublicEmailUnsubscribeRouteImport } from './routes/api/public/email/unsubscribe'
 import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
 import { Route as ApiPublicEmailClickRouteImport } from './routes/api/public/email/click'
 
@@ -1642,6 +1643,12 @@ const ApiPublicHooksAccessExpiryTickRoute =
     path: '/api/public/hooks/access-expiry-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicEmailUnsubscribeRoute =
+  ApiPublicEmailUnsubscribeRouteImport.update({
+    id: '/api/public/email/unsubscribe',
+    path: '/api/public/email/unsubscribe',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicEmailOpenRoute = ApiPublicEmailOpenRouteImport.update({
   id: '/api/public/email/open',
   path: '/api/public/email/open',
@@ -1876,6 +1883,7 @@ export interface FileRoutesByFullPath {
   '/posrednik/wnioski/': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
@@ -2130,6 +2138,7 @@ export interface FileRoutesByTo {
   '/posrednik/wnioski': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
@@ -2395,6 +2404,7 @@ export interface FileRoutesById {
   '/posrednik/wnioski/': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
@@ -2661,6 +2671,7 @@ export interface FileRouteTypes {
     | '/posrednik/wnioski/'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/email/unsubscribe'
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/analysis-pipeline-tick'
@@ -2915,6 +2926,7 @@ export interface FileRouteTypes {
     | '/posrednik/wnioski'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/email/unsubscribe'
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/analysis-pipeline-tick'
@@ -3179,6 +3191,7 @@ export interface FileRouteTypes {
     | '/posrednik/wnioski/'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/email/unsubscribe'
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/analysis-pipeline-tick'
@@ -3293,6 +3306,7 @@ export interface RootRouteChildren {
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
+  ApiPublicEmailUnsubscribeRoute: typeof ApiPublicEmailUnsubscribeRoute
   ApiPublicHooksAccessExpiryTickRoute: typeof ApiPublicHooksAccessExpiryTickRoute
   ApiPublicHooksAffiliateEventsTickRoute: typeof ApiPublicHooksAffiliateEventsTickRoute
   ApiPublicHooksAnalysisPipelineTickRoute: typeof ApiPublicHooksAnalysisPipelineTickRoute
@@ -5155,6 +5169,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksAccessExpiryTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email/unsubscribe': {
+      id: '/api/public/email/unsubscribe'
+      path: '/api/public/email/unsubscribe'
+      fullPath: '/api/public/email/unsubscribe'
+      preLoaderRoute: typeof ApiPublicEmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/email/open': {
       id: '/api/public/email/open'
       path: '/api/public/email/open'
@@ -5681,6 +5702,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
+  ApiPublicEmailUnsubscribeRoute: ApiPublicEmailUnsubscribeRoute,
   ApiPublicHooksAccessExpiryTickRoute: ApiPublicHooksAccessExpiryTickRoute,
   ApiPublicHooksAffiliateEventsTickRoute:
     ApiPublicHooksAffiliateEventsTickRoute,

@@ -43,12 +43,22 @@ export interface BrandOptions {
   showReplyHint?: boolean; // domyślnie true
 }
 
+/**
+ * Stopka ZAWSZE mówi, jak przestać dostawać wiadomości. Jest link — wypis jest
+ * jednym kliknięciem; nie ma (np. wysyłka bez adresu w bazie) — podajemy drogę
+ * przez odpowiedź, którą i tak rozpoznaje strażnik w opt-out.ts.
+ */
+function unsubscribeFooter(unsubscribeUrl?: string): string {
+  if (unsubscribeUrl) {
+    return `Nie chcesz dostawać tych wiadomości? <a href="${escapeHtml(unsubscribeUrl)}" style="color:#888;text-decoration:underline">Wypisz mnie</a> · `;
+  }
+  return `Nie chcesz dostawać tych wiadomości? Odpisz słowem „wypisz mnie" · `;
+}
+
 export function wrapBrandedEmail(opts: BrandOptions): string {
   const inner = opts.innerHtml ?? (opts.text ? textToInnerHtml(opts.text) : "");
   const showReply = opts.showReplyHint !== false;
-  const unsub = opts.unsubscribeUrl
-    ? `<a href="${opts.unsubscribeUrl}" style="color:#888;text-decoration:underline">Wypisz mnie</a> · `
-    : "";
+  const unsub = unsubscribeFooter(opts.unsubscribeUrl);
 
   return `<!doctype html><html lang="pl"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head><body ${BRAND_MARKER} style="margin:0;padding:0;background:#ffffff;font-family:Arial,sans-serif;color:#222">
 <div style="max-width:580px;margin:0 auto;padding:24px 20px">

@@ -47,7 +47,14 @@ export async function processMessengerOutbox(): Promise<{ sent: number; errors: 
     }
     const platform: "messenger" | "instagram" = lead?.messenger_psid ? "messenger" : "instagram";
 
-    const res = await sendMetaMessage({ recipientId, text: row.body, platform });
+    // Kolejka to wysyłka proaktywna — strażnik wypisu i dopisek „napisz STOP"
+    // obsługuje sendMetaMessage.
+    const res = await sendMetaMessage({
+      recipientId,
+      text: row.body,
+      platform,
+      proactive: true,
+    });
 
     await sb
       .from("messenger_outbox")
