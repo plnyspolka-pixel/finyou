@@ -45,6 +45,11 @@ import { collectionsExtraTools } from "./tools/collections-extra";
 import { marketingTools } from "./tools/marketing";
 import { opsTools } from "./tools/ops";
 import { calculatorTools } from "./tools/calculators";
+import { writesCrmTools } from "./tools/writes-crm";
+import { writesCommsTools } from "./tools/writes-comms";
+import { writesInvestorsTools } from "./tools/writes-investors";
+import { writesFinanceTools } from "./tools/writes-finance";
+import { writesMarketingTools } from "./tools/writes-marketing";
 
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
@@ -53,7 +58,7 @@ export default defineMcp({
   title: "Finance You",
   version: "0.3.0",
   instructions:
-    "Narzędzia platformy Finance You (pożyczki pozabankowe + inwestycje). Obejmują CRM (leady, klienci, wnioski, oferty inwestorów), treści (blog, FAQ, landing pages, materiały marketingowe, szkolenia), program pośredników, windykację, czat klient↔inwestor oraz kalkulator raty. Dla zespołu (administrator/operator): `get_updates_since` — raport „co nowego” od wskazanego momentu (zacznij od niego, gdy użytkownik pyta o nowości; zapamiętaj `next_since` na kolejne pytanie), `list_inbox_threads` — skrzynka z wątkami czekającymi na odpowiedź, `read_inbox_thread` — pełna korespondencja z jedną osobą. Widoczność danych ograniczają polityki RLS bazy — użytkownik widzi tylko to, do czego ma uprawnienia.",
+    "Narzędzia platformy Finance You (pożyczki pozabankowe + inwestycje). Obejmują CRM (leady, klienci, wnioski, oferty inwestorów), treści (blog, FAQ, landing pages, materiały marketingowe, szkolenia), program pośredników, windykację, czat klient↔inwestor oraz kalkulator raty. Dla zespołu (administrator/operator): `get_updates_since` — raport „co nowego” od wskazanego momentu (zacznij od niego, gdy użytkownik pyta o nowości; zapamiętaj `next_since` na kolejne pytanie), `list_inbox_threads` — skrzynka z wątkami czekającymi na odpowiedź, `read_inbox_thread` — pełna korespondencja z jedną osobą. Narzędzia działają w obie strony: poza odczytem są akcje panelu (edycja leadów, klientów, wniosków, decyzje o ofertach i propozycjach, kryteria instytucji, dostępy, windykacja, treści) oraz wysyłki (`send_email`, `send_sms`, `send_messenger_message`, `send_chat_reply`, `reply_institution_thread`). Każdy zapis wykonuj tylko na wyraźne polecenie użytkownika; przed wysyłką wiadomości pokaż dokładną treść i poczekaj na potwierdzenie. Widoczność danych ograniczają polityki RLS bazy i role — użytkownik widzi i zmienia tylko to, do czego ma uprawnienia.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
@@ -104,5 +109,10 @@ export default defineMcp({
     ...marketingTools,
     ...opsTools,
     ...calculatorTools,
+    ...writesCrmTools,
+    ...writesCommsTools,
+    ...writesInvestorsTools,
+    ...writesFinanceTools,
+    ...writesMarketingTools,
   ],
 });

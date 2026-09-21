@@ -83,6 +83,91 @@ export function requireUser(ctx: ToolContext): SupabaseClient {
   return userClient(ctx);
 }
 
+/**
+ * Do narzędzi ZAPISU zespołu: sprawdza rolę (administrator/operator) i zwraca
+ * klienta z rolą serwisową — tak samo robią server functions panelu
+ * (`assertAdminOrOperator` + `supabaseAdmin`), bo polityki RLS nie obejmują
+ * wszystkich zapisów administratora.
+ */
+export async function requireTeamAdmin(ctx: ToolContext): Promise<SupabaseClient> {
+  await requireTeam(ctx);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin as unknown as SupabaseClient;
+}
+
+/** Jak `requireTeamAdmin`, ale z własną listą ról. */
+export async function requireRolesAdmin(
+  ctx: ToolContext,
+  roles: readonly string[],
+): Promise<SupabaseClient> {
+  await requireRoles(ctx, roles);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin as unknown as SupabaseClient;
+}
+
+/** Id zalogowanego użytkownika do pól `created_by` / `decided_by`. */
+export function actorId(ctx: ToolContext): string {
+  const id = ctx.getUserId();
+  if (!id) throw new Error("Brak identyfikatora użytkownika w tokenie.");
+  return id;
+}
+
+/** Podpis do notatek: data + kto (e-mail albo id). */
+export function stamp(ctx: ToolContext): string {
+  const when = new Date().toISOString().slice(0, 16).replace("T", " ");
+  return `[${when} ${ctx.getUserEmail() ?? ctx.getUserId() ?? "mcp"}]`;
+}
+
+/** Buduje patch tylko z pól, które zostały podane (bez `undefined`). */
+export function patchOf(input: Record<string, unknown>, keys: readonly string[]) {
+  const out: Record<string, unknown> = {};
+  for (const k of keys) if (input[k] !== undefined) out[k] = input[k];
+  return out;
+}
+
+/** UPDATE … RETURNING — błąd gdy 0 wierszy (brak rekordu). */
+export async function updateOne(
+  client: SupabaseClient,
+  table: string,
+  id: string,
+  patch: Record<string, unknown>,
+  returning = "*",
+  idColumn = "id",
+): Promise<Record<string, any>> {
+  const { data, error } = await client
+    .from(table)
+    .update(patch)
+    .eq(idColumn, id)
+    .select(returning)
+    .maybeSingle();
+  if (error) throw new Error(`${table}: ${error.message}`);
+  if (!data) throw new Error(`${table}: nie znaleziono rekordu ${id}.`);
+  return data as Record<string, any>;
+}
+
+/** INSERT … RETURNING jednego wiersza. */
+export async function insertOne(
+  client: SupabaseClient,
+  table: string,
+  row: Record<string, unknown>,
+  returning = "*",
+): Promise<Record<string, any>> {
+  const { data, error } = await client.from(table).insert(row).select(returning).single();
+  if (error) throw new Error(`${table}: ${error.message}`);
+  return data as Record<string, any>;
+}
+
+export const WRITE = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: false,
+} as const;
+export const WRITE_IDEMPOTENT = { ...WRITE, idempotentHint: true } as const;
+export const DESTRUCTIVE = { ...WRITE, destructiveHint: true } as const;
+/** Narzędzie, które wysyła coś na zewnątrz (mail, SMS, Messenger). */
+export const SENDS = { ...WRITE, openWorldHint: true } as const;
+
 type HandlerResult = ReturnType<typeof ok> | ReturnType<typeof fail>;
 
 /** Opakowanie handlera: każdy wyjątek zamienia na `fail(message)`. */

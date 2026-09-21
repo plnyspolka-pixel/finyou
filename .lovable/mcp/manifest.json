@@ -4686,6 +4686,2570 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "outputSchema": null
+      },
+      {
+        "name": "update_lead",
+        "title": "Update lead",
+        "description": "Edycja leada: dane kontaktowe, status (nowy, w_kontakcie, rozmowa, wniosek_wyslany, wniosek_zlozony, zakwalifikowany, odrzucony, zamkniety, bad_lead), typ, źródło, jakość, przypisanie do operatora, oznaczenie jako zły lead z powodem, dopisanie notatki. Zmienia tylko podane pola. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "first_name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "last_name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "phone_raw": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "status": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60
+            },
+            "type": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 40,
+              "description": "np. klient, inwestor, posrednik"
+            },
+            "source": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "quality_tier": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "assigned_to": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Id operatora; null zdejmuje przypisanie."
+            },
+            "marked_bad_lead": {
+              "type": "boolean"
+            },
+            "marked_bad_reason": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "notes_append": {
+              "type": "string",
+              "maxLength": 4000,
+              "description": "Notatka do dopisania (z datą i autorem)."
+            }
+          },
+          "required": [
+            "lead_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "cancel_follow_ups",
+        "title": "Cancel pending follow-ups",
+        "description": "Anuluje wszystkie oczekujące (pending) follow-upy zaplanowane dla leada — kolejne maile/SMS-y/telefony z kadencji nie wyjdą. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "lead_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "queue_call",
+        "title": "Queue voicebot call",
+        "description": "Dodaje połączenie do kolejki voicebota (Ania zadzwoni do klienta w oknie godzinowym). Podaj numer albo lead_id / loan_application_id — numer weźmie się z rekordu. To realny telefon do prawdziwej osoby. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "phone": {
+              "type": "string",
+              "minLength": 9,
+              "maxLength": 20
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "scheduled_at": {
+              "type": "string",
+              "description": "Kiedy (ISO 8601); domyślnie od razu w najbliższym oknie."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_client",
+        "title": "Create client",
+        "description": "Zakłada klienta (pożyczkobiorcę) w CRM: imię, nazwisko, kontakt, firma, adres, notatka. Nie tworzy wniosku (do tego `create_loan_application`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "first_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "last_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "phone": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "company_name": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "nip": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "city": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "street": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "postal_code": {
+              "type": "string",
+              "maxLength": 12
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 4000
+            },
+            "source": {
+              "type": "string",
+              "maxLength": 80,
+              "default": "mcp"
+            }
+          },
+          "required": [
+            "first_name",
+            "last_name"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_client",
+        "title": "Update client",
+        "description": "Edycja klienta: dane kontaktowe i firmowe, adres, przypisany opiekun, blokady kontaktu (nie dzwonić / nie mailować / nie SMS-ować z powodem), dopisanie notatki. Zmienia tylko podane pola. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "first_name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "last_name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "phone": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "company_name": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "nip": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "city": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "street": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "postal_code": {
+              "type": "string",
+              "maxLength": 12
+            },
+            "assigned_user_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "do_not_call": {
+              "type": "boolean"
+            },
+            "do_not_call_reason": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "do_not_email": {
+              "type": "boolean"
+            },
+            "do_not_sms": {
+              "type": "boolean"
+            },
+            "notes_append": {
+              "type": "string",
+              "maxLength": 4000
+            }
+          },
+          "required": [
+            "client_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_loan_application",
+        "title": "Create loan application",
+        "description": "Zakłada wniosek pożyczkowy dla istniejącego klienta (status nowy_lead) — opcjonalnie z nieruchomością pod zabezpieczenie. Uruchamia standardową obsługę wniosku w panelu (przypomnienia, analizy) tak samo jak wniosek z formularza. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "loan_amount": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "preferred_period_months": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 360
+            },
+            "max_monthly_payment": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "situation_description": {
+              "type": "string",
+              "maxLength": 4000
+            },
+            "investor_purpose": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Cel finansowania (opis dla inwestorów)."
+            },
+            "assigned_operator": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "source": {
+              "type": "string",
+              "maxLength": 80,
+              "default": "mcp"
+            },
+            "property": {
+              "type": "object",
+              "properties": {
+                "property_type": {
+                  "type": "string",
+                  "enum": [
+                    "mieszkanie",
+                    "dom",
+                    "lokal_uslugowy",
+                    "dzialka_budowlana",
+                    "grunt_rolny",
+                    "udzial_w_nieruchomosci",
+                    "inna"
+                  ]
+                },
+                "city": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "street": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "address": {
+                  "type": "string",
+                  "maxLength": 300
+                },
+                "voivodeship": {
+                  "type": "string",
+                  "maxLength": 60
+                },
+                "land_register_number": {
+                  "type": "string",
+                  "maxLength": 30,
+                  "description": "Numer KW, np. WA1M/00123456/7."
+                },
+                "estimated_value": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "area_sqm": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "has_mortgage": {
+                  "type": "boolean"
+                },
+                "has_co_owners": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4000
+                }
+              },
+              "required": [
+                "property_type"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "client_id",
+            "loan_amount"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_application",
+        "title": "Update loan application",
+        "description": "Edycja wniosku: status (nowy_lead, w_trakcie_uzupelniania, braki_w_dokumentach, do_kontaktu, w_follow_upie, wniosek_kompletny, do_analizy, rokuje, nie_rokuje, wyslany_do_inwestorow, oferta_od_inwestora, oferta_przekazana_klientowi, zaakceptowany_przez_klienta, do_umowy i dalsze (patrz enum loan_status)), operator, decyzja administratora z uzasadnieniem, notatki, widoczność dla inwestorów, poziom anonimizacji, pauza automatyzacji / przypomnień, następny kontakt, ryzyko, kwota i okres, opis dla inwestorów. Zmiana statusu zapisuje się w historii i może wywołać standardowy e-mail statusowy do klienta (tak jak w panelu). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60
+            },
+            "assigned_operator": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "admin_decision": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "decision_reason": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "broker_notes_append": {
+              "type": "string",
+              "maxLength": 4000
+            },
+            "available_to_investors": {
+              "type": "boolean"
+            },
+            "visibility_level": {
+              "type": "string",
+              "enum": [
+                "zanonimizowane",
+                "czesciowe",
+                "pelne"
+              ]
+            },
+            "automation_paused": {
+              "type": "boolean"
+            },
+            "reminder_paused": {
+              "type": "boolean"
+            },
+            "next_contact_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "ISO 8601 albo null."
+            },
+            "risk_level": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "loan_amount": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "preferred_period_months": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 360
+            },
+            "max_monthly_payment": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "investor_description": {
+              "type": "string",
+              "maxLength": 4000
+            },
+            "investor_purpose": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          "required": [
+            "application_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "archive_application",
+        "title": "Archive / restore application",
+        "description": "Archiwizuje wniosek (znika z list roboczych, zostaje w bazie) albo przywraca go z archiwum (`restore=true`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "restore": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "application_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_property",
+        "title": "Add property to application",
+        "description": "Dodaje nieruchomość (zabezpieczenie) do wniosku: typ, lokalizacja, numer KW, szacowana wartość, powierzchnia, hipoteka, współwłaściciele. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "property_type": {
+              "type": "string",
+              "enum": [
+                "mieszkanie",
+                "dom",
+                "lokal_uslugowy",
+                "dzialka_budowlana",
+                "grunt_rolny",
+                "udzial_w_nieruchomosci",
+                "inna"
+              ]
+            },
+            "city": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "street": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "address": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "voivodeship": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "land_register_number": {
+              "type": "string",
+              "maxLength": 30,
+              "description": "Numer KW, np. WA1M/00123456/7."
+            },
+            "estimated_value": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "area_sqm": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "has_mortgage": {
+              "type": "boolean"
+            },
+            "has_co_owners": {
+              "type": "boolean"
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 4000
+            }
+          },
+          "required": [
+            "loan_application_id",
+            "property_type"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_missing_info_follow_up",
+        "title": "Pause / resume / stop missing-info follow-up",
+        "description": "Steruje kadencją „follow-up braków” dla wniosku: wstrzymaj (`paused=true`), wznów (`paused=false`), zakończ (`status=stopped`) albo przywróć (`status=active`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "paused": {
+              "type": "boolean"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "stopped"
+              ]
+            }
+          },
+          "required": [
+            "loan_application_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "answer_institution_question",
+        "title": "Record client's answer to institution question",
+        "description": "Zapisuje odpowiedź klienta na pytania instytucji finansującej (np. uzyskaną telefonicznie). Agent korespondencji przekaże ją instytucjom w najbliższym cyklu, jeśli pytania były już wysłane do klienta. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "thread_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_answer": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 8000
+            }
+          },
+          "required": [
+            "thread_id",
+            "client_answer"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_loan_proposal",
+        "title": "Create loan proposal (kreator)",
+        "description": "Tworzy propozycję pożyczki z kreatora: liczy ratę nominalną (annuitet), ratę ograniczoną do maks. raty klienta (reszta kapitału jako balon na końcu), odsetki, prowizję i koszt całkowity, zapisuje harmonogram jako szkic. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "months": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 360
+            },
+            "annual_rate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Roczne oprocentowanie w %."
+            },
+            "max_payment": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Maksymalna rata, jaką klient może płacić."
+            },
+            "commission_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30,
+              "default": 0
+            },
+            "client_name": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "client_email": {
+              "type": "string",
+              "format": "email"
+            },
+            "client_phone": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "note": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "source_application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "is_public": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "amount",
+            "months",
+            "annual_rate"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "send_email",
+        "title": "Send e-mail (inbox)",
+        "description": "Wysyła e-mail ze skrzynki Finance You do klienta, inwestora lub instytucji (nowy albo odpowiedź w wątku — podaj `reply_to_communication_id` z `read_inbox_thread`). Mail dostaje stopkę i trafia do historii korespondencji leada. To realna wiadomość do prawdziwej osoby — użyj TYLKO po tym, jak użytkownik zobaczył dokładną treść i wyraźnie kazał ją wysłać. Nie obiecuj warunków ani kwot, których nie ma w danych.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": "string",
+              "description": "Adres odbiorcy (maks. 3, rozdzielone przecinkiem)."
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "body": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000,
+              "description": "Treść (zwykły tekst, akapity)."
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Lead, do którego historii dopisać mail."
+            },
+            "reply_to_communication_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Id wiadomości, na którą odpowiadamy (kontynuacja wątku)."
+            }
+          },
+          "required": [
+            "to",
+            "subject",
+            "body"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "send_messenger_message",
+        "title": "Send Messenger / Instagram message",
+        "description": "Wysyła wiadomość do leada w Messengerze albo Instagram Direct (kanał wybiera się po tym, którym klient pisał). To realna wiadomość do prawdziwej osoby — użyj TYLKO po tym, jak użytkownik zobaczył dokładną treść i wyraźnie kazał ją wysłać. Nie obiecuj warunków ani kwot, których nie ma w danych.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "body": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          },
+          "required": [
+            "lead_id",
+            "body"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "send_chat_reply",
+        "title": "Send chat reply",
+        "description": "Odpowiada leadowi w czacie na stronie (`chat`) albo w czacie inwestora (`chat_inwestor`). To realna wiadomość do prawdziwej osoby — użyj TYLKO po tym, jak użytkownik zobaczył dokładną treść i wyraźnie kazał ją wysłać. Nie obiecuj warunków ani kwot, których nie ma w danych.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "body": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            },
+            "channel": {
+              "type": "string",
+              "enum": [
+                "chat",
+                "chat_inwestor"
+              ],
+              "default": "chat"
+            }
+          },
+          "required": [
+            "lead_id",
+            "body"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "send_sms",
+        "title": "Send SMS",
+        "description": "Wysyła SMS (Twilio) na numer albo do leada (numer z rekordu). Podlega strażnikom (wypis „dość to dość”, blokady kontaktu) i trafia do historii komunikacji. To realna wiadomość do prawdziwej osoby — użyj TYLKO po tym, jak użytkownik zobaczył dokładną treść i wyraźnie kazał ją wysłać. Nie obiecuj warunków ani kwot, których nie ma w danych.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "phone": {
+              "type": "string",
+              "minLength": 9,
+              "maxLength": 20
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "body": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 480
+            }
+          },
+          "required": [
+            "body"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "reply_institution_thread",
+        "title": "Reply to institution (offer thread)",
+        "description": "Odpowiada instytucji finansującej w wątku dystrybucji oferty (`distribution_id` z `list_institution_threads`); mail idzie z adresu wątku oferty, żeby odpowiedź instytucji wróciła do systemu. To realna wiadomość do prawdziwej osoby — użyj TYLKO po tym, jak użytkownik zobaczył dokładną treść i wyraźnie kazał ją wysłać. Nie obiecuj warunków ani kwot, których nie ma w danych.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "distribution_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "body": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000
+            }
+          },
+          "required": [
+            "distribution_id",
+            "subject",
+            "body"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "remember_admin_memory",
+        "title": "Remember (shared assistant memory)",
+        "description": "Zapisuje ustalenie do pamięci długotrwałej współdzielonej z asystentem panelu (/admin): tytuł, treść, rodzaj, przypięcie. Istniejący tytuł = aktualizacja treści. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200
+            },
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8000
+            },
+            "kind": {
+              "type": "string",
+              "maxLength": 40,
+              "default": "note",
+              "description": "np. note, fact, preference, rule"
+            },
+            "pinned": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "title",
+            "content"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "archive_admin_memory",
+        "title": "Forget (archive memory entry)",
+        "description": "Archiwizuje wpis pamięci asystenta po id (przestaje być wstrzykiwany do promptu). Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_investor_criteria",
+        "title": "Update investor distribution criteria",
+        "description": "Ustawia kryteria auto-dystrybucji instytucji/inwestora: widełki kwot, czy przyjmuje wnioski, czy auto-wysyłka włączona, pauza do daty, notatki. Zmienia tylko podane pola (upsert). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "investor_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "min_amount": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "max_amount": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "accepting_applications": {
+              "type": "boolean"
+            },
+            "auto_send_enabled": {
+              "type": "boolean"
+            },
+            "paused_until": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "ISO 8601 albo null (odpauzuj)."
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 1900
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "investor_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "decide_investor_offer",
+        "title": "Decide investor offer",
+        "description": "Decyzja administratora o ofercie inwestora: `approve` (zatwierdzona), `reject` (odrzucona), `send_to_client` (przekazana klientowi — klient zobaczy ją w swoim panelu), `mark_expired`, `back_to_review`. Opcjonalna notatka administratora. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "offer_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "decision": {
+              "type": "string",
+              "enum": [
+                "approve",
+                "reject",
+                "send_to_client",
+                "mark_expired",
+                "back_to_review"
+              ]
+            },
+            "admin_note": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          "required": [
+            "offer_id",
+            "decision"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "decide_auto_distribution_proposal",
+        "title": "Approve / reject auto-distribution proposal",
+        "description": "Zatwierdza (`approve`) albo odrzuca (`reject`) propozycję auto-dystrybucji wniosku do instytucji. UWAGA: zatwierdzenie od razu WYSYŁA ofertę mailem do dopasowanych instytucji (tak jak przycisk w panelu) i podlega dziennemu limitowi wysyłek. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "proposal_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "decision": {
+              "type": "string",
+              "enum": [
+                "approve",
+                "reject"
+              ]
+            }
+          },
+          "required": [
+            "proposal_id",
+            "decision"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "decide_criteria_change_proposal",
+        "title": "Apply / reject criteria change proposal",
+        "description": "Stosuje (`apply`) albo odrzuca (`reject`) propozycję zmiany kryteriów instytucji wyciągniętą z jej maila przez agenta korespondencji. `apply` nadpisuje kryteria dystrybucji tej instytucji i dopisuje źródło do notatek. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "proposal_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "decision": {
+              "type": "string",
+              "enum": [
+                "apply",
+                "reject"
+              ]
+            }
+          },
+          "required": [
+            "proposal_id",
+            "decision"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_investor_active",
+        "title": "Activate / deactivate investor",
+        "description": "Włącza lub wyłącza konto inwestora (`is_active`). Nieaktywny inwestor nie dostaje dystrybucji. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "investor_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "is_active": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "investor_id",
+            "is_active"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_project_proposal_status",
+        "title": "Set project proposal status",
+        "description": "Decyzja o propozycji inwestora w module projektów (te same statusy co w panelu: under_review, additional_information_required, presented_to_borrower, accepted_for_negotiation, counteroffer, rejected, expired, accepted, converted_to_transaction) z uzasadnieniem; kontroferta wymaga parametrów. Aktualizuje status projektu i wpis audytu jak panel. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "proposal_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "under_review",
+                "additional_information_required",
+                "presented_to_borrower",
+                "accepted_for_negotiation",
+                "counteroffer",
+                "rejected",
+                "expired",
+                "accepted",
+                "converted_to_transaction"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 4000
+            },
+            "counteroffer": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "proposal_id",
+            "status",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "answer_project_info_request",
+        "title": "Answer project info request",
+        "description": "Odpowiada na pytanie inwestora do projektu (moduł projektów); inwestor zobaczy odpowiedź w panelu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "answer": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 8000
+            }
+          },
+          "required": [
+            "request_id",
+            "answer"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_investment_project_status",
+        "title": "Set investment project status",
+        "description": "Zmienia status projektu inwestycyjnego (draft, under_review, available_internal_pool, paused, withdrawn, financed, closed) z uzasadnieniem — dokładnie jak panel: wejście do puli wymaga zaakceptowanego zdjęcia głównego; wycofanie/pauza/zamknięcie/sfinansowanie zamyka aktywne przypisania i informuje przypisanych inwestorów mailem. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "under_review",
+                "available_internal_pool",
+                "paused",
+                "withdrawn",
+                "financed",
+                "closed"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2000
+            }
+          },
+          "required": [
+            "project_id",
+            "status",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "grant_access",
+        "title": "Grant / extend platform access",
+        "description": "Nadaje lub przedłuża dostęp do platformy bez płatności (np. gest handlowy, test): użytkownik, grupa (investor / client / partner), liczba dni od dziś lub od końca obecnego dostępu, albo konkretna data końca. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 40,
+              "description": "np. investor, client, partner — jak w cenniku."
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 730
+            },
+            "active_until": {
+              "type": "string",
+              "description": "Alternatywnie: konkretna data końca (ISO 8601)."
+            }
+          },
+          "required": [
+            "user_id",
+            "audience"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_access_product",
+        "title": "Update access product (price list)",
+        "description": "Zmienia pozycję cennika: etykieta, cena w groszach, długość dostępu w dniach, aktywność, kolejność. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "product_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "amount_grosz": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "duration_days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3650
+            },
+            "active": {
+              "type": "boolean"
+            },
+            "sort_order": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "product_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "mark_payment_reviewed",
+        "title": "Mark payment as reviewed",
+        "description": "Zdejmuje flagę „wymaga przeglądu” z płatności za dostęp (po ręcznej weryfikacji). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "payment_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "payment_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_broker_settlement",
+        "title": "Update broker settlement",
+        "description": "Aktualizuje rozliczenie pośrednika: status, data wypłaty, notatki, kwota. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "settlement_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "paid_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "amount": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "settlement_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_affiliate_partner_status",
+        "title": "Update affiliate partner status",
+        "description": "Zmienia status partnera programu pośredników (np. pending_approval → active, active → suspended / blocked) z zapisem, kto zatwierdził. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "partner_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending_approval",
+                "active",
+                "suspended",
+                "blocked",
+                "rejected"
+              ]
+            }
+          },
+          "required": [
+            "partner_id",
+            "status"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "decide_affiliate_commission",
+        "title": "Approve / cancel affiliate commission",
+        "description": "Zatwierdza (`approve`) albo anuluje (`cancel`, z powodem) prowizję partnera. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "commission_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "decision": {
+              "type": "string",
+              "enum": [
+                "approve",
+                "cancel"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          "required": [
+            "commission_id",
+            "decision"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_collection_case",
+        "title": "Update collection case",
+        "description": "Aktualizuje sprawę windykacyjną: etap, priorytet (niski/sredni/wysoki/krytyczny), ścieżka (miekka/standardowa/twarda/karna), osoba prowadząca, wynik (splacona/ugoda/egzekucja_w_toku/umorzona/przekazana_karna), data zamknięcia. Zmiana etapu dopisuje zdarzenie w chronologii. Inwestor — swoje sprawy (RLS), zespół — wszystkie.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "case_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "etap": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "priorytet": {
+              "type": "string",
+              "enum": [
+                "niski",
+                "sredni",
+                "wysoki",
+                "krytyczny"
+              ]
+            },
+            "sciezka": {
+              "type": "string",
+              "enum": [
+                "miekka",
+                "standardowa",
+                "twarda",
+                "karna"
+              ]
+            },
+            "osoba_prowadzaca": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "wynik": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "splacona",
+                    "ugoda",
+                    "egzekucja_w_toku",
+                    "umorzona",
+                    "przekazana_karna"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data_zamkniecia": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "case_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_collection_event",
+        "title": "Add collection case event",
+        "description": "Dopisuje zdarzenie do chronologii sprawy windykacyjnej (telefon, SMS, e-mail, pismo nadane/doręczone/awizo/zwrot, wpłata, notatka, czynność sądowa) z datą i treścią. Nie wysyła niczego — to zapis w aktach. Inwestor — swoje sprawy (RLS), zespół — wszystkie.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "case_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "typ": {
+              "type": "string",
+              "enum": [
+                "sms",
+                "email",
+                "telefon",
+                "pismo_nadane",
+                "pismo_doreczone",
+                "pismo_awizo",
+                "pismo_zwrot",
+                "wplata",
+                "dokument_wygenerowany",
+                "zmiana_etapu",
+                "notatka",
+                "czynnosc_sadowa"
+              ]
+            },
+            "tytul": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "tresc": {
+              "type": "string",
+              "maxLength": 8000
+            },
+            "data_zdarzenia": {
+              "type": "string",
+              "description": "ISO 8601; domyślnie teraz."
+            },
+            "zalacznik_url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "case_id",
+            "typ",
+            "tytul"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_wind_loan",
+        "title": "Update loan (collections module)",
+        "description": "Aktualizuje pożyczkę w module windykacji: status (aktywna, w_zwloce, wypowiedziana, windykacja_komornicza, splacona, windykacja_karna), saldo pozostałe, data ostatniej wpłaty, termin spłaty, data wypowiedzenia. Inwestor — swoje (RLS), zespół — wszystkie.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loan_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "aktywna",
+                "w_zwloce",
+                "wypowiedziana",
+                "windykacja_komornicza",
+                "splacona",
+                "windykacja_karna"
+              ]
+            },
+            "saldo_pozostale": {
+              "type": "number",
+              "minimum": 0
+            },
+            "data_ostatniej_wplaty": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "termin_splaty": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "data_wypowiedzenia": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "loan_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_seo_article_draft",
+        "title": "Create blog article draft",
+        "description": "Zakłada szkic artykułu bloga (markdown) dla grupy borrower albo investor z meta danymi i słowami kluczowymi. Nie publikuje. Publikacja przez `update_seo_article` wymaga własnej okładki (`cover_image_url`) — zasada bloga Finance You. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 200
+            },
+            "content_md": {
+              "type": "string",
+              "minLength": 50,
+              "maxLength": 200000
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "borrower",
+                "investor"
+              ]
+            },
+            "slug": {
+              "type": "string",
+              "maxLength": 90,
+              "description": "Domyślnie z tytułu."
+            },
+            "excerpt": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "meta_title": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "meta_description": {
+              "type": "string",
+              "maxLength": 320
+            },
+            "primary_keyword": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 2
+              },
+              "maxItems": 20
+            },
+            "cta_label": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "cta_url": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "scheduled_for": {
+              "type": "string",
+              "description": "Planowana data publikacji (ISO 8601)."
+            },
+            "topic_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Temat z kolejki, który ten artykuł realizuje."
+            }
+          },
+          "required": [
+            "title",
+            "content_md",
+            "audience"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_seo_article",
+        "title": "Update / publish blog article",
+        "description": "Edytuje artykuł bloga (tytuł, treść, meta, słowa kluczowe, CTA, okładka, termin) i zmienia status: draft, scheduled (z `scheduled_for`), published (ustawia datę publikacji; wymaga okładki), archived (zdejmuje ze strony). Publikacja jest publiczna od razu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "article_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 200
+            },
+            "content_md": {
+              "type": "string",
+              "minLength": 50,
+              "maxLength": 200000
+            },
+            "excerpt": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "meta_title": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "meta_description": {
+              "type": "string",
+              "maxLength": 320
+            },
+            "keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 2
+              },
+              "maxItems": 20
+            },
+            "primary_keyword": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "cta_label": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "cta_url": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "cover_image_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "cover_image_alt": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "scheduled_for": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "scheduled",
+                "published",
+                "archived"
+              ]
+            }
+          },
+          "required": [
+            "article_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_blog_topic",
+        "title": "Update blog topic",
+        "description": "Edytuje temat w kolejce SEO: tytuł, słowo kluczowe, frazy dodatkowe, priorytet, notatki, status. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "topic_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 200
+            },
+            "primary_keyword": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "secondary_keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 2
+              },
+              "maxItems": 15
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "status": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          "required": [
+            "topic_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_blog_topic",
+        "title": "Delete blog topic",
+        "description": "Usuwa temat z kolejki SEO (nie dotyczy tematów w trakcie generowania). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "topic_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "topic_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_social_post",
+        "title": "Create social post (draft / scheduled)",
+        "description": "Tworzy post w module Social (facebook, instagram, linkedin, x, tiktok, threads): treść, hashtagi, obraz, link, kampania. Z `scheduled_at` dostaje status scheduled, bez — draft. Publikacja postów z tego modułu odbywa się z panelu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "platform": {
+              "type": "string",
+              "enum": [
+                "facebook",
+                "instagram",
+                "linkedin",
+                "x",
+                "tiktok",
+                "threads"
+              ]
+            },
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 5000
+            },
+            "hashtags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maxItems": 30
+            },
+            "image_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "link_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "campaign": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "scheduled_at": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "platform",
+            "content"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "queue_social_publication",
+        "title": "Queue automatic publication (Facebook / Instagram)",
+        "description": "Dodaje wpis do kolejki automatycznej publikacji (facebook_post, facebook_reels, instagram_reels) — tick opublikuje go o zadanej porze bez dalszego udziału człowieka. To realna publikacja na profilu firmy. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "platform": {
+              "type": "string",
+              "enum": [
+                "facebook_post",
+                "facebook_reels",
+                "instagram_reels"
+              ]
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 5000
+            },
+            "image_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Wymagane dla facebook_post bez wideo."
+            },
+            "video_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Wymagane dla reels."
+            },
+            "scheduled_at": {
+              "type": "string",
+              "description": "Kiedy opublikować (ISO 8601)."
+            }
+          },
+          "required": [
+            "platform",
+            "title",
+            "message",
+            "scheduled_at"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_email_campaign_draft",
+        "title": "Create e-mail campaign draft",
+        "description": "Zakłada szkic kampanii mailowej (nazwa, temat, treść HTML lub tekst, nadawca, grupa: leady / klienci / inwestorzy / wszyscy, filtr odbiorców). Nic nie wysyła — wysyłkę uruchamia się z panelu Mailing po podglądzie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "html_body": {
+              "type": "string",
+              "maxLength": 200000
+            },
+            "text_body": {
+              "type": "string",
+              "maxLength": 200000
+            },
+            "from_email": {
+              "type": "string",
+              "format": "email",
+              "default": "kontakt@financeyou.pl"
+            },
+            "from_name": {
+              "type": "string",
+              "maxLength": 200,
+              "default": "Finance You"
+            },
+            "audience_type": {
+              "type": "string",
+              "enum": [
+                "leady",
+                "klienci",
+                "inwestorzy",
+                "wszyscy"
+              ]
+            },
+            "audience_filter": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "preview_text": {
+              "type": "string",
+              "maxLength": 300
+            }
+          },
+          "required": [
+            "name",
+            "subject",
+            "audience_type"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_email_subscriber",
+        "title": "Add e-mail subscriber",
+        "description": "Dodaje adres do listy mailingowej (status active) z imieniem, tagami i źródłem. Nie wysyła maila. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "first_name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "last_name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maxItems": 20
+            },
+            "source": {
+              "type": "string",
+              "maxLength": 80,
+              "default": "mcp"
+            }
+          },
+          "required": [
+            "email"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "unsubscribe_email",
+        "title": "Unsubscribe e-mail address",
+        "description": "Wypisuje adres ze wszystkich automatycznych wysyłek Finance You (strażnik „dość to dość”): dodaje do listy blokad i oznacza subskrybenta jako wypisanego. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 300,
+              "default": "wypis przez MCP"
+            }
+          },
+          "required": [
+            "email"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_serp_keyword",
+        "title": "Add tracked keyword",
+        "description": "Dodaje frazę do śledzenia pozycji w Google (lokalizacja, język, intencja, docelowy URL, tagi). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "keyword": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200
+            },
+            "location": {
+              "type": "string",
+              "maxLength": 80,
+              "default": "Poland"
+            },
+            "language": {
+              "type": "string",
+              "maxLength": 10,
+              "default": "pl"
+            },
+            "intent": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "target_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maxItems": 20
+            }
+          },
+          "required": [
+            "keyword"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_serp_keyword_active",
+        "title": "Enable / disable tracked keyword",
+        "description": "Włącza lub wyłącza śledzenie frazy. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "keyword_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "is_active": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "keyword_id",
+            "is_active"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_pr_opportunity",
+        "title": "Update PR opportunity",
+        "description": "Aktualizuje okazję PR: status, notatki, szkic odpowiedzi (temat, treść), adresat. Nic nie wysyła. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "opportunity_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 4000
+            },
+            "draft_subject": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "draft_body": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "recipient_email": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "email"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "opportunity_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_short_link",
+        "title": "Create short link",
+        "description": "Tworzy krótki link financeyou.pl (do SMS-a, maila, posta) do dowolnego adresu, opcjonalnie powiązany z leadem / klientem / wnioskiem i z datą ważności. Zwraca kod i pełny URL; kliknięcia liczą się w `list_short_links`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "target_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "source": {
+              "type": "string",
+              "maxLength": 60,
+              "default": "mcp"
+            },
+            "expires_in_days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365
+            }
+          },
+          "required": [
+            "target_url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_landing_page_published",
+        "title": "Publish / unpublish landing page",
+        "description": "Publikuje albo zdejmuje landing page (`published`). Publikacja jest widoczna publicznie od razu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_page_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "published": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "landing_page_id",
+            "published"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
       }
     ]
   }

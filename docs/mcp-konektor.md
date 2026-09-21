@@ -8,8 +8,13 @@ logując się **własnym kontem Finance You**. W torze między czatem a danymi
 jest wyłącznie financeyou.pl i baza; Lovable dostarcza tylko bibliotekę
 (`@lovable.dev/mcp-js`), która obsługuje protokół.
 
-Nic nie dzieje się automatycznie: konektor odpowiada wyłącznie na pytania
-zadane w czacie. Żadnych cyklicznych maili ani pushy z tego modułu.
+Konektor działa **w obie strony**: agent czyta dane i wykonuje akcje panelu
+(edycja leadów, klientów i wniosków, decyzje o ofertach i propozycjach,
+kryteria instytucji, dostępy, windykacja, treści) oraz wysyła wiadomości
+(e-mail, SMS, Messenger, czat, odpowiedź instytucji). Nic nie dzieje się
+automatycznie: każdy zapis to wywołanie na polecenie użytkownika w czacie, a
+klient MCP (Claude.ai / ChatGPT) prosi o potwierdzenie przed każdym narzędziem
+zapisującym. Żadnych cyklicznych maili ani pushy z tego modułu.
 
 ## Co jest w repo
 
@@ -66,8 +71,8 @@ Jeśli zestaw ma być mniejszy, wystarczy usunąć grupę z listy w
 
 ## Katalog narzędzi
 
-Wszystkie narzędzia poza siedmioma wymienionymi w „Zapis" są **tylko do
-odczytu**. Listy przyjmują `limit` / `offset` i zwracają `total`. Filtry dat
+Narzędzia z sekcji „Zapis” zmieniają dane albo wysyłają wiadomości; pozostałe
+są **tylko do odczytu**. Listy przyjmują `limit` / `offset` i zwracają `total`. Filtry dat
 przyjmują ISO 8601 albo `YYYY-MM-DD`. Wrażliwe pola (PESEL, numery kont, hashe
 OTP, dane bankowe partnerów) nie są zwracane.
 
@@ -231,20 +236,27 @@ OTP, dane bankowe partnerów) nie są zwracane.
 | `calculate_repayment_schedule` | Pełny harmonogram: równe, malejące, balon; prowizja. |
 | `calculate_ltv`                | LTV, przedział, maks. kwota przy limicie.            |
 
-**Zapis** (klient MCP pyta o potwierdzenie przed każdym wywołaniem)
+**Zapis** (klient MCP pyta o potwierdzenie przed każdym wywołaniem; rola
+administrator/operator, chyba że zaznaczono inaczej)
 
-| Narzędzie                | Co robi                                              |
-| ------------------------ | ---------------------------------------------------- |
-| `create_lead`            | Nowy lead.                                           |
-| `update_lead_status`     | Zmiana statusu leada (+ notatka).                    |
-| `log_lead_communication` | Wpis w historii komunikacji (np. notatka z rozmowy). |
-| `add_lead_note`          | Dopisanie notatki do leada.                          |
-| `assign_lead`            | Przypisanie leada do operatora.                      |
-| `send_chat_message`      | Wiadomość w czacie klient ↔ inwestor.                |
-| `add_blog_topic`         | Temat do kolejki bloga (nic nie publikuje od razu).  |
+| Obszar                | Narzędzia                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Leady                 | `create_lead`, `update_lead` (dane, status, typ, źródło, jakość, przypisanie, zły lead, notatka), `update_lead_status`, `add_lead_note`, `assign_lead`, `log_lead_communication`, `cancel_follow_ups`, `queue_call` (voicebot zadzwoni)                                                                                                                                                                                                 |
+| Klienci i wnioski     | `create_client`, `update_client` (dane, opiekun, blokady kontaktu), `create_loan_application` (+ nieruchomość), `update_application` (status, operator, decyzja, widoczność, pauzy, ryzyko, kwoty), `archive_application`, `add_property`, `set_missing_info_follow_up`, `answer_institution_question`, `create_loan_proposal`                                                                                                          |
+| Wysyłki               | `send_email`, `send_sms`, `send_messenger_message`, `send_chat_reply`, `reply_institution_thread`, `send_chat_message` — realne wiadomości do ludzi; agent ma pokazać treść i czekać na „wyślij”                                                                                                                                                                                                                                        |
+| Inwestorzy i oferty   | `update_investor_criteria`, `decide_investor_offer` (zatwierdź / odrzuć / przekaż klientowi / wygasła), `decide_auto_distribution_proposal` (zatwierdzenie **wysyła** ofertę do instytucji), `decide_criteria_change_proposal`, `set_investor_active`                                                                                                                                                                                   |
+| Projekty inwestycyjne | `set_project_proposal_status` (statusy jak w panelu, kontroferta), `answer_project_info_request`, `set_investment_project_status` (pula / pauza / wycofanie — z audytem i mailem do przypisanych inwestorów jak w panelu)                                                                                                                                                                                                               |
+| Finanse i pośrednicy  | `grant_access` (administrator), `update_access_product` (administrator), `mark_payment_reviewed`, `update_broker_settlement`, `update_affiliate_partner_status` (administrator), `decide_affiliate_commission` (administrator)                                                                                                                                                                                                          |
+| Windykacja            | `update_collection_case` (etap z wpisem w chronologii), `add_collection_event`, `update_wind_loan` — inwestor na swoich sprawach (RLS), zespół na wszystkich                                                                                                                                                                                                                                                                            |
+| Treści i marketing    | `create_seo_article_draft`, `update_seo_article` (publikacja wymaga okładki), `add_blog_topic`, `update_blog_topic`, `delete_blog_topic`, `create_social_post`, `queue_social_publication` (auto-publikacja FB/IG), `create_email_campaign_draft` (bez wysyłki), `add_email_subscriber`, `unsubscribe_email`, `add_serp_keyword`, `set_serp_keyword_active`, `update_pr_opportunity`, `create_short_link`, `set_landing_page_published` |
+| Pamięć asystenta      | `remember_admin_memory`, `archive_admin_memory` (administrator) — wspólna pamięć z asystentem panelu                                                                                                                                                                                                                                                                                                                                    |
 
-Wysyłki maili, SMS-ów i Messengera przez konektor celowo **nie ma** — te
-kanały obsługuje panel i asystent panelu, który pokazuje treść przed wysłaniem.
+Narzędzia zapisu zespołu działają tak jak server functions panelu: sprawdzają
+rolę i piszą klientem serwisowym (polityki RLS nie obejmują wszystkich zapisów
+administratora). Statusy, wpisy audytu i skutki uboczne (np. e-mail statusowy
+do klienta po zmianie statusu wniosku, mail do inwestorów po wycofaniu
+projektu) są te same co w panelu — narzędzia wołają ten sam kod
+(`comms-agent`, `auto-distribution/engine`, `projects/audit`, `short-link`).
 
 Przykładowe pytania w czacie:
 
@@ -255,6 +267,11 @@ Przykładowe pytania w czacie:
 - „Jak wypadł ten tydzień vs poprzedni?" → `get_kpi_report`
 - „Czy coś się wysypało w nocy?" → `get_platform_health`, `list_external_api_calls`
 - „Jaka jest nasza pozycja na 'pożyczka pod zastaw nieruchomości'?" → `list_serp_keywords`
+- „Odpisz Kowalskiemu, że rata przy 300 tys. na 24 miesiące wyniesie X i zaproponuj telefon jutro” → `read_inbox_thread` + `calculate_loan_installment` + `send_email` (po potwierdzeniu)
+- „Przypisz wszystkie dzisiejsze leady z Meta do Ani i zmień status na w_kontakcie” → `list_leads` + `update_lead`
+- „Zatwierdź ofertę inwestora X do wniosku Y i przekaż klientowi” → `decide_investor_offer`
+- „Wstrzymaj przypomnienia dla wniosku Z na dwa tygodnie i dopisz notatkę” → `update_application`
+- „Dodaj temat na blog o pożyczce pod działkę rolną i zaplanuj post na FB na piątek 10:00” → `add_blog_topic` + `queue_social_publication`
 
 ## Jak dodać kolejne narzędzie
 
@@ -279,6 +296,73 @@ Złożone narzędzie — `defineTool` z `handle(async () => …)` i `requireTeam
 `index.ts`, odświeżyć manifest (`node
 node_modules/@lovable.dev/mcp-js/dist/cli/extract-manifest.cjs .` albo
 `bun run build`), nie edytować ręcznie tras `[.mcp]` / `[.well-known]`.
+
+## Wdrożenie przez Lovable — gotowe polecenie
+
+Repozytorium jest podpięte do projektu Lovable „Financeyou.pl”; Lovable
+synchronizuje gałąź `main`. Kolejność: (1) merge tej gałęzi do `main` w
+GitHubie, (2) w czacie Lovable wkleić polecenie poniżej, (3) po raporcie
+Lovable dodać konektor w Claude.ai / ChatGPT.
+
+```
+Cel: uruchomić na produkcji (https://financeyou.pl) serwer MCP z repozytorium i potwierdzić, że
+działa w obie strony (odczyt i zapis) dla Claude.ai / ChatGPT. Kod jest już w main — NIE pisz
+narzędzi od nowa, NIE zmieniaj plików w src/lib/mcp ani .lovable/mcp/manifest.json, NIE dodawaj
+cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, konfiguracja i testy.
+
+1. Sprawdź, że po synchronizacji z GitHub masz: src/lib/mcp/index.ts (ok. 174 narzędzia, w tym
+   57 zapisujących), src/lib/mcp/_list-tool.ts, src/lib/mcp/tools/writes-*.ts, scripts/check-mcp.ts,
+   docs/mcp-konektor.md. Build (bun run build) ma przechodzić. Nie formatuj ręcznie plików
+   generowanych przez plugin (src/routes/[.mcp]/*, src/routes/[.well-known]/*, src/routes/mcp.ts).
+
+2. Backend (Lovable Cloud / baza): w ustawieniach Auth włącz OAuth Server (OAuth 2.1) z:
+   - adresem strony zgody: https://financeyou.pl/.lovable/oauth/consent
+   - włączoną dynamiczną rejestracją klientów (Dynamic Client Registration) — Claude.ai i ChatGPT
+     rejestrują się same;
+   - jeśli panel wymaga listy dozwolonych redirect URI, dodaj:
+     https://claude.ai/api/mcp/auth_callback i https://chatgpt.com/connector_platform_oauth_redirect.
+   Upewnij się, że w środowisku serwera są: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,
+   SUPABASE_SERVICE_ROLE_KEY (narzędzia MCP czytają je z process.env), a do wysyłek:
+   LOVABLE_API_KEY + RESEND_API_KEY (e-mail), TWILIO_API_KEY (SMS), META_PAGE_ACCESS_TOKEN /
+   META_IG_PAGE_ACCESS_TOKEN (Messenger). Nie pokazuj mi wartości sekretów, tylko czy są.
+
+3. Opublikuj aplikację (Publish / Update), tak żeby financeyou.pl serwował aktualny build.
+
+4. Weryfikacja bez logowania — uruchom `bun run scripts/check-mcp.ts` (albo równoważne curl):
+   - GET https://financeyou.pl/.well-known/oauth-protected-resource → 200, JSON z authorization_servers;
+   - metadane serwera autoryzacji z tej listy → zawierają authorization_endpoint, token_endpoint
+     i registration_endpoint;
+   - POST https://financeyou.pl/mcp (JSON-RPC initialize, bez tokenu) → 401 z nagłówkiem
+     WWW-Authenticate zawierającym resource_metadata;
+   - GET https://financeyou.pl/.lovable/oauth/consent?authorization_id=test → 200 albo przekierowanie
+     do logowania.
+   Każde ❌ napraw w konfiguracji (nie w kodzie narzędzi) i uruchom ponownie.
+
+5. Test w obie strony z tokenem użytkownika: zaloguj się kontem administratora testowego przez API
+   auth bazy (grant hasłem), weź access_token i wołaj POST https://financeyou.pl/mcp z nagłówkiem
+   Authorization: Bearer <token> (JSON-RPC 2.0: initialize, tools/list, tools/call):
+   a) tools/list → lista ma get_updates_since, list_inbox_threads, list_leads, update_lead,
+      send_email, decide_investor_offer, grant_access;
+   b) tools/call get_my_profile → moje role zawierają administrator;
+   c) tools/call list_leads {limit: 3} → wiersze + total;
+   d) tools/call get_updates_since {} → liczniki z ostatniej godziny;
+   e) ZAPIS: na leadzie testowym (załóż go przez create_lead z first_name "TEST MCP", source "mcp_test")
+      wywołaj add_lead_note {note: "test MCP"} → w panelu /operator/leady/<id> notatka jest widoczna;
+      potem update_lead {status: "w_kontakcie"} → status zmieniony; potem update_lead
+      {marked_bad_lead: true, marked_bad_reason: "test"} → lead oznaczony jako zły;
+   f) ZAPIS: create_short_link {target_url: "https://financeyou.pl", source: "mcp_test"} → zwraca kod
+      i URL, a URL przekierowuje;
+   g) WYSYŁKA: send_email tylko na adres testowy z naszej domeny (np. kontakt@financeyou.pl):
+      {to, subject: "Test MCP", body: "Test wysyłki przez konektor"} → ok:true i wpis w skrzynce
+      panelu; NIE wysyłaj nic do prawdziwych klientów ani instytucji;
+   h) sprawdź odmowę: tym samym tokenem, ale kontem bez roli zespołu (np. testowy inwestor),
+      tools/call list_leads → błąd "Wymagane uprawnienia administrator/operator".
+   Po testach usuń lead testowy (albo zostaw oznaczony jako zły z powodem "test") i link testowy.
+
+6. Raport dla mnie: tabela kroków 1–5 z ✅/❌, dokładne odpowiedzi z punktu 4, id leada testowego,
+   co zmieniłeś w konfiguracji. Jeśli coś nie działa z powodu kodu — opisz błąd i zaproponuj
+   poprawkę, ale nie wdrażaj zmian w src/lib/mcp bez mojej zgody.
+```
 
 ## Weryfikacja produkcji
 
@@ -311,6 +395,8 @@ Ten sam skrypt przyjmuje inny adres jako argument (np. podgląd Lovable).
    sekretów).
 2. `bun run scripts/check-mcp.ts` → wszystkie ✅.
 3. Dodać konektor w Claude.ai / ChatGPT i zadać „Pokaż mój profil Finance You".
+4. Pierwszy zapis zrobić na leadzie testowym („dodaj notatkę do leada TEST MCP"), żeby
+   zobaczyć, jak klient MCP prosi o potwierdzenie.
 
 ## Dane osobowe i bezpieczeństwo
 
@@ -324,6 +410,9 @@ Ten sam skrypt przyjmuje inny adres jako argument (np. podgląd Lovable).
   administratora w czacie = pełny wgląd; do testów można użyć konta operatora.
 - PESEL, numery kont, dane bankowe partnerów i hashe OTP nie są zwracane przez
   żadne narzędzie.
-- Narzędzia zapisujące wymagają logowania i roli zespołu; klienci MCP proszą o
-  potwierdzenie przed zapisem. Żadne narzędzie nie wysyła maili, SMS-ów ani
-  wiadomości Messenger.
+- Narzędzia zapisujące wymagają logowania i roli zespołu (część tylko
+  administrator); klienci MCP proszą o potwierdzenie przed każdym zapisem.
+  Narzędzia `send_*` i `reply_institution_thread` wysyłają realne wiadomości —
+  instrukcja serwera każe agentowi pokazać treść i czekać na wyraźne „wyślij".
+  Zdarzenia zapisu są widoczne w panelu (notatki mają podpis MCP, e-maile mają
+  źródło `mcp` w metadanych, akcje projektów trafiają do audytu).
