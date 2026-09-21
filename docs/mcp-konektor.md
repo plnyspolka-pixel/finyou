@@ -340,6 +340,10 @@ token z wygaśnięciem „nigdy”:
    `instagram_basic`, `instagram_content_publish`, `instagram_manage_comments`,
    `instagram_manage_insights`, `instagram_manage_messages`,
    `business_management`, `leads_retrieval`, `ads_read`, `ads_management`.
+   Jeśli `META_ACCESS_TOKEN` jest już tokenem użytkownika systemowego (tak jest
+   w Finance You: `meta_status` pokazuje `type: SYSTEM_USER`, `expires_at:
+never`), nie trzeba nic generować — serwer wyprowadza z niego tokeny strony
+   i Instagrama sam (`derived_from: META_ACCESS_TOKEN`).
 4. Wklej token jako sekret `META_SYSTEM_USER_TOKEN` (Lovable → Ustawienia
    projektu → Secrets). Stare `META_PAGE_ACCESS_TOKEN`,
    `META_IG_PAGE_ACCESS_TOKEN` i `META_ACCESS_TOKEN` można zostawić — serwer

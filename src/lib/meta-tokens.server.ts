@@ -26,6 +26,8 @@ export type MetaTokenSource = "env" | "system_user" | "none";
 export type MetaTokensState = {
   checkedAt: number;
   source: MetaTokenSource;
+  /** Skąd wyprowadzono tokeny strony: osobny sekret albo META_ACCESS_TOKEN, gdy sam jest tokenem systemowym. */
+  derivedFrom: "META_SYSTEM_USER_TOKEN" | "META_ACCESS_TOKEN" | null;
   pageId: string | null;
   pageName: string | null;
   igUserId: string | null;
@@ -87,23 +89,21 @@ async function derivePages(systemUserToken: string): Promise<PageEntry[]> {
 
 async function refresh(force: boolean): Promise<MetaTokensState> {
   const now = Date.now();
-  const sys = process.env.META_SYSTEM_USER_TOKEN?.trim() || "";
   const env = process.env;
   const replaced: string[] = [];
   const base: MetaTokensState = {
     checkedAt: now,
     source: "none",
+    derivedFrom: null,
     pageId: env.META_PAGE_ID || null,
     pageName: null,
     igUserId: env.META_IG_USER_ID || null,
     replaced,
     error: null,
   };
-  if (!sys) {
-    return {
-      ...base,
-      source: env.META_PAGE_ACCESS_TOKEN || env.META_ACCESS_TOKEN ? "env" : "none",
-    };
+  const explicitSys = env.META_SYSTEM_USER_TOKEN?.trim() || "";
+  if (!explicitSys && !env.META_ACCESS_TOKEN) {
+    return { ...base, source: env.META_PAGE_ACCESS_TOKEN ? "env" : "none" };
   }
 
   const [pageOk, igOk, userOk] = await Promise.all([
@@ -113,10 +113,27 @@ async function refresh(force: boolean): Promise<MetaTokensState> {
       : Promise.resolve(false),
     env.META_ACCESS_TOKEN ? tokenWorks(env.META_ACCESS_TOKEN) : Promise.resolve(false),
   ]);
+  // Źródło tokenów strony: osobny sekret, a gdy go nie ma — META_ACCESS_TOKEN,
+  // o ile działa (w Finance You to token użytkownika systemowego, „nigdy nie wygasa”).
+  const sys = explicitSys || (userOk ? (env.META_ACCESS_TOKEN as string) : "");
+  const derivedFrom: MetaTokensState["derivedFrom"] = explicitSys
+    ? "META_SYSTEM_USER_TOKEN"
+    : sys
+      ? "META_ACCESS_TOKEN"
+      : null;
+  if (!sys) {
+    return {
+      ...base,
+      source: env.META_PAGE_ACCESS_TOKEN ? "env" : "none",
+      error: env.META_ACCESS_TOKEN
+        ? "META_ACCESS_TOKEN jest nieważny, a META_SYSTEM_USER_TOKEN nie jest ustawiony — nie ma z czego wyprowadzić tokenów strony."
+        : null,
+    };
+  }
   const needPage = force || pageOk === false;
   const needIg = force || igOk === false;
-  const needUser = force || userOk === false;
-  if (!needPage && !needIg && !needUser) return { ...base, source: "env" };
+  const needUser = (force || userOk === false) && Boolean(explicitSys);
+  if (!needPage && !needIg && !needUser) return { ...base, source: "env", derivedFrom };
 
   let pages: PageEntry[];
   try {
@@ -156,6 +173,7 @@ async function refresh(force: boolean): Promise<MetaTokensState> {
   return {
     ...base,
     source: "system_user",
+    derivedFrom,
     pageId: env.META_PAGE_ID || page.id,
     pageName: page.name,
     igUserId: env.META_IG_USER_ID || page.igUserId,
@@ -174,6 +192,7 @@ export async function ensureMetaTokens(opts: { force?: boolean } = {}): Promise<
     .catch((e) => ({
       checkedAt: Date.now(),
       source: "env" as const,
+      derivedFrom: null,
       pageId: process.env.META_PAGE_ID || null,
       pageName: null,
       igUserId: process.env.META_IG_USER_ID || null,
@@ -216,7 +235,15 @@ async function debugToken(
   const appSecret = process.env.META_APP_SECRET;
   const inspector = appId && appSecret ? `${appId}|${appSecret}` : token;
   try {
-    const r = await graphGet("debug_token", { input_token: token, access_token: inspector });
+    let r = await graphGet("debug_token", { input_token: token, access_token: inspector });
+    if (
+      !r.ok &&
+      inspector !== token &&
+      /Viewing App|did not match/i.test(r.json?.error?.message ?? "")
+    ) {
+      // Token z innej aplikacji Meta (np. piksel) — sprawdź nim samym.
+      r = await graphGet("debug_token", { input_token: token, access_token: token });
+    }
     const d = r.json?.data;
     if (!r.ok || !d) {
       return {
@@ -259,6 +286,7 @@ async function debugToken(
 
 export async function metaTokenHealth(): Promise<{
   source: MetaTokenSource;
+  derived_from: MetaTokensState["derivedFrom"];
   replaced: string[];
   error: string | null;
   tokens: MetaTokenHealth[];
@@ -295,9 +323,11 @@ export async function metaTokenHealth(): Promise<{
     tokens.push({ name, configured: true, preview: mask(value), ...h });
   }
   const warnings: string[] = [];
-  if (!process.env.META_SYSTEM_USER_TOKEN) {
+  const userTok = tokens.find((t) => t.name === "META_ACCESS_TOKEN");
+  const userIsSystem = userTok?.type === "SYSTEM_USER" && userTok.valid === true;
+  if (!process.env.META_SYSTEM_USER_TOKEN && !userIsSystem) {
     warnings.push(
-      "Brak META_SYSTEM_USER_TOKEN — tokeny strony / Instagrama są przypięte do hasła osoby i mogą wygasnąć; patrz docs/mcp-konektor.md → „Token Meta na stałe”.",
+      "Brak META_SYSTEM_USER_TOKEN, a META_ACCESS_TOKEN nie jest ważnym tokenem użytkownika systemowego — tokeny strony / Instagrama są przypięte do hasła osoby i mogą wygasnąć; patrz docs/mcp-konektor.md → „Token Meta na stałe”.",
     );
   }
   for (const t of tokens) {
@@ -308,5 +338,12 @@ export async function metaTokenHealth(): Promise<{
       warnings.push(`${t.name}: wygasa za ${t.days_left} dni (${t.expires_at}).`);
   }
   if (s.error) warnings.push(`Wyprowadzanie tokenów z użytkownika systemowego: ${s.error}`);
-  return { source: s.source, replaced: s.replaced, error: s.error, tokens, warnings };
+  return {
+    source: s.source,
+    derived_from: s.derivedFrom,
+    replaced: s.replaced,
+    error: s.error,
+    tokens,
+    warnings,
+  };
 }
