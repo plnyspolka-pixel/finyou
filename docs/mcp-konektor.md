@@ -355,6 +355,14 @@ never`), nie trzeba nic generować — serwer wyprowadza z niego tokeny strony
    `meta_status` pokazuje `token_health`: ważność, datę wygaśnięcia („never”
    dla tokena systemowego), zakresy i ostrzeżenia. `META_APP_SECRET` w
    sekretach pozwala sprawdzać tokeny przez `/debug_token` bez ograniczeń.
+6. Piksel (Conversions API): `FB_PIXEL_ACCESS_TOKEN` może pochodzić z innej
+   aplikacji Meta niż reszta — działa, dopóki Graph go przyjmuje. Serwer
+   sprawdza go razem z resztą; gdy jest nieważny, wysyłka zdarzeń idzie
+   tokenem użytkownika systemowego (`token_health.pixel: system_user`,
+   ostrzeżenie w `warnings`). `meta_status` pokazuje też `pixels`: czy token
+   widzi piksele z ustawień śledzenia (nazwa, `last_fired_time`). Nowy token
+   piksela: Events Manager → piksel → Ustawienia → Conversions API → Wygeneruj
+   token dostępu (ten sam Business Manager).
 
 Uprawnienia tokenów Meta potrzebne do pełnego zakresu: `pages_read_engagement`,
 `pages_read_user_content`, `pages_manage_posts`, `pages_manage_engagement`,

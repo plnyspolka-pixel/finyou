@@ -25,6 +25,8 @@ const normPhone = (v: string) => v.replace(/[^0-9]/g, "");
 export const sendFbCapiEvent = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Schema.parse(input))
   .handler(async ({ data }) => {
+    const { ensureMetaTokens } = await import("@/lib/meta-tokens.server");
+    await ensureMetaTokens();
     const token = process.env.FB_PIXEL_ACCESS_TOKEN;
     if (!token) {
       console.warn("[fb-capi] FB_PIXEL_ACCESS_TOKEN is not set");

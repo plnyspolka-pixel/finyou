@@ -2,6 +2,7 @@
 // Optymalizacja ODWROTNA: im mniejsza kwota wniosku, tym wyższa wartość eventu.
 
 import { createHash } from "crypto";
+import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 const PIXEL_ID_FALLBACK = "999846322426205"; // "Klienci app"
@@ -141,6 +142,7 @@ export async function sendCapiEvent(opts: {
   pixelId?: string;
   testEventCode?: string;
 }): Promise<{ ok: boolean; eventId: string; error?: string }> {
+  await ensureMetaTokens();
   const token = process.env.FB_PIXEL_ACCESS_TOKEN;
   if (!token) return { ok: false, eventId: "", error: "FB_PIXEL_ACCESS_TOKEN missing" };
 
