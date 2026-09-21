@@ -33,6 +33,18 @@ import sendChatMessage from "./tools/send-chat-message";
 import getUpdatesSince from "./tools/get-updates-since";
 import listInboxThreads from "./tools/list-inbox-threads";
 import readInboxThread from "./tools/read-inbox-thread";
+import { crmExtraTools } from "./tools/crm-extra";
+import { applicationsExtraTools } from "./tools/applications-extra";
+import { analysisTools } from "./tools/analysis";
+import { clientsAmlTools } from "./tools/clients-aml";
+import { investorsExtraTools } from "./tools/investors-extra";
+import { projectsTools } from "./tools/projects";
+import { financeTools } from "./tools/finance";
+import { affiliateExtraTools } from "./tools/affiliate-extra";
+import { collectionsExtraTools } from "./tools/collections-extra";
+import { marketingTools } from "./tools/marketing";
+import { opsTools } from "./tools/ops";
+import { calculatorTools } from "./tools/calculators";
 
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
@@ -80,5 +92,17 @@ export default defineMcp({
     getUpdatesSince,
     listInboxThreads,
     readInboxThread,
+    ...crmExtraTools,
+    ...applicationsExtraTools,
+    ...analysisTools,
+    ...clientsAmlTools,
+    ...investorsExtraTools,
+    ...projectsTools,
+    ...financeTools,
+    ...affiliateExtraTools,
+    ...collectionsExtraTools,
+    ...marketingTools,
+    ...opsTools,
+    ...calculatorTools,
   ],
 });

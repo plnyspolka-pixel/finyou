@@ -268,7 +268,6 @@ import { Route as ApiPublicHooksAutoDistributionTickRouteImport } from './routes
 import { Route as ApiPublicHooksAniaCallbacksRouteImport } from './routes/api/public/hooks/ania-callbacks'
 import { Route as ApiPublicHooksAnalysisPipelineTickRouteImport } from './routes/api/public/hooks/analysis-pipeline-tick'
 import { Route as ApiPublicHooksAffiliateEventsTickRouteImport } from './routes/api/public/hooks/affiliate-events-tick'
-import { Route as ApiPublicHooksActivityDigestTickRouteImport } from './routes/api/public/hooks/activity-digest-tick'
 import { Route as ApiPublicHooksAccessExpiryTickRouteImport } from './routes/api/public/hooks/access-expiry-tick'
 import { Route as ApiPublicEmailUnsubscribeRouteImport } from './routes/api/public/email/unsubscribe'
 import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
@@ -1638,12 +1637,6 @@ const ApiPublicHooksAffiliateEventsTickRoute =
     path: '/api/public/hooks/affiliate-events-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicHooksActivityDigestTickRoute =
-  ApiPublicHooksActivityDigestTickRouteImport.update({
-    id: '/api/public/hooks/activity-digest-tick',
-    path: '/api/public/hooks/activity-digest-tick',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiPublicHooksAccessExpiryTickRoute =
   ApiPublicHooksAccessExpiryTickRouteImport.update({
     id: '/api/public/hooks/access-expiry-tick',
@@ -1892,7 +1885,6 @@ export interface FileRoutesByFullPath {
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
-  '/api/public/hooks/activity-digest-tick': typeof ApiPublicHooksActivityDigestTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
@@ -2148,7 +2140,6 @@ export interface FileRoutesByTo {
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
-  '/api/public/hooks/activity-digest-tick': typeof ApiPublicHooksActivityDigestTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
@@ -2415,7 +2406,6 @@ export interface FileRoutesById {
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
-  '/api/public/hooks/activity-digest-tick': typeof ApiPublicHooksActivityDigestTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
@@ -2683,7 +2673,6 @@ export interface FileRouteTypes {
     | '/api/public/email/open'
     | '/api/public/email/unsubscribe'
     | '/api/public/hooks/access-expiry-tick'
-    | '/api/public/hooks/activity-digest-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/analysis-pipeline-tick'
     | '/api/public/hooks/ania-callbacks'
@@ -2939,7 +2928,6 @@ export interface FileRouteTypes {
     | '/api/public/email/open'
     | '/api/public/email/unsubscribe'
     | '/api/public/hooks/access-expiry-tick'
-    | '/api/public/hooks/activity-digest-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/analysis-pipeline-tick'
     | '/api/public/hooks/ania-callbacks'
@@ -3205,7 +3193,6 @@ export interface FileRouteTypes {
     | '/api/public/email/open'
     | '/api/public/email/unsubscribe'
     | '/api/public/hooks/access-expiry-tick'
-    | '/api/public/hooks/activity-digest-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/analysis-pipeline-tick'
     | '/api/public/hooks/ania-callbacks'
@@ -3321,7 +3308,6 @@ export interface RootRouteChildren {
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
   ApiPublicEmailUnsubscribeRoute: typeof ApiPublicEmailUnsubscribeRoute
   ApiPublicHooksAccessExpiryTickRoute: typeof ApiPublicHooksAccessExpiryTickRoute
-  ApiPublicHooksActivityDigestTickRoute: typeof ApiPublicHooksActivityDigestTickRoute
   ApiPublicHooksAffiliateEventsTickRoute: typeof ApiPublicHooksAffiliateEventsTickRoute
   ApiPublicHooksAnalysisPipelineTickRoute: typeof ApiPublicHooksAnalysisPipelineTickRoute
   ApiPublicHooksAniaCallbacksRoute: typeof ApiPublicHooksAniaCallbacksRoute
@@ -5176,13 +5162,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksAffiliateEventsTickRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/activity-digest-tick': {
-      id: '/api/public/hooks/activity-digest-tick'
-      path: '/api/public/hooks/activity-digest-tick'
-      fullPath: '/api/public/hooks/activity-digest-tick'
-      preLoaderRoute: typeof ApiPublicHooksActivityDigestTickRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/hooks/access-expiry-tick': {
       id: '/api/public/hooks/access-expiry-tick'
       path: '/api/public/hooks/access-expiry-tick'
@@ -5725,7 +5704,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
   ApiPublicEmailUnsubscribeRoute: ApiPublicEmailUnsubscribeRoute,
   ApiPublicHooksAccessExpiryTickRoute: ApiPublicHooksAccessExpiryTickRoute,
-  ApiPublicHooksActivityDigestTickRoute: ApiPublicHooksActivityDigestTickRoute,
   ApiPublicHooksAffiliateEventsTickRoute:
     ApiPublicHooksAffiliateEventsTickRoute,
   ApiPublicHooksAnalysisPipelineTickRoute:

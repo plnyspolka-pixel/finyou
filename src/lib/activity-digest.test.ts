@@ -5,36 +5,20 @@ import {
   summarizeActivity,
   type ActivityUpdates,
 } from "./activity-digest.server";
-import {
-  digestTextToHtml,
-  isQuietHour,
-  pushBody,
-  runActivityDigest,
-  warsawHour,
-} from "./activity-digest-run.server";
 
 type Row = Record<string, any>;
 
 /**
  * Minimalny, in-memory odpowiednik klienta PostgREST na potrzeby
- * `collectActivitySince` / `runActivityDigest`: select(count) + gte/lt/eq/in/is
- * + order/limit + insert.
+ * `collectActivitySince`: select(count) + gte/lt/eq/neq/in/is + order/limit.
  */
 function fakeDb(tables: Record<string, Row[]>) {
-  const inserted: Record<string, Row[]> = {};
   const from = (table: string) => {
     const filters: Array<(r: Row) => boolean> = [];
     let orderBy: { col: string; asc: boolean } | null = null;
     let limitN: number | null = null;
-    let mode: "select" | "insert" = "select";
-    let payload: Row | null = null;
     const q: any = {
       select() {
-        return q;
-      },
-      insert(row: Row) {
-        mode = "insert";
-        payload = row;
         return q;
       },
       gte(col: string, v: string) {
@@ -70,12 +54,6 @@ function fakeDb(tables: Record<string, Row[]>) {
         return q;
       },
       then(resolve: (v: any) => void) {
-        if (mode === "insert") {
-          (inserted[table] ??= []).push(payload!);
-          (tables[table] ??= []).push(payload!);
-          resolve({ data: null, error: null });
-          return;
-        }
         let rows = (tables[table] ?? []).filter((r) => filters.every((f) => f(r)));
         const count = rows.length;
         if (orderBy) {
@@ -89,7 +67,7 @@ function fakeDb(tables: Record<string, Row[]>) {
     };
     return q;
   };
-  return { from, inserted, tables };
+  return { from, tables };
 }
 
 const SINCE = "2026-09-21T08:00:00.000Z";
@@ -199,6 +177,15 @@ function sampleTables(): Record<string, Row[]> {
         period_months: 24,
         created_at: "2026-09-21T08:25:00.000Z",
       },
+      {
+        id: "o2",
+        loan_application_id: "a1",
+        investor_id: "i2",
+        offer_status: "szkic",
+        proposed_amount: 1,
+        period_months: 1,
+        created_at: "2026-09-21T08:26:00.000Z",
+      },
     ],
     offer_distribution_messages: [
       {
@@ -233,12 +220,11 @@ function sampleTables(): Record<string, Row[]> {
         processed_at: null,
       },
     ],
-    activity_digest_runs: [],
   };
 }
 
 describe("collectActivitySince", () => {
-  it("zbiera tylko zdarzenia z okna, pomija outbound, logi techniczne, usunięte wnioski i nieopłacone płatności", async () => {
+  it("zbiera tylko zdarzenia z okna; pomija outbound, logi techniczne, usunięte wnioski, szkice ofert i nieopłacone płatności", async () => {
     const db = fakeDb(sampleTables());
     const u = await collectActivitySince({ since: SINCE, until: UNTIL }, db);
     expect(u.errors).toEqual([]);
@@ -261,6 +247,7 @@ describe("collectActivitySince", () => {
       url: "/operator/skrzynka",
     });
     expect(byId.c3).toMatchObject({ who: "+48600300400", url: "/operator/leady" });
+    expect(u.investor_offers[0].id).toBe("o1");
     expect(u.payments[0]).toMatchObject({ id: "p1", paid_amount_grosz: 19900 });
   });
 
@@ -349,7 +336,7 @@ describe("summarizeActivity / renderActivityDigestText", () => {
     ).toBe("brak nowych zdarzeń");
   });
 
-  it("renderuje raport z linkami do panelu", async () => {
+  it("renderuje raport tekstowy z linkami do panelu", async () => {
     const db = fakeDb(sampleTables());
     const u = await collectActivitySince({ since: SINCE, until: UNTIL }, db);
     const text = renderActivityDigestText(u, "https://financeyou.pl");
@@ -360,152 +347,5 @@ describe("summarizeActivity / renderActivityDigestText", () => {
       "[e-mail] Jan Kowalski: Pytanie o ratę: Dzień dobry, ile wyniesie rata?",
     );
     expect(text).toContain("199.00 PLN");
-    const html = digestTextToHtml(text);
-    expect(html).toContain('<a href="https://financeyou.pl/operator/leady/l1"');
-    expect(html).not.toContain("<script");
-  });
-});
-
-describe("cisza nocna", () => {
-  it("liczy godzinę warszawską", () => {
-    // 21 września 2026: CEST (UTC+2)
-    expect(warsawHour(new Date("2026-09-21T20:30:00Z"))).toBe(22);
-    expect(warsawHour(new Date("2026-09-21T04:59:00Z"))).toBe(6);
-  });
-
-  it("domyślnie 22–7, konfigurowalna, wyłączalna", () => {
-    expect(isQuietHour(new Date("2026-09-21T20:30:00Z"), undefined)).toBe(true); // 22:30
-    expect(isQuietHour(new Date("2026-09-21T04:59:00Z"), undefined)).toBe(true); // 06:59
-    expect(isQuietHour(new Date("2026-09-21T05:00:00Z"), undefined)).toBe(false); // 07:00
-    expect(isQuietHour(new Date("2026-09-21T10:00:00Z"), undefined)).toBe(false); // 12:00
-    expect(isQuietHour(new Date("2026-09-21T10:00:00Z"), "9-13")).toBe(true);
-    expect(isQuietHour(new Date("2026-09-21T20:30:00Z"), "off")).toBe(false);
-    expect(isQuietHour(new Date("2026-09-21T20:30:00Z"), "garbage")).toBe(false);
-  });
-});
-
-describe("runActivityDigest", () => {
-  const baseDeps = (db: ReturnType<typeof fakeDb>, env: Record<string, string> = {}) => {
-    const pushes: any[] = [];
-    const emails: any[] = [];
-    return {
-      deps: {
-        db,
-        now: () => new Date(UNTIL),
-        env,
-        sendPush: async (i: any) => {
-          pushes.push(i);
-          return { sent: 2, failed: 0, removed: 0 };
-        },
-        sendEmail: async (o: any) => {
-          emails.push(o);
-          return { ok: true };
-        },
-        adminEmails: async () => ["admin@financeyou.pl"],
-        baseUrl: () => "https://financeyou.pl",
-      },
-      pushes,
-      emails,
-    };
-  };
-
-  it("pierwszy bieg bierze ostatnie 30 min, wysyła push + mail i zapisuje bieg", async () => {
-    const db = fakeDb(sampleTables());
-    const { deps, pushes, emails } = baseDeps(db);
-    const r = await runActivityDigest({}, deps);
-    expect(r.ok).toBe(true);
-    expect(r.skipped).toBeUndefined();
-    expect(r.since).toBe(SINCE);
-    expect(r.until).toBe(UNTIL);
-    expect(r.total).toBe(7);
-    expect(pushes).toHaveLength(1);
-    expect(pushes[0].event).toBe("digest:activity");
-    expect(pushes[0].title).toContain("Co nowego: 1 nowy lead");
-    expect(emails).toHaveLength(1);
-    expect(emails[0].to).toBe("admin@financeyou.pl");
-    expect(emails[0].subject).toContain("Co nowego na Finance You");
-    expect(db.inserted.activity_digest_runs).toHaveLength(1);
-    expect(db.inserted.activity_digest_runs[0]).toMatchObject({
-      since: SINCE,
-      until: UNTIL,
-      total: 7,
-      push_sent: 2,
-      email_sent: 1,
-      error: null,
-    });
-  });
-
-  it("kolejny bieg startuje od końca poprzedniego i nic nie wysyła, gdy pusto", async () => {
-    const tables = sampleTables();
-    tables.activity_digest_runs = [
-      { since: "2026-09-21T08:00:00.000Z", until: "2026-09-21T08:29:00.000Z" },
-    ];
-    const db = fakeDb(tables);
-    const { deps, pushes, emails } = baseDeps(db);
-    const r = await runActivityDigest({}, deps);
-    expect(r.skipped).toBe("nothing_new");
-    expect(r.since).toBe("2026-09-21T08:29:00.000Z");
-    expect(pushes).toHaveLength(0);
-    expect(emails).toHaveLength(0);
-    // okno mimo to przesunięte
-    expect(db.inserted.activity_digest_runs[0]).toMatchObject({ until: UNTIL, total: 0 });
-  });
-
-  it("po długiej przerwie cofa się maksymalnie 24 h", async () => {
-    const tables = sampleTables();
-    tables.activity_digest_runs = [
-      { since: "2026-09-10T00:00:00.000Z", until: "2026-09-10T00:30:00.000Z" },
-    ];
-    const db = fakeDb(tables);
-    const { deps } = baseDeps(db);
-    const r = await runActivityDigest({}, deps);
-    expect(r.capped).toBe(true);
-    expect(r.since).toBe("2026-09-20T08:30:00.000Z");
-  });
-
-  it("w ciszy nocnej pomija bieg bez przesuwania okna; force omija ciszę", async () => {
-    const db = fakeDb(sampleTables());
-    const { deps } = baseDeps(db);
-    deps.now = () => new Date("2026-09-21T21:00:00Z"); // 23:00 Warszawa
-    const r = await runActivityDigest({}, deps);
-    expect(r.skipped).toBe("quiet_hours");
-    expect(db.inserted.activity_digest_runs ?? []).toHaveLength(0);
-    // force: bieg się wykonuje (okno 30 min przed 23:00 jest puste → nothing_new,
-    // ale bieg zostaje zapisany, więc okno się przesuwa).
-    const forced = await runActivityDigest({ force: true }, deps);
-    expect(forced.skipped).toBe("nothing_new");
-    expect(db.inserted.activity_digest_runs).toHaveLength(1);
-  });
-
-  it("ACTIVITY_DIGEST_EMAILS nadpisuje adresatów, ACTIVITY_DIGEST_CHANNELS wyłącza kanały", async () => {
-    const db = fakeDb(sampleTables());
-    const { deps, pushes, emails } = baseDeps(db, {
-      ACTIVITY_DIGEST_EMAILS: "szef@financeyou.pl, Drugi@financeyou.pl",
-      ACTIVITY_DIGEST_CHANNELS: "email",
-    });
-    const r = await runActivityDigest({}, deps);
-    expect(pushes).toHaveLength(0);
-    expect(emails.map((e) => e.to)).toEqual(["szef@financeyou.pl", "drugi@financeyou.pl"]);
-    expect(r.email).toMatchObject({ sent: 2, failed: 0 });
-  });
-
-  it("błąd wysyłki maila ląduje w zapisie biegu, bieg się kończy", async () => {
-    const db = fakeDb(sampleTables());
-    const { deps } = baseDeps(db);
-    deps.sendEmail = async () => ({ ok: false, error: "blocked:suppressed" });
-    const r = await runActivityDigest({}, deps);
-    expect(r.ok).toBe(true);
-    expect(r.email).toMatchObject({ sent: 0, failed: 1 });
-    expect(db.inserted.activity_digest_runs[0].error).toContain("blocked:suppressed");
-  });
-
-  it("treść pusha to trzy najświeższe pozycje", async () => {
-    const db = fakeDb(sampleTables());
-    const u = await collectActivitySince({ since: SINCE, until: UNTIL }, db);
-    const body = pushBody(u);
-    const lines = body.split("\n");
-    expect(lines[0]).toContain("Płatność investor");
-    expect(lines).toHaveLength(4);
-    expect(lines[3]).toBe("… i 4 więcej");
   });
 });

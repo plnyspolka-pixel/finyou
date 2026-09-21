@@ -1001,6 +1001,3691 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "outputSchema": null
+      },
+      {
+        "name": "list_leads",
+        "title": "List leads (filters)",
+        "description": "Lista leadów z filtrami: status, typ, źródło, operator, jakość, fraza, zakres dat. Domyślnie bez leadów oznaczonych jako złe. Najnowsze pierwsze, stronicowanie `limit`/`offset`, w odpowiedzi `total`. Tylko administrator/operator (pośrednik używa `list_my_leads`).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status leada (np. nowy, w_kontakcie, wniosek, zamkniety)."
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Typ leada (np. klient, inwestor, posrednik)."
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Źródło leada (np. landing, messenger, meta, telefon, chat)."
+            },
+            "assigned_to": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Id operatora, do którego lead jest przypisany."
+            },
+            "quality_tier": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Poziom jakości ze scoringu (np. A/B/C)."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: imię, nazwisko, e-mail lub telefon."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Do kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "include_bad": {
+              "type": "boolean",
+              "default": false,
+              "description": "Czy dołączyć leady oznaczone jako złe (domyślnie nie)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_lead_timeline",
+        "title": "Get lead timeline",
+        "description": "Wszystko o jednym leadzie w jednym wywołaniu: dane leada, historia komunikacji (wszystkie kanały), zaplanowane follow-upy, atrybucja (UTM, kampania), powiązany wniosek i linki skrócone z klikami. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Ile ostatnich wiadomości (domyślnie 60)."
+            }
+          },
+          "required": [
+            "lead_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_lead_stats",
+        "title": "Get lead statistics",
+        "description": "Statystyki leadów w okresie: liczba, rozkład po statusie, źródle, typie, jakości i po dniach. Domyślnie ostatnie 30 dni. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (ISO 8601 lub YYYY-MM-DD; domyślnie 30 dni wstecz)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Do kiedy (domyślnie teraz)."
+            },
+            "include_bad": {
+              "type": "boolean",
+              "default": false,
+              "description": "Czy liczyć leady oznaczone jako złe."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_follow_ups",
+        "title": "List scheduled follow-ups",
+        "description": "Zaplanowane i wysłane follow-upy do leadów (kadencja mail/SMS/telefon): status, kanał, termin, liczba prób, błąd. Z danymi leada. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status wpisu (np. pending, sent, failed, cancelled)."
+            },
+            "channel": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Kanał (email, sms, phone)."
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego leada."
+            },
+            "scheduled_after": {
+              "type": "string",
+              "description": "Od kiedy (data zaplanowania, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "scheduled_before": {
+              "type": "string",
+              "description": "Do kiedy (data zaplanowania, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_call_queue",
+        "title": "List call queue",
+        "description": "Kolejka połączeń voicebota (Ania): numer, status, termin, próby, wynik rozmowy, powiązany klient/wniosek. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status (np. pending, in_progress, done, failed)."
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Źródło wpisu w kolejce."
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data zaplanowania, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Do kiedy (data zaplanowania, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_communications",
+        "title": "Search communications",
+        "description": "Wyszukiwanie w treści całej korespondencji (e-mail, Messenger, czat, SMS, notatki z rozmów) po frazie, kanale, kierunku, leadzie i dacie. Zwraca skróty treści z danymi leada; pełny wątek daje `read_inbox_thread`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w temacie lub treści."
+            },
+            "channel": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Kanał: email, messenger, instagram, chat, chat_inwestor, sms, whatsapp, voicebot_call, note."
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "inbound",
+                "outbound"
+              ],
+              "description": "Kierunek wiadomości."
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego leada."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Do kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_call_transcript",
+        "title": "Get call transcript",
+        "description": "Transkrypcja i nagranie rozmowy telefonicznej voicebota / operatora po id wpisu komunikacji (kanał voicebot_call). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "communication_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "communication_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_lead_note",
+        "title": "Add lead note",
+        "description": "Dopisuje notatkę (z datą i autorem) do pola notatek leada. Nie wysyła żadnej wiadomości do klienta. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            }
+          },
+          "required": [
+            "lead_id",
+            "note"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "assign_lead",
+        "title": "Assign lead to operator",
+        "description": "Przypisuje leada do operatora (id użytkownika z `list_team_members`) albo zdejmuje przypisanie (`user_id` = null). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "user_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Id użytkownika-operatora; null = brak przypisania."
+            }
+          },
+          "required": [
+            "lead_id",
+            "user_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_team_members",
+        "title": "List team members",
+        "description": "Członkowie zespołu Finance You (administratorzy, operatorzy, księgowość) z rolami i danymi z profilu — do przypisywania leadów i wniosków. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_applications",
+        "title": "Search loan applications",
+        "description": "Wyszukiwanie wniosków pożyczkowych po kliencie (imię, nazwisko, e-mail, telefon, NIP), statusie, kwocie, kompletności, operatorze, widoczności dla inwestorów, ryzyku i dacie. Z danymi klienta. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: klient (imię, nazwisko, e-mail, telefon, NIP, firma)."
+            },
+            "status": {
+              "type": "string",
+              "description": "Status wniosku (np. nowy_lead, wniosek_kompletny, do_analizy, rokuje, wyslany_do_inwestorow, oferta_od_inwestora, do_umowy)."
+            },
+            "min_amount": {
+              "type": "number",
+              "description": "Minimalna kwota pożyczki (PLN)."
+            },
+            "max_amount": {
+              "type": "number",
+              "description": "Maksymalna kwota pożyczki (PLN)."
+            },
+            "min_completeness": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "max_completeness": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "assigned_operator": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "available_to_investors": {
+              "type": "boolean"
+            },
+            "risk_level": {
+              "type": "string"
+            },
+            "since": {
+              "type": "string",
+              "description": "Utworzone od (ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Utworzone do."
+            },
+            "include_deleted": {
+              "type": "boolean",
+              "default": false
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_application_details",
+        "title": "Get application details (full card)",
+        "description": "Pełna karta wniosku w jednym wywołaniu: wniosek, klient, nieruchomości, dokumenty, historia statusów, oferty inwestorów, dystrybucja do instytucji, analizy (wycena nieruchomości, ryzyko inwestycyjne, KW, lokalizacja) i follow-up braków. Dla klienta (RLS) — własny wniosek; dla zespołu — każdy.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_incomplete_applications",
+        "title": "List incomplete applications",
+        "description": "Wnioski niekompletne (kompletność poniżej progu, domyślnie 100%) z listą braków, ostatnim i następnym kontaktem oraz licznikami przypomnień. Z danymi klienta. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "max_completeness": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 99,
+              "description": "Próg kompletności (domyślnie poniżej 100%)."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status wniosku."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Do kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_application_documents",
+        "title": "List documents",
+        "description": "Dokumenty wgrane do wniosku lub nieruchomości: typ, nazwa pliku, status weryfikacji, widoczność. Widoczność wg RLS (klient widzi swoje).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "property_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tej nieruchomości."
+            },
+            "document_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Typ dokumentu."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status weryfikacji."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_application_status_history",
+        "title": "Get application status history",
+        "description": "Historia zmian statusu wniosku (kto, kiedy, z czego na co). Widoczność wg RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Id wniosku."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "required": [
+            "loan_application_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_missing_info_follow_ups",
+        "title": "List missing-info follow-ups",
+        "description": "Stan modułu „follow-up braków”: które wnioski są w kadencji dopytywania o braki, ile prób, jakim kanałem, kiedy następna wysyłka, błędy. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status (np. active, done, stopped)."
+            },
+            "paused": {
+              "type": "boolean",
+              "description": "Tylko wstrzymane / tylko aktywne."
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_auto_distribution_proposals",
+        "title": "List auto-distribution proposals",
+        "description": "Propozycje auto-dystrybucji wniosków do instytucji finansujących: dopasowania, kwalifikacja, status (do zatwierdzenia / wysłane / odrzucone), wynik wysyłki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status propozycji (np. pending, approved, sent, rejected)."
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_institution_threads",
+        "title": "List institution threads",
+        "description": "Wątki mailowe z instytucjami finansującymi (dystrybucja oferty konkretnego wniosku): kto dostał ofertę, status, kiedy odpowiedział, ostatnie wiadomości. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "investor_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "read_institution_thread",
+        "title": "Read institution thread",
+        "description": "Wszystkie wiadomości wymienione z instytucjami w sprawie jednego wniosku (chronologicznie): kierunek, nadawca, temat, treść. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Id wniosku."
+            },
+            "investor_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko z tą instytucją."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Ile wierszy (domyślnie 60, maks. 200)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "required": [
+            "loan_application_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_institution_questions",
+        "title": "List institution questions",
+        "description": "Pytania instytucji finansujących do klientów (pętla pytanie → klient → odpowiedź → instytucje): status, kanał, odpowiedź klienta, kiedy przekazano. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status wątku pytań."
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_loan_proposals",
+        "title": "List loan proposals (kreator)",
+        "description": "Propozycje pożyczek z kreatora (kwota, okres, oprocentowanie, rata nominalna i ograniczona, prowizja, koszt całkowity) z danymi klienta. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status propozycji."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: klient."
+            },
+            "source_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_kw_analysis",
+        "title": "Get land register (KW) analysis",
+        "description": "Analiza księgi wieczystej po numerze KW albo po wniosku: właściciele, dane nieruchomości, flagi ryzyka, ocena ryzyka prawnego, podsumowanie dla inwestora. `full=true` dołącza surowe działy I–IV. Widoczność wg RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "kw_number": {
+              "type": "string",
+              "minLength": 5,
+              "description": "Numer KW, np. WA1M/00123456/7."
+            },
+            "application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Albo id wniosku."
+            },
+            "full": {
+              "type": "boolean",
+              "default": false,
+              "description": "Dołączyć surowe działy I–IV (duże)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_kw_findings",
+        "title": "Get KW findings (rule engine)",
+        "description": "Wynik silnika reguł na treści KW: status ogólny, liczba nierozstrzygniętych ustaleń, aktywne wzmianki i lista ustaleń (result_json). Po numerze KW albo wniosku. Widoczność wg RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "kw_number": {
+              "type": "string",
+              "minLength": 5
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_risk_assessment",
+        "title": "Get investment risk assessment",
+        "description": "Najnowsza ocena ryzyka inwestycyjnego wniosku: klasa ryzyka, score inwestycyjny, zbywalność, rekomendacja, próg sprzedaży wymuszonej, ostrzeżenia, pełny wynik. Widoczność wg RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "application_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "application_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_location_score",
+        "title": "Get location score",
+        "description": "Ocena potencjału lokalizacji nieruchomości (model po prefiksie KW): prawdopodobieństwa (centrum miasta, obszar funkcjonalny, dobra lokalizacja, obszar odległy), oczekiwana atrakcyjność, pewność, decyzja i wyjaśnienie. Widoczność wg RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "loan_application_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_analysis_runs",
+        "title": "List analysis pipeline runs",
+        "description": "Biegi pipeline'u analitycznego (KW → właściciele → analiza KW → ryzyko): status, kroki, powód uruchomienia, błąd, czasy. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status biegu (np. running, done, failed)."
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_kw_documents",
+        "title": "List fetched KW documents",
+        "description": "Pobrane odpisy ksiąg wieczystych: numer, status pobrania, kiedy zamówiono i pobrano, błąd. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status pobrania."
+            },
+            "kw_number": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Konkretny numer KW."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_client",
+        "title": "Get client (360)",
+        "description": "Karta klienta: dane kontaktowe i firmowe, zgody i blokady kontaktu, wnioski klienta, stan KYC (Didit) i AML (ryzyko, screening, PEP, sankcje). Bez PESEL i numerów kont. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_kyc_verifications",
+        "title": "List KYC verifications (Didit)",
+        "description": "Weryfikacje tożsamości Didit: status, typ workflow, decyzja, ostrzeżenia, użytkownik (e-mail z profilu). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status weryfikacji (np. approved, declined, in_review, pending)."
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego użytkownika."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_aml_customers",
+        "title": "List AML customers",
+        "description": "Rejestr AML: podmioty z oceną ryzyka, statusem screeningu, flagami PEP i sankcji. Bez PESEL i numerów dokumentów. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "risk_level": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Poziom ryzyka AML."
+            },
+            "screening_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status screeningu."
+            },
+            "pep_status": {
+              "type": "boolean",
+              "description": "Tylko osoby eksponowane politycznie (PEP)."
+            },
+            "sanction_hit": {
+              "type": "boolean",
+              "description": "Tylko trafienia sankcyjne."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: nazwisko, firma, NIP."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_aml_cases",
+        "title": "List AML cases",
+        "description": "Sprawy AML (analizy transakcji, zgłoszenia GIIF): numer, tytuł, status, pochodzenie, podmiot. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status sprawy."
+            },
+            "customer_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego podmiotu AML."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: numer, tytuł, opis."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_aml_case",
+        "title": "Get AML case",
+        "description": "Sprawa AML w całości: opis, strony, kwoty, chronologia, decyzje, uzasadnienie, screeningi podmiotu i raporty GIIF (status, wysyłka, UPO). Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_aml_screenings",
+        "title": "List AML screenings",
+        "description": "Screeningi sankcyjne/PEP (Dilisense): podmiot, typ, liczba trafień, rozstrzygnięcie, kto i kiedy rozstrzygnął. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "customer_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego podmiotu AML."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status screeningu."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: nazwa podmiotu."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_investor",
+        "title": "Get investor (360)",
+        "description": "Karta inwestora: dane, subskrypcja, kryteria dystrybucji (kwoty, auto-wysyłka, pauza), ustawienia instytucjonalne (LTV, lokalizacje, typy nieruchomości), oferty (liczby po statusie + ostatnie), dystrybucje, zlecenia inwestora, zaakceptowane dokumenty. Bez PESEL i konta. Inwestor widzi siebie (RLS), zespół — każdego.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_investor_criteria",
+        "title": "List investor distribution criteria",
+        "description": "Kryteria auto-dystrybucji instytucji/inwestorów: widełki kwot, czy przyjmują wnioski, czy auto-wysyłka włączona, pauza, notatki — z danymi inwestora. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "accepting_applications": {
+              "type": "boolean",
+              "description": "Tylko przyjmujący / nieprzyjmujący wnioski."
+            },
+            "auto_send_enabled": {
+              "type": "boolean",
+              "description": "Tylko z włączoną auto-wysyłką."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_investor_orders",
+        "title": "List investor orders",
+        "description": "Zlecenia inwestorów (moduł „Zlecenie–Projekt”): kwota, maks. okres, min. rentowność, ważność, status, wybór konsumencki, terminy. Inwestor widzi swoje (RLS), zespół — wszystkie.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status zlecenia."
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego użytkownika-inwestora."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_investor_order_matches",
+        "title": "List investor order matches",
+        "description": "Dopasowania zlecenie ↔ wniosek: status, teaser, akceptacja karty leada, ujawnienie, rezerwacja, decyzja, kwoty wypłaty i prowizji. Widoczność wg RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status dopasowania."
+            },
+            "order_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego zlecenia."
+            },
+            "application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_investor_screenings",
+        "title": "List investor screenings",
+        "description": "Screeningi sankcyjne/PEP inwestorów: podmiot, liczba trafień, wynik, przegląd (kto, kiedy, notatka). Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "result": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Wynik screeningu."
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego użytkownika."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_criteria_change_proposals",
+        "title": "List criteria change proposals",
+        "description": "Propozycje zmian kryteriów instytucji wyciągnięte przez agenta korespondencji z ich maili (do zatwierdzenia jednym kliknięciem w panelu): podsumowanie, proponowana zmiana, status. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status propozycji (np. pending, accepted, rejected)."
+            },
+            "investor_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tej instytucji."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_investor_success_fees",
+        "title": "List investor success fees",
+        "description": "Opłaty success fee inwestorów (moduł zleceń): kwota pożyczki, stawka w punktach bazowych, kwota opłaty, status, faktura. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status opłaty."
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego użytkownika."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_agreement_acceptances",
+        "title": "List agreement acceptances",
+        "description": "Akceptacje dokumentów prawnych przez inwestorów (umowa ramowa, regulaminy, oświadczenia): kod dokumentu, wersja, wariant podmiotu, metoda uwierzytelnienia, data. Inwestor widzi swoje (RLS), zespół — wszystkie.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego użytkownika."
+            },
+            "document_code": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Kod dokumentu."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data akceptacji, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_consumer_withdrawals",
+        "title": "List consumer withdrawals",
+        "description": "Odstąpienia konsumenckie od umów inwestora: dokument, wersja, data złożenia, potwierdzenie przyjęcia. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego użytkownika."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data złożenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_legal_documents",
+        "title": "List legal documents",
+        "description": "Paczka dokumentów prawnych inwestora (umowa ramowa, regulaminy, oświadczenia): kod, pakiet, wersja, tytuł, czy aktywny. Treść dokumentu nie jest zwracana.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "active": {
+              "type": "boolean",
+              "description": "Tylko aktywne wersje."
+            },
+            "package_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Identyfikator pakietu."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_investment_projects",
+        "title": "List investment projects",
+        "description": "Pula projektów inwestycyjnych (anonimizowane wnioski dla inwestorów): kwota, typ i lokalizacja nieruchomości, okres, oprocentowanie, wartość i LTV, zabezpieczenie, kompletność dokumentów, liczba odrzuceń. Widoczność wg RLS (inwestor widzi przydzielone).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status projektu."
+            },
+            "property_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Typ nieruchomości."
+            },
+            "city": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: miasto lub województwo."
+            },
+            "min_amount": {
+              "type": "number",
+              "description": "Minimalna kwota (PLN)."
+            },
+            "max_amount": {
+              "type": "number",
+              "description": "Maksymalna kwota (PLN)."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_investment_project",
+        "title": "Get investment project",
+        "description": "Projekt inwestycyjny w całości: karta projektu, przydziały do inwestorów (status, termin, decyzja), propozycje (parametry, status, kontroferta), pytania inwestorów z odpowiedziami, wersje. Widoczność wg RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_project_proposals",
+        "title": "List project proposals",
+        "description": "Propozycje inwestorów do projektów: status, parametry, ważność, decyzja, kontroferta, notatka administratora. Widoczność wg RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status propozycji."
+            },
+            "project_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego projektu."
+            },
+            "investor_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko od tego inwestora."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_project_info_requests",
+        "title": "List project info requests",
+        "description": "Pytania inwestorów do projektów (otwarte i odpowiedziane): treść, status, odpowiedź, kto i kiedy odpowiedział. Widoczność wg RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status (np. open, answered)."
+            },
+            "project_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego projektu."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_access_payments",
+        "title": "List access payments",
+        "description": "Płatności za dostęp do platformy (Tpay/Stripe): kupujący, produkt, kwota oczekiwana i zapłacona, status, okres dostępu, czy wymaga przeglądu, faktura. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status płatności (np. pending, paid, failed, refunded)."
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Grupa (np. investor, client, partner)."
+            },
+            "provider": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Operator płatności."
+            },
+            "needs_review": {
+              "type": "boolean",
+              "description": "Tylko wymagające przeglądu."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: e-mail, nazwa, NIP kupującego."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Do kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_access_entitlements",
+        "title": "List access entitlements",
+        "description": "Kto ma dostęp do platformy i do kiedy: użytkownik (e-mail z profilu), grupa, okres aktywności, ostatni produkt i płatność. `active_only` zostawia tylko aktywne. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Grupa (np. investor, client, partner)."
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego użytkownika."
+            },
+            "active_only": {
+              "type": "boolean",
+              "default": false,
+              "description": "Tylko dostępy aktywne w tej chwili."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_access_products",
+        "title": "List access products (price list)",
+        "description": "Cennik dostępu: kod produktu, etykieta, grupa, cena w groszach, waluta, długość dostępu w dniach, czy aktywny.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Grupa (np. investor, client, partner)."
+            },
+            "active": {
+              "type": "boolean",
+              "description": "Tylko aktywne produkty."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_my_access",
+        "title": "Get my access & roles",
+        "description": "Stan konta zalogowanego użytkownika: role, aktywne dostępy (do kiedy), subskrypcja inwestora, ostatnie płatności. Działa dla każdej roli.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_sales_invoices",
+        "title": "List sales invoices",
+        "description": "Faktury sprzedaży (Fakturowo / KSeF): numer, status, status KSeF, daty, nabywca, kwoty netto/VAT/brutto, źródło, PDF, błędy. Tylko administrator/księgowość.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status faktury."
+            },
+            "ksef_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status w KSeF."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: numer, nabywca, NIP."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Do kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_accounting_documents",
+        "title": "List accounting documents",
+        "description": "Dokumenty księgowe zaimportowane z KSeF / systemu księgowego: kierunek (sprzedaż/zakup), kontrahent, numer, daty, kwoty, źródło. Tylko administrator/księgowość.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "direction": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Kierunek (np. sales, purchase)."
+            },
+            "entity_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego podmiotu księgowego."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: numer, kontrahent, NIP."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data wystawienia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Do kiedy (data wystawienia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_revenue_report",
+        "title": "Get revenue report",
+        "description": "Przychody z opłaconych dostępów w okresie (domyślnie 30 dni): suma, liczba płatności, rozbicie po produkcie, grupie i miesiącu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (ISO 8601 lub YYYY-MM-DD; domyślnie 30 dni wstecz)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Do kiedy (domyślnie teraz)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_broker_settlements",
+        "title": "List broker settlements",
+        "description": "Rozliczenia pośredników (prowizje za wnioski): kwota, okres, status, data wypłaty, klient, wniosek. Pośrednik widzi swoje (RLS), zespół — wszystkie.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status rozliczenia."
+            },
+            "broker_user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego pośrednika."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_affiliate_partner",
+        "title": "Get affiliate partner",
+        "description": "Karta partnera programu pośredników: dane, kod polecający, status, sponsor, liczba partnerów w strukturze pod nim, prowizje zsumowane po statusie oraz ostatnie prowizje. Bez danych bankowych i PESEL. Partner widzi siebie (RLS), zespół — każdego.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_affiliate_payout_batches",
+        "title": "List affiliate payout batches",
+        "description": "Paczki wypłat prowizji partnerom: nazwa, status, liczba wypłat, suma, zatwierdzenie i wypłata. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status paczki."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_collection_case",
+        "title": "Get collection case",
+        "description": "Sprawa windykacyjna w całości: etap, ścieżka, priorytet, zaległość i opóźnienie, pożyczka (umowa, kwoty, saldo, terminy), dłużnik (bez PESEL i numeru dowodu) oraz chronologia zdarzeń z doręczeniami. Inwestor widzi swoje (RLS), zespół — wszystkie.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_wind_loans",
+        "title": "List investor loans (collections module)",
+        "description": "Pożyczki w module windykacji: numer umowy, kwoty, saldo, oprocentowanie, status (aktywna, w zwłoce, wypowiedziana, spłacona…), terminy, KW — z danymi pożyczkobiorcy (bez PESEL). Inwestor widzi swoje (RLS), zespół — wszystkie.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status pożyczki (aktywna, w_zwloce, wypowiedziana, windykacja_komornicza, splacona, windykacja_karna)."
+            },
+            "investor_user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko pożyczki tego inwestora."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_debt_collection_cases",
+        "title": "List debt collection cases (legacy)",
+        "description": "Starszy moduł spraw windykacyjnych (kalkulator kosztów działań): dłużnik, umowa, kapitał, stopy odsetek, status. Widoczność wg RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status sprawy."
+            },
+            "investor_user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko sprawy tego inwestora."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_seo_articles",
+        "title": "List SEO articles (all statuses)",
+        "description": "Artykuły bloga we wszystkich stanach (szkice, zaplanowane, opublikowane) z audience, słowem kluczowym, długością i terminami. Publiczne treści daje `search_blog` / `get_blog_article`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status (np. draft, scheduled, published)."
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Grupa docelowa (borrower / investor)."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: tytuł, słowo kluczowe, slug."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_blog_topic",
+        "title": "Add blog topic to queue",
+        "description": "Dodaje temat do kolejki SEO bloga (autopilot pisze artykuły z kolejki naprzemiennie dla klientów i inwestorów). Nie publikuje nic od razu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 200
+            },
+            "primary_keyword": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 120
+            },
+            "secondary_keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 2
+              },
+              "maxItems": 15
+            },
+            "search_intent": {
+              "type": "string",
+              "maxLength": 60,
+              "description": "Intencja (np. informacyjna, transakcyjna)."
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Priorytet (wyższy = wcześniej)."
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Wskazówki dla autora AI."
+            }
+          },
+          "required": [
+            "title"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_serp_keywords",
+        "title": "List tracked keywords with positions",
+        "description": "Śledzone frazy Google z ostatnią pozycją, poprzednią pozycją, adresem w wynikach, wolumenem i trudnością. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w słowie kluczowym."
+            },
+            "active_only": {
+              "type": "boolean",
+              "default": true
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_email_campaigns",
+        "title": "List email campaigns",
+        "description": "Kampanie mailowe: nazwa, temat, status, grupa, liczby (odbiorcy, wysłane, dostarczone, otwarcia, kliknięcia, odbicia, skargi, wypisy), terminy. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status kampanii (np. draft, scheduled, sending, sent)."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: nazwa lub temat."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_email_campaign",
+        "title": "Get email campaign",
+        "description": "Kampania mailowa ze statystykami odbiorców (rozkład statusów, otwarcia, kliknięcia) i opcjonalnie treścią HTML/tekstową. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "include_body": {
+              "type": "boolean",
+              "default": false,
+              "description": "Dołączyć treść HTML i tekstową."
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_email_subscribers",
+        "title": "List email subscribers",
+        "description": "Subskrybenci newslettera/mailingu: e-mail, imię, status, źródło, tagi, UTM, data wypisu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status (np. active, unsubscribed, bounced)."
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Źródło zapisu."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: e-mail lub imię."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_social_posts",
+        "title": "List social posts",
+        "description": "Posty social media (Facebook, Instagram, LinkedIn…): platforma, status, treść, hashtagi, obraz, link, kampania, terminy. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "platform": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Platforma."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status posta."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w treści lub nazwie kampanii."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_publish_queue",
+        "title": "List social publish queue",
+        "description": "Kolejka automatycznej publikacji w social media: platforma, tytuł, termin, status, próby, błąd, id opublikowanego posta. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "platform": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Platforma."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status wpisu w kolejce."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_meta_campaigns",
+        "title": "List Meta Ads campaigns",
+        "description": "Kampanie Meta Ads z synchronizacji: nazwa, cel, status, budżety, wydatki, wyświetlenia, kliknięcia, CTR, CPC, liczba leadów, koszt leada, terminy. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status kampanii w Meta."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w nazwie."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_meta_leads",
+        "title": "List Meta lead-form leads",
+        "description": "Leady z formularzy Meta (Lead Ads): dane kontaktowe, kampania, formularz, pola, powiązany wniosek, czas otrzymania. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "meta_campaign_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Id kampanii Meta."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: imię, e-mail, telefon."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data otrzymania, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "until": {
+              "type": "string",
+              "description": "Od kiedy (data otrzymania, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_landing_leads",
+        "title": "List landing page leads",
+        "description": "Zgłoszenia z landing page'y (formularze): dane, źródło, UTM, pola własne — z tytułem i slugiem landinga. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_page_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko z tego landinga."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: imię, e-mail, telefon."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_tracking_links",
+        "title": "List tracking campaigns (UTM links)",
+        "description": "Kampanie śledzące (linki z UTM i kodem skróconym): cel, parametry UTM, koszt, aktywność oraz liczba kliknięć. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: nazwa, slug, utm_campaign."
+            },
+            "active_only": {
+              "type": "boolean",
+              "default": false
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_short_links",
+        "title": "List short links",
+        "description": "Linki skrócone wysyłane klientom (SMS, mail): kod, cel, źródło, powiązany lead/klient/wniosek, liczba kliknięć, ostatnie kliknięcie, ważność. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Źródło linku."
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego leada."
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_pr_opportunities",
+        "title": "List PR opportunities",
+        "description": "Okazje PR znalezione przez monitoring mediów: źródło, temat, fragment, dopasowane frazy, termin, status, szkic odpowiedzi, adresat. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status okazji."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: temat, treść, źródło."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_growth_actions",
+        "title": "List growth engine actions",
+        "description": "Dziennik silnika wzrostu AI (SEO, linkbuilding, outreach, landing optimization…): moduł, akcja, status, podsumowanie, koszt, kto uruchomił. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "module": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Moduł silnika wzrostu."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status akcji."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_funnel_insights",
+        "title": "Get funnel insights",
+        "description": "Ostatnie analizy lejka AI: okres, podsumowanie, wąskie gardła, rekomendacje, metryki (opcjonalnie dla konkretnego landinga). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego landinga."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "description": "Ile wierszy (domyślnie 3, maks. 20)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_seo_location_pages",
+        "title": "List SEO location pages",
+        "description": "Strony lokalizacyjne SEO (pożyczki pod nieruchomość w mieście X): slug, nazwa, TERYT, status, meta, kiedy wygenerowano i opublikowano. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status strony."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: nazwa miejscowości lub slug."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_studio_jobs",
+        "title": "List studio video jobs",
+        "description": "Zadania studia wideo (awatar HeyGen + głos): status, tytuł publikacji, prompt, wideo, miniatura, platformy auto-publikacji, błąd. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status zadania."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_youtube_queue",
+        "title": "List YouTube publish queue",
+        "description": "Kolejka publikacji na YouTube (shorts): tytuł, prywatność, termin, status, próby, błąd, id opublikowanego wideo. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status wpisu w kolejce."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_automation_events",
+        "title": "List automation events",
+        "description": "Zdarzenia automatyzacji (webhooki, scenariusze, ticki): typ, status, wniosek, błąd. Do diagnozy „czy automat zadziałał”. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "automation_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Typ automatyzacji."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status (np. ok, error)."
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_external_api_calls",
+        "title": "List external API calls (errors)",
+        "description": "Wywołania zewnętrznych API (KW, GUS, KRS, CRBR, RCN, NBP…): dostawca, typ i wartość zapytania, powodzenie, kod błędu, czas odpowiedzi. Domyślnie tylko nieudane. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Dostawca API."
+            },
+            "only_failed": {
+              "type": "boolean",
+              "default": true,
+              "description": "Tylko nieudane wywołania (domyślnie tak)."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_audit_logs",
+        "title": "List audit logs",
+        "description": "Dziennik audytu panelu: akcja, typ i id obiektu, kto, wartości przed/po. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Nazwa akcji."
+            },
+            "object_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Typ obiektu (np. lead, loan_application)."
+            },
+            "object_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Id obiektu."
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko działania tego użytkownika."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_admin_assistant_history",
+        "title": "Search panel assistant history",
+        "description": "Szukanie w rozmowach z asystentem panelu (bot administratora w /admin): fraza, rola, data — z tytułem rozmowy. Pozwala kontynuować w czacie to, co ustalono w panelu. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w treści wiadomości."
+            },
+            "role": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Rola (user / assistant)."
+            },
+            "conversation_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko z tej rozmowy."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_admin_memory",
+        "title": "List panel assistant memory",
+        "description": "Pamięć długotrwała asystenta panelu (ustalenia, preferencje, fakty o firmie): tytuł, treść, rodzaj, przypięte, waga. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Rodzaj wpisu."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w tytule lub treści."
+            },
+            "include_archived": {
+              "type": "boolean",
+              "default": false,
+              "description": "Dołączyć wpisy zarchiwizowane."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_generated_documents",
+        "title": "List generated documents",
+        "description": "Dokumenty wygenerowane z szablonów (umowy, oświadczenia): szablon, powiązany lead / wniosek / oferta, pliki PDF/DOCX, rozmiar, kto wygenerował. Widoczność wg RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego leada."
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "template_slug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Slug szablonu."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data utworzenia, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_document_templates",
+        "title": "List document templates",
+        "description": "Szablony dokumentów w kreatorze: nazwa, slug, kategoria, zastosowanie, format wyjściowy, opis, grupa odbiorców. Treść szablonu nie jest zwracana.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "category": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Kategoria."
+            },
+            "use_case": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Zastosowanie."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: nazwa lub opis."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_loan_reminder_sends",
+        "title": "List loan reminder e-mail sends",
+        "description": "Wysłane maile przypominające klientom o dokończeniu wniosku (drip): adresat, temat, numer w sekwencji, godzina, otwarcia i kliknięcia, błąd. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko dla tego wniosku."
+            },
+            "recipient_email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Dokładny adres odbiorcy."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data wysyłki, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_platform_health",
+        "title": "Get platform health",
+        "description": "Stan operacyjny platformy z ostatnich 24 h w jednym wywołaniu: automatyzacje (po statusie i typie), nieudane wywołania API (po dostawcy), zaległe follow-upy, wątki czekające na odpowiedź, nieudane biegi analiz, wnioski niekompletne z ostatnich 30 dni, propozycje auto-dystrybucji i follow-upy braków po statusie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "hours": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 168,
+              "default": 24,
+              "description": "Ile godzin wstecz (domyślnie 24)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_kpi_report",
+        "title": "Get KPI report (period vs previous)",
+        "description": "Raport KPI za okres (domyślnie 7 dni) z porównaniem do poprzedniego okresu tej samej długości: nowe leady, wnioski, wiadomości przychodzące, oferty inwestorów, odpowiedzi instytucji, opłacone dostępy i przychód. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "period_days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "default": 7
+            },
+            "until": {
+              "type": "string",
+              "description": "Koniec okresu (domyślnie teraz)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "calculate_repayment_schedule",
+        "title": "Calculate repayment schedule",
+        "description": "Harmonogram spłat pożyczki: raty równe (annuitetowe), malejące albo odsetkowe z balonem kapitału na końcu. Zwraca listę rat (kapitał, odsetki, saldo), sumę odsetek, koszt całkowity, opcjonalnie prowizję. Czysta matematyka, bez bazy.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Kwota pożyczki w PLN."
+            },
+            "period_months": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 360
+            },
+            "yearly_rate_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Roczne oprocentowanie w %."
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "equal",
+                "decreasing",
+                "balloon"
+              ],
+              "default": "equal",
+              "description": "equal = raty równe, decreasing = malejące, balloon = same odsetki + kapitał na końcu."
+            },
+            "commission_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30,
+              "description": "Prowizja w % kwoty (doliczana do kosztu)."
+            },
+            "max_rows": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 360,
+              "description": "Ile rat zwrócić w liście (domyślnie wszystkie, maks. 360)."
+            }
+          },
+          "required": [
+            "amount",
+            "period_months",
+            "yearly_rate_pct"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "calculate_ltv",
+        "title": "Calculate LTV",
+        "description": "LTV (loan-to-value) dla zabezpieczenia hipotecznego: kwota pożyczki (plus istniejące obciążenia) do wartości nieruchomości. Zwraca LTV w %, orientacyjny przedział i maksymalną kwotę przy zadanym limicie LTV. Czysta matematyka.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loan_amount": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Wnioskowana kwota pożyczki (PLN)."
+            },
+            "property_value": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Wartość nieruchomości (PLN)."
+            },
+            "existing_encumbrances": {
+              "type": "number",
+              "minimum": 0,
+              "default": 0,
+              "description": "Istniejące hipoteki / obciążenia (PLN)."
+            },
+            "max_ltv_pct": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 60,
+              "description": "Limit LTV do wyliczenia maks. kwoty (domyślnie 60%)."
+            }
+          },
+          "required": [
+            "loan_amount",
+            "property_value"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
       }
     ]
   }
