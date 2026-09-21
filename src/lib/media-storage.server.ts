@@ -50,6 +50,31 @@ function safeName(s: string): string {
 }
 
 /**
+ * Upload z samonaprawą: gdy bucket nie istnieje (np. migracja nie poszła na
+ * produkcji), tworzy go z właściwą widocznością i ponawia zapis raz.
+ */
+async function uploadEnsuringBucket(
+  bucket: string,
+  path: string,
+  bytes: Uint8Array,
+  contentType: string,
+): Promise<void> {
+  const upload = () =>
+    supabaseAdmin.storage.from(bucket).upload(path, bytes, { contentType, upsert: false });
+  let { error } = await upload();
+  if (error && /bucket.*not.*found/i.test(error.message)) {
+    const { error: createErr } = await supabaseAdmin.storage.createBucket(bucket, {
+      public: bucket === PUBLIC_BUCKET,
+    });
+    if (createErr && !/already exists/i.test(createErr.message)) {
+      throw new Error(`storage ${bucket}: nie można utworzyć bucketa: ${createErr.message}`);
+    }
+    ({ error } = await upload());
+  }
+  if (error) throw new Error(`storage ${bucket}: ${error.message}`);
+}
+
+/**
  * Zapisuje bajty w Storage pod `mcp/<rok-miesiąc>/<nazwa>-<losowe>.<ext>` i
  * zwraca adres. `visibility: "private"` = podpisany link na godzinę.
  */
@@ -73,11 +98,7 @@ export async function storeMedia(
   const base = safeName(opts.name ?? "media") || "media";
   const path = `mcp/${opts.prefix ? `${safeName(opts.prefix)}/` : ""}${month}/${base}-${rand}.${ext}`;
 
-  const { error } = await supabaseAdmin.storage.from(bucket).upload(path, bytes, {
-    contentType: opts.contentType,
-    upsert: false,
-  });
-  if (error) throw new Error(`storage ${bucket}: ${error.message}`);
+  await uploadEnsuringBucket(bucket, path, bytes, opts.contentType);
 
   if (opts.visibility === "public") {
     const { data: pub } = supabaseAdmin.storage.from(bucket).getPublicUrl(path);

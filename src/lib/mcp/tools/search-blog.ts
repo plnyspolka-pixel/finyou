@@ -22,7 +22,7 @@ export default defineTool({
       .from("ai_seo_articles")
       .select("title, slug, audience, published_at")
       .eq("status", "published")
-      .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+      .or(`title.ilike.%${query}%,content_md.ilike.%${query}%,excerpt.ilike.%${query}%`)
       .order("published_at", { ascending: false })
       .limit(limit ?? 10);
     if (error) {
