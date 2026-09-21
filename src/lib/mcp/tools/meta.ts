@@ -256,7 +256,7 @@ export const getFacebookPageInsights = defineTool({
   name: "get_facebook_page_insights",
   title: "Get Facebook page insights",
   description:
-    "Statystyki strony (dziennie / tygodniowo / 28 dni): wyświetlenia, zasięg, zaangażowanie postów, fani (własna lista metryk przez `metrics`). Domyślnie ostatnie 7 dni. Tylko administrator/operator.",
+    "Statystyki strony (dziennie / tygodniowo / 28 dni): zaangażowanie postów, obserwujący, nowi obserwujący (Meta wycofała page_impressions, page_impressions_unique i page_fans; własna lista metryk przez `metrics`). Domyślnie ostatnie 7 dni. Tylko administrator/operator.",
   inputSchema: {
     period: z.enum(["day", "week", "days_28"]).default("day"),
     since: z.string().optional(),
