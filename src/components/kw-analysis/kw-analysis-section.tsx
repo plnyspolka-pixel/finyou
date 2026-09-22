@@ -117,7 +117,7 @@ function MessageBlock({ title, text }: { title: string; text: string }) {
   );
 }
 
-function FindingCard({ f }: { f: KwFinding }) {
+function FindingCard({ f, investorView = false }: { f: KwFinding; investorView?: boolean }) {
   const [open, setOpen] = useState(f.status === "STOP" || f.status === "WSTRZYMANE");
   return (
     <Card>
@@ -200,11 +200,15 @@ function FindingCard({ f }: { f: KwFinding }) {
           )}
 
           <Separator />
-          <div className="grid gap-2 md:grid-cols-3">
-            <MessageBlock title="Dla pośrednika" text={f.intermediaryMessage} />
-            <MessageBlock title="Do klienta" text={f.clientMessage} />
-            <MessageBlock title="Dla inwestora" text={f.investorMessage} />
-          </div>
+          {investorView ? (
+            <MessageBlock title="Co to oznacza dla inwestora" text={f.investorMessage} />
+          ) : (
+            <div className="grid gap-2 md:grid-cols-3">
+              <MessageBlock title="Dla pośrednika" text={f.intermediaryMessage} />
+              <MessageBlock title="Do klienta" text={f.clientMessage} />
+              <MessageBlock title="Dla inwestora" text={f.investorMessage} />
+            </div>
+          )}
         </CardContent>
       )}
     </Card>
@@ -228,7 +232,18 @@ const TABS: Array<{ key: string; label: string; cats: FindingCategory[] }> = [
   { key: "data", label: "Dane / jakość", cats: ["DATA_QUALITY"] },
 ];
 
-export function KwAnalysisReport({ result }: { result: KwAnalysisResult }) {
+/**
+ * Raport analizy KW. `investorView` = wersja dla inwestora (panel /inwestor):
+ * te same znaleziska, ale bez komunikatów operacyjnych do pośrednika i klienta
+ * (zostaje wyłącznie komunikat „dla inwestora").
+ */
+export function KwAnalysisReport({
+  result,
+  investorView = false,
+}: {
+  result: KwAnalysisResult;
+  investorView?: boolean;
+}) {
   const byCat = (cats: FindingCategory[]) =>
     result.findings.filter((f) => cats.includes(f.category));
   const blockers = result.findings.filter(
@@ -291,7 +306,7 @@ export function KwAnalysisReport({ result }: { result: KwAnalysisResult }) {
               {t.label}
             </TabsTrigger>
           ))}
-          <TabsTrigger value="messages">Komunikacja</TabsTrigger>
+          {!investorView && <TabsTrigger value="messages">Komunikacja</TabsTrigger>}
           <TabsTrigger value="priority">Miejsce hipoteki</TabsTrigger>
         </TabsList>
 
@@ -304,7 +319,7 @@ export function KwAnalysisReport({ result }: { result: KwAnalysisResult }) {
           ) : (
             blockers
               .sort((a, b) => sev(b.status) - sev(a.status))
-              .map((f) => <FindingCard key={f.id} f={f} />)
+              .map((f) => <FindingCard key={f.id} f={f} investorView={investorView} />)
           )}
         </TabsContent>
 
@@ -315,7 +330,7 @@ export function KwAnalysisReport({ result }: { result: KwAnalysisResult }) {
             ) : (
               byCat(t.cats)
                 .sort((a, b) => sev(b.status) - sev(a.status))
-                .map((f) => <FindingCard key={f.id} f={f} />)
+                .map((f) => <FindingCard key={f.id} f={f} investorView={investorView} />)
             )}
           </TabsContent>
         ))}
@@ -359,23 +374,25 @@ export function KwAnalysisReport({ result }: { result: KwAnalysisResult }) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="messages" className="space-y-3 mt-3">
-          {result.findings.map((f) => (
-            <Card key={f.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={f.status} />
-                  <CardTitle className="text-sm">{f.title}</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="grid gap-2 md:grid-cols-3">
-                <MessageBlock title="Dla pośrednika" text={f.intermediaryMessage} />
-                <MessageBlock title="Do klienta" text={f.clientMessage} />
-                <MessageBlock title="Dla inwestora" text={f.investorMessage} />
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
+        {!investorView && (
+          <TabsContent value="messages" className="space-y-3 mt-3">
+            {result.findings.map((f) => (
+              <Card key={f.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={f.status} />
+                    <CardTitle className="text-sm">{f.title}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="grid gap-2 md:grid-cols-3">
+                  <MessageBlock title="Dla pośrednika" text={f.intermediaryMessage} />
+                  <MessageBlock title="Do klienta" text={f.clientMessage} />
+                  <MessageBlock title="Dla inwestora" text={f.investorMessage} />
+                </CardContent>
+              </Card>
+            ))}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

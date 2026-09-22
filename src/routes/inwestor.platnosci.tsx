@@ -1,16 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { FancyPageHeader } from "@/components/layout/fancy-page-header";
-import { PaymentsAndInvoices } from "@/components/access/PaymentsAndInvoices";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+// „Płatności i faktury" to zakładka modułu „Pakiet i płatności"
+// (/inwestor/abonament?tab=platnosci). Trasa zostaje jako przekierowanie dla
+// starych linków (e-maile z fakturami, zakładki przeglądarki).
 export const Route = createFileRoute("/inwestor/platnosci")({
-  component: () => (
-    <div className="space-y-6">
-      <FancyPageHeader
-        eyebrow="Rozliczenia"
-        title="Płatności i faktury"
-        subtitle="Historia Twoich płatności za dostęp oraz wystawione faktury."
-      />
-      <PaymentsAndInvoices />
-    </div>
-  ),
+  beforeLoad: () => {
+    throw redirect({ to: "/inwestor/abonament", search: { tab: "platnosci" } });
+  },
+  component: () => null,
 });

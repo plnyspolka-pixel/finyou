@@ -7,17 +7,30 @@ import { formatPLN } from "@/lib/labels";
 import { getPropertyAnalysis } from "@/lib/property-analysis/property-collateral-analysis.functions";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
 
-export function InvestorSummaryCard({ applicationId }: { applicationId: string }) {
+export function InvestorSummaryCard({
+  applicationId,
+  result: preloaded,
+}: {
+  applicationId: string;
+  /** Wynik podany z zewnątrz (np. moduł Analityki) — karta nie pobiera go sama.
+   *  `null` = brak analizy (karta się nie renderuje). */
+  result?: PropertyAnalysisResult | null;
+}) {
   const fetchAnalysis = useServerFn(getPropertyAnalysis);
   const [row, setRow] = useState<any | null>(null);
 
   useEffect(() => {
+    if (preloaded !== undefined) return;
     void fetchAnalysis({ data: { applicationId } })
       .then(setRow)
       .catch(() => setRow(null));
-  }, [applicationId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applicationId, preloaded]);
 
-  const result = row?.result_json as PropertyAnalysisResult | undefined;
+  const result = (preloaded !== undefined ? preloaded : row?.result_json) as
+    | PropertyAnalysisResult
+    | null
+    | undefined;
   if (!result) return null;
 
   return (

@@ -1,18 +1,16 @@
 import { createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import {
-  ListChecks,
   Tag,
-  FileSignature,
   FileText,
   GraduationCap,
   Calculator,
   CreditCard,
   User,
   Gavel,
-  Receipt,
   ShieldCheck,
-  FileCheck,
+  Target,
+  BarChart3,
 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 import { InvestorAssistantWidget } from "@/components/inwestor/assistant-widget";
@@ -23,44 +21,42 @@ export const Route = createFileRoute("/inwestor")({
 });
 
 // Nawigacja pakietu PRO (3 000 zł / 6 mies. + 5% od udzielonej pożyczki) —
-// oraz personelu. Zawiera moduły zarezerwowane dla PRO: Akademię, kalkulator
-// compliance, AML i windykację AI.
+// oraz personelu. Zawiera moduły zarezerwowane dla PRO: Analitykę, Akademię,
+// kalkulator compliance, AML i windykację AI.
 const proGroups: NavGroup[] = [
   {
     items: [
-      // Główny ekran panelu: wyszukiwarka dostępnych wniosków (tylko wnioski —
-      // tworzenie umowy ma osobną, JEDYNĄ zakładkę „Tworzenie umowy").
-      { to: "/inwestor", label: "Dostępne wnioski", icon: ListChecks, exact: true },
-      // Jedyna ścieżka tworzenia umowy: agent AI + deterministyczny silnik klauzul.
-      { to: "/inwestor/kreator-umowy", label: "Tworzenie umowy", icon: FileSignature },
+      // Pierwszy ekran panelu: pipeline inwestora (dane stron → KYC → screening
+      // → pakiet umów → Zlecenie) i okazje z wykonania Zleceń.
+      { to: "/inwestor/umowy", label: "Okazje inwestycyjne", icon: Target },
       { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
+      // Pipeline analityczny (KW → właściciele → analiza KW → ryzyko) — ten
+      // sam, którym posługuje się zespół Finance You — dla okazji inwestora.
+      { to: "/inwestor/analityka", label: "Analityka", icon: BarChart3 },
+      // Jeden moduł dokumentów: agent umowy (silnik klauzul) + kreator
+      // dokumentów DOCX (bez kategorii „Umowy" — umowy tylko z agenta).
+      { to: "/inwestor/dokumenty", label: "Dokumenty i umowy", icon: FileText },
       { to: "/inwestor/windykacja", label: "Windykacja", icon: Gavel },
       { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
-      // Kreator dokumentów BEZ kategorii „Umowy" — umowy powstają wyłącznie
-      // w zakładce „Tworzenie umowy".
-      { to: "/inwestor/kreator-dokumentow", label: "Kreator dokumentów", icon: FileText },
       { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
       { to: "/inwestor/kalkulator", label: "Kalkulator compliance", icon: Calculator },
-      { to: "/inwestor/abonament", label: "Pakiet", icon: CreditCard },
-      { to: "/inwestor/umowy", label: "Pipeline i Zlecenia", icon: FileCheck },
-      { to: "/inwestor/platnosci", label: "Płatności i faktury", icon: Receipt },
+      // Pakiety oraz historia płatności i faktur w jednym module.
+      { to: "/inwestor/abonament", label: "Pakiet i płatności", icon: CreditCard },
       { to: "/inwestor/profil", label: "Profil", icon: User },
     ],
   },
 ];
 
-// Nawigacja pakietu Podstawowego (0 zł): cały pipeline, Zlecenia, okazje
-// kupowane pojedynczo, generator umowy pożyczki, płatności i profil.
-// Akademia, kalkulator compliance, AML i windykacja AI są w pakiecie PRO.
+// Nawigacja pakietu Podstawowego (0 zł): pipeline i Zlecenia, okazje kupowane
+// pojedynczo, generator umowy pożyczki, pakiet z płatnościami i profil.
+// Analityka, Akademia, kalkulator compliance, AML i windykacja AI są w PRO.
 const basicGroups: NavGroup[] = [
   {
     items: [
-      { to: "/inwestor", label: "Dostępne wnioski", icon: ListChecks, exact: true },
-      { to: "/inwestor/umowy", label: "Pipeline i Zlecenia", icon: FileCheck },
-      { to: "/inwestor/kreator-umowy", label: "Generator umowy pożyczki", icon: FileSignature },
+      { to: "/inwestor/umowy", label: "Okazje inwestycyjne", icon: Target },
       { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
-      { to: "/inwestor/abonament", label: "Pakiety", icon: CreditCard },
-      { to: "/inwestor/platnosci", label: "Płatności i faktury", icon: Receipt },
+      { to: "/inwestor/dokumenty", label: "Dokumenty i umowy", icon: FileText },
+      { to: "/inwestor/abonament", label: "Pakiet i płatności", icon: CreditCard },
       { to: "/inwestor/profil", label: "Profil", icon: User },
     ],
   },
@@ -69,15 +65,15 @@ const basicGroups: NavGroup[] = [
 // Ścieżki dostępne w pakiecie Podstawowym (routing — pierwsza z trzech warstw
 // egzekwowania; server functions i RLS blokują resztę niezależnie).
 const BASIC_PATHS = [
-  // Bramka zamkniętego modułu (aplikacja → KYC → screening → decyzja Finance
-  // You) żyje w zakładce „Dostępne wnioski" (/inwestor). Ścieżki
-  // /inwestor/projekty zostają dostępne dla głębokich linków (przypisania,
-  // propozycje) — dane i tak chronią server functions + RLS.
+  // Głębokie linki modułu projektów (przypisania, propozycje) — dane i tak
+  // chronią server functions + RLS.
   "/inwestor/projekty",
   // Pipeline i pakiet umów muszą być dostępne PRZED zakupem czegokolwiek —
   // Podstawowy składa Zlecenia bez opłat stałych.
   "/inwestor/umowy",
-  // Generator umowy pożyczki jest w zakresie pakietu Podstawowego.
+  // Dokumenty i umowy: generator umowy pożyczki jest w zakresie pakietu
+  // Podstawowego (kreator dokumentów DOCX w tym module wymaga PRO).
+  "/inwestor/dokumenty",
   "/inwestor/kreator-umowy",
   "/inwestor/abonament",
   "/inwestor/platnosci",
