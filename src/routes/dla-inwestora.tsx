@@ -16,12 +16,21 @@ import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
 import { ChatWidget } from "@/components/landing/chat-widget";
+import { LoanCalculator } from "@/components/loan-calculator";
 import { LeadsTable } from "@/routes/embed.leady";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import type { AccessProduct } from "@/lib/access/core";
 import { fetchPublicLeads, type PublicLead } from "@/lib/public-leads.functions";
 
 const JOIN = "/rejestracja?role=inwestor";
+
+// Filmy w hero. Pierwszy (Wistia) po prawej w rzędzie 1, drugi (HeyGen) piętro
+// niżej po lewej. ID filmu HeyGen to końcówka linku app.heygen.com/videos/<slug>-<id>;
+// publiczny odtwarzacz działa pod app.heygen.com/embeds/<id> i wymaga włączonego
+// udostępniania filmu (Share) w HeyGen.
+const WISTIA_EMBED_URL = "https://fast.wistia.net/embed/iframe/kjp6klcd5u?seo=false";
+const HEYGEN_VIDEO_ID = "1328c421db424e46a03158ef7faa5afc";
+const HEYGEN_EMBED_URL = `https://app.heygen.com/embeds/${HEYGEN_VIDEO_ID}`;
 
 // Cennik pobierany z zaufanego katalogu access_products (te same ceny co panel).
 // Odporne na brak bazy podczas SSR — wtedy pokazujemy statyczny fallback.
@@ -450,38 +459,113 @@ function Hero() {
             </MktButton>
           </div>
         </div>
-        <div style={{ position: "relative" }}>
-          <div
-            aria-hidden
+        <HeroVideo
+          src={WISTIA_EMBED_URL}
+          title="Klub Inwestorów Hipotecznych"
+          glow="linear-gradient(135deg, oklch(0.65 0.13 235 / .3), oklch(0.40 0.25 268 / .25))"
+        />
+
+        {/* Rząd 2 siatki hero: drugi film piętro niżej niż pierwszy, po lewej stronie;
+            po prawej krótki opis z przejściem do kalkulatora inwestora pod hero. */}
+        <HeroVideo
+          src={HEYGEN_EMBED_URL}
+          title="Finance You — Twoja droga do prywatnego finansowania nieruchomości"
+          glow="linear-gradient(135deg, oklch(0.83 0.14 88 / .28), oklch(0.65 0.13 235 / .25))"
+        />
+        <div>
+          <Eyebrow tone="gold">Film 2</Eyebrow>
+          <h2
             style={{
-              position: "absolute",
-              inset: "-1.5rem",
-              borderRadius: "var(--radius-3xl)",
-              background:
-                "linear-gradient(135deg, oklch(0.65 0.13 235 / .3), oklch(0.40 0.25 268 / .25))",
-              filter: "blur(34px)",
-            }}
-          />
-          <div
-            style={{
-              position: "relative",
-              borderRadius: "var(--radius-2xl)",
-              overflow: "hidden",
-              border: "1px solid rgba(255,255,255,.15)",
-              boxShadow: "var(--shadow-2xl)",
+              marginTop: "0.6rem",
+              fontSize: "clamp(1.45rem, 2.6vw, 2rem)",
+              fontWeight: 800,
+              lineHeight: 1.12,
+              letterSpacing: "-0.02em",
             }}
           >
-            <iframe
-              src="https://fast.wistia.net/embed/iframe/kjp6klcd5u?seo=false"
-              title="Klub Inwestorów Hipotecznych"
-              allow="autoplay; fullscreen"
-              allowFullScreen
-              style={{ width: "100%", aspectRatio: "16 / 9", display: "block", border: 0 }}
-            />
+            Twoja droga do prywatnego finansowania nieruchomości.
+          </h2>
+          <p
+            style={{
+              marginTop: "0.9rem",
+              maxWidth: "32rem",
+              fontSize: "1rem",
+              lineHeight: 1.6,
+              color: "rgba(255,255,255,.8)",
+            }}
+          >
+            Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You. Bezpośrednio
+            poniżej masz pełną wersję kalkulatora inwestora — policz zysk, raty, limity ustawowe i
+            harmonogram spłat na własnych parametrach.
+          </p>
+          <div style={{ marginTop: "1.4rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
+            <MktButton variant="outline" href="#kalkulator">
+              <BrandIcon name="ltv" size={16} /> Policz w kalkulatorze
+            </MktButton>
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+// Karta wideo w hero: poświata za ramką + iframe 16:9. Wspólna dla Wistii i HeyGen.
+function HeroVideo({ src, title, glow }: { src: string; title: string; glow: string }) {
+  return (
+    <div style={{ position: "relative" }}>
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: "-1.5rem",
+          borderRadius: "var(--radius-3xl)",
+          background: glow,
+          filter: "blur(34px)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          borderRadius: "var(--radius-2xl)",
+          overflow: "hidden",
+          border: "1px solid rgba(255,255,255,.15)",
+          boxShadow: "var(--shadow-2xl)",
+        }}
+      >
+        <iframe
+          src={src}
+          title={title}
+          allow="autoplay; fullscreen; encrypted-media"
+          allowFullScreen
+          style={{ width: "100%", aspectRatio: "16 / 9", display: "block", border: 0 }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Pełna wersja kalkulatora inwestora — ten sam komponent i ten sam tryb
+// (investorGuidance), co w panelu /inwestor/kalkulator: stopy NBP, limity
+// odsetek i MPKK, analiza zabezpieczenia, próg AML, harmonogram, PDF i CSV.
+// Sekcja stoi bezpośrednio pod filmami, przed pasem zakładek.
+function CalculatorSection() {
+  return (
+    <Section id="kalkulator">
+      <SectionHead
+        center
+        eyebrow="Kalkulator inwestora"
+        title="Pełny kalkulator pożyczki hipotecznej"
+        sub="Ta sama, najbardziej rozbudowana wersja co w panelu inwestora: stopy NBP na żywo, limit odsetek maksymalnych i MPKK, prowizje, realna stopa zwrotu po inflacji, analiza zabezpieczenia, próg AML oraz harmonogram spłat z eksportem do PDF i CSV."
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <LoanCalculator investorGuidance />
+      </div>
+      <ComplianceNote style={{ marginTop: "2rem" }}>
+        Wyliczenia mają charakter poglądowy i nie stanowią oferty ani rekomendacji inwestycyjnej.
+        Ostateczne warunki wynikają z umowy pożyczki. Inwestowanie wiąże się z ryzykiem utraty
+        części lub całości kapitału.
+      </ComplianceNote>
+    </Section>
   );
 }
 
@@ -522,7 +606,7 @@ function LeadsSection({ leads }: { leads: PublicLead[] }) {
   );
 }
 
-// ── Zakładki bezpośrednio pod filmem ─────────────────────────────────────────
+// ── Zakładki pod filmami i kalkulatorem ──────────────────────────────────────
 // Kotwice z nagłówka (#akademia, #ochrona, #windykacja-ai, #cennik) wybierają
 // odpowiednią zakładkę i przewijają do pasa zakładek — sekcje nie mają już
 // własnych id na stronie.
@@ -795,6 +879,8 @@ function InvestorLanding() {
   return (
     <MarketingShell page="inwestor" sticky={{ label: "Dołącz do Klubu", href: JOIN }}>
       <Hero />
+
+      <CalculatorSection />
 
       <InvestorTabs leads={leads} products={products} />
 
