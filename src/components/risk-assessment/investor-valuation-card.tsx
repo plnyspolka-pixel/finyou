@@ -41,20 +41,31 @@ function fmtPln(v: number | null | undefined): string {
  * oraz otoczenie/ludność. Dane wrażliwe właściciela i korespondencji nie są tu
  * ujawniane (serwer zwraca wyłącznie bezpieczny podzbiór).
  */
-export function InvestorValuationCard({ applicationId }: { applicationId: string }) {
+export function InvestorValuationCard({
+  applicationId,
+  summary: preloaded,
+}: {
+  applicationId: string;
+  /** Podsumowanie podane z zewnątrz (np. moduł Analityki) — karta nie pobiera
+   *  go sama. `null` = brak oceny (karta się nie renderuje). */
+  summary?: InvestorValuationSummary | null;
+}) {
   const fetchSummary = useServerFn(getInvestorValuationSummary);
-  const [data, setData] = useState<InvestorValuationSummary | null>(null);
+  const [fetched, setFetched] = useState<InvestorValuationSummary | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    if (preloaded !== undefined) return;
     void fetchSummary({ data: { applicationId } })
-      .then((r) => setData(r))
-      .catch(() => setData(null))
+      .then((r) => setFetched(r))
+      .catch(() => setFetched(null))
       .finally(() => setLoaded(true));
-  }, [applicationId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applicationId, preloaded]);
 
+  const data = preloaded !== undefined ? preloaded : fetched;
   // Bez oceny albo brak danych — nie pokazujemy pustej karty.
-  if (!loaded || !data) return null;
+  if ((preloaded === undefined && !loaded) || !data) return null;
 
   const { predictedValue: pv, quickSale: qs, saleability: sa } = data;
   const drivers: string[] = [];

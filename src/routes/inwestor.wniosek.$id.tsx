@@ -253,11 +253,11 @@ function InwestorWniosek() {
   return (
     <div className="space-y-6 max-w-5xl">
       <Link
-        to="/inwestor"
+        to="/inwestor/umowy"
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="mr-1 h-4 w-4" />
-        Wróć
+        Wróć do okazji inwestycyjnych
       </Link>
       <FancyPageHeader
         eyebrow="Wniosek inwestycyjny"

@@ -118,7 +118,7 @@ function PipelinePage() {
   return (
     <div className="space-y-5">
       <FancyPageHeader
-        eyebrow="Pipeline inwestora"
+        eyebrow="Okazje inwestycyjne"
         title="Od danych pożyczkodawcy do Zlecenia"
         subtitle="Dziewięć kroków w jednym miejscu: dane stron, rachunek do spłaty, KYC, screening sankcyjny, komplet umów i Zlecenie poszukiwania okazji."
       />

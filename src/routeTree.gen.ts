@@ -93,6 +93,8 @@ import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorKreatorUmowyRouteImport } from './routes/inwestor.kreator-umowy'
 import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
+import { Route as InwestorDokumentyRouteImport } from './routes/inwestor.dokumenty'
+import { Route as InwestorAnalitykaRouteImport } from './routes/inwestor.analityka'
 import { Route as InwestorAmlRouteImport } from './routes/inwestor.aml'
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as FakturaIdRouteImport } from './routes/faktura.$id'
@@ -693,6 +695,16 @@ const InwestorKreatorDokumentowRoute =
 const InwestorKalkulatorRoute = InwestorKalkulatorRouteImport.update({
   id: '/kalkulator',
   path: '/kalkulator',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorDokumentyRoute = InwestorDokumentyRouteImport.update({
+  id: '/dokumenty',
+  path: '/dokumenty',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorAnalitykaRoute = InwestorAnalitykaRouteImport.update({
+  id: '/analityka',
+  path: '/analityka',
   getParentRoute: () => InwestorRoute,
 } as any)
 const InwestorAmlRoute = InwestorAmlRouteImport.update({
@@ -1755,6 +1767,8 @@ export interface FileRoutesByFullPath {
   '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/aml': typeof InwestorAmlRouteWithChildren
+  '/inwestor/analityka': typeof InwestorAnalitykaRoute
+  '/inwestor/dokumenty': typeof InwestorDokumentyRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
@@ -2014,6 +2028,8 @@ export interface FileRoutesByTo {
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
+  '/inwestor/analityka': typeof InwestorAnalitykaRoute
+  '/inwestor/dokumenty': typeof InwestorDokumentyRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
@@ -2276,6 +2292,8 @@ export interface FileRoutesById {
   '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/aml': typeof InwestorAmlRouteWithChildren
+  '/inwestor/analityka': typeof InwestorAnalitykaRoute
+  '/inwestor/dokumenty': typeof InwestorDokumentyRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
@@ -2543,6 +2561,8 @@ export interface FileRouteTypes {
     | '/faktura/$id'
     | '/inwestor/abonament'
     | '/inwestor/aml'
+    | '/inwestor/analityka'
+    | '/inwestor/dokumenty'
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
@@ -2802,6 +2822,8 @@ export interface FileRouteTypes {
     | '/embed/wniosek'
     | '/faktura/$id'
     | '/inwestor/abonament'
+    | '/inwestor/analityka'
+    | '/inwestor/dokumenty'
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
@@ -3063,6 +3085,8 @@ export interface FileRouteTypes {
     | '/faktura/$id'
     | '/inwestor/abonament'
     | '/inwestor/aml'
+    | '/inwestor/analityka'
+    | '/inwestor/dokumenty'
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
@@ -3935,6 +3959,20 @@ declare module '@tanstack/react-router' {
       path: '/kalkulator'
       fullPath: '/inwestor/kalkulator'
       preLoaderRoute: typeof InwestorKalkulatorRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/dokumenty': {
+      id: '/inwestor/dokumenty'
+      path: '/dokumenty'
+      fullPath: '/inwestor/dokumenty'
+      preLoaderRoute: typeof InwestorDokumentyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/analityka': {
+      id: '/inwestor/analityka'
+      path: '/analityka'
+      fullPath: '/inwestor/analityka'
+      preLoaderRoute: typeof InwestorAnalitykaRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/inwestor/aml': {
@@ -5461,6 +5499,8 @@ const InwestorWindykacjaRouteWithChildren =
 interface InwestorRouteChildren {
   InwestorAbonamentRoute: typeof InwestorAbonamentRoute
   InwestorAmlRoute: typeof InwestorAmlRouteWithChildren
+  InwestorAnalitykaRoute: typeof InwestorAnalitykaRoute
+  InwestorDokumentyRoute: typeof InwestorDokumentyRoute
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
   InwestorKreatorDokumentowRoute: typeof InwestorKreatorDokumentowRoute
   InwestorKreatorUmowyRoute: typeof InwestorKreatorUmowyRoute
@@ -5480,6 +5520,8 @@ interface InwestorRouteChildren {
 const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorAbonamentRoute: InwestorAbonamentRoute,
   InwestorAmlRoute: InwestorAmlRouteWithChildren,
+  InwestorAnalitykaRoute: InwestorAnalitykaRoute,
+  InwestorDokumentyRoute: InwestorDokumentyRoute,
   InwestorKalkulatorRoute: InwestorKalkulatorRoute,
   InwestorKreatorDokumentowRoute: InwestorKreatorDokumentowRoute,
   InwestorKreatorUmowyRoute: InwestorKreatorUmowyRoute,

@@ -152,6 +152,7 @@ export const TIER_PRESENTATION: Record<InvestorTier, TierPresentation> = {
     tagline: "Wszystko z pakietu Podstawowego bez opłat za okazje, plus pełny warsztat inwestora.",
     bullets: [
       "Wszystko z pakietu Podstawowego — okazje bez opłat jednostkowych",
+      "Analityka — pipeline analityczny okazji: KW, właściciele, analiza KW, ryzyko",
       "Akademia inwestora",
       "Kalkulator compliance",
       "Moduł AML",

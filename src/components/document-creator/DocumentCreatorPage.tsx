@@ -16,10 +16,6 @@ import {
 import { gusCompanyLookup, type GusLookupResult } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup, type KrsLookupResult } from "@/lib/krs.functions";
 import {
-  companyBankAccountLookup,
-  type CompanyBankLookupResult,
-} from "@/lib/company-bank-lookup.functions";
-import {
   extractOrderedFields,
   groupFields,
   companyValueForField,
@@ -142,7 +138,6 @@ interface BundleResult {
   bundle: CompanyBundle;
   sources: string[];
   warnings: string[];
-  bankNote: string | null;
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -151,10 +146,14 @@ interface BundleResult {
 
 export function DocumentCreatorPage({
   excludeCategories,
+  embedded = false,
 }: {
   /** Kategorie wzorów ukryte w tym panelu (np. „umowa" u inwestora,
    *  gdzie umowy powstają wyłącznie w zakładce „Tworzenie umowy"). */
   excludeCategories?: string[];
+  /** Osadzenie w innym module (np. zakładka „Dokumenty i umowy" inwestora):
+   *  bez własnego nagłówka strony — nagłówek daje moduł nadrzędny. */
+  embedded?: boolean;
 } = {}) {
   const _list = useServerFn(listDocxTemplates);
   const _generate = useServerFn(generateDocxFromTemplate);
@@ -163,7 +162,6 @@ export function DocumentCreatorPage({
   const _preview = useServerFn(getDocxTemplatePreview);
   const _gus = useServerFn(gusCompanyLookup);
   const _krs = useServerFn(krsCompanyLookup);
-  const _bank = useServerFn(companyBankAccountLookup);
 
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
   const [history, setHistory] = useState<GeneratedDoc[]>([]);
@@ -419,7 +417,6 @@ export function DocumentCreatorPage({
       const bundle: CompanyBundle = {};
       const sources: string[] = [];
       const warnings: string[] = [];
-      let bankNote: string | null = null;
 
       // 1) GUS REGON BIR — priorytet NIP > REGON > KRS
       const payload: { nip?: string; regon?: string; krs?: string } = {};
@@ -486,31 +483,9 @@ export function DocumentCreatorPage({
         }
       }
 
-      // 3) Rachunek bankowy z internetu (Perplexity) — wymaga ręcznej weryfikacji
-      if (bundle.nip || bundle.krs || bundle.name) {
-        let bk: CompanyBankLookupResult | null = null;
-        try {
-          bk = await _bank({
-            data: {
-              companyName: bundle.name || "",
-              nip: bundle.nip || "",
-              krs: bundle.krs || "",
-              regon: bundle.regon || "",
-            },
-          });
-        } catch {
-          /* miękko */
-        }
-        if (bk?.success && bk.normalized) {
-          bundle.bankAccount = bk.normalized;
-          bankNote = "Numer rachunku znaleziony w internecie — zweryfikuj ręcznie przed przelewem.";
-          if (Array.isArray(bk.sources)) sources.push(...bk.sources.slice(0, 2));
-        }
-      }
-
-      return { bundle, sources, warnings, bankNote };
+      return { bundle, sources, warnings };
     },
-    [_gus, _krs, _bank],
+    [_gus, _krs],
   );
 
   const applyBundleToGroup = useCallback((group: FieldGroup, bundle: CompanyBundle) => {
@@ -576,16 +551,18 @@ export function DocumentCreatorPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Wand2 className="h-6 w-6" /> Kreator dokumentów
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Wybierz wzór, uzupełnij pola pogrupowane wg stron umowy. Dane firmowe pobierzesz jednym
-          kliknięciem z GUS, KRS i Białej Listy, a kwoty z kalkulatora pożyczki. Treść wzoru nie
-          jest zmieniana.
-        </p>
-      </div>
+      {!embedded && (
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Wand2 className="h-6 w-6" /> Kreator dokumentów
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Wybierz wzór, uzupełnij pola pogrupowane wg stron umowy. Dane firmowe pobierzesz jednym
+            kliknięciem z GUS, KRS i Białej Listy, a kwoty z kalkulatora pożyczki. Treść wzoru nie
+            jest zmieniana.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
         {/* Lista wzorów */}
@@ -1040,7 +1017,6 @@ function GroupCard({
   const [note, setNote] = useState<{
     sources: string[];
     warnings: string[];
-    bankNote: string | null;
   } | null>(null);
 
   const fetchCompany = async () => {
@@ -1070,7 +1046,7 @@ function GroupCard({
           },
         );
       }
-      setNote({ sources: res.sources, warnings: res.warnings, bankNote: res.bankNote });
+      setNote({ sources: res.sources, warnings: res.warnings });
     } catch (e) {
       toast.error(errMsg(e) ?? "Błąd pobierania danych firmy.", { id: t });
     } finally {
@@ -1156,17 +1132,12 @@ function GroupCard({
                   <span className="ml-1 hidden sm:inline">Pobierz</span>
                 </Button>
               </div>
-              {note && (note.sources.length > 0 || note.warnings.length > 0 || note.bankNote) && (
+              {note && (note.sources.length > 0 || note.warnings.length > 0) && (
                 <div className="space-y-1 text-[11px]">
                   {note.sources.filter((s) => !s.startsWith("http")).length > 0 && (
                     <div className="flex items-center gap-1 text-emerald-700 dark:text-emerald-300">
                       <ShieldCheck className="h-3 w-3" /> Źródła:{" "}
                       {note.sources.filter((s) => !s.startsWith("http")).join(", ")}
-                    </div>
-                  )}
-                  {note.bankNote && (
-                    <div className="flex items-start gap-1 text-amber-700 dark:text-amber-300">
-                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {note.bankNote}
                     </div>
                   )}
                   {note.warnings.map((w, i) => (
