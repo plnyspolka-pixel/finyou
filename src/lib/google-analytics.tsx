@@ -36,12 +36,20 @@ async function loadGoogleSettings(): Promise<Settings | null> {
   return (row as Settings) ?? null;
 }
 
-function ensureGtag() {
+/**
+ * Definiuje `window.gtag` tak, jak robi to oficjalny snippet Google: do
+ * `dataLayer` trafia obiekt `arguments`, nie tablica. gtag.js rozpoznaje
+ * polecenia (`config`, `event`, `consent`) wyłącznie po obiekcie `arguments`
+ * — tablica jest po cichu ignorowana, przez co GA4 i Google Ads nie dostawały
+ * żadnych zdarzeń mimo załadowanego skryptu.
+ */
+export function ensureGtag() {
   if (typeof window === "undefined") return;
   window.dataLayer = window.dataLayer || [];
   if (!window.gtag) {
-    window.gtag = function gtag(...args: unknown[]) {
-      (window.dataLayer as unknown[]).push(args);
+    window.gtag = function gtag() {
+      // eslint-disable-next-line prefer-rest-params
+      (window.dataLayer as unknown[]).push(arguments);
     } as any;
     window.gtag!("js", new Date());
   }
