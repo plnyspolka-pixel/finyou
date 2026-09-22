@@ -351,6 +351,26 @@ export const getHeygenVideo = defineTool({
     }),
 });
 
+export const syncLandingInvestorVideoTool = defineTool({
+  name: "sync_landing_investor_video",
+  title: "Sync landing investor video",
+  description:
+    "Kopiuje gotowy film HeyGen „Twoja droga do prywatnego finansowania nieruchomości” do naszego Storage (publiczny bucket studio-media, stała ścieżka) — landing /dla-inwestora odtwarza go wtedy z naszego pliku zamiast z HeyGen. Ponowne wywołanie nadpisuje kopię. Tylko administrator/operator.",
+  inputSchema: {
+    variant: z
+      .enum(["captioned", "clean"])
+      .default("captioned")
+      .describe("Który plik skopiować: z wypalonymi napisami (jeśli jest) czy czysty."),
+  },
+  annotations: WRITE_IDEMPOTENT,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      await requireTeam(ctx);
+      const { syncLandingInvestorVideo } = await import("@/lib/landing-video.server");
+      return ok(await syncLandingInvestorVideo({ variant: a.variant }));
+    }),
+});
+
 export const deleteHeygenVideo = defineTool({
   name: "delete_heygen_video",
   title: "Delete HeyGen video",
@@ -1303,6 +1323,7 @@ export const heygenTools = [
   searchHeygenStock,
   listHeygenVideos,
   getHeygenVideo,
+  syncLandingInvestorVideoTool,
   generateAvatarVideo,
   uploadHeygenAsset,
   listHeygenTemplates,

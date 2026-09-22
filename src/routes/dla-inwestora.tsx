@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
@@ -21,16 +21,31 @@ import { LeadsTable } from "@/routes/embed.leady";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import type { AccessProduct } from "@/lib/access/core";
 import { fetchPublicLeads, type PublicLead } from "@/lib/public-leads.functions";
+import { getLandingInvestorVideo } from "@/lib/landing-video.functions";
+import {
+  LANDING_INVESTOR_VIDEO,
+  LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL,
+  type LandingVideoInfo,
+} from "@/lib/landing-video";
 
 const JOIN = "/rejestracja?role=inwestor";
 
-// Filmy w hero. Pierwszy (Wistia) po prawej w rzędzie 1, drugi (HeyGen) piętro
-// niżej po lewej. ID filmu HeyGen to końcówka linku app.heygen.com/videos/<slug>-<id>;
-// publiczny odtwarzacz działa pod app.heygen.com/embeds/<id> i wymaga włączonego
-// udostępniania filmu (Share) w HeyGen.
+// Filmy w hero. Pierwszy (Wistia) po prawej w rzędzie 1, drugi piętro niżej po
+// lewej — odtwarzany z naszego pliku w Storage (src/lib/landing-video.ts).
+// Dopóki kopii nie ma (panel /admin/materialy → „Film na landingu inwestora"),
+// zapasowo gra odtwarzacz HeyGen.
 const WISTIA_EMBED_URL = "https://fast.wistia.net/embed/iframe/kjp6klcd5u?seo=false";
-const HEYGEN_VIDEO_ID = "1328c421db424e46a03158ef7faa5afc";
-const HEYGEN_EMBED_URL = `https://app.heygen.com/embeds/${HEYGEN_VIDEO_ID}`;
+const VIDEO2_TITLE = LANDING_INVESTOR_VIDEO.title;
+
+// Adres kopii filmu w Storage — null, gdy kopii jeszcze nie ma albo Storage
+// nie odpowiada (wtedy odtwarzacz HeyGen). Odporne na brak środowiska w SSR.
+async function loadLandingVideo(): Promise<LandingVideoInfo | null> {
+  try {
+    return await getLandingInvestorVideo();
+  } catch {
+    return null;
+  }
+}
 
 // Cennik pobierany z zaufanego katalogu access_products (te same ceny co panel).
 // Odporne na brak bazy podczas SSR — wtedy pokazujemy statyczny fallback.
@@ -112,8 +127,12 @@ const PIPELINE_STEPS: { n: number; t: string; d: string; hue: number }[] = [
 
 export const Route = createFileRoute("/dla-inwestora")({
   loader: async () => {
-    const [products, leads] = await Promise.all([loadInvestorProducts(), loadPublicLeads()]);
-    return { products, leads };
+    const [products, leads, video] = await Promise.all([
+      loadInvestorProducts(),
+      loadPublicLeads(),
+      loadLandingVideo(),
+    ]);
+    return { products, leads, video };
   },
   head: () => ({
     meta: [
@@ -405,7 +424,7 @@ const FAQS = [
   },
 ];
 
-function Hero() {
+function Hero({ video }: { video: LandingVideoInfo | null }) {
   return (
     <section className="fy-hero" style={{ color: "#fff", borderBottom: "1px solid var(--border)" }}>
       <div aria-hidden className="fy-hero-fx" />
@@ -459,19 +478,33 @@ function Hero() {
             </MktButton>
           </div>
         </div>
-        <HeroVideo
-          src={WISTIA_EMBED_URL}
-          title="Klub Inwestorów Hipotecznych"
-          glow="linear-gradient(135deg, oklch(0.65 0.13 235 / .3), oklch(0.40 0.25 268 / .25))"
-        />
+        <HeroFrame glow="linear-gradient(135deg, oklch(0.65 0.13 235 / .3), oklch(0.40 0.25 268 / .25))">
+          <HeroIframe src={WISTIA_EMBED_URL} title="Klub Inwestorów Hipotecznych" />
+        </HeroFrame>
 
-        {/* Rząd 2 siatki hero: drugi film piętro niżej niż pierwszy, po lewej stronie;
-            po prawej krótki opis z przejściem do kalkulatora inwestora pod hero. */}
-        <HeroVideo
-          src={HEYGEN_EMBED_URL}
-          title="Finance You — Twoja droga do prywatnego finansowania nieruchomości"
-          glow="linear-gradient(135deg, oklch(0.83 0.14 88 / .28), oklch(0.65 0.13 235 / .25))"
-        />
+        {/* Rząd 2 siatki hero: drugi film piętro niżej niż pierwszy, po lewej stronie
+            (z naszego pliku; zapasowo HeyGen), po prawej krótki opis z przejściem
+            do kalkulatora inwestora pod hero. */}
+        <HeroFrame glow="linear-gradient(135deg, oklch(0.83 0.14 88 / .28), oklch(0.65 0.13 235 / .25))">
+          {video ? (
+            <video
+              src={video.videoUrl}
+              poster={video.posterUrl ?? undefined}
+              controls
+              playsInline
+              preload="metadata"
+              aria-label={VIDEO2_TITLE}
+              style={{
+                width: "100%",
+                aspectRatio: "16 / 9",
+                display: "block",
+                background: "#05081c",
+              }}
+            />
+          ) : (
+            <HeroIframe src={LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL} title={VIDEO2_TITLE} />
+          )}
+        </HeroFrame>
         <div>
           <Eyebrow tone="gold">Film 2</Eyebrow>
           <h2
@@ -509,8 +542,9 @@ function Hero() {
   );
 }
 
-// Karta wideo w hero: poświata za ramką + iframe 16:9. Wspólna dla Wistii i HeyGen.
-function HeroVideo({ src, title, glow }: { src: string; title: string; glow: string }) {
+// Ramka wideo w hero: poświata za kartą + zaokrąglona ramka. W środku <video>
+// z naszego pliku albo iframe (Wistia / zapasowy HeyGen).
+function HeroFrame({ glow, children }: { glow: string; children: ReactNode }) {
   return (
     <div style={{ position: "relative" }}>
       <div
@@ -532,22 +566,29 @@ function HeroVideo({ src, title, glow }: { src: string; title: string; glow: str
           boxShadow: "var(--shadow-2xl)",
         }}
       >
-        <iframe
-          src={src}
-          title={title}
-          allow="autoplay; fullscreen; encrypted-media"
-          allowFullScreen
-          style={{ width: "100%", aspectRatio: "16 / 9", display: "block", border: 0 }}
-        />
+        {children}
       </div>
     </div>
   );
 }
 
+function HeroIframe({ src, title }: { src: string; title: string }) {
+  return (
+    <iframe
+      src={src}
+      title={title}
+      allow="autoplay; fullscreen; encrypted-media"
+      allowFullScreen
+      style={{ width: "100%", aspectRatio: "16 / 9", display: "block", border: 0 }}
+    />
+  );
+}
+
 // Pełna wersja kalkulatora inwestora — ten sam komponent i ten sam tryb
 // (investorGuidance), co w panelu /inwestor/kalkulator: stopy NBP, limity
-// odsetek i MPKK, analiza zabezpieczenia, próg AML, harmonogram, PDF i CSV.
-// Sekcja stoi bezpośrednio pod filmami, przed pasem zakładek.
+// odsetek i MPKK, zysk ponad inflację, analiza zabezpieczenia, próg AML,
+// harmonogram, PDF i CSV. Bez dwóch przycisków wymagających konta („Wyślij do
+// kreatora", „Wyślij do klienta"). Sekcja stoi pod filmami, przed zakładkami.
 function CalculatorSection() {
   return (
     <Section id="kalkulator">
@@ -558,7 +599,7 @@ function CalculatorSection() {
         sub="Ta sama, najbardziej rozbudowana wersja co w panelu inwestora: stopy NBP na żywo, limit odsetek maksymalnych i MPKK, prowizje, realna stopa zwrotu po inflacji, analiza zabezpieczenia, próg AML oraz harmonogram spłat z eksportem do PDF i CSV."
       />
       <div style={{ marginTop: "2.5rem" }}>
-        <LoanCalculator investorGuidance />
+        <LoanCalculator investorGuidance hideAccountActions />
       </div>
       <ComplianceNote style={{ marginTop: "2rem" }}>
         Wyliczenia mają charakter poglądowy i nie stanowią oferty ani rekomendacji inwestycyjnej.
@@ -875,10 +916,10 @@ function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: Acce
 }
 
 function InvestorLanding() {
-  const { products, leads } = Route.useLoaderData();
+  const { products, leads, video } = Route.useLoaderData();
   return (
     <MarketingShell page="inwestor" sticky={{ label: "Dołącz do Klubu", href: JOIN }}>
-      <Hero />
+      <Hero video={video} />
 
       <CalculatorSection />
 
