@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +17,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Trash2, Upload, ImageIcon, Video as VideoIcon, Download } from "lucide-react";
+import {
+  Trash2,
+  Upload,
+  ImageIcon,
+  Video as VideoIcon,
+  Download,
+  CloudDownload,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
+import { getLandingInvestorVideo, syncLandingInvestorVideoFn } from "@/lib/landing-video.functions";
+import { LANDING_INVESTOR_VIDEO, type LandingVideoInfo } from "@/lib/landing-video";
 
 export const Route = createFileRoute("/admin/materialy")({
   component: MarketingMaterialsPage,
@@ -49,6 +61,97 @@ function formatSize(b: number | null) {
   if (!b) return "";
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(0)} KB`;
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
+}
+
+// Film z hero landingu /dla-inwestora: kopia z HeyGen w naszym Storage pod
+// stałą ścieżką. Landing odtwarza ją z naszego pliku; dopóki kopii nie ma,
+// pokazuje odtwarzacz HeyGen. Przycisk robi (albo odświeża) kopię.
+function LandingVideoCard() {
+  const getInfo = useServerFn(getLandingInvestorVideo);
+  const sync = useServerFn(syncLandingInvestorVideoFn);
+  // undefined = jeszcze nie sprawdzono, null = brak kopii w Storage.
+  const [info, setInfo] = useState<LandingVideoInfo | null | undefined>(undefined);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    getInfo()
+      .then((v) => alive && setInfo(v))
+      .catch(() => alive && setInfo(null));
+    return () => {
+      alive = false;
+    };
+  }, [getInfo]);
+
+  const runSync = async () => {
+    setSyncing(true);
+    try {
+      const r = await sync({ data: { variant: "captioned" } });
+      setInfo({ videoUrl: r.videoUrl, posterUrl: r.posterUrl });
+      toast.success(
+        `Film skopiowany do Storage (${formatSize(r.bytes)}, ${
+          r.variant === "captioned" ? "z napisami" : "czysty master"
+        }). Landing odtwarza go z naszego pliku.`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się skopiować filmu z HeyGen.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <VideoIcon className="h-5 w-5" /> Film na landingu inwestora
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          „{LANDING_INVESTOR_VIDEO.title}” — drugi film w hero strony /dla-inwestora. Kopia z HeyGen
+          trafia do naszego Storage ({LANDING_INVESTOR_VIDEO.bucket}/
+          {LANDING_INVESTOR_VIDEO.videoPath}); dopóki jej nie ma, landing pokazuje odtwarzacz
+          HeyGen.
+        </p>
+        <p className="text-sm">
+          {info === undefined ? (
+            <span className="text-muted-foreground">Sprawdzam kopię w Storage…</span>
+          ) : info ? (
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <Badge>Kopia w Storage</Badge>
+              <a
+                href={info.videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 underline"
+              >
+                Otwórz plik <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+              {!info.posterUrl && <span className="text-muted-foreground">(bez plakatu)</span>}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              <Badge variant="secondary">Brak kopii</Badge>
+              <span className="text-muted-foreground">landing odtwarza film z HeyGen</span>
+            </span>
+          )}
+        </p>
+        <Button onClick={runSync} disabled={syncing}>
+          {syncing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Kopiuję z HeyGen…
+            </>
+          ) : (
+            <>
+              <CloudDownload className="mr-2 h-4 w-4" />{" "}
+              {info ? "Odśwież kopię z HeyGen" : "Pobierz z HeyGen do Storage"}
+            </>
+          )}
+        </Button>
+      </CardContent>
+    </Card>
+  );
 }
 
 function MarketingMaterialsPage() {
@@ -179,6 +282,8 @@ function MarketingMaterialsPage() {
           Zdjęcia i filmy podzielone na kategorie: klient, inwestor, pośrednik.
         </p>
       </div>
+
+      <LandingVideoCard />
 
       <Card>
         <CardHeader>

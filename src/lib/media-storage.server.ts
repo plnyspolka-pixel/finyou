@@ -52,15 +52,19 @@ function safeName(s: string): string {
 /**
  * Upload z samonaprawą: gdy bucket nie istnieje (np. migracja nie poszła na
  * produkcji), tworzy go z właściwą widocznością i ponawia zapis raz.
+ * `upsert: true` nadpisuje plik pod stałą ścieżką (np. film z landingu).
  */
-async function uploadEnsuringBucket(
+export async function uploadEnsuringBucket(
   bucket: string,
   path: string,
   bytes: Uint8Array,
   contentType: string,
+  opts: { upsert?: boolean } = {},
 ): Promise<void> {
   const upload = () =>
-    supabaseAdmin.storage.from(bucket).upload(path, bytes, { contentType, upsert: false });
+    supabaseAdmin.storage
+      .from(bucket)
+      .upload(path, bytes, { contentType, upsert: opts.upsert ?? false });
   let { error } = await upload();
   if (error && /bucket.*not.*found/i.test(error.message)) {
     const { error: createErr } = await supabaseAdmin.storage.createBucket(bucket, {

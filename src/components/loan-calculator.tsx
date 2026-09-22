@@ -180,6 +180,8 @@ type Props = {
   hideFinanceYouFee?: boolean;
   /** Włącza tryb prowizji wewnętrznej operatora (2–5% jako część prowizji inwestora). */
   internalOperatorMode?: boolean;
+  /** Publiczny landing (bez konta): ukrywa przyciski wymagające zalogowania — „Wyślij do kreatora" i „Wyślij do klienta". */
+  hideAccountActions?: boolean;
   /** Domyślny e-mail klienta (do wysyłki harmonogramu). */
   clientEmail?: string | null;
   /** Nazwa/nazwisko klienta (nagłówek harmonogramu i maila). */
@@ -217,6 +219,7 @@ export function LoanCalculator({
   investorGuidance = false,
   hideFinanceYouFee = false,
   internalOperatorMode = false,
+  hideAccountActions = false,
   clientEmail = null,
   clientName = null,
 }: Props) {
@@ -1833,15 +1836,17 @@ export function LoanCalculator({
             <CardTitle className="text-white">Harmonogram spłat</CardTitle>
             {investorGuidance && schedule.rows.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={sendCalcToCreator}
-                  className="bg-white text-slate-900 hover:bg-white/90 border-white"
-                  title="Przekaż dane kalkulacji do kreatorów w aplikacji"
-                >
-                  <Send className="mr-2 h-3.5 w-3.5" /> Wyślij do kreatora
-                </Button>
+                {!hideAccountActions && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={sendCalcToCreator}
+                    className="bg-white text-slate-900 hover:bg-white/90 border-white"
+                    title="Przekaż dane kalkulacji do kreatorów w aplikacji"
+                  >
+                    <Send className="mr-2 h-3.5 w-3.5" /> Wyślij do kreatora
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -1859,78 +1864,83 @@ export function LoanCalculator({
                 >
                   <Printer className="mr-2 h-3.5 w-3.5" /> Drukuj
                 </Button>
-                <Dialog open={sendOpen} onOpenChange={setSendOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-white text-slate-900 hover:bg-white/90 border-white"
-                    >
-                      <Send className="mr-2 h-3.5 w-3.5" /> Wyślij do klienta
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Wyślij harmonogram do klienta</DialogTitle>
-                      <DialogDescription>
-                        Klient otrzyma e-mail z podsumowaniem oferty i pełnym harmonogramem spłat.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-3 py-2">
-                      <div className="space-y-1.5">
-                        <Label>Adres e-mail klienta</Label>
-                        <Input
-                          type="email"
-                          value={recipient}
-                          onChange={(e) => setRecipient(e.target.value)}
-                          placeholder="klient@example.com"
-                        />
-                      </div>
-                      <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
-                        <div className="flex justify-between gap-3">
-                          <span className="text-muted-foreground">Do wypłaty na rękę</span>
-                          <b className="tabular-nums whitespace-nowrap text-right">
-                            {formatPLN(onHand)}
-                          </b>
-                        </div>
-                        <div className="flex justify-between gap-3">
-                          <span className="text-muted-foreground">Rata miesięczna</span>
-                          <b className="tabular-nums whitespace-nowrap text-right">
-                            {formatPLN(schedule.cappedRata)}
-                          </b>
-                        </div>
-                        <div className="flex justify-between gap-3">
-                          <span className="text-muted-foreground">Okres</span>
-                          <b className="tabular-nums whitespace-nowrap text-right">
-                            {months} mies.
-                          </b>
-                        </div>
-                        <div className="flex justify-between gap-3">
-                          <span className="text-muted-foreground">Łączna kwota do spłaty</span>
-                          <b className="tabular-nums whitespace-nowrap text-right">
-                            {formatPLN(totalToRepay)}
-                          </b>
-                        </div>
-                      </div>
-                    </div>
-                    <DialogFooter className="gap-2 sm:gap-2">
-                      <Button variant="outline" onClick={printSchedulePdf}>
-                        <Printer className="mr-2 h-4 w-4" /> Podgląd / PDF
+                {!hideAccountActions && (
+                  <Dialog open={sendOpen} onOpenChange={setSendOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-white text-slate-900 hover:bg-white/90 border-white"
+                      >
+                        <Send className="mr-2 h-3.5 w-3.5" /> Wyślij do klienta
                       </Button>
-                      <Button onClick={handleSendToClient} disabled={sending || !recipient.trim()}>
-                        {sending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Wysyłam…
-                          </>
-                        ) : (
-                          <>
-                            <Send className="mr-2 h-4 w-4" /> Wyślij e-mail
-                          </>
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Wyślij harmonogram do klienta</DialogTitle>
+                        <DialogDescription>
+                          Klient otrzyma e-mail z podsumowaniem oferty i pełnym harmonogramem spłat.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-3 py-2">
+                        <div className="space-y-1.5">
+                          <Label>Adres e-mail klienta</Label>
+                          <Input
+                            type="email"
+                            value={recipient}
+                            onChange={(e) => setRecipient(e.target.value)}
+                            placeholder="klient@example.com"
+                          />
+                        </div>
+                        <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Do wypłaty na rękę</span>
+                            <b className="tabular-nums whitespace-nowrap text-right">
+                              {formatPLN(onHand)}
+                            </b>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Rata miesięczna</span>
+                            <b className="tabular-nums whitespace-nowrap text-right">
+                              {formatPLN(schedule.cappedRata)}
+                            </b>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Okres</span>
+                            <b className="tabular-nums whitespace-nowrap text-right">
+                              {months} mies.
+                            </b>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Łączna kwota do spłaty</span>
+                            <b className="tabular-nums whitespace-nowrap text-right">
+                              {formatPLN(totalToRepay)}
+                            </b>
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter className="gap-2 sm:gap-2">
+                        <Button variant="outline" onClick={printSchedulePdf}>
+                          <Printer className="mr-2 h-4 w-4" /> Podgląd / PDF
+                        </Button>
+                        <Button
+                          onClick={handleSendToClient}
+                          disabled={sending || !recipient.trim()}
+                        >
+                          {sending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Wysyłam…
+                            </>
+                          ) : (
+                            <>
+                              <Send className="mr-2 h-4 w-4" /> Wyślij e-mail
+                            </>
+                          )}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
                 <Dialog open={exportOpen} onOpenChange={setExportOpen}>
                   <DialogTrigger asChild>
                     <Button
