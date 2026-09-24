@@ -71,6 +71,9 @@ export interface BorrowerData {
   website?: string;
   eDeliveryAddress?: string;
 
+  // rachunek do wypłaty pożyczki (rachunek pożyczkobiorcy)
+  bankAccount?: string;
+
   // tożsamość
   idDocument?: IdDocument;
 

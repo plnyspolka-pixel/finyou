@@ -722,6 +722,14 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
                   onChange={(e) => set("borrowerData.website")(e.target.value)}
                 />
               </div>
+              <div className="md:col-span-3">
+                <Label>Rachunek bankowy pożyczkobiorcy (do wypłaty)</Label>
+                <Input
+                  value={b.bankAccount ?? ""}
+                  onChange={(e) => set("borrowerData.bankAccount")(e.target.value)}
+                  placeholder="PL00 0000 0000 0000 0000 0000 0000"
+                />
+              </div>
               {!isCompany && (
                 <>
                   <div>
@@ -948,7 +956,7 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
                 />
               </div>
               <div className="md:col-span-2">
-                <Label>Rachunek bankowy (do spłat)</Label>
+                <Label>Rachunek bankowy pożyczkodawcy (do spłat)</Label>
                 <Input
                   value={inv.bankAccount ?? ""}
                   onChange={(e) => set("investorData.bankAccount")(e.target.value)}

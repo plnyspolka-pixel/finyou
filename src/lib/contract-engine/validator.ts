@@ -2,7 +2,7 @@
  * Walidacja danych wejściowych — DWIE warstwy (port `validator.py`):
  *   1. Schemat (zod) — kształt, typy, wzorce.
  *   2. Reguły konstrukcyjne — kompletność i spójność, której schemat nie
- *      wyrazi (R1–R29). Silnik NIE ocenia merytorycznie parametrów (limity,
+ *      wyrazi (R1–R30). Silnik NIE ocenia merytorycznie parametrów (limity,
  *      pokrycie zabezpieczenia, ryzyko wpisów) — od tego są inne moduły.
  *
  * Warstwa 2 jest ważniejsza: łapie dane, które przechodzą walidację formalną,
@@ -427,6 +427,13 @@ export function walidujReguly(d: any): Problem[] {
         `Ostatnia rata harmonogramu (${fmt(ostatnia)}) różni się od docelowej raty końcowej (${fmt(cel)})`,
       );
   }
+
+  // R30: rachunki — wypłata (Pożyczkobiorcy) i spłata (Pożyczkodawcy) muszą być podane
+  const rach = d.warunki?.rachunki ?? {};
+  if (d.warunki && !String(rach.wyplata ?? "").trim())
+    blad("warunki.rachunki.wyplata", "Brak rachunku Pożyczkobiorcy do wypłaty pożyczki");
+  if (d.warunki && !String(rach.splata ?? "").trim())
+    blad("warunki.rachunki.splata", "Brak rachunku Pożyczkodawcy do spłaty pożyczki");
 
   // R17: stan cywilny vs ustrój majątkowy
   const osoby: [string, any][] = pbLista.map((o, i) => [

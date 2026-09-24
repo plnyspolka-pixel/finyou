@@ -215,7 +215,12 @@ function budujWarunki(profile: ClientProfile, payload: LoanCalcPayload): any {
       kwota_raty_koncowej: balon > 0 ? kwota(balon) : undefined,
       raty: raty.length ? raty : undefined,
     }),
-    rachunki: { wyplata: inv.bankAccount || "", splata: inv.bankAccount || "" },
+    // Wypłata na rachunek Pożyczkobiorcy, spłata na rachunek Pożyczkodawcy
+    // (dla Finance You silnik wstawia jej rachunek, gdy pole jest puste).
+    rachunki: {
+      wyplata: profile.borrowerData?.bankAccount || "",
+      splata: inv.bankAccount || "",
+    },
   });
 }
 
