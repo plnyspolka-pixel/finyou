@@ -1380,7 +1380,7 @@ function EngineContractBlock({ profile }: { profile: ClientProfile }) {
         toast.error("Umowy nie wygenerowano — uzupełnij braki.");
       } else if (res.signedUrl) {
         window.open(res.signedUrl, "_blank");
-        toast.success("Umowa wygenerowana (.docx).");
+        toast.success("Komplet umowy wygenerowany (.docx): wniosek, umowa, Zał. 1–3.");
       }
     } catch (e: any) {
       toast.error(e?.message ?? "Błąd generacji");

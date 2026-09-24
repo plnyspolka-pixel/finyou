@@ -17,8 +17,8 @@ export {
   rodzajZenski,
   ROLA_NAZWA,
 } from "./facts";
-export { renderuj, wczytajBiblioteke, podstaw, BladPola } from "./renderer";
-export type { Dokument, Sekcja, Ustep, Strona } from "./renderer";
+export { renderuj, wczytajBiblioteke, podstaw, BladPola, tekstOdeslania } from "./renderer";
+export type { Dokument, Sekcja, Ustep, Strona, Polozenie } from "./renderer";
 export { formatuj } from "./formatter";
 export { waliduj, walidujReguly, walidujSchemat } from "./validator";
 export type { Problem, Poziom } from "./validator";
@@ -43,11 +43,23 @@ export { listaKlauzul, wszystkieIdKlauzul, bibliotekaBez } from "./clause-select
 export type { KlauzulaMeta } from "./clause-select";
 export { buildUmowaData, profileToCalcPayload } from "./profile-to-umowa";
 export type { BuildUmowaOptions } from "./profile-to-umowa";
-export { buildUmowaDocx, buildUmowaDocumentXml, harmonogramZUmowy } from "./umowa-docx";
+export {
+  buildKompletDocx,
+  buildKompletDocumentXml,
+  zbudujBloki,
+  tekstZDocx,
+  tekstZDocumentXml,
+} from "./umowa-docx";
+export type { KompletOpcje, Blok } from "./umowa-docx";
+export { generujKomplet, WERSJA_BIBLIOTEKI, CZESCI_KOMPLETU, SLUG_KOMPLETU } from "./komplet";
+export type { KompletWynik } from "./komplet";
+export { OPLATY_WINDYKACYJNE_DOMYSLNE } from "./oplaty-windykacyjne";
+export type { OplataWindykacyjna } from "./oplaty-windykacyjne";
 export {
   scalPatch,
   przetworzSzkic,
   uzupelnijHarmonogram,
   uzupelnijSlownie,
   uzupelnijIdNieruchomosci,
+  normalizujNumeryKw,
 } from "./umowa-agent-core";

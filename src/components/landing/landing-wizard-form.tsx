@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { kwCheckDigitError } from "@/lib/kw";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -201,6 +202,11 @@ export function LandingWizardForm() {
   }, []);
 
   const onSubmit = async () => {
+    const bladKw = kwCheckDigitError(allKwNumbers.join(" | "));
+    if (bladKw) {
+      toast.error(bladKw);
+      return;
+    }
     if (!allDone) {
       toast.error("Uzupełnij wszystkie kroki wizarda, aby wysłać wniosek.");
       return;

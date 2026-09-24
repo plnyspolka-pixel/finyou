@@ -1,7 +1,9 @@
 /**
  * Walidacja danych wejściowych — DWIE warstwy (port `validator.py`):
  *   1. Schemat (zod) — kształt, typy, wzorce.
- *   2. Reguły biznesowe — spójność, której schemat nie wyrazi (R1–R27).
+ *   2. Reguły konstrukcyjne — kompletność i spójność, której schemat nie
+ *      wyrazi (R1–R29). Silnik NIE ocenia merytorycznie parametrów (limity,
+ *      pokrycie zabezpieczenia, ryzyko wpisów) — od tego są inne moduły.
  *
  * Warstwa 2 jest ważniejsza: łapie dane, które przechodzą walidację formalną,
  * ale dają umowę wewnętrznie sprzeczną. Poziom BLAD blokuje generowanie,
@@ -162,28 +164,11 @@ export function walidujReguly(d: any): Problem[] {
       if (sposob === "wykreslenie_ze_srodkow_pozyczki") {
         if (!o.kwota_splaty) blad(osc, "Spłata ze środków pożyczki wymaga podania kwota_splaty");
         if (!o.wierzyciel_rachunek)
-          ostrz(osc, "Brak rachunku wierzyciela — w umowie pojawi się placeholder");
+          blad(osc, "Spłata ze środków pożyczki wymaga podania wierzyciel_rachunek");
       }
 
-      // R9
-      if (
-        ["egzekucja_administracyjna", "hipoteka_przymusowa"].includes(o.rodzaj) &&
-        ["brak", "pozostaje_akceptowane"].includes(sposob)
-      )
-        ostrz(
-          osc,
-          "Wpis egzekucyjny/hipoteka przymusowa pozostaje na nieruchomości. Należności publicznoprawne mogą mieć pierwszeństwo przed hipoteką umowną — rozważ warunek wykreślenia przed wypłatą",
-        );
-
-      // R10
-      if (
-        ["dozywocie", "sluzebnosc_osobista"].includes(o.rodzaj) &&
-        ["brak", "pozostaje_akceptowane"].includes(sposob)
-      )
-        ostrz(
-          osc,
-          "Służebność osobista/dożywocie pozostaje na nieruchomości — istotnie obniża wartość egzekucyjną zabezpieczenia",
-        );
+      // R9, R10 (ocena wpływu wpisów na wartość zabezpieczenia) usunięte —
+      // silnik nie ocenia merytorycznie parametrów; robią to inne moduły.
     });
   });
 
@@ -199,11 +184,6 @@ export function walidujReguly(d: any): Problem[] {
       blad(
         "warunki.kwota_pozyczki",
         `Suma spłat wierzycieli (${fmt(sumaSplat)}) przekracza Kwotę Pożyczki (${fmt(kwotaPoz)})`,
-      );
-    else if (sumaSplat > 0 && kwotaPoz - sumaSplat < 0.1 * kwotaPoz)
-      ostrz(
-        "warunki.kwota_pozyczki",
-        `Po spłacie wierzycieli pożyczkobiorcy pozostaje ${fmt(kwotaPoz - sumaSplat)} zł (<10% kwoty pożyczki)`,
       );
   } catch {
     /* brak danych — pomijamy */
@@ -410,20 +390,8 @@ export function walidujReguly(d: any): Problem[] {
       );
   }
 
-  // R13: kwota hipoteki vs kwota pożyczki
-  try {
-    const kwotaPoz = naLiczbe(d.warunki.kwota_pozyczki.cyframi);
-    nier.forEach((n, i) => {
-      const kh = naLiczbe(n.hipoteka.kwota.cyframi);
-      if (kh < kwotaPoz)
-        ostrz(
-          `nieruchomosci[${i}].hipoteka`,
-          `Kwota hipoteki (${fmt(kh)}) niższa niż Kwota Pożyczki (${fmt(kwotaPoz)}) — zabezpieczenie nie pokrywa kapitału`,
-        );
-    });
-  } catch {
-    /* ignore */
-  }
+  // R13 (kwota hipoteki vs kwota pożyczki) usunięta — ocena pokrycia
+  // zabezpieczenia nie należy do silnika umów.
 
   // R16: spójność harmonogramu
   const h = d.warunki?.harmonogram ?? {};
@@ -434,6 +402,29 @@ export function walidujReguly(d: any): Problem[] {
       blad(
         "warunki.harmonogram.raty",
         `Zadeklarowano ${h.liczba_rat} rat, a tabela zawiera ${h.raty.length}`,
+      );
+  }
+
+  // R29: docelowa rata końcowa — ostatnia rata harmonogramu musi jej równać się co do grosza
+  const docelowa = h.kwota_raty_koncowej_docelowa?.cyframi;
+  if (docelowa) {
+    if (h.typ !== "balonowy")
+      blad(
+        "warunki.harmonogram.kwota_raty_koncowej_docelowa",
+        "Docelowa rata końcowa dotyczy wyłącznie harmonogramu balonowego",
+      );
+    const raty: any[] = Array.isArray(h.raty) ? h.raty : [];
+    const cel = naLiczbeBezp(docelowa);
+    const ostatnia = raty.length ? naLiczbeBezp(raty[raty.length - 1].rata_razem) : null;
+    if (raty.length === 0)
+      blad(
+        "warunki.harmonogram.kwota_raty_koncowej_docelowa",
+        "Nie da się ułożyć harmonogramu z docelową ratą końcową przy podanym pułapie raty (kwota_raty) — raty regularne przekroczyłyby pułap albo rata końcowa bez prowizji już przekracza cel",
+      );
+    else if (cel !== null && ostatnia !== null && Math.abs(cel - ostatnia) > 0.004)
+      blad(
+        "warunki.harmonogram.raty",
+        `Ostatnia rata harmonogramu (${fmt(ostatnia)}) różni się od docelowej raty końcowej (${fmt(cel)})`,
       );
   }
 

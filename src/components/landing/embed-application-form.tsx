@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { kwCheckDigitError } from "@/lib/kw";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -189,6 +190,11 @@ export function EmbedApplicationForm() {
   const onSubmit = async () => {
     if (!consent) {
       toast.error("Zaakceptuj politykę prywatności i regulamin.");
+      return;
+    }
+    const bladKw = kwCheckDigitError(kwNumber);
+    if (bladKw) {
+      toast.error(bladKw);
       return;
     }
     if (!allPhotosReady) {

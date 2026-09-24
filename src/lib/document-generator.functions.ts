@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { LEGACY_KOMUNIKAT, LEGACY_USE_CASE } from "@/lib/legacy-templates";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   normalizePlaceholders,
@@ -42,6 +43,8 @@ export const listDocxTemplates = createServerFn({ method: "GET" })
       .from("document_templates")
       .select("id, slug, name, category, template_file_path, placeholders, sort_order")
       .not("template_file_path", "is", null)
+      // Wzory legacy (np. u01-04 — umowa pożyczki) zastąpił silnik umów.
+      .neq("use_case", LEGACY_USE_CASE)
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
     return (data ?? []) as DocTemplate[];
@@ -102,10 +105,11 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
     // 1. Pobierz szablon
     const { data: tpl, error: tplErr } = await supabase
       .from("document_templates")
-      .select("id, slug, name, template_file_path")
+      .select("id, slug, name, template_file_path, use_case")
       .eq("id", data.templateId)
       .maybeSingle();
     if (tplErr) throw new Error(tplErr.message);
+    if (tpl?.use_case === LEGACY_USE_CASE) throw new Error(LEGACY_KOMUNIKAT);
     if (!tpl?.template_file_path) throw new Error("Wzór nie ma przypisanego pliku.");
 
     // 2. Pobierz plik z Storage (fallback do starego bucketa „documents")

@@ -31,6 +31,14 @@ export interface EngineScheduleInput {
   maxMonthlyPayment: number;
   /** Data pierwszej raty — "YYYY-MM-DD" albo "DD.MM.RRRR". */
   firstPaymentDate?: string | null;
+  /**
+   * Docelowa kwota ostatniej (balonowej) raty. Gdy podana, silnik IGNORUJE
+   * `prowizja` i sam dobiera prowizję (do grosza) tak, by raty regularne
+   * mieściły się w pułapie, a ostatnia rata wyniosła dokładnie tyle —
+   * np. kapitał + pułap przy racie „odsetki + prowizja" w okresie spłaty.
+   * Różnica groszowa zawsze trafia do prowizji w ostatniej racie.
+   */
+  targetFinalPayment?: number | null;
 }
 
 export interface EngineScheduleRow {
@@ -61,6 +69,11 @@ export interface EngineSchedule {
   /** Kwota raty balonowej (rata_razem ostatniej raty), 0 gdy brak balonu. */
   balloon: number;
   warnings: string[];
+  /**
+   * Przy `targetFinalPayment`: komunikat, gdy docelowej raty końcowej nie da
+   * się osiągnąć przy podanym pułapie (niespójne parametry). null = osiągnięta.
+   */
+  targetError?: string | null;
 }
 
 function round2(n: number): number {
@@ -97,6 +110,100 @@ function formatDataPl(d: { y: number; m: number; d: number }): string {
  * Buduje harmonogram w modelu silnika. Wynik jest deterministyczny i spełnia
  * niezmienniki weryfikowane przez `walidujHarmonogram`.
  */
+/**
+ * Rdzeń harmonogramu: raty 1..N-1 z prowizją `m` (grosze), ostatnia rata
+ * z prowizją `last` (grosze) i całym pozostałym kapitałem.
+ */
+function symuluj(
+  K: number,
+  r: number,
+  N: number,
+  maxPay: number,
+  mGr: number,
+  lastGr: number,
+  first: { y: number; m: number; d: number } | null,
+): { rows: EngineScheduleRow[]; capped: boolean } {
+  const rows: EngineScheduleRow[] = [];
+  let remaining = K;
+  let capped = false;
+  for (let i = 1; i <= N; i++) {
+    const odsetki = round2(remaining * r);
+    const prowizja = (i < N ? mGr : lastGr) / 100;
+
+    let kapital: number;
+    if (i < N) {
+      const capacity = round2(maxPay - odsetki - prowizja);
+      kapital = Math.min(Math.max(0, capacity), remaining);
+      if (capacity < 0) capped = true;
+    } else {
+      kapital = remaining; // ostatnia rata: cały pozostały kapitał (balon)
+    }
+    kapital = round2(kapital);
+
+    const rata_razem = round2(odsetki + prowizja + kapital);
+    remaining = round2(remaining - kapital);
+
+    rows.push({
+      nr: i,
+      termin: first ? formatDataPl(addMonthsClamped(first, i - 1)) : "",
+      kapital,
+      odsetki,
+      prowizja,
+      rata_razem,
+      saldo: remaining < 0 ? 0 : remaining,
+      isBalloon: false,
+    });
+  }
+  return { rows, capped };
+}
+
+/**
+ * Dobór prowizji pod docelową ratę końcową. Ostatnia rata rośnie monotonicznie
+ * z prowizją miesięczną m (większa prowizja → mniej spłaconego kapitału →
+ * większy balon), więc szukamy binarnie największego m (w groszach), dla
+ * którego rata końcowa nie przekracza celu; resztę (grosze) dokładamy do
+ * prowizji w ostatniej racie. Górna granica m: rata regularna nie może
+ * przekroczyć pułapu.
+ */
+function dobierzProwizje(
+  K: number,
+  r: number,
+  N: number,
+  maxPay: number,
+  targetGr: number,
+  first: { y: number; m: number; d: number } | null,
+): { rows: EngineScheduleRow[]; error: string | null } {
+  const ostatniaGr = (mGr: number) => {
+    const { rows } = symuluj(K, r, N, maxPay, mGr, mGr, first);
+    return Math.round(rows[rows.length - 1].rata_razem * 100);
+  };
+  const mMax = Math.max(0, Math.floor(Math.round((maxPay - round2(K * r)) * 100)));
+  if (ostatniaGr(0) > targetGr) {
+    const { rows } = symuluj(K, r, N, maxPay, 0, 0, first);
+    return {
+      rows,
+      error:
+        "Docelowa rata końcowa jest niższa niż rata końcowa bez prowizji — przy tych parametrach nie da się jej osiągnąć.",
+    };
+  }
+  let lo = 0;
+  let hi = mMax;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (ostatniaGr(mid) <= targetGr) lo = mid;
+    else hi = mid - 1;
+  }
+  const delta = targetGr - ostatniaGr(lo);
+  const { rows } = symuluj(K, r, N, maxPay, lo, lo + delta, first);
+  // Reszta większa niż krok jednego grosza prowizji w każdej racie oznacza, że
+  // cel leży powyżej zasięgu pułapu (m = mMax) — parametry niespójne.
+  const error =
+    lo === mMax && delta > N
+      ? "Docelowa rata końcowa przekracza ratę osiągalną przy podanym pułapie raty — zwiększ pułap albo zmień ratę docelową."
+      : null;
+  return { rows, error };
+}
+
 export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule {
   const K = Math.max(0, round2(input.kwotaPozyczki));
   const P = Math.max(0, round2(input.prowizja));
@@ -120,50 +227,28 @@ export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule 
     };
   }
 
-  // prowizja rozłożona równo; ostatnia rata absorbuje zaokrąglenie
-  const monthlyCommission = round2(P / N);
-  const commissionOf = (i: number) =>
-    i < N ? monthlyCommission : round2(P - monthlyCommission * (N - 1));
-
   const first = input.firstPaymentDate ? parseAnyDate(input.firstPaymentDate) : null;
 
-  const rows: EngineScheduleRow[] = [];
-  let remaining = K;
-  let cappedWarned = false;
-
-  for (let i = 1; i <= N; i++) {
-    const odsetki = round2(remaining * r);
-    const prowizja = commissionOf(i);
-
-    let kapital: number;
-    if (i < N) {
-      const capacity = round2(maxPay - odsetki - prowizja);
-      kapital = Math.min(Math.max(0, capacity), remaining);
-      if (capacity < 0 && !cappedWarned) {
-        warnings.push(
-          "Pułap raty nie pokrywa odsetek i prowizji w części rat — rata przekracza deklarowany maksymalny pułap.",
-        );
-        cappedWarned = true;
-      }
-    } else {
-      kapital = remaining; // ostatnia rata: cały pozostały kapitał (balon)
+  let rows: EngineScheduleRow[];
+  let targetError: string | null | undefined;
+  if (input.targetFinalPayment != null && input.targetFinalPayment > 0 && N > 1) {
+    const t = dobierzProwizje(K, r, N, maxPay, Math.round(input.targetFinalPayment * 100), first);
+    rows = t.rows;
+    targetError = t.error;
+  } else {
+    // prowizja rozłożona równo; ostatnia rata absorbuje zaokrąglenie
+    const mGr = Math.round((P / N) * 100);
+    const lastGr = Math.round(P * 100) - mGr * (N - 1);
+    const sim = symuluj(K, r, N, maxPay, mGr, lastGr, first);
+    rows = sim.rows;
+    if (sim.capped) {
+      warnings.push(
+        "Pułap raty nie pokrywa odsetek i prowizji w części rat — rata przekracza deklarowany maksymalny pułap.",
+      );
     }
-    kapital = round2(kapital);
-
-    const rata_razem = round2(odsetki + prowizja + kapital);
-    remaining = round2(remaining - kapital);
-
-    rows.push({
-      nr: i,
-      termin: first ? formatDataPl(addMonthsClamped(first, i - 1)) : "",
-      kapital,
-      odsetki,
-      prowizja,
-      rata_razem,
-      saldo: remaining < 0 ? 0 : remaining,
-      isBalloon: false,
-    });
   }
+  const prowizjaRazem = round2(rows.reduce((a, r0) => a + r0.prowizja, 0));
+  const monthlyCommission = rows[0]?.prowizja ?? 0;
 
   const last = rows[rows.length - 1];
   // Balon istnieje, gdy ostatnia rata wyraźnie przekracza pułap — margines 2 zł
@@ -177,7 +262,7 @@ export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule 
   return {
     rows,
     kwotaPozyczki: K,
-    prowizja: P,
+    prowizja: prowizjaRazem,
     months: N,
     monthlyCommission,
     regularPayment: maxPay,
@@ -185,5 +270,6 @@ export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule 
     totalToRepay,
     balloon: hasBalloon ? last.rata_razem : 0,
     warnings,
+    ...(targetError !== undefined ? { targetError } : {}),
   };
 }

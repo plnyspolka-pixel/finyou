@@ -4,6 +4,7 @@ import { extractLoanCalcPayload, type LoanCalcPayload } from "@/lib/loan-calc-pd
 import { buildCalcFieldValues } from "@/lib/loan-calc-fill";
 import { readCalcHandoff, clearCalcHandoff, onCalcHandoffChange } from "@/lib/loan-calc-handoff";
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import {
   listDocxTemplates,
   generateDocxFromTemplate,
@@ -560,6 +561,18 @@ export function DocumentCreatorPage({
             Wybierz wzór, uzupełnij pola pogrupowane wg stron umowy. Dane firmowe pobierzesz jednym
             kliknięciem z GUS, KRS i Białej Listy, a kwoty z kalkulatora pożyczki. Treść wzoru nie
             jest zmieniana.
+          </p>
+          <p className="text-sm">
+            Umowę pożyczki (komplet: wniosek, umowa, harmonogram, protokół z negocjacji, tabela
+            opłat) generuje wyłącznie{" "}
+            <Link
+              to="/admin/kreator-pozyczki"
+              search={{ profileId: undefined }}
+              className="font-medium underline"
+            >
+              kreator pożyczki
+            </Link>{" "}
+            — z silnika umów.
           </p>
         </div>
       )}

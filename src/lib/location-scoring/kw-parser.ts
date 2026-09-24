@@ -6,36 +6,20 @@
 //   NUMER    — ośmiocyfrowy numer repertoryjny (paddowany zerami).
 //   KONTROLNA— cyfra kontrolna wyliczana z 13 znaków (prefiks + 8 cyfr).
 //
-// Cyfra kontrolna liczona algorytmem stosowanym w numeracji elektronicznych KW:
-//   * każdemu znakowi przypisujemy wartość (poniżej),
-//   * mnożymy przez wagę z cyklu [1, 3, 7],
-//   * sumujemy i bierzemy modulo 10.
-// Mapowanie znaków (oficjalny algorytm EKW): cyfry 0–9 → 0–9, X → 10, pozostałe
-// litery cyklicznie 1–9 z pominięciem Q, V, X (te nie występują w kodach sądów).
+// Cyfra kontrolna: jeden algorytm dla całej platformy — `kwCheckDigit` z
+// `@/lib/kw` (wartości: cyfry 0–9, X = 10, litery bez Q i V kolejno od 11;
+// wagi 1-3-7). Wcześniejsza lokalna mapa liter (cyklicznie 1–9) dawała błędny
+// wynik dla rzeczywistych ksiąg.
 //
-// Moduł czysty — bez importów, używalny po stronie klienta i serwera.
+// Moduł czysty — używalny po stronie klienta i serwera.
 
 import type { ParsedKwNumber } from "./types";
+import { kwCheckDigit } from "../kw";
 
-const KW_FULL_RE = /^([A-Z]{2}\d[A-Z0-9])\/(\d{7,8})\/(\d)$/;
+// Numer repertoryjny 1–8 cyfr — krótszy zapis (bez zer wiodących, np.
+// "KR1P/610770/2") jest dopełniany zerami, a nie odrzucany jako INVALID_KW.
+const KW_FULL_RE = /^([A-Z]{2}\d[A-Z0-9])\/(\d{1,8})\/(\d)$/;
 const KW_LOOSE_RE = /([A-Z]{2}\d[A-Z0-9])[\s/\\.-]{0,3}(\d{7,8})[\s/\\.-]{0,3}(\d)/;
-
-// Wartości znaków dla cyfry kontrolnej. X=10; litery cyklicznie 1..9,
-// pomijając Q, V (oraz X — obsługiwany osobno). Q/V nie występują w prefiksach.
-const CHAR_VALUES: Record<string, number> = (() => {
-  const map: Record<string, number> = {};
-  for (let d = 0; d <= 9; d++) map[String(d)] = d;
-  map["X"] = 10;
-  const cycleLetters = "ABCDEFGHIJKLMNOPRSTUWYZ"; // bez Q, V, X
-  let counter = 1;
-  for (const ch of cycleLetters) {
-    map[ch] = counter;
-    counter = counter === 9 ? 1 : counter + 1;
-  }
-  return map;
-})();
-
-const WEIGHTS = [1, 3, 7];
 
 /** Znormalizowana surowa postać numeru KW (uppercase, bez spacji). */
 export function normalizeKwRaw(raw: unknown): string {
@@ -50,14 +34,7 @@ export function normalizeKwRaw(raw: unknown): string {
  * Zwraca liczbę 0–9. Algorytm scentralizowany w jednym miejscu (spec §22).
  */
 export function computeKwCheckDigit(prefix: string, serialPadded: string): number {
-  const chars = `${prefix}${serialPadded}`.split("");
-  let sum = 0;
-  for (let i = 0; i < chars.length; i++) {
-    const value = CHAR_VALUES[chars[i]];
-    if (value === undefined) return -1; // znak spoza dozwolonego zbioru
-    sum += value * WEIGHTS[i % WEIGHTS.length];
-  }
-  return sum % 10;
+  return kwCheckDigit(prefix, serialPadded) ?? -1; // -1: znak spoza dozwolonego zbioru
 }
 
 /**

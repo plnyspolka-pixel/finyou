@@ -1,0 +1,690 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`snapshot tekstu DOCX > a — JDG, balon, kolejne miejsce + roszczenie 1`] = `
+"WNIOSEK O UDZIELENIE POŻYCZKI PIENIĘŻNEJ
+I. DANE WNIOSKODAWCY
+Imię i nazwisko / Firma: | Tomasz Wiśniewski, prowadzący działalność gospodarczą pod firmą TW-BUD Tomasz Wiśniewski
+PESEL / NIP: | PESEL 80010112345, NIP 6792345678
+Seria i numer dok. tożsamości: |
+Adres zamieszkania / siedziby: | ul. Długa 5, 30-001 Kraków
+Telefon: | +48 600 100 200
+E-mail: | tomasz.wisniewski@example.com
+
+II. CHARAKTER POŻYCZKI
+Wnioskuję o udzielenie pożyczki pieniężnej na cele związane z prowadzoną działalnością gospodarczą.
+Oświadczam, że pożyczka nie ma charakteru konsumenckiego i nie stanowi kredytu konsumenckiego w rozumieniu ustawy o kredycie konsumenckim.
+III. WARUNKI POŻYCZKI
+Wnioskowana kwota: | 25 000,00 zł
+Okres pożyczki: | 36 miesięcy
+Cel pożyczki: | finansowanie bieżącej działalności gospodarczej (zakup materiałów budowlanych)
+Zabezpieczenie: | hipoteka umowna do 99 000,00 zł na nieruchomości KW nr KR1P/00610770/2 oraz oświadczenie o poddaniu się egzekucji (art. 777 § 1 pkt 5 k.p.c.) do 99 000,00 zł
+
+IV. OŚWIADCZENIA FINANSOWE (AML)
+Oświadczam, że:
+– Osiągam stały i rzeczywisty dochód umożliwiający spłatę pożyczki.
+– Nie posiadam przeterminowanych zobowiązań pieniężnych.
+– Żadne moje zobowiązanie kredytowe ani pożyczkowe nie zostało wypowiedziane.
+– Wszystkie moje zobowiązania reguluję terminowo.
+– Nie toczy się wobec mnie postępowanie egzekucyjne.
+V. OŚWIADCZENIE PEP
+☒ Nie jestem osobą zajmującą eksponowane stanowisko polityczne (PEP), ani osobą z nią powiązaną.
+☐ Jestem osobą PEP lub osobą powiązaną z PEP.
+VI. AML – DO WYPEŁNIENIA PRZEZ POŻYCZKODAWCĘ
+Ocena ryzyka:  ☐ niskie   ☐ średnie   ☐ wysokie
+☐ Transakcja przekracza równowartość 15 000 EUR – wpis do ewidencji AML
+☐ Transakcja nie przekracza równowartości 15 000 EUR
+VII. ODPOWIEDZIALNOŚĆ KARNA
+Oświadczam, że jestem świadomy/a, iż podanie nieprawdziwych danych lub złożenie nieprawdziwych oświadczeń w celu uzyskania pożyczki pieniężnej stanowi przestępstwo, w szczególności z art. 286 §1 oraz art. 297 §1 Kodeksu karnego.
+VIII. OŚWIADCZENIE KOŃCOWE
+Oświadczam, że zapoznałem/am się z treścią niniejszego wniosku i składam go dobrowolnie.
+Sporządzono w Krakowie, dnia 24.09.2026 r.
+…………………………………… / Czytelny podpis Wnioskodawcy / Tomasz Wiśniewski
+
+UMOWA POŻYCZKI
+nr FY/2026/09/001
+zawarta dnia 24.09.2026 r. w Krakowie pomiędzy:
+TOMASZ WIŚNIEWSKI, prowadzący działalność gospodarczą pod firmą TW-BUD Tomasz Wiśniewski, adres: ul. Długa 5, 30-001 Kraków, PESEL 80010112345, NIP 6792345678, tel. +48 600 100 200, e-mail tomasz.wisniewski@example.com, zwanym/ą dalej „Pożyczkobiorcą”,
+FINANCE YOU sp. z o.o., reprezentowana przez prezesa zarządu Filipa Bielaka, adres: ul. Nowogrodzka 31, 00-511 Warszawa, KRS 0000635207, NIP 7010611803, REGON 365350668, zwanym/ą dalej „Pożyczkodawcą”.
+§ 1 – PRZEDMIOT UMOWY
+1. Przedmiotem Umowy jest udzielenie przez Pożyczkodawcę pożyczki pieniężnej dla Pożyczkobiorcy prowadzących działalność gospodarczą, na cele związane bezpośrednio z działalnością zawodową Pożyczkobiorcy.
+2. Pożyczkobiorca oświadcza, iż uzyskane z pożyczki środki przeznaczy na następujący cel: finansowanie bieżącej działalności gospodarczej (zakup materiałów budowlanych).
+§ 2 – KWOTA POŻYCZKI, PROWIZJA I WARUNKI WYPŁATY
+1. Pożyczkodawca udziela Pożyczkobiorcy pożyczki w kwocie dwadzieścia pięć tysięcy złotych 00/100 (25 000,00 zł), zwanej dalej „Kwotą Pożyczki”.
+2. Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości dwadzieścia jeden tysięcy pięćset dwadzieścia pięć złotych 12/100 (21 525,12 zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla Pożyczkobiorcy, odracza jej zapłatę i rozkłada ją na raty miesięczne zgodnie z Załącznikiem nr 1. Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji.
+3. Pożyczkodawca wypłaci Pożyczkobiorcy całą Kwotę Pożyczki, bez potrącania prowizji, tj. dwadzieścia pięć tysięcy złotych 00/100 (25 000,00 zł), przelewem na rachunek bankowy Pożyczkobiorcy nr 25 8011 0008 0010 0150 5299 0002, w ciągu dwóch dni roboczych od spełnienia warunków określonych w niniejszej Umowie.
+4. Oprocentowanie pożyczki wynosi 14,5 % w stosunku rocznym (odsetki umowne), według stałej stopy. Odsetki naliczane są od kapitału pozostającego do spłaty, od dnia wypłaty do dnia całkowitego zwrotu. Oprocentowanie nie przekracza odsetek maksymalnych (art. 359 § 2¹ k.c.); w razie obniżenia poziomu odsetek maksymalnych poniżej stopy umownej, stopa umowna ulega automatycznemu obniżeniu do poziomu odsetek maksymalnych. W razie wcześniejszej spłaty odsetki należne są wyłącznie za okres faktycznego korzystania z kapitału i podlegają proporcjonalnemu obniżeniu.
+5. Pożyczkobiorca zobowiązuje się zwrócić Kwotę Pożyczki wraz z prowizją i odsetkami przelewem na rachunek bankowy Pożyczkodawcy nr 39 1750 0012 0000 0000 3419 5005 w terminach i kwotach określonych w Harmonogramie Spłat stanowiącym Załącznik nr 1 do niniejszej Umowy.
+§ 3 – ZABEZPIECZENIA
+1. Pożyczkobiorca złoży notarialne oświadczenie obejmujące żądanie ustanowienia na rzecz Pożyczkodawcy hipoteki umownej do kwoty 99 000,00 zł (dziewięćdziesiąt dziewięć tysięcy złotych 00/100) na nieruchomości opisanej jako lokal mieszkalny nr 12 przy ul. Długiej 5 w Krakowie, dla której Sąd Rejonowy dla Krakowa-Podgórza w Krakowie, IV Wydział Ksiąg Wieczystych prowadzi księgę wieczystą nr KR1P/00610770/2. Hipoteka zabezpiecza spłatę wszelkich wierzytelności wynikających z niniejszej Umowy, w tym: Kwoty Pożyczki, odsetek, odsetek za zwłokę, prowizji, kosztów sądowych, egzekucyjnych, windykacyjnych oraz kosztów zastępstwa prawnego.
+2. W celu zabezpieczenia interesu Pożyczkodawcy Pożyczkobiorca w notarialnym oświadczeniu, o którym mowa w ust. 1, ustanowi na rzecz Pożyczkodawcy roszczenie o przeniesienie hipoteki ustanowionej zgodnie z ust. 1 na miejsce opróżnione przez każdą inną hipotekę wpisaną w księdze wieczystej nr KR1P/00610770/2 z pierwszeństwem przed hipoteką Pożyczkodawcy, a które to miejsce zostanie lub może zostać opróżnione wskutek wygaśnięcia, uchylenia, zmniejszenia lub wykreślenia takiej hipoteki (art. 101¹ ustawy z dnia 6 lipca 1982 r. o księgach wieczystych i hipotece). Roszczenie to podlega ujawnieniu w księdze wieczystej wraz z hipoteką Pożyczkodawcy. Pożyczkobiorca zobowiązuje się nie rozporządzać opróżnionym miejscem hipotecznym ani nie ustanawiać na nim innej hipoteki bez uprzedniej pisemnej zgody Pożyczkodawcy pod rygorem nieważności.
+3. Pożyczkobiorca zobowiązuje się, że w okresie obowiązywania Umowy nie dokona zbycia, darowizny, ustanowienia kolejnej hipoteki, obciążenia służebnością ani innego rozporządzenia nieruchomościami stanowiącymi zabezpieczenie bez uprzedniej pisemnej zgody Pożyczkodawcy pod rygorem nieważności.
+4. Pożyczkobiorca podda się rygorowi egzekucji wprost z aktu notarialnego w trybie art. 777 §1 pkt 5 k.p.c. do kwoty 99 000,00 zł (dziewięćdziesiąt dziewięć tysięcy złotych 00/100). Zdarzeniem uprawniającym Wierzyciela do wystąpienia o nadanie aktowi klauzuli wykonalności będzie niezapłacenie — w terminie 7 dni od daty doręczenia wezwania do zapłaty — należności wynikających z niniejszej Umowy pożyczki z dnia 24.09.2026. Wystarczającym dowodem na wykazanie zdarzenia jest potwierdzenie nadania na terytorium RP przesyłki rejestrowanej (art. 3 pkt 23 ustawy Prawo pocztowe) na adres do doręczeń wskazany w niniejszej Umowie. Wierzyciel może wystąpić o nadanie klauzuli wykonalności do dnia 24.10.2032 i jest uprawniony do wielokrotnego składania takiego wniosku.
+5. Koszty ustanowienia, zmiany i zwolnienia zabezpieczeń, w tym taksy notarialne, opłaty sądowe i podatek od czynności cywilnoprawnych, ponosi Pożyczkobiorca.
+6. Po całkowitej spłacie należności wynikających z Umowy Pożyczkodawca wyda, w terminie 14 dni, dokumenty konieczne do wykreślenia hipoteki oraz zwolnienia pozostałych zabezpieczeń.
+§ 4 – WINDYKACJA I SKUTKI OPÓŹNIENIA
+1. W przypadku niedotrzymania któregokolwiek terminu płatności Pożyczkobiorca zobowiązany jest do zapłaty odsetek za opóźnienie w wysokości dwukrotności ustawowych odsetek za opóźnienie obowiązujących w dniu podpisania Umowy, naliczanych od zaległej kwoty.
+2. W przypadku gdy Pożyczkobiorca nie wywiązuje się z obowiązku zwrotu pożyczki w terminie, Pożyczkodawca jest uprawniony do wszczęcia procedury windykacyjnej, której koszty – według Tabeli opłat windykacyjnych stanowiącej Załącznik nr 3 – w całości obciążają Pożyczkobiorcę.
+3. Czynności windykacyjne i upominawcze mogą być podejmowane z częstotliwością zgodną z dobrymi obyczajami, wielokrotnie do czasu całkowitej spłaty zadłużenia, zawarcia ugody lub skierowania sprawy na drogę sądową. Wszelkie czynności ujmowane są w rejestrze czynności windykacyjnych.
+4. W przypadku spłaty należności w niepełnej wysokości, wpłacone kwoty zaliczane są przez Pożyczkodawcę w następującej kolejności:
+a) prowizja (o ile nie została potrącona przy wypłacie);
+b) powstałe koszty windykacyjne;
+c) odsetki za opóźnienie;
+d) odsetki umowne;
+e) kapitał pożyczki.
+5. Pożyczkobiorca zobowiązany jest do zwrotu rzeczywistych, udokumentowanych kosztów czynności windykacyjnych poniesionych przez Pożyczkodawcę, w wysokości nieprzekraczającej stawek wskazanych w Załączniku nr 3 i ujętych w rejestrze czynności windykacyjnych. Opłaty te stanowią zwrot kosztów dochodzenia należności, a nie karę umowną.
+§ 5 – OŚWIADCZENIA STRON
+1. Pożyczkobiorca oświadcza, że jest przedsiębiorcą w rozumieniu art. 43¹ Kodeksu cywilnego, a niniejsza Umowa pozostaje w bezpośrednim związku z prowadzoną przez niego działalnością gospodarczą i ma dla niego charakter zawodowy. Umowa nie jest zawierana w celu konsumenckim, a do udzielonej pożyczki nie mają zastosowania przepisy ustawy o kredycie konsumenckim ani ustawy o kredycie hipotecznym.
+2. Pożyczkobiorca oświadcza, że dane podane w Umowie są prawdziwe i aktualne, oraz zobowiązuje się niezwłocznie informować Pożyczkodawcę o każdej ich zmianie.
+3. Pożyczkobiorca oświadcza, że przysługuje mu prawo własności nieruchomości stanowiących zabezpieczenie, że nieruchomości te — poza obciążeniami ujawnionymi w niniejszej Umowie — są wolne od praw i roszczeń osób trzecich, nie są przedmiotem postępowania egzekucyjnego (sądowego ani administracyjnego), postępowania o zniesienie współwłasności, działu spadku ani sporu co do stanu prawnego, a także że nie istnieją zaległości publicznoprawne mogące skutkować wpisem hipoteki przymusowej.
+4. Strony zgodnie potwierdzają, że w księgach wieczystych nieruchomości stanowiących zabezpieczenie ujawnione są następujące wpisy (stan obciążeń):
+a) w dziale IV księgi wieczystej nr KR1P/00610770/2: hipoteka umowna na rzecz Bank Przykładowy S.A. na kwotę 62 000,00 zł — hipoteka umowna zabezpieczająca kredyt;
+5. Pożyczkobiorca oraz każdy właściciel nieruchomości stanowiącej zabezpieczenie oświadczają, że nie posiadają wymagalnych zaległości wobec Urzędu Skarbowego ani Zakładu Ubezpieczeń Społecznych. Strony przyjmują do wiadomości, że należności publicznoprawne zabezpieczone hipoteką przymusową oraz egzekucja administracyjna mogą korzystać z pierwszeństwa przed hipoteką umowną, a zatajenie takich zaległości stanowi istotne naruszenie Umowy uprawniające do jej wypowiedzenia.
+6. Pożyczkobiorca oświadcza, że według swojej najlepszej wiedzy posiada zdolność do terminowej obsługi zobowiązania na warunkach określonych w Załączniku nr 1, nie toczy się przeciwko niego postępowanie o ogłoszenie upadłości ani restrukturyzacyjne, i nie ma podstaw do ich wszczęcia.
+7. Pożyczkobiorca potwierdza, że przed podpisaniem Umowy otrzymał jej projekt, miał możliwość zapoznania się z jego treścią oraz zasięgnięcia niezależnej porady prawnej, rozumie znaczenie i skutki prawne Umowy — w tym konstrukcję spłaty oraz charakter prowizji — nie działa pod wpływem błędu ani w przymusowym położeniu w rozumieniu art. 388 k.c., i zawiera Umowę swobodnie.
+8. Strony oświadczają, że są należycie umocowane do zawarcia Umowy.
+9. Tomasz Wiśniewski oświadcza, że nie pozostaje w związku małżeńskim, a nieruchomość objęta księgą wieczystą nr KR1P/00610770/2, w której dziale II jest ujawniony jako jedyny właściciel, wchodzi w skład jego majątku osobistego i nie jest objęta wspólnością majątkową małżeńską.
+10. Pożyczkobiorca oświadcza, że:
+a) niniejszą Umowę zawarł jako przedsiębiorca w rozumieniu art. 4 ust. 1 ustawy z dnia 6 marca 2018 r. – Prawo przedsiębiorców, a nie jako konsument w rozumieniu art. 22¹ k.c.;
+b) do udzielonej pożyczki nie mają zastosowania przepisy ustawy z dnia 12 maja 2011 r. o kredycie konsumenckim ani ustawy z dnia 23 marca 2017 r. o kredycie hipotecznym;
+c) przed zawarciem Umowy dokonał już pierwszych czynności w obrocie gospodarczym bezpośrednio związanych z przedmiotem wykonywanej działalności;
+d) jego przychody z tytułu działalności gospodarczej gwarantują terminową spłatę pożyczki;
+e) niniejszą Umowę zawarł na podstawie oferty przedstawionej przez Pożyczkodawcę i miał możliwość zapoznania się z nią bez obecności przedstawiciela Pożyczkodawcy;
+f) wszelkie dane przekazane Pożyczkodawcy są kompletne, zgodne ze stanem rzeczywistym i podane dobrowolnie;
+g) w pełni zrozumiał treść i skutki prawne poszczególnych postanowień Umowy i nie będzie rościł z tego tytułu żadnych pretensji;
+h) jest w pełni świadomy treści zawieranej Umowy i nie działa pod wpływem błędu ani okoliczności wyłączających lub ograniczających jego świadomość lub dobrowolność;
+i) nie znajduje się w przymusowym położeniu w rozumieniu art. 388 k.c.;
+j) nie toczy się przeciwko niemu postępowanie o ogłoszenie upadłości ani nie ma podstaw do ogłoszenia takiej upadłości;
+k) posiada rozeznanie na rynku ofert pożyczek pozabankowych dla przedsiębiorców i wybrał niniejszy produkt finansowy spośród dostępnych ofert;
+l) wyraża zgodę na przeniesienie przez Pożyczkodawcę wierzytelności i wszelkich praw wynikających z Umowy na osoby trzecie wraz z ustanowionymi zabezpieczeniami;
+m) wyraża zgodę na dostarczanie korespondencji drogą elektroniczną na adres: tomasz.wisniewski@example.com. W przypadku zmiany adresu e-mail Pożyczkobiorca zobowiązuje się niezwłocznie powiadomić Pożyczkodawcę na piśmie. Brak pisemnego powiadomienia o zmianie adresu e-mail skutkuje tym, że korespondencja wysłana na wskazany adres jest uznana za doręczoną. Niniejsza fikcja doręczenia nie dotyczy oświadczeń wywołujących skutki prawne, w szczególności wypowiedzenia Umowy oraz wezwania, o którym mowa w § 3 ust. 4, które doręcza się przesyłką rejestrowaną na adres do doręczeń Pożyczkobiorcy.
+11. Pożyczkodawca oświadcza, iż zgodnie z art. 13 RODO (Rozporządzenie PE i Rady (UE) 2016/679):
+a) administratorem danych osobowych Pożyczkobiorcy jest FINANCE YOU sp. z o.o.;
+b) dane osobowe przetwarzane są na podstawie art. 6 ust. 1 lit. b RODO w celu realizacji Umowy;
+c) odbiorcami danych będą wyłącznie podmioty uprawnione na podstawie przepisów prawa oraz firmy windykacyjne;
+d) dane przechowywane będą przez okres 10 lat od rozwiązania Umowy;
+e) Pożyczkobiorcy przysługuje prawo dostępu, sprostowania, sprzeciwu wobec przetwarzania oraz przenoszenia danych;
+f) Pożyczkobiorca ma prawo wniesienia skargi do Prezesa UODO;
+g) podanie danych jest dobrowolne, jednak odmowa może skutkować odmową udzielenia pożyczki.
+12. Pożyczkobiorca i Pożyczkodawca potwierdzają, że zapisy niniejszej Umowy są efektem indywidualnych negocjacji uwidocznionych w Protokole z Negocjacji (Załącznik nr 2).
+§ 6 – POSTANOWIENIA OGÓLNE
+1. Podpisując Umowę Pożyczkobiorca potwierdza odbiór Załącznika nr 1 (Harmonogram Spłat).
+2. Wszelkie zmiany niniejszej Umowy wymagają formy pisemnej pod rygorem nieważności.
+3. Pożyczkodawca i Pożyczkobiorca potwierdzają, że ich zgodnym zamiarem jest zawarcie Umowy pożyczki w rozumieniu przepisów k.c., której spłata jest odpowiednio i zgodnie z prawem zabezpieczona.
+4. Umowę sporządzono w 2 jednobrzmiących egzemplarzach, po jednym dla każdej ze Stron.
+5. W sprawach nieobjętych Umową stosuje się przepisy k.c. oraz inne powszechnie obowiązujące przepisy prawa. W razie sprzeczności postanowień Umowy z przepisami prawa, przepisy te uchylają, uzupełniają lub zastępują wadliwe postanowienia, a pozostałe postanowienia pozostają w mocy.
+6. Wszelkie spory wynikłe z realizacji Umowy Strony deklarują rozstrzygać polubownie. W braku porozumienia właściwym jest sąd powszechny miejscowo właściwy dla siedziby Pożyczkodawcy (wierzyciela) lub cesjonariusza.
+§ 7 – WYPOWIEDZENIE UMOWY
+1. Pożyczkodawca ma prawo wypowiedzieć Umowę ze skutkiem natychmiastowym i żądać natychmiastowej spłaty całości niespłaconego zadłużenia wraz z odsetkami i kosztami, gdy Pożyczkobiorca:
+a) opóźnia się z zapłatą którejkolwiek raty lub innych należności przez okres dłuższy niż 14 dni;
+b) wykorzysta pożyczkę niezgodnie z celem określonym w § 1;
+c) podał Pożyczkodawcy nieprawdziwe dane, dokumenty lub informacje mające znaczenie dla zawarcia lub wykonywania Umowy;
+d) utrudnia Pożyczkodawcy wykonanie jego praw z Umowy lub ustanowionych zabezpieczeń;
+e) narusza inne istotne postanowienia Umowy;
+f) zostanie wszczęte wobec niego postępowanie egzekucyjne, upadłościowe, restrukturyzacyjne lub likwidacyjne;
+g) dokona rozporządzenia nieruchomością stanowiącą zabezpieczenie bez zgody Pożyczkodawcy, o której mowa w § 3 ust. 3.
+2. W przypadku wypowiedzenia Umowy Pożyczkobiorca zobowiązany jest do spłaty całości zadłużenia w terminie 7 dni od doręczenia oświadczenia o wypowiedzeniu.
+3. Oświadczenie o wypowiedzeniu wywołuje skutek z chwilą jego dojścia do Pożyczkobiorcy w sposób umożliwiający zapoznanie się z jego treścią (art. 61 k.c.). Dla celów dowodowych Pożyczkodawca doręcza je przesyłką rejestrowaną na adres do doręczeń wskazany w Umowie; doręczenie na adres e-mail Pożyczkobiorcy ma charakter pomocniczy.
+ZAŁĄCZNIKI
+– Załącznik nr 1 — Harmonogram spłat
+– Załącznik nr 2 — Protokół z negocjacji indywidualnych
+– Załącznik nr 3 — Tabela opłat windykacyjnych
+…………………………………… / Pożyczkobiorca / Tomasz Wiśniewski | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu
+
+ZAŁĄCZNIK NR 1 DO UMOWY POŻYCZKI
+HARMONOGRAM SPŁAT
+do Umowy pożyczki nr FY/2026/09/001 zawartej dnia 24.09.2026 r. w Krakowie
+Kwota Pożyczki: | 25 000,00 zł
+Kwota wypłacona: | 25 000,00 zł (bez potrącenia prowizji)
+Prowizja jednorazowa: | 21 525,12 zł (płatna w ratach zgodnie z tabelą rat)
+Oprocentowanie umowne: | 14,5 % rocznie, naliczane od kapitału pozostającego do spłaty
+
+Tabela rat (36 rat):
+Nr | Termin | Rata | Kapitał | Odsetki | Prowizja | Saldo
+1 | 24.10.2026 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+2 | 24.11.2026 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+3 | 24.12.2026 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+4 | 24.01.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+5 | 24.02.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+6 | 24.03.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+7 | 24.04.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+8 | 24.05.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+9 | 24.06.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+10 | 24.07.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+11 | 24.08.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+12 | 24.09.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+13 | 24.10.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+14 | 24.11.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+15 | 24.12.2027 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+16 | 24.01.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+17 | 24.02.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+18 | 24.03.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+19 | 24.04.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+20 | 24.05.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+21 | 24.06.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+22 | 24.07.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+23 | 24.08.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+24 | 24.09.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+25 | 24.10.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+26 | 24.11.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+27 | 24.12.2028 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+28 | 24.01.2029 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+29 | 24.02.2029 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+30 | 24.03.2029 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+31 | 24.04.2029 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+32 | 24.05.2029 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+33 | 24.06.2029 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+34 | 24.07.2029 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+35 | 24.08.2029 | 900,00 | 0,00 | 302,08 | 597,92 | 25 000,00
+36 | 24.09.2029 | 25 900,00 | 25 000,00 | 302,08 | 597,92 | 0,00
+Razem |  | 57 400,00 | 25 000,00 | 10 874,88 | 21 525,12 |
+
+Łączna suma wszystkich płatności (kapitał + prowizja + odsetki): 57 400,00 zł (kapitał 25 000,00 zł + prowizja 21 525,12 zł + odsetki 10 874,88 zł); 35 rat po 900,00 zł oraz rata końcowa (balonowa) 25 900,00 zł, płatne 24. dnia każdego miesiąca począwszy od 24.10.2026 r.
+…………………………………… / Pożyczkobiorca / Tomasz Wiśniewski | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu
+
+ZAŁĄCZNIK NR 2 DO UMOWY POŻYCZKI
+PROTOKÓŁ Z NEGOCJACJI INDYWIDUALNYCH
+do Umowy pożyczki nr FY/2026/09/001 zawartej dnia 24.09.2026 r. w Krakowie
+1. DANE STRON
+Pożyczkodawca: | FINANCE YOU sp. z o.o.
+Pożyczkobiorca: | Tomasz Wiśniewski, prowadzący działalność gospodarczą pod firmą TW-BUD Tomasz Wiśniewski
+Tel. negocjacyjny Pożyczkobiorcy: | +48 600 100 200
+
+2. MIEJSCE, FORMY I PRZEBIEG NEGOCJACJI
+Negocjacje prowadzone były w trybie indywidualnym, w szczególności:
+– telefonicznie (nr tel.: +48 600 100 200);
+– drogą elektroniczną (e-mail: tomasz.wisniewski@example.com);
+Negocjacje trwały: | 24.09.2026 – 24.09.2026
+Uzgodniona prowizja finalna: | 21 525,12 zł
+Uzgodnione oprocentowanie finalne: | 14,5 %
+Uzgodniony okres pożyczki: | 36 miesięcy (35 rat po 900,00 zł + rata końcowa/balonowa 25 900,00 zł)
+
+3. ZAKRES INDYWIDUALNIE NEGOCJOWANYCH WARUNKÓW
+Strony potwierdzają, że następujące elementy zostały indywidualnie negocjowane:
+– Kwota pożyczki, jej wysokość i przeznaczenie (§ 1 Umowy).
+– Wysokość jednorazowej prowizji za udzielenie pożyczki oraz jej uzasadnienie (§ 2 ust. 2 Umowy).
+– Sposób i terminy wypłaty pożyczki, w tym podział na przelew / gotówkę / przekaz (§ 2 ust. 3 Umowy).
+– Wysokość oprocentowania umownego oraz zasady jego naliczania od kapitału pozostającego do spłaty (§ 2 ust. 4 Umowy).
+– Ustanowienie zabezpieczeń: wysokość hipoteki, poddanie się egzekucji (§ 3 Umowy).
+– Harmonogram spłat: terminy, liczba rat, wysokość rat (Załącznik nr 1).
+– Postanowienia dotyczące windykacji i kolejność zaliczania wpłat (§ 4 Umowy).
+– Prawo Pożyczkodawcy do wypowiedzenia Umowy i przesłanki wypowiedzenia (§ 7 Umowy).
+– Forma doręczeń, w tym zgoda na doręczenia e-mailowe (§ 5 ust. 10 lit. m Umowy).
+4. POTWIERDZENIA STRON
+– Pożyczkobiorca potwierdza, że wszystkie powyższe elementy były negocjowane indywidualnie, są dla niego jasne i zrozumiałe, a ich treść odzwierciedla wynik negocjacji.
+– Pożyczkobiorca potwierdza, że treść Umowy nie została mu narzucona i miał realny wpływ na każde z jej kluczowych postanowień.
+– Pożyczkodawca potwierdza prawidłowość przebiegu procesu negocjacyjnego.
+– Strony potwierdzają, że podpisanie Umowy nastąpiło po zakończeniu procesu negocjacji opisanego w niniejszym Protokole.
+…………………………………… / Pożyczkobiorca / Tomasz Wiśniewski | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu
+
+ZAŁĄCZNIK NR 3 DO UMOWY POŻYCZKI
+TABELA OPŁAT WINDYKACYJNYCH
+do Umowy pożyczki nr FY/2026/09/001 zawartej dnia 24.09.2026 r. w Krakowie
+Poniższe opłaty są naliczane wyłącznie w przypadku opóźnień w spłacie i stanowią zwrot rzeczywistych, udokumentowanych kosztów czynności windykacyjnych (§ 4 ust. 5 Umowy).
+Czynność windykacyjna | Opłata
+Aneks do umowy pożyczki | 3 000,00 zł
+Opłata za dokument wystawiony na życzenie Pożyczkobiorcy | 150,00 zł
+Monit pisemny / wezwanie do zapłaty | 300,00 zł
+Monit telefoniczny | 50,00 zł
+Monit SMS | 25,00 zł
+Wznowienie pożyczki po wypowiedzeniu | 2 000,00 zł
+Zmiana harmonogramu spłaty | 500,00 zł
+Przystąpienie do długu | 1 000,00 zł
+Wydruk historii operacji na rachunku pożyczki | 100,00 zł
+Wydanie promesy | 500,00 zł
+Wizyta terenowa do 50 km od siedziby | 200,00 zł
+Wizyta terenowa 50–100 km od siedziby | 400,00 zł
+Wizyta terenowa 100–150 km od siedziby | 600,00 zł
+Każde kolejne 50 km ponad 150 km | 200,00 zł
+Koszty obsługi prawnej przy dochodzeniu roszczeń | wg rozporządzenia Min. Sprawiedliwości z 22.10.2015 r.
+
+…………………………………… / Pożyczkobiorca / Tomasz Wiśniewski | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu"
+`;
+
+exports[`snapshot tekstu DOCX > b — dwoje pożyczkobiorców, współwłasność 1/2 1`] = `
+"WNIOSEK O UDZIELENIE POŻYCZKI PIENIĘŻNEJ
+I. DANE WNIOSKODAWCY
+Imię i nazwisko / Firma: | Anna Kowalczyk, prowadząca działalność gospodarczą pod firmą AK Handel Anna Kowalczyk oraz Marek Zieliński
+PESEL / NIP: | PESEL 85020254321, NIP 7121234567 (Anna Kowalczyk); PESEL 83030398765 (Marek Zieliński)
+Seria i numer dok. tożsamości: |
+Adres zamieszkania / siedziby: | ul. Lipowa 3, 20-001 Lublin
+Telefon: | +48 601 200 300 (Anna Kowalczyk); +48 602 300 400 (Marek Zieliński)
+E-mail: | anna.kowalczyk@example.com (Anna Kowalczyk)
+
+II. CHARAKTER POŻYCZKI
+Wnioskuję o udzielenie pożyczki pieniężnej na cele związane z prowadzoną działalnością gospodarczą.
+Oświadczam, że pożyczka nie ma charakteru konsumenckiego i nie stanowi kredytu konsumenckiego w rozumieniu ustawy o kredycie konsumenckim.
+III. WARUNKI POŻYCZKI
+Wnioskowana kwota: | 60 000,00 zł
+Okres pożyczki: | 24 miesiące
+Cel pożyczki: | rozwój prowadzonej działalności handlowej
+Zabezpieczenie: | hipoteka umowna do 150 000,00 zł na nieruchomości KW nr LU1I/00123456/7 oraz oświadczenie o poddaniu się egzekucji (art. 777 § 1 pkt 5 k.p.c.) do 150 000,00 zł
+
+IV. OŚWIADCZENIA FINANSOWE (AML)
+Oświadczam, że:
+– Osiągam stały i rzeczywisty dochód umożliwiający spłatę pożyczki.
+– Nie posiadam przeterminowanych zobowiązań pieniężnych.
+– Żadne moje zobowiązanie kredytowe ani pożyczkowe nie zostało wypowiedziane.
+– Wszystkie moje zobowiązania reguluję terminowo.
+– Nie toczy się wobec mnie postępowanie egzekucyjne.
+V. OŚWIADCZENIE PEP
+☐ Nie jestem osobą zajmującą eksponowane stanowisko polityczne (PEP), ani osobą z nią powiązaną.
+☐ Jestem osobą PEP lub osobą powiązaną z PEP.
+VI. AML – DO WYPEŁNIENIA PRZEZ POŻYCZKODAWCĘ
+Ocena ryzyka:  ☐ niskie   ☐ średnie   ☐ wysokie
+☐ Transakcja przekracza równowartość 15 000 EUR – wpis do ewidencji AML
+☐ Transakcja nie przekracza równowartości 15 000 EUR
+VII. ODPOWIEDZIALNOŚĆ KARNA
+Oświadczam, że jestem świadomy/a, iż podanie nieprawdziwych danych lub złożenie nieprawdziwych oświadczeń w celu uzyskania pożyczki pieniężnej stanowi przestępstwo, w szczególności z art. 286 §1 oraz art. 297 §1 Kodeksu karnego.
+VIII. OŚWIADCZENIE KOŃCOWE
+Oświadczam, że zapoznałem/am się z treścią niniejszego wniosku i składam go dobrowolnie.
+Sporządzono w Lublinie, dnia 24.09.2026 r.
+…………………………………… / Czytelny podpis Wnioskodawcy / Anna Kowalczyk | …………………………………… / Czytelny podpis Wnioskodawcy / Marek Zieliński
+
+UMOWA POŻYCZKI
+nr FY/2026/09/002
+zawarta dnia 24.09.2026 r. w Lublinie pomiędzy:
+ANNA KOWALCZYK, prowadzący działalność gospodarczą pod firmą AK Handel Anna Kowalczyk, adres: ul. Lipowa 3, 20-001 Lublin, PESEL 85020254321, NIP 7121234567, tel. +48 601 200 300, e-mail anna.kowalczyk@example.com, współwłaścicielka w udziale wynoszącym 1/2 części nieruchomości objętej księgą wieczystą nr LU1I/00123456/7, zwanym/ą dalej „Pożyczkobiorcami”,
+MAREK ZIELIŃSKI, adres: ul. Lipowa 3, 20-001 Lublin, PESEL 83030398765, tel. +48 602 300 400, współwłaściciel w udziale wynoszącym 1/2 części nieruchomości objętej księgą wieczystą nr LU1I/00123456/7, zwanym/ą dalej „Pożyczkobiorcami”,
+FINANCE YOU sp. z o.o., reprezentowana przez prezesa zarządu Filipa Bielaka, adres: ul. Nowogrodzka 31, 00-511 Warszawa, KRS 0000635207, NIP 7010611803, REGON 365350668, zwanym/ą dalej „Pożyczkodawcą”.
+§ 1 – PRZEDMIOT UMOWY
+1. Przedmiotem Umowy jest udzielenie przez Pożyczkodawcę pożyczki pieniężnej dla Pożyczkobiorców prowadzących działalność gospodarczą, na cele związane bezpośrednio z działalnością zawodową Pożyczkobiorców.
+2. Pożyczkobiorcy oświadczają, iż uzyskane z pożyczki środki przeznaczą na następujący cel: rozwój prowadzonej działalności handlowej.
+§ 2 – KWOTA POŻYCZKI, PROWIZJA I WARUNKI WYPŁATY
+1. Pożyczkodawca udziela Pożyczkobiorcom pożyczki w kwocie sześćdziesiąt tysięcy złotych 00/100 (60 000,00 zł), zwanej dalej „Kwotą Pożyczki”.
+2. Pożyczkobiorcy odpowiadają za zobowiązania wynikające z niniejszej Umowy solidarnie (art. 366 k.c.). Pożyczkodawca może żądać całości lub części świadczenia od wszystkich Pożyczkobiorców łącznie, od kilku z nich lub od każdego z osobna, a zaspokojenie przez któregokolwiek z nich zwalnia pozostałych. Do zupełnego zaspokojenia Pożyczkodawcy wszyscy Pożyczkobiorcy pozostają zobowiązani.
+3. Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości osiemnaście tysięcy złotych 00/100 (18 000,00 zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla Pożyczkobiorców, odracza jej zapłatę i rozkłada ją na raty miesięczne zgodnie z Załącznikiem nr 1. Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji.
+4. Pożyczkodawca wypłaci Pożyczkobiorcom całą Kwotę Pożyczki, bez potrącania prowizji, tj. sześćdziesiąt tysięcy złotych 00/100 (60 000,00 zł), przelewem na rachunek bankowy Pożyczkobiorców nr 25 8011 0008 0010 0150 5299 0002, w ciągu dwóch dni roboczych od spełnienia warunków określonych w niniejszej Umowie.
+5. Oprocentowanie pożyczki wynosi 15,5 % w stosunku rocznym (odsetki umowne), według stałej stopy. Odsetki naliczane są od kapitału pozostającego do spłaty, od dnia wypłaty do dnia całkowitego zwrotu. Oprocentowanie nie przekracza odsetek maksymalnych (art. 359 § 2¹ k.c.); w razie obniżenia poziomu odsetek maksymalnych poniżej stopy umownej, stopa umowna ulega automatycznemu obniżeniu do poziomu odsetek maksymalnych. W razie wcześniejszej spłaty odsetki należne są wyłącznie za okres faktycznego korzystania z kapitału i podlegają proporcjonalnemu obniżeniu.
+6. Pożyczkobiorcy zobowiązują się zwrócić Kwotę Pożyczki wraz z prowizją i odsetkami przelewem na rachunek bankowy Pożyczkodawcy nr 39 1750 0012 0000 0000 3419 5005 w terminach i kwotach określonych w Harmonogramie Spłat stanowiącym Załącznik nr 1 do niniejszej Umowy.
+§ 3 – ZABEZPIECZENIA
+1. Pożyczkobiorca złoży notarialne oświadczenie obejmujące żądanie ustanowienia na rzecz Pożyczkodawcy hipoteki umownej do kwoty 150 000,00 zł (sto pięćdziesiąt tysięcy złotych 00/100) na nieruchomości opisanej jako nieruchomość zabudowana budynkiem mieszkalnym jednorodzinnym przy ul. Lipowej 3 w Lublinie, dla której Sąd Rejonowy Lublin-Zachód w Lublinie, VI Wydział Ksiąg Wieczystych prowadzi księgę wieczystą nr LU1I/00123456/7. Hipoteka zabezpiecza spłatę wszelkich wierzytelności wynikających z niniejszej Umowy, w tym: Kwoty Pożyczki, odsetek, odsetek za zwłokę, prowizji, kosztów sądowych, egzekucyjnych, windykacyjnych oraz kosztów zastępstwa prawnego.
+2. Nieruchomość objęta księgą wieczystą nr LU1I/00123456/7 stanowi przedmiot współwłasności w częściach ułamkowych: Anna Kowalczyk (PESEL 85020254321) — w udziale wynoszącym 1/2 części oraz Marek Zieliński (PESEL 83030398765) — w udziale wynoszącym 1/2 części. Wszyscy współwłaściciele przystępują do niniejszej Umowy i wspólnie obejmują żądaniem ustanowienia hipoteki całą nieruchomość — hipoteka obciąża całą nieruchomość, a nie poszczególne udziały.
+3. Pożyczkobiorcy zobowiązują się, że w okresie obowiązywania Umowy nie dokona zbycia, darowizny, ustanowienia kolejnej hipoteki, obciążenia służebnością ani innego rozporządzenia nieruchomościami stanowiącymi zabezpieczenie bez uprzedniej pisemnej zgody Pożyczkodawcy pod rygorem nieważności.
+4. Pożyczkobiorca podda się rygorowi egzekucji wprost z aktu notarialnego w trybie art. 777 §1 pkt 5 k.p.c. do kwoty 150 000,00 zł (sto pięćdziesiąt tysięcy złotych 00/100). Zdarzeniem uprawniającym Wierzyciela do wystąpienia o nadanie aktowi klauzuli wykonalności będzie niezapłacenie — w terminie 7 dni od daty doręczenia wezwania do zapłaty — należności wynikających z niniejszej Umowy pożyczki z dnia 24.09.2026. Wystarczającym dowodem na wykazanie zdarzenia jest potwierdzenie nadania na terytorium RP przesyłki rejestrowanej (art. 3 pkt 23 ustawy Prawo pocztowe) na adres do doręczeń wskazany w niniejszej Umowie. Wierzyciel może wystąpić o nadanie klauzuli wykonalności do dnia 24.10.2030 i jest uprawniony do wielokrotnego składania takiego wniosku.
+5. Koszty ustanowienia, zmiany i zwolnienia zabezpieczeń, w tym taksy notarialne, opłaty sądowe i podatek od czynności cywilnoprawnych, ponoszą Pożyczkobiorcy.
+6. Po całkowitej spłacie należności wynikających z Umowy Pożyczkodawca wyda, w terminie 14 dni, dokumenty konieczne do wykreślenia hipoteki oraz zwolnienia pozostałych zabezpieczeń.
+§ 4 – WINDYKACJA I SKUTKI OPÓŹNIENIA
+1. W przypadku niedotrzymania któregokolwiek terminu płatności Pożyczkobiorcy zobowiązani są do zapłaty odsetek za opóźnienie w wysokości dwukrotności ustawowych odsetek za opóźnienie obowiązujących w dniu podpisania Umowy, naliczanych od zaległej kwoty.
+2. W przypadku gdy Pożyczkobiorcy nie wywiązują się z obowiązku zwrotu pożyczki w terminie, Pożyczkodawca jest uprawniony do wszczęcia procedury windykacyjnej, której koszty – według Tabeli opłat windykacyjnych stanowiącej Załącznik nr 3 – w całości obciążają Pożyczkobiorców.
+3. Czynności windykacyjne i upominawcze mogą być podejmowane z częstotliwością zgodną z dobrymi obyczajami, wielokrotnie do czasu całkowitej spłaty zadłużenia, zawarcia ugody lub skierowania sprawy na drogę sądową. Wszelkie czynności ujmowane są w rejestrze czynności windykacyjnych.
+4. W przypadku spłaty należności w niepełnej wysokości, wpłacone kwoty zaliczane są przez Pożyczkodawcę w następującej kolejności:
+a) prowizja (o ile nie została potrącona przy wypłacie);
+b) powstałe koszty windykacyjne;
+c) odsetki za opóźnienie;
+d) odsetki umowne;
+e) kapitał pożyczki.
+5. Pożyczkobiorcy zobowiązani są do zwrotu rzeczywistych, udokumentowanych kosztów czynności windykacyjnych poniesionych przez Pożyczkodawcę, w wysokości nieprzekraczającej stawek wskazanych w Załączniku nr 3 i ujętych w rejestrze czynności windykacyjnych. Opłaty te stanowią zwrot kosztów dochodzenia należności, a nie karę umowną.
+§ 5 – OŚWIADCZENIA STRON
+1. Pożyczkobiorcy oświadczają, że są przedsiębiorcami w rozumieniu art. 43¹ Kodeksu cywilnego, a niniejsza Umowa pozostaje w bezpośrednim związku z prowadzoną przez nich działalnością gospodarczą i ma dla nich charakter zawodowy. Umowa nie jest zawierana w celu konsumenckim, a do udzielonej pożyczki nie mają zastosowania przepisy ustawy o kredycie konsumenckim ani ustawy o kredycie hipotecznym.
+2. Pożyczkobiorcy oświadczają, że dane podane w Umowie są prawdziwe i aktualne, oraz zobowiązują się niezwłocznie informować Pożyczkodawcę o każdej ich zmianie.
+3. Pożyczkobiorcy oświadczają, że przysługuje im prawo własności nieruchomości stanowiących zabezpieczenie, że nieruchomości te — poza obciążeniami ujawnionymi w niniejszej Umowie — są wolne od praw i roszczeń osób trzecich, nie są przedmiotem postępowania egzekucyjnego (sądowego ani administracyjnego), postępowania o zniesienie współwłasności, działu spadku ani sporu co do stanu prawnego, a także że nie istnieją zaległości publicznoprawne mogące skutkować wpisem hipoteki przymusowej.
+4. Pożyczkobiorcy oraz każdy właściciel nieruchomości stanowiącej zabezpieczenie oświadczają, że nie posiadają wymagalnych zaległości wobec Urzędu Skarbowego ani Zakładu Ubezpieczeń Społecznych. Strony przyjmują do wiadomości, że należności publicznoprawne zabezpieczone hipoteką przymusową oraz egzekucja administracyjna mogą korzystać z pierwszeństwa przed hipoteką umowną, a zatajenie takich zaległości stanowi istotne naruszenie Umowy uprawniające do jej wypowiedzenia.
+5. Pożyczkobiorcy oświadczają, że według swojej najlepszej wiedzy posiadają zdolność do terminowej obsługi zobowiązania na warunkach określonych w Załączniku nr 1, nie toczy się przeciwko nich postępowanie o ogłoszenie upadłości ani restrukturyzacyjne, i nie ma podstaw do ich wszczęcia.
+6. Pożyczkobiorcy potwierdzają, że przed podpisaniem Umowy otrzymali jej projekt, mieli możliwość zapoznania się z jego treścią oraz zasięgnięcia niezależnej porady prawnej, rozumieją znaczenie i skutki prawne Umowy — w tym konstrukcję spłaty oraz charakter prowizji — nie działają pod wpływem błędu ani w przymusowym położeniu w rozumieniu art. 388 k.c., i zawierają Umowę swobodnie.
+7. Strony oświadczają, że są należycie umocowane do zawarcia Umowy.
+8. Pożyczkobiorcy oświadczają, że:
+a) niniejszą Umowę zawarli jako przedsiębiorcy w rozumieniu art. 4 ust. 1 ustawy z dnia 6 marca 2018 r. – Prawo przedsiębiorców, a nie jako konsumenci w rozumieniu art. 22¹ k.c.;
+b) do udzielonej pożyczki nie mają zastosowania przepisy ustawy z dnia 12 maja 2011 r. o kredycie konsumenckim ani ustawy z dnia 23 marca 2017 r. o kredycie hipotecznym;
+c) przed zawarciem Umowy dokonali już pierwszych czynności w obrocie gospodarczym bezpośrednio związanych z przedmiotem wykonywanej działalności;
+d) ich przychody z tytułu działalności gospodarczej gwarantują terminową spłatę pożyczki;
+e) niniejszą Umowę zawarli na podstawie oferty przedstawionej przez Pożyczkodawcę i mieli możliwość zapoznania się z nią bez obecności przedstawiciela Pożyczkodawcy;
+f) wszelkie dane przekazane Pożyczkodawcy są kompletne, zgodne ze stanem rzeczywistym i podane dobrowolnie;
+g) w pełni zrozumieli treść i skutki prawne poszczególnych postanowień Umowy i nie będą rościli z tego tytułu żadnych pretensji;
+h) są w pełni świadomi treści zawieranej Umowy i nie działają pod wpływem błędu ani okoliczności wyłączających lub ograniczających ich świadomość lub dobrowolność;
+i) nie znajdują się w przymusowym położeniu w rozumieniu art. 388 k.c.;
+j) nie toczy się przeciwko nim postępowanie o ogłoszenie upadłości ani nie ma podstaw do ogłoszenia takiej upadłości;
+k) posiadają rozeznanie na rynku ofert pożyczek pozabankowych dla przedsiębiorców i wybrali niniejszy produkt finansowy spośród dostępnych ofert;
+l) wyrażają zgodę na przeniesienie przez Pożyczkodawcę wierzytelności i wszelkich praw wynikających z Umowy na osoby trzecie wraz z ustanowionymi zabezpieczeniami;
+m) wyrażają zgodę na dostarczanie korespondencji drogą elektroniczną na adres: anna.kowalczyk@example.com. W przypadku zmiany adresu e-mail Pożyczkobiorcy zobowiązują się niezwłocznie powiadomić Pożyczkodawcę na piśmie. Brak pisemnego powiadomienia o zmianie adresu e-mail skutkuje tym, że korespondencja wysłana na wskazany adres jest uznana za doręczoną. Niniejsza fikcja doręczenia nie dotyczy oświadczeń wywołujących skutki prawne, w szczególności wypowiedzenia Umowy oraz wezwania, o którym mowa w § 3 ust. 4, które doręcza się przesyłką rejestrowaną na adres do doręczeń Pożyczkobiorców.
+9. Pożyczkodawca oświadcza, iż zgodnie z art. 13 RODO (Rozporządzenie PE i Rady (UE) 2016/679):
+a) administratorem danych osobowych Pożyczkobiorców jest FINANCE YOU sp. z o.o.;
+b) dane osobowe przetwarzane są na podstawie art. 6 ust. 1 lit. b RODO w celu realizacji Umowy;
+c) odbiorcami danych będą wyłącznie podmioty uprawnione na podstawie przepisów prawa oraz firmy windykacyjne;
+d) dane przechowywane będą przez okres 10 lat od rozwiązania Umowy;
+e) Pożyczkobiorcom przysługuje prawo dostępu, sprostowania, sprzeciwu wobec przetwarzania oraz przenoszenia danych;
+f) Pożyczkobiorcy mają prawo wniesienia skargi do Prezesa UODO;
+g) podanie danych jest dobrowolne, jednak odmowa może skutkować odmową udzielenia pożyczki.
+10. Pożyczkobiorcy i Pożyczkodawca potwierdzają, że zapisy niniejszej Umowy są efektem indywidualnych negocjacji uwidocznionych w Protokole z Negocjacji (Załącznik nr 2).
+§ 6 – POSTANOWIENIA OGÓLNE
+1. Podpisując Umowę Pożyczkobiorcy potwierdzają odbiór Załącznika nr 1 (Harmonogram Spłat).
+2. Wszelkie zmiany niniejszej Umowy wymagają formy pisemnej pod rygorem nieważności.
+3. Pożyczkodawca i Pożyczkobiorcy potwierdzają, że ich zgodnym zamiarem jest zawarcie Umowy pożyczki w rozumieniu przepisów k.c., której spłata jest odpowiednio i zgodnie z prawem zabezpieczona.
+4. Umowę sporządzono w 3 jednobrzmiących egzemplarzach, po jednym dla każdej ze Stron.
+5. W sprawach nieobjętych Umową stosuje się przepisy k.c. oraz inne powszechnie obowiązujące przepisy prawa. W razie sprzeczności postanowień Umowy z przepisami prawa, przepisy te uchylają, uzupełniają lub zastępują wadliwe postanowienia, a pozostałe postanowienia pozostają w mocy.
+6. Wszelkie spory wynikłe z realizacji Umowy Strony deklarują rozstrzygać polubownie. W braku porozumienia właściwym jest sąd powszechny miejscowo właściwy dla siedziby Pożyczkodawcy (wierzyciela) lub cesjonariusza.
+§ 7 – WYPOWIEDZENIE UMOWY
+1. Pożyczkodawca ma prawo wypowiedzieć Umowę ze skutkiem natychmiastowym i żądać natychmiastowej spłaty całości niespłaconego zadłużenia wraz z odsetkami i kosztami, gdy Pożyczkobiorcy:
+a) opóźniają się z zapłatą którejkolwiek raty lub innych należności przez okres dłuższy niż 14 dni;
+b) wykorzystają pożyczkę niezgodnie z celem określonym w § 1;
+c) podali Pożyczkodawcy nieprawdziwe dane, dokumenty lub informacje mające znaczenie dla zawarcia lub wykonywania Umowy;
+d) utrudniają Pożyczkodawcy wykonanie jego praw z Umowy lub ustanowionych zabezpieczeń;
+e) naruszają inne istotne postanowienia Umowy;
+f) zostanie wszczęte wobec któregokolwiek z nich postępowanie egzekucyjne, upadłościowe, restrukturyzacyjne lub likwidacyjne;
+g) dokonają rozporządzenia nieruchomością stanowiącą zabezpieczenie bez zgody Pożyczkodawcy, o której mowa w § 3 ust. 3.
+2. W przypadku wypowiedzenia Umowy Pożyczkobiorcy zobowiązani są do spłaty całości zadłużenia w terminie 7 dni od doręczenia oświadczenia o wypowiedzeniu.
+3. Oświadczenie o wypowiedzeniu wywołuje skutek z chwilą jego dojścia do Pożyczkobiorców w sposób umożliwiający zapoznanie się z jego treścią (art. 61 k.c.). Dla celów dowodowych Pożyczkodawca doręcza je przesyłką rejestrowaną na adres do doręczeń wskazany w Umowie; doręczenie na adres e-mail Pożyczkobiorców ma charakter pomocniczy.
+ZAŁĄCZNIKI
+– Załącznik nr 1 — Harmonogram spłat
+– Załącznik nr 2 — Protokół z negocjacji indywidualnych
+– Załącznik nr 3 — Tabela opłat windykacyjnych
+…………………………………… / Pożyczkobiorca / Anna Kowalczyk | …………………………………… / Pożyczkobiorca / Marek Zieliński | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu
+
+ZAŁĄCZNIK NR 1 DO UMOWY POŻYCZKI
+HARMONOGRAM SPŁAT
+do Umowy pożyczki nr FY/2026/09/002 zawartej dnia 24.09.2026 r. w Lublinie
+Kwota Pożyczki: | 60 000,00 zł
+Kwota wypłacona: | 60 000,00 zł (bez potrącenia prowizji)
+Prowizja jednorazowa: | 18 000,00 zł (płatna w ratach zgodnie z tabelą rat)
+Oprocentowanie umowne: | 15,5 % rocznie, naliczane od kapitału pozostającego do spłaty
+
+Tabela rat (24 raty):
+Nr | Termin | Rata | Kapitał | Odsetki | Prowizja | Saldo
+1 | 24.10.2026 | 1 600,00 | 75,00 | 775,00 | 750,00 | 59 925,00
+2 | 24.11.2026 | 1 600,00 | 75,97 | 774,03 | 750,00 | 59 849,03
+3 | 24.12.2026 | 1 600,00 | 76,95 | 773,05 | 750,00 | 59 772,08
+4 | 24.01.2027 | 1 600,00 | 77,94 | 772,06 | 750,00 | 59 694,14
+5 | 24.02.2027 | 1 600,00 | 78,95 | 771,05 | 750,00 | 59 615,19
+6 | 24.03.2027 | 1 600,00 | 79,97 | 770,03 | 750,00 | 59 535,22
+7 | 24.04.2027 | 1 600,00 | 81,00 | 769,00 | 750,00 | 59 454,22
+8 | 24.05.2027 | 1 600,00 | 82,05 | 767,95 | 750,00 | 59 372,17
+9 | 24.06.2027 | 1 600,00 | 83,11 | 766,89 | 750,00 | 59 289,06
+10 | 24.07.2027 | 1 600,00 | 84,18 | 765,82 | 750,00 | 59 204,88
+11 | 24.08.2027 | 1 600,00 | 85,27 | 764,73 | 750,00 | 59 119,61
+12 | 24.09.2027 | 1 600,00 | 86,37 | 763,63 | 750,00 | 59 033,24
+13 | 24.10.2027 | 1 600,00 | 87,49 | 762,51 | 750,00 | 58 945,75
+14 | 24.11.2027 | 1 600,00 | 88,62 | 761,38 | 750,00 | 58 857,13
+15 | 24.12.2027 | 1 600,00 | 89,76 | 760,24 | 750,00 | 58 767,37
+16 | 24.01.2028 | 1 600,00 | 90,92 | 759,08 | 750,00 | 58 676,45
+17 | 24.02.2028 | 1 600,00 | 92,10 | 757,90 | 750,00 | 58 584,35
+18 | 24.03.2028 | 1 600,00 | 93,29 | 756,71 | 750,00 | 58 491,06
+19 | 24.04.2028 | 1 600,00 | 94,49 | 755,51 | 750,00 | 58 396,57
+20 | 24.05.2028 | 1 600,00 | 95,71 | 754,29 | 750,00 | 58 300,86
+21 | 24.06.2028 | 1 600,00 | 96,95 | 753,05 | 750,00 | 58 203,91
+22 | 24.07.2028 | 1 600,00 | 98,20 | 751,80 | 750,00 | 58 105,71
+23 | 24.08.2028 | 1 600,00 | 99,47 | 750,53 | 750,00 | 58 006,24
+24 | 24.09.2028 | 59 505,49 | 58 006,24 | 749,25 | 750,00 | 0,00
+Razem |  | 96 305,49 | 60 000,00 | 18 305,49 | 18 000,00 |
+
+Łączna suma wszystkich płatności (kapitał + prowizja + odsetki): 96 305,49 zł (kapitał 60 000,00 zł + prowizja 18 000,00 zł + odsetki 18 305,49 zł); 23 raty po 1 600,00 zł oraz rata końcowa (balonowa) 59 505,49 zł, płatne 24. dnia każdego miesiąca począwszy od 24.10.2026 r.
+…………………………………… / Pożyczkobiorca / Anna Kowalczyk | …………………………………… / Pożyczkobiorca / Marek Zieliński | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu
+
+ZAŁĄCZNIK NR 2 DO UMOWY POŻYCZKI
+PROTOKÓŁ Z NEGOCJACJI INDYWIDUALNYCH
+do Umowy pożyczki nr FY/2026/09/002 zawartej dnia 24.09.2026 r. w Lublinie
+1. DANE STRON
+Pożyczkodawca: | FINANCE YOU sp. z o.o.
+Pożyczkobiorcy: | Anna Kowalczyk, prowadząca działalność gospodarczą pod firmą AK Handel Anna Kowalczyk oraz Marek Zieliński
+Tel. negocjacyjny Pożyczkobiorcy: | +48 601 200 300 (Anna Kowalczyk); +48 602 300 400 (Marek Zieliński)
+Pośrednik finansowy: | Jan Pośrednik (tel. 600 700 800)
+
+2. MIEJSCE, FORMY I PRZEBIEG NEGOCJACJI
+Negocjacje prowadzone były w trybie indywidualnym, w szczególności:
+– telefonicznie (nr tel.: +48 601 200 300 (Anna Kowalczyk); +48 602 300 400 (Marek Zieliński));
+– za pośrednictwem pośrednika finansowego — Jan Pośrednik (tel. 600 700 800);
+– drogą elektroniczną (e-mail: anna.kowalczyk@example.com (Anna Kowalczyk));
+Negocjacje trwały: | 10.09.2026 – 24.09.2026
+Uzgodniona prowizja finalna: | 18 000,00 zł
+Uzgodnione oprocentowanie finalne: | 15,5 %
+Uzgodniony okres pożyczki: | 24 miesiące (23 raty po 1 600,00 zł + rata końcowa/balonowa 59 505,49 zł)
+
+3. ZAKRES INDYWIDUALNIE NEGOCJOWANYCH WARUNKÓW
+Strony potwierdzają, że następujące elementy zostały indywidualnie negocjowane:
+– Kwota pożyczki, jej wysokość i przeznaczenie (§ 1 Umowy).
+– Wysokość jednorazowej prowizji za udzielenie pożyczki oraz jej uzasadnienie (§ 2 ust. 3 Umowy).
+– Sposób i terminy wypłaty pożyczki, w tym podział na przelew / gotówkę / przekaz (§ 2 ust. 4 Umowy).
+– Wysokość oprocentowania umownego oraz zasady jego naliczania od kapitału pozostającego do spłaty (§ 2 ust. 5 Umowy).
+– Ustanowienie zabezpieczeń: wysokość hipoteki, poddanie się egzekucji (§ 3 Umowy).
+– Harmonogram spłat: terminy, liczba rat, wysokość rat (Załącznik nr 1).
+– Postanowienia dotyczące windykacji i kolejność zaliczania wpłat (§ 4 Umowy).
+– Prawo Pożyczkodawcy do wypowiedzenia Umowy i przesłanki wypowiedzenia (§ 7 Umowy).
+– Forma doręczeń, w tym zgoda na doręczenia e-mailowe (§ 5 ust. 8 lit. m Umowy).
+4. POTWIERDZENIA STRON
+– Pożyczkobiorca potwierdza, że wszystkie powyższe elementy były negocjowane indywidualnie, są dla niego jasne i zrozumiałe, a ich treść odzwierciedla wynik negocjacji.
+– Pożyczkobiorca potwierdza, że treść Umowy nie została mu narzucona i miał realny wpływ na każde z jej kluczowych postanowień.
+– Pożyczkodawca potwierdza prawidłowość przebiegu procesu negocjacyjnego.
+– Strony potwierdzają, że podpisanie Umowy nastąpiło po zakończeniu procesu negocjacji opisanego w niniejszym Protokole.
+…………………………………… / Pożyczkobiorca / Anna Kowalczyk | …………………………………… / Pożyczkobiorca / Marek Zieliński | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu
+
+ZAŁĄCZNIK NR 3 DO UMOWY POŻYCZKI
+TABELA OPŁAT WINDYKACYJNYCH
+do Umowy pożyczki nr FY/2026/09/002 zawartej dnia 24.09.2026 r. w Lublinie
+Poniższe opłaty są naliczane wyłącznie w przypadku opóźnień w spłacie i stanowią zwrot rzeczywistych, udokumentowanych kosztów czynności windykacyjnych (§ 4 ust. 5 Umowy).
+Czynność windykacyjna | Opłata
+Aneks do umowy pożyczki | 3 000,00 zł
+Opłata za dokument wystawiony na życzenie Pożyczkobiorcy | 150,00 zł
+Monit pisemny / wezwanie do zapłaty | 300,00 zł
+Monit telefoniczny | 50,00 zł
+Monit SMS | 25,00 zł
+Wznowienie pożyczki po wypowiedzeniu | 2 000,00 zł
+Zmiana harmonogramu spłaty | 500,00 zł
+Przystąpienie do długu | 1 000,00 zł
+Wydruk historii operacji na rachunku pożyczki | 100,00 zł
+Wydanie promesy | 500,00 zł
+Wizyta terenowa do 50 km od siedziby | 200,00 zł
+Wizyta terenowa 50–100 km od siedziby | 400,00 zł
+Wizyta terenowa 100–150 km od siedziby | 600,00 zł
+Każde kolejne 50 km ponad 150 km | 200,00 zł
+Koszty obsługi prawnej przy dochodzeniu roszczeń | wg rozporządzenia Min. Sprawiedliwości z 22.10.2015 r.
+
+…………………………………… / Pożyczkobiorca / Anna Kowalczyk | …………………………………… / Pożyczkobiorca / Marek Zieliński | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu"
+`;
+
+exports[`snapshot tekstu DOCX > c — sp. z o.o. + poręczyciel rzeczowy 1`] = `
+"WNIOSEK O UDZIELENIE POŻYCZKI PIENIĘŻNEJ
+I. DANE WNIOSKODAWCY
+Imię i nazwisko / Firma: | Przykład Logistyka sp. z o.o.
+PESEL / NIP: | KRS 0000123456, NIP 5252123456, REGON 146123456
+Seria i numer dok. tożsamości: |
+Adres zamieszkania / siedziby: | ul. Magazynowa 10, 02-001 Warszawa
+Telefon: | +48 22 100 20 30
+E-mail: | biuro@przyklad-logistyka.example
+
+II. CHARAKTER POŻYCZKI
+Wnioskuję o udzielenie pożyczki pieniężnej na cele związane z prowadzoną działalnością gospodarczą.
+Oświadczam, że pożyczka nie ma charakteru konsumenckiego i nie stanowi kredytu konsumenckiego w rozumieniu ustawy o kredycie konsumenckim.
+III. WARUNKI POŻYCZKI
+Wnioskowana kwota: | 120 000,00 zł
+Okres pożyczki: | 12 miesięcy
+Cel pożyczki: | finansowanie floty pojazdów dostawczych spółki
+Zabezpieczenie: | hipoteka umowna do 300 000,00 zł na nieruchomości KW nr WA1M/00123456/3 oraz oświadczenie o poddaniu się egzekucji (art. 777 § 1 pkt 5 k.p.c.) do 300 000,00 zł
+
+IV. OŚWIADCZENIA FINANSOWE (AML)
+Oświadczam, że:
+– Osiągam stały i rzeczywisty dochód umożliwiający spłatę pożyczki.
+– Nie posiadam przeterminowanych zobowiązań pieniężnych.
+– Żadne moje zobowiązanie kredytowe ani pożyczkowe nie zostało wypowiedziane.
+– Wszystkie moje zobowiązania reguluję terminowo.
+– Nie toczy się wobec mnie postępowanie egzekucyjne.
+V. OŚWIADCZENIE PEP
+☐ Nie jestem osobą zajmującą eksponowane stanowisko polityczne (PEP), ani osobą z nią powiązaną.
+☐ Jestem osobą PEP lub osobą powiązaną z PEP.
+VI. AML – DO WYPEŁNIENIA PRZEZ POŻYCZKODAWCĘ
+Ocena ryzyka:  ☐ niskie   ☐ średnie   ☐ wysokie
+☐ Transakcja przekracza równowartość 15 000 EUR – wpis do ewidencji AML
+☐ Transakcja nie przekracza równowartości 15 000 EUR
+VII. ODPOWIEDZIALNOŚĆ KARNA
+Oświadczam, że jestem świadomy/a, iż podanie nieprawdziwych danych lub złożenie nieprawdziwych oświadczeń w celu uzyskania pożyczki pieniężnej stanowi przestępstwo, w szczególności z art. 286 §1 oraz art. 297 §1 Kodeksu karnego.
+VIII. OŚWIADCZENIE KOŃCOWE
+Oświadczam, że zapoznałem/am się z treścią niniejszego wniosku i składam go dobrowolnie.
+Sporządzono w Warszawie, dnia 24.09.2026 r.
+…………………………………… / Czytelny podpis Wnioskodawcy / Przykład Logistyka sp. z o.o. / Paweł Nowicki – prezes zarządu
+
+UMOWA POŻYCZKI
+nr FY/2026/09/003
+zawarta dnia 24.09.2026 r. w Warszawie pomiędzy:
+Przykład Logistyka sp. z o.o., reprezentowana przez prezesa zarządu Paweł Nowickiego, adres: ul. Magazynowa 10, 02-001 Warszawa, KRS 0000123456, NIP 5252123456, REGON 146123456, zwanym/ą dalej „Pożyczkobiorcą”,
+PAWEŁ NOWICKI, adres: ul. Leśna 7, 05-500 Piaseczno, PESEL 79050512345, zwanym/ą dalej „Poręczycielem”,
+FINANCE YOU sp. z o.o., reprezentowana przez prezesa zarządu Filipa Bielaka, adres: ul. Nowogrodzka 31, 00-511 Warszawa, KRS 0000635207, NIP 7010611803, REGON 365350668, zwanym/ą dalej „Pożyczkodawcą”.
+§ 1 – PRZEDMIOT UMOWY
+1. Przedmiotem Umowy jest udzielenie przez Pożyczkodawcę pożyczki pieniężnej dla Pożyczkobiorcy prowadzących działalność gospodarczą, na cele związane bezpośrednio z działalnością zawodową Pożyczkobiorcy.
+2. Pożyczkobiorca oświadcza, iż uzyskane z pożyczki środki przeznaczy na następujący cel: finansowanie floty pojazdów dostawczych spółki.
+§ 2 – KWOTA POŻYCZKI, PROWIZJA I WARUNKI WYPŁATY
+1. Pożyczkodawca udziela Pożyczkobiorcy pożyczki w kwocie sto dwadzieścia tysięcy złotych 00/100 (120 000,00 zł), zwanej dalej „Kwotą Pożyczki”.
+2. Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości dwadzieścia cztery tysiące złotych 00/100 (24 000,00 zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla Pożyczkobiorcy, odracza jej zapłatę i rozkłada ją na raty miesięczne zgodnie z Załącznikiem nr 1. Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji.
+3. Pożyczkodawca wypłaci Pożyczkobiorcy całą Kwotę Pożyczki, bez potrącania prowizji, tj. sto dwadzieścia tysięcy złotych 00/100 (120 000,00 zł), przelewem na rachunek bankowy Pożyczkobiorcy nr 25 8011 0008 0010 0150 5299 0002, w ciągu dwóch dni roboczych od spełnienia warunków określonych w niniejszej Umowie.
+4. Oprocentowanie pożyczki wynosi 16,0 % w stosunku rocznym (odsetki umowne), według stałej stopy. Odsetki naliczane są od kapitału pozostającego do spłaty, od dnia wypłaty do dnia całkowitego zwrotu. Oprocentowanie nie przekracza odsetek maksymalnych (art. 359 § 2¹ k.c.); w razie obniżenia poziomu odsetek maksymalnych poniżej stopy umownej, stopa umowna ulega automatycznemu obniżeniu do poziomu odsetek maksymalnych. W razie wcześniejszej spłaty odsetki należne są wyłącznie za okres faktycznego korzystania z kapitału i podlegają proporcjonalnemu obniżeniu.
+5. Pożyczkobiorca zobowiązuje się zwrócić Kwotę Pożyczki wraz z prowizją i odsetkami przelewem na rachunek bankowy Pożyczkodawcy nr 39 1750 0012 0000 0000 3419 5005 w terminach i kwotach określonych w Harmonogramie Spłat stanowiącym Załącznik nr 1 do niniejszej Umowy.
+§ 3 – ZABEZPIECZENIE RZECZOWE PORĘCZYCIELA
+1. Poręczyciel ustanawia zabezpieczenie rzeczowe na nieruchomości stanowiącej jego własność i nie udziela poręczenia osobistego w rozumieniu art. 876 k.c. Jego odpowiedzialność ogranicza się do przedmiotu zabezpieczenia — Pożyczkodawca może zaspokoić się wyłącznie z nieruchomości obciążonej hipoteką, a pozostały majątek Poręczyciela nie odpowiada za zobowiązania wynikające z niniejszej Umowy.
+2. Poręczyciel oświadcza, że zapoznał się z treścią Umowy oraz Harmonogramem Spłat, rozumie skutki ustanowienia hipoteki na swojej nieruchomości za zobowiązanie Pożyczkobiorcy — w tym możliwość utraty nieruchomości w razie braku spłaty — i ustanawia zabezpieczenie dobrowolnie.
+§ 4 – ZABEZPIECZENIA
+1. Poręczyciel złoży notarialne oświadczenie obejmujące żądanie ustanowienia na rzecz Pożyczkodawcy hipoteki umownej do kwoty 300 000,00 zł (trzysta tysięcy złotych 00/100) na nieruchomości opisanej jako lokal mieszkalny nr 4 przy ul. Puławskiej 100 w Warszawie, dla której Sąd Rejonowy dla Warszawy-Mokotowa w Warszawie, XIII Wydział Ksiąg Wieczystych prowadzi księgę wieczystą nr WA1M/00123456/3. Hipoteka zabezpiecza spłatę wszelkich wierzytelności wynikających z niniejszej Umowy, w tym: Kwoty Pożyczki, odsetek, odsetek za zwłokę, prowizji, kosztów sądowych, egzekucyjnych, windykacyjnych oraz kosztów zastępstwa prawnego.
+2. Poręczyciel zobowiązuje się, że w okresie obowiązywania Umowy nie dokona zbycia, darowizny, ustanowienia kolejnej hipoteki, obciążenia służebnością ani innego rozporządzenia nieruchomościami stanowiącymi zabezpieczenie bez uprzedniej pisemnej zgody Pożyczkodawcy pod rygorem nieważności.
+3. Pożyczkobiorca oraz Poręczyciel poddadzą się rygorowi egzekucji wprost z aktu notarialnego w trybie art. 777 §1 pkt 5 k.p.c. do kwoty 300 000,00 zł (trzysta tysięcy złotych 00/100). Zdarzeniem uprawniającym Wierzyciela do wystąpienia o nadanie aktowi klauzuli wykonalności będzie niezapłacenie — w terminie 7 dni od daty doręczenia wezwania do zapłaty — należności wynikających z niniejszej Umowy pożyczki z dnia 24.09.2026. Wystarczającym dowodem na wykazanie zdarzenia jest potwierdzenie nadania na terytorium RP przesyłki rejestrowanej (art. 3 pkt 23 ustawy Prawo pocztowe) na adres do doręczeń wskazany w niniejszej Umowie. Wierzyciel może wystąpić o nadanie klauzuli wykonalności do dnia 24.10.2029 i jest uprawniony do wielokrotnego składania takiego wniosku.
+4. Koszty ustanowienia, zmiany i zwolnienia zabezpieczeń, w tym taksy notarialne, opłaty sądowe i podatek od czynności cywilnoprawnych, ponosi Pożyczkobiorca.
+5. Po całkowitej spłacie należności wynikających z Umowy Pożyczkodawca wyda, w terminie 14 dni, dokumenty konieczne do wykreślenia hipoteki oraz zwolnienia pozostałych zabezpieczeń.
+§ 5 – WINDYKACJA I SKUTKI OPÓŹNIENIA
+1. W przypadku niedotrzymania któregokolwiek terminu płatności Pożyczkobiorca zobowiązany jest do zapłaty odsetek za opóźnienie w wysokości dwukrotności ustawowych odsetek za opóźnienie obowiązujących w dniu podpisania Umowy, naliczanych od zaległej kwoty.
+2. W przypadku gdy Pożyczkobiorca nie wywiązuje się z obowiązku zwrotu pożyczki w terminie, Pożyczkodawca jest uprawniony do wszczęcia procedury windykacyjnej, której koszty – według Tabeli opłat windykacyjnych stanowiącej Załącznik nr 3 – w całości obciążają Pożyczkobiorcę.
+3. Czynności windykacyjne i upominawcze mogą być podejmowane z częstotliwością zgodną z dobrymi obyczajami, wielokrotnie do czasu całkowitej spłaty zadłużenia, zawarcia ugody lub skierowania sprawy na drogę sądową. Wszelkie czynności ujmowane są w rejestrze czynności windykacyjnych.
+4. W przypadku spłaty należności w niepełnej wysokości, wpłacone kwoty zaliczane są przez Pożyczkodawcę w następującej kolejności:
+a) prowizja (o ile nie została potrącona przy wypłacie);
+b) powstałe koszty windykacyjne;
+c) odsetki za opóźnienie;
+d) odsetki umowne;
+e) kapitał pożyczki.
+5. Pożyczkobiorca zobowiązany jest do zwrotu rzeczywistych, udokumentowanych kosztów czynności windykacyjnych poniesionych przez Pożyczkodawcę, w wysokości nieprzekraczającej stawek wskazanych w Załączniku nr 3 i ujętych w rejestrze czynności windykacyjnych. Opłaty te stanowią zwrot kosztów dochodzenia należności, a nie karę umowną.
+§ 6 – OŚWIADCZENIA STRON
+1. Pożyczkobiorca oświadcza, że jest przedsiębiorcą w rozumieniu art. 43¹ Kodeksu cywilnego, a niniejsza Umowa pozostaje w bezpośrednim związku z prowadzoną przez niego działalnością gospodarczą i ma dla niego charakter zawodowy. Umowa nie jest zawierana w celu konsumenckim, a do udzielonej pożyczki nie mają zastosowania przepisy ustawy o kredycie konsumenckim ani ustawy o kredycie hipotecznym.
+2. Pożyczkobiorca oświadcza, że dane podane w Umowie są prawdziwe i aktualne, oraz zobowiązuje się niezwłocznie informować Pożyczkodawcę o każdej ich zmianie.
+3. Poręczyciel oświadcza, że przysługuje mu prawo własności nieruchomości stanowiących zabezpieczenie, że nieruchomości te — poza obciążeniami ujawnionymi w niniejszej Umowie — są wolne od praw i roszczeń osób trzecich, nie są przedmiotem postępowania egzekucyjnego (sądowego ani administracyjnego), postępowania o zniesienie współwłasności, działu spadku ani sporu co do stanu prawnego, a także że nie istnieją zaległości publicznoprawne mogące skutkować wpisem hipoteki przymusowej.
+4. Pożyczkobiorca oraz każdy właściciel nieruchomości stanowiącej zabezpieczenie oświadczają, że nie posiadają wymagalnych zaległości wobec Urzędu Skarbowego ani Zakładu Ubezpieczeń Społecznych. Strony przyjmują do wiadomości, że należności publicznoprawne zabezpieczone hipoteką przymusową oraz egzekucja administracyjna mogą korzystać z pierwszeństwa przed hipoteką umowną, a zatajenie takich zaległości stanowi istotne naruszenie Umowy uprawniające do jej wypowiedzenia.
+5. Pożyczkobiorca oświadcza, że według swojej najlepszej wiedzy posiada zdolność do terminowej obsługi zobowiązania na warunkach określonych w Załączniku nr 1, nie toczy się przeciwko niego postępowanie o ogłoszenie upadłości ani restrukturyzacyjne, i nie ma podstaw do ich wszczęcia.
+6. Pożyczkobiorca potwierdza, że przed podpisaniem Umowy otrzymał jej projekt, miał możliwość zapoznania się z jego treścią oraz zasięgnięcia niezależnej porady prawnej, rozumie znaczenie i skutki prawne Umowy — w tym konstrukcję spłaty oraz charakter prowizji — nie działa pod wpływem błędu ani w przymusowym położeniu w rozumieniu art. 388 k.c., i zawiera Umowę swobodnie.
+7. Strony oświadczają, że są należycie umocowane do zawarcia Umowy.
+8. Strony będące spółkami oświadczają, że osoby podpisujące niniejszą Umowę są należycie umocowane do ich reprezentowania zgodnie z zasadami reprezentacji ujawnionymi w rejestrze przedsiębiorców, a umocowanie to nie zostało odwołane ani ograniczone. Aktualne odpisy z rejestru oraz — w razie potrzeby — dokumenty pełnomocnictwa stanowią załącznik do Umowy.
+9. Strony będące spółkami oświadczają, że zawarcie niniejszej Umowy oraz ustanowienie przewidzianych w niej zabezpieczeń nie wymaga zgody organów spółki innej niż zgody, które zostały uzyskane i okazane Pożyczkodawcy, ani nie narusza umowy (statutu) spółki. W szczególności dotyczy to zgód wymaganych na podstawie art. 228 i art. 230 Kodeksu spółek handlowych oraz odpowiadających im postanowień umowy (statutu) spółki.
+10. Paweł Nowicki oświadcza, że pozostaje w związku małżeńskim, w którym obowiązuje ustrój rozdzielności majątkowej, a nieruchomość objęta księgą wieczystą nr WA1M/00123456/3, w której dziale II jest ujawniony jako jedyny właściciel, wchodzi w skład jego majątku osobistego i nie jest objęta wspólnością majątkową małżeńską.
+11. Pożyczkobiorca oświadcza, że:
+a) niniejszą Umowę zawarł jako przedsiębiorca w rozumieniu art. 4 ust. 1 ustawy z dnia 6 marca 2018 r. – Prawo przedsiębiorców, a nie jako konsument w rozumieniu art. 22¹ k.c.;
+b) do udzielonej pożyczki nie mają zastosowania przepisy ustawy z dnia 12 maja 2011 r. o kredycie konsumenckim ani ustawy z dnia 23 marca 2017 r. o kredycie hipotecznym;
+c) przed zawarciem Umowy dokonał już pierwszych czynności w obrocie gospodarczym bezpośrednio związanych z przedmiotem wykonywanej działalności;
+d) jego przychody z tytułu działalności gospodarczej gwarantują terminową spłatę pożyczki;
+e) niniejszą Umowę zawarł na podstawie oferty przedstawionej przez Pożyczkodawcę i miał możliwość zapoznania się z nią bez obecności przedstawiciela Pożyczkodawcy;
+f) wszelkie dane przekazane Pożyczkodawcy są kompletne, zgodne ze stanem rzeczywistym i podane dobrowolnie;
+g) w pełni zrozumiał treść i skutki prawne poszczególnych postanowień Umowy i nie będzie rościł z tego tytułu żadnych pretensji;
+h) jest w pełni świadomy treści zawieranej Umowy i nie działa pod wpływem błędu ani okoliczności wyłączających lub ograniczających jego świadomość lub dobrowolność;
+i) nie znajduje się w przymusowym położeniu w rozumieniu art. 388 k.c.;
+j) nie toczy się przeciwko niemu postępowanie o ogłoszenie upadłości ani nie ma podstaw do ogłoszenia takiej upadłości;
+k) posiada rozeznanie na rynku ofert pożyczek pozabankowych dla przedsiębiorców i wybrał niniejszy produkt finansowy spośród dostępnych ofert;
+l) wyraża zgodę na przeniesienie przez Pożyczkodawcę wierzytelności i wszelkich praw wynikających z Umowy na osoby trzecie wraz z ustanowionymi zabezpieczeniami;
+m) wyraża zgodę na dostarczanie korespondencji drogą elektroniczną na adres: biuro@przyklad-logistyka.example. W przypadku zmiany adresu e-mail Pożyczkobiorca zobowiązuje się niezwłocznie powiadomić Pożyczkodawcę na piśmie. Brak pisemnego powiadomienia o zmianie adresu e-mail skutkuje tym, że korespondencja wysłana na wskazany adres jest uznana za doręczoną. Niniejsza fikcja doręczenia nie dotyczy oświadczeń wywołujących skutki prawne, w szczególności wypowiedzenia Umowy oraz wezwania, o którym mowa w § 4 ust. 3, które doręcza się przesyłką rejestrowaną na adres do doręczeń Pożyczkobiorcy.
+12. Pożyczkodawca oświadcza, iż zgodnie z art. 13 RODO (Rozporządzenie PE i Rady (UE) 2016/679):
+a) administratorem danych osobowych Pożyczkobiorcy jest FINANCE YOU sp. z o.o.;
+b) dane osobowe przetwarzane są na podstawie art. 6 ust. 1 lit. b RODO w celu realizacji Umowy;
+c) odbiorcami danych będą wyłącznie podmioty uprawnione na podstawie przepisów prawa oraz firmy windykacyjne;
+d) dane przechowywane będą przez okres 10 lat od rozwiązania Umowy;
+e) Pożyczkobiorcy przysługuje prawo dostępu, sprostowania, sprzeciwu wobec przetwarzania oraz przenoszenia danych;
+f) Pożyczkobiorca ma prawo wniesienia skargi do Prezesa UODO;
+g) podanie danych jest dobrowolne, jednak odmowa może skutkować odmową udzielenia pożyczki.
+13. Pożyczkobiorca i Pożyczkodawca potwierdzają, że zapisy niniejszej Umowy są efektem indywidualnych negocjacji uwidocznionych w Protokole z Negocjacji (Załącznik nr 2).
+§ 7 – POSTANOWIENIA OGÓLNE
+1. Podpisując Umowę Pożyczkobiorca potwierdza odbiór Załącznika nr 1 (Harmonogram Spłat).
+2. Wszelkie zmiany niniejszej Umowy wymagają formy pisemnej pod rygorem nieważności.
+3. Pożyczkodawca i Pożyczkobiorca potwierdzają, że ich zgodnym zamiarem jest zawarcie Umowy pożyczki w rozumieniu przepisów k.c., której spłata jest odpowiednio i zgodnie z prawem zabezpieczona.
+4. Umowę sporządzono w 3 jednobrzmiących egzemplarzach, po jednym dla każdej ze Stron.
+5. W sprawach nieobjętych Umową stosuje się przepisy k.c. oraz inne powszechnie obowiązujące przepisy prawa. W razie sprzeczności postanowień Umowy z przepisami prawa, przepisy te uchylają, uzupełniają lub zastępują wadliwe postanowienia, a pozostałe postanowienia pozostają w mocy.
+6. Wszelkie spory wynikłe z realizacji Umowy Strony deklarują rozstrzygać polubownie. W braku porozumienia właściwym jest sąd powszechny miejscowo właściwy dla siedziby Pożyczkodawcy (wierzyciela) lub cesjonariusza.
+§ 8 – WYPOWIEDZENIE UMOWY
+1. Pożyczkodawca ma prawo wypowiedzieć Umowę ze skutkiem natychmiastowym i żądać natychmiastowej spłaty całości niespłaconego zadłużenia wraz z odsetkami i kosztami, gdy Pożyczkobiorca:
+a) opóźnia się z zapłatą którejkolwiek raty lub innych należności przez okres dłuższy niż 14 dni;
+b) wykorzysta pożyczkę niezgodnie z celem określonym w § 1;
+c) podał Pożyczkodawcy nieprawdziwe dane, dokumenty lub informacje mające znaczenie dla zawarcia lub wykonywania Umowy;
+d) utrudnia Pożyczkodawcy wykonanie jego praw z Umowy lub ustanowionych zabezpieczeń;
+e) narusza inne istotne postanowienia Umowy;
+f) zostanie wszczęte wobec niego postępowanie egzekucyjne, upadłościowe, restrukturyzacyjne lub likwidacyjne;
+g) dokona rozporządzenia nieruchomością stanowiącą zabezpieczenie bez zgody Pożyczkodawcy, o której mowa w § 4 ust. 2.
+2. W przypadku wypowiedzenia Umowy Pożyczkobiorca zobowiązany jest do spłaty całości zadłużenia w terminie 7 dni od doręczenia oświadczenia o wypowiedzeniu.
+3. Oświadczenie o wypowiedzeniu wywołuje skutek z chwilą jego dojścia do Pożyczkobiorcy w sposób umożliwiający zapoznanie się z jego treścią (art. 61 k.c.). Dla celów dowodowych Pożyczkodawca doręcza je przesyłką rejestrowaną na adres do doręczeń wskazany w Umowie; doręczenie na adres e-mail Pożyczkobiorcy ma charakter pomocniczy.
+ZAŁĄCZNIKI
+– Załącznik nr 1 — Harmonogram spłat
+– Załącznik nr 2 — Protokół z negocjacji indywidualnych
+– Załącznik nr 3 — Tabela opłat windykacyjnych
+…………………………………… / Pożyczkobiorca / Przykład Logistyka sp. z o.o. / Paweł Nowicki – prezes zarządu | …………………………………… / Poręczyciel / Paweł Nowicki | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu
+
+ZAŁĄCZNIK NR 1 DO UMOWY POŻYCZKI
+HARMONOGRAM SPŁAT
+do Umowy pożyczki nr FY/2026/09/003 zawartej dnia 24.09.2026 r. w Warszawie
+Kwota Pożyczki: | 120 000,00 zł
+Kwota wypłacona: | 120 000,00 zł (bez potrącenia prowizji)
+Prowizja jednorazowa: | 24 000,00 zł (płatna w ratach zgodnie z tabelą rat)
+Oprocentowanie umowne: | 16,0 % rocznie, naliczane od kapitału pozostającego do spłaty
+
+Tabela rat (12 rat):
+Nr | Termin | Rata | Kapitał | Odsetki | Prowizja | Saldo
+1 | 24.10.2026 | 12 887,71 | 9 287,71 | 1 600,00 | 2 000,00 | 110 712,29
+2 | 24.11.2026 | 12 887,71 | 9 411,55 | 1 476,16 | 2 000,00 | 101 300,74
+3 | 24.12.2026 | 12 887,71 | 9 537,03 | 1 350,68 | 2 000,00 | 91 763,71
+4 | 24.01.2027 | 12 887,71 | 9 664,19 | 1 223,52 | 2 000,00 | 82 099,52
+5 | 24.02.2027 | 12 887,71 | 9 793,05 | 1 094,66 | 2 000,00 | 72 306,47
+6 | 24.03.2027 | 12 887,71 | 9 923,62 | 964,09 | 2 000,00 | 62 382,85
+7 | 24.04.2027 | 12 887,71 | 10 055,94 | 831,77 | 2 000,00 | 52 326,91
+8 | 24.05.2027 | 12 887,71 | 10 190,02 | 697,69 | 2 000,00 | 42 136,89
+9 | 24.06.2027 | 12 887,71 | 10 325,88 | 561,83 | 2 000,00 | 31 811,01
+10 | 24.07.2027 | 12 887,71 | 10 463,56 | 424,15 | 2 000,00 | 21 347,45
+11 | 24.08.2027 | 12 887,71 | 10 603,08 | 284,63 | 2 000,00 | 10 744,37
+12 | 24.09.2027 | 12 887,63 | 10 744,37 | 143,26 | 2 000,00 | 0,00
+Razem |  | 154 652,44 | 120 000,00 | 10 652,44 | 24 000,00 |
+
+Łączna suma wszystkich płatności (kapitał + prowizja + odsetki): 154 652,44 zł (kapitał 120 000,00 zł + prowizja 24 000,00 zł + odsetki 10 652,44 zł); 12 rat w kwotach określonych w tabeli rat, płatne 24. dnia każdego miesiąca począwszy od 24.10.2026 r.
+…………………………………… / Pożyczkobiorca / Przykład Logistyka sp. z o.o. / Paweł Nowicki – prezes zarządu | …………………………………… / Poręczyciel / Paweł Nowicki | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu
+
+ZAŁĄCZNIK NR 2 DO UMOWY POŻYCZKI
+PROTOKÓŁ Z NEGOCJACJI INDYWIDUALNYCH
+do Umowy pożyczki nr FY/2026/09/003 zawartej dnia 24.09.2026 r. w Warszawie
+1. DANE STRON
+Pożyczkodawca: | FINANCE YOU sp. z o.o.
+Pożyczkobiorca: | Przykład Logistyka sp. z o.o.
+Tel. negocjacyjny Pożyczkobiorcy: | +48 22 100 20 30
+Poręczyciel: | Paweł Nowicki
+
+2. MIEJSCE, FORMY I PRZEBIEG NEGOCJACJI
+Negocjacje prowadzone były w trybie indywidualnym, w szczególności:
+– telefonicznie (nr tel.: +48 22 100 20 30);
+– drogą elektroniczną (e-mail: biuro@przyklad-logistyka.example);
+Negocjacje trwały: | 24.09.2026 – 24.09.2026
+Uzgodniona prowizja finalna: | 24 000,00 zł
+Uzgodnione oprocentowanie finalne: | 16,0 %
+Uzgodniony okres pożyczki: | 12 miesięcy (12 rat zgodnie z Załącznikiem nr 1)
+
+3. ZAKRES INDYWIDUALNIE NEGOCJOWANYCH WARUNKÓW
+Strony potwierdzają, że następujące elementy zostały indywidualnie negocjowane:
+– Kwota pożyczki, jej wysokość i przeznaczenie (§ 1 Umowy).
+– Wysokość jednorazowej prowizji za udzielenie pożyczki oraz jej uzasadnienie (§ 2 ust. 2 Umowy).
+– Sposób i terminy wypłaty pożyczki, w tym podział na przelew / gotówkę / przekaz (§ 2 ust. 3 Umowy).
+– Wysokość oprocentowania umownego oraz zasady jego naliczania od kapitału pozostającego do spłaty (§ 2 ust. 4 Umowy).
+– Ustanowienie zabezpieczeń: wysokość hipoteki, poddanie się egzekucji (§ 4 Umowy).
+– Harmonogram spłat: terminy, liczba rat, wysokość rat (Załącznik nr 1).
+– Postanowienia dotyczące windykacji i kolejność zaliczania wpłat (§ 5 Umowy).
+– Prawo Pożyczkodawcy do wypowiedzenia Umowy i przesłanki wypowiedzenia (§ 8 Umowy).
+– Forma doręczeń, w tym zgoda na doręczenia e-mailowe (§ 6 ust. 11 lit. m Umowy).
+4. POTWIERDZENIA STRON
+– Pożyczkobiorca potwierdza, że wszystkie powyższe elementy były negocjowane indywidualnie, są dla niego jasne i zrozumiałe, a ich treść odzwierciedla wynik negocjacji.
+– Pożyczkobiorca potwierdza, że treść Umowy nie została mu narzucona i miał realny wpływ na każde z jej kluczowych postanowień.
+– Pożyczkodawca potwierdza prawidłowość przebiegu procesu negocjacyjnego.
+– Strony potwierdzają, że podpisanie Umowy nastąpiło po zakończeniu procesu negocjacji opisanego w niniejszym Protokole.
+…………………………………… / Pożyczkobiorca / Przykład Logistyka sp. z o.o. / Paweł Nowicki – prezes zarządu | …………………………………… / Poręczyciel / Paweł Nowicki | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu
+
+ZAŁĄCZNIK NR 3 DO UMOWY POŻYCZKI
+TABELA OPŁAT WINDYKACYJNYCH
+do Umowy pożyczki nr FY/2026/09/003 zawartej dnia 24.09.2026 r. w Warszawie
+Poniższe opłaty są naliczane wyłącznie w przypadku opóźnień w spłacie i stanowią zwrot rzeczywistych, udokumentowanych kosztów czynności windykacyjnych (§ 5 ust. 5 Umowy).
+Czynność windykacyjna | Opłata
+Aneks do umowy pożyczki | 3 000,00 zł
+Opłata za dokument wystawiony na życzenie Pożyczkobiorcy | 150,00 zł
+Monit pisemny / wezwanie do zapłaty | 300,00 zł
+Monit telefoniczny | 50,00 zł
+Monit SMS | 25,00 zł
+Wznowienie pożyczki po wypowiedzeniu | 2 000,00 zł
+Zmiana harmonogramu spłaty | 500,00 zł
+Przystąpienie do długu | 1 000,00 zł
+Wydruk historii operacji na rachunku pożyczki | 100,00 zł
+Wydanie promesy | 500,00 zł
+Wizyta terenowa do 50 km od siedziby | 200,00 zł
+Wizyta terenowa 50–100 km od siedziby | 400,00 zł
+Wizyta terenowa 100–150 km od siedziby | 600,00 zł
+Każde kolejne 50 km ponad 150 km | 200,00 zł
+Koszty obsługi prawnej przy dochodzeniu roszczeń | wg rozporządzenia Min. Sprawiedliwości z 22.10.2015 r.
+
+…………………………………… / Pożyczkobiorca / Przykład Logistyka sp. z o.o. / Paweł Nowicki – prezes zarządu | …………………………………… / Poręczyciel / Paweł Nowicki | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu"
+`;

@@ -1,11 +1,7 @@
 {
   "$comment": "Biblioteka klauzul. Każda klauzula ma warunek włączenia (wyrażenie nad danymi) i szablon tekstu. Renderer iteruje po sekcjach w kolejności 'order'.",
-  "wersja": "1.0",
+  "wersja": "1.1",
   "sekcje": {
-    "OSWIADCZENIA_STRON": {
-      "tytul": "OŚWIADCZENIA STRON",
-      "order": 100
-    },
     "PRZEDMIOT": {
       "tytul": "PRZEDMIOT UMOWY",
       "order": 200
@@ -26,18 +22,13 @@
       "tytul": "ZABEZPIECZENIA",
       "order": 400
     },
-    "WARUNKI_ZAWIESZAJACE": {
-      "tytul": "WARUNKI URUCHOMIENIA POŻYCZKI",
-      "order": 450,
-      "warunek": "ma_warunki_zawieszajace"
-    },
     "WINDYKACJA": {
       "tytul": "WINDYKACJA I SKUTKI OPÓŹNIENIA",
       "order": 500
     },
-    "OSWIADCZENIA_RODO": {
+    "OSWIADCZENIA_STRON": {
       "tytul": "OŚWIADCZENIA STRON",
-      "order": 600
+      "order": 550
     },
     "POSTANOWIENIA_OGOLNE": {
       "tytul": "POSTANOWIENIA OGÓLNE",
@@ -216,31 +207,31 @@
     },
     {
       "id": "WZA_00_wprowadzenie",
-      "sekcja": "WARUNKI_ZAWIESZAJACE",
-      "order": 5,
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 60,
       "warunek": "ma_warunki_zawieszajace",
       "tekst": "Wypłata Kwoty Pożyczki nastąpi po łącznym spełnieniu następujących warunków:"
     },
     {
       "id": "WZA_01_dokumenty_podstawowe",
-      "sekcja": "WARUNKI_ZAWIESZAJACE",
-      "order": 10,
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 61,
       "warunek": "ma_warunki_zawieszajace",
       "tekst": "przekazaniu Pożyczkodawcy podpisanego oryginału Umowy wraz z załącznikami, z podpisami poświadczonymi notarialnie, oraz wypisów aktów notarialnych obejmujących żądanie wpisu hipoteki i oświadczenie o poddaniu się egzekucji;",
       "poziom": "podpunkt"
     },
     {
       "id": "WZA_02_zgoda_malzonka",
-      "sekcja": "WARUNKI_ZAWIESZAJACE",
-      "order": 20,
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 63,
       "warunek": "wymaga_zgody_malzonka",
       "tekst": "przedłożeniu zgody małżonka właściciela nieruchomości na ustanowienie hipoteki, wyrażonej w formie pisemnej z podpisem notarialnie poświadczonym (art. 37 § 1 pkt 1 k.r.o.);",
       "poziom": "podpunkt"
     },
     {
       "id": "WZA_04_wykreslenie_przed",
-      "sekcja": "WARUNKI_ZAWIESZAJACE",
-      "order": 40,
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 64,
       "warunek": "ma_wykreslenia_przed_wyplata",
       "tekst_pozycja": "wykreśleniu z księgi wieczystej nr {{o.nr_kw}} obciążenia: {{o.opis}} — potwierdzonym odpisem księgi wieczystej albo prawomocnym postanowieniem sądu wieczystoksięgowego;",
       "poziom": "podpunkt",
@@ -248,8 +239,8 @@
     },
     {
       "id": "WZA_05_zrzeczenie_sluzebnosci",
-      "sekcja": "WARUNKI_ZAWIESZAJACE",
-      "order": 50,
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 65,
       "warunek": "ma_zrzeczenia",
       "tekst_pozycja": "przedłożeniu Pożyczkodawcy wypisu aktu notarialnego obejmującego oświadczenie {{o.uprawniony_dopelniacz_kogo}} (PESEL {{o.uprawniony_do_zrzeczenia.pesel}}) o zrzeczeniu się przysługującego {{o.uprawniony_zaimek}} prawa: {{o.opis}}, obciążającego nieruchomość KW nr {{o.nr_kw}}, wraz ze zgodą na wykreślenie tego prawa z księgi wieczystej;",
       "poziom": "podpunkt",
@@ -259,16 +250,16 @@
     },
     {
       "id": "WZA_06_zaswiadczenia_zus_us",
-      "sekcja": "WARUNKI_ZAWIESZAJACE",
-      "order": 60,
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 66,
       "warunek": "ma_obciazenia_egzekucyjne or true",
       "tekst": "przedłożeniu aktualnych zaświadczeń o niezaleganiu w podatkach (Urząd Skarbowy) oraz w opłacaniu składek (Zakład Ubezpieczeń Społecznych), wystawionych nie wcześniej niż 30 dni przed datą wypłaty, dotyczących {{pb_dop}} oraz każdego właściciela nieruchomości stanowiącej zabezpieczenie;",
       "poziom": "podpunkt"
     },
     {
       "id": "WZA_07_odpis_kw",
-      "sekcja": "WARUNKI_ZAWIESZAJACE",
-      "order": 70,
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 67,
       "warunek": "ma_warunki_zawieszajace",
       "tekst": "przedłożeniu aktualnych odpisów zwykłych ksiąg wieczystych wszystkich nieruchomości stanowiących zabezpieczenie, potwierdzających stan działów III i IV zgodny z oświadczeniami złożonymi w niniejszej Umowie;",
       "poziom": "podpunkt"
@@ -419,8 +410,8 @@
     },
     {
       "id": "WZA_10_uchwaly",
-      "sekcja": "WARUNKI_ZAWIESZAJACE",
-      "order": 15,
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 62,
       "warunek": "ma_uchwaly_do_przedlozenia",
       "tekst_pozycja": "przedłożeniu Pożyczkodawcy uchwały {{u.organ}} {{u.podmiot}} wyrażającej zgodę na {{u.czynnosc}} — wymaganej na podstawie {{u.podstawa}};",
       "poziom": "podpunkt",
@@ -443,6 +434,399 @@
       "warunek": "ma_roszczenie_oproznione_miejsce",
       "tekst_pozycja": "W celu zabezpieczenia interesu Pożyczkodawcy Pożyczkobiorca w notarialnym oświadczeniu, o którym mowa w ust. 1, ustanowi na rzecz Pożyczkodawcy roszczenie o przeniesienie hipoteki ustanowionej zgodnie z ust. 1 na miejsce opróżnione przez każdą inną hipotekę wpisaną w księdze wieczystej nr {{n.nr_kw}} z pierwszeństwem przed hipoteką Pożyczkodawcy, a które to miejsce zostanie lub może zostać opróżnione wskutek wygaśnięcia, uchylenia, zmniejszenia lub wykreślenia takiej hipoteki (art. 101¹ ustawy z dnia 6 lipca 1982 r. o księgach wieczystych i hipotece). Roszczenie to podlega ujawnieniu w księdze wieczystej wraz z hipoteką Pożyczkodawcy. Pożyczkobiorca zobowiązuje się nie rozporządzać opróżnionym miejscem hipotecznym ani nie ustanawiać na nim innej hipoteki bez uprzedniej pisemnej zgody Pożyczkodawcy pod rygorem nieważności.",
       "uwaga_prawna": "Roszczenie o przeniesienie hipoteki na przyszłe opróżnione miejsce (art. 101(1) u.k.w.h.) — skuteczne wyłącznie po ujawnieniu w KW; treść oświadczenia notarialnego i wniosek wieczystoksięgowy muszą obejmować żądanie wpisu tego roszczenia."
+    },
+    {
+      "id": "WIN_01_odsetki_za_opoznienie",
+      "sekcja": "WINDYKACJA",
+      "order": 10,
+      "warunek": true,
+      "tekst": "W przypadku niedotrzymania któregokolwiek terminu płatności {{pb}} {{pb_zobowiazany_jest}} do zapłaty odsetek za opóźnienie w wysokości dwukrotności ustawowych odsetek za opóźnienie obowiązujących w dniu podpisania Umowy, naliczanych od zaległej kwoty.",
+      "podstawa_prawna": "art. 481 § 2¹ k.c."
+    },
+    {
+      "id": "WIN_02_procedura_windykacyjna",
+      "sekcja": "WINDYKACJA",
+      "order": 20,
+      "warunek": true,
+      "tekst": "W przypadku gdy {{pb}} nie {{pb_wywiazuje_sie}} z obowiązku zwrotu pożyczki w terminie, Pożyczkodawca jest uprawniony do wszczęcia procedury windykacyjnej, której koszty – według Tabeli opłat windykacyjnych stanowiącej Załącznik nr 3 – w całości obciążają {{pb_bier}}."
+    },
+    {
+      "id": "WIN_03_czestotliwosc",
+      "sekcja": "WINDYKACJA",
+      "order": 30,
+      "warunek": true,
+      "tekst": "Czynności windykacyjne i upominawcze mogą być podejmowane z częstotliwością zgodną z dobrymi obyczajami, wielokrotnie do czasu całkowitej spłaty zadłużenia, zawarcia ugody lub skierowania sprawy na drogę sądową. Wszelkie czynności ujmowane są w rejestrze czynności windykacyjnych."
+    },
+    {
+      "id": "WIN_04_kolejnosc_zaliczania",
+      "sekcja": "WINDYKACJA",
+      "order": 40,
+      "warunek": true,
+      "tekst": "W przypadku spłaty należności w niepełnej wysokości, wpłacone kwoty zaliczane są przez Pożyczkodawcę w następującej kolejności:",
+      "podstawa_prawna": "art. 451 § 1 k.c."
+    },
+    {
+      "id": "WIN_04a_prowizja",
+      "sekcja": "WINDYKACJA",
+      "order": 41,
+      "warunek": true,
+      "tekst": "prowizja (o ile nie została potrącona przy wypłacie);",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WIN_04b_koszty_windykacyjne",
+      "sekcja": "WINDYKACJA",
+      "order": 42,
+      "warunek": true,
+      "tekst": "powstałe koszty windykacyjne;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WIN_04c_odsetki_za_opoznienie",
+      "sekcja": "WINDYKACJA",
+      "order": 43,
+      "warunek": true,
+      "tekst": "odsetki za opóźnienie;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WIN_04d_odsetki_umowne",
+      "sekcja": "WINDYKACJA",
+      "order": 44,
+      "warunek": true,
+      "tekst": "odsetki umowne;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WIN_04e_kapital",
+      "sekcja": "WINDYKACJA",
+      "order": 45,
+      "warunek": true,
+      "tekst": "kapitał pożyczki.",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WIN_05_zwrot_kosztow",
+      "sekcja": "WINDYKACJA",
+      "order": 50,
+      "warunek": true,
+      "tekst": "{{pb}} {{pb_zobowiazany_jest}} do zwrotu rzeczywistych, udokumentowanych kosztów czynności windykacyjnych poniesionych przez Pożyczkodawcę, w wysokości nieprzekraczającej stawek wskazanych w Załączniku nr 3 i ujętych w rejestrze czynności windykacyjnych. Opłaty te stanowią zwrot kosztów dochodzenia należności, a nie karę umowną."
+    },
+    {
+      "id": "OSW_21_majatek_osobisty",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 90,
+      "warunek": "ma_majatek_osobisty",
+      "iteruje": "nieruchomosci_majatek_osobisty",
+      "tekst_pozycja": "{{n.wlasciciel_imie_nazwisko}} {{n.wlasciciel_oswiadcza}}, że {{n.stan_cywilny_opis}}, a nieruchomość objęta księgą wieczystą nr {{n.nr_kw}}, w której dziale II jest {{n.wlasciciel_ujawniony}} jako jedyny właściciel, wchodzi w skład {{n.wlasciciel_zaimek}} majątku osobistego i nie jest objęta wspólnością majątkową małżeńską.",
+      "podstawa_prawna": "art. 31 i art. 33 k.r.o.; art. 47 k.r.o."
+    },
+    {
+      "id": "OSW_20_oswiadczenia_pozyczkobiorcy",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 100,
+      "warunek": true,
+      "tekst": "{{pb}} {{pb_oswiadcza}}, że:"
+    },
+    {
+      "id": "OSW_20a_przedsiebiorca_prawo_przedsiebiorcow",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 101,
+      "warunek": true,
+      "tekst": "niniejszą Umowę {{pb_zawarl}} jako {{pb_przedsiebiorca_mian}} w rozumieniu art. 4 ust. 1 ustawy z dnia 6 marca 2018 r. – Prawo przedsiębiorców, a nie jako {{pb_konsument}} w rozumieniu art. 22¹ k.c.;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_20b_brak_kredytu_konsumenckiego",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 102,
+      "warunek": true,
+      "tekst": "do udzielonej pożyczki nie mają zastosowania przepisy ustawy z dnia 12 maja 2011 r. o kredycie konsumenckim ani ustawy z dnia 23 marca 2017 r. o kredycie hipotecznym;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_20c_czynnosci_w_obrocie",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 103,
+      "warunek": true,
+      "tekst": "przed zawarciem Umowy {{pb_dokonal}} już pierwszych czynności w obrocie gospodarczym bezpośrednio związanych z przedmiotem wykonywanej działalności;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_20d_przychody",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 104,
+      "warunek": true,
+      "tekst": "{{pb_jego}} przychody z tytułu działalności gospodarczej gwarantują terminową spłatę pożyczki;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_20e_oferta",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 105,
+      "warunek": true,
+      "tekst": "niniejszą Umowę {{pb_zawarl}} na podstawie oferty przedstawionej przez Pożyczkodawcę i {{pb_mial}} możliwość zapoznania się z nią bez obecności przedstawiciela Pożyczkodawcy;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_20f_dane_kompletne",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 106,
+      "warunek": true,
+      "tekst": "wszelkie dane przekazane Pożyczkodawcy są kompletne, zgodne ze stanem rzeczywistym i podane dobrowolnie;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_20g_zrozumienie",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 107,
+      "warunek": true,
+      "tekst": "w pełni {{pb_zrozumial}} treść i skutki prawne poszczególnych postanowień Umowy i nie {{pb_bedzie_roscil}} z tego tytułu żadnych pretensji;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_20h_swiadomosc",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 108,
+      "warunek": true,
+      "tekst": "{{pb_jest}} w pełni {{pb_swiadomy}} treści zawieranej Umowy i nie {{pb_dziala}} pod wpływem błędu ani okoliczności wyłączających lub ograniczających {{pb_jego_male}} świadomość lub dobrowolność;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_20i_brak_przymusowego_polozenia",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 109,
+      "warunek": true,
+      "tekst": "nie {{pb_znajduje_sie}} w przymusowym położeniu w rozumieniu art. 388 k.c.;",
+      "poziom": "podpunkt",
+      "podstawa_prawna": "art. 388 k.c."
+    },
+    {
+      "id": "OSW_20j_brak_upadlosci",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 110,
+      "warunek": true,
+      "tekst": "nie toczy się przeciwko {{pb_toczy_sie}} postępowanie o ogłoszenie upadłości ani nie ma podstaw do ogłoszenia takiej upadłości;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_20k_rozeznanie_rynku",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 111,
+      "warunek": true,
+      "tekst": "{{pb_posiada}} rozeznanie na rynku ofert pożyczek pozabankowych dla przedsiębiorców i {{pb_wybral}} niniejszy produkt finansowy spośród dostępnych ofert;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_20l_zgoda_na_cesje",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 112,
+      "warunek": true,
+      "tekst": "{{pb_wyraza}} zgodę na przeniesienie przez Pożyczkodawcę wierzytelności i wszelkich praw wynikających z Umowy na osoby trzecie wraz z ustanowionymi zabezpieczeniami;",
+      "poziom": "podpunkt",
+      "podstawa_prawna": "art. 509 k.c."
+    },
+    {
+      "id": "OSW_20m_doreczenia_email",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 113,
+      "warunek": "ma_email_pozyczkobiorcy",
+      "tekst": "{{pb_wyraza}} zgodę na dostarczanie korespondencji drogą elektroniczną na adres: {{pb_email}}. W przypadku zmiany adresu e-mail {{pb}} {{pb_zobowiazuje}} niezwłocznie powiadomić Pożyczkodawcę na piśmie. Brak pisemnego powiadomienia o zmianie adresu e-mail skutkuje tym, że korespondencja wysłana na wskazany adres jest uznana za doręczoną. Niniejsza fikcja doręczenia nie dotyczy oświadczeń wywołujących skutki prawne, w szczególności wypowiedzenia Umowy oraz wezwania, o którym mowa w {{ref:ZAB_04_777}}, które doręcza się przesyłką rejestrowaną na adres do doręczeń {{pb_dop}}.",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "RODO_01_informacja",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 200,
+      "warunek": true,
+      "tekst": "Pożyczkodawca oświadcza, iż zgodnie z art. 13 RODO (Rozporządzenie PE i Rady (UE) 2016/679):",
+      "podstawa_prawna": "art. 13 RODO"
+    },
+    {
+      "id": "RODO_01a_administrator",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 201,
+      "warunek": true,
+      "tekst": "administratorem danych osobowych {{pb_dop}} jest {{pozyczkodawca_nazwa}};",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "RODO_01b_podstawa",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 202,
+      "warunek": true,
+      "tekst": "dane osobowe przetwarzane są na podstawie art. 6 ust. 1 lit. b RODO w celu realizacji Umowy;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "RODO_01c_odbiorcy",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 203,
+      "warunek": true,
+      "tekst": "odbiorcami danych będą wyłącznie podmioty uprawnione na podstawie przepisów prawa oraz firmy windykacyjne;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "RODO_01d_okres",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 204,
+      "warunek": true,
+      "tekst": "dane przechowywane będą przez okres 10 lat od rozwiązania Umowy;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "RODO_01e_prawa",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 205,
+      "warunek": true,
+      "tekst": "{{pb_cel}} przysługuje prawo dostępu, sprostowania, sprzeciwu wobec przetwarzania oraz przenoszenia danych;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "RODO_01f_skarga",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 206,
+      "warunek": true,
+      "tekst": "{{pb}} {{pb_ma_prawo}} wniesienia skargi do Prezesa UODO;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "RODO_01g_dobrowolnosc",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 207,
+      "warunek": true,
+      "tekst": "podanie danych jest dobrowolne, jednak odmowa może skutkować odmową udzielenia pożyczki.",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_22_negocjacje",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 300,
+      "warunek": true,
+      "tekst": "{{pb}} i Pożyczkodawca potwierdzają, że zapisy niniejszej Umowy są efektem indywidualnych negocjacji uwidocznionych w Protokole z Negocjacji (Załącznik nr 2).",
+      "podstawa_prawna": "art. 385¹ § 3 k.c."
+    },
+    {
+      "id": "POG_01_odbior_harmonogramu",
+      "sekcja": "POSTANOWIENIA_OGOLNE",
+      "order": 10,
+      "warunek": true,
+      "tekst": "Podpisując Umowę {{pb}} {{pb_potwierdza}} odbiór Załącznika nr 1 (Harmonogram Spłat)."
+    },
+    {
+      "id": "POG_02_forma_pisemna",
+      "sekcja": "POSTANOWIENIA_OGOLNE",
+      "order": 20,
+      "warunek": true,
+      "tekst": "Wszelkie zmiany niniejszej Umowy wymagają formy pisemnej pod rygorem nieważności.",
+      "podstawa_prawna": "art. 76 k.c."
+    },
+    {
+      "id": "POG_03_zgodny_zamiar",
+      "sekcja": "POSTANOWIENIA_OGOLNE",
+      "order": 30,
+      "warunek": true,
+      "tekst": "Pożyczkodawca i {{pb}} potwierdzają, że ich zgodnym zamiarem jest zawarcie Umowy pożyczki w rozumieniu przepisów k.c., której spłata jest odpowiednio i zgodnie z prawem zabezpieczona."
+    },
+    {
+      "id": "POG_04_egzemplarze",
+      "sekcja": "POSTANOWIENIA_OGOLNE",
+      "order": 40,
+      "warunek": true,
+      "tekst": "Umowę sporządzono w {{liczba_egzemplarzy}} jednobrzmiących egzemplarzach, po jednym dla każdej ze Stron."
+    },
+    {
+      "id": "POG_05_salwatoryjna",
+      "sekcja": "POSTANOWIENIA_OGOLNE",
+      "order": 50,
+      "warunek": true,
+      "tekst": "W sprawach nieobjętych Umową stosuje się przepisy k.c. oraz inne powszechnie obowiązujące przepisy prawa. W razie sprzeczności postanowień Umowy z przepisami prawa, przepisy te uchylają, uzupełniają lub zastępują wadliwe postanowienia, a pozostałe postanowienia pozostają w mocy."
+    },
+    {
+      "id": "POG_06_sad_wlasciwy",
+      "sekcja": "POSTANOWIENIA_OGOLNE",
+      "order": 60,
+      "warunek": true,
+      "tekst": "Wszelkie spory wynikłe z realizacji Umowy Strony deklarują rozstrzygać polubownie. W braku porozumienia właściwym jest sąd powszechny miejscowo właściwy dla siedziby Pożyczkodawcy (wierzyciela) lub cesjonariusza.",
+      "podstawa_prawna": "art. 46 § 1 k.p.c."
+    },
+    {
+      "id": "WYP_01_przeslanki",
+      "sekcja": "WYPOWIEDZENIE",
+      "order": 10,
+      "warunek": true,
+      "tekst": "Pożyczkodawca ma prawo wypowiedzieć Umowę ze skutkiem natychmiastowym i żądać natychmiastowej spłaty całości niespłaconego zadłużenia wraz z odsetkami i kosztami, gdy {{pb}}:"
+    },
+    {
+      "id": "WYP_01a_opoznienie",
+      "sekcja": "WYPOWIEDZENIE",
+      "order": 11,
+      "warunek": true,
+      "tekst": "{{pb_opoznia_sie}} z zapłatą którejkolwiek raty lub innych należności przez okres dłuższy niż 14 dni;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WYP_01b_niezgodny_cel",
+      "sekcja": "WYPOWIEDZENIE",
+      "order": 12,
+      "warunek": true,
+      "tekst": "{{pb_wykorzysta}} pożyczkę niezgodnie z celem określonym w {{ref_par:PRZ_02_cel}};",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WYP_01c_nieprawdziwe_dane",
+      "sekcja": "WYPOWIEDZENIE",
+      "order": 13,
+      "warunek": true,
+      "tekst": "{{pb_podal}} Pożyczkodawcy nieprawdziwe dane, dokumenty lub informacje mające znaczenie dla zawarcia lub wykonywania Umowy;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WYP_01d_utrudnianie",
+      "sekcja": "WYPOWIEDZENIE",
+      "order": 14,
+      "warunek": true,
+      "tekst": "{{pb_utrudnia}} Pożyczkodawcy wykonanie jego praw z Umowy lub ustanowionych zabezpieczeń;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WYP_01e_naruszenie",
+      "sekcja": "WYPOWIEDZENIE",
+      "order": 15,
+      "warunek": true,
+      "tekst": "{{pb_narusza}} inne istotne postanowienia Umowy;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WYP_01f_postepowania",
+      "sekcja": "WYPOWIEDZENIE",
+      "order": 16,
+      "warunek": true,
+      "tekst": "zostanie wszczęte wobec {{pb_zaimek_wobec}} postępowanie egzekucyjne, upadłościowe, restrukturyzacyjne lub likwidacyjne;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WYP_01g_rozporzadzenie",
+      "sekcja": "WYPOWIEDZENIE",
+      "order": 17,
+      "warunek": true,
+      "tekst": "{{pb_dokona}} rozporządzenia nieruchomością stanowiącą zabezpieczenie bez zgody Pożyczkodawcy, o której mowa w {{ref:ZAB_03_zakaz_rozporzadzania}}.",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WYP_02_termin_splaty",
+      "sekcja": "WYPOWIEDZENIE",
+      "order": 20,
+      "warunek": true,
+      "tekst": "W przypadku wypowiedzenia Umowy {{pb}} {{pb_zobowiazany_jest}} do spłaty całości zadłużenia w terminie 7 dni od doręczenia oświadczenia o wypowiedzeniu."
+    },
+    {
+      "id": "WYP_03_doreczenie",
+      "sekcja": "WYPOWIEDZENIE",
+      "order": 30,
+      "warunek": true,
+      "tekst": "Oświadczenie o wypowiedzeniu wywołuje skutek z chwilą jego dojścia do {{pb_dop}} w sposób umożliwiający zapoznanie się z jego treścią (art. 61 k.c.). Dla celów dowodowych Pożyczkodawca doręcza je przesyłką rejestrowaną na adres do doręczeń wskazany w Umowie; doręczenie na adres e-mail {{pb_dop}} ma charakter pomocniczy.",
+      "podstawa_prawna": "art. 61 k.c."
     }
   ]
 }

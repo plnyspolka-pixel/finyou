@@ -8,7 +8,8 @@
 // Przepływ:
 //   ClientProfile (+ oferta)  →  profileToCalcPayload / buildUmowaData
 //                             →  waliduj() + walidujHarmonogram()  (BRAMA)
-//                             →  renderuj()  →  formatuj() (podgląd) / buildUmowaDocx() (.docx)
+//                             →  renderuj()  →  formatuj() (podgląd) / generujKomplet() (.docx:
+//                                wniosek + umowa + Zał. 1–3)
 //
 // Braki danych nie rzucają wyjątku — `waliduj()` zwraca je jako problemy do
 // uzupełnienia przez operatora (BLAD = blokuje generację, OSTRZEZENIE/INFO = nie).
@@ -25,7 +26,7 @@ import { autonaprawHarmonogram, walidujHarmonogram, type KorektaGroszowa } from 
 import { renderuj } from "./renderer";
 import { formatuj } from "./formatter";
 import { bibliotekaBez } from "./clause-select";
-import { buildUmowaDocx, harmonogramZUmowy } from "./umowa-docx";
+import { generujKomplet, type KompletWynik } from "./komplet";
 import type { Problem } from "./validator";
 import { zapiszUmoweDocx } from "./umowa-storage.server";
 
@@ -44,6 +45,8 @@ export interface UmowaGenInput {
   overrides?: Record<string, any>;
   /** ID klauzul silnika WYŁĄCZONYCH przez operatora — nie wchodzą do umowy. */
   excludedClauses?: string[];
+  /** Wniosek pożyczkowy, z którym wiążemy wygenerowany dokument. */
+  loanApplicationId?: string;
 }
 
 const inputSchema = z.object({
@@ -55,6 +58,7 @@ const inputSchema = z.object({
   nieruchomosci: z.array(z.any()).optional(),
   overrides: z.record(z.string(), z.any()).optional(),
   excludedClauses: z.array(z.string()).optional(),
+  loanApplicationId: z.string().uuid().optional(),
 });
 
 async function ladujProfil(supabase: any, profileId: string): Promise<ClientProfile> {
@@ -151,10 +155,9 @@ export const generateUmowaFromEngine = createServerFn({ method: "POST" })
     // Render może rzucić BladPola dla pola szablonu, które przechodzi schemat
     // (np. brak wartości podstawianej w klauzuli) — traktujemy to jak brak
     // blokujący, nie jak błąd 500.
-    let bytes: Uint8Array;
+    let komplet: KompletWynik;
     try {
-      const doc = renderuj(umowa, bibliotekaBez(data.excludedClauses ?? []));
-      bytes = await buildUmowaDocx(doc, harmonogramZUmowy(umowa));
+      komplet = await generujKomplet(umowa, { excludedClauses: data.excludedClauses });
     } catch (e: any) {
       problemy.push({
         poziom: "BLAD",
@@ -166,10 +169,15 @@ export const generateUmowaFromEngine = createServerFn({ method: "POST" })
 
     const { docxPath, signedUrl } = await zapiszUmoweDocx(supabase as any, {
       userId,
-      bytes,
+      komplet,
       numerUmowy: umowa.meta?.numer_umowy,
-      templateName: "Umowa pożyczki (silnik klauzul)",
-      formData: { client_profile_id: data.profileId },
+      templateName: "Komplet umowy pożyczki (silnik klauzul)",
+      zrodlo: "kreator",
+      loanApplicationId: data.loanApplicationId ?? null,
+      formData: {
+        client_profile_id: data.profileId,
+        ...(data.excludedClauses?.length ? { excluded_clauses: data.excludedClauses } : {}),
+      },
     });
 
     return {

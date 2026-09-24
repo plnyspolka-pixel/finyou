@@ -7,7 +7,7 @@
 
 import {
   stripHtml,
-  extractKwOwnerPersons,
+  extractKwOwnerEntries,
   extractKwOwnerPesels,
   parseMortgages,
   parseKwPropertyParams,
@@ -86,13 +86,20 @@ export function kwDocumentToExtraction(doc: KwDocumentSections): KwExtraction {
   const naglowek = [doc.okladka, doc.dzial_1o, doc.dzial_2].map((s) => stripHtml(s)).join("  ");
 
   // --- właściciele (dział II) ---
-  const persons = extractKwOwnerPersons(doc.dzial_2);
+  // Osoby z działu II wraz z udziałem i rodzajem wspólności (po pozycji w tekście).
+  const persons = extractKwOwnerEntries(doc.dzial_2);
   const pesels = extractKwOwnerPesels(doc.dzial_2);
   const wlasciciele: KwExtractionOwner[] = persons.map((p) => {
     const match = pesels.find(
       (x) => x.ownerName && norm(x.ownerName) === norm(`${p.firstName} ${p.lastName}`),
     );
-    return { imiePierwsze: p.firstName, nazwisko: p.lastName, pesel: match?.pesel ?? null };
+    return {
+      imiePierwsze: p.firstName,
+      nazwisko: p.lastName,
+      pesel: match?.pesel ?? null,
+      udzial: p.share ?? null,
+      rodzajWspolnosci: p.coOwnershipType ?? null,
+    };
   });
   // PESEL bez dopasowanego nazwiska z par imię-nazwisko — dołóż po PESEL-u
   for (const x of pesels) {

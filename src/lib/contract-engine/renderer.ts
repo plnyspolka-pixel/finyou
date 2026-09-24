@@ -38,21 +38,32 @@ export interface Strona {
   opis: string;
   grupa?: string;
 }
+/** Położenie klauzuli po numeracji — do odesłań („§ 4 ust. 2”, „§ 5 ust. 3 lit. m”). */
+export interface Polozenie {
+  paragraf: number;
+  ustep: number | null;
+  litera?: string;
+}
 export interface Dokument {
   meta: any;
   komparycja: { data: string; miejscowosc: string; strony: Strona[] };
   sekcje: Sekcja[];
   fakty: Record<string, any>;
   zalaczniki: { nr: number; tytul: string }[];
+  /** ID klauzuli → jej położenie w dokumencie (pierwszy ustęp/podpunkt). */
+  polozenia: Record<string, Polozenie>;
 }
 
 export class BladPola extends Error {}
 
 const POLE_RE = /\{\{([^}]+)\}\}/g;
+/** Odesłania do innych klauzul — rozwiązywane dopiero po numeracji. */
+const ODESLANIE_RE = /\{\{(ref|ref_par):([A-Za-z0-9_]+)\}\}/g;
 
 export function podstaw(tekst: string, ctx: Ctx, lokalne?: Record<string, any>): string {
-  return tekst.replace(POLE_RE, (_m, grp) => {
+  return tekst.replace(POLE_RE, (m, grp) => {
     const sciezka = String(grp).trim();
+    if (sciezka.startsWith("ref:") || sciezka.startsWith("ref_par:")) return m;
     if (lokalne) {
       for (const pref of Object.keys(lokalne)) {
         const obj = lokalne[pref];
@@ -76,7 +87,17 @@ export function podstaw(tekst: string, ctx: Ctx, lokalne?: Record<string, any>):
 
 const LITERY = "abcdefghijklmnoprstuwz";
 
-export function renderuj(dane: any, bib: any = biblioteka): Dokument {
+/** Tekst odesłania do położenia klauzuli. */
+export function tekstOdeslania(p: Polozenie, tylkoParagraf = false): string {
+  if (tylkoParagraf || p.ustep == null) return `§ ${p.paragraf}`;
+  return `§ ${p.paragraf} ust. ${p.ustep}` + (p.litera ? ` lit. ${p.litera.replace(")", "")}` : "");
+}
+
+export function renderuj(wejscie: any, bib: any = biblioteka): Dokument {
+  // Renderer nie modyfikuje danych wejściowych (pola pomocnicze, np.
+  // wlasciciel_oznaczenie, lądują w kopii) — dane wracają do wywołującego
+  // w postaci zgodnej ze schematem.
+  const dane = structuredClone(wejscie);
   const fakty = zbudujFakty(dane);
   const ctx: Ctx = { ...dane, ...fakty };
 
@@ -137,12 +158,41 @@ export function renderuj(dane: any, bib: any = biblioteka): Dokument {
     }
   });
 
+  // położenia klauzul + rozwiązanie odesłań
+  const polozenia: Record<string, Polozenie> = {};
+  for (const sek of wynikSekcje) {
+    let biezacyUstep: number | null = null;
+    for (const u of sek.ustepy) {
+      if (u.poziom === "ustep") biezacyUstep = u.numer ?? null;
+      if (polozenia[u.zrodlo]) continue;
+      polozenia[u.zrodlo] = {
+        paragraf: sek.numer!,
+        ustep: biezacyUstep,
+        ...(u.poziom === "podpunkt" && u.litera ? { litera: u.litera } : {}),
+      };
+    }
+  }
+  for (const sek of wynikSekcje) {
+    for (const u of sek.ustepy) {
+      u.tekst = u.tekst.replace(ODESLANIE_RE, (_m, rodzaj, id) => {
+        const p = polozenia[id];
+        if (!p) {
+          throw new BladPola(
+            `Klauzula ${u.zrodlo} odsyła do klauzuli ${id}, która nie weszła do Umowy`,
+          );
+        }
+        return tekstOdeslania(p, rodzaj === "ref_par");
+      });
+    }
+  }
+
   return {
     meta: dane.meta,
     komparycja: komparycja(dane),
     sekcje: wynikSekcje,
     fakty,
     zalaczniki: zalaczniki(dane, fakty),
+    polozenia,
   };
 }
 

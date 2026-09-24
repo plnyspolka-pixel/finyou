@@ -2,16 +2,12 @@
 // (kw-content.functions.ts, panel admina) oraz automatycznego wzbogacania
 // leadów (lead-doc-intel.server.ts). Wyniki lądują w cache kw_documents.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { compactKwNumber } from "@/lib/kw";
 
 export function normalizeKwNumber(raw: string): string | null {
-  const v = (raw || "").toUpperCase().replace(/\s+/g, "");
-  // Try to extract a KW pattern from anywhere in the string (tolerates trailing garbage).
-  // 7-digit numbers (older paper registers) are zero-padded to 8, like EKW does.
-  const m =
-    v.match(/([A-Z]{2}\d[A-Z0-9])\/?(\d{8})\/?(\d)/) ??
-    v.match(/([A-Z]{2}\d[A-Z0-9])\/(\d{7})\/(\d)/);
-  if (!m) return null;
-  return `${m[1]}${m[2].padStart(8, "0")}${m[3]}`; // CMD API uses compact 13-char form
+  // Jedna normalizacja dla platformy (@/lib/kw): numer dopełniany zerami do
+  // 8 cyfr — "KR1P/610770/2" → "KR1P006107702" (CMD API używa formy 13-znakowej).
+  return compactKwNumber(raw);
 }
 
 export function hasCmdConfig(): boolean {
