@@ -21,6 +21,7 @@ import {
 } from "./schedule";
 import { buildEngineSchedule } from "./loan-schedule";
 import { validateKwNumber } from "../kw";
+import { FINANCE_YOU, jestFinanceYou } from "./finance-you";
 
 // ── scalanie łatki danych ────────────────────────────────────────────
 /** Deep-merge łatki AI na szkic: obiekty scalane, tablice podmieniane, null czyści. */
@@ -176,6 +177,16 @@ export function normalizujNumeryKw(umowa: any): Problem[] {
   return problemy;
 }
 
+/**
+ * Rachunek spłaty: gdy Pożyczkodawcą jest Finance You, a rachunku nie podano,
+ * wstawiamy rachunek Finance You. Podany rachunek nie jest nadpisywany.
+ */
+export function uzupelnijRachunekSplaty(umowa: any): void {
+  if (!umowa?.warunki || !jestFinanceYou(umowa.pozyczkodawca)) return;
+  const r = (umowa.warunki.rachunki ??= {});
+  if (!String(r.splata ?? "").trim()) r.splata = FINANCE_YOU.rachunekSplaty;
+}
+
 /** Pełne uzupełnienie + autonaprawa + walidacja szkicu umowy. */
 export function przetworzSzkic(umowa: any): {
   umowa: any;
@@ -184,6 +195,7 @@ export function przetworzSzkic(umowa: any): {
 } {
   uzupelnijIdNieruchomosci(umowa);
   const problemyKw = normalizujNumeryKw(umowa);
+  uzupelnijRachunekSplaty(umowa);
   uzupelnijHarmonogram(umowa);
   uzupelnijSlownie(umowa);
   const autokorekty = umowa?.warunki ? autonaprawHarmonogram(umowa.warunki) : [];

@@ -15,6 +15,7 @@ import PizZip from "pizzip";
 import { przetworzSzkic } from "./umowa-agent-core";
 import { generujKomplet, WERSJA_BIBLIOTEKI, type KompletWynik } from "./komplet";
 import { tekstZDocx } from "./umowa-docx";
+import { odmienBiernik, odmienDopelniacz } from "./facts";
 import biblioteka from "./clauses.json";
 import { przypadekA, przypadekB, przypadekC } from "./fixtures/komplet-przypadki";
 
@@ -144,7 +145,7 @@ describe("przypadek końcowy zlecenia (a)", () => {
     expect(k1.sha256).toBe(k2.sha256);
     expect(Buffer.from(k1.bytes).equals(Buffer.from(k2.bytes))).toBe(true);
     expect(k1.wersjaBiblioteki).toBe(WERSJA_BIBLIOTEKI);
-    expect(WERSJA_BIBLIOTEKI).toBe("1.1");
+    expect(WERSJA_BIBLIOTEKI).toBe("1.2");
   });
 
   it("plik .docx ma komplet części pakietu (document, styles, relacje)", async () => {
@@ -183,5 +184,52 @@ describe("przypadki (b) i (c) — konstrukcja", () => {
     expect(tekst).toContain("…………………………………… / Poręczyciel / Paweł Nowicki");
     expect(tekst).toContain("ustrój rozdzielności majątkowej");
     expect(tekst).toContain("Poręczyciel: | Paweł Nowicki");
+  });
+});
+
+describe("poprawki treści istniejącej (zgoda z 24.09.2026) i rachunek Finance You", () => {
+  it("PRZ_01: liczba pojedyncza / mnoga", async () => {
+    expect((await komplet(przypadekA())).tekst).toContain(
+      "pożyczki pieniężnej dla Pożyczkobiorcy prowadzącego działalność gospodarczą",
+    );
+    expect((await komplet(przypadekB())).tekst).toContain(
+      "pożyczki pieniężnej dla Pożyczkobiorców prowadzących działalność gospodarczą",
+    );
+  });
+
+  it("OSW_05: „przeciwko niemu” / „przeciwko nim”", async () => {
+    const a = (await komplet(przypadekA())).tekst;
+    const b = (await komplet(przypadekB())).tekst;
+    expect(a).not.toContain("przeciwko niego");
+    expect(a).toContain(
+      "nie toczy się przeciwko niemu postępowanie o ogłoszenie upadłości ani restrukturyzacyjne",
+    );
+    expect(b).not.toContain("przeciwko nich");
+    expect(b).toContain(
+      "nie toczy się przeciwko nim postępowanie o ogłoszenie upadłości ani restrukturyzacyjne",
+    );
+  });
+
+  it("komparycja: „prowadząca działalność” dla kobiety", async () => {
+    const b = (await komplet(przypadekB())).tekst;
+    expect(b).toContain("ANNA KOWALCZYK, prowadząca działalność gospodarczą pod firmą");
+    expect(b).not.toContain("ANNA KOWALCZYK, prowadzący");
+  });
+
+  it("odmiana imion: Paweł → Pawła, Michał → Michała", async () => {
+    const c = (await komplet(przypadekC())).tekst;
+    expect(c).toContain("reprezentowana przez prezesa zarządu Pawła Nowickiego");
+    expect(odmienDopelniacz("Michał Kowalski")).toBe("Michała Kowalskiego");
+    expect(odmienBiernik("Paweł Nowak")).toBe("Pawła Nowaka");
+    expect(odmienDopelniacz("Anna Nowak")).toBe("Anny Nowak");
+  });
+
+  it("rachunek spłaty Finance You wstawiany, gdy nie podano; podany nie jest nadpisywany", async () => {
+    const a = (await komplet(przypadekA())).tekst;
+    expect(a).toContain("rachunek bankowy Pożyczkodawcy nr 56 1090 2590 0000 0001 5708 1371");
+    const d = przypadekA();
+    d.warunki.rachunki.splata = "11 2222 3333 4444 5555 6666 7777";
+    const { umowa } = przetworzSzkic(d);
+    expect(umowa.warunki.rachunki.splata).toBe("11 2222 3333 4444 5555 6666 7777");
   });
 });

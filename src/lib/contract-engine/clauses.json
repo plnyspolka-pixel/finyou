@@ -1,6 +1,6 @@
 {
   "$comment": "Biblioteka klauzul. Każda klauzula ma warunek włączenia (wyrażenie nad danymi) i szablon tekstu. Renderer iteruje po sekcjach w kolejności 'order'.",
-  "wersja": "1.1",
+  "wersja": "1.2",
   "sekcje": {
     "PRZEDMIOT": {
       "tytul": "PRZEDMIOT UMOWY",
@@ -45,7 +45,7 @@
       "sekcja": "PRZEDMIOT",
       "order": 10,
       "warunek": true,
-      "tekst": "Przedmiotem Umowy jest udzielenie przez Pożyczkodawcę pożyczki pieniężnej dla {{pb_dop}} prowadzących działalność gospodarczą, na cele związane bezpośrednio z działalnością zawodową {{pb_dop}}."
+      "tekst": "Przedmiotem Umowy jest udzielenie przez Pożyczkodawcę pożyczki pieniężnej dla {{pb_dop}} {{pb_prowadzacego}} działalność gospodarczą, na cele związane bezpośrednio z działalnością zawodową {{pb_dop}}."
     },
     {
       "id": "PRZ_02_cel",
@@ -313,7 +313,7 @@
       "sekcja": "OSWIADCZENIA_STRON",
       "order": 50,
       "warunek": true,
-      "tekst": "{{pb}} {{pb_oswiadcza}}, że według swojej najlepszej wiedzy {{pb_posiada}} zdolność do terminowej obsługi zobowiązania na warunkach określonych w Załączniku nr 1, nie toczy się przeciwko {{pb_zaimek}} postępowanie o ogłoszenie upadłości ani restrukturyzacyjne, i nie ma podstaw do ich wszczęcia."
+      "tekst": "{{pb}} {{pb_oswiadcza}}, że według swojej najlepszej wiedzy {{pb_posiada}} zdolność do terminowej obsługi zobowiązania na warunkach określonych w Załączniku nr 1, nie toczy się przeciwko {{pb_toczy_sie}} postępowanie o ogłoszenie upadłości ani restrukturyzacyjne, i nie ma podstaw do ich wszczęcia."
     },
     {
       "id": "OSW_06_swiadomosc",

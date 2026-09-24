@@ -21,7 +21,8 @@ export function odmienBiernik(imieNazwisko: string): string {
       if (low.endsWith("ska") || low.endsWith("cka") || low.endsWith("dzka"))
         return w.slice(0, -1) + "ą";
       if (low.endsWith("a")) return w.slice(0, -1) + "ę";
-      if (CONSONANT_END.test(low)) return kobieta && idx > 0 ? w : w + "a";
+      if (!kobieta && idx === 0 && low.endsWith("eł")) return w.slice(0, -2) + "ła"; // Paweł → Pawła
+      if (CONSONANT_END.test(low) || low.endsWith("ł")) return kobieta && idx > 0 ? w : w + "a";
       return w;
     })
     .join(" ");
@@ -37,7 +38,8 @@ export function odmienDopelniacz(imieNazwisko: string): string {
       if (low.endsWith("ska") || low.endsWith("cka") || low.endsWith("dzka"))
         return w.slice(0, -1) + "iej";
       if (low.endsWith("a")) return w.slice(0, -1) + "y";
-      if (CONSONANT_END.test(low)) return kobieta && idx > 0 ? w : w + "a";
+      if (!kobieta && idx === 0 && low.endsWith("eł")) return w.slice(0, -2) + "ła"; // Paweł → Pawła
+      if (CONSONANT_END.test(low) || low.endsWith("ł")) return kobieta && idx > 0 ? w : w + "a";
       return w;
     })
     .join(" ");
@@ -136,7 +138,10 @@ export function oznaczenieStrony(s: any, pelne = true, opts?: OznaczenieOpts): s
   if (s === null || s === undefined) return "";
   if (s.typ === "osoba_fizyczna") {
     const czesci: string[] = [String(s.imie_nazwisko).toUpperCase()];
-    if (s.firma) czesci.push(`prowadzący działalność gospodarczą pod firmą ${s.firma}`);
+    if (s.firma)
+      czesci.push(
+        `${rodzajZenski(s.imie_nazwisko) ? "prowadząca" : "prowadzący"} działalność gospodarczą pod firmą ${s.firma}`,
+      );
     else if (s.dzialalnosc === "gospodarstwo_rolne") {
       // Zmiana 2 po Kańkowskich: rolnik prowadzący gospodarstwo — traktowany
       // jak przedsiębiorca; przy wspólnym gospodarstwie NIP widnieje przy
@@ -309,6 +314,7 @@ export function zbudujFakty(d: any): Record<string, any> {
   f.pb_zawarl = wielu ? "zawarli" : "zawarł";
   f.pb_konsument = wielu ? "konsumenci" : "konsument";
   f.pb_przedsiebiorca_mian = wielu ? "przedsiębiorcy" : "przedsiębiorca";
+  f.pb_prowadzacego = wielu ? "prowadzących" : "prowadzącego";
   f.pb_dokonal = wielu ? "dokonali" : "dokonał";
   f.pb_jego = wielu ? "ich" : "jego";
   f.pb_jego_male = f.pb_jego;

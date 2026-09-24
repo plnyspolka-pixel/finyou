@@ -22,9 +22,9 @@ const POZYCZKODAWCA = {
   },
 };
 
+// Rachunek spłaty pominięty — silnik wstawia rachunek Finance You (Pożyczkodawca).
 const RACHUNKI = {
   wyplata: "25 8011 0008 0010 0150 5299 0002",
-  splata: "39 1750 0012 0000 0000 3419 5005",
 };
 
 /**

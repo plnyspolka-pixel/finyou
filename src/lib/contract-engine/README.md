@@ -11,7 +11,7 @@ w umowie bez poręczyciela.
 | Plik                      | Rola                                                                                                          | Odpowiednik w silniku                  |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | `schema.ts`               | Kontrakt danych (zod + typy TS). `.strict()` = `additionalProperties:false`.                                  | `schema/umowa.schema.json`             |
-| `clauses.json`            | Biblioteka klauzul (v1.1: 101 klauzul, 8 sekcji). Tu edytuje prawnik.                                         | `clauses/klauzule.json`                |
+| `clauses.json`            | Biblioteka klauzul (v1.2: 101 klauzul, 8 sekcji). Tu edytuje prawnik.                                         | `clauses/klauzule.json`                |
 | `umowa-docx.ts`           | Komplet w jednym .docx: wniosek → umowa → Zał. 1–3; podpisy jako niewidoczne tabele.                          | —                                      |
 | `komplet.ts`              | `generujKomplet()` — jedno wejście dla kreatora, agenta i MCP (render + .docx + SHA-256 + wersja biblioteki). | —                                      |
 | `oplaty-windykacyjne.ts`  | Stawki Załącznika nr 3 — jedyne miejsce konfiguracji.                                                         | —                                      |
