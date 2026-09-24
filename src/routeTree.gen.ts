@@ -260,6 +260,7 @@ import { Route as ApiPublicHooksLocationScoringTickRouteImport } from './routes/
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
 import { Route as ApiPublicHooksLoanReminderEmailsTickRouteImport } from './routes/api/public/hooks/loan-reminder-emails-tick'
 import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/api/public/hooks/loan-reminder-emails'
+import { Route as ApiPublicHooksKwEasymkwPollRouteImport } from './routes/api/public/hooks/kw-easymkw-poll'
 import { Route as ApiPublicHooksInstitutionMailTickRouteImport } from './routes/api/public/hooks/institution-mail-tick'
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
 import { Route as ApiPublicHooksFollowUpPlanTickRouteImport } from './routes/api/public/hooks/follow-up-plan-tick'
@@ -1589,6 +1590,12 @@ const ApiPublicHooksLoanReminderEmailsRoute =
     path: '/api/public/hooks/loan-reminder-emails',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksKwEasymkwPollRoute =
+  ApiPublicHooksKwEasymkwPollRouteImport.update({
+    id: '/api/public/hooks/kw-easymkw-poll',
+    path: '/api/public/hooks/kw-easymkw-poll',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksInstitutionMailTickRoute =
   ApiPublicHooksInstitutionMailTickRouteImport.update({
     id: '/api/public/hooks/institution-mail-tick',
@@ -1909,6 +1916,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
+  '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -2166,6 +2174,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
+  '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -2434,6 +2443,7 @@ export interface FileRoutesById {
   '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
+  '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -2703,6 +2713,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
+    | '/api/public/hooks/kw-easymkw-poll'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -2960,6 +2971,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
+    | '/api/public/hooks/kw-easymkw-poll'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -3227,6 +3239,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
+    | '/api/public/hooks/kw-easymkw-poll'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -3342,6 +3355,7 @@ export interface RootRouteChildren {
   ApiPublicHooksFollowUpPlanTickRoute: typeof ApiPublicHooksFollowUpPlanTickRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
   ApiPublicHooksInstitutionMailTickRoute: typeof ApiPublicHooksInstitutionMailTickRoute
+  ApiPublicHooksKwEasymkwPollRoute: typeof ApiPublicHooksKwEasymkwPollRoute
   ApiPublicHooksLoanReminderEmailsRoute: typeof ApiPublicHooksLoanReminderEmailsRoute
   ApiPublicHooksLoanReminderEmailsTickRoute: typeof ApiPublicHooksLoanReminderEmailsTickRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
@@ -5130,6 +5144,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksLoanReminderEmailsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/kw-easymkw-poll': {
+      id: '/api/public/hooks/kw-easymkw-poll'
+      path: '/api/public/hooks/kw-easymkw-poll'
+      fullPath: '/api/public/hooks/kw-easymkw-poll'
+      preLoaderRoute: typeof ApiPublicHooksKwEasymkwPollRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/institution-mail-tick': {
       id: '/api/public/hooks/institution-mail-tick'
       path: '/api/public/hooks/institution-mail-tick'
@@ -5761,6 +5782,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
   ApiPublicHooksInstitutionMailTickRoute:
     ApiPublicHooksInstitutionMailTickRoute,
+  ApiPublicHooksKwEasymkwPollRoute: ApiPublicHooksKwEasymkwPollRoute,
   ApiPublicHooksLoanReminderEmailsRoute: ApiPublicHooksLoanReminderEmailsRoute,
   ApiPublicHooksLoanReminderEmailsTickRoute:
     ApiPublicHooksLoanReminderEmailsTickRoute,
