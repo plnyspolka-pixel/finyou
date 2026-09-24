@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "finance-you-mcp",
-      "version": "0.3.0",
+      "version": "0.6.0",
       "title": "Finance You"
     },
     "tools": [
@@ -2072,6 +2072,554 @@
               "description": "Przesunięcie do stronicowania (domyślnie 0)."
             }
           },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "fetch_kw_content",
+        "title": "Fetch land register (KW) content",
+        "description": "Pobiera treść księgi wieczystej z EKW (przez CMD KW Engine) i zapisuje ją w cache kw_documents; gdy księga jest już w cache, zwraca ją bez nowego zapytania (force=true wymusza odświeżenie). Zwraca okładkę i działy I-O, I-Sp, II, III, IV oraz wyciąg: właściciele z PESEL, hipoteki, adres, działki. Pobranie trwa zwykle 20–90 s — gdy nie zdąży w `wait_seconds`, zwraca status `processing`; wywołaj ponownie (bez force) albo `get_kw_content`. Każde pobranie zużywa grupowy limit CMD. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "kw_number": {
+              "type": "string",
+              "minLength": 5,
+              "description": "Numer KW w dowolnym zapisie, np. WA1M/00123456/7 albo WA1M001234567."
+            },
+            "application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Albo id wniosku — numer KW z jego nieruchomości."
+            },
+            "force": {
+              "type": "boolean",
+              "default": false,
+              "description": "Wymuś ponowne pobranie z EKW mimo treści w cache (zużywa limit CMD)."
+            },
+            "wait_seconds": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 50,
+              "default": 45,
+              "description": "Ile sekund czekać na wynik z CMD w tym wywołaniu."
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "text",
+                "html",
+                "structured"
+              ],
+              "default": "text",
+              "description": "text — działy jako czytelny tekst (domyślnie); html — surowy HTML z EKW; structured — tylko wyciąg (właściciele, hipoteki, adres) bez treści działów."
+            },
+            "sections": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "okladka",
+                  "dzial_1o",
+                  "dzial_1s",
+                  "dzial_2",
+                  "dzial_3",
+                  "dzial_4"
+                ]
+              },
+              "description": "Ogranicz treść do wybranych działów (domyślnie wszystkie)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_kw_content",
+        "title": "Get cached KW content",
+        "description": "Treść księgi wieczystej z cache (kw_documents) bez odpytywania EKW i bez zużycia limitu CMD: status pobrania, działy I-O, I-Sp, II, III, IV i wyciąg (właściciele, hipoteki, adres). Gdy księgi nie ma w cache — użyj `fetch_kw_content`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "kw_number": {
+              "type": "string",
+              "minLength": 5,
+              "description": "Numer KW w dowolnym zapisie, np. WA1M/00123456/7 albo WA1M001234567."
+            },
+            "application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Albo id wniosku — numer KW z jego nieruchomości."
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "text",
+                "html",
+                "structured"
+              ],
+              "default": "text",
+              "description": "text — działy jako czytelny tekst (domyślnie); html — surowy HTML z EKW; structured — tylko wyciąg (właściciele, hipoteki, adres) bez treści działów."
+            },
+            "sections": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "okladka",
+                  "dzial_1o",
+                  "dzial_1s",
+                  "dzial_2",
+                  "dzial_3",
+                  "dzial_4"
+                ]
+              },
+              "description": "Ogranicz treść do wybranych działów (domyślnie wszystkie)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "analyze_kw",
+        "title": "Analyze land register (KW) — full pipeline",
+        "description": "Pełna analiza księgi wieczystej w jednym wywołaniu, dla numeru KW albo wniosku: (1) pobranie treści z EKW, jeśli nie ma jej w cache; (2) wyciąg i ocena stanu prawnego z parsera działów (właściciele, służebności, egzekucje, hipoteki, legal risk score); (3) silnik reguł KW — status ogólny (STOP / WSTRZYMANE / WARUNKOWO_DOPUSZCZALNE / …), ustalenia z wymaganymi dokumentami, miejsce hipoteki inwestora, LTV/CLTV (wynik zapisany jak z panelu); (4) sprawdzenie właścicieli z działu II w CEIDG i KRS; (5) potencjał lokalizacji po prefiksie KW; (6) przy `application_id` — ocena ryzyka inwestycyjnego wniosku. Kwoty transakcji domyślnie z wniosku. Błąd jednego kroku nie przerywa pozostałych (lista `errors`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "kw_number": {
+              "type": "string",
+              "minLength": 5,
+              "description": "Numer KW w dowolnym zapisie, np. WA1M/00123456/7 albo WA1M001234567."
+            },
+            "application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Albo id wniosku — numer KW z jego nieruchomości."
+            },
+            "fetch_if_missing": {
+              "type": "boolean",
+              "default": true,
+              "description": "Pobierz treść z EKW, gdy nie ma jej w cache (zużywa limit CMD)."
+            },
+            "force_refresh": {
+              "type": "boolean",
+              "default": false,
+              "description": "Pobierz świeży odpis z EKW mimo cache."
+            },
+            "loan_amount": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Kwota pożyczki (PLN) do analizy hipoteki i LTV; domyślnie kwota z wniosku."
+            },
+            "property_value": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Przyjęta wartość nieruchomości (PLN); domyślnie wartość szacunkowa z wniosku."
+            },
+            "transaction_type": {
+              "type": "string",
+              "enum": [
+                "CASH_LOAN",
+                "REFINANCING",
+                "PURCHASE_FINANCING",
+                "BRIDGE",
+                "OTHER"
+              ],
+              "default": "CASH_LOAN"
+            },
+            "check_owners": {
+              "type": "boolean",
+              "default": true,
+              "description": "Sprawdź właścicieli z działu II w CEIDG i KRS."
+            },
+            "score_location": {
+              "type": "boolean",
+              "default": true,
+              "description": "Policz potencjał lokalizacji."
+            },
+            "risk_assessment": {
+              "type": "boolean",
+              "default": true,
+              "description": "Przy application_id: policz ocenę ryzyka inwestycyjnego."
+            },
+            "force_risk": {
+              "type": "boolean",
+              "default": false,
+              "description": "Przelicz ocenę ryzyka mimo zapisanej (domyślnie zwraca zapisaną)."
+            },
+            "full": {
+              "type": "boolean",
+              "default": false,
+              "description": "Pełne wyniki modułów zamiast skrótów (duże)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "run_analysis_pipeline",
+        "title": "Run analysis pipeline for application",
+        "description": "Uruchamia pipeline analityczny wniosku, ten sam co automat i przycisk w panelu: pobranie KW → właściciele (CEIDG/KRS) → analiza KW (silnik reguł) → ocena ryzyka. Zamyka trwający przebieg i otwiera nowy. Przy `wait=true` od razu przesuwa kroki (do ok. `wait_seconds`); czego nie zdąży, dokończy cron tick — stan sprawdzisz przez `get_analysis_pipeline_run`. Zwraca stan kroków i raport z wyników. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "wait": {
+              "type": "boolean",
+              "default": true,
+              "description": "Wykonaj kroki od razu zamiast czekać na cron."
+            },
+            "wait_seconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 120,
+              "default": 90,
+              "description": "Budżet czasu na kroki w tym wywołaniu."
+            },
+            "full": {
+              "type": "boolean",
+              "default": false,
+              "description": "Pełne wyniki modułów zamiast skrótów."
+            }
+          },
+          "required": [
+            "application_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_analysis_pipeline_run",
+        "title": "Get analysis pipeline run and results",
+        "description": "Stan przebiegu pipeline'u analitycznego (po `run_id` albo najnowszy dla wniosku) razem z raportem z wyników: status pobrania KW, silnik reguł KW (status ogólny, ustalenia, miejsce hipoteki, LTV), właściciele (CEIDG/KRS), ocena ryzyka, potencjał lokalizacji. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "run_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "full": {
+              "type": "boolean",
+              "default": false,
+              "description": "Pełne wyniki modułów zamiast skrótów."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_contract_schema",
+        "title": "Get loan contract data schema",
+        "description": "Schemat danych umowy pożyczki (UmowaData) dla silnika klauzul Finance You i zasady wypełniania — przeczytaj przed `draft_contract`. `include_clauses=true` dołącza listę klauzul (ID, sekcja, czy obowiązkowa, skrót treści) do ewentualnego wyłączenia.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "include_clauses": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "draft_contract",
+        "title": "Draft loan contract (validate + preview)",
+        "description": "Buduje i sprawdza szkic umowy pożyczki w silniku klauzul — niczego nie zapisuje. Źródła danych (łączone w tej kolejności): `profile_id` (profil klienta z ofertą — strony, warunki, zabezpieczenia; kalkulację można nadpisać `calc`), `umowa` (pełny szkic z poprzedniego wywołania), `patch` (zmiany do naniesienia), `kw_numbers` (nieruchomości z treści KW w cache: właściciele, współwłasność, obciążenia z działów III/IV). System dolicza kwoty słownie, harmonogram rat i identyfikatory nieruchomości, domyka grosze, normalizuje numery KW (dopełnienie do 8 cyfr + cyfra kontrolna), waliduje kompletność i spójność konstrukcyjną. Zwraca uzupełniony `umowa` (przekaż go w kolejnym wywołaniu), problemy (błędy blokują umowę), autokorekty i — gdy brak błędów — podgląd tekstu umowy. Schemat: `get_contract_schema`.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "profile_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Id profilu klienta (client_profiles)."
+            },
+            "calc": {
+              "type": "object",
+              "additionalProperties": {},
+              "description": "Kalkulacja z kalkulatora (LoanCalcPayload); domyślnie z oferty w profilu."
+            },
+            "umowa": {
+              "type": "object",
+              "additionalProperties": {},
+              "description": "Szkic danych UmowaData (np. `umowa` z poprzedniego wyniku)."
+            },
+            "patch": {
+              "type": "object",
+              "additionalProperties": {},
+              "description": "Zmiany do naniesienia na szkic (deep-merge, tablice podmieniane w całości)."
+            },
+            "kw_numbers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 5
+              },
+              "maxItems": 6,
+              "description": "Numery KW zabezpieczenia — nieruchomości z treści KW w cache."
+            },
+            "excluded_clauses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "ID klauzul wyłączonych z umowy (lista w get_contract_schema, include_clauses=true)."
+            },
+            "preview": {
+              "type": "boolean",
+              "default": true,
+              "description": "Dołącz podgląd tekstu umowy, gdy brak błędów."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_contract_docx",
+        "title": "Generate loan contract document set (.docx)",
+        "description": "Generuje z silnika klauzul JEDEN plik .docx z kompletem dokumentów pożyczki, w kolejności: (1) Wniosek o udzielenie pożyczki pieniężnej (dane, charakter niekonsumencki, warunki, oświadczenia AML, PEP, ocena AML dla pożyczkodawcy, odpowiedzialność karna), (2) Umowa pożyczki (§ z biblioteki klauzul: przedmiot, kwota/prowizja/wypłata, zabezpieczenia, windykacja, oświadczenia z RODO, postanowienia ogólne, wypowiedzenie), (3) Załącznik nr 1 — Harmonogram spłat (tabela rat: nr, termin, rata, kapitał, odsetki, prowizja, saldo + sumy), (4) Załącznik nr 2 — Protokół z negocjacji indywidualnych, (5) Załącznik nr 3 — Tabela opłat windykacyjnych; pod każdą częścią blok podpisów. Dokument zawiera wyłącznie treść wiążącą. Zapisuje plik w Storage i trwały wpis w rejestrze wygenerowanych dokumentów (powiązany z `loan_application_id`, gdy podany) wraz z audytem (kto, kiedy, SHA-256 treści, wersja biblioteki klauzul); zwraca link do pobrania (ważny 1 h). Przyjmuje te same źródła co `draft_contract`; przy błędach walidacji nie generuje pliku i zwraca braki. Wywołuj po akceptacji podglądu przez użytkownika.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "profile_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "calc": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "umowa": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "patch": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "kw_numbers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 5
+              },
+              "maxItems": 6
+            },
+            "excluded_clauses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "ID klauzul wyłączonych z umowy (lista w get_contract_schema, include_clauses=true)."
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Id wniosku (loan_applications), z którym wiązany jest wygenerowany komplet."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "find_client",
+        "title": "Find client by any identifier",
+        "description": "Szuka klienta po czymkolwiek: imię i nazwisko, firma, e-mail, telefon, PESEL, NIP, numer KW, id klienta / wniosku / leada. Zwraca pasujących klientów (z liczbą wniosków) i leady bez przypisanego klienta. Następnie `get_client_dossier` z `client_id`. Tylko administrator/operator; wyszukiwanie po PESEL tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: nazwisko, e-mail, telefon, PESEL, NIP, KW albo id."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_client_dossier",
+        "title": "Get complete client dossier",
+        "description": "Pełna teczka klienta w jednym wywołaniu: wszystkie dane klienta (kontakt, adres, firma, zgody, blokady, notatki; PESEL, rachunek i raport BIK dla administratora), profil klienta z kreatora (oferta, dane pożyczkodawcy), wnioski ze statusami i historią, nieruchomości, dokumenty (z linkami do pobrania), księgi wieczyste (stan pobrania, wyniki silnika reguł, właściciele), analizy (wycena, ryzyko, lokalizacja, ekstrakcje z dokumentów), oferty inwestorów i dystrybucja, leady, pełna komunikacja (maile, SMS, rozmowy z transkrypcjami, Messenger, zdarzenia kontaktu, kolejka połączeń), czat z inwestorami, wygenerowane umowy, KYC/AML oraz pożyczki w windykacji. Klienta wskaż przez `client_id`, `application_id` albo `lead_id` (albo znajdź `find_client`). `sections` zawęża zakres. Każde otwarcie jest audytowane. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "sections": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "applications",
+                  "properties",
+                  "documents",
+                  "kw",
+                  "analyses",
+                  "profile",
+                  "leads",
+                  "communications",
+                  "chat",
+                  "contracts",
+                  "kyc_aml",
+                  "collections"
+                ]
+              },
+              "description": "Zakres teczki (domyślnie wszystko)."
+            },
+            "communications_limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "description": "Maks. liczba wiadomości/rozmów (najnowsze)."
+            },
+            "full_text": {
+              "type": "boolean",
+              "default": false,
+              "description": "Pełne treści wiadomości i transkrypcji zamiast skrótów."
+            },
+            "file_links": {
+              "type": "boolean",
+              "default": true,
+              "description": "Linki do pobrania dokumentów i umów (ważne 1 h)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_client_document",
+        "title": "Read client document",
+        "description": "Otwiera dokument klienta (z teczki / listy dokumentów wniosku): metadane, link do pobrania (1 h), tekst i dane wyciągnięte przez OCR/AI, a dla zdjęć i skanów (JPG/PNG/WebP do 3 MB) — sam obraz do obejrzenia w czacie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "include_image": {
+              "type": "boolean",
+              "default": true,
+              "description": "Dołącz obraz (zdjęcia, skany)."
+            },
+            "include_text": {
+              "type": "boolean",
+              "default": true,
+              "description": "Dołącz tekst z OCR."
+            }
+          },
+          "required": [
+            "document_id"
+          ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
@@ -5088,7 +5636,7 @@
                 "land_register_number": {
                   "type": "string",
                   "maxLength": 30,
-                  "description": "Numer KW, np. WA1M/00123456/7."
+                  "description": "Numer KW, np. WA1M/00123456/7. Numer bez zer (KR1P/610770/2) jest dopełniany do 8 cyfr; błędna cyfra kontrolna odrzuca zapis."
                 },
                 "estimated_value": {
                   "type": "number",
@@ -5312,7 +5860,7 @@
             "land_register_number": {
               "type": "string",
               "maxLength": 30,
-              "description": "Numer KW, np. WA1M/00123456/7."
+              "description": "Numer KW, np. WA1M/00123456/7. Numer bez zer (KR1P/610770/2) jest dopełniany do 8 cyfr; błędna cyfra kontrolna odrzuca zapis."
             },
             "estimated_value": {
               "type": "number",
@@ -10780,6 +11328,34 @@
           "required": [
             "video_id"
           ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "sync_landing_investor_video",
+        "title": "Sync landing investor video",
+        "description": "Kopiuje gotowy film HeyGen „Twoja droga do prywatnego finansowania nieruchomości” do naszego Storage (publiczny bucket studio-media, stała ścieżka) — landing /dla-inwestora odtwarza go wtedy z naszego pliku zamiast z HeyGen. Ponowne wywołanie nadpisuje kopię. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "variant": {
+              "type": "string",
+              "enum": [
+                "captioned",
+                "clean"
+              ],
+              "default": "captioned",
+              "description": "Który plik skopiować: z wypalonymi napisami (jeśli jest) czy czysty."
+            }
+          },
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
