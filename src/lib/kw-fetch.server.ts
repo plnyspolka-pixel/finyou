@@ -158,6 +158,21 @@ export async function fetchAndStoreKw(
   kw: string,
   opts?: { orderedBy?: string | null; force?: boolean; pollMaxMs?: number },
 ): Promise<KwFetchOutcome> {
+  // Produkcja: EasyMKW (mkw.monitoringdanych.io, kredyty na koncie).
+  // Stary CMD KW Engine (dev, grupowy limit) tylko gdy brak danych EasyMKW.
+  const { hasEasyMkwConfig } = await import("@/lib/easymkw.server");
+  if (hasEasyMkwConfig()) {
+    const { fetchAndStoreKwEasyMkw } = await import("@/lib/kw-easymkw.server");
+    return await fetchAndStoreKwEasyMkw(kw, opts);
+  }
+  return await fetchAndStoreKwCmd(kw, opts);
+}
+
+/** Stara ścieżka: CMD KW Engine (środowisko dev z grupowym limitem). */
+export async function fetchAndStoreKwCmd(
+  kw: string,
+  opts?: { orderedBy?: string | null; force?: boolean; pollMaxMs?: number },
+): Promise<KwFetchOutcome> {
   if (!hasCmdConfig()) {
     return {
       ok: false,
