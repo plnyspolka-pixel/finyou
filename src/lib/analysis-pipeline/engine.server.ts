@@ -162,6 +162,79 @@ export async function processAnalysisPipelineRuns(): Promise<PipelineProcessResu
   return result;
 }
 
+/**
+ * Ręczne uruchomienie pipeline'u dla wniosku (panel, MCP): zamyka trwający
+ * przebieg i otwiera nowy. Rzuca, gdy wniosek nie ma poprawnego numeru KW.
+ */
+export async function startAnalysisPipelineRunCore(
+  applicationId: string,
+  triggerReason: string,
+): Promise<{ id: string; kw_number: string }> {
+  const { normalizeKwNumber } = await import("@/lib/kw-fetch.server");
+  const { data: prop } = await supabaseAdmin
+    .from("properties")
+    .select("land_register_number")
+    .eq("loan_application_id", applicationId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const kwNumber = normalizeKwNumber(String(prop?.land_register_number ?? ""));
+  if (!kwNumber) throw new Error("Wniosek nie ma poprawnego numeru KW.");
+
+  await (supabaseAdmin as any)
+    .from("analysis_pipeline_runs")
+    .update({
+      status: "error",
+      error: "Przerwane ręcznym ponowieniem",
+      finished_at: new Date().toISOString(),
+    })
+    .eq("loan_application_id", applicationId)
+    .eq("status", "running");
+
+  const { data, error } = await (supabaseAdmin as any)
+    .from("analysis_pipeline_runs")
+    .insert({
+      loan_application_id: applicationId,
+      kw_number: kwNumber,
+      status: "running",
+      steps: freshSteps(),
+      trigger_reason: triggerReason,
+    })
+    .select("id, kw_number")
+    .single();
+  if (error) throw new Error(error.message);
+  return data as { id: string; kw_number: string };
+}
+
+/**
+ * Jeden krok naprzód dla wskazanego przebiegu (poza cron tickiem — np. MCP
+ * czeka na wynik). Błąd kroku zamyka przebieg tak samo jak w ticku.
+ */
+export async function advanceAnalysisPipelineRunById(
+  runId: string,
+): Promise<"finished" | "waiting" | "not_running"> {
+  const { data: run, error } = await (supabaseAdmin as any)
+    .from("analysis_pipeline_runs")
+    .select("id, loan_application_id, kw_number, steps, status")
+    .eq("id", runId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!run || run.status !== "running") return "not_running";
+  try {
+    return await advanceRun(run);
+  } catch (e: any) {
+    await (supabaseAdmin as any)
+      .from("analysis_pipeline_runs")
+      .update({
+        status: "error",
+        error: e?.message ?? "błąd",
+        finished_at: new Date().toISOString(),
+      })
+      .eq("id", run.id);
+    throw e;
+  }
+}
+
 async function saveSteps(runId: string, steps: RunSteps): Promise<void> {
   await (supabaseAdmin as any).from("analysis_pipeline_runs").update({ steps }).eq("id", runId);
 }
