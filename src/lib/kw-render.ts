@@ -24,6 +24,8 @@ export interface KwExtractionOwner {
   siedziba?: string | null;
   /** Np. "1/2". */
   udzial?: string | null;
+  /** Rodzaj wspólności z działu II, np. "wspólność ustawowa majątkowa małżeńska". */
+  rodzajWspolnosci?: string | null;
 }
 
 export interface KwExtractionDzialka {

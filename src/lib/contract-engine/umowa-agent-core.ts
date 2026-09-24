@@ -20,6 +20,8 @@ import {
   type KorektaGroszowa,
 } from "./schedule";
 import { buildEngineSchedule } from "./loan-schedule";
+import { validateKwNumber } from "../kw";
+import { FINANCE_YOU, jestFinanceYou } from "./finance-you";
 
 // ── scalanie łatki danych ────────────────────────────────────────────
 /** Deep-merge łatki AI na szkic: obiekty scalane, tablice podmieniane, null czyści. */
@@ -92,6 +94,8 @@ export function uzupelnijHarmonogram(umowa: any): void {
     return;
 
   const prow = Number.isNaN(prowizja) ? 0 : prowizja;
+  const docelowa = parseKwota(h.kwota_raty_koncowej_docelowa?.cyframi);
+  const zCelem = typ === "balonowy" && !Number.isNaN(docelowa) && docelowa > 0;
   let cap: number;
   if (typ === "balonowy") {
     const pulap = parseKwota(h.kwota_raty?.cyframi);
@@ -112,8 +116,18 @@ export function uzupelnijHarmonogram(umowa: any): void {
     months: liczbaRat,
     maxMonthlyPayment: cap,
     firstPaymentDate: pierwsza,
+    targetFinalPayment: zCelem ? docelowa : null,
   });
   if (eng.rows.length === 0) return;
+  if (zCelem) {
+    if (eng.targetError) return; // walidator zgłosi niespójność (R29)
+    // Silnik dobrał prowizję pod docelową ratę końcową — prowizja w §2 musi
+    // być sumą prowizji z harmonogramu (kwotę słownie doliczy uzupelnijSlownie).
+    w.prowizja = {
+      ...(w.prowizja ?? {}),
+      kwota: { cyframi: formatKwotaPL(eng.prowizja), slownie: "" },
+    };
+  }
 
   h.raty = formatujRaty(
     eng.rows.map((r) => ({
@@ -139,6 +153,40 @@ export function uzupelnijHarmonogram(umowa: any): void {
   }
 }
 
+/**
+ * Normalizacja numerów KW na wejściu: dopełnienie numeru do 8 cyfr
+ * („KR1P/610770/2” → „KR1P/00610770/2”) i kontrola cyfry kontrolnej.
+ * Błędny numer to brak blokujący (BLAD) — nie zgadujemy poprawnej cyfry.
+ */
+export function normalizujNumeryKw(umowa: any): Problem[] {
+  const problemy: Problem[] = [];
+  const nier: any[] = Array.isArray(umowa?.nieruchomosci) ? umowa.nieruchomosci : [];
+  nier.forEach((n, i) => {
+    if (!n || typeof n !== "object" || n.nr_kw == null || n.nr_kw === "") return;
+    const kw = validateKwNumber(n.nr_kw);
+    if (kw.ok) n.nr_kw = kw.value;
+    else {
+      if (kw.value) n.nr_kw = kw.value;
+      problemy.push({
+        poziom: "BLAD",
+        sciezka: `nieruchomosci[${i}].nr_kw`,
+        komunikat: kw.message,
+      });
+    }
+  });
+  return problemy;
+}
+
+/**
+ * Rachunek spłaty: gdy Pożyczkodawcą jest Finance You, a rachunku nie podano,
+ * wstawiamy rachunek Finance You. Podany rachunek nie jest nadpisywany.
+ */
+export function uzupelnijRachunekSplaty(umowa: any): void {
+  if (!umowa?.warunki || !jestFinanceYou(umowa.pozyczkodawca)) return;
+  const r = (umowa.warunki.rachunki ??= {});
+  if (!String(r.splata ?? "").trim()) r.splata = FINANCE_YOU.rachunekSplaty;
+}
+
 /** Pełne uzupełnienie + autonaprawa + walidacja szkicu umowy. */
 export function przetworzSzkic(umowa: any): {
   umowa: any;
@@ -146,12 +194,14 @@ export function przetworzSzkic(umowa: any): {
   autokorekty: KorektaGroszowa[];
 } {
   uzupelnijIdNieruchomosci(umowa);
+  const problemyKw = normalizujNumeryKw(umowa);
+  uzupelnijRachunekSplaty(umowa);
   uzupelnijHarmonogram(umowa);
   uzupelnijSlownie(umowa);
   const autokorekty = umowa?.warunki ? autonaprawHarmonogram(umowa.warunki) : [];
   let problemy: Problem[] = [];
   try {
-    problemy = [...waliduj(umowa), ...walidujHarmonogram(umowa?.warunki ?? {})];
+    problemy = [...problemyKw, ...waliduj(umowa), ...walidujHarmonogram(umowa?.warunki ?? {})];
   } catch (e: any) {
     problemy = [
       {

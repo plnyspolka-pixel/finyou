@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { normalizeKwNumbersInText } from "@/lib/kw";
 import { z } from "zod";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -190,7 +191,9 @@ async function submitApplicationCore(
     .insert({
       loan_application_id: loan.id,
       property_type: data.property_type,
-      land_register_number: data.land_register_number ?? null,
+      // Numery KW dopełnione do 8 cyfr (KR1P/610770/2 → KR1P/00610770/2) —
+      // bez tego pobranie z CMD i scoring lokalizacji zwracały INVALID_KW.
+      land_register_number: normalizeKwNumbersInText(data.land_register_number ?? null),
       city: data.city ?? null,
     })
     .select("id")

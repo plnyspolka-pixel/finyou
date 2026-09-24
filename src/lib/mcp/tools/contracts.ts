@@ -7,7 +7,7 @@ import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { actorId, fail, handle, linkBlock, ok, oneOf, requireUser, WRITE } from "../_helpers";
-import { compactKwNumber, formatKwNumber } from "@/lib/kw";
+import { compactKwNumber, validateKwNumber } from "@/lib/kw";
 import { KATALOG_SCHEMATU } from "@/lib/contract-engine/umowa-schema-catalog";
 import type { ClientProfile } from "@/lib/client-profile-types";
 
@@ -19,7 +19,9 @@ const ZASADY_DANYCH = [
   "Nie nadawaj identyfikatorów nieruchomości (id) — nada je system.",
   'Domyślne praktyki Finance You: prowizja model "nie_potracana_raty"; hipoteka i kwota z art. 777 zwykle 2× łącznej kwoty do spłaty — zawsze potwierdź je z użytkownikiem.',
   "Łatka (patch) to deep-merge: obiekty są scalane, tablice podmieniane w całości (podając tablicę, podaj ją kompletną), null usuwa wartość.",
-  "Silnik nie ocenia ryzyka prawnego ani nie doradza — problemy walidatora to braki i niespójności konstrukcyjne.",
+  "Silnik nie ocenia ryzyka prawnego ani parametrów (limity prowizji, odsetki maksymalne, terminy) — problemy walidatora to wyłącznie braki i niespójności konstrukcyjne. Dokument zawiera tylko treść wiążącą.",
+  "Numery KW podawaj w dowolnym zapisie — system dopełnia numer zerami do 8 cyfr (KR1P/610770/2 → KR1P/00610770/2) i sprawdza cyfrę kontrolną; błędna cyfra blokuje umowę.",
+  "Harmonogram balonowy z ratą końcową „kapitał + pułap”: podaj warunki.harmonogram.kwota_raty (pułap) i kwota_raty_koncowej_docelowa — silnik sam dobierze prowizję do grosza.",
 ];
 
 const excludedClausesSchema = z
@@ -58,9 +60,9 @@ async function nieruchomosciZKw(
   const istniejace: any[] = Array.isArray(umowa?.nieruchomosci) ? umowa.nieruchomosci : [];
 
   for (const [i, raw] of kwNumbers.entries()) {
-    const compact = compactKwNumber(raw);
-    if (!compact) throw new Error(`Nieprawidłowy numer KW: ${raw}`);
-    const label = formatKwNumber(compact) ?? compact;
+    const kw = validateKwNumber(raw);
+    if (!kw.ok) throw new Error(kw.message);
+    const { compact, value: label } = kw;
     const row = await oneOf<Record<string, string | null>>(
       s
         .from("kw_documents")
@@ -84,7 +86,49 @@ async function nieruchomosciZKw(
         `Brak treści KW ${label} w cache — pobierz ją najpierw narzędziem fetch_kw_content.`,
       );
     }
-    const mapped = mapujKwDoNieruchomosci(kwDocumentToExtraction(sekcje), {
+    const ekstrakcja = kwDocumentToExtraction(sekcje);
+
+    // Właściciele z działu II jako szkic pożyczkobiorców, gdy szkic ich
+    // jeszcze nie ma (imię i nazwisko, PESEL; adres uzupełnia użytkownik).
+    if (!umowa?.pozyczkobiorca) {
+      const osoby = (ekstrakcja.dzial2?.wlasciciele ?? []).filter((o) => o?.pesel && o?.nazwisko);
+      if (osoby.length) {
+        const strony = osoby.map((o) => ({
+          typ: "osoba_fizyczna",
+          imie_nazwisko: [o.imiePierwsze, o.imieDrugie, o.nazwisko].filter(Boolean).join(" "),
+          pesel: o.pesel,
+        }));
+        umowa.pozyczkobiorca = strony.length === 1 ? strony[0] : strony;
+        ostrzezenia.push(
+          `${label}: pożyczkobiorców przyjęto z działu II (właściciele) — uzupełnij adresy i dane kontaktowe.`,
+        );
+      }
+    }
+
+    // Sąd prowadzący księgę: z okładki, a gdy jej brak — z innej księgi tego
+    // samego wydziału (ten sam prefiks, np. KR1P) w cache kw_documents.
+    if (!ekstrakcja.sadRejonowy) {
+      const { data: inne } = await s
+        .from("kw_documents")
+        .select("kw_number, okladka, dzial_1o, dzial_2")
+        .like("kw_number", `${compact.slice(0, 4)}%`)
+        .neq("kw_number", compact)
+        .limit(10);
+      for (const d of inne ?? []) {
+        const sad = kwDocumentToExtraction({
+          kwNumber: d.kw_number,
+          okladka: decodeMaybeBase64(d.okladka),
+          dzial_1o: decodeMaybeBase64(d.dzial_1o),
+          dzial_2: decodeMaybeBase64(d.dzial_2),
+        }).sadRejonowy;
+        if (sad) {
+          ekstrakcja.sadRejonowy = sad;
+          break;
+        }
+      }
+    }
+
+    const mapped = mapujKwDoNieruchomosci(ekstrakcja, {
       id: `N${i + 1}`,
       pozyczkobiorcaPesele: pesele(umowa?.pozyczkobiorca),
       poreczicielPesel: pesele(umowa?.porecziciel)[0] ?? null,
@@ -186,7 +230,7 @@ export const getContractSchema = defineTool({
         workflow: [
           "1. draft_contract z profile_id (dane z profilu klienta i oferty) i/lub kw_numbers (nieruchomości z treści KW) albo z danymi od użytkownika w `umowa`.",
           "2. Uzupełniaj braki z listy `problemy.bledy`, przekazując poprzedni `umowa` z wyniku + `patch` ze zmianami.",
-          "3. Gdy `blocked=false`, pokaż użytkownikowi podgląd (`preview_text`) i po akceptacji wywołaj generate_contract_docx z tym samym `umowa`.",
+          "3. Gdy `blocked=false`, pokaż użytkownikowi podgląd (`preview_text`) i po akceptacji wywołaj generate_contract_docx z tym samym `umowa` (i `loan_application_id`, gdy umowa dotyczy wniosku) — powstaje jeden .docx: wniosek, umowa, Zał. 1 harmonogram, Zał. 2 protokół z negocjacji, Zał. 3 tabela opłat windykacyjnych.",
         ],
       };
       if (include_clauses) {
@@ -201,7 +245,7 @@ export const draftContract = defineTool({
   name: "draft_contract",
   title: "Draft loan contract (validate + preview)",
   description:
-    "Buduje i sprawdza szkic umowy pożyczki w silniku klauzul — niczego nie zapisuje. Źródła danych (łączone w tej kolejności): `profile_id` (profil klienta z ofertą — strony, warunki, zabezpieczenia; kalkulację można nadpisać `calc`), `umowa` (pełny szkic z poprzedniego wywołania), `patch` (zmiany do naniesienia), `kw_numbers` (nieruchomości z treści KW w cache: właściciele, współwłasność, obciążenia z działów III/IV). System dolicza kwoty słownie, harmonogram rat i identyfikatory nieruchomości, domyka grosze, waliduje (27 reguł). Zwraca uzupełniony `umowa` (przekaż go w kolejnym wywołaniu), problemy (błędy blokują umowę), autokorekty i — gdy brak błędów — podgląd tekstu umowy. Schemat: `get_contract_schema`.",
+    "Buduje i sprawdza szkic umowy pożyczki w silniku klauzul — niczego nie zapisuje. Źródła danych (łączone w tej kolejności): `profile_id` (profil klienta z ofertą — strony, warunki, zabezpieczenia; kalkulację można nadpisać `calc`), `umowa` (pełny szkic z poprzedniego wywołania), `patch` (zmiany do naniesienia), `kw_numbers` (nieruchomości z treści KW w cache: właściciele, współwłasność, obciążenia z działów III/IV). System dolicza kwoty słownie, harmonogram rat i identyfikatory nieruchomości, domyka grosze, normalizuje numery KW (dopełnienie do 8 cyfr + cyfra kontrolna), waliduje kompletność i spójność konstrukcyjną. Zwraca uzupełniony `umowa` (przekaż go w kolejnym wywołaniu), problemy (błędy blokują umowę), autokorekty i — gdy brak błędów — podgląd tekstu umowy. Schemat: `get_contract_schema`.",
   inputSchema: {
     profile_id: z.string().uuid().optional().describe("Id profilu klienta (client_profiles)."),
     calc: z
@@ -258,9 +302,9 @@ export const draftContract = defineTool({
 
 export const generateContractDocx = defineTool({
   name: "generate_contract_docx",
-  title: "Generate loan contract .docx",
+  title: "Generate loan contract document set (.docx)",
   description:
-    "Generuje plik .docx umowy pożyczki z silnika klauzul (z harmonogramem rat w załączniku), zapisuje go w Storage i w rejestrze wygenerowanych dokumentów, zwraca link do pobrania (ważny 1 h) i ścieżkę pliku. Przyjmuje te same źródła co `draft_contract`; przy błędach walidacji nie generuje pliku i zwraca braki. Wywołuj po akceptacji podglądu przez użytkownika.",
+    "Generuje z silnika klauzul JEDEN plik .docx z kompletem dokumentów pożyczki, w kolejności: (1) Wniosek o udzielenie pożyczki pieniężnej (dane, charakter niekonsumencki, warunki, oświadczenia AML, PEP, ocena AML dla pożyczkodawcy, odpowiedzialność karna), (2) Umowa pożyczki (§ z biblioteki klauzul: przedmiot, kwota/prowizja/wypłata, zabezpieczenia, windykacja, oświadczenia z RODO, postanowienia ogólne, wypowiedzenie), (3) Załącznik nr 1 — Harmonogram spłat (tabela rat: nr, termin, rata, kapitał, odsetki, prowizja, saldo + sumy), (4) Załącznik nr 2 — Protokół z negocjacji indywidualnych, (5) Załącznik nr 3 — Tabela opłat windykacyjnych; pod każdą częścią blok podpisów. Dokument zawiera wyłącznie treść wiążącą. Zapisuje plik w Storage i trwały wpis w rejestrze wygenerowanych dokumentów (powiązany z `loan_application_id`, gdy podany) wraz z audytem (kto, kiedy, SHA-256 treści, wersja biblioteki klauzul); zwraca link do pobrania (ważny 1 h). Przyjmuje te same źródła co `draft_contract`; przy błędach walidacji nie generuje pliku i zwraca braki. Wywołuj po akceptacji podglądu przez użytkownika.",
   inputSchema: {
     profile_id: z.string().uuid().optional(),
     calc: z.record(z.string(), z.any()).optional(),
@@ -268,6 +312,11 @@ export const generateContractDocx = defineTool({
     patch: z.record(z.string(), z.any()).optional(),
     kw_numbers: z.array(z.string().min(5)).max(6).optional(),
     excluded_clauses: excludedClausesSchema,
+    loan_application_id: z
+      .string()
+      .uuid()
+      .optional()
+      .describe("Id wniosku (loan_applications), z którym wiązany jest wygenerowany komplet."),
   },
   annotations: WRITE,
   handler: (args, ctx: ToolContext) =>
@@ -287,27 +336,24 @@ export const generateContractDocx = defineTool({
         });
       }
 
-      const { renderuj } = await import("@/lib/contract-engine/renderer");
-      const { bibliotekaBez } = await import("@/lib/contract-engine/clause-select");
-      const { buildUmowaDocx, harmonogramZUmowy } =
-        await import("@/lib/contract-engine/umowa-docx");
-      let bytes: Uint8Array;
+      const { generujKomplet, CZESCI_KOMPLETU } = await import("@/lib/contract-engine/komplet");
+      let komplet: Awaited<ReturnType<typeof generujKomplet>>;
       try {
-        const doc = renderuj(r.umowa, bibliotekaBez(args.excluded_clauses ?? []));
-        bytes = await buildUmowaDocx(doc, harmonogramZUmowy(r.umowa));
+        komplet = await generujKomplet(r.umowa, { excludedClauses: args.excluded_clauses });
       } catch (e) {
         return fail(`Nie udało się złożyć dokumentu: ${(e as Error)?.message ?? e}`);
       }
 
       const { zapiszUmoweDocx, DOCX_MIME } =
         await import("@/lib/contract-engine/umowa-storage.server");
-      const { docxPath, signedUrl } = await zapiszUmoweDocx(s, {
+      const { docxPath, signedUrl, documentId } = await zapiszUmoweDocx(s, {
         userId,
-        bytes,
+        komplet,
         numerUmowy: r.umowa?.meta?.numer_umowy,
-        templateName: "Umowa pożyczki (MCP, silnik klauzul)",
+        templateName: "Komplet umowy pożyczki (MCP, silnik klauzul)",
+        zrodlo: "mcp",
+        loanApplicationId: args.loan_application_id ?? null,
         formData: {
-          zrodlo: "mcp",
           ...(args.profile_id ? { client_profile_id: args.profile_id } : {}),
           ...(args.excluded_clauses?.length ? { excluded_clauses: args.excluded_clauses } : {}),
         },
@@ -316,14 +362,19 @@ export const generateContractDocx = defineTool({
       return ok(
         {
           generated: true,
+          generated_document_id: documentId,
+          loan_application_id: args.loan_application_id ?? null,
           docx_path: docxPath,
           download_url: signedUrl,
-          file_size_bytes: bytes.length,
+          file_size_bytes: komplet.bytes.length,
+          czesci: CZESCI_KOMPLETU,
+          sha256: komplet.sha256,
+          wersja_biblioteki_klauzul: komplet.wersjaBiblioteki,
           problemy: podsumujProblemy(r.problemy),
           autokorekty: r.autokorekty,
         },
         undefined,
-        linkBlock(signedUrl, nazwa, DOCX_MIME, "Umowa pożyczki (.docx)"),
+        linkBlock(signedUrl, nazwa, DOCX_MIME, "Komplet umowy pożyczki (.docx)"),
       );
     }),
 });

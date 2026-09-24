@@ -136,11 +136,20 @@ export function mapujKwDoNieruchomosci(kw: KwExtraction, ctx: KwMapContext): KwM
       };
     }
     wlasciciel_ref = "pozyczkobiorca";
+    // Rodzaj współwłasności z działu II: udziały ułamkowe (np. 1/2 + 1/2) bez
+    // adnotacji o wspólności małżeńskiej → współwłasność ułamkowa z udziałami;
+    // w pozostałych przypadkach — łączna małżeńska (jak dotąd).
+    const malzenska = wlasciciele.some((o) =>
+      /ma[łl][żz]e[ńn]|ustawow/i.test(o.rodzajWspolnosci ?? ""),
+    );
+    const ulamkowa =
+      !malzenska && wlasciciele.every((o) => /^\d+\s*\/\s*\d+$/.test(o.udzial ?? ""));
     wspolwlasnosc = {
-      rodzaj: "laczna_malzenska",
+      rodzaj: ulamkowa ? "ulamkowa" : "laczna_malzenska",
       wspolwlasciciele: wlasciciele.map((o) => ({
         imie_nazwisko: imieNazwiskoWlasciciela(o),
         pesel: o.pesel ?? null,
+        ...(ulamkowa ? { udzial: String(o.udzial).replace(/\s+/g, "") } : {}),
       })),
     };
     // zgoda małżonka nie jest wymagana — silnik wykrywa to sam (oboje są stroną)

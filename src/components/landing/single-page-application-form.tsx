@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from "react";
+import { kwCheckDigitError } from "@/lib/kw";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -454,6 +455,12 @@ export function SinglePageApplicationForm({
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const bladKw = kwCheckDigitError(allKwNumbers.join(" | "));
+    if (bladKw) {
+      toast.error(bladKw);
+      return;
+    }
 
     if (!skipContact) {
       if (!contactValid) {

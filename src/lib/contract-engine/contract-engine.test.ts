@@ -63,8 +63,10 @@ describe("B. Scenariusz prosty", () => {
   const sekcje1 = new Set(d1.sekcje.map((s) => s.nazwa));
   const txt1 = formatuj(d1);
   it("B1 brak sekcji poręczenia", () => expect(sekcje1.has("PORECZENIE")).toBe(false));
+  // Warunki uruchomienia są częścią § o kwocie i wypłacie (układ wzorca) —
+  // sprawdzamy obecność klauzuli wprowadzającej, nie osobnej sekcji.
   it("B2 brak warunków zawieszających", () =>
-    expect(sekcje1.has("WARUNKI_ZAWIESZAJACE")).toBe(false));
+    expect(d1.polozenia["WZA_00_wprowadzenie"]).toBeUndefined());
   it("B3 dwie strony w komparycji", () => expect(d1.komparycja.strony.length).toBe(2));
   it("B4 trzy załączniki bazowe", () => expect(d1.zalaczniki.length).toBe(3));
   it("B5 słowo 'Poręczyciel' nie występuje", () =>
@@ -91,7 +93,12 @@ describe("C. Scenariusz złożony", () => {
   const f2 = d2.fakty;
 
   it("C1 sekcja poręczenia", () => expect(sekcje2.has("PORECZENIE")).toBe(true));
-  it("C2 warunki zawieszające", () => expect(sekcje2.has("WARUNKI_ZAWIESZAJACE")).toBe(true));
+  it("C2 warunki zawieszające", () =>
+    expect(
+      d2.sekcje
+        .find((s) => s.nazwa === "KWOTA_PROWIZJA_WYPLATA")
+        ?.ustepy.some((u) => u.zrodlo === "WZA_00_wprowadzenie"),
+    ).toBe(true));
   it("C3 cztery strony", () => expect(d2.komparycja.strony.length).toBe(4));
   it("C4 brak niepodstawionych pól", () =>
     expect(!txt2.includes("{{") && !txt2.includes("}}")).toBe(true));
@@ -239,20 +246,22 @@ describe("D. Walidator negatywny", () => {
     z.warunki.harmonogram.kwota_raty_koncowej = null;
     expect(bledy(z).some((b) => b.includes("kwota_raty_koncowej"))).toBe(true);
   });
-  it("D15 dożywocie pozostaje (ostrzeżenie)", () => {
+  // D15–D17: silnik nie ocenia merytorycznie (pkt 6 zlecenia) — pozostawione
+  // dożywocie, wpis egzekucyjny ani niska hipoteka nie dają już ostrzeżeń.
+  it("D15 dożywocie pozostaje — bez oceny merytorycznej", () => {
     const z = clone(S2) as any;
     z.nieruchomosci[1].obciazenia[0].sposob_usuniecia = "pozostaje_akceptowane";
-    expect(ostrzezenia(z).some((o) => o.includes("obniża wartość egzekucyjną"))).toBe(true);
+    expect(ostrzezenia(z).some((o) => o.includes("wartość egzekucyjną"))).toBe(false);
   });
-  it("D16 hipoteka nie pokrywa kwoty (ostrzeżenie)", () => {
+  it("D16 hipoteka niższa niż kwota — bez oceny merytorycznej", () => {
     const z = clone(S1) as any;
     z.nieruchomosci[0].hipoteka.kwota.cyframi = "10 000,00";
-    expect(ostrzezenia(z).some((o) => o.includes("nie pokrywa kapitału"))).toBe(true);
+    expect(ostrzezenia(z).some((o) => o.includes("nie pokrywa kapitału"))).toBe(false);
   });
-  it("D17 wpis egzekucyjny pozostaje (ostrzeżenie)", () => {
+  it("D17 wpis egzekucyjny pozostaje — bez oceny merytorycznej", () => {
     const z = clone(S2) as any;
     z.nieruchomosci[1].obciazenia[1].sposob_usuniecia = "pozostaje_akceptowane";
-    expect(ostrzezenia(z).some((o) => o.includes("pierwszeństwo przed hipoteką"))).toBe(true);
+    expect(ostrzezenia(z).some((o) => o.includes("pierwszeństwo przed hipoteką"))).toBe(false);
   });
   it("D18 po_odlaczeniu bez wskazania działek", () => {
     const z = clone(S2) as any;

@@ -8,17 +8,20 @@ w umowie bez poręczyciela.
 
 ## Pliki
 
-| Plik | Rola | Odpowiednik w silniku |
-|---|---|---|
-| `schema.ts` | Kontrakt danych (zod + typy TS). `.strict()` = `additionalProperties:false`. | `schema/umowa.schema.json` |
-| `clauses.json` | Biblioteka 47 klauzul + 10 sekcji, **kopia 1:1**. Tu edytuje prawnik. | `clauses/klauzule.json` |
-| `conditions.ts` | Ewaluator warunków — **własny parser, bez `eval`/`Function()`**. | `ewaluuj_warunek` |
-| `facts.ts` | Fakty pochodne + oznaczenia i odmiana stron. | `zbuduj_fakty`, `oznaczenie_strony`, … |
-| `renderer.ts` | Złożenie dokumentu, numeracja, podstawianie pól. | `renderuj` |
-| `validator.ts` | Dwie warstwy: schemat (zod) + 27 reguł biznesowych (R1–R27). | `validator.py` |
-| `formatter.ts` | Podgląd tekstowy (do diffów/przeglądu). Wierny port `textwrap`. | `formatter.py` |
-| `fixtures/` | 5 scenariuszy testowych, kopie 1:1. | `tests/` |
-| `contract-engine.test.ts` | Port całego `test_suite.py` (194 asercje, w tym 33 negatywne). | `test_suite.py` |
+| Plik                      | Rola                                                                                                          | Odpowiednik w silniku                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `schema.ts`               | Kontrakt danych (zod + typy TS). `.strict()` = `additionalProperties:false`.                                  | `schema/umowa.schema.json`             |
+| `clauses.json`            | Biblioteka klauzul (v1.2: 101 klauzul, 8 sekcji). Tu edytuje prawnik.                                         | `clauses/klauzule.json`                |
+| `umowa-docx.ts`           | Komplet w jednym .docx: wniosek → umowa → Zał. 1–3; podpisy jako niewidoczne tabele.                          | —                                      |
+| `komplet.ts`              | `generujKomplet()` — jedno wejście dla kreatora, agenta i MCP (render + .docx + SHA-256 + wersja biblioteki). | —                                      |
+| `oplaty-windykacyjne.ts`  | Stawki Załącznika nr 3 — jedyne miejsce konfiguracji.                                                         | —                                      |
+| `conditions.ts`           | Ewaluator warunków — **własny parser, bez `eval`/`Function()`**.                                              | `ewaluuj_warunek`                      |
+| `facts.ts`                | Fakty pochodne + oznaczenia i odmiana stron.                                                                  | `zbuduj_fakty`, `oznaczenie_strony`, … |
+| `renderer.ts`             | Złożenie dokumentu, numeracja, podstawianie pól.                                                              | `renderuj`                             |
+| `validator.ts`            | Dwie warstwy: schemat (zod) + 27 reguł biznesowych (R1–R27).                                                  | `validator.py`                         |
+| `formatter.ts`            | Podgląd tekstowy (do diffów/przeglądu). Wierny port `textwrap`.                                               | `formatter.py`                         |
+| `fixtures/`               | 5 scenariuszy testowych, kopie 1:1.                                                                           | `tests/`                               |
+| `contract-engine.test.ts` | Port całego `test_suite.py` (194 asercje, w tym 33 negatywne).                                                | `test_suite.py`                        |
 
 ## Zmiany po sprawie Kańkowskich (zlecenie)
 
@@ -33,11 +36,11 @@ ryzyko prawne**; kontrole spójności konstrukcyjnej zostają.
    (`autokorekty` w `generate-umowa.functions.ts`), nie w treści umowy.
    Większy rozjazd pozostaje błędem konstrukcyjnym.
 2. **Współwłasność ułamkowa przywrócona**: `wspolwlasnosc.rodzaj = "ulamkowa"`
-   + pole `udzial` przy współwłaścicielu. Komparycja opisuje udziały
-   („w udziale wynoszącym 1/2 części"), klauzula `ZAB_01c` opisuje, że hipoteka
-   obciąża całą nieruchomość, gdy wszyscy współwłaściciele przystępują do
-   Umowy. Bez reguły blokującej. Gdy współwłaściciel jest zarazem
-   pożyczkobiorcą, żadna zgoda od niego się nie generuje.
+   - pole `udzial` przy współwłaścicielu. Komparycja opisuje udziały
+     („w udziale wynoszącym 1/2 części"), klauzula `ZAB_01c` opisuje, że hipoteka
+     obciąża całą nieruchomość, gdy wszyscy współwłaściciele przystępują do
+     Umowy. Bez reguły blokującej. Gdy współwłaściciel jest zarazem
+     pożyczkobiorcą, żadna zgoda od niego się nie generuje.
 3. **Rolnik prowadzący gospodarstwo**: `dzialalnosc = "gospodarstwo_rolne"`
    przy osobie fizycznej; NIP gospodarstwa przy jednym ze współrolników
    (przedstawicielu). Komparycja: „rolnicy prowadzący wspólne gospodarstwo
@@ -47,6 +50,50 @@ ryzyko prawne**; kontrole spójności konstrukcyjnej zostają.
    przymusowa), wierzyciel instytucjonalny (KRUS, ZUS, US, Skarb Państwa),
    kwota, treść wpisu. Tylko opis stanu księgi — bez ostrzeżeń o
    pierwszeństwie.
+
+## Jeden silnik, komplet dokumentów (wrzesień 2026)
+
+**Jedno źródło prawdy.** Kreator pożyczki (`/admin/kreator-pozyczki`), agent
+umowy (`/inwestor`) i MCP (`draft_contract`, `generate_contract_docx`) składają
+dokument tą samą funkcją `generujKomplet()`. Wzór `u01-04-umowa-pozyczki-z-
+zalacznikami-redline` w `document_templates` ma `use_case = 'legacy'` —
+znika z kreatora dokumentów, a generatory szablonowe odmawiają jego użycia.
+
+**Komplet w jednym .docx** (każda część od nowej strony, pod każdą blok
+podpisów jako niewidoczna tabela — nie tabulatory, które psują się w Google
+Drive): Wniosek o udzielenie pożyczki → Umowa → Zał. 1 Harmonogram (tabela
+rat z prowizją + sumy) → Zał. 2 Protokół z negocjacji → Zał. 3 Tabela opłat
+windykacyjnych (`oplaty-windykacyjne.ts`).
+
+**Układ umowy jak we wzorcu Kańkowskich:** §1 Przedmiot, §2 Kwota/prowizja/
+wypłata (z warunkami uruchomienia, gdy są), [Poręczenie], Zabezpieczenia,
+Windykacja, Oświadczenia stron (w tym RODO i protokół negocjacji),
+Postanowienia ogólne, Wypowiedzenie. Treść istniejących klauzul bez zmian —
+przesunięte tylko sekcje. Nowe klauzule: `WIN_*`, `OSW_20*`, `OSW_21`,
+`OSW_22`, `RODO_01*`, `POG_*`, `WYP_*`.
+
+**Odesłania** (`{{ref:ID}}` → „§ 3 ust. 4”, `{{ref_par:ID}}` → „§ 1”) są
+liczone po numeracji — wyłączenie klauzuli nie zostawi błędnego numeru
+(odesłanie do wyłączonej klauzuli = błąd renderowania).
+
+**Dokument = wyłącznie treść wiążąca.** Żadnych ostrzeżeń, uwag, komentarzy,
+placeholderów ani znaków wodnych (test `komplet.test.ts`). Walidator sprawdza
+tylko kompletność i spójność konstrukcyjną — usunięte R9, R10, R13 i
+ostrzeżenie „<10% kwoty po spłacie wierzycieli” (oceny merytoryczne).
+
+**Docelowa rata końcowa** (`harmonogram.kwota_raty_koncowej_docelowa`):
+silnik dobiera prowizję do grosza tak, by raty regularne mieściły się
+w pułapie, a ostatnia rata wyniosła dokładnie cel (np. kapitał + pułap);
+różnice groszowe zawsze w ostatniej racie (`loan-schedule.ts`, R29).
+
+**Numery KW** normalizowane na każdym wejściu (`src/lib/kw.ts`:
+`validateKwNumber`) — dopełnienie do 8 cyfr + cyfra kontrolna (algorytm EKW).
+
+**Audyt:** każda generacja = trwały wpis w `generated_documents`
+(`template_slug = 'silnik-umow-komplet'`, opcjonalnie `loan_application_id`)
+
+- wiersz `audit_logs` (`action = 'contract_generated'`: kto, kiedy, SHA-256
+  tekstu dokumentu, wersja biblioteki klauzul).
 
 ## Agent umowy (AI) — główny ekran /inwestor
 
@@ -74,6 +121,7 @@ Port był sprawdzany względem oryginału (Python) jako wyroczni:
   świadomie usunięte pola).
 
 Pułapki z README silnika, na które port zwraca uwagę:
+
 - **A10** — przy podstawianiu tokenów łatwo podmienić coś wewnątrz literału
   tekstowego (`'nie_potracana_raty'`). Parser leksuje literały jako całość, więc
   klauzula o prowizji nie znika po cichu.

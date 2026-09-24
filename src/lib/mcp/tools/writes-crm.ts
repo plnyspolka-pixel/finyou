@@ -4,6 +4,7 @@
 // potwierdzenie przed każdym wywołaniem.
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
+import { validateKwNumber } from "@/lib/kw";
 import {
   DESTRUCTIVE,
   WRITE,
@@ -307,13 +308,30 @@ const propertyShape = {
   street: z.string().max(200).optional(),
   address: z.string().max(300).optional(),
   voivodeship: z.string().max(60).optional(),
-  land_register_number: z.string().max(30).optional().describe("Numer KW, np. WA1M/00123456/7."),
+  land_register_number: z
+    .string()
+    .max(30)
+    .optional()
+    .describe(
+      "Numer KW, np. WA1M/00123456/7. Numer bez zer (KR1P/610770/2) jest dopełniany do 8 cyfr; błędna cyfra kontrolna odrzuca zapis.",
+    ),
   estimated_value: z.number().positive().optional(),
   area_sqm: z.number().positive().optional(),
   has_mortgage: z.boolean().optional(),
   has_co_owners: z.boolean().optional(),
   description: z.string().max(4000).optional(),
 };
+
+/**
+ * Numer KW z wejścia → forma kanoniczna (8 cyfr, sprawdzona cyfra kontrolna).
+ * Brak numeru → null; numer błędny → wyjątek z komunikatem dla użytkownika.
+ */
+function kwZWejscia(raw: string | null | undefined): string | null {
+  if (raw == null || !String(raw).trim()) return null;
+  const kw = validateKwNumber(raw);
+  if (!kw.ok) throw new Error(kw.message);
+  return kw.value;
+}
 
 async function insertProperty(
   s: Awaited<ReturnType<typeof requireTeamAdmin>>,
@@ -330,7 +348,7 @@ async function insertProperty(
       street: p.street ?? null,
       address: p.address ?? null,
       voivodeship: p.voivodeship ?? null,
-      land_register_number: p.land_register_number?.trim().toUpperCase() ?? null,
+      land_register_number: kwZWejscia(p.land_register_number),
       estimated_value: p.estimated_value ?? null,
       area_sqm: p.area_sqm ?? null,
       has_mortgage: p.has_mortgage ?? null,
@@ -367,6 +385,12 @@ export const createLoanApplication = defineTool({
       const s = await requireTeamAdmin(ctx);
       const client = await oneOf(s.from("clients").select("id").eq("id", a.client_id), "clients");
       if (!client) return fail("Nie znaleziono klienta.");
+      // Numer KW sprawdzamy PRZED założeniem wniosku — błędny nie zostawi pół-zapisu.
+      try {
+        kwZWejscia(a.property?.land_register_number);
+      } catch (e) {
+        return fail((e as Error).message);
+      }
       const app = await insertOne(
         s,
         "loan_applications",
@@ -497,6 +521,11 @@ export const addProperty = defineTool({
         "loan_applications",
       );
       if (!app) return fail("Nie znaleziono wniosku.");
+      try {
+        kwZWejscia(a.land_register_number);
+      } catch (e) {
+        return fail((e as Error).message);
+      }
       const property = await insertProperty(s, a.loan_application_id, a);
       if (a.land_register_number) {
         await s

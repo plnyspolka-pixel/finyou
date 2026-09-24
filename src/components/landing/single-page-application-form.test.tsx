@@ -147,7 +147,7 @@ describe("SinglePageApplicationForm – Meta pixel events", () => {
 
     // Wybierz typ nieruchomości, podaj KW i dołącz zdjęcie nieruchomości.
     await userEvent.click(screen.getByRole("button", { name: /^mieszkanie$/i }));
-    await userEvent.type(screen.getByLabelText(/numer księgi wieczystej/i), "wa1m/00123456/7");
+    await userEvent.type(screen.getByLabelText(/numer księgi wieczystej/i), "wa1m/00123456/3");
     addPropertyPhoto();
 
     await submitForm();
@@ -161,7 +161,7 @@ describe("SinglePageApplicationForm – Meta pixel events", () => {
       last_name: "Kowalska",
       email: "anna@example.com",
       property_type: "mieszkanie",
-      land_register_number: "WA1M/00123456/7",
+      land_register_number: "WA1M/00123456/3",
     });
     expect((payload.data.photos as unknown[]).length).toBe(1);
 

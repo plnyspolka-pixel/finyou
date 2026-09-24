@@ -21,7 +21,8 @@ export function odmienBiernik(imieNazwisko: string): string {
       if (low.endsWith("ska") || low.endsWith("cka") || low.endsWith("dzka"))
         return w.slice(0, -1) + "ą";
       if (low.endsWith("a")) return w.slice(0, -1) + "ę";
-      if (CONSONANT_END.test(low)) return kobieta && idx > 0 ? w : w + "a";
+      if (!kobieta && idx === 0 && low.endsWith("eł")) return w.slice(0, -2) + "ła"; // Paweł → Pawła
+      if (CONSONANT_END.test(low) || low.endsWith("ł")) return kobieta && idx > 0 ? w : w + "a";
       return w;
     })
     .join(" ");
@@ -37,7 +38,8 @@ export function odmienDopelniacz(imieNazwisko: string): string {
       if (low.endsWith("ska") || low.endsWith("cka") || low.endsWith("dzka"))
         return w.slice(0, -1) + "iej";
       if (low.endsWith("a")) return w.slice(0, -1) + "y";
-      if (CONSONANT_END.test(low)) return kobieta && idx > 0 ? w : w + "a";
+      if (!kobieta && idx === 0 && low.endsWith("eł")) return w.slice(0, -2) + "ła"; // Paweł → Pawła
+      if (CONSONANT_END.test(low) || low.endsWith("ł")) return kobieta && idx > 0 ? w : w + "a";
       return w;
     })
     .join(" ");
@@ -136,7 +138,10 @@ export function oznaczenieStrony(s: any, pelne = true, opts?: OznaczenieOpts): s
   if (s === null || s === undefined) return "";
   if (s.typ === "osoba_fizyczna") {
     const czesci: string[] = [String(s.imie_nazwisko).toUpperCase()];
-    if (s.firma) czesci.push(`prowadzący działalność gospodarczą pod firmą ${s.firma}`);
+    if (s.firma)
+      czesci.push(
+        `${rodzajZenski(s.imie_nazwisko) ? "prowadząca" : "prowadzący"} działalność gospodarczą pod firmą ${s.firma}`,
+      );
     else if (s.dzialalnosc === "gospodarstwo_rolne") {
       // Zmiana 2 po Kańkowskich: rolnik prowadzący gospodarstwo — traktowany
       // jak przedsiębiorca; przy wspólnym gospodarstwie NIP widnieje przy
@@ -241,6 +246,25 @@ export function oznaczenie777(d: any): string {
   return role.slice(0, -1).join(", ") + " oraz " + role[role.length - 1];
 }
 
+/** Opis stanu cywilnego do oświadczenia o majątku osobistym; null = nie dotyczy. */
+function opisStanuCywilnego(o: any): string | null {
+  const k = rodzajZenski(o?.imie_nazwisko ?? "");
+  switch (o?.stan_cywilny) {
+    case "kawaler_panna":
+      return "nie pozostaje w związku małżeńskim";
+    case "rozwiedziony":
+      return `nie pozostaje w związku małżeńskim (jest ${k ? "rozwiedziona" : "rozwiedziony"})`;
+    case "wdowiec":
+      return `nie pozostaje w związku małżeńskim (jest ${k ? "wdową" : "wdowcem"})`;
+    case "zonaty_zamezna":
+      return o.ustroj_majatkowy === "rozdzielnosc"
+        ? "pozostaje w związku małżeńskim, w którym obowiązuje ustrój rozdzielności majątkowej"
+        : null;
+    default:
+      return null;
+  }
+}
+
 // ── operacje na zbiorach PESEL ─────────────────────────────────
 function peselSet(items: any[]): Set<any> {
   return new Set(items.map((c) => c?.pesel ?? null));
@@ -283,6 +307,36 @@ export function zbudujFakty(d: any): Record<string, any> {
   f.pb_przeznaczy = wielu ? "przeznaczą" : "przeznaczy";
   f.pb_ponosi = wielu ? "ponoszą" : "ponosi";
   f.pb_toczy_sie = wielu ? "nim" : "niemu";
+  // Formy do klauzul windykacji, oświadczeń, RODO i wypowiedzenia (wzorzec
+  // Kańkowskich) — liczba mnoga dla kilku pożyczkobiorców.
+  f.pb_zobowiazany_jest = wielu ? "zobowiązani są" : "zobowiązany jest";
+  f.pb_wywiazuje_sie = wielu ? "wywiązują się" : "wywiązuje się";
+  f.pb_zawarl = wielu ? "zawarli" : "zawarł";
+  f.pb_konsument = wielu ? "konsumenci" : "konsument";
+  f.pb_przedsiebiorca_mian = wielu ? "przedsiębiorcy" : "przedsiębiorca";
+  f.pb_prowadzacego = wielu ? "prowadzących" : "prowadzącego";
+  f.pb_dokonal = wielu ? "dokonali" : "dokonał";
+  f.pb_jego = wielu ? "ich" : "jego";
+  f.pb_jego_male = f.pb_jego;
+  f.pb_zrozumial = wielu ? "zrozumieli" : "zrozumiał";
+  f.pb_bedzie_roscil = wielu ? "będą rościli" : "będzie rościł";
+  f.pb_swiadomy = wielu ? "świadomi" : "świadomy";
+  f.pb_znajduje_sie = wielu ? "znajdują się" : "znajduje się";
+  f.pb_wybral = wielu ? "wybrali" : "wybrał";
+  f.pb_wyraza = wielu ? "wyrażają" : "wyraża";
+  f.pb_ma_prawo = wielu ? "mają prawo" : "ma prawo";
+  f.pb_opoznia_sie = wielu ? "opóźniają się" : "opóźnia się";
+  f.pb_wykorzysta = wielu ? "wykorzystają" : "wykorzysta";
+  f.pb_podal = wielu ? "podali" : "podał";
+  f.pb_utrudnia = wielu ? "utrudniają" : "utrudnia";
+  f.pb_narusza = wielu ? "naruszają" : "narusza";
+  f.pb_zaimek_wobec = wielu ? "któregokolwiek z nich" : "niego";
+  f.pb_dokona = wielu ? "dokonają" : "dokona";
+
+  const emaile = [...new Set(poz.map((p) => String(p?.email ?? "").trim()).filter(Boolean))];
+  f.ma_email_pozyczkobiorcy = emaile.length > 0;
+  if (emaile.length) f.pb_email = emaile.join(" oraz ");
+  if (d.pozyczkodawca) f.pozyczkodawca_nazwa = oznaczenieStrony(d.pozyczkodawca, false);
 
   f.dluznicy_solidarni = wielu;
 
@@ -401,6 +455,31 @@ export function zbudujFakty(d: any): Record<string, any> {
       : "Oświadczenie o ustanowieniu hipoteki obejmuje udziały we współwłasności przysługujące osobom składającym to oświadczenie";
   }
 
+  // --- majątek osobisty jedynego właściciela (osoba fizyczna) ---
+  // Oświadczenie o stanie cywilnym i przynależności nieruchomości do majątku
+  // osobistego — gdy właściciel jest jedyny w dziale II (brak współwłasności),
+  // a z danych wynika, że wspólność majątkowa małżeńska go nie obejmuje.
+  // Przy wspólności ustawowej działa istniejąca zgoda małżonka (WZA_02).
+  const majatekOsobisty: any[] = [];
+  for (const n of nier) {
+    if (n.wspolwlasnosc) continue;
+    const wl = wlascicielObiekt(d, n);
+    if (!wl || wl.typ !== "osoba_fizyczna") continue;
+    const opis = opisStanuCywilnego(wl);
+    if (!opis) continue;
+    const kobieta = rodzajZenski(wl.imie_nazwisko);
+    majatekOsobisty.push({
+      ...n,
+      wlasciciel_imie_nazwisko: wl.imie_nazwisko,
+      wlasciciel_oswiadcza: "oświadcza",
+      wlasciciel_ujawniony: kobieta ? "ujawniona" : "ujawniony",
+      wlasciciel_zaimek: kobieta ? "jej" : "jego",
+      stan_cywilny_opis: opis,
+    });
+  }
+  f.nieruchomosci_majatek_osobisty = majatekOsobisty;
+  f.ma_majatek_osobisty = majatekOsobisty.length > 0;
+
   // --- poręczyciel ---
   const por = d.porecziciel ?? null;
   f.ma_poreczyciela = por !== null;
@@ -495,6 +574,14 @@ export function zbudujFakty(d: any): Record<string, any> {
     o.uprawniony_dopelniacz_kogo = odmienDopelniacz(imie);
     o.uprawniony_zaimek = rodzajZenski(imie) ? "jej" : "mu";
   }
+
+  // Liczba egzemplarzy = liczba Stron w komparycji (każda dostaje egzemplarz).
+  const wlascicieleTrzeci = new Set(
+    nier
+      .filter((n) => n.wlasciciel_ref === "osoba_trzecia" && n.wlasciciel_dane)
+      .map((n) => oznaczenieStrony(n.wlasciciel_dane)),
+  );
+  f.liczba_egzemplarzy = poz.length + (por ? 1 : 0) + wlascicieleTrzeci.size + 1;
 
   f.ma_warunki_zawieszajace =
     f.ma_wykreslenia_przed_wyplata ||

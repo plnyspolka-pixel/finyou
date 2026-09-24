@@ -20,7 +20,7 @@ import type { KorektaGroszowa } from "./schedule";
 import { scalPatch, przetworzSzkic } from "./umowa-agent-core";
 import { renderuj } from "./renderer";
 import { formatuj } from "./formatter";
-import { buildUmowaDocx, harmonogramZUmowy } from "./umowa-docx";
+import { generujKomplet, type KompletWynik } from "./komplet";
 import { KATALOG_SCHEMATU } from "./umowa-schema-catalog";
 import { zapiszUmoweDocx } from "./umowa-storage.server";
 
@@ -182,10 +182,9 @@ export const generateUmowaAgentDocx = createServerFn({ method: "POST" })
       return { docxPath: null, signedUrl: null, problemy, autokorekty, blocked: true };
     }
 
-    let bytes: Uint8Array;
+    let komplet: KompletWynik;
     try {
-      const doc = renderuj(umowa);
-      bytes = await buildUmowaDocx(doc, harmonogramZUmowy(umowa));
+      komplet = await generujKomplet(umowa);
     } catch (e: any) {
       problemy.push({
         poziom: "BLAD",
@@ -197,10 +196,10 @@ export const generateUmowaAgentDocx = createServerFn({ method: "POST" })
 
     const { docxPath, signedUrl } = await zapiszUmoweDocx(supabase as any, {
       userId,
-      bytes,
+      komplet,
       numerUmowy: umowa?.meta?.numer_umowy,
-      templateName: "Umowa pożyczki (agent umowy AI, silnik klauzul)",
-      formData: { zrodlo: "umowa-agent" },
+      templateName: "Komplet umowy pożyczki (agent umowy AI, silnik klauzul)",
+      zrodlo: "umowa-agent",
     });
 
     return {

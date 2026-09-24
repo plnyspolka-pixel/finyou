@@ -27,6 +27,7 @@ import {
 } from "@/lib/document-fields";
 import { amountToWordsPLN } from "@/lib/amount-to-words-pl";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { LEGACY_KOMUNIKAT, LEGACY_USE_CASE } from "@/lib/legacy-templates";
 import { FY_CREDITOR } from "@/lib/windykacja-docfill";
 import { buildCalcFieldValues } from "@/lib/loan-calc-fill";
 import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
@@ -224,10 +225,11 @@ async function loadTemplateText(
 ): Promise<{ name: string; text: string }> {
   const { data: tpl, error } = await supabase
     .from("document_templates")
-    .select("name, template_file_path")
+    .select("name, template_file_path, use_case")
     .eq("id", templateId)
     .maybeSingle();
   if (error) throw new Error(error.message);
+  if (tpl?.use_case === LEGACY_USE_CASE) throw new Error(LEGACY_KOMUNIKAT);
   if (!tpl?.template_file_path) throw new Error("Wzór nie ma przypisanego pliku.");
 
   // Wzory historycznie leżą w buckecie „documents"; nowe wgrywki lecą do

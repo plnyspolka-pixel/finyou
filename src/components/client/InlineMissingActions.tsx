@@ -2,6 +2,7 @@
 // od razu uzupełnia/wrzuca to, czego brakuje, bez wychodzenia z pulpitu.
 
 import { useState } from "react";
+import { kwCheckDigitError, normalizeKwNumbersInText } from "@/lib/kw";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadFile } from "@/lib/uploads/unified-upload";
@@ -446,11 +447,16 @@ function KwNumberBox({
   const [busy, setBusy] = useState(false);
   const save = async () => {
     if (!kw.trim()) return;
+    const bladKw = kwCheckDigitError(kw);
+    if (bladKw) {
+      toast.error(bladKw);
+      return;
+    }
     setBusy(true);
     try {
       const res = await supabase
         .from("properties")
-        .update({ land_register_number: kw.trim().toUpperCase() })
+        .update({ land_register_number: normalizeKwNumbersInText(kw.trim().toUpperCase()) })
         .eq("id", propertyId);
       if (res.error) throw res.error;
       toast.success("Numer KW zapisany");

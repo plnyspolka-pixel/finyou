@@ -289,6 +289,10 @@ const harmonogram = z
     dzien_miesiaca: z.number().int().min(1).max(28),
     kwota_raty: kwotaSchema.nullable().optional(),
     kwota_raty_koncowej: kwotaSchema.nullable().optional(),
+    // Docelowa rata końcowa (balonowa). Gdy podana, silnik sam dobiera prowizję
+    // (do grosza), tak by raty regularne mieściły się w pułapie `kwota_raty`,
+    // a ostatnia rata wyniosła dokładnie tyle (np. kapitał + pułap).
+    kwota_raty_koncowej_docelowa: kwotaSchema.nullable().optional(),
     raty: z.array(rataSchema).optional(),
   })
   .strict();
@@ -325,6 +329,40 @@ const zabezpieczenia = z
   })
   .strict();
 
+// ── dokumenty kompletu: wniosek i protokół z negocjacji ────────
+// Opcjonalne — bez nich generator składa wniosek z pustymi polami wyboru
+// (PEP, ocena AML) do zaznaczenia przy podpisie, a protokół z form negocjacji
+// wynikających z danych kontaktowych stron.
+const wniosek = z
+  .object({
+    // Oświadczenie PEP wnioskodawcy: false = nie jest PEP, true = jest PEP.
+    pep: z.boolean().nullable().optional(),
+    // Sekcja AML wypełniana przez pożyczkodawcę.
+    aml_ocena_ryzyka: z.enum(["niskie", "srednie", "wysokie"]).nullable().optional(),
+    aml_powyzej_15000_eur: z.boolean().nullable().optional(),
+  })
+  .strict()
+  .nullable()
+  .optional();
+
+const protokolNegocjacji = z
+  .object({
+    data_od: dataPl.nullable().optional(),
+    data_do: dataPl.nullable().optional(),
+    posrednik: z
+      .object({ imie_nazwisko: z.string().min(3), telefon: nullableStr })
+      .strict()
+      .nullable()
+      .optional(),
+    formy: z
+      .array(z.enum(["telefonicznie", "elektronicznie", "posrednik", "osobiscie"]))
+      .min(1)
+      .optional(),
+  })
+  .strict()
+  .nullable()
+  .optional();
+
 // ── korzeń ─────────────────────────────────────────────────────
 export const umowaSchema = z
   .object({
@@ -343,6 +381,8 @@ export const umowaSchema = z
     nieruchomosci: z.array(nieruchomosc).min(1),
     zabezpieczenia,
     oswiadczenia_dodatkowe: z.array(z.string()).optional(),
+    wniosek,
+    protokol_negocjacji: protokolNegocjacji,
   })
   .strict();
 
