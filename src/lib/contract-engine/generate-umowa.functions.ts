@@ -8,8 +8,8 @@
 // Przepływ:
 //   ClientProfile (+ oferta)  →  profileToCalcPayload / buildUmowaData
 //                             →  waliduj() + walidujHarmonogram()  (BRAMA)
-//                             →  renderuj()  →  formatuj() (podgląd) / generujKomplet() (.docx:
-//                                wniosek + umowa + Zał. 1–3)
+//                             →  tekstKompletu() (podgląd) / generujKomplet() (.docx:
+//                                wniosek + umowa + Zał. 1–3) — ten sam tekst w obu
 //
 // Braki danych nie rzucają wyjątku — `waliduj()` zwraca je jako problemy do
 // uzupełnienia przez operatora (BLAD = blokuje generację, OSTRZEZENIE/INFO = nie).
@@ -23,10 +23,9 @@ import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
 import { buildUmowaData, profileToCalcPayload, type BuildUmowaOptions } from "./profile-to-umowa";
 import { waliduj } from "./validator";
 import { autonaprawHarmonogram, walidujHarmonogram, type KorektaGroszowa } from "./schedule";
-import { renderuj } from "./renderer";
-import { formatuj } from "./formatter";
-import { bibliotekaBez } from "./clause-select";
-import { generujKomplet, type KompletWynik } from "./komplet";
+import { generujKomplet, tekstKompletu, type KompletWynik } from "./komplet";
+import { normalizujNumeryKw } from "./umowa-agent-core";
+import { nieruchomosciZKw } from "./kw-nieruchomosci.server";
 import type { Problem } from "./validator";
 import { zapiszUmoweDocx } from "./umowa-storage.server";
 
@@ -41,6 +40,11 @@ export interface UmowaGenInput {
   calc?: LoanCalcPayload | null;
   /** Nieruchomości z mapera KW (zastępują stub z propertyData). */
   nieruchomosci?: any[];
+  /**
+   * Numery KW zabezpieczenia — dane nieruchomości (sąd, opis, właściciele,
+   * obciążenia) z treści KW w cache. Domyślnie numer KW z profilu klienta.
+   */
+  kwNumbers?: string[];
   /** Głębokie nadpisania pól UmowaData (uzupełnienia operatora). */
   overrides?: Record<string, any>;
   /** ID klauzul silnika WYŁĄCZONYCH przez operatora — nie wchodzą do umowy. */
@@ -56,6 +60,7 @@ const inputSchema = z.object({
   dataUmowy: z.string().optional(),
   calc: z.any().optional(),
   nieruchomosci: z.array(z.any()).optional(),
+  kwNumbers: z.array(z.string().min(5)).max(6).optional(),
   overrides: z.record(z.string(), z.any()).optional(),
   excludedClauses: z.array(z.string()).optional(),
   loanApplicationId: z.string().uuid().optional(),
@@ -71,8 +76,8 @@ async function ladujProfil(supabase: any, profileId: string): Promise<ClientProf
   return { ...(row.data as object), id: row.id, updatedAt: row.updated_at } as ClientProfile;
 }
 
-/** Wspólny rdzeń: profil → UmowaData + problemy walidacji + wyrenderowany dokument. */
-function zbudujIzweryfikuj(profile: ClientProfile, input: UmowaGenInput) {
+/** Wspólny rdzeń: profil (+ treść KW z cache) → UmowaData + problemy walidacji. */
+async function zbudujIzweryfikuj(supabase: any, profile: ClientProfile, input: UmowaGenInput) {
   const calc = input.calc ?? profileToCalcPayload(profile);
   if (!calc) {
     const problem: Problem = {
@@ -81,7 +86,14 @@ function zbudujIzweryfikuj(profile: ClientProfile, input: UmowaGenInput) {
       komunikat:
         "Brak danych oferty do policzenia harmonogramu (kwota, okres, maks. rata, data wypłaty). Uzupełnij ofertę w profilu.",
     };
-    return { calc: null, umowa: null, problemy: [problem], blocked: true, autokorekty: [] };
+    return {
+      calc: null,
+      umowa: null,
+      problemy: [problem],
+      blocked: true,
+      autokorekty: [],
+      kwOstrzezenia: [] as string[],
+    };
   }
 
   const opts: BuildUmowaOptions = {
@@ -93,14 +105,54 @@ function zbudujIzweryfikuj(profile: ClientProfile, input: UmowaGenInput) {
   };
   const umowa = buildUmowaData(profile, calc, opts);
 
+  // Auto-uzupełnianie z KW (jak `kw_numbers` w MCP): sąd, opis lokalu z działu
+  // I-O, właściciele i PESEL z działu II, obciążenia z działów III/IV. Brak
+  // treści w cache nie blokuje — nieruchomość zostaje ze szkicu profilu.
+  const problemyKw: Problem[] = [];
+  let kwOstrzezenia: string[] = [];
+  const kwNumbers = (input.kwNumbers ?? [profile.propertyData?.landRegisterNumber ?? ""]).filter(
+    (k) => String(k ?? "").trim(),
+  );
+  if (!input.nieruchomosci?.length && kwNumbers.length) {
+    try {
+      const stub: any[] = umowa.nieruchomosci ?? [];
+      const r = await nieruchomosciZKw(
+        supabase,
+        kwNumbers,
+        { ...umowa, nieruchomosci: [] },
+        { wymagajTresci: false },
+      );
+      kwOstrzezenia = r.ostrzezenia;
+      if (r.nieruchomosci.length) {
+        // Hipoteka Pożyczkodawcy wynika z oferty, nie z księgi.
+        for (const n of r.nieruchomosci) n.hipoteka ??= stub[0]?.hipoteka;
+        umowa.nieruchomosci = r.nieruchomosci as any;
+      }
+    } catch (e: any) {
+      problemyKw.push({
+        poziom: "BLAD",
+        sciezka: "nieruchomosci",
+        komunikat: e?.message ?? String(e),
+      });
+    }
+  }
+  // Numery KW znormalizowane (dopełnienie do 8 cyfr + cyfra kontrolna).
+  problemyKw.push(...normalizujNumeryKw(umowa));
+
   // Zmiana 4 (po Kańkowskich): rozjazd groszowy z zaokrągleń domykamy na racie
   // balonowej PRZED walidacją. Korekta jest odnotowana w wyniku (informacja
   // techniczna dla operatora), nie w treści umowy.
   const autokorekty: KorektaGroszowa[] = autonaprawHarmonogram(umowa.warunki);
 
-  const problemy: Problem[] = [...waliduj(umowa), ...walidujHarmonogram(umowa.warunki)];
+  const problemy: Problem[] = [
+    ...problemyKw,
+    // Ostrzeżenia z mapowania KW (operator uzupełnia dane) — tylko w wyniku, nie w dokumencie.
+    ...kwOstrzezenia.map((k) => ({ poziom: "OSTRZEZENIE" as const, sciezka: "kw", komunikat: k })),
+    ...waliduj(umowa),
+    ...walidujHarmonogram(umowa.warunki),
+  ];
   const blocked = problemy.some((p) => p.poziom === "BLAD");
-  return { calc, umowa, problemy, blocked, autokorekty };
+  return { calc, umowa, problemy, blocked, autokorekty, kwOstrzezenia };
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -112,12 +164,17 @@ export const previewUmowaFromEngine = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => inputSchema.parse(input) as UmowaGenInput)
   .handler(async ({ data, context }) => {
     const profile = await ladujProfil(context.supabase, data.profileId);
-    const { umowa, problemy, blocked, autokorekty } = zbudujIzweryfikuj(profile, data);
+    const { umowa, problemy, blocked, autokorekty, kwOstrzezenia } = await zbudujIzweryfikuj(
+      context.supabase,
+      profile,
+      data,
+    );
 
+    // Podgląd = tekst całego kompletu (wniosek, umowa, Zał. 1–3), identyczny z plikiem.
     let previewText = "";
     if (umowa && !blocked) {
       try {
-        previewText = formatuj(renderuj(umowa, bibliotekaBez(data.excludedClauses ?? [])));
+        previewText = tekstKompletu(umowa, { excludedClauses: data.excludedClauses });
       } catch (e: any) {
         problemy.push({
           poziom: "BLAD",
@@ -131,6 +188,7 @@ export const previewUmowaFromEngine = createServerFn({ method: "POST" })
       previewText,
       problemy,
       autokorekty,
+      kwOstrzezenia,
       blocked: blocked || problemy.some((p) => p.poziom === "BLAD"),
     };
   });
@@ -145,7 +203,11 @@ export const generateUmowaFromEngine = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const profile = await ladujProfil(supabase, data.profileId);
-    const { umowa, problemy, blocked, autokorekty } = zbudujIzweryfikuj(profile, data);
+    const { umowa, problemy, blocked, autokorekty } = await zbudujIzweryfikuj(
+      supabase,
+      profile,
+      data,
+    );
 
     // Brama: przy błędach blokujących nie generujemy pliku — zwracamy braki.
     if (!umowa || blocked) {

@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { normalizeKwNumbersInText } from "@/lib/kw";
+import { kwCheckDigitError, normalizeKwNumbersInText } from "@/lib/kw";
 import { z } from "zod";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -31,7 +31,18 @@ const SubmitSchema = z.object({
   loan_amount: z.number().min(20_000).max(2_000_000),
   preferred_period_months: z.number().int().min(3).max(72),
   property_type: PropertyTypeEnum,
-  land_register_number: z.string().trim().max(60).optional().nullable(),
+  // Numery KW: błędna cyfra kontrolna odrzucana także po stronie serwera
+  // (formularz sprawdza ją w przeglądarce); zapis dopełniony do 8 cyfr.
+  land_register_number: z
+    .string()
+    .trim()
+    .max(60)
+    .optional()
+    .nullable()
+    .superRefine((v, ctx) => {
+      const blad = kwCheckDigitError(v);
+      if (blad) ctx.addIssue({ code: "custom", message: blad });
+    }),
   city: z.string().trim().max(120).optional().nullable(),
   annual_investor_rate: z.number().min(0).max(100).optional().nullable(),
   max_monthly_payment: z.number().min(0).max(1_000_000).optional().nullable(),

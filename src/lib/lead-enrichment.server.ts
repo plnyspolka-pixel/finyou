@@ -309,18 +309,23 @@ async function backfillApplicationFromFacts(
   }
 
   const allKws: string[] = Array.isArray(appData.kw_numbers) ? appData.kw_numbers : [];
-  const kwsToAdd = new Set([...(facts.kwNumbers ?? []), ...allKws]);
+  // Numery KW dopełnione do 8 cyfr (KR1P/610770/2 → KR1P/00610770/2) — bez
+  // tego pobranie z CMD i scoring lokalizacji zwracały INVALID_KW.
+  const kwKlucz = (k: unknown) =>
+    normalizeKwNumber(k) ??
+    String(k ?? "")
+      .trim()
+      .toUpperCase();
+  const kwsToAdd = new Set([...(facts.kwNumbers ?? []), ...allKws].map(kwKlucz).filter(Boolean));
   if (kwsToAdd.size === 0) return;
   const { data: existingProps } = await s
     .from("properties")
     .select("land_register_number")
     .eq("loan_application_id", loanId);
   const existing = new Set(
-    (existingProps ?? [])
-      .map((p: any) => (p.land_register_number ?? "").trim().toUpperCase())
-      .filter(Boolean),
+    (existingProps ?? []).map((p: any) => kwKlucz(p.land_register_number)).filter(Boolean),
   );
-  const fresh = Array.from(kwsToAdd).filter((k) => !existing.has(k.trim().toUpperCase()));
+  const fresh = Array.from(kwsToAdd).filter((k) => !existing.has(k));
   if (fresh.length === 0) return;
   const propertyType = mapPropertyType(appData.typ_nieruchomosci ?? appData.property_type);
   const estimatedValue: number | null =

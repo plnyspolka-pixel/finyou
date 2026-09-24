@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadFile, deleteStoragePath } from "@/lib/uploads/unified-upload";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { validateKwNumber } from "@/lib/kw";
 import { InvestorProposalCalculator } from "@/components/client/InvestorProposalCalculator";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -354,14 +355,15 @@ function KlientDashboard() {
         hint: "np. WA1M, GD1G, KR2K",
       };
     }
-    if (digits.length !== 8) {
+    // Krótszy numer dopełniamy zerami przy zapisie (KR1P/610770/2 → KR1P/00610770/2).
+    if (digits.length < 1 || digits.length > 8) {
       return {
         ok: false,
-        error: `Numer księgi musi mieć dokładnie 8 cyfr (wpisano ${digits.length}).`,
-        hint: "Uzupełnij zerami z przodu, np. 00123456",
+        error: `Numer księgi może mieć najwyżej 8 cyfr (wpisano ${digits.length}).`,
+        hint: "np. 00123456",
       };
     }
-    if (!/^\d{8}$/.test(digits)) {
+    if (!/^\d{1,8}$/.test(digits)) {
       return { ok: false, error: "Numer księgi może zawierać tylko cyfry (0–9).", hint: null };
     }
     if (control.length !== 1) {
@@ -374,7 +376,14 @@ function KlientDashboard() {
     if (!/^\d$/.test(control)) {
       return { ok: false, error: "Cyfra kontrolna musi być cyfrą (0–9).", hint: null };
     }
+    const kwCheck = validateKwNumber(value);
+    if (!kwCheck.ok) return { ok: false, error: kwCheck.message, hint: null };
     return { ok: true, error: null, hint: null };
+  };
+  /** Zapis KW dopełniony do 8 cyfr (po walidacji numer jest poprawny). */
+  const kwDoZapisu = (raw: string) => {
+    const r = validateKwNumber(raw);
+    return r.ok ? r.value : raw.trim().toUpperCase();
   };
 
   const kwValidation = validateKw(kw);
@@ -391,8 +400,8 @@ function KlientDashboard() {
     }
     setSavingKw(true);
     try {
-      const normalized = kw.trim().toUpperCase();
-      const normalizedExtras = extraKws.map((v) => v.trim().toUpperCase()).filter(Boolean);
+      const normalized = kwDoZapisu(kw);
+      const normalizedExtras = extraKws.filter((v) => v.trim()).map(kwDoZapisu);
       const { error } = await supabase
         .from("properties")
         .update({
