@@ -160,6 +160,7 @@ export type Database = {
           provider: string
           provider_transaction_id: string | null
           status: string
+          unlock_match_id: string | null
           updated_at: string
           user_id: string
         }
@@ -191,6 +192,7 @@ export type Database = {
           provider?: string
           provider_transaction_id?: string | null
           status?: string
+          unlock_match_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -222,6 +224,7 @@ export type Database = {
           provider?: string
           provider_transaction_id?: string | null
           status?: string
+          unlock_match_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -240,6 +243,13 @@ export type Database = {
             referencedRelation: "access_products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "access_payments_unlock_match_id_fkey"
+            columns: ["unlock_match_id"]
+            isOneToOne: false
+            referencedRelation: "investor_order_matches"
+            referencedColumns: ["id"]
+          },
         ]
       }
       access_products: {
@@ -250,10 +260,13 @@ export type Database = {
           code: string
           created_at: string
           currency: string
-          duration_days: number
+          duration_days: number | null
           id: string
+          kind: string
           label: string
           sort_order: number
+          success_fee_bps: number
+          tier: string | null
           updated_at: string
         }
         Insert: {
@@ -263,10 +276,13 @@ export type Database = {
           code: string
           created_at?: string
           currency?: string
-          duration_days: number
+          duration_days?: number | null
           id?: string
+          kind?: string
           label: string
           sort_order?: number
+          success_fee_bps?: number
+          tier?: string | null
           updated_at?: string
         }
         Update: {
@@ -276,10 +292,13 @@ export type Database = {
           code?: string
           created_at?: string
           currency?: string
-          duration_days?: number
+          duration_days?: number | null
           id?: string
+          kind?: string
           label?: string
           sort_order?: number
+          success_fee_bps?: number
+          tier?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -6468,6 +6487,54 @@ export type Database = {
           },
         ]
       }
+      investor_opportunity_unlocks: {
+        Row: {
+          amount_grosz: number
+          created_at: string
+          id: string
+          match_id: string
+          payment_id: string | null
+          source: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_grosz: number
+          created_at?: string
+          id?: string
+          match_id: string
+          payment_id?: string | null
+          source?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_grosz?: number
+          created_at?: string
+          id?: string
+          match_id?: string
+          payment_id?: string | null
+          source?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_opportunity_unlocks_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "investor_order_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investor_opportunity_unlocks_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "access_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investor_order_events: {
         Row: {
           actor: string | null
@@ -6693,10 +6760,120 @@ export type Database = {
         }
         Relationships: []
       }
+      investor_screenings: {
+        Row: {
+          created_at: string
+          dob: string | null
+          id: string
+          query: Json
+          raw_result: Json | null
+          result: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          subject_kind: string
+          subject_name: string
+          total_hits: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dob?: string | null
+          id?: string
+          query?: Json
+          raw_result?: Json | null
+          result: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          subject_kind?: string
+          subject_name: string
+          total_hits?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dob?: string | null
+          id?: string
+          query?: Json
+          raw_result?: Json | null
+          result?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          subject_kind?: string
+          subject_name?: string
+          total_hits?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      investor_success_fees: {
+        Row: {
+          created_at: string
+          fee_bps: number
+          fee_grosz: number
+          id: string
+          invoice_id: string | null
+          legal_basis: string | null
+          loan_amount_pln: number
+          match_id: string
+          note: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fee_bps: number
+          fee_grosz: number
+          id?: string
+          invoice_id?: string | null
+          legal_basis?: string | null
+          loan_amount_pln: number
+          match_id: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fee_bps?: number
+          fee_grosz?: number
+          id?: string
+          invoice_id?: string | null
+          legal_basis?: string | null
+          loan_amount_pln?: number
+          match_id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_success_fees_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "sales_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investor_success_fees_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "investor_order_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investors: {
         Row: {
           address: string | null
           bank_account: string | null
+          bank_account_bank_name: string | null
+          bank_account_confirmed_at: string | null
           city: string | null
           company_name: string | null
           country: string | null
@@ -6712,6 +6889,9 @@ export type Database = {
           krs: string | null
           last_name: string | null
           legal_form: string | null
+          lender_data_completed_at: string | null
+          lender_lookup_at: string | null
+          lender_lookup_source: string | null
           nip: string | null
           pesel: string | null
           phone: string | null
@@ -6720,6 +6900,9 @@ export type Database = {
           representative_first_name: string | null
           representative_last_name: string | null
           representative_role: string | null
+          screening_id: string | null
+          screening_result: string | null
+          screening_updated_at: string | null
           street: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -6739,6 +6922,8 @@ export type Database = {
         Insert: {
           address?: string | null
           bank_account?: string | null
+          bank_account_bank_name?: string | null
+          bank_account_confirmed_at?: string | null
           city?: string | null
           company_name?: string | null
           country?: string | null
@@ -6754,6 +6939,9 @@ export type Database = {
           krs?: string | null
           last_name?: string | null
           legal_form?: string | null
+          lender_data_completed_at?: string | null
+          lender_lookup_at?: string | null
+          lender_lookup_source?: string | null
           nip?: string | null
           pesel?: string | null
           phone?: string | null
@@ -6762,6 +6950,9 @@ export type Database = {
           representative_first_name?: string | null
           representative_last_name?: string | null
           representative_role?: string | null
+          screening_id?: string | null
+          screening_result?: string | null
+          screening_updated_at?: string | null
           street?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -6781,6 +6972,8 @@ export type Database = {
         Update: {
           address?: string | null
           bank_account?: string | null
+          bank_account_bank_name?: string | null
+          bank_account_confirmed_at?: string | null
           city?: string | null
           company_name?: string | null
           country?: string | null
@@ -6796,6 +6989,9 @@ export type Database = {
           krs?: string | null
           last_name?: string | null
           legal_form?: string | null
+          lender_data_completed_at?: string | null
+          lender_lookup_at?: string | null
+          lender_lookup_source?: string | null
           nip?: string | null
           pesel?: string | null
           phone?: string | null
@@ -6804,6 +7000,9 @@ export type Database = {
           representative_first_name?: string | null
           representative_last_name?: string | null
           representative_role?: string | null
+          screening_id?: string | null
+          screening_result?: string | null
+          screening_updated_at?: string | null
           street?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -6820,7 +7019,15 @@ export type Database = {
           web2learn_status?: string | null
           web2learn_user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "investors_screening_id_fkey"
+            columns: ["screening_id"]
+            isOneToOne: false
+            referencedRelation: "investor_screenings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       krs_cache: {
         Row: {
@@ -8117,6 +8324,7 @@ export type Database = {
       legal_documents: {
         Row: {
           active: boolean
+          allows_investor_fees: boolean
           code: string
           content_text: string
           docx_base64: string
@@ -8130,6 +8338,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          allows_investor_fees?: boolean
           code: string
           content_text: string
           docx_base64: string
@@ -8143,6 +8352,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          allows_investor_fees?: boolean
           code?: string
           content_text?: string
           docx_base64?: string
@@ -12535,6 +12745,10 @@ export type Database = {
         Returns: undefined
       }
       increment_loan_view: { Args: { _loan_id: string }; Returns: undefined }
+      investor_can_open_match: {
+        Args: { _match_id: string; _user_id: string }
+        Returns: boolean
+      }
       investor_has_disclosed_match: {
         Args: { _application_id: string; _user_id: string }
         Returns: boolean
@@ -12572,6 +12786,11 @@ export type Database = {
           voivodeship: string
         }[]
       }
+      investor_pipeline_complete: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      investor_tier: { Args: { _user_id: string }; Returns: string }
       is_external_partner: { Args: { _user_id: string }; Returns: boolean }
       is_internal_staff: { Args: { _user_id: string }; Returns: boolean }
       kw_claim_order: {
