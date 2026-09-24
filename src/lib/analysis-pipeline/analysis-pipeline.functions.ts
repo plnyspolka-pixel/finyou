@@ -46,35 +46,8 @@ export const startAnalysisPipelineRun = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdminOrOperator(context.supabase as any, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { normalizeKwNumber } = await import("@/lib/kw-fetch.server");
-
-    const { data: prop } = await supabaseAdmin
-      .from("properties")
-      .select("land_register_number")
-      .eq("loan_application_id", data.applicationId)
-      .maybeSingle();
-    const kwNumber = normalizeKwNumber(String(prop?.land_register_number ?? ""));
-    if (!kwNumber) throw new Error("Wniosek nie ma poprawnego numeru KW.");
-
+    const { startAnalysisPipelineRunCore } = await import("./engine.server");
     // Ręczny re-run zamyka ewentualny trwający przebieg i otwiera nowy.
-    await (supabaseAdmin as any)
-      .from("analysis_pipeline_runs")
-      .update({
-        status: "error",
-        error: "Przerwane ręcznym ponowieniem",
-        finished_at: new Date().toISOString(),
-      })
-      .eq("loan_application_id", data.applicationId)
-      .eq("status", "running");
-
-    const { error } = await (supabaseAdmin as any).from("analysis_pipeline_runs").insert({
-      loan_application_id: data.applicationId,
-      kw_number: kwNumber,
-      status: "running",
-      steps: {},
-      trigger_reason: "ręcznie z panelu",
-    });
-    if (error) throw new Error(error.message);
+    await startAnalysisPipelineRunCore(data.applicationId, "ręcznie z panelu");
     return { ok: true };
   });
