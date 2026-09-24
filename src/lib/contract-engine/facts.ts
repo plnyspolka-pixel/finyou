@@ -50,6 +50,32 @@ export function rodzajZenski(imieNazwisko: string): boolean {
   return imieNazwisko.split(/\s+/)[0].trim().toLowerCase().endsWith("a");
 }
 
+/**
+ * Płeć osoby fizycznej do odmiany rodzaju gramatycznego: pole `plec`, a gdy
+ * go brak — PESEL (przedostatnia cyfra parzysta = kobieta), a gdy i tego brak
+ * — końcówka imienia. Podmiot gospodarczy → rodzaj męski (rzeczownik
+ * „Pożyczkobiorca”).
+ */
+export function plecOsoby(o: any): "K" | "M" {
+  if (!o || (o.typ && o.typ !== "osoba_fizyczna")) return "M";
+  if (o.plec === "K" || o.plec === "M") return o.plec;
+  const pesel = String(o.pesel ?? "");
+  if (peselPoprawny(pesel)) return Number(pesel[9]) % 2 === 0 ? "K" : "M";
+  return rodzajZenski(String(o.imie_nazwisko ?? "")) ? "K" : "M";
+}
+
+/** PESEL z poprawną cyfrą kontrolną (wagi 1-3-7-9). */
+export function peselPoprawny(pesel: string): boolean {
+  if (!/^\d{11}$/.test(pesel)) return false;
+  const wagi = [1, 3, 7, 9, 1, 3, 7, 9, 1, 3];
+  const suma = wagi.reduce((acc, w, i) => acc + w * Number(pesel[i]), 0);
+  return (10 - (suma % 10)) % 10 === Number(pesel[10]);
+}
+
+export function jestKobieta(o: any): boolean {
+  return plecOsoby(o) === "K";
+}
+
 // Nazwy rodzajów obciążeń z działów III/IV — do klauzuli o stanie obciążeń.
 const RODZAJ_OBCIAZENIA: Record<string, string> = {
   hipoteka_umowna: "hipoteka umowna",
@@ -140,13 +166,13 @@ export function oznaczenieStrony(s: any, pelne = true, opts?: OznaczenieOpts): s
     const czesci: string[] = [String(s.imie_nazwisko).toUpperCase()];
     if (s.firma)
       czesci.push(
-        `${rodzajZenski(s.imie_nazwisko) ? "prowadząca" : "prowadzący"} działalność gospodarczą pod firmą ${s.firma}`,
+        `${jestKobieta(s) ? "prowadząca" : "prowadzący"} działalność gospodarczą pod firmą ${s.firma}`,
       );
     else if (s.dzialalnosc === "gospodarstwo_rolne") {
       // Zmiana 2 po Kańkowskich: rolnik prowadzący gospodarstwo — traktowany
       // jak przedsiębiorca; przy wspólnym gospodarstwie NIP widnieje przy
       // przedstawicielu (pole `nip` tej osoby), pozostali mają sam PESEL.
-      const prowadzacy = rodzajZenski(s.imie_nazwisko) ? "prowadząca" : "prowadzący";
+      const prowadzacy = jestKobieta(s) ? "prowadząca" : "prowadzący";
       czesci.push(
         opts?.wspolneGospodarstwo
           ? `rolnik ${prowadzacy} wspólne gospodarstwo rolne`
@@ -241,14 +267,17 @@ export function oznaczenieWlascicieli(d: any, f: any): string {
 }
 
 export function oznaczenie777(d: any): string {
-  const role = d.zabezpieczenia.egzekucja_777.poddaje_sie.map((r: string) => ROLA_NAZWA[r]);
+  const wielu = listaPozyczkobiorcow(d).length > 1;
+  const role = d.zabezpieczenia.egzekucja_777.poddaje_sie.map((r: string) =>
+    r === "pozyczkobiorca" && wielu ? "Pożyczkobiorcy" : ROLA_NAZWA[r],
+  );
   if (role.length === 1) return role[0];
   return role.slice(0, -1).join(", ") + " oraz " + role[role.length - 1];
 }
 
 /** Opis stanu cywilnego do oświadczenia o majątku osobistym; null = nie dotyczy. */
 function opisStanuCywilnego(o: any): string | null {
-  const k = rodzajZenski(o?.imie_nazwisko ?? "");
+  const k = jestKobieta(o);
   switch (o?.stan_cywilny) {
     case "kawaler_panna":
       return "nie pozostaje w związku małżeńskim";
@@ -285,20 +314,26 @@ export function zbudujFakty(d: any): Record<string, any> {
   f.wielu_pozyczkobiorcow = poz.length > 1;
 
   const wielu = f.wielu_pozyczkobiorcow as boolean;
+  // Rodzaj gramatyczny: przy jednej osobie fizycznej wg płci (pole `plec`,
+  // PESEL albo imię), przy wielu pożyczkobiorcach liczba mnoga jak dotąd.
+  const kobieta = !wielu && poz.length === 1 && jestKobieta(poz[0]);
+  f.pb_kobieta = kobieta;
+  const g = (mn: string, k: string, m: string) => (wielu ? mn : kobieta ? k : m);
   f.pb = wielu ? "Pożyczkobiorcy" : "Pożyczkobiorca";
   f.pb_dop = wielu ? "Pożyczkobiorców" : "Pożyczkobiorcy";
   f.pb_cel = wielu ? "Pożyczkobiorcom" : "Pożyczkobiorcy";
   f.pb_bier = wielu ? "Pożyczkobiorców" : "Pożyczkobiorcę";
-  f.pb_ma = wielu ? "ma dla nich" : "ma dla niego";
+  f.pb_ma = g("ma dla nich", "ma dla niej", "ma dla niego");
   f.pb_przedsiebiorca = wielu ? "przedsiębiorcami" : "przedsiębiorcą";
   f.pb_narz = wielu ? "Pożyczkobiorcami" : "Pożyczkobiorcą";
-  f.pb_zaimek = wielu ? "nich" : "niego";
-  f.pb_zaimek_mu = wielu ? "im" : "mu";
+  f.pb_zaimek = g("nich", "nią", "niego");
+  f.pb_zaimek_mu = g("im", "jej", "mu");
+  f.pb_dla = g("nich", "niej", "niego");
   f.pb_oswiadcza = wielu ? "oświadczają" : "oświadcza";
   f.pb_zobowiazuje = wielu ? "zobowiązują się" : "zobowiązuje się";
   f.pb_potwierdza = wielu ? "potwierdzają" : "potwierdza";
-  f.pb_otrzymal = wielu ? "otrzymali" : "otrzymał";
-  f.pb_mial = wielu ? "mieli" : "miał";
+  f.pb_otrzymal = g("otrzymali", "otrzymała", "otrzymał");
+  f.pb_mial = g("mieli", "miała", "miał");
   f.pb_rozumie = wielu ? "rozumieją" : "rozumie";
   f.pb_dziala = wielu ? "działają" : "działa";
   f.pb_zawiera = wielu ? "zawierają" : "zawiera";
@@ -306,32 +341,47 @@ export function zbudujFakty(d: any): Record<string, any> {
   f.pb_posiada = wielu ? "posiadają" : "posiada";
   f.pb_przeznaczy = wielu ? "przeznaczą" : "przeznaczy";
   f.pb_ponosi = wielu ? "ponoszą" : "ponosi";
-  f.pb_toczy_sie = wielu ? "nim" : "niemu";
+  f.pb_toczy_sie = g("nim", "niej", "niemu");
   // Formy do klauzul windykacji, oświadczeń, RODO i wypowiedzenia (wzorzec
   // Kańkowskich) — liczba mnoga dla kilku pożyczkobiorców.
-  f.pb_zobowiazany_jest = wielu ? "zobowiązani są" : "zobowiązany jest";
+  f.pb_zobowiazany_jest = g("zobowiązani są", "zobowiązana jest", "zobowiązany jest");
   f.pb_wywiazuje_sie = wielu ? "wywiązują się" : "wywiązuje się";
-  f.pb_zawarl = wielu ? "zawarli" : "zawarł";
+  f.pb_zawarl = g("zawarli", "zawarła", "zawarł");
   f.pb_konsument = wielu ? "konsumenci" : "konsument";
   f.pb_przedsiebiorca_mian = wielu ? "przedsiębiorcy" : "przedsiębiorca";
-  f.pb_prowadzacego = wielu ? "prowadzących" : "prowadzącego";
-  f.pb_dokonal = wielu ? "dokonali" : "dokonał";
-  f.pb_jego = wielu ? "ich" : "jego";
+  f.pb_prowadzacego = g("prowadzących", "prowadzącej", "prowadzącego");
+  f.pb_dokonal = g("dokonali", "dokonała", "dokonał");
+  f.pb_jego = g("ich", "jej", "jego");
   f.pb_jego_male = f.pb_jego;
-  f.pb_zrozumial = wielu ? "zrozumieli" : "zrozumiał";
-  f.pb_bedzie_roscil = wielu ? "będą rościli" : "będzie rościł";
-  f.pb_swiadomy = wielu ? "świadomi" : "świadomy";
+  f.pb_zrozumial = g("zrozumieli", "zrozumiała", "zrozumiał");
+  f.pb_bedzie_roscil = g("będą rościli", "będzie rościła", "będzie rościł");
+  f.pb_swiadomy = g("świadomi", "świadoma", "świadomy");
   f.pb_znajduje_sie = wielu ? "znajdują się" : "znajduje się";
-  f.pb_wybral = wielu ? "wybrali" : "wybrał";
+  f.pb_wybral = g("wybrali", "wybrała", "wybrał");
   f.pb_wyraza = wielu ? "wyrażają" : "wyraża";
   f.pb_ma_prawo = wielu ? "mają prawo" : "ma prawo";
   f.pb_opoznia_sie = wielu ? "opóźniają się" : "opóźnia się";
   f.pb_wykorzysta = wielu ? "wykorzystają" : "wykorzysta";
-  f.pb_podal = wielu ? "podali" : "podał";
+  f.pb_podal = g("podali", "podała", "podał");
   f.pb_utrudnia = wielu ? "utrudniają" : "utrudnia";
   f.pb_narusza = wielu ? "naruszają" : "narusza";
-  f.pb_zaimek_wobec = wielu ? "któregokolwiek z nich" : "niego";
+  f.pb_zaimek_wobec = g("któregokolwiek z nich", "niej", "niego");
   f.pb_dokona = wielu ? "dokonają" : "dokona";
+  // Biblioteka 1.3: aktywna działalność, warunki wejścia w życie, obciążenia
+  // pozostające przed hipoteką Pożyczkodawcy, przesłanki wypowiedzenia.
+  f.pb_wykonuje = wielu ? "wykonują" : "wykonuje";
+  f.pb_zlozyl = g("złożyli", "złożyła", "złożył");
+  f.pb_spelnia = wielu ? "spełniają" : "spełnia";
+  f.pb_zlozy = wielu ? "złożą" : "złoży";
+  f.pb_dopusci = wielu ? "dopuszczą" : "dopuści";
+  f.pb_podpis_poswiadczony = wielu
+    ? "z podpisami Pożyczkobiorców poświadczonymi notarialnie"
+    : "z podpisem Pożyczkobiorcy poświadczonym notarialnie";
+  // Oświadczenie o aktywnym wykonywaniu działalności (CEIDG) — pożyczkobiorca
+  // będący osobą fizyczną przedsiębiorcą (nie rolnikiem prowadzącym gospodarstwo).
+  f.ma_pb_ceidg = poz.some(
+    (p) => p?.typ === "osoba_fizyczna" && p.dzialalnosc !== "gospodarstwo_rolne",
+  );
 
   const emaile = [...new Set(poz.map((p) => String(p?.email ?? "").trim()).filter(Boolean))];
   f.ma_email_pozyczkobiorcy = emaile.length > 0;
@@ -397,6 +447,31 @@ export function zbudujFakty(d: any): Record<string, any> {
   f.ma_wykreslenia_przed_wyplata = f.obciazenia_wykreslenie_przed.length > 0;
   f.ma_splaty_wierzycieli = f.obciazenia_splata_ze_srodkow.length > 0;
   f.ma_zrzeczenia = f.obciazenia_zrzeczenie.length > 0;
+  // Hipoteki pozostające w księdze z pierwszeństwem przed hipoteką
+  // Pożyczkodawcy (zaakceptowane, nieusuwane) — zobowiązania z § 5
+  // i przesłanka wypowiedzenia.
+  const hipPozostajace = obcAll.filter(
+    (o) =>
+      o.sposob_usuniecia === "pozostaje_akceptowane" &&
+      (o.rodzaj === "hipoteka_umowna" || o.rodzaj === "hipoteka_przymusowa"),
+  );
+  f.ma_hipoteki_pozostajace = hipPozostajace.length > 0;
+  const opisyPozostajacych = hipPozostajace.map(
+    (o) =>
+      (o.rodzaj === "hipoteka_przymusowa" ? "hipoteki przymusowej" : "hipoteki umownej") +
+      (o.wierzyciel ? ` na rzecz ${o.wierzyciel}` : "") +
+      (o.kwota ? ` do kwoty ${o.kwota} zł` : "") +
+      ` wpisanej w dziale ${o.dzial} księgi wieczystej nr ${o.nr_kw}`,
+  );
+  f.hipoteki_pozostajace_opis =
+    opisyPozostajacych.length > 1
+      ? opisyPozostajacych.slice(0, -1).join(", ") +
+        " oraz " +
+        opisyPozostajacych[opisyPozostajacych.length - 1]
+      : (opisyPozostajacych[0] ?? "");
+  f.hipoteki_pozostajace_ta = hipPozostajace.length > 1 ? "tymi hipotekami" : "tą hipoteką";
+  f.hipoteki_pozostajace_pozostajacej =
+    hipPozostajace.length > 1 ? "pozostających" : "pozostającej";
   f.ma_obciazenia_egzekucyjne = obcAll.some((o) =>
     ["egzekucja_sadowa", "egzekucja_administracyjna", "hipoteka_przymusowa"].includes(o.rodzaj),
   );
@@ -465,16 +540,20 @@ export function zbudujFakty(d: any): Record<string, any> {
     if (n.wspolwlasnosc) continue;
     const wl = wlascicielObiekt(d, n);
     if (!wl || wl.typ !== "osoba_fizyczna") continue;
+    // Brak danych o stanie cywilnym i ustroju = brak adnotacji o wspólności
+    // w dziale II — oświadczenie bez części o stanie cywilnym.
+    const nieznany = !wl.stan_cywilny && !wl.ustroj_majatkowy;
     const opis = opisStanuCywilnego(wl);
-    if (!opis) continue;
-    const kobieta = rodzajZenski(wl.imie_nazwisko);
+    if (!opis && !nieznany) continue;
+    const kobieta = jestKobieta(wl);
     majatekOsobisty.push({
       ...n,
       wlasciciel_imie_nazwisko: wl.imie_nazwisko,
       wlasciciel_oswiadcza: "oświadcza",
       wlasciciel_ujawniony: kobieta ? "ujawniona" : "ujawniony",
       wlasciciel_zaimek: kobieta ? "jej" : "jego",
-      stan_cywilny_opis: opis,
+      stan_cywilny_opis: opis ?? "",
+      stan_cywilny_czesc: opis ? `${opis}, a ` : "",
     });
   }
   f.nieruchomosci_majatek_osobisty = majatekOsobisty;
@@ -560,10 +639,20 @@ export function zbudujFakty(d: any): Record<string, any> {
   const mnogaWl = roleWlascicieli.size > 1 || roleWlascicieli.has("Pożyczkobiorcy (mn.)");
   f.wlasciciele_czasownik_zobowiazuje = mnogaWl ? "zobowiązują się" : "zobowiązuje się";
   f.wlasciciele_czasownik_oswiadcza = mnogaWl ? "oświadczają" : "oświadcza";
-  f.wlasciciele_zaimek_przysluguje = mnogaWl ? "przysługuje im" : "przysługuje mu";
+  // Jeden właściciel (osoba fizyczna) — zaimek wg płci („przysługuje jej”).
+  const wlascicielJedyny = !mnogaWl && nier.length > 0 ? wlascicielObiekt(d, nier[0]) : null;
+  f.wlasciciele_zaimek_przysluguje = mnogaWl
+    ? "przysługuje im"
+    : jestKobieta(wlascicielJedyny)
+      ? "przysługuje jej"
+      : "przysługuje mu";
 
   const liczba777 = d.zabezpieczenia.egzekucja_777.poddaje_sie.length;
-  f.egzekucja_777_czasownik = liczba777 === 1 ? "podda się" : "poddadzą się";
+  f.egzekucja_777_czasownik =
+    liczba777 === 1 &&
+    !(f.wielu_pozyczkobiorcow && d.zabezpieczenia.egzekucja_777.poddaje_sie[0] === "pozyczkobiorca")
+      ? "podda się"
+      : "poddadzą się";
 
   if (por !== null) f.porecziciel_oznaczenie = "Poręczyciel";
 
@@ -598,7 +687,7 @@ export function zbudujFakty(d: any): Record<string, any> {
         kwota: kw ? kw.cyframi : "—",
         opis:
           `na rachunek wierzyciela ${o.wierzyciel || "hipotecznego"} ` +
-          `nr ${o.wierzyciel_rachunek || "[NR RACHUNKU WIERZYCIELA]"}, ` +
+          `nr ${o.wierzyciel_rachunek ?? ""}, ` +
           `tytułem spłaty zadłużenia zabezpieczonego wpisem: ${o.opis} ` +
           `(KW nr ${o.nr_kw}); w tym zakresie Pożyczkobiorca dokonuje przekazu, ` +
           `a Pożyczkodawca przekaz ten przyjmuje`,
@@ -610,6 +699,17 @@ export function zbudujFakty(d: any): Record<string, any> {
     });
   }
   f.wyplata_transze = transze;
+
+  // § 1: zakaz przeznaczenia pożyczki na cele związane z nieruchomościami.
+  // Domyślnie włączony; przy spłacie wierzycieli hipotecznych ze środków
+  // pożyczki domyślnie wyłączony (inaczej umowa przeczyłaby sama sobie).
+  const zakaz = d.warunki?.zakaz_celu_nieruchomosciowego;
+  f.zakaz_celu_nieruchomosciowego = zakaz === true || (zakaz !== false && !f.ma_splaty_wierzycieli);
+
+  // § 2 ust. 6 lit. b: wpis roszczenia o opróżnione miejsce, gdy dotyczy.
+  f.wejscie_w_zycie_roszczenie = f.ma_roszczenie_oproznione_miejsce
+    ? " (wraz z żądaniem wpisu roszczenia o przeniesienie hipoteki na opróżnione miejsce hipoteczne)"
+    : "";
 
   return f;
 }

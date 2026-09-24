@@ -6,7 +6,8 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import biblioteka from "./clauses.json";
-import { renderuj, type Dokument } from "./renderer";
+import { BladPola, renderuj, type Dokument } from "./renderer";
+import { bledyOdeslanKompletu } from "./odeslania";
 import { bibliotekaBez } from "./clause-select";
 import {
   buildKompletDocumentXml,
@@ -61,6 +62,9 @@ export async function generujKomplet(
   const doc = renderuj(umowa, bibliotekaBez(opts.excludedClauses ?? []));
   const documentXml = buildKompletDocumentXml(umowa, doc, opts);
   const tekst = tekstZDocumentXml(documentXml);
+  // Odesłania z wniosku i załączników do Umowy (np. „§ 4 ust. 5 Umowy”).
+  const bledy = bledyOdeslanKompletu(doc, tekst);
+  if (bledy.length) throw new BladPola(`Błędne odesłania: ${bledy.join("; ")}`);
   const [bytes, sha256] = await Promise.all([spakujDocx(documentXml), sha256Hex(tekst)]);
   return { bytes, doc, documentXml, tekst, sha256, wersjaBiblioteki: WERSJA_BIBLIOTEKI };
 }

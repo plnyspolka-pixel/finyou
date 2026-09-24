@@ -130,7 +130,7 @@ export function formatuj(doc: Dokument, szerokosc = 96): string {
   A(`zawarta dnia ${k.data} w ${k.miejscowosc} pomiędzy:`);
   A("");
   k.strony.forEach((s, i) => {
-    let tekst = `${s.opis}, zwanym/ą dalej „${s.rola}"`;
+    let tekst = s.zwany ? `${s.opis}, ${s.zwany.replace(/”$/, '"')}` : s.opis;
     tekst += i < k.strony.length - 1 ? "," : ".";
     A(fill(tekst, szerokosc));
     A("");

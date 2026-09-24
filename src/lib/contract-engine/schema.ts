@@ -119,6 +119,9 @@ const osobaFizycznaBase = {
   email: nullableStr,
   stan_cywilny: stanCywilny,
   ustroj_majatkowy: ustrojMajatkowy,
+  // Płeć — do rodzaju gramatycznego („zawarł/zawarła”). Gdy brak, silnik
+  // wyprowadza ją z PESEL (z poprawną cyfrą kontrolną), a w ostateczności z imienia.
+  plec: z.enum(["K", "M"]).nullable().optional(),
 };
 
 export const osobaFizyczna = z.object(osobaFizycznaBase).strict();
@@ -308,6 +311,10 @@ const warunki = z
       .strict(),
     oprocentowanie: z.string().regex(/^\d{1,2},\d$/),
     cel: z.string().min(5),
+    // § 1: zakaz przeznaczenia pożyczki na zakup, remont lub spłatę zobowiązań
+    // dotyczących nieruchomości. Brak = włączony (chyba że pożyczka spłaca
+    // wierzycieli hipotecznych).
+    zakaz_celu_nieruchomosciowego: z.boolean().nullable().optional(),
     harmonogram,
     rachunki: z.object({ wyplata: z.string(), splata: z.string() }).strict(),
   })

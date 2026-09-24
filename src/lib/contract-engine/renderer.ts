@@ -13,12 +13,13 @@
 import { ewaluujWarunek, pobierzSciezke, type Ctx } from "./conditions";
 import {
   listaPozyczkobiorcow,
+  jestKobieta,
   oznaczenieStrony,
-  rodzajZenski,
   ROLA_NAZWA,
   zbudujFakty,
 } from "./facts";
 import biblioteka from "./clauses.json";
+import { bledyOdeslanUmowy } from "./odeslania";
 
 export interface Ustep {
   poziom: "ustep" | "podpunkt";
@@ -37,6 +38,8 @@ export interface Strona {
   rola: string;
   opis: string;
   grupa?: string;
+  /** „zwaną dalej „Pożyczkobiorcą”” — rodzaj wg płci/formy; pusty w środku grupy. */
+  zwany: string;
 }
 /** Położenie klauzuli po numeracji — do odesłań („§ 4 ust. 2”, „§ 5 ust. 3 lit. m”). */
 export interface Polozenie {
@@ -59,11 +62,19 @@ export class BladPola extends Error {}
 const POLE_RE = /\{\{([^}]+)\}\}/g;
 /** Odesłania do innych klauzul — rozwiązywane dopiero po numeracji. */
 const ODESLANIE_RE = /\{\{(ref|ref_par):([A-Za-z0-9_]+)\}\}/g;
+/**
+ * Lista odesłań do oświadczeń, z których część może nie wejść do Umowy:
+ * `{{refs_lista:ID1,ID2}}` → „tematu 1 (§ 5 ust. 3) lub tematu 2 (§ 5 ust. 4)”.
+ * Wypisuje tylko klauzule obecne w Umowie (temat z metadanej
+ * `temat_odeslania`); gdy nie ma żadnej — błąd renderowania.
+ */
+const LISTA_ODESLAN_RE = /\{\{refs_lista:([A-Za-z0-9_,]+)\}\}/g;
+const ZNACZNIKI_ODESLAN = ["ref:", "ref_par:", "refs_lista:"];
 
 export function podstaw(tekst: string, ctx: Ctx, lokalne?: Record<string, any>): string {
   return tekst.replace(POLE_RE, (m, grp) => {
     const sciezka = String(grp).trim();
-    if (sciezka.startsWith("ref:") || sciezka.startsWith("ref_par:")) return m;
+    if (ZNACZNIKI_ODESLAN.some((z) => sciezka.startsWith(z))) return m;
     if (lokalne) {
       for (const pref of Object.keys(lokalne)) {
         const obj = lokalne[pref];
@@ -158,6 +169,16 @@ export function renderuj(wejscie: any, bib: any = biblioteka): Dokument {
     }
   });
 
+  // Interpunkcja wyliczeń: ostatni podpunkt ciągu kończy się kropką, a nie
+  // średnikiem — niezależnie od tego, które podpunkty weszły do Umowy.
+  for (const sek of wynikSekcje) {
+    sek.ustepy.forEach((u, i) => {
+      const nast = sek.ustepy[i + 1];
+      if (u.poziom === "podpunkt" && (!nast || nast.poziom !== "podpunkt") && u.tekst.endsWith(";"))
+        u.tekst = u.tekst.slice(0, -1) + ".";
+    });
+  }
+
   // położenia klauzul + rozwiązanie odesłań
   const polozenia: Record<string, Polozenie> = {};
   for (const sek of wynikSekcje) {
@@ -172,8 +193,27 @@ export function renderuj(wejscie: any, bib: any = biblioteka): Dokument {
       };
     }
   }
+  const tematy: Record<string, string> = {};
+  for (const k of klauzule) if (k.temat_odeslania) tematy[k.id] = k.temat_odeslania;
   for (const sek of wynikSekcje) {
     for (const u of sek.ustepy) {
+      u.tekst = u.tekst.replace(LISTA_ODESLAN_RE, (_m, lista: string) => {
+        const obecne = lista
+          .split(",")
+          .filter((id) => polozenia[id])
+          .map((id) => {
+            const ref = tekstOdeslania(polozenia[id]);
+            return tematy[id] ? `${tematy[id]} (${ref})` : ref;
+          });
+        if (obecne.length === 0) {
+          throw new BladPola(
+            `Klauzula ${u.zrodlo} odsyła do oświadczeń ${lista}, z których żadne nie weszło do Umowy`,
+          );
+        }
+        return obecne.length > 1
+          ? obecne.slice(0, -1).join(", ") + " lub " + obecne[obecne.length - 1]
+          : obecne[0];
+      });
       u.tekst = u.tekst.replace(ODESLANIE_RE, (_m, rodzaj, id) => {
         const p = polozenia[id];
         if (!p) {
@@ -186,7 +226,7 @@ export function renderuj(wejscie: any, bib: any = biblioteka): Dokument {
     }
   }
 
-  return {
+  const doc: Dokument = {
     meta: dane.meta,
     komparycja: komparycja(dane),
     sekcje: wynikSekcje,
@@ -194,6 +234,10 @@ export function renderuj(wejscie: any, bib: any = biblioteka): Dokument {
     zalaczniki: zalaczniki(dane, fakty),
     polozenia,
   };
+  // Każde odesłanie wewnętrzne musi wskazywać istniejącą jednostkę redakcyjną.
+  const bledy = bledyOdeslanUmowy(doc);
+  if (bledy.length) throw new BladPola(`Błędne odesłania: ${bledy.join("; ")}`);
+  return doc;
 }
 
 function renderujKlauzule(kl: any, ctx: Ctx, fakty: Record<string, any>): Ustep[] {
@@ -278,7 +322,7 @@ function opisUdzialowUlamkowych(d: any, p: any): string {
     if (w?.rodzaj !== "ulamkowa") continue;
     for (const ws of w.wspolwlasciciele ?? []) {
       if (ws?.pesel && ws.pesel === p.pesel && ws.udzial) {
-        const rola = rodzajZenski(p.imie_nazwisko) ? "współwłaścicielka" : "współwłaściciel";
+        const rola = jestKobieta(p) ? "współwłaścicielka" : "współwłaściciel";
         czesci.push(
           `${rola} w udziale wynoszącym ${ws.udzial} części nieruchomości objętej księgą wieczystą nr ${n.nr_kw}`,
         );
@@ -286,6 +330,31 @@ function opisUdzialowUlamkowych(d: any, p: any): string {
     }
   }
   return czesci.length ? ", " + czesci.join(", ") : "";
+}
+
+// Formy prawne, których nazwa rodzajowa jest rodzaju żeńskiego (spółka,
+// fundacja, spółdzielnia) — „zwaną dalej”.
+const FORMY_ZENSKIE = new Set([
+  "spolka_jawna",
+  "spolka_partnerska",
+  "spolka_komandytowa",
+  "spolka_komandytowo_akcyjna",
+  "sp_z_oo",
+  "prosta_sa",
+  "sa",
+  "spoldzielnia",
+  "fundacja",
+]);
+
+/** „zwanym” / „zwaną” / „zwanymi łącznie” — zgodnie z rodzajem oznaczenia strony. */
+export function formaZwany(s: any): string {
+  if (!s) return "zwanym";
+  if (s.typ === "osoba_fizyczna") return jestKobieta(s) ? "zwaną" : "zwanym";
+  if (s.forma === "spolka_cywilna" && Array.isArray(s.wspolnicy_sc)) return "zwanymi łącznie";
+  if (s.forma && FORMY_ZENSKIE.has(s.forma)) return "zwaną";
+  if (s.forma === "stowarzyszenie") return "zwanym";
+  const nazwa = `${s.nazwa ?? ""} ${s.forma_prawna ?? ""}`.toLowerCase();
+  return /\bsp\.|spółk|s\.a\.|fundacj|spółdziel/.test(nazwa) ? "zwaną" : "zwanym";
 }
 
 function komparycja(d: any): Dokument["komparycja"] {
@@ -296,8 +365,15 @@ function komparycja(d: any): Dokument["komparycja"] {
   const wspolneGospodarstwo =
     poz.filter((p) => p?.typ === "osoba_fizyczna" && p.dzialalnosc === "gospodarstwo_rolne")
       .length > 1;
-  const strony: Strona[] = poz.map((p) => ({
+  const strony: Strona[] = poz.map((p, i) => ({
     rola: rolaPb,
+    // Kilku pożyczkobiorców: jedno „zwanymi dalej łącznie” po ostatnim z nich.
+    zwany:
+      poz.length > 1
+        ? i === poz.length - 1
+          ? `zwanymi dalej łącznie „${rolaPb}”`
+          : ""
+        : `${formaZwany(p)} dalej „${rolaPb}”`,
     opis:
       oznaczenieStrony(p, true, {
         wspolneGospodarstwo:
@@ -310,6 +386,7 @@ function komparycja(d: any): Dokument["komparycja"] {
   if (d.porecziciel) {
     strony.push({
       rola: "Poręczycielem",
+      zwany: `${formaZwany(d.porecziciel)} dalej „Poręczycielem”`,
       opis: oznaczenieStrony(d.porecziciel) + opisUdzialowUlamkowych(d, d.porecziciel),
     });
   }
@@ -320,11 +397,19 @@ function komparycja(d: any): Dokument["komparycja"] {
         oznaczenieStrony(n.wlasciciel_dane) + opisUdzialowUlamkowych(d, n.wlasciciel_dane);
       if (!widziani.has(opis)) {
         widziani.add(opis);
-        strony.push({ rola: "Właścicielem nieruchomości", opis });
+        strony.push({
+          rola: "Właścicielem nieruchomości",
+          opis,
+          zwany: `${formaZwany(n.wlasciciel_dane)} dalej „Właścicielem nieruchomości”`,
+        });
       }
     }
   }
-  strony.push({ rola: "Pożyczkodawcą", opis: oznaczenieStrony(d.pozyczkodawca) });
+  strony.push({
+    rola: "Pożyczkodawcą",
+    opis: oznaczenieStrony(d.pozyczkodawca),
+    zwany: `${formaZwany(d.pozyczkodawca)} dalej „Pożyczkodawcą”`,
+  });
   return { data: d.meta.data_umowy, miejscowosc: d.meta.miejscowosc, strony };
 }
 
