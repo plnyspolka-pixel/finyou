@@ -144,6 +144,24 @@ export async function fetchReadable(
   };
 }
 
+/**
+ * Surowy Markdown strony przez Jina Reader (tryb tekstowy). Zachowuje nagłówki
+ * i ceny kart, które tryb JSON potrafi pominąć (np. ceny całkowite na OLX).
+ */
+export async function fetchReadableMarkdown(
+  url: string,
+  opts: { timeoutMs?: number } = {},
+): Promise<string> {
+  const res = await timedFetch(
+    JINA_READER + url,
+    { headers: jinaHeaders({ "X-Return-Format": "markdown" }) },
+    opts.timeoutMs ?? 30_000,
+  );
+  const text = await res.text().catch(() => "");
+  if (!res.ok) throw new Error(`Jina Reader ${res.status}: ${text.slice(0, 200)}`);
+  return text;
+}
+
 /** Wszystkie obiekty JSON-LD ze strony (spłaszczone tablice i @graph). */
 export function extractJsonLd(html: string): any[] {
   const out: any[] = [];
