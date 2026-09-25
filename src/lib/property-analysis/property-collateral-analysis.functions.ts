@@ -443,7 +443,18 @@ export async function runPropertyCollateralAnalysisCore(
 export const getPropertyAnalysis = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    // Bramka: wniosek musi być widoczny dla wywołującego przez RLS (zespół,
+    // klient-właściciel, inwestor z wnioskiem w swoim zakresie) — odczyt
+    // wyniku idzie service_role, więc bez tego każdy zalogowany czytałby
+    // analizę dowolnego wniosku.
+    const { data: app } = await (context.supabase as any)
+      .from("loan_applications")
+      .select("id")
+      .eq("id", data.applicationId)
+      .maybeSingle();
+    if (!app) return null;
+
     const { data: row } = await supabaseAdmin
       .from("property_analyses")
       .select("*")

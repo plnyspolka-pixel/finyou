@@ -26,6 +26,7 @@ import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
 import type {
   AnalyticsCoOwners,
   AnalyticsDetail,
+  AnalyticsKwDocument,
   AnalyticsListItem,
   AnalyticsResultFlags,
   AnalyticsRun,
@@ -328,7 +329,7 @@ function runGate(
   return { ok: true, reason: null };
 }
 
-function reduceCoOwners(r: CoOwnersAnalysis | null | undefined): AnalyticsCoOwners | null {
+export function reduceCoOwners(r: CoOwnersAnalysis | null | undefined): AnalyticsCoOwners | null {
   if (!r || !r.available) return null;
   const flagLabels: Record<string, string> = {
     liquidation: "likwidacja",
@@ -363,6 +364,39 @@ function reduceCoOwners(r: CoOwnersAnalysis | null | undefined): AnalyticsCoOwne
   };
 }
 
+/** Treść KW z cache kw_documents (forma kompaktowa numeru) w kształcie widoku. */
+export async function loadKwDocumentView(
+  db: any,
+  compact: string | null,
+): Promise<AnalyticsKwDocument | null> {
+  if (!compact) return null;
+  const { data: d } = await db
+    .from("kw_documents")
+    .select(
+      "status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error",
+    )
+    .eq("kw_number", compact)
+    .maybeSingle();
+  if (!d) return null;
+  const { decodeMaybeBase64 } = await import("@/lib/kw-fetch.server");
+  const sections = {
+    okladka: decodeMaybeBase64(d.okladka),
+    dzial_1o: decodeMaybeBase64(d.dzial_1o),
+    dzial_1s: decodeMaybeBase64(d.dzial_1s),
+    dzial_2: decodeMaybeBase64(d.dzial_2),
+    dzial_3: decodeMaybeBase64(d.dzial_3),
+    dzial_4: decodeMaybeBase64(d.dzial_4),
+  };
+  const hasContent = Object.values(sections).some(Boolean);
+  return {
+    // Raz pobrana treść nie znika przez nieudane odświeżenie (jak w getKwForApplication).
+    status: hasContent && d.status !== "processing" ? "ready" : String(d.status),
+    fetchedAt: d.fetched_at ?? null,
+    lastError: d.last_error ?? null,
+    sections,
+  };
+}
+
 /** Szczegóły pipeline'u dla jednego wniosku: KW, właściciele, analiza KW, ryzyko. */
 export const getMyAnalyticsDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -375,18 +409,9 @@ export const getMyAnalyticsDetail = createServerFn({ method: "GET" })
     const item = buildItem(app, source, scope, idx);
 
     const compact = compactKwNumber(propertyOf(app)?.land_register_number ?? "");
-    const { decodeMaybeBase64 } = await import("@/lib/kw-fetch.server");
 
-    const [kwDoc, kwa, co, risk, coll] = await Promise.all([
-      compact
-        ? db
-            .from("kw_documents")
-            .select(
-              "status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error",
-            )
-            .eq("kw_number", compact)
-            .maybeSingle()
-        : { data: null },
+    const [kwDocument, kwa, co, risk, coll] = await Promise.all([
+      loadKwDocumentView(db, compact),
       db
         .from("kw_land_register_analyses")
         .select("result_json, created_at")
@@ -414,28 +439,6 @@ export const getMyAnalyticsDetail = createServerFn({ method: "GET" })
         .limit(1)
         .maybeSingle(),
     ]);
-
-    const d = kwDoc.data;
-    const sections = d
-      ? {
-          okladka: decodeMaybeBase64(d.okladka),
-          dzial_1o: decodeMaybeBase64(d.dzial_1o),
-          dzial_1s: decodeMaybeBase64(d.dzial_1s),
-          dzial_2: decodeMaybeBase64(d.dzial_2),
-          dzial_3: decodeMaybeBase64(d.dzial_3),
-          dzial_4: decodeMaybeBase64(d.dzial_4),
-        }
-      : null;
-    const hasContent = Boolean(sections && Object.values(sections).some(Boolean));
-    const kwDocument = d
-      ? {
-          // Raz pobrana treść nie znika przez nieudane odświeżenie (jak w getKwForApplication).
-          status: hasContent && d.status !== "processing" ? "ready" : String(d.status),
-          fetchedAt: d.fetched_at ?? null,
-          lastError: d.last_error ?? null,
-          sections: sections!,
-        }
-      : null;
 
     let valuation: AnalyticsDetail["valuation"] = null;
     const riskJson = risk.data?.result_json as InvestmentRiskAssessment | undefined;

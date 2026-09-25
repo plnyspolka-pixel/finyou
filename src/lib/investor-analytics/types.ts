@@ -203,3 +203,51 @@ export function analyticsStepStatus(
 export function analyticsDoneCount(item: AnalyticsListItem): number {
   return ANALYTICS_STEPS.filter((s) => analyticsStepStatus(item, s.key) === "done").length;
 }
+
+// ── Szybka analiza KW (wniosek spoza Finance You) ───────────────────────────
+// Inwestor podaje numer KW własnego tematu — trzy pierwsze kroki pipeline'u
+// (bez analizy ryzyka, która wymaga pełnego wniosku). Nie tworzy wniosku w CRM.
+
+export type KwCheckStepKey = Exclude<AnalyticsStepKey, "risk">;
+
+export const KW_CHECK_STEPS = ANALYTICS_STEPS.filter(
+  (s): s is AnalyticsStepMeta & { key: KwCheckStepKey } => s.key !== "risk",
+);
+
+/** Ile nowych sprawdzeń inwestor może zlecić w ciągu 24 h (każde to pobranie KW). */
+export const KW_CHECK_DAILY_LIMIT = 5;
+
+export interface KwCheckItem {
+  id: string;
+  /** Numer KW w formacie XX1X/00000000/0. */
+  kwNumber: string;
+  label: string | null;
+  loanAmount: number | null;
+  propertyValue: number | null;
+  status: "running" | "done" | "error";
+  steps: Partial<Record<KwCheckStepKey, AnalyticsStepState>>;
+  error: string | null;
+  kwAnalysisStatus: FindingStatus | null;
+  createdAt: string;
+  finishedAt: string | null;
+}
+
+export interface KwCheckDetail {
+  item: KwCheckItem;
+  kwDocument: AnalyticsKwDocument | null;
+  coowners: AnalyticsCoOwners | null;
+  kwAnalysis: { result: KwAnalysisResult; createdAt: string } | null;
+}
+
+/** Stan kroku sprawdzenia: zapis w przebiegu, a w trwającym — pierwszy otwarty krok „w toku". */
+export function kwCheckStepStatus(item: KwCheckItem, key: KwCheckStepKey): AnalyticsStepStatus {
+  const st = item.steps[key]?.status;
+  if (st === "done" || st === "error") return st;
+  if (item.status !== "running") return "pending";
+  const order: KwCheckStepKey[] = ["kw", "coowners", "kw_analysis"];
+  const firstOpen = order.find((k) => {
+    const s = item.steps[k]?.status;
+    return s !== "done" && s !== "error";
+  });
+  return firstOpen === key ? "running" : "pending";
+}
