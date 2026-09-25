@@ -12749,6 +12749,10 @@ export type Database = {
         Args: { _match_id: string; _user_id: string }
         Returns: boolean
       }
+      investor_can_view_application: {
+        Args: { _application_id: string; _user_id: string }
+        Returns: boolean
+      }
       investor_has_disclosed_match: {
         Args: { _application_id: string; _user_id: string }
         Returns: boolean
