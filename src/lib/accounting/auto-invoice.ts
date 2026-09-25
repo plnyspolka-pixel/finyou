@@ -117,12 +117,13 @@ export async function createInvoiceFromPayment(
   const invoiceId = (inserted as { id: string }).id;
   if (input.autoIssue !== false) {
     try {
-      await issueSalesInvoice(db, invoiceId);
+      const r = await issueSalesInvoice(db, invoiceId);
+      if (!r.ok)
+        return { invoiceId, message: `Faktura nie została wystawiona: ${r.message ?? r.status}` };
     } catch (e) {
-      await db
-        .from("sales_invoices")
-        .update({ error_message: `Auto-wystawienie nie powiodło się: ${(e as Error).message}` })
-        .eq("id", invoiceId);
+      const message = `Auto-wystawienie nie powiodło się: ${(e as Error).message}`;
+      await db.from("sales_invoices").update({ error_message: message }).eq("id", invoiceId);
+      return { invoiceId, message };
     }
   }
   return { invoiceId };

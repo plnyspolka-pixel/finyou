@@ -87,7 +87,7 @@ const CreateInput = z.object({
   operatorCommission: z.number().nonnegative().optional(),
 });
 
-// Tworzy i od razu wystawia fakturę natywnie (nadaje numer, status "issued").
+// Tworzy i od razu wystawia fakturę (numer natywny; dla podmiotów KSeF — wysyłka FA(3)).
 export const createOperatorInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => CreateInput.parse(i))
@@ -134,32 +134,40 @@ export const createOperatorInvoice = createServerFn({ method: "POST" })
       },
     ];
 
+    const row = {
+      entity_id: data.entityId,
+      invoice_number: invoiceNumber,
+      buyer_name: data.buyerName,
+      buyer_nip: data.buyerNip || null,
+      buyer_email: data.buyerEmail || null,
+      buyer_street: data.buyerStreet || null,
+      buyer_city: data.buyerCity || null,
+      buyer_postal_code: data.buyerPostalCode || null,
+      issue_date: today,
+      sale_date: today,
+      due_date: data.dueDate || null,
+      currency: data.currency,
+      net_amount: net,
+      vat_amount: vat,
+      gross_amount: data.grossAmount,
+      vat_rate: data.vatRate,
+      items,
+      source_type: "manual",
+      provider: entity.provider ?? "manual",
+      // Szkic z nadanym numerem — wystawienie (i wysyłka do KSeF) niżej, wspólną ścieżką.
+      status: "draft",
+      ksef_status: "not_sent",
+      created_by: context.userId,
+    };
+
+    // Braki (adres sprzedawcy, podstawa zwolnienia, limit, token KSeF) — zanim zużyjemy numer.
+    const { preflightInvoice, issueSalesInvoice } = await import("@/lib/accounting/issue");
+    const problems = await preflightInvoice(accountingDb, row, entity);
+    if (problems.length) throw new Error(problems.join(" "));
+
     const { data: ins, error } = await accountingDb
       .from("sales_invoices")
-      .insert({
-        entity_id: data.entityId,
-        invoice_number: invoiceNumber,
-        buyer_name: data.buyerName,
-        buyer_nip: data.buyerNip || null,
-        buyer_email: data.buyerEmail || null,
-        buyer_street: data.buyerStreet || null,
-        buyer_city: data.buyerCity || null,
-        buyer_postal_code: data.buyerPostalCode || null,
-        issue_date: today,
-        sale_date: today,
-        due_date: data.dueDate || null,
-        currency: data.currency,
-        net_amount: net,
-        vat_amount: vat,
-        gross_amount: data.grossAmount,
-        vat_rate: data.vatRate,
-        items,
-        source_type: "manual",
-        provider: "manual",
-        status: "issued",
-        ksef_status: "not_sent",
-        created_by: context.userId,
-      })
+      .insert(row)
       .select("id, invoice_number")
       .single();
     if (error) throw new Error(`Nie udało się wystawić faktury: ${error.message}`);
@@ -177,10 +185,16 @@ export const createOperatorInvoice = createServerFn({ method: "POST" })
       entityType: "sales_invoice",
       entityId: id,
       action: "invoice_issued_operator",
-      after: { number: invoiceNumber, provider: "manual", gross: data.grossAmount },
+      after: { number: invoiceNumber, provider: row.provider, gross: data.grossAmount },
     });
 
-    return { ok: true, id, invoiceNumber };
+    const issued = await issueSalesInvoice(accountingDb, id, context.userId);
+    if (!issued.ok) {
+      throw new Error(
+        `Faktura ${invoiceNumber} zapisana jako szkic — nie została wystawiona: ${issued.message ?? issued.status}. Popraw dane i wystaw ją w Księgowość → Faktury.`,
+      );
+    }
+    return { ok: true, id, invoiceNumber, ksefStatus: issued.status, message: issued.message };
   });
 
 // Faktury wystawione przez zalogowanego operatora (admin/księgowość widzą wszystkie).

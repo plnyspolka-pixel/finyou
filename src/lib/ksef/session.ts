@@ -32,7 +32,10 @@ type CertEntry = { certificate: string; usage: string[] | string };
 
 // Zwraca klucz publiczny MF jako PEM (string). PEM jest wymagany, bo część runtime'ów
 // (workerd/Cloudflare) nie przyjmuje obiektu KeyObject w publicEncrypt({ key }).
-async function fetchEncryptionPublicKey(baseUrl: string): Promise<string> {
+export async function fetchEncryptionPublicKey(
+  baseUrl: string,
+  usage: "KsefTokenEncryption" | "SymmetricKeyEncryption" = "KsefTokenEncryption",
+): Promise<string> {
   const res = await fetch(`${baseUrl}/api/v2/security/public-key-certificates`, {
     headers: { Accept: "application/json" },
   });
@@ -41,10 +44,9 @@ async function fetchEncryptionPublicKey(baseUrl: string): Promise<string> {
   const pick =
     items.find((c) => {
       const u = Array.isArray(c.usage) ? c.usage : [c.usage];
-      return u.includes("KsefTokenEncryption");
-    }) ?? items[0];
-  if (!pick?.certificate)
-    throw new Error("Brak certyfikatu KsefTokenEncryption w odpowiedzi KSeF.");
+      return u.includes(usage);
+    }) ?? (usage === "KsefTokenEncryption" ? items[0] : undefined);
+  if (!pick?.certificate) throw new Error(`Brak certyfikatu ${usage} w odpowiedzi KSeF.`);
   const der = Buffer.from(pick.certificate, "base64");
   const cert = new X509Certificate(der);
   return cert.publicKey.export({ type: "spki", format: "pem" }) as string;

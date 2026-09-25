@@ -152,9 +152,13 @@ function FakturyPage() {
   async function issue(id: string) {
     try {
       const r = await issueFn({ data: { id } });
-      toast[r.ok ? "success" : "error"](
-        r.ok ? "Faktura wystawiona" : (r.message ?? "Błąd wystawiania"),
-      );
+      const okText =
+        r.status === "accepted"
+          ? "Faktura przyjęta w KSeF"
+          : r.status === "pending"
+            ? "Faktura wysłana — KSeF jeszcze przetwarza (odśwież za chwilę)"
+            : "Faktura wystawiona";
+      toast[r.ok ? "success" : "error"](r.ok ? okText : (r.message ?? "Błąd wystawiania"));
       void qc.invalidateQueries({ queryKey: ["sales-invoices"] });
     } catch (e) {
       toast.error("Błąd", { description: (e as Error).message });

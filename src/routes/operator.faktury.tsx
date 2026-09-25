@@ -293,7 +293,13 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
           operatorCommission: form.operatorCommission ? Number(form.operatorCommission) : undefined,
         },
       });
-      toast.success(`Faktura ${r.invoiceNumber} wystawiona`);
+      toast.success(
+        r.ksefStatus === "accepted"
+          ? `Faktura ${r.invoiceNumber} wystawiona i przyjęta w KSeF`
+          : r.ksefStatus === "pending"
+            ? `Faktura ${r.invoiceNumber} wysłana do KSeF — trwa przetwarzanie`
+            : `Faktura ${r.invoiceNumber} wystawiona`,
+      );
       void qc.invalidateQueries({ queryKey: ["my-operator-invoices"] });
       setIssued({ id: r.id, invoiceNumber: r.invoiceNumber });
     } catch (e: any) {

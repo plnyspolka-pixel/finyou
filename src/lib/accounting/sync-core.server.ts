@@ -503,5 +503,21 @@ export async function syncAllAccounting(): Promise<{ results: SyncResult[] }> {
     }
     await sleep(1500); // odstęp między podmiotami
   }
+  // Faktury wysłane do KSeF, które były jeszcze w przetwarzaniu (albo bez UPO).
+  try {
+    const { refreshPendingKsefInvoices } = await import("./issue");
+    const r = await refreshPendingKsefInvoices(accountingDb);
+    if (r.checked)
+      results.push({
+        entity: "(wszystkie)",
+        source: "ksef",
+        direction: "sales",
+        ok: true,
+        count: r.accepted,
+        message: `Statusy wysłanych faktur: sprawdzono ${r.checked}, przyjęte ${r.accepted}, odrzucone ${r.rejected}.`,
+      });
+  } catch (e) {
+    console.error("[sync-accounting] refreshPendingKsefInvoices", (e as Error).message);
+  }
   return { results };
 }

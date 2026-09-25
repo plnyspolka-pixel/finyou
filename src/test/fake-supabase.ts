@@ -109,6 +109,14 @@ class Query {
     this.filters.push((r) => String(r[col]) <= String(val));
     return this;
   }
+  lt(col: string, val: any) {
+    this.filters.push((r) => String(r[col]) < String(val));
+    return this;
+  }
+  gt(col: string, val: any) {
+    this.filters.push((r) => String(r[col]) > String(val));
+    return this;
+  }
   order(col: string, opts?: { ascending?: boolean }) {
     this.orderBy = { col, asc: opts?.ascending !== false };
     return this;

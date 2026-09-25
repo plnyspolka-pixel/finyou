@@ -3,10 +3,8 @@
 //  - 'disabled' / brak tokenu → faktura nie jest wysyłana do KSeF (status 'disabled').
 //  - tryb MOCK (token zaczyna się od "mock:" lub KSEF_MOCK=true) → symulacja akceptacji,
 //    do demonstracji i testów przepływu bez realnego połączenia.
-//  - tryb realny → wywołania API KSeF (challenge → InitToken → Send → Status).
-//    WYMAGA klucza publicznego MF (KSEF_MF_PUBLIC_KEY, PEM) do zaszyfrowania tokenu
-//    autoryzacyjnego oraz weryfikacji względem aktualnej wersji API. Przed produkcją
-//    potwierdź endpointy i format żądań dla wersji FA(2)/FA(3) / KSeF 2.0.
+//  - tryb realny → KSeF 2.0: uwierzytelnienie tokenem (session.ts) i wysyłka FA(3)
+//    w sesji interaktywnej (online.ts).
 import { createHash } from "node:crypto";
 import { decryptSensitive } from "@/lib/affiliate/crypto";
 
@@ -30,11 +28,35 @@ function pickEnvToken(entity: KsefEntity): string | null {
 
 export type KsefResult = {
   status: "disabled" | "pending" | "accepted" | "rejected" | "error";
+  /** Numer KSeF faktury (po przyjęciu; przy duplikacie — numer oryginału). */
   referenceNumber?: string | null;
   elementReference?: string | null;
+  /** Numer referencyjny sesji interaktywnej i faktury — do sprawdzania statusu. */
+  sessionReference?: string | null;
+  invoiceReference?: string | null;
+  /** Kod statusu faktury z KSeF (100/150/200/4xx). */
+  statusCode?: number | null;
+  /** Czy faktura mogła dotrzeć do KSeF (jeśli tak — nie wysyłać ponownie bez sprawdzenia). */
+  sent?: boolean;
   upoXml?: string | null;
   message?: string | null;
 };
+
+/** Środowisko i token, którymi podmiot faktycznie łączy się z KSeF (null = wyłączony). */
+export function effectiveKsef(
+  entity: KsefEntity,
+): { environment: KsefEnvironment; token: string } | null {
+  const envToken = pickEnvToken(entity);
+  const environment: KsefEnvironment =
+    entity.ksef_environment && entity.ksef_environment !== "disabled"
+      ? entity.ksef_environment
+      : envToken
+        ? "prod"
+        : "disabled";
+  if (environment === "disabled") return null;
+  const token = decryptSensitive(entity.ksef_token_encrypted) ?? envToken;
+  return token ? { environment, token } : null;
+}
 
 export function ksefBaseUrl(env: KsefEnvironment): string | null {
   // KSeF 2.0 (API v2). API 1.0 zostało wyłączone.
@@ -58,73 +80,45 @@ function isMock(token: string | null): boolean {
   return process.env.KSEF_MOCK === "true" || (token?.startsWith("mock:") ?? false);
 }
 
-/** Wysyła fakturę do KSeF (lub symuluje w trybie mock). */
+/** Wysyła fakturę FA(3) do KSeF (lub symuluje w trybie mock). */
 export async function ksefSubmitInvoice(entity: KsefEntity, faXml: string): Promise<KsefResult> {
-  // Fallback: jeśli podmiot nie ma jeszcze tokenu / środowiska, użyj globalnego tokenu z env (dopasowanego do podmiotu).
-  const envToken = pickEnvToken(entity);
-  const effectiveEnv: KsefEnvironment =
-    entity.ksef_environment && entity.ksef_environment !== "disabled"
-      ? entity.ksef_environment
-      : envToken
-        ? "prod"
-        : "disabled";
-  if (effectiveEnv === "disabled") {
-    return { status: "disabled", message: "KSeF wyłączony dla tego podmiotu." };
-  }
-  const token = decryptSensitive(entity.ksef_token_encrypted) ?? envToken;
-  if (!token) {
-    return { status: "disabled", message: "Brak tokenu KSeF dla podmiotu." };
-  }
-  const effectiveEntity: KsefEntity = { ...entity, ksef_environment: effectiveEnv };
+  const eff = effectiveKsef(entity);
+  if (!eff) return { status: "disabled", message: "KSeF wyłączony albo brak tokenu dla podmiotu." };
 
-  const hash = sha256Base64(faXml);
-
-  if (isMock(token)) {
+  if (isMock(eff.token)) {
+    const hash = sha256Base64(faXml);
     const ref = `MOCK-KSEF-${entity.ksef_nip ?? "NIP"}-${hash.slice(0, 10).replace(/[^A-Za-z0-9]/g, "")}`;
     const upo = `<?xml version="1.0" encoding="UTF-8"?><UPO><Symulacja>true</Symulacja><NumerReferencyjny>${ref}</NumerReferencyjny></UPO>`;
     return {
       status: "accepted",
       referenceNumber: ref,
       elementReference: ref,
+      sessionReference: `MOCK-SESSION-${hash.slice(0, 8)}`,
+      invoiceReference: `MOCK-INVOICE-${hash.slice(0, 8)}`,
+      statusCode: 200,
+      sent: true,
       upoXml: upo,
       message: "Tryb testowy (mock) — faktura nie została wysłana do realnego KSeF.",
     };
   }
 
-  const base = ksefBaseUrl(effectiveEnv);
-  if (!base) return { status: "error", message: "Nieznane środowisko KSeF." };
-
-  try {
-    return await ksefRealSubmit(base, effectiveEntity, token, faXml, hash);
-  } catch (e) {
-    return { status: "error", message: `Błąd integracji KSeF: ${(e as Error).message}` };
-  }
+  const { sendInvoiceOnline } = await import("./online");
+  return sendInvoiceOnline({ ...entity, ksef_environment: eff.environment }, faXml);
 }
 
-// ---------------------------------------------------------------------
-// Realne wysyłanie faktury w KSeF 2.0 (szkielet). Sesję otwieramy przez
-// nowy openKsefSession (Bearer accessToken). Endpoint POST /api/v2/invoices/send
-// wymaga jeszcze zaszyfrowanego symetrycznie payloadu (klucz z certyfikatu
-// SymmetricKeyEncryption). Zamiast wysyłać niepoprawnie, zwracamy 'pending'
-// z jasnym komunikatem — flow księgowy zapisuje fakturę i można ją potem wypchnąć
-// ręcznie, kiedy wdrożymy pełne szyfrowanie payloadu.
-async function ksefRealSubmit(
-  _base: string,
+/** Sprawdza status faktury wysłanej wcześniej (sesja + numer referencyjny faktury). */
+export async function ksefCheckInvoice(
   entity: KsefEntity,
-  _token: string,
-  _faXml: string,
-  _hash: string,
+  sessionReference: string,
+  invoiceReference: string,
 ): Promise<KsefResult> {
-  const { openKsefSession, closeKsefSession } = await import("./session");
-  try {
-    const session = await openKsefSession(entity);
-    await closeKsefSession(session);
-    return {
-      status: "pending",
-      message:
-        "KSeF 2.0: autoryzacja OK, ale wysyłka faktur wymaga jeszcze szyfrowania payloadu SymmetricKeyEncryption. Faktura oczekuje na wysłanie.",
-    };
-  } catch (e) {
-    return { status: "error", message: `KSeF 2.0 auth: ${(e as Error).message}` };
-  }
+  const eff = effectiveKsef(entity);
+  if (!eff) return { status: "pending", message: "KSeF wyłączony albo brak tokenu dla podmiotu." };
+  if (isMock(eff.token)) return { status: "accepted", statusCode: 200, sent: true };
+  const { checkInvoiceOnline } = await import("./online");
+  return checkInvoiceOnline(
+    { ...entity, ksef_environment: eff.environment },
+    sessionReference,
+    invoiceReference,
+  );
 }

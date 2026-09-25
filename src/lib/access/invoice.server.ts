@@ -107,9 +107,10 @@ export async function ensureInvoiceForAccessPayment(
       return { ok: false, invoiceId: null, message };
     }
 
+    // Faktura zapisana, ale np. KSeF jej nie przyjął — widoczne w panelu płatności.
     await db
       .from("access_payments")
-      .update({ invoice_id: res.invoiceId, invoice_error: null })
+      .update({ invoice_id: res.invoiceId, invoice_error: res.message ?? null })
       .eq("id", paymentId);
 
     // Osoba prywatna: wpis w rejestrze sprzedaży osób fizycznych automatycznie
@@ -179,12 +180,14 @@ export async function sendAccessInvoiceEmail(
   const [{ data: inv }, { data: product }] = await Promise.all([
     db
       .from("sales_invoices")
-      .select("id,invoice_number")
+      .select("id,invoice_number,status")
       .eq("id", payment.invoice_id)
       .maybeSingle(),
     db.from("access_products").select("label").eq("id", payment.product_id).maybeSingle(),
   ]);
   if (!inv) return { ok: false, message: "Nie znaleziono faktury" };
+  if (inv.status === "draft" || inv.status === "cancelled")
+    return { ok: false, message: "Faktura nie jest wystawiona (szkic albo anulowana)" };
 
   const { sendInvoiceIssuedEmail } = await import("./emails.server");
   await sendInvoiceIssuedEmail({

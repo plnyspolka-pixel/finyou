@@ -31,10 +31,10 @@ export const VAT_RATES = ["23", "8", "5", "0", "zw"] as const;
 export type VatRate = (typeof VAT_RATES)[number];
 
 const INVOICE_COLUMNS =
-  "id, entity_id, invoice_number, status, ksef_status, ksef_reference_number, issue_date, sale_date, due_date, buyer_name, buyer_nip, buyer_email, buyer_street, buyer_postal_code, buyer_city, buyer_country, buyer_user_id, net_amount, vat_amount, gross_amount, vat_rate, currency, items, provider, source_type, source_id, payment_id, pdf_url, error_message, created_by, created_at, updated_at";
+  "id, entity_id, invoice_number, status, ksef_status, ksef_reference_number, issue_date, sale_date, due_date, buyer_name, buyer_nip, buyer_email, buyer_street, buyer_postal_code, buyer_city, buyer_country, buyer_user_id, net_amount, vat_amount, gross_amount, vat_rate, vat_exemption_basis, currency, items, provider, source_type, source_id, payment_id, pdf_url, error_message, ksef_status_code, ksef_session_reference, ksef_invoice_reference, ksef_sent_at, created_by, created_at, updated_at";
 
 const ENTITY_COLUMNS =
-  "id, name, legal_name, nip, regon, address_street, address_postal_code, address_city, address_country, bank_account, email, phone, is_default, active, invoice_prefix, invoice_next_number, vat_payer, default_vat_rate, provider, ksef_environment, ksef_nip, created_at, updated_at";
+  "id, name, legal_name, nip, regon, address_street, address_postal_code, address_city, address_country, bank_account, email, phone, is_default, active, invoice_prefix, invoice_next_number, vat_payer, default_vat_rate, vat_exemption_basis, vat_exempt_limit, provider, ksef_environment, ksef_nip, created_at, updated_at";
 
 // ------------------------------------------------------------------
 // Czyste funkcje (testowane w accounting.test.ts)
@@ -113,12 +113,15 @@ export function buildInvoiceLines(items: LineInput[], defaultRate: string) {
   const gross = round2(lines.reduce((a, l) => a + l.gross, 0));
   const rates = [...new Set(lines.map((l) => l.vatRate))];
   return {
-    items: lines.map(({ name, quantity, unit, unitNet, vatRate }) => ({
+    // `net`/`vat` pozycji trafiają do FA(3) bez ponownego zaokrąglania.
+    items: lines.map(({ name, quantity, unit, unitNet, vatRate, net, vat }) => ({
       name,
       quantity,
       unit,
       unitNet,
       vatRate,
+      net,
+      vat,
     })),
     lines,
     net_amount: net,
@@ -702,7 +705,12 @@ export const createSalesInvoice = defineTool({
     sale_date: z.string().optional().describe("Data sprzedaży (domyślnie dziś)."),
     due_date: z.string().optional(),
     payment_days: z.number().int().min(0).max(365).optional(),
-    currency: z.string().length(3).optional().describe("Domyślnie PLN."),
+    currency: z.string().length(3).optional().describe("Domyślnie PLN (KSeF obsługuje tylko PLN)."),
+    vat_exemption_basis: z
+      .string()
+      .max(256)
+      .optional()
+      .describe("Podstawa zwolnienia dla pozycji zw, jeśli inna niż domyślna podmiotu."),
     issue_now: z.boolean().optional(),
   },
   annotations: WRITE,
@@ -716,6 +724,10 @@ export const createSalesInvoice = defineTool({
         return fail("Nie znaleziono wskazanego podmiotu.");
       if (!entity.active) return fail(`Podmiot „${entity.name}” jest nieaktywny.`);
       const calc = buildInvoiceLines(a.items, entity.default_vat_rate ?? "23");
+      if (entity.vat_payer === false && calc.lines.some((l) => l.vatRate !== "zw"))
+        return fail(
+          `„${entity.name}” jest zwolniony podmiotowo z VAT — wszystkie pozycje muszą mieć stawkę zw.`,
+        );
       const today = new Date().toISOString().slice(0, 10);
       const due =
         a.due_date !== undefined
@@ -741,6 +753,7 @@ export const createSalesInvoice = defineTool({
           vat_amount: calc.vat_amount,
           gross_amount: calc.gross_amount,
           vat_rate: calc.vat_rate,
+          vat_exemption_basis: a.vat_exemption_basis ?? null,
           items: calc.items,
           source_type: "manual",
           status: "draft",
@@ -759,7 +772,7 @@ export const createSalesInvoice = defineTool({
           ok: true,
           invoice: row,
           lines: calc.lines,
-          next: "Szkic zapisany. Po akceptacji wywołaj issue_sales_invoice.",
+          next: "Szkic zapisany. Pokaż podgląd (preview_ksef_invoice), po akceptacji wywołaj issue_sales_invoice.",
         });
       }
       const { issueSalesInvoice } = await import("@/lib/accounting/issue");
@@ -786,6 +799,7 @@ export const updateSalesInvoice = defineTool({
     items: z.array(lineSchema).min(1).max(100).optional(),
     sale_date: z.string().optional(),
     due_date: z.string().nullable().optional(),
+    vat_exemption_basis: z.string().max(256).nullable().optional(),
   },
   annotations: WRITE_IDEMPOTENT,
   handler: (a, ctx: ToolContext) =>
@@ -803,6 +817,7 @@ export const updateSalesInvoice = defineTool({
         "buyer_city",
         "buyer_country",
         "buyer_user_id",
+        "vat_exemption_basis",
       ]);
       let entity: any = null;
       if (a.entity_id) {
@@ -848,9 +863,9 @@ export const updateSalesInvoice = defineTool({
 
 export const issueSalesInvoiceTool = defineTool({
   name: "issue_sales_invoice",
-  title: "Issue sales invoice (numbering + KSeF)",
+  title: "Issue sales invoice / send to KSeF",
   description:
-    "Wystawia fakturę: nadaje numer wg prefiksu podmiotu (np. FY/2026/0007), ustawia datę wystawienia i — gdy podmiot działa przez KSeF — wysyła ją do KSeF (nieodwracalne; błąd KSeF zostawia szkic z opisem). Ponowne wywołanie dla faktury z błędem KSeF ponawia wysyłkę. Wywołuj tylko na wyraźne polecenie. Tylko administrator/księgowość.",
+    "Wystawia fakturę i wysyła ją do KSeF (FA(3), sesja interaktywna): najpierw sprawdza dane (adres sprzedawcy, NIP, podstawa zwolnienia, limit zwolnienia podmiotowego, token KSeF) — braki zwraca bez zużycia numeru; potem nadaje numer (np. FY/2026/0007) i wysyła. Wynik: `accepted` (numer KSeF), `pending` (KSeF przetwarza — sprawdź refresh_ksef_status), `rejected` (faktura wraca do szkicu z opisem błędu, ten sam numer) albo `error`. Działa też dla faktur wystawionych wcześniej bez KSeF (wyśle je) i ponawia nieudane wysyłki; faktury w toku tylko odświeża, przyjętych nie wysyła drugi raz. Wysyłka na środowisko produkcyjne tworzy fakturę o mocy prawnej — wywołuj tylko na wyraźne polecenie, po pokazaniu podglądu. Tylko administrator/księgowość.",
   inputSchema: { invoice_id: z.string().uuid() },
   annotations: { ...WRITE, openWorldHint: true },
   handler: ({ invoice_id }, ctx: ToolContext) =>
@@ -858,14 +873,86 @@ export const issueSalesInvoiceTool = defineTool({
       const db = await requireRolesAdmin(ctx, FINANCE_ROLES);
       const inv = await loadInvoice(db, invoice_id);
       if (inv.status === "cancelled") return fail("Faktura jest anulowana.");
-      // Błąd KSeF zostawia szkic (issue.ts), więc ponowienie to też wystawienie szkicu.
-      if (inv.status !== "draft")
-        return fail(
-          `Faktura ${inv.invoice_number ?? invoice_id} jest już wystawiona (status ${inv.status}, KSeF ${inv.ksef_status}).`,
-        );
       const { issueSalesInvoice } = await import("@/lib/accounting/issue");
       const res = await issueSalesInvoice(db, invoice_id, actorId(ctx));
       return ok({ ok: res.ok, result: res, invoice: await loadInvoice(db, invoice_id) });
+    }),
+});
+
+export const refreshKsefStatus = defineTool({
+  name: "refresh_ksef_status",
+  title: "Refresh KSeF status of invoice",
+  description:
+    "Sprawdza w KSeF status wysłanej faktury (w toku → przyjęta z numerem KSeF albo odrzucona z powodem) i dociąga UPO. Bez `invoice_id` odświeża wszystkie faktury w toku / bez UPO (to samo robi cogodzinna synchronizacja). Tylko administrator/księgowość.",
+  inputSchema: { invoice_id: z.string().uuid().optional() },
+  annotations: { ...WRITE_IDEMPOTENT, openWorldHint: true },
+  handler: ({ invoice_id }, ctx: ToolContext) =>
+    handle(async () => {
+      const db = await requireRolesAdmin(ctx, FINANCE_ROLES);
+      const { refreshKsefStatus: refresh, refreshPendingKsefInvoices } =
+        await import("@/lib/accounting/issue");
+      if (!invoice_id) return ok({ ok: true, ...(await refreshPendingKsefInvoices(db)) });
+      const res = await refresh(db, invoice_id, actorId(ctx));
+      return ok({ ok: res.ok, result: res, invoice: await loadInvoice(db, invoice_id) });
+    }),
+});
+
+export const previewKsefInvoice = defineTool({
+  name: "preview_ksef_invoice",
+  title: "Preview invoice XML (FA(3)) without sending",
+  description:
+    "Podgląd faktury przed wysyłką: lista braków blokujących wystawienie (adres sprzedawcy, NIP, podstawa zwolnienia, limit, token KSeF) oraz XML FA(3), który zostałby wysłany (numer i data wystawienia jako przyszłe, jeśli to szkic). Nic nie zapisuje i nic nie wysyła. Dla faktury już wysłanej zwraca zapisany XML. Tylko administrator/księgowość.",
+  inputSchema: {
+    invoice_id: z.string().uuid(),
+    include_xml: z.boolean().optional().describe("Domyślnie true."),
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: ({ invoice_id, include_xml }, ctx: ToolContext) =>
+    handle(async () => {
+      const db = await requireRolesAdmin(ctx, FINANCE_ROLES);
+      const inv = await oneOf(
+        db.from("sales_invoices").select("*").eq("id", invoice_id),
+        "sales_invoices",
+      );
+      if (!inv) return fail("Nie znaleziono faktury.");
+      const ent = await oneOf(
+        db.from("accounting_entities").select("*").eq("id", inv.entity_id),
+        "accounting_entities",
+      );
+      if (!ent) return fail("Faktura nie ma podmiotu.");
+      if (inv.ksef_xml && ["accepted", "pending"].includes(inv.ksef_status))
+        return ok({
+          sent: true,
+          ksef_status: inv.ksef_status,
+          ksef_number: inv.ksef_reference_number,
+          ...(include_xml === false ? {} : { xml: inv.ksef_xml }),
+        });
+      const { preflightInvoice, toFa3 } = await import("@/lib/accounting/issue");
+      const { buildFa3Xml, computeFa3Totals } = await import("@/lib/ksef/fa3-xml");
+      const today = new Date().toISOString().slice(0, 10);
+      const issueDate = inv.status === "draft" ? today : (inv.issue_date ?? today);
+      const number =
+        inv.invoice_number ??
+        `${ent.invoice_prefix || "FV"}/${new Date().getFullYear()}/${String(ent.invoice_next_number || 1).padStart(4, "0")}`;
+      const problems = await preflightInvoice(db, { ...inv, issue_date: issueDate }, ent);
+      const { invoice, seller } = toFa3(inv, ent, number, issueDate);
+      let xml: string | null = null;
+      if (!problems.length && ent.provider === "ksef") xml = buildFa3Xml(invoice, seller);
+      const totals = computeFa3Totals(invoice.items);
+      return ok({
+        sent: false,
+        entity: ent.name,
+        provider: ent.provider,
+        will_send_to_ksef: ent.provider === "ksef",
+        invoice_number: number,
+        number_is_provisional: !inv.invoice_number,
+        issue_date: issueDate,
+        totals_by_rate: totals.groups,
+        gross: totals.gross,
+        vat_exemption_basis: invoice.vat_exemption_basis,
+        problems,
+        ...(xml && include_xml !== false ? { xml } : {}),
+      });
     }),
 });
 
@@ -1083,6 +1170,55 @@ export const issueIndividualSaleInvoice = defineTool({
     }),
 });
 
+export const updateAccountingEntity = defineTool({
+  name: "update_accounting_entity",
+  title: "Update accounting entity settings",
+  description:
+    "Zmienia dane podmiotu wystawiającego faktury: adres, REGON, rachunek, e-mail, prefiks numeracji, płatnik VAT, domyślna stawka, podstawa zwolnienia (P_19A), limit zwolnienia podmiotowego, sposób wystawiania (manual/ksef), środowisko KSeF. Token KSeF i klucze API ustawia się wyłącznie w panelu. Tylko administrator.",
+  inputSchema: {
+    entity_id: z.string().uuid(),
+    legal_name: z.string().min(1).max(512).optional(),
+    regon: z.string().max(14).nullable().optional(),
+    address_street: z.string().max(300).nullable().optional(),
+    address_postal_code: z.string().max(20).nullable().optional(),
+    address_city: z.string().max(120).nullable().optional(),
+    bank_account: z.string().max(40).nullable().optional(),
+    email: z.string().email().nullable().optional(),
+    invoice_prefix: z.string().min(1).max(20).optional(),
+    vat_payer: z.boolean().optional(),
+    default_vat_rate: z.enum(VAT_RATES).optional(),
+    vat_exemption_basis: z.string().max(256).nullable().optional(),
+    vat_exempt_limit: z.number().min(0).nullable().optional(),
+    provider: z.enum(["manual", "ksef"]).optional(),
+    ksef_environment: z.enum(["disabled", "test", "demo", "prod"]).optional(),
+  },
+  annotations: WRITE_IDEMPOTENT,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      const db = await requireRolesAdmin(ctx, ["administrator"]);
+      const patch = patchOf(a, [
+        "legal_name",
+        "regon",
+        "address_street",
+        "address_postal_code",
+        "address_city",
+        "bank_account",
+        "email",
+        "invoice_prefix",
+        "vat_payer",
+        "default_vat_rate",
+        "vat_exemption_basis",
+        "vat_exempt_limit",
+        "provider",
+        "ksef_environment",
+      ]);
+      if (Object.keys(patch).length === 0) return fail("Brak pól do zmiany.");
+      const row = await updateOne(db, "accounting_entities", a.entity_id, patch, ENTITY_COLUMNS);
+      await audit(db, ctx, "accounting_entity", a.entity_id, "entity_updated", patch);
+      return ok({ ok: true, entity: row });
+    }),
+});
+
 export const accountingTools = [
   getAccountingOverview,
   listAccountingEntities,
@@ -1100,4 +1236,7 @@ export const accountingTools = [
   syncAccounting,
   updateIndividualSaleBuyer,
   issueIndividualSaleInvoice,
+  refreshKsefStatus,
+  previewKsefInvoice,
+  updateAccountingEntity,
 ];

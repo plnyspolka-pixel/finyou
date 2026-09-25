@@ -62,6 +62,8 @@ type EntityForm = {
   invoice_prefix: string;
   vat_payer: boolean;
   default_vat_rate: string;
+  vat_exemption_basis: string;
+  vat_exempt_limit: string;
   provider: "manual" | "ksef";
   ksef_environment: "disabled" | "test" | "demo" | "prod";
   ksef_nip: string;
@@ -84,6 +86,8 @@ const EMPTY: EntityForm = {
   invoice_prefix: "FV",
   vat_payer: true,
   default_vat_rate: "23",
+  vat_exemption_basis: "",
+  vat_exempt_limit: "",
   provider: "manual",
   ksef_environment: "disabled",
   ksef_nip: "",
@@ -122,6 +126,8 @@ function PodmiotyPage() {
       invoice_prefix: e.invoice_prefix ?? "FV",
       vat_payer: e.vat_payer ?? true,
       default_vat_rate: e.default_vat_rate ?? "23",
+      vat_exemption_basis: e.vat_exemption_basis ?? "",
+      vat_exempt_limit: e.vat_exempt_limit != null ? String(e.vat_exempt_limit) : "",
       provider: e.provider ?? "manual",
       ksef_environment: e.ksef_environment ?? "disabled",
       ksef_nip: e.ksef_nip ?? "",
@@ -153,6 +159,10 @@ function PodmiotyPage() {
           invoice_prefix: form.invoice_prefix,
           vat_payer: form.vat_payer,
           default_vat_rate: form.default_vat_rate,
+          vat_exemption_basis: form.vat_exemption_basis.trim() || null,
+          vat_exempt_limit: form.vat_exempt_limit.trim()
+            ? Number(form.vat_exempt_limit.replace(",", ".").replace(/\s/g, ""))
+            : null,
           provider: form.provider,
           ksef_environment: form.ksef_environment,
           ksef_nip: form.ksef_nip || null,
@@ -367,6 +377,25 @@ function PodmiotyPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label>Podstawa zwolnienia z VAT (na fakturze, pole P_19A)</Label>
+              <Input
+                value={form.vat_exemption_basis}
+                onChange={(e) => set("vat_exemption_basis")(e.target.value)}
+                placeholder="np. art. 43 ust. 1 pkt 38 ustawy o VAT albo art. 113 ust. 1 ustawy o VAT"
+              />
+            </div>
+            {!form.vat_payer && (
+              <div className="space-y-1 sm:col-span-2">
+                <Label>Limit sprzedaży w roku (zwolnienie podmiotowe, zł)</Label>
+                <Input
+                  inputMode="decimal"
+                  value={form.vat_exempt_limit}
+                  onChange={(e) => set("vat_exempt_limit")(e.target.value)}
+                  placeholder="np. 200000 — faktura przekraczająca limit zostanie zablokowana"
+                />
+              </div>
+            )}
             <div className="space-y-1 sm:col-span-2">
               <Label>Sposób wystawiania faktur</Label>
               <Select value={form.provider} onValueChange={set("provider")}>

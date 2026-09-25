@@ -22,7 +22,7 @@ describe("buildInvoiceLines", () => {
     const r = buildInvoiceLines([{ name: "Usługa", quantity: 2, unit_net: 100 }], "23");
     expect(r).toMatchObject({ net_amount: 200, vat_amount: 46, gross_amount: 246, vat_rate: "23" });
     expect(r.items).toEqual([
-      { name: "Usługa", quantity: 2, unit: "szt.", unitNet: 100, vatRate: "23" },
+      { name: "Usługa", quantity: 2, unit: "szt.", unitNet: 100, vatRate: "23", net: 200, vat: 46 },
     ]);
   });
 
