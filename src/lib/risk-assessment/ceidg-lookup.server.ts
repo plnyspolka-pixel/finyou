@@ -11,6 +11,7 @@
 //
 // Wymaga tokenu: CEIDG_JWT_TOKEN (Bearer). Bez tokenu zwracamy „niedostępne".
 
+import { BROWSER_HEADERS } from "@/lib/web-fetch.server";
 import type { CeidgActivity } from "./types";
 
 const CEIDG_BASE = "https://dane.biznes.gov.pl/api/ceidg/v3/firmy";
@@ -97,7 +98,14 @@ async function ceidgFetch(url: string, token: string): Promise<any | { error: st
   const timer = setTimeout(() => controller.abort(), 15_000);
   try {
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      // Brama Akamai przed dane.biznes.gov.pl odrzuca zapytania bez nagłówków
+      // przeglądarki („Access Denied", HTML) — zanim dotrą do API i tokenu.
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "User-Agent": BROWSER_HEADERS["User-Agent"],
+        "Accept-Language": BROWSER_HEADERS["Accept-Language"],
+      },
       signal: controller.signal,
     });
     if (res.status === 404) return { firmy: [] };
