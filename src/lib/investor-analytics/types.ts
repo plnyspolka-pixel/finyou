@@ -2,7 +2,7 @@
 // klienta i serwera. Pipeline analityczny to TEN SAM silnik, którym posługuje
 // się panel admina (lib/analysis-pipeline): pobranie KW → właściciele →
 // analiza KW → analiza ryzyka. Tu tylko odczyt wyników i uruchomienie na
-// żądanie dla okazji/wniosków, do których inwestor ma dostęp.
+// żądanie dla okazji/wniosków wybranych dla inwestora (nie całej puli).
 import type { FindingStatus, KwAnalysisResult } from "@/lib/kw-analysis/types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import type { InvestorValuationSummary } from "@/lib/risk-assessment/risk-assessment.functions";
@@ -28,12 +28,12 @@ export interface AnalyticsRun {
 }
 
 /** Skąd inwestor ma dostęp do wniosku. */
-export type AnalyticsSource = "okazja" | "oferta" | "dostepny";
+export type AnalyticsSource = "okazja" | "oferta" | "przekazany";
 
 export const ANALYTICS_SOURCE_LABELS: Record<AnalyticsSource, string> = {
   okazja: "Okazja z Twojego Zlecenia",
   oferta: "Twoja oferta",
-  dostepny: "Wniosek dostępny dla inwestorów",
+  przekazany: "Wniosek przekazany przez Finance You",
 };
 
 export interface AnalyticsResultFlags {

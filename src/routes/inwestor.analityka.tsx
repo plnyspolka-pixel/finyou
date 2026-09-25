@@ -78,7 +78,7 @@ function accent(hue: number, lightness: number, chroma: number, alpha = 1): stri
 const SOURCE_TONE: Record<AnalyticsSource, string> = {
   okazja: "bg-emerald-100 text-emerald-800 border-emerald-200",
   oferta: "bg-sky-100 text-sky-800 border-sky-200",
-  dostepny: "bg-slate-100 text-slate-700 border-slate-200",
+  przekazany: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
 const RUN_LABELS: Record<string, { label: string; tone: string }> = {
@@ -172,7 +172,7 @@ function AnalitykaPage() {
       all: items.length,
       okazja: 0,
       oferta: 0,
-      dostepny: 0,
+      przekazany: 0,
     };
     for (const i of items) c[i.source] += 1;
     return c;
@@ -183,7 +183,7 @@ function AnalitykaPage() {
       <FancyPageHeader
         eyebrow="Analityka"
         title="Pipeline analityczny"
-        subtitle="Cztery kroki, które przechodzi każda okazja u zespołu Finance You: pobranie księgi wieczystej, właściciele w rejestrach, analiza KW silnikiem reguł i analiza ryzyka z prognozą wartości. Tu masz je dla swoich okazji, ofert i dostępnych wniosków — z możliwością uruchomienia na żądanie."
+        subtitle="Cztery kroki, które przechodzi każda okazja u zespołu Finance You: pobranie księgi wieczystej, właściciele w rejestrach, analiza KW silnikiem reguł i analiza ryzyka z prognozą wartości. Tu masz je wyłącznie dla wniosków wybranych dla Ciebie: okazji z Twoich Zleceń, wniosków z Twoją ofertą i wniosków przekazanych Ci przez zespół — z możliwością uruchomienia na żądanie."
         actions={
           <Button
             size="sm"
@@ -230,9 +230,10 @@ function AnalitykaPage() {
             </div>
             <CardTitle>Brak wniosków do analizy</CardTitle>
             <CardDescription>
-              Analityka obejmuje okazje ujawnione w wykonaniu Twoich Zleceń, wnioski, do których
-              złożyłeś ofertę, oraz wnioski dopuszczone do inwestorów. Złóż Zlecenie poszukiwania
-              okazji — analizy pojawią się tu automatycznie.
+              Analityka obejmuje tylko wnioski wybrane dla Ciebie: okazje ujawnione w wykonaniu
+              Twoich Zleceń, wnioski, do których złożyłeś ofertę, oraz wnioski przekazane Ci przez
+              zespół Finance You. Złóż Zlecenie poszukiwania okazji — analizy pojawią się tu
+              automatycznie.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
@@ -271,7 +272,7 @@ function AnalitykaPage() {
                     ["all", "Wszystkie"],
                     ["okazja", "Okazje"],
                     ["oferta", "Oferty"],
-                    ["dostepny", "Dostępne"],
+                    ["przekazany", "Przekazane"],
                   ] as const
                 ).map(([key, label]) => (
                   <button
