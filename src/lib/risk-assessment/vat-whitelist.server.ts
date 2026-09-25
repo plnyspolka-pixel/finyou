@@ -11,6 +11,7 @@
 //   2) bez NIP → kandydaci z wyszukiwarki (numery NIP przy imieniu i nazwisku
 //      w katalogach firm) → każdy potwierdzany w wykazie: nazwa podmiotu musi
 //      zawierać imię i nazwisko właściciela.
+import { registryGet } from "@/lib/registry-fetch.server";
 import { webSearch } from "@/lib/web-fetch.server";
 import type { CeidgActivity } from "./types";
 
@@ -49,15 +50,13 @@ export async function lookupVatWhiteList(nipRaw: string): Promise<WhiteListSubje
   const nip = nipRaw.replace(/\D/g, "");
   if (!isValidNip(nip)) return null;
   const date = new Date().toISOString().slice(0, 10);
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 12_000);
   try {
-    const res = await fetch(`${WL_API}/${nip}?date=${date}`, {
+    const res = await registryGet(`${WL_API}/${nip}?date=${date}`, {
       headers: { Accept: "application/json" },
-      signal: ctrl.signal,
+      timeoutMs: 12_000,
     });
     if (!res.ok) return null;
-    const j = (await res.json()) as { result?: { subject?: any } };
+    const j = JSON.parse(res.text) as { result?: { subject?: any } };
     const s = j.result?.subject;
     if (!s?.name) return null;
     return {
@@ -70,8 +69,6 @@ export async function lookupVatWhiteList(nipRaw: string): Promise<WhiteListSubje
     };
   } catch {
     return null;
-  } finally {
-    clearTimeout(timer);
   }
 }
 

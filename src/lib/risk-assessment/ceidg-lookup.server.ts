@@ -11,7 +11,7 @@
 //
 // Wymaga tokenu: CEIDG_JWT_TOKEN (Bearer). Bez tokenu zwracamy „niedostępne".
 
-import { BROWSER_HEADERS } from "@/lib/web-fetch.server";
+import { isGatewayDenial, registryGet } from "@/lib/registry-fetch.server";
 import type { CeidgActivity } from "./types";
 
 const CEIDG_BASE = "https://dane.biznes.gov.pl/api/ceidg/v3/firmy";
@@ -94,41 +94,34 @@ function parseFirm(f: any): CeidgFirm {
 }
 
 async function ceidgFetch(url: string, token: string): Promise<any | { error: string }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15_000);
   try {
-    const res = await fetch(url, {
-      // Brama Akamai przed dane.biznes.gov.pl odrzuca zapytania bez nagłówków
-      // przeglądarki („Access Denied", HTML) — zanim dotrą do API i tokenu.
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-        "User-Agent": BROWSER_HEADERS["User-Agent"],
-        "Accept-Language": BROWSER_HEADERS["Accept-Language"],
-      },
-      signal: controller.signal,
+    // Przez registry-proxy (sieć Supabase): brama Akamai przed
+    // dane.biznes.gov.pl odrzuca żądania z Cloudflare Workers.
+    const res = await registryGet(url, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      timeoutMs: 15_000,
     });
     if (res.status === 404) return { firmy: [] };
     if (!res.ok) {
-      const t = await res.text().catch(() => "");
       // Odmowa bramy (Akamai „Access Denied") przychodzi jako strona HTML —
       // do raportu trafia krótki komunikat, nie surowy HTML.
-      const reason = /access denied/i.test(t)
-        ? "odmowa dostępu (Access Denied)"
-        : t
-            .replace(/<[^>]*>/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-            .slice(0, 120);
+      const reason = isGatewayDenial(res.status, res.text)
+        ? `odmowa bramy Akamai (Access Denied)${res.viaProxy ? " — także przez registry-proxy" : ""}`
+        : res.status === 401
+          ? "token CEIDG odrzucony (401) — sprawdź CEIDG_JWT_TOKEN"
+          : res.text
+              .replace(/<[^>]*>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, 120);
       return { error: `CEIDG HTTP ${res.status}: ${reason || "błąd"}` };
     }
-    return await res.json();
+    if (!res.text.trim()) return { firmy: [] };
+    return JSON.parse(res.text);
   } catch (e: any) {
     return {
       error: e?.name === "AbortError" ? "CEIDG timeout" : (e?.message ?? "CEIDG błąd sieci"),
     };
-  } finally {
-    clearTimeout(timer);
   }
 }
 
