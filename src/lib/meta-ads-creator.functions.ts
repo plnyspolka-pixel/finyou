@@ -7,6 +7,7 @@ import {
   buildCampaignPayload,
   buildCreativePayload,
   buildGeoLocations,
+  buildLeadFormPayload,
   sprawdzKampanie,
   statusPublikacji,
   przytnijPromien,
@@ -434,21 +435,12 @@ export const publishAdDraft = createServerFn({ method: "POST" })
       // 3) Lead form — tylko dla kampanii z formularzem na Facebooku
       const form = naStrone
         ? null
-        : await metaPost(`/${draft.page_id}/leadgen_forms`, {
-            name: leadForm.name ?? draft.name,
-            questions: leadForm.questions ?? [
-              { type: "EMAIL" },
-              { type: "FULL_NAME" },
-              { type: "PHONE" },
-            ],
-            privacy_policy: leadForm.privacy_policy ?? {
-              url: "https://financeyou.pl/polityka-prywatnosci",
-              link_text: "Polityka prywatności",
-            },
-            follow_up_action_url:
-              leadForm.follow_up_action_url ?? "https://financeyou.pl/dziekujemy",
-            locale: "pl_PL",
-          });
+        : await metaPost(
+            `/${draft.page_id}/leadgen_forms`,
+            // Razem z ekranem „dziękujemy" i przyciskiem Messengera — bez niego
+            // prospekt po wysłaniu formularza nie ma jak od razu zacząć rozmowy.
+            buildLeadFormPayload({ nazwa: draft.name, leadForm }),
+          );
 
       // 4) Ad creative
       const cr = await metaPost(

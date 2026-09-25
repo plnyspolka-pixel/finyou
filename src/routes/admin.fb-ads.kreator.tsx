@@ -23,6 +23,8 @@ import {
   zastosujSzablon,
   sprawdzKampanie,
   MAX_PROMIEN_KM,
+  DOMYSLNY_EKRAN_PODZIEKOWANIA,
+  type EkranPodziekowania,
 } from "@/lib/meta-ad-targeting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -268,6 +270,7 @@ function FbCreatorDialog({
         link_text: "Polityka prywatności",
       },
       follow_up_action_url: "https://financeyou.pl/dziekujemy",
+      thank_you_page: { ...DOMYSLNY_EKRAN_PODZIEKOWANIA },
     },
   });
 
@@ -1026,6 +1029,81 @@ function FbCreatorDialog({
                 }
               />
             </div>
+            {(() => {
+              // Szkice sprzed tej opcji nie mają ustawienia — pokazujemy to samo,
+              // co i tak poleci do Meta (przycisk Messengera).
+              const ekran: EkranPodziekowania = {
+                ...DOMYSLNY_EKRAN_PODZIEKOWANIA,
+                ...(form.lead_form?.thank_you_page ?? {}),
+              };
+              const ustaw = (patch: Partial<EkranPodziekowania>) =>
+                setForm({
+                  ...form,
+                  lead_form: { ...form.lead_form, thank_you_page: { ...ekran, ...patch } },
+                });
+              return (
+                <div className="space-y-3 rounded border p-3">
+                  <div>
+                    <Label>Po wysłaniu formularza (ekran „dziękujemy”)</Label>
+                    <Select
+                      value={ekran.przycisk}
+                      onValueChange={(v) => {
+                        const przycisk = v as EkranPodziekowania["przycisk"];
+                        ustaw({
+                          przycisk,
+                          button_text:
+                            przycisk === "messenger"
+                              ? DOMYSLNY_EKRAN_PODZIEKOWANIA.button_text
+                              : przycisk === "strona"
+                                ? "Przejdź na stronę"
+                                : "",
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="messenger">
+                          Przycisk „Napisz do nas na Messengerze”
+                        </SelectItem>
+                        <SelectItem value="strona">Przycisk do strony „dziękujemy”</SelectItem>
+                        <SelectItem value="brak">Sam ekran, bez przycisku</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Z przyciskiem Messengera prospekt może od razu zacząć rozmowę ze Stroną.
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Tytuł ekranu</Label>
+                    <Input
+                      maxLength={60}
+                      value={ekran.title ?? ""}
+                      onChange={(e) => ustaw({ title: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Treść ekranu</Label>
+                    <Textarea
+                      maxLength={360}
+                      value={ekran.body ?? ""}
+                      onChange={(e) => ustaw({ body: e.target.value })}
+                    />
+                  </div>
+                  {ekran.przycisk !== "brak" && (
+                    <div>
+                      <Label>Tekst przycisku</Label>
+                      <Input
+                        maxLength={60}
+                        value={ekran.button_text ?? ""}
+                        onChange={(e) => ustaw({ button_text: e.target.value })}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <div className="text-xs text-muted-foreground">
               Pola w formularzu: Email, Imię i nazwisko, Telefon (domyślnie).
             </div>
@@ -1069,6 +1147,21 @@ function FbCreatorDialog({
                       .join(", ") || "—"
                   }`}
             </div>
+            {!naStrone && (
+              <div>
+                <strong>Po wysłaniu formularza:</strong>{" "}
+                {(() => {
+                  const p =
+                    form.lead_form?.thank_you_page?.przycisk ??
+                    DOMYSLNY_EKRAN_PODZIEKOWANIA.przycisk;
+                  return p === "messenger"
+                    ? "ekran „dziękujemy” z przyciskiem Messengera"
+                    : p === "strona"
+                      ? `ekran „dziękujemy” z przyciskiem do ${form.lead_form?.follow_up_action_url || "strony"}`
+                      : "ekran „dziękujemy” bez przycisku";
+                })()}
+              </div>
+            )}
             <div>
               <strong>Po publikacji:</strong>{" "}
               {form.creative.wlacz_od_razu ? "od razu aktywna" : "wstrzymana"}
