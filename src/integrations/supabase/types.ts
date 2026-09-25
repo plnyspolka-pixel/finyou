@@ -6374,6 +6374,66 @@ export type Database = {
           },
         ]
       }
+      investor_kw_checks: {
+        Row: {
+          coowners_json: Json | null
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          kw_analysis_json: Json | null
+          kw_number: string
+          label: string | null
+          last_advanced_at: string | null
+          loan_amount: number | null
+          period_months: number | null
+          property_type: string | null
+          property_value: number | null
+          risk_json: Json | null
+          status: string
+          steps: Json
+          user_id: string
+        }
+        Insert: {
+          coowners_json?: Json | null
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          kw_analysis_json?: Json | null
+          kw_number: string
+          label?: string | null
+          last_advanced_at?: string | null
+          loan_amount?: number | null
+          period_months?: number | null
+          property_type?: string | null
+          property_value?: number | null
+          risk_json?: Json | null
+          status?: string
+          steps?: Json
+          user_id: string
+        }
+        Update: {
+          coowners_json?: Json | null
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          kw_analysis_json?: Json | null
+          kw_number?: string
+          label?: string | null
+          last_advanced_at?: string | null
+          loan_amount?: number | null
+          period_months?: number | null
+          property_type?: string | null
+          property_value?: number | null
+          risk_json?: Json | null
+          status?: string
+          steps?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       investor_offers: {
         Row: {
           admin_note: string | null
@@ -12747,6 +12807,10 @@ export type Database = {
       increment_loan_view: { Args: { _loan_id: string }; Returns: undefined }
       investor_can_open_match: {
         Args: { _match_id: string; _user_id: string }
+        Returns: boolean
+      }
+      investor_can_view_application: {
+        Args: { _application_id: string; _user_id: string }
         Returns: boolean
       }
       investor_has_disclosed_match: {
