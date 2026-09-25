@@ -12,7 +12,11 @@ import {
   runPropertyCollateralAnalysis,
   getPropertyAnalysis,
 } from "@/lib/property-analysis/property-collateral-analysis.functions";
-import type { PropertyAnalysisResult, SourceStatus } from "@/lib/property-analysis/types";
+import {
+  readPortalValuation,
+  type PropertyAnalysisResult,
+  type SourceStatus,
+} from "@/lib/property-analysis/types";
 import { PropertyMap } from "./property-map";
 
 function statusIcon(s: SourceStatus) {
@@ -76,6 +80,7 @@ export function CollateralAnalysisSection({
     );
 
   const result = row?.result_json as PropertyAnalysisResult | undefined;
+  const pv = readPortalValuation(result);
 
   // W trybie readOnly (widok inwestora) sekcja pojawia się jako bonus tylko gdy analiza jest gotowa.
   if (readOnly && !result) return null;
@@ -204,60 +209,47 @@ export function CollateralAnalysisSection({
                     {result.valuationBenchmark.varianceFromDeclaredValuePercent.toFixed(1)}%
                   </div>
                 )}
-                {result.perplexityValuation && (
+                {pv && (
                   <>
                     <Separator className="my-2" />
                     <div className="rounded border bg-muted/30 p-2 text-xs space-y-1">
                       <div className="flex items-center gap-2">
-                        <b>Wycena Perplexity</b>
-                        <Badge
-                          variant={
-                            result.perplexityValuation.status === "success"
-                              ? "default"
-                              : "destructive"
-                          }
-                        >
-                          {result.perplexityValuation.status}
+                        <b>Wycena z portali nieruchomości</b>
+                        <Badge variant={pv.status === "success" ? "default" : "destructive"}>
+                          {pv.status}
                         </Badge>
+                        <span className="text-muted-foreground">trend: {pv.marketTrend}</span>
                         <span className="text-muted-foreground">
-                          trend: {result.perplexityValuation.marketTrend}
-                        </span>
-                        <span className="text-muted-foreground">
-                          · porównań: {result.perplexityValuation.comparablesFound}
+                          · porównań: {pv.comparablesFound}
+                          {pv.transactionsFound != null
+                            ? ` (transakcji: ${pv.transactionsFound})`
+                            : ""}
                         </span>
                       </div>
-                      {result.perplexityValuation.rationale && (
-                        <div className="text-muted-foreground">
-                          {result.perplexityValuation.rationale}
-                        </div>
+                      {pv.sourcesSummary && (
+                        <div className="text-muted-foreground">Źródła: {pv.sourcesSummary}</div>
                       )}
-                      {result.perplexityValuation.liquidityComment && (
+                      {pv.rationale && <div className="text-muted-foreground">{pv.rationale}</div>}
+                      {pv.liquidityComment && (
                         <div>
                           <span className="text-muted-foreground">Płynność:</span>{" "}
-                          {result.perplexityValuation.liquidityComment}
+                          {pv.liquidityComment}
                         </div>
                       )}
-                      {(result.perplexityValuation.estimatedValueLowPln ||
-                        result.perplexityValuation.estimatedValueHighPln) && (
+                      {(pv.estimatedValueLowPln || pv.estimatedValueHighPln) && (
                         <div>
                           <span className="text-muted-foreground">Zakres wartości:</span>{" "}
-                          {result.perplexityValuation.estimatedValueLowPln?.toLocaleString(
-                            "pl-PL",
-                          ) ?? "—"}{" "}
-                          –{" "}
-                          {result.perplexityValuation.estimatedValueHighPln?.toLocaleString(
-                            "pl-PL",
-                          ) ?? "—"}{" "}
-                          PLN
+                          {pv.estimatedValueLowPln?.toLocaleString("pl-PL") ?? "—"} –{" "}
+                          {pv.estimatedValueHighPln?.toLocaleString("pl-PL") ?? "—"} PLN
                         </div>
                       )}
-                      {result.perplexityValuation.citations.length > 0 && (
+                      {pv.citations.length > 0 && (
                         <details>
                           <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                            Źródła ({result.perplexityValuation.citations.length})
+                            Źródła ({pv.citations.length})
                           </summary>
                           <ul className="mt-1 list-disc pl-4 space-y-0.5">
-                            {result.perplexityValuation.citations.slice(0, 15).map((c, i) => (
+                            {pv.citations.slice(0, 15).map((c, i) => (
                               <li key={i}>
                                 <a
                                   href={c}
@@ -272,11 +264,7 @@ export function CollateralAnalysisSection({
                           </ul>
                         </details>
                       )}
-                      {result.perplexityValuation.errorMessage && (
-                        <div className="text-destructive">
-                          {result.perplexityValuation.errorMessage}
-                        </div>
-                      )}
+                      {pv.errorMessage && <div className="text-destructive">{pv.errorMessage}</div>}
                     </div>
                   </>
                 )}
@@ -535,8 +523,8 @@ export function CollateralAnalysisSection({
                   </Badge>
                 </CardTitle>
                 <CardDescription>
-                  Źródło: Otodom, OLX, Domiporta, Gratka, Morizon, nieruchomosci-online (scraping
-                  przez Firecrawl). Ceny ofertowe (zwykle 5–15% wyższe od transakcyjnych).
+                  Źródło: Otodom, OLX, Gratka, Morizon, Adresowo (pobierane bezpośrednio z portali).
+                  Ceny ofertowe (zwykle 5–15% wyższe od transakcyjnych).
                 </CardDescription>
               </CardHeader>
               <CardContent className="text-sm space-y-3">

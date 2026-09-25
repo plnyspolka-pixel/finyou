@@ -3,16 +3,18 @@
 //
 // Publiczne API KRS (api-krs.ms.gov.pl) pozwala pobrać odpis TYLKO po numerze
 // KRS — nie wyszukuje po osobie ani po PESEL. Dlatego dwustopniowo:
-//   1) DISCOVERY — Perplexity Sonar (web search) wskazuje kandydackie numery
-//      KRS podmiotów, w których osoba może występować,
+//   1) DISCOVERY — darmowe wyszukiwanie w sieci (DuckDuckGo, web-fetch.server.ts)
+//      po imieniu i nazwisku; z wyników (rejestr.io, krs-online, aleo, MSiG…)
+//      wyciągamy kandydackie numery KRS podmiotów, w których osoba może występować,
 //   2) WERYFIKACJA — dla każdego kandydata pobieramy oficjalny odpis aktualny
 //      z api-krs.ms.gov.pl i szukamy osoby w jego treści. Odpis zawiera PESEL
 //      osób, więc zgodność z PESEL z księgi wieczystej daje dopasowanie PEWNE.
 //
-// Bez PERPLEXITY_API_KEY moduł zwraca „niedostępne" (nie przerywa sprawdzenia).
+// Gdy wyszukiwarka nie odpowiada, moduł zwraca „niedostępne" (nie przerywa sprawdzenia).
 
 import type { CoOwnerKrsCheck, CoOwnerKrsHit } from "./types";
 import { scanKrsOdpisForPerson } from "./core";
+import { webSearch, type WebSearchResult } from "@/lib/web-fetch.server";
 
 const KRS_BASE = "https://api-krs.ms.gov.pl/api/krs";
 const TIMEOUT_MS = 15_000;
@@ -30,110 +32,88 @@ function normalizeKrsNumber(input: string): string | null {
 
 type KrsCandidate = { krs: string; companyName: string | null; role: string | null };
 
+const PL_LOWER = (v: string) => v.toLocaleLowerCase("pl-PL");
+
+/**
+ * Numery KRS z wyniku wyszukiwania: 10-cyfrowe „0000123456" w tekście oraz
+ * identyfikatory z adresów rejestr.io (/krs/123456/…) i krs-online (…-krs-123456).
+ */
+export function extractKrsNumbers(r: WebSearchResult): string[] {
+  const out = new Set<string>();
+  const text = `${r.title} ${r.snippet}`;
+  for (const m of text.matchAll(/\bKRS[:\s]*(\d{6,10})\b/gi)) {
+    const n = normalizeKrsNumber(m[1]);
+    if (n) out.add(n);
+  }
+  for (const m of text.matchAll(/\b(0{2,}\d{4,8})\b/g)) {
+    if (m[1].length === 10) out.add(m[1]);
+  }
+  const urlPatterns = [/rejestr\.io\/krs\/(\d{1,10})/i, /krs[-_/](\d{6,10})(?:[./-]|$)/i];
+  for (const re of urlPatterns) {
+    const m = r.url.match(re);
+    const n = m ? normalizeKrsNumber(m[1]) : null;
+    if (n) out.add(n);
+  }
+  return [...out];
+}
+
 async function discoverKrsCandidates(args: {
   fullName: string;
   birthYear: number | null;
   city: string | null;
   voivodeship: string | null;
 }): Promise<KrsCandidate[] | { error: string }> {
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) return { error: "Brak PERPLEXITY_API_KEY" };
+  const queries = [
+    `"${args.fullName}" KRS`,
+    `"${args.fullName}" rejestr.io`,
+    args.city ? `"${args.fullName}" ${args.city} spółka zarząd` : null,
+  ].filter((q): q is string => !!q);
 
-  const hints = [
-    args.birthYear ? `rocznik ok. ${args.birthYear}` : null,
-    args.city ? `powiązana z miejscowością ${args.city}` : null,
-    args.voivodeship ? `woj. ${args.voivodeship}` : null,
-  ]
-    .filter(Boolean)
-    .join(", ");
-
-  const prompt =
-    `Sprawdź, czy osoba "${args.fullName}"${hints ? ` (${hints})` : ""} występuje w polskim ` +
-    `Krajowym Rejestrze Sądowym (KRS) — jako członek zarządu, wspólnik, akcjonariusz, prokurent, ` +
-    `członek rady nadzorczej lub likwidator jakiegokolwiek podmiotu. Przeszukaj bazy wpisów KRS ` +
-    `(rejestr.io, krs-online, aleo.com, imsig.pl, ogłoszenia MSiG) i strony podmiotów. ` +
-    `Zwróć WYŁĄCZNIE poprawny JSON: {"candidates":[{"krs":"0000123456","companyName":"…","role":"…"}]} ` +
-    `— maksymalnie ${MAX_CANDIDATES} podmiotów z 10-cyfrowym numerem KRS. ` +
-    `Jeżeli nie znajdziesz nic wiarygodnego, zwróć {"candidates":[]}.`;
-
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 30_000);
+  let results: WebSearchResult[] = [];
   try {
-    const res = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      signal: ctrl.signal,
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content:
-              "Jesteś analitykiem polskich rejestrów gospodarczych. Odpowiadasz wyłącznie JSON-em.",
-          },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.1,
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "candidates",
-            schema: {
-              type: "object",
-              properties: {
-                candidates: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      krs: { type: "string" },
-                      companyName: { type: "string" },
-                      role: { type: "string" },
-                    },
-                    required: ["krs"],
-                  },
-                },
-              },
-              required: ["candidates"],
-            },
-          },
-        },
-      }),
-    });
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      return { error: `Perplexity HTTP ${res.status}: ${t.slice(0, 120)}` };
-    }
-    const json: any = await res.json();
-    const content: string = json?.choices?.[0]?.message?.content ?? "";
-    let parsed: any = null;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      return { error: "Perplexity: niepoprawny JSON odpowiedzi" };
-    }
-    const arr = Array.isArray(parsed?.candidates) ? parsed.candidates : [];
-    const out: KrsCandidate[] = [];
-    const seen = new Set<string>();
-    for (const c of arr) {
-      const krs = normalizeKrsNumber(String(c?.krs ?? ""));
-      if (!krs || seen.has(krs)) continue;
-      seen.add(krs);
-      out.push({
-        krs,
-        companyName: c?.companyName ? String(c.companyName).trim() : null,
-        role: c?.role ? String(c.role).trim() : null,
-      });
-      if (out.length >= MAX_CANDIDATES) break;
-    }
-    return out;
+    const batches = await Promise.all(queries.map((q) => webSearch(q, { limit: 10 })));
+    results = batches.flat();
   } catch (e: any) {
-    return {
-      error: e?.name === "AbortError" ? "Perplexity timeout" : (e?.message ?? "błąd sieci"),
-    };
-  } finally {
-    clearTimeout(timer);
+    return { error: e?.message ?? "błąd wyszukiwarki" };
   }
+  if (results.length === 0) return { error: "wyszukiwarka nie zwróciła wyników" };
+
+  // Tylko wyniki, które faktycznie wspominają osobę (nazwisko w tytule/opisie).
+  const nameParts = args.fullName.split(/\s+/).filter(Boolean);
+  const lastName = PL_LOWER(nameParts[nameParts.length - 1] ?? "");
+  const firstName = PL_LOWER(nameParts[0] ?? "");
+  const cityLc = args.city ? PL_LOWER(args.city) : null;
+
+  const scored = new Map<string, KrsCandidate & { score: number }>();
+  for (const r of results) {
+    const text = PL_LOWER(`${r.title} ${r.snippet}`);
+    if (!lastName || !text.includes(lastName)) continue;
+    let score = 1;
+    if (firstName && text.includes(firstName)) score += 2;
+    if (cityLc && text.includes(cityLc)) score += 1;
+    if (/rejestr\.io|krs-online|aleo\.com|imsig|monitorsadowy/i.test(r.url)) score += 1;
+    for (const krs of extractKrsNumbers(r)) {
+      const prev = scored.get(krs);
+      if (prev) {
+        prev.score += score;
+        continue;
+      }
+      scored.set(krs, {
+        krs,
+        companyName:
+          r.title
+            .replace(/\s*[-–|].*$/, "")
+            .trim()
+            .slice(0, 200) || null,
+        role: null,
+        score,
+      });
+    }
+  }
+  return [...scored.values()]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_CANDIDATES)
+    .map(({ score: _score, ...c }) => c);
 }
 
 async function fetchKrsOdpis(krs: string): Promise<any | null> {
@@ -199,7 +179,7 @@ function companyMetaFromOdpis(
 }
 
 /**
- * Szuka osoby w KRS: discovery kandydatów (Perplexity) → weryfikacja każdego
+ * Szuka osoby w KRS: discovery kandydatów (wyszukiwanie w sieci) → weryfikacja każdego
  * kandydata oficjalnym odpisem (dopasowanie po PESEL z KW albo po nazwisku).
  * Do wyniku trafiają wyłącznie podmioty potwierdzone treścią odpisu.
  */

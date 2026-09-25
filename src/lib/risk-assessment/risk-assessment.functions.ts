@@ -2,9 +2,10 @@
 // Pipeline: BRAMKA KW (KW Engine — bez poprawnie pobranej księgi ocena nie startuje)
 // → stan prawny KW → właściciel (PESEL, trwanie życia) → korespondencja →
 // → OCR załączników klienta (status gruntu z wypisu/MPZP) →
-// → scraping rynku (deweloperuch.pl transakcje + otodom.pl oferty, Firecrawl) →
+// → dane rynkowe bezpośrednio z portali (deweloperuch.pl transakcje + otodom, morizon,
+//   gratka, adresowo, olx oferty; Jina Reader jako fallback) →
 // → deterministyczna wycena rynkowa (GUS BDL pomocniczo — grunty rolne zł/ha).
-// Perplexity usunięta z toru wyceny. Moduł RCN wyłączony.
+// Bez Firecrawl i bez Perplexity. Moduł RCN wyłączony.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -13,7 +14,7 @@ import {
   analyzePropertyCollateral,
   runPropertyCollateralAnalysisCore,
 } from "@/lib/property-analysis/property-collateral-analysis.functions";
-import type { DataSourceUsage } from "@/lib/property-analysis/types";
+import { readPortalValuation, type DataSourceUsage } from "@/lib/property-analysis/types";
 import { fetchAndStoreKw, normalizeKwNumber } from "@/lib/kw-fetch.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
@@ -43,7 +44,7 @@ type SupabaseLike = { from: (t: string) => any };
 const EMPTY_OCR: OcrSummary = { status: "no_data", documentsProcessed: 0, documents: [] };
 
 // Fallback, gdy pomocnicze zapytanie GUS BDL zawiedzie — ocena liczy się dalej
-// na scrapingu rynku (deweloperuch + otodom).
+// na danych z portali nieruchomości (deweloperuch + portale ogłoszeniowe).
 function emptyGovBenchmark(propertyType: string): GovBenchmark {
   return {
     source: "GUS BDL",
@@ -72,7 +73,7 @@ function emptyGovBenchmark(propertyType: string): GovBenchmark {
     period: null,
     fallbackUsed: false,
     summaryLine:
-      "GUS BDL (pomocniczo): brak danych — wycena bazuje na scrapingu rynku (deweloperuch + otodom).",
+      "GUS BDL (pomocniczo): brak danych — wycena bazuje na danych z portali nieruchomości.",
     warnings: [],
   };
 }
@@ -507,16 +508,16 @@ export async function assessInvestmentRisk(
     return emptyGovBenchmark(effPropertyType);
   });
 
-  // 5d) PODSTAWA WYCENY — scraping rynku (Firecrawl):
+  // 5d) PODSTAWA WYCENY — bezpośredni fetch portali (real-estate-market.server.ts):
   //     deweloperuch.pl: miasto/miejscowość + rodzaj (tylko DOMY i MIESZKANIA — transakcje),
-  //     otodom.pl: MIESZKANIA, DOMY i DZIAŁKI (aktywne oferty).
+  //     otodom/morizon/gratka/adresowo/olx: MIESZKANIA, DOMY, DZIAŁKI, LOKALE (aktywne oferty).
   const marketComparables = await fetchMarketComparables({
     propertyType: property?.property_type ?? "inna",
     city: effCity,
     street: (property as any)?.street ?? kwLegal.address?.street ?? null,
     voivodeship: effVoivodeship,
   }).catch((e) => {
-    warnings.push(`Rynek porównawczy (deweloperuch/otodom): ${e?.message ?? "błąd"}.`);
+    warnings.push(`Rynek porównawczy (portale nieruchomości): ${e?.message ?? "błąd"}.`);
     return null;
   });
 
@@ -542,18 +543,17 @@ export async function assessInvestmentRisk(
   });
   if (master.status !== "success")
     warnings.push(
-      `Wycena rynkowa (deweloperuch/otodom + GUS): ${master.errorMessage ?? "brak danych"}.`,
+      `Wycena rynkowa (portale nieruchomości + GUS): ${master.errorMessage ?? "brak danych"}.`,
     );
 
   // 7) Cena sprzedaży i wymuszonej sprzedaży (licytacje komornicze).
   //    Podstawa: mediana wyceny nadrzędnej → wycena zabezpieczenia → wartość deklarowana.
+  const collateralValuation = readPortalValuation(collateral);
   const collateralMid =
     collateral?.valuationBenchmark?.estimatedValueMedianPln ??
-    (collateral?.perplexityValuation?.estimatedValueLowPln &&
-    collateral?.perplexityValuation?.estimatedValueHighPln
+    (collateralValuation?.estimatedValueLowPln && collateralValuation?.estimatedValueHighPln
       ? Math.round(
-          (collateral.perplexityValuation.estimatedValueLowPln +
-            collateral.perplexityValuation.estimatedValueHighPln) /
+          (collateralValuation.estimatedValueLowPln + collateralValuation.estimatedValueHighPln) /
             2,
         )
       : null);
@@ -565,7 +565,7 @@ export async function assessInvestmentRisk(
   const basisSource = govLandValue
     ? "GUS BDL (ceny gruntów rolnych)"
     : master.estimatedValueMidPln
-      ? `Wycena rynkowa — ${master.basisSource ?? "deweloperuch/otodom"}`
+      ? `Wycena rynkowa — ${master.basisSource ?? "portale nieruchomości"}`
       : collateralMid
         ? "Analiza zabezpieczenia"
         : declaredValue
@@ -688,14 +688,14 @@ function buildDataSources(a: {
 }): DataSourceUsage[] {
   const sources: DataSourceUsage[] = [];
 
-  // PODSTAWA WYCENY: scraping rynku (Firecrawl) — deweloperuch + otodom.
+  // PODSTAWA WYCENY: dane z portali — deweloperuch (transakcje) + portale ogłoszeniowe.
   const mc = a.marketComparables;
   sources.push({
     source:
-      "Rynek porównawczy — deweloperuch.pl (transakcje domów/mieszkań) + otodom.pl (oferty mieszkań/domów/działek)",
+      "Rynek porównawczy — deweloperuch.pl (transakcje domów/mieszkań) + otodom, morizon, gratka, adresowo, olx (oferty)",
     used: !!mc && (mc.status === "success" || mc.status === "partial"),
     purpose:
-      "PODSTAWA WYCENY: twarde zł/m² ze scrapingu rynku (Firecrawl) — miasto/miejscowość + rodzaj nieruchomości",
+      "PODSTAWA WYCENY: twarde zł/m² bezpośrednio z portali — miasto/miejscowość + rodzaj nieruchomości",
     dataLevel: mc
       ? [
           mc.pricePerM2Median != null
@@ -811,7 +811,8 @@ function buildDataSources(a: {
   });
 
   sources.push({
-    source: "Prognoza łatwości sprzedaży (Perplexity: popyt z otoczenia 20/50 km)",
+    source:
+      "Prognoza łatwości sprzedaży (Lovable AI na danych z portali: popyt z otoczenia 20/50 km)",
     used: a.saleability.available,
     purpose:
       "zaludnienie, większe miasto, zbiornik wodny, kurort, sanatorium, atrakcje, dostępność",
@@ -822,7 +823,7 @@ function buildDataSources(a: {
     status: a.saleability.available ? "success" : "no_data",
   });
   sources.push({
-    source: "Aktywne oferty sprzedaży w okolicy — ceny ofertowe (Perplexity)",
+    source: "Aktywne oferty sprzedaży w okolicy — ceny ofertowe (portale ogłoszeniowe)",
     used: a.saleability.localMarketOffers.totalActiveListings > 0,
     purpose: "realna podaż i ceny ofertowe w okolicy — sygnał płynności zbycia",
     dataLevel: `${a.saleability.localMarketOffers.agencyListings} ofert biur / ${a.saleability.localMarketOffers.totalActiveListings} ogółem (~${a.saleability.localMarketOffers.radiusKm} km)`,
@@ -830,16 +831,17 @@ function buildDataSources(a: {
     status: a.saleability.localMarketOffers.totalActiveListings > 0 ? "success" : "no_data",
   });
 
-  // Źródła z analizy zabezpieczenia (Google Maps, ISOK/Wody Polskie, Perplexity wstępna) — przenieś, by uniknąć duplikatów.
+  // Źródła z analizy zabezpieczenia (Google Maps, ISOK/Wody Polskie, wstępna wycena z portali) — przenieś, by uniknąć duplikatów.
   if (a.collateral?.dataSourcesUsed?.length) {
     for (const s of a.collateral.dataSourcesUsed) {
-      if (/perplexity/i.test(s.source)) continue; // wycena raportowana osobno (scraping rynku)
+      // Wycena raportowana osobno (rynek porównawczy); „Perplexity" — stare analizy.
+      if (/perplexity|portale nieruchomości/i.test(s.source)) continue;
       sources.push(s);
     }
   }
 
   sources.push({
-    source: "Wycena rynkowa (deterministyczna) — deweloperuch + otodom, GUS pomocniczo",
+    source: "Wycena rynkowa (deterministyczna) — portale nieruchomości, GUS pomocniczo",
     used: a.master.status === "success",
     purpose:
       "wyliczenie wartości low/mid/high z mediany zł/m² × powierzchnia z KW (grunt rolny: GUS zł/ha × ha)",
@@ -980,7 +982,7 @@ export const diagnoseRcnForApplication = createServerFn({ method: "POST" })
     return {
       ok: false as const,
       message:
-        "Moduł RCN/GUS został wyłączony — bazujemy na rynku porównawczym (deweloperuch + otodom).",
+        "Moduł RCN/GUS został wyłączony — bazujemy na rynku porównawczym z portali nieruchomości.",
     };
   });
 

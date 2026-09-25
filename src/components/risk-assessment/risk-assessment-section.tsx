@@ -143,8 +143,8 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
           </h3>
           <p className="text-xs text-muted-foreground">
             Pipeline: KW (bramka — wymagane poprawne pobranie z KW Engine) → właściciel (PESEL/KRS)
-            → korespondencja → scraping rynku (deweloperuch + otodom) → wycena rynkowa (GUS
-            pomocniczo — grunty rolne).
+            → korespondencja → dane z portali (deweloperuch, otodom, morizon, gratka, adresowo, olx)
+            → wycena rynkowa (GUS pomocniczo — grunty rolne).
           </p>
         </div>
         <Button onClick={run} disabled={running} size="sm">
@@ -278,16 +278,16 @@ export function RiskAssessmentReport({ result }: { result: InvestmentRiskAssessm
 
       {/* Sekcja „Dane rządowe (RCN + GUS BDL)" została wyłączona — bazujemy na rynku porównawczym. */}
 
-      {/* Wycena rynkowa — scraping deweloperuch + otodom, GUS pomocniczo */}
+      {/* Wycena rynkowa — dane z portali nieruchomości, GUS pomocniczo */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <Sparkles className="h-4 w-4" /> Wycena rynkowa (deweloperuch + otodom)
+            <Sparkles className="h-4 w-4" /> Wycena rynkowa (portale nieruchomości)
           </CardTitle>
           <CardDescription>
-            Wycena ze scrapingu rynku (Firecrawl): transakcje deweloperuch.pl (domy/mieszkania) +
-            oferty otodom.pl (mieszkania/domy/działki). Dane GUS pomocniczo — dla gruntów rolnych
-            ceny zł/ha.
+            Wycena z danych pobieranych bezpośrednio z portali: transakcje deweloperuch.pl
+            (domy/mieszkania) + oferty otodom, morizon, gratka, adresowo i olx. Dane GUS pomocniczo
+            — dla gruntów rolnych ceny zł/ha.
             {result.masterValuation.basisSource ? (
               <>
                 {" "}

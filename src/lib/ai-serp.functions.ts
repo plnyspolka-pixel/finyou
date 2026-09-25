@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchReadable, webSearch } from "@/lib/web-fetch.server";
 
 function normalizeHost(input: string) {
   try {
@@ -85,31 +86,27 @@ export const deleteKeyword = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-async function fetchSerpViaFirecrawl(keyword: string, language: string, location: string) {
-  const apiKey = process.env.FIRECRAWL_API_KEY;
-  if (!apiKey) throw new Error("Brak FIRECRAWL_API_KEY — wymagany do scrapowania SERP.");
-
+// SERP Google przez Jina Reader (darmowy, bez klucza) — zastępuje Firecrawl.
+// Gdy Google zablokuje odczyt (captcha / brak linków organicznych), pozycje
+// liczymy awaryjnie z wyników DuckDuckGo (region PL).
+async function fetchSerp(keyword: string, language: string, location: string) {
   const hl = language || "pl";
   const gl = location.toLowerCase().startsWith("pol") ? "pl" : "us";
   const url = `https://www.google.com/search?q=${encodeURIComponent(keyword)}&hl=${hl}&gl=${gl}&num=30`;
 
-  const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      url,
-      formats: ["links", "markdown"],
-      onlyMainContent: false,
-      waitFor: 1500,
-    }),
-  });
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`Firecrawl error ${res.status}: ${t.slice(0, 200)}`);
+  let links: string[] = [];
+  let markdown = "";
+  try {
+    const page = await fetchReadable(url, { withLinks: true });
+    links = page.links;
+    markdown = page.markdown;
+    // Jina bywa bez podsumowania linków — wyciągnij je z Markdown.
+    if (links.length === 0) {
+      links = [...markdown.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].map((m) => m[1]);
+    }
+  } catch {
+    // przejdź do wyszukiwarki awaryjnej
   }
-  const json = await res.json();
-  const links: string[] = json?.data?.links ?? [];
-  const markdown: string = json?.data?.markdown ?? "";
 
   // Filter to organic-looking external links, preserve order, dedupe by hostname+path
   const seen = new Set<string>();
@@ -150,6 +147,13 @@ async function fetchSerpViaFirecrawl(keyword: string, language: string, location
   if (m.includes("knowledge panel") || m.includes("panel wiedzy")) features.push("knowledge_panel");
   if (markdown.match(/!\[[^\]]*\]\([^)]+\)/g)?.length ?? 0 > 5) features.push("image_pack");
 
+  if (organic.length === 0) {
+    const fallback = await webSearch(keyword, {
+      limit: 30,
+      region: gl === "pl" ? "pl-pl" : "us-en",
+    });
+    return { organic: fallback.map((r) => r.url), features };
+  }
   return { organic, features };
 }
 
@@ -165,7 +169,7 @@ export const checkKeywordRanking = createServerFn({ method: "POST" })
       .single();
     if (kErr || !kw) throw new Error(kErr?.message ?? "Nie znaleziono słowa kluczowego.");
 
-    const { organic, features } = await fetchSerpViaFirecrawl(kw.keyword, kw.language, kw.location);
+    const { organic, features } = await fetchSerp(kw.keyword, kw.language, kw.location);
 
     let position: number | null = null;
     let foundUrl: string | null = null;
@@ -228,11 +232,7 @@ export const checkAllRankings = createServerFn({ method: "POST" })
           .eq("id", k.id)
           .single();
         if (!kw) continue;
-        const { organic, features } = await fetchSerpViaFirecrawl(
-          kw.keyword,
-          kw.language,
-          kw.location,
-        );
+        const { organic, features } = await fetchSerp(kw.keyword, kw.language, kw.location);
         let position: number | null = null;
         let foundUrl: string | null = null;
         if (kw.target_url) {

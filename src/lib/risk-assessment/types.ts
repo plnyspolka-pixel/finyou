@@ -16,7 +16,7 @@ export type { SellabilityCategory, SellabilityCategoryResult } from "./exit-liqu
 
 export type MarketCompStatus = "success" | "partial" | "no_data" | "error" | "skipped";
 export interface MarketCompRecord {
-  source: "deweloperuch.pl" | "otodom.pl";
+  source: "deweloperuch.pl" | "otodom.pl" | "morizon.pl" | "gratka.pl" | "adresowo.pl" | "olx.pl";
   kind: "transaction" | "offer";
   url: string | null;
   title: string | null;
@@ -120,7 +120,7 @@ export interface OwnerProfile {
 
 // ---- KW: parametry nieruchomości z działu I-O (oznaczenie) ----
 // Odczytane wprost z JSON-a zwracanego przez KW Engine — używane jako źródło
-// parametrów do wyceny (pytanie do Perplexity o cenę za m²).
+// parametrów do wyceny (dobór porównań z portali nieruchomości).
 export interface KwPropertyParams {
   /** Rodzaj / przeznaczenie nieruchomości lub lokalu (np. „lokal mieszkalny", „budynek", „działka"). */
   kind: string | null;
@@ -200,7 +200,7 @@ export interface OcrSummary {
 }
 
 // ---- Wycena rynkowa (deterministyczna) ----
-// Liczona wprost ze scrapingu rynku (deweloperuch.pl transakcje + otodom.pl oferty)
+// Liczona wprost z danych portali (deweloperuch.pl transakcje + portale ogłoszeniowe oferty)
 // z danymi GUS jako źródłem pomocniczym (grunty rolne: ceny zł/ha). Bez LLM.
 export interface MasterValuation {
   /** Podstawa wyceny (np. „deweloperuch.pl — transakcje", „GUS BDL — ceny gruntów rolnych"). */
@@ -227,12 +227,7 @@ export interface MasterValuation {
 
 // ---- Prognozowana łatwość sprzedaży (popyt z otoczenia) ----
 export type SaleabilityBand =
-  | "bardzo_latwa"
-  | "latwa"
-  | "umiarkowana"
-  | "trudna"
-  | "bardzo_trudna"
-  | "nieznana";
+  "bardzo_latwa" | "latwa" | "umiarkowana" | "trudna" | "bardzo_trudna" | "nieznana";
 
 export interface SaleabilityForecast {
   available: boolean;
@@ -298,10 +293,7 @@ export interface SaleabilityForecast {
 
 // ---- Wycena wymuszonej sprzedaży (licytacja komornicza) ----
 export type AuctionOutcome =
-  | "pierwsza_licytacja"
-  | "druga_licytacja"
-  | "przejecie_wierzyciela"
-  | "nieznany";
+  "pierwsza_licytacja" | "druga_licytacja" | "przejecie_wierzyciela" | "nieznany";
 
 // Ryzyko blokady licytacji nieruchomości mieszkalnej (art. 952¹ § 2 KPC).
 export interface ResidentialAuctionBlock {
@@ -397,7 +389,7 @@ export interface InvestmentRiskAssessment {
 
   masterValuation: MasterValuation;
 
-  /** Wynik istniejącej analizy zabezpieczenia (wycena Perplexity + lokalizacja + powódź). */
+  /** Wynik istniejącej analizy zabezpieczenia (wycena z portali + lokalizacja + powódź). */
   collateralAnalysis: PropertyAnalysisResult | null;
 
   componentScores: RiskComponentScores;
