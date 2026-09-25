@@ -136,7 +136,7 @@ async function queryKsefMetadata(
       if (!firstReq) await sleep(300); // throttling między zapytaniami metadanych
       firstReq = false;
       const res = await ksefFetch(
-        `${s.baseUrl}/api/v2/invoices/query/metadata?pageOffset=${pageOffset}&pageSize=${pageSize}`,
+        `${s.baseUrl}/invoices/query/metadata?pageOffset=${pageOffset}&pageSize=${pageSize}`,
         {
           method: "POST",
           headers: {
@@ -235,7 +235,7 @@ async function syncKsefWithSession(
   }
 }
 
-// Pobiera źródłowy XML z KSeF (GET /api/v2/invoices/ksef/{ksefNumber}) dla faktur,
+// Pobiera źródłowy XML z KSeF (GET /invoices/ksef/{ksefNumber}) dla faktur,
 // które jeszcze nie mają zapisanego xml_content. Zwraca liczniki + diagnostykę błędów.
 async function fetchMissingInvoiceXml(
   entityId: string,
@@ -262,7 +262,7 @@ async function fetchMissingInvoiceXml(
     if (!row.ksef_reference_number) continue;
     try {
       await sleep(XML_FETCH_DELAY_MS);
-      const url = `${s.baseUrl}/api/v2/invoices/ksef/${encodeURIComponent(row.ksef_reference_number)}`;
+      const url = `${s.baseUrl}/invoices/ksef/${encodeURIComponent(row.ksef_reference_number)}`;
       const res = await ksefFetch(url, {
         method: "GET",
         headers: {

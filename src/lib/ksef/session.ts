@@ -1,15 +1,17 @@
 // KSeF 2.0 session helper — token-based (KSeF Authorization Token).
 // Flow (per api-test.ksef.mf.gov.pl/docs/v2):
-//   1) GET  /api/v2/security/public-key-certificates → wybierz cert z usage=KsefTokenEncryption
-//   2) POST /api/v2/auth/challenge → { challenge, timestamp, timestampMs }
+//   0) katalog główny API wykrywany automatycznie (api-root.ts: /v2 albo /api/v2)
+//   1) GET  /security/public-key-certificates → wybierz cert z usage=KsefTokenEncryption
+//   2) POST /auth/challenge → { challenge, timestamp, timestampMs }
 //   3) RSA-OAEP-SHA256 na `${token}|${timestampMs}` kluczem publicznym z cert (X.509)
-//   4) POST /api/v2/auth/ksef-token → { referenceNumber, authenticationToken:{token} }
-//   5) GET  /api/v2/auth/{referenceNumber} → poll do status = 'Success'
-//   6) POST /api/v2/auth/token/redeem (Authorization: Bearer <authenticationToken>) → { accessToken, refreshToken }
+//   4) POST /auth/ksef-token → { referenceNumber, authenticationToken:{token} }
+//   5) GET  /auth/{referenceNumber} → poll do status = 'Success'
+//   6) POST /auth/token/redeem (Authorization: Bearer <authenticationToken>) → { accessToken, refreshToken }
 //   7) Wszystkie kolejne wywołania: Authorization: Bearer <accessToken.token>
 import { publicEncrypt, constants, X509Certificate } from "node:crypto";
 import { decryptSensitive } from "@/lib/affiliate/crypto";
 import { ksefBaseUrl, type KsefEntity, type KsefEnvironment } from "./client";
+import { forgetKsefApiRoot, resolveKsefApiRoot } from "./api-root";
 
 export function pickEnvTokenFor(entity: Pick<KsefEntity, "legal_name">): string | null {
   const name = (entity.legal_name ?? "").toLowerCase();
@@ -19,6 +21,7 @@ export function pickEnvTokenFor(entity: Pick<KsefEntity, "legal_name">): string 
 }
 
 export type KsefSession = {
+  /** Katalog główny API (wykryty), np. https://api.ksef.mf.gov.pl/v2 — ścieżki dopisujemy bez prefiksu. */
   baseUrl: string;
   environment: KsefEnvironment;
   /** Bearer access token (JWT) do wszystkich chronionych endpointów KSeF 2.0. */
@@ -36,7 +39,7 @@ export async function fetchEncryptionPublicKey(
   baseUrl: string,
   usage: "KsefTokenEncryption" | "SymmetricKeyEncryption" = "KsefTokenEncryption",
 ): Promise<string> {
-  const res = await fetch(`${baseUrl}/api/v2/security/public-key-certificates`, {
+  const res = await fetch(`${baseUrl}/security/public-key-certificates`, {
     headers: { Accept: "application/json" },
   });
   if (!res.ok) throw new Error(`Nie udało się pobrać certyfikatów KSeF (${res.status}).`);
@@ -59,7 +62,7 @@ async function pollAuthStatus(
 ): Promise<void> {
   const deadline = Date.now() + 20_000;
   while (Date.now() < deadline) {
-    const res = await fetch(`${baseUrl}/api/v2/auth/${encodeURIComponent(referenceNumber)}`, {
+    const res = await fetch(`${baseUrl}/auth/${encodeURIComponent(referenceNumber)}`, {
       headers: { Accept: "application/json", Authorization: `Bearer ${authToken}` },
     });
     if (!res.ok) throw new Error(`GET /auth/${referenceNumber} ${res.status}`);
@@ -81,6 +84,17 @@ async function pollAuthStatus(
 
 /** Otwiera sesję KSeF 2.0 i zwraca `accessToken` (JWT) używany jako Bearer. */
 export async function openKsefSession(entity: KsefEntity): Promise<KsefSession> {
+  try {
+    return await openKsefSessionOnce(entity);
+  } catch (e) {
+    // 404 = MF zmieniło adresację — wykryj katalog API od nowa i spróbuj raz jeszcze.
+    if (!/ 404\b/.test((e as Error).message)) throw e;
+    forgetKsefApiRoot();
+    return openKsefSessionOnce(entity);
+  }
+}
+
+async function openKsefSessionOnce(entity: KsefEntity): Promise<KsefSession> {
   const envToken = pickEnvTokenFor(entity);
   const environment: KsefEnvironment =
     entity.ksef_environment && entity.ksef_environment !== "disabled"
@@ -93,14 +107,15 @@ export async function openKsefSession(entity: KsefEntity): Promise<KsefSession> 
   if (!token) throw new Error("Brak tokenu autoryzacyjnego KSeF dla podmiotu.");
   const nip = entity.ksef_nip ?? "";
   if (!nip) throw new Error("Brak NIP podmiotu dla autoryzacji KSeF.");
-  const base = ksefBaseUrl(environment);
-  if (!base) throw new Error("Nieznane środowisko KSeF.");
+  const host = ksefBaseUrl(environment);
+  if (!host) throw new Error("Nieznane środowisko KSeF.");
+  const base = await resolveKsefApiRoot(host);
 
   // 1) klucz publiczny z API KSeF (PEM)
   const publicKeyPem = await fetchEncryptionPublicKey(base);
 
   // 2) challenge
-  const chRes = await fetch(`${base}/api/v2/auth/challenge`, {
+  const chRes = await fetch(`${base}/auth/challenge`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: "{}",
@@ -116,7 +131,7 @@ export async function openKsefSession(entity: KsefEntity): Promise<KsefSession> 
   ).toString("base64");
 
   // 4) submit
-  const submitRes = await fetch(`${base}/api/v2/auth/ksef-token`, {
+  const submitRes = await fetch(`${base}/auth/ksef-token`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
@@ -142,7 +157,7 @@ export async function openKsefSession(entity: KsefEntity): Promise<KsefSession> 
   await pollAuthStatus(base, submit.referenceNumber, authToken);
 
   // 6) redeem access/refresh
-  const rdRes = await fetch(`${base}/api/v2/auth/token/redeem`, {
+  const rdRes = await fetch(`${base}/auth/token/redeem`, {
     method: "POST",
     headers: { Accept: "application/json", Authorization: `Bearer ${authToken}` },
   });
@@ -169,7 +184,7 @@ export async function openKsefSession(entity: KsefEntity): Promise<KsefSession> 
 /** Zamyka sesję (best-effort). */
 export async function closeKsefSession(session: KsefSession): Promise<void> {
   try {
-    await fetch(`${session.baseUrl}/api/v2/auth/token/revoke`, {
+    await fetch(`${session.baseUrl}/auth/token/revoke`, {
       method: "POST",
       headers: { Authorization: `Bearer ${session.accessToken}` },
     });

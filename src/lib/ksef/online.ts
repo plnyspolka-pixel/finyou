@@ -17,6 +17,11 @@ import {
   type KsefSession,
 } from "./session";
 import type { KsefEntity, KsefResult } from "./client";
+import { forgetKsefApiRoot } from "./api-root";
+
+/** Dopisek do błędów wskazujących, że KSeF przestał przyjmować schemat FA(3). */
+export const SCHEMA_HINT =
+  "Jeśli Ministerstwo Finansów wprowadziło nowy schemat faktury (następcę FA(3)), generator faktur wymaga aktualizacji — MF ogłasza takie zmiany z wyprzedzeniem w changelogu KSeF.";
 
 const sha256b64 = (b: Buffer) => createHash("sha256").update(b).digest("base64");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -74,6 +79,12 @@ export function interpretInvoiceStatus(st: InvoiceStatusResponse): KsefResult {
       referenceNumber: st.status?.extensions?.originalKsefNumber ?? null,
       message: `Duplikat faktury w KSeF${desc ? ` (${desc})` : ""}.`,
     };
+  if (code === 430)
+    return {
+      status: "rejected",
+      statusCode: code,
+      message: `KSeF odrzucił plik faktury (430 — niezgodność ze schematem): ${desc}. ${SCHEMA_HINT}`,
+    };
   if (code === 405 || code === 500 || code === 550)
     return { status: "error", statusCode: code, message: `KSeF ${code}: ${desc}` };
   return {
@@ -112,7 +123,7 @@ async function api<T = any>(
   body?: unknown,
   accept = "application/json",
 ): Promise<T> {
-  const url = `${s.baseUrl}/api/v2${path}`;
+  const url = `${s.baseUrl}${path}`;
   for (let attempt = 0; ; attempt += 1) {
     const res = await fetch(url, {
       method,
@@ -129,6 +140,7 @@ async function api<T = any>(
       await sleep(Number.isFinite(ra) && ra > 0 ? Math.min(ra, 30) * 1000 : 2000 * 2 ** attempt);
       continue;
     }
+    if (res.status === 404) forgetKsefApiRoot(); // możliwa zmiana adresacji MF
     if (!res.ok) throw new Error(`${method} ${path} ${res.status}: ${await errorText(res)}`);
     if (res.status === 204) return undefined as T;
     return (accept === "application/json" ? res.json() : res.text()) as Promise<T>;
@@ -191,6 +203,11 @@ export async function sendInvoiceOnline(
     const opened = await api<{ referenceNumber: string }>(session, "POST", "/sessions/online", {
       formCode: FA3_FORM_CODE,
       encryption: { encryptedSymmetricKey, initializationVector: iv.toString("base64") },
+    }).catch((e: Error) => {
+      // Odmowa otwarcia sesji dla FA(3) = schemat wycofany po stronie KSeF.
+      if (/ 400:/.test(e.message) && /form|schem|FA \(3\)/i.test(e.message))
+        throw new Error(`${e.message}. ${SCHEMA_HINT}`);
+      throw e;
     });
     sessionRef = opened.referenceNumber;
     try {

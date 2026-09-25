@@ -14,7 +14,7 @@ const publicPem = keys.publicKey.export({ type: "spki", format: "pem" }) as stri
 
 vi.mock("./session", () => ({
   openKsefSession: vi.fn(async () => ({
-    baseUrl: "https://ksef.test",
+    baseUrl: "https://ksef.test/v2",
     environment: "test",
     accessToken: "ACCESS",
     nip: "7010611803",
@@ -66,6 +66,11 @@ describe("interpretInvoiceStatus", () => {
       }),
     ).toMatchObject({ status: "rejected", statusCode: 440, referenceNumber: "ORIG" });
     expect(interpretInvoiceStatus({ status: { code: 550 } }).status).toBe("error");
+    expect(
+      interpretInvoiceStatus({
+        status: { code: 430, description: "Błąd weryfikacji pliku faktury" },
+      }),
+    ).toMatchObject({ status: "rejected", message: expect.stringMatching(/nowy schemat/) });
   });
 });
 
@@ -96,7 +101,7 @@ describe("sendInvoiceOnline", () => {
             status,
             headers: { "Content-Type": "application/json" },
           });
-        if (url.endsWith("/api/v2/sessions/online")) {
+        if (url.endsWith("/v2/sessions/online")) {
           // Serwer KSeF: odszyfrowuje klucz symetryczny kluczem prywatnym MF.
           symKey = privateDecrypt(
             { key: keys.privateKey, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" },
@@ -151,7 +156,7 @@ describe("sendInvoiceOnline", () => {
       sent: true,
       upoXml: "<UPO/>",
     });
-    const order = calls.map((c) => `${c.method} ${c.url.replace("https://ksef.test/api/v2", "")}`);
+    const order = calls.map((c) => `${c.method} ${c.url.replace("https://ksef.test/v2", "")}`);
     expect(order.slice(0, 3)).toEqual([
       "POST /sessions/online",
       `POST /sessions/online/${"S".repeat(36)}/invoices`,
