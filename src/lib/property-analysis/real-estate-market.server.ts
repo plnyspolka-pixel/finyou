@@ -760,8 +760,9 @@ async function scrapeOlx(
   const source: PortalSource = "olx.pl";
   const url = `https://www.olx.pl/nieruchomosci/${OLX_PATH[cat]}/sprzedaz/${slugPl(city)}/`;
   try {
-    const page = await fetchReadable(url, { timeoutMs: 30_000 });
-    const rows = extractListingsFromText(page.markdown, source, { pageUrl: url });
+    // Tryb tekstowy Jiny — tryb JSON gubi ceny całkowite z kart OLX.
+    const markdown = await fetchReadableMarkdown(url, { timeoutMs: 30_000 });
+    const rows = extractListingsFromText(markdown, source, { pageUrl: url });
     return {
       listings: rows,
       report: {
@@ -770,7 +771,7 @@ async function scrapeOlx(
         via: "jina",
         url,
         listingsParsed: rows.length,
-        totalListings: extractTotalCount(page.markdown),
+        totalListings: extractTotalCount(markdown),
         portalAvgPricePerM2: null,
       },
     };
