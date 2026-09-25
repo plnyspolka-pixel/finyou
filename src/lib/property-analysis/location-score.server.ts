@@ -1,9 +1,20 @@
-// Scoring lokalizacji — wykorzystuje istniejącą funkcję property-location-analysis,
-// a w razie braku danych zwraca neutralny wynik (40/100).
+// Scoring lokalizacji i geokodowanie — OpenStreetMap (Nominatim + Overpass).
+// Do 22.07.2026 przez konektor Google Maps; po jego odłączeniu w Lovable
+// geokodowanie zwracało pustkę. Interfejs bez zmian (geocode, locationScore),
+// więc analiza zabezpieczenia, benchmark GUS i ryzyko powodziowe korzystają
+// z OSM bez własnych zmian.
 import type { LocationScoreResult } from "./types";
-import { fetchWithTimeout } from "./cache.server";
+import { osmGeocode, osmNearby } from "@/lib/osm.server";
 
-const GATEWAY = "https://connector-gateway.lovable.dev/google_maps";
+/** Kategorie punktów w scoringu zabezpieczenia (promień 1,5 km, maks. 20 na kategorię). */
+const SCORE_CATEGORIES: Record<string, string> = {
+  schools: "szkoły",
+  groceryStores: "sklepy spożywcze",
+  pharmacies: "apteki",
+  publicTransport: "przystanki komunikacji",
+  parks: "parki",
+  clinics: "przychodnie i szpitale",
+};
 
 export async function locationScore(args: {
   lat: number | null;
@@ -20,89 +31,44 @@ export async function locationScore(args: {
       liquidityComment: "Płynność trudna do oceny bez geolokalizacji.",
     };
   }
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey || !lovableKey) {
+  const nearby = await osmNearby(lat, lng, 1500, Object.keys(SCORE_CATEGORIES), 20).catch(
+    () => null,
+  );
+  if (!nearby) {
     return {
       score: 50,
       available: false,
-      summary: "Brak konfiguracji Google Maps — lokalizacji nie oceniono.",
+      summary: "Nie pobrano punktów w okolicy (OpenStreetMap) — lokalizacji nie oceniono.",
       liquidityComment: "Wymagana ręczna weryfikacja lokalizacji.",
     };
   }
-  const categories = ["school", "supermarket", "pharmacy", "bus_station", "park", "hospital"];
   const counts: Record<string, number> = {};
-  try {
-    for (const type of categories) {
-      const res = await fetchWithTimeout(
-        `${GATEWAY}/places/v1/places:searchNearby`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${lovableKey}`,
-            "X-Connection-Api-Key": apiKey,
-            "Content-Type": "application/json",
-            "X-Goog-FieldMask": "places.id",
-          },
-          body: JSON.stringify({
-            includedTypes: [type],
-            maxResultCount: 20,
-            locationRestriction: {
-              circle: { center: { latitude: lat, longitude: lng }, radius: 1500 },
-            },
-          }),
-        },
-        12_000,
-      );
-      if (res.ok) {
-        const j = (await res.json()) as { places?: unknown[] };
-        counts[type] = (j.places ?? []).length;
-      } else {
-        counts[type] = 0;
-      }
-    }
-    const total = Object.values(counts).reduce((a, b) => a + b, 0);
-    const score = Math.max(0, Math.min(100, Math.round((total / 60) * 100)));
-    const quality =
-      score >= 70 ? "bardzo dobra" : score >= 50 ? "dobra" : score >= 30 ? "przeciętna" : "słaba";
-    return {
-      score,
-      summary: `Dostępność infrastruktury: ${quality}. Łącznie ${total} punktów POI w promieniu 1,5 km.`,
-      liquidityComment:
-        score >= 50
-          ? "Lokalizacja sprzyja płynności rynkowej."
-          : "Lokalizacja może obniżać płynność rynkową.",
-      poiCounts: counts,
-    };
-  } catch {
-    return {
-      score: 40,
-      summary: "Błąd pobierania danych Google Maps — wynik szacunkowy.",
-      liquidityComment: "Wymagana ręczna weryfikacja.",
-    };
-  }
-}
-
-type GeocodeResult = {
-  geometry?: { location?: { lat: number; lng: number }; location_type?: string };
-  formatted_address?: string;
-  address_components?: Array<{ long_name: string; short_name: string; types: string[] }>;
-  partial_match?: boolean;
-  types?: string[];
-};
-
-function norm(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "");
+  for (const key of Object.keys(SCORE_CATEGORIES)) counts[key] = nearby[key]?.length ?? 0;
+  // Skala jak przy Google Places: 6 kategorii × maks. 20, pełny wynik od 60 punktów.
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const score = Math.max(0, Math.min(100, Math.round((total / 60) * 100)));
+  const quality =
+    score >= 70 ? "bardzo dobra" : score >= 50 ? "dobra" : score >= 30 ? "przeciętna" : "słaba";
+  const detail = Object.entries(SCORE_CATEGORIES)
+    .map(([k, label]) => `${label}: ${counts[k] >= 20 ? "20+" : counts[k]}`)
+    .join(", ");
+  return {
+    score,
+    available: true,
+    summary: `Dostępność infrastruktury: ${quality}. Łącznie ${total} punktów w promieniu 1,5 km (OpenStreetMap — ${detail}).`,
+    liquidityComment:
+      score >= 50
+        ? "Lokalizacja sprzyja płynności rynkowej."
+        : "Lokalizacja może obniżać płynność rynkową.",
+    poiCounts: counts,
+  };
 }
 
 /**
  * Geokodowanie z ponowieniami: pełny adres → adres bez numeru lokalu
  * („Komandosów 12/61" → „Komandosów 12") → sama miejscowość (przybliżenie,
- * `approximate: true`). Numer lokalu potrafi zablokować dopasowanie Google.
+ * `approximate: true`). Przy podanej miejscowości/województwie wynik musi do
+ * nich pasować — inaczej ulica o tej samej nazwie w innym mieście.
  */
 export async function geocode(
   address: string,
@@ -113,74 +79,27 @@ export async function geocode(
     cityFallback?: boolean;
   },
 ): Promise<{ lat: number; lng: number; approximate?: boolean } | null> {
-  const exact = await geocodeOnce(address, opts);
+  if (!address?.trim()) return null;
+  const match = {
+    expectedCity: opts?.expectedCity ?? null,
+    expectedVoivodeship: opts?.expectedVoivodeship ?? null,
+  };
+  const once = async (q: string) => {
+    const g = await osmGeocode(q, match).catch(() => null);
+    return g ? { lat: g.lat, lng: g.lng, approximate: g.approximate || undefined } : null;
+  };
+  const exact = await once(address);
   if (exact) return exact;
   const withoutUnit = address.replace(/(\d+[a-z]?)\s*\/\s*\d+[a-z]?/gi, "$1");
   if (withoutUnit !== address) {
-    const retry = await geocodeOnce(withoutUnit, opts);
+    const retry = await once(withoutUnit);
     if (retry) return retry;
   }
   if (opts?.cityFallback && opts.expectedCity) {
-    const city = await geocodeOnce(
+    const city = await once(
       [opts.expectedCity, opts.expectedVoivodeship].filter(Boolean).join(", "),
-      opts,
     );
     if (city) return { ...city, approximate: true };
   }
   return null;
-}
-
-async function geocodeOnce(
-  address: string,
-  opts?: { expectedCity?: string | null; expectedVoivodeship?: string | null },
-): Promise<{ lat: number; lng: number } | null> {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey || !lovableKey || !address) return null;
-  try {
-    // Bias do Polski, dodatkowo doklej "Polska" jeśli adres tego nie zawiera.
-    const q = /polska|poland/i.test(address) ? address : `${address}, Polska`;
-    const params = new URLSearchParams({
-      address: q,
-      region: "pl",
-      language: "pl",
-      components: "country:PL",
-    });
-    const res = await fetchWithTimeout(`${GATEWAY}/maps/api/geocode/json?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": apiKey },
-    });
-    if (!res.ok) return null;
-    const j = (await res.json()) as { results?: GeocodeResult[]; status?: string };
-    const results = j.results ?? [];
-    if (!results.length) return null;
-
-    const expCity = opts?.expectedCity ? norm(opts.expectedCity) : null;
-    const expVoi = opts?.expectedVoivodeship ? norm(opts.expectedVoivodeship) : null;
-
-    // Wybierz pierwszy wynik, który pasuje do oczekiwanego miasta/województwa.
-    // Jeśli nie ma oczekiwań — bierz pierwszy. Jeśli są — odrzuć partial_match
-    // oraz dopasowania, w których city/voivodeship nie zgadza się z oczekiwanym.
-    const pick = results.find((r) => {
-      if (!expCity && !expVoi) return true;
-      const comps = r.address_components ?? [];
-      const cityComp = comps.find(
-        (c) =>
-          c.types.includes("locality") ||
-          c.types.includes("postal_town") ||
-          c.types.includes("administrative_area_level_3"),
-      );
-      const voiComp = comps.find((c) => c.types.includes("administrative_area_level_1"));
-      const cityOk = expCity ? cityComp && norm(cityComp.long_name).includes(expCity) : true;
-      const voiOk = expVoi ? voiComp && norm(voiComp.long_name).includes(expVoi) : true;
-      // Odrzucamy partial_match jeśli mamy oczekiwane miasto, a ono się nie zgadza
-      if (r.partial_match && !cityOk) return false;
-      return cityOk && voiOk;
-    });
-
-    const chosen = pick ?? (expCity ? null : results[0]);
-    const loc = chosen?.geometry?.location;
-    return loc ? { lat: loc.lat, lng: loc.lng } : null;
-  } catch {
-    return null;
-  }
 }

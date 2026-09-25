@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { osmGeocode, osmNearby, type OsmPlace } from "@/lib/osm.server";
 
-const GATEWAY = "https://connector-gateway.lovable.dev/google_maps";
-
+// Źródło: OpenStreetMap (Nominatim + Overpass) — konektor Google Maps
+// odłączono w Lovable (od 22.07.2026 analiza zwracała błąd).
 const InputSchema = z.object({
   propertyAddress: z.string().max(500).optional().nullable(),
   city: z.string().max(200).optional().nullable(),
@@ -15,7 +16,7 @@ const InputSchema = z.object({
   forceRefresh: z.boolean().optional(),
 });
 
-type Place = { name?: string; vicinity?: string; types?: string[]; distance?: number };
+type Place = OsmPlace;
 
 function normalizeAddress(parts: {
   propertyAddress?: string | null;
@@ -29,102 +30,25 @@ function normalizeAddress(parts: {
   return joined.replace(/\s+/g, " ").toLowerCase();
 }
 
-function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
-async function gmFetch(path: string, init?: RequestInit) {
-  const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-  const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
-  if (!LOVABLE_API_KEY || !GOOGLE_MAPS_API_KEY) {
-    throw new Error("GOOGLE_MAPS_API_KEY_MISSING");
-  }
-  const res = await fetch(`${GATEWAY}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": GOOGLE_MAPS_API_KEY,
-      ...(init?.headers ?? {}),
-    },
-  });
-  return res;
-}
-
-async function geocode(address: string) {
-  const res = await gmFetch(
-    `/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=pl&language=pl`,
-  );
-  if (!res.ok) throw new Error("GOOGLE_MAPS_API_ERROR");
-  const data = await res.json();
-  if (data.status !== "OK" || !data.results?.[0]) return null;
-  const r = data.results[0];
+async function geocode(address: string, city: string | null) {
+  const g =
+    (await osmGeocode(address, { expectedCity: city })) ??
+    (await osmGeocode(address.replace(/(\d+[a-z]?)\s*\/\s*\d+[a-z]?/gi, "$1"), {
+      expectedCity: city,
+    }));
+  if (!g) return null;
   return {
-    latitude: r.geometry.location.lat as number,
-    longitude: r.geometry.location.lng as number,
-    formattedAddress: r.formatted_address as string,
-    placeId: r.place_id as string,
+    latitude: g.lat,
+    longitude: g.lng,
+    formattedAddress: g.formattedAddress,
+    placeId: g.osmId ?? "",
   };
 }
 
-async function nearby(
-  lat: number,
-  lng: number,
-  radius: number,
-  includedTypes: string[],
-): Promise<Place[]> {
-  const res = await gmFetch(`/places/v1/places:searchNearby`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location,places.types",
-    },
-    body: JSON.stringify({
-      includedTypes,
-      maxResultCount: 20,
-      locationRestriction: {
-        circle: { center: { latitude: lat, longitude: lng }, radius },
-      },
-      languageCode: "pl",
-    }),
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.places ?? []).map((p: any) => ({
-    name: p.displayName?.text,
-    vicinity: p.formattedAddress,
-    types: p.types,
-    distance: p.location
-      ? haversine(lat, lng, p.location.latitude, p.location.longitude)
-      : undefined,
-  }));
-}
-
-const CATEGORY_TYPES: Record<string, string[]> = {
-  schools: ["school", "primary_school", "secondary_school"],
-  kindergartens: ["preschool"],
-  groceryStores: ["supermarket", "grocery_store", "convenience_store"],
-  pharmacies: ["pharmacy", "drugstore"],
-  clinics: ["doctor", "hospital"],
-  publicTransport: ["bus_stop", "transit_station", "train_station", "subway_station"],
-  parks: ["park"],
-  restaurants: ["restaurant", "cafe"],
-  banks: ["bank", "atm"],
-  shopping: ["shopping_mall", "department_store"],
-};
-
 async function gatherInfrastructure(lat: number, lng: number, radius: number) {
-  const result: Record<string, Place[]> = {};
-  for (const [key, types] of Object.entries(CATEGORY_TYPES)) {
-    result[key] = await nearby(lat, lng, radius, types);
-  }
-  return result;
+  const r = await osmNearby(lat, lng, radius);
+  if (!r) throw new Error("OSM_API_ERROR");
+  return r as Record<string, Place[]>;
 }
 
 function classify(score: number) {
@@ -224,6 +148,7 @@ export const analyzePropertyLocation = createServerFn({ method: "POST" })
 
       const geo = await geocode(
         [address, data.postalCode, data.city, "Polska"].filter(Boolean).join(", "),
+        data.city ?? null,
       );
       if (!geo) {
         return {
@@ -233,11 +158,10 @@ export const analyzePropertyLocation = createServerFn({ method: "POST" })
         };
       }
 
-      const [r500, r1000, r3000] = await Promise.all([
-        gatherInfrastructure(geo.latitude, geo.longitude, 500),
-        gatherInfrastructure(geo.latitude, geo.longitude, 1000),
-        gatherInfrastructure(geo.latitude, geo.longitude, 3000),
-      ]);
+      // Po kolei — publiczna instancja Overpass ogranicza równoległe zapytania.
+      const r500 = await gatherInfrastructure(geo.latitude, geo.longitude, 500);
+      const r1000 = await gatherInfrastructure(geo.latitude, geo.longitude, 1000);
+      const r3000 = await gatherInfrastructure(geo.latitude, geo.longitude, 3000);
 
       const counts = {
         schoolsWithin1000m: r1000.schools.length,
@@ -251,11 +175,12 @@ export const analyzePropertyLocation = createServerFn({ method: "POST" })
       const locationScore = computeScore(r1000, r3000);
       const investmentOfferText = buildOfferText(locationScore.category, counts);
 
-      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${geo.latitude},${geo.longitude}&query_place_id=${geo.placeId}`;
+      // Link do mapy po współrzędnych (bez identyfikatora miejsca Google).
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${geo.latitude},${geo.longitude}`;
 
       const result = {
         success: true as const,
-        source: "Google Maps Platform",
+        source: "OpenStreetMap (Nominatim, Overpass)",
         property: {
           inputAddress: address,
           formattedAddress: geo.formattedAddress,
@@ -292,17 +217,10 @@ export const analyzePropertyLocation = createServerFn({ method: "POST" })
       return result;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown";
-      if (msg === "GOOGLE_MAPS_API_KEY_MISSING") {
-        return {
-          success: false,
-          errorCode: "GOOGLE_MAPS_API_KEY_MISSING",
-          message: "Integracja Google Maps nie została skonfigurowana.",
-        };
-      }
-      console.error("property-location-analysis error:", e);
+      console.error("property-location-analysis error:", msg);
       return {
         success: false,
-        errorCode: "GOOGLE_MAPS_API_ERROR",
+        errorCode: "MAP_DATA_ERROR",
         message: "Nie udało się pobrać danych lokalizacyjnych.",
       };
     }

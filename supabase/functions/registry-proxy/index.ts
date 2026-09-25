@@ -7,6 +7,8 @@
 // wykonuje żądanie z sieci Supabase (inny zakres IP) i zwraca odpowiedź 1:1 —
 // jak tpay-proxy dla Tpay.
 //
+// Także OpenStreetMap (Nominatim, Overpass) — publiczne API bez klucza.
+//
 // Bezpieczeństwo: wyłącznie GET, wyłącznie hosty rejestrów publicznych
 // z listy poniżej, bez podążania za przekierowaniami. Token CEIDG przychodzi
 // w nagłówku Authorization od aplikacji — funkcja go nie przechowuje.
@@ -25,6 +27,8 @@ const ALLOWED_HOSTS = new Set([
   "dane.biznes.gov.pl", // CEIDG — hurtownia danych (API v3)
   "wl-api.mf.gov.pl", // wykaz podatników VAT MF
   "api-krs.ms.gov.pl", // KRS — odpisy
+  "nominatim.openstreetmap.org", // OSM — geokodowanie adresów
+  "overpass-api.de", // OSM — punkty w okolicy
 ]);
 
 /** Nagłówki przekazywane do rejestru (reszta odrzucana). */

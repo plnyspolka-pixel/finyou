@@ -135,14 +135,13 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
   },
   // 6. Dane geoprzestrzenne
   {
-    key: "google_maps",
-    name: "Google Maps Platform",
+    key: "openstreetmap",
+    name: "OpenStreetMap (Nominatim, Overpass)",
     category: "dane_geoprzestrzenne",
     governmental: false,
     purpose: "Geokodowanie i ocena infrastruktury/lokalizacji",
-    provides: "Współrzędne, POI, dostępność usług i komunikacji",
-    provider: "Google Maps (Lovable connector)",
-    envKey: "GOOGLE_MAPS_API_KEY",
+    provides: "Współrzędne, punkty w okolicy (szkoły, sklepy, apteki, przystanki, parki)",
+    provider: "OpenStreetMap — Nominatim i Overpass API (bez klucza)",
   },
   // 7. Prognoza łatwości sprzedaży (popyt z otoczenia)
   {
