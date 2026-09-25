@@ -9,7 +9,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { runPropertyCollateralAnalysisCore } from "@/lib/property-analysis/property-collateral-analysis.functions";
+import {
+  analyzePropertyCollateral,
+  runPropertyCollateralAnalysisCore,
+} from "@/lib/property-analysis/property-collateral-analysis.functions";
 import type { DataSourceUsage } from "@/lib/property-analysis/types";
 import { fetchAndStoreKw, normalizeKwNumber } from "@/lib/kw-fetch.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -120,25 +123,101 @@ export async function runInvestmentRiskAssessmentCore(
     }
   }
 
-  const generatedAt = new Date().toISOString();
-  const warnings: string[] = [];
-
-  // 0) Wczytaj wniosek, właściciela (client_id), nieruchomość, dokumenty.
+  // 0) Wczytaj wniosek, właściciela (client_id), nieruchomość.
   const [{ data: app }, { data: props }] = await Promise.all([
     db.from("loan_applications").select("*").eq("id", applicationId).maybeSingle(),
     db.from("properties").select("*").eq("loan_application_id", applicationId),
   ]);
-
   if (!app) throw new Error("Wniosek nie znaleziony.");
   const property = props?.[0] ?? null;
   const clientId = (app as any).client_id ?? null;
+
+  const result = await assessInvestmentRisk(db, {
+    applicationId,
+    resultKey: applicationId,
+    clientId,
+    loanAmount: app.loan_amount ?? null,
+    preferredPeriodMonths: app.preferred_period_months ?? null,
+    property,
+  });
+
+  // 10) Zapis. Uwaga: supabase-js nie rzuca wyjątków — błąd trzeba odczytać z { error }.
+  try {
+    const { error: saveError } = await db.from("investment_risk_assessments").upsert(
+      {
+        application_id: applicationId,
+        property_id: property?.id ?? null,
+        client_id: clientId,
+        investment_score: result.investmentScore,
+        risk_grade: result.riskGrade,
+        recommendation: result.recommendation,
+        saleability_score: result.saleability.available ? result.saleability.score : null,
+        forced_sale_floor_pln: result.forcedSale.secondAuctionOpeningPln,
+        result_json: result,
+        data_sources: result.dataSources,
+        warnings: result.warnings,
+        master_valuation_status: result.masterValuation.status,
+      },
+      { onConflict: "application_id" },
+    );
+    if (saveError) throw saveError;
+  } catch (e: any) {
+    // Zapis nie może wywrócić całej oceny — ale musi być widoczny dla operatora.
+    console.error("[risk-assessment] save failed:", e?.message ?? e);
+    result.warnings = dedupeStr([
+      ...result.warnings,
+      `Nie udało się zapisać oceny w bazie (${e?.message ?? "błąd"}) — wynik nie będzie widoczny po odświeżeniu strony.`,
+    ]);
+  }
+
+  return result;
+}
+
+/**
+ * Przedmiot oceny: wniosek z CRM albo nieruchomość bez wniosku (szybka analiza
+ * inwestora dla tematu spoza Finance You — tylko numer KW i dane podane przez
+ * inwestora; bez dokumentów, korespondencji i danych klienta).
+ */
+export interface RiskAssessmentSubject {
+  /** Wniosek w CRM — null, gdy oceniamy nieruchomość spoza systemu. */
+  applicationId: string | null;
+  /** Identyfikator wpisywany do wyniku (`applicationId` w InvestmentRiskAssessment). */
+  resultKey: string;
+  clientId: string | null;
+  loanAmount: number | null;
+  preferredPeriodMonths: number | null;
+  /**
+   * Rekord nieruchomości (kolumny tabeli properties). Bez `id` uzupełnienia
+   * z KW trafiają tylko do obiektu, nie do bazy.
+   */
+  property: Record<string, any> | null;
+}
+
+const NO_CORRESPONDENCE: InvestmentRiskAssessment["correspondence"] = {
+  available: false,
+  messagesAnalyzed: 0,
+  channels: [],
+  statedFacts: [],
+  inconsistencies: [],
+  redFlags: [],
+  summary: "Wniosek spoza Finance You — brak korespondencji z klientem w systemie.",
+};
+
+/** Pełna ocena inwestycji (kroki 1–9) — bez zapisu wyniku. */
+export async function assessInvestmentRisk(
+  db: SupabaseLike,
+  subject: RiskAssessmentSubject,
+): Promise<InvestmentRiskAssessment> {
+  const generatedAt = new Date().toISOString();
+  const warnings: string[] = [];
+  const { applicationId, clientId, property } = subject;
   // Pożyczki udzielamy na 1–5 lat — dożycie liczymy dla tego zakresu (poza nim clamp do 1–5;
   // brak deklaracji okresu → 5 lat, tj. najostrożniejszy horyzont).
   const loanTermYears = clampLoanTermYears(
-    app.preferred_period_months ? app.preferred_period_months / 12 : null,
+    subject.preferredPeriodMonths ? subject.preferredPeriodMonths / 12 : null,
   );
   const declaredValue = property?.estimated_value ?? null;
-  const loanAmount = app.loan_amount ?? null;
+  const loanAmount = subject.loanAmount;
 
   // 1) BRAMKA KW — ocena NIE startuje bez poprawnie pobranej treści księgi
   //    wieczystej z KW Engine (CMD). Najpierw upewniamy się, że dane KW są
@@ -208,7 +287,9 @@ export async function runInvestmentRiskAssessmentCore(
     if (!property.city && kwAddr?.city) patch.city = kwAddr.city;
     if (!property.voivodeship && kwAddr?.voivodeship) patch.voivodeship = kwAddr.voivodeship;
     if (property.area_sqm == null && kwAreaSqm != null) patch.area_sqm = kwAreaSqm;
-    if (Object.keys(patch).length > 0) {
+    if (Object.keys(patch).length > 0 && !property.id) {
+      Object.assign(property, patch);
+    } else if (Object.keys(patch).length > 0) {
       const { error: patchError } = await db.from("properties").update(patch).eq("id", property.id);
       if (patchError)
         console.error("[risk-assessment] property KW backfill failed:", patchError.message);
@@ -236,7 +317,24 @@ export async function runInvestmentRiskAssessmentCore(
   //    Nie przerywamy oceny, gdy padnie — degradujemy się miękko.
   let collateral = null as InvestmentRiskAssessment["collateralAnalysis"];
   try {
-    collateral = await runPropertyCollateralAnalysisCore(applicationId, kwValuationOpts);
+    collateral = applicationId
+      ? await runPropertyCollateralAnalysisCore(applicationId, kwValuationOpts)
+      : await analyzePropertyCollateral(
+          {
+            applicationId: subject.resultKey,
+            propertyType: property?.property_type ?? "inna",
+            kwNumber: property?.land_register_number ?? null,
+            address: property?.address ?? null,
+            city: property?.city ?? null,
+            voivodeship: property?.voivodeship ?? null,
+            usableAreaM2: property?.area_sqm ?? null,
+            declaredPropertyValuePln: declaredValue,
+            requestedLoanAmountPln: loanAmount,
+            documents: [],
+          },
+          kwValuationOpts,
+          { property, persist: null },
+        );
   } catch (e: any) {
     warnings.push(`Analiza zabezpieczenia nie powiodła się: ${e?.message ?? "błąd"}.`);
   }
@@ -246,10 +344,12 @@ export async function runInvestmentRiskAssessmentCore(
   //    statusu gruntu; ich treść zasila analizę prawa zabudowy (krok 5b).
   let ocr = EMPTY_OCR;
   try {
-    const { data: docRows } = await db
-      .from("documents")
-      .select("id, file_name, file_path, file_url, document_type")
-      .eq("loan_application_id", applicationId);
+    const { data: docRows } = applicationId
+      ? await db
+          .from("documents")
+          .select("id, file_name, file_path, file_url, document_type")
+          .eq("loan_application_id", applicationId)
+      : { data: [] };
     type DocRow = {
       id: string;
       file_name: string | null;
@@ -272,7 +372,7 @@ export async function runInvestmentRiskAssessmentCore(
           return { id: d.id, url, type: d.document_type, name: d.file_name };
         }),
       );
-      ocr = await ocrDocuments({ applicationId, documents: withUrls });
+      ocr = await ocrDocuments({ applicationId: subject.resultKey, documents: withUrls });
       const failed = ocr.documents.filter((r) => r.status !== "success").length;
       if (failed > 0) {
         warnings.push(
@@ -309,7 +409,9 @@ export async function runInvestmentRiskAssessmentCore(
       .join(" \n ") || null;
 
   const [correspondence, saleabilityRaw] = await Promise.all([
-    analyzeCorrespondence({ applicationId, clientId, declaredValue, loanAmount, city: effCity }),
+    applicationId
+      ? analyzeCorrespondence({ applicationId, clientId, declaredValue, loanAmount, city: effCity })
+      : Promise.resolve({ ...NO_CORRESPONDENCE }),
     analyzeSaleability({
       propertyType: property?.property_type ?? "inna",
       address: effAddress,
@@ -545,7 +647,7 @@ export async function runInvestmentRiskAssessmentCore(
 
   const result: InvestmentRiskAssessment = {
     success: true,
-    applicationId,
+    applicationId: subject.resultKey,
     generatedAt,
     investmentScore: combined.investmentScore,
     riskGrade: combined.riskGrade,
@@ -569,35 +671,6 @@ export async function runInvestmentRiskAssessmentCore(
     dataSources,
     executiveSummary,
   };
-
-  // 10) Zapis. Uwaga: supabase-js nie rzuca wyjątków — błąd trzeba odczytać z { error }.
-  try {
-    const { error: saveError } = await db.from("investment_risk_assessments").upsert(
-      {
-        application_id: applicationId,
-        property_id: property?.id ?? null,
-        client_id: clientId,
-        investment_score: combined.investmentScore,
-        risk_grade: combined.riskGrade,
-        recommendation: combined.recommendation,
-        saleability_score: saleability.available ? saleability.score : null,
-        forced_sale_floor_pln: forcedSale.secondAuctionOpeningPln,
-        result_json: result,
-        data_sources: dataSources,
-        warnings,
-        master_valuation_status: master.status,
-      },
-      { onConflict: "application_id" },
-    );
-    if (saveError) throw saveError;
-  } catch (e: any) {
-    // Zapis nie może wywrócić całej oceny — ale musi być widoczny dla operatora.
-    console.error("[risk-assessment] save failed:", e?.message ?? e);
-    result.warnings = dedupeStr([
-      ...result.warnings,
-      `Nie udało się zapisać oceny w bazie (${e?.message ?? "błąd"}) — wynik nie będzie widoczny po odświeżeniu strony.`,
-    ]);
-  }
 
   return result;
 }

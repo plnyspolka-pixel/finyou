@@ -6,6 +6,7 @@
 import type { FindingStatus, KwAnalysisResult } from "@/lib/kw-analysis/types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import type { InvestorValuationSummary } from "@/lib/risk-assessment/risk-assessment.functions";
+import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
 
 export type AnalyticsStepKey = "kw" | "coowners" | "kw_analysis" | "risk";
 export type AnalyticsStepStatus = "pending" | "running" | "done" | "error";
@@ -205,14 +206,25 @@ export function analyticsDoneCount(item: AnalyticsListItem): number {
 }
 
 // ── Szybka analiza KW (wniosek spoza Finance You) ───────────────────────────
-// Inwestor podaje numer KW własnego tematu — trzy pierwsze kroki pipeline'u
-// (bez analizy ryzyka, która wymaga pełnego wniosku). Nie tworzy wniosku w CRM.
+// Inwestor podaje numer KW własnego tematu i rodzaj nieruchomości — wszystkie
+// cztery kroki pipeline'u, łącznie z pełną oceną ryzyka. Nie tworzy wniosku w CRM.
 
-export type KwCheckStepKey = Exclude<AnalyticsStepKey, "risk">;
+export type KwCheckStepKey = AnalyticsStepKey;
 
-export const KW_CHECK_STEPS = ANALYTICS_STEPS.filter(
-  (s): s is AnalyticsStepMeta & { key: KwCheckStepKey } => s.key !== "risk",
-);
+export const KW_CHECK_STEPS = ANALYTICS_STEPS;
+
+/** Rodzaje nieruchomości (klucze propertyTypeLabels) — podstawa wyceny w kroku 4. */
+export const KW_CHECK_PROPERTY_TYPES = [
+  "mieszkanie",
+  "dom",
+  "lokal_uslugowy",
+  "dzialka_budowlana",
+  "grunt_rolny",
+  "udzial_w_nieruchomosci",
+  "inna",
+] as const;
+
+export type KwCheckPropertyType = (typeof KW_CHECK_PROPERTY_TYPES)[number];
 
 /** Ile nowych sprawdzeń inwestor może zlecić w ciągu 24 h (każde to pobranie KW). */
 export const KW_CHECK_DAILY_LIMIT = 5;
@@ -222,8 +234,11 @@ export interface KwCheckItem {
   /** Numer KW w formacie XX1X/00000000/0. */
   kwNumber: string;
   label: string | null;
+  /** Rodzaj nieruchomości (klucz propertyTypeLabels) — podstawa wyceny w kroku 4. */
+  propertyType: string | null;
   loanAmount: number | null;
   propertyValue: number | null;
+  periodMonths: number | null;
   status: "running" | "done" | "error";
   steps: Partial<Record<KwCheckStepKey, AnalyticsStepState>>;
   error: string | null;
@@ -237,6 +252,8 @@ export interface KwCheckDetail {
   kwDocument: AnalyticsKwDocument | null;
   coowners: AnalyticsCoOwners | null;
   kwAnalysis: { result: KwAnalysisResult; createdAt: string } | null;
+  /** Pełna ocena ryzyka (krok 4) — ten sam raport co w panelu zespołu. */
+  risk: InvestmentRiskAssessment | null;
 }
 
 /** Stan kroku sprawdzenia: zapis w przebiegu, a w trwającym — pierwszy otwarty krok „w toku". */
@@ -244,7 +261,7 @@ export function kwCheckStepStatus(item: KwCheckItem, key: KwCheckStepKey): Analy
   const st = item.steps[key]?.status;
   if (st === "done" || st === "error") return st;
   if (item.status !== "running") return "pending";
-  const order: KwCheckStepKey[] = ["kw", "coowners", "kw_analysis"];
+  const order: KwCheckStepKey[] = ["kw", "coowners", "kw_analysis", "risk"];
   const firstOpen = order.find((k) => {
     const s = item.steps[k]?.status;
     return s !== "done" && s !== "error";

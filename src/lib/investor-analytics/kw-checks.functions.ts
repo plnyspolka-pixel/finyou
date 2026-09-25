@@ -1,8 +1,9 @@
 // Server functions szybkiej analizy KW — wniosek spoza Finance You.
 //
 // Inwestor może użyć Analityki do własnego tematu z zewnątrz: podaje numer
-// KW (opcjonalnie nazwę, kwotę i wartość), a automat wykonuje trzy kroki
-// pipeline'u (kw-checks.server.ts). Sprawdzenie jest prywatne — widzi je
+// KW i rodzaj nieruchomości (opcjonalnie nazwę, kwotę, wartość i okres), a
+// automat wykonuje cztery kroki pipeline'u z pełną oceną ryzyka
+// (kw-checks.server.ts). Sprawdzenie jest prywatne — widzi je
 // tylko jego autor, nie powstaje z niego wniosek w CRM ani dostęp do
 // jakichkolwiek wniosków Finance You.
 //
@@ -14,9 +15,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { compactKwNumber, validateKwNumber } from "@/lib/kw";
 import type { CoOwnersAnalysis } from "@/lib/coowners/types";
 import type { KwAnalysisResult } from "@/lib/kw-analysis/types";
+import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
 import { loadKwDocumentView, reduceCoOwners } from "./analytics.functions";
 import {
   KW_CHECK_DAILY_LIMIT,
+  KW_CHECK_PROPERTY_TYPES,
   type KwCheckDetail,
   type KwCheckItem,
   type KwCheckStepKey,
@@ -28,8 +31,9 @@ const ADVANCE_ON_READ_AFTER_MS = 45_000;
 /** Limit oczekiwania na EKW w żądaniu inwestora (dłużej czeka cron tick). */
 const INTERACTIVE_POLL_MS = 20_000;
 
-const ROW_SELECT =
-  "id, user_id, kw_number, label, loan_amount, property_value, status, steps, coowners_json, kw_analysis_json, error, last_advanced_at, created_at, finished_at";
+const LIST_SELECT =
+  "id, user_id, kw_number, label, property_type, loan_amount, property_value, period_months, status, steps, kw_analysis_json, error, last_advanced_at, created_at, finished_at";
+const ROW_SELECT = `${LIST_SELECT}, coowners_json, risk_json`;
 
 async function adminDb() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -48,8 +52,10 @@ function toItem(r: any): KwCheckItem {
     id: String(r.id),
     kwNumber: String(r.kw_number),
     label: r.label ?? null,
+    propertyType: r.property_type ?? null,
     loanAmount: num(r.loan_amount),
     propertyValue: num(r.property_value),
+    periodMonths: num(r.period_months),
     status: r.status === "done" ? "done" : r.status === "error" ? "error" : "running",
     steps: (r.steps ?? {}) as Partial<Record<KwCheckStepKey, AnalyticsStepState>>,
     error: r.error ?? null,
@@ -87,7 +93,7 @@ export const listMyKwChecks = createServerFn({ method: "GET" })
     const db = await adminDb();
     const { data, error } = await db
       .from("investor_kw_checks")
-      .select(ROW_SELECT)
+      .select(LIST_SELECT)
       .eq("user_id", context.userId as string)
       .order("created_at", { ascending: false })
       .limit(100);
@@ -103,6 +109,8 @@ export const startMyKwCheck = createServerFn({ method: "POST" })
       .object({
         kwNumber: z.string().min(3).max(40),
         label: z.string().trim().max(120).nullish(),
+        propertyType: z.enum(KW_CHECK_PROPERTY_TYPES),
+        periodMonths: z.number().int().min(1).max(600).nullish(),
         loanAmount: z.number().nonnegative().max(1_000_000_000).nullish(),
         propertyValue: z.number().nonnegative().max(1_000_000_000).nullish(),
       })
@@ -146,17 +154,22 @@ export const startMyKwCheck = createServerFn({ method: "POST" })
         user_id: userId,
         kw_number: kw.value,
         label: data.label || null,
+        property_type: data.propertyType,
+        period_months: data.periodMonths ?? null,
         loan_amount: data.loanAmount ?? null,
         property_value: data.propertyValue ?? null,
         status: "running",
         steps: freshKwCheckSteps(),
       })
-      .select("id, user_id, kw_number, loan_amount, property_value, status, steps")
+      .select(
+        "id, user_id, kw_number, property_type, loan_amount, property_value, period_months, status, steps",
+      )
       .single();
     if (error) throw new Error(error.message);
 
-    // Pierwszy krok od razu — przy KW z cache całość kończy się w tym żądaniu.
-    await advanceKwCheckSafe(row, { pollMaxMs: INTERACTIVE_POLL_MS });
+    // Kroki 1–3 od razu (przy KW z cache kończą się w tym żądaniu); ocenę
+    // ryzyka — minuty pracy — wykonuje w tle cron tick.
+    await advanceKwCheckSafe(row, { pollMaxMs: INTERACTIVE_POLL_MS, skipRisk: true });
     return { id: String(row.id), reused: false };
   });
 
@@ -176,7 +189,7 @@ export const getMyKwCheck = createServerFn({ method: "POST" })
     const last = Date.parse(row.last_advanced_at ?? row.created_at);
     if (row.status === "running" && Date.now() - last >= ADVANCE_ON_READ_AFTER_MS) {
       const { advanceKwCheckSafe } = await import("./kw-checks.server");
-      await advanceKwCheckSafe(row, { pollMaxMs: INTERACTIVE_POLL_MS });
+      await advanceKwCheckSafe(row, { pollMaxMs: INTERACTIVE_POLL_MS, skipRisk: true });
       row = await loadOwnRow(db, userId, data.id);
     }
 
@@ -192,5 +205,6 @@ export const getMyKwCheck = createServerFn({ method: "POST" })
             createdAt: String(row.steps?.kw_analysis?.finished_at ?? row.created_at),
           }
         : null,
+      risk: (row.risk_json as InvestmentRiskAssessment | null) ?? null,
     };
   });

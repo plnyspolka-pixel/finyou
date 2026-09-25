@@ -141,7 +141,7 @@ function AnalitykaPage() {
       <FancyPageHeader
         eyebrow="Analityka"
         title="Analiza własnego wniosku"
-        subtitle="Temat spoza Finance You? Podaj numer księgi wieczystej, a automat wykona trzy pierwsze kroki pipeline'u: pobranie KW, właściciele w CEIDG/KRS i analizę KW silnikiem reguł. Sprawdzenia widzisz tylko Ty."
+        subtitle="Temat spoza Finance You? Podaj numer księgi wieczystej i rodzaj nieruchomości, a automat wykona cały pipeline: pobranie KW, właściciele w CEIDG/KRS, analizę KW silnikiem reguł i pełną ocenę ryzyka z wyceną rynkową. Sprawdzenia widzisz tylko Ty."
       />
       {tabs}
       <ExternalKwChecks

@@ -1,6 +1,7 @@
-// Szybka analiza KW — wniosek spoza Finance You (moduł „Analityka" inwestora).
-// Inwestor podaje numer KW własnego tematu; automat pobiera księgę, zestawia
-// właścicieli z CEIDG/KRS i przepuszcza treść przez silnik reguł analizy KW.
+// Analiza wniosku spoza Finance You (moduł „Analityka" inwestora). Inwestor
+// podaje numer KW i rodzaj nieruchomości; automat pobiera księgę, zestawia
+// właścicieli z CEIDG/KRS, przepuszcza treść przez silnik reguł analizy KW
+// i wykonuje pełną ocenę ryzyka (ten sam raport co w panelu zespołu).
 // Sprawdzenie jest prywatne i nie daje wglądu w żadne wnioski Finance You.
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,10 +14,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RiskAssessmentReport } from "@/components/risk-assessment/risk-assessment-section";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { KwAnalysisReport } from "@/components/kw-analysis/kw-analysis-section";
 import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
-import { formatDateTime, formatPLN } from "@/lib/labels";
+import { formatDateTime, formatPLN, propertyTypeLabels } from "@/lib/labels";
 import { validateKwNumber } from "@/lib/kw";
 import { STATUS_LABELS as KW_STATUS_LABELS } from "@/lib/kw-analysis/types";
 import {
@@ -27,9 +36,11 @@ import {
 import {
   ANALYTICS_STEP_STATUS_LABELS,
   KW_CHECK_DAILY_LIMIT,
+  KW_CHECK_PROPERTY_TYPES,
   KW_CHECK_STEPS,
   kwCheckStepStatus,
   type KwCheckItem,
+  type KwCheckPropertyType,
 } from "@/lib/investor-analytics/types";
 import { accent, CoOwnersStep, KwStep, StepCard, StepEmpty } from "./analytics-steps";
 
@@ -147,10 +158,10 @@ export function ExternalKwChecks({
             </div>
             <CardTitle>Analiza własnego wniosku</CardTitle>
             <CardDescription className="max-w-xl">
-              Masz temat spoza Finance You? Podaj numer księgi wieczystej — pobierzemy jej treść,
-              sprawdzimy właścicieli w CEIDG i KRS oraz przepuścimy księgę przez silnik reguł
-              analizy KW (miejsce hipoteki, obciążenia, wzmianki, blokery). Sprawdzenie widzisz
-              tylko Ty.
+              Masz temat spoza Finance You? Podaj numer księgi wieczystej i rodzaj nieruchomości —
+              pobierzemy treść KW, sprawdzimy właścicieli w CEIDG i KRS, przepuścimy księgę przez
+              silnik reguł analizy KW i wykonamy pełną ocenę ryzyka: wycenę rynkową, sprzedaż
+              wymuszoną, zbywalność i klasę ryzyka. Sprawdzenie widzisz tylko Ty.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -166,11 +177,18 @@ function NewCheckForm({ onCreated }: { onCreated: (id: string) => void }) {
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
   const [value, setValue] = useState("");
+  const [propertyType, setPropertyType] = useState<KwCheckPropertyType | "">("");
+  const [period, setPeriod] = useState("");
 
   const kwCheck = kw.trim() ? validateKwNumber(kw) : null;
   const loanAmount = parseAmount(amount);
   const propertyValue = parseAmount(value);
-  const amountsOk = !Number.isNaN(loanAmount) && !Number.isNaN(propertyValue);
+  const periodMonths = period.trim() ? Number(period.trim()) : null;
+  const periodOk =
+    periodMonths === null ||
+    (Number.isInteger(periodMonths) && periodMonths >= 1 && periodMonths <= 600);
+  const amountsOk = !Number.isNaN(loanAmount) && !Number.isNaN(propertyValue) && periodOk;
+  const canSubmit = Boolean(kwCheck?.ok) && Boolean(propertyType) && amountsOk;
 
   const startMut = useMutation({
     mutationFn: () =>
@@ -180,6 +198,8 @@ function NewCheckForm({ onCreated }: { onCreated: (id: string) => void }) {
           label: label.trim() || null,
           loanAmount,
           propertyValue,
+          propertyType: propertyType as KwCheckPropertyType,
+          periodMonths,
         },
       }),
     onSuccess: (r) => {
@@ -192,6 +212,8 @@ function NewCheckForm({ onCreated }: { onCreated: (id: string) => void }) {
       setLabel("");
       setAmount("");
       setValue("");
+      setPropertyType("");
+      setPeriod("");
       void qc.invalidateQueries({ queryKey: ["investor-kw-checks"] });
       onCreated(r.id);
     },
@@ -211,7 +233,7 @@ function NewCheckForm({ onCreated }: { onCreated: (id: string) => void }) {
           className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
-            if (kwCheck?.ok && amountsOk) startMut.mutate();
+            if (canSubmit) startMut.mutate();
           }}
         >
           <div className="space-y-1.5">
@@ -226,6 +248,24 @@ function NewCheckForm({ onCreated }: { onCreated: (id: string) => void }) {
             {kwCheck && !kwCheck.ok && (
               <p className="text-xs text-destructive">{kwCheck.message}</p>
             )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="kw-check-type">Rodzaj nieruchomości</Label>
+            <Select
+              value={propertyType}
+              onValueChange={(v) => setPropertyType(v as KwCheckPropertyType)}
+            >
+              <SelectTrigger id="kw-check-type">
+                <SelectValue placeholder="Wybierz — podstawa wyceny" />
+              </SelectTrigger>
+              <SelectContent>
+                {KW_CHECK_PROPERTY_TYPES.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {propertyTypeLabels[key] ?? key}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="kw-check-label">Nazwa (opcjonalnie)</Label>
@@ -259,15 +299,26 @@ function NewCheckForm({ onCreated }: { onCreated: (id: string) => void }) {
               />
             </div>
           </div>
-          {!amountsOk && <p className="text-xs text-destructive">Kwoty muszą być liczbami.</p>}
+          <div className="space-y-1.5">
+            <Label htmlFor="kw-check-period">Okres pożyczki (mies., opcjonalnie)</Label>
+            <Input
+              id="kw-check-period"
+              inputMode="numeric"
+              placeholder="np. 24"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+            />
+          </div>
+          {!amountsOk && (
+            <p className="text-xs text-destructive">
+              Kwoty muszą być liczbami, a okres liczbą miesięcy (1–600).
+            </p>
+          )}
           <p className="text-[11px] text-muted-foreground">
-            Kwota i wartość są opcjonalne — pozwalają ocenić miejsce hipoteki i CLTV.
+            Kwota, wartość i okres są opcjonalne — pozwalają ocenić miejsce hipoteki, CLTV, relację
+            pożyczki do sprzedaży wymuszonej i horyzont analizy właściciela.
           </p>
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={!kwCheck?.ok || !amountsOk || startMut.isPending}
-          >
+          <Button type="submit" className="w-full" disabled={!canSubmit || startMut.isPending}>
             {startMut.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -326,6 +377,7 @@ function CheckDetail({ id }: { id: string }) {
   const kwStatus = kwCheckStepStatus(item, "kw");
   const coStatus = kwCheckStepStatus(item, "coowners");
   const kwaStatus = kwCheckStepStatus(item, "kw_analysis");
+  const riskStatus = kwCheckStepStatus(item, "risk");
 
   return (
     <div className="min-w-0 space-y-4">
@@ -352,7 +404,11 @@ function CheckDetail({ id }: { id: string }) {
               <span>
                 KW <span className="font-mono text-foreground">{item.kwNumber}</span>
               </span>
+              {item.propertyType && (
+                <span>{propertyTypeLabels[item.propertyType] ?? item.propertyType}</span>
+              )}
               {item.loanAmount != null && <span>kwota {formatPLN(item.loanAmount)}</span>}
+              {item.periodMonths != null && <span>{item.periodMonths} mies.</span>}
               {item.propertyValue != null && <span>wartość {formatPLN(item.propertyValue)}</span>}
               <span>zlecono {formatDateTime(item.createdAt)}</span>
             </div>
@@ -393,7 +449,8 @@ function CheckDetail({ id }: { id: string }) {
             <Loader2 className="h-4 w-4 animate-spin" />
             <AlertTitle>Automat pracuje</AlertTitle>
             <AlertDescription>
-              Pobranie KW z EKW potrafi potrwać kilka minut. Ten widok odświeża się sam.
+              Pobranie KW z EKW potrafi potrwać kilka minut, a pełna ocena ryzyka rusza w tle do
+              15–30 minut później. Ten widok odświeża się sam.
             </AlertDescription>
           </Alert>
         )}
@@ -441,10 +498,24 @@ function CheckDetail({ id }: { id: string }) {
         )}
       </StepCard>
 
-      <p className="text-xs text-muted-foreground">
-        Analiza ryzyka z prognozą wartości wymaga pełnego wniosku — dla tematu spoza Finance You
-        obejmuje trzy pierwsze kroki pipeline'u.
-      </p>
+      <StepCard meta={KW_CHECK_STEPS[3]} status={riskStatus} error={item.steps.risk?.error}>
+        {d.risk ? (
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Ocena z {formatDateTime(d.risk.generatedAt)}. Dla tematu spoza Finance You bez
+              dokumentów i korespondencji klienta — parametry nieruchomości pochodzą z działu I-O
+              KW.
+            </p>
+            <RiskAssessmentReport result={d.risk} />
+          </div>
+        ) : (
+          <StepEmpty
+            status={riskStatus}
+            text="Pełną ocenę ryzyka (wycena rynkowa, sprzedaż wymuszona, zbywalność, klasa ryzyka) wykonuje automat w tle — zwykle do 15–30 minut od pobrania księgi."
+          />
+        )}
+      </StepCard>
+
       <RiskDisclaimer />
     </div>
   );
