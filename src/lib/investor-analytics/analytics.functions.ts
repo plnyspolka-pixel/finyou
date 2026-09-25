@@ -7,11 +7,14 @@
 //  • szczegóły: treść KW, właściciele, raport analizy KW, prognoza wartości,
 //  • uruchomienie przebiegu na żądanie (limit: 1 przebieg / wniosek / 24 h).
 //
-// Zakres dostępu (serwer, niezależnie od UI):
+// Zakres dostępu (serwer, niezależnie od UI) — wyłącznie wnioski wybrane dla
+// tego inwestora, nigdy cała pula Finance You:
 //  (a) okazja ujawniona w cyklu Zlecenia (status rezerwacja/transakcja),
 //  (b) wniosek, do którego inwestor złożył ofertę,
-//  (c) przy pełnym dostępie — każdy wniosek dopuszczony do inwestorów
-//      (te same warunki co polityka RLS loans_investor_select).
+//  (c) wniosek przekazany mu przez zespół (wysłana dystrybucja oferty).
+// Pełny dostęp (abonament) NIE otwiera analityki wszystkich wniosków
+// dopuszczonych do inwestorów — analityka to narzędzie inwestora do jego
+// spraw, a nie wgląd w portfel platformy.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -23,6 +26,7 @@ import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
 import type {
   AnalyticsCoOwners,
   AnalyticsDetail,
+  AnalyticsKwDocument,
   AnalyticsListItem,
   AnalyticsResultFlags,
   AnalyticsRun,
@@ -31,8 +35,8 @@ import type {
 
 /** Minimalny odstęp między przebiegami zlecanymi z panelu inwestora. */
 const RUN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-/** Ile najnowszych wniosków z puli „dostępne dla inwestorów" pokazujemy. */
-const AVAILABLE_LIMIT = 60;
+/** Statusy dystrybucji, w których wniosek faktycznie trafił do inwestora. */
+const UNSENT_DISTRIBUTION_STATUSES = ["szkic", "gotowe_do_wysylki"];
 
 const loose = (c: unknown) => c as any;
 
@@ -45,29 +49,34 @@ const APP_SELECT =
   "id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, available_to_investors, visibility_level, deleted_at, created_at, location_potential_score, properties(property_type, city, voivodeship, estimated_value, area_sqm, land_register_number)";
 
 interface Scope {
-  fullAccess: boolean;
   offerAppIds: Set<string>;
+  sharedAppIds: Set<string>;
   matchByApp: Map<string, { projectRef: string | null }>;
 }
 
-/** Zakres wniosków inwestora: oferty + ujawnione okazje + flaga pełnego dostępu. */
+/** Zakres wniosków inwestora: ujawnione okazje + jego oferty + wnioski mu przekazane. */
 async function loadScope(db: any, userId: string): Promise<Scope> {
-  const { investorHasFullAccess, isInternalStaff } = await import("@/lib/access/guards.server");
-  const [full, staff, { data: inv }, { data: orders }] = await Promise.all([
-    investorHasFullAccess(userId),
-    isInternalStaff(userId),
+  const [{ data: inv }, { data: orders }] = await Promise.all([
     db.from("investors").select("id").eq("user_id", userId).maybeSingle(),
     db.from("investor_orders").select("id").eq("user_id", userId),
   ]);
 
   const offerAppIds = new Set<string>();
+  const sharedAppIds = new Set<string>();
   if (inv?.id) {
-    const { data: offers } = await db
-      .from("investor_offers")
-      .select("loan_application_id")
-      .eq("investor_id", inv.id);
+    const [{ data: offers }, { data: distributions }] = await Promise.all([
+      db.from("investor_offers").select("loan_application_id").eq("investor_id", inv.id),
+      db
+        .from("offer_distributions")
+        .select("loan_application_id, distribution_status")
+        .eq("investor_id", inv.id)
+        .not("distribution_status", "in", `(${UNSENT_DISTRIBUTION_STATUSES.join(",")})`),
+    ]);
     for (const o of (offers ?? []) as { loan_application_id: string | null }[]) {
       if (o.loan_application_id) offerAppIds.add(o.loan_application_id);
+    }
+    for (const d of (distributions ?? []) as { loan_application_id: string | null }[]) {
+      if (d.loan_application_id) sharedAppIds.add(d.loan_application_id);
     }
   }
 
@@ -89,7 +98,7 @@ async function loadScope(db: any, userId: string): Promise<Scope> {
     }
   }
 
-  return { fullAccess: Boolean(full || staff), offerAppIds, matchByApp };
+  return { offerAppIds, sharedAppIds, matchByApp };
 }
 
 function isInvestorVisible(app: any): boolean {
@@ -105,7 +114,7 @@ function sourceFor(scope: Scope, app: any): AnalyticsSource | null {
   if (!app || app.deleted_at != null) return null;
   if (scope.matchByApp.has(app.id)) return "okazja";
   if (scope.offerAppIds.has(app.id)) return "oferta";
-  if (scope.fullAccess && isInvestorVisible(app)) return "dostepny";
+  if (scope.sharedAppIds.has(app.id)) return "przekazany";
   return null;
 }
 
@@ -248,7 +257,7 @@ function buildItem(app: any, source: AnalyticsSource, scope: Scope, idx: ResultI
   return item;
 }
 
-const SOURCE_ORDER: Record<AnalyticsSource, number> = { okazja: 0, oferta: 1, dostepny: 2 };
+const SOURCE_ORDER: Record<AnalyticsSource, number> = { okazja: 0, oferta: 1, przekazany: 2 };
 
 /** Lista wniosków w zasięgu inwestora ze stanem pipeline'u analitycznego. */
 export const listMyAnalyticsApplications = createServerFn({ method: "GET" })
@@ -258,29 +267,15 @@ export const listMyAnalyticsApplications = createServerFn({ method: "GET" })
     const db = await adminDb();
     const scope = await loadScope(db, userId);
 
-    const explicitIds = [...new Set([...scope.matchByApp.keys(), ...scope.offerAppIds])];
-    const [explicit, available] = await Promise.all([
-      explicitIds.length
-        ? db.from("loan_applications").select(APP_SELECT).in("id", explicitIds)
-        : { data: [] as any[] },
-      scope.fullAccess
-        ? db
-            .from("loan_applications")
-            .select(APP_SELECT)
-            .eq("available_to_investors", true)
-            .eq("visibility_level", "zanonimizowane")
-            .is("deleted_at", null)
-            .order("created_at", { ascending: false })
-            .limit(AVAILABLE_LIMIT)
-        : { data: [] as any[] },
-    ]);
+    const ids = [
+      ...new Set([...scope.matchByApp.keys(), ...scope.offerAppIds, ...scope.sharedAppIds]),
+    ];
+    const { data } = ids.length
+      ? await db.from("loan_applications").select(APP_SELECT).in("id", ids)
+      : { data: [] as any[] };
 
-    const byId = new Map<string, any>();
-    for (const a of [...((explicit.data ?? []) as any[]), ...((available.data ?? []) as any[])]) {
-      if (!byId.has(a.id)) byId.set(a.id, a);
-    }
     // Jak w dawnej wyszukiwarce: tylko wnioski z nieruchomością i sensowną kwotą.
-    const apps = [...byId.values()].filter((a) => {
+    const apps = ((data ?? []) as any[]).filter((a) => {
       const p = propertyOf(a);
       return Boolean(p?.property_type) && Number(a.loan_amount) > 0;
     });
@@ -334,7 +329,7 @@ function runGate(
   return { ok: true, reason: null };
 }
 
-function reduceCoOwners(r: CoOwnersAnalysis | null | undefined): AnalyticsCoOwners | null {
+export function reduceCoOwners(r: CoOwnersAnalysis | null | undefined): AnalyticsCoOwners | null {
   if (!r || !r.available) return null;
   const flagLabels: Record<string, string> = {
     liquidation: "likwidacja",
@@ -369,6 +364,39 @@ function reduceCoOwners(r: CoOwnersAnalysis | null | undefined): AnalyticsCoOwne
   };
 }
 
+/** Treść KW z cache kw_documents (forma kompaktowa numeru) w kształcie widoku. */
+export async function loadKwDocumentView(
+  db: any,
+  compact: string | null,
+): Promise<AnalyticsKwDocument | null> {
+  if (!compact) return null;
+  const { data: d } = await db
+    .from("kw_documents")
+    .select(
+      "status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error",
+    )
+    .eq("kw_number", compact)
+    .maybeSingle();
+  if (!d) return null;
+  const { decodeMaybeBase64 } = await import("@/lib/kw-fetch.server");
+  const sections = {
+    okladka: decodeMaybeBase64(d.okladka),
+    dzial_1o: decodeMaybeBase64(d.dzial_1o),
+    dzial_1s: decodeMaybeBase64(d.dzial_1s),
+    dzial_2: decodeMaybeBase64(d.dzial_2),
+    dzial_3: decodeMaybeBase64(d.dzial_3),
+    dzial_4: decodeMaybeBase64(d.dzial_4),
+  };
+  const hasContent = Object.values(sections).some(Boolean);
+  return {
+    // Raz pobrana treść nie znika przez nieudane odświeżenie (jak w getKwForApplication).
+    status: hasContent && d.status !== "processing" ? "ready" : String(d.status),
+    fetchedAt: d.fetched_at ?? null,
+    lastError: d.last_error ?? null,
+    sections,
+  };
+}
+
 /** Szczegóły pipeline'u dla jednego wniosku: KW, właściciele, analiza KW, ryzyko. */
 export const getMyAnalyticsDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -381,18 +409,9 @@ export const getMyAnalyticsDetail = createServerFn({ method: "GET" })
     const item = buildItem(app, source, scope, idx);
 
     const compact = compactKwNumber(propertyOf(app)?.land_register_number ?? "");
-    const { decodeMaybeBase64 } = await import("@/lib/kw-fetch.server");
 
-    const [kwDoc, kwa, co, risk, coll] = await Promise.all([
-      compact
-        ? db
-            .from("kw_documents")
-            .select(
-              "status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error",
-            )
-            .eq("kw_number", compact)
-            .maybeSingle()
-        : { data: null },
+    const [kwDocument, kwa, co, risk, coll] = await Promise.all([
+      loadKwDocumentView(db, compact),
       db
         .from("kw_land_register_analyses")
         .select("result_json, created_at")
@@ -420,28 +439,6 @@ export const getMyAnalyticsDetail = createServerFn({ method: "GET" })
         .limit(1)
         .maybeSingle(),
     ]);
-
-    const d = kwDoc.data;
-    const sections = d
-      ? {
-          okladka: decodeMaybeBase64(d.okladka),
-          dzial_1o: decodeMaybeBase64(d.dzial_1o),
-          dzial_1s: decodeMaybeBase64(d.dzial_1s),
-          dzial_2: decodeMaybeBase64(d.dzial_2),
-          dzial_3: decodeMaybeBase64(d.dzial_3),
-          dzial_4: decodeMaybeBase64(d.dzial_4),
-        }
-      : null;
-    const hasContent = Boolean(sections && Object.values(sections).some(Boolean));
-    const kwDocument = d
-      ? {
-          // Raz pobrana treść nie znika przez nieudane odświeżenie (jak w getKwForApplication).
-          status: hasContent && d.status !== "processing" ? "ready" : String(d.status),
-          fetchedAt: d.fetched_at ?? null,
-          lastError: d.last_error ?? null,
-          sections: sections!,
-        }
-      : null;
 
     let valuation: AnalyticsDetail["valuation"] = null;
     const riskJson = risk.data?.result_json as InvestmentRiskAssessment | undefined;

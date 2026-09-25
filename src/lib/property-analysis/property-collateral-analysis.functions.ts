@@ -25,7 +25,13 @@ const Input = z.object({ applicationId: z.string().uuid() });
 export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => Input.parse(d))
-  .handler(async ({ data }) => runPropertyCollateralAnalysisCore(data.applicationId));
+  .handler(async ({ data, context }) => {
+    // Płatne źródła (Perplexity, Google Maps, OCR) i nadpisanie zapisanej
+    // analizy — uruchamia wyłącznie zespół.
+    const { isInternalStaff } = await import("@/lib/access/guards.server");
+    if (!(await isInternalStaff(context.userId as string))) throw new Error("Brak uprawnień");
+    return runPropertyCollateralAnalysisCore(data.applicationId);
+  });
 
 // Parametry nieruchomości odczytane z KW (dział I-O) — mają pierwszeństwo w wycenie
 // (dobór porównań z portali dla nieruchomości o tych parametrach i lokalizacji).
@@ -83,6 +89,36 @@ export async function runPropertyCollateralAnalysisCore(
       })),
     };
 
+    return analyzePropertyCollateral(input, opts, {
+      property,
+      persist: { applicationId, propertyId: property?.id ?? null },
+    });
+  }
+}
+
+/** Pola rekordu nieruchomości, z których korzysta analiza poza `input`. */
+export interface CollateralPropertyRecord {
+  id?: string | null;
+  has_mortgage?: boolean | null;
+  has_co_owners?: boolean | null;
+  photos?: unknown[] | null;
+}
+
+/**
+ * Analiza zabezpieczenia dla gotowych danych nieruchomości. `persist` = zapis
+ * wyniku przy wniosku (property_analyses + log); null = wynik tylko zwracany
+ * (np. szybka analiza wniosku spoza Finance You w panelu inwestora).
+ */
+export async function analyzePropertyCollateral(
+  input: PropertyAnalysisInput,
+  opts: CollateralAnalysisOpts,
+  ctx: {
+    property: CollateralPropertyRecord | null;
+    persist: { applicationId: string; propertyId: string | null } | null;
+  },
+) {
+  {
+    const { property, persist } = ctx;
     // Parametry z KW mają pierwszeństwo — wycena ma dotyczyć nieruchomości
     // o parametrach i lokalizacji odczytanych z księgi wieczystej.
     const kw = opts.kw;
@@ -101,7 +137,7 @@ export async function runPropertyCollateralAnalysisCore(
 
     // 1) Ekstrakcja dokumentów
     const docExtraction = await extractDocuments({
-      applicationId,
+      applicationId: input.applicationId,
       documents: input.documents ?? [],
     });
     sourcesUsed.push({
@@ -405,11 +441,13 @@ export async function runPropertyCollateralAnalysisCore(
     };
 
     // 10) Zapis
+    if (!persist) return result;
+    const { applicationId } = persist;
     const { data: saved } = await supabaseAdmin
       .from("property_analyses")
       .upsert({
         application_id: applicationId,
-        property_id: property?.id ?? null,
+        property_id: persist.propertyId,
         status: "done",
         result_json: result as never,
         collateral_score: collateralScore.total,
@@ -425,7 +463,7 @@ export async function runPropertyCollateralAnalysisCore(
 
     await supabaseAdmin.from("property_analysis_logs").insert({
       application_id: applicationId,
-      property_id: property?.id ?? null,
+      property_id: persist.propertyId,
       analysis_id: saved?.id ?? null,
       sources_used: sourcesUsed.map((s) => s.source) as never,
       rcn_status: pv.status === "success" ? "success" : "no_data",
@@ -443,7 +481,18 @@ export async function runPropertyCollateralAnalysisCore(
 export const getPropertyAnalysis = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    // Bramka: wniosek musi być widoczny dla wywołującego przez RLS (zespół,
+    // klient-właściciel, inwestor z wnioskiem w swoim zakresie) — odczyt
+    // wyniku idzie service_role, więc bez tego każdy zalogowany czytałby
+    // analizę dowolnego wniosku.
+    const { data: app } = await (context.supabase as any)
+      .from("loan_applications")
+      .select("id")
+      .eq("id", data.applicationId)
+      .maybeSingle();
+    if (!app) return null;
+
     const { data: row } = await supabaseAdmin
       .from("property_analyses")
       .select("*")

@@ -2,10 +2,11 @@
 // klienta i serwera. Pipeline analityczny to TEN SAM silnik, którym posługuje
 // się panel admina (lib/analysis-pipeline): pobranie KW → właściciele →
 // analiza KW → analiza ryzyka. Tu tylko odczyt wyników i uruchomienie na
-// żądanie dla okazji/wniosków, do których inwestor ma dostęp.
+// żądanie dla okazji/wniosków wybranych dla inwestora (nie całej puli).
 import type { FindingStatus, KwAnalysisResult } from "@/lib/kw-analysis/types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import type { InvestorValuationSummary } from "@/lib/risk-assessment/risk-assessment.functions";
+import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
 
 export type AnalyticsStepKey = "kw" | "coowners" | "kw_analysis" | "risk";
 export type AnalyticsStepStatus = "pending" | "running" | "done" | "error";
@@ -28,12 +29,12 @@ export interface AnalyticsRun {
 }
 
 /** Skąd inwestor ma dostęp do wniosku. */
-export type AnalyticsSource = "okazja" | "oferta" | "dostepny";
+export type AnalyticsSource = "okazja" | "oferta" | "przekazany";
 
 export const ANALYTICS_SOURCE_LABELS: Record<AnalyticsSource, string> = {
   okazja: "Okazja z Twojego Zlecenia",
   oferta: "Twoja oferta",
-  dostepny: "Wniosek dostępny dla inwestorów",
+  przekazany: "Wniosek przekazany przez Finance You",
 };
 
 export interface AnalyticsResultFlags {
@@ -202,4 +203,68 @@ export function analyticsStepStatus(
 
 export function analyticsDoneCount(item: AnalyticsListItem): number {
   return ANALYTICS_STEPS.filter((s) => analyticsStepStatus(item, s.key) === "done").length;
+}
+
+// ── Szybka analiza KW (wniosek spoza Finance You) ───────────────────────────
+// Inwestor podaje numer KW własnego tematu i rodzaj nieruchomości — wszystkie
+// cztery kroki pipeline'u, łącznie z pełną oceną ryzyka. Nie tworzy wniosku w CRM.
+
+export type KwCheckStepKey = AnalyticsStepKey;
+
+export const KW_CHECK_STEPS = ANALYTICS_STEPS;
+
+/** Rodzaje nieruchomości (klucze propertyTypeLabels) — podstawa wyceny w kroku 4. */
+export const KW_CHECK_PROPERTY_TYPES = [
+  "mieszkanie",
+  "dom",
+  "lokal_uslugowy",
+  "dzialka_budowlana",
+  "grunt_rolny",
+  "udzial_w_nieruchomosci",
+  "inna",
+] as const;
+
+export type KwCheckPropertyType = (typeof KW_CHECK_PROPERTY_TYPES)[number];
+
+/** Ile nowych sprawdzeń inwestor może zlecić w ciągu 24 h (każde to pobranie KW). */
+export const KW_CHECK_DAILY_LIMIT = 5;
+
+export interface KwCheckItem {
+  id: string;
+  /** Numer KW w formacie XX1X/00000000/0. */
+  kwNumber: string;
+  label: string | null;
+  /** Rodzaj nieruchomości (klucz propertyTypeLabels) — podstawa wyceny w kroku 4. */
+  propertyType: string | null;
+  loanAmount: number | null;
+  propertyValue: number | null;
+  periodMonths: number | null;
+  status: "running" | "done" | "error";
+  steps: Partial<Record<KwCheckStepKey, AnalyticsStepState>>;
+  error: string | null;
+  kwAnalysisStatus: FindingStatus | null;
+  createdAt: string;
+  finishedAt: string | null;
+}
+
+export interface KwCheckDetail {
+  item: KwCheckItem;
+  kwDocument: AnalyticsKwDocument | null;
+  coowners: AnalyticsCoOwners | null;
+  kwAnalysis: { result: KwAnalysisResult; createdAt: string } | null;
+  /** Pełna ocena ryzyka (krok 4) — ten sam raport co w panelu zespołu. */
+  risk: InvestmentRiskAssessment | null;
+}
+
+/** Stan kroku sprawdzenia: zapis w przebiegu, a w trwającym — pierwszy otwarty krok „w toku". */
+export function kwCheckStepStatus(item: KwCheckItem, key: KwCheckStepKey): AnalyticsStepStatus {
+  const st = item.steps[key]?.status;
+  if (st === "done" || st === "error") return st;
+  if (item.status !== "running") return "pending";
+  const order: KwCheckStepKey[] = ["kw", "coowners", "kw_analysis", "risk"];
+  const firstOpen = order.find((k) => {
+    const s = item.steps[k]?.status;
+    return s !== "done" && s !== "error";
+  });
+  return firstOpen === key ? "running" : "pending";
 }
