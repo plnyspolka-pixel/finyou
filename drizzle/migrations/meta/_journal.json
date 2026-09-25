@@ -15,6 +15,20 @@
       "when": 1790370744372,
       "tag": "0001_inwestor_zakres_wnioskow",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790370849387,
+      "tag": "0002_inwestor_analiza_kw_zewnetrzna",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790370856678,
+      "tag": "0003_inwestor_analiza_kw_ocena_ryzyka",
+      "breakpoints": true
     }
   ]
 }
