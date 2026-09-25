@@ -46,6 +46,9 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
       attachments: data.attachments,
       actorUserId: context.userId,
       source: "inbox_manual",
+      // Pisze człowiek z panelu — jak odpowiedź operatora na Messengerze:
+      // przechodzi mimo zwykłego wypisu, twarda blokada zatrzyma i ją.
+      category: "transactional",
     });
   });
 

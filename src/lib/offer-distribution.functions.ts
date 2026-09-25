@@ -93,6 +93,8 @@ export const replyToDistribution = createServerFn({ method: "POST" })
       subject: data.subject,
       body: data.body,
       actorUserId: context.userId,
+      // Wiadomość pisana ręcznie przez operatora z panelu — nie automat.
+      category: "transactional",
     });
   });
 
