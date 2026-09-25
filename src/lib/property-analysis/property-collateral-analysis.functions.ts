@@ -151,20 +151,29 @@ export async function analyzePropertyCollateral(
 
     // 2) Geokodowanie — z walidacją zgodności z deklarowanym miastem/województwem,
     //    żeby Google nie podstawił nam losowej miejscowości o podobnej nazwie ulicy.
-    const geo =
+    // Bez dokładnego adresu — przybliżenie centrum miejscowości (cityFallback).
+    const geo: { lat: number; lng: number; approximate?: boolean } | null =
       input.latitude && input.longitude
         ? { lat: input.latitude, lng: input.longitude }
-        : input.address
+        : input.address || input.city
           ? await geocode(
               [input.address, input.city, input.voivodeship, "Polska"].filter(Boolean).join(", "),
-              { expectedCity: input.city, expectedVoivodeship: input.voivodeship },
+              {
+                expectedCity: input.city,
+                expectedVoivodeship: input.voivodeship,
+                cityFallback: true,
+              },
             )
           : null;
     if (geo) {
       input.latitude = geo.lat;
       input.longitude = geo.lng;
     }
-    if (!geo && input.address) {
+    if (geo?.approximate) {
+      warnings.push(
+        `Nie znaleziono dokładnego adresu — lokalizację oceniono dla centrum miejscowości "${input.city ?? "—"}". Sprawdź adres nieruchomości.`,
+      );
+    } else if (!geo && input.address) {
       warnings.push(
         `Geokodowanie odrzuciło wynik niezgodny z miastem "${input.city ?? "—"}". Sprawdź adres nieruchomości.`,
       );

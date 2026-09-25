@@ -31,7 +31,7 @@ export const runCoOwnersCheck = createServerFn({ method: "POST" })
     const [{ data: app }, { data: props }] = await Promise.all([
       db
         .from("loan_applications")
-        .select("id, client_id")
+        .select("id, client_id, nip")
         .eq("id", data.applicationId)
         .maybeSingle(),
       db.from("properties").select("*").eq("loan_application_id", data.applicationId),
@@ -57,19 +57,22 @@ export const runCoOwnersCheck = createServerFn({ method: "POST" })
     }
 
     let primaryClientName: string | null = null;
+    let primaryClientNip: string | null = (app as any)?.nip ?? null;
     if (app.client_id) {
       const { data: client } = await db
         .from("clients")
-        .select("first_name, last_name, city")
+        .select("first_name, last_name, city, nip")
         .eq("id", app.client_id)
         .maybeSingle();
       primaryClientName =
         [client?.first_name, client?.last_name].filter(Boolean).join(" ").trim() || null;
+      primaryClientNip = client?.nip || primaryClientNip;
     }
 
     const result = await analyzeCoOwners({
       kwNumber,
       primaryClientName,
+      primaryClientNip,
       city: property?.city ?? null,
       voivodeship: property?.voivodeship ?? null,
     });

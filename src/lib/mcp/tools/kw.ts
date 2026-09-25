@@ -451,7 +451,11 @@ export const analyzeKw = defineTool({
       const appId = args.application_id ?? null;
 
       // Dane wniosku: kwota, wartość, klient, lokalizacja.
-      type LoanRow = { loan_amount: number | null; client_id: string | null };
+      type LoanRow = {
+        loan_amount: number | null;
+        client_id: string | null;
+        nip: string | null;
+      };
       type PropRow = {
         estimated_value: number | null;
         city: string | null;
@@ -463,7 +467,7 @@ export const analyzeKw = defineTool({
       if (appId) {
         [loan, prop] = await Promise.all([
           oneOf<LoanRow>(
-            admin.from("loan_applications").select("loan_amount, client_id").eq("id", appId),
+            admin.from("loan_applications").select("loan_amount, client_id, nip").eq("id", appId),
             "loan_applications",
           ),
           oneOf<PropRow>(
@@ -544,18 +548,28 @@ export const analyzeKw = defineTool({
         args.check_owners
           ? section(errors, "właściciele (CEIDG/KRS)", async () => {
               let primaryClientName: string | null = null;
+              let primaryClientNip: string | null = loan?.nip ?? null;
               if (loan?.client_id) {
-                const c = await oneOf<{ first_name: string | null; last_name: string | null }>(
-                  admin.from("clients").select("first_name, last_name").eq("id", loan.client_id),
+                const c = await oneOf<{
+                  first_name: string | null;
+                  last_name: string | null;
+                  nip: string | null;
+                }>(
+                  admin
+                    .from("clients")
+                    .select("first_name, last_name, nip")
+                    .eq("id", loan.client_id),
                   "clients",
                 );
                 primaryClientName =
                   [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim() || null;
+                primaryClientNip = c?.nip || primaryClientNip;
               }
               const { analyzeCoOwners } = await import("@/lib/coowners/analyze.server");
               const co = await analyzeCoOwners({
                 kwNumber: compact,
                 primaryClientName,
+                primaryClientNip,
                 city: prop?.city ?? null,
                 voivodeship: prop?.voivodeship ?? null,
               });

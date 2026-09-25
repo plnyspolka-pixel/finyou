@@ -212,8 +212,12 @@ function enumerateStrengthsRisks(
     strengths.push("Wystarczająca liczba transakcji porównawczych w RCN.");
   if (s.rcn && s.rcn.count === 0)
     risks.push("Brak transakcji porównawczych w RCN dla danej lokalizacji.");
-  if (s.location.score >= 70) strengths.push("Dobra lokalizacja i dostępność infrastruktury.");
-  if (s.location.score < 40) risks.push("Słaba lokalizacja — możliwa ograniczona płynność.");
+  if (s.location.available === false) {
+    risks.push("Lokalizacji nie oceniono (brak geolokalizacji adresu) — zweryfikuj ręcznie.");
+  } else {
+    if (s.location.score >= 70) strengths.push("Dobra lokalizacja i dostępność infrastruktury.");
+    if (s.location.score < 40) risks.push("Słaba lokalizacja — możliwa ograniczona płynność.");
+  }
   if (s.legal.warnings.length > 0)
     risks.push(`Ostrzeżenia prawne: ${s.legal.warnings.slice(0, 3).join("; ")}.`);
   if (c.dataQuality >= 11) strengths.push("Dobra jakość i pokrycie danych.");

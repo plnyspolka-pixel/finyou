@@ -137,30 +137,7 @@ export async function advanceKwCheck(
       markStep(steps, "kw_analysis", "error", "Brak treści KW — analiza niemożliwa.");
     } else {
       try {
-        const amount = Number(row.loan_amount ?? 0) || 0;
-        const value = row.property_value != null ? Number(row.property_value) : null;
-        const { runKwLandRegisterAnalysisCore } = await import("@/lib/kw-analysis.functions");
-        // Parametry jak w pipelinie: podana kwota jako gotówka/ekspozycja/suma
-        // hipoteki (zachowawczo); bez kwoty — sama ocena stanu księgi.
-        const analysis = await runKwLandRegisterAnalysisCore(
-          supabaseAdmin as any,
-          {
-            kwNumber: compact,
-            loanApplicationId: null,
-            caseId: `investor-kw-check:${row.id}`,
-            transactionType: "CASH_LOAN",
-            requestedCashAmount: amount,
-            newLoanExposure: amount,
-            requestedMortgageSum: amount,
-            acceptedPropertyValue: value != null && Number.isFinite(value) ? value : null,
-            borrower: null,
-            declaredCollateralProviders: [],
-            seniorCreditorCertificate: null,
-          },
-          row.user_id,
-        );
-        if (!analysis.ok) throw new Error(analysis.message ?? "analiza KW nie powiodła się");
-        patch.kw_analysis_json = analysis.result;
+        patch.kw_analysis_json = await analyzeCheckKw(row, compact, null);
         markStep(steps, "kw_analysis", "done");
       } catch (e: any) {
         markStep(steps, "kw_analysis", "error", e?.message ?? "błąd analizy KW");
@@ -201,6 +178,20 @@ export async function advanceKwCheck(
           },
         });
         markStep(steps, "risk", "done");
+        // Bez wartości podanej przez inwestora analiza KW z kroku 3 nie
+        // policzyła LTV/CLTV — przeliczamy ją z wartością z wyceny rynkowej.
+        const marketValue = (patch.risk_json as any)?.masterValuation?.estimatedValueMidPln ?? null;
+        if (
+          (value == null || !Number.isFinite(value)) &&
+          steps.kw_analysis.status === "done" &&
+          marketValue > 0
+        ) {
+          try {
+            patch.kw_analysis_json = await analyzeCheckKw(row, compact, marketValue);
+          } catch (e: any) {
+            console.error("[investor-kw-check] kw re-analysis", row.id, e?.message);
+          }
+        }
       } catch (e: any) {
         markStep(steps, "risk", "error", e?.message ?? "błąd oceny ryzyka");
       }
@@ -223,6 +214,42 @@ export async function advanceKwCheck(
     finished_at: new Date().toISOString(),
   });
   return "finished";
+}
+
+/**
+ * Analiza KW silnikiem reguł dla sprawdzenia. Wartość nieruchomości: podana
+ * przez inwestora, a bez niej — `fallbackValue` (wycena rynkowa z kroku 4).
+ */
+async function analyzeCheckKw(
+  row: KwCheckRow,
+  compact: string,
+  fallbackValue: number | null,
+): Promise<unknown> {
+  const amount = Number(row.loan_amount ?? 0) || 0;
+  const declared = row.property_value != null ? Number(row.property_value) : null;
+  const { runKwLandRegisterAnalysisCore } = await import("@/lib/kw-analysis.functions");
+  // Parametry jak w pipelinie: podana kwota jako gotówka/ekspozycja/suma
+  // hipoteki (zachowawczo); bez kwoty — sama ocena stanu księgi.
+  const analysis = await runKwLandRegisterAnalysisCore(
+    supabaseAdmin as any,
+    {
+      kwNumber: compact,
+      loanApplicationId: null,
+      caseId: `investor-kw-check:${row.id}`,
+      transactionType: "CASH_LOAN",
+      requestedCashAmount: amount,
+      newLoanExposure: amount,
+      requestedMortgageSum: amount,
+      acceptedPropertyValue:
+        declared != null && Number.isFinite(declared) && declared > 0 ? declared : fallbackValue,
+      borrower: null,
+      declaredCollateralProviders: [],
+      seniorCreditorCertificate: null,
+    },
+    row.user_id,
+  );
+  if (!analysis.ok) throw new Error(analysis.message ?? "analiza KW nie powiodła się");
+  return analysis.result;
 }
 
 /** Bezpieczne przesunięcie — błąd nieoczekiwany zamyka sprawdzenie zamiast wisieć. */

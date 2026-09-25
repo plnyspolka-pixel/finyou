@@ -141,12 +141,59 @@ describe("Scenariusz 3/4 — jedna wcześniejsza hipoteka (drugie miejsce)", () 
     },
   });
 
-  it("bez zaświadczenia ⇒ WSTRZYMANE", () => {
+  it("bez zaświadczenia: CLTV z sumy hipoteki — ponad limit ⇒ STOP", () => {
+    // (250k suma hipoteki + 200k) / 600k = 75% > 50%.
     const res = runKwAnalysis(baseInput(), sections(mortgageExtraction));
     expect(res.priority.expectedInvestorRank).toBe(2);
-    expect(statusesOf(res.findings, "R-RANK")).toContain("WARUNKOWO_DOPUSZCZALNE");
-    expect(statusesOf(res.findings, "R-SECOND-RANK-CERT")).toContain("WSTRZYMANE");
-    expect(res.overallStatus).toBe("WSTRZYMANE");
+    expect(res.ltv.priorExposureSource).toBe("kw_mortgage_sum");
+    expect(res.ltv.priorExposureForCltv).toBe(250_000);
+    expect(statusesOf(res.findings, "R-SECOND-RANK-CERT")).toContain("WARUNKOWO_DOPUSZCZALNE");
+    expect(statusesOf(res.findings, "R-CLTV")).toContain("STOP");
+  });
+
+  it("bez zaświadczenia: hipoteka 62 tys., pożyczka 25 tys., wartość 648 tys. ⇒ WARUNKOWO", () => {
+    // Kraków, 25.09: suma hipoteki z KW ogranicza ekspozycję z 1. miejsca.
+    const small = baseExtraction({
+      dzial4: {
+        brakWpisu: false,
+        hipoteki: [
+          {
+            rodzaj: "HIPOTEKA UMOWNA",
+            sumaKwota: 62_000,
+            walutaSumy: "ZŁ",
+            wierzyciel: "TRANSFER SYSTEM SP. Z O.O.",
+            tresc: "Hipoteka umowna.",
+          },
+        ],
+      },
+    });
+    const res = runKwAnalysis(
+      baseInput({
+        newLoanExposure: 25_000,
+        requestedCashAmount: 25_000,
+        requestedMortgageSum: 25_000,
+        acceptedPropertyValue: 648_000,
+      }),
+      sections(small),
+    );
+    // CLTV = (62k + 25k) / 648k ≈ 13,4%.
+    expect(res.ltv.determinable).toBe(true);
+    expect(res.ltv.withinPolicy).toBe(true);
+    expect(statusesOf(res.findings, "R-SECOND-RANK-CERT")).toEqual(["WARUNKOWO_DOPUSZCZALNE"]);
+    expect(res.findings.some((f) => f.status === "WSTRZYMANE" && f.category === "RANK")).toBe(
+      false,
+    );
+  });
+
+  it("bez zaświadczenia i bez wartości — brakuje tylko wyceny", () => {
+    const res = runKwAnalysis(
+      baseInput({ acceptedPropertyValue: null }),
+      sections(mortgageExtraction),
+    );
+    expect(res.ltv.determinable).toBe(false);
+    expect(res.ltv.priorExposureForCltv).toBe(250_000);
+    const cltv = res.findings.find((f) => f.ruleId === "R-CLTV");
+    expect(cltv?.title).toBe("Brak wartości nieruchomości do LTV");
   });
 
   it("z kompletnym zaświadczeniem i CLTV≤50% ⇒ WARUNKOWO", () => {
@@ -427,7 +474,7 @@ describe("R-CLTV — dane o zadłużeniu tylko przy obciążonym Dziale IV", () 
     expect(f?.clientMessage).not.toContain("zadłużeniu");
   });
 
-  it("hipoteka w Dziale IV + brak danych ⇒ prosimy o wycenę i saldo", () => {
+  it("hipoteka ze znaną sumą + brak wartości ⇒ tylko wycena (suma ogranicza ekspozycję)", () => {
     const ext = baseExtraction({
       dzial4: {
         brakWpisu: false,
@@ -445,7 +492,8 @@ describe("R-CLTV — dane o zadłużeniu tylko przy obciążonym Dziale IV", () 
     const res = runKwAnalysis(baseInput({ acceptedPropertyValue: null }), sections(ext));
     const f = res.findings.find((x) => x.ruleId === "R-CLTV");
     expect(f?.status).toBe("WSTRZYMANE");
-    expect(f?.requestedDocuments.map((d) => d.code)).toContain("SENIOR_CERT");
+    expect(f?.requestedDocuments.map((d) => d.code)).toEqual(["VALUATION"]);
+    expect(res.ltv.priorExposureForCltv).toBe(250_000);
   });
 });
 

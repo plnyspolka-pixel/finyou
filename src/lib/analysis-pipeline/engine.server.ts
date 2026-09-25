@@ -260,6 +260,55 @@ export interface AdvanceRunOpts {
 }
 
 /**
+ * Analiza KW silnikiem reguł dla wniosku z przebiegu. Wartość nieruchomości:
+ * z wniosku, a gdy jej brak — `fallbackValue` (wycena rynkowa z oceny
+ * ryzyka). Zwraca, czy użyto wartości zastępczej.
+ */
+async function runPipelineKwAnalysis(
+  run: { loan_application_id: string; kw_number: string },
+  fallbackValue: number | null,
+): Promise<boolean> {
+  const [{ data: loan }, { data: prop }] = await Promise.all([
+    supabaseAdmin
+      .from("loan_applications")
+      .select("id, loan_amount")
+      .eq("id", run.loan_application_id)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("properties")
+      .select("estimated_value")
+      .eq("loan_application_id", run.loan_application_id)
+      .maybeSingle(),
+  ]);
+  const declared = prop?.estimated_value != null ? Number(prop.estimated_value) : null;
+  // Wartość zadeklarowana ma pierwszeństwo — przeliczamy tylko, gdy jej brak.
+  if (fallbackValue != null && declared != null && declared > 0) return false;
+  const amount = Number(loan?.loan_amount ?? 0);
+  const { runKwLandRegisterAnalysisCore } = await import("@/lib/kw-analysis.functions");
+  // Parametry transakcji jak przy ręcznym uruchomieniu bez doprecyzowania:
+  // kwota wniosku jako gotówka/ekspozycja/suma hipoteki (zachowawczo).
+  const analysis = await runKwLandRegisterAnalysisCore(
+    supabaseAdmin as any,
+    {
+      kwNumber: run.kw_number,
+      loanApplicationId: run.loan_application_id,
+      caseId: run.loan_application_id,
+      transactionType: "CASH_LOAN",
+      requestedCashAmount: amount,
+      newLoanExposure: amount,
+      requestedMortgageSum: amount,
+      acceptedPropertyValue: declared != null && declared > 0 ? declared : fallbackValue,
+      borrower: null,
+      declaredCollateralProviders: [],
+      seniorCreditorCertificate: null,
+    },
+    null,
+  );
+  if (!analysis.ok) throw new Error(analysis.message ?? "analiza KW nie powiodła się");
+  return fallbackValue != null;
+}
+
+/**
  * Jeden krok naprzód dla przebiegu. Zwraca "finished", gdy wszystkie kroki
  * są rozstrzygnięte (done/error), inaczej "waiting" (kolejny tick dokończy).
  */
@@ -306,7 +355,7 @@ async function advanceRun(
         const [{ data: app }, { data: prop }] = await Promise.all([
           supabaseAdmin
             .from("loan_applications")
-            .select("id, client_id")
+            .select("id, client_id, nip")
             .eq("id", run.loan_application_id)
             .maybeSingle(),
           supabaseAdmin
@@ -316,19 +365,22 @@ async function advanceRun(
             .maybeSingle(),
         ]);
         let primaryClientName: string | null = null;
+        let primaryClientNip: string | null = (app as any)?.nip ?? null;
         if (app?.client_id) {
           const { data: c } = await supabaseAdmin
             .from("clients")
-            .select("first_name, last_name")
+            .select("first_name, last_name, nip")
             .eq("id", app.client_id)
             .maybeSingle();
           primaryClientName =
             [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim() || null;
+          primaryClientNip = c?.nip || primaryClientNip;
         }
         const { analyzeCoOwners } = await import("@/lib/coowners/analyze.server");
         const coResult = await analyzeCoOwners({
           kwNumber: run.kw_number,
           primaryClientName,
+          primaryClientNip,
           city: prop?.city ?? null,
           voivodeship: prop?.voivodeship ?? null,
         });
@@ -359,39 +411,7 @@ async function advanceRun(
       markStep(steps, "kw_analysis", "error", "Brak treści KW — analiza niemożliwa.");
     } else {
       try {
-        const { data: loan } = await supabaseAdmin
-          .from("loan_applications")
-          .select("id, loan_amount")
-          .eq("id", run.loan_application_id)
-          .maybeSingle();
-        const { data: prop } = await supabaseAdmin
-          .from("properties")
-          .select("estimated_value")
-          .eq("loan_application_id", run.loan_application_id)
-          .maybeSingle();
-        const amount = Number(loan?.loan_amount ?? 0);
-        const { runKwLandRegisterAnalysisCore } = await import("@/lib/kw-analysis.functions");
-        // Parametry transakcji jak przy ręcznym uruchomieniu bez doprecyzowania:
-        // kwota wniosku jako gotówka/ekspozycja/suma hipoteki (zachowawczo).
-        const analysis = await runKwLandRegisterAnalysisCore(
-          supabaseAdmin as any,
-          {
-            kwNumber: run.kw_number,
-            loanApplicationId: run.loan_application_id,
-            caseId: run.loan_application_id,
-            transactionType: "CASH_LOAN",
-            requestedCashAmount: amount,
-            newLoanExposure: amount,
-            requestedMortgageSum: amount,
-            acceptedPropertyValue:
-              prop?.estimated_value != null ? Number(prop.estimated_value) : null,
-            borrower: null,
-            declaredCollateralProviders: [],
-            seniorCreditorCertificate: null,
-          },
-          null,
-        );
-        if (!analysis.ok) throw new Error(analysis.message ?? "analiza KW nie powiodła się");
+        await runPipelineKwAnalysis(run, null);
         markStep(steps, "kw_analysis", "done");
       } catch (e: any) {
         markStep(steps, "kw_analysis", "error", e?.message ?? "błąd analizy KW");
@@ -406,8 +426,24 @@ async function advanceRun(
     try {
       const { runInvestmentRiskAssessmentCore } =
         await import("@/lib/risk-assessment/risk-assessment.functions");
-      await runInvestmentRiskAssessmentCore(supabaseAdmin as any, run.loan_application_id, {});
+      // Nowy przebieg = nowa ocena (bez force ocena zwracałaby zapisany wynik).
+      const risk = await runInvestmentRiskAssessmentCore(
+        supabaseAdmin as any,
+        run.loan_application_id,
+        { force: true },
+      );
       markStep(steps, "risk", "done");
+      // Wniosek bez wartości nieruchomości: analiza KW z kroku 3 nie policzyła
+      // LTV/CLTV — przeliczamy ją z wartością z wyceny rynkowej (silnik reguł
+      // jest deterministyczny i bez płatnych źródeł).
+      const marketValue = risk.masterValuation?.estimatedValueMidPln ?? null;
+      if (steps.kw_analysis.status === "done" && marketValue && marketValue > 0) {
+        try {
+          await runPipelineKwAnalysis(run, marketValue);
+        } catch (e: any) {
+          console.error("[analysis-pipeline] kw re-analysis with valuation", run.id, e?.message);
+        }
+      }
     } catch (e: any) {
       markStep(steps, "risk", "error", e?.message ?? "błąd analizy ryzyka");
     }

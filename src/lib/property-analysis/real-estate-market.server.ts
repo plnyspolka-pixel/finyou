@@ -21,7 +21,12 @@ import {
 } from "@/lib/web-fetch.server";
 
 export type PortalSource =
-  "deweloperuch.pl" | "otodom.pl" | "morizon.pl" | "gratka.pl" | "adresowo.pl" | "olx.pl";
+  | "deweloperuch.pl"
+  | "otodom.pl"
+  | "morizon.pl"
+  | "gratka.pl"
+  | "adresowo.pl"
+  | "olx.pl";
 
 export const ALL_PORTALS: PortalSource[] = [
   "deweloperuch.pl",
@@ -258,6 +263,46 @@ export function extractPortalAvgPpm2(text: string): number | null {
 
 // ---------- deweloperuch.pl (transakcje) ----------
 
+/** Najniższa wiarygodna stawka transakcyjna zł/m² dla lokalu lub domu. */
+const MIN_PLAUSIBLE_PPM2 = 1_000;
+
+/** Kwota to raczej cena za m² niż cena całkowita (stawka z dzielenia nierealna). */
+export function looksLikePpm2NotTotal(amount: number, areaM2: number): boolean {
+  return amount >= 1_500 && amount <= 60_000 && amount / areaM2 < MIN_PLAUSIBLE_PPM2;
+}
+
+/**
+ * Transakcje nieprzystające do rynku: mediana stawek transakcyjnych poniżej
+ * 35% mediany ofert z tego samego miasta oznacza błąd odczytu (np. kolumna
+ * źle rozpoznana), a nie rynek — takie transakcje nie mogą być podstawą
+ * wyceny. Zwraca listę bez nich i informację o odrzuceniu.
+ */
+export function dropImplausibleTransactions(listings: PortalListing[]): {
+  listings: PortalListing[];
+  dropped: number;
+} {
+  const med = (xs: number[]) => {
+    if (!xs.length) return null;
+    const a = [...xs].sort((x, y) => x - y);
+    const m = Math.floor(a.length / 2);
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  };
+  const tx = listings
+    .filter((l) => l.kind === "transaction")
+    .map((l) => l.pricePerM2)
+    .filter((v): v is number => v != null && v > 0);
+  const offers = listings
+    .filter((l) => l.kind === "offer")
+    .map((l) => l.pricePerM2)
+    .filter((v): v is number => v != null && v > 0);
+  const txMed = med(tx);
+  const offerMed = med(offers);
+  if (txMed == null || offerMed == null || offers.length < 3 || txMed >= offerMed * 0.35) {
+    return { listings, dropped: 0 };
+  }
+  return { listings: listings.filter((l) => l.kind !== "transaction"), dropped: tx.length };
+}
+
 const DATE_RE = /\b(\d{2}\.\d{2}\.\d{4}|\d{4}-\d{2}-\d{2})\b/;
 
 /** Wiersze tabeli transakcji (HTML) → rekordy. Kolumny rozpoznawane po treści. */
@@ -313,11 +358,18 @@ function parseTransactionCells(cells: string[], streetLc: string | null): Portal
     cells.find((c) => /[a-ząćęłńóśźż]{3,}/i.test(c) && !DATE_RE.test(c) && !/zł|m²|m2/i.test(c)) ??
     null;
   if (streetLc && addressCell && !addressCell.toLowerCase().includes(streetLc)) return null;
-  const price = priceCell
+  let price = priceCell
     ? sanePrice(parseMoney((priceCell.match(/\d[\d\s\u00a0.,]*/) ?? [""])[0]))
     : null;
   const area = areaCell ? saneArea(num(areaCell.match(AREA_RE)?.[1])) : null;
-  const ppm2 = ppm2Cell ? sanePpm2(parseMoney(ppm2Cell.match(PPM2_RE)![1])) : null;
+  let ppm2 = ppm2Cell ? sanePpm2(parseMoney(ppm2Cell.match(PPM2_RE)![1])) : null;
+  // Kolumna „zł/m²" bez jednostki w komórce (sam nagłówek) wygląda jak cena
+  // całkowita: 15 720 zł za 36 m² dałoby 433 zł/m². Kwota w przedziale cen za
+  // metr, która po podzieleniu przez metraż daje nierealną stawkę, to cena za m².
+  if (!ppm2 && price && area && looksLikePpm2NotTotal(price, area)) {
+    ppm2 = price;
+    price = sanePrice(price * area);
+  }
   return listing({
     source: "deweloperuch.pl",
     kind: "transaction",
@@ -864,8 +916,16 @@ export async function fetchPortalMarket(input: PortalMarketInput): Promise<Porta
   add("olx.pl", () => scrapeOlx(city, cat));
 
   const settled = await Promise.all(jobs);
-  const listings = settled.flatMap((s) => s.listings);
   const sources = settled.map((s) => s.report);
+  const checked = dropImplausibleTransactions(settled.flatMap((s) => s.listings));
+  const listings = checked.listings;
+  if (checked.dropped > 0) {
+    const dew = sources.find((s) => s.source === "deweloperuch.pl");
+    if (dew) {
+      dew.status = "error";
+      dew.message = `odrzucono ${checked.dropped} transakcji — stawki nieprzystające do ofert z miasta (błąd odczytu)`;
+    }
+  }
   const offers = listings.filter((l) => l.kind === "offer");
 
   // Podaż: portale w dużej mierze dublują te same ogłoszenia, więc nie sumujemy —

@@ -103,7 +103,16 @@ async function ceidgFetch(url: string, token: string): Promise<any | { error: st
     if (res.status === 404) return { firmy: [] };
     if (!res.ok) {
       const t = await res.text().catch(() => "");
-      return { error: `CEIDG HTTP ${res.status}: ${t.slice(0, 160)}` };
+      // Odmowa bramy (Akamai „Access Denied") przychodzi jako strona HTML —
+      // do raportu trafia krótki komunikat, nie surowy HTML.
+      const reason = /access denied/i.test(t)
+        ? "odmowa dostępu (Access Denied)"
+        : t
+            .replace(/<[^>]*>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 120);
+      return { error: `CEIDG HTTP ${res.status}: ${reason || "błąd"}` };
     }
     return await res.json();
   } catch (e: any) {
