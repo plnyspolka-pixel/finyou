@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchReadable } from "@/lib/web-fetch.server";
 
 function normalizeDomain(input: string) {
   try {
@@ -83,23 +84,13 @@ export const deleteCompetitor = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// Treść strony konkurenta przez Jina Reader (darmowy, bez klucza) — zastępuje Firecrawl.
 async function scrapeUrl(url: string) {
-  const apiKey = process.env.FIRECRAWL_API_KEY;
-  if (!apiKey) throw new Error("Brak FIRECRAWL_API_KEY.");
-  const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
-  });
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`Firecrawl ${res.status}: ${t.slice(0, 200)}`);
-  }
-  const json = await res.json();
+  const page = await fetchReadable(url);
   return {
-    title: (json?.data?.metadata?.title as string) ?? null,
-    description: (json?.data?.metadata?.description as string) ?? null,
-    markdown: (json?.data?.markdown as string) ?? "",
+    title: page.title,
+    description: page.description,
+    markdown: page.markdown,
   };
 }
 

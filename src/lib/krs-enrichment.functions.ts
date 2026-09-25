@@ -1,10 +1,14 @@
 // Auto-wzbogacanie zamaskowanych danych osobowych z KRS o pełne imiona/nazwiska
-// znalezione w internecie. Używa Perplexity Sonar (web search + LLM).
+// znalezione w internecie: darmowe wyszukiwanie w sieci (DuckDuckGo + treść stron
+// rejestrowych przez Jina Reader) → Lovable AI Gateway wyciąga kandydatów WYŁĄCZNIE
+// z zebranych tekstów → dopasowanie do inicjałów z KRS (matchesMaskedPerson).
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { fetchReadable, webSearch, type WebSearchResult } from "@/lib/web-fetch.server";
+import { lovableAiJson } from "@/lib/lovable-ai.server";
 
 export type EnrichmentResult = {
   success: true;
@@ -83,79 +87,70 @@ function buildCacheKey(d: z.infer<typeof InputSchema>) {
     .join("|");
 }
 
-async function askPerplexity(input: z.infer<typeof InputSchema>): Promise<CandidateFromAI[]> {
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) return [];
+// Serwisy z danymi rejestrowymi, których strony warto przeczytać w całości.
+const REGISTRY_HOSTS =
+  /rejestr\.io|krs-online|aleo\.com|infoveriti|imsig|monitorsadowy|bizraport|owg\.pl/i;
+
+async function gatherWebEvidence(input: z.infer<typeof InputSchema>): Promise<string> {
+  const company =
+    input.companyName || (input.krs ? `KRS ${input.krs}` : input.nip ? `NIP ${input.nip}` : "");
+  const queries = [
+    input.krs ? `KRS ${input.krs} zarząd` : null,
+    company ? `"${company}" zarząd ${input.function || "prezes"}` : null,
+    input.nip ? `NIP ${input.nip} ${input.function || "zarząd"}` : null,
+  ].filter((q): q is string => !!q);
+  const batches = await Promise.all(queries.map((q) => webSearch(q, { limit: 8 }).catch(() => [])));
+  const results: WebSearchResult[] = [];
+  const seen = new Set<string>();
+  for (const r of batches.flat()) {
+    if (seen.has(r.url)) continue;
+    seen.add(r.url);
+    results.push(r);
+  }
+  const snippets = results
+    .slice(0, 15)
+    .map((r) => `• ${r.title} — ${r.snippet} (${r.url})`)
+    .join("\n");
+  // Pełna treść maks. 2 stron rejestrowych (tam są składy zarządu).
+  const pages = await Promise.all(
+    results
+      .filter((r) => REGISTRY_HOSTS.test(r.url))
+      .slice(0, 2)
+      .map((r) =>
+        fetchReadable(r.url, { timeoutMs: 20_000 })
+          .then((p) => `### ${r.url}\n${p.markdown.slice(0, 6000)}`)
+          .catch(() => ""),
+      ),
+  );
+  return [snippets, ...pages.filter(Boolean)].join("\n\n").trim();
+}
+
+async function findCandidatesOnWeb(input: z.infer<typeof InputSchema>): Promise<CandidateFromAI[]> {
+  if (!process.env.LOVABLE_API_KEY) return [];
+  const evidence = await gatherWebEvidence(input);
+  if (!evidence) return [];
 
   const companyHint =
     input.companyName || (input.krs ? `KRS ${input.krs}` : input.nip ? `NIP ${input.nip}` : "");
   const fnHint = input.function ? ` pełniąca funkcję "${input.function}"` : "";
-
   const prompt =
     `Szukam pełnego imienia i nazwiska osoby z polskiej spółki "${companyHint}"` +
     (input.krs ? ` (KRS ${input.krs})` : "") +
     (input.nip ? ` (NIP ${input.nip})` : "") +
-    `${fnHint}. Z rejestru KRS znana jest tylko zamaskowana wersja: "${input.maskedPerson}". ` +
-    `Znajdź w wiarygodnych źródłach (strona spółki, BIP, prasa branżowa, wpisy KRS w bazach komercyjnych, LinkedIn) ` +
-    `pełną wersję imienia i nazwiska tej osoby. ` +
-    `Zwróć WYŁĄCZNIE poprawny JSON o strukturze: ` +
-    `{"candidates":[{"fullName":"Imię (Drugie) Nazwisko","function":"PREZES ZARZĄDU","confidence":0.0-1.0,"source":"krótko skąd"}]}. ` +
-    `Maksymalnie 5 kandydatów. Jeżeli nie znajdziesz nic wiarygodnego, zwróć {"candidates":[]}.`;
+    `${fnHint}. Z rejestru KRS znana jest tylko zamaskowana wersja: "${input.maskedPerson}".\n\n` +
+    `Poniżej teksty zebrane z internetu. Wskaż osoby WYŁĄCZNIE na ich podstawie — nie zgaduj ` +
+    `i nie korzystaj z pamięci. Każdy kandydat musi wystąpić w tekstach i pasować do inicjałów.\n\n` +
+    `TEKSTY:\n${evidence.slice(0, 20_000)}\n\n` +
+    `Zwróć WYŁĄCZNIE JSON: {"candidates":[{"fullName":"Imię (Drugie) Nazwisko","function":"PREZES ZARZĄDU","confidence":0.0-1.0,"source":"URL z tekstów"}]}. ` +
+    `Maksymalnie 5 kandydatów. Jeżeli w tekstach nie ma wiarygodnej odpowiedzi, zwróć {"candidates":[]}.`;
 
-  const res = await fetch("https://api.perplexity.ai/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "sonar",
-      messages: [
-        {
-          role: "system",
-          content:
-            "Jesteś analitykiem danych rejestrowych w Polsce. Odpowiadaj zwięźle, tylko JSON-em.",
-        },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.1,
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "candidates",
-          schema: {
-            type: "object",
-            properties: {
-              candidates: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    fullName: { type: "string" },
-                    function: { type: "string" },
-                    confidence: { type: "number" },
-                    source: { type: "string" },
-                  },
-                  required: ["fullName"],
-                },
-              },
-            },
-            required: ["candidates"],
-          },
-        },
-      },
-    }),
-  });
-
-  if (!res.ok) {
-    console.error(
-      "[krs-enrichment] perplexity error",
-      res.status,
-      await res.text().catch(() => ""),
-    );
-    return [];
-  }
-  const json: any = await res.json();
-  const content: string = json?.choices?.[0]?.message?.content ?? "";
   try {
-    const parsed = JSON.parse(content);
+    const parsed = await lovableAiJson<{ candidates?: any[] }>({
+      system: "Jesteś analitykiem danych rejestrowych w Polsce. Odpowiadasz wyłącznie JSON-em.",
+      user: prompt,
+      temperature: 0.1,
+      timeoutMs: 45_000,
+    });
     const arr = Array.isArray(parsed?.candidates) ? parsed.candidates : [];
     return arr
       .filter((c: any) => typeof c?.fullName === "string" && c.fullName.trim().length > 2)
@@ -165,7 +160,8 @@ async function askPerplexity(input: z.infer<typeof InputSchema>): Promise<Candid
         confidence: typeof c.confidence === "number" ? c.confidence : undefined,
         source: c.source ? String(c.source).trim() : undefined,
       }));
-  } catch {
+  } catch (e) {
+    console.error("[krs-enrichment] AI error", (e as Error).message);
     return [];
   }
 }
@@ -264,7 +260,7 @@ export const companyRepresentationAutoEnrichment = createServerFn({ method: "POS
     let rawResults: CandidateFromAI[] = [];
 
     try {
-      rawResults = await askPerplexity(data);
+      rawResults = await findCandidatesOnWeb(data);
       const best = selectBestRepresentationCandidate(rawResults, data.maskedPerson, fn);
       if (best) {
         fullName = best.fullName;

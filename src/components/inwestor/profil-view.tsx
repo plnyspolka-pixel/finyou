@@ -215,7 +215,7 @@ export function InwestorProfil() {
         { id: t },
       );
 
-      // Auto-uzupełnienie zamaskowanych danych reprezentanta z Perplexity (KRS oddaje tylko inicjały).
+      // Auto-uzupełnienie zamaskowanych danych reprezentanta z wyszukiwania w sieci (KRS oddaje tylko inicjały).
       const fn1 = firstBoardMember?.firstName || "";
       const ln1 = firstBoardMember?.lastName || "";
       if (firstBoardMember && (/\*/.test(fn1) || /\*/.test(ln1))) {

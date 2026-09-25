@@ -14,7 +14,7 @@ import type {
 } from "./types";
 import { plotCategoryLabel, type PlotBuildabilityResult } from "./plot-buildability";
 import { gradeFromScore } from "./types";
-import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
+import { readPortalValuation, type PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import type { LongevityBand } from "./life-expectancy";
 
 // Wagi komponentów (suma = 1). GŁÓWNYM komponentem jest płynność wyjścia
@@ -51,7 +51,7 @@ function valuationConfidenceScore(
   master: MasterValuation,
 ): number {
   let score = 40;
-  const cv = collateral?.perplexityValuation;
+  const cv = readPortalValuation(collateral);
   if (cv?.status === "success") {
     score += 20;
     if (cv.comparablesFound >= 8) score += 15;

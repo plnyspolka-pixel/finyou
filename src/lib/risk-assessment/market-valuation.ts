@@ -1,6 +1,6 @@
 // Deterministyczna WYCENA RYNKOWA — zastępuje dawną „nadrzędną wycenę Perplexity".
-// Podstawa: scraping rynku (deweloperuch.pl — rzeczywiste transakcje domów/mieszkań,
-// otodom.pl — aktywne oferty mieszkań/domów/działek). Dane GUS BDL wyłącznie
+// Podstawa: dane z portali (deweloperuch.pl — rzeczywiste transakcje domów/mieszkań,
+// otodom/morizon/gratka/adresowo/olx — aktywne oferty). Dane GUS BDL wyłącznie
 // POMOCNICZO — przede wszystkim dla gruntów rolnych (ceny zł/ha wg klasy).
 // Czysta, testowalna logika — bez zależności serwerowych i bez LLM.
 
@@ -12,6 +12,8 @@ import type {
   Recommendation,
 } from "./types";
 import type { ValuationBasis } from "./plot-buildability";
+
+const OFFERS_ONLY_BASIS = "portale ogłoszeniowe (aktywne oferty)";
 
 export interface MarketValuationInput {
   propertyType: string;
@@ -108,11 +110,11 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
     );
     if (mcUsable) {
       rationaleParts.push(
-        `Pomocniczo rynek (otodom): mediana ofert ${mc!.pricePerM2Median!.toLocaleString("pl-PL")} zł/m² z ${sampleN} rekordów.`,
+        `Pomocniczo rynek (portale ogłoszeniowe): mediana ofert ${mc!.pricePerM2Median!.toLocaleString("pl-PL")} zł/m² z ${sampleN} rekordów.`,
       );
     }
   } else if (mcUsable && i.areaM2 != null && i.areaM2 > 0) {
-    // MIESZKANIE / DOM / DZIAŁKA — podstawą jest scraping rynku (deweloperuch + otodom).
+    // MIESZKANIE / DOM / DZIAŁKA — podstawą są dane z portali (deweloperuch + portale ogłoszeniowe).
     const medPpm2 = mc!.pricePerM2Median!;
     const lowPpm2 = mc!.pricePerM2P25 ?? pct(medPpm2, 0.85);
     const highPpm2 = mc!.pricePerM2P75 ?? pct(medPpm2, 1.1);
@@ -123,20 +125,20 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
       low = plotValueWithSizeAdjustment(Math.min(lowPpm2, medPpm2), i.areaM2);
       high = plotValueWithSizeAdjustment(Math.max(highPpm2, medPpm2), i.areaM2);
       rationaleParts.push(
-        `Wycena ze scrapingu rynku z KOREKTĄ WIELKOŚCI działki: mediana ${medPpm2.toLocaleString("pl-PL")} zł/m² (${mc!.transactionsCount} transakcji deweloperuch, ${mc!.offersCount} ofert otodom${mc!.city ? `, ${mc!.city}` : ""}); pierwsze ${PLOT_FULL_PRICE_AREA_M2.toLocaleString("pl-PL")} m² po pełnej stawce, powyżej — ${Math.round(PLOT_MARGINAL_FACTOR * 100)}% stawki (ceny małych działek nie skalują się liniowo na ${i.areaM2.toLocaleString("pl-PL")} m²). Wynik: ${mid.toLocaleString("pl-PL")} PLN.`,
+        `Wycena z danych portali z KOREKTĄ WIELKOŚCI działki: mediana ${medPpm2.toLocaleString("pl-PL")} zł/m² (${mc!.transactionsCount} transakcji deweloperuch, ${mc!.offersCount} ofert z portali${mc!.city ? `, ${mc!.city}` : ""}); pierwsze ${PLOT_FULL_PRICE_AREA_M2.toLocaleString("pl-PL")} m² po pełnej stawce, powyżej — ${Math.round(PLOT_MARGINAL_FACTOR * 100)}% stawki (ceny małych działek nie skalują się liniowo na ${i.areaM2.toLocaleString("pl-PL")} m²). Wynik: ${mid.toLocaleString("pl-PL")} PLN.`,
       );
     } else {
       mid = Math.round(medPpm2 * i.areaM2);
       low = Math.round(Math.min(lowPpm2, medPpm2) * i.areaM2);
       high = Math.round(Math.max(highPpm2, medPpm2) * i.areaM2);
       rationaleParts.push(
-        `Wycena ze scrapingu rynku: mediana ${medPpm2.toLocaleString("pl-PL")} zł/m² (${mc!.transactionsCount} transakcji deweloperuch, ${mc!.offersCount} ofert otodom${mc!.city ? `, ${mc!.city}` : ""}) × ${i.areaM2} m² = ${mid.toLocaleString("pl-PL")} PLN; widełki z kwartyli próbki.`,
+        `Wycena z danych portali: mediana ${medPpm2.toLocaleString("pl-PL")} zł/m² (${mc!.transactionsCount} transakcji deweloperuch, ${mc!.offersCount} ofert z portali${mc!.city ? `, ${mc!.city}` : ""}) × ${i.areaM2} m² = ${mid.toLocaleString("pl-PL")} PLN; widełki z kwartyli próbki.`,
       );
     }
     basisSource =
       mc!.transactionsCount > 0
-        ? "deweloperuch.pl (transakcje) + otodom.pl (oferty)"
-        : "otodom.pl (aktywne oferty)";
+        ? "deweloperuch.pl (transakcje) + portale ogłoszeniowe (oferty)"
+        : OFFERS_ONLY_BASIS;
     if (isAgri)
       rationaleParts.push(
         "Uwaga: grunt o statusie rolnym bez danych GUS (zł/ha) — użyto ofert rynkowych; wynik traktuj ostrożnie.",
@@ -156,7 +158,7 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
     const why =
       i.areaM2 == null && !(isAgri && i.landAreaHa != null)
         ? "brak powierzchni nieruchomości (KW/wniosek)"
-        : "brak danych porównawczych ze scrapingu (deweloperuch/otodom) i danych GUS";
+        : "brak danych porównawczych z portali nieruchomości i danych GUS";
     return {
       status: "no_data",
       basisSource: "brak",
@@ -187,7 +189,7 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
 
   const keyRisks: string[] = [];
   const keyStrengths: string[] = [];
-  const offersOnly = basisSource === "otodom.pl (aktywne oferty)";
+  const offersOnly = basisSource === OFFERS_ONLY_BASIS;
   const extrapolatedPlot =
     sizeAdjusted && i.areaM2 != null && i.areaM2 > PLOT_EXTRAPOLATION_LIMIT_M2;
 
@@ -260,7 +262,7 @@ export function computeMarketValuation(i: MarketValuationInput): MasterValuation
   else if (sizeAdjusted && recommendation === "rekomendowana") recommendation = "warunkowa";
 
   const liquidityComment = mc
-    ? `Aktywna podaż w okolicy: ${mc.offersCount} ofert (otodom), ${mc.transactionsCount} transakcji (deweloperuch).`
+    ? `Aktywna podaż w okolicy: ${mc.offersCount} ofert (portale ogłoszeniowe), ${mc.transactionsCount} transakcji (deweloperuch).`
     : "";
 
   const citations = (mc?.sample ?? [])

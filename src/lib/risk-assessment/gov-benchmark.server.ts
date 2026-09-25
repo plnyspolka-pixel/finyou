@@ -21,7 +21,7 @@ function levelLabel(level: "powiat" | "wojewodztwo" | "krajowy" | undefined | nu
  * Rola w nowym pipeline wyceny: dane GUS są wyłącznie wsparciem — przede
  * wszystkim dla GRUNTÓW ROLNYCH (ceny zł/ha wg klasy bonitacyjnej), gdzie
  * stanowią podstawę wyceny; dla pozostałych typów służą jako sanity-check /
- * fallback, gdy scraping rynku (deweloperuch/otodom) nie zwróci danych.
+ * fallback, gdy dane z portali nieruchomości nie zwróci danych.
  */
 export async function fetchGusAuxiliaryBenchmark(args: {
   propertyType: string;

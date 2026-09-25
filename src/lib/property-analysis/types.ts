@@ -11,11 +11,7 @@ export type PropertyType =
   | "inna";
 
 export type CollateralCategory =
-  | "bardzo_dobre"
-  | "dobre"
-  | "akceptowalne"
-  | "podwyzszone_ryzyko"
-  | "nieakceptowalne";
+  "bardzo_dobre" | "dobre" | "akceptowalne" | "podwyzszone_ryzyko" | "nieakceptowalne";
 
 export type LtvCategory = "safe" | "moderate" | "high" | "very_high" | "unknown";
 
@@ -177,33 +173,46 @@ export interface PropertyAnalysisResult {
   gusDiagnostics?: GusBenchmarkDiagnostics | null;
   rcnDiagnostics?: RcnDiagnostics | null;
   listingsBenchmark?: ListingsBenchmarkSummary | null;
-  perplexityValuation?: {
-    status: "success" | "no_data" | "error";
-    pricePerM2Median: number | null;
-    pricePerM2Average: number | null;
-    pricePerM2Min: number | null;
-    pricePerM2Max: number | null;
-    pricePerHa: number | null;
-    estimatedValueLowPln: number | null;
-    estimatedValueHighPln: number | null;
-    marketTrend: "rosnacy" | "stabilny" | "spadkowy" | "nieznany";
-    liquidityComment: string;
-    rationale: string;
-    comparablesFound: number;
-    citations: string[];
-    errorMessage?: string;
-  } | null;
+  /** Wycena z bieżących danych portali nieruchomości (+ komentarz Lovable AI). */
+  portalValuation?: PortalValuationSummary | null;
+  /**
+   * @deprecated Wycena Perplexity z analiz sprzed migracji na portale — tylko do
+   * odczytu starych rekordów. Czytaj przez `readPortalValuation()`.
+   */
+  perplexityValuation?: PortalValuationSummary | null;
 
   warnings: string[];
   raw: Record<string, any>;
 }
 
+export interface PortalValuationSummary {
+  status: "success" | "no_data" | "error";
+  pricePerM2Median: number | null;
+  pricePerM2Average: number | null;
+  pricePerM2Min: number | null;
+  pricePerM2Max: number | null;
+  pricePerHa: number | null;
+  estimatedValueLowPln: number | null;
+  estimatedValueHighPln: number | null;
+  marketTrend: "rosnacy" | "stabilny" | "spadkowy" | "nieznany";
+  liquidityComment: string;
+  rationale: string;
+  comparablesFound: number;
+  transactionsFound?: number;
+  sourcesSummary?: string;
+  citations: string[];
+  errorMessage?: string;
+}
+
+/** Wycena z portali; dla starych analiz — zapisana wcześniej wycena Perplexity. */
+export function readPortalValuation(
+  r: Pick<PropertyAnalysisResult, "portalValuation" | "perplexityValuation"> | null | undefined,
+): PortalValuationSummary | null {
+  return r?.portalValuation ?? r?.perplexityValuation ?? null;
+}
+
 export type BdlLevelLabel =
-  | "powiat / miasto na prawach powiatu"
-  | "województwo"
-  | "region NUTS"
-  | "Polska"
-  | "nieznany";
+  "powiat / miasto na prawach powiatu" | "województwo" | "region NUTS" | "Polska" | "nieznany";
 
 export type GusSanityStatus = "ok" | "suspicious" | "rejected";
 

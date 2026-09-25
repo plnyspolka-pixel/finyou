@@ -11,4 +11,4 @@ Autopilot bloga (`src/lib/blog-autopilot.server.ts`) publikuje codziennie 1 arty
 
 Typ artykułu zapisywany w `raw_ai_output.post_kind`. Wybór następnego = patrz na ostatni `post_kind` i wybierz kolejny w rotacji.
 
-Model: Perplexity `sonar` (brief) + `sonar-pro` (writer, JSON schema).
+Źródła newsów: Google News RSS (zapytania per typ, operator `when:1d/7d/30d`). Model: Lovable AI Gateway `google/gemini-2.5-pro` — briefing wyłącznie z nagłówków RSS + writer (JSON). Bez Perplexity.
