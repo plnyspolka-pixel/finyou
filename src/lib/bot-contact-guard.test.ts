@@ -61,6 +61,42 @@ describe("guardOutboundContactDetails", () => {
     expect(foreign.redactions[0].kind).toBe("adres");
   });
 
+  it("nie wycina spersonalizowanego linku do wniosku podanego botowi w kontekście", () => {
+    const link =
+      "https://abcdefgh.supabase.co/auth/v1/verify?token=482913756102&type=magiclink&redirect_to=https://financeyou.pl/klient";
+    const res = guardOutboundContactDetails(`Jasne! Twój link do dokończenia wniosku: ${link}.`, {
+      knownText: ["Poproszę link do wniosku", link],
+    });
+    expect(res.redactions).toHaveLength(0);
+    expect(res.usedFallback).toBe(false);
+    expect(res.text).toContain(link);
+  });
+
+  it("link z kontekstu przechodzi też z &amp; i końcową interpunkcją", () => {
+    const link = "https://abcdefgh.supabase.co/auth/v1/verify?token=abc&type=magiclink";
+    const res = guardOutboundContactDetails(
+      `Proszę: https://abcdefgh.supabase.co/auth/v1/verify?token=abc&amp;type=magiclink!`,
+      { knownText: [link] },
+    );
+    expect(res.redactions).toHaveLength(0);
+  });
+
+  it("zostawia krótki link i subdomeny Finance You, nawet z cyframi w kodzie", () => {
+    const res = guardOutboundContactDetails(
+      "Twój link: https://financeyou.pl/s/ab3k9x. Panel: https://app.financeyou.pl/klient/123456789.",
+    );
+    expect(res.redactions).toHaveLength(0);
+    expect(res.text).toContain("https://financeyou.pl/s/ab3k9x");
+  });
+
+  it("wciąż wycina zmyślony numer w zdaniu obok naszego linku", () => {
+    const res = guardOutboundContactDetails(
+      "Link: https://financeyou.pl/klient i telefon +48 22 230 25 79. Czekam na dane wniosku.",
+    );
+    expect(res.redactions[0].kind).toBe("telefon");
+    expect(res.text).toBe("Czekam na dane wniosku.");
+  });
+
   it("gdy po czyszczeniu nie zostaje nic, wysyła bezpieczne zdanie zastępcze", () => {
     const res = guardOutboundContactDetails("Proszę dzwonić: +48 22 230 25 79.", {
       fallback: "Zostańmy przy wniosku — co jeszcze mogę wyjaśnić?",

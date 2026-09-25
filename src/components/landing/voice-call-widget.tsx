@@ -80,34 +80,86 @@ export function VoiceCallWidget({
     };
   }, [surface]);
 
+  // Numer „pokolenia" rozmowy: każde rozłączenie go podbija, więc spóźnione
+  // zdarzenia starej sesji (albo sesja, która dopiero wstaje po kliknięciu
+  // „Zakończ" w trakcie łączenia) nie nadpisują stanu nowej rozmowy.
+  const generationRef = useRef(0);
+  // true od kliknięcia „Porozmawiaj" do zestawienia sesji — blokuje podwójny start.
+  const startingRef = useRef(false);
+
   const hangUp = useCallback(() => {
+    const active = sessionRef.current !== null || startingRef.current;
+    generationRef.current += 1;
+    startingRef.current = false;
     sessionRef.current?.stop();
     sessionRef.current = null;
     setMuted(false);
+    if (active) setState("ended");
   }, []);
 
   // Zwolnij mikrofon, gdy komponent znika (np. zmiana podstrony).
-  useEffect(() => () => sessionRef.current?.stop(), []);
+  useEffect(
+    () => () => {
+      generationRef.current += 1;
+      startingRef.current = false;
+      sessionRef.current?.stop();
+      sessionRef.current = null;
+    },
+    [],
+  );
 
   const call = useCallback(async () => {
-    if (sessionRef.current) return;
+    if (sessionRef.current || startingRef.current) return;
+    const generation = ++generationRef.current;
+    const isCurrent = () => generation === generationRef.current;
+    startingRef.current = true;
     setError(null);
     setLastAgent(null);
     setLastUser(null);
+    setMuted(false);
+
+    let session: VoiceConversation | null = null;
+    let finished = false;
     try {
-      sessionRef.current = await startVoiceConversation(
+      session = await startVoiceConversation(
         { surface, dynamicVariables },
         {
-          onState: setState,
-          onAgentMessage: setLastAgent,
-          onUserMessage: setLastUser,
-          onError: (message) => setError(message),
+          onState: (next) => {
+            if (!isCurrent()) return;
+            setState(next);
+            // Rozmowa skończyła się sama (zerwane połączenie, Ania się
+            // rozłączyła, błąd) — zwalniamy sesję, żeby przycisk
+            // „Porozmawiaj z Anią" mógł od razu zacząć nową.
+            if (next === "ended" || next === "error") {
+              finished = true;
+              if (session === null || sessionRef.current === session) sessionRef.current = null;
+              setMuted(false);
+            }
+          },
+          onAgentMessage: (text) => {
+            if (isCurrent()) setLastAgent(text);
+          },
+          onUserMessage: (text) => {
+            if (isCurrent()) setLastUser(text);
+          },
+          onError: (message) => {
+            if (isCurrent()) setError(message);
+          },
         },
       );
+      if (!isCurrent() || finished) {
+        // Rozłączono w trakcie łączenia albo sesja padła, zanim ją zapisaliśmy.
+        session.stop();
+      } else {
+        sessionRef.current = session;
+      }
     } catch (e) {
+      if (!isCurrent()) return;
       sessionRef.current = null;
       setState("idle");
       setError(e instanceof Error ? e.message : "Nie udało się rozpocząć rozmowy.");
+    } finally {
+      if (isCurrent()) startingRef.current = false;
     }
   }, [surface, dynamicVariables]);
 
