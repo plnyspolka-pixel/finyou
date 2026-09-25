@@ -4,6 +4,7 @@ import {
   extractPortalAvgPpm2,
   marketCategory,
   parseDeweloperuchTable,
+  dropImplausibleTransactions,
   parseJsonLdListings,
   parseOtodomNextData,
 } from "./real-estate-market.server";
@@ -41,6 +42,16 @@ describe("deweloperuch — tabela transakcji (HTML)", () => {
     });
     // Brak kolumny zł/m² → liczone z ceny i metrażu.
     expect(rows[1].pricePerM2).toBe(Math.round(720_000 / 39));
+  });
+
+  it("kolumna zł/m² bez jednostki nie jest brana za cenę całkowitą", () => {
+    // Kraków, 25.09: „15 720" przy 36,3 m² dawało 433 zł/m² i wycenę ~13 tys. zł.
+    const rows = parseDeweloperuchTable(
+      `<table><tr><td>28.08.2026</td><td>Lok. 360</td><td>36,3 m²</td><td>15 720 zł</td></tr></table>`,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].pricePerM2).toBe(15_720);
+    expect(rows[0].pricePln).toBe(Math.round(15_720 * 36.3));
   });
 
   it("filtruje po ulicy", () => {
@@ -173,6 +184,38 @@ Lublin, Czechów - Dzisiaj
 
   it("czyta średnią cenę m² z nagłówka portalu", () => {
     expect(extractPortalAvgPpm2(md)).toBe(11_450);
+  });
+});
+
+describe("dropImplausibleTransactions", () => {
+  const row = (kind: "transaction" | "offer", pricePerM2: number) => ({
+    source: (kind === "transaction" ? "deweloperuch.pl" : "otodom.pl") as
+      | "deweloperuch.pl"
+      | "otodom.pl",
+    kind,
+    postedBy: "unknown" as const,
+    url: null,
+    title: null,
+    address: null,
+    pricePln: null,
+    areaM2: null,
+    pricePerM2,
+    date: null,
+  });
+  it("odrzuca transakcje nieprzystające do ofert z miasta", () => {
+    const r = dropImplausibleTransactions([
+      ...[433, 206, 183, 286].map((v) => row("transaction", v)),
+      ...[17_998, 12_000, 16_140].map((v) => row("offer", v)),
+    ]);
+    expect(r.dropped).toBe(4);
+    expect(r.listings.every((l) => l.kind === "offer")).toBe(true);
+  });
+  it("zostawia wiarygodne transakcje", () => {
+    const r = dropImplausibleTransactions([
+      ...[11_000, 12_500].map((v) => row("transaction", v)),
+      ...[15_000, 14_000, 16_000].map((v) => row("offer", v)),
+    ]);
+    expect(r.dropped).toBe(0);
   });
 });
 

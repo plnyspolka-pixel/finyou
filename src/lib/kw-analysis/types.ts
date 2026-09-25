@@ -370,6 +370,12 @@ export interface LtvResult {
   seniorBalanceFromCertificate: number | null;
   /** Przyjęta ekspozycja poprzedzająca do CLTV. */
   priorExposureForCltv: number | null;
+  /**
+   * Skąd ekspozycja poprzedzająca: zaświadczenie wierzyciela, suma hipotek
+   * poprzedzających z działu IV (górna granica zabezpieczonej wierzytelności)
+   * albo brak obciążeń poprzedzających.
+   */
+  priorExposureSource: "certificate" | "kw_mortgage_sum" | "none" | null;
   newLoanExposure: number;
   acceptedPropertyValue: number | null;
   cltv: number | null;

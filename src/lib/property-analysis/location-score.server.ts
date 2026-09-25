@@ -14,8 +14,9 @@ export async function locationScore(args: {
   const { lat, lng } = args;
   if (lat == null || lng == null) {
     return {
-      score: 35,
-      summary: "Brak współrzędnych — ograniczona analiza lokalizacji.",
+      score: 50,
+      available: false,
+      summary: "Nie ustalono położenia (geokodowanie) — lokalizacji nie oceniono.",
       liquidityComment: "Płynność trudna do oceny bez geolokalizacji.",
     };
   }
@@ -23,8 +24,9 @@ export async function locationScore(args: {
   const lovableKey = process.env.LOVABLE_API_KEY;
   if (!apiKey || !lovableKey) {
     return {
-      score: 45,
-      summary: "Brak konfiguracji Google Maps — wynik szacunkowy.",
+      score: 50,
+      available: false,
+      summary: "Brak konfiguracji Google Maps — lokalizacji nie oceniono.",
       liquidityComment: "Wymagana ręczna weryfikacja lokalizacji.",
     };
   }
@@ -97,7 +99,38 @@ function norm(s: string): string {
     .replace(/[^a-z0-9]+/g, "");
 }
 
+/**
+ * Geokodowanie z ponowieniami: pełny adres → adres bez numeru lokalu
+ * („Komandosów 12/61" → „Komandosów 12") → sama miejscowość (przybliżenie,
+ * `approximate: true`). Numer lokalu potrafi zablokować dopasowanie Google.
+ */
 export async function geocode(
+  address: string,
+  opts?: {
+    expectedCity?: string | null;
+    expectedVoivodeship?: string | null;
+    /** Ostatnia próba: sama miejscowość (współrzędne centrum). */
+    cityFallback?: boolean;
+  },
+): Promise<{ lat: number; lng: number; approximate?: boolean } | null> {
+  const exact = await geocodeOnce(address, opts);
+  if (exact) return exact;
+  const withoutUnit = address.replace(/(\d+[a-z]?)\s*\/\s*\d+[a-z]?/gi, "$1");
+  if (withoutUnit !== address) {
+    const retry = await geocodeOnce(withoutUnit, opts);
+    if (retry) return retry;
+  }
+  if (opts?.cityFallback && opts.expectedCity) {
+    const city = await geocodeOnce(
+      [opts.expectedCity, opts.expectedVoivodeship].filter(Boolean).join(", "),
+      opts,
+    );
+    if (city) return { ...city, approximate: true };
+  }
+  return null;
+}
+
+async function geocodeOnce(
   address: string,
   opts?: { expectedCity?: string | null; expectedVoivodeship?: string | null },
 ): Promise<{ lat: number; lng: number } | null> {

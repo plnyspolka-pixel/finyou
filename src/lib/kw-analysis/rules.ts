@@ -553,24 +553,26 @@ const ruleRank: Rule = {
           status: "WARUNKOWO_DOPUSZCZALNE",
           title: "Docelowe drugie miejsce hipoteki",
           plainLanguageSummary:
-            "Hipoteka inwestora byłaby na drugim miejscu — dopuszczalne warunkowo (zaświadczenie + CLTV ≤ limit).",
+            "Hipoteka inwestora byłaby na drugim miejscu — dopuszczalne warunkowo, gdy CLTV (z sumą hipoteki poprzedzającej albo saldem z zaświadczenia) ≤ limit.",
           source: priority.evidence,
           whyItMatters:
-            "Drugie miejsce wymaga ustalenia bieżącej i maksymalnej ekspozycji wierzyciela z pierwszego miejsca.",
+            "Drugie miejsce wymaga ustalenia maksymalnej ekspozycji z pierwszego miejsca — wyznacza ją suma hipoteki z KW albo zaświadczenie wierzyciela.",
           rankImpact: "DIRECT",
-          expectedFromClient: "Aktualne zaświadczenie wierzyciela z pierwszego miejsca.",
-          requestedDocuments: [DOCS.SENIOR_CERT],
+          expectedFromClient:
+            "Gdy suma hipoteki poprzedzającej jest w KW — nic; inaczej zaświadczenie wierzyciela z 1. miejsca.",
+          requestedDocuments: [],
           proposedResolution:
-            "Uzyskaj kompletne zaświadczenie i przelicz CLTV — dopuszczalne, gdy CLTV ≤ limit polityki.",
-          agreementCondition: "Kompletne zaświadczenie wierzyciela z 1. miejsca i CLTV w limicie.",
+            "Przelicz CLTV z sumą hipoteki poprzedzającej (lub saldem z zaświadczenia) — dopuszczalne, gdy CLTV ≤ limit polityki.",
+          agreementCondition:
+            "CLTV w limicie polityki (ekspozycja z 1. miejsca wg sumy hipoteki lub zaświadczenia).",
           payoutCondition:
             "Potwierdzona maksymalna ekspozycja poprzedzająca i CLTV ≤ limit polityki.",
           intermediaryMessage:
-            "Hipoteka byłaby na drugim miejscu. To możliwe, ale najpierw potrzebujemy zaświadczenia od banku z pierwszego miejsca.",
+            "Hipoteka byłaby na drugim miejscu. To możliwe, jeśli łączne obciążenie (z sumą pierwszej hipoteki) mieści się w limicie.",
           clientMessage:
             "Na nieruchomości jest już jedna hipoteka. Aby udzielić finansowania, potrzebujemy zaświadczenia od obecnego wierzyciela.",
           investorMessage:
-            "Drugie miejsce — warunkowo dopuszczalne po zaświadczeniu wierzyciela z 1. miejsca i CLTV w limicie.",
+            "Drugie miejsce — warunkowo dopuszczalne przy CLTV w limicie (ekspozycja z 1. miejsca wg sumy hipoteki z KW lub zaświadczenia).",
         }),
       ];
     }
@@ -615,9 +617,40 @@ const ruleRank: Rule = {
 const ruleSecondRankCertificate: Rule = {
   id: "R-SECOND-RANK-CERT",
   version: V,
-  run({ priority, input }) {
+  run({ priority, input, ltv }) {
     if (priority.expectedInvestorRank !== 2 || !priority.determinable) return [];
     const cert = input.seniorCreditorCertificate;
+    if (!cert && ltv.priorExposureSource === "kw_mortgage_sum") {
+      // Suma hipoteki z działu IV ogranicza wierzytelność zabezpieczoną na
+      // pierwszym miejscu — CLTV liczymy z niej (zachowawczo), zaświadczenie
+      // nie jest warunkiem. O dopuszczalności decyduje R-CLTV.
+      const sumTxt = `${(ltv.priorExposureForCltv ?? 0).toLocaleString("pl-PL")} PLN`;
+      return [
+        mkFinding({
+          ruleId: "R-SECOND-RANK-CERT",
+          ruleVersion: V,
+          category: "RANK",
+          status: "WARUNKOWO_DOPUSZCZALNE",
+          title: "Ekspozycja z pierwszego miejsca ograniczona sumą hipoteki",
+          plainLanguageSummary: `Hipoteka na pierwszym miejscu zabezpiecza najwyżej ${sumTxt} — CLTV policzono z tej sumy, bez zaświadczenia wierzyciela.`,
+          source: priority.evidence,
+          whyItMatters:
+            "Suma hipoteki jest górną granicą wierzytelności zabezpieczonej przed inwestorem — przy CLTV w limicie drugie miejsce jest dopuszczalne.",
+          rankImpact: "DIRECT",
+          expectedFromClient:
+            "Opcjonalnie: zaświadczenie wierzyciela z pierwszego miejsca (rzeczywiste saldo może być niższe od sumy hipoteki).",
+          requestedDocuments: [],
+          proposedResolution:
+            "Decyzja na podstawie CLTV z sumą hipoteki poprzedzającej; zaświadczenie może tylko poprawić wynik.",
+          agreementCondition: "CLTV (z sumą hipoteki poprzedzającej) ≤ limit polityki.",
+          intermediaryMessage: `Przed inwestorem jest hipoteka do ${sumTxt}. Liczymy obciążenie z tej sumy — zaświadczenie z banku nie jest konieczne.`,
+          clientMessage:
+            "Na nieruchomości jest już hipoteka — uwzględniamy ją w ocenie w pełnej wysokości wpisanej w księdze.",
+          investorMessage: `Drugie miejsce: ekspozycja poprzedzająca ≤ ${sumTxt} (suma hipoteki z KW) — decyzja zależy od CLTV.`,
+          confidence: 0.85,
+        }),
+      ];
+    }
     if (!cert) {
       return [
         mkFinding({
@@ -711,9 +744,12 @@ const ruleCltv: Rule = {
       // Dane o zadłużeniu (saldo/zaświadczenie) są potrzebne wyłącznie, gdy w
       // Dziale IV jest hipoteka albo aktywna wzmianka; przy czystym Dziale IV
       // do LTV brakuje co najwyżej wartości nieruchomości.
+      // Ekspozycja poprzedzająca znana (suma hipotek z KW / zaświadczenie) —
+      // brakuje wtedy już tylko wartości nieruchomości.
       const hasSectionIvBurden =
-        nlr.mortgages.some((m) => m.isActive) ||
-        nlr.mentions.some((m) => m.isActive && m.section === "IV");
+        ltv.priorExposureForCltv == null &&
+        (nlr.mortgages.some((m) => m.isActive) ||
+          nlr.mentions.some((m) => m.isActive && m.section === "IV"));
       return [
         mkFinding({
           ruleId: "R-CLTV",
@@ -749,13 +785,13 @@ const ruleCltv: Rule = {
             : "Uzupełnij zaakceptowaną wartość nieruchomości; przelicz LTV.",
           intermediaryMessage: hasSectionIvBurden
             ? "Nie mamy pełnych danych do policzenia LTV. Potrzebna wartość nieruchomości i saldo długu."
-            : "Nie mamy wartości nieruchomości do policzenia LTV. Dział IV jest czysty — wystarczy wycena.",
+            : "Nie mamy wartości nieruchomości do policzenia LTV — wystarczy wycena (obciążenia z Działu IV są już uwzględnione).",
           clientMessage: hasSectionIvBurden
             ? "Do oceny potrzebujemy wyceny nieruchomości i informacji o obecnym zadłużeniu."
             : "Do oceny potrzebujemy wyceny nieruchomości.",
           investorMessage: hasSectionIvBurden
             ? "BRAK DANYCH / WSTRZYMANE — LTV/CLTV nieobliczalne."
-            : "BRAK DANYCH / WSTRZYMANE — LTV nieobliczalne (brak wartości; Dział IV bez obciążeń).",
+            : "BRAK DANYCH / WSTRZYMANE — LTV nieobliczalne (brak wartości nieruchomości).",
         }),
       ];
     }

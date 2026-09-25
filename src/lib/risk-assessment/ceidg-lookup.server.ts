@@ -11,6 +11,7 @@
 //
 // Wymaga tokenu: CEIDG_JWT_TOKEN (Bearer). Bez tokenu zwracamy „niedostępne".
 
+import { isGatewayDenial, registryGet } from "@/lib/registry-fetch.server";
 import type { CeidgActivity } from "./types";
 
 const CEIDG_BASE = "https://dane.biznes.gov.pl/api/ceidg/v3/firmy";
@@ -93,25 +94,34 @@ function parseFirm(f: any): CeidgFirm {
 }
 
 async function ceidgFetch(url: string, token: string): Promise<any | { error: string }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15_000);
   try {
-    const res = await fetch(url, {
+    // Przez registry-proxy (sieć Supabase): brama Akamai przed
+    // dane.biznes.gov.pl odrzuca żądania z Cloudflare Workers.
+    const res = await registryGet(url, {
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      signal: controller.signal,
+      timeoutMs: 15_000,
     });
     if (res.status === 404) return { firmy: [] };
     if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      return { error: `CEIDG HTTP ${res.status}: ${t.slice(0, 160)}` };
+      // Odmowa bramy (Akamai „Access Denied") przychodzi jako strona HTML —
+      // do raportu trafia krótki komunikat, nie surowy HTML.
+      const reason = isGatewayDenial(res.status, res.text)
+        ? `odmowa bramy Akamai (Access Denied)${res.viaProxy ? " — także przez registry-proxy" : ""}`
+        : res.status === 401
+          ? "token CEIDG odrzucony (401) — sprawdź CEIDG_JWT_TOKEN"
+          : res.text
+              .replace(/<[^>]*>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, 120);
+      return { error: `CEIDG HTTP ${res.status}: ${reason || "błąd"}` };
     }
-    return await res.json();
+    if (!res.text.trim()) return { firmy: [] };
+    return JSON.parse(res.text);
   } catch (e: any) {
     return {
       error: e?.name === "AbortError" ? "CEIDG timeout" : (e?.message ?? "CEIDG błąd sieci"),
     };
-  } finally {
-    clearTimeout(timer);
   }
 }
 

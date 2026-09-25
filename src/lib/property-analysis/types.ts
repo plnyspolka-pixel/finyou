@@ -11,7 +11,11 @@ export type PropertyType =
   | "inna";
 
 export type CollateralCategory =
-  "bardzo_dobre" | "dobre" | "akceptowalne" | "podwyzszone_ryzyko" | "nieakceptowalne";
+  | "bardzo_dobre"
+  | "dobre"
+  | "akceptowalne"
+  | "podwyzszone_ryzyko"
+  | "nieakceptowalne";
 
 export type LtvCategory = "safe" | "moderate" | "high" | "very_high" | "unknown";
 
@@ -86,6 +90,11 @@ export interface LtvResult {
 
 export interface LocationScoreResult {
   score: number;
+  /**
+   * false = lokalizacji nie oceniono (brak współrzędnych / konfiguracji) —
+   * `score` jest wtedy neutralny, a nie sygnałem słabej lokalizacji.
+   */
+  available?: boolean;
   summary: string;
   liquidityComment: string;
   poiCounts?: Record<string, number>;
@@ -212,7 +221,11 @@ export function readPortalValuation(
 }
 
 export type BdlLevelLabel =
-  "powiat / miasto na prawach powiatu" | "województwo" | "region NUTS" | "Polska" | "nieznany";
+  | "powiat / miasto na prawach powiatu"
+  | "województwo"
+  | "region NUTS"
+  | "Polska"
+  | "nieznany";
 
 export type GusSanityStatus = "ok" | "suspicious" | "rejected";
 

@@ -17,6 +17,7 @@ import {
   type KwAnalysisInput,
   type KwAnalysisResult,
   type LtvResult,
+  type MortgagePriorityResult,
   type NormalizedLandRegister,
   type Party,
 } from "./types";
@@ -42,18 +43,29 @@ export function computeLtv(
 
   const value = input.acceptedPropertyValue ?? null;
   const rank = priority.expectedInvestorRank;
+  const priorSumCap = priorMortgageSumCap(priority.effectivePriorEncumbrances);
 
-  // Dla pierwszego miejsca ekspozycja poprzedzająca = 0.
+  // Dla pierwszego miejsca ekspozycja poprzedzająca = 0. Przy obciążeniach
+  // poprzedzających: saldo z zaświadczenia, a bez niego — suma hipotek
+  // poprzedzających z działu IV. Suma hipoteki to górna granica wierzytelności
+  // zabezpieczonej na tym miejscu (hipoteka do 60 000 zł ⇒ ekspozycja
+  // poprzedzająca maks. 60 000 zł), więc CLTV liczone z niej jest zachowawcze.
   let priorExposureForCltv: number | null = null;
+  let priorExposureSource: LtvResult["priorExposureSource"] = null;
   if (rank === 1 && priority.determinable) {
     priorExposureForCltv = 0;
-  } else if (rank === 2) {
-    // NIE używamy samej sumy hipoteki jako salda — potrzebne zaświadczenie.
-    priorExposureForCltv = seniorBalanceFromCertificate;
-  } else if (priority.effectivePriorEncumbrances.length > 0) {
-    priorExposureForCltv = seniorBalanceFromCertificate;
+    priorExposureSource = "none";
+  } else if (rank === 2 || priority.effectivePriorEncumbrances.length > 0) {
+    if (seniorBalanceFromCertificate != null) {
+      priorExposureForCltv = seniorBalanceFromCertificate;
+      priorExposureSource = "certificate";
+    } else if (priorSumCap != null) {
+      priorExposureForCltv = priorSumCap;
+      priorExposureSource = "kw_mortgage_sum";
+    }
   } else {
     priorExposureForCltv = 0;
+    priorExposureSource = "none";
   }
 
   if (value == null || value <= 0 || priorExposureForCltv == null) {
@@ -62,6 +74,7 @@ export function computeLtv(
       mortgageSumFromKw,
       seniorBalanceFromCertificate,
       priorExposureForCltv,
+      priorExposureSource,
       newLoanExposure: input.newLoanExposure,
       acceptedPropertyValue: value,
       cltv: null,
@@ -70,7 +83,7 @@ export function computeLtv(
       note:
         value == null || value <= 0
           ? "Brak zaakceptowanej wartości nieruchomości — LTV/CLTV nieobliczalne (BRAK DANYCH)."
-          : "Brak wiarygodnego salda długu poprzedzającego (zaświadczenie) — CLTV nieobliczalne.",
+          : "Obciążenie poprzedzające bez sumy w KW (np. roszczenie) i brak zaświadczenia — CLTV nieobliczalne.",
     };
   }
 
@@ -81,6 +94,7 @@ export function computeLtv(
     mortgageSumFromKw,
     seniorBalanceFromCertificate,
     priorExposureForCltv,
+    priorExposureSource,
     newLoanExposure: input.newLoanExposure,
     acceptedPropertyValue: value,
     cltv,
@@ -88,10 +102,30 @@ export function computeLtv(
     withinPolicy,
     note:
       `Suma hipotek z KW: ${mortgageSumFromKw != null ? mortgageSumFromKw.toLocaleString("pl-PL") + " PLN" : "—"}; ` +
-      `ekspozycja poprzedzająca do CLTV: ${priorExposureForCltv.toLocaleString("pl-PL")} PLN; ` +
+      `ekspozycja poprzedzająca do CLTV: ${priorExposureForCltv.toLocaleString("pl-PL")} PLN` +
+      (priorExposureSource === "kw_mortgage_sum"
+        ? " (suma hipotek poprzedzających z KW — górna granica, bez zaświadczenia); "
+        : priorExposureSource === "certificate"
+          ? " (z zaświadczenia wierzyciela); "
+          : "; ") +
       `nowa ekspozycja: ${input.newLoanExposure.toLocaleString("pl-PL")} PLN; ` +
       `wartość: ${value.toLocaleString("pl-PL")} PLN; CLTV = ${(cltv * 100).toFixed(1)}%.`,
   };
+}
+
+/**
+ * Suma hipotek poprzedzających, gdy KAŻDE obciążenie poprzedzające to hipoteka
+ * ze znaną sumą w złotych — inaczej null (roszczenie, wzmianka albo waluta
+ * obca nie dają górnej granicy ekspozycji).
+ */
+export function priorMortgageSumCap(
+  priors: MortgagePriorityResult["effectivePriorEncumbrances"],
+): number | null {
+  if (priors.length === 0) return null;
+  const pln = (c: string | null) => !c || /z[łl]|pln/i.test(c);
+  if (!priors.every((p) => p.kind === "MORTGAGE" && p.sum != null && p.sum > 0 && pln(p.currency)))
+    return null;
+  return priors.reduce((acc, p) => acc + (p.sum ?? 0), 0);
 }
 
 function collectParties(input: KwAnalysisInput): Party[] {

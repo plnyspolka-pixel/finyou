@@ -512,7 +512,7 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
       toast.success(
         r.status === "running"
           ? "Przebieg pipeline'u już trwa — wyniki pojawią się tutaj."
-          : "Analiza w kolejce. Cztery kroki wykona automat — wyniki pojawią się w ciągu ok. 15–30 minut.",
+          : "Analiza uruchomiona: księga, właściciele i analiza KW są liczone od razu, ocenę ryzyka automat dokończy w ciągu ok. 15–30 minut.",
       );
       refresh();
     },
@@ -548,6 +548,7 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
       `${accent(s.hue, 0.68, 0.17)} ${Math.round((i / (ANALYTICS_STEPS.length - 1)) * 100)}%`,
   ).join(", ");
   const run = item.run;
+  const missingSteps = ANALYTICS_STEPS.filter((s) => analyticsStepStatus(item, s.key) !== "done");
   const runLabel = run ? RUN_LABELS[run.status] : null;
 
   return (
@@ -624,7 +625,11 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
               ) : (
                 <Play className="mr-2 h-4 w-4" />
               )}
-              {done === 0 ? "Uruchom analizę" : "Uruchom ponownie"}
+              {done === 0
+                ? "Uruchom analizę"
+                : done < ANALYTICS_STEPS.length
+                  ? "Dokończ analizę"
+                  : "Uruchom ponownie"}
             </Button>
           </div>
         </div>
@@ -652,6 +657,27 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
             </span>
           )}
         </div>
+        {missingSteps.length > 0 && run?.status !== "running" && d.canRequestRun && (
+          <Alert className="mt-3">
+            <Play className="h-4 w-4" />
+            <AlertTitle>
+              Brakuje {missingSteps.length} z {ANALYTICS_STEPS.length} kroków
+            </AlertTitle>
+            <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+              <span>
+                Do zrobienia: {missingSteps.map((s) => `${s.index}. ${s.title}`).join(", ")}.
+              </span>
+              <Button size="sm" disabled={runMut.isPending} onClick={() => runMut.mutate()}>
+                {runMut.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
+                Uruchom brakujące kroki
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         {d.runBlockedReason && !d.canRequestRun && run?.status !== "running" && (
           <p className="mt-2 text-xs text-muted-foreground">{d.runBlockedReason}</p>
         )}
