@@ -153,8 +153,8 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     purpose: "ocena płynności wyjścia z inwestycji na podstawie otoczenia 20/50 km",
     provides:
       "zaludnienie, większe miasto, zbiornik wodny, kurort, sanatorium, atrakcje turystyczne, dostępność drogowa, popyt na najem",
-    provider: "Perplexity (sonar-pro)",
-    envKey: "PERPLEXITY_API_KEY",
+    provider: "Gemini 2.5 Pro (Lovable AI Gateway) na danych z portali nieruchomości",
+    envKey: "LOVABLE_API_KEY",
   },
   {
     key: "local_market_offers",
@@ -164,20 +164,20 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     purpose: "realna podaż i ceny ofertowe w okolicy — sygnał płynności zbycia",
     provides:
       "aktywne ogłoszenia sprzedaży w okolicy (~10 km), udział ofert biur vs prywatnych, mediana ceny/m²",
-    provider: "Perplexity (otodom, olx, morizon, gratka, domiporta, nieruchomości-online)",
-    envKey: "PERPLEXITY_API_KEY",
+    provider:
+      "Bezpośredni fetch portali: otodom.pl (__NEXT_DATA__), morizon.pl i gratka.pl (JSON-LD), adresowo.pl; olx.pl przez Jina Reader",
   },
-  // 8. Rynek nieruchomości — PODSTAWA WYCENY (scraping).
+  // 8. Rynek nieruchomości — PODSTAWA WYCENY (bezpośrednio z portali).
   {
     key: "market_comparables_scrape",
-    name: "Rynek porównawczy — deweloperuch.pl + otodom.pl (scraping, podstawa wyceny)",
+    name: "Rynek porównawczy — deweloperuch.pl + portale ogłoszeniowe (podstawa wyceny)",
     category: "rynek_nieruchomosci",
     governmental: false,
     purpose:
-      "PODSTAWA WYCENY: scraping miasto/miejscowość + rodzaj — deweloperuch (tylko domy i mieszkania, transakcje), otodom (mieszkania, domy i działki, oferty)",
+      "PODSTAWA WYCENY: miasto/miejscowość + rodzaj — deweloperuch (tylko domy i mieszkania, transakcje z aktów notarialnych), otodom/morizon/gratka/adresowo/olx (oferty)",
     provides: "mediana/kwartyle zł/m², liczba transakcji, aktywne oferty w okolicy",
-    provider: "Firecrawl v2 (deweloperuch.pl, otodom.pl)",
-    envKey: "FIRECRAWL_API_KEY",
+    provider:
+      "Bezpośredni fetch (deweloperuch.pl, otodom.pl, morizon.pl, gratka.pl, adresowo.pl), Jina Reader jako fallback i dla olx.pl",
   },
 ];
 

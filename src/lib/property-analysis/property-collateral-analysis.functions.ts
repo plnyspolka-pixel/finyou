@@ -1,4 +1,5 @@
-// Orchestrator analizy zabezpieczenia — wycena oparta wyłącznie o Perplexity (sonar-pro).
+// Orchestrator analizy zabezpieczenia — wycena z dzisiejszych danych portali nieruchomości
+// (deweloperuch, otodom, morizon, gratka, adresowo, olx) + komentarz Lovable AI.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -15,7 +16,7 @@ import type {
 import { geocode, locationScore } from "./location-score.server";
 import { extractDocuments } from "./document-extraction.server";
 import { analyzeFloodRisk } from "./flood-risk.server";
-import { perplexityValuation, perplexityToRcnStats } from "./perplexity-valuation.server";
+import { portalValuation, portalValuationToRcnStats } from "./portal-valuation.server";
 import { calculateCollateralScore, classifyLtv } from "./scoring";
 import { buildAnalysisResult, generateOfferText } from "./offer-text";
 
@@ -27,7 +28,7 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
   .handler(async ({ data }) => runPropertyCollateralAnalysisCore(data.applicationId));
 
 // Parametry nieruchomości odczytane z KW (dział I-O) — mają pierwszeństwo w wycenie
-// (pytanie do Perplexity o cenę za m² dla nieruchomości o tych parametrach i lokalizacji).
+// (dobór porównań z portali dla nieruchomości o tych parametrach i lokalizacji).
 export interface CollateralAnalysisOpts {
   kw?: {
     usableAreaM2?: number | null;
@@ -141,11 +142,12 @@ export async function runPropertyCollateralAnalysisCore(
       input.voivodeship = input.voivodeship || "mazowieckie";
     }
 
-    // 3) Wycena Perplexity (sonar-pro) — jedyne źródło cenowe
-    const pplx = await perplexityValuation({
+    // 3) Wycena z portali nieruchomości — jedyne źródło cenowe
+    const pv = await portalValuation({
       propertyType: input.propertyType,
       address: input.address,
       city: input.city,
+      county: input.county,
       voivodeship: input.voivodeship,
       usableAreaM2: input.usableAreaM2,
       buildingAreaM2: input.buildingAreaM2,
@@ -158,26 +160,26 @@ export async function runPropertyCollateralAnalysisCore(
       declaredPropertyValuePln: input.declaredPropertyValuePln,
     });
     sourcesUsed.push({
-      source: "Perplexity (sonar-pro)",
-      used: pplx.status === "success",
+      source: "Portale nieruchomości (deweloperuch, otodom, morizon, gratka, adresowo, olx)",
+      used: pv.status === "success",
       purpose: input.parametersFromKw
         ? "wycena za m² dla nieruchomości o parametrach i lokalizacji z księgi wieczystej"
-        : "wycena porównawcza z aktualnych ogłoszeń i raportów rynkowych",
+        : "wycena porównawcza z aktualnych ogłoszeń i transakcji",
       dataLevel: input.city ? `lokalnie: ${input.city}` : "Polska",
-      period: "ostatnie 12 mies.",
-      status: pplx.status,
+      period: "bieżące oferty + transakcje RCN",
+      status: pv.status,
       note:
-        pplx.status === "success"
-          ? `${pplx.comparablesFound} porównań, trend: ${pplx.marketTrend}${pplx.citations.length ? `, źródeł: ${pplx.citations.length}` : ""}`
-          : pplx.errorMessage,
+        pv.status === "success"
+          ? `${pv.comparablesFound} porównań (${pv.transactionsFound} transakcji), trend: ${pv.marketTrend}; ${pv.sourcesSummary}`
+          : pv.errorMessage,
     });
-    if (pplx.status === "error") {
+    if (pv.status === "error") {
       warnings.push(
-        `Perplexity nie zwróciła wyceny: ${pplx.errorMessage ?? "błąd"}. Wymagana ręczna wycena.`,
+        `Portale nieruchomości nie zwróciły danych: ${pv.errorMessage ?? "błąd"}. Wymagana ręczna wycena.`,
       );
-    } else if (pplx.status === "no_data") {
+    } else if (pv.status === "no_data") {
       warnings.push(
-        "Perplexity nie znalazła wystarczających danych porównawczych — wymagana ręczna weryfikacja.",
+        `Za mało danych porównawczych z portali — wymagana ręczna weryfikacja. ${pv.errorMessage ?? ""}`.trim(),
       );
     }
 
@@ -197,29 +199,25 @@ export async function runPropertyCollateralAnalysisCore(
       status: input.latitude != null ? "success" : "no_data",
     });
 
-    // 5) Benchmark wartości — wyłącznie z Perplexity
+    // 5) Benchmark wartości — z portali nieruchomości
     const isLand = input.propertyType === "grunt_rolny";
     const areaM2 = input.usableAreaM2 ?? input.buildingAreaM2 ?? input.landAreaM2 ?? null;
     const areaHa = input.landAreaHa ?? (input.landAreaM2 ? input.landAreaM2 / 10_000 : null);
 
-    const pricePerM2Median = pplx.pricePerM2Median;
-    const pricePerM2Average = pplx.pricePerM2Average;
-    const pricePerHa = pplx.pricePerHa;
-    const mainSource = pplx.status === "success" ? "Perplexity (analiza rynkowa)" : "Brak danych";
+    const pricePerM2Median = pv.pricePerM2Median;
+    const pricePerM2Average = pv.pricePerM2Average;
+    const pricePerHa = pv.pricePerHa;
+    const mainSource =
+      pv.status === "success" ? "Portale nieruchomości (dane bieżące)" : "Brak danych";
     const supporting: string[] =
-      pplx.status === "success" && pplx.citations.length > 0
-        ? [`${pplx.citations.length} źródeł online`]
-        : [];
+      pv.status === "success" && pv.sourcesSummary ? [pv.sourcesSummary] : [];
 
-    if (
-      input.declaredPropertyValuePln &&
-      (pplx.estimatedValueLowPln || pplx.estimatedValueHighPln)
-    ) {
-      const lo = pplx.estimatedValueLowPln ?? 0;
-      const hi = pplx.estimatedValueHighPln ?? Infinity;
+    if (input.declaredPropertyValuePln && (pv.estimatedValueLowPln || pv.estimatedValueHighPln)) {
+      const lo = pv.estimatedValueLowPln ?? 0;
+      const hi = pv.estimatedValueHighPln ?? Infinity;
       if (input.declaredPropertyValuePln < lo * 0.7 || input.declaredPropertyValuePln > hi * 1.3) {
         warnings.push(
-          `Wartość deklarowana (${input.declaredPropertyValuePln.toLocaleString("pl-PL")} PLN) istotnie odbiega od oszacowania rynkowego (${lo.toLocaleString("pl-PL")}–${(pplx.estimatedValueHighPln ?? 0).toLocaleString("pl-PL")} PLN).`,
+          `Wartość deklarowana (${input.declaredPropertyValuePln.toLocaleString("pl-PL")} PLN) istotnie odbiega od oszacowania rynkowego (${lo.toLocaleString("pl-PL")}–${(pv.estimatedValueHighPln ?? 0).toLocaleString("pl-PL")} PLN).`,
         );
       }
     }
@@ -276,13 +274,13 @@ export async function runPropertyCollateralAnalysisCore(
     if (property?.has_co_owners) legal.warnings.push("Współwłaściciele — wymagana ich zgoda.");
     legal.score = legal.warnings.length === 0 ? 80 : legal.warnings.length === 1 ? 60 : 40;
 
-    const syntheticRcn = perplexityToRcnStats(pplx, isLand);
-    const comparablesCount = pplx.comparablesFound;
+    const syntheticRcn = portalValuationToRcnStats(pv, isLand);
+    const comparablesCount = pv.comparablesFound;
     const marketSummary =
-      pplx.status === "success"
-        ? pplx.liquidityComment ||
-          `Perplexity zidentyfikowała ${comparablesCount} porównań w tej lokalizacji.`
-        : (pplx.errorMessage ?? "Brak danych porównawczych z Perplexity.");
+      pv.status === "success"
+        ? pv.liquidityComment ||
+          `Na portalach znaleziono ${comparablesCount} porównań w tej lokalizacji.`
+        : (pv.errorMessage ?? "Brak danych porównawczych z portali nieruchomości.");
     const market: MarketLiquidityResult = {
       score:
         comparablesCount >= 10 ? 80 : comparablesCount >= 5 ? 60 : comparablesCount >= 2 ? 40 : 20,
@@ -345,7 +343,7 @@ export async function runPropertyCollateralAnalysisCore(
     });
 
     // 9) Teksty oferty
-    const weakData = pplx.status !== "success" || comparablesCount < 2;
+    const weakData = pv.status !== "success" || comparablesCount < 2;
     if (weakData)
       warnings.push(
         "Dostępność danych porównawczych jest ograniczona — wymagana ręczna weryfikacja.",
@@ -379,7 +377,7 @@ export async function runPropertyCollateralAnalysisCore(
       sourcesUsed,
       warnings,
       offerText,
-      raw: { perplexity: pplx, loc, flood: flood.raw },
+      raw: { portalValuation: pv, loc, flood: flood.raw },
       floodRisk: {
         ...flood.floodRisk,
         available: flood.success,
@@ -387,21 +385,23 @@ export async function runPropertyCollateralAnalysisCore(
       },
       floodAlerts: flood.alerts,
     });
-    result.perplexityValuation = {
-      status: pplx.status,
-      pricePerM2Median: pplx.pricePerM2Median,
-      pricePerM2Average: pplx.pricePerM2Average,
-      pricePerM2Min: pplx.pricePerM2Min,
-      pricePerM2Max: pplx.pricePerM2Max,
-      pricePerHa: pplx.pricePerHa,
-      estimatedValueLowPln: pplx.estimatedValueLowPln,
-      estimatedValueHighPln: pplx.estimatedValueHighPln,
-      marketTrend: pplx.marketTrend,
-      liquidityComment: pplx.liquidityComment,
-      rationale: pplx.rationale,
-      comparablesFound: pplx.comparablesFound,
-      citations: pplx.citations,
-      errorMessage: pplx.errorMessage,
+    result.portalValuation = {
+      status: pv.status,
+      pricePerM2Median: pv.pricePerM2Median,
+      pricePerM2Average: pv.pricePerM2Average,
+      pricePerM2Min: pv.pricePerM2Min,
+      pricePerM2Max: pv.pricePerM2Max,
+      pricePerHa: pv.pricePerHa,
+      estimatedValueLowPln: pv.estimatedValueLowPln,
+      estimatedValueHighPln: pv.estimatedValueHighPln,
+      marketTrend: pv.marketTrend,
+      liquidityComment: pv.liquidityComment,
+      rationale: pv.rationale,
+      comparablesFound: pv.comparablesFound,
+      transactionsFound: pv.transactionsFound,
+      sourcesSummary: pv.sourcesSummary,
+      citations: pv.citations,
+      errorMessage: pv.errorMessage,
     };
 
     // 10) Zapis
@@ -428,7 +428,7 @@ export async function runPropertyCollateralAnalysisCore(
       property_id: property?.id ?? null,
       analysis_id: saved?.id ?? null,
       sources_used: sourcesUsed.map((s) => s.source) as never,
-      rcn_status: pplx.status === "success" ? "success" : "no_data",
+      rcn_status: pv.status === "success" ? "success" : "no_data",
       gus_bdl_status: "no_data",
       nbp_status: "no_data",
       google_maps_status: input.latitude != null ? "success" : "no_data",

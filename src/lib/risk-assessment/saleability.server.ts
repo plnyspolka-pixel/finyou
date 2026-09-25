@@ -1,11 +1,13 @@
 // Prognozowana łatwość sprzedaży (płynność wyjścia z inwestycji).
-// Łączy: badanie popytu z otoczenia przez Perplexity (zaludnienie, większe miasto,
-// zbiornik wodny, kurort/uzdrowisko, sanatorium, atrakcje turystyczne, dostępność
-// komunikacyjna, siła nabywcza, popyt na najem) + realne aktywne oferty sprzedaży
-// w okolicy wraz z cenami ofertowymi (Perplexity — portale ogłoszeniowe).
+// Łączy: realne aktywne oferty sprzedaży w okolicy pobrane bezpośrednio z portali
+// (otodom, morizon, gratka, adresowo, olx — local-offers.server.ts) + ocenę popytu
+// z otoczenia (zaludnienie, większe miasto, zbiornik wodny, kurort/uzdrowisko,
+// sanatorium, atrakcje turystyczne, dostępność komunikacyjna, siła nabywcza, popyt
+// na najem) przez Lovable AI Gateway, któremu przekazujemy twarde dane z portali.
 
 import type { SaleabilityForecast, SaleabilityBand } from "./types";
-import { perplexityLocalOffers } from "@/lib/property-analysis/perplexity-offers.server";
+import { fetchLocalOffers } from "@/lib/property-analysis/local-offers.server";
+import { AI_MODEL_PRO, lovableAiJson } from "@/lib/lovable-ai.server";
 import type { FloorFactorResult } from "./floor-factor";
 import type { PlotBuildabilityResult } from "./plot-buildability";
 import {
@@ -18,7 +20,7 @@ import {
 const LOCAL_OFFERS_RADIUS_KM = 10;
 // Podaż badamy w rosnących promieniach — Karta oferty pokazuje 10/20/30 km.
 const OFFERS_RADII_KM = [10, 20, 30] as const;
-const OFFERS_SOURCE = "Perplexity (portale ogłoszeniowe)";
+const OFFERS_SOURCE = "Portale ogłoszeniowe (otodom, morizon, gratka, adresowo, olx)";
 
 function bandFromScore(score: number): SaleabilityBand {
   if (score >= 80) return "bardzo_latwa";
@@ -48,9 +50,11 @@ function emptyLocalOffers(): LocalOffers {
   };
 }
 
-// ---- Aktywne oferty sprzedaży w okolicy (Perplexity — ceny ofertowe z portali) ----
+// ---- Aktywne oferty sprzedaży w okolicy (bezpośrednio z portali) ----
 // Podaż mierzymy w trzech promieniach (10/20/30 km); wartości główne (scoring,
-// dotychczasowi konsumenci) pochodzą z najmniejszego promienia.
+// dotychczasowi konsumenci) pochodzą z najmniejszego promienia. Najmniejszy
+// promień odpytuje wszystkie portale; większe — tylko otodom (jedyny z filtrem
+// promienia), z liczbą ofert nie mniejszą niż w mniejszym promieniu.
 async function gatherLocalOffers(args: {
   propertyType: string;
   city: string | null;
@@ -60,32 +64,36 @@ async function gatherLocalOffers(args: {
 }): Promise<LocalOffers> {
   try {
     const results = await Promise.all(
-      OFFERS_RADII_KM.map((radiusKm) =>
-        perplexityLocalOffers({
+      OFFERS_RADII_KM.map((radiusKm, i) =>
+        fetchLocalOffers({
           propertyType: args.propertyType,
           city: args.city,
           district: args.district,
           voivodeship: args.voivodeship,
           areaM2: args.areaM2,
           radiusKm,
+          sources: i === 0 ? undefined : ["otodom.pl"],
         }).catch(() => null),
       ),
     );
     const primary = results[0];
     if (!primary) return emptyLocalOffers();
+    let prev = primary;
     const byRadius = OFFERS_RADII_KM.flatMap((radiusKm, i) => {
-      const r = results[i];
-      return r
-        ? [
-            {
-              radiusKm,
-              totalActiveListings: r.totalActiveListings,
-              agencyListings: r.agencyListings,
-              privateListings: r.privateListings,
-              medianPricePerM2: r.medianPricePerM2,
-            },
-          ]
-        : [];
+      const raw = results[i];
+      if (!raw) return [];
+      // Większy promień nie może mieć mniejszej podaży niż mniejszy.
+      const r = i > 0 && raw.totalActiveListings < prev.totalActiveListings ? prev : raw;
+      prev = r;
+      return [
+        {
+          radiusKm,
+          totalActiveListings: r.totalActiveListings,
+          agencyListings: r.agencyListings,
+          privateListings: r.privateListings,
+          medianPricePerM2: r.medianPricePerM2 ?? primary.medianPricePerM2,
+        },
+      ];
     });
     return {
       available: primary.agencyListings > 0,
@@ -110,11 +118,30 @@ async function gatherLocalOffers(args: {
   }
 }
 
-// ---- Badanie popytu z otoczenia (Perplexity) ----
-function buildPrompt(loc: string, propertyType: string): string {
+// ---- Badanie popytu z otoczenia (Lovable AI Gateway + dane z portali) ----
+function describeOffers(offers: LocalOffers): string {
+  if (!offers.totalActiveListings && !offers.sample.length) {
+    return "Brak ofert sprzedaży tego typu na portalach dla tej lokalizacji (otodom, morizon, gratka, adresowo, olx).";
+  }
+  const radii = (offers.byRadius ?? [])
+    .map((r) => `${r.radiusKm} km: ${r.totalActiveListings} ofert (biura ${r.agencyListings})`)
+    .join("; ");
+  return (
+    `Aktywne oferty sprzedaży pobrane dziś z portali: ${offers.totalActiveListings} ` +
+    `(biura: ${offers.agencyListings}, prywatne: ${offers.privateListings})` +
+    (offers.medianPricePerM2 ? `, mediana ${offers.medianPricePerM2} zł/m²` : "") +
+    (radii ? `. Wg promienia — ${radii}` : "") +
+    "."
+  );
+}
+
+function buildPrompt(loc: string, propertyType: string, offers: LocalOffers): string {
   return `Jesteś analitykiem rynku nieruchomości w Polsce. Oceń PROGNOZOWANĄ ŁATWOŚĆ SPRZEDAŻY nieruchomości (${propertyType}) w lokalizacji: ${loc}. Weź pod uwagę popyt wynikający z otoczenia.
 
-Przeszukaj aktualne źródła i ustal:
+TWARDE DANE Z PORTALI (dzisiejsze, traktuj jako fakty):
+${describeOffers(offers)}
+
+Na podstawie swojej wiedzy o polskiej geografii, demografii (GUS) i infrastrukturze ustal. Gdy nie znasz wartości — zwróć null / "nieznana" zamiast zgadywać:
 1. Liczbę mieszkańców miejscowości oraz trend demograficzny (rosnąca/stabilna/malejąca).
 1a. ŁĄCZNĄ liczbę mieszkańców w promieniu 20 km od tej lokalizacji (suma ludności miejscowości/gmin w tym promieniu — oszacuj na podstawie danych GUS).
 2. Najbliższe większe miasto (>50 tys.): nazwa, liczba mieszkańców, odległość w km.
@@ -144,15 +171,6 @@ ODPOWIEDŹ — wyłącznie poprawny JSON, bez markdown:
 }`;
 }
 
-function tryParseJson(s: string): any | null {
-  const m = s.match(/\{[\s\S]*\}/);
-  if (!m) return null;
-  try {
-    return JSON.parse(m[0]);
-  } catch {
-    return null;
-  }
-}
 function b(v: any): boolean {
   return v === true || v === "true";
 }
@@ -234,7 +252,7 @@ export async function analyzeSaleability(args: {
   const loc =
     [args.address, args.city, args.voivodeship, "Polska"].filter(Boolean).join(", ") || "Polska";
 
-  // Aktywne oferty biur w okolicy — równolegle z Perplexity.
+  // Aktywne oferty w okolicy — najpierw portale, potem analiza AI na tych danych.
   const offersPromise = gatherLocalOffers({
     propertyType: args.propertyType,
     city: args.city,
@@ -271,48 +289,34 @@ export async function analyzeSaleability(args: {
     summary,
   });
 
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) {
+  if (!process.env.LOVABLE_API_KEY) {
     const offers = await offersPromise;
     return empty(
-      "Brak PERPLEXITY_API_KEY — prognoza łatwości sprzedaży pominięta (dane o ofertach biur zachowane).",
+      "Brak LOVABLE_API_KEY — prognoza łatwości sprzedaży pominięta (dane o ofertach z portali zachowane).",
       offers,
     );
   }
 
   try {
-    const [res, offers] = await Promise.all([
-      fetch("https://api.perplexity.ai/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "sonar-pro",
-          messages: [
-            {
-              role: "system",
-              content:
-                "Jesteś analitykiem rynku nieruchomości w Polsce. Odpowiadasz wyłącznie poprawnym JSON-em.",
-            },
-            { role: "user", content: buildPrompt(loc, args.propertyType) },
-          ],
-          temperature: 0.2,
-          search_recency_filter: "year",
-        }),
-      }),
-      offersPromise,
-    ]);
-
-    if (!res.ok) {
+    const offers = await offersPromise;
+    let parsed: any;
+    try {
+      parsed = await lovableAiJson({
+        model: AI_MODEL_PRO,
+        system:
+          "Jesteś analitykiem rynku nieruchomości w Polsce. Odpowiadasz wyłącznie poprawnym JSON-em.",
+        user: buildPrompt(loc, args.propertyType, offers),
+        temperature: 0.2,
+      });
+    } catch (e: any) {
       return empty(
-        `Perplexity HTTP ${res.status} — prognoza łatwości sprzedaży niedostępna.`,
+        `Analiza AI niedostępna (${e?.message ?? "błąd"}) — prognoza łatwości sprzedaży pominięta.`,
         offers,
       );
     }
-    const json: any = await res.json();
-    const content: string = json?.choices?.[0]?.message?.content ?? "";
-    const citations: string[] = Array.isArray(json?.citations) ? json.citations : [];
-    const parsed = tryParseJson(content);
-    if (!parsed) return empty("Nie udało się sparsować prognozy łatwości sprzedaży.", offers);
+    const citations: string[] = offers.sample
+      .map((o) => o.url)
+      .filter((u): u is string => !!u && /^https?:\/\//.test(u));
 
     const nearest = parsed.nearestLargeCity ?? {};
     const demandDrivers = {

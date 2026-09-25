@@ -1,10 +1,11 @@
-// Codzienny bot blogowy: zbiera świeże newsy finansowe (Perplexity + Firecrawl),
-// pisze artykuł SEO przez Lovable AI, generuje okładkę i publikuje z linkami
-// wewnętrznymi (do innych artykułów na blogu) i zewnętrznymi (źródłami).
+// Codzienny bot blogowy: zbiera świeże newsy finansowe (Google News RSS — darmowe,
+// bez klucza), Lovable AI Gateway układa z nich briefing i pisze artykuł SEO,
+// dobiera okładkę i publikuje z linkami wewnętrznymi (do innych artykułów na blogu)
+// i zewnętrznymi (źródłami z RSS).
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
-const PPLX_URL = "https://api.perplexity.ai/chat/completions";
+import { parseRssItems, type RssItem } from "@/lib/pr/core";
+import { AI_MODEL_PRO, lovableAiJson } from "@/lib/lovable-ai.server";
 
 function slugify(s: string): string {
   return s
@@ -85,33 +86,112 @@ const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
   },
 };
 
-async function fetchFreshNewsBrief(pplxKey: string, kind: PostKind): Promise<NewsBrief> {
-  const b = BRIEFS[kind];
-  const res = await fetch(PPLX_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${pplxKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "sonar",
-      search_recency_filter:
-        kind === "investor_review" ? "month" : kind === "legal_market_monitor" ? "week" : "day",
-      messages: [
-        { role: "system", content: b.sys },
-        { role: "user", content: b.user },
-      ],
+// Zapytania do Google News (RSS) na każdy rodzaj wpisu. Operator `when:` ogranicza
+// świeżość: 1d dla newsów dnia, 7d dla przeglądu tygodnia, 30d dla przeglądu inwestycyjnego.
+const NEWS_QUERIES: Record<PostKind, { when: string; queries: string[] }> = {
+  borrower_news: {
+    when: "1d",
+    queries: [
+      "stopy procentowe RPP",
+      "WIBOR inflacja",
+      "ceny mieszkań",
+      "kredyty hipoteczne",
+      "UOKiK KNF kredytobiorcy",
+    ],
+  },
+  investor_news: {
+    when: "1d",
+    queries: [
+      "RPP stopy procentowe",
+      "kurs złotego EUR USD",
+      "WIG20 giełda",
+      "złoto ropa bitcoin",
+      "rynek nieruchomości inwestycje",
+    ],
+  },
+  investor_review: {
+    when: "30d",
+    queries: [
+      "obligacje skarbowe oprocentowanie",
+      "lokaty oprocentowanie ranking",
+      "crowdfunding nieruchomościowy",
+      "rentowność najmu mieszkań",
+      "obligacje korporacyjne Catalyst",
+    ],
+  },
+  legal_market_monitor: {
+    when: "7d",
+    queries: [
+      "projekt ustawy kredyty hipoteczne",
+      "wyrok SN TSUE kredyt",
+      "komornicy licytacje nieruchomości",
+      "notariusze taksa notarialna",
+      "KNF UOKiK komunikat",
+      "ceny mieszkań GUS transakcje",
+      "Fed EBC stopy procentowe",
+    ],
+  },
+};
+
+async function fetchNewsItems(kind: PostKind): Promise<RssItem[]> {
+  const cfg = NEWS_QUERIES[kind];
+  const batches = await Promise.all(
+    cfg.queries.map(async (q) => {
+      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(`${q} when:${cfg.when}`)}&hl=pl&gl=PL&ceid=PL:pl`;
+      try {
+        const res = await fetch(url, {
+          headers: { "User-Agent": "FinanceYou-Blog-Autopilot/1.0 (+https://financeyou.pl)" },
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (!res.ok) return [];
+        return parseRssItems(await res.text(), `Google News: ${q}`).slice(0, 8);
+      } catch {
+        return [];
+      }
     }),
-  });
-  if (!res.ok) {
-    throw new Error(`Perplexity ${res.status}: ${await res.text().catch(() => "")}`);
+  );
+  const seen = new Set<string>();
+  const out: RssItem[] = [];
+  for (const it of batches.flat()) {
+    const key = it.title.toLowerCase().slice(0, 80);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(it);
   }
-  const json: any = await res.json();
-  const summary: string = json.choices?.[0]?.message?.content ?? "";
-  const rawCitations: string[] =
-    json.citations ?? json.search_results?.map((r: any) => r.url) ?? [];
-  const citations = rawCitations.slice(0, 8).map((url) => ({ url }));
-  return { summary, citations };
+  return out.slice(0, 40);
+}
+
+async function fetchFreshNewsBrief(kind: PostKind): Promise<NewsBrief> {
+  const b = BRIEFS[kind];
+  const items = await fetchNewsItems(kind);
+  if (items.length === 0) throw new Error("Google News RSS: brak świeżych wiadomości");
+  const list = items
+    .map(
+      (it, i) =>
+        `[${i + 1}] ${it.publishedAt?.slice(0, 10) ?? "b.d."} | ${it.source} | ${it.title}${it.snippet ? ` — ${it.snippet}` : ""} | ${it.url}`,
+    )
+    .join("\n");
+  const parsed = await lovableAiJson<{ summary?: string; used?: number[] }>({
+    model: AI_MODEL_PRO,
+    system: `${b.sys} Pracujesz WYŁĄCZNIE na podanej liście wiadomości — nie dopisuj faktów, liczb ani dat spoza niej. Odpowiadasz JSON-em.`,
+    user: `${b.user}
+
+WIADOMOŚCI (nagłówki z Google News, numerowane):
+${list}
+
+Zwróć JSON: { "summary": "<briefing w formacie opisanym wyżej; przy każdej pozycji podaj datę, źródło i numer [n]>", "used": [<numery wykorzystanych wiadomości>] }`,
+    temperature: 0.2,
+  });
+  const summary = String(parsed?.summary ?? "").trim();
+  if (!summary) throw new Error("AI: pusty briefing");
+  const used = Array.isArray(parsed?.used)
+    ? parsed.used.map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= items.length)
+    : [];
+  const picked = (used.length ? used.map((n) => items[n - 1]) : items).slice(0, 8);
+  return {
+    summary,
+    citations: picked.map((it) => ({ url: it.url, title: it.title })),
+  };
 }
 
 interface RelatedArticle {
@@ -187,7 +267,6 @@ interface ArticleDraft {
 }
 
 async function writeArticleFromNews(
-  _lovableKey: string,
   brief: NewsBrief,
   internal: RelatedArticle[],
   kind: PostKind,
@@ -200,7 +279,9 @@ async function writeArticleFromNews(
         `- [${a.title}](/blog/${a.slug})${a.primary_keyword ? ` — kw: ${a.primary_keyword}` : ""}`,
     )
     .join("\n");
-  const externalList = brief.citations.map((c) => `- ${c.url}`).join("\n");
+  const externalList = brief.citations
+    .map((c) => (c.title ? `- ${c.title}: ${c.url}` : `- ${c.url}`))
+    .join("\n");
 
   const structureHint =
     kind === "investor_review"
@@ -275,40 +356,15 @@ Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt",
     ],
   };
 
-  const pplxKey = process.env.PERPLEXITY_API_KEY;
-  if (!pplxKey) throw new Error("PERPLEXITY_API_KEY missing");
-  const res = await fetch(PPLX_URL, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${pplxKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "sonar-pro",
-      search_recency_filter: kind === "investor_review" ? "month" : "week",
-      messages: [
-        { role: "system", content: sys },
-        { role: "user", content: userMsg },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: { name: "blog_post", schema: jsonSchema },
-      },
-    }),
+  const parsed = await lovableAiJson<ArticleDraft>({
+    model: AI_MODEL_PRO,
+    system: sys,
+    user: `${userMsg}\n\nSCHEMAT JSON (wszystkie pola wymagane): ${JSON.stringify(jsonSchema)}`,
+    temperature: 0.4,
+    timeoutMs: 180_000,
   });
-  if (!res.ok)
-    throw new Error(`Perplexity writer ${res.status}: ${await res.text().catch(() => "")}`);
-  const json: any = await res.json();
-  const raw: string = json.choices?.[0]?.message?.content ?? "";
-  const cleaned = raw
-    .trim()
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/```\s*$/i, "");
-  let parsed: any;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch {
-    const m = cleaned.match(/\{[\s\S]*\}$/);
-    if (!m) throw new Error("Perplexity writer returned non-JSON");
-    parsed = JSON.parse(m[0]);
+  for (const k of jsonSchema.required) {
+    if ((parsed as any)?.[k] == null) throw new Error(`AI writer: brak pola ${k}`);
   }
   return parsed as ArticleDraft;
 }
@@ -337,10 +393,7 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
   slug?: string;
   id?: string;
 }> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const pplxKey = process.env.PERPLEXITY_API_KEY;
-  if (!lovableKey) return { ok: false, reason: "LOVABLE_API_KEY missing" };
-  if (!pplxKey) return { ok: false, reason: "PERPLEXITY_API_KEY missing" };
+  if (!process.env.LOVABLE_API_KEY) return { ok: false, reason: "LOVABLE_API_KEY missing" };
 
   // Nie publikuj 2 razy tego samego dnia (chyba że force=1)
   if (!opts.force) {
@@ -358,9 +411,9 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
 
   const kind = await pickNextKind();
   const audience = audienceOf(kind);
-  const brief = await fetchFreshNewsBrief(pplxKey, kind);
+  const brief = await fetchFreshNewsBrief(kind);
   const internal = await pickInternalLinks();
-  const draft = await writeArticleFromNews(lovableKey, brief, internal, kind);
+  const draft = await writeArticleFromNews(brief, internal, kind);
   const cover = pickCover(kind);
 
   const slug = await ensureUniqueSlug(slugify(draft.title));
