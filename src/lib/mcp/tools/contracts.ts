@@ -7,7 +7,6 @@ import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { actorId, fail, handle, linkBlock, ok, oneOf, requireUser, WRITE } from "../_helpers";
-import { compactKwNumber, validateKwNumber } from "@/lib/kw";
 import { KATALOG_SCHEMATU } from "@/lib/contract-engine/umowa-schema-catalog";
 import type { ClientProfile } from "@/lib/client-profile-types";
 
@@ -38,113 +37,6 @@ async function loadProfile(s: SupabaseClient, profileId: string) {
   );
   if (!row) throw new Error("Profil klienta nie znaleziony (albo brak dostępu).");
   return { ...(row.data as object), id: row.id, updatedAt: row.updated_at } as ClientProfile;
-}
-
-function pesele(strona: any): string[] {
-  const list = Array.isArray(strona) ? strona : strona ? [strona] : [];
-  return list.map((p: any) => String(p?.pesel ?? "")).filter((p: string) => /^\d{11}$/.test(p));
-}
-
-/** Nieruchomości z treści KW w cache (kw_documents) → szkice `nieruchomosc` silnika. */
-async function nieruchomosciZKw(
-  s: SupabaseClient,
-  kwNumbers: string[],
-  umowa: any,
-): Promise<{ nieruchomosci: any[]; ostrzezenia: string[] }> {
-  const { decodeMaybeBase64 } = await import("@/lib/kw-fetch.server");
-  const { kwDocumentToExtraction } = await import("@/lib/kw-extraction");
-  const { mapujKwDoNieruchomosci } = await import("@/lib/contract-engine/kw-mapper");
-  const { scalPatch } = await import("@/lib/contract-engine/umowa-agent-core");
-  const out: any[] = [];
-  const ostrzezenia: string[] = [];
-  const istniejace: any[] = Array.isArray(umowa?.nieruchomosci) ? umowa.nieruchomosci : [];
-
-  for (const [i, raw] of kwNumbers.entries()) {
-    const kw = validateKwNumber(raw);
-    if (!kw.ok) throw new Error(kw.message);
-    const { compact, value: label } = kw;
-    const row = await oneOf<Record<string, string | null>>(
-      s
-        .from("kw_documents")
-        .select("kw_number, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4")
-        .eq("kw_number", compact),
-      "kw_documents",
-    );
-    const sekcje = row
-      ? {
-          kwNumber: row.kw_number,
-          okladka: decodeMaybeBase64(row.okladka),
-          dzial_1o: decodeMaybeBase64(row.dzial_1o),
-          dzial_1s: decodeMaybeBase64(row.dzial_1s),
-          dzial_2: decodeMaybeBase64(row.dzial_2),
-          dzial_3: decodeMaybeBase64(row.dzial_3),
-          dzial_4: decodeMaybeBase64(row.dzial_4),
-        }
-      : null;
-    if (!sekcje || !(sekcje.dzial_1o || sekcje.dzial_2 || sekcje.dzial_4)) {
-      throw new Error(
-        `Brak treści KW ${label} w cache — pobierz ją najpierw narzędziem fetch_kw_content.`,
-      );
-    }
-    const ekstrakcja = kwDocumentToExtraction(sekcje);
-
-    // Właściciele z działu II jako szkic pożyczkobiorców, gdy szkic ich
-    // jeszcze nie ma (imię i nazwisko, PESEL; adres uzupełnia użytkownik).
-    if (!umowa?.pozyczkobiorca) {
-      const osoby = (ekstrakcja.dzial2?.wlasciciele ?? []).filter((o) => o?.pesel && o?.nazwisko);
-      if (osoby.length) {
-        const strony = osoby.map((o) => ({
-          typ: "osoba_fizyczna",
-          imie_nazwisko: [o.imiePierwsze, o.imieDrugie, o.nazwisko].filter(Boolean).join(" "),
-          pesel: o.pesel,
-        }));
-        umowa.pozyczkobiorca = strony.length === 1 ? strony[0] : strony;
-        ostrzezenia.push(
-          `${label}: pożyczkobiorców przyjęto z działu II (właściciele) — uzupełnij adresy i dane kontaktowe.`,
-        );
-      }
-    }
-
-    // Sąd prowadzący księgę: z okładki, a gdy jej brak — z innej księgi tego
-    // samego wydziału (ten sam prefiks, np. KR1P) w cache kw_documents.
-    if (!ekstrakcja.sadRejonowy) {
-      const { data: inne } = await s
-        .from("kw_documents")
-        .select("kw_number, okladka, dzial_1o, dzial_2")
-        .like("kw_number", `${compact.slice(0, 4)}%`)
-        .neq("kw_number", compact)
-        .limit(10);
-      for (const d of inne ?? []) {
-        const sad = kwDocumentToExtraction({
-          kwNumber: d.kw_number,
-          okladka: decodeMaybeBase64(d.okladka),
-          dzial_1o: decodeMaybeBase64(d.dzial_1o),
-          dzial_2: decodeMaybeBase64(d.dzial_2),
-        }).sadRejonowy;
-        if (sad) {
-          ekstrakcja.sadRejonowy = sad;
-          break;
-        }
-      }
-    }
-
-    const mapped = mapujKwDoNieruchomosci(ekstrakcja, {
-      id: `N${i + 1}`,
-      pozyczkobiorcaPesele: pesele(umowa?.pozyczkobiorca),
-      poreczicielPesel: pesele(umowa?.porecziciel)[0] ?? null,
-    });
-    ostrzezenia.push(...mapped.ostrzezenia.map((o) => `${label}: ${o}`));
-    if (mapped.odrzucona || !mapped.nieruchomosc) {
-      throw new Error(
-        `KW ${label}: sprawy nie da się obsłużyć silnikiem — ${mapped.powod ?? "brak powodu"}.`,
-      );
-    }
-    // Pola podane wcześniej dla tej samej KW (np. hipoteka, sposób usunięcia
-    // obciążeń) mają pierwszeństwo przed szkicem z mapera.
-    const wczesniej = istniejace.find((n) => compactKwNumber(n?.nr_kw) === compact);
-    out.push(wczesniej ? scalPatch(mapped.nieruchomosc, wczesniej) : mapped.nieruchomosc);
-  }
-  return { nieruchomosci: out, ostrzezenia };
 }
 
 type Problem = { poziom: string; sciezka: string; komunikat: string };
@@ -194,6 +86,7 @@ async function zbudujSzkic(
 
   let kwOstrzezenia: string[] = [];
   if (args.kw_numbers?.length) {
+    const { nieruchomosciZKw } = await import("@/lib/contract-engine/kw-nieruchomosci.server");
     const r = await nieruchomosciZKw(s, args.kw_numbers, szkic);
     szkic.nieruchomosci = r.nieruchomosci;
     kwOstrzezenia = r.ostrzezenia;
@@ -245,7 +138,7 @@ export const draftContract = defineTool({
   name: "draft_contract",
   title: "Draft loan contract (validate + preview)",
   description:
-    "Buduje i sprawdza szkic umowy pożyczki w silniku klauzul — niczego nie zapisuje. Źródła danych (łączone w tej kolejności): `profile_id` (profil klienta z ofertą — strony, warunki, zabezpieczenia; kalkulację można nadpisać `calc`), `umowa` (pełny szkic z poprzedniego wywołania), `patch` (zmiany do naniesienia), `kw_numbers` (nieruchomości z treści KW w cache: właściciele, współwłasność, obciążenia z działów III/IV). System dolicza kwoty słownie, harmonogram rat i identyfikatory nieruchomości, domyka grosze, normalizuje numery KW (dopełnienie do 8 cyfr + cyfra kontrolna), waliduje kompletność i spójność konstrukcyjną. Zwraca uzupełniony `umowa` (przekaż go w kolejnym wywołaniu), problemy (błędy blokują umowę), autokorekty i — gdy brak błędów — podgląd tekstu umowy. Schemat: `get_contract_schema`.",
+    "Buduje i sprawdza szkic umowy pożyczki w silniku klauzul — niczego nie zapisuje. Źródła danych (łączone w tej kolejności): `profile_id` (profil klienta z ofertą — strony, warunki, zabezpieczenia; kalkulację można nadpisać `calc`), `umowa` (pełny szkic z poprzedniego wywołania), `patch` (zmiany do naniesienia), `kw_numbers` (nieruchomości z treści KW w cache: właściciele, współwłasność, obciążenia z działów III/IV). System dolicza kwoty słownie, harmonogram rat i identyfikatory nieruchomości, domyka grosze, normalizuje numery KW (dopełnienie do 8 cyfr + cyfra kontrolna), waliduje kompletność i spójność konstrukcyjną. Zwraca uzupełniony `umowa` (przekaż go w kolejnym wywołaniu), problemy (błędy blokują umowę), autokorekty i — gdy brak błędów — podgląd tekstu całego kompletu (wniosek, umowa, Zał. 1–3), identyczny z treścią pliku generowanego przez `generate_contract_docx`. Schemat: `get_contract_schema`.",
   inputSchema: {
     profile_id: z.string().uuid().optional().describe("Id profilu klienta (client_profiles)."),
     calc: z
@@ -266,7 +159,12 @@ export const draftContract = defineTool({
       .optional()
       .describe("Numery KW zabezpieczenia — nieruchomości z treści KW w cache."),
     excluded_clauses: excludedClausesSchema,
-    preview: z.boolean().default(true).describe("Dołącz podgląd tekstu umowy, gdy brak błędów."),
+    preview: z
+      .boolean()
+      .default(true)
+      .describe(
+        "Dołącz podgląd tekstu całego kompletu (wniosek, umowa, Zał. 1–3), gdy brak błędów.",
+      ),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: (args, ctx: ToolContext) =>
@@ -276,10 +174,8 @@ export const draftContract = defineTool({
       let previewText: string | null = null;
       if (!r.blocked && args.preview) {
         try {
-          const { renderuj } = await import("@/lib/contract-engine/renderer");
-          const { formatuj } = await import("@/lib/contract-engine/formatter");
-          const { bibliotekaBez } = await import("@/lib/contract-engine/clause-select");
-          previewText = formatuj(renderuj(r.umowa, bibliotekaBez(args.excluded_clauses ?? [])));
+          const { tekstKompletu } = await import("@/lib/contract-engine/komplet");
+          previewText = tekstKompletu(r.umowa, { excludedClauses: args.excluded_clauses });
         } catch (e) {
           r.problemy.push({
             poziom: "BLAD",
@@ -304,7 +200,7 @@ export const generateContractDocx = defineTool({
   name: "generate_contract_docx",
   title: "Generate loan contract document set (.docx)",
   description:
-    "Generuje z silnika klauzul JEDEN plik .docx z kompletem dokumentów pożyczki, w kolejności: (1) Wniosek o udzielenie pożyczki pieniężnej (dane, charakter niekonsumencki, warunki, oświadczenia AML, PEP, ocena AML dla pożyczkodawcy, odpowiedzialność karna), (2) Umowa pożyczki (§ z biblioteki klauzul: przedmiot, kwota/prowizja/wypłata, zabezpieczenia, windykacja, oświadczenia z RODO, postanowienia ogólne, wypowiedzenie), (3) Załącznik nr 1 — Harmonogram spłat (tabela rat: nr, termin, rata, kapitał, odsetki, prowizja, saldo + sumy), (4) Załącznik nr 2 — Protokół z negocjacji indywidualnych, (5) Załącznik nr 3 — Tabela opłat windykacyjnych; pod każdą częścią blok podpisów. Dokument zawiera wyłącznie treść wiążącą. Zapisuje plik w Storage i trwały wpis w rejestrze wygenerowanych dokumentów (powiązany z `loan_application_id`, gdy podany) wraz z audytem (kto, kiedy, SHA-256 treści, wersja biblioteki klauzul); zwraca link do pobrania (ważny 1 h). Przyjmuje te same źródła co `draft_contract`; przy błędach walidacji nie generuje pliku i zwraca braki. Wywołuj po akceptacji podglądu przez użytkownika.",
+    "Generuje z silnika klauzul JEDEN plik .docx z kompletem dokumentów pożyczki, w kolejności: (1) Wniosek o udzielenie pożyczki pieniężnej (dane, charakter niekonsumencki, warunki, oświadczenia AML, PEP, ocena AML dla pożyczkodawcy, odpowiedzialność karna), (2) Umowa pożyczki (§ z biblioteki klauzul: przedmiot, kwota/prowizja/wypłata, zabezpieczenia, windykacja, oświadczenia z RODO, postanowienia ogólne, wypowiedzenie), (3) Załącznik nr 1 — Harmonogram spłat (tabela rat: nr, termin, rata, kapitał, odsetki, prowizja, saldo + sumy), (4) Załącznik nr 2 — Protokół z negocjacji indywidualnych, (5) Załącznik nr 3 — Tabela opłat windykacyjnych; pod każdą częścią blok podpisów. Dokument zawiera wyłącznie treść wiążącą. Zapisuje plik w Storage i trwały wpis w rejestrze wygenerowanych dokumentów (powiązany z `loan_application_id`, gdy podany) wraz z audytem (kto, kiedy, SHA-256 treści, wersja biblioteki klauzul); zwraca link do pobrania (ważny 1 h) oraz pełny tekst kompletu (`tekst` — do porównania bez pobierania pliku; później: `get_generated_document_text`). Przyjmuje te same źródła co `draft_contract`; przy błędach walidacji nie generuje pliku i zwraca braki. Wywołuj po akceptacji podglądu przez użytkownika.",
   inputSchema: {
     profile_id: z.string().uuid().optional(),
     calc: z.record(z.string(), z.any()).optional(),
@@ -372,6 +268,7 @@ export const generateContractDocx = defineTool({
           wersja_biblioteki_klauzul: komplet.wersjaBiblioteki,
           problemy: podsumujProblemy(r.problemy),
           autokorekty: r.autokorekty,
+          tekst: komplet.tekst,
         },
         undefined,
         linkBlock(signedUrl, nazwa, DOCX_MIME, "Komplet umowy pożyczki (.docx)"),
@@ -379,4 +276,68 @@ export const generateContractDocx = defineTool({
     }),
 });
 
-export const contractTools = [getContractSchema, draftContract, generateContractDocx];
+export const getGeneratedDocumentText = defineTool({
+  name: "get_generated_document_text",
+  title: "Get generated document text",
+  description:
+    "Tekst wygenerowanego dokumentu .docx z rejestru `generated_documents` (np. kompletu umowy pożyczki z `generate_contract_docx`) — akapity i tabele (komórki rozdzielone „ | ”), bez pobierania pliku ze Storage. Dla kompletu z silnika zwraca też audyt (SHA-256, wersja biblioteki klauzul) i sprawdza, czy SHA-256 tekstu pliku zgadza się z zapisanym przy generacji.",
+  inputSchema: {
+    id: z.string().uuid().describe("Id dokumentu (generated_documents.id)."),
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: ({ id }, ctx: ToolContext) =>
+    handle(async () => {
+      const s = requireUser(ctx);
+      const row = await oneOf<{
+        id: string;
+        template_name: string | null;
+        template_slug: string | null;
+        docx_path: string | null;
+        form_data: any;
+        loan_application_id: string | null;
+        created_at: string;
+        created_by: string | null;
+      }>(
+        s
+          .from("generated_documents")
+          .select(
+            "id, template_name, template_slug, docx_path, form_data, loan_application_id, created_at, created_by",
+          )
+          .eq("id", id),
+        "generated_documents",
+      );
+      if (!row) return fail("Dokument nie znaleziony (albo brak dostępu).");
+      if (!row.docx_path) return fail("Dokument nie ma pliku .docx.");
+      const { CLIENT_FILES_BUCKET } = await import("@/lib/storage-buckets");
+      const { data: blob, error } = await s.storage
+        .from(CLIENT_FILES_BUCKET)
+        .download(row.docx_path);
+      if (error || !blob)
+        return fail(`Nie udało się pobrać pliku: ${error?.message ?? "brak pliku"}`);
+      const { tekstZDocx } = await import("@/lib/contract-engine/umowa-docx");
+      const { sha256Hex } = await import("@/lib/contract-engine/komplet");
+      const tekst = await tekstZDocx(new Uint8Array(await blob.arrayBuffer()));
+      const sha256 = await sha256Hex(tekst);
+      const audyt = row.form_data?.audyt ?? null;
+      return ok({
+        id: row.id,
+        template_name: row.template_name,
+        template_slug: row.template_slug,
+        loan_application_id: row.loan_application_id,
+        created_at: row.created_at,
+        created_by: row.created_by,
+        docx_path: row.docx_path,
+        audyt,
+        sha256,
+        sha256_zgodny: audyt?.sha256 ? audyt.sha256 === sha256 : null,
+        tekst,
+      });
+    }),
+});
+
+export const contractTools = [
+  getContractSchema,
+  draftContract,
+  generateContractDocx,
+  getGeneratedDocumentText,
+];

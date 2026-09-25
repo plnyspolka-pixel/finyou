@@ -40,6 +40,7 @@
     {
       "typ": "osoba_fizyczna",
       "imie_nazwisko": "Agnieszka Kowalczyk",
+      "plec": "K",
       "firma": null,
       "pesel": "82092387654",
       "nip": null,

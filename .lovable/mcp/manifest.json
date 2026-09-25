@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "finance-you-mcp",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "title": "Finance You"
     },
     "tools": [
@@ -2380,7 +2380,7 @@
       {
         "name": "draft_contract",
         "title": "Draft loan contract (validate + preview)",
-        "description": "Buduje i sprawdza szkic umowy pożyczki w silniku klauzul — niczego nie zapisuje. Źródła danych (łączone w tej kolejności): `profile_id` (profil klienta z ofertą — strony, warunki, zabezpieczenia; kalkulację można nadpisać `calc`), `umowa` (pełny szkic z poprzedniego wywołania), `patch` (zmiany do naniesienia), `kw_numbers` (nieruchomości z treści KW w cache: właściciele, współwłasność, obciążenia z działów III/IV). System dolicza kwoty słownie, harmonogram rat i identyfikatory nieruchomości, domyka grosze, normalizuje numery KW (dopełnienie do 8 cyfr + cyfra kontrolna), waliduje kompletność i spójność konstrukcyjną. Zwraca uzupełniony `umowa` (przekaż go w kolejnym wywołaniu), problemy (błędy blokują umowę), autokorekty i — gdy brak błędów — podgląd tekstu umowy. Schemat: `get_contract_schema`.",
+        "description": "Buduje i sprawdza szkic umowy pożyczki w silniku klauzul — niczego nie zapisuje. Źródła danych (łączone w tej kolejności): `profile_id` (profil klienta z ofertą — strony, warunki, zabezpieczenia; kalkulację można nadpisać `calc`), `umowa` (pełny szkic z poprzedniego wywołania), `patch` (zmiany do naniesienia), `kw_numbers` (nieruchomości z treści KW w cache: właściciele, współwłasność, obciążenia z działów III/IV). System dolicza kwoty słownie, harmonogram rat i identyfikatory nieruchomości, domyka grosze, normalizuje numery KW (dopełnienie do 8 cyfr + cyfra kontrolna), waliduje kompletność i spójność konstrukcyjną. Zwraca uzupełniony `umowa` (przekaż go w kolejnym wywołaniu), problemy (błędy blokują umowę), autokorekty i — gdy brak błędów — podgląd tekstu całego kompletu (wniosek, umowa, Zał. 1–3), identyczny z treścią pliku generowanego przez `generate_contract_docx`. Schemat: `get_contract_schema`.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -2428,7 +2428,7 @@
             "preview": {
               "type": "boolean",
               "default": true,
-              "description": "Dołącz podgląd tekstu umowy, gdy brak błędów."
+              "description": "Dołącz podgląd tekstu całego kompletu (wniosek, umowa, Zał. 1–3), gdy brak błędów."
             }
           },
           "additionalProperties": false,
@@ -2439,7 +2439,7 @@
       {
         "name": "generate_contract_docx",
         "title": "Generate loan contract document set (.docx)",
-        "description": "Generuje z silnika klauzul JEDEN plik .docx z kompletem dokumentów pożyczki, w kolejności: (1) Wniosek o udzielenie pożyczki pieniężnej (dane, charakter niekonsumencki, warunki, oświadczenia AML, PEP, ocena AML dla pożyczkodawcy, odpowiedzialność karna), (2) Umowa pożyczki (§ z biblioteki klauzul: przedmiot, kwota/prowizja/wypłata, zabezpieczenia, windykacja, oświadczenia z RODO, postanowienia ogólne, wypowiedzenie), (3) Załącznik nr 1 — Harmonogram spłat (tabela rat: nr, termin, rata, kapitał, odsetki, prowizja, saldo + sumy), (4) Załącznik nr 2 — Protokół z negocjacji indywidualnych, (5) Załącznik nr 3 — Tabela opłat windykacyjnych; pod każdą częścią blok podpisów. Dokument zawiera wyłącznie treść wiążącą. Zapisuje plik w Storage i trwały wpis w rejestrze wygenerowanych dokumentów (powiązany z `loan_application_id`, gdy podany) wraz z audytem (kto, kiedy, SHA-256 treści, wersja biblioteki klauzul); zwraca link do pobrania (ważny 1 h). Przyjmuje te same źródła co `draft_contract`; przy błędach walidacji nie generuje pliku i zwraca braki. Wywołuj po akceptacji podglądu przez użytkownika.",
+        "description": "Generuje z silnika klauzul JEDEN plik .docx z kompletem dokumentów pożyczki, w kolejności: (1) Wniosek o udzielenie pożyczki pieniężnej (dane, charakter niekonsumencki, warunki, oświadczenia AML, PEP, ocena AML dla pożyczkodawcy, odpowiedzialność karna), (2) Umowa pożyczki (§ z biblioteki klauzul: przedmiot, kwota/prowizja/wypłata, zabezpieczenia, windykacja, oświadczenia z RODO, postanowienia ogólne, wypowiedzenie), (3) Załącznik nr 1 — Harmonogram spłat (tabela rat: nr, termin, rata, kapitał, odsetki, prowizja, saldo + sumy), (4) Załącznik nr 2 — Protokół z negocjacji indywidualnych, (5) Załącznik nr 3 — Tabela opłat windykacyjnych; pod każdą częścią blok podpisów. Dokument zawiera wyłącznie treść wiążącą. Zapisuje plik w Storage i trwały wpis w rejestrze wygenerowanych dokumentów (powiązany z `loan_application_id`, gdy podany) wraz z audytem (kto, kiedy, SHA-256 treści, wersja biblioteki klauzul); zwraca link do pobrania (ważny 1 h) oraz pełny tekst kompletu (`tekst` — do porównania bez pobierania pliku; później: `get_generated_document_text`). Przyjmuje te same źródła co `draft_contract`; przy błędach walidacji nie generuje pliku i zwraca braki. Wywołuj po akceptacji podglądu przez użytkownika.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -2486,6 +2486,32 @@
               "description": "Id wniosku (loan_applications), z którym wiązany jest wygenerowany komplet."
             }
           },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_generated_document_text",
+        "title": "Get generated document text",
+        "description": "Tekst wygenerowanego dokumentu .docx z rejestru `generated_documents` (np. kompletu umowy pożyczki z `generate_contract_docx`) — akapity i tabele (komórki rozdzielone „ | ”), bez pobierania pliku ze Storage. Dla kompletu z silnika zwraca też audyt (SHA-256, wersja biblioteki klauzul) i sprawdza, czy SHA-256 tekstu pliku zgadza się z zapisanym przy generacji.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Id dokumentu (generated_documents.id)."
+            }
+          },
+          "required": [
+            "id"
+          ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
@@ -13319,6 +13345,487 @@
           },
           "required": [
             "url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "supabase_list_tables",
+        "title": "Supabase: schema (tables, columns, RPC)",
+        "description": "Schemat bazy wystawiony przez PostgREST: lista tabel i widoków (bez `table`) albo kolumny jednej tabeli z typami i wymaganymi polami (z `table`), plus lista funkcji RPC. Zacznij od niego przed `supabase_select` / zapisem. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "table": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+              "description": "Tabela, której kolumny pokazać."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "supabase_select",
+        "title": "Supabase: select rows",
+        "description": "Odczyt z dowolnej tabeli/widoku (rola serwisowa, bez RLS): kolumny w składni PostgREST (także relacje, np. `id, email, leads(id, status)`), filtry, sortowanie, limit/offset i łączna liczba wierszy. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "table": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            },
+            "columns": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000,
+              "default": "*"
+            },
+            "filters": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "Kolumna; dla JSON także ścieżka PostgREST, np. `data->>status`."
+                  },
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "like",
+                      "ilike",
+                      "is",
+                      "in",
+                      "contains",
+                      "containedBy"
+                    ]
+                  },
+                  "value": {
+                    "description": "Wartość; dla `in` tablica, dla `is` null/true/false, dla `contains` tablica/obiekt."
+                  }
+                },
+                "required": [
+                  "column",
+                  "op"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 20
+            },
+            "or": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Warunek `or` PostgREST, np. `status.eq.new,status.eq.open`."
+            },
+            "order": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "ascending": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "required": [
+                  "column"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 5
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 50
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          "required": [
+            "table"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "supabase_insert",
+        "title": "Supabase: insert / upsert rows",
+        "description": "Wstawia wiersze do tabeli (rola serwisowa, bez RLS); z `on_conflict` robi upsert po wskazanych kolumnach. Zwraca zapisane wiersze. Wykonuj tylko na wyraźne polecenie użytkownika. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "table": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "minItems": 1,
+              "maxItems": 500
+            },
+            "on_conflict": {
+              "type": "string",
+              "maxLength": 300,
+              "description": "Kolumny unikalne dla upsertu, np. `id` albo `email`."
+            },
+            "returning": {
+              "type": "string",
+              "maxLength": 2000,
+              "default": "*"
+            }
+          },
+          "required": [
+            "table",
+            "rows"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "supabase_update",
+        "title": "Supabase: update rows",
+        "description": "Zmienia wiersze pasujące do filtrów (co najmniej jeden filtr — bez filtrów narzędzie odmawia). `max_rows` chroni przed zmianą większej liczby wierszy niż zakładana: najpierw liczy dopasowania i przerywa, gdy jest ich więcej. Wykonuj tylko na wyraźne polecenie użytkownika. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "table": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            },
+            "patch": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "filters": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "Kolumna; dla JSON także ścieżka PostgREST, np. `data->>status`."
+                  },
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "like",
+                      "ilike",
+                      "is",
+                      "in",
+                      "contains",
+                      "containedBy"
+                    ]
+                  },
+                  "value": {
+                    "description": "Wartość; dla `in` tablica, dla `is` null/true/false, dla `contains` tablica/obiekt."
+                  }
+                },
+                "required": [
+                  "column",
+                  "op"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 20
+            },
+            "max_rows": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            },
+            "returning": {
+              "type": "string",
+              "maxLength": 2000,
+              "default": "*"
+            }
+          },
+          "required": [
+            "table",
+            "patch",
+            "filters"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "supabase_delete",
+        "title": "Supabase: delete rows",
+        "description": "Usuwa wiersze pasujące do filtrów (co najmniej jeden filtr; `max_rows` jak w `supabase_update`). Nieodwracalne — przed wywołaniem pokaż użytkownikowi, co zostanie usunięte, i poczekaj na potwierdzenie. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "table": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            },
+            "filters": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "column": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "Kolumna; dla JSON także ścieżka PostgREST, np. `data->>status`."
+                  },
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "like",
+                      "ilike",
+                      "is",
+                      "in",
+                      "contains",
+                      "containedBy"
+                    ]
+                  },
+                  "value": {
+                    "description": "Wartość; dla `in` tablica, dla `is` null/true/false, dla `contains` tablica/obiekt."
+                  }
+                },
+                "required": [
+                  "column",
+                  "op"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 20
+            },
+            "max_rows": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          "required": [
+            "table",
+            "filters"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "supabase_rpc",
+        "title": "Supabase: call RPC function",
+        "description": "Wywołuje funkcję bazy (RPC) z argumentami, z rolą serwisową. Listę funkcji i ich argumentów daje `supabase_list_tables`. Funkcja może zmieniać dane — wywołuj ją tylko na wyraźne polecenie użytkownika, chyba że tylko czyta. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "fn": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "fn"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "supabase_storage",
+        "title": "Supabase: storage (buckets, files, signed URLs)",
+        "description": "Storage: `list_buckets` — kubełki; `list` — pliki w kubełku pod prefiksem (`path`); `signed_url` — podpisany link do pliku (domyślnie na godzinę). Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "list_buckets",
+                "list",
+                "signed_url"
+              ]
+            },
+            "bucket": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "path": {
+              "type": "string",
+              "maxLength": 1000,
+              "description": "Prefiks (list) albo ścieżka pliku (signed_url)."
+            },
+            "search": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 100
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "expires_in": {
+              "type": "integer",
+              "minimum": 60,
+              "maximum": 604800,
+              "default": 3600
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "supabase_invoke_function",
+        "title": "Supabase: invoke edge function",
+        "description": "Wywołuje edge function Supabase (np. `rcn-proxy`, `tpay-proxy`) z ciałem JSON i kluczem serwisowym. Funkcja może działać na zewnątrz (płatności, rejestry) — tylko na wyraźne polecenie użytkownika. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-z0-9][a-z0-9_-]*$"
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE"
+              ],
+              "default": "POST"
+            },
+            "body": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "name"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"

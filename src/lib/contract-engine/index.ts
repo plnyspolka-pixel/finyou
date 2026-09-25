@@ -51,7 +51,13 @@ export {
   tekstZDocumentXml,
 } from "./umowa-docx";
 export type { KompletOpcje, Blok } from "./umowa-docx";
-export { generujKomplet, WERSJA_BIBLIOTEKI, CZESCI_KOMPLETU, SLUG_KOMPLETU } from "./komplet";
+export {
+  generujKomplet,
+  tekstKompletu,
+  WERSJA_BIBLIOTEKI,
+  CZESCI_KOMPLETU,
+  SLUG_KOMPLETU,
+} from "./komplet";
 export type { KompletWynik } from "./komplet";
 export { OPLATY_WINDYKACYJNE_DOMYSLNE } from "./oplaty-windykacyjne";
 export type { OplataWindykacyjna } from "./oplaty-windykacyjne";

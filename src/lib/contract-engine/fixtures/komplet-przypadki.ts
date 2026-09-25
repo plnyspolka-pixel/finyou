@@ -28,7 +28,7 @@ const RACHUNKI = {
 };
 
 /**
- * (a) = przypadek końcowy zlecenia: JDG, 25 000 zł, 14,5%, 36 rat, pułap 900 zł,
+ * (a) = przypadek końcowy zlecenia: JDG (kobieta), 25 000 zł, 14,5%, 36 rat, pułap 900 zł,
  * rata końcowa docelowa 25 900 zł, hipoteka 99 000 zł na KR1P/610770/2 (numer
  * bez zer — ma zostać znormalizowany) na kolejnym miejscu (przed nami hipoteka
  * umowna 62 000 zł) z roszczeniem o opróżnione miejsce, 777 do 99 000 zł.
@@ -39,13 +39,14 @@ export function przypadekA(): any {
     pozyczkodawca: POZYCZKODAWCA,
     pozyczkobiorca: {
       typ: "osoba_fizyczna",
-      imie_nazwisko: "Tomasz Wiśniewski",
-      firma: "TW-BUD Tomasz Wiśniewski",
-      pesel: "80010112345",
+      imie_nazwisko: "Katarzyna Wiśniewska",
+      firma: "KW-BUD Katarzyna Wiśniewska",
+      // PESEL z poprawną cyfrą kontrolną — płeć (K) silnik wyprowadza z niego.
+      pesel: "85061512347",
       nip: "6792345678",
       adres: "ul. Długa 5, 30-001 Kraków",
       telefon: "+48 600 100 200",
-      email: "tomasz.wisniewski@example.com",
+      email: "katarzyna.wisniewska@example.com",
       stan_cywilny: "kawaler_panna",
     },
     porecziciel: null,

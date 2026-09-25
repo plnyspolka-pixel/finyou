@@ -21,7 +21,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Dokument } from "./renderer";
 import { tekstOdeslania } from "./renderer";
-import { krotkieOznaczenie, listaPozyczkobiorcow, oznaczenieStrony, rodzajZenski } from "./facts";
+import {
+  jestKobieta,
+  krotkieOznaczenie,
+  listaPozyczkobiorcow,
+  oznaczenieStrony,
+  plecOsoby,
+} from "./facts";
 import { formatKwotaPL, parseKwota } from "./schedule";
 import { OPLATY_WINDYKACYJNE_DOMYSLNE, type OplataWindykacyjna } from "./oplaty-windykacyjne";
 
@@ -132,7 +138,7 @@ function nazwyPozyczkobiorcow(d: any): string {
   const nazwy = l.map((p) =>
     p?.typ === "osoba_fizyczna"
       ? p.firma
-        ? `${p.imie_nazwisko}, ${rodzajZenski(p.imie_nazwisko) ? "prowadząca" : "prowadzący"} działalność gospodarczą pod firmą ${p.firma}`
+        ? `${p.imie_nazwisko}, ${jestKobieta(p) ? "prowadząca" : "prowadzący"} działalność gospodarczą pod firmą ${p.firma}`
         : p.imie_nazwisko
       : oznaczenieStrony(p, false),
   );
@@ -170,8 +176,49 @@ function poleWielu(l: any[], f: (p: any) => string | null | undefined): string {
 
 // ── 1. Wniosek ─────────────────────────────────────────────────
 
+/**
+ * Formy 1. osoby we Wniosku: jeden wnioskodawca — wg płci (przy podmiocie wg
+ * płci pierwszego reprezentanta), kilku — liczba mnoga.
+ */
+function formyWniosku(l: any[]) {
+  const wielu = l.length > 1;
+  const p = l[0];
+  const mowiacy =
+    p?.typ === "podmiot_gospodarczy" ? ([] as any[]).concat(p.reprezentacja ?? [])[0] : p;
+  const k = !wielu && !!mowiacy && plecOsoby(mowiacy) === "K";
+  const g = (mn: string, kob: string, m: string) => (wielu ? mn : k ? kob : m);
+  return {
+    oswiadczam: wielu ? "Oświadczamy" : "Oświadczam",
+    wnioskuje: wielu ? "Wnioskujemy" : "Wnioskuję",
+    osiagam: wielu ? "Osiągamy" : "Osiągam",
+    posiadam: wielu ? "Nie posiadamy" : "Nie posiadam",
+    moje: wielu ? "nasze" : "moje",
+    reguluje: wielu ? "regulujemy" : "reguluję",
+    wobec: wielu ? "wobec nas" : "wobec mnie",
+    pepNie: wielu
+      ? "Żaden z nas nie jest osobą zajmującą eksponowane stanowisko polityczne (PEP) ani osobą z nią powiązaną."
+      : "Nie jestem osobą zajmującą eksponowane stanowisko polityczne (PEP), ani osobą z nią powiązaną.",
+    pepTak: wielu
+      ? "Co najmniej jeden z nas jest osobą PEP lub osobą powiązaną z PEP."
+      : "Jestem osobą PEP lub osobą powiązaną z PEP.",
+    jestem: wielu ? "jesteśmy" : "jestem",
+    swiadomy: g("świadomi", "świadoma", "świadomy"),
+    zapoznalem: g("zapoznaliśmy się", "zapoznałam się", "zapoznałem się"),
+    skladam: wielu ? "składamy" : "składam",
+    wykonuje: wielu ? "wykonujemy" : "wykonuję",
+    zlozylem: g("złożyliśmy", "złożyłam", "złożyłem"),
+    spelniam: wielu ? "spełniamy" : "spełniam",
+    zloze: wielu ? "złożymy" : "złożę",
+  };
+}
+
 function wniosekBloki(d: any): Blok[] {
   const l = listaPozyczkobiorcow(d);
+  const F = formyWniosku(l);
+  // Oświadczenie o aktywnej działalności (CEIDG) — jak § 5 Umowy.
+  const ceidg = l.some(
+    (p) => p?.typ === "osoba_fizyczna" && p.dzialalnosc !== "gospodarstwo_rolne",
+  );
   const h = d.warunki.harmonogram;
   const w = d.wniosek ?? {};
   const wid = [2400, 7238];
@@ -221,12 +268,12 @@ function wniosekBloki(d: any): Blok[] {
     },
     { t: "naglowek", tekst: "II. CHARAKTER POŻYCZKI" },
     akapit([
-      r("Wnioskuję o udzielenie pożyczki pieniężnej "),
+      r(`${F.wnioskuje} o udzielenie pożyczki pieniężnej `),
       r("na cele związane z prowadzoną działalnością gospodarczą", { bold: true }),
       r("."),
     ]),
     akapit([
-      r("Oświadczam, że pożyczka "),
+      r(`${F.oswiadczam}, że pożyczka `),
       r("nie ma charakteru konsumenckiego", { bold: true }),
       r(" i nie stanowi kredytu konsumenckiego w rozumieniu ustawy o kredycie konsumenckim."),
     ]),
@@ -242,18 +289,22 @@ function wniosekBloki(d: any): Blok[] {
       ],
     },
     { t: "naglowek", tekst: "IV. OŚWIADCZENIA FINANSOWE (AML)" },
-    akapit([r("Oświadczam, że:", { bold: true })]),
-    lista("Osiągam stały i rzeczywisty dochód umożliwiający spłatę pożyczki."),
-    lista("Nie posiadam przeterminowanych zobowiązań pieniężnych."),
-    lista("Żadne moje zobowiązanie kredytowe ani pożyczkowe nie zostało wypowiedziane."),
-    lista("Wszystkie moje zobowiązania reguluję terminowo."),
-    lista("Nie toczy się wobec mnie postępowanie egzekucyjne."),
+    akapit([r(`${F.oswiadczam}, że:`, { bold: true })]),
+    lista(`${F.osiagam} stały i rzeczywisty dochód umożliwiający spłatę pożyczki.`),
+    lista(`${F.posiadam} przeterminowanych zobowiązań pieniężnych.`),
+    lista(`Żadne ${F.moje} zobowiązanie kredytowe ani pożyczkowe nie zostało wypowiedziane.`),
+    lista(`Wszystkie ${F.moje} zobowiązania ${F.reguluje} terminowo.`),
+    lista(`Nie toczy się ${F.wobec} postępowanie egzekucyjne.`),
+    ...(ceidg
+      ? [
+          lista(
+            `Na dzień złożenia wniosku aktywnie i faktycznie ${F.wykonuje} działalność gospodarczą, a jej wykonywanie nie jest zawieszone; nie ${F.zlozylem} wniosku o zawieszenie wykonywania działalności gospodarczej ani o wykreślenie wpisu z Centralnej Ewidencji i Informacji o Działalności Gospodarczej; nie ${F.spelniam} przesłanek do zawieszenia wykonywania działalności gospodarczej, w tym zawieszenia z datą początkową wcześniejszą niż dzień zawarcia umowy pożyczki, i nie ${F.zloze} wniosku o zawieszenie obejmujące dzień zawarcia umowy pożyczki; ujawnienie takiego zawieszenia oznacza, że niniejsze oświadczenie jest nieprawdziwe.`,
+          ),
+        ]
+      : []),
     { t: "naglowek", tekst: "V. OŚWIADCZENIE PEP" },
-    akapit(
-      `${CHECK(pep === false)} Nie jestem osobą zajmującą eksponowane stanowisko polityczne (PEP), ani osobą z nią powiązaną.`,
-      { wciecie: "lista" },
-    ),
-    akapit(`${CHECK(pep === true)} Jestem osobą PEP lub osobą powiązaną z PEP.`, {
+    akapit(`${CHECK(pep === false)} ${F.pepNie}`, { wciecie: "lista" }),
+    akapit(`${CHECK(pep === true)} ${F.pepTak}`, {
       wciecie: "lista",
     }),
     { t: "naglowek", tekst: "VI. AML – DO WYPEŁNIENIA PRZEZ POŻYCZKODAWCĘ" },
@@ -275,11 +326,11 @@ function wniosekBloki(d: any): Blok[] {
     }),
     { t: "naglowek", tekst: "VII. ODPOWIEDZIALNOŚĆ KARNA" },
     akapit(
-      "Oświadczam, że jestem świadomy/a, iż podanie nieprawdziwych danych lub złożenie nieprawdziwych oświadczeń w celu uzyskania pożyczki pieniężnej stanowi przestępstwo, w szczególności z art. 286 §1 oraz art. 297 §1 Kodeksu karnego.",
+      `${F.oswiadczam}, że ${F.jestem} ${F.swiadomy}, iż podanie nieprawdziwych danych lub złożenie nieprawdziwych oświadczeń w celu uzyskania pożyczki pieniężnej stanowi przestępstwo, w szczególności z art. 286 § 1 oraz art. 297 § 1 Kodeksu karnego.`,
     ),
     { t: "naglowek", tekst: "VIII. OŚWIADCZENIE KOŃCOWE" },
     akapit(
-      "Oświadczam, że zapoznałem/am się z treścią niniejszego wniosku i składam go dobrowolnie.",
+      `${F.oswiadczam}, że ${F.zapoznalem} z treścią niniejszego wniosku i ${F.skladam} go dobrowolnie.`,
     ),
     akapit(`Sporządzono w ${d.meta.miejscowosc}, dnia ${d.meta.data_umowy} r.`),
     {
@@ -301,7 +352,12 @@ function umowaBloki(d: any, doc: Dokument): Blok[] {
   out.push(akapit(`zawarta dnia ${k.data} r. w ${k.miejscowosc} pomiędzy:`));
   k.strony.forEach((s, i) => {
     const kon = i < k.strony.length - 1 ? "," : ".";
-    out.push(akapit([r(s.opis), r(", zwanym/ą dalej "), r(`„${s.rola}”`, { bold: true }), r(kon)]));
+    const zw = s.zwany.match(/^(.*?)(„[^”]*”)$/);
+    out.push(
+      akapit(
+        zw ? [r(s.opis), r(`, ${zw[1]}`), r(zw[2], { bold: true }), r(kon)] : [r(s.opis), r(kon)],
+      ),
+    );
   });
 
   for (const sek of doc.sekcje) {
@@ -452,6 +508,7 @@ function harmonogramBloki(d: any): Blok[] {
 
 function protokolBloki(d: any, doc: Dokument): Blok[] {
   const l = listaPozyczkobiorcow(d);
+  const f = doc.fakty;
   const pn = d.protokol_negocjacji ?? {};
   const h = d.warunki.harmonogram;
   const wid = [3400, 6238];
@@ -561,10 +618,10 @@ function protokolBloki(d: any, doc: Dokument): Blok[] {
       ),
     { t: "naglowek", tekst: "4. POTWIERDZENIA STRON" },
     lista(
-      "Pożyczkobiorca potwierdza, że wszystkie powyższe elementy były negocjowane indywidualnie, są dla niego jasne i zrozumiałe, a ich treść odzwierciedla wynik negocjacji.",
+      `${f.pb} ${f.pb_potwierdza}, że wszystkie powyższe elementy były negocjowane indywidualnie, są dla ${f.pb_dla} jasne i zrozumiałe, a ich treść odzwierciedla wynik negocjacji.`,
     ),
     lista(
-      "Pożyczkobiorca potwierdza, że treść Umowy nie została mu narzucona i miał realny wpływ na każde z jej kluczowych postanowień.",
+      `${f.pb} ${f.pb_potwierdza}, że treść Umowy nie została ${f.pb_zaimek_mu} narzucona i ${f.pb_mial} realny wpływ na każde z jej kluczowych postanowień.`,
     ),
     lista("Pożyczkodawca potwierdza prawidłowość przebiegu procesu negocjacyjnego."),
     lista(

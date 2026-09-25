@@ -435,6 +435,33 @@ export function walidujReguly(d: any): Problem[] {
   if (d.warunki && !String(rach.splata ?? "").trim())
     blad("warunki.rachunki.splata", "Brak rachunku Pożyczkodawcy do spłaty pożyczki");
 
+  // R31: spłata wierzyciela ze środków pożyczki — kwota i rachunek wierzyciela
+  // muszą być podane (dokument nie może zawierać pól do uzupełnienia).
+  nier.forEach((n: any, i: number) => {
+    (n.obciazenia ?? []).forEach((o: any, j: number) => {
+      if (o.sposob_usuniecia !== "wykreslenie_ze_srodkow_pozyczki") return;
+      const sciezka = `nieruchomosci[${i}].obciazenia[${j}]`;
+      if (!o.kwota_splaty?.cyframi)
+        blad(`${sciezka}.kwota_splaty`, "Brak kwoty spłaty wierzyciela ze środków pożyczki");
+      if (!String(o.wierzyciel_rachunek ?? "").trim())
+        blad(
+          `${sciezka}.wierzyciel_rachunek`,
+          "Brak numeru rachunku wierzyciela spłacanego ze środków pożyczki",
+        );
+    });
+  });
+
+  // R32: zakaz przeznaczenia pożyczki na spłatę zobowiązań dotyczących
+  // nieruchomości (§ 1) sprzeczny ze spłatą wierzycieli hipotecznych z Kwoty Pożyczki.
+  const splatyWierzycieli = nier.some((n: any) =>
+    (n.obciazenia ?? []).some((o: any) => o.sposob_usuniecia === "wykreslenie_ze_srodkow_pozyczki"),
+  );
+  if (d.warunki?.zakaz_celu_nieruchomosciowego === true && splatyWierzycieli)
+    blad(
+      "warunki.zakaz_celu_nieruchomosciowego",
+      "Zakaz przeznaczenia pożyczki na spłatę zobowiązań dotyczących nieruchomości jest sprzeczny ze spłatą wierzycieli hipotecznych ze środków pożyczki",
+    );
+
   // R17: stan cywilny vs ustrój majątkowy
   const osoby: [string, any][] = pbLista.map((o, i) => [
     pbLista.length > 1 ? `pozyczkobiorca[${i}]` : "pozyczkobiorca",

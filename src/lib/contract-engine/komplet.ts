@@ -6,7 +6,8 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import biblioteka from "./clauses.json";
-import { renderuj, type Dokument } from "./renderer";
+import { BladPola, renderuj, type Dokument } from "./renderer";
+import { bledyOdeslanKompletu } from "./odeslania";
 import { bibliotekaBez } from "./clause-select";
 import {
   buildKompletDocumentXml,
@@ -54,13 +55,37 @@ async function sha256Hex(tekst: string): Promise<string> {
  * Rzuca `BladPola` (renderer), gdy klauzuli brakuje wartości pola albo
  * odesłanie wskazuje klauzulę wyłączoną — wywołujący traktuje to jak brak.
  */
+export function zlozKomplet(
+  umowa: any,
+  opts: KompletOpcje & { excludedClauses?: string[] } = {},
+): { doc: Dokument; documentXml: string; tekst: string } {
+  const doc = renderuj(umowa, bibliotekaBez(opts.excludedClauses ?? []));
+  const documentXml = buildKompletDocumentXml(umowa, doc, opts);
+  const tekst = tekstZDocumentXml(documentXml);
+  // Odesłania z wniosku i załączników do Umowy (np. „§ 4 ust. 5 Umowy”).
+  const bledy = bledyOdeslanKompletu(doc, tekst);
+  if (bledy.length) throw new BladPola(`Błędne odesłania: ${bledy.join("; ")}`);
+  return { doc, documentXml, tekst };
+}
+
+/**
+ * Tekst całego kompletu (wniosek, umowa, załączniki) — ten sam, który trafia
+ * do pliku .docx i do hasha. Podgląd bez pakowania pliku.
+ */
+export function tekstKompletu(
+  umowa: any,
+  opts: KompletOpcje & { excludedClauses?: string[] } = {},
+): string {
+  return zlozKomplet(umowa, opts).tekst;
+}
+
 export async function generujKomplet(
   umowa: any,
   opts: KompletOpcje & { excludedClauses?: string[] } = {},
 ): Promise<KompletWynik> {
-  const doc = renderuj(umowa, bibliotekaBez(opts.excludedClauses ?? []));
-  const documentXml = buildKompletDocumentXml(umowa, doc, opts);
-  const tekst = tekstZDocumentXml(documentXml);
+  const { doc, documentXml, tekst } = zlozKomplet(umowa, opts);
   const [bytes, sha256] = await Promise.all([spakujDocx(documentXml), sha256Hex(tekst)]);
   return { bytes, doc, documentXml, tekst, sha256, wersjaBiblioteki: WERSJA_BIBLIOTEKI };
 }
+
+export { sha256Hex };

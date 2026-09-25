@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizePolishPhone } from "@/lib/phone";
+import { kwCheckDigitError, normalizeKwNumbersInText } from "@/lib/kw";
 import { runPropertyCollateralAnalysisCore } from "@/lib/property-analysis/property-collateral-analysis.functions";
 
 const Schema = z.object({
@@ -28,7 +29,18 @@ const Schema = z.object({
   street: z.string().max(200).optional().nullable(),
   voivodeship: z.string().max(120).optional().nullable(),
   kw_status: z.enum(["znam", "nie_znam", "brak"]).optional().nullable(),
-  land_register_number: z.string().max(60).optional().nullable(),
+  // Numer KW: błędna cyfra kontrolna = błąd walidacji; zapis dopełniony do 8 cyfr
+  // (KR1P/610770/2 → KR1P/00610770/2), inaczej CMD i scoring zwracają INVALID_KW.
+  land_register_number: z
+    .string()
+    .max(60)
+    .optional()
+    .nullable()
+    .superRefine((v, ctx) => {
+      const blad = kwCheckDigitError(v);
+      if (blad) ctx.addIssue({ code: "custom", message: blad });
+    })
+    .transform((v) => normalizeKwNumbersInText(v ?? null)),
   situation_description: z.string().max(2000).optional().nullable(),
   consent_rodo: z.literal(true),
   source: z.string().max(120).optional().nullable(),

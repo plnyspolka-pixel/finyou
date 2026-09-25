@@ -124,7 +124,7 @@ describe("przypadek końcowy zlecenia (a)", () => {
   it("odesłania liczone po numeracji (doręczenia → 777, wypowiedzenie → zakaz rozporządzania)", async () => {
     const { tekst } = await komplet(przypadekA());
     expect(tekst).toContain("wezwania, o którym mowa w § 3 ust. 4, które doręcza się");
-    expect(tekst).toContain("bez zgody Pożyczkodawcy, o której mowa w § 3 ust. 3.");
+    expect(tekst).toContain("bez zgody Pożyczkodawcy, o której mowa w § 3 ust. 3;");
     expect(tekst).toContain("(§ 4 ust. 5 Umowy)"); // Zał. 3 → zwrot kosztów
   });
 
@@ -134,7 +134,7 @@ describe("przypadek końcowy zlecenia (a)", () => {
     const bezRamek = documentXml.match(/<w:tblBorders><w:top w:val="nil"\/>/g) ?? [];
     expect(bezRamek.length).toBe(5); // wniosek, umowa, Zał. 1, 2, 3
     expect(tekst).toContain(
-      "…………………………………… / Pożyczkobiorca / Tomasz Wiśniewski | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu",
+      "…………………………………… / Pożyczkobiorca / Katarzyna Wiśniewska | …………………………………… / Pożyczkodawca / FINANCE YOU sp. z o.o. / Filip Bielak – prezes zarządu",
     );
   });
 
@@ -145,7 +145,7 @@ describe("przypadek końcowy zlecenia (a)", () => {
     expect(k1.sha256).toBe(k2.sha256);
     expect(Buffer.from(k1.bytes).equals(Buffer.from(k2.bytes))).toBe(true);
     expect(k1.wersjaBiblioteki).toBe(WERSJA_BIBLIOTEKI);
-    expect(WERSJA_BIBLIOTEKI).toBe("1.2");
+    expect(WERSJA_BIBLIOTEKI).toBe("1.3");
   });
 
   it("plik .docx ma komplet części pakietu (document, styles, relacje)", async () => {
@@ -169,7 +169,9 @@ describe("przypadki (b) i (c) — konstrukcja", () => {
       "Pożyczkobiorcy odpowiadają za zobowiązania wynikające z niniejszej Umowy solidarnie",
     );
     expect(tekst).toContain("w udziale wynoszącym 1/2 części");
-    expect(tekst).toContain("niniejszą Umowę zawarli jako przedsiębiorcy");
+    expect(tekst).toContain("Pożyczkobiorcy oświadczają, że są przedsiębiorcami");
+    expect(tekst).toContain("zwanymi dalej łącznie „Pożyczkobiorcami”");
+    expect(tekst).toContain("Pożyczkobiorcy poddadzą się rygorowi egzekucji");
     expect(tekst).toContain("Pośrednik finansowy: | Jan Pośrednik (tel. 600 700 800)");
     expect(tekst).toContain("Negocjacje trwały: | 10.09.2026 – 24.09.2026");
     expect(tekst).toContain("Umowę sporządzono w 3 jednobrzmiących egzemplarzach");
@@ -190,7 +192,7 @@ describe("przypadki (b) i (c) — konstrukcja", () => {
 describe("poprawki treści istniejącej (zgoda z 24.09.2026) i rachunek Finance You", () => {
   it("PRZ_01: liczba pojedyncza / mnoga", async () => {
     expect((await komplet(przypadekA())).tekst).toContain(
-      "pożyczki pieniężnej dla Pożyczkobiorcy prowadzącego działalność gospodarczą",
+      "pożyczki pieniężnej dla Pożyczkobiorcy prowadzącej działalność gospodarczą",
     );
     expect((await komplet(przypadekB())).tekst).toContain(
       "pożyczki pieniężnej dla Pożyczkobiorców prowadzących działalność gospodarczą",
@@ -202,6 +204,10 @@ describe("poprawki treści istniejącej (zgoda z 24.09.2026) i rachunek Finance 
     const b = (await komplet(przypadekB())).tekst;
     expect(a).not.toContain("przeciwko niego");
     expect(a).toContain(
+      "nie toczy się przeciwko niej postępowanie o ogłoszenie upadłości ani restrukturyzacyjne",
+    );
+    const c = (await komplet(przypadekC())).tekst;
+    expect(c).toContain(
       "nie toczy się przeciwko niemu postępowanie o ogłoszenie upadłości ani restrukturyzacyjne",
     );
     expect(b).not.toContain("przeciwko nich");
@@ -231,5 +237,153 @@ describe("poprawki treści istniejącej (zgoda z 24.09.2026) i rachunek Finance 
     d.warunki.rachunki.splata = "11 2222 3333 4444 5555 6666 7777";
     const { umowa } = przetworzSzkic(d);
     expect(umowa.warunki.rachunki.splata).toBe("11 2222 3333 4444 5555 6666 7777");
+  });
+});
+
+describe("biblioteka 1.3 — przypadek końcowy (a): JDG kobieta, hipoteka na kolejnym miejscu", () => {
+  it("§ 1 ust. 3 — zakaz celu nieruchomościowego (domyślnie włączony)", async () => {
+    const { tekst } = await komplet(przypadekA());
+    expect(tekst).toContain(
+      "3. Strony postanawiają, że kwota pożyczki nie może zostać przeznaczona na zakup, remont lub spłatę zobowiązań dotyczących nieruchomości.",
+    );
+    const d = przypadekA();
+    d.warunki.zakaz_celu_nieruchomosciowego = false;
+    expect((await komplet(d)).tekst).not.toContain("nie może zostać przeznaczona na zakup");
+  });
+
+  it("§ 2 ust. 2 — prowizja przy wcześniejszej spłacie; ust. 3 odsyła do ust. 6", async () => {
+    const { tekst } = await komplet(przypadekA());
+    expect(tekst).toContain(
+      "W razie wcześniejszej spłaty prowizja nie podlega obniżeniu, a jej niezapłacona część staje się płatna wraz ze spłacanym kapitałem.",
+    );
+    expect(tekst).toContain(
+      "w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w § 2 ust. 6.",
+    );
+    expect(tekst).not.toContain("od spełnienia warunków określonych w niniejszej Umowie");
+  });
+
+  it("§ 2 ust. 6 — warunki wejścia w życie a–c, z roszczeniem o opróżnione miejsce", async () => {
+    const { tekst } = await komplet(przypadekA());
+    expect(tekst).toContain(
+      "6. Umowa jest ważna z chwilą jej podpisania, a wchodzi w życie z dniem przekazania Pożyczkodawcy łącznie:",
+    );
+    expect(tekst).toContain(
+      "a) oryginału Umowy wraz z załącznikami, z podpisem Pożyczkobiorcy poświadczonym notarialnie;",
+    );
+    expect(tekst).toContain(
+      "b) wypisów aktów notarialnych obejmujących żądanie wpisu hipoteki, o której mowa w § 3 ust. 1 (wraz z żądaniem wpisu roszczenia o przeniesienie hipoteki na opróżnione miejsce hipoteczne), oraz oświadczenie o poddaniu się egzekucji w trybie art. 777 § 1 pkt 5 k.p.c., o którym mowa w § 3 ust. 4;",
+    );
+    expect(tekst).toContain(
+      "c) kompletu oryginałów dokumentów stanowiących podstawę przyznania pożyczki.",
+    );
+  });
+
+  it("§ 5 — aktywna działalność (umowa i wniosek), jedno oświadczenie o statusie przedsiębiorcy", async () => {
+    const { tekst } = await komplet(przypadekA());
+    expect(tekst).toContain(
+      "a) na dzień zawarcia Umowy aktywnie i faktycznie wykonuje działalność gospodarczą, a wykonywanie tej działalności nie jest zawieszone; nie złożyła wniosku o zawieszenie",
+    );
+    expect(tekst).toContain(
+      "ujawnienie takiego zawieszenia oznacza, że niniejsze oświadczenie jest nieprawdziwe;",
+    );
+    expect(tekst).toContain(
+      "– Na dzień złożenia wniosku aktywnie i faktycznie wykonuję działalność gospodarczą, a jej wykonywanie nie jest zawieszone; nie złożyłam wniosku",
+    );
+    // dublowanie usunięte: zostaje wyłącznie § 5 ust. 1 (art. 43¹ k.c.)
+    expect(tekst).toContain(
+      "1. Pożyczkobiorca oświadcza, że jest przedsiębiorcą w rozumieniu art. 43¹",
+    );
+    expect(tekst).not.toContain(
+      "art. 4 ust. 1 ustawy z dnia 6 marca 2018 r. – Prawo przedsiębiorców",
+    );
+    expect(tekst).not.toContain(
+      "do udzielonej pożyczki nie mają zastosowania przepisy ustawy z dnia 12 maja 2011",
+    );
+  });
+
+  it("§ 5 — majątek osobisty bez zgody osób trzecich", async () => {
+    const { tekst } = await komplet(przypadekA());
+    expect(tekst).toContain(
+      "Katarzyna Wiśniewska oświadcza, że nie pozostaje w związku małżeńskim, a nieruchomość objęta księgą wieczystą nr KR1P/00610770/2, w której dziale II jest ujawniona jako jedyny właściciel, wchodzi w skład jej majątku osobistego i nie jest objęta wspólnością majątkową małżeńską, a ustanowienie na niej hipoteki na rzecz Pożyczkodawcy nie wymaga zgody osób trzecich.",
+    );
+    // brak danych o stanie cywilnym (brak adnotacji o wspólności) — oświadczenie bez tej części
+    const d = przypadekA();
+    delete d.pozyczkobiorca.stan_cywilny;
+    expect((await komplet(d)).tekst).toContain(
+      "Katarzyna Wiśniewska oświadcza, że nieruchomość objęta księgą wieczystą nr KR1P/00610770/2",
+    );
+    // wspólność ustawowa — bez oświadczenia o majątku osobistym (działa zgoda małżonka)
+    const w = przypadekA();
+    w.pozyczkobiorca.stan_cywilny = "zonaty_zamezna";
+    w.pozyczkobiorca.ustroj_majatkowy = "wspolnosc_ustawowa";
+    const tw = (await komplet(w)).tekst;
+    expect(tw).not.toContain("wchodzi w skład jej majątku osobistego");
+    expect(tw).toContain("przedłożeniu zgody małżonka właściciela nieruchomości");
+  });
+
+  it("§ 5 — obciążenie pozostające przed hipoteką Pożyczkodawcy: zobowiązania i oświadczenie", async () => {
+    const { tekst } = await komplet(przypadekA());
+    expect(tekst).toContain(
+      "W odniesieniu do hipoteki umownej na rzecz Bank Przykładowy S.A. do kwoty 62 000,00 zł wpisanej w dziale IV księgi wieczystej nr KR1P/00610770/2, pozostającej w księdze wieczystej z pierwszeństwem przed hipoteką Pożyczkodawcy, Pożyczkobiorca:",
+    );
+    expect(tekst).toContain(
+      "a) oświadcza, że dług zabezpieczony tą hipoteką nie jest i nie będzie spłacany ze środków pożyczki;",
+    );
+    expect(tekst).toContain(
+      "terminowo regulować dług zabezpieczony tą hipoteką i nie dopuścić do jego zwiększenia;",
+    );
+    expect(tekst).toContain(
+      "niezwłocznie informować Pożyczkodawcę o spłacie tego długu, o wypowiedzeniu umowy, z której on wynika, oraz o wszczęciu przez wierzyciela egzekucji",
+    );
+  });
+
+  it("§ 7 — lit. c odsyła do oświadczeń, lit. h (hipoteka wcześniejsza), interpunkcja wyliczenia", async () => {
+    const { tekst } = await komplet(przypadekA());
+    expect(tekst).toContain(
+      "c) podała Pożyczkodawcy nieprawdziwe dane, dokumenty lub informacje mające znaczenie dla zawarcia lub wykonywania Umowy, w tym gdy nieprawdziwe okaże się którekolwiek z oświadczeń dotyczących aktywnego wykonywania działalności gospodarczej (§ 5 ust. 11 lit. a), własności i stanu prawnego nieruchomości (§ 5 ust. 3), braku zaległości publicznoprawnych (§ 5 ust. 6) lub majątku osobistego (§ 5 ust. 10);",
+    );
+    expect(tekst).toContain(
+      "h) dopuści do zwiększenia długu zabezpieczonego hipoteką wpisaną z pierwszeństwem przed hipoteką Pożyczkodawcy albo gdy wierzyciel takiej hipoteki wszcznie egzekucję z nieruchomości stanowiącej zabezpieczenie.",
+    );
+    // bez hipoteki pozostającej: brak lit. h, lit. g kończy wyliczenie kropką
+    const d = przypadekA();
+    d.nieruchomosci[0].obciazenia = [];
+    const t = (await komplet(d)).tekst;
+    expect(t).not.toContain("h) dopuści do zwiększenia");
+    expect(t).toContain("bez zgody Pożyczkodawcy, o której mowa w § 3 ust. 3.");
+    expect(t).not.toContain("W odniesieniu do hipoteki umownej");
+  });
+
+  it("forma żeńska w całym komplecie — bez form „/a”, „/am”, „zwanym/ą”", async () => {
+    const { tekst } = await komplet(przypadekA());
+    for (const zakazane of ["zwanym/ą", "świadomy/a", "zapoznałem/am", "/am ", "/a,"])
+      expect(tekst).not.toContain(zakazane);
+    for (const oczekiwane of [
+      "zwaną dalej „Pożyczkobiorcą”",
+      "zwaną dalej „Pożyczkodawcą”",
+      "niniejszą Umowę zawarła",
+      "jest w pełni świadoma",
+      "zostanie wszczęte wobec niej postępowanie",
+      "jej przychody z tytułu działalności",
+      "Oświadczam, że jestem świadoma, iż podanie",
+      "Oświadczam, że zapoznałam się z treścią niniejszego wniosku",
+      "są dla niej jasne i zrozumiałe",
+      "nie została jej narzucona i miała realny wpływ",
+      "Pożyczkobiorca zobowiązana jest do zapłaty odsetek",
+      "przysługuje jej prawo własności",
+    ])
+      expect(tekst).toContain(oczekiwane);
+  });
+
+  it("R31/R32 — brak rachunku wierzyciela i sprzeczny zakaz celu blokują generację", () => {
+    const d = przypadekA();
+    d.nieruchomosci[0].obciazenia[0].sposob_usuniecia = "wykreslenie_ze_srodkow_pozyczki";
+    d.warunki.zakaz_celu_nieruchomosciowego = true;
+    const bledy = przetworzSzkic(d)
+      .problemy.filter((p) => p.poziom === "BLAD")
+      .map((p) => p.sciezka);
+    expect(bledy).toContain("nieruchomosci[0].obciazenia[0].kwota_splaty");
+    expect(bledy).toContain("nieruchomosci[0].obciazenia[0].wierzyciel_rachunek");
+    expect(bledy).toContain("warunki.zakaz_celu_nieruchomosciowego");
   });
 });
