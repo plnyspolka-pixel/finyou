@@ -467,9 +467,11 @@ export const getMyAnalyticsDetail = createServerFn({ method: "GET" })
   });
 
 /**
- * Uruchomienie pipeline'u na żądanie inwestora. Przebieg zakłada się w tej
- * samej tabeli co automat i re-run z panelu admina — dokończy go cron tick
- * (co 15 min). Limit: jeden przebieg na wniosek na 24 h.
+ * Uruchomienie pipeline'u na żądanie inwestora — ta sama funkcja startowa co
+ * re-run z panelu admina (numer KW w formie kompaktowej, jak klucz cache
+ * kw_documents: pobrana już księga nie jest zamawiana ponownie). Kroki 1–3
+ * wykonują się od razu w tym żądaniu; ocenę ryzyka (minuty) dokańcza cron
+ * tick. Limit: jeden przebieg na wniosek na 24 h.
  */
 export const requestInvestorAnalysisRun = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -493,13 +495,17 @@ export const requestInvestorAnalysisRun = createServerFn({ method: "POST" })
       throw new Error(gate.reason ?? "Nie można uruchomić analizy.");
     }
 
-    const { error } = await db.from("analysis_pipeline_runs").insert({
-      loan_application_id: app.id,
-      kw_number: kwNumber,
-      status: "running",
-      steps: {},
-      trigger_reason: "inwestor: na żądanie z modułu Analityka",
-    });
-    if (error) throw new Error(error.message);
+    const { startAnalysisPipelineRunCore, advanceAnalysisPipelineRunById } =
+      await import("@/lib/analysis-pipeline/engine.server");
+    const run = await startAnalysisPipelineRunCore(
+      app.id,
+      "inwestor: na żądanie z modułu Analityka",
+    );
+    try {
+      await advanceAnalysisPipelineRunById(run.id, { pollMaxMs: 20_000, skipRisk: true });
+    } catch (e: any) {
+      // Błąd kroku zamyka przebieg (widoczny w szczegółach) — nie zlecenie.
+      console.error("[investor-analytics] advance failed", run.id, e?.message);
+    }
     return { ok: true, status: "queued" };
   });

@@ -212,6 +212,7 @@ export async function startAnalysisPipelineRunCore(
  */
 export async function advanceAnalysisPipelineRunById(
   runId: string,
+  opts: AdvanceRunOpts = {},
 ): Promise<"finished" | "waiting" | "not_running"> {
   const { data: run, error } = await (supabaseAdmin as any)
     .from("analysis_pipeline_runs")
@@ -221,7 +222,7 @@ export async function advanceAnalysisPipelineRunById(
   if (error) throw new Error(error.message);
   if (!run || run.status !== "running") return "not_running";
   try {
-    return await advanceRun(run);
+    return await advanceRun(run, opts);
   } catch (e: any) {
     await (supabaseAdmin as any)
       .from("analysis_pipeline_runs")
@@ -248,22 +249,35 @@ function markStep(steps: RunSteps, key: StepKey, status: StepStatus, error?: str
   };
 }
 
+export interface AdvanceRunOpts {
+  /** Limit czekania na EKW (domyślnie 45 s — cron tick). */
+  pollMaxMs?: number;
+  /**
+   * Zatrzymaj się przed oceną ryzyka (minuty pracy) — żądanie z przeglądarki
+   * robi kroki 1–3, ocenę dokańcza cron tick.
+   */
+  skipRisk?: boolean;
+}
+
 /**
  * Jeden krok naprzód dla przebiegu. Zwraca "finished", gdy wszystkie kroki
  * są rozstrzygnięte (done/error), inaczej "waiting" (kolejny tick dokończy).
  */
-async function advanceRun(run: {
-  id: string;
-  loan_application_id: string;
-  kw_number: string;
-  steps: RunSteps;
-}): Promise<"finished" | "waiting"> {
+async function advanceRun(
+  run: {
+    id: string;
+    loan_application_id: string;
+    kw_number: string;
+    steps: RunSteps;
+  },
+  opts: AdvanceRunOpts = {},
+): Promise<"finished" | "waiting"> {
   const steps: RunSteps = { ...freshSteps(), ...(run.steps ?? {}) };
 
   // ── Krok 1: pobranie treści KW ─────────────────────────────────────────────
   if (steps.kw.status === "pending" || steps.kw.status === "running") {
     const { fetchAndStoreKw } = await import("@/lib/kw-fetch.server");
-    const outcome = await fetchAndStoreKw(run.kw_number, { pollMaxMs: 45_000 });
+    const outcome = await fetchAndStoreKw(run.kw_number, { pollMaxMs: opts.pollMaxMs ?? 45_000 });
     if (outcome.ok) {
       markStep(steps, "kw", "done");
     } else if (outcome.status === "processing") {
@@ -387,6 +401,7 @@ async function advanceRun(run: {
   }
 
   // ── Krok 4: analiza ryzyka ─────────────────────────────────────────────────
+  if (steps.risk.status === "pending" && opts.skipRisk) return "waiting";
   if (steps.risk.status === "pending") {
     try {
       const { runInvestmentRiskAssessmentCore } =
