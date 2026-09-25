@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { analyzePropertyLocation } from "@/lib/property-location-analysis.functions";
 import { useKwAddress } from "@/lib/kw-address";
+import { osmEmbedUrl } from "@/lib/osm-embed";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,13 +74,8 @@ export function PropertyLocationAnalysis({
   };
 
   const ok = result?.success === true;
-  const browserKey = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY;
-  const mapEmbedUrl =
-    ok && browserKey
-      ? `https://www.google.com/maps/embed/v1/place?key=${browserKey}&q=${encodeURIComponent(
-          result.property.formattedAddress,
-        )}&language=pl`
-      : null;
+  // Mapa OpenStreetMap (bez klucza) — konektor Google Maps odłączono.
+  const mapEmbedUrl = ok ? osmEmbedUrl(result.property.latitude, result.property.longitude) : null;
 
   return (
     <Card>
@@ -149,7 +145,7 @@ export function PropertyLocationAnalysis({
                   rel="noreferrer"
                   className="grid place-items-center h-64 rounded-md border bg-muted/30 text-sm text-muted-foreground"
                 >
-                  Otwórz w Google Maps
+                  Otwórz na mapie
                 </a>
               )}
               <div className="space-y-3">

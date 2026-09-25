@@ -831,7 +831,7 @@ function buildDataSources(a: {
     status: a.saleability.localMarketOffers.totalActiveListings > 0 ? "success" : "no_data",
   });
 
-  // Źródła z analizy zabezpieczenia (Google Maps, ISOK/Wody Polskie, wstępna wycena z portali) — przenieś, by uniknąć duplikatów.
+  // Źródła z analizy zabezpieczenia (OpenStreetMap, ISOK/Wody Polskie, wstępna wycena z portali) — przenieś, by uniknąć duplikatów.
   if (a.collateral?.dataSourcesUsed?.length) {
     for (const s of a.collateral.dataSourcesUsed) {
       // Wycena raportowana osobno (rynek porównawczy); „Perplexity" — stare analizy.

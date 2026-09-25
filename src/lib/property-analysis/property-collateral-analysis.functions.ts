@@ -26,7 +26,7 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => Input.parse(d))
   .handler(async ({ data, context }) => {
-    // Płatne źródła (Perplexity, Google Maps, OCR) i nadpisanie zapisanej
+    // Źródła zewnętrzne (portale, mapy, OCR) i nadpisanie zapisanej
     // analizy — uruchamia wyłącznie zespół.
     const { isInternalStaff } = await import("@/lib/access/guards.server");
     if (!(await isInternalStaff(context.userId as string))) throw new Error("Brak uprawnień");
@@ -236,7 +236,7 @@ export async function analyzePropertyCollateral(
       city: input.city,
     });
     sourcesUsed.push({
-      source: "Google Maps Platform",
+      source: "OpenStreetMap (Nominatim, Overpass)",
       used: input.latitude != null,
       purpose: "lokalizacja i infrastruktura",
       dataLevel: input.latitude != null ? "współrzędne" : "—",
