@@ -16,7 +16,7 @@ import {
   extractJsonLd,
   extractNextData,
   fetchHtml,
-  fetchReadable,
+  fetchReadableMarkdown,
   htmlToText,
 } from "@/lib/web-fetch.server";
 
