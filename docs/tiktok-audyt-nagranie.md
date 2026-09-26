@@ -9,15 +9,27 @@ jeśli czegoś nie widać na nagraniu, uznaje się to za brak.
 
 1. Migracje wdrożone: `20260926120000_tiktok_content_posting.sql`
    i `20260926140000_tiktok_ustawienia_publikacji_tworcy.sql`.
-2. Sekrety ustawione: `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`.
-   Redirect URI w TikTok for Developers: `https://financeyou.pl/api/tiktok/callback`.
-3. Gotowy pionowy MP4 (9:16) w buckecie `studio-media` — **nie** URL z HeyGen,
+2. **Aplikacja w TikTok for Developers ma dodane DWA produkty:**
+   - **Login Kit** — z włączonym przełącznikiem **Configure for Web**. Bez tego
+     endpoint `/v2/auth/authorize/` odrzuca żądanie komunikatem „popraw
+     client_key", nawet gdy klucz jest w pełni poprawny. Content Posting API
+     **nie wystarcza** do zalogowania — to osobny produkt.
+   - **Content Posting API** — z opcją **Direct Post**.
+3. Zakresy `user.info.basic` i `video.publish` włączone dla aplikacji,
+   Redirect URI wpisany dokładnie jako `https://financeyou.pl/api/tiktok/callback`
+   (również w konfiguracji Login Kit dla Web).
+4. Sekrety ustawione: `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`. Klucz ma
+   kształt `aw` + 14 znaków (16 łącznie), np. `aw7nk86b7czitwc9` — jeśli Twój
+   wygląda inaczej, prawdopodobnie wkleiłeś Client secret albo App ID.
+   Podgląd klucza i wysyłanego Redirect URI pokazuje „Diagnostyka połączenia"
+   w karcie TikTok w panelu.
+5. Gotowy pionowy MP4 (9:16) w buckecie `studio-media` — **nie** URL z HeyGen,
    te wygasają.
-4. Konto TikTok, na które publikujesz, wylogowane w przeglądarce (nagranie ma
+6. Konto TikTok, na które publikujesz, wylogowane w przeglądarce (nagranie ma
    pokazać pełne logowanie i zgodę).
-5. Nagrywaj **całe okno przeglądarki z widocznym paskiem adresu** — audytor
+7. Nagrywaj **całe okno przeglądarki z widocznym paskiem adresu** — audytor
    chce widzieć domenę i przejście na `tiktok.com`. Bez cięć w środku flow.
-6. Język panelu: polski jest OK, ale jeśli wniosek składasz po angielsku,
+8. Język panelu: polski jest OK, ale jeśli wniosek składasz po angielsku,
    dopisz w opisie wniosku tłumaczenie etykiet (albo nagraj z krótkim
    komentarzem lektorskim / napisami po angielsku).
 

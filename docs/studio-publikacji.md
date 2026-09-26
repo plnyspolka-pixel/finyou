@@ -262,10 +262,16 @@ true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
 
 ### Połączenie konta (OAuth, raz)
 
-1. W [TikTok for Developers](https://developers.tiktok.com/) włącz w aplikacji
-   produkt **Content Posting API** z opcją **Direct Post**, dodaj zakresy
-   `user.info.basic` i `video.publish`, a jako Redirect URI wpisz dokładnie
-   `https://financeyou.pl/api/tiktok/callback`.
+1. W [TikTok for Developers](https://developers.tiktok.com/) dodaj aplikacji
+   **oba** produkty:
+   - **Login Kit** z włączonym **Configure for Web** — to on obsługuje
+     `/v2/auth/authorize/`. Bez niego logowanie pada na „popraw client_key",
+     choćby klucz był idealny; Content Posting API tego nie zastępuje.
+   - **Content Posting API** z opcją **Direct Post**.
+
+   Dodaj zakresy `user.info.basic` i `video.publish`, a jako Redirect URI wpisz
+   dokładnie `https://financeyou.pl/api/tiktok/callback`.
+
 2. Client key i secret wrzuć do sekretów jako `TIKTOK_CLIENT_KEY`
    i `TIKTOK_CLIENT_SECRET`.
 3. W panelu **/admin/studio-publikacji** → karta „TikTok" → **Połącz TikTok**.
