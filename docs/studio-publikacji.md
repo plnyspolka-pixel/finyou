@@ -14,22 +14,25 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 
 ## Architektura
 
-| Element                                   | Plik                                                                                     |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Publikacja Meta (Graph API)               | `src/lib/studio-publishing.server.ts`                                                    |
-| Publikacja TikTok (Content Posting API)   | `src/lib/tiktok.server.ts`                                                               |
-| TikTok — czysta logika chunków/tytułu     | `src/lib/tiktok-upload.ts` (+ testy `tiktok-upload.test.ts`)                             |
-| TikTok — server functions panelu          | `src/lib/tiktok.functions.ts`                                                            |
-| TikTok — OAuth (start + callback)         | `src/routes/api/tiktok/auth.ts`, `src/routes/api/tiktok/callback.ts`                     |
-| Klasyfikacja błędów Meta + backoff        | `src/lib/meta-graph-errors.ts` (+ testy `meta-graph-errors.test.ts`)                     |
-| Helpery AI (scenariusz, prompty, grafiki) | `src/lib/studio-ai.server.ts`                                                            |
-| Server functions                          | `src/lib/studio.functions.ts`                                                            |
-| Baza 250 pytań do shortów (generowana)    | `src/lib/shorts-question-bank.ts`                                                        |
-| Źródło bazy pytań + generator             | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts` |
-| Cron tick Meta                            | `src/routes/api/public/hooks/social-publish-tick.ts`                                     |
-| Panel admina                              | `src/routes/admin.studio-publikacji.tsx`                                                 |
-| Migracja (tabele + bucket + cron)         | `supabase/migrations/20260803130000_studio_publikacji.sql`                               |
-| Migracja TikToka                          | `supabase/migrations/20260926120000_tiktok_content_posting.sql`                          |
+| Element                                      | Plik                                                                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Publikacja Meta (Graph API)                  | `src/lib/studio-publishing.server.ts`                                                    |
+| Publikacja TikTok (Content Posting API)      | `src/lib/tiktok.server.ts`                                                               |
+| TikTok — czysta logika chunków/tytułu        | `src/lib/tiktok-upload.ts` (+ testy `tiktok-upload.test.ts`)                             |
+| TikTok — server functions panelu             | `src/lib/tiktok.functions.ts`                                                            |
+| TikTok — ekran publikacji (zgodny z audytem) | `src/components/admin/tiktok-post-options-fields.tsx`                                    |
+| TikTok — scenariusz nagrania do audytu       | `docs/tiktok-audyt-nagranie.md`                                                          |
+| TikTok — OAuth (start + callback)            | `src/routes/api/tiktok/auth.ts`, `src/routes/api/tiktok/callback.ts`                     |
+| Klasyfikacja błędów Meta + backoff           | `src/lib/meta-graph-errors.ts` (+ testy `meta-graph-errors.test.ts`)                     |
+| Helpery AI (scenariusz, prompty, grafiki)    | `src/lib/studio-ai.server.ts`                                                            |
+| Server functions                             | `src/lib/studio.functions.ts`                                                            |
+| Baza 250 pytań do shortów (generowana)       | `src/lib/shorts-question-bank.ts`                                                        |
+| Źródło bazy pytań + generator                | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts` |
+| Cron tick Meta                               | `src/routes/api/public/hooks/social-publish-tick.ts`                                     |
+| Panel admina                                 | `src/routes/admin.studio-publikacji.tsx`                                                 |
+| Migracja (tabele + bucket + cron)            | `supabase/migrations/20260803130000_studio_publikacji.sql`                               |
+| Migracja TikToka                             | `supabase/migrations/20260926120000_tiktok_content_posting.sql`                          |
+| Migracja: ustawienia posta twórcy            | `supabase/migrations/20260926140000_tiktok_ustawienia_publikacji_tworcy.sql`             |
 
 Tabele:
 
@@ -285,10 +288,9 @@ każdym odświeżeniu — zapisujemy nowy, inaczej integracja padłaby po dobie.
 ### Przebieg publikacji (rozłożony na ticki)
 
 1. **`creator_info/query`** — wołane **przed każdą** publikacją (wymóg TikToka).
-   `privacy_level` bierzemy **wyłącznie** z `privacy_level_options`
-   (`PUBLIC_TO_EVERYONE` gdy dostępne, inaczej pierwsza opcja) — nigdy
-   hardkodem, bo klient bez audytu TikToka dostaje tylko `SELF_ONLY`.
-   Z tej samej odpowiedzi bierzemy `comment_disabled`; duet i stitch wyłączamy.
+   Służy do **sprawdzenia wyborów twórcy** (czy wybrany `privacy_level` jest
+   nadal dozwolony) i domknięcia przełączników ograniczeniami konta. Sam wybór
+   robi człowiek na ekranie publikacji — patrz sekcja poniżej.
 2. **`video/init`** (`FILE_UPLOAD`) → `publish_id` + `upload_url`, zapis
    `publish_id` do bazy **przed** uploadem (gdyby worker padł, kolejny tick
    domknie wpis pollingiem, a nie opublikuje drugi raz), potem `PUT` chunków
@@ -314,3 +316,39 @@ w `src/lib/tiktok-upload.test.ts`.
 TikTok nie dopuszcza cudzych watermarków w Direct Post. Render Studia
 (`src/lib/studio-render.server.ts`) wypala w obraz **tylko napisy** — żadnego
 logo ani nakładki Finance You — więc materiał nadaje się do publikacji bez zmian.
+
+## Zgodność z audytem TikToka (ekran publikacji)
+
+Content Sharing Guidelines zabraniają hardkodowania prywatności: _„Developers
+should not hardcode one privacy setting… your export screen must reflect those
+values"_. Pierwsza wersja integracji wybierała `privacy_level` po stronie
+serwera — **to nie przeszłoby audytu**, więc wybór należy do twórcy i jedzie
+razem z wpisem w kolejce.
+
+Ekran (`TiktokPostOptionsFields`, wspólny dla publikacji ręcznej
+i auto-publikacji zadania wideo) pokazuje:
+
+- nick konta, na które publikujemy,
+- **wybór prywatności z `creator_info`, bez wartości domyślnej** — dopóki twórca
+  nie wskaże, przycisk publikacji jest nieaktywny,
+- przełączniki komentarzy / duetu / stitcha, **wyszarzone** gdy konto twórcy je
+  blokuje (`applyCreatorConstraints` liczy iloczyn: nie włączamy niczego, czego
+  twórca nie zaznaczył),
+- **ujawnienie treści komercyjnej** — domyślnie wyłączone, po włączeniu
+  checkboxy „Twoja marka" (`brand_organic_toggle`) i „Treść brandowana"
+  (`brand_content_toggle`) plus etykieta, jaką TikTok nada filmowi,
+- deklarację **„Publikując, akceptujesz Music Usage Confirmation"** tuż przed
+  przyciskiem.
+
+Wybory lądują w `social_publish_queue.tiktok_post_options` (auto-publikacja:
+najpierw w `studio_video_jobs.tiktok_post_options`, skąd kopiuje je
+`maybeAutoPublishJob`). Panel i serwer walidują je **tym samym**
+`parseTiktokPostOptions`, żeby UI nie przepuszczał czegoś, co publikacja
+odrzuci. Reguła TikToka „treść brandowana nie może być prywatna" jest
+egzekwowana po obu stronach — zgłaszamy błąd, zamiast po cichu zmieniać wybór
+twórcy.
+
+Klient **przed audytem** ma wymuszone `SELF_ONLY` — `creator_info` zwróci wtedy
+tylko tę opcję i tyle zobaczy twórca. To oczekiwane, nie obchodzimy tego.
+
+Scenariusz nagrania do wniosku audytowego: `docs/tiktok-audyt-nagranie.md`.

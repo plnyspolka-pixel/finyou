@@ -11,10 +11,11 @@
 //
 // Publikacja jest TRÓJETAPOWA i rozłożona na ticki, bo TikTok transkoduje
 // materiał asynchronicznie (jak kontener IG w studio-publishing.server.ts):
-//   1. creator_info/query  — WYMAGANE przed każdą publikacją; z odpowiedzi
-//      bierzemy dozwolone privacy_level i przełączniki komentarzy/duetu/stitcha.
-//      privacy_level NIGDY nie jest hardkodowany — klient bez audytu dostaje
-//      wyłącznie SELF_ONLY i hardkod PUBLIC_TO_EVERYONE kończyłby się błędem.
+//   1. creator_info/query  — WYMAGANE przed każdą publikacją. Służy do
+//      SPRAWDZENIA wyborów twórcy (czy wybrany privacy_level jest nadal
+//      dozwolony) i domknięcia przełączników ustawieniami konta. Sam wybór
+//      robi człowiek w panelu — wytyczne TikToka zabraniają hardkodowania
+//      prywatności, a klient bez audytu dostaje wyłącznie SELF_ONLY.
 //   2. video/init (FILE_UPLOAD) + PUT chunków — zwraca publish_id i upload_url.
 //   3. status/fetch — polling do PUBLISH_COMPLETE / FAILED.
 //
@@ -22,7 +23,13 @@
 // (jeden post na przebieg ticka, zgodnie ze specyfikacją).
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { planChunks, pickPrivacyLevel, tiktokTitle } from "./tiktok-upload";
+import {
+  applyCreatorConstraints,
+  parseTiktokPostOptions,
+  planChunks,
+  tiktokTitle,
+  type TiktokPostOptions,
+} from "./tiktok-upload";
 
 const OAUTH_AUTH_URL = "https://www.tiktok.com/v2/auth/authorize/";
 const OAUTH_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/";
@@ -361,7 +368,10 @@ async function tiktokPost(url: string, token: string, body: unknown): Promise<Ap
 
 export type CreatorInfo = {
   nickname: string | null;
-  privacyLevel: string;
+  username: string | null;
+  avatarUrl: string | null;
+  /** Dozwolone poziomy prywatności — to z nich twórca wybiera w panelu. */
+  privacyOptions: string[];
   commentDisabled: boolean;
   duetDisabled: boolean;
   stitchDisabled: boolean;
@@ -370,19 +380,27 @@ export type CreatorInfo = {
 
 /**
  * creator_info/query — WYMAGANE przed każdą publikacją (wymóg TikToka).
- * privacy_level bierzemy z listy zwróconej przez API: PUBLIC_TO_EVERYONE gdy
- * dostępne, inaczej pierwsza opcja z listy. Zero hardkodu.
+ * Zwraca to, co panel pokazuje twórcy (nick, dozwolone poziomy prywatności,
+ * które interakcje blokuje jego konto) i czym tick weryfikuje jego wybory.
  */
 export async function queryCreatorInfo(token: string): Promise<CreatorInfo> {
   const json = await tiktokPost(CREATOR_INFO_URL, token, {});
   const d = (json.data ?? {}) as Record<string, unknown>;
-  const options = Array.isArray(d.privacy_level_options)
-    ? (d.privacy_level_options as unknown[]).filter((o): o is string => typeof o === "string")
+  const privacyOptions = Array.isArray(d.privacy_level_options)
+    ? (d.privacy_level_options as unknown[]).filter(
+        (o): o is string => typeof o === "string" && o.length > 0,
+      )
     : [];
-  const privacyLevel = pickPrivacyLevel(options);
+  if (!privacyOptions.length) {
+    throw new Error(
+      "TikTok nie zwrócił dozwolonych poziomów prywatności (privacy_level_options) — nie publikujemy bez nich.",
+    );
+  }
   return {
     nickname: typeof d.creator_nickname === "string" ? d.creator_nickname : null,
-    privacyLevel,
+    username: typeof d.creator_username === "string" ? d.creator_username : null,
+    avatarUrl: typeof d.creator_avatar_url === "string" ? d.creator_avatar_url : null,
+    privacyOptions,
     commentDisabled: d.comment_disabled === true,
     duetDisabled: d.duet_disabled === true,
     stitchDisabled: d.stitch_disabled === true,
@@ -404,6 +422,7 @@ export type TiktokQueueRow = {
   tiktok_status: string | null;
   tiktok_fail_reason: string | null;
   tiktok_upload_at: string | null;
+  tiktok_post_options: unknown;
   external_post_id: string | null;
   last_error: string | null;
   published_at: string | null;
@@ -418,6 +437,7 @@ async function uploadVideo(
   item: TiktokQueueRow,
   token: string,
   creator: CreatorInfo,
+  options: TiktokPostOptions,
 ): Promise<string> {
   if (!item.video_url) throw new Error("Publikacja na TikToku wymaga URL wideo (MP4, pion 9:16).");
 
@@ -438,14 +458,19 @@ async function uploadVideo(
   const title = tiktokTitle(item.title || item.message);
   if (!title) throw new Error("Publikacja na TikToku wymaga tytułu.");
 
+  // Przełączniki: wybór twórcy domknięty ograniczeniami jego konta.
+  const effective = applyCreatorConstraints(options, creator);
   const init = await tiktokPost(VIDEO_INIT_URL, token, {
     post_info: {
       title,
-      // Zawsze z creator_info — patrz queryCreatorInfo.
-      privacy_level: creator.privacyLevel,
-      disable_comment: creator.commentDisabled,
-      disable_duet: true,
-      disable_stitch: true,
+      // Wybór twórcy z panelu, zweryfikowany względem creator_info.
+      privacy_level: effective.privacyLevel,
+      disable_comment: effective.disableComment,
+      disable_duet: effective.disableDuet,
+      disable_stitch: effective.disableStitch,
+      // Ujawnienie treści komercyjnej („Your brand" / „Branded content").
+      brand_organic_toggle: effective.brandOrganic,
+      brand_content_toggle: effective.brandedContent,
     },
     source_info: {
       source: "FILE_UPLOAD",
@@ -627,10 +652,12 @@ export async function processTiktokQueueItem(id: string): Promise<{
         : { ok: true, processing: true, publishId: item.tiktok_publish_id };
     }
 
-    // 4a — creator_info WYMAGANE przed każdą publikacją.
+    // 4a — creator_info WYMAGANE przed każdą publikacją; służy też do
+    // sprawdzenia, czy wybory twórcy są nadal dozwolone przez jego konto.
     const creator = await queryCreatorInfo(token);
+    const options = parseTiktokPostOptions(item.tiktok_post_options, creator.privacyOptions);
     // 4b — init + chunki.
-    const publishId = await uploadVideo(item, token, creator);
+    const publishId = await uploadVideo(item, token, creator, options);
     // 4c — polling.
     const poll = await pollUntilDoneOrDefer(item, token, publishId, POLLS_INLINE);
     if (poll.failed) return { ok: false, error: poll.error };

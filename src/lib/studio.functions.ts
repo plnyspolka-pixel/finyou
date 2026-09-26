@@ -121,6 +121,9 @@ export const enqueueStudioPublish = createServerFn({ method: "POST" })
       image_url?: string;
       privacy_status?: "public" | "unlisted" | "private";
       scheduled_at?: string;
+      // Ustawienia posta TikToka wybrane przez twórcę na ekranie publikacji
+      // (wymóg audytu — patrz src/lib/tiktok-upload.ts).
+      tiktok_post_options?: unknown;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -144,6 +147,13 @@ export const enqueueStudioPublish = createServerFn({ method: "POST" })
     // TikTok publikuje `post_info.title` — bez niego init API zwraca błąd.
     if (data.platforms.includes("tiktok") && !title && !message) {
       throw new Error("TikTok wymaga tytułu (lub treści, która go zastąpi).");
+    }
+    // Prywatności ani oznaczeń komercyjnych NIE ustalamy za twórcę — walidacja
+    // wymusza, że przyszły z ekranu publikacji.
+    let tiktokOptions: unknown = null;
+    if (data.platforms.includes("tiktok")) {
+      const { parseTiktokPostOptions } = await import("./tiktok-upload");
+      tiktokOptions = parseTiktokPostOptions(data.tiktok_post_options);
     }
     if (data.platforms.includes("facebook_post") && !message && !imageUrl && !videoUrl) {
       throw new Error("Post na Facebooku wymaga treści lub mediów.");
@@ -177,6 +187,7 @@ export const enqueueStudioPublish = createServerFn({ method: "POST" })
         image_url: platform === "facebook_post" ? imageUrl : null,
         scheduled_at: scheduledAt,
         created_by: context.userId,
+        ...(platform === "tiktok" ? { tiktok_post_options: tiktokOptions as never } : {}),
       }));
       const { error } = await supabaseAdmin.from("social_publish_queue").insert(rows);
       if (error) throw new Error(error.message);
@@ -482,13 +493,15 @@ export const generateStudioScript = createServerFn({ method: "POST" })
   });
 
 // Auto-publikacja: walidacja wspólna dla generacji pojedynczej i wsadowej.
-function sanitizeAutoPublish(d: {
+async function sanitizeAutoPublish(d: {
   auto_publish_platforms?: StudioPlatform[];
   publish_privacy?: string;
-}): {
+  tiktok_post_options?: unknown;
+}): Promise<{
   auto_publish_platforms: StudioPlatform[];
   publish_privacy: string;
-} {
+  tiktok_post_options: unknown;
+}> {
   const allowed: StudioPlatform[] = [
     "youtube",
     "facebook_post",
@@ -500,7 +513,18 @@ function sanitizeAutoPublish(d: {
   const privacy = ["public", "unlisted", "private"].includes(d.publish_privacy ?? "")
     ? d.publish_privacy!
     : "public";
-  return { auto_publish_platforms: platforms, publish_privacy: privacy };
+  // Auto-publikacja na TikToka też musi nieść wybory twórcy — tick nie ma
+  // prawa dobrać prywatności sam, więc bez nich zadania nie zakładamy.
+  let tiktokOptions: unknown = null;
+  if (platforms.includes("tiktok")) {
+    const { parseTiktokPostOptions } = await import("./tiktok-upload");
+    tiktokOptions = parseTiktokPostOptions(d.tiktok_post_options);
+  }
+  return {
+    auto_publish_platforms: platforms,
+    publish_privacy: privacy,
+    tiktok_post_options: tiktokOptions,
+  };
 }
 
 // Krok 2: scenariusz → ElevenLabs TTS → HeyGen avatar. Zwraca id joba do pollingu.
@@ -516,6 +540,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       dynamic_scenes?: boolean;
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
+      tiktok_post_options?: unknown;
       publish_title?: string;
       publish_description?: string;
     }) => d,
@@ -526,7 +551,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
     const voiceId = data.voice_id || FILIP_VOICE_ID;
-    const autoPub = sanitizeAutoPublish(data);
+    const autoPub = await sanitizeAutoPublish(data);
 
     const { data: job, error: insErr } = await supabaseAdmin
       .from("studio_video_jobs")
@@ -540,6 +565,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         dynamic_scenes: data.dynamic_scenes === true,
         auto_publish_platforms: autoPub.auto_publish_platforms,
         publish_privacy: autoPub.publish_privacy,
+        tiktok_post_options: autoPub.tiktok_post_options as never,
         publish_title: data.publish_title?.trim() ?? "",
         publish_description: data.publish_description?.trim() ?? "",
         created_by: context.userId,
@@ -599,6 +625,7 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       dynamic_scenes?: boolean;
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
+      tiktok_post_options?: unknown;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -609,7 +636,7 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
     const { findShortsQuestion, shortsPromptForQuestion } = await import("./shorts-question-bank");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
-    const autoPub = sanitizeAutoPublish(data);
+    const autoPub = await sanitizeAutoPublish(data);
 
     // Pomiń pytania, które mają już nie-failowy job (ochrona przed dublami).
     const { data: existing } = await supabaseAdmin
@@ -643,6 +670,7 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
         dynamic_scenes: data.dynamic_scenes === true,
         auto_publish_platforms: autoPub.auto_publish_platforms,
         publish_privacy: autoPub.publish_privacy,
+        tiktok_post_options: autoPub.tiktok_post_options as never,
         publish_title: q.question.slice(0, 92),
         created_by: context.userId,
       });
@@ -675,7 +703,7 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
     const { data: row } = await supabaseAdmin
       .from("studio_video_jobs")
       .select(
-        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, captions, caption_wait_since, dynamic_scenes, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by",
+        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, captions, caption_wait_since, dynamic_scenes, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by, tiktok_post_options",
       )
       .eq("id", data.id)
       .single();

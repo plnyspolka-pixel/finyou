@@ -47,6 +47,31 @@ export const getTiktokIntegrationStatus = createServerFn({ method: "GET" })
     };
   });
 
+/**
+ * Dane twórcy dla ekranu publikacji: nick, dozwolone poziomy prywatności
+ * i to, które interakcje blokuje jego konto. Wytyczne TikToka wymagają, żeby
+ * ekran odzwierciedlał te wartości, więc panel pobiera je przed publikacją.
+ */
+export type TiktokCreatorInfo = {
+  nickname: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+  privacyOptions: string[];
+  commentDisabled: boolean;
+  duetDisabled: boolean;
+  stitchDisabled: boolean;
+  maxVideoPostDurationSec: number | null;
+};
+
+export const getTiktokCreatorInfo = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<TiktokCreatorInfo> => {
+    await assertAdmin(context.userId);
+    const { getAccessToken, queryCreatorInfo } = await import("@/lib/tiktok.server");
+    const token = await getAccessToken();
+    return queryCreatorInfo(token);
+  });
+
 export const startTiktokConnect = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

@@ -36,9 +36,16 @@ import { describeScenePlan } from "@/lib/studio-scenes";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
 import {
   getTiktokIntegrationStatus,
+  getTiktokCreatorInfo,
   startTiktokConnect,
   disconnectTiktokAccount,
 } from "@/lib/tiktok.functions";
+import { TiktokPostOptionsFields } from "@/components/admin/tiktok-post-options-fields";
+import {
+  EMPTY_TIKTOK_OPTIONS,
+  tiktokOptionsError,
+  type TiktokPostOptions,
+} from "@/lib/tiktok-upload";
 import { HEYGEN_AVATARS, FILIP_VOICE_ID } from "@/lib/heygen-avatars";
 import {
   SHORTS_QUESTIONS,
@@ -181,6 +188,7 @@ function StudioPage() {
   const genImageFn = useServerFn(generateStudioImageFn);
   const deleteImageFn = useServerFn(deleteStudioImage);
   const tiktokStatusFn = useServerFn(getTiktokIntegrationStatus);
+  const tiktokCreatorFn = useServerFn(getTiktokCreatorInfo);
   const tiktokConnectFn = useServerFn(startTiktokConnect);
   const tiktokDisconnectFn = useServerFn(disconnectTiktokAccount);
 
@@ -234,6 +242,11 @@ function StudioPage() {
     queryKey: ["tiktok-status"],
     queryFn: () => tiktokStatusFn(),
   });
+  // Ustawienia konta twórcy pod ekran publikacji. Wytyczne TikToka wymagają,
+  // żeby ekran odzwierciedlał creator_info, więc pobieramy je przy każdym
+  // wejściu (opcje prywatności potrafią się zmienić) — tylko gdy TikTok jest
+  // faktycznie wybrany, żeby nie pukać do API bez potrzeby.
+  const tiktokConnected = !!tiktokStatus?.connected;
 
   const tiktokConnectM = useMutation({
     mutationFn: () => tiktokConnectFn(),
@@ -295,6 +308,18 @@ function StudioPage() {
 
   // ── Publikacja ─────────────────────────────────────────────────────────────
   const [platforms, setPlatforms] = useState<StudioPlatform[]>([]);
+  const [ttOptions, setTtOptions] = useState<TiktokPostOptions>(EMPTY_TIKTOK_OPTIONS);
+  const ttSelected = platforms.includes("tiktok");
+  const {
+    data: ttCreator,
+    isLoading: ttCreatorLoading,
+    error: ttCreatorError,
+  } = useQuery({
+    queryKey: ["tiktok-creator-info"],
+    queryFn: () => tiktokCreatorFn(),
+    enabled: ttSelected && tiktokConnected,
+    staleTime: 60_000,
+  });
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -316,6 +341,7 @@ function StudioPage() {
           image_url: imageUrl || undefined,
           privacy_status: privacy,
           scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+          tiktok_post_options: ttSelected ? ttOptions : undefined,
         },
       }),
     onSuccess: (r) => {
@@ -390,10 +416,28 @@ function StudioPage() {
   // ── Auto-publikacja po wygenerowaniu ───────────────────────────────────────
   const [autoPublishOn, setAutoPublishOn] = useState(false);
   const [autoPlatforms, setAutoPlatforms] = useState<StudioPlatform[]>(["youtube"]);
+  const [autoTtOptions, setAutoTtOptions] = useState<TiktokPostOptions>(EMPTY_TIKTOK_OPTIONS);
   const [autoPrivacy, setAutoPrivacy] = useState<"public" | "unlisted" | "private">("public");
   const toggleAutoPlatform = (p: StudioPlatform) =>
     setAutoPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
   const effectiveAutoPlatforms = autoPublishOn ? autoPlatforms : [];
+  const autoTtSelected = effectiveAutoPlatforms.includes("tiktok");
+  // Osobne zapytanie od publikacji ręcznej (inny moment w formularzu), ten sam
+  // cache — creator_info to te same dane konta.
+  const {
+    data: autoTtCreator,
+    isLoading: autoTtCreatorLoading,
+    error: autoTtCreatorError,
+  } = useQuery({
+    queryKey: ["tiktok-creator-info"],
+    queryFn: () => tiktokCreatorFn(),
+    enabled: autoTtSelected && tiktokConnected,
+    staleTime: 60_000,
+  });
+  // Auto-publikacja na TikToka bez kompletnych wyborów twórcy jest zablokowana.
+  const autoTtBlocked =
+    autoTtSelected &&
+    (!autoTtCreator || !!tiktokOptionsError(autoTtOptions, autoTtCreator.privacyOptions));
 
   // ── Baza 250 pytań do shortów ──────────────────────────────────────────────
   const [bankCategory, setBankCategory] = useState<"all" | ShortsCategory>("all");
@@ -497,6 +541,7 @@ function StudioPage() {
           publish_privacy: autoPrivacy,
           publish_title: title,
           publish_description: message,
+          tiktok_post_options: autoTtSelected ? autoTtOptions : undefined,
         },
       }),
     onSuccess: () => {
@@ -521,6 +566,7 @@ function StudioPage() {
           dynamic_scenes: dynamicScenesOn,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
+          tiktok_post_options: autoTtSelected ? autoTtOptions : undefined,
         },
       }),
     onSuccess: (r) => {
@@ -887,11 +933,35 @@ function StudioPage() {
                 </div>
               </div>
 
+              {/* Ekran publikacji TikToka — wymagane przez audyt kontrolki
+                  twórcy (prywatność, interakcje, ujawnienie komercyjne)
+                  i deklaracja zgody na muzykę, wszystko NAD przyciskiem. */}
+              {ttSelected && (
+                <TiktokPostOptionsFields
+                  value={ttOptions}
+                  onChange={setTtOptions}
+                  creator={tiktokConnected ? ttCreator : undefined}
+                  loading={tiktokConnected && ttCreatorLoading}
+                  error={
+                    !tiktokConnected
+                      ? "Konto TikTok nie jest połączone — połącz je w karcie TikTok powyżej."
+                      : ttCreatorError
+                        ? (ttCreatorError as Error).message
+                        : null
+                  }
+                />
+              )}
+
               <div className="flex items-center gap-3">
                 <Button
                   onClick={() => enqueueM.mutate()}
                   disabled={
-                    enqueueM.isPending || !platforms.length || (needsVideo && !videoUrl.trim())
+                    enqueueM.isPending ||
+                    !platforms.length ||
+                    (needsVideo && !videoUrl.trim()) ||
+                    // TikTok bez kompletnych wyborów twórcy nie idzie dalej.
+                    (ttSelected &&
+                      (!ttCreator || !!tiktokOptionsError(ttOptions, ttCreator.privacyOptions)))
                   }
                 >
                   {enqueueM.isPending ? (
@@ -1141,7 +1211,7 @@ function StudioPage() {
                 <Button
                   size="sm"
                   onClick={() => batchM.mutate()}
-                  disabled={batchM.isPending || selectedIds.size === 0}
+                  disabled={batchM.isPending || selectedIds.size === 0 || autoTtBlocked}
                 >
                   {batchM.isPending ? (
                     <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -1256,6 +1326,24 @@ function StudioPage() {
                       </select>
                     </div>
                   </div>
+                  {/* Auto-publikacja na TikToka też wymaga wyborów twórcy —
+                      tick nie ma prawa dobrać prywatności sam. */}
+                  {autoTtSelected && (
+                    <TiktokPostOptionsFields
+                      deferred
+                      value={autoTtOptions}
+                      onChange={setAutoTtOptions}
+                      creator={tiktokConnected ? autoTtCreator : undefined}
+                      loading={tiktokConnected && autoTtCreatorLoading}
+                      error={
+                        !tiktokConnected
+                          ? "Konto TikTok nie jest połączone — połącz je w zakładce Publikacja."
+                          : autoTtCreatorError
+                            ? (autoTtCreatorError as Error).message
+                            : null
+                      }
+                    />
+                  )}
                   <p className="text-xs text-muted-foreground">
                     Gdy render w HeyGen się skończy, wideo trafi automatycznie do kolejek publikacji
                     zaznaczonych platform (tytuł i opis generuje AI razem ze scenariuszem). Działa
@@ -1507,7 +1595,7 @@ function StudioPage() {
 
               <Button
                 onClick={() => startVideoM.mutate()}
-                disabled={startVideoM.isPending || !fullScript.trim()}
+                disabled={startVideoM.isPending || !fullScript.trim() || autoTtBlocked}
               >
                 {startVideoM.isPending ? (
                   <Loader2 className="mr-1 h-4 w-4 animate-spin" />

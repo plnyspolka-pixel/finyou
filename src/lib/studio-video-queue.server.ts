@@ -29,6 +29,7 @@ type JobRow = {
   dynamic_scenes: boolean;
   auto_publish_platforms: string[];
   publish_privacy: string;
+  tiktok_post_options: unknown;
   publish_title: string;
   publish_description: string;
   auto_published_at: string | null;
@@ -265,6 +266,9 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
         image_url: null,
         scheduled_at: now,
         created_by: job.created_by,
+        // Wybory twórcy z formularza zadania jadą do kolejki — tick publikuje
+        // dokładnie je, bez dobierania prywatności za niego.
+        ...(platform === "tiktok" ? { tiktok_post_options: job.tiktok_post_options as never } : {}),
       })),
     );
     if (error) errors.push(`social: ${error.message}`);

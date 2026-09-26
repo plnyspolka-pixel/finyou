@@ -3,7 +3,8 @@ import {
   MIN_CHUNK_BYTES,
   TARGET_CHUNK_BYTES,
   TITLE_MAX,
-  pickPrivacyLevel,
+  applyCreatorConstraints,
+  parseTiktokPostOptions,
   planChunks,
   tiktokTitle,
 } from "./tiktok-upload";
@@ -86,18 +87,102 @@ describe("tiktokTitle", () => {
   });
 });
 
-describe("pickPrivacyLevel", () => {
-  it("preferuje PUBLIC_TO_EVERYONE, gdy jest dostępne", () => {
-    expect(pickPrivacyLevel(["FOLLOWER_OF_CREATOR", "PUBLIC_TO_EVERYONE", "SELF_ONLY"])).toBe(
-      "PUBLIC_TO_EVERYONE",
+describe("parseTiktokPostOptions", () => {
+  const base = {
+    privacyLevel: "PUBLIC_TO_EVERYONE",
+    disableComment: false,
+    disableDuet: true,
+    disableStitch: true,
+    brandOrganic: false,
+    brandedContent: false,
+  };
+
+  it("przyjmuje komplet ustawień twórcy", () => {
+    expect(parseTiktokPostOptions(base)).toEqual(base);
+  });
+
+  it("wymaga wybranego poziomu prywatności — nie podstawia domyślnego", () => {
+    expect(() => parseTiktokPostOptions({ ...base, privacyLevel: "" })).toThrow(/prywatności/);
+    expect(() => parseTiktokPostOptions({ ...base, privacyLevel: "   " })).toThrow(/prywatności/);
+    expect(() => parseTiktokPostOptions(null)).toThrow(/ustawień publikacji/);
+    expect(() => parseTiktokPostOptions(undefined)).toThrow(/ustawień publikacji/);
+  });
+
+  it("odrzuca prywatność, na którą konto twórcy już nie pozwala", () => {
+    expect(() => parseTiktokPostOptions(base, ["SELF_ONLY"])).toThrow(/nie pozwala już/);
+    expect(parseTiktokPostOptions(base, ["SELF_ONLY", "PUBLIC_TO_EVERYONE"])).toEqual(base);
+  });
+
+  // Reguła TikToka: treść brandowana nie może być prywatna. Zgłaszamy błąd,
+  // zamiast po cichu zmieniać którykolwiek z wyborów twórcy.
+  it("nie dopuszcza treści brandowanej przy prywatności tylko-ja", () => {
+    expect(() =>
+      parseTiktokPostOptions({ ...base, privacyLevel: "SELF_ONLY", brandedContent: true }),
+    ).toThrow(/Branded content/);
+  });
+
+  it("pozwala na własną markę przy prywatności tylko-ja", () => {
+    const out = parseTiktokPostOptions({
+      ...base,
+      privacyLevel: "SELF_ONLY",
+      brandOrganic: true,
+    });
+    expect(out.brandOrganic).toBe(true);
+    expect(out.privacyLevel).toBe("SELF_ONLY");
+  });
+
+  it("traktuje brakujące przełączniki jako wyłączone", () => {
+    const out = parseTiktokPostOptions({ privacyLevel: "SELF_ONLY" });
+    expect(out).toEqual({
+      privacyLevel: "SELF_ONLY",
+      disableComment: false,
+      disableDuet: false,
+      disableStitch: false,
+      brandOrganic: false,
+      brandedContent: false,
+    });
+  });
+});
+
+describe("applyCreatorConstraints", () => {
+  const options = {
+    privacyLevel: "PUBLIC_TO_EVERYONE",
+    disableComment: false,
+    disableDuet: false,
+    disableStitch: false,
+    brandOrganic: false,
+    brandedContent: false,
+  };
+
+  it("wyłącza interakcje zablokowane na koncie twórcy", () => {
+    const out = applyCreatorConstraints(options, {
+      commentDisabled: true,
+      duetDisabled: false,
+      stitchDisabled: true,
+    });
+    expect(out.disableComment).toBe(true);
+    expect(out.disableStitch).toBe(true);
+    expect(out.disableDuet).toBe(false);
+  });
+
+  // Iloczyn, nie nadpisanie: konto pozwalające na duet nie może włączyć go
+  // z powrotem, jeśli twórca sam go wyłączył.
+  it("nie włącza z powrotem tego, co twórca wyłączył", () => {
+    const out = applyCreatorConstraints(
+      { ...options, disableDuet: true, disableComment: true },
+      { commentDisabled: false, duetDisabled: false, stitchDisabled: false },
     );
+    expect(out.disableDuet).toBe(true);
+    expect(out.disableComment).toBe(true);
   });
 
-  it("bierze pierwszą dostępną opcję, gdy publicznej nie ma", () => {
-    expect(pickPrivacyLevel(["SELF_ONLY", "MUTUAL_FOLLOW_FRIENDS"])).toBe("SELF_ONLY");
-  });
-
-  it("nie hardkoduje poziomu przy pustej liście — rzuca", () => {
-    expect(() => pickPrivacyLevel([])).toThrow(/privacy_level_options/);
+  it("nie rusza prywatności ani oznaczeń komercyjnych", () => {
+    const out = applyCreatorConstraints(
+      { ...options, brandOrganic: true },
+      { commentDisabled: true, duetDisabled: true, stitchDisabled: true },
+    );
+    expect(out.privacyLevel).toBe("PUBLIC_TO_EVERYONE");
+    expect(out.brandOrganic).toBe(true);
+    expect(out.brandedContent).toBe(false);
   });
 });
