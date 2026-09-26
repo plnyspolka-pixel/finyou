@@ -34,13 +34,9 @@ import {
 import { captionBadgeLabel } from "@/lib/studio-captions";
 import { describeScenePlan } from "@/lib/studio-scenes";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
-import {
-  getTiktokIntegrationStatus,
-  getTiktokCreatorInfo,
-  startTiktokConnect,
-  disconnectTiktokAccount,
-} from "@/lib/tiktok.functions";
+import { getTiktokIntegrationStatus, getTiktokCreatorInfo } from "@/lib/tiktok.functions";
 import { TiktokPostOptionsFields } from "@/components/admin/tiktok-post-options-fields";
+import { TiktokConnectionCard } from "@/components/admin/tiktok-connection-card";
 import {
   EMPTY_TIKTOK_OPTIONS,
   tiktokOptionsError,
@@ -189,20 +185,8 @@ function StudioPage() {
   const deleteImageFn = useServerFn(deleteStudioImage);
   const tiktokStatusFn = useServerFn(getTiktokIntegrationStatus);
   const tiktokCreatorFn = useServerFn(getTiktokCreatorInfo);
-  const tiktokConnectFn = useServerFn(startTiktokConnect);
-  const tiktokDisconnectFn = useServerFn(disconnectTiktokAccount);
 
   const [tab, setTab] = useState("publikacja");
-
-  // Powrót z OAuth TikToka (/api/tiktok/callback dokleja ?tt=…).
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tt = params.get("tt");
-    if (tt === "connected") toast.success("Konto TikTok połączone!");
-    if (tt === "error")
-      toast.error(`Połączenie z TikTokiem nieudane: ${params.get("reason") ?? "nieznany błąd"}`);
-    if (tt) window.history.replaceState({}, "", window.location.pathname);
-  }, []);
 
   const { data: status } = useQuery({ queryKey: ["studio-status"], queryFn: () => statusFn() });
   const { data: socialQueue = [] } = useQuery({
@@ -247,24 +231,6 @@ function StudioPage() {
   // wejściu (opcje prywatności potrafią się zmienić) — tylko gdy TikTok jest
   // faktycznie wybrany, żeby nie pukać do API bez potrzeby.
   const tiktokConnected = !!tiktokStatus?.connected;
-
-  const tiktokConnectM = useMutation({
-    mutationFn: () => tiktokConnectFn(),
-    // `url` to /api/tiktok/auth?state=… — ten endpoint robi redirect na TikToka.
-    onSuccess: ({ url }) => {
-      window.location.href = url;
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-  const tiktokDisconnectM = useMutation({
-    mutationFn: () => tiktokDisconnectFn(),
-    onSuccess: () => {
-      toast.success("Odłączono konto TikTok");
-      qc.invalidateQueries({ queryKey: ["tiktok-status"] });
-      qc.invalidateQueries({ queryKey: ["studio-status"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   // Automatyczny polling HeyGen dla jobów w trakcie renderowania.
   useEffect(() => {
@@ -716,104 +682,9 @@ function StudioPage() {
 
         {/* ── PUBLIKACJA ─────────────────────────────────────────────────── */}
         <TabsContent value="publikacja" className="space-y-6">
-          {/* Połączenie konta TikTok (OAuth) — odpowiednik karty kanału
-              w /admin/youtube-shorts. Meta jedzie na sekretach środowiska,
-              więc własnej karty nie potrzebuje. */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Music2 className="h-5 w-5" /> TikTok
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {tiktokLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : !tiktokStatus?.envConfigured ? (
-                <div className="space-y-2">
-                  <p className="font-medium text-destructive">
-                    Brak konfiguracji — ustaw sekrety TIKTOK_CLIENT_KEY i TIKTOK_CLIENT_SECRET.
-                  </p>
-                  <p className="text-muted-foreground">
-                    W TikTok for Developers włącz produkt <b>Content Posting API</b> (Direct Post),
-                    dodaj zakresy <code>user.info.basic</code> i <code>video.publish</code>, a jako
-                    Redirect URI wpisz{" "}
-                    <code className="break-all rounded bg-muted px-1">
-                      {tiktokStatus?.redirectUri}
-                    </code>
-                    .
-                  </p>
-                </div>
-              ) : tiktokStatus.connected ? (
-                <div className="flex flex-wrap items-start gap-4">
-                  <div className="space-y-1">
-                    <p className="flex items-center gap-2 font-medium">
-                      <span
-                        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-green-500"
-                        aria-hidden
-                      />
-                      Połączono
-                      {tiktokStatus.openId && (
-                        <code className="rounded bg-muted px-1 text-xs">{tiktokStatus.openId}</code>
-                      )}
-                    </p>
-                    {tiktokStatus.connectedAt && (
-                      <p className="text-xs text-muted-foreground">
-                        od {new Date(tiktokStatus.connectedAt).toLocaleString("pl-PL")}
-                      </p>
-                    )}
-                    {tiktokStatus.tokenExpiresAt && (
-                      <p className="text-xs text-muted-foreground">
-                        Token wygasa {new Date(tiktokStatus.tokenExpiresAt).toLocaleString("pl-PL")}{" "}
-                        — tick odświeża go automatycznie 2 h przed terminem.
-                      </p>
-                    )}
-                    {tiktokStatus.refreshTokenExpiresAt && (
-                      <p className="text-xs text-muted-foreground">
-                        Ponowne logowanie wymagane do{" "}
-                        {new Date(tiktokStatus.refreshTokenExpiresAt).toLocaleDateString("pl-PL")}.
-                      </p>
-                    )}
-                    {tiktokStatus.lastError && (
-                      <p className="text-xs text-destructive">
-                        Ostatni błąd: {tiktokStatus.lastError}
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => tiktokDisconnectM.mutate()}
-                    disabled={tiktokDisconnectM.isPending}
-                  >
-                    <Unplug className="mr-1 h-4 w-4" /> Rozłącz
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-muted-foreground">
-                    Konto TikTok nie jest połączone — publikacja na TikToka jest wyłączona.
-                  </p>
-                  {tiktokStatus.lastError && (
-                    <p className="text-xs text-destructive">
-                      Ostatni błąd: {tiktokStatus.lastError}
-                    </p>
-                  )}
-                  <Button
-                    size="sm"
-                    onClick={() => tiktokConnectM.mutate()}
-                    disabled={tiktokConnectM.isPending}
-                  >
-                    {tiktokConnectM.isPending ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Music2 className="mr-1 h-4 w-4" />
-                    )}
-                    Połącz TikTok
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* Połączenie konta TikTok — ten sam komponent renderuje się
+              w /admin/ustawienia, więc obie strony pokazują jeden stan. */}
+          <TiktokConnectionCard />
 
           <Card>
             <CardHeader>

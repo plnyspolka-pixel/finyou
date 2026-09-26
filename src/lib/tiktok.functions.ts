@@ -19,6 +19,10 @@ async function assertAdmin(userId: string) {
 export type TiktokIntegrationStatus = {
   envConfigured: boolean;
   redirectUri: string;
+  /** Diagnostyka `client_key` — patrz describeClientKey w tiktok.server.ts. */
+  clientKeyPreview: string;
+  clientKeyLength: number;
+  clientKeyHadWhitespace: boolean;
   connected: boolean;
   openId: string | null;
   tokenExpiresAt: string | null;
@@ -31,13 +35,18 @@ export const getTiktokIntegrationStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<TiktokIntegrationStatus> => {
     await assertAdmin(context.userId);
-    const { getTiktokEnv, getIntegrationRow } = await import("@/lib/tiktok.server");
+    const { getTiktokEnv, getIntegrationRow, describeClientKey } =
+      await import("@/lib/tiktok.server");
     const env = getTiktokEnv();
+    const key = describeClientKey();
     const row = await getIntegrationRow();
     // Tokenów NIE zwracamy — tylko metadane do panelu.
     return {
       envConfigured: env.configured,
       redirectUri: env.redirectUri,
+      clientKeyPreview: key.preview,
+      clientKeyLength: key.length,
+      clientKeyHadWhitespace: key.hadWhitespace,
       connected: !!row.refresh_token && row.connected,
       openId: row.open_id,
       tokenExpiresAt: row.token_expires_at,

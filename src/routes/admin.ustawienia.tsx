@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
+import { TiktokConnectionCard } from "@/components/admin/tiktok-connection-card";
 
 export const Route = createFileRoute("/admin/ustawienia")({
   component: UstawieniaPage,
@@ -38,15 +39,19 @@ function UstawieniaPage() {
           </div>
           <div>Integracje: zarządzaj w sekcji „Integracje”.</div>
           <div>
-            Publikacja społecznościowa (YouTube, Facebook, Instagram,{" "}
-            <b className="text-foreground">TikTok</b>): połącz konta w{" "}
-            <Link className="underline" to="/admin/studio-publikacji">
-              Studiu publikacji
+            YouTube: połącz kanał w{" "}
+            <Link className="underline" to="/admin/youtube-shorts">
+              YouTube Shorts
             </Link>
-            .
+            . Facebook i Instagram jadą na sekretach środowiska (META_*).
           </div>
         </CardContent>
       </Card>
+
+      {/* TikTok wymaga OAuth per konto, więc ma własną kartę tutaj. Ten sam
+          komponent renderuje się w Studiu publikacji — jeden stan, dwa
+          miejsca, bez rozjazdu. */}
+      <TiktokConnectionCard />
     </div>
   );
 }

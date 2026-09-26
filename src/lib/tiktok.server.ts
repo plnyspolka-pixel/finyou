@@ -67,11 +67,30 @@ const PROCESSING_TIMEOUT_MIN = 60;
 const STALLED_CLAIM_MIN = 30;
 
 export function getTiktokEnv() {
-  const clientKey = process.env.TIKTOK_CLIENT_KEY || "";
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET || "";
+  // .trim() nie jest ozdobą: sekrety wklejane do menedżera łapią spację albo
+  // znak nowej linii na końcu, a URLSearchParams zakoduje to jako %0A i TikTok
+  // odrzuci żądanie komunikatem o błędnym `client_key`.
+  const clientKey = (process.env.TIKTOK_CLIENT_KEY || "").trim();
+  const clientSecret = (process.env.TIKTOK_CLIENT_SECRET || "").trim();
   const redirectUri =
-    process.env.TIKTOK_REDIRECT_URI || "https://financeyou.pl/api/tiktok/callback";
+    (process.env.TIKTOK_REDIRECT_URI || "").trim() || "https://financeyou.pl/api/tiktok/callback";
   return { clientKey, clientSecret, redirectUri, configured: !!(clientKey && clientSecret) };
+}
+
+/**
+ * Podgląd `client_key` do diagnostyki w panelu. Klucz NIE jest sekretem —
+ * jedzie jawnie w URL-u zgody, który użytkownik i tak widzi w pasku adresu —
+ * ale pokazujemy skrót plus długość, żeby dało się wychwycić wklejoną spację,
+ * ucięty znak albo pomyłkowo wstawiony client_secret.
+ */
+export function describeClientKey(): { preview: string; length: number; hadWhitespace: boolean } {
+  const raw = process.env.TIKTOK_CLIENT_KEY || "";
+  const key = raw.trim();
+  return {
+    preview: key ? `${key.slice(0, 6)}…${key.slice(-2)}` : "(puste)",
+    length: key.length,
+    hadWhitespace: raw !== key,
+  };
 }
 
 type IntegrationRow = {
