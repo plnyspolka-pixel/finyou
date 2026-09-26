@@ -11670,6 +11670,7 @@ export type Database = {
           scheduled_at: string
           status: string
           tiktok_fail_reason: string | null
+          tiktok_post_options: Json | null
           tiktok_publish_id: string | null
           tiktok_status: string | null
           tiktok_upload_at: string | null
@@ -11693,6 +11694,7 @@ export type Database = {
           scheduled_at?: string
           status?: string
           tiktok_fail_reason?: string | null
+          tiktok_post_options?: Json | null
           tiktok_publish_id?: string | null
           tiktok_status?: string | null
           tiktok_upload_at?: string | null
@@ -11716,6 +11718,7 @@ export type Database = {
           scheduled_at?: string
           status?: string
           tiktok_fail_reason?: string | null
+          tiktok_post_options?: Json | null
           tiktok_publish_id?: string | null
           tiktok_status?: string | null
           tiktok_upload_at?: string | null
@@ -11814,6 +11817,7 @@ export type Database = {
           status: string
           subtitle_url: string | null
           thumbnail_url: string | null
+          tiktok_post_options: Json | null
           updated_at: string
           video_url: string | null
           video_url_clean: string | null
@@ -11844,6 +11848,7 @@ export type Database = {
           status?: string
           subtitle_url?: string | null
           thumbnail_url?: string | null
+          tiktok_post_options?: Json | null
           updated_at?: string
           video_url?: string | null
           video_url_clean?: string | null
@@ -11874,6 +11879,7 @@ export type Database = {
           status?: string
           subtitle_url?: string | null
           thumbnail_url?: string | null
+          tiktok_post_options?: Json | null
           updated_at?: string
           video_url?: string | null
           video_url_clean?: string | null

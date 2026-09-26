@@ -36,6 +36,13 @@
       "when": 1790446642689,
       "tag": "0004_tiktok_content_posting",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790446737746,
+      "tag": "0005_tiktok_ustawienia_publikacji_tworcy",
+      "breakpoints": true
     }
   ]
 }
