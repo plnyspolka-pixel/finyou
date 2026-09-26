@@ -7421,8 +7421,8 @@
       },
       {
         "name": "queue_social_publication",
-        "title": "Queue automatic publication (Facebook / Instagram)",
-        "description": "Dodaje wpis do kolejki automatycznej publikacji (facebook_post, facebook_reels, instagram_reels) — tick opublikuje go o zadanej porze bez dalszego udziału człowieka. To realna publikacja na profilu firmy. Tylko administrator/operator.",
+        "title": "Queue automatic publication (Facebook / Instagram / TikTok)",
+        "description": "Dodaje wpis do kolejki automatycznej publikacji (facebook_post, facebook_reels, instagram_reels, tiktok) — tick opublikuje go o zadanej porze bez dalszego udziału człowieka. To realna publikacja na profilu firmy. TikTok wymaga połączonego konta (panel → Studio publikacji → Połącz TikTok) i pionowego MP4. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -7437,7 +7437,8 @@
               "enum": [
                 "facebook_post",
                 "facebook_reels",
-                "instagram_reels"
+                "instagram_reels",
+                "tiktok"
               ]
             },
             "title": {
@@ -11898,7 +11899,7 @@
       {
         "name": "create_studio_video_job",
         "title": "Create studio video job",
-        "description": "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+        "description": "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -11947,7 +11948,8 @@
                   "youtube",
                   "facebook_post",
                   "facebook_reels",
-                  "instagram_reels"
+                  "instagram_reels",
+                  "tiktok"
                 ]
               },
               "default": []
@@ -12036,7 +12038,8 @@
                   "youtube",
                   "facebook_post",
                   "facebook_reels",
-                  "instagram_reels"
+                  "instagram_reels",
+                  "tiktok"
                 ]
               }
             }
@@ -12126,7 +12129,8 @@
                   "youtube",
                   "facebook_post",
                   "facebook_reels",
-                  "instagram_reels"
+                  "instagram_reels",
+                  "tiktok"
                 ]
               },
               "minItems": 1
