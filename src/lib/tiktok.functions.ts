@@ -81,6 +81,18 @@ export const getTiktokCreatorInfo = createServerFn({ method: "GET" })
     return queryCreatorInfo(token);
   });
 
+/**
+ * Diagnostyka: czy TikTok w ogóle rozpoznaje naszą parę kluczy. Nie dotyka
+ * tokenów użytkownika ani niczego nie zapisuje.
+ */
+export const testTiktokCredentials = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ ok: boolean; detail: string }> => {
+    await assertAdmin(context.userId);
+    const { verifyClientCredentials } = await import("@/lib/tiktok.server");
+    return verifyClientCredentials();
+  });
+
 export const startTiktokConnect = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

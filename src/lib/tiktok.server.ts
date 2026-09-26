@@ -284,6 +284,36 @@ export async function disconnectTiktok(): Promise<void> {
   });
 }
 
+/**
+ * Test poświadczeń bez udziału przeglądarki: wymiana client_key + client_secret
+ * na „client access token" (grant_type=client_credentials). Rozcina problem
+ * na pół, gdy ekran zgody odrzuca `client_key`:
+ *   * sukces  → para kluczy jest prawidłowa i rozpoznawana przez TikToka,
+ *               więc wina leży w konfiguracji aplikacji (brak Login Kit,
+ *               wyłączone „Configure for Web", aplikacja w sandboxie),
+ *   * porażka → zły albo nieaktualny client_key/secret w sekretach.
+ */
+export async function verifyClientCredentials(): Promise<{
+  ok: boolean;
+  detail: string;
+}> {
+  const { clientKey, clientSecret, configured } = getTiktokEnv();
+  if (!configured) {
+    return { ok: false, detail: "Brak TIKTOK_CLIENT_KEY / TIKTOK_CLIENT_SECRET w sekretach." };
+  }
+  const { json, status } = await tokenRequest({
+    client_key: clientKey,
+    client_secret: clientSecret,
+    grant_type: "client_credentials",
+  });
+  const err = tokenError(json, status);
+  if (err) return { ok: false, detail: err };
+  return {
+    ok: true,
+    detail: "TikTok rozpoznał parę client_key + client_secret i wydał token aplikacji.",
+  };
+}
+
 // ── Token ────────────────────────────────────────────────────────────────────
 
 // Odświeżamy z 2 h zapasem — publikacja w środku ticka nie może stracić tokena.
