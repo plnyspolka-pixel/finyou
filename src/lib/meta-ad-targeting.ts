@@ -311,6 +311,81 @@ export function buildCreativePayload(input: KreacjaInput): Record<string, unknow
   };
 }
 
+/**
+ * Co widzi osoba zaraz po wysłaniu formularza błyskawicznego (ekran
+ * „dziękujemy" Meta). Domyślnie przycisk „Napisz do nas na Messengerze" —
+ * prospekt może od razu zacząć rozmowę, a Ania przejmuje ją w skrzynce.
+ */
+export type PrzyciskPodziekowania = "messenger" | "strona" | "brak";
+
+export type EkranPodziekowania = {
+  przycisk?: PrzyciskPodziekowania;
+  title?: string;
+  body?: string;
+  button_text?: string;
+};
+
+export const DOMYSLNY_EKRAN_PODZIEKOWANIA: Required<EkranPodziekowania> = {
+  przycisk: "messenger",
+  title: "Dziękujemy!",
+  body: "Mamy Twoje dane i wkrótce się odezwiemy. Masz pytanie już teraz? Napisz do nas na Messengerze.",
+  button_text: "Napisz na Messengerze",
+};
+
+const DOMYSLNY_TEKST_PRZYCISKU: Record<PrzyciskPodziekowania, string> = {
+  messenger: DOMYSLNY_EKRAN_PODZIEKOWANIA.button_text,
+  strona: "Przejdź na stronę",
+  brak: "",
+};
+
+/** Pole `thank_you_page` żądania POST /<page_id>/leadgen_forms. */
+export function buildThankYouPage(
+  ekran: EkranPodziekowania | null | undefined,
+  websiteUrl?: string | null,
+): Record<string, unknown> {
+  const e = ekran ?? {};
+  let przycisk: PrzyciskPodziekowania = e.przycisk ?? DOMYSLNY_EKRAN_PODZIEKOWANIA.przycisk;
+  // Przycisk „strona" bez adresu Meta odrzuci — wtedy zostaje sam ekran.
+  if (przycisk === "strona" && !websiteUrl) przycisk = "brak";
+  const title = (e.title?.trim() || DOMYSLNY_EKRAN_PODZIEKOWANIA.title).slice(0, 60);
+  const body = (e.body?.trim() || DOMYSLNY_EKRAN_PODZIEKOWANIA.body).slice(0, 360);
+  const button_text = (e.button_text?.trim() || DOMYSLNY_TEKST_PRZYCISKU[przycisk]).slice(0, 60);
+
+  if (przycisk === "messenger") {
+    return {
+      title,
+      body,
+      button_type: "MESSAGE_BUSINESS",
+      button_text,
+      enable_messenger: true,
+    };
+  }
+  if (przycisk === "strona") {
+    return { title, body, button_type: "VIEW_WEBSITE", button_text, website_url: websiteUrl };
+  }
+  return { title, body, button_type: "NONE" };
+}
+
+/** Ciało żądania POST /<page_id>/leadgen_forms. */
+export function buildLeadFormPayload(input: {
+  nazwa: string;
+  leadForm?: Record<string, any> | null;
+}): Record<string, unknown> {
+  const lf = input.leadForm ?? {};
+  const followUpUrl: string = lf.follow_up_action_url || "https://financeyou.pl/dziekujemy";
+  return {
+    name: lf.name || input.nazwa,
+    questions: lf.questions ?? [{ type: "EMAIL" }, { type: "FULL_NAME" }, { type: "PHONE" }],
+    privacy_policy: lf.privacy_policy ?? {
+      url: "https://financeyou.pl/polityka-prywatnosci",
+      link_text: "Polityka prywatności",
+    },
+    follow_up_action_url: followUpUrl,
+    thank_you_page: buildThankYouPage(lf.thank_you_page as EkranPodziekowania | undefined, followUpUrl),
+    locale: "pl_PL",
+  };
+}
+
 export type PytanieFormularza = { type: string };
 
 export type SzablonKampanii = {
@@ -328,6 +403,7 @@ export type SzablonKampanii = {
     questions: PytanieFormularza[];
     privacy_policy: { url: string; link_text: string };
     follow_up_action_url: string;
+    thank_you_page?: EkranPodziekowania;
   };
   /**
    * Audiencje remarketingowe Finance You. Dla kampanii klienta zewnętrznego

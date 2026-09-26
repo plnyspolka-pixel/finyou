@@ -46,7 +46,7 @@ const OPT_OUT_PATTERNS: { signal: string; re: RegExp }[] = [
   },
   {
     signal: "zaprzestanie_pl",
-    re: /nie\s+(pisz|piszcie|wysy[łl]ajcie|kontaktujcie)\s+(do\s+mnie|si[ęe]|wi[ęe]cej)/i,
+    re: /nie\s+(pisz|piszcie|wysy[łl]ajcie|kontaktujcie)\s+(do\s+mnie|si[ęe]|wi[ęe]cej|mi|nam)\b/i,
   },
   { signal: "zaprzestanie_pl", re: /nie\s+kontaktujcie\s+si[ęe]/i },
   // „Nie chcę / nie życzę sobie"
@@ -88,6 +88,8 @@ const OPT_OUT_PATTERNS: { signal: string; re: RegExp }[] = [
   // Angielski (klienci zagraniczni / klienty pocztowe z szablonem). Celowo bez
   // samego słowa „unsubscribe" — stopki firmowe w odpowiedziach klientów mają
   // je w treści i każdy taki mail wyglądałby na rezygnację.
+  { signal: "cofniecie_zgody_marketing_pl", re: /(cofam|wycofuj[ęe]|odwo[łl]uj[ęe])\s+(swoj[ąa]\s+|moj[ąa]\s+)?zgod[ęe]/i },
+
   { signal: "optout_en", re: /(please\s+)?unsubscribe\s+(me|us)\b/i },
   { signal: "optout_en", re: /^\s*unsubscribe\s*[!.]*\s*$/im },
   { signal: "optout_en", re: /(want|wish)\s+to\s+unsubscribe/i },
@@ -100,24 +102,42 @@ const OPT_OUT_PATTERNS: { signal: string; re: RegExp }[] = [
 ];
 
 /**
- * Sygnały twarde — klient nie tylko prosi o spokój, ale powołuje się na RODO
- * albo grozi skargą. Takie adresy blokujemy w KAŻDEJ kategorii (również maile
- * obsługowe), dopóki człowiek nie zdejmie blokady w panelu.
+ * Sygnały twarde — klient nie tylko prosi o spokój, ale WPROST żąda usunięcia
+ * danych / cofa zgodę na podstawie RODO albo grozi skargą. Takie adresy
+ * blokujemy w KAŻDEJ kategorii (również maile obsługowe), dopóki człowiek nie
+ * zdejmie blokady w panelu.
+ *
+ * Uwaga: samo słowo „RODO"/„GDPR", „UODO", „prawo do bycia zapomnianym" czy
+ * „prawo do sprzeciwu wobec przetwarzania" NIE jest sygnałem — występują
+ * w każdej klauzuli informacyjnej i stopce firmowej. Wymagamy wyrażonej
+ * w pierwszej osobie intencji (żądam, wnoszę, cofam, zgłoszę…).
  */
 const HARD_OPT_OUT_PATTERNS: { signal: string; re: RegExp }[] = [
-  { signal: "rodo", re: /\brodo\b/i },
-  { signal: "rodo", re: /\bgdpr\b/i },
   {
     signal: "rodo",
-    re: /[żz][ąa]dam\s+(natychmiastowego\s+)?(usuni[ęe]cia|zaprzestania|wykre[śs]lenia)/i,
+    re: /[żz][ąa]dam\s+(natychmiastowego\s+|niezw[łl]ocznego\s+)?(usuni[ęe]cia|zaprzestania|wykre[śs]lenia)/i,
   },
-  { signal: "rodo", re: /prawo\s+do\s+bycia\s+zapomnianym/i },
-  { signal: "rodo", re: /cofam\s+zgod[ęe]/i },
-  { signal: "rodo", re: /sprzeciw\s+wobec\s+przetwarzania/i },
-  { signal: "skarga", re: /\buodo\b|\buokik\b|urz[ęe]d\s+ochrony\s+danych/i },
+  {
+    signal: "rodo",
+    re: /(prosz[ęe]|wnosz[ęe])\s+o\s+(natychmiastowe\s+|niezw[łl]oczne\s+)?usuni[ęe]cie\s+(wszystkich\s+)?(moich\s+)?danych/i,
+  },
+  {
+    signal: "rodo",
+    re: /(korzystam|skorzysta[ćc]|chc[ęe]\s+skorzysta[ćc]|powo[łl]uj[ęe]\s+si[ęe]\s+na)\s+(z\s+)?(mojego\s+|swojego\s+)?prawa?\s+do\s+(bycia\s+zapomnianym|usuni[ęe]cia\s+danych|sprzeciwu)/i,
+  },
+  // Cofnięcie zgody wyłącznie na marketing to zwykła rezygnacja (soft, niżej) —
+  // nie może blokować maili wynikających z umowy.
+  {
+    signal: "rodo",
+    re: /(cofam|wycofuj[ęe]|odwo[łl]uj[ęe])\s+(swoj[ąa]\s+|moj[ąa]\s+)?zgod[ęe](?!\s+na\s+(marketing|newsletter|ofert|otrzymywanie\s+(ofert|newslettera|informacji\s+handlowych|materia[łl][óo]w\s+marketingowych)|informacj[ęe]\s+handlow|komunikacj[ęe]\s+marketingow|kontakt\s+marketingowy))/i,
+  },
+  { signal: "rodo", re: /(wnosz[ęe]|zg[łl]aszam|sk[łl]adam)\s+sprzeciw/i },
+  { signal: "rodo", re: /(please\s+)?(delete|erase|remove)\s+(all\s+)?(of\s+)?my\s+(personal\s+)?data/i },
+  { signal: "rodo", re: /i\s+(hereby\s+)?(withdraw|revoke)\s+(my\s+)?consent/i },
+  { signal: "rodo", re: /i\s+(hereby\s+)?object\s+to\s+(the\s+)?processing/i },
   {
     signal: "skarga",
-    re: /(zg[łl]osz[ęe]|zawiadomi[ęe]|skarg[aęe])\b.{0,40}(uodo|uokik|urz[ęe]d|organ)/i,
+    re: /(zg[łl]osz[ęe]|zg[łl]aszam|zawiadomi[ęe]|zawiadamiam|z[łl]o[żz][ęe]|sk[łl]adam|skieruj[ęe]|wnios[ęe]|napisz[ęe])(?![\p{L}]).{0,60}(\buodo\b|\bpuodo\b|\buokik\b|urz[ęe]d\w*\s+ochrony\s+danych|prezes\w*\s+urz[ęe]du)/iu,
   },
   { signal: "skarga", re: /(zg[łl]aszam|zg[łl]osz[ęe])\s+(to\s+)?(jako\s+)?spam/i },
   {
@@ -128,7 +148,8 @@ const HARD_OPT_OUT_PATTERNS: { signal: string; re: RegExp }[] = [
 ];
 
 /**
- * Granice cytowanej historii wątku i podpisu — poniżej nich treść nie jest już
+ * Granice cytowanej historii wątku, podpisu i stopki (klauzula RODO,
+ * zastrzeżenie poufności) — poniżej nich treść nie jest już
  * własną wypowiedzią nadawcy (cytat naszego maila, stopka firmowa z linkami).
  */
 const QUOTE_BOUNDARIES: RegExp[] = [
@@ -140,6 +161,12 @@ const QUOTE_BOUNDARIES: RegExp[] = [
   /^\s*(Dnia|Data)\s+.+\s+napisa[łl]/im,
   /^\s*On\s+.+\s+wrote\s*:/im,
   /^\s*Wys[łl]ane\s+z\s+(mojego\s+)?(iPhone|iPad|Yahoo|Poczty)/im,
+  // Klauzule informacyjne RODO i zastrzeżenia poufności w stopkach — to nie
+  // jest wypowiedź nadawcy, a zawierają słowa typu „usunięcie", „sprzeciw", „UODO".
+  /^\s*(Klauzula\s+(informacyjna|RODO|poufno[śs]ci)|Informacja\s+o\s+przetwarzaniu\s+danych|Ochrona\s+danych\s+osobowych\s*:)/im,
+  /^\s*(Zgodnie\s+z\s+art\.?\s*1[34]|Administratorem\s+(Pani|Pana|Pa[ńn]stwa|Twoich|Pani\/Pana|danych))/im,
+  /^\s*(Ta\s+wiadomo[śs][ćc]|Niniejsza\s+wiadomo[śs][ćc]|Tre[śs][ćc]\s+tej\s+wiadomo[śs]ci)\s+(jest\s+poufna|mo[żz]e\s+zawiera[ćc]|zawiera\s+informacje\s+poufne|stanowi)/im,
+  /^\s*(This\s+(e-?mail|message)|The\s+information\s+(contained\s+)?in\s+this)\s+(is\s+confidential|may\s+contain|and\s+any\s+attachments|contains)/im,
 ];
 
 /**

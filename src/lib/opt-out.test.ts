@@ -77,6 +77,52 @@ describe("detectOptOut — sygnały twarde", () => {
   });
 });
 
+describe("detectOptOut — samo słowo RODO/GDPR to nie wypis", () => {
+  it("wzmianka o RODO w treści nie blokuje", () => {
+    expect(
+      detectOptOut({ text: "Dzień dobry, przesyłam podpisaną zgodę RODO oraz skan dowodu." }),
+    ).toBeNull();
+    expect(detectOptOut({ subject: "Zgoda RODO", text: "W załączniku." })).toBeNull();
+    expect(detectOptOut({ text: "Our company is GDPR compliant, attached the documents." })).toBeNull();
+  });
+
+  it("klauzula informacyjna RODO w stopce nie blokuje", () => {
+    const body = [
+      "Dziękuję, harmonogram otrzymałem.",
+      "",
+      "Jan Kowalski",
+      "Klauzula informacyjna RODO: Administratorem danych osobowych jest ABC sp. z o.o.",
+      "Przysługuje Pani/Panu prawo do bycia zapomnianym, prawo do wniesienia sprzeciwu",
+      "wobec przetwarzania oraz skargi do Prezesa Urzędu Ochrony Danych Osobowych (UODO).",
+    ].join("\n");
+    expect(detectOptOut({ text: body })).toBeNull();
+  });
+
+  it("klauzula bez nagłówka też nie daje twardego wypisu", () => {
+    const text =
+      "Przesyłam dokumenty. Zgodnie z RODO przysługuje Pani/Panu prawo do bycia zapomnianym oraz skargi do UODO.";
+    expect(detectOptOut({ text })).toBeNull();
+  });
+
+  it("wyraźne żądanie z powołaniem na RODO nadal jest twarde", () => {
+    expect(
+      detectOptOut({ text: "Na podstawie art. 17 RODO proszę o usunięcie moich danych." })?.strength,
+    ).toBe("hard");
+    expect(detectOptOut({ text: "Wnoszę sprzeciw wobec przetwarzania moich danych." })?.strength).toBe(
+      "hard",
+    );
+    expect(detectOptOut({ text: "Please delete my personal data (GDPR)." })?.strength).toBe("hard");
+  });
+
+  it("cofnięcie zgody tylko na marketing jest miękkie", () => {
+    expect(detectOptOut({ text: "Cofam zgodę na marketing." })?.strength).toBe("soft");
+  });
+
+  it("„nie wysyłajcie mi\" to zwykły wypis", () => {
+    expect(detectOptOut({ text: "Nie wysyłajcie mi już ofert." })?.strength).toBe("soft");
+  });
+});
+
 describe("detectOptOut — brak fałszywych alarmów", () => {
   const negatives = [
     "Dzień dobry, proszę o informację o oprocentowaniu.",

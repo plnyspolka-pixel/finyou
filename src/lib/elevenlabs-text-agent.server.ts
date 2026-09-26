@@ -424,6 +424,8 @@ export async function runAgentTurn(opts: {
           lead.email,
           lead.phone_raw,
           lead.phone_normalized,
+          // Link do wniosku wysłany wcześniej (send_application_link) — bot może go powtórzyć.
+          (lead as { return_link?: string | null }).return_link,
         ]);
         return { reply: safeReply, toolCalls: [] };
       }
@@ -617,6 +619,7 @@ export async function runAgentTurn(opts: {
         lead.phone_raw,
         lead.phone_normalized,
         applicationLink,
+        (lead as { return_link?: string | null }).return_link,
       ]);
       return { reply: safeReply, toolCalls: toolResults };
     }

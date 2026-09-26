@@ -49,8 +49,41 @@ export interface ContactGuardOptions {
 const DEFAULT_FALLBACK =
   "Wróćmy do wniosku — wszystko, czego potrzeba, zbierzemy tutaj. Na czym skończyliśmy?";
 
-/** Domeny, których linki i adresy e-mail są nasze. */
+/** Domeny, których linki i adresy e-mail są nasze (w tym krótkie linki financeyou.pl/s/…). */
 const ALLOWED_DOMAINS = ["financeyou.pl"];
+
+/**
+ * Host naszego projektu Supabase — spersonalizowany link do wniosku to magic
+ * link Supabase (https://<projekt>.supabase.co/auth/v1/verify?…), więc jego
+ * domena też jest „nasza". Czytamy ją ostrożnie: moduł działa i na serwerze,
+ * i w przeglądarce.
+ */
+function ownBackendHosts(): string[] {
+  const urls: Array<string | undefined> = [];
+  try {
+    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+      .process?.env;
+    urls.push(env?.SUPABASE_URL, env?.VITE_SUPABASE_URL);
+  } catch {
+    /* brak process — przeglądarka */
+  }
+  try {
+    const env = (import.meta as { env?: Record<string, string | undefined> }).env;
+    urls.push(env?.VITE_SUPABASE_URL);
+  } catch {
+    /* noop */
+  }
+  const hosts: string[] = [];
+  for (const u of urls) {
+    if (!u) continue;
+    try {
+      hosts.push(new URL(u).hostname.toLowerCase());
+    } catch {
+      /* noop */
+    }
+  }
+  return hosts;
+}
 
 function digitsOf(value: string): string {
   return value.replace(/\D/g, "");
@@ -65,9 +98,29 @@ export function nationalPhoneDigits(raw: string): string | null {
   return null;
 }
 
-function isAllowedDomain(host: string): boolean {
+function isAllowedDomain(host: string, extraHosts: string[] = []): boolean {
   const h = host.toLowerCase().replace(/^www\./, "");
+  if (extraHosts.includes(h)) return true;
   return ALLOWED_DOMAINS.some((d) => h === d || h.endsWith(`.${d}`));
+}
+
+/** Obcina znaki interpunkcyjne, które model dokleja za linkiem na końcu zdania. */
+function trimUrl(raw: string): string {
+  return raw.replace(/[.,;:!?…»”'"\]*]+$/u, "");
+}
+
+/** Postać linku do porównań: małe litery, &amp; → &, bez końcowej interpunkcji i „/". */
+function normalizeUrl(raw: string): string {
+  return trimUrl(raw).replace(/&amp;/gi, "&").toLowerCase().replace(/\/+$/, "");
+}
+
+function hostOf(raw: string): string | null {
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    return new URL(withScheme).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return null;
+  }
 }
 
 // Ciąg wyglądający na numer: cyfry z typowymi separatorami, opcjonalnie z
@@ -121,13 +174,31 @@ export function guardOutboundContactDetails(
   );
   knownEmails.add(COMPANY.email.toLowerCase());
 
+  // Linki, które bot dostał w kontekście (np. spersonalizowany link do wniosku)
+  // albo które padły w rozmowie — takie może powtórzyć, a zdanie z nimi zostaje.
+  const knownUrls = new Set<string>();
+  const knownUrlHosts = new Set<string>();
+  for (const u of known.match(URL_CANDIDATE) ?? []) {
+    knownUrls.add(normalizeUrl(u));
+    const host = hostOf(trimUrl(u));
+    if (host) knownUrlHosts.add(host);
+  }
+  const extraHosts = [...ownBackendHosts(), hostOf(SITE_URL) ?? ""].filter(Boolean);
+
   const redactions: Redaction[] = [];
 
   const sentences = splitSentences(text);
   const kept: string[] = [];
 
   for (const sentence of sentences) {
-    const offending = findOffendingContact(sentence, { knownPhones, knownEmails, known });
+    const offending = findOffendingContact(sentence, {
+      knownPhones,
+      knownEmails,
+      known,
+      knownUrls,
+      knownUrlHosts,
+      extraHosts,
+    });
     if (offending) {
       redactions.push({ ...offending, sentence: sentence.trim() });
       continue;
@@ -148,38 +219,48 @@ export function guardOutboundContactDetails(
 
 function findOffendingContact(
   sentence: string,
-  ctx: { knownPhones: Set<string>; knownEmails: Set<string>; known: string },
+  ctx: {
+    knownPhones: Set<string>;
+    knownEmails: Set<string>;
+    known: string;
+    knownUrls: Set<string>;
+    knownUrlHosts: Set<string>;
+    extraHosts: string[];
+  },
 ): { kind: RedactionKind; value: string } | null {
-  // E-mail
-  for (const match of sentence.match(EMAIL_CANDIDATE) ?? []) {
-    const value = match.toLowerCase();
-    const domain = value.split("@")[1] ?? "";
-    if (isAllowedDomain(domain) || ctx.knownEmails.has(value)) continue;
-    return { kind: "email", value: match };
+  // Adres WWW — najpierw, bo dozwolone linki wycinamy z dalszej analizy:
+  // spersonalizowany link (token, redirect_to, kod krótkiego linku) potrafi
+  // zawierać ciągi cyfr lub „@", które wyglądałyby na telefon albo e-mail.
+  let rest = sentence;
+  for (const match of sentence.match(URL_CANDIDATE) ?? []) {
+    const url = trimUrl(match);
+    const host = hostOf(url);
+    const allowed =
+      host === null ||
+      isAllowedDomain(host, ctx.extraHosts) ||
+      ctx.knownUrls.has(normalizeUrl(url)) ||
+      ctx.knownUrlHosts.has(host) ||
+      ctx.known.includes(normalizeUrl(url));
+    if (!allowed) return { kind: "adres", value: url };
+    rest = rest.split(match).join(" ");
   }
 
-  // Adres WWW
-  for (const match of sentence.match(URL_CANDIDATE) ?? []) {
-    const withScheme = match.startsWith("http") ? match : `https://${match}`;
-    let host = "";
-    try {
-      host = new URL(withScheme).hostname;
-    } catch {
-      continue;
-    }
-    if (isAllowedDomain(host) || host === new URL(SITE_URL).hostname) continue;
-    if (ctx.known.includes(match.toLowerCase())) continue;
-    return { kind: "adres", value: match };
+  // E-mail
+  for (const match of rest.match(EMAIL_CANDIDATE) ?? []) {
+    const value = match.toLowerCase();
+    const domain = value.split("@")[1] ?? "";
+    if (isAllowedDomain(domain, ctx.extraHosts) || ctx.knownEmails.has(value)) continue;
+    return { kind: "email", value: match };
   }
 
   // Telefon
   PHONE_CANDIDATE.lastIndex = 0;
   let m: RegExpExecArray | null;
-  while ((m = PHONE_CANDIDATE.exec(sentence)) !== null) {
+  while ((m = PHONE_CANDIDATE.exec(rest)) !== null) {
     const raw = m[0].trim();
     const national = nationalPhoneDigits(raw);
     if (!national) continue;
-    if (looksLikeMoneyOrId(sentence, m.index, m.index + m[0].length)) continue;
+    if (looksLikeMoneyOrId(rest, m.index, m.index + m[0].length)) continue;
     if (ctx.knownPhones.has(national)) continue;
     return { kind: "telefon", value: raw };
   }

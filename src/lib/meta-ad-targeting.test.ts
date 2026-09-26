@@ -6,6 +6,8 @@ import {
   buildAdSetPayload,
   buildCampaignPayload,
   buildCreativePayload,
+  buildLeadFormPayload,
+  buildThankYouPage,
   sprawdzKampanie,
   zUtm,
   MAX_PROMIEN_KM,
@@ -364,5 +366,54 @@ describe("kontrola przed publikacją", () => {
         landingUrl: "https://szalunki-lublin.pl",
       }),
     ).toEqual([]);
+  });
+});
+
+describe("formularz błyskawiczny — ekran po wysłaniu", () => {
+  it("domyślnie ekran „dziękujemy” z przyciskiem Messengera", () => {
+    const f = buildLeadFormPayload({ nazwa: "FY", leadForm: {} });
+    const t = f.thank_you_page as Record<string, unknown>;
+    expect(t.button_type).toBe("MESSAGE_BUSINESS");
+    expect(t.enable_messenger).toBe(true);
+    expect(t.title).toBeTruthy();
+    expect(t.body).toBeTruthy();
+    expect(t.button_text).toBeTruthy();
+    expect(f.follow_up_action_url).toBe("https://financeyou.pl/dziekujemy");
+    expect(f.name).toBe("FY");
+  });
+
+  it("szkic ze starego formatu (bez ustawienia) też dostaje Messengera", () => {
+    const f = buildLeadFormPayload({
+      nazwa: "Szalunki",
+      leadForm: {
+        name: "Szalunki — zapytanie",
+        follow_up_action_url: "https://szalunki-lublin.pl",
+        privacy_policy: { url: "https://szalunki-lublin.pl/polityka", link_text: "Polityka" },
+      },
+    });
+    expect((f.thank_you_page as any).button_type).toBe("MESSAGE_BUSINESS");
+    expect(f.name).toBe("Szalunki — zapytanie");
+  });
+
+  it("przycisk do strony używa adresu „dziękujemy”", () => {
+    const t = buildThankYouPage({ przycisk: "strona" }, "https://szalunki-lublin.pl");
+    expect(t).toMatchObject({
+      button_type: "VIEW_WEBSITE",
+      website_url: "https://szalunki-lublin.pl",
+    });
+  });
+
+  it("przycisk do strony bez adresu spada do ekranu bez przycisku", () => {
+    expect(buildThankYouPage({ przycisk: "strona" }, null).button_type).toBe("NONE");
+  });
+
+  it("własne teksty są zachowane", () => {
+    const t = buildThankYouPage({
+      przycisk: "messenger",
+      title: "Dzięki!",
+      body: "Odezwiemy się.",
+      button_text: "Czat",
+    });
+    expect(t).toMatchObject({ title: "Dzięki!", body: "Odezwiemy się.", button_text: "Czat" });
   });
 });

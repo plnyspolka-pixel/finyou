@@ -14,6 +14,10 @@ import {
   type AccessAudience,
   type BuyerType,
 } from "./core";
+import {
+  decideInFlightUnlockPayment,
+  PENDING_UNLOCK_STALE_MINUTES,
+} from "./pending-unlock";
 
 // Wersje dokumentów prawnych akceptowanych na formularzu.
 // TODO(prawne): podmień na wersje zatwierdzone przez obsługę prawną.
@@ -40,6 +44,61 @@ const CheckoutSchema = z.object({
 });
 
 export type CreateAccessCheckoutInput = z.infer<typeof CheckoutSchema>;
+
+const IN_FLIGHT_UNLOCK_MESSAGE = (minutesLeft: number) =>
+  `Płatność za tę okazję jest już rozpoczęta — dokończ ją w oknie Tpay albo spróbuj ponownie za ok. ${minutesLeft} min.`;
+
+/**
+ * Przegląd rozpoczętych (created/pending) płatności za okazję przed nową próbą.
+ * Porzucone/odrzucone są anulowane; zwraca komunikat błędu, jeśli któraś
+ * nadal musi blokować (świeża albo już opłacona w Tpay), inaczej `null`.
+ */
+async function resolveInFlightUnlockPayments(db: any, matchId: string): Promise<string | null> {
+  const { data: rows } = await db
+    .from("access_payments")
+    .select("id, status, created_at, provider_transaction_id")
+    .eq("unlock_match_id", matchId)
+    .in("status", ["created", "pending"])
+    .order("created_at", { ascending: false })
+    .limit(10);
+  for (const row of (rows ?? []) as Array<{
+    id: string;
+    status: string;
+    created_at: string;
+    provider_transaction_id: string | null;
+  }>) {
+    let tpayStatus: string | null = null;
+    if (row.provider_transaction_id) {
+      try {
+        const { getTpayTransaction } = await import("@/lib/tpay.server");
+        const tx = await getTpayTransaction(String(row.provider_transaction_id));
+        tpayStatus = tx?.status ?? null;
+      } catch (e) {
+        // Brak odpowiedzi Tpay — decyzja wyłącznie po wieku rekordu.
+        console.warn("[access-checkout] tpay status lookup failed", (e as Error).message);
+      }
+    }
+    const decision = decideInFlightUnlockPayment({
+      status: row.status,
+      createdAt: row.created_at,
+      hasProviderTransaction: Boolean(row.provider_transaction_id),
+      tpayStatus,
+    });
+    if (decision.action === "block_paid") {
+      return "Płatność za tę okazję została już zaksięgowana — odblokowanie pojawi się w ciągu kilku minut. Odśwież stronę za chwilę.";
+    }
+    if (decision.action === "block_fresh") {
+      return IN_FLIGHT_UNLOCK_MESSAGE(decision.minutesLeft);
+    }
+    // Guard statusu w WHERE: równoległy webhook 'correct' nie zostanie nadpisany.
+    await db
+      .from("access_payments")
+      .update({ status: "cancelled", failure_reason: `superseded:${decision.reason}` })
+      .eq("id", row.id)
+      .in("status", ["created", "pending"]);
+  }
+  return null;
+}
 
 export const createAccessCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -117,22 +176,16 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         if (already) {
           return { error: "Ta okazja jest już odblokowana." };
         }
-        // Druga rozpoczęta płatność za tę samą okazję skończyłaby się podwójnym
-        // obciążeniem (odblokowanie jest unikalne po match_id) — blokujemy ją
-        // tutaj, a webhook ma dodatkowo własne zabezpieczenie.
-        const { data: inFlight } = await db
-          .from("access_payments")
-          .select("id")
-          .eq("unlock_match_id", data.matchId)
-          .in("status", ["created", "pending"])
-          .limit(1)
-          .maybeSingle();
-        if (inFlight) {
-          return {
-            error:
-              "Płatność za tę okazję jest już rozpoczęta — dokończ ją albo odczekaj, aż wygaśnie.",
-          };
-        }
+        // Druga rozpoczęta płatność za tę samą okazję mogłaby skończyć się
+        // podwójnym obciążeniem (odblokowanie jest unikalne po match_id).
+        // Blokujemy ją jednak tylko, gdy poprzednia jest świeża albo już
+        // opłacona w Tpay — porzucona (zamknięta strona, anulowanie, przelew,
+        // który nie doszedł) wygasa i nie może blokować okazji na zawsze.
+        // Webhook ma dodatkowo własne zabezpieczenie (późna wpłata za anulowany
+        // rekord trafia do wyjaśnienia/zwrotu), a baza — unikalny indeks
+        // na jedną rozpoczętą płatność za okazję.
+        const blocked = await resolveInFlightUnlockPayments(db, data.matchId);
+        if (blocked) return { error: blocked };
         unlockMatchId = data.matchId;
       }
 
@@ -188,6 +241,10 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         })
         .select("id")
         .single();
+      if (insErr && unlockMatchId && (insErr as { code?: string }).code === "23505") {
+        // Równoległe żądanie zdążyło rozpocząć płatność za tę okazję.
+        return { error: IN_FLIGHT_UNLOCK_MESSAGE(PENDING_UNLOCK_STALE_MINUTES) };
+      }
       if (insErr || !payment) {
         console.error("[access-checkout] insert payment failed", insErr?.message);
         return { error: "Nie udało się rozpocząć płatności. Spróbuj ponownie." };

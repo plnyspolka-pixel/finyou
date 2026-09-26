@@ -190,11 +190,18 @@ export const listLeads = createServerFn({ method: "GET" })
       return out;
     };
     const base = (cols: string) => supabaseAdmin.from("lead_communications").select(cols);
+    // Dopasowanie po e-mailu bez względu na wielkość liter: JEDNO wyrażenie
+    // `email ~* '^(a|b|…)$'` zamiast OR-a ze stu `email ILIKE …`. Sto wzorców
+    // ILIKE sprawdzanych na każdym z ~64 tys. wierszy to ~4 s na zapytanie
+    // (statement timeout 8 s, kilkanaście takich zapytań na jedno otwarcie listy);
+    // regex liczy się raz na wiersz i korzysta z indeksu trigramowego
+    // `idx_leadcomm_email_trgm` (bez indeksu ~4× szybciej niż OR z ILIKE).
+    const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const scoped = (cols: string, kind: "ids" | "phones" | "emails", c: string[]) => {
       let q = base(cols);
       if (kind === "ids") q = q.in("lead_id", c);
       else if (kind === "phones") q = q.in("phone_normalized", c);
-      else q = q.or(c.map((e) => `email.ilike.${e}`).join(","));
+      else q = q.filter("email", "imatch", `^(${c.map(escapeRegex).join("|")})$`);
       return q;
     };
     const heavyQueries: Promise<any>[] = [];

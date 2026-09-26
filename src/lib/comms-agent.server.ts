@@ -14,6 +14,7 @@
  *    (dystrybucja oferty konkretnego wniosku).
  */
 import type { OutboundAttachmentRef } from "./email-attachments.types";
+import type { SendCategory } from "./opt-out";
 
 export type CommsThread = {
   lead_id: string | null;
@@ -289,6 +290,14 @@ export async function sendEmailFromInbox(args: {
   /** Ślad w metadanych: kto wysłał — ekran skrzynki czy asystent. */
   source?: string;
   leadId?: string | null;
+  /**
+   * Kategoria dla strażnika wypisu. `transactional` — mail napisany ręcznie
+   * przez człowieka z panelu: idzie mimo zwykłego wypisu (twarda blokada po
+   * RODO/skardze/bounce zatrzyma i jego), tak jak wiadomość operatora na
+   * Messengerze. Domyślnie `automated` — automaty (agent instytucji itp.)
+   * respektują wypis.
+   */
+  category?: SendCategory;
 }): Promise<{
   ok: boolean;
   sent: number;
@@ -357,6 +366,7 @@ export async function sendEmailFromInbox(args: {
       replyTo: "kontakt@financeyou.pl",
       showReplyHint: true,
       attachments: resolvedAttachments.length ? resolvedAttachments : undefined,
+      category: args.category ?? "automated",
     });
     results.push({ email: to, ok: res.ok, id: res.id, error: res.error });
     try {
@@ -601,6 +611,8 @@ export async function replyToOfferDistribution(args: {
   subject: string;
   body: string;
   actorUserId: string;
+  /** Jak w `sendEmailFromInbox`: `transactional` dla wiadomości pisanej przez operatora z panelu. */
+  category?: SendCategory;
 }): Promise<{ ok: boolean; id: string | null; to: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { sendResendEmail } = await import("./resend-send.server");
@@ -646,6 +658,7 @@ export async function replyToOfferDistribution(args: {
     references,
     replyTo,
     showReplyHint: true,
+    category: args.category ?? "automated",
   });
   if (!send.ok) throw new Error(send.error ?? "Nie udało się wysłać wiadomości");
 
