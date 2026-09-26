@@ -308,11 +308,11 @@ export const createSocialPost = defineTool({
 
 export const queueSocialPublication = defineTool({
   name: "queue_social_publication",
-  title: "Queue automatic publication (Facebook / Instagram)",
+  title: "Queue automatic publication (Facebook / Instagram / TikTok)",
   description:
-    "Dodaje wpis do kolejki automatycznej publikacji (facebook_post, facebook_reels, instagram_reels) — tick opublikuje go o zadanej porze bez dalszego udziału człowieka. To realna publikacja na profilu firmy. Tylko administrator/operator.",
+    "Dodaje wpis do kolejki automatycznej publikacji (facebook_post, facebook_reels, instagram_reels, tiktok) — tick opublikuje go o zadanej porze bez dalszego udziału człowieka. To realna publikacja na profilu firmy. TikTok wymaga połączonego konta (panel → Studio publikacji → Połącz TikTok) i pionowego MP4. Tylko administrator/operator.",
   inputSchema: {
-    platform: z.enum(["facebook_post", "facebook_reels", "instagram_reels"]),
+    platform: z.enum(["facebook_post", "facebook_reels", "instagram_reels", "tiktok"]),
     title: z.string().min(1).max(200),
     message: z.string().min(1).max(5000),
     image_url: z.string().url().optional().describe("Wymagane dla facebook_post bez wideo."),
@@ -323,7 +323,8 @@ export const queueSocialPublication = defineTool({
   handler: (a, ctx: ToolContext) =>
     handle(async () => {
       const s = await requireTeamAdmin(ctx);
-      if (a.platform !== "facebook_post" && !a.video_url) return fail("Reels wymagają video_url.");
+      if (a.platform !== "facebook_post" && !a.video_url)
+        return fail("Reels i TikTok wymagają video_url.");
       if (a.platform === "facebook_post" && !a.image_url && !a.video_url)
         return fail("Post na Facebooku wymaga image_url albo video_url.");
       const row = await insertOne(

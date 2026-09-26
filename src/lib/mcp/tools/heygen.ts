@@ -32,7 +32,13 @@ import { defineListTool, flag, search, text } from "../_list-tool";
 const ADMIN_ONLY = ["administrator"] as const;
 const READ = { readOnlyHint: true, idempotentHint: true, openWorldHint: true } as const;
 
-const PLATFORMS = ["youtube", "facebook_post", "facebook_reels", "instagram_reels"] as const;
+const PLATFORMS = [
+  "youtube",
+  "facebook_post",
+  "facebook_reels",
+  "instagram_reels",
+  "tiktok",
+] as const;
 const PRIVACY = ["public", "unlisted", "private"] as const;
 const ASPECT = ["9:16", "16:9", "1:1"] as const;
 const RESOLUTION = ["720p", "1080p"] as const;
@@ -721,7 +727,7 @@ export const createStudioVideoJob = defineTool({
   name: "create_studio_video_job",
   title: "Create studio video job",
   description:
-    "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+    "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
   inputSchema: {
     prompt: z.string().min(3).max(2000).optional().describe("Temat / brief odcinka."),
     script: z.string().max(5000).optional().describe("Gotowy tekst lektora; pusty = AI."),

@@ -1,5 +1,5 @@
 // Studio publikacji — jedno miejsce do: publikacji wideo (YouTube / Instagram
-// Reels / Facebook Reels / post na Facebooku), generowania wideo HeyGen
+// Reels / Facebook Reels / TikTok / post na Facebooku), generowania wideo HeyGen
 // z promptu, generatora promptów i generatora grafik AI.
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -34,6 +34,18 @@ import {
 import { captionBadgeLabel } from "@/lib/studio-captions";
 import { describeScenePlan } from "@/lib/studio-scenes";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
+import {
+  getTiktokIntegrationStatus,
+  getTiktokCreatorInfo,
+  startTiktokConnect,
+  disconnectTiktokAccount,
+} from "@/lib/tiktok.functions";
+import { TiktokPostOptionsFields } from "@/components/admin/tiktok-post-options-fields";
+import {
+  EMPTY_TIKTOK_OPTIONS,
+  tiktokOptionsError,
+  type TiktokPostOptions,
+} from "@/lib/tiktok-upload";
 import { HEYGEN_AVATARS, FILIP_VOICE_ID } from "@/lib/heygen-avatars";
 import {
   SHORTS_QUESTIONS,
@@ -75,6 +87,8 @@ import {
   Film,
   Play,
   Maximize2,
+  Music2,
+  Unplug,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/studio-publikacji")({
@@ -90,6 +104,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   facebook_post: "Post na Facebooku",
   facebook_reels: "Facebook Reels",
   instagram_reels: "Instagram Reels",
+  tiktok: "TikTok",
 };
 
 // Zgodne z MAX_ATTEMPTS w src/lib/studio-publishing.server.ts — chwilowe błędy
@@ -125,6 +140,19 @@ const AUTO_PLATFORM_SHORT: Record<string, string> = {
   facebook_reels: "FB Reels",
   instagram_reels: "IG Reels",
   facebook_post: "Post FB",
+  tiktok: "TikTok",
+};
+
+// Etapy TikTok Content Posting API (kolumna tiktok_status w kolejce).
+const TIKTOK_STATUS_LABELS: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
+  pending: { label: "TikTok: start", variant: "secondary" },
+  uploading: { label: "TikTok: wysyłanie chunków…", variant: "outline" },
+  processing: { label: "TikTok: przetwarzanie…", variant: "outline" },
+  publish_complete: { label: "TikTok: opublikowano", variant: "default" },
+  failed: { label: "TikTok: błąd", variant: "destructive" },
 };
 
 function externalUrl(platform: string, externalId: string | null): string | null {
@@ -159,8 +187,22 @@ function StudioPage() {
   const imagesFn = useServerFn(listStudioImages);
   const genImageFn = useServerFn(generateStudioImageFn);
   const deleteImageFn = useServerFn(deleteStudioImage);
+  const tiktokStatusFn = useServerFn(getTiktokIntegrationStatus);
+  const tiktokCreatorFn = useServerFn(getTiktokCreatorInfo);
+  const tiktokConnectFn = useServerFn(startTiktokConnect);
+  const tiktokDisconnectFn = useServerFn(disconnectTiktokAccount);
 
   const [tab, setTab] = useState("publikacja");
+
+  // Powrót z OAuth TikToka (/api/tiktok/callback dokleja ?tt=…).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tt = params.get("tt");
+    if (tt === "connected") toast.success("Konto TikTok połączone!");
+    if (tt === "error")
+      toast.error(`Połączenie z TikTokiem nieudane: ${params.get("reason") ?? "nieznany błąd"}`);
+    if (tt) window.history.replaceState({}, "", window.location.pathname);
+  }, []);
 
   const { data: status } = useQuery({ queryKey: ["studio-status"], queryFn: () => statusFn() });
   const { data: socialQueue = [] } = useQuery({
@@ -195,6 +237,33 @@ function StudioPage() {
   const { data: images = [] } = useQuery({
     queryKey: ["studio-images"],
     queryFn: () => imagesFn(),
+  });
+  const { data: tiktokStatus, isLoading: tiktokLoading } = useQuery({
+    queryKey: ["tiktok-status"],
+    queryFn: () => tiktokStatusFn(),
+  });
+  // Ustawienia konta twórcy pod ekran publikacji. Wytyczne TikToka wymagają,
+  // żeby ekran odzwierciedlał creator_info, więc pobieramy je przy każdym
+  // wejściu (opcje prywatności potrafią się zmienić) — tylko gdy TikTok jest
+  // faktycznie wybrany, żeby nie pukać do API bez potrzeby.
+  const tiktokConnected = !!tiktokStatus?.connected;
+
+  const tiktokConnectM = useMutation({
+    mutationFn: () => tiktokConnectFn(),
+    // `url` to /api/tiktok/auth?state=… — ten endpoint robi redirect na TikToka.
+    onSuccess: ({ url }) => {
+      window.location.href = url;
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const tiktokDisconnectM = useMutation({
+    mutationFn: () => tiktokDisconnectFn(),
+    onSuccess: () => {
+      toast.success("Odłączono konto TikTok");
+      qc.invalidateQueries({ queryKey: ["tiktok-status"] });
+      qc.invalidateQueries({ queryKey: ["studio-status"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   // Automatyczny polling HeyGen dla jobów w trakcie renderowania.
@@ -239,6 +308,18 @@ function StudioPage() {
 
   // ── Publikacja ─────────────────────────────────────────────────────────────
   const [platforms, setPlatforms] = useState<StudioPlatform[]>([]);
+  const [ttOptions, setTtOptions] = useState<TiktokPostOptions>(EMPTY_TIKTOK_OPTIONS);
+  const ttSelected = platforms.includes("tiktok");
+  const {
+    data: ttCreator,
+    isLoading: ttCreatorLoading,
+    error: ttCreatorError,
+  } = useQuery({
+    queryKey: ["tiktok-creator-info"],
+    queryFn: () => tiktokCreatorFn(),
+    enabled: ttSelected && tiktokConnected,
+    staleTime: 60_000,
+  });
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -260,6 +341,7 @@ function StudioPage() {
           image_url: imageUrl || undefined,
           privacy_status: privacy,
           scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+          tiktok_post_options: ttSelected ? ttOptions : undefined,
         },
       }),
     onSuccess: (r) => {
@@ -334,10 +416,28 @@ function StudioPage() {
   // ── Auto-publikacja po wygenerowaniu ───────────────────────────────────────
   const [autoPublishOn, setAutoPublishOn] = useState(false);
   const [autoPlatforms, setAutoPlatforms] = useState<StudioPlatform[]>(["youtube"]);
+  const [autoTtOptions, setAutoTtOptions] = useState<TiktokPostOptions>(EMPTY_TIKTOK_OPTIONS);
   const [autoPrivacy, setAutoPrivacy] = useState<"public" | "unlisted" | "private">("public");
   const toggleAutoPlatform = (p: StudioPlatform) =>
     setAutoPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
   const effectiveAutoPlatforms = autoPublishOn ? autoPlatforms : [];
+  const autoTtSelected = effectiveAutoPlatforms.includes("tiktok");
+  // Osobne zapytanie od publikacji ręcznej (inny moment w formularzu), ten sam
+  // cache — creator_info to te same dane konta.
+  const {
+    data: autoTtCreator,
+    isLoading: autoTtCreatorLoading,
+    error: autoTtCreatorError,
+  } = useQuery({
+    queryKey: ["tiktok-creator-info"],
+    queryFn: () => tiktokCreatorFn(),
+    enabled: autoTtSelected && tiktokConnected,
+    staleTime: 60_000,
+  });
+  // Auto-publikacja na TikToka bez kompletnych wyborów twórcy jest zablokowana.
+  const autoTtBlocked =
+    autoTtSelected &&
+    (!autoTtCreator || !!tiktokOptionsError(autoTtOptions, autoTtCreator.privacyOptions));
 
   // ── Baza 250 pytań do shortów ──────────────────────────────────────────────
   const [bankCategory, setBankCategory] = useState<"all" | ShortsCategory>("all");
@@ -441,6 +541,7 @@ function StudioPage() {
           publish_privacy: autoPrivacy,
           publish_title: title,
           publish_description: message,
+          tiktok_post_options: autoTtSelected ? autoTtOptions : undefined,
         },
       }),
     onSuccess: () => {
@@ -465,6 +566,7 @@ function StudioPage() {
           dynamic_scenes: dynamicScenesOn,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
+          tiktok_post_options: autoTtSelected ? autoTtOptions : undefined,
         },
       }),
     onSuccess: (r) => {
@@ -577,6 +679,14 @@ function StudioPage() {
           <Badge variant={status.instagramConfigured ? "default" : "outline"}>
             Instagram {status.instagramConfigured ? "skonfigurowany" : "brak konfiguracji"}
           </Badge>
+          <Badge variant={status.tiktokConnected ? "default" : "outline"}>
+            TikTok{" "}
+            {status.tiktokConnected
+              ? "połączony"
+              : status.tiktokConfigured
+                ? "niepołączony"
+                : "brak konfiguracji"}
+          </Badge>
           <Badge variant={status.heygenConfigured ? "default" : "outline"}>
             HeyGen {status.heygenConfigured ? "OK" : "brak klucza"}
           </Badge>
@@ -606,23 +716,129 @@ function StudioPage() {
 
         {/* ── PUBLIKACJA ─────────────────────────────────────────────────── */}
         <TabsContent value="publikacja" className="space-y-6">
+          {/* Połączenie konta TikTok (OAuth) — odpowiednik karty kanału
+              w /admin/youtube-shorts. Meta jedzie na sekretach środowiska,
+              więc własnej karty nie potrzebuje. */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Music2 className="h-5 w-5" /> TikTok
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {tiktokLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : !tiktokStatus?.envConfigured ? (
+                <div className="space-y-2">
+                  <p className="font-medium text-destructive">
+                    Brak konfiguracji — ustaw sekrety TIKTOK_CLIENT_KEY i TIKTOK_CLIENT_SECRET.
+                  </p>
+                  <p className="text-muted-foreground">
+                    W TikTok for Developers włącz produkt <b>Content Posting API</b> (Direct Post),
+                    dodaj zakresy <code>user.info.basic</code> i <code>video.publish</code>, a jako
+                    Redirect URI wpisz{" "}
+                    <code className="break-all rounded bg-muted px-1">
+                      {tiktokStatus?.redirectUri}
+                    </code>
+                    .
+                  </p>
+                </div>
+              ) : tiktokStatus.connected ? (
+                <div className="flex flex-wrap items-start gap-4">
+                  <div className="space-y-1">
+                    <p className="flex items-center gap-2 font-medium">
+                      <span
+                        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-green-500"
+                        aria-hidden
+                      />
+                      Połączono
+                      {tiktokStatus.openId && (
+                        <code className="rounded bg-muted px-1 text-xs">{tiktokStatus.openId}</code>
+                      )}
+                    </p>
+                    {tiktokStatus.connectedAt && (
+                      <p className="text-xs text-muted-foreground">
+                        od {new Date(tiktokStatus.connectedAt).toLocaleString("pl-PL")}
+                      </p>
+                    )}
+                    {tiktokStatus.tokenExpiresAt && (
+                      <p className="text-xs text-muted-foreground">
+                        Token wygasa {new Date(tiktokStatus.tokenExpiresAt).toLocaleString("pl-PL")}{" "}
+                        — tick odświeża go automatycznie 2 h przed terminem.
+                      </p>
+                    )}
+                    {tiktokStatus.refreshTokenExpiresAt && (
+                      <p className="text-xs text-muted-foreground">
+                        Ponowne logowanie wymagane do{" "}
+                        {new Date(tiktokStatus.refreshTokenExpiresAt).toLocaleDateString("pl-PL")}.
+                      </p>
+                    )}
+                    {tiktokStatus.lastError && (
+                      <p className="text-xs text-destructive">
+                        Ostatni błąd: {tiktokStatus.lastError}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => tiktokDisconnectM.mutate()}
+                    disabled={tiktokDisconnectM.isPending}
+                  >
+                    <Unplug className="mr-1 h-4 w-4" /> Rozłącz
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-muted-foreground">
+                    Konto TikTok nie jest połączone — publikacja na TikToka jest wyłączona.
+                  </p>
+                  {tiktokStatus.lastError && (
+                    <p className="text-xs text-destructive">
+                      Ostatni błąd: {tiktokStatus.lastError}
+                    </p>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={() => tiktokConnectM.mutate()}
+                    disabled={tiktokConnectM.isPending}
+                  >
+                    {tiktokConnectM.isPending ? (
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Music2 className="mr-1 h-4 w-4" />
+                    )}
+                    Połącz TikTok
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Opublikuj na wielu platformach naraz</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-4">
-                {(["youtube", "instagram_reels", "facebook_reels", "facebook_post"] as const).map(
-                  (p) => (
-                    <label key={p} className="flex cursor-pointer items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={platforms.includes(p)}
-                        onCheckedChange={() => togglePlatform(p)}
-                      />
-                      {PLATFORM_LABELS[p]}
-                    </label>
-                  ),
-                )}
+                {(
+                  [
+                    "youtube",
+                    "instagram_reels",
+                    "facebook_reels",
+                    "tiktok",
+                    "facebook_post",
+                  ] as const
+                ).map((p) => (
+                  <label key={p} className="flex cursor-pointer items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={platforms.includes(p)}
+                      onCheckedChange={() => togglePlatform(p)}
+                    />
+                    {p === "tiktok" && <Music2 className="h-4 w-4" />}
+                    {PLATFORM_LABELS[p]}
+                  </label>
+                ))}
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -717,11 +933,35 @@ function StudioPage() {
                 </div>
               </div>
 
+              {/* Ekran publikacji TikToka — wymagane przez audyt kontrolki
+                  twórcy (prywatność, interakcje, ujawnienie komercyjne)
+                  i deklaracja zgody na muzykę, wszystko NAD przyciskiem. */}
+              {ttSelected && (
+                <TiktokPostOptionsFields
+                  value={ttOptions}
+                  onChange={setTtOptions}
+                  creator={tiktokConnected ? ttCreator : undefined}
+                  loading={tiktokConnected && ttCreatorLoading}
+                  error={
+                    !tiktokConnected
+                      ? "Konto TikTok nie jest połączone — połącz je w karcie TikTok powyżej."
+                      : ttCreatorError
+                        ? (ttCreatorError as Error).message
+                        : null
+                  }
+                />
+              )}
+
               <div className="flex items-center gap-3">
                 <Button
                   onClick={() => enqueueM.mutate()}
                   disabled={
-                    enqueueM.isPending || !platforms.length || (needsVideo && !videoUrl.trim())
+                    enqueueM.isPending ||
+                    !platforms.length ||
+                    (needsVideo && !videoUrl.trim()) ||
+                    // TikTok bez kompletnych wyborów twórcy nie idzie dalej.
+                    (ttSelected &&
+                      (!ttCreator || !!tiktokOptionsError(ttOptions, ttCreator.privacyOptions)))
                   }
                 >
                   {enqueueM.isPending ? (
@@ -814,7 +1054,30 @@ function StudioPage() {
                               {PLATFORM_LABELS[item.platform] ?? item.platform}
                             </Badge>
                             <Badge variant={st.variant}>{st.label}</Badge>
+                            {item.platform === "tiktok" &&
+                              item.tiktok_status &&
+                              (() => {
+                                const tt = TIKTOK_STATUS_LABELS[item.tiktok_status] ?? {
+                                  label: `TikTok: ${item.tiktok_status}`,
+                                  variant: "outline" as const,
+                                };
+                                return (
+                                  <Badge
+                                    variant={tt.variant}
+                                    // fail_reason w tooltipie (natywny title — bez
+                                    // zależności od TooltipProvider w tym drzewie).
+                                    title={item.tiktok_fail_reason ?? undefined}
+                                  >
+                                    {tt.label}
+                                  </Badge>
+                                );
+                              })()}
                           </div>
+                          {item.platform === "tiktok" && item.tiktok_fail_reason && (
+                            <p className="break-words text-xs text-destructive">
+                              Powód odrzucenia: {item.tiktok_fail_reason}
+                            </p>
+                          )}
                           <p className="break-words font-medium">
                             {item.title || item.message.slice(0, 60) || "(bez tytułu)"}
                           </p>
@@ -948,7 +1211,7 @@ function StudioPage() {
                 <Button
                   size="sm"
                   onClick={() => batchM.mutate()}
-                  disabled={batchM.isPending || selectedIds.size === 0}
+                  disabled={batchM.isPending || selectedIds.size === 0 || autoTtBlocked}
                 >
                   {batchM.isPending ? (
                     <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -1038,15 +1301,18 @@ function StudioPage() {
               {autoPublishOn ? (
                 <>
                   <div className="flex flex-wrap gap-4">
-                    {(["youtube", "instagram_reels", "facebook_reels"] as const).map((p) => (
-                      <label key={p} className="flex cursor-pointer items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={autoPlatforms.includes(p)}
-                          onCheckedChange={() => toggleAutoPlatform(p)}
-                        />
-                        {PLATFORM_LABELS[p]}
-                      </label>
-                    ))}
+                    {(["youtube", "instagram_reels", "facebook_reels", "tiktok"] as const).map(
+                      (p) => (
+                        <label key={p} className="flex cursor-pointer items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={autoPlatforms.includes(p)}
+                            onCheckedChange={() => toggleAutoPlatform(p)}
+                          />
+                          {p === "tiktok" && <Music2 className="h-4 w-4" />}
+                          {PLATFORM_LABELS[p]}
+                        </label>
+                      ),
+                    )}
                     <div className="flex items-center gap-2 text-sm">
                       <Label className="text-sm font-normal">Widoczność (YouTube):</Label>
                       <select
@@ -1060,6 +1326,24 @@ function StudioPage() {
                       </select>
                     </div>
                   </div>
+                  {/* Auto-publikacja na TikToka też wymaga wyborów twórcy —
+                      tick nie ma prawa dobrać prywatności sam. */}
+                  {autoTtSelected && (
+                    <TiktokPostOptionsFields
+                      deferred
+                      value={autoTtOptions}
+                      onChange={setAutoTtOptions}
+                      creator={tiktokConnected ? autoTtCreator : undefined}
+                      loading={tiktokConnected && autoTtCreatorLoading}
+                      error={
+                        !tiktokConnected
+                          ? "Konto TikTok nie jest połączone — połącz je w zakładce Publikacja."
+                          : autoTtCreatorError
+                            ? (autoTtCreatorError as Error).message
+                            : null
+                      }
+                    />
+                  )}
                   <p className="text-xs text-muted-foreground">
                     Gdy render w HeyGen się skończy, wideo trafi automatycznie do kolejek publikacji
                     zaznaczonych platform (tytuł i opis generuje AI razem ze scenariuszem). Działa
@@ -1311,7 +1595,7 @@ function StudioPage() {
 
               <Button
                 onClick={() => startVideoM.mutate()}
-                disabled={startVideoM.isPending || !fullScript.trim()}
+                disabled={startVideoM.isPending || !fullScript.trim() || autoTtBlocked}
               >
                 {startVideoM.isPending ? (
                   <Loader2 className="mr-1 h-4 w-4 animate-spin" />

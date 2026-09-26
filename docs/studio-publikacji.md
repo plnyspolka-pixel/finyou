@@ -2,9 +2,9 @@
 
 Jedno miejsce (panel **/admin/studio-publikacji**) do:
 
-1. **Publikacji wideo** na YouTube (Shorts), Instagram Reels, Facebook Reels
-   i postów na Facebooku (tekst / grafika / wideo) — z jednego formularza,
-   z harmonogramem i kolejką.
+1. **Publikacji wideo** na YouTube (Shorts), Instagram Reels, Facebook Reels,
+   TikToka i postów na Facebooku (tekst / grafika / wideo) — z jednego
+   formularza, z harmonogramem i kolejką.
 2. **Generowania wideo HeyGen z promptu** — prompt → scenariusz AI →
    lektor ElevenLabs → awatar HeyGen (pion 9:16).
 3. **Generatora promptów** — pomysły na wideo, grafiki i posty social.
@@ -14,26 +14,40 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 
 ## Architektura
 
-| Element                                   | Plik                                                                                     |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Publikacja Meta (Graph API)               | `src/lib/studio-publishing.server.ts`                                                    |
-| Klasyfikacja błędów Meta + backoff        | `src/lib/meta-graph-errors.ts` (+ testy `meta-graph-errors.test.ts`)                     |
-| Helpery AI (scenariusz, prompty, grafiki) | `src/lib/studio-ai.server.ts`                                                            |
-| Server functions                          | `src/lib/studio.functions.ts`                                                            |
-| Baza 250 pytań do shortów (generowana)    | `src/lib/shorts-question-bank.ts`                                                        |
-| Źródło bazy pytań + generator             | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts` |
-| Cron tick Meta                            | `src/routes/api/public/hooks/social-publish-tick.ts`                                     |
-| Panel admina                              | `src/routes/admin.studio-publikacji.tsx`                                                 |
-| Migracja (tabele + bucket + cron)         | `supabase/migrations/20260803130000_studio_publikacji.sql`                               |
+| Element                                      | Plik                                                                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Publikacja Meta (Graph API)                  | `src/lib/studio-publishing.server.ts`                                                    |
+| Publikacja TikTok (Content Posting API)      | `src/lib/tiktok.server.ts`                                                               |
+| TikTok — czysta logika chunków/tytułu        | `src/lib/tiktok-upload.ts` (+ testy `tiktok-upload.test.ts`)                             |
+| TikTok — server functions panelu             | `src/lib/tiktok.functions.ts`                                                            |
+| TikTok — ekran publikacji (zgodny z audytem) | `src/components/admin/tiktok-post-options-fields.tsx`                                    |
+| TikTok — scenariusz nagrania do audytu       | `docs/tiktok-audyt-nagranie.md`                                                          |
+| TikTok — OAuth (start + callback)            | `src/routes/api/tiktok/auth.ts`, `src/routes/api/tiktok/callback.ts`                     |
+| Klasyfikacja błędów Meta + backoff           | `src/lib/meta-graph-errors.ts` (+ testy `meta-graph-errors.test.ts`)                     |
+| Helpery AI (scenariusz, prompty, grafiki)    | `src/lib/studio-ai.server.ts`                                                            |
+| Server functions                             | `src/lib/studio.functions.ts`                                                            |
+| Baza 250 pytań do shortów (generowana)       | `src/lib/shorts-question-bank.ts`                                                        |
+| Źródło bazy pytań + generator                | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts` |
+| Cron tick Meta                               | `src/routes/api/public/hooks/social-publish-tick.ts`                                     |
+| Panel admina                                 | `src/routes/admin.studio-publikacji.tsx`                                                 |
+| Migracja (tabele + bucket + cron)            | `supabase/migrations/20260803130000_studio_publikacji.sql`                               |
+| Migracja TikToka                             | `supabase/migrations/20260926120000_tiktok_content_posting.sql`                          |
+| Migracja: ustawienia posta twórcy            | `supabase/migrations/20260926140000_tiktok_ustawienia_publikacji_tworcy.sql`             |
 
 Tabele:
 
 - `social_publish_queue` — kolejka publikacji Meta (`facebook_post`,
-  `facebook_reels`, `instagram_reels`). Statusy: `pending → publishing →
-(processing) → published`; `failed` po 3 **realnych** próbach; `cancelled`
-  ręcznie. Instagram publikuje się dwuetapowo: tick tworzy kontener mediów
-  (status `processing`, znacznik czasu w `ig_container_at`), a po zakończeniu
-  transkodowania po stronie Meta kolejny tick woła `media_publish`.
+  `facebook_reels`, `instagram_reels`) **oraz TikToka** (`tiktok`). Statusy:
+  `pending → publishing → (processing) → published`; `failed` po 3 **realnych**
+  próbach; `cancelled` ręcznie. Instagram publikuje się dwuetapowo: tick tworzy
+  kontener mediów (status `processing`, znacznik czasu w `ig_container_at`),
+  a po zakończeniu transkodowania po stronie Meta kolejny tick woła
+  `media_publish`. TikTok analogicznie — kolumny `tiktok_publish_id`,
+  `tiktok_status` (`pending | uploading | processing | publish_complete |
+failed`) i `tiktok_fail_reason`. **Oba tory filtrują się wzajemnie po
+  `platform`**: tick Meta pomija wpisy `tiktok`, a tick TikToka bierze tylko je.
+- `tiktok_integration` — singleton z tokenami OAuth TikToka (dostęp wyłącznie
+  `service_role`, jak `youtube_integration`).
 - `studio_video_jobs` — joby wideo HeyGen z promptu (statusy jak w Awatar FAQ:
   `generating_audio → uploading → rendering → ready/failed`).
 - `studio_images` — wygenerowane grafiki; pliki w publicznym buckecie
@@ -70,15 +84,18 @@ co poprawić.
 
 ## Konfiguracja — sekrety środowiska
 
-| Sekret                   | Do czego                                                 |
-| ------------------------ | -------------------------------------------------------- |
-| `META_PAGE_ID`           | ID strony FB, na którą publikujemy                       |
-| `META_PAGE_ACCESS_TOKEN` | Token strony (fallback: `META_ACCESS_TOKEN`)             |
-| `META_IG_USER_ID`        | ID konta Instagram **Business** powiązanego ze stroną    |
-| `HEYGEN_API_KEY`         | Generowanie wideo awatara (już używany przez Awatar FAQ) |
-| `HEYGEN_CAPTION_STYLE`   | Opcjonalny styl napisów HeyGen (domyślnie `default`)     |
-| `ELEVENLABS_API_KEY`     | Lektor TTS (już używany)                                 |
-| `LOVABLE_API_KEY`        | AI gateway: scenariusze, prompty, grafiki (już używany)  |
+| Sekret                   | Do czego                                                          |
+| ------------------------ | ----------------------------------------------------------------- |
+| `META_PAGE_ID`           | ID strony FB, na którą publikujemy                                |
+| `META_PAGE_ACCESS_TOKEN` | Token strony (fallback: `META_ACCESS_TOKEN`)                      |
+| `META_IG_USER_ID`        | ID konta Instagram **Business** powiązanego ze stroną             |
+| `TIKTOK_CLIENT_KEY`      | Klient TikTok for Developers (Content Posting API)                |
+| `TIKTOK_CLIENT_SECRET`   | Sekret tego klienta                                               |
+| `TIKTOK_REDIRECT_URI`    | Opcjonalny; domyślnie `https://financeyou.pl/api/tiktok/callback` |
+| `HEYGEN_API_KEY`         | Generowanie wideo awatara (już używany przez Awatar FAQ)          |
+| `HEYGEN_CAPTION_STYLE`   | Opcjonalny styl napisów HeyGen (domyślnie `default`)              |
+| `ELEVENLABS_API_KEY`     | Lektor TTS (już używany)                                          |
+| `LOVABLE_API_KEY`        | AI gateway: scenariusze, prompty, grafiki (już używany)           |
 
 Token strony musi mieć uprawnienia: `pages_manage_posts`,
 `pages_read_engagement`, a dla Instagrama dodatkowo `instagram_basic`
@@ -97,6 +114,10 @@ zwraca **bezterminowy** token strony). `META_IG_USER_ID` znajdziesz przez
 - **YouTube**: limity quota — ok. 6 uploadów/dobę (opis w
   `docs/youtube-shorts.md`).
 - **Post FB**: tekst, tekst+grafika (`/photos`), tekst+wideo (`/videos`).
+- **TikTok**: MP4, pion 9:16, plik do 100 MB (limit bufora workera). Limit
+  publikacji ~15/dobę na konto, więc tick wysyła **jeden post na przebieg**.
+  Tytuł do 150 znaków. Wideo idzie metodą `FILE_UPLOAD` (nie `PULL_FROM_URL`),
+  więc plik pobieramy z bucketu `studio-media` i wysyłamy chunkami.
 
 ## Użycie
 
@@ -127,7 +148,6 @@ Zakładki panelu:
    `caption: { file_format: "srt", style: … }` (v3 nie przyjmuje `caption:
 true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
    i to jest tu sedno:
-
    - `file_format` sam → HeyGen oddaje **tylko plik SRT** obok wideo,
    - `file_format` + `style` → napisy są **dodatkowo wypalane w obrazie**.
 
@@ -159,7 +179,6 @@ true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
    **Urozmaicenie (przebitki)** — drugi przełącznik obok napisów, domyślnie
    wyłączony. Włączony renderuje rolkę jako **sklejkę scen** zamiast jednego
    ujęcia gadającej głowy (`POST /v3/videos` z `type: "studio"`):
-
    1. scenariusz tniemy **deterministycznie po zdaniach** na maks. 6 segmentów
       (`splitScriptIntoSegments`) — AI nie dostaje tekstu do przepisania,
       więc lektor mówi dokładnie to, co zatwierdzono w panelu,
@@ -184,7 +203,6 @@ true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
 
    **Czego API HeyGena NIE potrafi** (sprawdzone w specyfikacji v3, żeby nie
    szukać tego drugi raz):
-
    - **nakładek na awatara** — sceny są pełnoekranowe i sklejane, nie ma
      warstw. Ikonka „AI" w rogu, znacznik kategorii i duże pytanie na środku
      z paczki 250 pytań zostają więc **instrukcją montażową** (przycisk
@@ -239,3 +257,98 @@ true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
    podstawia ją do posta na Facebooku.
 4. **Generator promptów** — temat + rodzaj (wideo / grafiki / posty) →
    lista promptów z przyciskami „Użyj" / kopiuj.
+
+## TikTok — Content Posting API (Direct Post)
+
+### Połączenie konta (OAuth, raz)
+
+1. W [TikTok for Developers](https://developers.tiktok.com/) włącz w aplikacji
+   produkt **Content Posting API** z opcją **Direct Post**, dodaj zakresy
+   `user.info.basic` i `video.publish`, a jako Redirect URI wpisz dokładnie
+   `https://financeyou.pl/api/tiktok/callback`.
+2. Client key i secret wrzuć do sekretów jako `TIKTOK_CLIENT_KEY`
+   i `TIKTOK_CLIENT_SECRET`.
+3. W panelu **/admin/studio-publikacji** → karta „TikTok" → **Połącz TikTok**.
+   Po powrocie z TikToka karta pokazuje zieloną kropkę, `open_id` i datę
+   wygaśnięcia tokena. „Rozłącz" unieważnia grant i czyści tokeny z bazy.
+
+Przycisk NIE prowadzi wprost na TikToka: admin-only server fn
+`startTiktokConnect` wydaje jednorazowy `state`, a dopiero endpoint
+`/api/tiktok/auth?state=…` robi redirect. Bez tego ktokolwiek mógłby przejść
+flow na **swoim** koncie i podmienić firmową integrację na własną —
+`/api/tiktok/auth` jest publiczny, bo nawigacja przeglądarki nie nosi nagłówka
+`Authorization` (sesja Supabase jedzie w nim, nie w ciasteczku).
+
+### Tokeny
+
+`access_token` żyje 24 h, `refresh_token` 365 dni. Tick odświeża token, gdy
+do wygaśnięcia zostało mniej niż 2 h. **TikTok rotuje `refresh_token`** przy
+każdym odświeżeniu — zapisujemy nowy, inaczej integracja padłaby po dobie.
+
+### Przebieg publikacji (rozłożony na ticki)
+
+1. **`creator_info/query`** — wołane **przed każdą** publikacją (wymóg TikToka).
+   Służy do **sprawdzenia wyborów twórcy** (czy wybrany `privacy_level` jest
+   nadal dozwolony) i domknięcia przełączników ograniczeniami konta. Sam wybór
+   robi człowiek na ekranie publikacji — patrz sekcja poniżej.
+2. **`video/init`** (`FILE_UPLOAD`) → `publish_id` + `upload_url`, zapis
+   `publish_id` do bazy **przed** uploadem (gdyby worker padł, kolejny tick
+   domknie wpis pollingiem, a nie opublikuje drugi raz), potem `PUT` chunków
+   z nagłówkiem `Content-Range`.
+3. **`status/fetch`** — polling co 30 s (do 3 prób w tym ticku), a jeśli TikTok
+   wciąż przetwarza, wpis zostaje w `processing` i domykają go kolejne ticki
+   (limit całkowity: 60 min). `PUBLISH_COMPLETE` → wpis `published`;
+   `FAILED` → `tiktok_fail_reason` z odpowiedzi, bez ponawiania (materiał
+   odrzucony merytorycznie nie przejdzie też za drugim razem).
+
+#### Dlaczego chunki liczymy `floor`, nie `ceil`
+
+TikTok waliduje `total_chunk_count == floor(video_size / chunk_size)`, a
+**ostatni chunk pochłania resztę** (może być większy niż `chunk_size`).
+`ceil` — jak w pierwotnej specyfikacji modułu — kończyłby się błędem
+`invalid_params` dla każdego rozmiaru niepodzielnego przez `chunk_size`
+(25 MB / 10 MB → `ceil` daje 3, a TikTok oczekuje 2 chunków: 10 MB i 15 MB).
+Plik poniżej 5 MB leci jako jeden chunk. Niezmienniki pilnują testy
+w `src/lib/tiktok-upload.test.ts`.
+
+### Bez znaku wodnego
+
+TikTok nie dopuszcza cudzych watermarków w Direct Post. Render Studia
+(`src/lib/studio-render.server.ts`) wypala w obraz **tylko napisy** — żadnego
+logo ani nakładki Finance You — więc materiał nadaje się do publikacji bez zmian.
+
+## Zgodność z audytem TikToka (ekran publikacji)
+
+Content Sharing Guidelines zabraniają hardkodowania prywatności: _„Developers
+should not hardcode one privacy setting… your export screen must reflect those
+values"_. Pierwsza wersja integracji wybierała `privacy_level` po stronie
+serwera — **to nie przeszłoby audytu**, więc wybór należy do twórcy i jedzie
+razem z wpisem w kolejce.
+
+Ekran (`TiktokPostOptionsFields`, wspólny dla publikacji ręcznej
+i auto-publikacji zadania wideo) pokazuje:
+
+- nick konta, na które publikujemy,
+- **wybór prywatności z `creator_info`, bez wartości domyślnej** — dopóki twórca
+  nie wskaże, przycisk publikacji jest nieaktywny,
+- przełączniki komentarzy / duetu / stitcha, **wyszarzone** gdy konto twórcy je
+  blokuje (`applyCreatorConstraints` liczy iloczyn: nie włączamy niczego, czego
+  twórca nie zaznaczył),
+- **ujawnienie treści komercyjnej** — domyślnie wyłączone, po włączeniu
+  checkboxy „Twoja marka" (`brand_organic_toggle`) i „Treść brandowana"
+  (`brand_content_toggle`) plus etykieta, jaką TikTok nada filmowi,
+- deklarację **„Publikując, akceptujesz Music Usage Confirmation"** tuż przed
+  przyciskiem.
+
+Wybory lądują w `social_publish_queue.tiktok_post_options` (auto-publikacja:
+najpierw w `studio_video_jobs.tiktok_post_options`, skąd kopiuje je
+`maybeAutoPublishJob`). Panel i serwer walidują je **tym samym**
+`parseTiktokPostOptions`, żeby UI nie przepuszczał czegoś, co publikacja
+odrzuci. Reguła TikToka „treść brandowana nie może być prywatna" jest
+egzekwowana po obu stronach — zgłaszamy błąd, zamiast po cichu zmieniać wybór
+twórcy.
+
+Klient **przed audytem** ma wymuszone `SELF_ONLY` — `creator_info` zwróci wtedy
+tylko tę opcję i tyle zobaczy twórca. To oczekiwane, nie obchodzimy tego.
+
+Scenariusz nagrania do wniosku audytowego: `docs/tiktok-audyt-nagranie.md`.

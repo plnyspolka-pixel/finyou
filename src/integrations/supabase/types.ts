@@ -11684,6 +11684,11 @@ export type Database = {
           published_at: string | null
           scheduled_at: string
           status: string
+          tiktok_fail_reason: string | null
+          tiktok_post_options: Json | null
+          tiktok_publish_id: string | null
+          tiktok_status: string | null
+          tiktok_upload_at: string | null
           title: string
           updated_at: string
           video_url: string | null
@@ -11703,6 +11708,11 @@ export type Database = {
           published_at?: string | null
           scheduled_at?: string
           status?: string
+          tiktok_fail_reason?: string | null
+          tiktok_post_options?: Json | null
+          tiktok_publish_id?: string | null
+          tiktok_status?: string | null
+          tiktok_upload_at?: string | null
           title?: string
           updated_at?: string
           video_url?: string | null
@@ -11722,6 +11732,11 @@ export type Database = {
           published_at?: string | null
           scheduled_at?: string
           status?: string
+          tiktok_fail_reason?: string | null
+          tiktok_post_options?: Json | null
+          tiktok_publish_id?: string | null
+          tiktok_status?: string | null
+          tiktok_upload_at?: string | null
           title?: string
           updated_at?: string
           video_url?: string | null
@@ -11817,6 +11832,7 @@ export type Database = {
           status: string
           subtitle_url: string | null
           thumbnail_url: string | null
+          tiktok_post_options: Json | null
           updated_at: string
           video_url: string | null
           video_url_clean: string | null
@@ -11847,6 +11863,7 @@ export type Database = {
           status?: string
           subtitle_url?: string | null
           thumbnail_url?: string | null
+          tiktok_post_options?: Json | null
           updated_at?: string
           video_url?: string | null
           video_url_clean?: string | null
@@ -11877,6 +11894,7 @@ export type Database = {
           status?: string
           subtitle_url?: string | null
           thumbnail_url?: string | null
+          tiktok_post_options?: Json | null
           updated_at?: string
           video_url?: string | null
           video_url_clean?: string | null
@@ -11959,6 +11977,54 @@ export type Database = {
           system_prompt?: string
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      tiktok_integration: {
+        Row: {
+          access_token: string | null
+          connected: boolean
+          connected_at: string | null
+          created_at: string
+          id: number
+          last_error: string | null
+          oauth_state: string | null
+          oauth_state_expires_at: string | null
+          open_id: string | null
+          refresh_token: string | null
+          refresh_token_expires_at: string | null
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          connected?: boolean
+          connected_at?: string | null
+          created_at?: string
+          id?: number
+          last_error?: string | null
+          oauth_state?: string | null
+          oauth_state_expires_at?: string | null
+          open_id?: string | null
+          refresh_token?: string | null
+          refresh_token_expires_at?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          connected?: boolean
+          connected_at?: string | null
+          created_at?: string
+          id?: number
+          last_error?: string | null
+          oauth_state?: string | null
+          oauth_state_expires_at?: string | null
+          open_id?: string | null
+          refresh_token?: string | null
+          refresh_token_expires_at?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

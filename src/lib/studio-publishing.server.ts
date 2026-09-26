@@ -13,6 +13,8 @@
 // Fallback tokena: META_ACCESS_TOKEN (jak w meta-send.server.ts).
 //
 // Kolejka: social_publish_queue (migracja 20260803130000_studio_publikacji).
+// Uwaga: ta sama tabela obsługuje TikToka (platform='tiktok'), ale tamten tor
+// ma własne API i tick — tutaj wpisy TikToka są konsekwentnie odfiltrowane.
 // IG wymaga odpytywania statusu kontenera — tick najpierw tworzy kontener
 // (status `processing`), a publikuje po FINISHED w kolejnych przebiegach.
 //
@@ -330,6 +332,7 @@ async function deferAllDue(minutes: number, reason: string) {
       last_error: `${reason} ${formatNextAttempt(nextAt, minutes)}`,
     })
     .in("status", ["pending", "processing"])
+    .neq("platform", "tiktok")
     .lte("scheduled_at", new Date().toISOString());
 }
 
@@ -352,6 +355,9 @@ export async function processSocialQueueItem(
     .from("social_publish_queue")
     .update({ status: "publishing" })
     .eq("id", id)
+    // TikTok jedzie własnym torem (tiktok.server.ts) — bez tego filtra wpis
+    // 'tiktok' wpadłby do gałęzi Instagrama na końcu tej funkcji.
+    .neq("platform", "tiktok")
     .in("status", ["pending", "failed"])
     .select("*")
     .maybeSingle();
@@ -492,6 +498,8 @@ export async function runSocialPublishTick(): Promise<{
     .from("social_publish_queue")
     .select("id")
     .eq("status", "pending")
+    // Wpisy TikToka bierze runTiktokPublishTick — ta kolejka jest wspólna.
+    .neq("platform", "tiktok")
     .lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true })
     .limit(MAX_ITEMS_PER_TICK);

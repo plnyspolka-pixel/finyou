@@ -190,6 +190,8 @@ import { Route as InwestorAmlRyzykoRouteImport } from './routes/inwestor.aml.ryz
 import { Route as InwestorAmlPonadprogoweRouteImport } from './routes/inwestor.aml.ponadprogowe'
 import { Route as InwestorAmlKlienciRouteImport } from './routes/inwestor.aml.klienci'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
+import { Route as ApiTiktokCallbackRouteImport } from './routes/api/tiktok/callback'
+import { Route as ApiTiktokAuthRouteImport } from './routes/api/tiktok/auth'
 import { Route as ApiPublicYoutubeOauthCallbackRouteImport } from './routes/api/public/youtube-oauth-callback'
 import { Route as ApiPublicVoiceSessionRouteImport } from './routes/api/public/voice-session'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio-voice'
@@ -1191,6 +1193,16 @@ const EmbedLSlugRoute = EmbedLSlugRouteImport.update({
   path: '/embed/l/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTiktokCallbackRoute = ApiTiktokCallbackRouteImport.update({
+  id: '/api/tiktok/callback',
+  path: '/api/tiktok/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTiktokAuthRoute = ApiTiktokAuthRouteImport.update({
+  id: '/api/tiktok/auth',
+  path: '/api/tiktok/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicYoutubeOauthCallbackRoute =
   ApiPublicYoutubeOauthCallbackRouteImport.update({
     id: '/api/public/youtube-oauth-callback',
@@ -1874,6 +1886,8 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/voice-session': typeof ApiPublicVoiceSessionRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
+  '/api/tiktok/auth': typeof ApiTiktokAuthRoute
+  '/api/tiktok/callback': typeof ApiTiktokCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
   '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
@@ -2132,6 +2146,8 @@ export interface FileRoutesByTo {
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/voice-session': typeof ApiPublicVoiceSessionRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
+  '/api/tiktok/auth': typeof ApiTiktokAuthRoute
+  '/api/tiktok/callback': typeof ApiTiktokCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
   '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
@@ -2401,6 +2417,8 @@ export interface FileRoutesById {
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/voice-session': typeof ApiPublicVoiceSessionRoute
   '/api/public/youtube-oauth-callback': typeof ApiPublicYoutubeOauthCallbackRoute
+  '/api/tiktok/auth': typeof ApiTiktokAuthRoute
+  '/api/tiktok/callback': typeof ApiTiktokCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
   '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
@@ -2671,6 +2689,8 @@ export interface FileRouteTypes {
     | '/api/public/twilio-voice'
     | '/api/public/voice-session'
     | '/api/public/youtube-oauth-callback'
+    | '/api/tiktok/auth'
+    | '/api/tiktok/callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
     | '/inwestor/aml/ponadprogowe'
@@ -2929,6 +2949,8 @@ export interface FileRouteTypes {
     | '/api/public/twilio-voice'
     | '/api/public/voice-session'
     | '/api/public/youtube-oauth-callback'
+    | '/api/tiktok/auth'
+    | '/api/tiktok/callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
     | '/inwestor/aml/ponadprogowe'
@@ -3197,6 +3219,8 @@ export interface FileRouteTypes {
     | '/api/public/twilio-voice'
     | '/api/public/voice-session'
     | '/api/public/youtube-oauth-callback'
+    | '/api/tiktok/auth'
+    | '/api/tiktok/callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
     | '/inwestor/aml/ponadprogowe'
@@ -3340,6 +3364,8 @@ export interface RootRouteChildren {
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
   ApiPublicVoiceSessionRoute: typeof ApiPublicVoiceSessionRoute
   ApiPublicYoutubeOauthCallbackRoute: typeof ApiPublicYoutubeOauthCallbackRoute
+  ApiTiktokAuthRoute: typeof ApiTiktokAuthRoute
+  ApiTiktokCallbackRoute: typeof ApiTiktokCallbackRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
@@ -4654,6 +4680,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmbedLSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tiktok/callback': {
+      id: '/api/tiktok/callback'
+      path: '/api/tiktok/callback'
+      fullPath: '/api/tiktok/callback'
+      preLoaderRoute: typeof ApiTiktokCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tiktok/auth': {
+      id: '/api/tiktok/auth'
+      path: '/api/tiktok/auth'
+      fullPath: '/api/tiktok/auth'
+      preLoaderRoute: typeof ApiTiktokAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/youtube-oauth-callback': {
       id: '/api/public/youtube-oauth-callback'
       path: '/api/public/youtube-oauth-callback'
@@ -5762,6 +5802,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
   ApiPublicVoiceSessionRoute: ApiPublicVoiceSessionRoute,
   ApiPublicYoutubeOauthCallbackRoute: ApiPublicYoutubeOauthCallbackRoute,
+  ApiTiktokAuthRoute: ApiTiktokAuthRoute,
+  ApiTiktokCallbackRoute: ApiTiktokCallbackRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,

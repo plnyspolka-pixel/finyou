@@ -1,13 +1,15 @@
 // Cron tick Studia publikacji: publikuje wymagalne wpisy z kolejki
-// social_publish_queue (FB post / FB Reels / IG Reels przez Meta Graph API),
-// domyka dwuetapowe publikacje IG (kontener → media_publish) oraz obsługuje
-// kolejkę wsadową wideo HeyGen (joby 'queued' i polling renderów z
-// auto-publikacją) — dzięki temu batch i auto-publikacja działają także
-// przy zamkniętej przeglądarce.
+// social_publish_queue (FB post / FB Reels / IG Reels przez Meta Graph API,
+// TikTok przez Content Posting API), domyka dwuetapowe publikacje IG
+// (kontener → media_publish) i TikToka (upload → polling statusu), odświeża
+// token TikToka oraz obsługuje kolejkę wsadową wideo HeyGen (joby 'queued'
+// i polling renderów z auto-publikacją) — dzięki temu batch i auto-publikacja
+// działają także przy zamkniętej przeglądarce.
 // Harmonogram: pg_cron co 10 minut (migracja 20260803130000_studio_publikacji).
 import { createFileRoute } from "@tanstack/react-router";
 import { runSocialPublishTick } from "@/lib/studio-publishing.server";
 import { runStudioVideoTick } from "@/lib/studio-video-queue.server";
+import { runTiktokPublishTick } from "@/lib/tiktok.server";
 import { requireCronSecret } from "@/lib/cron-auth.server";
 
 async function runTick(): Promise<Response> {
@@ -17,7 +19,12 @@ async function runTick(): Promise<Response> {
       error: e instanceof Error ? e.message : String(e),
     }));
     const social = await runSocialPublishTick();
-    const result = { ...social, video };
+    // TikTok osobno: własne API, własny token i limit ~15 postów/dobę
+    // (jedna publikacja na przebieg). Błąd TikToka nie może wywalić ticka Meta.
+    const tiktok = await runTiktokPublishTick().catch((e) => ({
+      error: e instanceof Error ? e.message : String(e),
+    }));
+    const result = { ...social, video, tiktok };
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: { "Content-Type": "application/json" },
