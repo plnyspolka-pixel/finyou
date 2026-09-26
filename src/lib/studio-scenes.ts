@@ -12,7 +12,15 @@
 //     w środek rolki ucina lektora i robi ciszę — dlatego z niej nie korzystamy.
 //
 // Stąd projekt: lektor gra bez przerwy, a obraz co jakiś czas przechodzi
-// z awatara na pełnoekranową grafikę ze stocku HeyGena (`/v3/assets/search`).
+// z awatara na pełnoekranową grafikę z banku b-rolli (`studio-broll.server.ts`,
+// z dossypką ze stocku).
+//
+// DWA TRYBY MONTAŻU:
+//   * „przebitki AI" (applyScenePlan) — AI wskazuje, KTÓRE segmenty
+//     zilustrować; reszta zostaje na awatarze,
+//   * „struktura rolki" (planReelStructure) — stały rytm
+//     ujęcie → wizual hook → przebitka → a-roll KOLEJNEGO domyślnego awatara.
+//     Tu AI nie decyduje już gdzie ciąć, tylko czym zilustrować.
 //
 // ZASADA: tekst mówiony dzielimy DETERMINISTYCZNIE (zdaniami). AI dostaje
 // gotowe segmenty i decyduje wyłącznie, które z nich zilustrować i czym —
@@ -24,14 +32,20 @@ export const MAX_SCENES = 6;
 /** Minimalna liczba scen, żeby w ogóle było co urozmaicać. */
 export const MIN_SCENES_FOR_BROLL = 3;
 
-export type SceneKind = "avatar" | "broll";
+export type SceneKind = "avatar" | "broll" | "hook";
 
 export type ScenePlanItem = {
   kind: SceneKind;
   /** Fragment tekstu mówionego przypisany do tej sceny. */
   text: string;
-  /** Angielska fraza do biblioteki stocku HeyGena — tylko dla `broll`. */
+  /** Angielska fraza do banku/stocku — tylko dla `broll`. */
   query: string | null;
+  /**
+   * Awatar, który mówi tę scenę. Dla `broll`/`hook` trzymamy tu awatara,
+   * na którego scena spadnie, gdy grafiki zabraknie — dzięki temu awaria
+   * przebitki nie wybija rotacji a-rolli z rytmu.
+   */
+  avatarId?: string | null;
 };
 
 /** Decyzja AI dla jednego segmentu (indeks zgodny z listą segmentów). */
@@ -78,8 +92,14 @@ export function splitScriptIntoSegments(script: string, max = MAX_SCENES): strin
  *  - przebitka bez frazy wyszukiwania to zwykła scena z awatarem,
  *  - przy krótkim materiale (< MIN_SCENES_FOR_BROLL scen) nie tniemy wcale.
  */
-export function applyScenePlan(segments: string[], decisions: SceneDecision[]): ScenePlanItem[] {
+export function applyScenePlan(
+  segments: string[],
+  decisions: SceneDecision[],
+  avatarIds: string[] = [],
+): ScenePlanItem[] {
   const byIndex = new Map(decisions.map((d) => [d.index, d]));
+  const rotation = avatarIds.filter(Boolean);
+  let speaker = 0;
   const lastIndex = segments.length - 1;
   const allowBroll = segments.length >= MIN_SCENES_FOR_BROLL;
 
@@ -93,15 +113,90 @@ export function applyScenePlan(segments: string[], decisions: SceneDecision[]): 
       allowBroll && decision?.broll === true && Boolean(query) && i !== 0 && i !== lastIndex;
     const broll = wantsBroll && !previousWasBroll;
     previousWasBroll = broll;
-    items.push({ kind: broll ? "broll" : "avatar", text, query: broll ? query : null });
+    // Każde ujęcie z awatarem bierze kolejnego z rotacji; przebitka dziedziczy
+    // aktualnego mówcę (to on wróci na ekran, gdy grafiki nie będzie).
+    const avatarId = rotation.length ? rotation[speaker % rotation.length] : null;
+    if (!broll) speaker++;
+    items.push({
+      kind: broll ? "broll" : "avatar",
+      text,
+      query: broll ? query : null,
+      avatarId,
+    });
   });
 
   return items;
 }
 
+/**
+ * Stały rytm rolki po pierwszym ujęciu — dokładnie ten, o który chodzi
+ * w strukturze: ujęcie → wizual hook → przebitka → a-roll innego awatara.
+ */
+export const REEL_CYCLE: SceneKind[] = ["hook", "broll", "avatar"];
+
+/**
+ * STRUKTURA ROLKI (tryb „struktura", w odróżnieniu od trybu, w którym miejsca
+ * przebitek wskazuje AI):
+ *
+ *   0. ujęcie z pierwszym domyślnym awatarem — hook mówi twarz,
+ *   1. wizual hook — pełnoekranowy efekt, który zatrzymuje kciuk,
+ *   2. przebitka (b-roll) ilustrująca treść,
+ *   3. a-roll KOLEJNEGO domyślnego awatara — zmiana twarzy resetuje uwagę,
+ *   … i tak w kółko, a ostatnia scena (CTA) zawsze wraca na awatara.
+ *
+ * Rytm jest deterministyczny — AI nie decyduje już GDZIE ciąć, tylko CZYM
+ * zilustrować przebitkę (frazę dokleja render). Dzięki temu każda rolka ma
+ * ten sam, rozpoznawalny montaż.
+ */
+export function planReelStructure(
+  segments: string[],
+  opts: { avatarIds: string[] },
+): ScenePlanItem[] {
+  const rotation = opts.avatarIds.filter(Boolean);
+  const avatarAt = (turn: number): string | null =>
+    rotation.length ? rotation[turn % rotation.length] : null;
+
+  const lastIndex = segments.length - 1;
+  let speaker = 0;
+
+  // Za krótki materiał zostaje gadającą głową — cięcia co jedno zdanie męczą.
+  if (segments.length < MIN_SCENES_FOR_BROLL) {
+    return segments.map((text) => {
+      const avatarId = avatarAt(speaker);
+      speaker++;
+      return { kind: "avatar" as const, text, query: null, avatarId };
+    });
+  }
+
+  const items: ScenePlanItem[] = [];
+  let cycle = 0;
+  segments.forEach((text, i) => {
+    const isEdge = i === 0 || i === lastIndex;
+    const role: SceneKind = isEdge ? "avatar" : REEL_CYCLE[cycle++ % REEL_CYCLE.length];
+    const avatarId = avatarAt(speaker);
+    if (role === "avatar") speaker++;
+    items.push({ kind: role, text, query: null, avatarId });
+  });
+  return items;
+}
+
+/** Ile scen planu czeka na grafikę (przebitki + wizual hooki). */
+export function visualSceneCount(items: ScenePlanItem[]): number {
+  return items.filter((i) => i.kind === "broll" || i.kind === "hook").length;
+}
+
+/** Awatary faktycznie użyte w planie, w kolejności wejścia na ekran. */
+export function avatarsInPlan(items: ScenePlanItem[]): string[] {
+  const out: string[] = [];
+  for (const i of items) {
+    if (i.kind === "avatar" && i.avatarId && !out.includes(i.avatarId)) out.push(i.avatarId);
+  }
+  return out;
+}
+
 /** Czy plan w ogóle coś zmienia względem jednego ujęcia gadającej głowy. */
 export function planHasBroll(items: ScenePlanItem[]): boolean {
-  return items.some((i) => i.kind === "broll");
+  return items.some((i) => i.kind === "broll" || i.kind === "hook");
 }
 
 /** Scena gotowa do wysłania — z podpiętym audio i (dla przebitki) grafiką. */
@@ -133,7 +228,7 @@ export function buildStudioScenes(
   opts: { avatarId: string; backgroundColor?: string },
 ): HeygenStudioScene[] {
   return resolved.map(({ item, audioAssetId, imageUrl }) => {
-    if (item.kind === "broll" && imageUrl) {
+    if (item.kind !== "avatar" && imageUrl) {
       return {
         type: "image" as const,
         source: { type: "url" as const, url: imageUrl },
@@ -144,7 +239,9 @@ export function buildStudioScenes(
       type: "avatar_video" as const,
       input: {
         type: "avatar" as const,
-        avatar_id: opts.avatarId,
+        // Scena niesie własnego awatara (rotacja a-rolli); `opts.avatarId`
+        // to zapasowy mówca, gdy plan nie wskazał nikogo.
+        avatar_id: item.avatarId || opts.avatarId,
         audio_asset_id: audioAssetId,
         ...(opts.backgroundColor
           ? { background: { type: "color" as const, color: opts.backgroundColor } }
@@ -157,8 +254,12 @@ export function buildStudioScenes(
 /** Krótkie podsumowanie planu do panelu („3 ujęcia + 2 przebitki"). */
 export function describeScenePlan(items: ScenePlanItem[]): string {
   const broll = items.filter((i) => i.kind === "broll").length;
-  const avatar = items.length - broll;
+  const hooks = items.filter((i) => i.kind === "hook").length;
+  const avatar = items.length - broll - hooks;
   const parts = [`${avatar} ${avatar === 1 ? "ujęcie" : "ujęcia"} z awatarem`];
   if (broll) parts.push(`${broll} ${broll === 1 ? "przebitka" : "przebitki"}`);
-  return parts.join(" + ");
+  if (hooks) parts.push(`${hooks} ${hooks === 1 ? "wizual hook" : "wizual hooki"}`);
+  const faces = avatarsInPlan(items).length;
+  const summary = parts.join(" + ");
+  return faces > 1 ? `${summary} (${faces} awatary)` : summary;
 }

@@ -25,12 +25,16 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 | TikTok — OAuth (start + callback)            | `src/routes/api/tiktok/auth.ts`, `src/routes/api/tiktok/callback.ts`                     |
 | Klasyfikacja błędów Meta + backoff           | `src/lib/meta-graph-errors.ts` (+ testy `meta-graph-errors.test.ts`)                     |
 | Helpery AI (scenariusz, prompty, grafiki)    | `src/lib/studio-ai.server.ts`                                                            |
+| Bank b-rolli (import, dobór, seed)           | `src/lib/studio-broll.server.ts`                                                         |
+| Bank b-rolli — czysta logika doboru          | `src/lib/studio-broll-match.ts` (+ testy `studio-broll-match.test.ts`)                   |
+| Domyślne awatary (rotacja a-rolli)           | `src/lib/studio-avatars.server.ts`                                                       |
 | Server functions                             | `src/lib/studio.functions.ts`                                                            |
 | Baza 250 pytań do shortów (generowana)       | `src/lib/shorts-question-bank.ts`                                                        |
 | Źródło bazy pytań + generator                | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts` |
 | Cron tick Meta                               | `src/routes/api/public/hooks/social-publish-tick.ts`                                     |
 | Panel admina                                 | `src/routes/admin.studio-publikacji.tsx`                                                 |
 | Migracja (tabele + bucket + cron)            | `supabase/migrations/20260803130000_studio_publikacji.sql`                               |
+| Migracja: bank b-rolli + domyślne awatary    | `supabase/migrations/20260927120000_studio_bank_broll_i_domyslne_awatary.sql`            |
 | Migracja TikToka                             | `supabase/migrations/20260926120000_tiktok_content_posting.sql`                          |
 | Migracja: ustawienia posta twórcy            | `supabase/migrations/20260926140000_tiktok_ustawienia_publikacji_tworcy.sql`             |
 
@@ -52,6 +56,11 @@ failed`) i `tiktok_fail_reason`. **Oba tory filtrują się wzajemnie po
   `generating_audio → uploading → rendering → ready/failed`).
 - `studio_images` — wygenerowane grafiki; pliki w publicznym buckecie
   `studio-media` (trwałe URL-e, które Meta może pobrać przy publikacji).
+- `studio_broll_assets` — **bank b-rolli**: przebitki (`kind = 'broll'`)
+  i wizual hooki (`kind = 'hook'`). Pliki w tym samym buckecie `studio-media`,
+  dobór po tagach, rotacja po `last_used_at` / `use_count`.
+- `studio_default_avatars` — **stały zestaw domyślnych awatarów**; `position`
+  wyznacza rotację a-rolli w rolce.
 
 Publikacja na **YouTube** korzysta z istniejącego modułu YouTube Shorts —
 formularz Studia wstawia wpisy do `youtube_publish_queue`
@@ -93,6 +102,7 @@ co poprawić.
 | `TIKTOK_CLIENT_SECRET`   | Sekret tego klienta                                               |
 | `TIKTOK_REDIRECT_URI`    | Opcjonalny; domyślnie `https://financeyou.pl/api/tiktok/callback` |
 | `HEYGEN_API_KEY`         | Generowanie wideo awatara (już używany przez Awatar FAQ)          |
+| `PEXELS_API_KEY`         | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)  |
 | `HEYGEN_CAPTION_STYLE`   | Opcjonalny styl napisów HeyGen (domyślnie `default`)              |
 | `ELEVENLABS_API_KEY`     | Lektor TTS (już używany)                                          |
 | `LOVABLE_API_KEY`        | AI gateway: scenariusze, prompty, grafiki (już używany)           |
@@ -176,16 +186,18 @@ true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
    z dźwiękiem, a pipeline YouTube robi materiały 5–8 min, gdzie wypalone
    napisy przeszkadzają, a player YT ma własne.
 
-   **Urozmaicenie (przebitki)** — drugi przełącznik obok napisów, domyślnie
-   wyłączony. Włączony renderuje rolkę jako **sklejkę scen** zamiast jednego
+   **Montaż rolki** — wybór obok napisów (domyślnie „pojedyncze ujęcie");
+   pozostałe dwa tryby — „przebitki AI" i „struktura" (opisana niżej w sekcji
+   „Struktura rolki") — renderują rolkę jako **sklejkę scen** zamiast jednego
    ujęcia gadającej głowy (`POST /v3/videos` z `type: "studio"`):
    1. scenariusz tniemy **deterministycznie po zdaniach** na maks. 6 segmentów
       (`splitScriptIntoSegments`) — AI nie dostaje tekstu do przepisania,
       więc lektor mówi dokładnie to, co zatwierdzono w panelu,
    2. AI (`planVideoScenes`) dostaje ponumerowane segmenty i wskazuje tylko,
       **które zilustrować** i jaką angielską frazą szukać w bibliotece,
-   3. frazy idą do stocku HeyGena (`GET /v3/assets/search`, `type=image`),
-      z preferencją grafik pionowych (kadr 9:16 docina resztę),
+   3. frazy idą do **banku b-rolli** (`resolveBrollImage`: najpierw własna
+      biblioteka, potem stock — Pexels albo `GET /v3/assets/search`
+      HeyGena — z preferencją grafik pionowych, bo kadr 9:16 docina resztę),
    4. każdy segment dostaje własne audio z ElevenLabs (długość sceny HeyGen
       liczy z jej audio) i ląduje jako scena `avatar_video` albo pełnoekranowa
       `image` **z narracją** — lektor gra przez przebitkę dalej.
@@ -253,10 +265,86 @@ true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
    Regeneracja bazy pytań po zmianie pliku źródłowego:
    `bun run scripts/generate-shorts-question-bank.ts`.
 
-3. **Grafiki AI** — prompt → grafika zapisana w Storage; „Do posta"
+3. **B-rolle** — bank materiałów, z którego jadą przebitki i wizual hooki
+   (opis niżej: „Bank b-rolli").
+
+4. **Grafiki AI** — prompt → grafika zapisana w Storage; „Do posta"
    podstawia ją do posta na Facebooku.
-4. **Generator promptów** — temat + rodzaj (wideo / grafiki / posty) →
+5. **Generator promptów** — temat + rodzaj (wideo / grafiki / posty) →
    lista promptów z przyciskami „Użyj" / kopiuj.
+
+## Bank b-rolli (zakładka „B-rolle")
+
+Do tej pory przebitki brały się wprost z wyszukiwarki stocku HeyGena. To trzy
+problemy naraz: każdy przebieg oddaje co innego (rolki wychodzą niespójne),
+raz znalezionej dobrej grafiki nie da się użyć drugi raz, a cudzy URL może
+wygasnąć między planowaniem a renderem. Dlatego materiał trzymamy u siebie.
+
+- **Co jest w banku** — `studio_broll_assets`, dwa rodzaje: `broll`
+  (ilustracja treści) i `hook` (wizual hook, czyli efekciarskie ujęcie, które
+  ma zatrzymać kciuk, a nie coś tłumaczyć).
+- **Skąd** — przycisk „Uzupełnij bank ze stocku" (startowy zestaw fraz;
+  Pexels, gdy jest `PEXELS_API_KEY`, inaczej biblioteka HeyGena), ręczne
+  dodanie z publicznego URL-a, albo przycisk „do banku" przy grafice AI.
+  **Każdy plik kopiujemy do bucketu `studio-media`** — HeyGen i Meta dostają
+  trwały https, nie wygasający link stocku. Seed jest idempotentny (pomija
+  frazy, które już są), a plik przyjmujemy tylko gdy to faktycznie obraz
+  (`content-type: image/*`) do 15 MB.
+- **Jak render dobiera materiał** (`resolveBrollImage` — jedyne wejście):
+  najpierw bank (pokrycie słów frazy przez tagi/tytuł/frazę źródłową, próg
+  0,34; przy remisie pion przed kwadratem, potem najdawniej użyte), potem
+  stock — a to, co stock oddał, **od razu wpada do banku**. Bank sam się więc
+  zapełnia w trakcie normalnej pracy. Gdy fraza nic nie znajdzie, lepszy jest
+  najdawniej użyty materiał z banku (jest tematyczny) niż dziura w montażu.
+- **Rotacja** — użycie odnotowujemy dopiero, gdy render faktycznie ruszył
+  (`use_count`, `last_used_at`), żeby nieudana próba nie przesuwała kolejki.
+  W jednej rolce ten sam plik nie wystąpi dwa razy.
+- **Wyłączanie zamiast kasowania** — przełącznik „oko" zdejmuje materiał
+  z doboru, ale zostawia go w bibliotece (`active = false`).
+
+## Domyślne awatary (przycisk „Ustaw jako domyślne")
+
+W siatce awatarów każda kafelka ma gwiazdkę: klikanie buduje zestaw
+(numer na gwiazdce = miejsce w rotacji), a przycisk **„Ustaw jako domyślne"**
+zapisuje go na stałe do `studio_default_avatars`. Zestaw zastępowany jest
+w całości — „domyślne" to dokładnie to, co widać w panelu.
+
+Zestaw obowiązuje wszystkie tory generacji, nie tylko otwarty panel: joby
+wsadowe i cron czytają go przez `resolveAvatarRotation` (kolumna
+`studio_video_jobs.avatar_ids`, a gdy pusta — aktualny zapis w tabeli).
+Rotację prowadzi awatar wybrany w formularzu, za nim reszta zestawu
+(maks. 6 twarzy — więcej w 30–60 s to już nie montaż, tylko chaos).
+
+## Struktura rolki (montaż: ujęcie → wizual hook → b-roll → a-roll)
+
+Pole **„Montaż rolki"** w zakładce „Wideo AI" ma trzy tryby:
+
+1. **Pojedyncze ujęcie** — gadająca głowa (jak dotąd).
+2. **Przebitki — miejsca cięć wskazuje AI** (`applyScenePlan`) — dotychczasowe
+   urozmaicenie, tylko materiał leci teraz z banku.
+3. **Struktura** (`planReelStructure`, kolumna `reel_structure`) — stały,
+   deterministyczny rytm:
+
+   | scena | co widać                                                        |
+   | ----- | --------------------------------------------------------------- |
+   | 0     | ujęcie z pierwszym domyślnym awatarem (hook mówi twarz)         |
+   | 1     | **wizual hook** — pełnoekranowy efekt z banku                   |
+   | 2     | **b-roll** — przebitka ilustrująca treść                        |
+   | 3     | **a-roll KOLEJNEGO domyślnego awatara**                         |
+   | …     | cykl się powtarza; ostatnia scena (CTA) zawsze wraca na awatara |
+
+   AI nie decyduje już **gdzie** ciąć — dostaje tylko indeksy przebitek
+   i oddaje frazę wyszukiwania dla każdej (`planBrollQueries`). Lektor gra
+   przez przebitki dalej, a tekst dzielony jest deterministycznie po zdaniach,
+   więc mówi dokładnie to, co zatwierdzono w panelu.
+
+Każda scena niesie awatara, który ją przejmie, **gdy grafiki zabraknie** — awaria
+przebitki nie wybija rotacji z rytmu, tylko wraca na twarz. Gdy nie uda się
+zdobyć ani jednej grafiki, rolka wychodzi jako pojedyncze ujęcie z powodem
+w `last_error`. Przy jednym domyślnym awatarze struktura nadal tnie — po prostu
+bez zmiany twarzy (panel o tym mówi). Plan faktycznie wysłany na render
+zapisujemy w `scene_plan`, a biblioteka pokazuje go jako
+„3 ujęcia z awatarem + 1 przebitka + 2 wizual hooki (3 awatary)".
 
 ## TikTok — Content Posting API (Direct Post)
 

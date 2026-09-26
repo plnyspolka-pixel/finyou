@@ -27,9 +27,17 @@ import {
   listStudioImages,
   generateStudioImageFn,
   deleteStudioImage,
+  listStudioDefaultAvatars,
+  saveStudioDefaultAvatars,
+  listStudioBroll,
+  addStudioBroll,
+  setStudioBrollActive,
+  deleteStudioBroll,
+  seedStudioBroll,
   type StudioPlatform,
   type StudioVideoJob,
   type StudioAvatar,
+  type StudioBrollAsset,
 } from "@/lib/studio.functions";
 import { captionBadgeLabel } from "@/lib/studio-captions";
 import { describeScenePlan } from "@/lib/studio-scenes";
@@ -89,6 +97,12 @@ import {
   Maximize2,
   Music2,
   Unplug,
+  Star,
+  Library,
+  Layers,
+  Plus,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/studio-publikacji")({
@@ -187,6 +201,13 @@ function StudioPage() {
   const imagesFn = useServerFn(listStudioImages);
   const genImageFn = useServerFn(generateStudioImageFn);
   const deleteImageFn = useServerFn(deleteStudioImage);
+  const defaultAvatarsFn = useServerFn(listStudioDefaultAvatars);
+  const saveDefaultAvatarsFn = useServerFn(saveStudioDefaultAvatars);
+  const brollFn = useServerFn(listStudioBroll);
+  const addBrollFn = useServerFn(addStudioBroll);
+  const brollActiveFn = useServerFn(setStudioBrollActive);
+  const deleteBrollFn = useServerFn(deleteStudioBroll);
+  const seedBrollFn = useServerFn(seedStudioBroll);
   const tiktokStatusFn = useServerFn(getTiktokIntegrationStatus);
   const tiktokCreatorFn = useServerFn(getTiktokCreatorInfo);
   const tiktokConnectFn = useServerFn(startTiktokConnect);
@@ -237,6 +258,15 @@ function StudioPage() {
   const { data: images = [] } = useQuery({
     queryKey: ["studio-images"],
     queryFn: () => imagesFn(),
+  });
+  // Stały zestaw domyślnych awatarów — rotacja a-rolli w strukturze rolki.
+  const { data: defaultAvatars = [] } = useQuery({
+    queryKey: ["studio-default-avatars"],
+    queryFn: () => defaultAvatarsFn(),
+  });
+  const { data: brollAssets = [], isLoading: brollLoading } = useQuery({
+    queryKey: ["studio-broll"],
+    queryFn: () => brollFn({ data: {} }),
   });
   const { data: tiktokStatus, isLoading: tiktokLoading } = useQuery({
     queryKey: ["tiktok-status"],
@@ -391,7 +421,11 @@ function StudioPage() {
   const [voiceId, setVoiceId] = useState(FILIP_VOICE_ID);
   // Shorty i rolki ogląda się bez dźwięku — napisy domyślnie włączone.
   const [captionsOn, setCaptionsOn] = useState(true);
-  const [dynamicScenesOn, setDynamicScenesOn] = useState(false);
+  // Montaż rolki: pojedyncze ujęcie | przebitki wskazane przez AI | stała
+  // struktura (ujęcie → wizual hook → przebitka → a-roll innego awatara).
+  const [montage, setMontage] = useState<"single" | "ai" | "structure">("single");
+  const dynamicScenesOn = montage !== "single";
+  const reelStructureOn = montage === "structure";
 
   // ── Wybór awatara (katalog HeyGen) ─────────────────────────────────────────
   const [avatarSearch, setAvatarSearch] = useState("");
@@ -412,6 +446,131 @@ function StudioPage() {
     [avatars, avatarId],
   );
   const AVATAR_DISPLAY_CAP = 60;
+
+  // ── Stały zestaw domyślnych awatarów ───────────────────────────────────────
+  // Zaznaczenie gwiazdką jest robocze; dopiero przycisk „Ustaw jako domyślne"
+  // zapisuje zestaw na stałe (do bazy) — korzysta z niego także kolejka i cron.
+  const [avatarPicks, setAvatarPicks] = useState<string[]>([]);
+  const savedDefaultIds = useMemo(() => defaultAvatars.map((a) => a.avatar_id), [defaultAvatars]);
+  // Zapisany zestaw wchodzi do panelu raz — potem rządzi to, co klika człowiek.
+  const defaultsLoaded = useRef(false);
+  useEffect(() => {
+    if (defaultsLoaded.current || !savedDefaultIds.length) return;
+    defaultsLoaded.current = true;
+    setAvatarPicks(savedDefaultIds);
+    setAvatarId((current) => (savedDefaultIds.includes(current) ? current : savedDefaultIds[0]));
+  }, [savedDefaultIds]);
+
+  const toggleAvatarPick = (id: string) =>
+    setAvatarPicks((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const picksDirty =
+    avatarPicks.length !== savedDefaultIds.length ||
+    avatarPicks.some((id, i) => savedDefaultIds[i] !== id);
+
+  const avatarName = (id: string) =>
+    avatars.find((a) => a.id === id)?.name ??
+    defaultAvatars.find((a) => a.avatar_id === id)?.name ??
+    HEYGEN_AVATARS.find((a) => a.id === id)?.name ??
+    id.slice(0, 8);
+
+  const saveDefaultsM = useMutation({
+    mutationFn: () => saveDefaultAvatarsFn({ data: { avatar_ids: avatarPicks } }),
+    onSuccess: (r) => {
+      toast.success(
+        r.saved
+          ? `Zapisano ${r.saved} domyślnych awatarów — rotacja a-rolli działa też w serii i cronie`
+          : "Wyczyszczono zestaw domyślnych awatarów",
+      );
+      qc.invalidateQueries({ queryKey: ["studio-default-avatars"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Rotacja wysyłana z generatorem: wybrany awatar prowadzi, reszta zestawu
+  // przejmuje kolejne a-rolle.
+  const avatarRotation = useMemo(
+    () => [...new Set([avatarId, ...avatarPicks])],
+    [avatarId, avatarPicks],
+  );
+
+  // ── Bank b-rolli ───────────────────────────────────────────────────────────
+  const [brollKindFilter, setBrollKindFilter] = useState<"all" | "broll" | "hook">("all");
+  const [brollSearch, setBrollSearch] = useState("");
+  const [newBrollUrl, setNewBrollUrl] = useState("");
+  const [newBrollTitle, setNewBrollTitle] = useState("");
+  const [newBrollTags, setNewBrollTags] = useState("");
+  const [newBrollKind, setNewBrollKind] = useState<"broll" | "hook">("broll");
+
+  const filteredBroll = useMemo(() => {
+    const needle = brollSearch.trim().toLowerCase();
+    return brollAssets.filter(
+      (a) =>
+        (brollKindFilter === "all" || a.kind === brollKindFilter) &&
+        (!needle ||
+          a.title.toLowerCase().includes(needle) ||
+          a.source_query.toLowerCase().includes(needle) ||
+          a.tags.some((t) => t.includes(needle))),
+    );
+  }, [brollAssets, brollKindFilter, brollSearch]);
+
+  const brollCounts = useMemo(
+    () => ({
+      broll: brollAssets.filter((a) => a.kind === "broll" && a.active).length,
+      hook: brollAssets.filter((a) => a.kind === "hook" && a.active).length,
+    }),
+    [brollAssets],
+  );
+
+  const refreshBroll = () => qc.invalidateQueries({ queryKey: ["studio-broll"] });
+
+  const addBrollM = useMutation({
+    mutationFn: () =>
+      addBrollFn({
+        data: {
+          url: newBrollUrl.trim(),
+          kind: newBrollKind,
+          title: newBrollTitle.trim(),
+          tags: newBrollTags,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Dodano do banku (plik skopiowany do naszego Storage)");
+      setNewBrollUrl("");
+      setNewBrollTitle("");
+      setNewBrollTags("");
+      refreshBroll();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const seedBrollM = useMutation({
+    mutationFn: () => seedBrollFn({ data: {} }),
+    onSuccess: (r) => {
+      toast.success(
+        `Bank uzupełniony: +${r.added}` +
+          (r.skipped ? `, pominięto ${r.skipped} (już są)` : "") +
+          (r.failed ? `, nieudane ${r.failed}` : ""),
+      );
+      refreshBroll();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const brollActiveM = useMutation({
+    mutationFn: (v: { id: string; active: boolean }) => brollActiveFn({ data: v }),
+    onSuccess: refreshBroll,
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteBrollM = useMutation({
+    mutationFn: (id: string) => deleteBrollFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Usunięto z banku");
+      refreshBroll();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   // ── Auto-publikacja po wygenerowaniu ───────────────────────────────────────
   const [autoPublishOn, setAutoPublishOn] = useState(false);
@@ -537,6 +696,8 @@ function StudioPage() {
           voice_id: voiceId,
           captions: captionsOn,
           dynamic_scenes: dynamicScenesOn,
+          reel_structure: reelStructureOn,
+          avatar_ids: avatarRotation,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
           publish_title: title,
@@ -564,6 +725,8 @@ function StudioPage() {
           voice_id: voiceId,
           captions: captionsOn,
           dynamic_scenes: dynamicScenesOn,
+          reel_structure: reelStructureOn,
+          avatar_ids: avatarRotation,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
           tiktok_post_options: autoTtSelected ? autoTtOptions : undefined,
@@ -705,6 +868,9 @@ function StudioPage() {
           </TabsTrigger>
           <TabsTrigger value="wideo">
             <Video className="mr-1 h-4 w-4" /> Wideo AI (HeyGen)
+          </TabsTrigger>
+          <TabsTrigger value="b-rolle">
+            <Library className="mr-1 h-4 w-4" /> B-rolle
           </TabsTrigger>
           <TabsTrigger value="grafiki">
             <ImageIcon className="mr-1 h-4 w-4" /> Grafiki AI
@@ -1500,37 +1666,68 @@ function StudioPage() {
                 ) : (
                   <>
                     <div className="grid max-h-[420px] grid-cols-2 gap-3 overflow-y-auto rounded-md border p-2 sm:grid-cols-3 lg:grid-cols-5">
-                      {filteredAvatars.slice(0, AVATAR_DISPLAY_CAP).map((a) => (
-                        <button
-                          key={a.id}
-                          type="button"
-                          onClick={() => setAvatarId(a.id)}
-                          className={`rounded-lg border p-2 text-left transition-colors ${
-                            avatarId === a.id
-                              ? "border-primary ring-2 ring-primary"
-                              : "hover:border-muted-foreground/50"
-                          }`}
-                        >
-                          {a.preview ? (
-                            <img
-                              src={a.preview}
-                              alt={a.name}
-                              className="aspect-square w-full rounded-md object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="flex aspect-square w-full items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
-                              brak podglądu
-                            </div>
-                          )}
-                          <p className="mt-1 truncate text-xs font-medium">{a.name}</p>
-                          <p className="truncate text-[11px] text-muted-foreground">
-                            {a.mine ? "Mój" : "Publiczny"}
-                            {a.kind === "talking_photo" ? " • foto" : ""}
-                            {a.group ? ` • ${a.group}` : ""}
-                          </p>
-                        </button>
-                      ))}
+                      {filteredAvatars.slice(0, AVATAR_DISPLAY_CAP).map((a) => {
+                        const pickIndex = avatarPicks.indexOf(a.id);
+                        return (
+                          <div key={a.id} className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setAvatarId(a.id)}
+                              className={`w-full rounded-lg border p-2 text-left transition-colors ${
+                                avatarId === a.id
+                                  ? "border-primary ring-2 ring-primary"
+                                  : "hover:border-muted-foreground/50"
+                              }`}
+                            >
+                              {a.preview ? (
+                                <img
+                                  src={a.preview}
+                                  alt={a.name}
+                                  className="aspect-square w-full rounded-md object-cover"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="flex aspect-square w-full items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
+                                  brak podglądu
+                                </div>
+                              )}
+                              <p className="mt-1 truncate text-xs font-medium">{a.name}</p>
+                              <p className="truncate text-[11px] text-muted-foreground">
+                                {a.mine ? "Mój" : "Publiczny"}
+                                {a.kind === "talking_photo" ? " • foto" : ""}
+                                {a.group ? ` • ${a.group}` : ""}
+                              </p>
+                            </button>
+                            {/* Gwiazdka = kandydat na domyślnego; numer pokazuje
+                                miejsce w rotacji a-rolli. Zapisuje dopiero
+                                przycisk „Ustaw jako domyślne". */}
+                            <button
+                              type="button"
+                              onClick={() => toggleAvatarPick(a.id)}
+                              title={
+                                pickIndex >= 0
+                                  ? `W zestawie domyślnych (${pickIndex + 1}. w rotacji) — kliknij, by usunąć`
+                                  : "Dodaj do zestawu domyślnych"
+                              }
+                              aria-label={
+                                pickIndex >= 0
+                                  ? `Usuń ${a.name} z domyślnych`
+                                  : `Dodaj ${a.name} do domyślnych`
+                              }
+                              className={`absolute right-1 top-1 flex h-7 min-w-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold shadow-sm transition-colors ${
+                                pickIndex >= 0
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-background/85 text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              <Star
+                                className={`h-3.5 w-3.5 ${pickIndex >= 0 ? "fill-current" : ""}`}
+                              />
+                              {pickIndex >= 0 ? pickIndex + 1 : ""}
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                     {filteredAvatars.length > AVATAR_DISPLAY_CAP && (
                       <p className="text-xs text-muted-foreground">
@@ -1540,6 +1737,70 @@ function StudioPage() {
                     )}
                   </>
                 )}
+
+                {/* Stały zestaw domyślnych awatarów — jeden przycisk zapisuje
+                    go do bazy, więc obowiązuje też serię wsadową i crona. */}
+                <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label className="flex items-center gap-2">
+                      <Star className="h-4 w-4" /> Domyślne awatary (rotacja a-rolli)
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      {avatarPicks.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setAvatarPicks([])}
+                          disabled={saveDefaultsM.isPending}
+                        >
+                          Wyczyść wybór
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => saveDefaultsM.mutate()}
+                        disabled={saveDefaultsM.isPending || !picksDirty}
+                      >
+                        {saveDefaultsM.isPending ? (
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Star className="mr-1 h-4 w-4" />
+                        )}
+                        Ustaw jako domyślne
+                      </Button>
+                    </div>
+                  </div>
+                  {avatarPicks.length ? (
+                    <div className="flex flex-wrap gap-1">
+                      {avatarPicks.map((id, i) => (
+                        <Badge key={id} variant="secondary" className="gap-1">
+                          {i + 1}. {avatarName(id)}
+                          <button
+                            type="button"
+                            onClick={() => toggleAvatarPick(id)}
+                            aria-label={`Usuń ${avatarName(id)} z domyślnych`}
+                            className="ml-1 text-muted-foreground hover:text-foreground"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Zaznacz gwiazdką kilka awatarów w siatce powyżej (kolejność klikania =
+                      kolejność wchodzenia na ekran) i kliknij „Ustaw jako domyślne".
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {savedDefaultIds.length
+                      ? `Zapisany zestaw: ${savedDefaultIds.map(avatarName).join(" → ")}.`
+                      : "Zapisanego zestawu jeszcze nie ma."}{" "}
+                    Zestaw obowiązuje na stałe — bierze go z niego także generowanie wsadowe i cron.
+                    W strukturze rolki kolejne a-rolle mówi kolejny awatar z listy.
+                    {picksDirty && " Masz niezapisane zmiany."}
+                  </p>
+                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -1574,23 +1835,55 @@ function StudioPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <Clapperboard className="h-4 w-4" /> Urozmaicenie (przebitki)
+                    <Clapperboard className="h-4 w-4" /> Montaż rolki
                   </Label>
-                  <div className="flex h-10 items-center gap-3 rounded-md border bg-muted/40 px-3">
-                    <Switch checked={dynamicScenesOn} onCheckedChange={setDynamicScenesOn} />
-                    <span className="text-sm text-muted-foreground">
-                      {dynamicScenesOn ? "AI dobiera przebitki" : "Sama gadająca głowa"}
-                    </span>
-                  </div>
+                  <select
+                    className="h-10 w-full rounded-md border bg-background p-2 text-sm"
+                    value={montage}
+                    onChange={(e) => setMontage(e.target.value as typeof montage)}
+                  >
+                    <option value="single">Pojedyncze ujęcie (gadająca głowa)</option>
+                    <option value="ai">Przebitki — miejsca cięć wskazuje AI</option>
+                    <option value="structure">
+                      Struktura: ujęcie → wizual hook → b-roll → a-roll innego awatara
+                    </option>
+                  </select>
                 </div>
               </div>
-              {dynamicScenesOn && (
+              {montage === "ai" && (
                 <p className="text-xs text-muted-foreground">
                   Scenariusz zostanie pocięty na sceny (zdaniami — treść bez zmian), a AI wskaże
-                  fragmenty do zilustrowania pełnoekranową grafiką z biblioteki HeyGen; lektor mówi
-                  przez nie dalej. Hook i CTA zawsze zostają na awatarze. Gdy AI nie znajdzie
-                  sensownej ilustracji, rolka wychodzi jako pojedyncze ujęcie — z powodem w tabeli.
+                  fragmenty do zilustrowania pełnoekranową grafiką z banku b-rolli (czego w banku
+                  nie ma, bank dociąga ze stocku i u siebie zapisuje); lektor mówi przez nie dalej.
+                  Hook i CTA zawsze zostają na awatarze. Gdy nie znajdzie się sensowna ilustracja,
+                  rolka wychodzi jako pojedyncze ujęcie — z powodem w tabeli.
                 </p>
+              )}
+              {montage === "structure" && (
+                <div className="space-y-1 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground">
+                    Stały rytm: ujęcie → wizual hook → b-roll → a-roll innego domyślnego awatara (i
+                    tak w kółko; CTA zawsze wraca na twarz).
+                  </p>
+                  <p>
+                    Miejsca cięć są z góry ustalone — AI dobiera już tylko, czym zilustrować
+                    przebitkę. Wizual hooki i b-rolle lecą z banku (zakładka „B-rolle”:{" "}
+                    {brollCounts.hook} hooków, {brollCounts.broll} przebitek).
+                  </p>
+                  <p>
+                    Rotacja twarzy:{" "}
+                    {avatarRotation.length > 1
+                      ? avatarRotation.map(avatarName).join(" → ")
+                      : `${avatarName(avatarId)} (dodaj więcej domyślnych awatarów, żeby a-roll mówiła inna twarz)`}
+                    .
+                  </p>
+                  {!brollCounts.hook && (
+                    <p className="text-amber-600 dark:text-amber-500">
+                      Bank nie ma jeszcze wizual hooków — uzupełnij go w zakładce „B-rolle”, inaczej
+                      te sceny spadną z powrotem na awatara.
+                    </p>
+                  )}
+                </div>
               )}
 
               <Button
@@ -1682,6 +1975,11 @@ function StudioPage() {
                                 <Captions className="h-3 w-3" />
                                 {captionBadgeLabel(j)}
                               </Badge>
+                              {j.reel_structure && (
+                                <Badge variant="secondary" className="gap-1">
+                                  <Layers className="h-3 w-3" /> struktura rolki
+                                </Badge>
+                              )}
                               {j.scene_plan?.length ? (
                                 <Badge
                                   variant="outline"
@@ -1689,8 +1987,12 @@ function StudioPage() {
                                   title={j.scene_plan
                                     .map((s, i) =>
                                       s.kind === "broll"
-                                        ? `${i + 1}. przebitka: ${s.query}`
-                                        : `${i + 1}. awatar`,
+                                        ? `${i + 1}. przebitka: ${s.query ?? "z banku"}`
+                                        : s.kind === "hook"
+                                          ? `${i + 1}. wizual hook`
+                                          : `${i + 1}. awatar${
+                                              s.avatarId ? `: ${avatarName(s.avatarId)}` : ""
+                                            }`,
                                     )
                                     .join("\n")}
                                 >
@@ -1827,6 +2129,202 @@ function StudioPage() {
         </TabsContent>
 
         {/* ── GRAFIKI ────────────────────────────────────────────────────── */}
+        {/* ── Bank b-rolli ──────────────────────────────────────────────── */}
+        <TabsContent value="b-rolle" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Bank b-rolli i wizual hooków</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">
+                  <Film className="mr-1 h-3.5 w-3.5" /> {brollCounts.broll} przebitek
+                </Badge>
+                <Badge variant="secondary">
+                  <Layers className="mr-1 h-3.5 w-3.5" /> {brollCounts.hook} wizual hooków
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => seedBrollM.mutate()}
+                  disabled={seedBrollM.isPending}
+                >
+                  {seedBrollM.isPending ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-1 h-4 w-4" />
+                  )}
+                  Uzupełnij bank ze stocku
+                </Button>
+                <Button size="sm" variant="ghost" onClick={refreshBroll}>
+                  <RefreshCw className="mr-1 h-4 w-4" /> Odśwież
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Materiały z banku trafiają do rolek: przebitki dobierane są po tagach do frazy
+                planera, a wizual hooki rotują od najdawniej użytego. Każdy plik kopiujemy do
+                naszego bucketu <code>studio-media</code> — HeyGen i Meta czytają trwały URL, a nie
+                wygasający link stocku. „Uzupełnij bank ze stocku” pobiera startowy zestaw (Pexels,
+                gdy jest klucz <code>PEXELS_API_KEY</code>, inaczej biblioteka HeyGena) i pomija
+                frazy, które już masz.
+              </p>
+
+              <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_1fr_auto]">
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Dodaj własny materiał (publiczny URL grafiki)</Label>
+                  <Input
+                    value={newBrollUrl}
+                    onChange={(e) => setNewBrollUrl(e.target.value)}
+                    placeholder="https://…/przebitka.jpg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Rodzaj</Label>
+                  <select
+                    className="h-10 w-full rounded-md border bg-background p-2 text-sm"
+                    value={newBrollKind}
+                    onChange={(e) => setNewBrollKind(e.target.value as "broll" | "hook")}
+                  >
+                    <option value="broll">Przebitka (b-roll)</option>
+                    <option value="hook">Wizual hook</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Nazwa / opis</Label>
+                  <Input
+                    value={newBrollTitle}
+                    onChange={(e) => setNewBrollTitle(e.target.value)}
+                    placeholder="np. signing mortgage contract"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tagi (po przecinku)</Label>
+                  <Input
+                    value={newBrollTags}
+                    onChange={(e) => setNewBrollTags(e.target.value)}
+                    placeholder="mortgage, contract, umowa"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    onClick={() => addBrollM.mutate()}
+                    disabled={addBrollM.isPending || !newBrollUrl.trim()}
+                  >
+                    {addBrollM.isPending ? (
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-1 h-4 w-4" />
+                    )}
+                    Dodaj
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Tagi decydują o doborze — wpisuj je tak, jak planer opisuje kadr (po angielsku), a
+                dla wygody także po polsku. Nazwa i tagi same wchodzą do słów kluczowych.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Biblioteka</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  className="h-9 rounded-md border bg-background px-2 text-sm"
+                  value={brollKindFilter}
+                  onChange={(e) => setBrollKindFilter(e.target.value as "all" | "broll" | "hook")}
+                >
+                  <option value="all">Wszystko</option>
+                  <option value="broll">Tylko przebitki</option>
+                  <option value="hook">Tylko wizual hooki</option>
+                </select>
+                <Input
+                  className="h-9 w-56"
+                  value={brollSearch}
+                  onChange={(e) => setBrollSearch(e.target.value)}
+                  placeholder="Szukaj po nazwie lub tagu…"
+                />
+              </div>
+
+              {brollLoading ? (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Wczytuję bank…
+                </p>
+              ) : filteredBroll.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Bank jest pusty dla tych filtrów. Kliknij „Uzupełnij bank ze stocku” albo dodaj
+                  własny materiał powyżej.
+                </p>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {filteredBroll.map((a: StudioBrollAsset) => (
+                    <div
+                      key={a.id}
+                      className={`space-y-2 rounded-lg border p-3 ${a.active ? "" : "opacity-60"}`}
+                    >
+                      <img
+                        src={a.media_url}
+                        alt={a.title}
+                        className="aspect-[9/16] w-full rounded-md object-cover"
+                        loading="lazy"
+                      />
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Badge variant={a.kind === "hook" ? "default" : "secondary"}>
+                          {a.kind === "hook" ? "wizual hook" : "przebitka"}
+                        </Badge>
+                        {!a.active && <Badge variant="outline">wyłączony</Badge>}
+                        <span className="text-[11px] text-muted-foreground">
+                          użyć: {a.use_count}
+                        </span>
+                      </div>
+                      <p className="line-clamp-2 text-xs font-medium">{a.title}</p>
+                      {a.tags.length > 0 && (
+                        <p className="line-clamp-2 text-[11px] text-muted-foreground">
+                          {a.tags.slice(0, 6).join(" · ")}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          title={a.active ? "Wyłącz z doboru" : "Włącz do doboru"}
+                          onClick={() => brollActiveM.mutate({ id: a.id, active: !a.active })}
+                          disabled={brollActiveM.isPending}
+                        >
+                          {a.active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          title="Kopiuj URL"
+                          onClick={() => {
+                            navigator.clipboard.writeText(a.media_url);
+                            toast.success("Skopiowano URL");
+                          }}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Usuń z banku"
+                          onClick={() => deleteBrollM.mutate(a.id)}
+                          disabled={deleteBrollM.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="grafiki" className="space-y-6">
           <Card>
             <CardHeader>
@@ -1885,6 +2383,29 @@ function StudioPage() {
                           onClick={() => applyImageToPublish(im.image_url)}
                         >
                           <Send className="mr-1 h-4 w-4" /> Do posta
+                        </Button>
+                        {/* Grafika AI nadaje się na przebitkę — jedno kliknięcie
+                            i wpada do banku, z którego jadą rolki. */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          title="Dodaj do banku b-rolli"
+                          onClick={() =>
+                            addBrollFn({
+                              data: {
+                                url: im.image_url,
+                                kind: "broll",
+                                title: im.prompt.slice(0, 120),
+                              },
+                            })
+                              .then(() => {
+                                toast.success("Dodano do banku b-rolli");
+                                refreshBroll();
+                              })
+                              .catch((e: Error) => toast.error(e.message))
+                          }
+                        >
+                          <Library className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
