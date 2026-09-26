@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      _tmp_v6_stage: {
+        Row: {
+          body: string
+          part: number
+        }
+        Insert: {
+          body: string
+          part: number
+        }
+        Update: {
+          body?: string
+          part?: number
+        }
+        Relationships: []
+      }
       access_audit_logs: {
         Row: {
           action: string
