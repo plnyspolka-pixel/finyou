@@ -74,14 +74,36 @@ async function viaProxy(
   }
 }
 
-/** GET do rejestru: przez registry-proxy, a gdy niedostępne — bezpośrednio. */
+/** Odpowiedź wygląda na blokadę sieci/serwera, a nie na wynik zapytania. */
+export function isBlockedResponse(status: number): boolean {
+  return status === 403 || status === 406 || status === 429 || status >= 500;
+}
+
+/**
+ * GET do rejestru. Domyślnie przez registry-proxy (CEIDG blokuje Cloudflare
+ * Workers), a gdy funkcji brak — bezpośrednio. `prefer: "direct"` odwraca
+ * kolejność: najpierw bezpośrednio, a przy blokadzie (403/406/429/5xx, błąd
+ * sieci) przez registry-proxy — dla serwisów, które blokują sieć Supabase
+ * (OpenStreetMap: Nominatim odpowiada funkcji 403).
+ */
 export async function registryGet(
   url: string,
-  opts: { headers?: Record<string, string>; timeoutMs?: number } = {},
+  opts: {
+    headers?: Record<string, string>;
+    timeoutMs?: number;
+    prefer?: "proxy" | "direct";
+  } = {},
 ): Promise<RegistryResponse> {
   const headers = opts.headers ?? {};
   const timeoutMs = opts.timeoutMs ?? 15_000;
   const base = process.env.SUPABASE_URL;
+  if (opts.prefer === "direct") {
+    const first = await direct(url, headers, timeoutMs).catch(() => null);
+    if (first && !isBlockedResponse(first.status)) return first;
+    const proxied = base ? await viaProxy(base, url, headers, timeoutMs) : null;
+    if (proxied && !isBlockedResponse(proxied.status)) return proxied;
+    return first ?? proxied ?? { ok: false, status: 0, text: "", viaProxy: false };
+  }
   if (base) {
     const proxied = await viaProxy(base, url, headers, timeoutMs);
     if (proxied) return proxied;

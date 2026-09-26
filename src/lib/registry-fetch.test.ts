@@ -39,6 +39,34 @@ describe("registryGet", () => {
     expect(fetchMock.mock.calls[1][0]).toBe(CEIDG);
   });
 
+  it("prefer: direct — najpierw bezpośrednio, przy blokadzie przez proxy", async () => {
+    vi.stubEnv("SUPABASE_URL", "https://x.supabase.co");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("blocked", { status: 403 }))
+      .mockResolvedValueOnce(
+        new Response("[]", { status: 200, headers: { "x-registry-proxy": "1" } }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const r = await registryGet("https://nominatim.openstreetmap.org/search?q=x", {
+      prefer: "direct",
+    });
+    expect(r).toMatchObject({ ok: true, viaProxy: true });
+    expect(fetchMock.mock.calls[0][0]).toBe("https://nominatim.openstreetmap.org/search?q=x");
+    expect(fetchMock.mock.calls[1][0]).toBe("https://x.supabase.co/functions/v1/registry-proxy");
+  });
+
+  it("prefer: direct — udane zapytanie bezpośrednie nie idzie przez proxy", async () => {
+    vi.stubEnv("SUPABASE_URL", "https://x.supabase.co");
+    const fetchMock = vi.fn(async () => new Response("[]", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const r = await registryGet("https://nominatim.openstreetmap.org/search?q=x", {
+      prefer: "direct",
+    });
+    expect(r).toMatchObject({ ok: true, viaProxy: false });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("rozpoznaje stronę odmowy bramy Akamai", () => {
     expect(isGatewayDenial(403, "<HTML><TITLE>Access Denied</TITLE>")).toBe(true);
     expect(isGatewayDenial(403, '{"message":"Forbidden"}')).toBe(false);

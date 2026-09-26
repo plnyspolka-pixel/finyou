@@ -6,11 +6,17 @@
 //   • Nominatim — najwyżej 1 zapytanie/s, nagłówek User-Agent identyfikujący
 //     aplikację (nie przeglądarkę), wyniki warto cache'ować,
 //   • Overpass — publiczna instancja, rozsądna liczba zapytań.
-// Ruch przez registry-proxy (sieć Supabase), a gdy niedostępne — bezpośrednio.
+// Najpierw bezpośrednio (OSM blokuje sieć Supabase — Nominatim odpowiada
+// registry-proxy 403), przy blokadzie przez registry-proxy.
 import { registryGet } from "@/lib/registry-fetch.server";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
-const OVERPASS = "https://overpass-api.de/api/interpreter";
+/** Publiczne instancje Overpass — kolejna, gdy poprzednia przeciążona/odmawia. */
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
 const USER_AGENT = "FinanceYou.pl/1.0 (analiza lokalizacji nieruchomosci; https://financeyou.pl)";
 
 export interface OsmGeocode {
@@ -84,6 +90,7 @@ async function nominatimSearch(query: string): Promise<NominatimRow[]> {
   const res = await registryGet(`${NOMINATIM}?${params.toString()}`, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     timeoutMs: 12_000,
+    prefer: "direct",
   });
   if (!res.ok) return [];
   try {
@@ -209,11 +216,16 @@ export async function osmNearby(
   perCategory = 20,
 ): Promise<Record<string, OsmPlace[]> | null> {
   const query = buildOverpassQuery(lat, lng, radius, categories, perCategory);
-  const res = await registryGet(`${OVERPASS}?data=${encodeURIComponent(query)}`, {
-    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-    timeoutMs: 30_000,
-  });
-  if (!res.ok) return null;
+  let res: Awaited<ReturnType<typeof registryGet>> | null = null;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    res = await registryGet(`${endpoint}?data=${encodeURIComponent(query)}`, {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+      timeoutMs: 30_000,
+      prefer: "direct",
+    }).catch(() => null);
+    if (res?.ok) break;
+  }
+  if (!res?.ok) return null;
   let elements: any[] = [];
   try {
     elements = JSON.parse(res.text)?.elements ?? [];
