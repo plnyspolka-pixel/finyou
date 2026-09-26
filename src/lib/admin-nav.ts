@@ -602,6 +602,22 @@ export const adminSections: AdminSection[] = [
             synonyms: ["serp", "pozycje", "google pozycje"],
           },
           {
+            to: "/admin/google-search",
+            label: "Google Search",
+            icon: Search,
+            description:
+              "Search Console: pozycje najpopularniejszych fraz, wejścia na stronę i wykresy zmian w czasie.",
+            synonyms: [
+              "search console",
+              "gsc",
+              "pozycje google",
+              "wejscia",
+              "kliknięcia",
+              "ruch organiczny",
+              "analityka seo",
+            ],
+          },
+          {
             to: "/admin/ai-competitors",
             label: "Competitor Watch",
             icon: Eye,
