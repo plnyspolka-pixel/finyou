@@ -335,6 +335,10 @@ export type StudioVideoJob = {
   caption_wait_since: string | null;
   /** Czy rolka renderuje się jako sklejka scen (awatar + przebitki). */
   dynamic_scenes: boolean;
+  /** Czy poszła stałą strukturą (ujęcie → wizual hook → przebitka → a-roll). */
+  reel_structure: boolean;
+  /** Rotacja domyślnych awatarów użyta przy tym jobie. */
+  avatar_ids: string[];
   /** Plan scen faktycznie wysłany na render; null = pojedyncze ujęcie. */
   scene_plan: ScenePlanItem[] | null;
   last_error: string | null;
@@ -538,6 +542,8 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       voice_id?: string;
       captions?: boolean;
       dynamic_scenes?: boolean;
+      reel_structure?: boolean;
+      avatar_ids?: string[];
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
       tiktok_post_options?: unknown;
@@ -552,6 +558,11 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
     const voiceId = data.voice_id || FILIP_VOICE_ID;
     const autoPub = await sanitizeAutoPublish(data);
+    // Rotacja a-rolli: to, co przyszło z panelu, a gdy nic — stały zestaw
+    // domyślnych awatarów (ten sam, którym jedzie kolejka i cron).
+    const { resolveAvatarRotation } = await import("./studio-avatars.server");
+    const avatarIds = await resolveAvatarRotation(data.avatar_ids);
+    const reelStructure = data.reel_structure === true;
 
     const { data: job, error: insErr } = await supabaseAdmin
       .from("studio_video_jobs")
@@ -562,7 +573,9 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         voice_id: voiceId,
         status: "generating_audio",
         captions: data.captions !== false,
-        dynamic_scenes: data.dynamic_scenes === true,
+        dynamic_scenes: data.dynamic_scenes === true || reelStructure,
+        reel_structure: reelStructure,
+        avatar_ids: avatarIds,
         auto_publish_platforms: autoPub.auto_publish_platforms,
         publish_privacy: autoPub.publish_privacy,
         tiktok_post_options: autoPub.tiktok_post_options as never,
@@ -587,7 +600,9 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         avatarId: data.avatar_id,
         voiceId,
         captions: data.captions !== false,
-        dynamicScenes: data.dynamic_scenes === true,
+        dynamicScenes: data.dynamic_scenes === true || reelStructure,
+        reelStructure,
+        avatarIds,
       });
 
       await supabaseAdmin
@@ -623,6 +638,8 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       voice_id?: string;
       captions?: boolean;
       dynamic_scenes?: boolean;
+      reel_structure?: boolean;
+      avatar_ids?: string[];
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
       tiktok_post_options?: unknown;
@@ -637,6 +654,9 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
     const autoPub = await sanitizeAutoPublish(data);
+    const { resolveAvatarRotation } = await import("./studio-avatars.server");
+    const avatarIds = await resolveAvatarRotation(data.avatar_ids);
+    const reelStructure = data.reel_structure === true;
 
     // Pomiń pytania, które mają już nie-failowy job (ochrona przed dublami).
     const { data: existing } = await supabaseAdmin
@@ -667,7 +687,9 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
         voice_id: data.voice_id || FILIP_VOICE_ID,
         status: "queued",
         captions: data.captions !== false,
-        dynamic_scenes: data.dynamic_scenes === true,
+        dynamic_scenes: data.dynamic_scenes === true || reelStructure,
+        reel_structure: reelStructure,
+        avatar_ids: avatarIds,
         auto_publish_platforms: autoPub.auto_publish_platforms,
         publish_privacy: autoPub.publish_privacy,
         tiktok_post_options: autoPub.tiktok_post_options as never,
@@ -703,7 +725,7 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
     const { data: row } = await supabaseAdmin
       .from("studio_video_jobs")
       .select(
-        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, captions, caption_wait_since, dynamic_scenes, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by, tiktok_post_options",
+        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, captions, caption_wait_since, dynamic_scenes, reel_structure, avatar_ids, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by, tiktok_post_options",
       )
       .eq("id", data.id)
       .single();
@@ -843,4 +865,178 @@ export const deleteStudioImage = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("studio_images").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// ── Domyślne awatary (stały zestaw + rotacja a-rolli) ────────────────────────
+// Przycisk „Ustaw jako domyślne" w panelu zapisuje TU cały zestaw — kolejność
+// z panelu wyznacza rotację: pierwszy mówi hook, kolejni przejmują a-rolle.
+
+export type StudioDefaultAvatar = {
+  avatar_id: string;
+  name: string;
+  preview: string | null;
+  kind: "avatar" | "talking_photo";
+  position: number;
+};
+
+/** Więcej twarzy w jednej 30-60-sekundowej rolce to już nie montaż, to chaos. */
+const MAX_DEFAULT_AVATARS = 6;
+
+export const listStudioDefaultAvatars = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<StudioDefaultAvatar[]> => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("studio_default_avatars")
+      .select("avatar_id, name, preview, kind, position")
+      .order("position", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r) => ({
+      avatar_id: r.avatar_id,
+      name: r.name ?? "",
+      preview: r.preview ?? null,
+      kind: r.kind === "talking_photo" ? "talking_photo" : "avatar",
+      position: r.position ?? 0,
+    }));
+  });
+
+export const saveStudioDefaultAvatars = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { avatar_ids: string[] }) => d)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const ids = [...new Set(data.avatar_ids.map((i) => i.trim()).filter(Boolean))];
+    if (ids.length > MAX_DEFAULT_AVATARS) {
+      throw new Error(`Maksymalnie ${MAX_DEFAULT_AVATARS} domyślnych awatarów.`);
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Nazwę i podgląd bierzemy z katalogu konta HeyGen, żeby panel pokazywał
+    // twarze także wtedy, gdy API akurat nie odpowiada.
+    const catalog = new Map<string, { name: string; preview: string | null; kind: string }>();
+    try {
+      const { listHeygenCatalog } = await import("./heygen-catalog.server");
+      for (const item of await listHeygenCatalog()) {
+        catalog.set(item.id, { name: item.name, preview: item.preview, kind: item.kind });
+      }
+    } catch {
+      // Katalog niedostępny — zapisujemy same id, panel dorobi opis później.
+    }
+    const { HEYGEN_AVATARS } = await import("./heygen-avatars");
+    for (const a of HEYGEN_AVATARS) {
+      if (!catalog.has(a.id)) {
+        catalog.set(a.id, { name: a.name, preview: a.previewImage, kind: "avatar" });
+      }
+    }
+
+    // Zestaw zastępujemy w całości — „domyślne" to dokładnie to, co widać
+    // w panelu przy kliknięciu, bez resztek po poprzednim wyborze.
+    const { error: delErr } = await supabaseAdmin
+      .from("studio_default_avatars")
+      .delete()
+      .neq("avatar_id", "");
+    if (delErr) throw new Error(delErr.message);
+    if (!ids.length) return { ok: true, saved: 0 };
+
+    const rows = ids.map((avatar_id, position) => {
+      const meta = catalog.get(avatar_id);
+      return {
+        avatar_id,
+        name: meta?.name ?? avatar_id,
+        preview: meta?.preview ?? null,
+        kind: meta?.kind === "talking_photo" ? "talking_photo" : "avatar",
+        position,
+        created_by: context.userId,
+      };
+    });
+    const { error } = await supabaseAdmin.from("studio_default_avatars").insert(rows);
+    if (error) throw new Error(error.message);
+    return { ok: true, saved: rows.length };
+  });
+
+// ── Bank b-rolli ─────────────────────────────────────────────────────────────
+
+export type StudioBrollAsset = {
+  id: string;
+  kind: "broll" | "hook";
+  title: string;
+  tags: string[];
+  media_url: string;
+  source: string;
+  source_query: string;
+  orientation: string | null;
+  attribution: string;
+  active: boolean;
+  use_count: number;
+  last_used_at: string | null;
+  created_at: string;
+};
+
+export const listStudioBroll = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d?: { kind?: "broll" | "hook"; search?: string }) => d ?? {})
+  .handler(async ({ data, context }): Promise<StudioBrollAsset[]> => {
+    await assertAdmin(context.userId);
+    const { listBrollAssets } = await import("./studio-broll.server");
+    const items = await listBrollAssets({
+      kind: data.kind,
+      search: data.search,
+      includeInactive: true,
+    });
+    return items.map(({ storage_path: _ignored, ...rest }) => rest);
+  });
+
+export const addStudioBroll = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { url: string; kind: "broll" | "hook"; title?: string; tags?: string }) => d)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { addBrollFromUrl } = await import("./studio-broll.server");
+    const tags = (data.tags ?? "")
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+    const asset = await addBrollFromUrl({
+      url: data.url,
+      kind: data.kind === "hook" ? "hook" : "broll",
+      title: data.title,
+      tags,
+      source: "url",
+      sourceQuery: data.title ?? "",
+      userId: context.userId,
+    });
+    return { ok: true, id: asset.id, media_url: asset.media_url };
+  });
+
+export const setStudioBrollActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string; active: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { setBrollActive } = await import("./studio-broll.server");
+    await setBrollActive(data.id, data.active);
+    return { ok: true };
+  });
+
+export const deleteStudioBroll = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { deleteBrollAsset } = await import("./studio-broll.server");
+    await deleteBrollAsset(data.id);
+    return { ok: true };
+  });
+
+// Jedno kliknięcie = startowy bank ze stocku (Pexels, gdy jest PEXELS_API_KEY,
+// inaczej biblioteka HeyGena). Idempotentne — frazy już pobrane są pomijane.
+export const seedStudioBroll = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d?: { kinds?: ("broll" | "hook")[] }) => d ?? {})
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { seedBrollBank } = await import("./studio-broll.server");
+    const kinds = data.kinds?.length ? data.kinds : (["broll", "hook"] as const).slice();
+    return await seedBrollBank({ kinds: [...kinds], userId: context.userId });
   });
