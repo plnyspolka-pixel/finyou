@@ -92,6 +92,7 @@ async function nominatimSearch(query: string): Promise<NominatimRow[]> {
     timeoutMs: 12_000,
     prefer: "direct",
   });
+  noteAttempt("Nominatim", res);
   if (!res.ok) return [];
   try {
     const rows = JSON.parse(res.text);
@@ -101,18 +102,149 @@ async function nominatimSearch(query: string): Promise<NominatimRow[]> {
   }
 }
 
+// ── Diagnostyka geokodowania ─────────────────────────────────────────────────
+// Ostatnie odpowiedzi geokoderów (np. „Nominatim: 403 przez proxy") — trafiają
+// do ostrzeżeń analizy, gdy położenia nie ustalono.
+let lastAttempts: string[] = [];
+function noteAttempt(provider: string, res: { status: number; viaProxy: boolean; ok: boolean }) {
+  lastAttempts.push(
+    `${provider}: ${res.ok ? "OK" : res.status || "brak odpowiedzi"}${res.viaProxy ? " (przez proxy)" : ""}`,
+  );
+  if (lastAttempts.length > 12) lastAttempts = lastAttempts.slice(-12);
+}
+/** Odpowiedzi geokoderów z ostatniej próby (do ostrzeżeń w raporcie). */
+export function lastGeocodeDiagnostics(): string {
+  return [...new Set(lastAttempts)].join("; ");
+}
+
+// ── GUGiK UUG — oficjalna usługa geokodowania adresów w Polsce ───────────────
+const GUGIK_UUG = "https://services.gugik.gov.pl/uug/";
+const PHOTON = "https://photon.komoot.io/api/";
+
+/** Punkt w Polsce z pary liczb w dowolnej kolejności (lon/lat albo lat/lon). */
+export function plPoint(a: number, b: number): { lat: number; lng: number } | null {
+  const isLat = (v: number) => v >= 48.9 && v <= 55;
+  const isLng = (v: number) => v >= 14 && v <= 24.2;
+  if (isLat(b) && isLng(a)) return { lat: b, lng: a };
+  if (isLat(a) && isLng(b)) return { lat: a, lng: b };
+  return null;
+}
+
+/** Wynik UUG → punkt (pola x/y albo geometry_wkt „POINT(x y)"). */
+export function parseUugResult(r: Record<string, any>): { lat: number; lng: number } | null {
+  const wkt = String(r.geometry_wkt ?? "").match(/POINT\s*\(\s*([\d.]+)\s+([\d.]+)\s*\)/i);
+  if (wkt) return plPoint(Number(wkt[1]), Number(wkt[2]));
+  const x = Number(r.x);
+  const y = Number(r.y);
+  return Number.isFinite(x) && Number.isFinite(y) ? plPoint(x, y) : null;
+}
+
+async function gugikGeocode(
+  query: string,
+  expectedCity: string | null | undefined,
+): Promise<OsmGeocode | null> {
+  // UUG oczekuje „Miejscowość, ulica numer" — bez numeru lokalu.
+  const streetPart = query
+    .split(",")[0]
+    .replace(/(\d+[a-z]?)\s*\/\s*\d+[a-z]?/gi, "$1")
+    .trim();
+  const address =
+    expectedCity && normPl(streetPart) !== normPl(expectedCity)
+      ? `${expectedCity}, ${streetPart}`
+      : query;
+  const params = new URLSearchParams({ request: "GetAddress", address, srid: "4326" });
+  const res = await registryGet(`${GUGIK_UUG}?${params.toString()}`, {
+    headers: { Accept: "application/json" },
+    timeoutMs: 12_000,
+  });
+  noteAttempt("GUGiK", res);
+  if (!res.ok) return null;
+  let json: any;
+  try {
+    json = JSON.parse(res.text);
+  } catch {
+    return null;
+  }
+  const rows = Object.values((json?.results ?? {}) as Record<string, Record<string, any>>);
+  for (const r of rows) {
+    if (expectedCity && normPl(r.city) !== normPl(expectedCity)) continue;
+    const pt = parseUugResult(r);
+    if (!pt) continue;
+    const exact = Boolean(r.number);
+    return {
+      ...pt,
+      formattedAddress: [r.street, r.number, r.code, r.city].filter(Boolean).join(" "),
+      osmId: r.id ? `uug/${r.id}` : null,
+      approximate: !exact,
+    };
+  }
+  return null;
+}
+
+async function photonGeocode(
+  query: string,
+  opts: { expectedCity?: string | null; expectedVoivodeship?: string | null },
+): Promise<OsmGeocode | null> {
+  const params = new URLSearchParams({ q: query, limit: "5", bbox: "14.0,48.9,24.2,55.0" });
+  const res = await registryGet(`${PHOTON}?${params.toString()}`, {
+    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+    timeoutMs: 12_000,
+    prefer: "direct",
+  });
+  noteAttempt("Photon", res);
+  if (!res.ok) return null;
+  let features: any[] = [];
+  try {
+    features = JSON.parse(res.text)?.features ?? [];
+  } catch {
+    return null;
+  }
+  for (const f of features) {
+    const p = f?.properties ?? {};
+    if (p.countrycode && p.countrycode !== "PL") continue;
+    const address = {
+      city: p.city ?? (p.type === "city" ? p.name : undefined),
+      town: p.town,
+      village: p.village,
+      municipality: p.county,
+      state: p.state,
+    };
+    if (!nominatimMatches({ address }, opts.expectedCity, opts.expectedVoivodeship)) continue;
+    const [lng, lat] = f?.geometry?.coordinates ?? [];
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    return {
+      lat,
+      lng,
+      formattedAddress: [p.street ?? p.name, p.housenumber, p.postcode, p.city]
+        .filter(Boolean)
+        .join(" "),
+      osmId: p.osm_type && p.osm_id ? `${p.osm_type}/${p.osm_id}` : null,
+      approximate: !p.housenumber,
+    };
+  }
+  return null;
+}
+
 /**
- * Geokodowanie adresu w Polsce. Przy podanej miejscowości/województwie wynik
- * musi do nich pasować (Nominatim potrafi podstawić ulicę o tej samej nazwie
- * w innym mieście). null = nie znaleziono.
+ * Geokodowanie adresu w Polsce: Nominatim → GUGiK UUG → Photon. Przy podanej
+ * miejscowości/województwie wynik musi do nich pasować (geokoder potrafi
+ * podstawić ulicę o tej samej nazwie w innym mieście). null = nie znaleziono.
  */
 export async function osmGeocode(
   query: string,
   opts: { expectedCity?: string | null; expectedVoivodeship?: string | null } = {},
 ): Promise<OsmGeocode | null> {
+  lastAttempts = [];
   const rows = await nominatimSearch(query);
   const pick = rows.find((r) => nominatimMatches(r, opts.expectedCity, opts.expectedVoivodeship));
-  if (!pick) return null;
+  // Nominatim blokuje sieci chmurowe (Cloudflare, Supabase) — zapasowo oficjalny
+  // geokoder GUGiK (adresy w Polsce), potem Photon (dane OSM).
+  if (!pick) {
+    return (
+      (await gugikGeocode(query, opts.expectedCity).catch(() => null)) ??
+      (await photonGeocode(query, opts).catch(() => null))
+    );
+  }
   const lat = Number(pick.lat);
   const lng = Number(pick.lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
