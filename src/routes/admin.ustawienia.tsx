@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -37,6 +37,14 @@ function UstawieniaPage() {
             Dystrybucja do inwestorów: <b className="text-foreground">E-mail (Karta oferty)</b>
           </div>
           <div>Integracje: zarządzaj w sekcji „Integracje”.</div>
+          <div>
+            Publikacja społecznościowa (YouTube, Facebook, Instagram,{" "}
+            <b className="text-foreground">TikTok</b>): połącz konta w{" "}
+            <Link className="underline" to="/admin/studio-publikacji">
+              Studiu publikacji
+            </Link>
+            .
+          </div>
         </CardContent>
       </Card>
     </div>
