@@ -82,6 +82,25 @@ describe("Overpass", () => {
     expect(r?.publicTransport).toHaveLength(1);
   });
 
+  it("przeciążony serwer Overpass — kolejna instancja", async () => {
+    vi.stubEnv("SUPABASE_URL", "");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("timeout", { status: 504 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            elements: [{ type: "node", id: 9, lat: 50, lon: 20, tags: { amenity: "pharmacy" } }],
+          }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const r = await osmNearby(50, 20, 1500, ["pharmacies"]);
+    expect(r?.pharmacies).toHaveLength(1);
+    expect(String(fetchMock.mock.calls[1][0])).toContain("overpass.kumi.systems");
+  });
+
   it("błąd Overpass = null (lokalizacja nieoceniona, nie „słaba”)", async () => {
     vi.stubEnv("SUPABASE_URL", "");
     vi.stubGlobal(
