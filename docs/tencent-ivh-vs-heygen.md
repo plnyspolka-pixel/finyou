@@ -118,17 +118,55 @@ Ale: to **nowa funkcja produktowa, nie zamiennik HeyGena**. I HeyGen ma własne
 Interactive Avatar / streaming API, którego jeszcze nie używamy — czyli tę samą
 hipotezę można przetestować bez zmiany dostawcy i bez drugiego onboardingu.
 
-## 7. Alternatywa, jeśli chodzi o koszt: self-host
+## 7. Self-host — HunyuanVideo-Avatar odpada w UE
 
-Tencent wydał **HunyuanVideo-Avatar** jako open source (GitHub
-`Tencent-Hunyuan/HunyuanVideo-Avatar`, wagi na Hugging Face): model MM-DiT
-generujący wideo z **jednego portretu + klipu audio**, działa na jednym GPU
-od ~10 GB VRAM z TeaCache.
+**Sprawdzone 2026-09-26: HunyuanVideo-Avatar jest dla nas nieużywalny.**
 
-To pasuje do naszego pipeline’u idealnie (mamy już audio i portret) i eliminuje
-koszt za minutę — kosztem GPU, kolejki renderującej i utrzymania. Licencję
-do użytku komercyjnego trzeba sprawdzić w repozytorium (licencje Hunyuan bywają
-ograniczone terytorialnie). Sensowne jako plan B przy dużym wolumenie, nie teraz.
+Repozytorium `Tencent-Hunyuan/HunyuanVideo-Avatar` jest objęte **Tencent Hunyuan
+Community License Agreement**, która zaczyna się od zdania:
+
+> „THIS LICENSE AGREEMENT DOES NOT APPLY IN THE EUROPEAN UNION, UNITED KINGDOM
+> AND SOUTH KOREA”
+
+Definicja „Territory” wprost wyłącza obszar Unii Europejskiej. Finance You jest
+podmiotem polskim, więc **nie ma licencji na ten model** — ani komercyjnej, ani
+żadnej innej. To nie jest kwestia warunku do spełnienia (jak limit 100 mln MAU
+z sekcji 4 czy wymóg pliku Notice); poza terytorium licencja po prostu nie
+obowiązuje. Temat zamknięty.
+
+Przy okazji korekta wcześniejszej notatki: **24 GB VRAM** to oficjalne minimum
+(704×768, 129 klatek, „very slow”), rekomendowane 96 GB, testowane na 8 GPU.
+Próg ~10 GB dotyczy zewnętrznego portu Wan2GP z TeaCache, nie oficjalnego repo.
+
+## 7a. Self-host w wariancie licencyjnie czystym
+
+Sedno oszczędności nie leży tam, gdzie je początkowo umieściłem. Generowanie
+wideo **ze zdjęcia** modelem dyfuzyjnym (Hallo2, HunyuanVideo-Avatar) jest
+powolne — minuty GPU na sekundę materiału — więc koszt zbliża się do ceny
+HeyGena i oszczędność znika. Tanieje dopiero **lip-sync na gotowym nagraniu**:
+jedna sesja zdjęciowa z Filipem daje pętlę bazową, którą potem dowolnie długo
+re-synchronizujemy z audio ElevenLabs.
+
+| Model | Licencja | Tryb | Wymagania | Uwagi |
+| --- | --- | --- | --- | --- |
+| **LatentSync 1.6** (ByteDance) | Apache-2.0 | wideo + audio → wideo z poprawionymi ustami | 8 GB VRAM (v1.5), 18 GB (v1.6) | 512×512, dyfuzja w przestrzeni latentnej; najlepszy stosunek jakość/koszt |
+| **MuseTalk** (TMElyralab) | MIT, wagi bez ograniczeń komercyjnych | jw., **czas rzeczywisty** | 30 fps+ na V100; działa nawet na 4 GB | obszar twarzy 256×256 — miękkie przy pionie 1080p |
+| **Hallo2** (Fudan) | MIT | **zdjęcie** + audio → wideo | testowane na A100, Ubuntu + CUDA 11.8 | do 4K i długich nagrań, ale wolne; ICLR 2025 |
+
+Rząd wielkości kosztu GPU (RunPod, wrzesień 2026: L40S 48 GB ≈ 0,79 USD/h,
+A100 80 GB ≈ 1,39 USD/h, serverless A100 ≈ 2,72 USD/h). Przy lip-syncu na
+gotowym nagraniu minuta materiału to **grosze**, przy generowaniu ze zdjęcia —
+**porównywalnie z HeyGenem** (1–3 USD/min). To jest szacunek, nie pomiar:
+faktyczny czas renderu trzeba zmierzyć na własnym klipie.
+
+Dwie rzeczy do rozstrzygnięcia przed takim wdrożeniem:
+
+1. **Skąd pętla bazowa Filipa.** Najczyściej: nagranie kamerą. Użycie renderu
+   z HeyGena jako materiału wejściowego dla innego modelu może naruszać jego
+   regulamin — do sprawdzenia w ToS, nie zakładać.
+2. **RODO zostaje z nami.** Self-host akurat tu pomaga: biometria nie opuszcza
+   naszej infrastruktury, co jest łatwiejsze do obronienia niż transfer do
+   dostawcy spoza UE.
 
 ## 8. Rekomendacja
 
@@ -144,8 +182,10 @@ Kolejność działań, gdyby temat wrócił:
 2. **Awatar interaktywny** — jeśli to jest właściwa potrzeba, przetestować
    najpierw Interactive Avatar w HeyGenie (klucz już mamy), a Tencenta traktować
    jako drugą ofertę do porównania.
-3. **Duży wolumen** — porównać HunyuanVideo-Avatar na własnym GPU z ceną
-   HeyGena; to realniejsza oszczędność niż zmiana SaaS-u na SaaS.
+3. **Duży wolumen** — nie HunyuanVideo-Avatar (licencja nie obejmuje UE),
+   tylko **LatentSync 1.6 na własnym GPU** jako lip-sync na nagranej pętli
+   Filipa. To realniejsza oszczędność niż zmiana SaaS-u na SaaS — ale wymaga
+   sesji nagraniowej i kolejki renderującej po naszej stronie.
 
 ## 9. Gdyby jednak — jak wyglądałaby integracja
 
@@ -174,7 +214,9 @@ a to właśnie jest najdroższa część.
 - [ ] Cennik międzynarodowy za minutę broadcastu i za wizerunek.
 - [ ] Region przetwarzania (czy IVH stoi we Frankfurcie) + DPA i SCC.
 - [ ] Limity współbieżności i czas renderu 60-sekundowego shorta.
-- [ ] Licencja komercyjna HunyuanVideo-Avatar.
+- [x] ~~Licencja komercyjna HunyuanVideo-Avatar~~ — Tencent Hunyuan Community License **nie obowiązuje w UE**, model odpada.
+- [ ] Zmierzony czas renderu LatentSync 1.6 na 60-sekundowym shorcie (L40S).
+- [ ] Czy ToS HeyGena dopuszcza użycie renderu jako wejścia do innego modelu.
 
 ## Źródła
 
@@ -183,5 +225,7 @@ a to właśnie jest najdroższa część.
 - [Tencent Cloud — nowa strefa dostępności w Europie](https://www.tencentcloud.com/dynamic/news-details/100987)
 - [Digital human za 145 USD (PetaPixel)](https://petapixel.com/2023/05/01/chinese-company-lets-you-make-a-deepfake-digital-human-for-145/)
 - [Integracja z DeepSeek (AIbase)](https://www.aibase.com/news/15662)
-- [HunyuanVideo-Avatar — GitHub](https://github.com/tencent-hunyuan/hunyuanvideo-avatar) · [strona projektu](https://hunyuanvideo-avatar.github.io/) · [arXiv 2505.20156](https://arxiv.org/pdf/2505.20156)
+- [HunyuanVideo-Avatar — GitHub](https://github.com/Tencent-Hunyuan/HunyuanVideo-Avatar) · [tekst licencji](https://raw.githubusercontent.com/Tencent-Hunyuan/HunyuanVideo-Avatar/main/LICENSE) · [arXiv 2505.20156](https://arxiv.org/pdf/2505.20156)
+- [LatentSync](https://github.com/bytedance/LatentSync) · [MuseTalk](https://github.com/TMElyralab/MuseTalk) · [Hallo2](https://github.com/fudan-generative-vision/hallo2)
+- [Runpod — cennik GPU](https://www.runpod.io/pricing)
 - [HeyGen API Pricing (help center)](https://help.heygen.com/en/articles/10060327-heygen-api-pricing-explained) · [Enterprise Pricing](https://developers.heygen.com/docs/enterprise-pricing)
