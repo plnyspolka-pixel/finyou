@@ -29,6 +29,8 @@ const ALLOWED_HOSTS = new Set([
   "api-krs.ms.gov.pl", // KRS — odpisy
   "nominatim.openstreetmap.org", // OSM — geokodowanie adresów
   "overpass-api.de", // OSM — punkty w okolicy
+  "services.gugik.gov.pl", // GUGiK — geokodowanie adresów (UUG)
+  "photon.komoot.io", // Photon — geokodowanie (dane OSM)
 ]);
 
 /** Nagłówki przekazywane do rejestru (reszta odrzucana). */

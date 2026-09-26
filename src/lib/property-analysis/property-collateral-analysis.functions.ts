@@ -14,6 +14,7 @@ import type {
   ValuationBenchmark,
 } from "./types";
 import { geocode, locationScore } from "./location-score.server";
+import { lastGeocodeDiagnostics } from "@/lib/osm.server";
 import { extractDocuments } from "./document-extraction.server";
 import { analyzeFloodRisk } from "./flood-risk.server";
 import { portalValuation, portalValuationToRcnStats } from "./portal-valuation.server";
@@ -174,8 +175,9 @@ export async function analyzePropertyCollateral(
         `Nie znaleziono dokładnego adresu — lokalizację oceniono dla centrum miejscowości "${input.city ?? "—"}". Sprawdź adres nieruchomości.`,
       );
     } else if (!geo && input.address) {
+      const diag = lastGeocodeDiagnostics();
       warnings.push(
-        `Geokodowanie odrzuciło wynik niezgodny z miastem "${input.city ?? "—"}". Sprawdź adres nieruchomości.`,
+        `Nie ustalono położenia adresu w "${input.city ?? "—"}" — sprawdź adres nieruchomości.${diag ? ` Geokodery: ${diag}.` : ""}`,
       );
     }
 

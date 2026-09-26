@@ -2,8 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildOverpassQuery,
   categorizeTags,
+  lastGeocodeDiagnostics,
   nominatimMatches,
   osmGeocode,
+  parseUugResult,
+  plPoint,
   osmNearby,
 } from "./osm.server";
 import { osmEmbedUrl } from "./osm-embed";
@@ -138,6 +141,77 @@ describe("geokodowanie", () => {
     );
     const g = await osmGeocode("Komandosów 12, Kraków", { expectedCity: "Kraków" });
     expect(g).toMatchObject({ lat: 50.0318, lng: 19.9912, approximate: false, osmId: "way/7" });
+  });
+});
+
+describe("geokodowanie zapasowe", () => {
+  it("UUG: punkt z WKT lub x/y w dowolnej kolejności", () => {
+    expect(parseUugResult({ geometry_wkt: "POINT(19.9912 50.0318)" })).toEqual({
+      lat: 50.0318,
+      lng: 19.9912,
+    });
+    expect(parseUugResult({ x: "50.0318", y: "19.9912" })).toEqual({ lat: 50.0318, lng: 19.9912 });
+    expect(plPoint(500000, 300000)).toBeNull();
+  });
+
+  it("Nominatim zablokowany → GUGiK UUG, z diagnostyką", async () => {
+    vi.stubEnv("SUPABASE_URL", "");
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("nominatim")) return new Response("blocked", { status: 403 });
+      if (url.includes("gugik"))
+        return jsonResponse({
+          results: {
+            "1": {
+              city: "Kraków",
+              street: "ul. Komandosów",
+              number: "12",
+              geometry_wkt: "POINT(19.9912 50.0318)",
+            },
+          },
+        });
+      return new Response("nope", { status: 500 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const g = await osmGeocode("Komandosów 12/5, Kraków", { expectedCity: "Kraków" });
+    expect(g).toMatchObject({ lat: 50.0318, lng: 19.9912, approximate: false });
+    const gugikUrl = String(fetchMock.mock.calls.find((c) => String(c[0]).includes("gugik"))?.[0]);
+    expect(decodeURIComponent(gugikUrl.replace(/\+/g, " "))).toContain(
+      "address=Kraków, Komandosów 12&",
+    );
+    expect(lastGeocodeDiagnostics()).toContain("Nominatim: 403");
+    expect(lastGeocodeDiagnostics()).toContain("GUGiK: OK");
+  });
+
+  it("Nominatim i GUGiK bez wyniku → Photon", async () => {
+    vi.stubEnv("SUPABASE_URL", "");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("photon"))
+          return jsonResponse({
+            features: [
+              {
+                geometry: { coordinates: [21.0, 52.2] },
+                properties: { countrycode: "PL", city: "Warszawa", housenumber: "12" },
+              },
+              {
+                geometry: { coordinates: [19.9912, 50.0318] },
+                properties: {
+                  countrycode: "PL",
+                  city: "Kraków",
+                  street: "Komandosów",
+                  housenumber: "12",
+                  osm_type: "W",
+                  osm_id: 7,
+                },
+              },
+            ],
+          });
+        return jsonResponse(url.includes("gugik") ? { results: {} } : []);
+      }),
+    );
+    const g = await osmGeocode("Komandosów 12, Kraków", { expectedCity: "Kraków" });
+    expect(g).toMatchObject({ lat: 50.0318, lng: 19.9912, osmId: "W/7" });
   });
 });
 
