@@ -11677,6 +11677,9 @@ export type Database = {
           title: string
           updated_at: string
           video_url: string | null
+          x_media_at: string | null
+          x_media_id: string | null
+          x_media_status: string | null
         }
         Insert: {
           attempt_count?: number
@@ -11701,6 +11704,9 @@ export type Database = {
           title?: string
           updated_at?: string
           video_url?: string | null
+          x_media_at?: string | null
+          x_media_id?: string | null
+          x_media_status?: string | null
         }
         Update: {
           attempt_count?: number
@@ -11725,6 +11731,9 @@ export type Database = {
           title?: string
           updated_at?: string
           video_url?: string | null
+          x_media_at?: string | null
+          x_media_id?: string | null
+          x_media_status?: string | null
         }
         Relationships: []
       }
@@ -12010,6 +12019,60 @@ export type Database = {
           refresh_token_expires_at?: string | null
           token_expires_at?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      x_integration: {
+        Row: {
+          access_token: string | null
+          code_verifier: string | null
+          connected: boolean
+          connected_at: string | null
+          created_at: string
+          id: number
+          last_error: string | null
+          oauth_state: string | null
+          oauth_state_expires_at: string | null
+          refresh_token: string | null
+          scope: string | null
+          token_expires_at: string | null
+          updated_at: string
+          username: string | null
+          x_user_id: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          code_verifier?: string | null
+          connected?: boolean
+          connected_at?: string | null
+          created_at?: string
+          id?: number
+          last_error?: string | null
+          oauth_state?: string | null
+          oauth_state_expires_at?: string | null
+          refresh_token?: string | null
+          scope?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          username?: string | null
+          x_user_id?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          code_verifier?: string | null
+          connected?: boolean
+          connected_at?: string | null
+          created_at?: string
+          id?: number
+          last_error?: string | null
+          oauth_state?: string | null
+          oauth_state_expires_at?: string | null
+          refresh_token?: string | null
+          scope?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          username?: string | null
+          x_user_id?: string | null
         }
         Relationships: []
       }

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { TiktokConnectionCard } from "@/components/admin/tiktok-connection-card";
+import { XConnectionCard } from "@/components/admin/x-connection-card";
 
 export const Route = createFileRoute("/admin/ustawienia")({
   component: UstawieniaPage,
@@ -48,10 +49,11 @@ function UstawieniaPage() {
         </CardContent>
       </Card>
 
-      {/* TikTok wymaga OAuth per konto, więc ma własną kartę tutaj. Ten sam
-          komponent renderuje się w Studiu publikacji — jeden stan, dwa
-          miejsca, bez rozjazdu. */}
+      {/* TikTok i X wymagają OAuth per konto, więc mają własne karty tutaj.
+          Te same komponenty renderują się w Studiu publikacji — jeden stan,
+          dwa miejsca, bez rozjazdu. */}
       <TiktokConnectionCard />
+      <XConnectionCard />
     </div>
   );
 }
