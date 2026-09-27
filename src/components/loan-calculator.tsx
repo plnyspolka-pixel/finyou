@@ -50,6 +50,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPLN, propertyTypeLabels } from "@/lib/labels";
+import { financeYouFeePctFor } from "@/lib/finance-you-fee";
 import {
   Select,
   SelectContent,
@@ -247,16 +248,15 @@ export function LoanCalculator({
   // pożyczki, klient ją spłaca w ratach (odsetki liczą się także od niej), a przez raty
   // wraca ona do inwestora — dlatego podnosi jego wkład gotówkowy na starcie
   // (inwestor wykłada onHand + prowizję FY), ale jest neutralna dla jego zysku.
-  // Skala liniowa od 10% (przy 20 000 zł) do 4% (przy 1 000 000 zł) kwoty pożyczki.
-  // W trybie oferty wewnętrznej (hideFinanceYouFee) prowizja FY = 0.
-  // Ponieważ % FY zależy od nominału, a nominał zależy od %, iterujemy do punktu stałego.
+  // Skala liniowa od 10% (przy 20 000 zł) do 4% (przy 1 000 000 zł) kwoty pożyczki
+  // (`financeYouFeePctFor` — to samo źródło, którym lista „Moje oferty" odtwarza
+  // prowizję FY dla zapisanych ofert). W trybie oferty wewnętrznej (hideFinanceYouFee) FY = 0.
   const { amount, financeYouFeePct } = useMemo(() => {
     // Model silnika: PEŁNA WYPŁATA — Pożyczkobiorca otrzymuje całą Kwotę Pożyczki.
     // Prowizja nie jest potrącana z wypłaty (jest rozłożona na raty), więc kwota
     // na rękę = Kwota Pożyczki (brak „ubruttowienia").
     const amt = onHand;
-    const t = Math.min(1, Math.max(0, (amt - 20_000) / (1_000_000 - 20_000)));
-    const fyPct = hideFinanceYouFee ? 0 : Math.round((10 - t * 6) * 10) / 10;
+    const fyPct = hideFinanceYouFee ? 0 : financeYouFeePctFor(amt);
     return { amount: amt, financeYouFeePct: fyPct };
   }, [onHand, hideFinanceYouFee]);
 
