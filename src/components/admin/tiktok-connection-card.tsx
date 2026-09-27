@@ -18,6 +18,7 @@ import {
   getTiktokIntegrationStatus,
   startTiktokConnect,
   disconnectTiktokAccount,
+  testTiktokCredentials,
 } from "@/lib/tiktok.functions";
 
 export function TiktokConnectionCard() {
@@ -25,6 +26,7 @@ export function TiktokConnectionCard() {
   const statusFn = useServerFn(getTiktokIntegrationStatus);
   const connectFn = useServerFn(startTiktokConnect);
   const disconnectFn = useServerFn(disconnectTiktokAccount);
+  const testFn = useServerFn(testTiktokCredentials);
 
   const { data: status, isLoading } = useQuery({
     queryKey: ["tiktok-status"],
@@ -47,6 +49,17 @@ export function TiktokConnectionCard() {
     }
     window.history.replaceState({}, "", window.location.pathname);
   }, [qc]);
+
+  // Test poświadczeń bez przeglądarki — rozstrzyga, czy „popraw client_key"
+  // na ekranie zgody to zły klucz, czy niedokonfigurowana aplikacja.
+  const testM = useMutation({
+    mutationFn: () => testFn(),
+    onSuccess: (r) =>
+      r.ok
+        ? toast.success(`Klucze OK — ${r.detail}`, { duration: 10_000 })
+        : toast.error(`TikTok odrzucił klucze: ${r.detail}`, { duration: 15_000 }),
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const connectM = useMutation({
     mutationFn: () => connectFn(),
@@ -173,7 +186,23 @@ export function TiktokConnectionCard() {
                 <p>
                   Jeśli TikTok odrzuca client_key: sprawdź, czy wartość pochodzi z pola{" "}
                   <b>Client key</b> (nie Client secret ani App ID) i czy aplikacja ma dodany produkt{" "}
-                  <b>Login Kit</b> — sam Content Posting API nie wystarcza do logowania.
+                  <b>Login Kit</b> z włączonym <b>Configure for Web</b> — sam Content Posting API
+                  nie wystarcza do logowania.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-1"
+                  onClick={() => testM.mutate()}
+                  disabled={testM.isPending}
+                >
+                  {testM.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                  Sprawdź klucze bez logowania
+                </Button>
+                <p>
+                  Ten test wymienia client_key + client_secret na token aplikacji. Jeśli{" "}
+                  <b>przejdzie</b>, klucze są dobre i problem jest w konfiguracji aplikacji (Login
+                  Kit / sandbox). Jeśli <b>padnie</b>, zły albo nieaktualny klucz w sekretach.
                 </p>
               </div>
             </details>

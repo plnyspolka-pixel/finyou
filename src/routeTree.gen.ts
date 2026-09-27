@@ -142,6 +142,7 @@ import { Route as AdminKartyOfertRouteImport } from './routes/admin.karty-ofert'
 import { Route as AdminInwestycjeRouteImport } from './routes/admin.inwestycje'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
+import { Route as AdminGoogleSearchRouteImport } from './routes/admin.google-search'
 import { Route as AdminGeneratorUmowyRouteImport } from './routes/admin.generator-umowy'
 import { Route as AdminFollowUpBrakiRouteImport } from './routes/admin.follow-up-braki'
 import { Route as AdminFinanseRouteImport } from './routes/admin.finanse'
@@ -949,6 +950,11 @@ const AdminIntegracjeRoute = AdminIntegracjeRouteImport.update({
   path: '/integracje',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminGoogleSearchRoute = AdminGoogleSearchRouteImport.update({
+  id: '/google-search',
+  path: '/google-search',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminGeneratorUmowyRoute = AdminGeneratorUmowyRouteImport.update({
   id: '/generator-umowy',
   path: '/generator-umowy',
@@ -1751,6 +1757,7 @@ export interface FileRoutesByFullPath {
   '/admin/finanse': typeof AdminFinanseRoute
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
+  '/admin/google-search': typeof AdminGoogleSearchRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/inwestycje': typeof AdminInwestycjeRoute
@@ -2018,6 +2025,7 @@ export interface FileRoutesByTo {
   '/admin/finanse': typeof AdminFinanseRoute
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
+  '/admin/google-search': typeof AdminGoogleSearchRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/inwestycje': typeof AdminInwestycjeRoute
@@ -2286,6 +2294,7 @@ export interface FileRoutesById {
   '/admin/finanse': typeof AdminFinanseRoute
   '/admin/follow-up-braki': typeof AdminFollowUpBrakiRoute
   '/admin/generator-umowy': typeof AdminGeneratorUmowyRoute
+  '/admin/google-search': typeof AdminGoogleSearchRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/inwestycje': typeof AdminInwestycjeRoute
@@ -2560,6 +2569,7 @@ export interface FileRouteTypes {
     | '/admin/finanse'
     | '/admin/follow-up-braki'
     | '/admin/generator-umowy'
+    | '/admin/google-search'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/inwestycje'
@@ -2827,6 +2837,7 @@ export interface FileRouteTypes {
     | '/admin/finanse'
     | '/admin/follow-up-braki'
     | '/admin/generator-umowy'
+    | '/admin/google-search'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/inwestycje'
@@ -3094,6 +3105,7 @@ export interface FileRouteTypes {
     | '/admin/finanse'
     | '/admin/follow-up-braki'
     | '/admin/generator-umowy'
+    | '/admin/google-search'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/inwestycje'
@@ -4370,6 +4382,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIntegracjeRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/google-search': {
+      id: '/admin/google-search'
+      path: '/google-search'
+      fullPath: '/admin/google-search'
+      preLoaderRoute: typeof AdminGoogleSearchRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/generator-umowy': {
       id: '/admin/generator-umowy'
       path: '/generator-umowy'
@@ -5375,6 +5394,7 @@ interface AdminRouteChildren {
   AdminFinanseRoute: typeof AdminFinanseRoute
   AdminFollowUpBrakiRoute: typeof AdminFollowUpBrakiRoute
   AdminGeneratorUmowyRoute: typeof AdminGeneratorUmowyRoute
+  AdminGoogleSearchRoute: typeof AdminGoogleSearchRoute
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
   AdminInwestycjeRoute: typeof AdminInwestycjeRoute
@@ -5458,6 +5478,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminFinanseRoute: AdminFinanseRoute,
   AdminFollowUpBrakiRoute: AdminFollowUpBrakiRoute,
   AdminGeneratorUmowyRoute: AdminGeneratorUmowyRoute,
+  AdminGoogleSearchRoute: AdminGoogleSearchRoute,
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
   AdminInwestycjeRoute: AdminInwestycjeRoute,
@@ -5905,13 +5926,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

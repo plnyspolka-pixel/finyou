@@ -23,13 +23,26 @@ jeśli czegoś nie widać na nagraniu, uznaje się to za brak.
    wygląda inaczej, prawdopodobnie wkleiłeś Client secret albo App ID.
    Podgląd klucza i wysyłanego Redirect URI pokazuje „Diagnostyka połączenia"
    w karcie TikTok w panelu.
-5. Gotowy pionowy MP4 (9:16) w buckecie `studio-media` — **nie** URL z HeyGen,
+5. **Jeśli nagrywasz na sandboxie** (typowa droga przed audytem):
+   - Sandbox ma **własne** `client_key` i `client_secret` — inne niż produkcyjne.
+     Wgraj je do sekretów na czas nagrywania.
+   - W sandboxie dodaj konto TikTok, którym będziesz się logować, do listy
+     **Target Users**. Bez tego ekran zgody kończy się błędem
+     `non_sandbox_target` — klucz jest wtedy poprawny, odrzucane jest konto.
+     TikTok wymaga potwierdzenia, że konto należy do Ciebie.
+   - W sandboxie `creator_info` zwykle zwraca wyłącznie `SELF_ONLY`, więc lista
+     prywatności na ekranie publikacji będzie jednopozycyjna. To poprawne
+     zachowanie, nie błąd — panel pokazuje dokładnie to, na co pozwala konto.
+   - **Po zatwierdzeniu audytu wróć do kluczy produkcyjnych.** Zostawione
+     sekrety sandboxowe oznaczają, że publikacja nigdy nie trafi do prawdziwych
+     odbiorców.
+6. Gotowy pionowy MP4 (9:16) w buckecie `studio-media` — **nie** URL z HeyGen,
    te wygasają.
-6. Konto TikTok, na które publikujesz, wylogowane w przeglądarce (nagranie ma
+7. Konto TikTok, na które publikujesz, wylogowane w przeglądarce (nagranie ma
    pokazać pełne logowanie i zgodę).
-7. Nagrywaj **całe okno przeglądarki z widocznym paskiem adresu** — audytor
+8. Nagrywaj **całe okno przeglądarki z widocznym paskiem adresu** — audytor
    chce widzieć domenę i przejście na `tiktok.com`. Bez cięć w środku flow.
-8. Język panelu: polski jest OK, ale jeśli wniosek składasz po angielsku,
+9. Język panelu: polski jest OK, ale jeśli wniosek składasz po angielsku,
    dopisz w opisie wniosku tłumaczenie etykiet (albo nagraj z krótkim
    komentarzem lektorskim / napisami po angielsku).
 

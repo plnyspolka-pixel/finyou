@@ -13,6 +13,7 @@ import {
 } from "@/components/marketing/sections";
 import { MktBadge } from "@/components/marketing/primitives";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
+import { PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
 
 const APPLY = "/rejestracja?role=klient";
 
@@ -82,12 +83,12 @@ const HOW = [
   { t: "Otrzymujesz informację", d: "Dostajesz informację o możliwych opcjach." },
 ];
 
-const PROPS: { icon: Icon3DName; t: string }[] = [
-  { icon: "propApartment", t: "Mieszkanie" },
-  { icon: "propHouse", t: "Dom" },
-  { icon: "propStore", t: "Lokal użytkowy/usługowy" },
-  { icon: "propPlot", t: "Działka budowlana" },
-  { icon: "propField", t: "Grunt rolny" },
+const PROPS: { icon: Icon3DName; sec: keyof typeof PROPERTY_DOCS_BY_SECURITY }[] = [
+  { icon: "propApartment", sec: "mieszkanie" },
+  { icon: "propHouse", sec: "dom" },
+  { icon: "propStore", sec: "lokal_uslugowy" },
+  { icon: "propPlot", sec: "dzialka_budowlana" },
+  { icon: "propField", sec: "grunt_rolny" },
 ];
 
 const WHY: FeatureItemData[] = [
@@ -250,32 +251,82 @@ function ClientLanding() {
             gap: "0.9rem",
           }}
         >
-          {PROPS.map((p) => (
-            <div
-              key={p.t}
-              style={{
-                borderRadius: "var(--radius-xl)",
-                border: "1px solid var(--border)",
-                background: "var(--card)",
-                boxShadow: "var(--shadow-xs)",
-                padding: "1.2rem 1rem",
-                textAlign: "center",
-              }}
-            >
-              <Icon3D name={p.icon} size={64} />
-              <div style={{ marginTop: 8, fontSize: "0.85rem", fontWeight: 700 }}>{p.t}</div>
+          {PROPS.map((p) => {
+            const info = PROPERTY_DOCS_BY_SECURITY[p.sec];
+            return (
               <div
+                key={p.sec}
                 style={{
-                  marginTop: 6,
-                  fontSize: "0.7rem",
-                  color: "var(--muted-foreground)",
-                  lineHeight: 1.4,
+                  borderRadius: "var(--radius-xl)",
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  boxShadow: "var(--shadow-xs)",
+                  padding: "1.2rem 1rem",
+                  display: "flex",
+                  flexDirection: "column",
                 }}
               >
-                Potrzebny będzie numer KW oraz podstawowe informacje o nieruchomości.
+                <div style={{ textAlign: "center" }}>
+                  <Icon3D name={p.icon} size={64} />
+                  <div style={{ marginTop: 8, fontSize: "0.85rem", fontWeight: 700 }}>
+                    {info.title}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    marginTop: 12,
+                    paddingTop: 10,
+                    borderTop: "1px solid var(--border)",
+                    fontSize: "0.62rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--muted-foreground)",
+                  }}
+                >
+                  Co przygotować
+                </div>
+                <ul
+                  style={{
+                    marginTop: 6,
+                    padding: 0,
+                    listStyle: "none",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 5,
+                    textAlign: "left",
+                  }}
+                >
+                  {info.docs.map((d) => (
+                    <li
+                      key={d}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 6,
+                        fontSize: "0.7rem",
+                        lineHeight: 1.35,
+                        color: "var(--muted-foreground)",
+                      }}
+                    >
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          marginTop: 5,
+                          width: 5,
+                          height: 5,
+                          borderRadius: 999,
+                          flex: "0 0 auto",
+                          background: "var(--primary)",
+                        }}
+                      />
+                      <span>{d}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Section>
 
