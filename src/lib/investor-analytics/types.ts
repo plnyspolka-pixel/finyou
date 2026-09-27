@@ -74,6 +74,13 @@ export interface AnalyticsListItem {
   results: AnalyticsResultFlags;
 }
 
+/** Wynik listy: bez złożonego Zlecenia lista jest pusta z flagą `orderRequired`. */
+export interface AnalyticsListResult {
+  items: AnalyticsListItem[];
+  /** true = inwestor nie ma złożonego Zlecenia — nic nie pokazujemy. */
+  orderRequired: boolean;
+}
+
 export interface AnalyticsKwDocument {
   status: string;
   fetchedAt: string | null;

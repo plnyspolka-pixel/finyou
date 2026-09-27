@@ -3,8 +3,10 @@
 // zespół Finance You w panelu admina — dla okazji i wniosków inwestora.
 // Lewa kolumna: lista z postępem czterech kroków; prawa: szczegóły wybranego
 // wniosku krok po kroku oraz uruchomienie przebiegu na żądanie.
-// Zakres: wyłącznie wnioski wybrane dla inwestora (nie cała pula). Druga
-// zakładka to szybka analiza KW własnego wniosku spoza Finance You.
+// Zakres: wyłącznie wnioski wybrane dla inwestora (nie cała pula) — i tylko
+// PO złożeniu Zlecenia poszukiwania okazji: bez Zlecenia inwestor nie widzi
+// tu żadnych ofert (bramka po stronie serwera, tu wyłącznie komunikat).
+// Druga zakładka to szybka analiza KW własnego wniosku spoza Finance You.
 import { useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +15,7 @@ import {
   AlertTriangle,
   BarChart3,
   ExternalLink,
+  FileSignature,
   Loader2,
   MapPin,
   Play,
@@ -168,9 +171,11 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
     queryFn: () => listFn(),
     // Trwający przebieg dokańcza cron (co 15 min) — odświeżamy listę co pół minuty.
     refetchInterval: (q) =>
-      (q.state.data ?? []).some((i) => i.run?.status === "running") ? 30_000 : false,
+      (q.state.data?.items ?? []).some((i) => i.run?.status === "running") ? 30_000 : false,
   });
-  const items = useMemo(() => listQ.data ?? [], [listQ.data]);
+  const items = useMemo(() => listQ.data?.items ?? [], [listQ.data]);
+  // Bramka Zlecenia: serwer nie zwraca nic, dopóki inwestor nie złoży Zlecenia.
+  const orderRequired = listQ.data?.orderRequired === true;
 
   const [filter, setFilter] = useState<"all" | AnalyticsSource>("all");
   const [q, setQ] = useState("");
@@ -232,7 +237,7 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
       <FancyPageHeader
         eyebrow="Analityka"
         title="Pipeline analityczny"
-        subtitle="Cztery kroki, które przechodzi każda okazja u zespołu Finance You: pobranie księgi wieczystej, właściciele w rejestrach, analiza KW silnikiem reguł i analiza ryzyka z prognozą wartości. Tu masz je wyłącznie dla wniosków wybranych dla Ciebie: okazji z Twoich Zleceń, wniosków z Twoją ofertą i wniosków przekazanych Ci przez zespół — z możliwością uruchomienia na żądanie."
+        subtitle="Cztery kroki, które przechodzi każda okazja u zespołu Finance You: pobranie księgi wieczystej, właściciele w rejestrach, analiza KW silnikiem reguł i analiza ryzyka z prognozą wartości. Okazje i propozycje pojawiają się tu wyłącznie w wykonaniu Twojego Zlecenia poszukiwania okazji — bez złożonego Zlecenia niczego nie szukamy i nie pokazujemy."
         actions={
           <Button
             size="sm"
@@ -252,12 +257,14 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
       />
       {tabs}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatTile label="W zasięgu" value={stats.total} hue={262} />
-        <StatTile label="Komplet analiz" value={stats.ready} hue={160} />
-        <StatTile label="Przebieg w toku" value={stats.running} hue={48} />
-        <StatTile label="Częściowo / bez analiz" value={stats.partial + stats.none} hue={217} />
-      </div>
+      {!orderRequired && (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <StatTile label="W zasięgu" value={stats.total} hue={262} />
+          <StatTile label="Komplet analiz" value={stats.ready} hue={160} />
+          <StatTile label="Przebieg w toku" value={stats.running} hue={48} />
+          <StatTile label="Częściowo / bez analiz" value={stats.partial + stats.none} hue={217} />
+        </div>
+      )}
 
       {listQ.isLoading ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -269,6 +276,27 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
             <p className="text-destructive">Nie udało się pobrać listy wniosków.</p>
             <Button variant="outline" onClick={() => void listQ.refetch()}>
               Spróbuj ponownie
+            </Button>
+          </CardContent>
+        </Card>
+      ) : orderRequired ? (
+        <Card className="border-primary/40">
+          <CardHeader className="items-center text-center">
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary/10">
+              <FileSignature className="h-7 w-7 text-primary" />
+            </div>
+            <CardTitle>Najpierw złóż Zlecenie poszukiwania okazji</CardTitle>
+            <CardDescription>
+              Bez złożonego Zlecenia nie widzisz tu żadnych ofert ani wniosków — także tych, do
+              których składałeś ofertę, ani przekazanych przez zespół. Dopiero na podstawie Zlecenia
+              szukamy dla Ciebie okazji i przedstawiamy propozycje. Zlecenie składasz w module
+              „Okazje inwestycyjne” po przejściu pipeline'u (dane pożyczkodawcy, rachunek, KYC,
+              screening i komplet umów).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Button asChild>
+              <Link to="/inwestor/umowy">Złóż Zlecenie w Okazjach inwestycyjnych</Link>
             </Button>
           </CardContent>
         </Card>

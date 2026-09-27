@@ -26,7 +26,14 @@ import {
   type WindDocument,
 } from "@/lib/windykacja.functions";
 import { placeWindCollectionCall } from "@/lib/windykacja-call.functions";
-import { WIND_FEE_DEFAULTS } from "@/lib/windykacja-fees";
+import {
+  WIND_FEE_DEFAULTS,
+  WIND_FEE_LABELS,
+  normalizeWindFeeTable,
+  windFeeForAction,
+  type WindFeeKind,
+} from "@/lib/windykacja-fees";
+import { WindQuickContactDialog } from "@/components/inwestor/wind-quick-actions";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import {
   listDocxTemplates,
@@ -516,29 +523,25 @@ function WindykacjaCaseCard() {
             </CardContent>
           </Card>
 
-          {/* Kontakt windykacyjny — zawsze pod ręką (SMS / telefon AI / e-mail). */}
+          {/* Czynności windykacyjne — telefon AI / SMS / e-mail: każda trafia do
+              rejestru czynności z opłatą naliczoną zgodnie z umową. */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <Phone className="h-4 w-4" /> Kontakt windykacyjny
+                <Phone className="h-4 w-4" /> Czynności windykacyjne
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-2">
+              <Button size="sm" className="justify-start" onClick={() => setAction("botcall")}>
+                <Phone className="h-4 w-4 mr-1.5" /> Telefon windykacyjny AI
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
                 className="justify-start"
                 onClick={() => setAction("sms")}
               >
-                <MessageSquare className="h-4 w-4 mr-1.5" /> Wyślij SMS windykacyjny
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-start"
-                onClick={() => setAction("botcall")}
-              >
-                <Phone className="h-4 w-4 mr-1.5" /> Zadzwoń (agent AI w Twoim imieniu)
+                <MessageSquare className="h-4 w-4 mr-1.5" /> Wyślij SMS
               </Button>
               <Button
                 variant="outline"
@@ -549,8 +552,20 @@ function WindykacjaCaseCard() {
                 <Mail className="h-4 w-4 mr-1.5" /> Wyślij e-mail
               </Button>
               <p className="text-[11px] text-muted-foreground">
-                Każdy kontakt trafia do rejestru czynności — z możliwością naliczenia opłaty
-                windykacyjnej doliczanej do zadłużenia.
+                Każda czynność trafia do rejestru czynności windykacyjnych, a opłata jest naliczana
+                zgodnie z umową i doliczana do zadłużenia. Opłaty wg umowy:{" "}
+                {(["sms", "telefon", "pismo"] as WindFeeKind[])
+                  .map(
+                    (k) =>
+                      `${WIND_FEE_LABELS[k].split(" (")[0].toLowerCase()} ${formatPLN(
+                        windFeeForAction(normalizeWindFeeTable(loan.oplaty_windykacyjne), k).fee,
+                      )}`,
+                  )
+                  .join(" · ")}
+                {normalizeWindFeeTable(loan.oplaty_windykacyjne)
+                  ? ""
+                  : " (umowa nie określa — domyślne podpowiedzi)"}
+                .
               </p>
             </CardContent>
           </Card>
@@ -728,8 +743,29 @@ function WindykacjaCaseCard() {
         </div>
       </div>
 
-      {/* MODALE AKCJI */}
-      {action && (
+      {/* „Telefon windykacyjny AI" / „Wyślij SMS" — ten sam dialog co w panelu:
+          czynność + wpis do rejestru + opłata zgodnie z umową. */}
+      {(action === "botcall" || action === "sms") && (
+        <WindQuickContactDialog
+          kind={action}
+          caseId={caseId}
+          loan={loan}
+          borrower={borrower}
+          debtTotal={debt?.totalDue ?? Number(kase.kwota_zalegla || 0)}
+          onClose={() => {
+            setAction(null);
+            setDocPreset(null);
+          }}
+          onDone={(ev) => {
+            setAction(null);
+            setDocPreset(null);
+            refreshAfterEvent(ev);
+          }}
+        />
+      )}
+
+      {/* MODALE AKCJI (pozostałe działania) */}
+      {action && action !== "botcall" && action !== "sms" && (
         <ActionDialog
           kind={action}
           initialDocType={docPreset}
@@ -1516,9 +1552,12 @@ function ActionDialog({
                 onChange={(e) => set("oplata", e.target.value)}
               />
               <p className="text-[11px] text-muted-foreground mt-1">
-                Opłata zostanie doliczona do zadłużenia jako koszt windykacji (wpłaty klienta
-                pokrywają najpierw koszty — art. 451 k.c.). Nalicz tylko, jeśli umowa pożyczki
-                przewiduje opłaty za czynności windykacyjne.
+                Kwota podpowiedziana zgodnie z tabelą opłat z umowy pożyczki (gdy umowa milczy —
+                domyślna: {WIND_FEE_DEFAULTS.sms}/{WIND_FEE_DEFAULTS.telefon}/
+                {WIND_FEE_DEFAULTS.pismo} zł za SMS/telefon/pismo). Opłata trafia do rejestru
+                czynności i jest doliczana do zadłużenia jako koszt windykacji (wpłaty klienta
+                pokrywają najpierw koszty — art. 451 k.c.). Nalicz tylko, jeśli umowa przewiduje
+                opłaty za czynności windykacyjne.
               </p>
             </Fld>
           )}
@@ -1821,6 +1860,10 @@ function initialValues(
   debtTotal?: number | null,
 ): Record<string, string> {
   const base: Record<string, string> = { data: todayISO(), data_nadania: todayISO(), oplata: "0" };
+  // Opłaty ZGODNIE Z UMOWĄ: tabela opłat z umowy pożyczki, a gdy umowa milczy —
+  // domyślna podpowiedź (WIND_FEE_DEFAULTS); umowa bez opłat → 0.
+  const feeTable = normalizeWindFeeTable(loan.oplaty_windykacyjne);
+  const fee = (k: WindFeeKind) => String(windFeeForAction(feeTable, k).fee);
   if (kind === "sms" || kind === "telefon" || kind === "botcall")
     base.target = borrower.telefon ?? "";
   if (kind === "email") {
@@ -1829,14 +1872,15 @@ function initialValues(
   }
   if (kind === "sms") {
     base.tresc = `Przypomnienie: zaległość z umowy ${loan.numer_umowy ?? ""} wynosi ${formatPLN(debtTotal ?? kase.kwota_zalegla)}. Prosimy o pilną spłatę. Finance You`;
-    base.oplata = String(WIND_FEE_DEFAULTS.sms);
+    base.oplata = fee("sms");
   }
-  if (kind === "email") base.oplata = String(WIND_FEE_DEFAULTS.email);
+  if (kind === "email") base.oplata = fee("email");
+  if (kind === "telefon") base.oplata = fee("telefon");
   if (kind === "botcall") {
     base.kwota = String(Math.round(Number(debtTotal ?? kase.kwota_zalegla) || 0));
-    base.oplata = String(WIND_FEE_DEFAULTS.telefon);
+    base.oplata = fee("telefon");
   }
-  if (kind === "pismo") base.oplata = String(WIND_FEE_DEFAULTS.pismo);
+  if (kind === "pismo") base.oplata = fee("pismo");
   if (kind === "doreczenie") base.rodzaj = "doreczone";
   if (kind === "dokument") {
     const allowed = documentsForPath(kase.sciezka);

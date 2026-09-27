@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
 import { buildWindDocument, type DocContext } from "@/lib/windykacja-documents";
+import { normalizeWindFeeTable, windFeeForAction, type WindFeeTable } from "@/lib/windykacja-fees";
 import type {
   WindPath,
   WindEventType,
@@ -59,6 +60,8 @@ export type WindLoan = {
   data_ostatniej_wplaty: string | null;
   data_wypowiedzenia: string | null;
   kwota_doplat: number;
+  /** Tabela opłat za czynności windykacyjne z umowy (podstawa naliczania w rejestrze). */
+  oplaty_windykacyjne: WindFeeTable | null;
 };
 
 export type WindPriority = "niski" | "sredni" | "wysoki" | "krytyczny";
@@ -123,7 +126,43 @@ export type WindDocument = {
 export type WindCaseEnriched = WindCase & { loan: WindLoan; borrower: WindBorrower };
 
 const LOAN_COLS =
-  "id, borrower_id, numer_umowy, data_umowy, kwota_pozyczki, kwota_calkowita, prowizja, termin_splaty, numer_kw, kwota_hipoteki, akt_notarialny_777, kwota_777, rachunek_splaty, oprocentowanie_roczne, stopa_odsetek_max, status, saldo_pozostale, data_ostatniej_wplaty, data_wypowiedzenia, kwota_doplat";
+  "id, borrower_id, numer_umowy, data_umowy, kwota_pozyczki, kwota_calkowita, prowizja, termin_splaty, numer_kw, kwota_hipoteki, akt_notarialny_777, kwota_777, rachunek_splaty, oprocentowanie_roczne, stopa_odsetek_max, status, saldo_pozostale, data_ostatniej_wplaty, data_wypowiedzenia, kwota_doplat, oplaty_windykacyjne";
+
+/** Schemat tabeli opłat z umowy (wejście z formularza / odczytu umowy). */
+const feeTableSchema = z
+  .object({
+    sms: z.coerce.number().min(0).nullable().optional(),
+    email: z.coerce.number().min(0).nullable().optional(),
+    telefon: z.coerce.number().min(0).nullable().optional(),
+    pismo: z.coerce.number().min(0).nullable().optional(),
+    brak_oplat: z.boolean().nullable().optional(),
+    zrodlo: z.enum(["umowa", "recznie"]).nullable().optional(),
+  })
+  .nullable()
+  .optional();
+
+/**
+ * Opłata za czynność ZGODNIE Z UMOWĄ sprawy: tabela opłat z wind_loans;
+ * gdy umowa jej nie określa — domyślna podpowiedź; umowa bez opłat → 0.
+ * Jawnie podana kwota (edycja w formularzu) ma pierwszeństwo.
+ */
+async function resolveActionFee(
+  db: LooseDb,
+  caseId: string,
+  kind: "sms" | "email" | "telefon" | "pismo",
+  explicit: number | null | undefined,
+): Promise<number> {
+  if (explicit != null && Number.isFinite(explicit)) return Math.max(0, explicit);
+  const { data: kase } = await db
+    .from("wind_collection_cases")
+    .select("id, loan:wind_loans(oplaty_windykacyjne)")
+    .eq("id", caseId)
+    .maybeSingle();
+  const table = normalizeWindFeeTable(
+    (kase?.loan as { oplaty_windykacyjne?: unknown } | null)?.oplaty_windykacyjne,
+  );
+  return windFeeForAction(table, kind).fee;
+}
 const BORROWER_COLS =
   "id, imie_nazwisko, typ, pesel, nip, dowod_osobisty, adres_zamieszkania, adres_do_doreczen, email, telefon, email_zgoda_doreczenia, notatki";
 const CASE_COLS =
@@ -161,14 +200,25 @@ export const listWindDashboard = createServerFn({ method: "GET" })
     >;
     const caseIds = list.map((c) => c.id);
 
+    // Zdarzenia z kwotą wpłaty i opłatą — panel liczy z nich zadłużenie z
+    // odsetkami karnymi dla każdej sprawy (ten sam silnik co karta sprawy).
     let events: Pick<
       WindEvent,
-      "case_id" | "typ" | "tytul" | "data_zdarzenia" | "data_doreczenia" | "status_doreczenia"
+      | "case_id"
+      | "typ"
+      | "tytul"
+      | "data_zdarzenia"
+      | "data_doreczenia"
+      | "status_doreczenia"
+      | "metadata"
+      | "oplata"
     >[] = [];
     if (caseIds.length) {
       const { data: ev } = await db
         .from("wind_events")
-        .select("case_id, typ, tytul, data_zdarzenia, data_doreczenia, status_doreczenia")
+        .select(
+          "case_id, typ, tytul, data_zdarzenia, data_doreczenia, status_doreczenia, metadata, oplata",
+        )
         .in("case_id", caseIds)
         .order("data_zdarzenia", { ascending: false });
       events = (ev ?? []) as typeof events;
@@ -240,6 +290,8 @@ const createSchema = z.object({
   rachunek_splaty: z.string().optional().nullable(),
   oprocentowanie_roczne: z.coerce.number().default(0),
   stopa_odsetek_max: z.coerce.number().default(0),
+  /** Tabela opłat za czynności windykacyjne z umowy (odczyt AI / korekta). */
+  oplaty_windykacyjne: feeTableSchema,
   kwota_zalegla: z.coerce.number().default(0),
   sciezka: z.enum(["miekka", "standardowa", "twarda", "karna"]).default("miekka"),
   etap: z.string().default("kontakt_wstepny"),
@@ -306,6 +358,7 @@ export const createWindCase = createServerFn({ method: "POST" })
         rachunek_splaty: emptyToNull(data.rachunek_splaty),
         oprocentowanie_roczne: data.oprocentowanie_roczne,
         stopa_odsetek_max: data.stopa_odsetek_max,
+        oplaty_windykacyjne: normalizeWindFeeTable(data.oplaty_windykacyjne) ?? null,
         status: "w_zwloce",
         saldo_pozostale: saldo,
         data_ostatniej_wplaty: wplaty.length ? wplaty[wplaty.length - 1].data : null,
@@ -519,7 +572,8 @@ export const performWindContact = createServerFn({ method: "POST" })
         target: z.string().optional().nullable(),
         subject: z.string().optional().nullable(),
         tresc: z.string().min(1, "Treść jest wymagana"),
-        oplata: z.coerce.number().min(0).default(0),
+        /** Brak = opłata zgodnie z tabelą opłat z umowy (albo domyślna podpowiedź). */
+        oplata: z.coerce.number().min(0).nullable().optional(),
       })
       .parse(d),
   )
@@ -528,6 +582,8 @@ export const performWindContact = createServerFn({ method: "POST" })
     let status: WindDeliveryStatus | null = null;
     let extra: Record<string, unknown> = {};
     let tytul = "";
+    // Opłata za czynność — zgodnie z umową pożyczki tej sprawy.
+    const oplata = await resolveActionFee(db, data.caseId, data.typ, data.oplata);
 
     if (data.typ === "sms") {
       tytul = "SMS wysłany";
@@ -577,7 +633,8 @@ export const performWindContact = createServerFn({ method: "POST" })
             : null,
         status_doreczenia: status,
         metadata: extra,
-        oplata: data.oplata,
+        // SMS/e-mail, który nie wyszedł, nie obciąża dłużnika opłatą.
+        oplata: data.typ === "telefon" || status ? oplata : 0,
         autor: context.claims?.email ?? null,
       })
       .select(EVENT_COLS)

@@ -15,6 +15,11 @@
 // Pełny dostęp (abonament) NIE otwiera analityki wszystkich wniosków
 // dopuszczonych do inwestorów — analityka to narzędzie inwestora do jego
 // spraw, a nie wgląd w portfel platformy.
+//
+// BRAMKA ZLECENIA: bez złożonego Zlecenia poszukiwania okazji inwestor nie
+// widzi tu ŻADNYCH wniosków ani ofert — także tych z własnych ofert czy
+// przekazanych przez zespół. Cokolwiek szukamy i pokazujemy inwestorowi,
+// robimy to wyłącznie w wykonaniu Zlecenia (§ Ramowej umowy pośrednictwa).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -28,6 +33,7 @@ import type {
   AnalyticsDetail,
   AnalyticsKwDocument,
   AnalyticsListItem,
+  AnalyticsListResult,
   AnalyticsResultFlags,
   AnalyticsRun,
   AnalyticsSource,
@@ -37,6 +43,15 @@ import type {
 const RUN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 /** Statusy dystrybucji, w których wniosek faktycznie trafił do inwestora. */
 const UNSENT_DISTRIBUTION_STATUSES = ["szkic", "gotowe_do_wysylki"];
+/**
+ * Statusy Zlecenia, które otwierają analitykę: złożone (czeka na decyzję),
+ * przyjęte i wykonane. Cofnięte, wygasłe i odmówione nie są już podstawą do
+ * szukania ani pokazywania czegokolwiek.
+ */
+const SUBMITTED_ORDER_STATUSES = ["zlozone", "przyjete", "wykonane"];
+/** Komunikat bramki — ten sam w liście, szczegółach i uruchomieniu przebiegu. */
+const ORDER_REQUIRED_MESSAGE =
+  "Analityka i propozycje okazji są dostępne po złożeniu Zlecenia poszukiwania okazji.";
 
 const loose = (c: unknown) => c as any;
 
@@ -49,6 +64,8 @@ const APP_SELECT =
   "id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, available_to_investors, visibility_level, deleted_at, created_at, location_potential_score, properties(property_type, city, voivodeship, estimated_value, area_sqm, land_register_number)";
 
 interface Scope {
+  /** Czy inwestor ma złożone Zlecenie — bez niego zakres jest pusty. */
+  hasOrder: boolean;
   offerAppIds: Set<string>;
   sharedAppIds: Set<string>;
   matchByApp: Map<string, { projectRef: string | null }>;
@@ -58,8 +75,21 @@ interface Scope {
 async function loadScope(db: any, userId: string): Promise<Scope> {
   const [{ data: inv }, { data: orders }] = await Promise.all([
     db.from("investors").select("id").eq("user_id", userId).maybeSingle(),
-    db.from("investor_orders").select("id").eq("user_id", userId),
+    db.from("investor_orders").select("id, status").eq("user_id", userId),
   ]);
+
+  const hasOrder = ((orders ?? []) as { status: string }[]).some((o) =>
+    SUBMITTED_ORDER_STATUSES.includes(o.status),
+  );
+  if (!hasOrder) {
+    // Bramka Zlecenia: nic nie ładujemy — ani ofert, ani przekazań.
+    return {
+      hasOrder: false,
+      offerAppIds: new Set(),
+      sharedAppIds: new Set(),
+      matchByApp: new Map(),
+    };
+  }
 
   const offerAppIds = new Set<string>();
   const sharedAppIds = new Set<string>();
@@ -98,7 +128,7 @@ async function loadScope(db: any, userId: string): Promise<Scope> {
     }
   }
 
-  return { offerAppIds, sharedAppIds, matchByApp };
+  return { hasOrder: true, offerAppIds, sharedAppIds, matchByApp };
 }
 
 function isInvestorVisible(app: any): boolean {
@@ -259,13 +289,18 @@ function buildItem(app: any, source: AnalyticsSource, scope: Scope, idx: ResultI
 
 const SOURCE_ORDER: Record<AnalyticsSource, number> = { okazja: 0, oferta: 1, przekazany: 2 };
 
-/** Lista wniosków w zasięgu inwestora ze stanem pipeline'u analitycznego. */
+/**
+ * Lista wniosków w zasięgu inwestora ze stanem pipeline'u analitycznego.
+ * Bez złożonego Zlecenia lista jest pusta, a `orderRequired` mówi UI, że
+ * to bramka Zlecenia, a nie brak wyników.
+ */
 export const listMyAnalyticsApplications = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<AnalyticsListItem[]> => {
+  .handler(async ({ context }): Promise<AnalyticsListResult> => {
     const userId = context.userId as string;
     const db = await adminDb();
     const scope = await loadScope(db, userId);
+    if (!scope.hasOrder) return { items: [], orderRequired: true };
 
     const ids = [
       ...new Set([...scope.matchByApp.keys(), ...scope.offerAppIds, ...scope.sharedAppIds]),
@@ -292,12 +327,13 @@ export const listMyAnalyticsApplications = createServerFn({ method: "GET" })
         SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source] ||
         Date.parse(b.createdAt) - Date.parse(a.createdAt),
     );
-    return items;
+    return { items, orderRequired: false };
   });
 
 /** Wniosek w zasięgu inwestora albo błąd — wspólna bramka szczegółów i uruchomienia. */
 async function loadAccessibleApp(db: any, userId: string, applicationId: string) {
   const scope = await loadScope(db, userId);
+  if (!scope.hasOrder) throw new Error(ORDER_REQUIRED_MESSAGE);
   const { data: app, error } = await db
     .from("loan_applications")
     .select(APP_SELECT)

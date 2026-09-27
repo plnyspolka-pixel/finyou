@@ -23,14 +23,19 @@ import {
   previewUmowaAgent,
   generateUmowaAgentDocx,
 } from "@/lib/contract-engine/umowa-agent.functions";
+import {
+  buildCalcHandoffMessage,
+  onCalcHandoffChange,
+  readCalcHandoff,
+} from "@/lib/loan-calc-handoff";
+import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
 const GREETING =
-  "Dzień dobry! Jestem agentem umowy — wypełniam z Tobą dane umowy pożyczki dla silnika klauzul " +
-  "(tylko to — niczym innym się nie zajmuję). Tekst umowy złoży deterministycznie silnik; ja zbieram dane: " +
-  "strony, kwotę i warunki, nieruchomości z KW i zabezpieczenia. Od czego zaczynamy? Możesz też wkleić " +
-  "wszystkie dane naraz — rozłożę je na pola umowy.";
+  "Dzień dobry! Przygotuję z Tobą umowę pożyczki. Zbieram dane: strony, kwotę i warunki, " +
+  "nieruchomości z KW i zabezpieczenia — tekst umowy złoży silnik klauzul. Od czego zaczynamy? " +
+  "Możesz też wkleić wszystkie dane naraz albo wysłać harmonogram z kalkulatora.";
 
 const SUGGESTIONS = [
   "Zacznijmy nową umowę pożyczki",
@@ -40,6 +45,24 @@ const SUGGESTIONS = [
 ];
 
 const STORAGE_KEY = "inwestor-umowa-agent-v1";
+/** Znacznik czasu ostatniej kalkulacji, która już rozpoczęła rozmowę. */
+const CALC_CONSUMED_KEY = "inwestor-umowa-agent-calc-consumed-ts";
+
+function readConsumedCalcTs(): number {
+  try {
+    return Number(localStorage.getItem(CALC_CONSUMED_KEY) || 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function markCalcConsumed(ts: number): void {
+  try {
+    localStorage.setItem(CALC_CONSUMED_KEY, String(ts));
+  } catch {
+    /* pamięć lokalna niedostępna */
+  }
+}
 
 interface Persisted {
   messages: ChatMsg[];
@@ -60,10 +83,14 @@ function loadPersisted(): Persisted {
 }
 
 /**
- * AGENT UMOWY (AI) — GŁÓWNY EKRAN panelu /inwestor. Osobny agent czatowy,
- * którego jedynym zadaniem jest wypełnianie danych umowy dla silnika klauzul
- * (contract-engine). AI wypełnia wyłącznie dane zgodne ze schematem; kod
- * dolicza harmonogram i kwoty słownie, waliduje, renderuje podgląd i .docx.
+ * AGENT UMOWY (AI) — kreator umowy pożyczki w module „Dokumenty i umowy".
+ * Agent czatowy wypełnia dane umowy dla silnika klauzul (contract-engine);
+ * kod dolicza harmonogram i kwoty słownie, waliduje, renderuje podgląd i .docx.
+ *
+ * Start z kalkulatora: „Wyślij do kreatora" zapisuje kalkulację w handoffie;
+ * panel po wejściu wykrywa nową kalkulację, zaczyna NOWĄ rozmowę i wysyła
+ * harmonogram spłat jako jej pierwszą wiadomość (liczby wchodzą do szkicu
+ * deterministycznie po stronie serwera).
  */
 export function UmowaAgentPanel() {
   const sendFn = useServerFn(sendUmowaAgentMessage);
@@ -101,15 +128,20 @@ export function UmowaAgentPanel() {
   const ostrzezenia = problemy.filter((p) => p.poziom === "OSTRZEZENIE");
   const maDane = !!umowa && typeof umowa === "object" && Object.keys(umowa as object).length > 0;
 
-  async function send(textOverride?: string) {
+  async function send(textOverride?: string, opts?: { calc?: LoanCalcPayload; fresh?: boolean }) {
     const text = (textOverride ?? input).trim();
     if (!text || sending) return;
     setInput("");
     setSending(true);
-    const nextMessages: ChatMsg[] = [...messages, { role: "user", content: text }];
-    setState((s) => ({ ...s, messages: nextMessages }));
+    // Rozmowa od nowa (np. harmonogram z kalkulatora jako pierwsza wiadomość).
+    const baseMessages = opts?.fresh ? [] : messages;
+    const baseUmowa = opts?.fresh ? {} : umowa;
+    const nextMessages: ChatMsg[] = [...baseMessages, { role: "user", content: text }];
+    setState({ messages: nextMessages, umowa: baseUmowa });
     try {
-      const res = await sendFn({ data: { messages: nextMessages, umowa } });
+      const res = await sendFn({
+        data: { messages: nextMessages, umowa: baseUmowa, calc: opts?.calc ?? null },
+      });
       setState({
         messages: [...nextMessages, { role: "assistant", content: res.reply }],
         umowa: res.umowa,
@@ -186,6 +218,31 @@ export function UmowaAgentPanel() {
     }
   }
 
+  // Harmonogram z kalkulatora („Wyślij do kreatora") → nowa rozmowa, której
+  // pierwszą wiadomością jest harmonogram spłat. Każdą kalkulację zużywamy raz.
+  const startedFromCalcRef = useRef(false);
+  useEffect(() => {
+    const tryStart = () => {
+      if (sending || startedFromCalcRef.current) return;
+      const h = readCalcHandoff();
+      if (!h || h.ts <= readConsumedCalcTs()) return;
+      startedFromCalcRef.current = true;
+      markCalcConsumed(h.ts);
+      setProblemy([]);
+      setAutokorekty([]);
+      setMissing([]);
+      setPreview("");
+      void send(buildCalcHandoffMessage(h.payload), { calc: h.payload, fresh: true }).finally(
+        () => {
+          startedFromCalcRef.current = false;
+        },
+      );
+    };
+    tryStart();
+    return onCalcHandoffChange(tryStart);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- start tylko przy wejściu / nowym handoffie
+  }, []);
+
   return (
     <div className="flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-xl">
       <div className="flex items-center gap-3 border-b border-border bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] px-5 py-4 text-accent-foreground">
@@ -193,9 +250,9 @@ export function UmowaAgentPanel() {
           <FileSignature className="h-6 w-6" />
         </div>
         <div className="leading-tight">
-          <div className="text-base font-bold">Agent umowy (AI)</div>
+          <div className="text-base font-bold">Kreator umowy (agent AI)</div>
           <div className="text-xs opacity-85">
-            Osobny agent tylko do wypełniania umowy — dane zbiera AI, umowę składa silnik klauzul
+            Dane zbiera agent w rozmowie, tekst umowy składa silnik klauzul
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -357,9 +414,6 @@ export function UmowaAgentPanel() {
             )}
             Generuj .docx
           </Button>
-          <span className="ml-auto text-[10px] text-muted-foreground">
-            Agent wypełnia wyłącznie dane — tekst umowy składa deterministycznie silnik klauzul.
-          </span>
         </div>
       </div>
 

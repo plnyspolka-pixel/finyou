@@ -8,6 +8,9 @@
 //   9. Zlecenie poszukiwania okazji
 // Kolejność liczy computeInvestorPipeline (ta sama funkcja po stronie serwera),
 // § 15 ust. 7: żaden checkbox nie startuje zaznaczony.
+// Umowy (kroki 6–8) są ODBLOKOWANE do wglądu od razu: pełna treść każdej
+// umowy jest widoczna niezależnie od stanu pipeline'u; kolejność dotyczy
+// wyłącznie podpisu (egzekwuje ją serwer w acceptLegalDocument).
 import { useState } from "react";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -110,8 +113,14 @@ function PipelinePage() {
   const step = (key: PipelineStepKey): PipelineStep =>
     steps.find((s) => s.key === key) as PipelineStep;
 
-  const docByCode = (code: string) =>
-    (legal.documents ?? []).find((d: any) => d.code === code && d.active) ?? null;
+  // Do podglądu wystarczy dokument w rejestrze (także nieaktywny — przed
+  // aktywacją pakietu przez kancelarię); do podpisu wymagana jest wersja aktywna.
+  const docByCode = (code: string) => {
+    const docs = (legal.documents ?? []) as any[];
+    return (
+      docs.find((d) => d.code === code && d.active) ?? docs.find((d) => d.code === code) ?? null
+    );
+  };
 
   const tier = TIER_PRESENTATION[pipe.tier];
 
@@ -134,8 +143,9 @@ function PipelinePage() {
       {!legal.packActive ? (
         <Card className="border-amber-300 bg-amber-50/40">
           <CardContent className="py-4 text-sm text-amber-900">
-            Pakiet dokumentów jest w przygotowaniu (przegląd kancelarii). Kroki 5–9 odblokujemy po
-            jego aktywacji — damy znać e-mailem. Kroki 1–4 możesz przejść już teraz.
+            Pakiet dokumentów jest w przygotowaniu (przegląd kancelarii). Treść umów możesz
+            przeglądać już teraz; podpis kroków 6–8 i Zlecenie odblokujemy po aktywacji pakietu —
+            damy znać e-mailem. Kroki 1–4 możesz przejść już teraz.
           </CardContent>
         </Card>
       ) : null}
@@ -169,15 +179,15 @@ function PipelinePage() {
         const s = step(code);
         if (!doc) {
           return (
-            <PipelineStepCard key={code} step={s}>
+            <PipelineStepCard key={code} step={s} readable>
               <p className="text-sm text-muted-foreground">
-                Dokument nie jest jeszcze aktywny w rejestrze.
+                Dokument nie trafił jeszcze do rejestru — podgląd pojawi się po jego dodaniu.
               </p>
             </PipelineStepCard>
           );
         }
         return (
-          <PipelineStepCard key={code} step={s}>
+          <PipelineStepCard key={code} step={s} readable>
             <DocumentStep
               doc={doc}
               locked={s.state === "zablokowany"}
@@ -452,6 +462,12 @@ const DOC_STATEMENTS: Record<string, Array<{ key: string; label: string }>> = {
   ],
 };
 
+/**
+ * Krok umowy: pełna treść jest ZAWSZE do wglądu (odblokowana), a podpis
+ * (checkboxy + „Podpisuję i akceptuję") pojawia się dopiero, gdy krok nie
+ * jest zablokowany i dokument jest aktywny. Kolejność podpisów i tak
+ * egzekwuje serwer (acceptLegalDocument).
+ */
 function DocumentStep({
   doc,
   locked,
@@ -465,17 +481,18 @@ function DocumentStep({
 }) {
   const fetchText = useServerFn(getLegalDocumentText);
   const accept = useServerFn(acceptLegalDocument);
-  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   // § 15 ust. 7: wszystkie pola startują PUSTE.
   const [confirmed, setConfirmed] = useState(false);
   const [statements, setStatements] = useState<Record<string, boolean>>({});
 
-  const { data: text } = useQuery({
+  const textQ = useQuery({
     queryKey: ["legal-doc-text", doc.code, doc.version],
     queryFn: () => fetchText({ data: { code: doc.code } }),
-    enabled: open,
     staleTime: Infinity,
   });
+  const text = textQ.data as { content_text?: string | null } | undefined;
+  const canSign = !locked && Boolean(doc.active);
 
   const stmts = DOC_STATEMENTS[doc.code] ?? [];
   const allStatements = stmts.every((s) => statements[s.key]);
@@ -503,26 +520,46 @@ function DocumentStep({
     );
   }
 
-  if (locked) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Dokument odblokuje się po ukończeniu wcześniejszych kroków pipeline'u.
-      </p>
-    );
-  }
-
   return (
     <div className="space-y-3">
       <ComparisonPreview investor={investor} />
-      {!open ? (
-        <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-          <FileText className="mr-2 h-4 w-4" /> Wyświetl pełną treść ({doc.version})
-        </Button>
+
+      {/* PODGLĄD TREŚCI — zawsze odblokowany, niezależnie od stanu pipeline'u. */}
+      <div className="rounded-xl border bg-muted/30">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            <FileText className="h-4 w-4 text-primary" /> Pełna treść umowy · wersja {doc.version}
+            {!doc.active ? (
+              <Badge variant="outline" className="font-normal">
+                wersja robocza
+              </Badge>
+            ) : null}
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => setExpanded((e) => !e)}>
+            {expanded ? "Zwiń" : "Rozwiń całość"}
+          </Button>
+        </div>
+        <div
+          className={`overflow-y-auto p-4 text-xs leading-relaxed whitespace-pre-wrap ${
+            expanded ? "max-h-[70vh]" : "max-h-72"
+          }`}
+        >
+          {textQ.isLoading
+            ? "Wczytywanie treści…"
+            : textQ.isError
+              ? "Nie udało się wczytać treści dokumentu."
+              : text?.content_text || "Dokument nie ma jeszcze treści w rejestrze."}
+        </div>
+      </div>
+
+      {!canSign ? (
+        <p className="text-sm text-muted-foreground">
+          {locked
+            ? "Podpis w formie dokumentowej będzie możliwy po ukończeniu wcześniejszych kroków pipeline'u (dane pożyczkodawcy, rachunek, KYC, screening, doręczenie i wcześniejsze umowy). Treść możesz przeczytać już teraz."
+            : "Podpis będzie możliwy po aktywacji pakietu dokumentów przez kancelarię."}
+        </p>
       ) : (
         <>
-          <div className="max-h-96 overflow-y-auto rounded-xl border bg-muted/30 p-4 text-xs leading-relaxed whitespace-pre-wrap">
-            {(text as any)?.content_text ?? "Wczytywanie treści…"}
-          </div>
           <div className="space-y-2">
             {stmts.map((s) => (
               <div key={s.key} className="flex items-start gap-2">

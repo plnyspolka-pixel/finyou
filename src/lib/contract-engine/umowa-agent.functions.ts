@@ -23,6 +23,8 @@ import { formatuj } from "./formatter";
 import { generujKomplet, type KompletWynik } from "./komplet";
 import { KATALOG_SCHEMATU } from "./umowa-schema-catalog";
 import { zapiszUmoweDocx } from "./umowa-storage.server";
+import { kalkulacjaDoSzkicu, wyglądaJakKalkulacja } from "./calc-to-umowa";
+import type { LoanCalcPayload } from "../loan-calc-pdf";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const GEMINI_PRO = "google/gemini-2.5-pro";
@@ -66,25 +68,34 @@ export interface UmowaAgentResult {
 
 export const sendUmowaAgentMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { messages: ChatMsg[]; umowa?: any }) => {
+  .inputValidator((d: { messages: ChatMsg[]; umowa?: any; calc?: LoanCalcPayload | null }) => {
     const messages = Array.isArray(d?.messages) ? d.messages.slice(-40) : [];
     const last = messages[messages.length - 1];
     if (!last || last.role !== "user" || !String(last.content ?? "").trim())
       throw new Error("Brak wiadomości użytkownika.");
     if (String(last.content).length > 6000) throw new Error("Wiadomość jest za długa.");
-    return { messages, umowa: d?.umowa ?? {} };
+    // Kalkulacja z kalkulatora („Wyślij do kreatora") — liczby wchodzą do
+    // szkicu deterministycznie, model ich nie przepisuje.
+    const calc = wyglądaJakKalkulacja(d?.calc) ? d.calc : null;
+    return { messages, umowa: d?.umowa ?? {}, calc };
   })
   .handler(async ({ data }): Promise<UmowaAgentResult> => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("Agent umowy jest chwilowo niedostępny.");
 
-    const szkic = data.umowa && typeof data.umowa === "object" ? structuredClone(data.umowa) : {};
+    let szkic = data.umowa && typeof data.umowa === "object" ? structuredClone(data.umowa) : {};
+    if (data.calc) szkic = scalPatch(szkic, kalkulacjaDoSzkicu(data.calc));
 
     // Stan szkicu + aktualne problemy walidacji — kontekst dla agenta.
     const { problemy: problemyPrzed } = przetworzSzkic(structuredClone(szkic));
     const stan =
       "AKTUALNY SZKIC DANYCH UMOWY (JSON):\n" +
       JSON.stringify(szkic).slice(0, 24000) +
+      (data.calc
+        ? "\n\nUWAGA: warunki finansowe i harmonogram rat zostały właśnie wpisane do szkicu " +
+          "wprost z kalkulatora (deterministycznie). NIE zmieniaj ich i nie przepisuj — potwierdź je " +
+          "w odpowiedzi i przejdź do stron umowy, nieruchomości (KW) i zabezpieczeń."
+        : "") +
       "\n\nAKTUALNE PROBLEMY WALIDATORA:\n" +
       (problemyPrzed.length
         ? problemyPrzed

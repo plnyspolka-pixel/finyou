@@ -199,6 +199,19 @@ export const analyzeWindDocument = createServerFn({ method: "POST" })
 // pożyczki, żeby nie trzeba było niczego przepisywać ręcznie.
 // ════════════════════════════════════════════════════════════════════
 
+/**
+ * Tabela opłat za czynności windykacyjne odczytana z umowy (zł). Brak
+ * kwoty = umowa nie określa opłaty; `brak_oplat` = umowa nie przewiduje
+ * żadnych opłat windykacyjnych.
+ */
+export interface WindContractFees {
+  sms: number | null;
+  email: number | null;
+  telefon: number | null;
+  pismo: number | null;
+  brak_oplat: boolean;
+}
+
 export interface WindContractData {
   reason: WindOcrResult["reason"];
   imie_nazwisko: string | null;
@@ -215,6 +228,12 @@ export interface WindContractData {
   prowizja: number | null;
   termin_splaty: string | null; // ISO yyyy-mm-dd
   numer_kw: string | null;
+  /** Oprocentowanie roczne kapitałowe (%), gdy umowa je podaje. */
+  oprocentowanie_roczne: number | null;
+  /** Odsetki za opóźnienie wg umowy (% rocznie), gdy umowa je podaje. */
+  odsetki_za_opoznienie: number | null;
+  /** Opłaty za czynności windykacyjne wg umowy — podstawa naliczania w rejestrze. */
+  oplaty_windykacyjne: WindContractFees | null;
   podsumowanie: string;
 }
 
@@ -234,9 +253,18 @@ const CONTRACT_USER_PROMPT = `To jest umowa pożyczki. Wyodrębnij dane i zwró�
   "prowizja": prowizja jako liczba albo null,
   "termin_splaty": ostateczny termin spłaty w formacie yyyy-mm-dd albo null,
   "numer_kw": numer księgi wieczystej (format AA1A/00000000/0) albo null,
+  "oprocentowanie_roczne": oprocentowanie kapitałowe w % rocznie jako liczba albo null,
+  "odsetki_za_opoznienie": odsetki za opóźnienie w % rocznie jako liczba (np. odsetki maksymalne za opóźnienie) albo null,
+  "oplaty_windykacyjne": {
+    "sms": opłata w zł za wysłanie SMS-a/monitu SMS albo null,
+    "email": opłata w zł za monit e-mail albo null,
+    "telefon": opłata w zł za telefoniczne wezwanie/monit albo null,
+    "pismo": opłata w zł za pisemne wezwanie do zapłaty (list polecony) albo null,
+    "brak_oplat": true, jeśli umowa WYRAŹNIE nie przewiduje opłat za czynności windykacyjne; w przeciwnym razie false
+  },
   "podsumowanie": jedno zdanie po polsku podsumowujące umowę
 }
-Pożyczkodawcą jest firma (np. Finance You) — NIE wpisuj jej jako pożyczkobiorcy. Kwoty bez waluty i spacji. Jeśli czegoś nie ma — null. Zwróć wyłącznie JSON.`;
+Pożyczkodawcą jest firma (np. Finance You) — NIE wpisuj jej jako pożyczkobiorcy. Kwoty bez waluty i spacji. Opłaty windykacyjne bierz z tabeli opłat / paragrafu o kosztach windykacji; nie wymyślaj ich — jeśli umowa ich nie podaje, wpisz null. Jeśli czegoś nie ma — null. Zwróć wyłącznie JSON.`;
 
 function str(v: unknown, max = 200): string | null {
   return typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
@@ -259,8 +287,27 @@ function emptyContract(reason: WindOcrResult["reason"]): WindContractData {
     prowizja: null,
     termin_splaty: null,
     numer_kw: null,
+    oprocentowanie_roczne: null,
+    odsetki_za_opoznienie: null,
+    oplaty_windykacyjne: null,
     podsumowanie: "",
   };
+}
+
+/** Tabela opłat z odpowiedzi modelu → WindContractFees (null, gdy nic nie odczytano). */
+function parseContractFees(v: unknown): WindContractFees | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const fees: WindContractFees = {
+    sms: toNumber(o.sms),
+    email: toNumber(o.email),
+    telefon: toNumber(o.telefon),
+    pismo: toNumber(o.pismo),
+    brak_oplat: o.brak_oplat === true,
+  };
+  const any =
+    fees.brak_oplat || [fees.sms, fees.email, fees.telefon, fees.pismo].some((x) => x != null);
+  return any ? fees : null;
 }
 
 export const analyzeWindContract = createServerFn({ method: "POST" })
@@ -339,6 +386,9 @@ export const analyzeWindContract = createServerFn({ method: "POST" })
         prowizja: toNumber(p.prowizja),
         termin_splaty: toIsoDate(p.termin_splaty),
         numer_kw: str(p.numer_kw, 40),
+        oprocentowanie_roczne: toNumber(p.oprocentowanie_roczne),
+        odsetki_za_opoznienie: toNumber(p.odsetki_za_opoznienie),
+        oplaty_windykacyjne: parseContractFees(p.oplaty_windykacyjne),
         podsumowanie: typeof p.podsumowanie === "string" ? p.podsumowanie.slice(0, 500) : "",
       };
     } catch {
