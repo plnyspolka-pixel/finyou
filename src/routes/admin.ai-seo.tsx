@@ -24,6 +24,10 @@ import {
   EyeOff,
   FileText,
   Lightbulb,
+  Search,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from "lucide-react";
 import {
   planSeoTopics,
@@ -32,6 +36,9 @@ import {
   deleteSeoArticle,
   deleteSeoTopic,
 } from "@/lib/ai-seo.functions";
+import { getSearchOverview } from "@/lib/google-search.functions";
+import { Link } from "@tanstack/react-router";
+import { Area, AreaChart, ResponsiveContainer, Tooltip as RTooltip, XAxis } from "recharts";
 
 export const Route = createFileRoute("/admin/ai-seo")({
   component: SeoEnginePage,
@@ -53,6 +60,7 @@ function SeoEnginePage() {
         <TopicPlanner />
         <ArticlesSummary />
       </div>
+      <SearchPerformanceCard />
       <TopicsList />
       <ArticlesList />
     </div>
@@ -156,6 +164,152 @@ function ArticlesSummary() {
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+/** Skrót z Google Search Console: wejścia z wyszukiwarki i pozycje najlepszych fraz.
+ *  Pełny raport z wykresami zmian w czasie: /admin/google-search. */
+function SearchPerformanceCard() {
+  const load = useServerFn(getSearchOverview);
+  const [data, setData] = useState<any | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    load({ data: { days: 28, chart_queries: 0, table_limit: 5, with_ga4: false } })
+      .then((r) => {
+        if (!cancelled) {
+          setData(r);
+          setState("ready");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
+
+  if (state === "loading") return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              Ruch z Google (28 dni)
+            </CardTitle>
+            <CardDescription>
+              Wejścia na stronę i pozycje najpopularniejszych fraz z Search Console.
+            </CardDescription>
+          </div>
+          <Link to="/admin/google-search">
+            <Button variant="outline" size="sm">
+              Pełny raport i wykresy
+            </Button>
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {state === "error" || !data ? (
+          <p className="text-sm text-muted-foreground">
+            Brak danych z Search Console — sprawdź połączenie z Google w zakładce{" "}
+            <Link to="/admin/google-search" className="underline">
+              Google Search
+            </Link>
+            .
+          </p>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div>
+              <div className="flex items-baseline gap-3">
+                <span className="text-2xl font-bold tabular-nums">
+                  {new Intl.NumberFormat("pl-PL").format(data.totals.clicks)}
+                </span>
+                <span className="text-xs text-muted-foreground">wejść z wyszukiwarki</span>
+                <SeoDelta value={data.change.clicks_pct} suffix="%" />
+              </div>
+              <div className="h-28 mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={data.series} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="seo-clicks" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2a78d6" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="#2a78d6" stopOpacity={0.03} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`}
+                      tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                      stroke="var(--border)"
+                      minTickGap={28}
+                    />
+                    <RTooltip
+                      formatter={(v: any) => [v, "Wejścia"]}
+                      labelFormatter={(d: any) =>
+                        `${String(d).slice(8, 10)}.${String(d).slice(5, 7)}.${String(d).slice(0, 4)}`
+                      }
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="clicks"
+                      stroke="#2a78d6"
+                      strokeWidth={2}
+                      fill="url(#seo-clicks)"
+                      dot={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-xs text-muted-foreground">
+                Najpopularniejsze frazy — pozycja i zmiana względem poprzednich 28 dni
+              </div>
+              {data.queries.slice(0, 5).map((q: any) => (
+                <div key={q.query} className="flex items-center gap-3 text-sm">
+                  <span className="truncate flex-1" title={q.query}>
+                    {q.query}
+                  </span>
+                  <Badge variant="outline" className="tabular-nums shrink-0">
+                    poz. {q.position.toFixed(1)}
+                  </Badge>
+                  <span className="w-24 shrink-0 text-right">
+                    <SeoDelta value={q.position_change} suffix=" poz." />
+                  </span>
+                </div>
+              ))}
+              {data.queries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Brak fraz w tym okresie.</p>
+              ) : null}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Dodatnia wartość = lepiej (dla pozycji: awans w wynikach). */
+function SeoDelta({ value, suffix = "" }: { value: number | null; suffix?: string }) {
+  if (value == null) return <span className="text-xs text-muted-foreground">—</span>;
+  const flat = Math.abs(value) < 0.05;
+  const up = value > 0;
+  const Icon = flat ? Minus : up ? TrendingUp : TrendingDown;
+  const cls = flat
+    ? "text-muted-foreground"
+    : up
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-destructive";
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-medium ${cls}`}>
+      <Icon className="h-3 w-3" />
+      {flat ? "bez zmian" : `${up ? "+" : ""}${value.toFixed(1)}${suffix}`}
+    </span>
   );
 }
 
