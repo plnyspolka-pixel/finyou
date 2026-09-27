@@ -186,6 +186,11 @@ type Props = {
   clientEmail?: string | null;
   /** Nazwa/nazwisko klienta (nagłówek harmonogramu i maila). */
   clientName?: string | null;
+  /**
+   * Po „Wyślij do kreatora": rodzic otwiera kreator umowy, a harmonogram
+   * (zapisany w handoffie) staje się pierwszą wiadomością rozmowy z agentem.
+   */
+  onSentToCreator?: () => void;
 };
 
 /** Tooltip ze słowniczkiem przy etykiecie pola. */
@@ -222,6 +227,7 @@ export function LoanCalculator({
   hideAccountActions = false,
   clientEmail = null,
   clientName = null,
+  onSentToCreator,
 }: Props) {
   const fetchRates = useServerFn(getNbpRates);
   const ratesQ = useQuery({
@@ -681,9 +687,20 @@ export function LoanCalculator({
     };
   }
 
-  /** Przekazuje kalkulację do Kreatora dokumentów w aplikacji (bez pliku). */
+  /**
+   * Przekazuje kalkulację do kreatora w aplikacji (bez pliku). Gdy rodzic
+   * podał `onSentToCreator`, otwiera kreator umowy — harmonogram jest tam
+   * pierwszą wiadomością rozpoczynającą rozmowę z agentem umowy.
+   */
   function sendCalcToCreator() {
     saveCalcHandoff(buildCalcPayload());
+    if (onSentToCreator) {
+      toast.success("Harmonogram wysłany do kreatora umowy", {
+        description: "Otwieram kreator — harmonogram spłat rozpoczyna rozmowę z agentem umowy.",
+      });
+      onSentToCreator();
+      return;
+    }
     toast.success("Kalkulacja przekazana do kreatorów", {
       description: "Otwórz Kreator dokumentów i kliknij „Wczytaj z kalkulatora”.",
     });

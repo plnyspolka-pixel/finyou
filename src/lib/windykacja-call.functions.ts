@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
+import { normalizeWindFeeTable, windFeeForAction } from "@/lib/windykacja-fees";
 
 // ════════════════════════════════════════════════════════════════════
 // TELEFON WINDYKACYJNY Z SYSTEMU — agent ElevenLabs dzwoniący w imieniu
@@ -121,8 +122,9 @@ export const placeWindCollectionCall = createServerFn({ method: "POST" })
         caseId: z.string().uuid(),
         telefon: z.string().min(6, "Podaj numer telefonu"),
         /** Kwota zaległości do zakomunikowania (domyślnie wyliczenie z systemu). */
-        kwota: z.coerce.number().min(0),
-        oplata: z.coerce.number().min(0).default(0),
+        kwota: z.coerce.number().min(0).default(0),
+        /** Brak = opłata za telefon zgodnie z tabelą opłat z umowy (albo domyślna). */
+        oplata: z.coerce.number().min(0).nullable().optional(),
       })
       .parse(d),
   )
@@ -133,7 +135,7 @@ export const placeWindCollectionCall = createServerFn({ method: "POST" })
     const { data: kase, error: cErr } = await db
       .from("wind_collection_cases")
       .select(
-        "id, kwota_zalegla, loan:wind_loans(numer_umowy, borrower:wind_borrowers(imie_nazwisko, telefon))",
+        "id, kwota_zalegla, loan:wind_loans(numer_umowy, oplaty_windykacyjne, borrower:wind_borrowers(imie_nazwisko, telefon))",
       )
       .eq("id", data.caseId)
       .maybeSingle();
@@ -142,8 +144,15 @@ export const placeWindCollectionCall = createServerFn({ method: "POST" })
 
     const loan = kase.loan as {
       numer_umowy: string | null;
+      oplaty_windykacyjne: unknown;
       borrower: { imie_nazwisko: string; telefon: string | null } | null;
     } | null;
+
+    // Opłata za telefon windykacyjny — zgodnie z umową pożyczki tej sprawy.
+    const oplata =
+      data.oplata != null
+        ? Math.max(0, data.oplata)
+        : windFeeForAction(normalizeWindFeeTable(loan?.oplaty_windykacyjne), "telefon").fee;
 
     // Imię i nazwisko inwestora, w którego imieniu dzwoni agent.
     const s = admin();
@@ -198,7 +207,7 @@ export const placeWindCollectionCall = createServerFn({ method: "POST" })
           ok: res.ok,
           error: res.error ?? null,
         },
-        oplata: res.ok ? data.oplata : 0,
+        oplata: res.ok ? oplata : 0,
         autor: context.claims?.email ?? null,
       })
       .select(

@@ -50,6 +50,13 @@
       "when": 1790533137746,
       "tag": "0006_x_publikacja",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790619537746,
+      "tag": "0007_wind_oplaty_umowne",
+      "breakpoints": true
     }
   ]
 }

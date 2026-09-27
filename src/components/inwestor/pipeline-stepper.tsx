@@ -106,15 +106,23 @@ export function PipelineStepCard({
   step,
   children,
   action,
+  readable = false,
 }: {
   step: PipelineStep;
   children: ReactNode;
   /** Skrót akcji w nagłówku (np. przycisk „Uruchom ponownie"). */
   action?: ReactNode;
+  /**
+   * Krok „do wglądu": treść (np. umowy) jest odblokowana i czytelna zawsze,
+   * a blokada dotyczy wyłącznie podpisu. Karta nie jest wtedy wyszarzona ani
+   * oznaczona kłódką — pokazuje odznakę „Do wglądu".
+   */
+  readable?: boolean;
 }) {
   const done = step.state === "zrobione";
   const current = step.state === "biezacy";
-  const blocked = step.state === "zablokowany";
+  const blocked = step.state === "zablokowany" && !readable;
+  const readableBlocked = step.state === "zablokowany" && readable;
   const attention = step.state === "uwaga";
 
   const hue = attention ? 25 : step.hue;
@@ -184,7 +192,7 @@ export function PipelineStepCard({
               color: attention ? "oklch(0.45 0.18 25)" : accent(hue, 0.38, 0.13),
             }}
           >
-            {STATE_BADGE[step.state]}
+            {readableBlocked ? "Do wglądu" : STATE_BADGE[step.state]}
           </span>
         </div>
       </header>
