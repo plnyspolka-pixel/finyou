@@ -11773,6 +11773,96 @@ export type Database = {
         }
         Relationships: []
       }
+      studio_broll_assets: {
+        Row: {
+          active: boolean
+          attribution: string
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          last_used_at: string | null
+          media_url: string
+          orientation: string | null
+          source: string
+          source_query: string
+          storage_path: string | null
+          tags: string[]
+          title: string
+          updated_at: string
+          use_count: number
+        }
+        Insert: {
+          active?: boolean
+          attribution?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          last_used_at?: string | null
+          media_url: string
+          orientation?: string | null
+          source?: string
+          source_query?: string
+          storage_path?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          use_count?: number
+        }
+        Update: {
+          active?: boolean
+          attribution?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          last_used_at?: string | null
+          media_url?: string
+          orientation?: string | null
+          source?: string
+          source_query?: string
+          storage_path?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          use_count?: number
+        }
+        Relationships: []
+      }
+      studio_default_avatars: {
+        Row: {
+          avatar_id: string
+          created_at: string
+          created_by: string | null
+          kind: string
+          name: string
+          position: number
+          preview: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_id: string
+          created_at?: string
+          created_by?: string | null
+          kind?: string
+          name?: string
+          position?: number
+          preview?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_id?: string
+          created_at?: string
+          created_by?: string | null
+          kind?: string
+          name?: string
+          position?: number
+          preview?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       studio_images: {
         Row: {
           created_at: string
@@ -11806,6 +11896,7 @@ export type Database = {
           auto_publish_platforms: string[]
           auto_published_at: string | null
           avatar_id: string
+          avatar_ids: string[]
           background_color: string
           caption_wait_since: string | null
           captions: boolean
@@ -11819,6 +11910,7 @@ export type Database = {
           publish_description: string
           publish_privacy: string
           publish_title: string
+          reel_structure: boolean
           render_engine: string
           resolution: string
           scene_plan: Json | null
@@ -11837,6 +11929,7 @@ export type Database = {
           auto_publish_platforms?: string[]
           auto_published_at?: string | null
           avatar_id: string
+          avatar_ids?: string[]
           background_color?: string
           caption_wait_since?: string | null
           captions?: boolean
@@ -11850,6 +11943,7 @@ export type Database = {
           publish_description?: string
           publish_privacy?: string
           publish_title?: string
+          reel_structure?: boolean
           render_engine?: string
           resolution?: string
           scene_plan?: Json | null
@@ -11868,6 +11962,7 @@ export type Database = {
           auto_publish_platforms?: string[]
           auto_published_at?: string | null
           avatar_id?: string
+          avatar_ids?: string[]
           background_color?: string
           caption_wait_since?: string | null
           captions?: boolean
@@ -11881,6 +11976,7 @@ export type Database = {
           publish_description?: string
           publish_privacy?: string
           publish_title?: string
+          reel_structure?: boolean
           render_engine?: string
           resolution?: string
           scene_plan?: Json | null

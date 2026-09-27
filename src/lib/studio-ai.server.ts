@@ -110,6 +110,42 @@ Zwracaj WYŁĄCZNIE JSON: {"scenes":[{"index":1,"query":"signing mortgage contra
   return out;
 }
 
+// Tryb „struktura rolki": miejsca cięć są z góry ustalone (ujęcie → wizual
+// hook → przebitka → a-roll innego awatara), więc AI nie decyduje już GDZIE
+// ciąć — dostaje konkretne indeksy segmentów i oddaje wyłącznie frazę
+// wyszukiwania dla każdego z nich. Brak odpowiedzi nie psuje montażu: render
+// weźmie wtedy materiał z banku po prostu najdawniej użyty.
+export async function planBrollQueries(args: {
+  segments: string[];
+  indices: number[];
+  topic: string;
+}): Promise<Map<number, string>> {
+  const out = new Map<number, string>();
+  if (!args.indices.length) return out;
+  const numbered = args.segments.map((s, i) => `${i}. ${s}`).join("\n");
+
+  const parsed = await chatJson(
+    `Jesteś montażystą krótkich pionowych wideo (Shorts/Reels) firmy finansowej. ${BRAND_CONTEXT}
+Dostajesz ponumerowane segmenty tekstu lektora oraz listę indeksów, w których montaż WYMAGA przebitki (decyzja jest już podjęta — nie oceniasz jej).
+Dla KAŻDEGO wskazanego indeksu podaj frazę do biblioteki materiałów po ANGIELSKU: 2-4 słowa, konkret ilustrujący to, co lektor mówi w tym segmencie (np. "signing mortgage contract", "apartment building exterior"), bez nazw marek i bez twarzy w kadrze.
+
+Zwracaj WYŁĄCZNIE JSON: {"scenes":[{"index":1,"query":"signing mortgage contract"}]}`,
+    `Temat odcinka: ${args.topic}\n\nSegmenty:\n${numbered}\n\nIndeksy do zilustrowania: ${args.indices.join(", ")}`,
+  );
+
+  const raw = Array.isArray(parsed.scenes) ? parsed.scenes : [];
+  const wanted = new Set(args.indices);
+  for (const entry of raw) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const e = entry as { index?: unknown; query?: unknown };
+    const index = typeof e.index === "number" ? e.index : Number.NaN;
+    const query = typeof e.query === "string" ? e.query.trim() : "";
+    if (!Number.isInteger(index) || !wanted.has(index) || !query) continue;
+    out.set(index, query);
+  }
+  return out;
+}
+
 export type StudioPromptKind = "video" | "image" | "social";
 
 export async function generatePromptIdeas(args: {
