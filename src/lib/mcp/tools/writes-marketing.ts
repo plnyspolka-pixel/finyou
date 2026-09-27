@@ -308,14 +308,18 @@ export const createSocialPost = defineTool({
 
 export const queueSocialPublication = defineTool({
   name: "queue_social_publication",
-  title: "Queue automatic publication (Facebook / Instagram / TikTok)",
+  title: "Queue automatic publication (Facebook / Instagram / TikTok / X)",
   description:
-    "Dodaje wpis do kolejki automatycznej publikacji (facebook_post, facebook_reels, instagram_reels, tiktok) — tick opublikuje go o zadanej porze bez dalszego udziału człowieka. To realna publikacja na profilu firmy. TikTok wymaga połączonego konta (panel → Studio publikacji → Połącz TikTok) i pionowego MP4. Tylko administrator/operator.",
+    "Dodaje wpis do kolejki automatycznej publikacji (facebook_post, facebook_reels, instagram_reels, tiktok, x) — tick opublikuje go o zadanej porze bez dalszego udziału człowieka. To realna publikacja na profilu firmy. TikTok wymaga połączonego konta (panel → Studio publikacji → Połącz TikTok) i pionowego MP4. X wymaga połączonego konta (panel → Ustawienia → Połącz X); publikuje sam tekst, opcjonalnie z grafiką albo wideo, a treść dłuższą niż limit konta przycinamy przed wysyłką. Tylko administrator/operator.",
   inputSchema: {
-    platform: z.enum(["facebook_post", "facebook_reels", "instagram_reels", "tiktok"]),
+    platform: z.enum(["facebook_post", "facebook_reels", "instagram_reels", "tiktok", "x"]),
     title: z.string().min(1).max(200),
     message: z.string().min(1).max(5000),
-    image_url: z.string().url().optional().describe("Wymagane dla facebook_post bez wideo."),
+    image_url: z
+      .string()
+      .url()
+      .optional()
+      .describe("Wymagane dla facebook_post bez wideo; na X opcjonalne."),
     video_url: z.string().url().optional().describe("Wymagane dla reels."),
     scheduled_at: z.string().describe("Kiedy opublikować (ISO 8601)."),
   },
@@ -323,7 +327,8 @@ export const queueSocialPublication = defineTool({
   handler: (a, ctx: ToolContext) =>
     handle(async () => {
       const s = await requireTeamAdmin(ctx);
-      if (a.platform !== "facebook_post" && !a.video_url)
+      // X, jak post na FB, publikuje też sam tekst — reszta to wideo.
+      if (a.platform !== "facebook_post" && a.platform !== "x" && !a.video_url)
         return fail("Reels i TikTok wymagają video_url.");
       if (a.platform === "facebook_post" && !a.image_url && !a.video_url)
         return fail("Post na Facebooku wymaga image_url albo video_url.");
@@ -334,7 +339,9 @@ export const queueSocialPublication = defineTool({
           platform: a.platform,
           title: a.title,
           message: a.message,
-          image_url: a.platform === "facebook_post" ? (a.image_url ?? null) : null,
+          // Grafikę niosą tylko platformy, które ją publikują: post FB i X.
+          image_url:
+            a.platform === "facebook_post" || a.platform === "x" ? (a.image_url ?? null) : null,
           video_url: a.video_url ?? null,
           scheduled_at: isoDate(a.scheduled_at, "scheduled_at"),
           created_by: actorId(ctx),

@@ -26,6 +26,8 @@ export type StudioStatus = {
   instagramConfigured: boolean;
   tiktokConfigured: boolean;
   tiktokConnected: boolean;
+  xConfigured: boolean;
+  xConnected: boolean;
   heygenConfigured: boolean;
   elevenlabsConfigured: boolean;
   aiConfigured: boolean;
@@ -38,6 +40,7 @@ export const getStudioStatus = createServerFn({ method: "GET" })
     const { getIntegrationRow } = await import("./youtube-shorts.server");
     const { getMetaPublishEnv } = await import("./studio-publishing.server");
     const tiktok = await import("./tiktok.server");
+    const x = await import("./x.server");
     const meta = getMetaPublishEnv();
     let youtubeConnected = false;
     try {
@@ -51,12 +54,20 @@ export const getStudioStatus = createServerFn({ method: "GET" })
     } catch {
       // Brak tabeli/tokenu nie blokuje panelu.
     }
+    let xConnected = false;
+    try {
+      xConnected = !!(await x.getIntegrationRow()).refresh_token;
+    } catch {
+      // Brak tabeli/tokenu nie blokuje panelu.
+    }
     return {
       youtubeConnected,
       facebookConfigured: meta.facebookConfigured,
       instagramConfigured: meta.instagramConfigured,
       tiktokConfigured: tiktok.getTiktokEnv().configured,
       tiktokConnected,
+      xConfigured: x.getXEnv().configured,
+      xConnected,
       heygenConfigured: !!process.env.HEYGEN_API_KEY,
       elevenlabsConfigured: !!process.env.ELEVENLABS_API_KEY,
       aiConfigured: !!process.env.LOVABLE_API_KEY,
@@ -70,7 +81,8 @@ export type StudioPlatform =
   | "facebook_post"
   | "facebook_reels"
   | "instagram_reels"
-  | "tiktok";
+  | "tiktok"
+  | "x";
 
 export type SocialQueueItem = {
   id: string;
@@ -86,6 +98,8 @@ export type SocialQueueItem = {
   tiktok_publish_id: string | null;
   tiktok_status: string | null;
   tiktok_fail_reason: string | null;
+  x_media_id: string | null;
+  x_media_status: string | null;
   last_error: string | null;
   published_at: string | null;
   created_at: string;
@@ -99,7 +113,7 @@ export const listSocialQueue = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin
       .from("social_publish_queue")
       .select(
-        "id, platform, title, message, video_url, image_url, scheduled_at, status, attempt_count, external_post_id, tiktok_publish_id, tiktok_status, tiktok_fail_reason, last_error, published_at, created_at",
+        "id, platform, title, message, video_url, image_url, scheduled_at, status, attempt_count, external_post_id, tiktok_publish_id, tiktok_status, tiktok_fail_reason, x_media_id, x_media_status, last_error, published_at, created_at",
       )
       .order("created_at", { ascending: false })
       .limit(200);
@@ -137,7 +151,8 @@ export const enqueueStudioPublish = createServerFn({ method: "POST" })
       if (url && !/^https:\/\//.test(url))
         throw new Error("URL mediów musi zaczynać się od https://");
     }
-    const needsVideo = data.platforms.filter((p) => p !== "facebook_post");
+    // X, jak post na FB, publikuje też sam tekst — reszta platform to wideo.
+    const needsVideo = data.platforms.filter((p) => p !== "facebook_post" && p !== "x");
     if (needsVideo.length && !videoUrl) {
       throw new Error("Publikacja wideo (YouTube/Reels/TikTok) wymaga URL pliku MP4.");
     }
@@ -158,6 +173,10 @@ export const enqueueStudioPublish = createServerFn({ method: "POST" })
     if (data.platforms.includes("facebook_post") && !message && !imageUrl && !videoUrl) {
       throw new Error("Post na Facebooku wymaga treści lub mediów.");
     }
+    // X wymaga tekstu zawsze — sam materiał bez treści to na X pusty post.
+    if (data.platforms.includes("x") && !message && !title) {
+      throw new Error("Post na X wymaga treści (lub tytułu, który ją zastąpi).");
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const scheduledAt = data.scheduled_at ?? new Date().toISOString();
@@ -174,7 +193,7 @@ export const enqueueStudioPublish = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
     }
 
-    // Meta i TikTok dzielą kolejkę social_publish_queue (różni je `platform`).
+    // Meta, TikTok i X dzielą kolejkę social_publish_queue (różni je `platform`).
     const queuePlatforms = data.platforms.filter(
       (p): p is Exclude<StudioPlatform, "youtube"> => p !== "youtube",
     );
@@ -184,7 +203,8 @@ export const enqueueStudioPublish = createServerFn({ method: "POST" })
         title,
         message,
         video_url: videoUrl,
-        image_url: platform === "facebook_post" ? imageUrl : null,
+        // Grafikę niosą tylko platformy, które ją publikują: post FB i X.
+        image_url: platform === "facebook_post" || platform === "x" ? imageUrl : null,
         scheduled_at: scheduledAt,
         created_by: context.userId,
         ...(platform === "tiktok" ? { tiktok_post_options: tiktokOptions as never } : {}),
@@ -235,7 +255,8 @@ export const retrySocialQueueItem = createServerFn({ method: "POST" })
     // wyczerpanym licznikiem wracał do kolejki tylko po to, żeby od razu
     // paść). Kontener IG zostaje — jeśli żyje, dokończymy publikację z niego.
     // TikTok odwrotnie: publish_id jest jednorazowy, więc czyścimy go razem
-    // z tiktok_status (tick szuka wpisów z tiktok_status IS NULL).
+    // z tiktok_status (tick szuka wpisów z tiktok_status IS NULL). Tak samo X:
+    // media_id wygasa, a tick X-a szuka wpisów z x_media_status IS NULL.
     const { error } = await supabaseAdmin
       .from("social_publish_queue")
       .update({
@@ -247,6 +268,9 @@ export const retrySocialQueueItem = createServerFn({ method: "POST" })
         tiktok_status: null,
         tiktok_fail_reason: null,
         tiktok_upload_at: null,
+        x_media_id: null,
+        x_media_status: null,
+        x_media_at: null,
       })
       .eq("id", data.id)
       .in("status", ["failed", "cancelled", "processing"]);
@@ -270,6 +294,12 @@ export const publishSocialQueueItemNow = createServerFn({ method: "POST" })
     if (row.platform === "tiktok") {
       const { processTiktokQueueItem } = await import("./tiktok.server");
       const result = await processTiktokQueueItem(data.id);
+      if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
+      return { ok: true, processing: !!result.processing };
+    }
+    if (row.platform === "x") {
+      const { processXQueueItem } = await import("./x.server");
+      const result = await processXQueueItem(data.id);
       if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
       return { ok: true, processing: !!result.processing };
     }

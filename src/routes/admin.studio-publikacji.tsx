@@ -37,6 +37,7 @@ import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.fu
 import { getTiktokIntegrationStatus, getTiktokCreatorInfo } from "@/lib/tiktok.functions";
 import { TiktokPostOptionsFields } from "@/components/admin/tiktok-post-options-fields";
 import { TiktokConnectionCard } from "@/components/admin/tiktok-connection-card";
+import { XConnectionCard } from "@/components/admin/x-connection-card";
 import {
   EMPTY_TIKTOK_OPTIONS,
   tiktokOptionsError,
@@ -84,6 +85,7 @@ import {
   Play,
   Maximize2,
   Music2,
+  Twitter,
   Unplug,
 } from "lucide-react";
 
@@ -101,6 +103,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   facebook_reels: "Facebook Reels",
   instagram_reels: "Instagram Reels",
   tiktok: "TikTok",
+  x: "Post na X",
 };
 
 // Zgodne z MAX_ATTEMPTS w src/lib/studio-publishing.server.ts — chwilowe błędy
@@ -137,6 +140,7 @@ const AUTO_PLATFORM_SHORT: Record<string, string> = {
   instagram_reels: "IG Reels",
   facebook_post: "Post FB",
   tiktok: "TikTok",
+  x: "X",
 };
 
 // Etapy TikTok Content Posting API (kolumna tiktok_status w kolejce).
@@ -151,11 +155,27 @@ const TIKTOK_STATUS_LABELS: Record<
   failed: { label: "TikTok: błąd", variant: "destructive" },
 };
 
+// Etapy uploadu mediów na X (kolumna x_media_status w kolejce). Post czysto
+// tekstowy przechodzi przez nie w jednym ticku i nigdy nie zatrzymuje się
+// na 'processing' — tam czeka tylko wideo transkodowane po stronie X-a.
+const X_MEDIA_STATUS_LABELS: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
+  pending: { label: "X: start", variant: "secondary" },
+  uploading: { label: "X: wysyłanie materiału…", variant: "outline" },
+  processing: { label: "X: przetwarzanie materiału…", variant: "outline" },
+  ready: { label: "X: materiał gotowy", variant: "default" },
+  failed: { label: "X: błąd", variant: "destructive" },
+};
+
 function externalUrl(platform: string, externalId: string | null): string | null {
   if (!externalId) return null;
   if (platform === "facebook_post" || platform === "facebook_reels") {
     return `https://www.facebook.com/${externalId}`;
   }
+  // /i/web/status/<id> działa bez znajomości @handle autora.
+  if (platform === "x") return `https://x.com/i/web/status/${externalId}`;
   return null;
 }
 
@@ -625,7 +645,8 @@ function StudioPage() {
     toast.success("Grafika podstawiona do posta na Facebooku");
   };
 
-  const needsVideo = platforms.some((p) => p !== "facebook_post");
+  // X i post na FB publikują też sam tekst — reszta platform to wideo.
+  const needsVideo = platforms.some((p) => p !== "facebook_post" && p !== "x");
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -650,6 +671,14 @@ function StudioPage() {
             {status.tiktokConnected
               ? "połączony"
               : status.tiktokConfigured
+                ? "niepołączony"
+                : "brak konfiguracji"}
+          </Badge>
+          <Badge variant={status.xConnected ? "default" : "outline"}>
+            X{" "}
+            {status.xConnected
+              ? "połączony"
+              : status.xConfigured
                 ? "niepołączony"
                 : "brak konfiguracji"}
           </Badge>
@@ -682,9 +711,10 @@ function StudioPage() {
 
         {/* ── PUBLIKACJA ─────────────────────────────────────────────────── */}
         <TabsContent value="publikacja" className="space-y-6">
-          {/* Połączenie konta TikTok — ten sam komponent renderuje się
+          {/* Połączenia kont TikTok i X — te same komponenty renderują się
               w /admin/ustawienia, więc obie strony pokazują jeden stan. */}
           <TiktokConnectionCard />
+          <XConnectionCard />
 
           <Card>
             <CardHeader>
@@ -699,6 +729,7 @@ function StudioPage() {
                     "facebook_reels",
                     "tiktok",
                     "facebook_post",
+                    "x",
                   ] as const
                 ).map((p) => (
                   <label key={p} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -707,6 +738,7 @@ function StudioPage() {
                       onCheckedChange={() => togglePlatform(p)}
                     />
                     {p === "tiktok" && <Music2 className="h-4 w-4" />}
+                    {p === "x" && <Twitter className="h-4 w-4" />}
                     {PLATFORM_LABELS[p]}
                   </label>
                 ))}
@@ -943,6 +975,15 @@ function StudioPage() {
                                   </Badge>
                                 );
                               })()}
+                            {item.platform === "x" &&
+                              item.x_media_status &&
+                              (() => {
+                                const xs = X_MEDIA_STATUS_LABELS[item.x_media_status] ?? {
+                                  label: `X: ${item.x_media_status}`,
+                                  variant: "outline" as const,
+                                };
+                                return <Badge variant={xs.variant}>{xs.label}</Badge>;
+                              })()}
                           </div>
                           {item.platform === "tiktok" && item.tiktok_fail_reason && (
                             <p className="break-words text-xs text-destructive">
@@ -1172,7 +1213,7 @@ function StudioPage() {
               {autoPublishOn ? (
                 <>
                   <div className="flex flex-wrap gap-4">
-                    {(["youtube", "instagram_reels", "facebook_reels", "tiktok"] as const).map(
+                    {(["youtube", "instagram_reels", "facebook_reels", "tiktok", "x"] as const).map(
                       (p) => (
                         <label key={p} className="flex cursor-pointer items-center gap-2 text-sm">
                           <Checkbox
@@ -1180,6 +1221,7 @@ function StudioPage() {
                             onCheckedChange={() => toggleAutoPlatform(p)}
                           />
                           {p === "tiktok" && <Music2 className="h-4 w-4" />}
+                          {p === "x" && <Twitter className="h-4 w-4" />}
                           {PLATFORM_LABELS[p]}
                         </label>
                       ),
