@@ -7421,8 +7421,8 @@
       },
       {
         "name": "queue_social_publication",
-        "title": "Queue automatic publication (Facebook / Instagram / TikTok)",
-        "description": "Dodaje wpis do kolejki automatycznej publikacji (facebook_post, facebook_reels, instagram_reels, tiktok) — tick opublikuje go o zadanej porze bez dalszego udziału człowieka. To realna publikacja na profilu firmy. TikTok wymaga połączonego konta (panel → Studio publikacji → Połącz TikTok) i pionowego MP4. Tylko administrator/operator.",
+        "title": "Queue automatic publication (Facebook / Instagram / TikTok / X)",
+        "description": "Dodaje wpis do kolejki automatycznej publikacji (facebook_post, facebook_reels, instagram_reels, tiktok, x) — tick opublikuje go o zadanej porze bez dalszego udziału człowieka. To realna publikacja na profilu firmy. TikTok wymaga połączonego konta (panel → Studio publikacji → Połącz TikTok) i pionowego MP4. X wymaga połączonego konta (panel → Ustawienia → Połącz X); publikuje sam tekst, opcjonalnie z grafiką albo wideo, a treść dłuższą niż limit konta przycinamy przed wysyłką. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -7438,7 +7438,8 @@
                 "facebook_post",
                 "facebook_reels",
                 "instagram_reels",
-                "tiktok"
+                "tiktok",
+                "x"
               ]
             },
             "title": {
@@ -7454,7 +7455,7 @@
             "image_url": {
               "type": "string",
               "format": "uri",
-              "description": "Wymagane dla facebook_post bez wideo."
+              "description": "Wymagane dla facebook_post bez wideo; na X opcjonalne."
             },
             "video_url": {
               "type": "string",

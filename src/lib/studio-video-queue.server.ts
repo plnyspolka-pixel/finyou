@@ -27,6 +27,8 @@ type JobRow = {
   captions: boolean;
   caption_wait_since: string | null;
   dynamic_scenes: boolean;
+  reel_structure: boolean;
+  avatar_ids: string[];
   auto_publish_platforms: string[];
   publish_privacy: string;
   tiktok_post_options: unknown;
@@ -125,6 +127,11 @@ async function processClaimedJob(job: JobRow): Promise<void> {
 
   await supabaseAdmin.from("studio_video_jobs").update({ status: "uploading" }).eq("id", job.id);
 
+  // Rotacja a-rolli: zapisana przy jobie, a gdy pusta — aktualny stały zestaw
+  // domyślnych awatarów (joby z kolejki nie przechodzą przez panel).
+  const { resolveAvatarRotation } = await import("./studio-avatars.server");
+  const avatarIds = await resolveAvatarRotation(job.avatar_ids);
+
   const { renderStudioVideo } = await import("./studio-render.server");
   const rendered = await renderStudioVideo({
     script,
@@ -132,7 +139,9 @@ async function processClaimedJob(job: JobRow): Promise<void> {
     avatarId: job.avatar_id,
     voiceId: job.voice_id,
     captions: job.captions !== false,
-    dynamicScenes: job.dynamic_scenes === true,
+    dynamicScenes: job.dynamic_scenes === true || job.reel_structure === true,
+    reelStructure: job.reel_structure === true,
+    avatarIds,
   });
   await supabaseAdmin
     .from("studio_video_jobs")

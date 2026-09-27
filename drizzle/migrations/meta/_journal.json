@@ -54,8 +54,15 @@
     {
       "idx": 7,
       "version": "7",
+      "when": 1790488563500,
+      "tag": "0007_studio_bank_broll_i_domyslne_awatary",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
       "when": 1790619537746,
-      "tag": "0007_wind_oplaty_umowne",
+      "tag": "0008_wind_oplaty_umowne",
       "breakpoints": true
     }
   ]
