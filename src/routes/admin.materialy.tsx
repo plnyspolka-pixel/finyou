@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,9 +28,20 @@ import {
   CloudDownload,
   ExternalLink,
   Loader2,
+  Send,
 } from "lucide-react";
 import { getLandingInvestorVideo, syncLandingInvestorVideoFn } from "@/lib/landing-video.functions";
 import { LANDING_INVESTOR_VIDEO, type LandingVideoInfo } from "@/lib/landing-video";
+import { listSocialQueue } from "@/lib/studio.functions";
+import { listYoutubeQueue } from "@/lib/youtube-shorts.functions";
+import { PLATFORM_LABELS } from "@/lib/studio-platforms";
+import {
+  PUBLIC_MEDIA_BUCKET,
+  publicCopyPath,
+  publicationsForMaterial,
+  type MaterialPublication,
+} from "@/lib/marketing-material-publish";
+import { MaterialPublishDialog } from "@/components/admin/material-publish-dialog";
 
 export const Route = createFileRoute("/admin/materialy")({
   component: MarketingMaterialsPage,
@@ -41,6 +54,7 @@ type Material = {
   id: string;
   title: string;
   description: string | null;
+  ai_description: string | null;
   audience: Audience;
   media_type: MediaType;
   storage_path: string;
@@ -154,8 +168,62 @@ function LandingVideoCard() {
   );
 }
 
+// Etykiety statusów kolejek — zgodne ze Studiem publikacji.
+const PUBLICATION_STATUS: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
+  pending: { label: "zaplanowany", variant: "secondary" },
+  publishing: { label: "publikowanie…", variant: "outline" },
+  uploading: { label: "wysyłanie…", variant: "outline" },
+  processing: { label: "przetwarzanie…", variant: "outline" },
+  published: { label: "opublikowany", variant: "default" },
+  failed: { label: "błąd", variant: "destructive" },
+  cancelled: { label: "anulowany", variant: "outline" },
+};
+
+// Wpisy kolejek publikacji dotyczące jednego materiału — pod kartą, żeby
+// było widać, co już poszło, a co czeka (szczegóły i ponowienia: Studio).
+function MaterialPublications({ items }: { items: MaterialPublication[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {items.map((p) => {
+        const st = PUBLICATION_STATUS[p.status] ?? { label: p.status, variant: "outline" as const };
+        const when =
+          p.status === "published" && p.published_at
+            ? new Date(p.published_at).toLocaleString("pl-PL")
+            : new Date(p.scheduled_at).toLocaleString("pl-PL");
+        const badge = (
+          <Badge
+            key={p.id}
+            variant={st.variant}
+            className="font-normal"
+            title={p.last_error ?? `${PLATFORM_LABELS[p.platform] ?? p.platform}: ${when}`}
+          >
+            {PLATFORM_LABELS[p.platform] ?? p.platform}: {st.label}
+          </Badge>
+        );
+        return p.url ? (
+          <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="inline-flex">
+            {badge}
+          </a>
+        ) : (
+          badge
+        );
+      })}
+    </div>
+  );
+}
+
 function MarketingMaterialsPage() {
+  const { roles } = useAuth();
+  // Publikacja idzie przez admin-only server functions Studia — reszta ról
+  // widzi bibliotekę bez przycisku, zamiast dostawać „Brak uprawnień".
+  const canPublish = roles.includes("administrator");
   const [items, setItems] = useState<Material[]>([]);
+  const [publishTarget, setPublishTarget] = useState<Material | null>(null);
+  const [publishOpen, setPublishOpen] = useState(false);
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -168,6 +236,38 @@ function MarketingMaterialsPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Kolejki publikacji (Meta / TikTok / X + YouTube) — do badge'y pod kartami.
+  // Server functions są admin-only, więc dla innych ról nie pytamy wcale.
+  const socialQueueFn = useServerFn(listSocialQueue);
+  const ytQueueFn = useServerFn(listYoutubeQueue);
+  const { data: socialQueue = [], refetch: refetchSocial } = useQuery({
+    queryKey: ["studio-social-queue"],
+    queryFn: () => socialQueueFn(),
+    enabled: canPublish,
+    refetchInterval: 30_000,
+  });
+  const { data: ytQueue = [], refetch: refetchYt } = useQuery({
+    queryKey: ["yt-queue"],
+    queryFn: () => ytQueueFn(),
+    enabled: canPublish,
+    refetchInterval: 30_000,
+  });
+  const publicationsById = useMemo(() => {
+    const map: Record<string, MaterialPublication[]> = {};
+    if (!socialQueue.length && !ytQueue.length) return map;
+    for (const m of items) {
+      const { data } = supabase.storage.from(PUBLIC_MEDIA_BUCKET).getPublicUrl(publicCopyPath(m));
+      const list = publicationsForMaterial(data.publicUrl, socialQueue, ytQueue);
+      if (list.length) map[m.id] = list;
+    }
+    return map;
+  }, [items, socialQueue, ytQueue]);
+
+  const openPublish = (m: Material) => {
+    setPublishTarget(m);
+    setPublishOpen(true);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -280,6 +380,17 @@ function MarketingMaterialsPage() {
         <h1 className="text-2xl font-bold">Materiały marketingowe</h1>
         <p className="text-muted-foreground text-sm">
           Zdjęcia i filmy podzielone na kategorie: klient, inwestor, pośrednik.
+          {canPublish && (
+            <>
+              {" "}
+              Przycisk „Publikuj" przy materiale wysyła go na social media (od ręki albo przez
+              kolejkę) i pozwala ustawić opis. Kolejkę i ponowienia obsługuje{" "}
+              <Link to="/admin/studio-publikacji" className="underline">
+                Studio publikacji
+              </Link>
+              .
+            </>
+          )}
         </p>
       </div>
 
@@ -404,9 +515,25 @@ function MarketingMaterialsPage() {
                             {formatSize(m.file_size)}
                           </Badge>
                         </div>
+                        <MaterialPublications items={publicationsById[m.id] ?? []} />
                         <div className="flex gap-2">
+                          {canPublish && (
+                            <Button
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => openPublish(m)}
+                              title="Publikuj na social media, dodaj do kolejki albo ustaw opis"
+                            >
+                              <Send className="h-4 w-4 mr-1" /> Publikuj
+                            </Button>
+                          )}
                           {url && (
-                            <Button asChild size="sm" variant="outline" className="flex-1">
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              className={canPublish ? "" : "flex-1"}
+                            >
                               <a href={url} target="_blank" rel="noreferrer" download>
                                 <Download className="h-4 w-4 mr-1" /> Pobierz
                               </a>
@@ -425,6 +552,19 @@ function MarketingMaterialsPage() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <MaterialPublishDialog
+        material={publishTarget}
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        onTextSaved={(id, patch) =>
+          setItems((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+        }
+        onQueued={() => {
+          refetchSocial();
+          refetchYt();
+        }}
+      />
     </div>
   );
 }

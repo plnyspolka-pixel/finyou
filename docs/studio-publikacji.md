@@ -29,6 +29,9 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 | Bank b-rolli — czysta logika doboru          | `src/lib/studio-broll-match.ts` (+ testy `studio-broll-match.test.ts`)                   |
 | Domyślne awatary (rotacja a-rolli)           | `src/lib/studio-avatars.server.ts`                                                       |
 | Server functions                             | `src/lib/studio.functions.ts`                                                            |
+| Kolejki — wspólne wstawianie wpisów          | `src/lib/studio-enqueue.server.ts`, `src/lib/studio-platforms.ts`                        |
+| „Publikuj" przy materiale (Materiały)        | `src/lib/marketing-material-publish*.ts` (logika, kopia publiczna, server functions)     |
+| Dialog „Publikuj" (Materiały)                | `src/components/admin/material-publish-dialog.tsx`                                       |
 | Baza 250 pytań do shortów (generowana)       | `src/lib/shorts-question-bank.ts`                                                        |
 | Źródło bazy pytań + generator                | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts` |
 | Cron tick Meta                               | `src/routes/api/public/hooks/social-publish-tick.ts`                                     |
@@ -272,6 +275,42 @@ true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
    podstawia ją do posta na Facebooku.
 5. **Generator promptów** — temat + rodzaj (wideo / grafiki / posty) →
    lista promptów z przyciskami „Użyj" / kopiuj.
+
+## Publikacja z biblioteki materiałów (/admin/materialy)
+
+Wgrane grafiki i filmy z **Materiałów marketingowych** publikuje się bez
+przepisywania URL-i do Studia: przy każdej karcie jest przycisk **„Publikuj"**,
+który otwiera dialog z:
+
+- wyborem platform (grafika → post na Facebooku / X; film → dodatkowo YouTube
+  Short, Instagram i Facebook Reels, TikTok). Platformy niepołączone albo bez
+  sekretów są wyszarzone — stan bierze z `getStudioStatus`;
+- tytułem i treścią, podstawionymi z materiału (opis ręczny, a gdy go brak —
+  opis AI) oraz przyciskiem **„Wygeneruj opis AI"** (`generateMaterialDescription`);
+  checkbox „Zapisz tytuł i opis także w materiale" (domyślnie włączony)
+  utrwala tekst w `marketing_materials`, żeby następna publikacja go podstawiła;
+- terminem, widocznością YouTube i ekranem publikacji TikToka (ten sam
+  komponent co w Studiu — wymogi audytu);
+- trzema akcjami: **„Zapisz tylko opis"**, **„Dodaj do kolejki"** (cron co
+  10 minut albo wybrany termin) i **„Publikuj teraz"** (wpis w kolejce
+  i natychmiastowe przetworzenie każdej platformy, wynik osobnym toastem;
+  nieudany wpis zostaje w kolejce z błędem — ponowienia jak zwykle w Studiu).
+
+Bucket `marketing-materials` jest prywatny, a platformy pobierają plik dopiero
+w chwili publikacji — dlatego serwer robi najpierw **publiczną kopię** w
+`studio-media/marketing-materials/<id materiału>.<ext>` (Storage `copy` między
+bucketami, bez przepuszczania pliku przez workera). Ścieżka jest
+deterministyczna: ponowna publikacja używa tej samej kopii, a badge'e pod kartą
+(„FB Reels: zaplanowany", „YouTube Short: opublikowany" z linkiem) powstają
+z dopasowania wpisów kolejek po tym URL-u. Kopii nie usuwamy razem z materiałem
+z biblioteki, żeby zaplanowany wpis nie stracił źródła.
+
+Pliki: `src/lib/studio-platforms.ts` (etykiety i reguły platform, wspólne),
+`src/lib/studio-enqueue.server.ts` (wstawianie do kolejek — wspólne ze
+Studiem), `src/lib/marketing-material-publish.ts` (+ testy),
+`src/lib/marketing-material-publish.server.ts` (kopia publiczna),
+`src/lib/marketing-material-publish.functions.ts` (server functions),
+`src/components/admin/material-publish-dialog.tsx` (dialog).
 
 ## Bank b-rolli (zakładka „B-rolle")
 
