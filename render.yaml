@@ -1,0 +1,24 @@
+# Render.com — DARMOWY hosting usługi wypalania napisów (Blueprint).
+# Render → New → Blueprint → wskaż to repo → Apply. Plan „free": usługa usypia
+# po 15 min bez ruchu i budzi się ok. minutę przy pierwszym zapytaniu — klient
+# w src/lib/caption-burner.server.ts czeka na to (limit 120 s), a przerwane
+# zadania usługa wznawia z dysku. Po wdrożeniu skopiuj adres usługi i wartość
+# CAPTION_BURNER_SECRET (zakładka Environment) do sekretów Finance You.
+# Szczegóły: services/caption-burner/README.md.
+services:
+  - type: web
+    name: finyou-caption-burner
+    runtime: docker
+    plan: free
+    region: frankfurt
+    rootDir: services/caption-burner
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: CAPTION_BURNER_SECRET
+        generateValue: true
+      # 0,1 vCPU na planie free — najszybszy preset, jakość dla rolek wystarcza.
+      - key: FFMPEG_PRESET
+        value: ultrafast
+      - key: MAX_INPUT_MB
+        value: "200"
