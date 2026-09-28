@@ -17,6 +17,13 @@ import {
   requireTeamAdmin,
   updateOne,
 } from "../_helpers";
+import {
+  PLATFORM_ENUM,
+  PRIVACY_ENUM,
+  processQueuedNow,
+  publishedUrl,
+  tiktokPostOptionsSchema,
+} from "../_publish";
 
 function slugify(s: string): string {
   return s
@@ -308,47 +315,65 @@ export const createSocialPost = defineTool({
 
 export const queueSocialPublication = defineTool({
   name: "queue_social_publication",
-  title: "Queue automatic publication (Facebook / Instagram / TikTok / X)",
+  title: "Queue publication (YouTube / Facebook / Instagram / TikTok / X)",
   description:
-    "Dodaje wpis do kolejki automatycznej publikacji (facebook_post, facebook_reels, instagram_reels, tiktok, x) — tick opublikuje go o zadanej porze bez dalszego udziału człowieka. To realna publikacja na profilu firmy. TikTok wymaga połączonego konta (panel → Studio publikacji → Połącz TikTok) i pionowego MP4. X wymaga połączonego konta (panel → Ustawienia → Połącz X); publikuje sam tekst, opcjonalnie z grafiką albo wideo, a treść dłuższą niż limit konta przycinamy przed wysyłką. Tylko administrator/operator.",
+    "Dodaje wpis do kolejki automatycznej publikacji na jednej lub kilku platformach naraz: youtube (Short), instagram_reels, facebook_reels, tiktok, facebook_post, x. Tick (co 10 min) opublikuje o `scheduled_at` (puste = najbliższy przebieg) bez dalszego udziału człowieka; `publish_now=true` publikuje od razu i zwraca wynik per platforma. To realna publikacja na profilach firmy. Wideo: MP4 pod trwałym https (Reels / Shorts / TikTok pion 9:16, do 100 MB) — URL-e HeyGen wygasają, materiał z biblioteki publikuj przez `publish_marketing_material`. Grafikę (`image_url`) niosą tylko facebook_post i x. YouTube wymaga tytułu; TikTok — połączonego konta i `tiktok_post_options` z prywatnością wybraną przez użytkownika (opcje: `get_tiktok_creator_info`); X — połączonego konta, treść ponad limit jest przycinana. Tylko administrator/operator.",
   inputSchema: {
-    platform: z.enum(["facebook_post", "facebook_reels", "instagram_reels", "tiktok", "x"]),
-    title: z.string().min(1).max(200),
-    message: z.string().min(1).max(5000),
-    image_url: z
+    platforms: z
+      .array(PLATFORM_ENUM)
+      .min(1)
+      .optional()
+      .describe("Platformy (co najmniej jedna) — albo pojedyncza `platform`."),
+    platform: PLATFORM_ENUM.optional().describe("Pojedyncza platforma (skrót dla platforms)."),
+    title: z.string().max(200).default("").describe("Tytuł (YouTube, wideo na FB, TikTok)."),
+    message: z.string().max(5000).default("").describe("Treść / opis / caption."),
+    image_url: z.string().url().optional().describe("Grafika (facebook_post, x)."),
+    video_url: z
       .string()
       .url()
       .optional()
-      .describe("Wymagane dla facebook_post bez wideo; na X opcjonalne."),
-    video_url: z.string().url().optional().describe("Wymagane dla reels."),
-    scheduled_at: z.string().describe("Kiedy opublikować (ISO 8601)."),
+      .describe("MP4 pod https (Reels, Shorts, TikTok, wideo FB / X)."),
+    scheduled_at: z
+      .string()
+      .optional()
+      .describe("Kiedy opublikować (ISO 8601); puste = najbliższy tick."),
+    privacy_status: PRIVACY_ENUM.default("public").describe("Widoczność na YouTube."),
+    tiktok_post_options: tiktokPostOptionsSchema,
+    publish_now: z.boolean().default(false).describe("Publikuj od razu (nie łącz z scheduled_at)."),
   },
   annotations: { ...WRITE, openWorldHint: true },
   handler: (a, ctx: ToolContext) =>
     handle(async () => {
-      const s = await requireTeamAdmin(ctx);
-      // X, jak post na FB, publikuje też sam tekst — reszta to wideo.
-      if (a.platform !== "facebook_post" && a.platform !== "x" && !a.video_url)
-        return fail("Reels i TikTok wymagają video_url.");
-      if (a.platform === "facebook_post" && !a.image_url && !a.video_url)
-        return fail("Post na Facebooku wymaga image_url albo video_url.");
-      const row = await insertOne(
-        s,
-        "social_publish_queue",
-        {
-          platform: a.platform,
-          title: a.title,
-          message: a.message,
-          // Grafikę niosą tylko platformy, które ją publikują: post FB i X.
-          image_url:
-            a.platform === "facebook_post" || a.platform === "x" ? (a.image_url ?? null) : null,
-          video_url: a.video_url ?? null,
-          scheduled_at: isoDate(a.scheduled_at, "scheduled_at"),
-          created_by: actorId(ctx),
-        },
-        "id, platform, title, status, scheduled_at",
-      );
-      return ok({ ok: true, queued: row });
+      await requireTeamAdmin(ctx);
+      const platforms = [...new Set([...(a.platforms ?? []), ...(a.platform ? [a.platform] : [])])];
+      if (!platforms.length) return fail("Podaj platforms (albo platform).");
+      if (a.publish_now && a.scheduled_at)
+        return fail("publish_now nie łączy się z scheduled_at — wybierz jedno.");
+      // Walidacja i wpisy — ta sama ścieżka co Studio i przycisk przy materiale.
+      const { enqueuePublication } = await import("@/lib/studio-enqueue.server");
+      const result = await enqueuePublication({
+        platforms,
+        title: a.title,
+        message: a.message,
+        video_url: a.video_url,
+        image_url: a.image_url,
+        privacy_status: a.privacy_status,
+        scheduled_at: isoDate(a.scheduled_at, "scheduled_at"),
+        tiktok_post_options: a.tiktok_post_options,
+        userId: actorId(ctx),
+      });
+      const published_now = a.publish_now ? await processQueuedNow(result) : null;
+      return ok({
+        ok: true,
+        queued: result,
+        published_now: published_now?.map((o) => ({
+          ...o,
+          url: publishedUrl(o.platform, o.external_id),
+        })),
+        note: a.publish_now
+          ? "Nieudane wpisy zostały w kolejce z błędem — `retry_social_queue_item` / `retry_youtube_queue_item` ponawia."
+          : "Stan: `list_publish_queue` (Meta / TikTok / X) i `list_youtube_queue`; `run_publish_tick` publikuje od ręki.",
+      });
     }),
 });
 
@@ -613,7 +638,7 @@ export const setLandingPagePublished = defineTool({
       );
       return ok({
         ok: true,
-        landing_page: { ...row, url: row.published ? `/lp/${row.slug}` : null },
+        landing_page: { ...row, url: row.published ? `https://financeyou.pl/l/${row.slug}` : null },
       });
     }),
 });

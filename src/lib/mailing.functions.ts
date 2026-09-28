@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { fetchAllPaged } from "@/lib/supabase-paging.server";
 import { z } from "zod";
 
 async function assertStaff(userId: string) {
@@ -11,84 +10,13 @@ async function assertStaff(userId: string) {
     throw new Error("Brak uprawnień");
 }
 
-// ============ AUDIENCE ============
-// Wszystkie odczyty audiencji idą stronami — jedno zapytanie na kilka tysięcy
-// wierszy potrafiło wpaść w `statement timeout` i wywrócić całą wysyłkę.
-function clientsPage(from: number, to: number) {
-  return supabaseAdmin
-    .from("clients")
-    .select("email, first_name, last_name, consent_marketing")
-    .not("email", "is", null)
-    .order("id", { ascending: true })
-    .range(from, to);
-}
-
-function investorsPage(from: number, to: number) {
-  return supabaseAdmin
-    .from("investors")
-    .select("email, first_name, last_name, company_name")
-    .not("email", "is", null)
-    .order("id", { ascending: true })
-    .range(from, to);
-}
-
-async function fetchAudience(type: string, filter: Record<string, unknown>) {
-  if (type === "leady") {
-    const rows = await fetchAllPaged((from, to) =>
-      supabaseAdmin
-        .from("loan_applications")
-        .select(
-          "id, client_id, status, clients!inner(email, first_name, last_name, consent_email, consent_marketing)",
-        )
-        .order("id", { ascending: true })
-        .range(from, to),
-    );
-    return rows
-      .filter((r: any) => r.clients?.email && r.clients?.consent_marketing !== false)
-      .map((r: any) => ({
-        email: r.clients.email,
-        name: `${r.clients.first_name ?? ""} ${r.clients.last_name ?? ""}`.trim(),
-      }));
-  }
-  if (type === "klienci") {
-    const rows = await fetchAllPaged(clientsPage);
-    return rows
-      .filter((c) => c.consent_marketing !== false)
-      .map((c) => ({ email: c.email!, name: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() }));
-  }
-  if (type === "inwestorzy") {
-    const rows = await fetchAllPaged(investorsPage);
-    return rows.map((i) => ({
-      email: i.email!,
-      name: i.company_name ?? `${i.first_name ?? ""} ${i.last_name ?? ""}`.trim(),
-    }));
-  }
-  if (type === "wszyscy") {
-    const [a, b] = await Promise.all([fetchAllPaged(clientsPage), fetchAllPaged(investorsPage)]);
-    const list: { email: string; name: string }[] = [];
-    a.filter((x) => x.consent_marketing !== false).forEach((x) =>
-      list.push({ email: x.email!, name: `${x.first_name ?? ""} ${x.last_name ?? ""}`.trim() }),
-    );
-    b.forEach((x) =>
-      list.push({
-        email: x.email!,
-        name: x.company_name ?? `${x.first_name ?? ""} ${x.last_name ?? ""}`.trim(),
-      }),
-    );
-    // dedup
-    const map = new Map<string, { email: string; name: string }>();
-    list.forEach((x) => map.set(x.email.toLowerCase(), x));
-    return [...map.values()];
-  }
-  return [];
-}
-
 export const previewAudience = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { audience_type: string; audience_filter?: Record<string, unknown> }) => d)
   .handler(async ({ context, data }) => {
     await assertStaff(context.userId);
-    const list = await fetchAudience(data.audience_type, data.audience_filter ?? {});
+    const { fetchCampaignAudience } = await import("./mailing.server");
+    const list = await fetchCampaignAudience(data.audience_type, data.audience_filter ?? {});
     return { count: list.length, sample: list.slice(0, 10) };
   });
 
@@ -175,21 +103,8 @@ export const sendTestEmail = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await assertStaff(context.userId);
-    const { data: c } = await supabaseAdmin
-      .from("email_campaigns")
-      .select("*")
-      .eq("id", data.id)
-      .single();
-    if (!c) throw new Error("Kampania nie znaleziona");
-    const { sendViaLovable, renderTemplate } = await import("./mailing.server");
-    await sendViaLovable({
-      to: data.toEmail,
-      from: c.from_email!,
-      fromName: c.from_name,
-      subject: `[TEST] ${c.subject}`,
-      html: renderTemplate(c.html_body, { imie: "Janie", firma: "Test sp. z o.o." }),
-      text: c.text_body,
-    });
+    const { sendCampaignTest } = await import("./mailing.server");
+    await sendCampaignTest(data.id, data.toEmail);
     return { ok: true };
   });
 
@@ -198,38 +113,8 @@ export const scheduleCampaign = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string; sendNow?: boolean }) => d)
   .handler(async ({ context, data }) => {
     await assertStaff(context.userId);
-    const { data: c } = await supabaseAdmin
-      .from("email_campaigns")
-      .select("*")
-      .eq("id", data.id)
-      .single();
-    if (!c) throw new Error("Kampania nie znaleziona");
-    if (c.status !== "szkic") throw new Error("Tylko szkice mogą być zaplanowane");
-
-    const recipients = await fetchAudience(
-      c.audience_type,
-      (c.audience_filter as Record<string, unknown>) ?? {},
-    );
-    if (!recipients.length) throw new Error("Brak odbiorców w wybranym segmencie");
-
-    const rows = recipients.map((r) => ({
-      campaign_id: data.id,
-      recipient_email: r.email,
-      recipient_name: r.name,
-      status: "oczekuje",
-    }));
-    // batch insert
-    for (let i = 0; i < rows.length; i += 500) {
-      await supabaseAdmin.from("email_campaign_recipients").insert(rows.slice(i, i + 500));
-    }
-    const when = data.sendNow
-      ? new Date().toISOString()
-      : (c.scheduled_at ?? new Date().toISOString());
-    await supabaseAdmin
-      .from("email_campaigns")
-      .update({ status: "zaplanowana", scheduled_at: when, recipients_total: rows.length })
-      .eq("id", data.id);
-    return { ok: true, count: rows.length };
+    const { scheduleCampaignSend } = await import("./mailing.server");
+    return scheduleCampaignSend(data.id, { sendNow: !!data.sendNow });
   });
 
 export const cancelCampaign = createServerFn({ method: "POST" })

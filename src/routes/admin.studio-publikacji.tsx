@@ -40,6 +40,8 @@ import {
   type StudioAvatar,
   type StudioBrollAsset,
 } from "@/lib/studio.functions";
+// Etykiety platform są wspólne z panelem materiałów (/admin/materialy).
+import { PLATFORM_LABELS } from "@/lib/studio-platforms";
 import { captionBadgeLabel } from "@/lib/studio-captions";
 import {
   CAPTION_STYLE_OPTIONS,
@@ -118,15 +120,6 @@ export const Route = createFileRoute("/admin/studio-publikacji")({
   ),
   notFoundComponent: () => <div className="p-6">Nie znaleziono.</div>,
 });
-
-const PLATFORM_LABELS: Record<string, string> = {
-  youtube: "YouTube Short",
-  facebook_post: "Post na Facebooku",
-  facebook_reels: "Facebook Reels",
-  instagram_reels: "Instagram Reels",
-  tiktok: "TikTok",
-  x: "Post na X",
-};
 
 // Zgodne z MAX_ATTEMPTS w src/lib/studio-publishing.server.ts — chwilowe błędy
 // (limity Meta) prób nie zużywają, więc licznik pokazuje realne podejścia.
@@ -1185,7 +1178,7 @@ function StudioPage() {
                         <div className="min-w-0 flex-1 space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline">
-                              {PLATFORM_LABELS[item.platform] ?? item.platform}
+                              {PLATFORM_LABELS[item.platform as StudioPlatform] ?? item.platform}
                             </Badge>
                             <Badge variant={st.variant}>{st.label}</Badge>
                             {item.platform === "tiktok" &&

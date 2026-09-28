@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "finance-you-mcp",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "title": "Finance You"
     },
     "tools": [
@@ -4102,7 +4102,7 @@
             "status": {
               "type": "string",
               "minLength": 1,
-              "description": "Status kampanii (np. draft, scheduled, sending, sent)."
+              "description": "Status kampanii: szkic, zaplanowana, wysylana, wyslana, anulowana (moduł Social: wysylanie, wyslane)."
             },
             "query": {
               "type": "string",
@@ -7421,8 +7421,8 @@
       },
       {
         "name": "queue_social_publication",
-        "title": "Queue automatic publication (Facebook / Instagram / TikTok / X)",
-        "description": "Dodaje wpis do kolejki automatycznej publikacji (facebook_post, facebook_reels, instagram_reels, tiktok, x) — tick opublikuje go o zadanej porze bez dalszego udziału człowieka. To realna publikacja na profilu firmy. TikTok wymaga połączonego konta (panel → Studio publikacji → Połącz TikTok) i pionowego MP4. X wymaga połączonego konta (panel → Ustawienia → Połącz X); publikuje sam tekst, opcjonalnie z grafiką albo wideo, a treść dłuższą niż limit konta przycinamy przed wysyłką. Tylko administrator/operator.",
+        "title": "Queue publication (YouTube / Facebook / Instagram / TikTok / X)",
+        "description": "Dodaje wpis do kolejki automatycznej publikacji na jednej lub kilku platformach naraz: youtube (Short), instagram_reels, facebook_reels, tiktok, facebook_post, x. Tick (co 10 min) opublikuje o `scheduled_at` (puste = najbliższy przebieg) bez dalszego udziału człowieka; `publish_now=true` publikuje od razu i zwraca wynik per platforma. To realna publikacja na profilach firmy. Wideo: MP4 pod trwałym https (Reels / Shorts / TikTok pion 9:16, do 100 MB) — URL-e HeyGen wygasają, materiał z biblioteki publikuj przez `publish_marketing_material`. Grafikę (`image_url`) niosą tylko facebook_post i x. YouTube wymaga tytułu; TikTok — połączonego konta i `tiktok_post_options` z prywatnością wybraną przez użytkownika (opcje: `get_tiktok_creator_info`); X — połączonego konta, treść ponad limit jest przycinana. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -7432,47 +7432,105 @@
         "inputSchema": {
           "type": "object",
           "properties": {
+            "platforms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "youtube",
+                  "instagram_reels",
+                  "facebook_reels",
+                  "tiktok",
+                  "facebook_post",
+                  "x"
+                ]
+              },
+              "minItems": 1,
+              "description": "Platformy (co najmniej jedna) — albo pojedyncza `platform`."
+            },
             "platform": {
-              "type": "string",
-              "enum": [
-                "facebook_post",
-                "facebook_reels",
-                "instagram_reels",
-                "tiktok",
-                "x"
-              ]
+              "$ref": "#/properties/platforms/items",
+              "description": "Pojedyncza platforma (skrót dla platforms)."
             },
             "title": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 200
+              "maxLength": 200,
+              "default": "",
+              "description": "Tytuł (YouTube, wideo na FB, TikTok)."
             },
             "message": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 5000
+              "maxLength": 5000,
+              "default": "",
+              "description": "Treść / opis / caption."
             },
             "image_url": {
               "type": "string",
               "format": "uri",
-              "description": "Wymagane dla facebook_post bez wideo; na X opcjonalne."
+              "description": "Grafika (facebook_post, x)."
             },
             "video_url": {
               "type": "string",
               "format": "uri",
-              "description": "Wymagane dla reels."
+              "description": "MP4 pod https (Reels, Shorts, TikTok, wideo FB / X)."
             },
             "scheduled_at": {
               "type": "string",
-              "description": "Kiedy opublikować (ISO 8601)."
+              "description": "Kiedy opublikować (ISO 8601); puste = najbliższy tick."
+            },
+            "privacy_status": {
+              "type": "string",
+              "enum": [
+                "public",
+                "unlisted",
+                "private"
+              ],
+              "default": "public",
+              "description": "Widoczność na YouTube."
+            },
+            "tiktok_post_options": {
+              "type": "object",
+              "properties": {
+                "privacyLevel": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Poziom prywatności z listy get_tiktok_creator_info (np. PUBLIC_TO_EVERYONE, SELF_ONLY) — wybór użytkownika, nie domyślny."
+                },
+                "disableComment": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "disableDuet": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "disableStitch": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "brandOrganic": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "„Your brand” — promocja własnej marki."
+                },
+                "brandedContent": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "„Branded content” — płatna współpraca."
+                }
+              },
+              "required": [
+                "privacyLevel"
+              ],
+              "additionalProperties": false,
+              "description": "Wymagane, gdy platforms zawiera tiktok."
+            },
+            "publish_now": {
+              "type": "boolean",
+              "default": false,
+              "description": "Publikuj od razu (nie łącz z scheduled_at)."
             }
           },
-          "required": [
-            "platform",
-            "title",
-            "message",
-            "scheduled_at"
-          ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
@@ -7833,6 +7891,4880 @@
           "required": [
             "landing_page_id",
             "published"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_marketing_overview",
+        "title": "Get marketing overview",
+        "description": "Cały marketing w jednym wywołaniu — zacznij od niego, gdy użytkownik pyta „co z marketingiem” albo chce coś zaplanować: gotowość kanałów (YouTube, Facebook, Instagram, TikTok, X, HeyGen, ElevenLabs, AI) z instrukcją, co połączyć; kolejki publikacji (nadchodzące, w toku, nieudane, ostatnio opublikowane); zadania wideo Studia; biblioteka materiałów (po kategorii i typie); posty social (draft / scheduled); kampanie mailowe; Meta Ads (aktywne, wydatki, leady); landing page'e; linki UTM; dziennik silnika wzrostu z ostatnich dni. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "default": 7,
+              "description": "Okres dla dziennika działań i ostatnich publikacji (dni)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_marketing_materials_admin",
+        "title": "List marketing materials (with filters)",
+        "description": "Biblioteka materiałów marketingowych (/admin/materialy) z filtrami: kategoria (klient / inwestor / posrednik), typ (image / video), fraza w tytule lub opisie. Zwraca opis ręczny i opis AI; link do pliku i stan publikacji daje `get_marketing_material`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Kategoria: klient / inwestor / posrednik."
+            },
+            "media_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Typ pliku: image / video."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w tytule lub opisie."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_marketing_material",
+        "title": "Get marketing material",
+        "description": "Jeden materiał z biblioteki: tytuł, opisy (ręczny i AI), kategoria, typ, podpisany link do pliku (ważny godzinę), dozwolone platformy i wszystkie wpisy kolejek publikacji tego pliku (status, termin, link do posta). `preview=true` pokazuje grafikę w czacie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "material_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "preview": {
+              "type": "boolean",
+              "default": false,
+              "description": "Pokaż grafikę inline (tylko image)."
+            }
+          },
+          "required": [
+            "material_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_marketing_material",
+        "title": "Update marketing material",
+        "description": "Zmienia tytuł, opis (używany przy publikacji) albo kategorię materiału. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "material_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 5000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor",
+                "posrednik"
+              ]
+            }
+          },
+          "required": [
+            "material_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_material_description",
+        "title": "Generate AI description for a material",
+        "description": "Pisze krótki opis (do 280 znaków, po polsku, z CTA) pod publikację materiału w social media — na podstawie tytułu, kategorii i opcjonalnego kontekstu. Domyślnie zapisuje go jako `ai_description` materiału (jak przycisk w panelu). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "material_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "context": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Wskazówki dla copywritera AI."
+            },
+            "save": {
+              "type": "boolean",
+              "default": true,
+              "description": "Zapisz jako ai_description materiału."
+            }
+          },
+          "required": [
+            "material_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "publish_marketing_material",
+        "title": "Publish marketing material to social channels",
+        "description": "Publikuje materiał z biblioteki (grafikę albo film) na wybranych platformach — to, co robi przycisk „Publikuj” w /admin/materialy. Grafika: facebook_post, x. Film: youtube (Short), instagram_reels, facebook_reels, tiktok, facebook_post, x. Bez `title`/`message` bierze tytuł i opis materiału (ręczny, a gdy go brak — AI). Serwer robi publiczną kopię pliku i wstawia wpisy do kolejek; domyślnie publikuje je tick (co 10 min) albo o `scheduled_at`; `publish_now=true` publikuje od razu i zwraca wynik per platforma. TikTok wymaga `tiktok_post_options` (prywatność z `get_tiktok_creator_info`, wybór użytkownika). Realna publikacja na profilach firmy — potwierdź z użytkownikiem tytuł, treść i kanały. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "material_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "platforms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "youtube",
+                  "instagram_reels",
+                  "facebook_reels",
+                  "tiktok",
+                  "facebook_post",
+                  "x"
+                ]
+              },
+              "minItems": 1
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Domyślnie tytuł materiału."
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 5000,
+              "description": "Domyślnie opis materiału (albo opis AI)."
+            },
+            "scheduled_at": {
+              "type": "string",
+              "description": "Termin publikacji (ISO 8601); puste = najbliższy tick."
+            },
+            "privacy_status": {
+              "type": "string",
+              "enum": [
+                "public",
+                "unlisted",
+                "private"
+              ],
+              "default": "public",
+              "description": "Widoczność na YouTube."
+            },
+            "tiktok_post_options": {
+              "type": "object",
+              "properties": {
+                "privacyLevel": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Poziom prywatności z listy get_tiktok_creator_info (np. PUBLIC_TO_EVERYONE, SELF_ONLY) — wybór użytkownika, nie domyślny."
+                },
+                "disableComment": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "disableDuet": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "disableStitch": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "brandOrganic": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "„Your brand” — promocja własnej marki."
+                },
+                "brandedContent": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "„Branded content” — płatna współpraca."
+                }
+              },
+              "required": [
+                "privacyLevel"
+              ],
+              "additionalProperties": false,
+              "description": "Wymagane, gdy platforms zawiera tiktok."
+            },
+            "save_to_material": {
+              "type": "boolean",
+              "default": false,
+              "description": "Zapisz podany tytuł i treść także w materiale."
+            },
+            "publish_now": {
+              "type": "boolean",
+              "default": false,
+              "description": "Publikuj od razu zamiast czekać na tick (nie łącz z scheduled_at)."
+            }
+          },
+          "required": [
+            "material_id",
+            "platforms"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_marketing_material_from_url",
+        "title": "Add marketing material from URL",
+        "description": "Dodaje do biblioteki materiałów grafikę albo film pobrany spod publicznego adresu https (np. grafika ze Studia, film z HeyGen) — do 60 MB. Zapisuje plik w Storage i wpis z tytułem, opisem i kategorią. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor",
+                "posrednik"
+              ]
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 5000
+            }
+          },
+          "required": [
+            "url",
+            "title",
+            "audience"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_marketing_material",
+        "title": "Delete marketing material",
+        "description": "Usuwa materiał z biblioteki (plik w Storage i wpis). Publiczna kopia użyta w kolejkach zostaje, żeby zaplanowane publikacje nie straciły źródła. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "material_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "material_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "publish_social_queue_item_now",
+        "title": "Publish queued social item now",
+        "description": "Publikuje wpis z kolejki social (facebook_post, facebook_reels, instagram_reels, tiktok, x) od razu, zamiast czekać na termin i tick. Realna publikacja. Wpis w stanie `processing` oznacza, że platforma jeszcze przetwarza plik — tick domknie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "queue_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "cancel_social_queue_item",
+        "title": "Cancel queued social item",
+        "description": "Anuluje wpis w kolejce social, który jeszcze czeka (status pending). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "queue_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "retry_social_queue_item",
+        "title": "Retry failed / cancelled social item",
+        "description": "Wraca wpis (failed, cancelled albo zawieszony w processing) do kolejki od razu: zeruje licznik prób i identyfikatory uploadu TikToka / X. Tick opublikuje w najbliższym przebiegu (albo `publish_social_queue_item_now`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "queue_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_social_queue_item",
+        "title": "Delete social queue item",
+        "description": "Usuwa wpis z kolejki social (poza publikowanym / przetwarzanym). Nie kasuje już opublikowanego posta na platformie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "queue_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "retry_youtube_queue_item",
+        "title": "Retry failed / cancelled Short",
+        "description": "Wraca wpis kolejki YouTube (failed albo cancelled) do stanu pending z terminem „teraz”. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "queue_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_youtube_queue_item",
+        "title": "Delete YouTube queue item",
+        "description": "Usuwa wpis z kolejki YouTube (poza trwającym uploadem). Nie kasuje filmu z kanału — do tego `delete_youtube_video`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "queue_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "run_publish_tick",
+        "title": "Run publish tick now",
+        "description": "Uruchamia od razu to, co cron robi co 10 minut: publikuje wymagalne wpisy z kolejek Meta (FB / IG), TikToka, X i YouTube, domyka publikacje w toku (kontenery IG, uploady TikToka / X) i odświeża tokeny. Realne publikacje. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_tiktok_creator_info",
+        "title": "Get TikTok creator info (privacy options)",
+        "description": "Dane połączonego konta TikTok: nick, dozwolone poziomy prywatności (`privacyOptions` — z nich użytkownik wybiera `privacyLevel` do `tiktok_post_options`), czy konto blokuje komentarze / duet / stitch, maksymalna długość filmu. Wymagane przed publikacją na TikToku (audyt Content Posting API). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_social_post",
+        "title": "Update social post",
+        "description": "Edytuje post w module Social: treść, hashtagi, obraz, link, kampania, termin, status (draft / scheduled / published / failed). Podanie `scheduled_at` bez statusu ustawia scheduled. Ten moduł nie publikuje automatycznie — do realnej publikacji służy `queue_social_publication`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "post_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "platform": {
+              "type": "string",
+              "enum": [
+                "facebook",
+                "instagram",
+                "linkedin",
+                "x",
+                "tiktok",
+                "threads"
+              ]
+            },
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 5000
+            },
+            "hashtags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "maxItems": 30
+            },
+            "image_url": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "link_url": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "campaign": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "scheduled_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "scheduled",
+                "published",
+                "failed"
+              ]
+            }
+          },
+          "required": [
+            "post_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_social_post",
+        "title": "Delete social post",
+        "description": "Usuwa post z modułu Social (szkic / zaplanowany / archiwalny). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "post_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "post_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_social_post_copy",
+        "title": "Generate social post copy (AI)",
+        "description": "Pisze treść posta pod platformę (facebook, instagram, linkedin, x, tiktok, threads) z briefu: treść, hashtagi i prompt na grafikę (po angielsku, do `generate_studio_image`). Nic nie zapisuje — zapis przez `create_social_post` albo publikacja przez `queue_social_publication`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "platform": {
+              "type": "string",
+              "enum": [
+                "facebook",
+                "instagram",
+                "linkedin",
+                "x",
+                "tiktok",
+                "threads"
+              ]
+            },
+            "brief": {
+              "type": "string",
+              "minLength": 10,
+              "maxLength": 4000
+            },
+            "campaign": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "tone": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "platform",
+            "brief"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_email_campaign",
+        "title": "Update e-mail campaign draft",
+        "description": "Edytuje kampanię mailową (tylko szkic albo anulowana): nazwa, temat, preheader, treść HTML / tekst, nadawca, reply-to, grupa odbiorców (leady / klienci / inwestorzy / wszyscy) albo `segment` z `segment_id`, filtr, termin. Anulowana kampania wraca do szkicu. Nic nie wysyła. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "campaign_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "preview_text": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 300
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "html_body": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200000
+            },
+            "text_body": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "from_email": {
+              "type": "string",
+              "format": "email"
+            },
+            "from_name": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "reply_to": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "email"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience_type": {
+              "type": "string",
+              "enum": [
+                "leady",
+                "klienci",
+                "inwestorzy",
+                "wszyscy",
+                "segment"
+              ]
+            },
+            "audience_filter": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "segment_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "scheduled_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Termin wysyłki (ISO 8601)."
+            }
+          },
+          "required": [
+            "campaign_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "preview_email_campaign_audience",
+        "title": "Preview e-mail campaign audience",
+        "description": "Liczba odbiorców i próbka 10 adresów dla grupy (leady / klienci / inwestorzy / wszyscy — z poszanowaniem zgód marketingowych) albo segmentu subskrybentów (`segment` + `segment_id`; bez segment_id — wszyscy aktywni subskrybenci). Podaj `campaign_id`, żeby sprawdzić odbiorców istniejącej kampanii. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "campaign_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "audience_type": {
+              "type": "string",
+              "enum": [
+                "leady",
+                "klienci",
+                "inwestorzy",
+                "wszyscy",
+                "segment"
+              ]
+            },
+            "segment_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "audience_filter": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "send_email_campaign_test",
+        "title": "Send e-mail campaign test",
+        "description": "Wysyła jeden mail testowy kampanii (temat z prefiksem [TEST], podstawione zmienne) na wskazany adres. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "campaign_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "to_email": {
+              "type": "string",
+              "format": "email"
+            }
+          },
+          "required": [
+            "campaign_id",
+            "to_email"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "schedule_email_campaign",
+        "title": "Schedule / send e-mail campaign",
+        "description": "Zamraża listę odbiorców kampanii (szkic) i planuje wysyłkę: na `scheduled_at`, na termin zapisany w kampanii albo — z `send_now` — od razu. Cron wysyła zaplanowane kampanie w kolejnych minutach (`run_email_campaign_dispatch` startuje od ręki). To realna wysyłka do ludzi: przed wywołaniem pokaż użytkownikowi temat, treść i liczbę odbiorców (`preview_email_campaign_audience`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "campaign_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "send_now": {
+              "type": "boolean",
+              "default": false
+            },
+            "scheduled_at": {
+              "type": "string",
+              "description": "Termin wysyłki (ISO 8601)."
+            }
+          },
+          "required": [
+            "campaign_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "cancel_email_campaign",
+        "title": "Cancel scheduled e-mail campaign",
+        "description": "Anuluje zaplanowaną kampanię, zanim ruszy wysyłka (status zaplanowana → anulowana). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "campaign_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "campaign_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_email_campaign",
+        "title": "Delete e-mail campaign",
+        "description": "Usuwa kampanię mailową (szkic, anulowaną albo zakończoną — nie w trakcie wysyłki ani zaplanowaną). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "campaign_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "campaign_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "run_email_campaign_dispatch",
+        "title": "Dispatch due e-mail campaigns now",
+        "description": "Uruchamia od razu wysyłkę zaplanowanych kampanii, których termin minął (to, co cron robi cyklicznie): do `max_per_run` maili na kampanię w tym przebiegu; resztę dosyła kolejny przebieg. Realne maile. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "max_per_run": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_email_campaign_copy",
+        "title": "Generate e-mail campaign copy (AI)",
+        "description": "Pisze z briefu temat, preheader i prostą treść HTML maila (z linkiem wypisu). Nic nie zapisuje — kampanię zakłada `create_email_campaign_draft`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brief": {
+              "type": "string",
+              "minLength": 10,
+              "maxLength": 4000
+            }
+          },
+          "required": [
+            "brief"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_email_segments",
+        "title": "List e-mail segments",
+        "description": "Segmenty subskrybentów newslettera: nazwa, opis, filtry (tagi, źródła, statusy, daty zapisu), liczba odbiorców. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w nazwie lub opisie."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "save_email_segment",
+        "title": "Create / update e-mail segment",
+        "description": "Tworzy albo (z `segment_id`) aktualizuje segment subskrybentów: nazwa, opis, filtry (tagi, źródła, statusy, zakres dat zapisu). Przelicza liczbę odbiorców. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "segment_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "filters": {
+              "type": "object",
+              "properties": {
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "maxItems": 30
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "maxItems": 30
+                },
+                "status": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "maxItems": 10
+                },
+                "createdFrom": {
+                  "type": "string",
+                  "description": "Zapisani od (ISO 8601 / YYYY-MM-DD)."
+                },
+                "createdTo": {
+                  "type": "string",
+                  "description": "Zapisani do (ISO 8601 / YYYY-MM-DD)."
+                }
+              },
+              "additionalProperties": false,
+              "default": {}
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_email_segment",
+        "title": "Delete e-mail segment",
+        "description": "Usuwa segment subskrybentów (kampanie zachowują zamrożoną listę). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "segment_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "segment_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_email_subscriber",
+        "title": "Update e-mail subscriber",
+        "description": "Zmienia dane subskrybenta (po id albo adresie): imię, nazwisko, tagi, status (active / unsubscribed / bounced). Wypisanie z blokadą wszystkich wysyłek robi `unsubscribe_email`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "subscriber_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "Alternatywnie do subscriber_id."
+            },
+            "first_name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "last_name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maxItems": 30
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "unsubscribed",
+                "bounced"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_email_subscriber",
+        "title": "Delete e-mail subscriber",
+        "description": "Usuwa subskrybenta z listy (po id albo adresie). Nie dodaje blokady — jeśli osoba prosi o wypis, użyj `unsubscribe_email`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "subscriber_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_all_landing_pages",
+        "title": "List landing pages (including drafts)",
+        "description": "Wszystkie landing page'e z panelu (także nieopublikowane) z licznikami wizyt i konwersji. Pełną treść (sekcje, formularz, motyw) daje `get_landing_page`; publiczne tylko `list_landing_pages`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w tytule, slugu lub nagłówku."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_landing_page",
+        "title": "Get landing page",
+        "description": "Pełna treść landing page'a (po id albo slugu): nagłówki, CTA, sekcje, pola formularza, motyw, meta, obrazy, podziękowanie, przekierowanie, liczniki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_page_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "slug": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_landing_page",
+        "title": "Create landing page",
+        "description": "Tworzy landing page (ten sam schemat co panel): slug, tytuł, nagłówek, podtytuł, CTA, obrazy, meta opis, sekcje (text / features / testimonial / stats / cta), pola formularza (1–15), podziękowanie, przekierowanie, motyw, `published`. Treść z briefu podpowie `generate_landing_copy`. Publiczny adres: /l/<slug>. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "slug": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "pattern": "^[a-z0-9-]+$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "headline": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "subheadline": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "cta_text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80,
+              "default": "Zapisz się"
+            },
+            "hero_image_url": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": ""
+                }
+              ]
+            },
+            "og_image_url": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": ""
+                }
+              ]
+            },
+            "meta_description": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "sections": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "features",
+                      "testimonial",
+                      "stats",
+                      "cta"
+                    ]
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "content": {
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 1000
+                        },
+                        "label": {
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "value": {
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "icon": {
+                          "type": "string",
+                          "maxLength": 60
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "maxItems": 20
+                  },
+                  "author": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "role": {
+                    "type": "string",
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 30,
+              "default": []
+            },
+            "form_fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50,
+                    "pattern": "^[a-z_][a-z0-9_]*$"
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "email",
+                      "tel",
+                      "textarea",
+                      "select"
+                    ]
+                  },
+                  "required": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "placeholder": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 120
+                    },
+                    "maxItems": 20
+                  }
+                },
+                "required": [
+                  "name",
+                  "label",
+                  "type"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 15
+            },
+            "thank_you_message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "redirect_url": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": ""
+                }
+              ]
+            },
+            "theme": {
+              "type": "object",
+              "properties": {
+                "primary": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#0ea5e9"
+                },
+                "background": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#ffffff"
+                }
+              },
+              "additionalProperties": false,
+              "default": {
+                "primary": "#0ea5e9",
+                "background": "#ffffff"
+              }
+            },
+            "published": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "slug",
+            "title",
+            "headline",
+            "form_fields",
+            "thank_you_message"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_landing_page",
+        "title": "Update landing page",
+        "description": "Edytuje dowolne pola landing page'a (te same co przy tworzeniu) i/lub publikuje / zdejmuje (`published`). Publikacja jest widoczna od razu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_page_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "slug": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "pattern": "^[a-z0-9-]+$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "headline": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "subheadline": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "cta_text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80,
+              "default": "Zapisz się"
+            },
+            "hero_image_url": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": ""
+                }
+              ]
+            },
+            "og_image_url": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": ""
+                }
+              ]
+            },
+            "meta_description": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "sections": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "features",
+                      "testimonial",
+                      "stats",
+                      "cta"
+                    ]
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "content": {
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 1000
+                        },
+                        "label": {
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "value": {
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "icon": {
+                          "type": "string",
+                          "maxLength": 60
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "maxItems": 20
+                  },
+                  "author": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "role": {
+                    "type": "string",
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 30,
+              "default": []
+            },
+            "form_fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50,
+                    "pattern": "^[a-z_][a-z0-9_]*$"
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "email",
+                      "tel",
+                      "textarea",
+                      "select"
+                    ]
+                  },
+                  "required": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "placeholder": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 120
+                    },
+                    "maxItems": 20
+                  }
+                },
+                "required": [
+                  "name",
+                  "label",
+                  "type"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 15
+            },
+            "thank_you_message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "redirect_url": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": ""
+                }
+              ]
+            },
+            "theme": {
+              "type": "object",
+              "properties": {
+                "primary": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#0ea5e9"
+                },
+                "background": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#ffffff"
+                }
+              },
+              "additionalProperties": false,
+              "default": {
+                "primary": "#0ea5e9",
+                "background": "#ffffff"
+              }
+            },
+            "published": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "landing_page_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_landing_page",
+        "title": "Delete landing page",
+        "description": "Usuwa landing page razem ze zgłoszeniami z jego formularza. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_page_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "landing_page_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_landing_copy",
+        "title": "Generate landing page copy (AI)",
+        "description": "Pisze z briefu nagłówek, podtytuł, CTA, meta opis i sekcje landing page'a w formacie gotowym do `create_landing_page`. Nic nie zapisuje. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brief": {
+              "type": "string",
+              "minLength": 10,
+              "maxLength": 4000
+            }
+          },
+          "required": [
+            "brief"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_tracking_link",
+        "title": "Create tracking link (UTM campaign)",
+        "description": "Tworzy kampanię śledzącą: krótki link financeyou.pl/r/<kod> → adres docelowy z parametrami UTM (source, medium, campaign — domyślnie slug nazwy, term, content), z kosztem i notatką. Kliknięcia i przypisane leady liczy `list_tracking_links` / `get_tracking_link_stats`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "target_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "utm_source": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "utm_medium": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "utm_campaign": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "utm_term": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "utm_content": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "cost": {
+              "type": "number",
+              "minimum": 0,
+              "default": 0
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          "required": [
+            "name",
+            "target_url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_tracking_link",
+        "title": "Update tracking link",
+        "description": "Włącza / wyłącza kampanię śledzącą (wyłączony link przestaje przekierowywać), aktualizuje koszt i notatkę. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tracking_link_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "is_active": {
+              "type": "boolean"
+            },
+            "cost": {
+              "type": "number",
+              "minimum": 0
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "tracking_link_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_tracking_link",
+        "title": "Delete tracking link",
+        "description": "Usuwa kampanię śledzącą (link /r/<kod> przestaje działać). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tracking_link_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "tracking_link_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_tracking_link_stats",
+        "title": "Get tracking link stats",
+        "description": "Statystyki kampanii śledzącej za ostatnie N dni: kliknięcia i leady dzień po dniu, kraje, urządzenia, źródła odesłań, koszt na lead. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tracking_link_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 30
+            }
+          },
+          "required": [
+            "tracking_link_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_tracking_settings",
+        "title": "Get pixel / tag settings",
+        "description": "Ustawienia śledzenia strony (/admin/pixele): piksele Meta (klient / inwestor), które zdarzenia wysyłać, GA4, GTM, Google Ads (id konwersji i etykiety), id grup odbiorców Meta. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_tracking_settings",
+        "title": "Update pixel / tag settings",
+        "description": "Zmienia ustawienia śledzenia strony: id pikseli Meta, przełączniki zdarzeń (lead, rejestracja, zapis, kontakt), GA4, GTM, Google Ads. Działa od razu na stronie publicznej. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "client_pixel_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "investor_pixel_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "track_lead": {
+              "type": "boolean"
+            },
+            "track_registration": {
+              "type": "boolean"
+            },
+            "track_subscribe": {
+              "type": "boolean"
+            },
+            "track_contact": {
+              "type": "boolean"
+            },
+            "ga4_measurement_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "gtm_container_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "google_ads_conversion_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "google_ads_label_registration": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "google_ads_label_lead": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "google_ads_label_submit": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "google_ads_label_subscribe": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "plan_seo_topics",
+        "title": "Plan SEO blog topics (AI)",
+        "description": "AI planuje `count` (3–20) tematów blogowych pod hasło / obszar `seed` (tytuł, słowo kluczowe, frazy dodatkowe, intencja, trudność, priorytet) i dodaje je do kolejki tematów SEO. Autopilot pisze z kolejki; jeden temat od ręki: `generate_seo_article`. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "seed": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            },
+            "count": {
+              "type": "number",
+              "minimum": 3,
+              "maximum": 20,
+              "default": 8
+            }
+          },
+          "required": [
+            "seed"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_seo_article",
+        "title": "Generate SEO article from topic (AI)",
+        "description": "AI pisze pełny artykuł (800–1500 słów, markdown, FAQ, CTA do wniosku) z tematu z kolejki (`topicId` z `list_blog_topics`), nadaje unikalny slug i zapisuje jako szkic; `autoPublish=true` publikuje od razu na blogu. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "topicId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "autoPublish": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "topicId"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_seo_article_status",
+        "title": "Set SEO article status",
+        "description": "Zmienia status artykułu bloga jak w panelu AI SEO: draft / published / archived (bez wymogu okładki — `update_seo_article` go wymaga). Publikacja jest publiczna od razu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "archived"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "status"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_seo_article",
+        "title": "Delete SEO article",
+        "description": "Usuwa artykuł bloga (także opublikowany — znika ze strony). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_serp_keyword",
+        "title": "Update tracked keyword",
+        "description": "Edytuje śledzoną frazę: treść, docelowy URL, aktywność, tagi, wolumen, trudność. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "keyword": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "target_url": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "is_active": {
+              "type": "boolean"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 20
+            },
+            "search_volume": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "difficulty": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_serp_keyword",
+        "title": "Delete tracked keyword",
+        "description": "Usuwa frazę ze śledzenia razem z historią pozycji. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "check_serp_ranking",
+        "title": "Check Google ranking for one keyword",
+        "description": "Sprawdza od ręki pozycję docelowej domeny w Google dla jednej frazy (`keyword_id` z `list_serp_keywords`), zapisuje pomiar z poprzednią pozycją i cechami SERP; zwraca też TOP 10 wyników. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "keyword_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "keyword_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "check_all_serp_rankings",
+        "title": "Check Google rankings for all active keywords",
+        "description": "Sprawdza pozycje wszystkich aktywnych fraz (jedna po drugiej, z odstępem) i zapisuje pomiary. Przy wielu frazach trwa minuty. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_serp_rankings",
+        "title": "List ranking history",
+        "description": "Historia pomiarów pozycji (najnowsze pierwsze): fraza, pozycja, poprzednia, adres w wynikach, cechy SERP, czas. Filtr po `keyword_id`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "keyword_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko ta fraza."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data pomiaru, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_ai_landings",
+        "title": "List AI landings",
+        "description": "Landingi wygenerowane przez silnik wzrostu (/admin/ai-growth-engine): slug, tytuł, status (draft / published / archived), cel, grupa, słowa kluczowe, nagłówek, CTA. Publiczny adres: /embed/l/<slug>. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status: draft / published / archived."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: tytuł, slug, cel."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_ai_landing",
+        "title": "Get AI landing",
+        "description": "Pełna treść landingu AI (po id albo slugu): meta, hero, CTA, sekcje, brief, słowa kluczowe. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "slug": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_ai_landing",
+        "title": "Generate AI landing (growth engine)",
+        "description": "AI generuje kompletny landing (meta, hero, CTA, 3–8 sekcji: korzyści, jak to działa, dowód społeczny, FAQ, CTA) z celu kampanii, grupy docelowej, słów kluczowych i briefu; `ctaUrl` domyślnie z ustawień silnika. Zapisuje jako szkic; `autoPublish=true` publikuje pod /embed/l/<slug>. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "goal": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            },
+            "audience": {
+              "type": "string",
+              "maxLength": 500,
+              "default": ""
+            },
+            "keywords": {
+              "type": "string",
+              "maxLength": 500,
+              "default": ""
+            },
+            "brief": {
+              "type": "string",
+              "maxLength": 3000,
+              "default": ""
+            },
+            "ctaUrl": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "autoPublish": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "goal"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_ai_landing_status",
+        "title": "Publish / archive AI landing",
+        "description": "Zmienia status landingu AI: draft / published / archived (publikacja widoczna od razu). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "archived"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "status"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_ai_landing",
+        "title": "Delete AI landing",
+        "description": "Usuwa landing AI razem z wariantami i zdarzeniami. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_growth_settings",
+        "title": "Get growth engine settings",
+        "description": "Ustawienia silnika wzrostu: tryb automatyzacji (off / manual_review / semi_auto / full_autopilot), dzienny budżet AI, marka i jej opis, grupa docelowa, główny URL CTA, domyślny model. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_growth_settings",
+        "title": "Update growth engine settings",
+        "description": "Zmienia ustawienia silnika wzrostu (tryb automatyzacji, budżet AI, marka, grupa docelowa, CTA, model). Tryb full_autopilot pozwala silnikowi publikować bez przeglądu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "automation_mode": {
+              "type": "string",
+              "enum": [
+                "off",
+                "manual_review",
+                "semi_auto",
+                "full_autopilot"
+              ]
+            },
+            "daily_ai_budget_pln": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "brand_name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "brand_description": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "target_audience": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "primary_cta_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "default_model": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_funnel_stats",
+        "title": "Get funnel stats",
+        "description": "Statystyki lejka za N dni (opcjonalnie dla jednego landingu AI): kroki z konwersją i odpadem, źródła pierwszego kontaktu, urządzenia, sumy. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_id": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 30
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_funnel_insights",
+        "title": "Generate funnel insights (AI)",
+        "description": "AI analizuje lejek za N dni (wąskie gardła, rekomendacje) i zapisuje wynik (`get_funnel_insights` czyta zapisane). Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_id": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 30
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_outreach_targets",
+        "title": "List outreach targets",
+        "description": "Cele outreachu (portale, blogi, partnerzy): domena, kontakt, nisza, priorytet, status (new / queued / contacted / responded / won / rejected / blacklist), źródło, notatki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status celu."
+            },
+            "niche": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Nisza."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_outreach_messages",
+        "title": "List outreach messages",
+        "description": "Wiadomości outreachu (sekwencje kroków 1–5): temat, treść, status (draft / approved / sent / replied / bounced), cel, kąt, wysłano, fragment odpowiedzi. Filtr po `target_id`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "target_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko ten cel."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status wiadomości."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "discover_outreach_targets",
+        "title": "Discover outreach targets (AI)",
+        "description": "AI proponuje do `count` (1–20) celów outreachu w niszy (domena, kontakt, uzasadnienie) i dodaje je jako cele ze źródłem ai_discovery. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "niche": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 300
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 10
+            }
+          },
+          "required": [
+            "niche"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_outreach_target",
+        "title": "Add outreach target",
+        "description": "Dodaje cel outreachu ręcznie: domena, URL, kontakt, nisza, priorytet, notatki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 255,
+              "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$"
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "contact_name": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 120
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "contact_email": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "email"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "niche": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 120
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 50
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "manual",
+                "ai_discovery",
+                "import"
+              ],
+              "default": "manual"
+            }
+          },
+          "required": [
+            "domain"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_outreach_target",
+        "title": "Update outreach target",
+        "description": "Edytuje cel outreachu: kontakt, nisza, priorytet, status (new / queued / contacted / responded / won / rejected / blacklist), notatki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "contact_name": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 120
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "contact_email": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "not": {}
+                        },
+                        {
+                          "type": "string",
+                          "format": "email"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": ""
+                }
+              ]
+            },
+            "niche": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 120
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "new",
+                "queued",
+                "contacted",
+                "responded",
+                "won",
+                "rejected",
+                "blacklist"
+              ]
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_outreach_target",
+        "title": "Delete outreach target",
+        "description": "Usuwa cel outreachu razem z wiadomościami. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_outreach_message",
+        "title": "Generate outreach message (AI)",
+        "description": "AI pisze wiadomość outreachu do celu (`target_id`): cel rozmowy, kąt, krok sekwencji 1–5 (`parent_id` = poprzednia wiadomość przy follow-upie). Zapisuje jako szkic — nic nie wysyła; treść kopiuje się do własnej skrzynki, a `update_outreach_message` z `mark_sent` odnotowuje wysyłkę. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "target_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "goal": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            },
+            "angle": {
+              "type": "string",
+              "maxLength": 500,
+              "default": ""
+            },
+            "step": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5,
+              "default": 1
+            },
+            "parent_id": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "target_id",
+            "goal"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_outreach_message",
+        "title": "Update outreach message",
+        "description": "Edytuje wiadomość outreachu (temat, treść, status), `mark_sent=true` odnotowuje wysyłkę (cel → contacted), `reply_excerpt` + status replied zapisuje odpowiedź. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "subject": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "body": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "approved",
+                "sent",
+                "replied",
+                "bounced"
+              ]
+            },
+            "reply_excerpt": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 5000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "mark_sent": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_outreach_message",
+        "title": "Delete outreach message",
+        "description": "Usuwa wiadomość outreachu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_backlinks",
+        "title": "List backlinks",
+        "description": "Backlinki: strona źródłowa, domena, cel, anchor, typ (editorial / guest_post / directory / forum / comment / partnership / other), dofollow, DA, status (live / lost / pending / rejected), ostatnie sprawdzenie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status linku."
+            },
+            "link_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Typ linku."
+            },
+            "dofollow": {
+              "type": "boolean",
+              "description": "Tylko dofollow / nofollow."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_backlink",
+        "title": "Add backlink",
+        "description": "Rejestruje backlink (źródło, cel, anchor, typ, dofollow, DA, notatki, powiązany cel outreachu) ze statusem live. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "source_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "target_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "anchor_text": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 300
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "link_type": {
+              "type": "string",
+              "enum": [
+                "editorial",
+                "guest_post",
+                "directory",
+                "forum",
+                "comment",
+                "partnership",
+                "other"
+              ],
+              "default": "editorial"
+            },
+            "dofollow": {
+              "type": "boolean",
+              "default": true
+            },
+            "domain_authority": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "outreach_target_id": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "source_url",
+            "target_url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_backlink",
+        "title": "Update backlink",
+        "description": "Edytuje backlink: status, dofollow, DA, notatki, data sprawdzenia. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "live",
+                "lost",
+                "pending",
+                "rejected"
+              ]
+            },
+            "dofollow": {
+              "type": "boolean"
+            },
+            "domain_authority": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "last_checked_at": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_backlink",
+        "title": "Delete backlink",
+        "description": "Usuwa backlink z rejestru. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_linkbuilding_suggestions",
+        "title": "List link building suggestions",
+        "description": "Propozycje AI miejsc na linki: domena, wskazówka kontaktu, strategia, uzasadnienie, priorytet 1–5, oczekiwane DA, status (new / in_progress / won / rejected / archived). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status propozycji."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_linkbuilding_suggestions",
+        "title": "Generate link building suggestions (AI)",
+        "description": "AI proponuje miejsca na linki w niszy (domeny, strategia, uzasadnienie, priorytet) i zapisuje je jako propozycje; `promote_suggestion_to_outreach` robi z propozycji cel outreachu. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "niche": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 2000,
+              "default": ""
+            }
+          },
+          "required": [
+            "niche"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_linkbuilding_suggestion",
+        "title": "Update link building suggestion",
+        "description": "Zmienia status (new / in_progress / won / rejected / archived) albo priorytet propozycji. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "new",
+                "in_progress",
+                "won",
+                "rejected",
+                "archived"
+              ]
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "promote_suggestion_to_outreach",
+        "title": "Promote suggestion to outreach target",
+        "description": "Zamienia propozycję link buildingu w cel outreachu (propozycja → in_progress). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_competitors",
+        "title": "List monitored competitors",
+        "description": "Monitorowani konkurenci: nazwa, domena, śledzone URL-e, tagi, aktywność, ostatnie sprawdzenie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "is_active": {
+              "type": "boolean",
+              "description": "Tylko aktywni / nieaktywni."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: nazwa lub domena."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_competitor_snapshots",
+        "title": "List competitor snapshots (change feed)",
+        "description": "Zrzuty stron konkurencji z każdego skanu: URL, tytuł, opis, czy treść się zmieniła, streszczenie zmiany i analiza AI. `changed=true` daje sam feed zmian. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "competitor_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko ten konkurent."
+            },
+            "changed": {
+              "type": "boolean",
+              "description": "Tylko zrzuty ze zmianą."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data skanu, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_competitor",
+        "title": "Add competitor to monitoring",
+        "description": "Dodaje konkurenta: nazwa, domena, 1–20 URL-i do śledzenia, notatki, tagi. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150
+            },
+            "domain": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200
+            },
+            "urls": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uri"
+              },
+              "minItems": 1,
+              "maxItems": 20
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 20,
+              "default": []
+            }
+          },
+          "required": [
+            "name",
+            "domain",
+            "urls"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_competitor",
+        "title": "Update competitor",
+        "description": "Edytuje konkurenta: nazwa, URL-e, notatki, tagi, aktywność. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150
+            },
+            "urls": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uri"
+              },
+              "maxItems": 20
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 20
+            },
+            "is_active": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_competitor",
+        "title": "Delete competitor",
+        "description": "Usuwa konkurenta razem z historią zrzutów. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "scan_competitor",
+        "title": "Scan competitor now",
+        "description": "Pobiera śledzone strony konkurenta, porównuje z poprzednim zrzutem i przy zmianie prosi AI o streszczenie i analizę; zapisuje zrzuty. Zużywa kredyty AI przy zmianach. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "competitor_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "competitor_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_clarity_metrics",
+        "title": "Get Microsoft Clarity metrics",
+        "description": "Metryki Clarity z ostatnich 1–3 dni (URL / urządzenie / źródło, medium, kraj / przeglądarka / system): sesje, rage clicks, dead clicks, scroll depth. Limit Clarity: 10 wywołań eksportu dziennie (każde tu zużywa 3). Wymaga CLARITY_API_TOKEN. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "numOfDays": {
+              "type": "number",
+              "enum": [
+                1,
+                2,
+                3
+              ],
+              "default": 3
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "analyze_clarity_metrics",
+        "title": "Analyze Clarity metrics (AI)",
+        "description": "AI analizuje przekazane metryki Clarity (z `get_clarity_metrics`) i odpowiada na pytanie — domyślnie TOP 5 problemów UX z rekomendacjami. Nic nie zapisuje. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "metrics": {},
+            "question": {
+              "type": "string",
+              "maxLength": 2000,
+              "default": ""
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_google_ad_drafts",
+        "title": "List Google Ads drafts",
+        "description": "Szkice kampanii Google Ads z kreatora: nazwa, typ (SEARCH / DISPLAY), budżet dzienny, status, URL docelowy, lokalizacje, języki, liczba nagłówków i słów. Google Ads nie ma integracji API — wynik to plik CSV do Google Ads Editor (`export_google_ad_csv`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status szkicu."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "save_google_ad_draft",
+        "title": "Create / update Google Ads draft",
+        "description": "Tworzy (bez `id`) albo aktualizuje szkic kampanii Google Ads: nazwa, typ SEARCH / DISPLAY, budżet dzienny PLN, słowa kluczowe i wykluczające, 3–15 nagłówków (≤30 znaków), 2–4 opisy (≤90), URL docelowy, ścieżki wyświetlane, lokalizacje, języki, notatki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "campaign_type": {
+              "type": "string",
+              "enum": [
+                "SEARCH",
+                "DISPLAY"
+              ]
+            },
+            "daily_budget_pln": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "maxItems": 200
+            },
+            "negative_keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "maxItems": 200
+            },
+            "headlines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 30
+              },
+              "minItems": 3,
+              "maxItems": 15
+            },
+            "descriptions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 90
+              },
+              "minItems": 2,
+              "maxItems": 4
+            },
+            "final_url": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 500
+            },
+            "display_path1": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "display_path2": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "target_locations": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "minItems": 1,
+              "maxItems": 50
+            },
+            "target_languages": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 10
+              },
+              "minItems": 1,
+              "maxItems": 20
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "campaign_type",
+            "daily_budget_pln",
+            "keywords",
+            "negative_keywords",
+            "headlines",
+            "descriptions",
+            "final_url",
+            "target_locations",
+            "target_languages"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_google_ad_draft",
+        "title": "Get Google Ads draft",
+        "description": "Pełny szkic kampanii Google Ads. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_google_ad_draft",
+        "title": "Delete Google Ads draft",
+        "description": "Usuwa szkic kampanii Google Ads. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "export_google_ad_csv",
+        "title": "Export Google Ads draft to CSV",
+        "description": "Generuje plik CSV kampanii do importu w Google Ads Editor (zwraca treść i nazwę pliku) i oznacza szkic jako eksportowany. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_meta_ad_drafts",
+        "title": "List Meta Ads drafts",
+        "description": "Szkice kampanii Meta Ads z kreatora (/admin/fb-ads/kreator): nazwa, konto, strona, budżet dzienny, status (szkic / opublikowana / blad), terminy, id obiektów po publikacji, błąd. Pełne targetowanie i kreację daje `get_meta_ad_draft`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status szkicu."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_meta_ad_draft",
+        "title": "Get Meta Ads draft",
+        "description": "Pełny szkic kampanii Meta Ads: targetowanie, kreacja, formularz leadów, terminy, wynik publikacji. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "save_meta_ad_draft",
+        "title": "Create / update Meta Ads draft",
+        "description": "Tworzy (bez `id`) albo aktualizuje szkic kampanii Meta Ads: nazwa, konto reklamowe (uuid z `list_meta_ad_accounts` / panelu), strona FB (`list_facebook_pages`), budżet dzienny (≥5), terminy, `targeting` (geo_locations, cities, age_min/max, genders, interests[], umiejscowienia, poszerzanie_grupy, remarketing…), `creative` (headline, primary_text, description, image_url, cta_type, cel: formularz_fb | strona_www, landing_url, pixel_id, wlacz_od_razu), `lead_form` (name, questions, privacy_policy, thank_you_page). Nic nie publikuje. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "ad_account_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "page_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "page_name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "daily_budget": {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 100000
+            },
+            "start_time": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "end_time": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "targeting": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "creative": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "lead_form": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "name",
+            "daily_budget",
+            "targeting",
+            "creative",
+            "lead_form"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_meta_ad_draft",
+        "title": "Delete Meta Ads draft",
+        "description": "Usuwa szkic kampanii Meta Ads (nie usuwa kampanii już utworzonej w Meta). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "publish_meta_ad_draft",
+        "title": "Publish Meta Ads draft to Meta",
+        "description": "Tworzy w Meta kampanię → zestaw reklam → (formularz leadów) → kreację → reklamę ze szkicu; kampania zostaje WSTRZYMANA, chyba że kreacja ma `wlacz_od_razu`. To realna kampania z budżetem — pokaż użytkownikowi szkic i poczekaj na potwierdzenie. Wynik i błędy zapisują się w szkicu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_facebook_pages",
+        "title": "List Facebook pages of the ad account user",
+        "description": "Strony FB dostępne dla tokena reklamowego (id, nazwa) — do `page_id` szkicu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_meta_targeting",
+        "title": "Search Meta targeting (locations / interests)",
+        "description": "Szuka w Meta lokalizacji (`adgeolocation`) albo zainteresowań (`adinterest`) po frazie — wyniki do `targeting` szkicu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "adgeolocation",
+                "adinterest"
+              ]
+            },
+            "q": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "type",
+            "q"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "suggest_meta_targeting",
+        "title": "Suggest Meta targeting presets",
+        "description": "Gotowe zestawy targetowania Finance You (np. Lublin 100 km, „buduje się”) do wstawienia w szkic. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "geo": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "interests": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_meta_pixels",
+        "title": "List Meta pixels of an ad account",
+        "description": "Piksele konta reklamowego (`ad_account_id` = uuid z bazy) — do `creative.pixel_id`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ad_account_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "ad_account_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_meta_pixel",
+        "title": "Create Meta pixel",
+        "description": "Tworzy nowy piksel na koncie reklamowym Meta. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ad_account_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          },
+          "required": [
+            "ad_account_id",
+            "name"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_pr_outreach_log",
+        "title": "List PR outreach log",
+        "description": "Dziennik wysłanych pitchy PR: adresat, temat, status, wysłano / dostarczono / otwarto / kliknięto / odpowiedziano, błąd. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_pr_draft",
+        "title": "Generate PR pitch draft (AI)",
+        "description": "AI pisze szkic odpowiedzi (temat + treść) na okazję PR z monitoringu mediów i zapisuje go w okazji (`list_pr_opportunities`). Nic nie wysyła. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "send_pr_outreach",
+        "title": "Send PR pitch",
+        "description": "Wysyła zatwierdzony szkic pitcha PR mailem do adresata okazji (status → sent, wpis w dzienniku). Realny mail do dziennikarza — moduł PR zakłada, że wysyłkę zawsze zatwierdza człowiek: pokaż temat, treść i adresata, poczekaj na wyraźne „wyślij”. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
@@ -11735,7 +16667,7 @@
       {
         "name": "get_studio_job",
         "title": "Get studio video job",
-        "description": "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status, plan scen, wideo (czyste i z napisami), miniatura, napisy, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`). Tylko administrator/operator.",
+        "description": "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status (… rendering → captioning, gdy wypalamy własne napisy → ready), plan scen, wideo (czyste i z napisami), styl napisów, miniatura, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`). Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -11900,7 +16832,7 @@
       {
         "name": "create_studio_video_job",
         "title": "Create studio video job",
-        "description": "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+        "description": "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. `caption_style` wybiera wygląd napisów (HeyGen nie daje kontroli nad rozmiarem/pozycją — własne style wypala nasza usługa). Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -11935,6 +16867,18 @@
             "captions": {
               "type": "boolean",
               "default": true
+            },
+            "caption_style": {
+              "type": "string",
+              "enum": [
+                "heygen",
+                "reels",
+                "tiktok",
+                "box",
+                "minimal"
+              ],
+              "description": "Styl napisów: heygen (domyślne HeyGena, bez kontroli wyglądu) albo własny wypalany u nas: reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Własne wymagają usługi CAPTION_BURNER_URL.",
+              "default": "heygen"
             },
             "dynamic_scenes": {
               "type": "boolean",
@@ -11985,7 +16929,7 @@
       {
         "name": "update_studio_job",
         "title": "Update studio video job",
-        "description": "Zmienia zadanie Studia: scenariusz, awatar, głos, napisy i przebitki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Tylko administrator/operator.",
+        "description": "Zmienia zadanie Studia: scenariusz, awatar, głos, napisy (i ich styl) oraz przebitki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -12011,6 +16955,17 @@
             },
             "captions": {
               "type": "boolean"
+            },
+            "caption_style": {
+              "type": "string",
+              "enum": [
+                "heygen",
+                "reels",
+                "tiktok",
+                "box",
+                "minimal"
+              ],
+              "description": "Styl napisów: heygen (domyślne HeyGena, bez kontroli wyglądu) albo własny wypalany u nas: reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Własne wymagają usługi CAPTION_BURNER_URL."
             },
             "dynamic_scenes": {
               "type": "boolean"
@@ -12047,6 +17002,42 @@
           },
           "required": [
             "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "restyle_studio_job_captions",
+        "title": "Restyle captions of a ready studio video",
+        "description": "Wypala napisy GOTOWEGO filmu Studia na nowo w wybranym własnym stylu (reels / tiktok / box / minimal): czysty master + plik SRT z HeyGena idą do naszej usługi FFmpeg, film przechodzi do statusu captioning, a gotowy plik (trwały link w Storage) zastępuje video_url. Poprzednia wersja zostaje do czasu sukcesu; przy porażce wraca. Nie publikuje ponownie. Wymaga usługi CAPTION_BURNER_URL; linki HeyGena wygasają po ~7 dniach, więc działa dla świeżych filmów. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "caption_style": {
+              "type": "string",
+              "enum": [
+                "reels",
+                "tiktok",
+                "box",
+                "minimal"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "caption_style"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
@@ -12166,7 +17157,7 @@
       {
         "name": "poll_studio_jobs",
         "title": "Poll rendering studio jobs",
-        "description": "Odpytuje HeyGen o wszystkie zadania Studia w statusie rendering i domyka gotowe (zapis linków, auto-publikacja jeśli ustawiona) albo nieudane. To, co robi tick co 10 min — bez czekania. Tylko administrator/operator.",
+        "description": "Odpytuje HeyGen o zadania Studia w statusie rendering (i usługę napisów o zadania w captioning) i domyka gotowe (zapis linków, własne napisy, auto-publikacja jeśli ustawiona) albo nieudane. To, co robi tick co 10 min — bez czekania. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
