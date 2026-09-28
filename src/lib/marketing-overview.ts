@@ -84,6 +84,7 @@ export function channelReadiness(status: {
   heygenConfigured: boolean;
   elevenlabsConfigured: boolean;
   aiConfigured: boolean;
+  captionBurnerConfigured?: boolean;
 }): { ready: string[]; missing: { channel: string; fix: string }[] } {
   const ready: string[] = [];
   const missing: { channel: string; fix: string }[] = [];
@@ -109,5 +110,12 @@ export function channelReadiness(status: {
   add(status.heygenConfigured, "heygen", "Sekret HEYGEN_API_KEY.");
   add(status.elevenlabsConfigured, "elevenlabs", "Sekret ELEVENLABS_API_KEY.");
   add(status.aiConfigured, "ai", "Sekret LOVABLE_API_KEY (scenariusze, opisy, grafiki).");
+  if (status.captionBurnerConfigured !== undefined) {
+    add(
+      status.captionBurnerConfigured,
+      "caption_burner",
+      "Usługa wypalania napisów (CAPTION_BURNER_URL) — bez niej zostaje styl napisów HeyGena.",
+    );
+  }
   return { ready, missing };
 }

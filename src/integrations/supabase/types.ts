@@ -11897,6 +11897,10 @@ export type Database = {
           auto_published_at: string | null
           avatar_id: string
           avatar_ids: string[]
+          caption_burn_attempts: number
+          caption_burn_id: string | null
+          caption_burn_started_at: string | null
+          caption_style: string
           background_color: string
           caption_wait_since: string | null
           captions: boolean
@@ -11930,6 +11934,10 @@ export type Database = {
           auto_published_at?: string | null
           avatar_id: string
           avatar_ids?: string[]
+          caption_burn_attempts?: number
+          caption_burn_id?: string | null
+          caption_burn_started_at?: string | null
+          caption_style?: string
           background_color?: string
           caption_wait_since?: string | null
           captions?: boolean
@@ -11963,6 +11971,10 @@ export type Database = {
           auto_published_at?: string | null
           avatar_id?: string
           avatar_ids?: string[]
+          caption_burn_attempts?: number
+          caption_burn_id?: string | null
+          caption_burn_started_at?: string | null
+          caption_style?: string
           background_color?: string
           caption_wait_since?: string | null
           captions?: boolean

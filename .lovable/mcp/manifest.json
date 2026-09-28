@@ -16667,7 +16667,7 @@
       {
         "name": "get_studio_job",
         "title": "Get studio video job",
-        "description": "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status, plan scen, wideo (czyste i z napisami), miniatura, napisy, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`). Tylko administrator/operator.",
+        "description": "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status (… rendering → captioning, gdy wypalamy własne napisy → ready), plan scen, wideo (czyste i z napisami), styl napisów, miniatura, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`). Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -16832,7 +16832,7 @@
       {
         "name": "create_studio_video_job",
         "title": "Create studio video job",
-        "description": "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+        "description": "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. `caption_style` wybiera wygląd napisów (HeyGen nie daje kontroli nad rozmiarem/pozycją — własne style wypala nasza usługa). Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -16867,6 +16867,18 @@
             "captions": {
               "type": "boolean",
               "default": true
+            },
+            "caption_style": {
+              "type": "string",
+              "enum": [
+                "heygen",
+                "reels",
+                "tiktok",
+                "box",
+                "minimal"
+              ],
+              "description": "Styl napisów: heygen (domyślne HeyGena, bez kontroli wyglądu) albo własny wypalany u nas: reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Własne wymagają usługi CAPTION_BURNER_URL.",
+              "default": "heygen"
             },
             "dynamic_scenes": {
               "type": "boolean",
@@ -16917,7 +16929,7 @@
       {
         "name": "update_studio_job",
         "title": "Update studio video job",
-        "description": "Zmienia zadanie Studia: scenariusz, awatar, głos, napisy i przebitki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Tylko administrator/operator.",
+        "description": "Zmienia zadanie Studia: scenariusz, awatar, głos, napisy (i ich styl) oraz przebitki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -16943,6 +16955,17 @@
             },
             "captions": {
               "type": "boolean"
+            },
+            "caption_style": {
+              "type": "string",
+              "enum": [
+                "heygen",
+                "reels",
+                "tiktok",
+                "box",
+                "minimal"
+              ],
+              "description": "Styl napisów: heygen (domyślne HeyGena, bez kontroli wyglądu) albo własny wypalany u nas: reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Własne wymagają usługi CAPTION_BURNER_URL."
             },
             "dynamic_scenes": {
               "type": "boolean"
@@ -16979,6 +17002,42 @@
           },
           "required": [
             "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "restyle_studio_job_captions",
+        "title": "Restyle captions of a ready studio video",
+        "description": "Wypala napisy GOTOWEGO filmu Studia na nowo w wybranym własnym stylu (reels / tiktok / box / minimal): czysty master + plik SRT z HeyGena idą do naszej usługi FFmpeg, film przechodzi do statusu captioning, a gotowy plik (trwały link w Storage) zastępuje video_url. Poprzednia wersja zostaje do czasu sukcesu; przy porażce wraca. Nie publikuje ponownie. Wymaga usługi CAPTION_BURNER_URL; linki HeyGena wygasają po ~7 dniach, więc działa dla świeżych filmów. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "caption_style": {
+              "type": "string",
+              "enum": [
+                "reels",
+                "tiktok",
+                "box",
+                "minimal"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "caption_style"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
@@ -17098,7 +17157,7 @@
       {
         "name": "poll_studio_jobs",
         "title": "Poll rendering studio jobs",
-        "description": "Odpytuje HeyGen o wszystkie zadania Studia w statusie rendering i domyka gotowe (zapis linków, auto-publikacja jeśli ustawiona) albo nieudane. To, co robi tick co 10 min — bez czekania. Tylko administrator/operator.",
+        "description": "Odpytuje HeyGen o zadania Studia w statusie rendering (i usługę napisów o zadania w captioning) i domyka gotowe (zapis linków, własne napisy, auto-publikacja jeśli ustawiona) albo nieudane. To, co robi tick co 10 min — bez czekania. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,

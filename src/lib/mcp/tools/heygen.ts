@@ -28,6 +28,7 @@ import {
   updateOne,
 } from "../_helpers";
 import { defineListTool, flag, search, text } from "../_list-tool";
+import { CAPTION_STYLE_IDS } from "@/lib/caption-style";
 
 const ADMIN_ONLY = ["administrator"] as const;
 const READ = { readOnlyHint: true, idempotentHint: true, openWorldHint: true } as const;
@@ -43,6 +44,12 @@ const PRIVACY = ["public", "unlisted", "private"] as const;
 const ASPECT = ["9:16", "16:9", "1:1"] as const;
 const RESOLUTION = ["720p", "1080p"] as const;
 const CAPTIONS = ["burned", "sidecar", "off"] as const;
+/** Style napisów Studia: heygen = wypala HeyGen; reszta = u nas (usługa caption-burner). */
+const CAPTION_STYLE = z
+  .enum(CAPTION_STYLE_IDS)
+  .describe(
+    "Styl napisów: heygen (domyślne HeyGena, bez kontroli wyglądu) albo własny wypalany u nas: reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Własne wymagają usługi CAPTION_BURNER_URL.",
+  );
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -107,10 +114,15 @@ export const heygenStatus = defineTool({
       const s = await requireTeamAdmin(ctx);
       const hg = await import("@/lib/heygen-api.server");
       const d = await defaults();
+      const burner = await import("@/lib/caption-burner.server");
       const out: Record<string, unknown> = {
         api_key_configured: hg.hasHeygenApiKey(),
         elevenlabs_configured: Boolean(process.env.ELEVENLABS_API_KEY),
         ai_configured: Boolean(process.env.LOVABLE_API_KEY),
+        // Własne style napisów (rozmiar, pozycja) — usługa FFmpeg poza HeyGenem.
+        caption_burner: burner.isCaptionBurnerConfigured()
+          ? await burner.checkCaptionBurnerHealth()
+          : { ok: false, ffmpeg: null, error: "nie skonfigurowana (CAPTION_BURNER_URL)" },
         default_avatar: { id: d.avatarId, name: d.avatarName },
         default_elevenlabs_voice_id: d.voiceId,
       };
@@ -614,7 +626,7 @@ export const getStudioJob = defineTool({
   name: "get_studio_job",
   title: "Get studio video job",
   description:
-    "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status, plan scen, wideo (czyste i z napisami), miniatura, napisy, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`). Tylko administrator/operator.",
+    "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status (… rendering → captioning, gdy wypalamy własne napisy → ready), plan scen, wideo (czyste i z napisami), styl napisów, miniatura, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`). Tylko administrator/operator.",
   inputSchema: {
     id: z.string().uuid(),
     preview: z
@@ -727,7 +739,7 @@ export const createStudioVideoJob = defineTool({
   name: "create_studio_video_job",
   title: "Create studio video job",
   description:
-    "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+    "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. `caption_style` wybiera wygląd napisów (HeyGen nie daje kontroli nad rozmiarem/pozycją — własne style wypala nasza usługa). Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
   inputSchema: {
     prompt: z.string().min(3).max(2000).optional().describe("Temat / brief odcinka."),
     script: z.string().max(5000).optional().describe("Gotowy tekst lektora; pusty = AI."),
@@ -735,6 +747,7 @@ export const createStudioVideoJob = defineTool({
     avatar_id: z.string().optional(),
     voice_id: z.string().optional().describe("Głos ElevenLabs; domyślnie Filip."),
     captions: z.boolean().default(true),
+    caption_style: CAPTION_STYLE.default("heygen"),
     dynamic_scenes: z
       .boolean()
       .default(false)
@@ -785,6 +798,7 @@ export const createStudioVideoJob = defineTool({
         voice_id: a.voice_id ?? d.voiceId,
         status: a.start_now ? "generating_audio" : "queued",
         captions: a.captions,
+        caption_style: a.caption_style,
         dynamic_scenes: a.dynamic_scenes,
         auto_publish_platforms: a.auto_publish_platforms,
         publish_privacy: a.publish_privacy,
@@ -849,13 +863,14 @@ export const updateStudioJob = defineTool({
   name: "update_studio_job",
   title: "Update studio video job",
   description:
-    "Zmienia zadanie Studia: scenariusz, awatar, głos, napisy i przebitki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Tylko administrator/operator.",
+    "Zmienia zadanie Studia: scenariusz, awatar, głos, napisy (i ich styl) oraz przebitki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
   inputSchema: {
     id: z.string().uuid(),
     script: z.string().max(5000).optional(),
     avatar_id: z.string().optional(),
     voice_id: z.string().optional(),
     captions: z.boolean().optional(),
+    caption_style: CAPTION_STYLE.optional(),
     dynamic_scenes: z.boolean().optional(),
     publish_title: z.string().max(100).optional(),
     publish_description: z.string().max(5000).optional(),
@@ -876,6 +891,7 @@ export const updateStudioJob = defineTool({
         "avatar_id",
         "voice_id",
         "captions",
+        "caption_style",
         "dynamic_scenes",
       ]);
       if (Object.keys(renderPatch).length && !["queued", "failed"].includes(job.status)) {
@@ -901,9 +917,43 @@ export const updateStudioJob = defineTool({
         "studio_video_jobs",
         a.id,
         patch,
-        "id, status, publish_title, publish_privacy, auto_publish_platforms, captions, dynamic_scenes, avatar_id, voice_id",
+        "id, status, publish_title, publish_privacy, auto_publish_platforms, captions, caption_style, dynamic_scenes, avatar_id, voice_id",
       );
       return ok({ ok: true, job: updated, actor: actorId(ctx) });
+    }),
+});
+
+export const restyleStudioJobCaptions = defineTool({
+  name: "restyle_studio_job_captions",
+  title: "Restyle captions of a ready studio video",
+  description:
+    "Wypala napisy GOTOWEGO filmu Studia na nowo w wybranym własnym stylu (reels / tiktok / box / minimal): czysty master + plik SRT z HeyGena idą do naszej usługi FFmpeg, film przechodzi do statusu captioning, a gotowy plik (trwały link w Storage) zastępuje video_url. Poprzednia wersja zostaje do czasu sukcesu; przy porażce wraca. Nie publikuje ponownie. Wymaga usługi CAPTION_BURNER_URL; linki HeyGena wygasają po ~7 dniach, więc działa dla świeżych filmów. Tylko administrator/operator.",
+  inputSchema: {
+    id: z.string().uuid(),
+    caption_style: z.enum(["reels", "tiktok", "box", "minimal"]),
+  },
+  annotations: WRITE,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      const s = await requireTeamAdmin(ctx);
+      const { restyleJobCaptions } = await import("@/lib/studio-video-queue.server");
+      type JobRow = import("@/lib/studio-video-queue.server").StudioJobRow;
+      const job = await oneOf<JobRow>(
+        s.from("studio_video_jobs").select("*").eq("id", a.id),
+        "studio_video_jobs",
+      );
+      if (!job) return fail("Nie znaleziono zadania.");
+      try {
+        await restyleJobCaptions(job, a.caption_style);
+      } catch (e) {
+        return fail(errMsg(e));
+      }
+      return ok({
+        ok: true,
+        job: { id: job.id, status: "captioning", caption_style: a.caption_style },
+        note: "Wypalanie trwa zwykle poniżej minuty — `get_studio_job` albo `poll_studio_jobs` domknie zadanie.",
+        actor: actorId(ctx),
+      });
     }),
 });
 
@@ -928,6 +978,9 @@ export const retryStudioJob = defineTool({
           thumbnail_url: null,
           subtitle_url: null,
           caption_wait_since: null,
+          caption_burn_id: null,
+          caption_burn_started_at: null,
+          caption_burn_attempts: 0,
           scene_plan: null,
         })
         .eq("id", a.id)
@@ -1023,7 +1076,7 @@ export const pollStudioJobs = defineTool({
   name: "poll_studio_jobs",
   title: "Poll rendering studio jobs",
   description:
-    "Odpytuje HeyGen o wszystkie zadania Studia w statusie rendering i domyka gotowe (zapis linków, auto-publikacja jeśli ustawiona) albo nieudane. To, co robi tick co 10 min — bez czekania. Tylko administrator/operator.",
+    "Odpytuje HeyGen o zadania Studia w statusie rendering (i usługę napisów o zadania w captioning) i domyka gotowe (zapis linków, własne napisy, auto-publikacja jeśli ustawiona) albo nieudane. To, co robi tick co 10 min — bez czekania. Tylko administrator/operator.",
   inputSchema: {},
   annotations: WRITE_IDEMPOTENT,
   handler: (_a, ctx: ToolContext) =>
@@ -1346,6 +1399,7 @@ export const heygenTools = [
   listStudioImages,
   createStudioVideoJob,
   updateStudioJob,
+  restyleStudioJobCaptions,
   retryStudioJob,
   deleteStudioJob,
   publishStudioJob,
