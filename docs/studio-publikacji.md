@@ -100,21 +100,22 @@ co poprawić.
 
 ## Konfiguracja — sekrety środowiska
 
-| Sekret                   | Do czego                                                                       |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| `META_PAGE_ID`           | ID strony FB, na którą publikujemy                                             |
-| `META_PAGE_ACCESS_TOKEN` | Token strony (fallback: `META_ACCESS_TOKEN`)                                   |
-| `META_IG_USER_ID`        | ID konta Instagram **Business** powiązanego ze stroną                          |
-| `TIKTOK_CLIENT_KEY`      | Klient TikTok for Developers (Content Posting API)                             |
-| `TIKTOK_CLIENT_SECRET`   | Sekret tego klienta                                                            |
-| `TIKTOK_REDIRECT_URI`    | Opcjonalny; domyślnie `https://financeyou.pl/api/tiktok/callback`              |
-| `HEYGEN_API_KEY`         | Generowanie wideo awatara (już używany przez Awatar FAQ)                       |
-| `PEXELS_API_KEY`         | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)               |
-| `HEYGEN_CAPTION_STYLE`   | Opcjonalny styl napisów HeyGen (domyślnie `default`; API zna tylko tę wartość) |
-| `CAPTION_BURNER_URL`     | Opcjonalny; adres usługi wypalania napisów (własne style napisów)              |
-| `CAPTION_BURNER_SECRET`  | Sekret tej usługi (Bearer) — bez pary URL+sekret zostaje styl HeyGena          |
-| `ELEVENLABS_API_KEY`     | Lektor TTS (już używany)                                                       |
-| `LOVABLE_API_KEY`        | AI gateway: scenariusze, prompty, grafiki (już używany)                        |
+| Sekret                         | Do czego                                                                                 |
+| ------------------------------ | ---------------------------------------------------------------------------------------- |
+| `META_PAGE_ID`                 | ID strony FB, na którą publikujemy                                                       |
+| `META_PAGE_ACCESS_TOKEN`       | Token strony (fallback: `META_ACCESS_TOKEN`)                                             |
+| `META_IG_USER_ID`              | ID konta Instagram **Business** powiązanego ze stroną                                    |
+| `TIKTOK_CLIENT_KEY`            | Klient TikTok for Developers (Content Posting API)                                       |
+| `TIKTOK_CLIENT_SECRET`         | Sekret tego klienta                                                                      |
+| `TIKTOK_REDIRECT_URI`          | Opcjonalny; domyślnie `https://financeyou.pl/api/tiktok/callback`                        |
+| `HEYGEN_API_KEY`               | Generowanie wideo awatara (już używany przez Awatar FAQ)                                 |
+| `PEXELS_API_KEY`               | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)                         |
+| `HEYGEN_CAPTION_STYLE`         | Opcjonalny styl napisów HeyGen (domyślnie `default`; API zna tylko tę wartość)           |
+| `CAPTION_BURNER_URL`           | Opcjonalny; adres usługi wypalania napisów (własne style napisów)                        |
+| `CAPTION_BURNER_SECRET`        | Sekret tej usługi (Bearer) — bez pary URL+sekret zostaje styl HeyGena                    |
+| `CAPTION_BURN_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na wynik usługi, zanim opublikujemy wersję HeyGena (domyślnie 45) |
+| `ELEVENLABS_API_KEY`           | Lektor TTS (już używany)                                                                 |
+| `LOVABLE_API_KEY`              | AI gateway: scenariusze, prompty, grafiki (już używany)                                  |
 
 Token strony musi mieć uprawnienia: `pages_manage_posts`,
 `pages_read_engagement`, a dla Instagrama dodatkowo `instagram_basic`
@@ -204,8 +205,11 @@ true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
 
    Jak to działa: backend chodzi na Cloudflare Workers, gdzie nie ma FFmpega,
    więc obraz wypala mała usługa `services/caption-burner` (FFmpeg + libass,
-   jeden plik, bez zależności; deploy: Fly.io jedną komendą albo Docker
-   gdziekolwiek — patrz `services/caption-burner/README.md`). Pipeline po
+   jeden plik, bez zależności). Stanie na darmowym planie Render.com
+   (`render.yaml` w repo — Blueprint), na Koyebie, na własnym komputerze
+   z Cloudflare Tunnel albo na Fly.io z usypianiem za grosze — zadania
+   zapisuje na dysku, więc uśpienie i wybudzenie nic nie gubi; patrz
+   `services/caption-burner/README.md`. Pipeline po
    zakończeniu renderu HeyGena bierze **czysty master** (`video_url`) i **plik
    SRT** (`caption_url`), z SRT buduje ASS w wybranym stylu (`srtToAss`:
    parser SRT odporny na BOM/CRLF/tagi, cięcie kwestii do maks. 1–2 wierszy

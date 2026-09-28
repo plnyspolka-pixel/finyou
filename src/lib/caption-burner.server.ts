@@ -83,11 +83,13 @@ export async function submitCaptionBurn(input: {
   if (!ass) {
     throw new Error("Plik SRT z HeyGena nie zawiera żadnej kwestii — nie ma czego wypalić.");
   }
+  // Darmowe hostingi (Render, Koyeb, Fly z usypianiem) budzą kontener dopiero
+  // przy pierwszym zapytaniu i trzymają je ok. minutę — stąd długi limit.
   const res = await burnerFetch("/jobs", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ video_url: input.videoUrl, ass, name: input.name ?? "studio" }),
-    timeoutMs: 60_000,
+    timeoutMs: 120_000,
   });
   if (!res.ok) throw new Error(`caption-burner: ${await errorOf(res)}`);
   const json = (await res.json().catch(() => null)) as { id?: string } | null;
@@ -102,7 +104,7 @@ const KNOWN_STATES: readonly CaptionBurnState[] = ["queued", "processing", "done
 export async function getCaptionBurnStatus(
   id: string,
 ): Promise<{ status: CaptionBurnState; error: string | null }> {
-  const res = await burnerFetch(`/jobs/${encodeURIComponent(id)}`);
+  const res = await burnerFetch(`/jobs/${encodeURIComponent(id)}`, { timeoutMs: 90_000 });
   if (res.status === 404) {
     return { status: "missing", error: "usługa nie zna tego zadania (restart usługi?)" };
   }

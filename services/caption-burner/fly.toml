@@ -1,7 +1,11 @@
-# Przykładowa konfiguracja Fly.io (https://fly.io) — jedna maszyna, która
-# NIE usypia się (auto_stop) — w trakcie wypalania nie może zniknąć, a zadania
-# żyją w pamięci usługi. Uruchomienie: `fly launch --copy-config --no-deploy`
-# w tym katalogu, potem `fly secrets set CAPTION_BURNER_SECRET=…` i `fly deploy`.
+# Przykładowa konfiguracja Fly.io (https://fly.io). Maszyna USYPIA SIĘ, gdy
+# nie ma ruchu (auto_stop_machines = "stop") i budzi przy pierwszym zapytaniu
+# w ok. sekundę — płacisz tylko za sekundy pracy, czyli grosze miesięcznie.
+# Zadania są zapisane na dysku maszyny (przeżywają stop/start), więc uśpienie
+# w trakcie niczego nie gubi. Jeśli wolisz maszynę stale włączoną (kilka
+# dolarów miesięcznie): auto_stop_machines = "off", min_machines_running = 1.
+# Uruchomienie: `fly launch --copy-config --no-deploy` w tym katalogu, potem
+# `fly secrets set CAPTION_BURNER_SECRET=…` i `fly deploy`.
 app = "finyou-caption-burner"
 primary_region = "waw"
 
@@ -16,9 +20,9 @@ primary_region = "waw"
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "off"
+  auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 1
+  min_machines_running = 0
 
   [[http_service.checks]]
     interval = "30s"
@@ -28,5 +32,5 @@ primary_region = "waw"
     path = "/health"
 
 [[vm]]
-  size = "shared-cpu-2x"
-  memory = "1gb"
+  size = "shared-cpu-1x"
+  memory = "512mb"

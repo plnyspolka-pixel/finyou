@@ -12,7 +12,54 @@ miejsce w całym systemie, które faktycznie przetwarza obraz.
 
 ## Uruchomienie
 
-### Fly.io (zalecane — jedna komenda, region Warszawa)
+Usługa jest zwykłym kontenerem Dockera, więc stanie wszędzie, gdzie da się
+uruchomić kontener. Zadania zapisuje na dysku (`job.json`), więc **może być
+usypiana i budzona** — przerwane wypalanie wznawia po starcie, a klient
+w Finance You czeka do 120 s na wybudzenie przy zleceniu. Dzięki temu działa
+na darmowych planach.
+
+### Za darmo: Render.com (Blueprint, bez własnego serwera)
+
+1. Konto na [render.com](https://render.com) (plan free; wg Render bez karty).
+2. **New → Blueprint → wybierz repo `finyou`** — Render czyta `render.yaml`
+   z katalogu głównego repo i sam zbuduje obraz z `services/caption-burner`.
+3. Po wdrożeniu: adres usługi to `https://finyou-caption-burner.onrender.com`
+   (nazwa może dostać przyrostek), a sekret znajdziesz w zakładce
+   **Environment → CAPTION_BURNER_SECRET** (Render wygenerował go sam).
+4. Oba wpisz w sekretach Finance You (tabela niżej).
+
+Ograniczenia planu free: 0,1 vCPU (rolka 60 s wypala się w 1–3 min zamiast
+kilkunastu sekund — `FFMPEG_PRESET=ultrafast` jest już w blueprintcie),
+usypianie po 15 min bez ruchu (pierwsze zlecenie czeka ok. minutę na
+wybudzenie), 750 godzin pracy miesięcznie — przy kilku rolkach dziennie
+usługa i tak śpi większość czasu.
+
+### Za darmo: Koyeb
+
+Analogicznie (New Service → GitHub → repo `finyou`, Dockerfile
+`services/caption-burner/Dockerfile`, instancja _Free_, zmienna
+`CAPTION_BURNER_SECRET`). Koyeb od 2026 r. wymaga podania karty także na
+planie darmowym; instancja usypia po godzinie bez ruchu.
+
+### Za darmo: własny komputer + Cloudflare Tunnel
+
+Gdy masz komputer włączony w godzinach pracy:
+
+```sh
+docker build -t caption-burner services/caption-burner
+docker run -d --restart unless-stopped -p 8080:8080 \
+  -e CAPTION_BURNER_SECRET=… -v caption-jobs:/tmp/caption-burner caption-burner
+cloudflared tunnel --url http://localhost:8080     # darmowy tunel → adres https
+```
+
+`cloudflared` (Cloudflare Tunnel) daje publiczny adres https bez otwierania
+portów. Szybki tunel (`--url`) ma losowy adres `*.trycloudflare.com`, który
+zmienia się po restarcie — na stałe załóż tunel nazwany na własnej domenie
+(też za darmo). W Finance You ustaw `CAPTION_BURN_TIMEOUT_MINUTES=720`, żeby
+rolki wygenerowane przy wyłączonym komputerze poczekały na jego włączenie,
+zamiast po 45 min schodzić na napisy HeyGena.
+
+### Prawie za darmo: Fly.io z usypianiem
 
 ```sh
 cd services/caption-burner
@@ -22,10 +69,11 @@ fly deploy
 fly status                                   # adres: https://<app>.fly.dev
 ```
 
-`fly.toml` trzyma **jedną maszynę, która się nie usypia** (`auto_stop_machines =
-"off"`): zadania żyją w pamięci usługi, a wypalanie 60-sekundowej rolki trwa
-kilkanaście sekund — usypianie w trakcie zepsułoby przebieg. Koszt maszyny
-`shared-cpu-2x` / 1 GB to kilka dolarów miesięcznie.
+`fly.toml` usypia maszynę bez ruchu i budzi ją przy pierwszym zapytaniu
+(ok. sekunda) — płacisz za sekundy pracy, czyli grosze miesięcznie; Fly wymaga
+karty. Maszyna stale włączona (`auto_stop_machines = "off"`,
+`min_machines_running = 1`, `shared-cpu-2x` / 1 GB) to kilka dolarów
+miesięcznie i najkrótszy czas wypalania.
 
 ### Docker (Railway, Render, VPS…)
 
@@ -43,10 +91,11 @@ podstawi DejaVu Sans, gdyby Inter brakowało.
 
 Sekrety środowiska aplikacji (Lovable → ustawienia → sekrety):
 
-| Sekret                  | Wartość                                     |
-| ----------------------- | ------------------------------------------- |
-| `CAPTION_BURNER_URL`    | np. `https://finyou-caption-burner.fly.dev` |
-| `CAPTION_BURNER_SECRET` | ten sam ciąg, który dostała usługa          |
+| Sekret                         | Wartość                                          |
+| ------------------------------ | ------------------------------------------------ |
+| `CAPTION_BURNER_URL`           | np. `https://finyou-caption-burner.onrender.com` |
+| `CAPTION_BURNER_SECRET`        | ten sam ciąg, który dostała usługa               |
+| `CAPTION_BURN_TIMEOUT_MINUTES` | opcjonalnie; ile czekać na wynik (domyślnie 45)  |
 
 Bez tych sekretów Studio działa jak dotąd (napisy HeyGena); panel pokazuje
 wtedy tylko styl „HeyGen (domyślne)”.

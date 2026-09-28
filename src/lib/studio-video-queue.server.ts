@@ -75,6 +75,16 @@ export type HeygenRenderStatus = HeygenCaptionOutputs & {
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+/**
+ * Ile czekać na usługę napisów, zanim opublikujemy wersję zapasową. Domyślnie
+ * 45 min; gdy usługa stoi na komputerze, który bywa wyłączony, można podnieść
+ * (np. 720 = pół doby) — joby poczekają na włączenie zamiast schodzić na HeyGen.
+ */
+function captionBurnTimeoutMs(): number | undefined {
+  const minutes = Number(process.env.CAPTION_BURN_TIMEOUT_MINUTES);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes * 60_000 : undefined;
+}
+
 /** Komunikaty do `last_error` sklejamy, żeby powód pominięcia montażu nie ginął. */
 const joinNotes = (...notes: Array<string | null | undefined>) =>
   notes.filter((n): n is string => Boolean(n && n.trim())).join(" ") || null;
@@ -349,6 +359,7 @@ async function finishCaptionBurn(
       attempts: job.caption_burn_attempts,
       now: new Date(),
       fallback: { previous, heygen },
+      timeoutMs: captionBurnTimeoutMs(),
     });
 
   let resolution = resolveWith(null);

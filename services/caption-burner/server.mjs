@@ -14,14 +14,17 @@
 //   GET    /jobs/:id/file   — gotowy MP4 (tylko status done)
 //   DELETE /jobs/:id        — sprząta pliki zadania
 //
-// Zadania żyją w pamięci i na dysku roboczym; po restarcie usługi znikają —
-// klient (studio-video-queue.server.ts) traktuje „nieznane zadanie" jak
-// nieudane i ponawia raz albo schodzi na napisy HeyGena.
+// Zadania trzymamy w pamięci I na dysku roboczym (job.json w katalogu
+// zadania): po restarcie usługi — także po uśpieniu i wybudzeniu na Fly.io,
+// Render czy Koyeb — wczytujemy je z powrotem, przerwane wracają do kolejki,
+// gotowe pliki czekają na odbiór. Gdy dysk przepadł (nowy deploy), klient
+// (studio-video-queue.server.ts) traktuje „nieznane zadanie" jak nieudane,
+// ponawia raz albo schodzi na napisy HeyGena.
 
 import http from "node:http";
 import path from "node:path";
 import { spawn, execFile } from "node:child_process";
-import { mkdir, rm, writeFile, stat } from "node:fs/promises";
+import { mkdir, rm, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { createWriteStream, createReadStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { Readable, Transform } from "node:stream";
@@ -226,9 +229,50 @@ function ffmpegVersion() {
 
 // ── Zadania ─────────────────────────────────────────────────────────────────
 
+/** Stan zadania na dysku — przeżywa restart / uśpienie usługi. */
+async function persist(job) {
+  const { dir: _dir, ...data } = job;
+  await writeFile(path.join(job.dir, "job.json"), JSON.stringify(data), "utf8").catch((e) =>
+    console.warn(`[${job.id}] zapis job.json: ${e.message}`),
+  );
+}
+
+/** Po starcie: wczytaj zadania z dysku, przerwane wróć do kolejki. */
+async function restoreJobs() {
+  const entries = await readdir(WORK_DIR, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const dir = path.join(WORK_DIR, entry.name);
+    let data;
+    try {
+      data = JSON.parse(await readFile(path.join(dir, "job.json"), "utf8"));
+    } catch {
+      await rm(dir, { recursive: true, force: true }).catch(() => {});
+      continue;
+    }
+    const job = { ...data, dir };
+    if (job.status === "done") {
+      const ok = await stat(path.join(dir, "out.mp4")).catch(() => null);
+      if (!ok) {
+        job.status = "failed";
+        job.error = "plik wynikowy zniknął po restarcie usługi";
+        await persist(job);
+      }
+    } else if (job.status === "queued" || job.status === "processing") {
+      job.status = "queued";
+      job.error = null;
+      queue.push(job);
+    }
+    jobs.set(job.id, job);
+  }
+  if (jobs.size) console.log(`caption-burner: wczytano ${jobs.size} zadań z dysku`);
+  pump();
+}
+
 async function processJob(job) {
   job.status = "processing";
   job.started_at = new Date().toISOString();
+  await persist(job);
   const input = path.join(job.dir, "in.mp4");
   try {
     job.input_bytes = await download(job.video_url, input);
@@ -250,6 +294,7 @@ async function processJob(job) {
   } finally {
     job.finished_at = new Date().toISOString();
     await rm(input, { force: true }).catch(() => {});
+    await persist(job);
   }
 }
 
@@ -322,6 +367,7 @@ async function route(req, res) {
       status: "queued",
       created_at: new Date().toISOString(),
     };
+    await persist(job);
     jobs.set(id, job);
     queue.push(job);
     pump();
@@ -372,8 +418,9 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-await rm(WORK_DIR, { recursive: true, force: true }).catch(() => {});
 await mkdir(WORK_DIR, { recursive: true });
+await restoreJobs();
+await sweep().catch(() => {});
 setInterval(() => sweep().catch(() => {}), 10 * 60_000).unref();
 
 server.listen(PORT, () => {
