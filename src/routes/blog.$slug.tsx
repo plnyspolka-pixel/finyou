@@ -8,6 +8,7 @@ import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { BlogCover } from "@/components/blog/BlogCover";
 import { MarketingShell } from "@/components/marketing/shell";
+import { ACTIVE_SOCIAL_LINKS } from "@/components/marketing/social-links";
 import { ComplianceNote, Section } from "@/components/marketing/sections";
 import { MktBadge, Eyebrow } from "@/components/marketing/primitives";
 
@@ -249,6 +250,7 @@ export const Route = createFileRoute("/blog/$slug")({
               "@type": "Organization",
               name: "Finance You",
               url: "https://financeyou.pl",
+              sameAs: ACTIVE_SOCIAL_LINKS.map((s) => s.href),
               logo: {
                 "@type": "ImageObject",
                 url: "https://financeyou.pl/favicon.png",
