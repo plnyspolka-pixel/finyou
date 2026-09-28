@@ -6,6 +6,7 @@
 // wycina ciała handlerów z bundla klienta, więc nic z tego nie trafia do
 // przeglądarki.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { fetchAllPaged } from "@/lib/supabase-paging.server";
 
 const SENDER_DOMAIN = "notify.financeyou.pl";
 const DEFAULT_FROM = "no-reply@financeyou.pl";
@@ -69,6 +70,164 @@ export async function sendViaLovable(args: {
 
 export function renderTemplate(html: string, vars: Record<string, string>) {
   return html.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, k) => vars[k] ?? "");
+}
+
+// ============ AUDIENCE ============
+// Odbiorcy kampanii wg grupy (leady / klienci / inwestorzy / wszyscy) albo
+// segmentu subskrybentów (`segment`, `audience_filter.segment_id`) — wspólne
+// dla panelu Mailing i narzędzi MCP.
+// Wszystkie odczyty audiencji idą stronami — jedno zapytanie na kilka tysięcy
+// wierszy potrafiło wpaść w `statement timeout` i wywrócić całą wysyłkę.
+function clientsPage(from: number, to: number) {
+  return supabaseAdmin
+    .from("clients")
+    .select("email, first_name, last_name, consent_marketing")
+    .not("email", "is", null)
+    .order("id", { ascending: true })
+    .range(from, to);
+}
+
+function investorsPage(from: number, to: number) {
+  return supabaseAdmin
+    .from("investors")
+    .select("email, first_name, last_name, company_name")
+    .not("email", "is", null)
+    .order("id", { ascending: true })
+    .range(from, to);
+}
+
+export async function fetchCampaignAudience(type: string, filter: Record<string, unknown>) {
+  if (type === "leady") {
+    const rows = await fetchAllPaged((from, to) =>
+      supabaseAdmin
+        .from("loan_applications")
+        .select(
+          "id, client_id, status, clients!inner(email, first_name, last_name, consent_email, consent_marketing)",
+        )
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
+    return rows
+      .filter((r: any) => r.clients?.email && r.clients?.consent_marketing !== false)
+      .map((r: any) => ({
+        email: r.clients.email,
+        name: `${r.clients.first_name ?? ""} ${r.clients.last_name ?? ""}`.trim(),
+      }));
+  }
+  if (type === "klienci") {
+    const rows = await fetchAllPaged(clientsPage);
+    return rows
+      .filter((c) => c.consent_marketing !== false)
+      .map((c) => ({ email: c.email!, name: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() }));
+  }
+  if (type === "inwestorzy") {
+    const rows = await fetchAllPaged(investorsPage);
+    return rows.map((i) => ({
+      email: i.email!,
+      name: i.company_name ?? `${i.first_name ?? ""} ${i.last_name ?? ""}`.trim(),
+    }));
+  }
+  if (type === "segment") {
+    const { resolveSegmentRecipients } = await import("./email-marketing.server");
+    let segFilters: Record<string, unknown> = {};
+    const segmentId = typeof filter.segment_id === "string" ? filter.segment_id : null;
+    if (segmentId) {
+      const { data: seg } = await supabaseAdmin
+        .from("email_segments")
+        .select("filters")
+        .eq("id", segmentId)
+        .maybeSingle();
+      segFilters = ((seg?.filters as Record<string, unknown>) ?? {}) as Record<string, unknown>;
+    }
+    const rows = await resolveSegmentRecipients(segFilters as never);
+    return rows.map((r) => ({
+      email: r.email,
+      name: `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim(),
+    }));
+  }
+  if (type === "wszyscy") {
+    const [a, b] = await Promise.all([fetchAllPaged(clientsPage), fetchAllPaged(investorsPage)]);
+    const list: { email: string; name: string }[] = [];
+    a.filter((x) => x.consent_marketing !== false).forEach((x) =>
+      list.push({ email: x.email!, name: `${x.first_name ?? ""} ${x.last_name ?? ""}`.trim() }),
+    );
+    b.forEach((x) =>
+      list.push({
+        email: x.email!,
+        name: x.company_name ?? `${x.first_name ?? ""} ${x.last_name ?? ""}`.trim(),
+      }),
+    );
+    // dedup
+    const map = new Map<string, { email: string; name: string }>();
+    list.forEach((x) => map.set(x.email.toLowerCase(), x));
+    return [...map.values()];
+  }
+  return [];
+}
+
+/**
+ * Planuje wysyłkę kampanii: zamraża listę odbiorców w email_campaign_recipients
+ * i przełącza status na `zaplanowana` (cron dispatchScheduledCampaigns wysyła
+ * po terminie). `sendNow` ustawia termin na teraz. Tylko szkice.
+ */
+export async function scheduleCampaignSend(
+  campaignId: string,
+  opts: { sendNow?: boolean; scheduledAt?: string | null } = {},
+): Promise<{ ok: true; count: number; scheduled_at: string }> {
+  const { data: c } = await supabaseAdmin
+    .from("email_campaigns")
+    .select("*")
+    .eq("id", campaignId)
+    .single();
+  if (!c) throw new Error("Kampania nie znaleziona");
+  if (c.status !== "szkic") throw new Error("Tylko szkice mogą być zaplanowane");
+
+  const recipients = await fetchCampaignAudience(
+    c.audience_type,
+    ((c.audience_filter as Record<string, unknown>) ?? {}) as Record<string, unknown>,
+  );
+  if (!recipients.length) throw new Error("Brak odbiorców w wybranym segmencie");
+
+  const rows = recipients.map((r) => ({
+    campaign_id: campaignId,
+    recipient_email: r.email,
+    recipient_name: r.name,
+    status: "oczekuje",
+  }));
+  // batch insert
+  for (let i = 0; i < rows.length; i += 500) {
+    const { error } = await supabaseAdmin
+      .from("email_campaign_recipients")
+      .insert(rows.slice(i, i + 500));
+    if (error) throw new Error(`email_campaign_recipients: ${error.message}`);
+  }
+  const when = opts.sendNow
+    ? new Date().toISOString()
+    : (opts.scheduledAt ?? c.scheduled_at ?? new Date().toISOString());
+  const { error } = await supabaseAdmin
+    .from("email_campaigns")
+    .update({ status: "zaplanowana", scheduled_at: when, recipients_total: rows.length })
+    .eq("id", campaignId);
+  if (error) throw new Error(`email_campaigns: ${error.message}`);
+  return { ok: true, count: rows.length, scheduled_at: when };
+}
+
+/** Mail testowy kampanii na jeden adres (z podstawionymi zmiennymi). */
+export async function sendCampaignTest(campaignId: string, toEmail: string): Promise<void> {
+  const { data: c } = await supabaseAdmin
+    .from("email_campaigns")
+    .select("*")
+    .eq("id", campaignId)
+    .single();
+  if (!c) throw new Error("Kampania nie znaleziona");
+  await sendViaLovable({
+    to: toEmail,
+    from: c.from_email!,
+    fromName: c.from_name,
+    subject: `[TEST] ${c.subject}`,
+    html: renderTemplate(c.html_body, { imie: "Janie", firma: "Test sp. z o.o." }),
+    text: c.text_body,
+  });
 }
 
 // ============ DISPATCH (used by cron) ============

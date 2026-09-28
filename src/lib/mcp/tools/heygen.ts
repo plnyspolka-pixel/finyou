@@ -1013,7 +1013,7 @@ export const publishStudioJob = defineTool({
         job: after,
         actor: actorId(ctx),
         note: published
-          ? "Wpisy w kolejkach — sprawdź `list_youtube_queue` i `list_social_publish_queue`."
+          ? "Wpisy w kolejkach — sprawdź `list_youtube_queue` i `list_publish_queue`."
           : (after?.last_error ?? "Publikacja nie została zakolejkowana."),
       });
     }),

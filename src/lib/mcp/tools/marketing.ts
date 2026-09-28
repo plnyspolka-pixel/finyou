@@ -131,7 +131,10 @@ export const listEmailCampaigns = defineListTool({
   resultKey: "campaigns",
   access: "team",
   filters: {
-    status: text("status", "Status kampanii (np. draft, scheduled, sending, sent)."),
+    status: text(
+      "status",
+      "Status kampanii: szkic, zaplanowana, wysylana, wyslana, anulowana (moduł Social: wysylanie, wyslane).",
+    ),
     query: search(["name", "subject"], "Fraza: nazwa lub temat."),
     since: since("created_at"),
   },
