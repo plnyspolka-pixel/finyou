@@ -1,0 +1,32 @@
+# Przykładowa konfiguracja Fly.io (https://fly.io) — jedna maszyna, która
+# NIE usypia się (auto_stop) — w trakcie wypalania nie może zniknąć, a zadania
+# żyją w pamięci usługi. Uruchomienie: `fly launch --copy-config --no-deploy`
+# w tym katalogu, potem `fly secrets set CAPTION_BURNER_SECRET=…` i `fly deploy`.
+app = "finyou-caption-burner"
+primary_region = "waw"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  MAX_CONCURRENCY = "1"
+  FFMPEG_PRESET = "veryfast"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "1gb"

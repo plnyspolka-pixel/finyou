@@ -29,12 +29,17 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 | Bank b-rolli — czysta logika doboru          | `src/lib/studio-broll-match.ts` (+ testy `studio-broll-match.test.ts`)                   |
 | Domyślne awatary (rotacja a-rolli)           | `src/lib/studio-avatars.server.ts`                                                       |
 | Server functions                             | `src/lib/studio.functions.ts`                                                            |
+| Napisy własne — styl (SRT → ASS, presety)    | `src/lib/caption-style.ts` (+ testy `caption-style.test.ts`)                             |
+| Napisy własne — decyzje pipeline'u           | `src/lib/studio-captions.ts` (+ testy `studio-captions.test.ts`)                         |
+| Napisy własne — klient usługi wypalania      | `src/lib/caption-burner.server.ts`                                                       |
+| Usługa wypalania napisów (FFmpeg + libass)   | `services/caption-burner/` (server.mjs, Dockerfile, fly.toml, README)                    |
 | Baza 250 pytań do shortów (generowana)       | `src/lib/shorts-question-bank.ts`                                                        |
 | Źródło bazy pytań + generator                | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts` |
 | Cron tick Meta                               | `src/routes/api/public/hooks/social-publish-tick.ts`                                     |
 | Panel admina                                 | `src/routes/admin.studio-publikacji.tsx`                                                 |
 | Migracja (tabele + bucket + cron)            | `supabase/migrations/20260803130000_studio_publikacji.sql`                               |
 | Migracja: bank b-rolli + domyślne awatary    | `supabase/migrations/20260927120000_studio_bank_broll_i_domyslne_awatary.sql`            |
+| Migracja: napisy własne                      | `supabase/migrations/20260928120000_studio_napisy_wlasne.sql`                            |
 | Migracja TikToka                             | `supabase/migrations/20260926120000_tiktok_content_posting.sql`                          |
 | Migracja: ustawienia posta twórcy            | `supabase/migrations/20260926140000_tiktok_ustawienia_publikacji_tworcy.sql`             |
 
@@ -53,7 +58,9 @@ failed`) i `tiktok_fail_reason`. **Oba tory filtrują się wzajemnie po
 - `tiktok_integration` — singleton z tokenami OAuth TikToka (dostęp wyłącznie
   `service_role`, jak `youtube_integration`).
 - `studio_video_jobs` — joby wideo HeyGen z promptu (statusy jak w Awatar FAQ:
-  `generating_audio → uploading → rendering → ready/failed`).
+  `generating_audio → uploading → rendering → ready/failed`; przy własnym stylu
+  napisów między `rendering` a `ready` jest jeszcze `captioning` — wypalanie
+  w naszej usłudze).
 - `studio_images` — wygenerowane grafiki; pliki w publicznym buckecie
   `studio-media` (trwałe URL-e, które Meta może pobrać przy publikacji).
 - `studio_broll_assets` — **bank b-rolli**: przebitki (`kind = 'broll'`)
@@ -93,19 +100,21 @@ co poprawić.
 
 ## Konfiguracja — sekrety środowiska
 
-| Sekret                   | Do czego                                                          |
-| ------------------------ | ----------------------------------------------------------------- |
-| `META_PAGE_ID`           | ID strony FB, na którą publikujemy                                |
-| `META_PAGE_ACCESS_TOKEN` | Token strony (fallback: `META_ACCESS_TOKEN`)                      |
-| `META_IG_USER_ID`        | ID konta Instagram **Business** powiązanego ze stroną             |
-| `TIKTOK_CLIENT_KEY`      | Klient TikTok for Developers (Content Posting API)                |
-| `TIKTOK_CLIENT_SECRET`   | Sekret tego klienta                                               |
-| `TIKTOK_REDIRECT_URI`    | Opcjonalny; domyślnie `https://financeyou.pl/api/tiktok/callback` |
-| `HEYGEN_API_KEY`         | Generowanie wideo awatara (już używany przez Awatar FAQ)          |
-| `PEXELS_API_KEY`         | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)  |
-| `HEYGEN_CAPTION_STYLE`   | Opcjonalny styl napisów HeyGen (domyślnie `default`)              |
-| `ELEVENLABS_API_KEY`     | Lektor TTS (już używany)                                          |
-| `LOVABLE_API_KEY`        | AI gateway: scenariusze, prompty, grafiki (już używany)           |
+| Sekret                   | Do czego                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| `META_PAGE_ID`           | ID strony FB, na którą publikujemy                                             |
+| `META_PAGE_ACCESS_TOKEN` | Token strony (fallback: `META_ACCESS_TOKEN`)                                   |
+| `META_IG_USER_ID`        | ID konta Instagram **Business** powiązanego ze stroną                          |
+| `TIKTOK_CLIENT_KEY`      | Klient TikTok for Developers (Content Posting API)                             |
+| `TIKTOK_CLIENT_SECRET`   | Sekret tego klienta                                                            |
+| `TIKTOK_REDIRECT_URI`    | Opcjonalny; domyślnie `https://financeyou.pl/api/tiktok/callback`              |
+| `HEYGEN_API_KEY`         | Generowanie wideo awatara (już używany przez Awatar FAQ)                       |
+| `PEXELS_API_KEY`         | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)               |
+| `HEYGEN_CAPTION_STYLE`   | Opcjonalny styl napisów HeyGen (domyślnie `default`; API zna tylko tę wartość) |
+| `CAPTION_BURNER_URL`     | Opcjonalny; adres usługi wypalania napisów (własne style napisów)              |
+| `CAPTION_BURNER_SECRET`  | Sekret tej usługi (Bearer) — bez pary URL+sekret zostaje styl HeyGena          |
+| `ELEVENLABS_API_KEY`     | Lektor TTS (już używany)                                                       |
+| `LOVABLE_API_KEY`        | AI gateway: scenariusze, prompty, grafiki (już używany)                        |
 
 Token strony musi mieć uprawnienia: `pages_manage_posts`,
 `pages_read_engagement`, a dla Instagrama dodatkowo `instagram_basic`
@@ -180,6 +189,49 @@ true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
    napisów. Biblioteka rozróżnia trzy stany: „napisy na wideo", „tylko plik
    SRT", „bez napisów". Plik SRT nadal ląduje w `subtitle_url` (przycisk
    „SRT"). Ustawienie obowiązuje też dla generowania wsadowego.
+
+   **Styl napisów — własne wypalanie.** HeyGen v3 przyjmuje w `caption.style`
+   **wyłącznie `"default"`** (sprawdzone na żywym API: walidacja odpowiada
+   „Input should be 'default'"), więc rozmiar, czcionka i pozycja napisów
+   HeyGena nie są do ustawienia — wychodzą małe, nisko, w szarym pasku.
+   Dlatego obok przełącznika jest **select „Styl napisów"**:
+   - `HeyGen (domyślne)` — jak dotąd,
+   - `Rolka — duże z obrysem`, `TikTok — wielkie litery, podświetlanie słów`,
+     `Ramka — biały na ciemnym pasku`, `Delikatne — mniejsze u dołu` —
+     **wypalane u nas**. Presety (rozmiar, kolory, obrys, pozycja, maks.
+     znaków w wierszu, podświetlanie słowa) siedzą w `src/lib/caption-style.ts`;
+     zmiana wyglądu to zmiana w tym pliku.
+
+   Jak to działa: backend chodzi na Cloudflare Workers, gdzie nie ma FFmpega,
+   więc obraz wypala mała usługa `services/caption-burner` (FFmpeg + libass,
+   jeden plik, bez zależności; deploy: Fly.io jedną komendą albo Docker
+   gdziekolwiek — patrz `services/caption-burner/README.md`). Pipeline po
+   zakończeniu renderu HeyGena bierze **czysty master** (`video_url`) i **plik
+   SRT** (`caption_url`), z SRT buduje ASS w wybranym stylu (`srtToAss`:
+   parser SRT odporny na BOM/CRLF/tagi, cięcie kwestii do maks. 1–2 wierszy
+   po N znaków z czasem proporcjonalnym do liczby znaków, wyrównanie dwóch
+   wierszy, opcjonalne wielkie litery i podświetlanie słowa — czasy słów też
+   proporcjonalne, bo SRT nie zna czasów słów), wysyła zadanie do usługi
+   i przechodzi w status **`captioning`**. Kolejne odpytanie (panel co 15 s,
+   tick co 10 min) pobiera gotowy MP4, zapisuje go w buckecie `studio-media`
+   (**trwały link** — linki HeyGena wygasają po ~7 dniach) i dopiero wtedy
+   ustawia `ready` + auto-publikację. Czysty master zostaje w `video_url_clean`.
+
+   Nic z tego nie blokuje generacji ani nie zostawia joba w zawieszeniu
+   (`planCaptionBurn` / `resolveCaptionBurn` w `studio-captions.ts`, testy):
+   brak sekretów usługi, brak SRT z HeyGena, błąd zlecenia → od razu napisy
+   HeyGena z powodem w `last_error`; błąd usługi albo zaginione zadanie (restart)
+   → jedno ponowienie, potem wersja HeyGena; brak wyniku po 45 min → wersja
+   HeyGena. Panel pokazuje styl w badge'u („napisy: Rolka — duże z obrysem")
+   i faktyczny stan, nie zamówiony. Kolumny: `caption_style`, `caption_burn_id`,
+   `caption_burn_started_at`, `caption_burn_attempts`.
+
+   **Zmiana napisów gotowego filmu** — w bibliotece przy gotowym wideo select
+   „Zmień napisy…" (także `restyle_studio_job_captions` w MCP): czysty master
+   - SRT lecą do usługi w nowym stylu, poprzedni plik zostaje do czasu sukcesu
+     i wraca przy porażce. Nie publikuje ponownie. Działa dla filmów z ostatnich
+     ~7 dni (potem linki HeyGena wygasają); dla starszych trzeba wygenerować
+     rolkę od nowa.
 
    Pozostałe ścieżki HeyGena zamawiają świadomie `captions: "sidecar"`
    (nie wypalamy tego, czego nie publikujemy): FAQ awatara gra na stronie

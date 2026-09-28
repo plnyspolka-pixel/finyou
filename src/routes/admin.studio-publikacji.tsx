@@ -4,7 +4,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   getStudioStatus,
   listSocialQueue,
@@ -23,6 +23,7 @@ import {
   processStudioVideoQueueNow,
   pollStudioVideoJob,
   deleteStudioVideoJob,
+  restyleStudioVideoCaptions,
   generateStudioPrompts,
   listStudioImages,
   generateStudioImageFn,
@@ -40,6 +41,13 @@ import {
   type StudioBrollAsset,
 } from "@/lib/studio.functions";
 import { captionBadgeLabel } from "@/lib/studio-captions";
+import {
+  CAPTION_STYLE_OPTIONS,
+  CUSTOM_CAPTION_STYLES,
+  captionPreviewCss,
+  isCustomCaptionStyle,
+  type CaptionStyleId,
+} from "@/lib/caption-style";
 import { describeScenePlan } from "@/lib/studio-scenes";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
 import { getTiktokIntegrationStatus, getTiktokCreatorInfo } from "@/lib/tiktok.functions";
@@ -144,9 +152,40 @@ const VIDEO_STATUS_LABELS: Record<string, string> = {
   generating_audio: "Generuję lektora…",
   uploading: "Wysyłam audio…",
   rendering: "Renderowanie w HeyGen…",
+  captioning: "Wypalam napisy…",
   ready: "Gotowe",
   failed: "Błąd",
 };
+
+/**
+ * Podgląd stylu napisów: przybliżenie CSS na ciemnym kadrze. Prawdziwy wygląd
+ * daje libass w usłudze wypalania — to tylko orientacja co do rozmiaru,
+ * pozycji i kolorów.
+ */
+function CaptionStylePreview({ styleId }: { styleId: CaptionStyleId }) {
+  if (!isCustomCaptionStyle(styleId)) return null;
+  const style = CUSTOM_CAPTION_STYLES[styleId];
+  const css = { ...captionPreviewCss(style), display: "inline-block", maxWidth: "100%" };
+  return (
+    <div
+      aria-hidden
+      className="flex h-28 items-end justify-center overflow-hidden rounded-md border bg-[#101728] px-3"
+      style={{
+        paddingBottom: style.placement === "center" ? 40 : Math.round(style.marginBottom * 0.1),
+      }}
+    >
+      <span style={css as CSSProperties}>
+        {style.highlight ? (
+          <>
+            Tak wyglądają <span style={{ color: style.highlight }}>napisy</span>
+          </>
+        ) : (
+          "Tak wyglądają napisy"
+        )}
+      </span>
+    </div>
+  );
+}
 
 const AUTO_PLATFORM_SHORT: Record<string, string> = {
   youtube: "YouTube",
@@ -213,6 +252,7 @@ function StudioPage() {
   const processQueueFn = useServerFn(processStudioVideoQueueNow);
   const pollVideoFn = useServerFn(pollStudioVideoJob);
   const deleteVideoFn = useServerFn(deleteStudioVideoJob);
+  const restyleFn = useServerFn(restyleStudioVideoCaptions);
   const genPromptsFn = useServerFn(generateStudioPrompts);
   const imagesFn = useServerFn(listStudioImages);
   const genImageFn = useServerFn(generateStudioImageFn);
@@ -282,9 +322,12 @@ function StudioPage() {
   // faktycznie wybrany, żeby nie pukać do API bez potrzeby.
   const tiktokConnected = !!tiktokStatus?.connected;
 
-  // Automatyczny polling HeyGen dla jobów w trakcie renderowania.
+  // Automatyczny polling dla jobów w trakcie renderowania (HeyGen) i wypalania
+  // własnych napisów (usługa caption-burner).
   useEffect(() => {
-    const rendering = videoJobs.filter((j) => j.status === "rendering");
+    const rendering = videoJobs.filter(
+      (j) => j.status === "rendering" || j.status === "captioning",
+    );
     if (!rendering.length) return;
     const t = setInterval(() => {
       rendering.forEach((j) =>
@@ -407,6 +450,17 @@ function StudioPage() {
   const [voiceId, setVoiceId] = useState(FILIP_VOICE_ID);
   // Shorty i rolki ogląda się bez dźwięku — napisy domyślnie włączone.
   const [captionsOn, setCaptionsOn] = useState(true);
+  // Styl napisów: HeyGen (bez kontroli wyglądu) albo własny, wypalany naszą
+  // usługą FFmpeg. Gdy usługa jest skonfigurowana, domyślnie „rolka”.
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyleId>("heygen");
+  const captionBurnerOn = !!status?.captionBurnerConfigured;
+  const captionStyleDefaulted = useRef(false);
+  useEffect(() => {
+    if (captionBurnerOn && !captionStyleDefaulted.current) {
+      captionStyleDefaulted.current = true;
+      setCaptionStyle("reels");
+    }
+  }, [captionBurnerOn]);
   // Montaż rolki: pojedyncze ujęcie | przebitki wskazane przez AI | stała
   // struktura (ujęcie → wizual hook → przebitka → a-roll innego awatara).
   const [montage, setMontage] = useState<"single" | "ai" | "structure">("single");
@@ -681,6 +735,7 @@ function StudioPage() {
           avatar_id: avatarId,
           voice_id: voiceId,
           captions: captionsOn,
+          caption_style: captionStyle,
           dynamic_scenes: dynamicScenesOn,
           reel_structure: reelStructureOn,
           avatar_ids: avatarRotation,
@@ -702,6 +757,15 @@ function StudioPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const restyleM = useMutation({
+    mutationFn: (v: { id: string; caption_style: string }) => restyleFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Wypalam nowe napisy — gotowy plik podmieni się w bibliotece");
+      qc.invalidateQueries({ queryKey: ["studio-video-jobs"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const batchM = useMutation({
     mutationFn: () =>
       batchFn({
@@ -710,6 +774,7 @@ function StudioPage() {
           avatar_id: avatarId,
           voice_id: voiceId,
           captions: captionsOn,
+          caption_style: captionStyle,
           dynamic_scenes: dynamicScenesOn,
           reel_structure: reelStructureOn,
           avatar_ids: avatarRotation,
@@ -1745,6 +1810,35 @@ function StudioPage() {
                       {captionsOn ? "Włączone (zalecane)" : "Wyłączone"}
                     </span>
                   </div>
+                  {captionsOn && (
+                    <>
+                      <select
+                        className="h-10 w-full rounded-md border bg-background p-2 text-sm"
+                        value={captionStyle}
+                        title="Styl napisów"
+                        onChange={(e) => setCaptionStyle(e.target.value as CaptionStyleId)}
+                      >
+                        {CAPTION_STYLE_OPTIONS.map((o) => (
+                          <option
+                            key={o.id}
+                            value={o.id}
+                            disabled={o.id !== "heygen" && !captionBurnerOn}
+                          >
+                            {o.label}
+                            {o.id !== "heygen" && !captionBurnerOn
+                              ? " — wymaga usługi napisów"
+                              : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <CaptionStylePreview styleId={captionStyle} />
+                      <p className="text-xs text-muted-foreground">
+                        {captionBurnerOn
+                          ? CAPTION_STYLE_OPTIONS.find((o) => o.id === captionStyle)?.description
+                          : "HeyGen nie pozwala ustawić rozmiaru, czcionki ani pozycji napisów. Własne style wypala usługa caption-burner — sekrety CAPTION_BURNER_URL i CAPTION_BURNER_SECRET (opis w docs/studio-publikacji.md)."}
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
@@ -1983,6 +2077,30 @@ function StudioPage() {
                               </Button>
                             </a>
                           )}
+                          {captionBurnerOn &&
+                            j.status === "ready" &&
+                            j.subtitle_url &&
+                            (j.video_url_clean || !j.captions) && (
+                              <select
+                                className="h-8 rounded-md border bg-background px-2 text-xs"
+                                value=""
+                                disabled={restyleM.isPending}
+                                title="Wypal napisy na nowo w innym stylu (nie publikuje ponownie; linki HeyGen działają ok. 7 dni)"
+                                onChange={(e) => {
+                                  if (e.target.value)
+                                    restyleM.mutate({ id: j.id, caption_style: e.target.value });
+                                }}
+                              >
+                                <option value="">Zmień napisy…</option>
+                                {CAPTION_STYLE_OPTIONS.filter(
+                                  (o) => o.id !== "heygen" && o.id !== j.caption_style,
+                                ).map((o) => (
+                                  <option key={o.id} value={o.id}>
+                                    {o.label}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
                           <Button
                             variant="ghost"
                             size="sm"

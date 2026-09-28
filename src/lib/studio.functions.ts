@@ -7,7 +7,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { StudioPromptKind } from "./studio-ai.server";
-import { resolveCaptionedOutput } from "./studio-captions";
+import { isCustomCaptionStyle, parseCaptionStyleId } from "./caption-style";
 import type { ScenePlanItem } from "./studio-scenes";
 
 async function assertAdmin(userId: string) {
@@ -31,6 +31,8 @@ export type StudioStatus = {
   heygenConfigured: boolean;
   elevenlabsConfigured: boolean;
   aiConfigured: boolean;
+  /** Usługa wypalania napisów (własne style) — bez niej zostaje styl HeyGena. */
+  captionBurnerConfigured: boolean;
 };
 
 export const getStudioStatus = createServerFn({ method: "GET" })
@@ -71,6 +73,9 @@ export const getStudioStatus = createServerFn({ method: "GET" })
       heygenConfigured: !!process.env.HEYGEN_API_KEY,
       elevenlabsConfigured: !!process.env.ELEVENLABS_API_KEY,
       aiConfigured: !!process.env.LOVABLE_API_KEY,
+      captionBurnerConfigured: (
+        await import("./caption-burner.server")
+      ).isCaptionBurnerConfigured(),
     };
   });
 
@@ -363,6 +368,12 @@ export type StudioVideoJob = {
   /** Czy `video_url` ma napisy wypalone w obrazie. */
   captions: boolean;
   caption_wait_since: string | null;
+  /** 'heygen' = napisy HeyGena; inne = wypalone u nas (src/lib/caption-style.ts). */
+  caption_style: string;
+  /** Id zadania w usłudze wypalania — gdy status to 'captioning'. */
+  caption_burn_id: string | null;
+  caption_burn_started_at: string | null;
+  caption_burn_attempts: number;
   /** Czy rolka renderuje się jako sklejka scen (awatar + przebitki). */
   dynamic_scenes: boolean;
   /** Czy poszła stałą strukturą (ujęcie → wizual hook → przebitka → a-roll). */
@@ -571,6 +582,8 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       avatar_id: string;
       voice_id?: string;
       captions?: boolean;
+      /** Styl napisów: 'heygen' albo własny (reels | tiktok | box | minimal). */
+      caption_style?: string;
       dynamic_scenes?: boolean;
       reel_structure?: boolean;
       avatar_ids?: string[];
@@ -603,6 +616,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         voice_id: voiceId,
         status: "generating_audio",
         captions: data.captions !== false,
+        caption_style: parseCaptionStyleId(data.caption_style),
         dynamic_scenes: data.dynamic_scenes === true || reelStructure,
         reel_structure: reelStructure,
         avatar_ids: avatarIds,
@@ -667,6 +681,7 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       avatar_id: string;
       voice_id?: string;
       captions?: boolean;
+      caption_style?: string;
       dynamic_scenes?: boolean;
       reel_structure?: boolean;
       avatar_ids?: string[];
@@ -717,6 +732,7 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
         voice_id: data.voice_id || FILIP_VOICE_ID,
         status: "queued",
         captions: data.captions !== false,
+        caption_style: parseCaptionStyleId(data.caption_style),
         dynamic_scenes: data.dynamic_scenes === true || reelStructure,
         reel_structure: reelStructure,
         avatar_ids: avatarIds,
@@ -751,70 +767,86 @@ export const pollStudioVideoJob = createServerFn({ method: "POST" })
     await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { getHeygenVideoStatus } = await import("./avatar-faq.server");
+    const { settleCaptionBurn, settleHeygenCompletion } =
+      await import("./studio-video-queue.server");
+    type JobRow = import("./studio-video-queue.server").StudioJobRow;
 
     const { data: row } = await supabaseAdmin
       .from("studio_video_jobs")
-      .select(
-        "id, prompt, script, avatar_id, voice_id, heygen_video_id, status, video_url, captions, caption_wait_since, dynamic_scenes, reel_structure, avatar_ids, auto_publish_platforms, publish_privacy, publish_title, publish_description, auto_published_at, created_by, tiktok_post_options",
-      )
+      .select("*")
       .eq("id", data.id)
       .single();
-    if (!row?.heygen_video_id) return { status: "no_video" as const };
+    const job = (row ?? null) as JobRow | null;
+    if (!job) return { status: "no_video" as const };
 
-    const status = await getHeygenVideoStatus(row.heygen_video_id);
-    const update: {
-      status?: string;
-      video_url?: string | null;
-      video_url_clean?: string | null;
-      thumbnail_url?: string | null;
-      subtitle_url?: string | null;
-      captions?: boolean;
-      caption_wait_since?: string | null;
-      last_error?: string | null;
-    } = {};
+    // Własne napisy w toku: odpytujemy usługę wypalania, nie HeyGen.
+    if (job.status === "captioning") {
+      const out = await settleCaptionBurn(job);
+      return {
+        status: out.state === "ready" ? "completed" : "captioning",
+        video_url: out.state === "ready" ? out.videoUrl : null,
+        thumbnail_url: job.thumbnail_url,
+      };
+    }
+    if (!job.heygen_video_id) return { status: "no_video" as const };
+
+    const status = await getHeygenVideoStatus(job.heygen_video_id);
     if (status.status === "completed" && status.video_url) {
-      // Wersja z wypalonymi napisami to osobny plik HeyGena — bierzemy ją,
-      // a czysty master zostaje pod video_url_clean.
-      const resolved = resolveCaptionedOutput({
-        want: row.captions ? "burned" : "sidecar",
-        outputs: status,
-        waitSince: row.caption_wait_since,
-        now: new Date(),
-      });
-      if (resolved.state === "waiting") {
-        await supabaseAdmin
-          .from("studio_video_jobs")
-          .update({ caption_wait_since: resolved.waitSince })
-          .eq("id", data.id);
-        return { status: "rendering", video_url: null, thumbnail_url: status.thumbnail_url };
-      }
-      update.status = "ready";
-      update.video_url = resolved.videoUrl;
-      update.video_url_clean = resolved.cleanVideoUrl;
-      update.thumbnail_url = status.thumbnail_url ?? null;
-      update.subtitle_url = resolved.subtitleUrl;
-      update.captions = resolved.captionsBurned;
-      update.caption_wait_since = null;
-      update.last_error = resolved.note;
-    } else if (status.status === "failed") {
-      update.status = "failed";
-      update.last_error =
-        typeof status.error === "string" ? status.error : JSON.stringify(status.error ?? {});
-    } else {
-      update.status = status.status === "processing" ? "rendering" : status.status;
+      // Te same decyzje co w ticku: własne napisy, wersja HeyGena z karencją,
+      // auto-publikacja — jedna funkcja, żeby panel i cron nie rozjeżdżały się.
+      const out = await settleHeygenCompletion(job, status);
+      return {
+        status:
+          out.state === "ready"
+            ? "completed"
+            : out.state === "captioning"
+              ? "captioning"
+              : "rendering",
+        video_url: out.state === "ready" ? out.videoUrl : null,
+        thumbnail_url: status.thumbnail_url,
+      };
     }
-    await supabaseAdmin.from("studio_video_jobs").update(update).eq("id", data.id);
+    if (status.status === "failed") {
+      await supabaseAdmin
+        .from("studio_video_jobs")
+        .update({
+          status: "failed",
+          last_error:
+            typeof status.error === "string" ? status.error : JSON.stringify(status.error ?? {}),
+        })
+        .eq("id", data.id);
+      return { status: "failed", video_url: null, thumbnail_url: status.thumbnail_url };
+    }
+    await supabaseAdmin
+      .from("studio_video_jobs")
+      .update({ status: status.status === "processing" ? "rendering" : status.status })
+      .eq("id", data.id);
+    return { status: status.status, video_url: null, thumbnail_url: status.thumbnail_url };
+  });
 
-    if (update.status === "ready" && update.video_url) {
-      const { maybeAutoPublishJob } = await import("./studio-video-queue.server");
-      await maybeAutoPublishJob({ ...row, status: "ready", video_url: update.video_url });
+/**
+ * Zmiana napisów gotowego wideo na własny styl (usługa wypalania). Poprzedni
+ * plik zostaje pod video_url, aż nowy będzie gotowy; przy porażce wraca.
+ */
+export const restyleStudioVideoCaptions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string; caption_style: string }) => d)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    if (!isCustomCaptionStyle(data.caption_style)) {
+      throw new Error("Wybierz własny styl napisów (nie HeyGen).");
     }
-    return {
-      status: status.status,
-      // Ten sam plik, który zapisaliśmy i który pójdzie do publikacji.
-      video_url: update.video_url ?? null,
-      thumbnail_url: status.thumbnail_url,
-    };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { restyleJobCaptions } = await import("./studio-video-queue.server");
+    type JobRow = import("./studio-video-queue.server").StudioJobRow;
+    const { data: row } = await supabaseAdmin
+      .from("studio_video_jobs")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (!row) throw new Error("Nie znaleziono zadania.");
+    await restyleJobCaptions(row as JobRow, data.caption_style);
+    return { ok: true };
   });
 
 export const deleteStudioVideoJob = createServerFn({ method: "POST" })
