@@ -10132,6 +10132,2646 @@
         "outputSchema": null
       },
       {
+        "name": "plan_seo_topics",
+        "title": "Plan SEO blog topics (AI)",
+        "description": "AI planuje `count` (3–20) tematów blogowych pod hasło / obszar `seed` (tytuł, słowo kluczowe, frazy dodatkowe, intencja, trudność, priorytet) i dodaje je do kolejki tematów SEO. Autopilot pisze z kolejki; jeden temat od ręki: `generate_seo_article`. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "seed": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            },
+            "count": {
+              "type": "number",
+              "minimum": 3,
+              "maximum": 20,
+              "default": 8
+            }
+          },
+          "required": [
+            "seed"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_seo_article",
+        "title": "Generate SEO article from topic (AI)",
+        "description": "AI pisze pełny artykuł (800–1500 słów, markdown, FAQ, CTA do wniosku) z tematu z kolejki (`topicId` z `list_blog_topics`), nadaje unikalny slug i zapisuje jako szkic; `autoPublish=true` publikuje od razu na blogu. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "topicId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "autoPublish": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "topicId"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_seo_article_status",
+        "title": "Set SEO article status",
+        "description": "Zmienia status artykułu bloga jak w panelu AI SEO: draft / published / archived (bez wymogu okładki — `update_seo_article` go wymaga). Publikacja jest publiczna od razu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "archived"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "status"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_seo_article",
+        "title": "Delete SEO article",
+        "description": "Usuwa artykuł bloga (także opublikowany — znika ze strony). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_serp_keyword",
+        "title": "Update tracked keyword",
+        "description": "Edytuje śledzoną frazę: treść, docelowy URL, aktywność, tagi, wolumen, trudność. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "keyword": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "target_url": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "is_active": {
+              "type": "boolean"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 20
+            },
+            "search_volume": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "difficulty": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_serp_keyword",
+        "title": "Delete tracked keyword",
+        "description": "Usuwa frazę ze śledzenia razem z historią pozycji. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "check_serp_ranking",
+        "title": "Check Google ranking for one keyword",
+        "description": "Sprawdza od ręki pozycję docelowej domeny w Google dla jednej frazy (`keyword_id` z `list_serp_keywords`), zapisuje pomiar z poprzednią pozycją i cechami SERP; zwraca też TOP 10 wyników. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "keyword_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "keyword_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "check_all_serp_rankings",
+        "title": "Check Google rankings for all active keywords",
+        "description": "Sprawdza pozycje wszystkich aktywnych fraz (jedna po drugiej, z odstępem) i zapisuje pomiary. Przy wielu frazach trwa minuty. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_serp_rankings",
+        "title": "List ranking history",
+        "description": "Historia pomiarów pozycji (najnowsze pierwsze): fraza, pozycja, poprzednia, adres w wynikach, cechy SERP, czas. Filtr po `keyword_id`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "keyword_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko ta fraza."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data pomiaru, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_ai_landings",
+        "title": "List AI landings",
+        "description": "Landingi wygenerowane przez silnik wzrostu (/admin/ai-growth-engine): slug, tytuł, status (draft / published / archived), cel, grupa, słowa kluczowe, nagłówek, CTA. Publiczny adres: /embed/l/<slug>. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status: draft / published / archived."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: tytuł, slug, cel."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_ai_landing",
+        "title": "Get AI landing",
+        "description": "Pełna treść landingu AI (po id albo slugu): meta, hero, CTA, sekcje, brief, słowa kluczowe. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "slug": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_ai_landing",
+        "title": "Generate AI landing (growth engine)",
+        "description": "AI generuje kompletny landing (meta, hero, CTA, 3–8 sekcji: korzyści, jak to działa, dowód społeczny, FAQ, CTA) z celu kampanii, grupy docelowej, słów kluczowych i briefu; `ctaUrl` domyślnie z ustawień silnika. Zapisuje jako szkic; `autoPublish=true` publikuje pod /embed/l/<slug>. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "goal": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            },
+            "audience": {
+              "type": "string",
+              "maxLength": 500,
+              "default": ""
+            },
+            "keywords": {
+              "type": "string",
+              "maxLength": 500,
+              "default": ""
+            },
+            "brief": {
+              "type": "string",
+              "maxLength": 3000,
+              "default": ""
+            },
+            "ctaUrl": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "autoPublish": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "goal"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_ai_landing_status",
+        "title": "Publish / archive AI landing",
+        "description": "Zmienia status landingu AI: draft / published / archived (publikacja widoczna od razu). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "archived"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "status"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_ai_landing",
+        "title": "Delete AI landing",
+        "description": "Usuwa landing AI razem z wariantami i zdarzeniami. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_growth_settings",
+        "title": "Get growth engine settings",
+        "description": "Ustawienia silnika wzrostu: tryb automatyzacji (off / manual_review / semi_auto / full_autopilot), dzienny budżet AI, marka i jej opis, grupa docelowa, główny URL CTA, domyślny model. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_growth_settings",
+        "title": "Update growth engine settings",
+        "description": "Zmienia ustawienia silnika wzrostu (tryb automatyzacji, budżet AI, marka, grupa docelowa, CTA, model). Tryb full_autopilot pozwala silnikowi publikować bez przeglądu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "automation_mode": {
+              "type": "string",
+              "enum": [
+                "off",
+                "manual_review",
+                "semi_auto",
+                "full_autopilot"
+              ]
+            },
+            "daily_ai_budget_pln": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "brand_name": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "brand_description": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "target_audience": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "primary_cta_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "default_model": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_funnel_stats",
+        "title": "Get funnel stats",
+        "description": "Statystyki lejka za N dni (opcjonalnie dla jednego landingu AI): kroki z konwersją i odpadem, źródła pierwszego kontaktu, urządzenia, sumy. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_id": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 30
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_funnel_insights",
+        "title": "Generate funnel insights (AI)",
+        "description": "AI analizuje lejek za N dni (wąskie gardła, rekomendacje) i zapisuje wynik (`get_funnel_insights` czyta zapisane). Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "landing_id": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 30
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_outreach_targets",
+        "title": "List outreach targets",
+        "description": "Cele outreachu (portale, blogi, partnerzy): domena, kontakt, nisza, priorytet, status (new / queued / contacted / responded / won / rejected / blacklist), źródło, notatki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status celu."
+            },
+            "niche": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Nisza."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_outreach_messages",
+        "title": "List outreach messages",
+        "description": "Wiadomości outreachu (sekwencje kroków 1–5): temat, treść, status (draft / approved / sent / replied / bounced), cel, kąt, wysłano, fragment odpowiedzi. Filtr po `target_id`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "target_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko ten cel."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status wiadomości."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "discover_outreach_targets",
+        "title": "Discover outreach targets (AI)",
+        "description": "AI proponuje do `count` (1–20) celów outreachu w niszy (domena, kontakt, uzasadnienie) i dodaje je jako cele ze źródłem ai_discovery. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "niche": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 300
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 10
+            }
+          },
+          "required": [
+            "niche"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_outreach_target",
+        "title": "Add outreach target",
+        "description": "Dodaje cel outreachu ręcznie: domena, URL, kontakt, nisza, priorytet, notatki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 255,
+              "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$"
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "contact_name": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 120
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "contact_email": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "email"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "niche": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 120
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 50
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "manual",
+                "ai_discovery",
+                "import"
+              ],
+              "default": "manual"
+            }
+          },
+          "required": [
+            "domain"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_outreach_target",
+        "title": "Update outreach target",
+        "description": "Edytuje cel outreachu: kontakt, nisza, priorytet, status (new / queued / contacted / responded / won / rejected / blacklist), notatki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "contact_name": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 120
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "contact_email": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "not": {}
+                        },
+                        {
+                          "type": "string",
+                          "format": "email"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": ""
+                }
+              ]
+            },
+            "niche": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 120
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "new",
+                "queued",
+                "contacted",
+                "responded",
+                "won",
+                "rejected",
+                "blacklist"
+              ]
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_outreach_target",
+        "title": "Delete outreach target",
+        "description": "Usuwa cel outreachu razem z wiadomościami. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_outreach_message",
+        "title": "Generate outreach message (AI)",
+        "description": "AI pisze wiadomość outreachu do celu (`target_id`): cel rozmowy, kąt, krok sekwencji 1–5 (`parent_id` = poprzednia wiadomość przy follow-upie). Zapisuje jako szkic — nic nie wysyła; treść kopiuje się do własnej skrzynki, a `update_outreach_message` z `mark_sent` odnotowuje wysyłkę. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "target_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "goal": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            },
+            "angle": {
+              "type": "string",
+              "maxLength": 500,
+              "default": ""
+            },
+            "step": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5,
+              "default": 1
+            },
+            "parent_id": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "target_id",
+            "goal"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_outreach_message",
+        "title": "Update outreach message",
+        "description": "Edytuje wiadomość outreachu (temat, treść, status), `mark_sent=true` odnotowuje wysyłkę (cel → contacted), `reply_excerpt` + status replied zapisuje odpowiedź. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "subject": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "body": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "approved",
+                "sent",
+                "replied",
+                "bounced"
+              ]
+            },
+            "reply_excerpt": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 5000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "mark_sent": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_outreach_message",
+        "title": "Delete outreach message",
+        "description": "Usuwa wiadomość outreachu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_backlinks",
+        "title": "List backlinks",
+        "description": "Backlinki: strona źródłowa, domena, cel, anchor, typ (editorial / guest_post / directory / forum / comment / partnership / other), dofollow, DA, status (live / lost / pending / rejected), ostatnie sprawdzenie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status linku."
+            },
+            "link_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Typ linku."
+            },
+            "dofollow": {
+              "type": "boolean",
+              "description": "Tylko dofollow / nofollow."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_backlink",
+        "title": "Add backlink",
+        "description": "Rejestruje backlink (źródło, cel, anchor, typ, dofollow, DA, notatki, powiązany cel outreachu) ze statusem live. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "source_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "target_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "anchor_text": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 300
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "link_type": {
+              "type": "string",
+              "enum": [
+                "editorial",
+                "guest_post",
+                "directory",
+                "forum",
+                "comment",
+                "partnership",
+                "other"
+              ],
+              "default": "editorial"
+            },
+            "dofollow": {
+              "type": "boolean",
+              "default": true
+            },
+            "domain_authority": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "outreach_target_id": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "source_url",
+            "target_url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_backlink",
+        "title": "Update backlink",
+        "description": "Edytuje backlink: status, dofollow, DA, notatki, data sprawdzenia. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "live",
+                "lost",
+                "pending",
+                "rejected"
+              ]
+            },
+            "dofollow": {
+              "type": "boolean"
+            },
+            "domain_authority": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "last_checked_at": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_backlink",
+        "title": "Delete backlink",
+        "description": "Usuwa backlink z rejestru. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_linkbuilding_suggestions",
+        "title": "List link building suggestions",
+        "description": "Propozycje AI miejsc na linki: domena, wskazówka kontaktu, strategia, uzasadnienie, priorytet 1–5, oczekiwane DA, status (new / in_progress / won / rejected / archived). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status propozycji."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_linkbuilding_suggestions",
+        "title": "Generate link building suggestions (AI)",
+        "description": "AI proponuje miejsca na linki w niszy (domeny, strategia, uzasadnienie, priorytet) i zapisuje je jako propozycje; `promote_suggestion_to_outreach` robi z propozycji cel outreachu. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "niche": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 2000,
+              "default": ""
+            }
+          },
+          "required": [
+            "niche"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_linkbuilding_suggestion",
+        "title": "Update link building suggestion",
+        "description": "Zmienia status (new / in_progress / won / rejected / archived) albo priorytet propozycji. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "new",
+                "in_progress",
+                "won",
+                "rejected",
+                "archived"
+              ]
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "promote_suggestion_to_outreach",
+        "title": "Promote suggestion to outreach target",
+        "description": "Zamienia propozycję link buildingu w cel outreachu (propozycja → in_progress). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_competitors",
+        "title": "List monitored competitors",
+        "description": "Monitorowani konkurenci: nazwa, domena, śledzone URL-e, tagi, aktywność, ostatnie sprawdzenie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "is_active": {
+              "type": "boolean",
+              "description": "Tylko aktywni / nieaktywni."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza: nazwa lub domena."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_competitor_snapshots",
+        "title": "List competitor snapshots (change feed)",
+        "description": "Zrzuty stron konkurencji z każdego skanu: URL, tytuł, opis, czy treść się zmieniła, streszczenie zmiany i analiza AI. `changed=true` daje sam feed zmian. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "competitor_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko ten konkurent."
+            },
+            "changed": {
+              "type": "boolean",
+              "description": "Tylko zrzuty ze zmianą."
+            },
+            "since": {
+              "type": "string",
+              "description": "Od kiedy (data skanu, ISO 8601 lub YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_competitor",
+        "title": "Add competitor to monitoring",
+        "description": "Dodaje konkurenta: nazwa, domena, 1–20 URL-i do śledzenia, notatki, tagi. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150
+            },
+            "domain": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200
+            },
+            "urls": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uri"
+              },
+              "minItems": 1,
+              "maxItems": 20
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 20,
+              "default": []
+            }
+          },
+          "required": [
+            "name",
+            "domain",
+            "urls"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_competitor",
+        "title": "Update competitor",
+        "description": "Edytuje konkurenta: nazwa, URL-e, notatki, tagi, aktywność. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150
+            },
+            "urls": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uri"
+              },
+              "maxItems": 20
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 20
+            },
+            "is_active": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_competitor",
+        "title": "Delete competitor",
+        "description": "Usuwa konkurenta razem z historią zrzutów. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "scan_competitor",
+        "title": "Scan competitor now",
+        "description": "Pobiera śledzone strony konkurenta, porównuje z poprzednim zrzutem i przy zmianie prosi AI o streszczenie i analizę; zapisuje zrzuty. Zużywa kredyty AI przy zmianach. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "competitor_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "competitor_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_clarity_metrics",
+        "title": "Get Microsoft Clarity metrics",
+        "description": "Metryki Clarity z ostatnich 1–3 dni (URL / urządzenie / źródło, medium, kraj / przeglądarka / system): sesje, rage clicks, dead clicks, scroll depth. Limit Clarity: 10 wywołań eksportu dziennie (każde tu zużywa 3). Wymaga CLARITY_API_TOKEN. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "numOfDays": {
+              "type": "number",
+              "enum": [
+                1,
+                2,
+                3
+              ],
+              "default": 3
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "analyze_clarity_metrics",
+        "title": "Analyze Clarity metrics (AI)",
+        "description": "AI analizuje przekazane metryki Clarity (z `get_clarity_metrics`) i odpowiada na pytanie — domyślnie TOP 5 problemów UX z rekomendacjami. Nic nie zapisuje. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "metrics": {},
+            "question": {
+              "type": "string",
+              "maxLength": 2000,
+              "default": ""
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_google_ad_drafts",
+        "title": "List Google Ads drafts",
+        "description": "Szkice kampanii Google Ads z kreatora: nazwa, typ (SEARCH / DISPLAY), budżet dzienny, status, URL docelowy, lokalizacje, języki, liczba nagłówków i słów. Google Ads nie ma integracji API — wynik to plik CSV do Google Ads Editor (`export_google_ad_csv`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status szkicu."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "save_google_ad_draft",
+        "title": "Create / update Google Ads draft",
+        "description": "Tworzy (bez `id`) albo aktualizuje szkic kampanii Google Ads: nazwa, typ SEARCH / DISPLAY, budżet dzienny PLN, słowa kluczowe i wykluczające, 3–15 nagłówków (≤30 znaków), 2–4 opisy (≤90), URL docelowy, ścieżki wyświetlane, lokalizacje, języki, notatki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "campaign_type": {
+              "type": "string",
+              "enum": [
+                "SEARCH",
+                "DISPLAY"
+              ]
+            },
+            "daily_budget_pln": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "maxItems": 200
+            },
+            "negative_keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "maxItems": 200
+            },
+            "headlines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 30
+              },
+              "minItems": 3,
+              "maxItems": 15
+            },
+            "descriptions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 90
+              },
+              "minItems": 2,
+              "maxItems": 4
+            },
+            "final_url": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 500
+            },
+            "display_path1": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "display_path2": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "target_locations": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "minItems": 1,
+              "maxItems": 50
+            },
+            "target_languages": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 10
+              },
+              "minItems": 1,
+              "maxItems": 20
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "campaign_type",
+            "daily_budget_pln",
+            "keywords",
+            "negative_keywords",
+            "headlines",
+            "descriptions",
+            "final_url",
+            "target_locations",
+            "target_languages"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_google_ad_draft",
+        "title": "Get Google Ads draft",
+        "description": "Pełny szkic kampanii Google Ads. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_google_ad_draft",
+        "title": "Delete Google Ads draft",
+        "description": "Usuwa szkic kampanii Google Ads. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "export_google_ad_csv",
+        "title": "Export Google Ads draft to CSV",
+        "description": "Generuje plik CSV kampanii do importu w Google Ads Editor (zwraca treść i nazwę pliku) i oznacza szkic jako eksportowany. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_meta_ad_drafts",
+        "title": "List Meta Ads drafts",
+        "description": "Szkice kampanii Meta Ads z kreatora (/admin/fb-ads/kreator): nazwa, konto, strona, budżet dzienny, status (szkic / opublikowana / blad), terminy, id obiektów po publikacji, błąd. Pełne targetowanie i kreację daje `get_meta_ad_draft`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Status szkicu."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_meta_ad_draft",
+        "title": "Get Meta Ads draft",
+        "description": "Pełny szkic kampanii Meta Ads: targetowanie, kreacja, formularz leadów, terminy, wynik publikacji. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "save_meta_ad_draft",
+        "title": "Create / update Meta Ads draft",
+        "description": "Tworzy (bez `id`) albo aktualizuje szkic kampanii Meta Ads: nazwa, konto reklamowe (uuid z `list_meta_ad_accounts` / panelu), strona FB (`list_facebook_pages`), budżet dzienny (≥5), terminy, `targeting` (geo_locations, cities, age_min/max, genders, interests[], umiejscowienia, poszerzanie_grupy, remarketing…), `creative` (headline, primary_text, description, image_url, cta_type, cel: formularz_fb | strona_www, landing_url, pixel_id, wlacz_od_razu), `lead_form` (name, questions, privacy_policy, thank_you_page). Nic nie publikuje. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "ad_account_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "page_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "page_name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "daily_budget": {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 100000
+            },
+            "start_time": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "end_time": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "targeting": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "creative": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "lead_form": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "name",
+            "daily_budget",
+            "targeting",
+            "creative",
+            "lead_form"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_meta_ad_draft",
+        "title": "Delete Meta Ads draft",
+        "description": "Usuwa szkic kampanii Meta Ads (nie usuwa kampanii już utworzonej w Meta). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "publish_meta_ad_draft",
+        "title": "Publish Meta Ads draft to Meta",
+        "description": "Tworzy w Meta kampanię → zestaw reklam → (formularz leadów) → kreację → reklamę ze szkicu; kampania zostaje WSTRZYMANA, chyba że kreacja ma `wlacz_od_razu`. To realna kampania z budżetem — pokaż użytkownikowi szkic i poczekaj na potwierdzenie. Wynik i błędy zapisują się w szkicu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_facebook_pages",
+        "title": "List Facebook pages of the ad account user",
+        "description": "Strony FB dostępne dla tokena reklamowego (id, nazwa) — do `page_id` szkicu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_meta_targeting",
+        "title": "Search Meta targeting (locations / interests)",
+        "description": "Szuka w Meta lokalizacji (`adgeolocation`) albo zainteresowań (`adinterest`) po frazie — wyniki do `targeting` szkicu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "adgeolocation",
+                "adinterest"
+              ]
+            },
+            "q": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "type",
+            "q"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "suggest_meta_targeting",
+        "title": "Suggest Meta targeting presets",
+        "description": "Gotowe zestawy targetowania Finance You (np. Lublin 100 km, „buduje się”) do wstawienia w szkic. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "geo": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "interests": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_meta_pixels",
+        "title": "List Meta pixels of an ad account",
+        "description": "Piksele konta reklamowego (`ad_account_id` = uuid z bazy) — do `creative.pixel_id`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ad_account_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "ad_account_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_meta_pixel",
+        "title": "Create Meta pixel",
+        "description": "Tworzy nowy piksel na koncie reklamowym Meta. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ad_account_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          },
+          "required": [
+            "ad_account_id",
+            "name"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_pr_outreach_log",
+        "title": "List PR outreach log",
+        "description": "Dziennik wysłanych pitchy PR: adresat, temat, status, wysłano / dostarczono / otwarto / kliknięto / odpowiedziano, błąd. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_pr_draft",
+        "title": "Generate PR pitch draft (AI)",
+        "description": "AI pisze szkic odpowiedzi (temat + treść) na okazję PR z monitoringu mediów i zapisuje go w okazji (`list_pr_opportunities`). Nic nie wysyła. Zużywa kredyty AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "send_pr_outreach",
+        "title": "Send PR pitch",
+        "description": "Wysyła zatwierdzony szkic pitcha PR mailem do adresata okazji (status → sent, wpis w dzienniku). Realny mail do dziennikarza — moduł PR zakłada, że wysyłkę zawsze zatwierdza człowiek: pokaż temat, treść i adresata, poczekaj na wyraźne „wyślij”. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
         "name": "eleven_status",
         "title": "ElevenLabs status",
         "description": "Stan integracji ElevenLabs: klucz API, plan i zużycie znaków, agenty przypisane do powierzchni (A1 intake, A2 investor_info, A3 investor_panel, telefon, przypomnienia), numer telefonu voicebota, ustawienia dzwonienia i SMS, aktualne okno godzinowe dzwonienia, sekret webhook tooli. Tylko administrator/operator.",
