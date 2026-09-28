@@ -456,6 +456,29 @@
 .fy-nav-drop-panel a:last-child { border-radius: 0 0 10px 10px; }
 .fy-nav-drop-panel a:hover { color: var(--accent); background: rgba(20, 30, 66, 0.97); }
 
+/* ——— stopka: ikony social mediów (okrągłe przyciski w kolumnie marki) ——— */
+.fy-marketing .fy-social a {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.25rem; height: 2.25rem; border-radius: 999px;
+  color: var(--muted-foreground);
+  background: rgba(10, 16, 40, 0.6);
+  border: 1px solid rgba(84, 124, 214, 0.25);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out), transform var(--duration-base) var(--ease-out);
+}
+.fy-marketing .fy-social a:hover,
+.fy-marketing .fy-social a:focus-visible {
+  color: var(--accent);
+  border-color: rgba(84, 124, 214, 0.6);
+  background: rgba(20, 30, 66, 0.97);
+  transform: translateY(-2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .fy-marketing .fy-social a:hover,
+  .fy-marketing .fy-social a:focus-visible { transform: none; }
+}
+
 /* anchors (#akademia, #cennik…) must not hide under the sticky header */
 .fy-marketing section[id] { scroll-margin-top: 5rem; }
 
