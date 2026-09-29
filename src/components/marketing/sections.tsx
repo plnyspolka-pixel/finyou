@@ -534,7 +534,10 @@ export function PricingCard({
 
 /* ------------------------------- FAQ ------------------------------------ */
 
-export function FAQ({ items }: { items: { q: string; a: string }[] }) {
+export type FAQItem = { q: string; a: string };
+export type FAQGroup = { key: string; label: string; items: FAQItem[] };
+
+export function FAQ({ items }: { items: FAQItem[] }) {
   const [open, setOpen] = useState(0);
   return (
     <div
@@ -551,6 +554,8 @@ export function FAQ({ items }: { items: { q: string; a: string }[] }) {
       {items.map((f, i) => (
         <div key={i} style={{ borderTop: i ? "1px solid var(--border)" : "none" }}>
           <button
+            type="button"
+            aria-expanded={open === i}
             onClick={() => setOpen(open === i ? -1 : i)}
             style={{
               width: "100%",
@@ -597,6 +602,62 @@ export function FAQ({ items }: { items: { q: string; a: string }[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * FAQ podzielone na kategorie — pigułki przełączają grupę, pod spodem zwykły
+ * akordeon {@link FAQ}. Zmiana kategorii montuje akordeon od nowa, więc
+ * pierwsze pytanie grupy jest rozwinięte.
+ */
+export function FAQGroups({ groups }: { groups: FAQGroup[] }) {
+  const [active, setActive] = useState(groups[0]?.key);
+  const current = groups.find((g) => g.key === active) ?? groups[0];
+  if (!current) return null;
+  return (
+    <>
+      <div
+        role="tablist"
+        aria-label="Kategorie pytań"
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          gap: "0.5rem",
+          maxWidth: "52rem",
+          margin: "2rem auto 0",
+        }}
+      >
+        {groups.map((g) => {
+          const isActive = g.key === current.key;
+          return (
+            <button
+              key={g.key}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActive(g.key)}
+              style={{
+                padding: "0.5rem 1rem",
+                borderRadius: 999,
+                fontFamily: "inherit",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                border: isActive ? "1px solid var(--accent)" : "1px solid var(--border)",
+                background: isActive ? "var(--accent)" : "var(--card)",
+                color: isActive ? "var(--accent-foreground)" : "inherit",
+                transition: "all .18s ease",
+              }}
+            >
+              {g.label}
+              <span style={{ marginLeft: 6, opacity: 0.7, fontWeight: 500 }}>{g.items.length}</span>
+            </button>
+          );
+        })}
+      </div>
+      <FAQ key={current.key} items={current.items} />
+    </>
   );
 }
 
