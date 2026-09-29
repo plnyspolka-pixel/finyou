@@ -182,13 +182,7 @@ export function RoleCard({ icon3d, badge, title, desc, cta, href, accent }: Role
 
 /* --------------------------- Feature grid ------------------------------- */
 
-export type FeatureItemData = {
-  icon: string;
-  t: string;
-  d?: string;
-  /** Mała odznaka w prawym górnym rogu karty — np. pakiet, w którym jest dana korzyść. */
-  badge?: { v: "default" | "secondary" | "accent" | "gold"; t: string };
-};
+export type FeatureItemData = { icon: string; t: string; d?: string };
 
 function FeatureItem({ it, icon3d }: { it: FeatureItemData; icon3d?: boolean }) {
   const [h, setH] = useState(false);
@@ -197,7 +191,6 @@ function FeatureItem({ it, icon3d }: { it: FeatureItemData; icon3d?: boolean }) 
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
       style={{
-        position: "relative",
         background: "var(--card)",
         border: `1px solid ${h ? "oklch(0.40 0.25 268 / 0.5)" : "var(--border)"}`,
         borderRadius: "var(--radius-2xl)",
@@ -207,32 +200,7 @@ function FeatureItem({ it, icon3d }: { it: FeatureItemData; icon3d?: boolean }) 
         transition: "all var(--duration-base) var(--ease-out)",
       }}
     >
-      {it.badge && (
-        <MktBadge
-          variant={it.badge.v}
-          style={{
-            position: "absolute",
-            top: "0.9rem",
-            right: "0.9rem",
-            padding: "0.1rem 0.5rem",
-            fontSize: "0.64rem",
-            fontWeight: 800,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-          }}
-        >
-          {it.badge.t}
-        </MktBadge>
-      )}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: icon3d ? 12 : 10,
-          // Miejsce na odznakę, żeby tytuł nie wchodził pod nią.
-          paddingRight: it.badge ? "5rem" : 0,
-        }}
-      >
+      <div style={{ display: "flex", alignItems: "center", gap: icon3d ? 12 : 10 }}>
         {icon3d ? (
           <Icon3D name={it.icon as Icon3DName} size={48} />
         ) : (
