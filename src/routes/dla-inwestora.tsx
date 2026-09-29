@@ -29,6 +29,8 @@ import {
 } from "@/lib/landing-video";
 
 const JOIN = "/rejestracja?role=inwestor";
+// Kotwica zakładki Cennik (patrz INVESTOR_TABS) — cel złotego CTA w hero.
+const PRICING_HASH = "#cennik";
 
 // Filmy w hero. Pierwszy (Wistia) po prawej w rzędzie 1, drugi piętro niżej po
 // lewej — odtwarzany z naszego pliku w Storage (src/lib/landing-video.ts).
@@ -424,6 +426,33 @@ const FAQS = [
   },
 ];
 
+// Duży złoty przycisk „Dołącz do klubu” — jedyny CTA w hero, prowadzi do
+// zakładki Cennik (#cennik). Zakładki reagują na `hashchange`; gdy hash już
+// jest ustawiony na #cennik (np. po kliknięciu w zakładkę), przeglądarka nie
+// wyśle zdarzenia, więc wysyłamy je sami, żeby strona przewinęła się do cennika.
+function JoinClubButton() {
+  return (
+    <MktButton
+      variant="gold"
+      size="cta"
+      href={PRICING_HASH}
+      style={{
+        height: "4rem",
+        padding: "0 clamp(1.6rem, 5vw, 3rem)",
+        fontSize: "1.2rem",
+        maxWidth: "100%",
+      }}
+      onClick={() => {
+        if (window.location.hash === PRICING_HASH) {
+          window.dispatchEvent(new HashChangeEvent("hashchange"));
+        }
+      }}
+    >
+      <BrandIcon name="handCoins" size={22} /> Dołącz do klubu
+    </MktButton>
+  );
+}
+
 function Hero({ video }: { video: LandingVideoInfo | null }) {
   return (
     <section className="fy-hero" style={{ color: "#fff", borderBottom: "1px solid var(--border)" }}>
@@ -473,9 +502,7 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
             szukających finansowania pod zabezpieczenie nieruchomości.
           </p>
           <div style={{ marginTop: "1.8rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
-            <MktButton variant="cta" href={JOIN}>
-              <BrandIcon name="handCoins" size={18} /> Dołącz do Klubu
-            </MktButton>
+            <JoinClubButton />
           </div>
         </div>
         <HeroFrame glow="linear-gradient(135deg, oklch(0.65 0.13 235 / .3), oklch(0.40 0.25 268 / .25))">
@@ -483,8 +510,8 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
         </HeroFrame>
 
         {/* Rząd 2 siatki hero: drugi film piętro niżej niż pierwszy, po lewej stronie
-            (z naszego pliku; zapasowo HeyGen), po prawej krótki opis z przejściem
-            do kalkulatora inwestora pod hero. */}
+            (z naszego pliku; zapasowo HeyGen), po prawej krótki opis i ten sam złoty
+            przycisk „Dołącz do klubu” prowadzący do cennika. */}
         <HeroFrame glow="linear-gradient(135deg, oklch(0.83 0.14 88 / .28), oklch(0.65 0.13 235 / .25))">
           {video ? (
             <video
@@ -532,9 +559,7 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
             harmonogram spłat na własnych parametrach.
           </p>
           <div style={{ marginTop: "1.4rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
-            <MktButton variant="outline" href="#kalkulator">
-              <BrandIcon name="ltv" size={16} /> Policz w kalkulatorze
-            </MktButton>
+            <JoinClubButton />
           </div>
         </div>
       </div>
@@ -667,7 +692,7 @@ const INVESTOR_TABS: { key: InvestorTabKey; hash: string; label: string }[] = [
   { key: "akademia", hash: "#akademia", label: "Akademia inwestora" },
   { key: "ochrona", hash: "#ochrona", label: "7 warstw ochrony" },
   { key: "windykacja", hash: "#windykacja-ai", label: "Windykacja AI" },
-  { key: "cennik", hash: "#cennik", label: "Cennik" },
+  { key: "cennik", hash: PRICING_HASH, label: "Cennik" },
 ];
 
 // Jeden pipeline — kolorowa oś kroków, te same etapy co w panelu inwestora.
