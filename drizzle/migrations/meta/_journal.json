@@ -64,6 +64,20 @@
       "when": 1790619537746,
       "tag": "0008_wind_oplaty_umowne",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790665027677,
+      "tag": "0009_video_renditions",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790665033297,
+      "tag": "0010_studio_material_audience",
+      "breakpoints": true
     }
   ]
 }

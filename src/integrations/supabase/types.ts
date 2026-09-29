@@ -11910,6 +11910,9 @@ export type Database = {
           heygen_video_id: string | null
           id: string
           last_error: string | null
+          material_audience:
+            | Database["public"]["Enums"]["marketing_audience"]
+            | null
           prompt: string
           publish_description: string
           publish_privacy: string
@@ -11947,6 +11950,9 @@ export type Database = {
           heygen_video_id?: string | null
           id?: string
           last_error?: string | null
+          material_audience?:
+            | Database["public"]["Enums"]["marketing_audience"]
+            | null
           prompt: string
           publish_description?: string
           publish_privacy?: string
@@ -11984,6 +11990,9 @@ export type Database = {
           heygen_video_id?: string | null
           id?: string
           last_error?: string | null
+          material_audience?:
+            | Database["public"]["Enums"]["marketing_audience"]
+            | null
           prompt?: string
           publish_description?: string
           publish_privacy?: string
@@ -12310,6 +12319,57 @@ export type Database = {
         }
         Relationships: []
       }
+      video_renditions: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          id: string
+          job_id: string | null
+          job_started_at: string | null
+          last_error: string | null
+          output_bytes: number | null
+          output_url: string | null
+          profile: string
+          source_bytes: number | null
+          source_url: string
+          status: string
+          unchanged: boolean
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_started_at?: string | null
+          last_error?: string | null
+          output_bytes?: number | null
+          output_url?: string | null
+          profile?: string
+          source_bytes?: number | null
+          source_url: string
+          status?: string
+          unchanged?: boolean
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_started_at?: string | null
+          last_error?: string | null
+          output_bytes?: number | null
+          output_url?: string | null
+          profile?: string
+          source_bytes?: number | null
+          source_url?: string
+          status?: string
+          unchanged?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       voicebot_settings: {
         Row: {
           agent_id: string | null
@@ -12631,6 +12691,7 @@ export type Database = {
           kwota_pozyczki: number
           numer_kw: string | null
           numer_umowy: string | null
+          oplaty_windykacyjne: Json | null
           oprocentowanie_roczne: number
           prowizja: number
           rachunek_splaty: string | null
@@ -12656,6 +12717,7 @@ export type Database = {
           kwota_pozyczki?: number
           numer_kw?: string | null
           numer_umowy?: string | null
+          oplaty_windykacyjne?: Json | null
           oprocentowanie_roczne?: number
           prowizja?: number
           rachunek_splaty?: string | null
@@ -12681,6 +12743,7 @@ export type Database = {
           kwota_pozyczki?: number
           numer_kw?: string | null
           numer_umowy?: string | null
+          oplaty_windykacyjne?: Json | null
           oprocentowanie_roczne?: number
           prowizja?: number
           rachunek_splaty?: string | null
