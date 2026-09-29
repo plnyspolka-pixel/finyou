@@ -174,3 +174,39 @@ export function tiktokOptionsError(
     return err instanceof Error ? err.message : String(err);
   }
 }
+
+// ── Błędy TikToka, których ponawianie nic nie da ─────────────────────────────
+
+/**
+ * Kod błędu init, gdy aplikacja w TikTok for Developers nie przeszła jeszcze
+ * audytu Content Posting API: przed audytem TikTok przyjmuje posty wyłącznie
+ * na KONTO PRYWATNE i z widocznością „Tylko ja" (SELF_ONLY).
+ */
+export const TIKTOK_UNAUDITED_ERROR = "unaudited_client_can_only_post_to_private_accounts";
+
+export type TiktokErrorClass = {
+  /** Komunikat do panelu (po polsku, z oryginałem TikToka na końcu). */
+  message: string;
+  /** Błąd trwały — ponowienie przy tych samych ustawieniach skończy się tak samo. */
+  permanent: boolean;
+};
+
+/**
+ * Tłumaczy błąd TikToka na komunikat dla człowieka i mówi, czy ma sens go
+ * ponawiać. Bez tego wpis z błędem audytu mielił trzy próby (każda to
+ * creator_info + init) i kończył się angielskim komunikatem z linkiem.
+ */
+export function classifyTiktokError(raw: string): TiktokErrorClass {
+  if (raw.includes(TIKTOK_UNAUDITED_ERROR)) {
+    return {
+      permanent: true,
+      message:
+        "TikTok odrzucił post: aplikacja Finance You w TikTok for Developers nie przeszła jeszcze audytu, " +
+        "a przed audytem TikTok przyjmuje filmy tylko na konto prywatne z widocznością „Tylko ja”. " +
+        "Rozwiązanie: dokończ audyt (scenariusz nagrania: docs/tiktok-audyt-nagranie.md) albo na czas " +
+        "testów ustaw konto TikTok jako prywatne i przy publikacji wybierz „Tylko ja”. " +
+        `Ponawianie bez tej zmiany nic nie da. [TikTok: ${TIKTOK_UNAUDITED_ERROR}]`,
+    };
+  }
+  return { message: raw, permanent: false };
+}

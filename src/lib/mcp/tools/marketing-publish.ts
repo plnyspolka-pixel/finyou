@@ -443,6 +443,15 @@ export const retrySocialQueueItem = defineTool({
   handler: ({ queue_id }, ctx: ToolContext) =>
     handle(async () => {
       const s = await requireTeamAdmin(ctx);
+      const current = await oneOf(
+        s.from("social_publish_queue").select("id, platform, video_url").eq("id", queue_id),
+        "social_publish_queue",
+      );
+      if (current?.video_url) {
+        // Nieudana kompresja wideo dostaje nowy budżet prób razem z wpisem.
+        const { resetVideoRendition } = await import("@/lib/video-rendition.server");
+        await resetVideoRendition(current.video_url).catch(() => {});
+      }
       const { data, error } = await s
         .from("social_publish_queue")
         .update({
@@ -457,6 +466,11 @@ export const retrySocialQueueItem = defineTool({
           x_media_id: null,
           x_media_status: null,
           x_media_at: null,
+          // Kontener IG ma sens tylko przy wpisie Instagrama (patrz retry w
+          // studio.functions.ts) — obcy ig_creation_id mógłby trafić na IG.
+          ...(current?.platform !== "instagram_reels"
+            ? { ig_creation_id: null, ig_container_at: null }
+            : {}),
         })
         .eq("id", queue_id)
         .in("status", ["failed", "cancelled", "processing"])
@@ -540,14 +554,18 @@ export const runPublishTick = defineTool({
   name: "run_publish_tick",
   title: "Run publish tick now",
   description:
-    "Uruchamia od razu to, co cron robi co 10 minut: publikuje wymagalne wpisy z kolejek Meta (FB / IG), TikToka, X i YouTube, domyka publikacje w toku (kontenery IG, uploady TikToka / X) i odświeża tokeny. Realne publikacje. Tylko administrator/operator.",
+    "Uruchamia od razu to, co cron robi co 10 minut: kompresuje wideo czekające w kolejkach do profilu publikacji (video_renditions), publikuje wymagalne wpisy z kolejek Meta (FB / IG), TikToka, X i YouTube, domyka publikacje w toku (kontenery IG, uploady TikToka / X) i odświeża tokeny. Realne publikacje. Tylko administrator/operator.",
   inputSchema: {},
   annotations: SENDS,
   handler: (_a, ctx: ToolContext) =>
     handle(async () => {
       await requireTeamAdmin(ctx);
       const errors: string[] = [];
-      // Sekwencyjnie jak w cronie: każdy tor ma własne API i limity.
+      // Sekwencyjnie jak w cronie: najpierw kompresja (żeby plik był gotowy
+      // przed wysyłką), potem każdy tor z własnym API i limitami.
+      const renditions = await section(errors, "renditions", async () =>
+        (await import("@/lib/video-rendition.server")).runVideoRenditionTick(),
+      );
       const meta = await section(errors, "meta", async () =>
         (await import("@/lib/studio-publishing.server")).runSocialPublishTick(),
       );
@@ -560,7 +578,7 @@ export const runPublishTick = defineTool({
       const youtube = await section(errors, "youtube", async () =>
         (await import("@/lib/youtube-shorts.server")).runYoutubeShortsTick(),
       );
-      return ok({ ok: errors.length === 0, meta, tiktok, x, youtube, errors });
+      return ok({ ok: errors.length === 0, renditions, meta, tiktok, x, youtube, errors });
     }),
 });
 

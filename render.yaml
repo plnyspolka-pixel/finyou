@@ -20,5 +20,11 @@ services:
       # 0,1 vCPU na planie free — najszybszy preset, jakość dla rolek wystarcza.
       - key: FFMPEG_PRESET
         value: ultrafast
+      # Kompresja przed publikacją (zadanie transcode) dostaje surowe filmy
+      # z biblioteki materiałów — bywają po kilkaset MB.
       - key: MAX_INPUT_MB
-        value: "200"
+        value: "500"
+      # 0,1 vCPU koduje 3-minutowy film 1080p nawet pół godziny; limit
+      # kodowania i tak jest pilnowany po stronie Finance You (2 h).
+      - key: TRANSCODE_TIMEOUT_SECONDS
+        value: "5400"

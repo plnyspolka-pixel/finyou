@@ -3,21 +3,30 @@
 // TikTok przez Content Posting API, X przez API v2), domyka dwuetapowe
 // publikacje IG (kontener → media_publish), TikToka (upload → polling statusu)
 // i X-a (upload mediów → polling przetwarzania), odświeża tokeny TikToka
-// i X-a oraz obsługuje kolejkę wsadową wideo HeyGen (joby 'queued'
-// i polling renderów z auto-publikacją) — dzięki temu batch i auto-publikacja
-// działają także przy zamkniętej przeglądarce.
+// i X-a, obsługuje kolejkę wsadową wideo HeyGen (joby 'queued' i polling
+// renderów z auto-publikacją) oraz kompresję wideo przed publikacją
+// (video_renditions: zlecanie i domykanie zadań w usłudze FFmpeg) — dzięki
+// temu batch, auto-publikacja i kompresja działają także przy zamkniętej
+// przeglądarce.
 // Harmonogram: pg_cron co 10 minut (migracja 20260803130000_studio_publikacji).
 import { createFileRoute } from "@tanstack/react-router";
 import { runSocialPublishTick } from "@/lib/studio-publishing.server";
 import { runStudioVideoTick } from "@/lib/studio-video-queue.server";
 import { runTiktokPublishTick } from "@/lib/tiktok.server";
 import { runXPublishTick } from "@/lib/x.server";
+import { runVideoRenditionTick } from "@/lib/video-rendition.server";
 import { requireCronSecret } from "@/lib/cron-auth.server";
 
 async function runTick(): Promise<Response> {
   try {
     // Najpierw wideo (może dostawić wpisy auto-publikacji), potem publikacja.
     const video = await runStudioVideoTick().catch((e) => ({
+      error: e instanceof Error ? e.message : String(e),
+    }));
+    // Kompresja przed publikacją: renditions dla wpisów czekających w kolejkach
+    // (także YouTube), żeby plik był gotowy, zanim wpis stanie się wymagalny.
+    // Błąd tej części nie może wywalić publikacji.
+    const renditions = await runVideoRenditionTick().catch((e) => ({
       error: e instanceof Error ? e.message : String(e),
     }));
     const social = await runSocialPublishTick();
@@ -31,7 +40,7 @@ async function runTick(): Promise<Response> {
     const x = await runXPublishTick().catch((e) => ({
       error: e instanceof Error ? e.message : String(e),
     }));
-    const result = { ...social, video, tiktok, x };
+    const result = { ...social, video, renditions, tiktok, x };
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: { "Content-Type": "application/json" },

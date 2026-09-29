@@ -36,7 +36,20 @@ import {
 } from "./meta-graph-errors";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
-const RUPLOAD = "https://rupload.facebook.com/video-reels/v21.0";
+// Upload Reels (hosted file_url): właściwy adres zwraca Meta w odpowiedzi na
+// upload_phase=start (`upload_url`); ten jest zapasem wg dokumentacji Reels
+// Publishing API. Wcześniej stał tu `/video-reels/…` — Meta odpowiadała
+// „Endpoint … doesn't exist" i każdy FB Reel kończył się błędem.
+const RUPLOAD = "https://rupload.facebook.com/video-upload/v21.0";
+
+/**
+ * Platformy obsługiwane przez ten moduł. Kolejka social_publish_queue jest
+ * wspólna z TikTokiem i X-em — każde zapytanie tego toru MUSI filtrować po
+ * tej liście. Wcześniej filtr wykluczał tylko TikToka, więc tick Meta
+ * przejmował wpisy X i robił z nich kontenery Instagrama (wpis X wisiał
+ * potem w „przetwarzanie…" na zawsze).
+ */
+const META_PLATFORMS = ["facebook_post", "facebook_reels", "instagram_reels"] as const;
 
 const MAX_ITEMS_PER_TICK = 3;
 const MAX_IG_CHECKS_PER_TICK = 5;
@@ -113,6 +126,17 @@ const graphPost = (path: string, params: Record<string, string>) =>
   graphFetch(path, params, "POST");
 const graphGet = (path: string, params: Record<string, string>) => graphFetch(path, params, "GET");
 
+/**
+ * Adres wideo do przekazania Meta: wersja skompresowana do profilu
+ * publikacji (MP4 H.264/AAC ≤ 1080p ≤ 60 MB — Reels odrzucają MOV/HEVC
+ * i pliki ponad limit). Rzuca VideoPreparingError, gdy plik jeszcze się
+ * przygotowuje; bez usługi oddaje oryginał.
+ */
+async function publishableVideoUrl(videoUrl: string): Promise<string> {
+  const { ensurePublishableVideo } = await import("./video-rendition.server");
+  return ensurePublishableVideo(videoUrl);
+}
+
 // ── Facebook: post na stronie (tekst / grafika / wideo) ──────────────────────
 
 async function publishFacebookPost(item: QueueRow): Promise<string> {
@@ -121,7 +145,7 @@ async function publishFacebookPost(item: QueueRow): Promise<string> {
 
   if (item.video_url) {
     const json = await graphPost(`${pageId}/videos`, {
-      file_url: item.video_url,
+      file_url: await publishableVideoUrl(item.video_url),
       description: item.message,
       ...(item.title ? { title: item.title } : {}),
       access_token: pageToken,
@@ -154,6 +178,9 @@ async function publishFacebookReel(item: QueueRow): Promise<string> {
   const { pageId, pageToken, facebookConfigured } = getMetaPublishEnv();
   if (!facebookConfigured) throw new Error("Brak META_PAGE_ID / META_PAGE_ACCESS_TOKEN.");
   if (!item.video_url) throw new Error("Facebook Reels wymaga URL wideo (MP4, pion 9:16).");
+  // Przed startem uploadu — gdy wideo jeszcze się kompresuje, nie zostawiamy
+  // po sobie otwartej sesji video_reels.
+  const videoUrl = await publishableVideoUrl(item.video_url);
 
   const start = await graphPost(`${pageId}/video_reels`, {
     upload_phase: "start",
@@ -161,13 +188,17 @@ async function publishFacebookReel(item: QueueRow): Promise<string> {
   });
   const videoId = start.video_id as string | undefined;
   if (!videoId) throw new Error("Facebook nie zwrócił video_id (upload_phase=start).");
+  const uploadUrl =
+    typeof start.upload_url === "string" && start.upload_url.startsWith("https://")
+      ? start.upload_url
+      : `${RUPLOAD}/${videoId}`;
 
   // Hosted upload: Meta samo pobiera plik z podanego URL (nagłówek file_url).
-  const upRes = await fetch(`${RUPLOAD}/${videoId}`, {
+  const upRes = await fetch(uploadUrl, {
     method: "POST",
     headers: {
       Authorization: `OAuth ${pageToken}`,
-      file_url: item.video_url,
+      file_url: videoUrl,
     },
   });
   const upJson = (await upRes.json().catch(() => ({}))) as {
@@ -203,7 +234,7 @@ async function createInstagramContainer(item: QueueRow): Promise<string> {
 
   const json = await graphPost(`${igUserId}/media`, {
     media_type: "REELS",
-    video_url: item.video_url,
+    video_url: await publishableVideoUrl(item.video_url),
     caption: item.message,
     access_token: pageToken,
   });
@@ -332,7 +363,8 @@ async function deferAllDue(minutes: number, reason: string) {
       last_error: `${reason} ${formatNextAttempt(nextAt, minutes)}`,
     })
     .in("status", ["pending", "processing"])
-    .neq("platform", "tiktok")
+    // Limit Meta nie dotyczy TikToka ani X-a — ich wpisów nie odraczamy.
+    .in("platform", META_PLATFORMS)
     .lte("scheduled_at", new Date().toISOString());
 }
 
@@ -347,6 +379,8 @@ export async function processSocialQueueItem(
   ok: boolean;
   externalId?: string;
   processing?: boolean;
+  /** Wideo w kompresji — wpis odroczony, publikacja ruszy z ticka. */
+  preparing?: boolean;
   deferred?: boolean;
   error?: string;
 }> {
@@ -355,9 +389,9 @@ export async function processSocialQueueItem(
     .from("social_publish_queue")
     .update({ status: "publishing" })
     .eq("id", id)
-    // TikTok jedzie własnym torem (tiktok.server.ts) — bez tego filtra wpis
-    // 'tiktok' wpadłby do gałęzi Instagrama na końcu tej funkcji.
-    .neq("platform", "tiktok")
+    // TikTok i X jadą własnymi torami (tiktok.server.ts, x.server.ts) — bez
+    // tego filtra ich wpisy wpadałyby do gałęzi Instagrama na końcu funkcji.
+    .in("platform", META_PLATFORMS)
     .in("status", ["pending", "failed"])
     .select("*")
     .maybeSingle();
@@ -375,6 +409,12 @@ export async function processSocialQueueItem(
       const videoId = await publishFacebookReel(item);
       await markPublished(id, videoId, item.attempt_count + 1);
       return { ok: true, externalId: videoId };
+    }
+
+    // Zabezpieczenie: gałąź Instagrama tylko dla wpisów Instagrama — nigdy
+    // nie publikujemy na IG materiału zakolejkowanego na inną platformę.
+    if (item.platform !== "instagram_reels") {
+      throw new Error(`Platforma ${String(item.platform)} nie jest obsługiwana przez tor Meta.`);
     }
 
     // instagram_reels — kontener już istnieje (np. po odroczeniu przy limicie):
@@ -416,6 +456,20 @@ export async function processSocialQueueItem(
         keepContainer: !!item.ig_creation_id,
       });
       return { ok: false, deferred: true, error: err.info.friendly };
+    }
+    const { VideoPreparingError } = await import("./video-rendition.server");
+    if (err instanceof VideoPreparingError) {
+      // Wideo się kompresuje — wpis wraca do kolejki na kilka minut BEZ
+      // zużycia próby (nic nie poszło do Meta).
+      await supabaseAdmin
+        .from("social_publish_queue")
+        .update({
+          status: "pending",
+          scheduled_at: err.nextAt.toISOString(),
+          last_error: err.note,
+        })
+        .eq("id", id);
+      return { ok: true, preparing: true };
     }
     const msg = err instanceof Error ? err.message : String(err);
     await markFailed(item, msg);
@@ -498,8 +552,8 @@ export async function runSocialPublishTick(): Promise<{
     .from("social_publish_queue")
     .select("id")
     .eq("status", "pending")
-    // Wpisy TikToka bierze runTiktokPublishTick — ta kolejka jest wspólna.
-    .neq("platform", "tiktok")
+    // Wpisy TikToka i X-a biorą ich własne ticki — ta kolejka jest wspólna.
+    .in("platform", META_PLATFORMS)
     .lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true })
     .limit(MAX_ITEMS_PER_TICK);
@@ -510,8 +564,8 @@ export async function runSocialPublishTick(): Promise<{
     if (state.rateLimited) break;
     processed += 1;
     const result = await processSocialQueueItem(item.id, state);
-    if (result.ok && !result.processing) published += 1;
-    else if (result.deferred) deferred += 1;
+    if (result.ok && !result.processing && !result.preparing) published += 1;
+    else if (result.deferred || result.preparing) deferred += 1;
     else if (result.error) errors.push(result.error);
   }
 

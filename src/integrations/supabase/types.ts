@@ -12310,6 +12310,57 @@ export type Database = {
         }
         Relationships: []
       }
+      video_renditions: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          id: string
+          job_id: string | null
+          job_started_at: string | null
+          last_error: string | null
+          output_bytes: number | null
+          output_url: string | null
+          profile: string
+          source_bytes: number | null
+          source_url: string
+          status: string
+          unchanged: boolean
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_started_at?: string | null
+          last_error?: string | null
+          output_bytes?: number | null
+          output_url?: string | null
+          profile?: string
+          source_bytes?: number | null
+          source_url: string
+          status?: string
+          unchanged?: boolean
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_started_at?: string | null
+          last_error?: string | null
+          output_bytes?: number | null
+          output_url?: string | null
+          profile?: string
+          source_bytes?: number | null
+          source_url?: string
+          status?: string
+          unchanged?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       voicebot_settings: {
         Row: {
           agent_id: string | null

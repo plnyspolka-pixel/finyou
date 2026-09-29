@@ -242,18 +242,27 @@ export function MaterialPublishDialog({
       ...r.social.map((s) =>
         publishSocialNowFn({ data: { id: s.id } }).then(
           (res) =>
-            toast.success(
-              res.processing
-                ? `${PLATFORM_LABELS[s.platform]}: plik wysłany, platforma go przetwarza.`
-                : `${PLATFORM_LABELS[s.platform]}: opublikowano.`,
-            ),
+            res.preparing
+              ? toast.info(
+                  `${PLATFORM_LABELS[s.platform]}: wideo jest kompresowane do profilu publikacji — wpis wyjdzie automatycznie po zakończeniu.`,
+                )
+              : toast.success(
+                  res.processing
+                    ? `${PLATFORM_LABELS[s.platform]}: plik wysłany, platforma go przetwarza.`
+                    : `${PLATFORM_LABELS[s.platform]}: opublikowano.`,
+                ),
           (e: Error) =>
             toast.error(`${PLATFORM_LABELS[s.platform]}: ${e.message} (wpis został w kolejce)`),
         ),
       ),
       ...r.youtube.map((y) =>
         publishYoutubeNowFn({ data: { id: y.id } }).then(
-          () => toast.success(`${PLATFORM_LABELS.youtube}: opublikowano.`),
+          (res) =>
+            res.preparing
+              ? toast.info(
+                  `${PLATFORM_LABELS.youtube}: wideo jest kompresowane do profilu publikacji — wpis wyjdzie automatycznie po zakończeniu.`,
+                )
+              : toast.success(`${PLATFORM_LABELS.youtube}: opublikowano.`),
           (e: Error) =>
             toast.error(`${PLATFORM_LABELS.youtube}: ${e.message} (wpis został w kolejce)`),
         ),
