@@ -407,6 +407,18 @@
 /* hero two-column grid */
 .fy-hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 3rem; align-items: center; }
 
+/* złoty CTA z mieniącym się gradientem (MktButton variant="gold") —
+   kafelek tła ma 200% szerokości, więc przesunięcie o 200% to dokładnie jedna
+   pełna długość gradientu i pętla nie ma szwu */
+.fy-btn-gold { animation: fyGoldShimmer 3.8s linear infinite; }
+@keyframes fyGoldShimmer {
+  0%   { background-position: 200% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fy-btn-gold { animation: none; }
+}
+
 /* image CTA buttons (exact uploaded artwork) */
 .fy-imgbtn { display: inline-block; line-height: 0; transition: transform var(--duration-base) var(--ease-out), filter var(--duration-base) var(--ease-out); }
 .fy-imgbtn img { height: 3.75rem; width: auto; display: block; }
