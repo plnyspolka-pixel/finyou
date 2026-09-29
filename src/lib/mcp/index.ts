@@ -63,6 +63,7 @@ import { youtubeTools } from "./tools/youtube";
 import { heygenTools } from "./tools/heygen";
 import { googleTools } from "./tools/google";
 import { supabaseTools } from "./tools/supabase";
+import { storageRepairTools } from "./tools/storage-repair";
 
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
@@ -140,5 +141,6 @@ export default defineMcp({
     ...heygenTools,
     ...googleTools,
     ...supabaseTools,
+    ...storageRepairTools,
   ],
 });

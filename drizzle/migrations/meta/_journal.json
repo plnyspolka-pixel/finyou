@@ -134,6 +134,13 @@
       "when": 1790697821610,
       "tag": "0018_etap5_akceptacje_zgod_i_boty",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790699841643,
+      "tag": "0019_pliki_klienta_naprawa_przeniesionych",
+      "breakpoints": true
     }
   ]
 }
