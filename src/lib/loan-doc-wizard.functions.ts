@@ -24,6 +24,8 @@ import {
   amountKind,
   type DocField,
   type CompanyBundle,
+  IOD_NIE_WYZNACZONO,
+  isIodField,
 } from "@/lib/document-fields";
 import { amountToWordsPLN } from "@/lib/amount-to-words-pl";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
@@ -263,6 +265,10 @@ async function loadTemplateText(
 function seedLenderValues(fields: DocField[], lender: ResolvedLender): Record<string, string> {
   const values: Record<string, string> = {};
   for (const f of fields) {
+    if (isIodField(f)) {
+      values[f.id] = IOD_NIE_WYZNACZONO;
+      continue;
+    }
     if (f.groupKey !== "pozyczkodawca") continue;
     let v = companyValueForField(f, lender.bundle);
     if (!v && lender.bundle.pesel) {

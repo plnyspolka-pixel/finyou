@@ -1,6 +1,6 @@
-// Czyste reguły cyklu Zlecenie–Projekt (Etap U2, pakiet FY-LEGAL-2026-09-04 v5).
-// Bez I/O — wszystko testowalne jednostkowo. Źródła: Umowa ramowa v5 (§ 5–6,
-// Zał. 1 Karta Leada, Zał. 6, Zał. 7), NDA v5 (§ 5, § 7), plik 00 paczki.
+// Czyste reguły cyklu Zlecenie–Projekt (Etap U2, pakiet FY-LEGAL-2026-09-29).
+// Bez I/O — wszystko testowalne jednostkowo. Źródła: Umowa ramowa v7 (§ 5–7,
+// Zał. 1 Karta Leada, Zał. 6, Zał. 7), NDA v6 (§ 5, § 7), plik 00 paczki.
 
 /** Statusy Dopasowania (para Zlecenie–Projekt) — cykl z § 5 Umowy ramowej. */
 export const MATCH_STATUSES = [

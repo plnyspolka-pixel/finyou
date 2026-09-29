@@ -1,7 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ActiveConsentDocumentPage,
+  loadActiveConsentDoc,
+} from "@/components/legal/active-consent-document";
 
 export const Route = createFileRoute("/regulamin")({
   component: Regulamin,
+  loader: async () => ({ doc: await loadActiveConsentDoc("terms") }),
   head: () => ({
     meta: [
       { title: "Regulamin serwisu | Finance You" },
@@ -16,6 +21,18 @@ export const Route = createFileRoute("/regulamin")({
 });
 
 function Regulamin() {
+  const { doc } = Route.useLoaderData();
+  return (
+    <ActiveConsentDocumentPage
+      doc={doc}
+      heading="Regulamin klienta"
+      fallback={<RegulaminStatyczny />}
+    />
+  );
+}
+
+/** Skrócona treść statyczna — gdy aktywnej wersji nie da się pobrać. */
+function RegulaminStatyczny() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">

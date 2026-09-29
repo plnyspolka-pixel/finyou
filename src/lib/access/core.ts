@@ -32,7 +32,7 @@ export interface AccessProduct {
   sort_order: number;
   kind: AccessProductKind;
   tier: AccessTier | null;
-  /** Opłata sukcesu w punktach bazowych (500 = 5%) — tylko pakiet PRO. */
+  /** Opłata sukcesu w punktach bazowych — historyczna (model v6); od v7 zawsze 0. */
   success_fee_bps: number;
 }
 

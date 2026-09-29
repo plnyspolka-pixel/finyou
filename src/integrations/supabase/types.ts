@@ -4221,6 +4221,47 @@ export type Database = {
         }
         Relationships: []
       }
+      consent_acceptances: {
+        Row: {
+          accepted_at: string
+          document_id: string | null
+          id: string
+          ip: unknown
+          kind: Database["public"]["Enums"]["consent_kind"]
+          user_agent: string | null
+          user_id: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string
+          document_id?: string | null
+          id?: string
+          ip?: unknown
+          kind: Database["public"]["Enums"]["consent_kind"]
+          user_agent?: string | null
+          user_id: string
+          version: number
+        }
+        Update: {
+          accepted_at?: string
+          document_id?: string | null
+          id?: string
+          ip?: unknown
+          kind?: Database["public"]["Enums"]["consent_kind"]
+          user_agent?: string | null
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_acceptances_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "consent_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_documents: {
         Row: {
           content: string

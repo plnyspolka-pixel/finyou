@@ -810,6 +810,16 @@ function composeIdLine(key: string, b: CompanyBundle): string {
   return parts.join(", ");
 }
 
+/**
+ * Pole inspektora ochrony danych (np. „[IMIĘ I NAZWISKO IOD]” w klauzuli
+ * RODO u08). Finance You i inwestorzy co do zasady nie wyznaczają IOD —
+ * pole wypełniamy stałą wartością zamiast zostawiać je do uzupełnienia.
+ */
+export const IOD_NIE_WYZNACZONO = "nie wyznaczono";
+export function isIodField(field: Pick<DocField, "key">): boolean {
+  return /\bIOD\b|inspektor(a)? ochrony danych/i.test(field.key);
+}
+
 /** Zwraca wartość dla pola z danych firmowych albo null, jeśli nie ma czym uzupełnić. */
 export function companyValueForField(field: DocField, b: CompanyBundle): string | null {
   switch (field.semantic) {

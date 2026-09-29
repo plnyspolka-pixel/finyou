@@ -33,8 +33,9 @@ describe("treść SMS-a powitalnego", () => {
   const body = buildWelcomeSmsBody(shortLinkUrl("ab3x9k"));
 
   it("zawiera ofertę i link", () => {
-    expect(body).toContain("pozyczki pod zastaw nieruchomosci");
-    expect(body).toContain("1,79%");
+    expect(body).toContain("pozyczki dla firm pod zastaw nieruchomosci");
+    // Żadnych stawek miesięcznych ponad odsetki maksymalne.
+    expect(body).not.toMatch(/1,79|miesiecznie/);
     expect(body).toContain("https://financeyou.pl/s/ab3x9k");
   });
 

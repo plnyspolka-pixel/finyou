@@ -1,7 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ActiveConsentDocumentPage,
+  loadActiveConsentDoc,
+} from "@/components/legal/active-consent-document";
 
 export const Route = createFileRoute("/polityka-prywatnosci")({
   component: PolitykaPrywatnosci,
+  loader: async () => ({ doc: await loadActiveConsentDoc("privacy") }),
   head: () => ({
     meta: [
       { title: "Polityka prywatności | Finance You" },
@@ -16,6 +21,18 @@ export const Route = createFileRoute("/polityka-prywatnosci")({
 });
 
 function PolitykaPrywatnosci() {
+  const { doc } = Route.useLoaderData();
+  return (
+    <ActiveConsentDocumentPage
+      doc={doc}
+      heading="Polityka prywatności"
+      fallback={<PolitykaPrywatnosciStatyczny />}
+    />
+  );
+}
+
+/** Skrócona treść statyczna — gdy aktywnej wersji nie da się pobrać. */
+function PolitykaPrywatnosciStatyczny() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">

@@ -11,6 +11,7 @@ import {
   Target,
   BarChart3,
 } from "lucide-react";
+import { ConsentGate } from "@/components/consent/consent-gate";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 import { InvestorAssistantWidget } from "@/components/inwestor/assistant-widget";
 
@@ -52,6 +53,7 @@ function InwestorLayout() {
         title="Panel inwestora"
         allow={["inwestor", "administrator"]}
         groups={navGroups}
+        wrapOutlet={(outlet) => <ConsentGate audience="inwestor">{outlet}</ConsentGate>}
       />
       <InvestorAssistantWidget />
     </>

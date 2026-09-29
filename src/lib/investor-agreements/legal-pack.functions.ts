@@ -1,8 +1,8 @@
-// Pakiet umów inwestora (FY-LEGAL-2026-09-04) — Etap U1.
+// Pakiet umów inwestora (FY-LEGAL-2026-09-29: umowa ramowa v7, NDA v6, RODO v5) — Etap U1.
 //
 // Sekwencja z pliku 00 paczki prawnika: (1) konto i identyfikacja →
 // (2) informacje przedumowne dla Konsumenta na trwałym nośniku →
-// (3) Umowa ramowa v5 → (4) NDA v5 → (5) Umowa RODO v4 (Moduł A) →
+// (3) Umowa ramowa v7 → (4) NDA v6 → (5) Umowa RODO v5 (Moduł A) →
 // (7) Formularz Zlecenia (Zał. 7). Bez kompletu 1–5 formularz Zlecenia
 // jest nieaktywny. Każda akceptacja: wersja + skrót SHA-256 dokumentu,
 // konto, czas, metoda uwierzytelnienia, treść oświadczeń, IP i urządzenie

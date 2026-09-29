@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LayoutDashboard, User, Bell, Handshake } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
+import { ConsentGate } from "@/components/consent/consent-gate";
 
 export const Route = createFileRoute("/klient")({
   component: KlientLayout,
@@ -18,5 +19,12 @@ const groups: NavGroup[] = [
 ];
 
 function KlientLayout() {
-  return <PanelShell title="Panel klienta" allow={["klient", "administrator"]} groups={groups} />;
+  return (
+    <PanelShell
+      title="Panel klienta"
+      allow={["klient", "administrator"]}
+      groups={groups}
+      wrapOutlet={(outlet) => <ConsentGate audience="klient">{outlet}</ConsentGate>}
+    />
+  );
 }

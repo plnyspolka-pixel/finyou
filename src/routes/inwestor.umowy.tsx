@@ -1,4 +1,5 @@
-// JEDEN pipeline inwestora (pakiet FY-LEGAL-2026-09-04 + cennik 2026-09):
+// JEDEN pipeline inwestora (pakiet FY-LEGAL-2026-09-29: umowa ramowa v7, NDA v6, RODO v5;
+// usługa dla Inwestora nieodpłatna):
 //   1. Dane pożyczkodawcy (osoba fizyczna / JDG / spółka, wyszukiwarka GUS/KRS)
 //   2. Rachunek bankowy do spłaty pożyczki (wymuszony)
 //   3. Weryfikacja tożsamości — KYC Didit
@@ -433,11 +434,11 @@ const DOC_STATEMENTS: Record<string, Array<{ key: string; label: string }>> = {
     {
       key: "nieodplatnosc_uslugi",
       label:
-        "Przyjmuję do wiadomości zasady rozliczenia opisane w Umowie ramowej (Prowizja Klientowska obciąża Klienta).",
+        "Przyjmuję do wiadomości, że usługa Finance You jest dla mnie nieodpłatna. Jedyną opłatą jest Prowizja Klientowska: 7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT. Płaci ją Klient, a przy wypłacie przekazuję ją Finance You z kwoty Finansowania (Zał. 6).",
     },
     {
       key: "mechanizm_zabezpieczenia_prowizji",
-      label: "Akceptuję Mechanizm Zabezpieczenia Prowizji (§ 6 Umowy ramowej).",
+      label: "Akceptuję Mechanizm Zabezpieczenia Prowizji (§ 7 Umowy ramowej).",
     },
     {
       key: "kara_obejsciowa_i_okres_ochronny",
