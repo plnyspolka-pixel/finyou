@@ -37,12 +37,7 @@ export interface AmlSettingsView {
   additionalPerson: AmlPerson | null;
   signerPerson: AmlPerson | null; // null = ta sama co odpowiedzialna
   institution: AmlInstitution;
-  giifConnectionStatus: string;
-  giifInstitutionId: string | null;
-  giifEnvironment: "test" | "production";
   profileGaps: AmlProfileGaps;
-  /** Aktywny provider szyfrowania kluczy certyfikatów (KMS vs lokalna koperta). */
-  keyProvider: { name: string; productionApproved: boolean; description: string };
 }
 
 /** Braki danych wymaganych do finalnego zgłoszenia (ostrzegamy, nie blokujemy). */
@@ -105,25 +100,16 @@ async function buildDefaultsFromProfile(
   return { person, institution };
 }
 
-async function keyProviderInfo() {
-  const { getAmlKeyProvider } = await import("@/lib/aml/key-provider.server");
-  return getAmlKeyProvider().info();
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
-async function toView(row: any): Promise<AmlSettingsView> {
+function toView(row: any): AmlSettingsView {
   const person = (row.responsible_person ?? {}) as AmlPerson;
   const institution = (row.institution ?? {}) as AmlInstitution;
   return {
-    keyProvider: await keyProviderInfo(),
     id: row.id,
     responsiblePerson: person,
     additionalPerson: (row.additional_person as AmlPerson | null) ?? null,
     signerPerson: (row.signer_person as AmlPerson | null) ?? null,
     institution,
-    giifConnectionStatus: row.giif_connection_status,
-    giifInstitutionId: row.giif_institution_id ?? null,
-    giifEnvironment: row.giif_environment,
     profileGaps: computeProfileGaps(person, institution),
   };
 }
@@ -163,9 +149,9 @@ export const getAmlSettings = createServerFn({ method: "POST" })
           .eq("id", existing.id)
           .select("*")
           .single();
-        return await toView(updated ?? { ...existing, ...merged });
+        return toView(updated ?? { ...existing, ...merged });
       }
-      return await toView(existing);
+      return toView(existing);
     }
 
     const defaults = await buildDefaultsFromProfile(context.supabase, context.userId);
@@ -188,7 +174,7 @@ export const getAmlSettings = createServerFn({ method: "POST" })
       action: "auto_initialized_from_profile",
       details: { person: defaults.person as unknown as Record<string, unknown> },
     });
-    return await toView(created);
+    return toView(created);
   });
 
 const UpdateSettingsInput = z.object({
@@ -196,7 +182,6 @@ const UpdateSettingsInput = z.object({
   additionalPerson: PersonSchema.nullable().optional(),
   signerPerson: PersonSchema.nullable().optional(),
   institution: InstitutionSchema.optional(),
-  giifEnvironment: z.enum(["test", "production"]).optional(),
 });
 
 export const updateAmlSettings = createServerFn({ method: "POST" })
@@ -209,7 +194,6 @@ export const updateAmlSettings = createServerFn({ method: "POST" })
     if (data.additionalPerson !== undefined) patch.additional_person = data.additionalPerson;
     if (data.signerPerson !== undefined) patch.signer_person = data.signerPerson;
     if (data.institution !== undefined) patch.institution = data.institution;
-    if (data.giifEnvironment !== undefined) patch.giif_environment = data.giifEnvironment;
 
     const { data: updated, error } = await db
       .from("aml_settings")
@@ -227,7 +211,7 @@ export const updateAmlSettings = createServerFn({ method: "POST" })
       action: "settings_updated",
       details: { fields: Object.keys(patch) },
     });
-    return await toView(updated);
+    return toView(updated);
   });
 
 export interface AmlOverview {
@@ -241,7 +225,6 @@ export interface AmlOverview {
   reportsSubmitted: number;
   upoReceived: number;
   profileGaps: AmlProfileGaps;
-  giifConnectionStatus: string;
 }
 
 /** Liczniki na ekran Przegląd. */
@@ -286,6 +269,5 @@ export const getAmlOverview = createServerFn({ method: "POST" })
       ),
       upoReceived: await count("aml_reports", (q) => q.eq("status", "upo_received")),
       profileGaps: gaps,
-      giifConnectionStatus: settingsRow?.giif_connection_status ?? "not_connected",
     };
   });

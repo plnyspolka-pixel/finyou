@@ -5,10 +5,8 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { getAmlOverview, getAmlSettings, type AmlOverview } from "@/lib/aml/aml-settings.functions";
-import { GIIF_CONNECTION_LABELS, type AmlGiifConnectionStatus } from "@/lib/aml/aml-types";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/aml/")({
@@ -62,13 +60,13 @@ function AmlOverviewScreen() {
         {
           label: "Ponadprogowe bez decyzji",
           value: overview.thresholdPending,
-          to: "/inwestor/aml/ponadprogowe",
+          to: "/inwestor/aml/transakcje",
           warn: overview.thresholdPending > 0,
         },
         {
           label: "Po terminie 7 dni",
           value: overview.thresholdOverdue,
-          to: "/inwestor/aml/ponadprogowe",
+          to: "/inwestor/aml/transakcje",
           warn: overview.thresholdOverdue > 0,
         },
         { label: "Otwarte sprawy AML", value: overview.openCases, to: "/inwestor/aml/sprawy" },
@@ -77,8 +75,17 @@ function AmlOverviewScreen() {
           value: overview.reportsInPreparation,
           to: "/inwestor/aml/zgloszenia",
         },
-        { label: "Wysłane do GIIF", value: overview.reportsSubmitted, to: "/inwestor/aml/upo" },
-        { label: "Otrzymane UPO", value: overview.upoReceived, to: "/inwestor/aml/upo" },
+        {
+          label: "Wysłane bez potwierdzenia",
+          value: overview.reportsSubmitted,
+          to: "/inwestor/aml/zgloszenia",
+          warn: overview.reportsSubmitted > 0,
+        },
+        {
+          label: "Potwierdzone (UPO / ZPO)",
+          value: overview.upoReceived,
+          to: "/inwestor/aml/zgloszenia",
+        },
       ]
     : [];
 
@@ -87,7 +94,7 @@ function AmlOverviewScreen() {
       <FancyPageHeader
         eyebrow="AML"
         title="Przeciwdziałanie praniu pieniędzy"
-        subtitle="Weryfikacja klientów, oceny ryzyka, rejestry transakcji i zgłoszenia GIIF. Cały moduł działa bez podpisu kwalifikowanego — podpis będzie potrzebny dopiero przy wysyłce zgłoszenia do SI*GIIF."
+        subtitle="Weryfikacja klientów, oceny ryzyka, rejestr transakcji i zgłoszenia GIIF. Podpis kwalifikowany jest potrzebny tylko do wysyłki przez SI*GIIF — awaryjnie zgłoszenie można wysłać papierowo."
       />
 
       {overview && !overview.profileGaps.ready && (
@@ -129,25 +136,6 @@ function AmlOverviewScreen() {
           </Link>
         ))}
       </div>
-
-      {overview && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Połączenie z SI*GIIF</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <Badge variant="outline">
-              {GIIF_CONNECTION_LABELS[overview.giifConnectionStatus as AmlGiifConnectionStatus] ??
-                overview.giifConnectionStatus}
-            </Badge>
-            <p>
-              Rejestracja w SI*GIIF i certyfikat komunikacyjny będą potrzebne dopiero przy wysyłce
-              pierwszego zgłoszenia — kreator uruchomi się wtedy automatycznie, bez utraty
-              przygotowanego zgłoszenia.
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

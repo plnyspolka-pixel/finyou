@@ -1,8 +1,9 @@
 // Rejestr transakcji — automatyczne, ręczne i (w przyszłości) bankowe.
 // Wykonanie transakcji potwierdza inwestor, jeżeli Finance You nie widzi
 // faktycznego przelewu; po potwierdzeniu system liczy równowartość EUR
-// (kurs średni NBP z dnia transakcji) i oznacza transakcje ponadprogowe.
-import { createFileRoute, Link } from "@tanstack/react-router";
+// (kurs średni NBP z dnia transakcji) i oznacza transakcje ponadprogowe,
+// które trafiają do rejestru ponadprogowego pod tabelą.
+import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import {
 import { listAmlCustomers } from "@/lib/aml/aml-customers.functions";
 import { TRANSACTION_TYPE_LABELS } from "@/lib/aml/aml-types";
 import { AmlEmptyState, amlCustomerLabel, formatEUR } from "@/components/aml/aml-ui";
+import { ThresholdRegister } from "@/components/aml/threshold-register";
 import { formatPLN } from "@/lib/labels";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,6 +73,8 @@ function AmlTransactionsScreen() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [busy, setBusy] = useState<string | null>(null);
+  // Zmiana rejestru transakcji może dodać wpis ponadprogowy — odśwież rejestr.
+  const [registerKey, setRegisterKey] = useState(0);
 
   const reload = useCallback(async () => {
     try {
@@ -124,6 +128,7 @@ function AmlTransactionsScreen() {
       setOpen(false);
       setForm(EMPTY);
       await reload();
+      setRegisterKey((k) => k + 1);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd zapisu transakcji");
     } finally {
@@ -142,6 +147,7 @@ function AmlTransactionsScreen() {
           : "Wykonanie potwierdzone",
       );
       await reload();
+      setRegisterKey((k) => k + 1);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd potwierdzenia");
     } finally {
@@ -363,16 +369,11 @@ function AmlTransactionsScreen() {
                 ))}
               </tbody>
             </table>
-            <p className="text-xs text-muted-foreground mt-3">
-              Transakcje ponadprogowe wymagają decyzji w{" "}
-              <Link to="/inwestor/aml/ponadprogowe" className="underline">
-                rejestrze ponadprogowym
-              </Link>
-              .
-            </p>
           </CardContent>
         </Card>
       )}
+
+      <ThresholdRegister refreshKey={registerKey} />
     </div>
   );
 }

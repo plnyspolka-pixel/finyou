@@ -1387,7 +1387,7 @@ export function LoanCalculator({
                     obowiązek wpisać tę transakcję do <b>rejestru transakcji ponadprogowych</b> oraz
                     przekazać informację do GIIF w terminie 7 dni (art. 72 ustawy AML).{" "}
                     <Link
-                      to="/inwestor/aml/ponadprogowe"
+                      to="/inwestor/aml/transakcje"
                       className="font-semibold underline underline-offset-2"
                     >
                       Prowadź rejestr w module AML →
@@ -1418,7 +1418,7 @@ export function LoanCalculator({
                     transakcji ponadprogowych i zgłaszasz do GIIF w terminie 7 dni (art. 72 ustawy
                     AML). Kurs EUR NBP chwilowo niedostępny — nie można przeliczyć progu na PLN.{" "}
                     <Link
-                      to="/inwestor/aml/ponadprogowe"
+                      to="/inwestor/aml/transakcje"
                       className="font-semibold underline underline-offset-2"
                     >
                       Prowadź rejestr w module AML →

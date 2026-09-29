@@ -1,38 +1,28 @@
 # Moduł AML dla inwestorów
 
-Kompletny moduł przeciwdziałania praniu pieniędzy (AML) w panelu inwestora
-(`/inwestor/aml`). **Cały moduł jest dostępny od pierwszego wejścia** — bez
-aktywacji, bez konfiguracji SI\*GIIF i bez podpisu kwalifikowanego. Podpis
-kwalifikowany jest potrzebny dopiero przy faktycznej wysyłce zgłoszenia do
-GIIF (przycisk „Podpisz i zgłoś do GIIF").
+Moduł przeciwdziałania praniu pieniędzy (AML) w panelu inwestora
+(`/inwestor/aml`). Działa od pierwszego wejścia — bez aktywacji i bez
+podpisu kwalifikowanego. Zakres ograniczony do tego, co konieczne:
+weryfikacja klienta, ocena ryzyka, rejestr transakcji (z rejestrem
+ponadprogowym), sprawy AML, przygotowanie zgłoszeń do GIIF i ewidencja ich
+wysyłki.
 
-## Status wdrożenia
-
-| Obszar | Status |
-|---|---|
-| Lokalny potok (przygotowanie → podpis → szyfrowanie → kolejka → status → UPO) | `local_mock_verified` — przetestowany z mockiem |
-| Rzeczywista integracja z testowym SI\*GIIF (mTLS, endpointy, walidacja, UPO) | `giif_test_pending` — wymaga testu na oficjalnym środowisku GIIF |
-| Migracja bazy (`supabase/migrations/20260720120000_aml_module.sql`) | `database_migration_pending` — do zastosowania + regeneracja typów |
-
-Lokalny potok został przetestowany z mockiem. mTLS, rzeczywiste endpointy,
-walidacja SI\*GIIF i UPO wymagają jeszcze testu na oficjalnym środowisku
-GIIF. Statusu `giif_test_verified` nie wolno ustawiać na podstawie mocka —
-wyłącznie po otrzymaniu rzeczywistej odpowiedzi testowego SI\*GIIF i
-pobraniu rzeczywistego testowego UPO (`scripts/giif-e2e-test.ts`).
+Platforma **nie łączy się z API SI\*GIIF** (usunięto nieprzetestowaną
+integrację mTLS/KMS/CSR i kolejkę wysyłek). Zgłoszenie wysyła inwestor —
+elektronicznie w SI\*GIIF albo awaryjnie papierowo — a w module rejestruje
+wysyłkę i dołącza potwierdzenie.
 
 ## Ekrany
 
 | Ekran | Ścieżka | Zakres |
 |---|---|---|
-| Przegląd | `/inwestor/aml` | liczniki, braki profilu (ostrzeżenie, nie blokada), stan połączenia SI\*GIIF |
-| Klienci i weryfikacje | `/inwestor/aml/klienci` | profil AML, CRBR (beneficjenci/reprezentanci/rozbieżności), screening Dilisense, ocena trafień |
+| Przegląd | `/inwestor/aml` | liczniki, braki profilu (ostrzeżenie, nie blokada) |
+| Klienci | `/inwestor/aml/klienci` | profil AML, CRBR (beneficjenci/reprezentanci/rozbieżności), screening Dilisense, ocena trafień |
 | Oceny ryzyka | `/inwestor/aml/ryzyko` | propozycja systemu + ostateczna decyzja inwestora (zmiana wymaga uzasadnienia) |
-| Transakcje | `/inwestor/aml/transakcje` | rejestr transakcji (auto / ręczne / bankowe), potwierdzanie wykonania |
-| Transakcje ponadprogowe | `/inwestor/aml/ponadprogowe` | próg 15 000 EUR wg kursu NBP, termin 7 dni, decyzje, „raportuje bank" |
+| Transakcje | `/inwestor/aml/transakcje` | rejestr transakcji + rejestr ponadprogowy (15 000 EUR wg NBP, termin 7 dni, decyzje, „raportuje bank") |
 | Sprawy AML | `/inwestor/aml/sprawy` | sprawy z klienta/screeningu/CRBR/ryzyka/transakcji/rejestru/ręcznie |
-| Zgłoszenia GIIF | `/inwestor/aml/zgloszenia` | przygotowanie, XML+PDF, wersje+hash, zatwierdzenie, pakiet, podpis i wysyłka |
-| UPO i odpowiedzi | `/inwestor/aml/upo` | statusy, odpowiedzi GIIF, pobieranie UPO |
-| Ustawienia AML | `/inwestor/aml/ustawienia` | osoba odpowiedzialna (auto z profilu), osoba podpisująca, instytucja, środowisko, provider kluczy |
+| Zgłoszenia GIIF | `/inwestor/aml/zgloszenia` | przygotowanie, XML+PDF, wysyłka (SI\*GIIF albo papier), potwierdzenia UPO/ZPO |
+| Ustawienia | `/inwestor/aml/ustawienia` | osoba odpowiedzialna (auto z profilu), osoba podpisująca, instytucja, audyt |
 
 ## Osoba odpowiedzialna
 
@@ -40,8 +30,7 @@ Przy pierwszym wejściu `getAmlSettings` tworzy `aml_settings` automatycznie z
 profilu inwestora (`profiles` + `investors`): imię, nazwisko, stanowisko,
 e-mail, telefon, organizacja, NIP i adres. Braki są tylko ostrzeżeniem —
 wymagane dopiero przed wygenerowaniem finalnego zgłoszenia. W ustawieniach
-można zmienić osobę odpowiedzialną, dodać osobę uprawnioną i wskazać inną
-osobę podpisującą.
+można zmienić osobę odpowiedzialną i wskazać inną osobę podpisującą.
 
 ## Screening Dilisense
 
@@ -70,86 +59,53 @@ automatycznie podejrzana — można dla niej niezależnie utworzyć sprawę AML.
 
 ## Zgłoszenia GIIF
 
-Bez podpisu działa: automatyczne zebranie danych (instytucja, osoba
-odpowiedzialna, klient, reprezentanci, beneficjenci, strony, rachunki, kwoty,
-umowa, uzasadnienie, załączniki), kontrola kompletności, podgląd, PDF, XML
-zgodny ze strukturą GIIF (walidacja strukturalna + miejsce na kanoniczny XSD
-z dokumentacji GIIF), wersjonowanie i SHA-256 dokumentów, zatwierdzenie
-treści, pobranie pakietu.
+1. **Przygotowanie** — automatyczne zebranie danych (instytucja, osoba
+   odpowiedzialna, klient, reprezentanci, beneficjenci, strony, rachunki,
+   kwoty, umowa, uzasadnienie, załączniki) i kontrola kompletności.
+2. **Generowanie XML + PDF** — wersjonowanie i SHA-256 dokumentów, pobranie.
+3. **Wysyłka** (przycisk „Wyślij") — jedna z dwóch ścieżek:
+   - **Elektronicznie w SI\*GIIF** (ścieżka ustawowa, zalecana): inwestor
+     loguje się do SI\*GIIF, wprowadza zgłoszenie i podpisuje je
+     kwalifikowanym podpisem elektronicznym / kwalifikowaną pieczęcią
+     (samodzielnie albo przez pełnomocnika). Profil zaufany nie wystarcza.
+     W module wpisuje identyfikator zgłoszenia i dołącza UPO.
+   - **Papierowo — bez podpisu kwalifikowanego (awaryjnie)**: inwestor podaje
+     przyczynę, moduł generuje zawiadomienie do wydruku (HTML, pełne polskie
+     znaki, „Drukuj → Zapisz jako PDF") z adresatem, podstawą prawną,
+     danymi, uzasadnieniem, adnotacją o poufności (art. 54) i miejscem na
+     podpis własnoręczny. Kopia i SHA-256 trafiają do archiwum zgłoszenia.
+     Wysyłka listem poleconym za potwierdzeniem odbioru na adres:
+     Generalny Inspektor Informacji Finansowej, Ministerstwo Finansów,
+     ul. Świętokrzyska 12, 00-916 Warszawa. W module wpisuje się datę
+     i numer nadania oraz dołącza dowód nadania / ZPO.
+4. **Potwierdzenie** — UPO albo dowód nadania / ZPO można dołączyć od razu
+   lub później (status „Potwierdzone (UPO / ZPO)").
 
-„Podpisz i zgłoś do GIIF":
+Kanał i numer są zapisywane w `aml_reports` (`giif_status` = `si_giif` /
+`paper`, `giif_submission_id`, `submitted_at`, `upo_storage_path`,
+`giif_response`), bez zmian schematu bazy.
 
-- **Wariant A** (aktywne połączenie): finalny dokument → podpis kwalifikowany
-  LOKALNIE (CAdES/PKCS#7) → weryfikacja podpisu → szyfrowanie aktualnym
-  certyfikatem GIIF (CMS EnvelopedData) → wysyłka mTLS → identyfikator
-  zgłoszenia → status → UPO. **PIN i klucz podpisu nigdy nie są pobierane
-  ani zapisywane.**
-- **Wariant B** (brak połączenia): kontekstowy kreator rejestracji SI\*GIIF
-  bez opuszczania zgłoszenia — dane z profilu, dokument rejestracyjny, klucz
-  + CSR (klucz szyfrowany przez `AmlKeyProvider`), podpis lokalny, wysyłka
-  rejestracji, pobranie certyfikatu, kontrola zgodności z CSR, test mTLS
-  i automatyczny powrót do przygotowanego zgłoszenia.
+### Czy ścieżka papierowa jest prawidłowa? (weryfikacja 09.2026)
 
-## Infrastruktura
+**Tylko jako ścieżka awaryjna.** Ustawa AML (t.j. Dz.U. z 2025 r. poz. 644)
+oraz rozporządzenie MF z 4.10.2018 r. (Dz.U. 2018 poz. 1946) przewidują
+przekazywanie informacji i zawiadomień do GIIF środkami komunikacji
+elektronicznej (SI\*GIIF), a rejestracja instytucji (formularz
+identyfikujący) wymaga kwalifikowanego podpisu lub pieczęci. Nie
+znaleźliśmy aktualnego przepisu, który czyniłby wersję papierową
+równoważnym sposobem wykonania obowiązku przez instytucję obowiązaną.
+Dlatego:
 
-`src/lib/aml/`: generator XML + walidator (`giif-xml.server.ts`), PDF
-(`giif-pdf.server.ts`), CSR/CMS/szyfrowanie (`crypto.server.ts`),
-provider kluczy (`key-provider.server.ts`), provider mTLS
-(`giif-mtls.server.ts`), certyfikat szyfrujący GIIF
-(`giif-encryption-cert.server.ts`), GIIF Connector z kolejką wysyłek,
-idempotencją (nagłówek `Idempotency-Key` + obsługa 409), ponowieniami
-(backoff, 503/timeout), statusami (w tym „X") i UPO
-(`giif-connector.server.ts`), kurs EUR NBP (`nbp-eur.server.ts`),
-Dilisense (`dilisense.server.ts`), audyt (`audit.server.ts`).
+- **transakcje ponadprogowe (art. 72)** — papier jest zablokowany
+  (wyłącznie SI\*GIIF),
+- **zawiadomienia (art. 74, 86, 89)** — papier dozwolony z obowiązkową
+  przyczyną; to udokumentowanie niezwłocznego działania, a zgłoszenie
+  należy jak najszybciej przekazać także przez SI\*GIIF (np. przez
+  pełnomocnika z podpisem kwalifikowanym). Przed pierwszym użyciem warto
+  potwierdzić tryb telefonicznie w GIIF.
 
-**Dokumentacja REST API SI\*GIIF jest publiczna:**
-<https://giif.mofnet.gov.pl/api/>. Ścieżki endpointów w `GIIF_PATHS`
-(`giif-connector.server.ts`) należy przed testem live porównać z tą
-dokumentacją; część ścieżek w dokumentacji zawiera literówkę „instutucje" —
-właściwego wariantu nie zgadujemy, potwierdza go dopiero test na środowisku
-testowym (do tego czasu ścieżki można nadpisać env `GIIF_PATH_*`).
-
-**Certyfikat szyfrujący GIIF** jest pobierany dynamicznie z publicznego,
-nieuwierzytelnianego `GET {GIIF_BASE_URL}/certyfikatSzyfrowania`
-(`Accept: application/x-pem-file`): walidacja PEM/X.509, fingerprint SHA-256,
-okres ważności, cache 6 h z wymuszonym odświeżeniem przed wysyłką, a
-fingerprint użyty dla konkretnego zgłoszenia jest zapisywany w
-`aml_reports.encryption_cert_fingerprint` i audycie; pełny certyfikat nie
-jest logowany. Sekret `GIIF_ENCRYPTION_CERT_PEM` to wyłącznie jawnie
-oznaczony fallback dla testów lokalnych z `GIIF_MOCK=true`.
-
-**mTLS — `GiifMtlsProvider`.** Każdy inwestor ma własny certyfikat
-komunikacyjny SI\*GIIF, więc jeden binding Cloudflare nie jest rozwiązaniem
-produkcyjnym dla wielu organizacji (bindingi mTLS konfiguruje się per
-Worker — <https://developers.cloudflare.com/workers/runtime-apis/bindings/mtls/>).
-Implementacje: `MockGiifMtlsProvider` (testy lokalne),
-`CloudflareTestGiifMtlsProvider` (jeden testowy certyfikat Finance You przez
-binding `GIIF_MTLS`, środowisko testowe), `ProductionGiifMtlsProvider`
-(wydzielona usługa backendowa w UE — `GIIF_MTLS_PROXY_URL` — dynamicznie
-wybierająca certyfikat kliencki dla `organizationId`; przed żądaniem
-walidowane są: organizacja, NIP, identyfikator/status/ważność certyfikatu
-i jego przynależność do organizacji). Frontend nigdy nie wskazuje
-certyfikatu ani bindingu.
-
-**Klucze certyfikatów — `AmlKeyProvider`.** `LocalEnvelopeKeyProvider`
-(lokalna koperta AES-256-GCM na `AML_ENVELOPE_MASTER_KEY`) **nie jest
-KMS-em** i nie jest dopuszczony do produkcyjnego przechowywania kluczy
-certyfikatów GIIF — ekran Ustawienia AML pokazuje to wprost. Produkcyjnie:
-`ProductionKmsKeyProvider` (`AML_KEY_PROVIDER=production`,
-`AML_KMS_ENDPOINT`, `AML_KMS_TOKEN`) z prawdziwym KMS/HSM.
-
-Sekrety środowiska:
-
-- `DILISENSE_API_KEY` — klucz Dilisense (tylko backend),
-- `AML_ENVELOPE_MASTER_KEY` — master-klucz lokalnej koperty (dev/test;
-  dawna nazwa `AML_KMS_MASTER_KEY` jest przestarzała),
-- `AML_KEY_PROVIDER` / `AML_KMS_ENDPOINT` / `AML_KMS_TOKEN` — produkcyjny
-  KMS/HSM,
-- `GIIF_MTLS_PROXY_URL` / `GIIF_MTLS_PROXY_TOKEN` — produkcyjna usługa mTLS,
-- `GIIF_ENCRYPTION_CERT_PEM` — fallback certyfikatu szyfrującego (tylko mock),
-- `GIIF_MOCK=true` — tryb symulacji SI\*GIIF (wyłącznie dev/test),
-- binding Cloudflare `GIIF_MTLS` (`wrangler mtls-certificate`) — jeden
-  testowy certyfikat Finance You (środowisko testowe).
+Terminy: art. 74 — niezwłocznie, nie później niż 2 dni robocze od
+potwierdzenia podejrzenia; art. 72 — 7 dni od transakcji.
 
 ## Bezpieczeństwo
 
@@ -157,11 +113,9 @@ Sekrety środowiska:
   personel wewnętrzny; klient, pośrednik ani inny inwestor nie widzą
   screeningu, ocen, spraw, zgłoszeń ani UPO,
 - `aml_audit_log` jest nieusuwalny (INSERT-only, trigger blokuje
-  UPDATE/DELETE) i rejestruje każdą zmianę statusu, decyzję, podpis, wysyłkę
-  i odpowiedź GIIF,
+  UPDATE/DELETE) i rejestruje każdą zmianę statusu, decyzję, wygenerowanie
+  dokumentów, wysyłkę (kanał) i dołączenie potwierdzenia,
 - prywatny bucket `aml-private` (ścieżki per `user_id`),
-- klucze certyfikatów komunikacyjnych wyłącznie zaszyfrowane przez
-  `AmlKeyProvider` (w tabeli tylko `kms_key_ref`), nigdy we frontendzie,
 - Finance You nie przechowuje podpisu kwalifikowanego, PIN-u ani klucza
   prywatnego podpisu inwestora — każdy inwestor używa własnego podpisu
   i własnego certyfikatu.
@@ -182,24 +136,7 @@ jeszcze zastosowana. Kolejność wdrożenia:
    zastąp go wygenerowanymi typami — wzorzec `wind_*` nie jest
    uzasadnieniem trwałego `any`.
 
-## Środowiska SI\*GIIF i testy
+## Testy
 
-- test: `https://test.giif.mofnet.gov.pl/api/rest2018`
-- produkcja: `https://www.giif.mofnet.gov.pl/api/rest2018`
-
-Nigdy nie używaj testowych certyfikatów i danych w produkcji.
-
-Testy jednostkowe: `bun run test` (`src/lib/aml/aml.test.ts`).
-
-Testy integracyjne: `bun scripts/giif-e2e-test.ts`
-
-- `GIIF_MOCK=true` — test lokalny; wynik co najwyżej `local_mock_verified`
-  (mock NIE testuje realnego mTLS, zgodności endpointów, przyjęcia podpisu
-  ani UPO),
-- `GIIF_MOCK=false GIIF_ENV=test` — prawdziwe testowe SI\*GIIF; wymaga
-  maszyny/CI z dostępem sieciowym do `test.giif.mofnet.gov.pl` i testowej
-  rejestracji Finance You; `giif_test_verified` wyłącznie po rzeczywistej
-  odpowiedzi i pobraniu rzeczywistego testowego UPO (skrypt zapisuje też
-  fingerprint certyfikatu szyfrującego i potwierdza brak podwójnej wysyłki),
-- produkcja jest w skrypcie zablokowana bez dodatkowego jawnego
-  zabezpieczenia.
+Testy jednostkowe: `bun run test` (`src/lib/aml/aml.test.ts`) — XML GIIF,
+próg EUR, propozycja ryzyka, PDF, zawiadomienie papierowe.

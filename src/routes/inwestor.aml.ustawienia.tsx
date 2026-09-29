@@ -1,6 +1,5 @@
 // Ustawienia AML — osoba odpowiedzialna (domyślnie z profilu inwestora),
-// dodatkowa osoba uprawniona, osoba podpisująca, dane instytucji, środowisko
-// SI*GIIF oraz nieusuwalna historia audytu.
+// osoba podpisująca, dane instytucji oraz nieusuwalna historia audytu.
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -11,24 +10,12 @@ import {
   type AmlSettingsView,
 } from "@/lib/aml/aml-settings.functions";
 import { listAmlAudit } from "@/lib/aml/aml-cases.functions";
-import {
-  GIIF_CONNECTION_LABELS,
-  type AmlGiifConnectionStatus,
-  type AmlPerson,
-} from "@/lib/aml/aml-types";
+import type { AmlPerson } from "@/lib/aml/aml-types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Loader2, Settings2 } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/aml/ustawienia")({
@@ -103,7 +90,6 @@ function AmlSettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [sameSigner, setSameSigner] = useState(true);
-  const [hasAdditional, setHasAdditional] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -112,7 +98,6 @@ function AmlSettingsScreen() {
         const s = await fetchSettings();
         setSettings(s);
         setSameSigner(!s.signerPerson);
-        setHasAdditional(Boolean(s.additionalPerson));
         const a = await fetchAudit({ data: {} });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
         setAudit(a.audit as any[]);
@@ -132,10 +117,8 @@ function AmlSettingsScreen() {
       const updated = await save({
         data: {
           responsiblePerson: settings.responsiblePerson,
-          additionalPerson: hasAdditional ? (settings.additionalPerson ?? EMPTY_PERSON) : null,
           signerPerson: sameSigner ? null : (settings.signerPerson ?? EMPTY_PERSON),
           institution: settings.institution,
-          giifEnvironment: settings.giifEnvironment,
         },
       });
       setSettings(updated);
@@ -266,27 +249,6 @@ function AmlSettingsScreen() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Dodatkowa osoba uprawniona</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={hasAdditional}
-                onCheckedChange={(v) => setHasAdditional(Boolean(v))}
-              />
-              Wskaż dodatkową osobę uprawnioną
-            </label>
-            {hasAdditional && (
-              <PersonFields
-                value={settings.additionalPerson ?? EMPTY_PERSON}
-                onChange={(p) => setSettings({ ...settings, additionalPerson: p })}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
             <CardTitle className="text-base">Osoba podpisująca zgłoszenia</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -301,97 +263,28 @@ function AmlSettingsScreen() {
               />
             )}
             <p className="text-xs text-muted-foreground">
-              Do wysyłki zgłoszeń wymagany jest kwalifikowany podpis elektroniczny osoby
-              podpisującej. Profil Zaufany ani podpis zaufany nie zastępują kwalifikowanego podpisu
-              elektronicznego wymaganego przez SI*GIIF. Finance You nie przechowuje podpisu, PIN-u
-              ani klucza prywatnego.
+              Osoba podpisuje zgłoszenie w SI*GIIF kwalifikowanym podpisem elektronicznym (profil
+              zaufany nie wystarcza) albo — przy wysyłce papierowej — własnoręcznie. Finance You nie
+              przechowuje podpisu, PIN-u ani klucza prywatnego.
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Połączenie SI*GIIF</CardTitle>
+            <CardTitle className="text-base">Wysyłka zgłoszeń do GIIF</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">
-                {GIIF_CONNECTION_LABELS[settings.giifConnectionStatus as AmlGiifConnectionStatus] ??
-                  settings.giifConnectionStatus}
-              </Badge>
-              {settings.giifConnectionStatus === "not_connected" && (
-                <span className="text-xs text-muted-foreground">to normalny stan startowy</span>
-              )}
-            </div>
-            {settings.giifInstitutionId && (
-              <p className="text-xs text-muted-foreground font-mono">
-                ID instytucji: {settings.giifInstitutionId}
-              </p>
-            )}
-
-            <div className="rounded-md bg-muted/50 p-3 text-xs space-y-2">
-              <p className="font-medium text-sm">Co masz zrobić — i dlaczego</p>
-              <p className="text-muted-foreground">
-                <span className="font-medium text-foreground">Teraz: nic.</span> Cały moduł AML —
-                klienci, oceny ryzyka, transakcje, sprawy i przygotowanie zgłoszeń — działa bez
-                połączenia z SI*GIIF. Połączenie jest potrzebne dopiero przy{" "}
-                <span className="font-medium text-foreground">pierwszej wysyłce zgłoszenia</span> do
-                GIIF. Wtedy z ekranu zgłoszenia sam uruchomi się kreator, który przeprowadzi Cię
-                krok po kroku:
-              </p>
-              <ol className="list-decimal space-y-1 pl-4 text-muted-foreground">
-                <li>
-                  <span className="font-medium text-foreground">Rejestracja instytucji</span> w
-                  SI*GIIF — dane pobierzemy z Twojego profilu, Ty je tylko potwierdzasz.
-                </li>
-                <li>
-                  <span className="font-medium text-foreground">Klucz i wniosek o certyfikat</span>{" "}
-                  — generujemy je za Ciebie; klucz prywatny nigdy nie opuszcza platformy w postaci
-                  jawnej.
-                </li>
-                <li>
-                  <span className="font-medium text-foreground">Podpis kwalifikowany</span> osoby
-                  podpisującej — wymaga go GIIF (Profil Zaufany nie wystarcza). Platforma nie
-                  przechowuje Twojego podpisu, PIN-u ani klucza.
-                </li>
-                <li>
-                  <span className="font-medium text-foreground">Certyfikat komunikacyjny</span>{" "}
-                  wydaje operator GIIF — po jego otrzymaniu testujemy połączenie i wracamy do
-                  Twojego zgłoszenia.
-                </li>
-              </ol>
-              <p className="text-muted-foreground">
-                Dlatego połączenie nie „zestawia się samo" — część kroków (podpis, wydanie
-                certyfikatu) leży po stronie Twojej i urzędu.
-              </p>
-            </div>
-
-            <div className="w-full max-w-sm">
-              <Label>Środowisko</Label>
-              <Select
-                value={settings.giifEnvironment}
-                onValueChange={(v) =>
-                  setSettings({ ...settings, giifEnvironment: v as "test" | "production" })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="test">Testowe (test.giif.mofnet.gov.pl)</SelectItem>
-                  <SelectItem value="production">Produkcyjne (www.giif.mofnet.gov.pl)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="mt-1 text-xs text-muted-foreground">
-                „Testowe" służy do próbnej wysyłki bez skutków prawnych. „Produkcyjne" wysyła
-                zgłoszenia realnie do GIIF — wybierz je dopiero, gdy masz wydany certyfikat
-                komunikacyjny.
-              </p>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              Klucze Twoich certyfikatów komunikacyjnych przechowujemy wyłącznie w postaci
-              zaszyfrowanej (zarządzany sekret) i nigdy nie pokazujemy ich w przeglądarce.
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <p>
+              <span className="font-medium text-foreground">Elektronicznie (zalecane):</span>{" "}
+              instytucja rejestruje się w SI*GIIF formularzem identyfikującym i wysyła zgłoszenia z
+              kwalifikowanym podpisem elektronicznym lub pieczęcią — samodzielnie albo przez
+              pełnomocnika.
+            </p>
+            <p>
+              <span className="font-medium text-foreground">Papierowo (awaryjnie):</span> gdy
+              wysyłka elektroniczna nie jest możliwa, moduł wygeneruje zawiadomienie do wydruku,
+              podpisu własnoręcznego i wysyłki listem poleconym.
             </p>
           </CardContent>
         </Card>
