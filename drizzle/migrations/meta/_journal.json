@@ -78,6 +78,13 @@
       "when": 1790665033297,
       "tag": "0010_studio_material_audience",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790699335900,
+      "tag": "0011_pliki_klienta_naprawa_przeniesionych",
+      "breakpoints": true
     }
   ]
 }
