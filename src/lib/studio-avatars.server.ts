@@ -55,6 +55,61 @@ export async function resolveAvatarRotation(
   return await getDefaultAvatarIds();
 }
 
+/**
+ * Rotacja twarzy dla JEDNEJ rolki z zestawu domyślnych: prowadzący, a za nim
+ * partnerzy z zestawu — najpierw ci, których ostatnie rolki nie użyły
+ * (najdawniej użyty pierwszy; remis rozstrzyga kolejność zestawu). Dzięki
+ * temu zestaw czterech twarzy przy dwóch na rolkę rozkłada się po równo,
+ * zamiast wiecznie parować prowadzącego z pozycją 2. Gdy liczba twarzy
+ * obejmuje cały zestaw, kolejność zostaje taka jak w panelu.
+ */
+export function pickReelRotation(opts: {
+  lead: string;
+  /** Zestaw domyślnych w kolejności z panelu. */
+  defaults: string[];
+  /** Ile twarzy w rolce razem z prowadzącym. */
+  count: number;
+  /** `avatar_ids` ostatnich jobów, od najnowszego. */
+  recent: string[][];
+}): string[] {
+  const { lead } = opts;
+  const pool = [...new Set(opts.defaults.filter((id) => id && id !== lead))];
+  const partners = Math.max(0, Math.floor(opts.count) - 1);
+  if (!partners || !pool.length) return [lead];
+  if (partners >= pool.length) return [lead, ...pool];
+  // Wiek = indeks najnowszego joba z tą twarzą; nieużyta = starsza niż wszystko.
+  const age = new Map<string, number>();
+  opts.recent.forEach((ids, i) => {
+    for (const id of ids ?? []) if (!age.has(id)) age.set(id, i);
+  });
+  const ageOf = (id: string) => age.get(id) ?? opts.recent.length;
+  // Sort jest stabilny — przy równym wieku zostaje kolejność zestawu.
+  const ranked = [...pool].sort((a, b) => ageOf(b) - ageOf(a));
+  return [lead, ...ranked.slice(0, partners)];
+}
+
+/** Ile ostatnich jobów liczy się przy doborze partnera. */
+const RECENT_JOBS_FOR_ROTATION = 50;
+
+/**
+ * Rotacja dla joba zakładanego bez `avatar_ids` (np. z MCP): prowadzący +
+ * partnerzy z zestawu domyślnych dobrani po ostatnich jobach.
+ */
+export async function defaultReelRotation(lead: string, count: number): Promise<string[]> {
+  const defaults = await getDefaultAvatarIds();
+  const { data, error } = await supabaseAdmin
+    .from("studio_video_jobs")
+    .select("avatar_ids")
+    .order("created_at", { ascending: false })
+    .limit(RECENT_JOBS_FOR_ROTATION);
+  if (error) {
+    // Bez historii partner idzie po kolejności zestawu — rolka i tak wychodzi.
+    console.warn(`[Studio] rotacja po ostatnich jobach: ${error.message}`);
+  }
+  const recent = (data ?? []).map((r) => (r.avatar_ids ?? []).filter(Boolean));
+  return pickReelRotation({ lead, defaults, count, recent });
+}
+
 export type CatalogAvatarWithDefault = HeygenCatalogItem & {
   /** Czy należy do zestawu domyślnych z panelu. */
   is_default: boolean;

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { HeygenCatalogItem } from "./heygen-catalog.server";
-import { markDefaultAvatars, type StudioDefaultAvatar } from "./studio-avatars.server";
+import {
+  markDefaultAvatars,
+  pickReelRotation,
+  type StudioDefaultAvatar,
+} from "./studio-avatars.server";
 
 const item = (id: string, mine = false): HeygenCatalogItem => ({
   id,
@@ -52,5 +56,61 @@ describe("markDefaultAvatars", () => {
       ["A", 1],
       ["B", 2],
     ]);
+  });
+});
+
+describe("pickReelRotation", () => {
+  const defaults = ["A", "B", "C", "D"];
+
+  it("partnerem zostaje twarz najdawniej użyta w ostatnich rolkach", () => {
+    const recent = [
+      ["A", "B"],
+      ["A", "C"],
+      ["A", "D"],
+    ];
+    expect(pickReelRotation({ lead: "A", defaults, count: 2, recent })).toEqual(["A", "D"]);
+  });
+
+  it("twarz jeszcze nieużyta wyprzedza każdą użytą", () => {
+    const recent = [
+      ["A", "B"],
+      ["A", "C"],
+    ];
+    expect(pickReelRotation({ lead: "A", defaults, count: 2, recent })).toEqual(["A", "D"]);
+  });
+
+  it("bez historii partnerzy idą po kolejności zestawu, prowadzący spoza zestawu też prowadzi", () => {
+    expect(pickReelRotation({ lead: "X", defaults, count: 3, recent: [] })).toEqual([
+      "X",
+      "A",
+      "B",
+    ]);
+  });
+
+  it("liczba twarzy obejmująca cały zestaw zachowuje kolejność panelu", () => {
+    const recent = [["A", "C"]];
+    expect(pickReelRotation({ lead: "A", defaults, count: 6, recent })).toEqual([
+      "A",
+      "B",
+      "C",
+      "D",
+    ]);
+  });
+
+  it("jedna twarz albo pusty zestaw = sam prowadzący", () => {
+    expect(pickReelRotation({ lead: "A", defaults, count: 1, recent: [] })).toEqual(["A"]);
+    expect(pickReelRotation({ lead: "A", defaults: [], count: 2, recent: [] })).toEqual(["A"]);
+    expect(pickReelRotation({ lead: "A", defaults: ["A"], count: 2, recent: [] })).toEqual(["A"]);
+  });
+
+  it("kolejne rolki obchodzą cały zestaw po kolei", () => {
+    const history: string[][] = [];
+    const seen: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      const rotation = pickReelRotation({ lead: "A", defaults, count: 2, recent: history });
+      seen.push(rotation[1]);
+      history.unshift(rotation);
+    }
+    expect(seen).toEqual(["B", "C", "D", "B"]);
   });
 });

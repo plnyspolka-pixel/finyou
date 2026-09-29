@@ -117,8 +117,11 @@ function defaultAvatarsPayload(set: StudioDefaultAvatar[]) {
   return set.map((a, i) => ({ position: i + 1, id: a.avatar_id, name: a.name, kind: a.kind }));
 }
 
+/** Ile twarzy w jednej rolce bez `avatar_ids`: prowadzący + partner z zestawu domyślnych. */
+const AVATARS_PER_REEL = 2;
+
 const DEFAULT_AVATARS_NOTE =
-  "Zestaw domyślnych awatarów ustawia panel Studia (przycisk „Ustaw jako domyślne”): pozycja 1 prowadzi rolkę (mówi hook), kolejne przejmują a-rolle przy strukturze rolki. `create_studio_video_job` bez `avatar_id` / `avatar_ids` używa dokładnie tego zestawu — nie zgaduj domyślnych po nazwie.";
+  "Zestaw domyślnych awatarów ustawia panel Studia (przycisk „Ustaw jako domyślne”): pozycja 1 prowadzi rolkę (mówi hook), kolejne przejmują a-rolle przy strukturze rolki. `create_studio_video_job` bez `avatar_id` / `avatar_ids` bierze z tego zestawu prowadzącego i partnera dobieranego rotacyjnie po ostatnich rolkach (domyślnie 2 twarze w rolce z przebitkami b-roll) — nie zgaduj domyślnych po nazwie.";
 const NO_DEFAULT_AVATARS_NOTE =
   "Panel Studia nie ma zapisanego zestawu domyślnych awatarów — bez `avatar_id` Studio użyje digital twina Filipa.";
 
@@ -782,7 +785,7 @@ export const createStudioVideoJob = defineTool({
   name: "create_studio_video_job",
   title: "Create studio video job",
   description:
-    "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. `caption_style` wybiera wygląd napisów (HeyGen nie daje kontroli nad rozmiarem/pozycją — własne style wypala nasza usługa). Awatar: bez `avatar_id` prowadzi pierwszy z zestawu domyślnych ustawionego w panelu Studia (`list_heygen_avatars` → `default_avatars`), a `reel_structure=true` daje stały montaż rolki (ujęcie → wizual hook → przebitka → a-roll kolejnego awatara) z rotacją po całym zestawie; `avatar_ids` nadpisuje rotację. Nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+    "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. `caption_style` wybiera wygląd napisów (HeyGen nie daje kontroli nad rozmiarem/pozycją — własne style wypala nasza usługa). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → wizual hook → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
   inputSchema: {
     prompt: z.string().min(3).max(2000).optional().describe("Temat / brief odcinka."),
     script: z.string().max(5000).optional().describe("Gotowy tekst lektora; pusty = AI."),
@@ -798,7 +801,16 @@ export const createStudioVideoJob = defineTool({
       .max(6)
       .optional()
       .describe(
-        "Rotacja a-rolli przy strukturze rolki (kolejność = kolejność ujęć; prowadzący i tak idzie pierwszy). Domyślnie cały zestaw domyślnych z panelu.",
+        "Rotacja twarzy wprost (kolejność = kolejność ujęć; prowadzący i tak idzie pierwszy). Bez tego: prowadzący + partnerzy z zestawu domyślnych dobrani rotacyjnie (`avatars_per_reel`).",
+      ),
+    avatars_per_reel: z
+      .number()
+      .int()
+      .min(1)
+      .max(6)
+      .default(AVATARS_PER_REEL)
+      .describe(
+        "Ile twarzy w rolce, gdy rotacji nie podano wprost: prowadzący + partnerzy z zestawu domyślnych (domyślnie 2; 1 = jedna twarz).",
       ),
     voice_id: z.string().optional().describe("Głos ElevenLabs; domyślnie Filip."),
     captions: z.boolean().default(true),
@@ -806,12 +818,14 @@ export const createStudioVideoJob = defineTool({
     dynamic_scenes: z
       .boolean()
       .default(false)
-      .describe("Przebitki ze stocku między ujęciami awatara (miejsca cięć wskazuje AI)."),
+      .describe(
+        "Przebitki ze stocku w miejscach wskazanych przez AI (zamiast stałej struktury). Przy `reel_structure` i tak włączone.",
+      ),
     reel_structure: z
       .boolean()
-      .default(false)
+      .default(true)
       .describe(
-        "Stała struktura rolki: ujęcie → wizual hook → przebitka → a-roll kolejnego awatara z rotacji (włącza przebitki).",
+        "Stała struktura rolki: ujęcie → wizual hook → przebitka b-roll → a-roll kolejnej twarzy z rotacji. Domyślnie włączona; `false` = pojedyncze ujęcie (albo przebitki AI przy `dynamic_scenes=true`).",
       ),
     auto_publish_platforms: z.array(z.enum(PLATFORMS)).default([]),
     publish_privacy: z.enum(PRIVACY).default("public"),
@@ -852,14 +866,19 @@ export const createStudioVideoJob = defineTool({
         if (!description)
           description = [gen.description, gen.hashtags.join(" ")].filter(Boolean).join("\n\n");
       }
-      // Rotacja a-rolli jak w panelu: podana wprost, a gdy nie — stały zestaw
-      // domyślnych (ten sam, którym jedzie kolejka i cron).
-      const { resolveAvatarRotation } = await import("@/lib/studio-avatars.server");
-      const avatarIds = await resolveAvatarRotation(a.avatar_ids);
+      // Rotacja twarzy: podana wprost (prowadzący pierwszy, jak w panelu), a gdy
+      // nie — prowadzący + partnerzy z zestawu domyślnych dobrani po ostatnich
+      // rolkach (najdawniej użyty pierwszy), żeby cały zestaw dostawał ekran.
+      const leadAvatar = a.avatar_id ?? d.avatarId;
+      const given = (a.avatar_ids ?? []).filter(Boolean);
+      const { defaultReelRotation } = await import("@/lib/studio-avatars.server");
+      const avatarIds = given.length
+        ? [...new Set([leadAvatar, ...given])]
+        : await defaultReelRotation(leadAvatar, a.avatars_per_reel);
       const row = {
         prompt,
         script,
-        avatar_id: a.avatar_id ?? d.avatarId,
+        avatar_id: leadAvatar,
         avatar_ids: avatarIds,
         voice_id: a.voice_id ?? d.voiceId,
         status: a.start_now ? "generating_audio" : "queued",
