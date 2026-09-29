@@ -24,6 +24,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parseShortsPromptTag, findShortsQuestion } from "./shorts-question-bank";
 import {
   CAPTION_BURN_MAX_ATTEMPTS,
+  isBadgeOnlyBurn,
+  planBadgeBurn,
   planCaptionBurn,
   resolveCaptionBurn,
   resolveCaptionedOutput,
@@ -246,6 +248,7 @@ async function submitBurn(
     videoUrl: plan.videoUrl,
     srtUrl: plan.srtUrl,
     styleId: plan.styleId,
+    aiBadge: plan.aiBadge,
     name: fallbackTitle(job),
   });
   await supabaseAdmin
@@ -265,20 +268,78 @@ async function submitBurn(
 }
 
 /**
+ * Sam znaczek „AI" na pliku, który inaczej poszedłby prosto do publikacji
+ * (napisy HeyGena albo bez napisów). Job przechodzi w 'captioning' jak przy
+ * napisach własnych; styl zostaje „heygen", po nim rozpoznajemy ten rodzaj
+ * wypalania przy domykaniu (`isBadgeOnlyBurn`).
+ */
+async function submitBadgeBurn(
+  job: JobRow,
+  src: {
+    /** Plik, na który kładziemy znaczek. */
+    videoUrl: string;
+    /** Czysty master (bez napisów), gdy `videoUrl` ma napisy HeyGena. */
+    cleanVideoUrl: string | null;
+    subtitleUrl: string | null;
+    captionsBurned: boolean;
+    thumbnailUrl: string | null;
+    lastError: string | null;
+  },
+): Promise<void> {
+  const { submitCaptionBurn } = await import("./caption-burner.server");
+  const burnId = await submitCaptionBurn({
+    videoUrl: src.videoUrl,
+    aiBadge: true,
+    name: fallbackTitle(job),
+  });
+  await supabaseAdmin
+    .from("studio_video_jobs")
+    .update({
+      status: "captioning",
+      caption_style: "heygen",
+      captions: src.captionsBurned,
+      caption_burn_id: burnId,
+      caption_burn_started_at: new Date().toISOString(),
+      caption_burn_attempts: job.caption_burn_attempts + 1,
+      // Czysty master zostaje czysty: bez napisów to sam plik źródłowy, a nie
+      // wynik ze znaczkiem (inaczej zmiana napisów dołożyłaby drugi znaczek).
+      video_url_clean: src.captionsBurned ? src.cleanVideoUrl : src.videoUrl,
+      subtitle_url: src.subtitleUrl,
+      thumbnail_url: src.thumbnailUrl ?? job.thumbnail_url ?? null,
+      caption_wait_since: null,
+      last_error: src.lastError,
+    })
+    .eq("id", job.id);
+}
+
+/** Plik pod znaczek przy ponowieniu: wersja z napisami HeyGena albo czysty master. */
+async function badgeSourceFor(job: JobRow): Promise<string | null> {
+  if (!job.captions) return job.video_url_clean;
+  if (!job.heygen_video_id) return null;
+  const { getHeygenVideoStatus } = await import("./avatar-faq.server");
+  const status = await getHeygenVideoStatus(job.heygen_video_id).catch(() => null);
+  return status?.captioned_video_url ?? null;
+}
+
+/**
  * Gotowy render HeyGena: własne napisy (jeśli zamówione i możliwe) albo
  * publikacja wersji HeyGena — z dotychczasową karencją na wypaloną wersję.
+ * Każda ścieżka dokłada znaczek „AI" w rogu, gdy jest włączony i jest usługa.
  * Jedna funkcja dla ticka i pollingu z panelu.
  */
 export async function settleHeygenCompletion(
   job: JobRow,
   status: HeygenRenderStatus,
 ): Promise<SettleOutcome> {
-  const { isCaptionBurnerConfigured } = await import("./caption-burner.server");
+  const { isCaptionBurnerConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
+  const burnerConfigured = isCaptionBurnerConfigured();
+  const aiBadge = isAiBadgeEnabled();
   const plan = planCaptionBurn({
     captions: job.captions,
     captionStyle: job.caption_style,
-    burnerConfigured: isCaptionBurnerConfigured(),
+    burnerConfigured,
     outputs: status,
+    aiBadge,
   });
   let planNote: string | null = plan.action === "heygen" ? plan.reason : null;
 
@@ -308,6 +369,29 @@ export async function settleHeygenCompletion(
       .eq("id", job.id);
     return { state: "waiting" };
   }
+
+  // Znaczek „AI" na pliku HeyGena, zanim pójdzie do publikacji.
+  let badgeNote: string | null = null;
+  const badge = planBadgeBurn({ aiBadge, burnerConfigured, videoUrl: resolved.videoUrl });
+  if (badge.action === "badge") {
+    try {
+      await submitBadgeBurn(job, {
+        videoUrl: badge.videoUrl,
+        cleanVideoUrl: resolved.cleanVideoUrl,
+        subtitleUrl: resolved.subtitleUrl,
+        captionsBurned: resolved.captionsBurned,
+        thumbnailUrl: status.thumbnail_url ?? null,
+        lastError: joinNotes(job.last_error, resolved.note, planNote),
+      });
+      return { state: "captioning" };
+    } catch (e) {
+      console.warn(`[Studio] zlecenie znaczka AI nieudane (${job.id}): ${errMsg(e)}`);
+      badgeNote = `Znaczek AI nieudany przy zleceniu: ${errMsg(e)} — opublikowano bez znaczka.`;
+    }
+  } else {
+    badgeNote = badge.reason;
+  }
+
   return markReady(job, {
     video_url: resolved.videoUrl,
     video_url_clean: resolved.cleanVideoUrl,
@@ -319,7 +403,7 @@ export async function settleHeygenCompletion(
     caption_wait_since: null,
     caption_burn_id: null,
     caption_burn_started_at: null,
-    last_error: joinNotes(job.last_error, resolved.note, planNote),
+    last_error: joinNotes(job.last_error, resolved.note, planNote, badgeNote),
   });
 }
 
@@ -355,6 +439,9 @@ async function finishCaptionBurn(
   const previous = job.video_url
     ? { videoUrl: job.video_url, captions: job.captions, captionStyle: job.caption_style }
     : null;
+  // Zadanie z samym znaczkiem (napisy HeyGena / bez napisów) — przy porażce
+  // publikujemy plik HeyGena, tylko bez znaczka.
+  const badgeOnly = isBadgeOnlyBurn(job.caption_style);
   const resolveWith = (heygen: HeygenCaptionOutputs | null) =>
     resolveCaptionBurn({
       status: probe.status,
@@ -364,6 +451,7 @@ async function finishCaptionBurn(
       now: new Date(),
       fallback: { previous, heygen },
       timeoutMs: captionBurnTimeoutMs(),
+      failureLabel: badgeOnly ? "Znaczek AI nieudany" : "Własne napisy nieudane",
     });
 
   let resolution = resolveWith(null);
@@ -374,6 +462,8 @@ async function finishCaptionBurn(
       const { getHeygenVideoStatus } = await import("./avatar-faq.server");
       heygen = await getHeygenVideoStatus(job.heygen_video_id).catch(() => null);
     }
+    // Bez napisów HeyGena ich wersji nie publikujemy — nawet jeśli jest.
+    if (heygen && badgeOnly && !job.captions) heygen = { ...heygen, captioned_video_url: null };
     resolution = resolveWith(heygen ?? { video_url: job.video_url_clean });
   }
 
@@ -385,7 +475,8 @@ async function finishCaptionBurn(
       await burner.discardCaptionBurn(job.caption_burn_id!);
       return await markReady(job, {
         video_url: stored.url,
-        captions: true,
+        // Sam znaczek nie zmienia tego, czy plik ma napisy.
+        captions: badgeOnly ? job.captions : true,
         caption_burn_id: null,
         caption_burn_started_at: null,
         caption_wait_since: null,
@@ -396,6 +487,29 @@ async function finishCaptionBurn(
     }
   }
 
+  if (resolution.state === "retry" && badgeOnly) {
+    const source = burner.isCaptionBurnerConfigured() ? await badgeSourceFor(job) : null;
+    if (source) {
+      try {
+        console.warn(`[Studio] ponawiam znaczek AI (${job.id}): ${resolution.reason}`);
+        await submitBadgeBurn(job, {
+          videoUrl: source,
+          cleanVideoUrl: job.video_url_clean,
+          subtitleUrl: job.subtitle_url,
+          captionsBurned: job.captions,
+          thumbnailUrl: job.thumbnail_url,
+          lastError: job.last_error,
+        });
+        return { state: "captioning" };
+      } catch (e) {
+        probe = { status: "failed", error: `ponowienie: ${errMsg(e)}` };
+      }
+    } else {
+      probe = { status: "failed", error: `${resolution.reason}; brak pliku do ponowienia` };
+    }
+    return finishCaptionBurn({ ...job, caption_burn_attempts: CAPTION_BURN_MAX_ATTEMPTS }, probe);
+  }
+
   if (resolution.state === "retry") {
     const styleId = job.caption_style as CustomCaptionStyleId;
     const plan = planCaptionBurn({
@@ -403,6 +517,7 @@ async function finishCaptionBurn(
       captionStyle: styleId,
       burnerConfigured: burner.isCaptionBurnerConfigured(),
       outputs: { video_url: job.video_url_clean, subtitle_url: job.subtitle_url },
+      aiBadge: burner.isAiBadgeEnabled(),
     });
     if (plan.action === "burn") {
       try {
@@ -463,11 +578,13 @@ export async function restyleJobCaptions(
   if (!clean) throw new Error("Brak czystego mastera bez napisów — nie ma na czym wypalić nowych.");
   if (!job.subtitle_url)
     throw new Error("Brak pliku SRT z HeyGena — nie ma z czego zbudować napisów.");
+  const { isAiBadgeEnabled } = await import("./caption-burner.server");
   const plan = planCaptionBurn({
     captions: true,
     captionStyle: styleId,
     burnerConfigured: true,
     outputs: { video_url: clean, subtitle_url: job.subtitle_url },
+    aiBadge: isAiBadgeEnabled(),
   });
   if (plan.action !== "burn") throw new Error(plan.reason ?? "Nie można zlecić napisów.");
   await submitBurn({ ...job, caption_burn_attempts: 0 }, plan, job.thumbnail_url);

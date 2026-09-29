@@ -5,6 +5,11 @@ plik ASS** (styl napisów liczy kod Finance You w `src/lib/caption-style.ts`)
 i oddaje MP4 z napisami wypalonymi w obrazie. Jeden plik (`server.mjs`),
 zero zależności npm, Node 22+.
 
+Tą samą drogą Studio kładzie na każdą rolkę **znaczek „AI"** w prawym górnym
+rogu: to zwykłe zdarzenia w pliku ASS (rysunek `\p1` + napis), dopisywane do
+napisów albo wysyłane jako ASS z samym znaczkiem (wideo z napisami HeyGena
+lub bez napisów). Usługa nie rozróżnia tych przypadków i nie wymaga zmian.
+
 Dlaczego osobna usługa: HeyGen v3 przyjmuje w `caption.style` wyłącznie
 `"default"` (rozmiar, czcionka i pozycja napisów nie są sterowalne), a backend
 Finance You działa na Cloudflare Workers, gdzie nie ma FFmpega. To jedyne

@@ -117,6 +117,7 @@ co poprawić.
 | `CAPTION_BURNER_URL`           | Opcjonalny; adres usługi wypalania napisów (własne style napisów)                        |
 | `CAPTION_BURNER_SECRET`        | Sekret tej usługi (Bearer) — bez pary URL+sekret zostaje styl HeyGena                    |
 | `CAPTION_BURN_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na wynik usługi, zanim opublikujemy wersję HeyGena (domyślnie 45) |
+| `STUDIO_AI_BADGE`              | Opcjonalny; `0` / `off` wyłącza znaczek „AI" w rogu rolek (domyślnie włączony)           |
 | `ELEVENLABS_API_KEY`           | Lektor TTS (już używany)                                                                 |
 | `LOVABLE_API_KEY`              | AI gateway: scenariusze, prompty, grafiki (już używany)                                  |
 
@@ -455,6 +456,32 @@ w `last_error`. Przy jednym domyślnym awatarze struktura nadal tnie — po pros
 bez zmiany twarzy (panel o tym mówi). Plan faktycznie wysłany na render
 zapisujemy w `scene_plan`, a biblioteka pokazuje go jako
 „3 ujęcia z awatarem + 1 przebitka + 2 wizual hooki (3 awatary)".
+
+## Znaczek „AI" w rogu rolki
+
+Każda rolka Studia dostaje w prawym górnym rogu mały znaczek **„AI"**
+(półprzezroczysta pigułka z białym napisem, 64×36 px w kadrze 720×1280,
+140 px od góry — poniżej ikonek aplikacji, powyżej przycisków polubień).
+Znaczek jest częścią pliku ASS, który wypala usługa `caption-burner`
+(`aiBadgeEvents` / `aiBadgeAss` w `src/lib/caption-style.ts`), więc sama
+usługa nie wymaga zmian. HeyGen nie ma warstw, na których dałoby się go położyć.
+
+Jak trafia na film (`settleHeygenCompletion`):
+
+- **napisy własne** (reels / tiktok / box / minimal) — znaczek jedzie tym samym
+  przebiegiem co napisy, bez dodatkowego kosztu;
+- **napisy HeyGena albo bez napisów** — po renderze (i karencji na wersję
+  z napisami) plik HeyGena idzie do usługi jeszcze raz, tylko po znaczek
+  (`planBadgeBurn`, status „captioning"; `caption_style` zostaje `heygen`);
+- **porażka** (usługa nie odpowiada, błąd FFmpega, limit czasu) — jedno
+  ponowienie, potem publikacja pliku HeyGena bez znaczka z adnotacją
+  „Znaczek AI nieudany…" w `last_error`; brak usługi = „Znaczek AI pominięty…".
+
+Zmiana napisów gotowego filmu (`restyle_studio_job_captions`) też dokłada
+znaczek; `video_url_clean` zostaje czystym masterem bez znaczka, żeby nowe
+wypalenie nie dołożyło drugiego. Filmy gotowe przed wdrożeniem znaczka go nie
+mają. Stan: `heygen_status` → `ai_badge` (MCP) i podpowiedź przy napisach
+w panelu.
 
 ## TikTok — Content Posting API (Direct Post)
 

@@ -8,9 +8,12 @@
 // Konfiguracja (sekrety środowiska):
 //   CAPTION_BURNER_URL    — np. https://finyou-caption-burner.fly.dev
 //   CAPTION_BURNER_SECRET — ten sam, co w usłudze (Bearer)
-// Bez nich pipeline zostaje przy napisach HeyGena (nic nie pada).
+//   STUDIO_AI_BADGE       — opcjonalnie `0` / `off` wyłącza znaczek „AI" w rogu
+//                           rolek (domyślnie włączony)
+// Bez nich pipeline zostaje przy napisach HeyGena (nic nie pada) — i bez
+// znaczka „AI", bo HeyGen nie ma warstw, na których dałoby się go położyć.
 
-import { srtToAss, type CustomCaptionStyleId } from "./caption-style";
+import { aiBadgeAss, srtToAss, type CustomCaptionStyleId } from "./caption-style";
 import { fetchBytes, storeMedia, type StoredMedia } from "./media-storage.server";
 
 export type CaptionBurnerEnv = { configured: boolean; url: string; secret: string };
@@ -22,6 +25,15 @@ export function getCaptionBurnerEnv(): CaptionBurnerEnv {
 }
 
 export const isCaptionBurnerConfigured = (): boolean => getCaptionBurnerEnv().configured;
+
+/**
+ * Czy rolki Studia dostają znaczek „AI" w rogu. Domyślnie tak — to
+ * oznaczenie treści wygenerowanej przez AI; `STUDIO_AI_BADGE=0` wyłącza.
+ */
+export function isAiBadgeEnabled(): boolean {
+  const v = (process.env.STUDIO_AI_BADGE ?? "").trim().toLowerCase();
+  return !["0", "false", "off", "no", "nie"].includes(v);
+}
 
 const MAX_SRT_BYTES = 2 * 1024 * 1024;
 const MAX_RESULT_BYTES = 300 * 1024 * 1024;
@@ -68,20 +80,31 @@ async function errorOf(res: Response): Promise<string> {
 }
 
 /**
- * Zleca wypalenie: pobiera SRT HeyGena, buduje ASS w wybranym stylu i
- * wysyła zadanie. Zwraca id zadania w usłudze (zapisywane w
- * `studio_video_jobs.caption_burn_id`).
+ * Zleca wypalenie: napisy własne (SRT HeyGena → ASS w wybranym stylu),
+ * znaczek „AI" albo oba naraz — i wysyła zadanie. Bez `srtUrl` / `styleId`
+ * wypala sam znaczek (wideo z napisami HeyGena albo bez napisów). Zwraca id
+ * zadania w usłudze (zapisywane w `studio_video_jobs.caption_burn_id`).
  */
 export async function submitCaptionBurn(input: {
   videoUrl: string;
-  srtUrl: string;
-  styleId: CustomCaptionStyleId;
+  srtUrl?: string | null;
+  styleId?: CustomCaptionStyleId | null;
+  aiBadge?: boolean;
   name?: string;
 }): Promise<string> {
-  const srt = await fetchBytes(input.srtUrl, MAX_SRT_BYTES);
-  const ass = srtToAss(new TextDecoder().decode(srt.bytes), input.styleId);
-  if (!ass) {
-    throw new Error("Plik SRT z HeyGena nie zawiera żadnej kwestii — nie ma czego wypalić.");
+  let ass: string | null;
+  if (input.srtUrl && input.styleId) {
+    const srt = await fetchBytes(input.srtUrl, MAX_SRT_BYTES);
+    ass = srtToAss(new TextDecoder().decode(srt.bytes), input.styleId, undefined, {
+      aiBadge: input.aiBadge === true,
+    });
+    if (!ass) {
+      throw new Error("Plik SRT z HeyGena nie zawiera żadnej kwestii — nie ma czego wypalić.");
+    }
+  } else if (input.aiBadge) {
+    ass = aiBadgeAss();
+  } else {
+    throw new Error("Nie ma czego wypalić: brak napisów i znaczka AI.");
   }
   // Darmowe hostingi (Render, Koyeb, Fly z usypianiem) budzą kontener dopiero
   // przy pierwszym zapytaniu i trzymają je ok. minutę — stąd długi limit.

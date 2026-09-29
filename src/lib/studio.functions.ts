@@ -34,6 +34,8 @@ export type StudioStatus = {
   aiConfigured: boolean;
   /** Usługa wypalania napisów (własne style) — bez niej zostaje styl HeyGena. */
   captionBurnerConfigured: boolean;
+  /** Znaczek „AI" w rogu rolek (STUDIO_AI_BADGE); kładzie go usługa wypalania. */
+  aiBadgeEnabled?: boolean;
 };
 
 export const getStudioStatus = createServerFn({ method: "GET" })

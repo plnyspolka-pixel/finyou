@@ -145,7 +145,7 @@ const VIDEO_STATUS_LABELS: Record<string, string> = {
   generating_audio: "Generuję lektora…",
   uploading: "Wysyłam audio…",
   rendering: "Renderowanie w HeyGen…",
-  captioning: "Wypalam napisy…",
+  captioning: "Wypalam napisy / znaczek AI…",
   ready: "Gotowe",
   failed: "Błąd",
 };
@@ -447,6 +447,8 @@ function StudioPage() {
   // usługą FFmpeg. Gdy usługa jest skonfigurowana, domyślnie „rolka”.
   const [captionStyle, setCaptionStyle] = useState<CaptionStyleId>("heygen");
   const captionBurnerOn = !!status?.captionBurnerConfigured;
+  // Znaczek „AI" w rogu rolki kładzie usługa wypalania (HeyGen nie ma warstw).
+  const aiBadgeOn = status?.aiBadgeEnabled !== false;
   const captionStyleDefaulted = useRef(false);
   useEffect(() => {
     if (captionBurnerOn && !captionStyleDefaulted.current) {
@@ -1839,6 +1841,19 @@ function StudioPage() {
                           ? CAPTION_STYLE_OPTIONS.find((o) => o.id === captionStyle)?.description
                           : "HeyGen nie pozwala ustawić rozmiaru, czcionki ani pozycji napisów. Własne style wypala usługa caption-burner — sekrety CAPTION_BURNER_URL i CAPTION_BURNER_SECRET (opis w docs/studio-publikacji.md)."}
                       </p>
+                      {aiBadgeOn && (
+                        <p
+                          className={
+                            captionBurnerOn
+                              ? "text-xs text-muted-foreground"
+                              : "text-xs text-amber-600 dark:text-amber-500"
+                          }
+                        >
+                          {captionBurnerOn
+                            ? "Każda rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner razem z napisami)."
+                            : "Znaczek „AI” w rogu wymaga usługi caption-burner — bez niej rolki wyjdą bez znaczka."}
+                        </p>
+                      )}
                     </>
                   )}
                 </div>
