@@ -3,6 +3,7 @@
 // Zał. 1 Karta Leada, Zał. 6, Zał. 7), NDA v6 (§ 5, § 7), plik 00 paczki.
 
 /** Statusy Dopasowania (para Zlecenie–Projekt) — cykl z § 5 Umowy ramowej. */
+import { FY_COMMISSION_MIN_PLN, FY_COMMISSION_PCT, fyCommission } from "@/lib/contract-engine/fees";
 export const MATCH_STATUSES = [
   "dopasowane", // Dopasowanie utworzone, teaser jeszcze nie udostępniony
   "teaser", // teaser anonimowy widoczny dla inwestora
@@ -147,12 +148,13 @@ export function extendedReservationDeadline(
 
 /** Prowizja Klientowska: 7% kwoty Finansowania, nie mniej niż 5000 zł
  *  (Zał. 6 — dyspozycja Klienta i klauzula prowizyjna przy wypłacie). */
-export const PROVISION_RATE = 0.07;
-export const PROVISION_MIN_PLN = 5000;
+export const PROVISION_RATE = FY_COMMISSION_PCT / 100;
+export const PROVISION_MIN_PLN = FY_COMMISSION_MIN_PLN;
 
+/** Deleguje do fees.ts (jedno źródło); brak kwoty → kwota minimalna. */
 export function clientProvisionPln(payoutAmountPln: number): number {
   if (!Number.isFinite(payoutAmountPln) || payoutAmountPln <= 0) return PROVISION_MIN_PLN;
-  return Math.max(Math.round(payoutAmountPln * PROVISION_RATE * 100) / 100, PROVISION_MIN_PLN);
+  return fyCommission(payoutAmountPln);
 }
 
 /** Zlecenie: kwota ± 15% (Zał. 7). */
