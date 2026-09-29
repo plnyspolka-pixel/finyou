@@ -1,7 +1,8 @@
 // Bank b-rolli — czysta logika doboru materiału (bez I/O, żeby dało się ją
 // przetestować bez Supabase). Serwerowa część: src/lib/studio-broll.server.ts.
 
-export type BrollKind = "broll" | "hook";
+/** Jedyny rodzaj materiału w banku (wizual hooki usunięte). */
+export type BrollKind = "broll";
 
 /** Tyle z materiału wystarczy, żeby ocenić dopasowanie do frazy. */
 export type MatchableAsset = { tags: string[]; title: string; source_query: string };

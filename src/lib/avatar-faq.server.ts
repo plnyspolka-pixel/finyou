@@ -171,6 +171,17 @@ export async function createHeygenVideoFromAudio(opts: {
 // Biblioteka stocku HeyGena (`GET /v3/assets/search`) — obrazy i ikony, BEZ
 // klipów wideo. Do rolki bierzemy grafikę pionową (kadr 9:16 docina resztę).
 export async function searchHeygenStockImage(query: string): Promise<string | null> {
+  return (await searchHeygenStockImages(query, 1))[0]?.url ?? null;
+}
+
+/**
+ * Kilka grafik ze stocku HeyGena dla jednej frazy — pion → kwadrat → reszta,
+ * bo przy kadrze 9:16 poziomy obrazek traci najwięcej.
+ */
+export async function searchHeygenStockImages(
+  query: string,
+  count: number,
+): Promise<Array<{ url: string; orientation: string | null }>> {
   const url = new URL(`${HEYGEN_BASE}/v3/assets/search`);
   url.searchParams.set("query", query);
   url.searchParams.set("type", "image");
@@ -180,7 +191,7 @@ export async function searchHeygenStockImage(query: string): Promise<string | nu
   const res = await fetch(url, { headers: { "X-Api-Key": HEYGEN_API_KEY() } });
   if (!res.ok) {
     console.warn(`[HeyGen] stock search "${query}" nieudany: ${res.status} ${await res.text()}`);
-    return null;
+    return [];
   }
   const json = (await res.json()) as {
     data?: Array<{ url?: string | null; orientation?: string | null }>;
@@ -188,10 +199,11 @@ export async function searchHeygenStockImage(query: string): Promise<string | nu
   const items = (json.data ?? []).filter((i): i is { url: string; orientation?: string | null } =>
     Boolean(i?.url),
   );
-  if (!items.length) return null;
-  // Pion → kwadrat → cokolwiek: przy kadrze 9:16 poziomy obrazek traci najwięcej.
-  const byOrientation = (want: string) => items.find((i) => i.orientation === want);
-  return (byOrientation("portrait") ?? byOrientation("square") ?? items[0]).url;
+  const rank = (o?: string | null) => (o === "portrait" ? 0 : o === "square" ? 1 : 2);
+  return [...items]
+    .sort((x, y) => rank(x.orientation) - rank(y.orientation))
+    .slice(0, Math.max(1, count))
+    .map((i) => ({ url: i.url, orientation: i.orientation ?? null }));
 }
 
 /**

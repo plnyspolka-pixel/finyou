@@ -4,10 +4,10 @@
 // Trzy ścieżki:
 //   * pojedyncze ujęcie — awatar czyta cały scenariusz (dotychczasowe działanie),
 //   * przebitki AI — sklejka scen, w której AI wskazuje, co zilustrować,
-//   * struktura rolki — stały rytm: ujęcie → wizual hook → przebitka →
+//   * struktura rolki — stały rytm: ujęcie → przebitka →
 //     a-roll KOLEJNEGO domyślnego awatara (patrz src/lib/studio-scenes.ts).
 //
-// Materiał na przebitki i hooki bierzemy z BANKU B-ROLLI
+// Materiał na przebitki bierzemy z BANKU B-ROLLI
 // (src/lib/studio-broll.server.ts): najpierw własna biblioteka, a czego w niej
 // nie ma, bank dociąga ze stocku i od razu u siebie zapisuje.
 //
@@ -139,11 +139,10 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
     );
   }
 
-  // Grafiki dla przebitek i wizual hooków. Pusty wynik nie psuje planu — taka
+  // Grafiki dla przebitek. Pusty wynik nie psuje planu — taka
   // scena wraca na awatara (buildStudioScenes), a gdy nie zostanie ani jedna
   // grafika, nie ma po co płacić za render wieloscenowy.
-  const { resolveBrollImage, pickHookFromBank, markBrollUsed } =
-    await import("./studio-broll.server");
+  const { resolveBrollImage, markBrollUsed } = await import("./studio-broll.server");
   const usedAssets = new Set<string>();
   const images: (string | null)[] = [];
   for (const item of plan) {
@@ -152,12 +151,6 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
       continue;
     }
     try {
-      if (item.kind === "hook") {
-        const hook = await pickHookFromBank(usedAssets);
-        if (hook) usedAssets.add(hook.id);
-        images.push(hook?.media_url ?? null);
-        continue;
-      }
       const broll = await resolveBrollImage(item.query, usedAssets);
       if (broll?.assetId) usedAssets.add(broll.assetId);
       images.push(broll?.url ?? null);
