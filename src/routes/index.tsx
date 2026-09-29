@@ -1,3 +1,4 @@
+import { COMPANY_DATA } from "@/lib/company";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth, defaultPathForRoles, postLoginPathForRoles } from "@/hooks/use-auth";
@@ -18,9 +19,9 @@ import { MktButton } from "@/components/marketing/primitives";
 import type { Icon3DName } from "@/components/marketing/icon-3d";
 import { financialServiceLd } from "@/lib/seo/company";
 
-export const PHONE_DISPLAY = "+48 732 059 898";
-export const PHONE_HREF = "+48732059898";
-export const EMAIL = "kontakt@financeyou.pl";
+export const PHONE_DISPLAY = COMPANY_DATA.phone.display;
+export const PHONE_HREF = COMPANY_DATA.phone.e164;
+export const EMAIL = COMPANY_DATA.email;
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -92,7 +93,10 @@ const FLOW = [
     d: "Numer KW i podstawowe informacje o nieruchomości.",
   },
   { t: "System porządkuje dane", d: "Sprawa zostaje ustrukturyzowana i opisana." },
-  { t: "Trafia do finansujących", d: "Inwestorzy i partnerzy finansowi widzą okazję." },
+  {
+    t: "Trafia do finansujących",
+    d: "Inwestorzy z przyjętym Zleceniem widzą anonimowy opis sprawy.",
+  },
   { t: "Zespół prowadzi proces", d: "Obsługa w CRM z pełną historią kontaktu." },
   { t: "Inwestor analizuje", d: "LTV, typ nieruchomości, dokumenty w jednym miejscu." },
   { t: "Platforma wspiera obsługę", d: "Dokumentacja, komunikacja i monitoring." },
@@ -161,8 +165,9 @@ function Hero() {
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Finance You łączy klientów szukających finansowania i prywatnych inwestorów w jednym
-            systemie: z CRM-em, AI, dokumentacją, szkoleniami i automatyzacją procesu.
+            Finance You łączy przedsiębiorców szukających finansowania i prywatnych inwestorów w
+            jednym systemie: z CRM-em, AI, dokumentacją, szkoleniami i automatyzacją procesu.
+            Finansowanie wyłącznie na cel związany z działalnością gospodarczą.
           </p>
           <div
             style={{

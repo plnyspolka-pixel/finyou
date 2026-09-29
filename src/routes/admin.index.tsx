@@ -29,14 +29,38 @@ export const Route = createFileRoute("/admin/")({
 
 // Lejek pogrupowany w fazy — żeby od razu było widać, gdzie są sprawy.
 const PHASES: { label: string; statuses: string[] }[] = [
-  { label: "Pozyskanie", statuses: ["nowy_lead", "brak_kontaktu", "kontakt"] },
-  { label: "Wniosek", statuses: ["kompletowanie_danych"] },
-  { label: "U inwestorów", statuses: ["szukamy_inwestora"] },
+  { label: "Pozyskanie", statuses: ["nowy_lead", "brak_kontaktu", "do_kontaktu", "w_follow_upie"] },
+  {
+    label: "Wniosek",
+    statuses: [
+      "w_trakcie_uzupelniania",
+      "braki_w_dokumentach",
+      "wniosek_kompletny",
+      "do_analizy",
+      "rokuje",
+    ],
+  },
+  {
+    label: "U inwestorów",
+    statuses: ["wyslany_do_inwestorow", "oferta_od_inwestora", "oferta_przekazana_klientowi"],
+  },
   {
     label: "Umowa",
-    statuses: ["warunki_zaakceptowane", "dokumenty_przygotowanie_umowy", "notariusz"],
+    statuses: [
+      "zaakceptowany_przez_klienta",
+      "do_umowy",
+      "oczekuje_podpisania_umowy",
+      "umowa_podpisana",
+      "oczekuje_ustanowienia_zabezpieczen",
+      "zabezpieczenia_ustanowione",
+      "dokumenty_dostarczone_do_inwestora",
+      "oczekuje_wyplaty",
+    ],
   },
-  { label: "Zamknięte", statuses: ["zamkniete"] },
+  {
+    label: "Zamknięte",
+    statuses: ["wyplacony", "zamkniety", "archiwalny", "nie_rokuje", "wniosek_odrzucony"],
+  },
 ];
 
 // Najważniejsze liczby — to, na co admin patrzy najpierw.
@@ -44,12 +68,16 @@ const HEADLINE: { key: string; label: string; href: string }[] = [
   { key: "nowy_lead", label: "Nowe leady", href: "/admin/klienci" },
   { key: "brak_kontaktu", label: "Brak kontaktu", href: "/admin/klienci" },
   {
-    key: "kompletowanie_danych",
-    label: "Kompletowanie danych",
+    key: "braki_w_dokumentach",
+    label: "Braki w dokumentach",
     href: "/admin/wnioski-niekompletne",
   },
-  { key: "szukamy_inwestora", label: "Szukamy inwestora", href: "/admin/dystrybucja" },
-  { key: "warunki_zaakceptowane", label: "Warunki zaakceptowane", href: "/admin/klienci" },
+  { key: "wyslany_do_inwestorow", label: "Wysłane do inwestorów", href: "/admin/dystrybucja" },
+  {
+    key: "zaakceptowany_przez_klienta",
+    label: "Zaakceptowane przez klienta",
+    href: "/admin/klienci",
+  },
 ];
 
 const QUICK_LINKS: { to: string; label: string; icon: typeof Users }[] = [

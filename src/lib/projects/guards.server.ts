@@ -4,6 +4,7 @@
 // woła te strażniki. Sprawdzenia idą przez service_role na tabelach modułu,
 // więc warstwa API i RLS są zawsze zgodne.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { LTV_MAX } from "@/lib/contract-engine/fees";
 import type { ModuleAccessStatus } from "./module-types";
 
 // Tabele modułu nie są jeszcze w wygenerowanych typach Database — luźny dostęp
@@ -122,11 +123,13 @@ export async function getModuleSettings(): Promise<ModuleSettings> {
       extension_hours: 12,
       proposal_hours: 48,
       rejection_review_threshold: 5,
-      ltv_bands: { conservative: 35, acceptable: 50, elevated: 60 },
+      ltv_bands: { conservative: 35, acceptable: 50, elevated: LTV_MAX },
       min_period_months: 3,
       max_period_months: 120,
-      max_ltv_percent: 80,
+      max_ltv_percent: LTV_MAX,
     };
   }
-  return data as ModuleSettings;
+  const row = data as ModuleSettings;
+  // Jeden limit LTV w systemie — nigdy więcej niż LTV_MAX (fees.ts).
+  return { ...row, max_ltv_percent: Math.min(Number(row.max_ltv_percent) || LTV_MAX, LTV_MAX) };
 }

@@ -385,7 +385,7 @@ function toLenderView(row: any): LenderView | null {
 
 export interface InvestorPipelineState {
   investor: LenderView | null;
-  tier: "podstawowy" | "pro";
+  tier: "podstawowy";
   pipeline: ReturnType<typeof computeInvestorPipeline>;
   input: PipelineInput;
   kyc: { status: KycStatus; url: string | null; fullName: string | null } | null;
@@ -457,7 +457,7 @@ export const getInvestorPipelineState = createServerFn({ method: "GET" })
 
     return {
       investor: toLenderView(investor),
-      tier: (tier as "podstawowy" | "pro") ?? "podstawowy",
+      tier: "podstawowy",
       pipeline: computeInvestorPipeline(input),
       input,
       kyc: didit

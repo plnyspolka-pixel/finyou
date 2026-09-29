@@ -3,6 +3,8 @@
 // Aby pominąć (np. szablon już zbrandowany), użyj noBranding=true lub
 // wstaw w HTML marker: data-fy-branded.
 
+import { COMPANY_DATA } from "@/lib/company";
+
 const FAVICON_URL =
   "https://financeyou.pl/__l5e/assets-v1/73e2df85-6890-4ae6-a18a-debbc0970e07/favicon-mark.png";
 const WORDMARK_URL =
@@ -79,7 +81,7 @@ export function wrapBrandedEmail(opts: BrandOptions): string {
   <p style="font-size:12px;color:#888;text-align:center;margin:0 0 6px">
     <a href="https://financeyou.pl" style="color:#888;text-decoration:none">financeyou.pl</a> ·
     <a href="https://financeyou.pl/blog" style="color:#888;text-decoration:none">blog</a> ·
-    <a href="mailto:kontakt@financeyou.pl" style="color:#888;text-decoration:none">kontakt@financeyou.pl</a>
+    <a href="mailto:${COMPANY_DATA.email}" style="color:#888;text-decoration:none">${COMPANY_DATA.email}</a>
   </p>
   <p style="font-size:11px;color:#aaa;text-align:center;margin:0">
     ${unsub}Finance You — pożyczki pod zastaw nieruchomości.

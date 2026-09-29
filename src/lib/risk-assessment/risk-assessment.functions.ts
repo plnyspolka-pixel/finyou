@@ -8,6 +8,7 @@
 // Bez Firecrawl i bez Perplexity. Moduł RCN wyłączony.
 
 import { createServerFn } from "@tanstack/react-start";
+import { proposeAutoStatus } from "@/lib/loan-status";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
@@ -162,6 +163,32 @@ export async function runInvestmentRiskAssessmentCore(
       { onConflict: "application_id" },
     );
     if (saveError) throw saveError;
+    // Decyzja nadrzędna nr 11: ocena ryzyka nigdy nie odrzuca wniosku sama —
+    // rekomendacja „odradzana" trafia jako PROPOZYCJA `nie_rokuje` do
+    // zatwierdzenia przez operatora w panelu.
+    if (result.recommendation === "odradzana") {
+      const { data: appRow } = await db
+        .from("loan_applications")
+        .select("status, suggested_status")
+        .eq("id", applicationId)
+        .maybeSingle();
+      const prop = proposeAutoStatus(
+        appRow?.status,
+        "nie_rokuje",
+        `Ocena ryzyka: ${result.investmentScore}/100 (klasa ${result.riskGrade}) — rekomendacja „odradzana".`,
+      );
+      if (prop.suggest && appRow?.suggested_status !== prop.suggest) {
+        await db
+          .from("loan_applications")
+          .update({
+            suggested_status: prop.suggest,
+            suggested_status_reason: prop.reason,
+            suggested_at: new Date().toISOString(),
+            suggested_by: "risk_assessment",
+          })
+          .eq("id", applicationId);
+      }
+    }
   } catch (e: any) {
     // Zapis nie może wywrócić całej oceny — ale musi być widoczny dla operatora.
     console.error("[risk-assessment] save failed:", e?.message ?? e);

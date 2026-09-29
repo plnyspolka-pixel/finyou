@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { maxCapitalRate } from "@/lib/contract-engine/fees";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,7 +19,6 @@ import {
   Eye,
   AlertTriangle,
   FolderOpen,
-  Lock,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
@@ -39,7 +39,6 @@ import { openOrCreateThread } from "@/lib/chat.functions";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
-import { useAccessState } from "@/hooks/use-access";
 
 // Reguły z kalkulatora na /klient: max okres maleje wraz z kwotą.
 function maxMonthsForAmount(amount: number): number {
@@ -53,36 +52,9 @@ export const Route = createFileRoute("/inwestor/wniosek/$id")({
   component: InwestorWniosekGate,
 });
 
-// Szczegół wniosku wymaga aktywnego pełnego dostępu inwestora — bez niego
-// pokazujemy zamkniętą kartę (layout i tak przekierowuje na /inwestor/abonament).
+// Szczegół wniosku: dostępny dla każdego inwestora (usługa nieodpłatna —
+// Umowa ramowa v7). Dane i tak chronią server functions i RLS.
 function InwestorWniosekGate() {
-  const { loading, hasFullAccess } = useAccessState("investor");
-  if (loading) {
-    return <div className="py-10 text-center text-muted-foreground">Ładowanie…</div>;
-  }
-  if (!hasFullAccess) {
-    return (
-      <div className="mx-auto max-w-2xl py-10">
-        <Card>
-          <CardHeader className="items-center text-center">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-muted">
-              <Lock className="h-7 w-7 text-muted-foreground" />
-            </div>
-            <CardTitle>Szczegóły wniosku wymagają pełnego dostępu</CardTitle>
-            <CardDescription>
-              Pełne dane wniosku, dokumenty, księga wieczysta i składanie ofert są dostępne po
-              aktywacji pełnego dostępu inwestora.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <Button asChild>
-              <Link to="/inwestor/abonament">Zobacz pakiety dostępu</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
   return <InwestorWniosek />;
 }
 
@@ -107,7 +79,8 @@ function InwestorWniosek() {
     queryFn: () => fetchRates(),
     staleTime: 12 * 60 * 60 * 1000,
   });
-  const maxAnnualRate = ((ratesQ.data?.referenceRate ?? 3.75) + 3.5) * 2;
+  // Odsetki maksymalne z tabeli stóp (fees.ts) — jedno miejsce w systemie.
+  const maxAnnualRate = maxCapitalRate();
 
   // Calc state — wypełniana przez LoanCalculator (onChange)
   const [calc, setCalc] = useState<LoanCalculatorState | null>(null);
@@ -257,7 +230,7 @@ function InwestorWniosek() {
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="mr-1 h-4 w-4" />
-        Wróć do okazji inwestycyjnych
+        Wróć do Zleceń i Projektów
       </Link>
       <FancyPageHeader
         eyebrow="Wniosek inwestycyjny"

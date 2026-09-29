@@ -275,7 +275,10 @@ async function handler({ request }: { request: Request }) {
         // Status decyzji
         const decision = (app.admin_decision ?? "").toLowerCase();
         dyn.is_decision_available = decision === "approved" || decision === "rejected";
-        dyn.is_rejected = decision === "rejected" || app.status === "wniosek_odrzucony";
+        dyn.is_rejected =
+          decision === "rejected" ||
+          app.status === "wniosek_odrzucony" ||
+          app.status === "nie_rokuje";
         dyn.is_completed = app.status === "wyplacony" || app.status === "zamkniety";
 
         // Wiadomość statusowa + akcja klienta

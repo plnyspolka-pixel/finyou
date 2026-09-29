@@ -14,6 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
+import { buildFyEngineSchedule } from "@/lib/contract-engine/loan-schedule";
+import { maxCapitalRate } from "@/lib/contract-engine/fees";
 import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { LANDING_OFFER_PHOTOS } from "@/assets/landing-offer-photos";
@@ -26,7 +28,7 @@ const PROPERTY_VISUAL: Record<string, { Icon: typeof Home; gradient: string }> =
   commercial: { Icon: Store, gradient: "from-violet-500/15 via-violet-500/5 to-transparent" },
 };
 
-// ---- Calculator-equivalent math (mirrors offer-calculator-panel.tsx) -------
+// ---- Matematyka = ten sam silnik co kalkulator (jedno źródło prawdy) ------
 type ScheduleRow = {
   n: number | "balon";
   payment: number;
@@ -35,12 +37,18 @@ type ScheduleRow = {
   balance: number;
 };
 type OfferFigures = {
+  /** Prowizja Finance You w % Kwoty Udzielonej (7 %, min 5 000 zł, bez VAT). */
   feePct: number;
+  /** Prowizja Finance You (potrącana z wypłaty). */
   fee: number;
+  /** Kwota Udzielona (kwota pożyczki). */
   grossPrincipal: number;
+  /** Kwota na rękę = Kwota Udzielona − prowizja FY. */
+  netToClient: number;
   monthly: number;
   balloon: number;
   total: number;
+  totalCost: number;
   investorCompensation: number;
   schedule: ScheduleRow[];
 };
@@ -50,42 +58,34 @@ function computeOfferFigures(
   months: number,
   annualRatePercent: number,
 ): OfferFigures {
-  const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
-  const FY_FEE_PCT = Math.round((10 - feeT * 6) * 10) / 10;
-  const fee = Math.round((amount * FY_FEE_PCT) / 100);
-  const grossPrincipal = amount + fee;
-  const r = annualRatePercent / 100 / 12;
   const allowBalloon = months <= 36;
-  const nominal = monthlyPayment(grossPrincipal, annualRatePercent, months);
-  const paymentExact = allowBalloon ? grossPrincipal * r : nominal;
-
-  const schedule: ScheduleRow[] = [];
-  let balance = grossPrincipal;
-  let totalPaid = 0;
-  let totalInterest = 0;
-  for (let n = 1; n <= months; n++) {
-    const interest = balance * r;
-    const principalPart = Math.max(0, Math.min(paymentExact - interest, balance));
-    const payment = interest + principalPart;
-    balance = Math.max(0, balance - principalPart);
-    totalPaid += payment;
-    totalInterest += interest;
-    schedule.push({ n, payment, interest, principal: principalPart, balance });
-  }
-  let balloon = 0;
-  if (balance > 0.5) {
-    balloon = balance;
-    totalPaid += balance;
-    schedule.push({ n: "balon", payment: balance, interest: 0, principal: balance, balance: 0 });
-  }
+  const nominal = monthlyPayment(amount, annualRatePercent, months);
+  const r = annualRatePercent / 100 / 12;
+  const cap = allowBalloon ? Math.max(1, Math.ceil(amount * r)) : Math.ceil(nominal);
+  const eng = buildFyEngineSchedule({
+    kwotaPozyczki: amount,
+    prowizja: 0,
+    annualRatePercent,
+    months,
+    maxMonthlyPayment: cap,
+  });
+  const schedule: ScheduleRow[] = eng.rows.map((row) => ({
+    n: row.isBalloon ? "balon" : row.nr,
+    payment: row.rata_razem,
+    interest: row.odsetki,
+    principal: row.kapital,
+    balance: row.saldo,
+  }));
   return {
-    feePct: FY_FEE_PCT,
-    fee,
-    grossPrincipal,
-    monthly: paymentExact,
-    balloon,
-    total: totalPaid,
-    investorCompensation: totalInterest,
+    feePct: amount > 0 ? Math.round((eng.prowizjaFY / amount) * 1000) / 10 : 0,
+    fee: eng.prowizjaFY,
+    grossPrincipal: eng.kwotaUdzielona,
+    netToClient: eng.kwotaWyplaconaKlientowi,
+    monthly: eng.rows.length > 1 ? eng.rows[0].rata_razem : eng.regularPayment,
+    balloon: eng.balloon,
+    total: eng.totalToRepay,
+    totalCost: eng.calkowityKoszt,
+    investorCompensation: eng.totalInterest,
     schedule,
   };
 }
@@ -230,11 +230,8 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       amount > 400_000
         ? pick([24, 30, 36]) // powyżej 400k max 36 mies.
         : pick([36, 48, 60, 60, 72, 72]); // do 400k preferujemy długie okresy
-    // Stopa zwrotu w okolicy minimum z kalkulatora
-    const rate =
-      period <= 36
-        ? Math.round((24 + rand() * 2) * 2) / 2 // 24% – 26%
-        : Math.round((15 + rand() * 3) * 2) / 2; // 15% – 18%
+    // Oprocentowanie ≤ odsetki maksymalne (art. 359 § 2¹ KC): max − 0…2 p.p.
+    const rate = Math.round((maxCapitalRate() - rand() * 2) * 2) / 2;
     const figures = computeOfferFigures(amount, period, rate);
     const minutesAgo = i < 3 ? Math.floor(rand() * 180) + 3 : Math.floor(rand() * 60 * 24 * 7) + 60;
     const formRoll = rand();

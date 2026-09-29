@@ -810,6 +810,36 @@ function composeIdLine(key: string, b: CompanyBundle): string {
   return parts.join(", ");
 }
 
+/**
+ * Pole inspektora ochrony danych (np. „[IMIĘ I NAZWISKO IOD]” w klauzuli
+ * RODO u08 — klauzula Pożyczkodawcy). Wypełniamy je danymi Inwestora
+ * (Pożyczkodawcy): osoba fizyczna — imię i nazwisko, firma — reprezentant
+ * (albo nazwa), plus e-mail lub telefon do kontaktu w sprawach danych.
+ */
+export function iodValueFromLender(b: CompanyBundle, isIndividual: boolean): string | null {
+  const osoba = (isIndividual ? b.name : b.representativeName || b.name)?.trim();
+  if (!osoba) return null;
+  const kontakt = (b.email || b.phone || "").trim();
+  return kontakt ? `${osoba} (kontakt: ${kontakt})` : osoba;
+}
+export function isIodField(field: Pick<DocField, "key">): boolean {
+  return /\bIOD\b|inspektor(a)? ochrony danych/i.test(field.key);
+}
+
+/**
+ * Pole rachunku Finance You (np. „[RACHUNEK FINANCE YOU]”, „rachunek do
+ * zapłaty prowizji”). Finance You ma jeden rachunek — kreator wpisuje go
+ * automatycznie niezależnie od Pożyczkodawcy.
+ */
+export function isFinanceYouAccountField(
+  field: Pick<DocField, "key" | "context" | "semantic">,
+): boolean {
+  return (
+    field.semantic === "bank" &&
+    /finance\s*you|prowizj/i.test(`${field.key} ${field.context ?? ""}`)
+  );
+}
+
 /** Zwraca wartość dla pola z danych firmowych albo null, jeśli nie ma czym uzupełnić. */
 export function companyValueForField(field: DocField, b: CompanyBundle): string | null {
   switch (field.semantic) {

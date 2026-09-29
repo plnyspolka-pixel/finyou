@@ -30,6 +30,8 @@ type PanelShellProps = {
   mobileHeaderExtra?: ReactNode;
   /** Włącz „fancy" navy aurora backdrop w obszarze głównym. */
   fancy?: boolean;
+  /** Owija treść strony (np. bramka akceptacji nowej wersji regulaminu). */
+  wrapOutlet?: (outlet: ReactNode) => ReactNode;
 };
 
 /**
@@ -46,6 +48,7 @@ export function PanelShell({
   topBar,
   mobileHeaderExtra,
   fancy = false,
+  wrapOutlet,
 }: PanelShellProps) {
   const { user, roles, loading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -302,7 +305,7 @@ export function PanelShell({
             </>
           )}
 
-          <Outlet />
+          {wrapOutlet ? wrapOutlet(<Outlet />) : <Outlet />}
         </main>
       </div>
       {footer}

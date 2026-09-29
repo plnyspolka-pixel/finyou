@@ -25,7 +25,8 @@ import {
 } from "@/components/landing/property-types-showcase";
 import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
 import {
-  computeLoanFigures,
+  defaultAnnualRate,
+  validateAnnualRate,
   formatPLN,
   securityTypeLabels,
   type SecurityType,
@@ -291,7 +292,7 @@ export function SinglePageApplicationForm({
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(36);
   const [maxPayment, setMaxPayment] = useState(0);
-  const [annualRate, setAnnualRate] = useState(30);
+  const [annualRate, setAnnualRate] = useState(defaultAnnualRate());
   const rateTouchedRef = useRef(false);
 
   // Max okres spłaty maleje wraz z kwotą:
@@ -306,15 +307,9 @@ export function SinglePageApplicationForm({
     if (months > maxMonths) setMonths(maxMonths);
   }, [maxMonths, months]);
 
-  // Sugerowane wynagrodzenie inwestora: rośnie z kwotą, maleje z okresem.
-  // Zakres ~15–45%. Aktualizuje się automatycznie dopóki użytkownik nie ruszy suwaka.
-  const suggestedRate = useMemo(() => {
-    const amountT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
-    const monthsT = Math.min(1, Math.max(0, (months - 6) / (72 - 6)));
-    const raw = 22 + amountT * 18 - monthsT * 8;
-    const clamped = Math.min(45, Math.max(15, raw));
-    return Math.round(clamped * 2) / 2;
-  }, [amount, months]);
+  // Domyślne oprocentowanie = odsetki maksymalne (art. 359 § 2¹ KC) — twarda
+  // blokada powyżej; użytkownik może tylko obniżyć suwakiem.
+  const suggestedRate = useMemo(() => defaultAnnualRate(), []);
 
   useEffect(() => {
     if (!rateTouchedRef.current) setAnnualRate(suggestedRate);
@@ -329,9 +324,16 @@ export function SinglePageApplicationForm({
   const [usableArea, setUsableArea] = useState("");
   const [city, setCity] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
-  const [consentPrivacy, setConsentPrivacy] = useState(skipContact || isBroker);
-  const [consentTerms, setConsentTerms] = useState(skipContact || isBroker);
-  const [consentMarketing, setConsentMarketing] = useState(skipContact || isBroker);
+  // Zgody NIGDY nie są domyślnie zaznaczone (Etap 6); marketing jest opcjonalny.
+  const [consentPrivacy, setConsentPrivacy] = useState(false);
+  const [consentTerms, setConsentTerms] = useState(false);
+  const [consentMarketing, setConsentMarketing] = useState(false);
+  // Bramka B2B (decyzja nadrzędna nr 1): wymagane oświadczenie o celu gospodarczym.
+  const [businessPurpose, setBusinessPurpose] = useState(false);
+  const [businessStatus, setBusinessStatus] = useState<
+    "" | "prowadzi" | "zamierza" | "nie_zamierza"
+  >("");
+  const [nip, setNip] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const leadFiredRef = useRef(false);
   const deedInputRef = useRef<HTMLInputElement>(null);
@@ -467,8 +469,14 @@ export function SinglePageApplicationForm({
         toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
         return;
       }
-      if (!isBroker && (!consentPrivacy || !consentTerms || !consentMarketing)) {
+      if (!isBroker && (!consentPrivacy || !consentTerms)) {
         toast.error("Zaakceptuj politykę prywatności i regulamin serwisu.");
+        return;
+      }
+      if (!businessPurpose) {
+        toast.error(
+          "Potwierdź, że finansowanie przeznaczasz na cel związany z działalnością gospodarczą.",
+        );
         return;
       }
       fireLead();
@@ -528,6 +536,9 @@ export function SinglePageApplicationForm({
           city: city.trim() || null,
           annual_investor_rate: annualRate,
           max_monthly_payment: maxPayment > 0 ? maxPayment : null,
+          business_purpose_declared: businessPurpose,
+          business_status: businessStatus || null,
+          nip: nip.trim() || null,
           land_register_number: (() => {
             const parts = [...allKwNumbers];
             const ua = usableArea.trim();
@@ -651,6 +662,47 @@ export function SinglePageApplicationForm({
               </div>
             </div>
 
+            <div className="space-y-3 rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+              <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
+                <Checkbox
+                  checked={businessPurpose}
+                  onCheckedChange={(v) => setBusinessPurpose(v === true)}
+                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
+                />
+                <span>
+                  Finansowanie przeznaczam na cel związany z działalnością gospodarczą (nie na cele
+                  konsumpcyjne ani prywatne potrzeby mieszkaniowe). *
+                </span>
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-white/80">
+                    Działalność gospodarcza (opcjonalnie)
+                  </Label>
+                  <select
+                    value={businessStatus}
+                    onChange={(e) => setBusinessStatus(e.target.value as typeof businessStatus)}
+                    className={FANCY_INPUT_CLASS}
+                  >
+                    <option value="">— wybierz —</option>
+                    <option value="prowadzi">Prowadzę działalność</option>
+                    <option value="zamierza">Zamierzam założyć działalność</option>
+                    <option value="nie_zamierza">Reprezentuję spółkę / inny podmiot</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-white/80">NIP (opcjonalnie)</Label>
+                  <Input
+                    inputMode="numeric"
+                    value={nip}
+                    onChange={(e) => setNip(e.target.value)}
+                    placeholder="0000000000"
+                    className={FANCY_INPUT_CLASS}
+                  />
+                </div>
+              </div>
+            </div>
+
             {!isBroker && (
               <div className="space-y-3 rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
                 <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
@@ -699,7 +751,7 @@ export function SinglePageApplicationForm({
                   />
                   <span>
                     Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert
-                    Finance You. Mogę ją wycofać w każdej chwili. *
+                    Finance You. Mogę ją wycofać w każdej chwili. (opcjonalnie)
                   </span>
                 </label>
               </div>

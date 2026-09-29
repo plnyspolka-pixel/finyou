@@ -52,7 +52,9 @@ export function przypadekA(): any {
     porecziciel: null,
     warunki: {
       kwota_pozyczki: { cyframi: "25 000,00" },
-      prowizja: { kwota: { cyframi: "0,00" }, model: "nie_potracana_raty" },
+      // Stała prowizja inwestora z umowy (dawniej dobierana pod ratę końcową
+      // 25 900,00 — dziś silnik jej nie dobiera; kwota podana wprost).
+      prowizja: { kwota: { cyframi: "21 525,12" }, model: "nie_potracana_raty" },
       oprocentowanie: "14,5",
       cel: "finansowanie bieżącej działalności gospodarczej (zakup materiałów budowlanych)",
       harmonogram: {
@@ -61,7 +63,6 @@ export function przypadekA(): any {
         data_pierwszej_raty: "24.10.2026",
         dzien_miesiaca: 24,
         kwota_raty: { cyframi: "900,00" },
-        kwota_raty_koncowej_docelowa: { cyframi: "25 900,00" },
       },
       rachunki: RACHUNKI,
     },
@@ -128,7 +129,7 @@ export function przypadekB(): any {
     warunki: {
       kwota_pozyczki: { cyframi: "60 000,00" },
       prowizja: { kwota: { cyframi: "18 000,00" }, model: "nie_potracana_raty" },
-      oprocentowanie: "15,5",
+      oprocentowanie: "14,5",
       cel: "rozwój prowadzonej działalności handlowej",
       harmonogram: {
         liczba_rat: 24,
@@ -204,7 +205,7 @@ export function przypadekC(): any {
     warunki: {
       kwota_pozyczki: { cyframi: "120 000,00" },
       prowizja: { kwota: { cyframi: "24 000,00" }, model: "nie_potracana_raty" },
-      oprocentowanie: "16,0",
+      oprocentowanie: "14,5",
       cel: "finansowanie floty pojazdów dostawczych spółki",
       harmonogram: {
         liczba_rat: 12,

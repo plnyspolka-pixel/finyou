@@ -1,0 +1,376 @@
+PAKIET UMOWNY
+Umowa udostępniania i ochrony danych osobowych oraz warunkowego powierzenia przetwarzania
+Moduł A: odrębni administratorzy • Moduł B: procesor wyłącznie na udokumentowane polecenie
+Wersja
+FY-LEGAL-2026-09-29.v5 • 29 września 2026 r.
+Zakres
+Finansowanie zabezpieczone hipoteką wyłącznie na cel związany z działalnością gospodarczą
+Forma
+papierowa, kwalifikowany podpis elektroniczny albo forma dokumentowa w systemie z pełnym śladem audytowym
+zawarta w formie dokumentowej na odległość albo podpisana w dniu wskazanym przy podpisach, pomiędzy:
+FINANCE YOU
+Finance You spółka z ograniczoną odpowiedzialnością z siedzibą w Warszawie, ul. Nowogrodzka 31, 00-511 Warszawa, wpisana do rejestru przedsiębiorców KRS pod numerem 0000635207, NIP 7010611803, REGON 365350668, kapitał zakładowy 389 600,00 zł, reprezentowana przez Filipa Roberta Bielaka – Prezesa Zarządu uprawnionego do samodzielnej reprezentacji, dalej: „Finance You” lub „Ujawniający”;
+a
+INWESTOR / ODBIORCA DANYCH
+Wariant strony
+☐ osoba fizyczna  ☐ osoba fizyczna prowadząca działalność  ☐ osoba prawna / jednostka organizacyjna
+Imię i nazwisko / firma
+________________________________________________________________
+Adres / siedziba
+________________________________________________________________
+PESEL albo KRS
+________________________________________________________________
+NIP / REGON
+________________________________________________________________
+E-mail i telefon
+________________________________________________________________
+Reprezentacja
+________________________________________________________________
+dalej: „Inwestor” lub „Odbiorca”; Finance You i Inwestor dalej łącznie: „Strony”, a każdy z osobna: „Strona”.
+Preambuła
+Finance You dysponuje danymi pozyskanymi w związku z kwalifikacją Projektów finansowania gospodarczego zabezpieczonego hipoteką.
+Po otrzymaniu danych Inwestor co do zasady samodzielnie określa cel oceny ryzyka i decyzji o Finansowaniu, przez co działa jako odrębny administrator, a nie jako podmiot przetwarzający wyłącznie na polecenie Finance You.
+Powierzenie przetwarzania ma zastosowanie tylko wtedy, gdy Karta Polecenia wyraźnie opisuje czynność wykonywaną przez jedną Stronę w imieniu i wyłącznie według instrukcji drugiej.
+Strony chcą zapewnić etapowe, minimalne i bezpieczne ujawnianie danych oraz możliwość wykazania legalności, zakresu i czasu każdego dostępu.
+Domyślny model RODO.  Ocena klienta na potrzeby własnej decyzji finansowej oznacza odrębne administrowanie. Moduł powierzenia z art. 28 RODO uruchamia się tylko podpisaną Kartą Polecenia; sama nazwa „umowa powierzenia” nie zmienia rzeczywistej roli Strony.
+§ 1. Definicje i interpretacja
+RODO oznacza rozporządzenie Parlamentu Europejskiego i Rady (UE) 2016/679 oraz właściwe krajowe przepisy o ochronie danych.
+Dane Projektowe oznaczają dane osobowe oraz dokumenty dotyczące Klienta, osób z nim związanych, nieruchomości i planowanego lub zawartego Finansowania, udostępniane pod identyfikatorem Projektu.
+Administrator, Podmiot Przetwarzający, Odbiorca, Naruszenie Ochrony Danych, Dane Osobowe i Przetwarzanie mają znaczenie nadane im w RODO.
+Karta Transferu Danych oznacza Załącznik nr 1 wypełniany dla Projektu lub kategorii Projektów, dokumentujący role, cel, zakres danych, odbiorców, okres przechowywania i etap ujawnienia.
+Karta Polecenia oznacza Załącznik nr 3, który jako jedyny uruchamia Moduł B powierzenia dla konkretnej czynności, określając przedmiot, czas, charakter, cel, kategorie osób i danych oraz instrukcje Administratora.
+TOM oznaczają techniczne i organizacyjne środki bezpieczeństwa z Załącznika nr 2 oraz środki dodatkowe wskazane w Karcie Transferu lub Karcie Polecenia.
+Incydent oznacza zdarzenie, które doprowadziło albo mogło doprowadzić do przypadkowego lub bezprawnego zniszczenia, utraty, zmiany, nieuprawnionego ujawnienia lub dostępu, a także istotnej niedostępności danych.
+Państwo Trzecie oznacza państwo poza Europejskim Obszarem Gospodarczym, a Transfer obejmuje także zdalny dostęp do danych z takiego państwa.
+Umowa Pośrednictwa i NDA mają znaczenie nadane im w odrębnych dokumentach Stron. W razie sprzeczności w sprawach ochrony danych pierwszeństwo ma niniejsza Umowa i Karta Transferu, a dla prawidłowo uruchomionego powierzenia — Karta Polecenia.
+§ 2. Zasady wspólne dla każdego ujawnienia
+Strony przetwarzają wyłącznie dane adekwatne, stosowne i ograniczone do niezbędnych dla konkretnego, zgodnego z prawem celu. Umowa nie zobowiązuje Finance You do przekazywania wszystkich posiadanych danych ani całej dokumentacji.
+Ujawnienie odbywa się etapowo: teaser anonimowy, pakiet zanonimizowany lub spseudonimizowany, następnie ograniczony pakiet identyfikujący, a pełniejsze dokumenty dopiero po wykazaniu potrzeby. Dane szczególnych kategorii i dane dotyczące wyroków skazujących lub naruszeń prawa są co do zasady wyłączone i wymagają odrębnej udokumentowanej podstawy, testu niezbędności i dodatkowych zabezpieczeń.
+Każde ujawnienie musi być przypisane do imiennego użytkownika, Projektu, zakresu, wersji dokumentów i czasu dostępu. Konta współdzielone są zabronione.
+Strona otrzymująca nie może używać danych do marketingu, wzbogacania baz, oceny osób poza Projektem, trenowania modeli, sprzedaży leadów, pozyskiwania klientów poza Umową Pośrednictwa ani łączenia z zewnętrznymi zbiorami w celu niedozwolonej reidentyfikacji.
+Dane mogą zostać ujawnione wyłącznie osobom rzeczywiście zaangażowanym w ocenę lub realizację Projektu, związanym poufnością i posiadającym zakres uprawnień zgodny z zasadą niezbędnej wiedzy.
+Strony prowadzą dokumentację pozwalającą wykazać legalność, cel, źródło, odbiorców, okres przechowywania i zastosowane zabezpieczenia. Karta Transferu nie zastępuje rejestru czynności ani analizy podstaw prawnych wymaganej od każdego Administratora.
+Przed Ujawnieniem Identyfikującym Karta Transferu musi mieć status zatwierdzony, wskazywać rzeczywiste role Stron, podstawę art. 6 RODO każdej z nich, wynik wymaganej oceny równowagi albo inną dokumentację podstawy, sposób wykonania obowiązków art. 13–14 RODO oraz dokładny zakres paczki danych. Ogólne pole „zgoda RODO” ani samo podpisanie tej Umowy nie stanowi samodzielnej podstawy prawnej.
+§ 3. Kategorie osób i danych
+W zależności od Projektu dane mogą dotyczyć:
+Klienta, przedsiębiorcy, właściciela lub współwłaściciela nieruchomości;
+reprezentantów, pełnomocników, wspólników, beneficjentów rzeczywistych i członków organów;
+małżonka lub osoby, której prawa mają znaczenie dla wspólności, własności lub zabezpieczenia;
+dłużnika rzeczowego, poręczyciela, gwaranta, spółki operacyjnej lub celowej;
+pracowników, kontrahentów, najemców lub innych osób, lecz wyłącznie gdy ich dane są niezbędne do oceny przepływów, tytułu prawnego albo ryzyka Projektu; oraz
+doradców i osób kontaktowych Stron.
+Dane mogą obejmować, w granicach niezbędności:
+dane identyfikacyjne i kontaktowe, identyfikatory publicznych rejestrów oraz dane o umocowaniu;
+dane działalności, struktury właścicielskiej i beneficjentów rzeczywistych;
+dane finansowe, przychodowe, o zobowiązaniach, historii płatniczej, rachunkach i źródłach spłaty;
+dane nieruchomości, księgi wieczystej, tytułu prawnego, obciążeń, wyceny, ubezpieczenia, najmu i dokumentacji technicznej;
+dane transakcji, negocjacji, przelewów, zabezpieczeń, podpisów i komunikacji; oraz
+dane sporów, egzekucji, upadłości lub sankcji tylko w zakresie zgodnym z prawem i koniecznym do oceny ryzyka.
+Finance You przed ujawnieniem usuwa lub maskuje dane niezwiązane z Projektem, w szczególności identyfikatory osób trzecich, numery rachunków niepotrzebne do analizy, dane zdrowotne, prywatną korespondencję i nadmiarowe załączniki. PESEL, seria i numer dokumentu tożsamości, pełna kopia dokumentu, numer rachunku bankowego, wzór podpisu oraz dane rodzinne mogą być ujawnione dopiero wtedy, gdy są ściśle niezbędne dla wskazanej czynności zamknięcia transakcji, AML, czynności notarialnej lub ustanowienia zabezpieczenia, i muszą być odrębnie oznaczone w Karcie Transferu.
+MODUŁ A — UDOSTĘPNIENIE MIĘDZY ODRĘBNYMI ADMINISTRATORAMI
+Reguła.  Ten Moduł stosuje się domyślnie, gdy Inwestor otrzymuje dane, aby podjąć własną decyzję o Finansowaniu.
+§ 4. Odrębność administratorów
+Finance You jest Administratorem w zakresie pozyskania i kwalifikacji Projektu, prowadzenia platformy, przedstawienia relacji, dokumentowania usługi, rozliczeń, bezpieczeństwa i ochrony roszczeń.
+Inwestor staje się odrębnym Administratorem w zakresie własnej analizy Klienta i nieruchomości, decyzji o Finansowaniu, negocjacji, zawarcia, obsługi, zabezpieczenia, monitoringu, windykacji i ochrony własnych roszczeń.
+Każda Strona samodzielnie ustala własne cele, podstawy prawne, okresy przechowywania i środki, odpowiada za obowiązki wobec osób i nie może przerzucić tej odpowiedzialności na drugą Stronę samą treścią Umowy.
+Umowa nie ustanawia współadministrowania. Jeżeli Strony zaczną wspólnie ustalać cele i zasadnicze sposoby Przetwarzania, przed takim działaniem zawrą odrębne uzgodnienie zgodne z art. 26 RODO.
+Inwestor nie może twierdzić wobec osób, organu ani własnych dostawców, że przetwarza wyłącznie na polecenie Finance You, jeżeli faktycznie wykorzystuje dane do własnej decyzji lub własnej transakcji.
+§ 5. Cele i podstawy prawne odrębnych Administratorów
+Każda Strona przed rozpoczęciem Przetwarzania określi i udokumentuje właściwą podstawę z art. 6 RODO, a gdy ma to zastosowanie — także podstawę dotyczącą danych szczególnych kategorii lub danych objętych art. 10 RODO.
+Finance You może opierać odpowiednie operacje w szczególności na wykonaniu umowy lub działaniach przedumownych, obowiązku prawnym albo prawnie uzasadnionym interesie polegającym na kwalifikacji i przedstawieniu Projektu, zapewnieniu bezpieczeństwa, rozliczeniu i ochronie roszczeń, po przeprowadzeniu wymaganej oceny równowagi.
+Inwestor może opierać odpowiednie operacje w szczególności na działaniach przedumownych, wykonaniu umowy, obowiązku prawnym albo własnym prawnie uzasadnionym interesie w ocenie ryzyka, zawarciu i obsłudze Finansowania, o ile interes nie jest nadrzędny wobec praw osoby.
+Przed otrzymaniem pakietu identyfikującego Inwestor składa w Karcie Transferu własne oświadczenie o konkretnej podstawie, celu, retencji i obowiązku informacyjnym. Finance You może odmówić ujawnienia, jeżeli wskazana podstawa jest oczywiście nieadekwatna, cel jest niezgodny z Projektem albo Inwestor nie przedstawi wymaganej dokumentacji, lecz taka kontrola nie przenosi na Finance You odpowiedzialności za samodzielne operacje Inwestora.
+Zgoda nie jest domyślną podstawą dla udostępnienia lub oceny Projektu. Jeżeli konkretne Przetwarzanie wymaga zgody, Administrator uzyskujący zgodę zapewnia jej dobrowolność, konkretność, świadomość, jednoznaczność i możliwość wycofania bez wpływu na wcześniejszą zgodność z prawem.
+Dane nie mogą być wykorzystywane do decyzji wywołującej wobec osoby skutki prawne opartej wyłącznie na zautomatyzowanym Przetwarzaniu, chyba że właściwy Administrator wykaże przesłankę prawną i wdroży wymagane zabezpieczenia, w tym interwencję człowieka.
+§ 6. Obowiązki informacyjne i prawa osób
+Finance You realizuje obowiązek informacyjny wobec osób, od których zbiera dane, wskazując co najmniej kategorie odbiorców lub Inwestora w zakresie wymaganym RODO i adekwatnym do etapu Projektu.
+Inwestor realizuje obowiązek z art. 14 RODO po otrzymaniu danych pośrednio: w rozsądnym terminie nie dłuższym niż miesiąc, najpóźniej przy pierwszym kontakcie z osobą albo przed dalszym ujawnieniem — zależnie od tego, które zdarzenie nastąpi wcześniej, chyba że wykaże konkretny wyjątek przewidziany prawem.
+Klauzula Inwestora powinna wskazywać jego tożsamość, cele, podstawy, kategorie danych i źródło, odbiorców, transfery, okresy, prawa, możliwość skargi i — jeżeli występuje — zautomatyzowane decyzje. Nie wolno przedstawiać Finance You jako Administratora operacji wykonywanych samodzielnie przez Inwestora.
+Każdy Administrator samodzielnie obsługuje żądania dotyczące własnych operacji. Żądanie skierowane do niewłaściwej Strony jest przekazywane właściwej Stronie bez zbędnej zwłoki, co do zasady w ciągu 2 Dni Roboczych, jeżeli przekazanie jest zgodne z prawem.
+Strony udzielają sobie rozsądnej pomocy w identyfikacji danych, źródeł i odbiorców. Odpowiedź osobie lub organowi przygotowuje Administrator odpowiedzialny za dane Przetwarzanie; druga Strona nie odpowiada w jego imieniu bez umocowania.
+§ 7. Dalsze ujawnienie przez Inwestora
+Inwestor może ujawnić Dane Projektowe swoim pracownikom, członkom organów, profesjonalnym doradcom, rzeczoznawcy, notariuszowi, dostawcy bezpiecznego systemu lub ujawnionemu współinwestorowi tylko wtedy, gdy ujawnienie jest niezbędne, zgodne z podstawą prawną, objęte poufnością i udokumentowane.
+Ujawnienie członkowi Grupy Inwestora, który ma samodzielnie oceniać lub zawrzeć Finansowanie, czyni ten podmiot odrębnym Administratorem. Przed dostępem musi on podpisać wymagane przystąpienie, otrzymać Kartę Transferu i spełnić obowiązki informacyjne oraz bezpieczeństwa.
+Dostawca wykonujący czynności wyłącznie w imieniu Inwestora może być jego podmiotem przetwarzającym wyłącznie po zawarciu przez Inwestora umowy zgodnej z art. 28 RODO i zweryfikowaniu odpowiednich gwarancji. Inwestor odpowiada za wybór, instrukcje i nadzór nad takim dostawcą.
+Dane nie mogą zostać sprzedane, udostępnione brokerowi danych, wykorzystane w publicznym rejestrze prywatnym ani ujawnione potencjalnemu finansującemu „na próbę” bez uprzedniego objęcia go właściwą strukturą umowną.
+Na żądanie Finance You Inwestor wskaże kategorie lub tożsamość dalszych odbiorców w zakresie koniecznym do wykazania zgodności i poinformowania osoby, z zastrzeżeniem tajemnicy zawodowej.
+§ 8. Przechowywanie, ograniczenie i usunięcie
+Jeżeli Projekt zostanie odrzucony, rezerwacja wygaśnie albo Inwestor nie kontynuuje analizy, pełne Dane Projektowe usuwa się z aktywnych systemów w terminie 14 dni, chyba że konkretny obowiązek prawny lub udokumentowana potrzeba ochrony roszczeń wymaga dłuższego, ograniczonego przechowania.
+Inwestor może zachować minimalny zestaw dowodowy konieczny do wykazania oceny, źródła relacji, konfliktu lub obrony roszczeń, z odseparowaniem, ograniczeniem dostępu i zakazem ponownego użycia operacyjnego. Finance You może zachować identyfikator Klienta, Projektu, Ujawnienia, akceptacje i logi przez pięcioletni okres ochronny oraz właściwy ustawowy okres dochodzenia roszczeń.
+Dla zrealizowanego Finansowania Administrator określa okres na podstawie celu obsługi, przepisów rachunkowych, podatkowych, AML — jeżeli mają zastosowanie — oraz przedawnienia. Okresy muszą być wpisane w Karcie Transferu lub wewnętrznym harmonogramie retencji.
+Kopie zapasowe mogą podlegać rotacyjnemu nadpisaniu, co do zasady nie później niż w ciągu 90 dni, pod warunkiem że są odseparowane, niedostępne operacyjnie i usuwane przy zwykłym cyklu odtwarzania. Wcześniejsze usunięcie stosuje się, jeżeli technicznie wykonalne i proporcjonalne.
+Legal hold może zawiesić usunięcie tylko w zakresie rzeczywiście koniecznym do konkretnego postępowania, audytu lub roszczenia. Po ustaniu przyczyny dane podlegają ponownej ocenie i usunięciu.
+Na żądanie Strona otrzymująca składa certyfikat usunięcia według Załącznika nr 5. Anonimizacja musi być trwała i uwzględniać rozsądnie dostępne środki ponownej identyfikacji.
+§ 9. Bezpieczeństwo
+Każda Strona wdraża TOM odpowiednie do ryzyka, charakteru danych, kosztu i stanu wiedzy technicznej. Minimalny standard określa Załącznik nr 2; Karta Transferu może ustanowić środki wyższe.
+Pełne dane są dostępne wyłącznie przez imienne konto z uwierzytelnianiem wieloskładnikowym, uprawnieniami opartymi na rolach i automatycznym wygaśnięciem dostępu. Udostępnianie haseł i kont jest zabronione.
+Dokumenty powinny być szyfrowane w transmisji i spoczynku, oznaczone znakiem wodnym zawierającym co najmniej użytkownika, Projekt i czas oraz — gdy to możliwe — udostępniane przez wygasające linki bez prawa dalszego udostępnienia.
+Kopiowanie lokalne, drukowanie, fotografowanie i zrzuty ekranu są zakazane, chyba że Karta Transferu dopuszcza je jako niezbędne i wskazuje zabezpieczenia. Dopuszczona kopia podlega temu samemu okresowi retencji i ewidencji.
+Każda Strona zapewnia aktualizacje bezpieczeństwa, ochronę stacji końcowych, szyfrowanie dysków, blokadę ekranu, kopie zapasowe, kontrolę podatności, szkolenia i procedury odbierania uprawnień.
+Finance You może zablokować dostęp bez uprzedzenia, jeżeli istnieje uzasadnione podejrzenie naruszenia, przejęcia konta, nietypowego pobierania, braku MFA lub nieaktualnych danych użytkownika.
+§ 10. Incydenty i zawiadomienia
+Strona, która wykryje Incydent dotyczący Danych Projektowych, zawiadamia drugą Stronę bez zbędnej zwłoki, nie później niż w ciągu 12 godzin od jego stwierdzenia, na adres kontakt@financeyou.pl oraz telefon 889 888 700, a następnie aktualizuje informacje w miarę postępu analizy.
+Pierwsze zgłoszenie nie może być opóźniane z powodu braku pełnych danych. Powinno zawierać co najmniej czas, system, kategorie i przybliżoną liczbę osób oraz rekordów, możliwe skutki, zastosowane środki, status zabezpieczenia dowodów i kontakt do osoby prowadzącej.
+Każdy odrębny Administrator samodzielnie ocenia obowiązek zgłoszenia organowi nadzorczemu i zawiadomienia osób. Strony współpracują tak, aby umożliwić dotrzymanie terminów ustawowych, ale żadna Strona nie dokonuje zgłoszenia w imieniu drugiej bez uzgodnienia lub podstawy prawnej.
+Strona odpowiedzialna zabezpiecza logi, ogranicza skutki, nie niszczy dowodów, prowadzi chronologię i wdraża działania naprawcze. Komunikat publiczny identyfikujący drugą Stronę wymaga uprzedniej konsultacji, o ile prawo nie nakazuje natychmiastowego ujawnienia.
+Szczegółowy formularz stanowi Załącznik nr 4. Zastosowanie formularza nie warunkuje skuteczności wstępnego zgłoszenia.
+§ 11. Transfery poza EOG
+Inwestor nie przenosi Danych Projektowych do Państwa Trzeciego ani nie umożliwia z niego zdalnego dostępu bez uprzedniego udokumentowania podstawy z rozdziału V RODO i pisemnego powiadomienia Finance You.
+Jeżeli transfer opiera się na standardowych klauzulach umownych lub innym instrumencie wymagającym oceny, właściwy Administrator przeprowadza ocenę skutków transferu i wdraża środki dodatkowe, w szczególności szyfrowanie, zarządzanie kluczami w EOG i ograniczenie dostępu.
+Wybór dostawcy deklarującego lokalizację w EOG nie wystarcza, jeżeli jego wsparcie, podprocesorzy albo organy państwa trzeciego mogą uzyskać dostęp. Karta Transferu wskazuje lokalizacje i mechanizm transferu.
+Jeżeli wymagany mechanizm przestaje być skuteczny, Strona zawiesza transfer i niezwłocznie informuje drugą Stronę, a następnie usuwa, zwraca albo przenosi dane do zgodnego środowiska.
+§ 12. Weryfikacja zgodności odrębnych Administratorów
+Raz w roku Finance You może zażądać aktualnego kwestionariusza bezpieczeństwa, potwierdzenia MFA, lokalizacji danych, listy kategorii odbiorców, harmonogramu retencji i wyniku odpowiedniego audytu lub certyfikacji Inwestora.
+W razie Incydentu, wiarygodnego podejrzenia naruszenia lub żądania organu Finance You może przeprowadzić dodatkową, proporcjonalną weryfikację z rozsądnym wyprzedzeniem, a w nagłym przypadku niezwłocznie. Weryfikacja nie daje dostępu do danych innych klientów ani tajemnic niezwiązanych z Umową.
+Inwestor może przedstawić raport niezależnego audytora zamiast kontroli na miejscu, jeżeli raport obejmuje wymagany zakres i jest aktualny. Finance You zachowuje prawo do wyjaśnienia istotnych luk.
+Każda Strona ponosi własne zwykłe koszty weryfikacji. Jeżeli ujawniono istotną niezgodność, uzasadnione koszty ponownej weryfikacji po terminie naprawczym ponosi Strona niezgodna.
+MODUŁ B — WARUNKOWE POWIERZENIE PRZETWARZANIA
+Warunek aktywacji.  Moduł B nie działa automatycznie. Wymaga podpisanej Karty Polecenia dla ściśle wskazanej czynności wykonywanej wyłącznie w imieniu Administratora.
+§ 13. Uruchomienie i granice powierzenia
+Moduł B stosuje się tylko po podpisaniu Karty Polecenia, która wskazuje Administratora, Podmiot Przetwarzający, przedmiot i czas, charakter i cel, rodzaj danych, kategorie osób, udokumentowane instrukcje, lokalizacje i zasady usunięcia.
+Brak Karty Polecenia oznacza brak powierzenia. Czynności własnej oceny ryzyka, decyzji o Finansowaniu, negocjacji, obsługi wierzytelności lub dochodzenia roszczeń Inwestora zawsze należą do Modułu A.
+Jeżeli Podmiot Przetwarzający zaczyna określać własny cel lub zasadniczy sposób Przetwarzania poza instrukcją, staje się Administratorem w odniesieniu do tej operacji i niezwłocznie informuje drugą Stronę. Nie zwalnia go to z odpowiedzialności za przekroczenie instrukcji.
+Czynności procesora są wykonywane nieodpłatnie w ramach współpracy, chyba że Karta Polecenia wyraźnie, kwotowo i przed rozpoczęciem czynności przewiduje odrębne wynagrodzenie.
+§ 14. Obowiązki Podmiotu Przetwarzającego
+Podmiot Przetwarzający zobowiązuje się:
+przetwarzać dane wyłącznie na udokumentowane polecenie Administratora, także w zakresie transferów, chyba że obowiązek nakłada prawo; o takim obowiązku informuje przed Przetwarzaniem, o ile prawo tego nie zakazuje;
+zapewnić, że osoby upoważnione są związane poufnością, przeszkolone i mają dostęp tylko w niezbędnym zakresie;
+wdrożyć TOM odpowiednie do ryzyka i środki dodatkowe z Karty Polecenia;
+prowadzić wymagane rejestry i udostępniać Administratorowi informacje konieczne do wykazania zgodności;
+niezwłocznie poinformować, jeżeli jego zdaniem instrukcja narusza RODO lub inne prawo ochrony danych, i zawiesić ją w zakresie koniecznym do wyjaśnienia;
+pomagać Administratorowi w realizacji praw osób, bezpieczeństwie, zgłoszeniach naruszeń, ocenie skutków i konsultacjach z organem; oraz
+nie kontaktować się z osobą ani organem w imieniu Administratora bez instrukcji, chyba że wymaga tego prawo.
+Żądanie osoby dotyczące powierzonych danych Podmiot Przetwarzający przekazuje Administratorowi bez zbędnej zwłoki, co do zasady w ciągu 1 Dnia Roboczego, i nie odpowiada merytorycznie bez polecenia.
+Koszty nadzwyczajnej pomocy wykraczającej poza zwykły zakres mogą zostać uzgodnione w Karcie Polecenia, lecz brak uzgodnienia nie zwalnia z pomocy wymaganej prawem w terminie niezbędnym do zgodności.
+§ 15. Dalsze podmioty przetwarzające
+Podmiot Przetwarzający nie angażuje dalszego podmiotu bez uprzedniego szczegółowego albo ogólnego pisemnego upoważnienia Administratora wskazanego w Karcie Polecenia.
+Przy upoważnieniu ogólnym Podmiot Przetwarzający powiadamia o planowanej zmianie co najmniej 14 dni wcześniej, podając usługę, lokalizacje, transfery i istotne środki. Administrator może zgłosić uzasadniony sprzeciw dotyczący ochrony danych.
+Z dalszym podmiotem zawiera się umowę nakładającą co najmniej te same obowiązki ochrony danych. Podmiot Przetwarzający odpowiada wobec Administratora za wykonanie obowiązków dalszego podmiotu.
+Lista zaakceptowanych dalszych podmiotów znajduje się w Karcie Polecenia. Zmiana, która powoduje transfer do Państwa Trzeciego albo istotne obniżenie bezpieczeństwa, wymaga uprzedniego wyraźnego zatwierdzenia.
+§ 16. Naruszenia, audyt i zakończenie powierzenia
+Podmiot Przetwarzający zgłasza Administratorowi Incydent dotyczący powierzonych danych bez zbędnej zwłoki, nie później niż w ciągu 12 godzin od stwierdzenia, niezależnie od własnej oceny ryzyka.
+Administrator albo upoważniony audytor może sprawdzić zgodność raz w roku oraz dodatkowo po Incydencie, istotnej zmianie lub żądaniu organu. Audyt odbywa się w sposób proporcjonalny, z ochroną systemów i danych innych klientów; w nagłej sytuacji nie wymaga zwykłego wyprzedzenia.
+Po zakończeniu usługi Podmiot Przetwarzający — według wyboru Administratora wskazanego w Karcie Polecenia — zwraca dane i usuwa kopie albo bezpiecznie usuwa dane oraz składa certyfikat. Wyjątek dotyczy wyłącznie zakresu i okresu, w którym prawo nakazuje przechowanie.
+Jeżeli Karta Polecenia nie wskazuje inaczej, usunięcie z aktywnych systemów następuje w ciągu 14 dni, a z rotacyjnych kopii zapasowych nie później niż w ciągu 90 dni. Do czasu usunięcia dane są odseparowane i nieużywane.
+Administrator może zawiesić instrukcję lub dostęp, jeżeli Podmiot Przetwarzający nie usunie istotnego naruszenia w rozsądnym terminie albo gdy natychmiastowe zawieszenie jest konieczne dla ochrony osób.
+§ 17. Odpowiedzialność, zmiana podmiotu i postanowienia końcowe
+Każda Strona odpowiada za naruszenia przypisane jej zgodnie z RODO i prawem krajowym. Roszczenia między Stronami obejmują udokumentowaną szkodę i rozsądne koszty spowodowane zawinionym naruszeniem Umowy, z uwzględnieniem zakresu odpowiedzialności, decyzji organów i zakazu przenoszenia sankcji wbrew prawu.
+Kary z NDA za ten sam Incydent nie są pobierane podwójnie; Finance You może wybrać podstawę. Postanowienia o karach nie mają zastosowania do Konsumenta ani osoby korzystającej z ochrony konsumenckiej.
+Osoba fizyczna nie może przekazać danych swojej obecnej lub przyszłej spółce przed podpisaniem przez spółkę właściwego przystąpienia, oznaczonych wersji Umów, Karty Transferu i — jeśli dotyczy — Karty Polecenia oraz przed aktywacją imiennego dostępu przez Finance You. Osoba fizyczna i spółka są odrębnymi podmiotami i odrębnymi Administratorami, chyba że rzeczywiste role są inne. Aktywacja działa na przyszłość i nie legalizuje wcześniejszego ujawnienia.
+Umowa obowiązuje przez czas współpracy, a po jej ustaniu tak długo, jak Strona posiada Dane Projektowe lub ciążą na niej obowiązki dotyczące bezpieczeństwa, usunięcia, dowodów i roszczeń.
+Zmiany wymagają formy dokumentowej. Zmiana TOM obniżająca poziom ochrony albo rozszerzenie kategorii danych wymaga uprzedniej oceny ryzyka i akceptacji właściwej Karty.
+Umowa podlega prawu polskiemu. Spory B2B rozpoznaje sąd właściwy dla siedziby Finance You, o ile uzgodnienie właściwości zostało utrwalone w formie wymaganej przez prawo procesowe; w przeciwnym razie właściwość wynika z przepisów ogólnych. Wobec Konsumenta właściwość wynika z przepisów bezwzględnych. Nieważność części nie narusza pozostałych postanowień.
+Załączniki nr 1–5 są integralną częścią Umowy. Karta Transferu i Karta Polecenia mogą być zawarte elektronicznie z pełnym śladem audytowym.
+________________________________
+________________________________
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+INWESTOR / ODBIORCA — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 1
+Karta Transferu Danych
+Domyślnie Moduł A — odrębni Administratorzy. Wypełnić przed ujawnieniem identyfikującym.
+PARAMETRY TRANSFERU
+ID Projektu / zakres
+________________________________________________________________
+Role
+☐ Moduł A: Finance You i Inwestor — odrębni Administratorzy☐ Moduł B: zgodnie z Kartą Polecenia nr __________________
+Cel Finance You
+☐ kwalifikacja  ☐ przedstawienie  ☐ rozliczenie  ☐ dowody / roszczenia  ☐ bezpieczeństwo  ☐ inny: ______
+Cel Inwestora
+☐ ocena ryzyka  ☐ decyzja  ☐ negocjacje  ☐ zawarcie / obsługa  ☐ zabezpieczenie / roszczenia
+Opis niezbędności
+Dlaczego identyfikacja jest potrzebna na tym etapie i dlaczego zakresu nie można ograniczyć: ______________________________
+Kategorie osób
+☐ Klient  ☐ właściciel  ☐ reprezentant  ☐ UBO  ☐ małżonek  ☐ poręczyciel  ☐ inne: ______
+Kategorie danych
+☐ identyfikacyjne  ☐ kontaktowe  ☐ firmowe  ☐ finansowe  ☐ nieruchomość / KW  ☐ transakcyjne☐ dane szczególne / art. 10 — wyłącznie z uzasadnieniem: ______________________________
+Dane podwyższonego ryzyka
+☐ brak  ☐ PESEL  ☐ dokument tożsamości  ☐ rachunek bankowy  ☐ podpis  ☐ dane rodzinnekonkretna czynność i podstawa niezbędności: ________________________________________________
+Paczka / dokumenty
+identyfikator paczki, lista plików i poziom redakcji: ________________________________________________
+Etap ujawnienia
+☐ teaser anonimowy  ☐ pakiet zanonimizowany  ☐ pakiet identyfikujący  ☐ dokumentacja rozszerzona
+Podstawa Finance You
+art. 6 ust. 1 lit. ______ RODO; opis / test: ________________________________________________
+Podstawa Inwestora
+art. 6 ust. 1 lit. ______ RODO; opis / test: ________________________________________________
+Obowiązki art. 13/14
+Finance You: __________________  Inwestor: __________________  termin / wyjątek i uzasadnienie: __________________
+Podstawa art. 9 / 10
+☐ nie dotyczy  ☐ art. 9 ust. 2 lit. ____ / podstawa krajowa: __________________☐ art. 10 / podstawa prawna i zabezpieczenia: __________________________________________
+Odbiorcy / Grupa
+________________________________________________________________
+Lokalizacje danych
+________________________________________________________________
+Transfer poza EOG
+☐ nie  ☐ tak — państwo / mechanizm / środki: ________________________________________________
+Retencja pełnych danych
+od: __________________  do / zdarzenie: ________________________________________________
+Retencja minimalnych dowodów
+do końca Okresu Ochronnego i właściwego okresu roszczeń; szczegóły: __________________
+Środki dodatkowe
+________________________________________________________________
+Status i zatwierdzenia
+☐ projekt  ☐ privacy/IOD  ☐ właściciel Projektu  ☐ zatwierdzona do ujawnieniadata / osoby: ________________________________________________________________
+Data i log ujawnienia
+________________________________________________________________
+________________________________
+________________________________
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+INWESTOR / ODBIORCA — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 2
+Minimalne środki techniczne i organizacyjne (TOM)
+Środki należy dostosować w górę po ocenie ryzyka; tabela określa minimum przed pełnym dostępem.
+Obszar
+Wymaganie minimalne
+Dowód / status
+Tożsamość
+Imienne konta; zakaz kont współdzielonych; weryfikacja reprezentacji i cykliczny przegląd użytkowników.
+________________
+MFA
+Wymagane dla pełnych danych i funkcji administracyjnych; odporne na phishing tam, gdzie dostępne.
+________________
+Uprawnienia
+RBAC, najmniejsze uprawnienia, zatwierdzanie dostępu per Projekt, automatyczne wygaśnięcie i natychmiastowe odebranie.
+________________
+Transmisja
+TLS 1.2 lub nowszy; bezpieczne linki, zakaz zwykłych niezaszyfrowanych załączników z pełnymi danymi.
+________________
+Spoczynek
+Szyfrowanie o sile porównywalnej z AES-256 dla urządzeń, baz, magazynów i kopii; kontrolowane klucze.
+________________
+Urządzenia
+Szyfrowanie dysku, EDR/antymalware, blokada ekranu, aktualizacje, brak niezarządzanych urządzeń dla pełnych danych.
+________________
+Dokumenty
+Znaki wodne: użytkownik, ID Projektu, czas; wygasające linki; ograniczenie pobierania, druku i zrzutów.
+________________
+Logi
+Logowanie logowania, wyświetlenia, pobrania, eksportu, nadania uprawnień, akceptacji i zdarzeń administracyjnych; ochrona przed zmianą.
+________________
+Monitoring
+Alerty nietypowego pobierania, wielu lokalizacji, prób obejścia i nieudanych logowań; procedura reakcji.
+________________
+Kopie
+Szyfrowane, testowane, odseparowane; określone RPO/RTO; rotacyjne usunięcie danych co do zasady do 90 dni.
+________________
+Podatności
+Cykliczne skanowanie, aktualizacje krytyczne w terminie wynikającym z ryzyka, testy po istotnych zmianach.
+________________
+Ludzie
+Poufność, szkolenie przed dostępem i co najmniej coroczne; procedura onboarding/offboarding i zgłaszania Incydentów.
+________________
+Fizyczne
+Kontrola dostępu do pomieszczeń i dokumentów papierowych; czyste biurko; bezpieczne niszczenie.
+________________
+Retencja
+Automatyczne terminy, blokada legal hold, potwierdzone usunięcie z aktywnych systemów i harmonogram kopii.
+________________
+Dostawcy
+Due diligence, umowy art. 28, lokalizacje i transfery, procedura zmian, okresowa weryfikacja.
+________________
+Ciągłość
+Plan awaryjny, kontakty Incydentowe 24/7 dla zdarzeń krytycznych, ćwiczenia i aktualizacja po incydencie.
+________________
+ZAŁĄCZNIK NR 3
+Karta Polecenia przetwarzania — art. 28 RODO
+Uruchamia Moduł B wyłącznie dla opisanej czynności.
+PARAMETRY POWIERZENIA
+Numer / data
+________________________________________________________________
+Administrator
+________________________________________________________________
+Podmiot Przetwarzający
+________________________________________________________________
+Przedmiot
+________________________________________________________________
+Czas
+od: __________________  do / zdarzenie końcowe: ______________________________
+Charakter czynności
+☐ zbieranie  ☐ porządkowanie  ☐ hosting  ☐ weryfikacja formalna  ☐ komunikacja  ☐ inne: ______
+Cel
+________________________________________________________________
+Kategorie osób
+________________________________________________________________
+Kategorie danych
+________________________________________________________________
+Instrukcje
+________________________________________________________________________________________________________________________________
+Dalsi procesorzy
+☐ brak  ☐ szczegółowe upoważnienie: __________________  ☐ ogólne upoważnienie z 14-dniowym powiadomieniem
+Lista / lokalizacje
+________________________________________________________________
+Transfery
+☐ brak  ☐ państwo / mechanizm / środki: ________________________________________________
+TOM dodatkowe
+________________________________________________________________
+Po zakończeniu
+☐ zwrot i usunięcie kopii  ☐ bezpieczne usunięcie  ☐ prawny wyjątek: __________________
+Wynagrodzenie procesora
+☐ czynność nieodpłatna  ☐ odrębnie uzgodnione: ________________________________________________
+Administrator potwierdza, że polecenie jest zgodne z prawem, a Podmiot Przetwarzający potwierdza zdolność wykonania go zgodnie z Modułem B.
+________________________________
+________________________________
+ADMINISTRATOR — imię, nazwisko, funkcja / podpis / data
+PODMIOT PRZETWARZAJĄCY — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 4
+Formularz wstępnego zgłoszenia Incydentu
+Wyślij nie później niż w ciągu 12 godzin; brak pełnych danych nie opóźnia zgłoszenia.
+ZGŁOSZENIE INCYDENTU
+Zgłaszający / kontakt
+________________________________________________________________
+Data wykrycia
+________________________________________________________________
+Szacowany początek / koniec
+________________________________________________________________
+System / Projekt
+________________________________________________________________
+Opis
+________________________________________________________________________________________________________________________________
+Kategorie osób
+________________________________________________________________
+Kategorie i zakres danych
+________________________________________________________________
+Liczba osób / rekordów
+znana: __________  szacowana: __________  nieustalona: ☐
+Poufność / integralność / dostępność
+☐ ujawnienie  ☐ utrata  ☐ zmiana  ☐ niedostępność  ☐ inne: __________________
+Możliwe skutki
+________________________________________________________________
+Działania natychmiastowe
+________________________________________________________________
+Czy dane odzyskano / zaszyfrowano
+________________________________________________________________
+Logi i dowody
+lokalizacja / osoba zabezpieczająca: ________________________________________________
+Dalsze kroki i termin aktualizacji
+________________________________________________________________
+Kanał pilny: kontakt@financeyou.pl oraz tel. 889 888 700. Wrażliwy załącznik przekazać bezpiecznym kanałem uzgodnionym telefonicznie.
+ZAŁĄCZNIK NR 5
+Certyfikat zwrotu / usunięcia danych
+Stosować po odrzuceniu Projektu, zakończeniu celu lub powierzenia.
+POTWIERDZENIE
+Podmiot składający
+________________________________________________________________
+Projekt / Karta
+________________________________________________________________
+Zakres danych
+________________________________________________________________
+Podstawa usunięcia
+☐ odrzucenie  ☐ wygaśnięcie rezerwacji  ☐ koniec celu  ☐ żądanie  ☐ koniec powierzenia  ☐ inna
+Aktywne systemy
+usunięto dnia: __________________  metoda: ________________________________________________
+Urządzenia / wydruki
+________________________________________________________________
+Dalsi odbiorcy / procesorzy
+________________________________________________________________
+Kopie zapasowe
+cykl nadpisania do: __________________  izolacja: ________________________________________________
+Zachowany minimalny zestaw
+☐ nie  ☐ tak — zakres, podstawa i termin: ________________________________________________
+Osoba odpowiedzialna
+________________________________________________________________
+Oświadczam, że wskazane dane zostały zwrócone lub usunięte zgodnie z Umową, a zachowane wyjątki są ograniczone, odseparowane i nie będą używane operacyjnie.
+________________________________
+________________________________
+SKŁADAJĄCY CERTYFIKAT — imię, nazwisko, funkcja / podpis / data
+PRZYJMUJĄCY — imię, nazwisko, funkcja / podpis / data

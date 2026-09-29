@@ -174,8 +174,9 @@ function KlientDashboard() {
       const { error } = await supabase
         .from("loan_applications")
         .update({
-          status: "szukamy_inwestora",
-          available_to_investors: true,
+          // Komplet danych → wniosek_kompletny; do inwestorów wysyła operator
+          // (dystrybucja) po oświadczeniu o celu gospodarczym (bramka B2B).
+          status: "wniosek_kompletny",
           completeness_percent: 100,
         })
         .eq("id", loanRow.id);

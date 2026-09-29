@@ -60,7 +60,7 @@ export async function applyMetaAnswersToApplication(
 
   if (amount != null && !app.loan_amount) {
     const patch: Record<string, unknown> = { loan_amount: amount };
-    if (app.status === "brak_kwoty") patch.status = "kompletowanie_danych";
+    if (app.status === "braki_w_dokumentach") patch.status = "w_trakcie_uzupelniania";
     await admin.from("loan_applications").update(patch).eq("id", loanApplicationId);
   }
 

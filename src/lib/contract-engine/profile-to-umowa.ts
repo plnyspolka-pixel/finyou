@@ -22,6 +22,8 @@ import type { LoanCalcPayload } from "../loan-calc-pdf";
 import type { UmowaData } from "./schema";
 import { formatKwotaPL, parseKwota, payloadDoRaty } from "./schedule";
 import { buildEngineSchedule } from "./loan-schedule";
+import { fyCommission } from "./fees";
+import { FINANCE_YOU } from "./finance-you";
 import { amountToWordsPLN } from "../amount-to-words-pl";
 
 // ── konwersje pomocnicze ───────────────────────────────────────
@@ -192,8 +194,10 @@ function budujNieruchomosc(profile: ClientProfile, payload: LoanCalcPayload): an
 
 function budujWarunki(profile: ClientProfile, payload: LoanCalcPayload): any {
   const sched = payload.schedule ?? [];
-  const prowizjaCalk =
-    (Number(payload.commissionPln) || 0) + (Number(payload.financeYouFeePln) || 0);
+  // Prowizja inwestora (w ratach) i Prowizja Finance You (potrącana z wypłaty)
+  // to dwa różne pola umowy.
+  const prowizjaInwestora = Number(payload.commissionPln) || 0;
+  const prowizjaFY = Number(payload.financeYouFeePln) || 0;
   const prowizjaRaty = sched.map((r) => Number(r.prow) || 0);
   const raty = payloadDoRaty(payload, prowizjaRaty);
 
@@ -203,7 +207,8 @@ function budujWarunki(profile: ClientProfile, payload: LoanCalcPayload): any {
 
   return czysc({
     kwota_pozyczki: kwota(payload.nominal),
-    prowizja: czysc({ kwota: kwota(prowizjaCalk), model: "nie_potracana_raty" }),
+    prowizja: czysc({ kwota: kwota(prowizjaInwestora), model: "nie_potracana_raty" }),
+    prowizja_finance_you: prowizjaFY > 0 ? { kwota: kwota(prowizjaFY) } : undefined,
     oprocentowanie: oprocentowanie(payload.annualRate),
     cel: profile.borrowerData?.loanPurpose || "",
     harmonogram: czysc({
@@ -217,10 +222,11 @@ function budujWarunki(profile: ClientProfile, payload: LoanCalcPayload): any {
     }),
     // Wypłata na rachunek Pożyczkobiorcy, spłata na rachunek Pożyczkodawcy
     // (dla Finance You silnik wstawia jej rachunek, gdy pole jest puste).
-    rachunki: {
+    rachunki: czysc({
       wyplata: profile.borrowerData?.bankAccount || "",
       splata: inv.bankAccount || "",
-    },
+      finance_you: prowizjaFY > 0 ? FINANCE_YOU.rachunek : undefined,
+    }),
   });
 }
 
@@ -275,9 +281,11 @@ export function profileToCalcPayload(profile: ClientProfile): LoanCalcPayload | 
   const annual = Number(o.annualInterestPercent ?? 0);
   if (!K || !months || !maxPay || !o.payoutDate) return null;
 
+  const feeFY = fyCommission(K);
   const eng = buildEngineSchedule({
     kwotaPozyczki: K,
     prowizja: P,
+    prowizjaFY: feeFY,
     annualRatePercent: annual,
     months,
     maxMonthlyPayment: maxPay,
@@ -301,12 +309,12 @@ export function profileToCalcPayload(profile: ClientProfile): LoanCalcPayload | 
     annualRate: annual,
     commissionPct: K > 0 ? Math.round((P / K) * 10000) / 100 : 0,
     commissionPln: P,
-    financeYouFeePct: 0,
-    financeYouFeePln: 0,
+    financeYouFeePct: K > 0 ? Math.round((feeFY / K) * 10000) / 100 : 0,
+    financeYouFeePln: feeFY,
     monthlyPayment: eng.regularPayment,
     balloon: eng.balloon,
     totalInterest: eng.totalInterest,
-    totalCost: Math.round((P + eng.totalInterest) * 100) / 100,
+    totalCost: eng.calkowityKoszt,
     totalToRepay: eng.totalToRepay,
     mortgageAmount: Number(sec.mortgageAmount ?? 0),
     art777Amount: Number(sec.art777Amount ?? 0),

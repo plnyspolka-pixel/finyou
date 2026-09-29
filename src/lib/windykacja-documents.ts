@@ -3,14 +3,16 @@
 // Statyczne szablony z podstawianymi danymi sprawy; profesjonalna
 // polszczyzna prawnicza, podpis zarządu Finance You sp. z o.o.
 //
-// TODO: podłączyć generator treści (LLM / szablony serwerowe / PDF).
+// Treść jest statyczna (szablony w kodzie); generator LLM / PDF nie jest
+// częścią tego modułu.
 // ════════════════════════════════════════════════════════════════════
 
+import { COMPANY_DATA } from "@/lib/company";
 import { formatPLN } from "./labels";
 import type { WindDocumentType } from "./windykacja-procedure";
 import { DOCUMENT_LABELS } from "./windykacja-procedure";
 
-const SIGNATURE = "Filip Bielak\nPrezes Zarządu\nFinance You sp. z o.o.";
+const SIGNATURE = `Filip Bielak\nPrezes Zarządu\n${COMPANY_DATA.legalName}`;
 
 export interface DocContext {
   dluznik: string;

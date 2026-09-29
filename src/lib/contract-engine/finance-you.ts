@@ -1,11 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Dane Finance You sp. z o.o. jako Pożyczkodawcy — jedno miejsce w silniku umów.
+// Dane Finance You sp. z o.o. jako Pożyczkodawcy — z src/lib/company.ts.
+import { COMPANY_DATA } from "@/lib/company";
 
 export const FINANCE_YOU = {
-  nip: "7010611803",
-  krs: "0000635207",
+  nip: COMPANY_DATA.nip,
+  krs: COMPANY_DATA.krs,
+  /** Jedyny rachunek Finance You — spłaty pożyczek FY (§ 2) i prowizja. */
+  rachunek: COMPANY_DATA.bankAccount,
   /** Rachunek do spłaty pożyczek udzielanych przez Finance You (§ 2 — spłata). */
-  rachunekSplaty: "56 1090 2590 0000 0001 5708 1371",
+  rachunekSplaty: COMPANY_DATA.bankAccount,
+  /** Rachunek na Prowizję Klientowską potrącaną z wypłaty (Zał. 6 / Zał. 4). */
+  rachunekProwizji: COMPANY_DATA.bankAccount,
 } as const;
 
 /** Czy strona to Finance You (po NIP albo KRS). */

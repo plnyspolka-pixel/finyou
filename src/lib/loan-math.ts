@@ -1,6 +1,8 @@
-// Kalkulacje pożyczki + wskaźnik zainteresowania inwestora.
+// Kalkulacje pożyczki — cienka warstwa nad silnikiem (`buildEngineSchedule`)
+// i opłatami (`fees.ts`). JEDNO źródło prawdy dla formularzy wniosku i landingu.
 
 import { buildEngineSchedule } from "./contract-engine/loan-schedule";
+import { fyCommission, maxCapitalRate, validateAnnualRate } from "./contract-engine/fees";
 
 export type SecurityType =
   | "mieszkanie"
@@ -10,6 +12,7 @@ export type SecurityType =
   | "lokal_uslugowy"
   | "inna";
 
+/** Rata annuitetowa (nominalna, bez pułapu) — do wyznaczenia domyślnego pułapu raty. */
 export function monthlyPayment(amount: number, annualRatePercent: number, months: number): number {
   if (!amount || !months) return 0;
   const r = annualRatePercent / 100 / 12;
@@ -18,26 +21,30 @@ export function monthlyPayment(amount: number, annualRatePercent: number, months
   return (amount * r * pow) / (pow - 1);
 }
 
-export function totalRepayment(monthly: number, months: number): number {
-  return monthly * months;
-}
-
-export function investorTotalCompensation(monthly: number, months: number, amount: number): number {
-  return Math.max(0, monthly * months - amount);
-}
-
 /** Komplet wyliczeń raty/balonu/kosztu — JEDNO źródło prawdy dla obu formularzy wniosku. */
 export type LoanFigures = {
+  /** Kwota Udzielona (kwota pożyczki z umowy). */
+  amount: number;
+  /** Prowizja Finance You (7 %, min 5 000 zł, bez VAT) — potrącana z wypłaty. */
+  feeFY: number;
+  /** Otrzymasz na rękę = kwota − prowizja FY. */
+  netToClient: number;
   /** Rata nominalna (bez ograniczenia maksymalną ratą). */
   nominal: number;
   /** Rata po ograniczeniu pułapem `maxPayment` (jeśli podany). */
   monthly: number;
-  /** Dopłata balonowa doliczana do ostatniej raty. */
+  /** Rata balonowa (ostatnia z N rat), 0 gdy brak balonu. */
   balloon: number;
-  /** Łączna spłata (raty + balon). */
+  /** Łączna spłata (suma rat) — do spłaty. */
   total: number;
-  /** Koszt finansowania = wynagrodzenie inwestora. */
+  /** Suma odsetek. */
+  totalInterest: number;
+  /** Koszt całkowity = odsetki + prowizja inwestora + prowizja FY. */
+  totalCost: number;
+  /** Koszt finansowania po stronie inwestora (odsetki + prowizja inwestora). */
   investorCompensation: number;
+  /** Błędy blokujące silnika (stopa > max, pułap raty za niski). */
+  errors: string[];
 };
 
 export function computeLoanFigures(input: {
@@ -45,59 +52,56 @@ export function computeLoanFigures(input: {
   annualRatePercent: number;
   months: number;
   maxPayment?: number;
-  /** Prowizja (rozłożona na raty). Domyślnie 0 — ten kalkulator nie zawsze ją modeluje. */
+  /** Prowizja INWESTORA (rozłożona na raty). Domyślnie 0. */
   commission?: number;
+  /** Prowizja Finance You — domyślnie włączona (7 %, min 5 000 zł); podaj 0, by wyłączyć. */
+  commissionFY?: number;
+  /** Dzień oceny odsetek maksymalnych (domyślnie dziś). */
+  asOf?: Date | string;
 }): LoanFigures {
   const nominal = monthlyPayment(input.amount, input.annualRatePercent, input.months);
   const cap = input.maxPayment && input.maxPayment > 0 ? input.maxPayment : nominal;
   const monthly = Math.min(nominal || 0, cap || 0);
-  // Jedno źródło prawdy: model silnika (pełna wypłata, odsetki od salda,
-  // prowizja w ratach, balon = ostatnia z rat).
+  const feeFY = input.commissionFY ?? fyCommission(input.amount);
+  // Jedno źródło prawdy: model silnika (Kwota Udzielona, odsetki od salda,
+  // prowizja inwestora w ratach, prowizja FY potrącana, balon = ostatnia z rat).
   const eng = buildEngineSchedule({
     kwotaPozyczki: input.amount,
     prowizja: Math.max(0, input.commission ?? 0),
+    prowizjaFY: feeFY,
     annualRatePercent: input.annualRatePercent,
     months: input.months,
     maxMonthlyPayment: cap,
+    asOf: input.asOf,
   });
   return {
+    amount: eng.kwotaUdzielona,
+    feeFY: eng.prowizjaFY,
+    netToClient: eng.kwotaWyplaconaKlientowi,
     nominal,
     monthly,
     balloon: eng.balloon,
     total: eng.totalToRepay,
+    totalInterest: eng.totalInterest,
+    totalCost: eng.calkowityKoszt,
     investorCompensation: Math.max(0, eng.totalToRepay - input.amount),
+    errors: eng.errors,
   };
 }
 
-// Wartości bazowe i skalowanie według rocznego wynagrodzenia.
-// Liniowa interpolacja między 15% (base) a 36% (max).
-const baseAt15: Record<SecurityType, number> = {
-  mieszkanie: 95,
-  dom: 85,
-  grunt_rolny: 75,
-  dzialka_budowlana: 60,
-  lokal_uslugowy: 55,
-  inna: 50,
-};
-const maxAt36: Record<SecurityType, number> = {
-  mieszkanie: 100,
-  dom: 98,
-  grunt_rolny: 95,
-  dzialka_budowlana: 88,
-  lokal_uslugowy: 85,
-  inna: 82,
-};
-
-export function interestScore(type: SecurityType, annualRatePercent: number): number {
-  const base = baseAt15[type];
-  const top = maxAt36[type];
-  const r = Math.max(15, Math.min(36, annualRatePercent));
-  const t = (r - 15) / (36 - 15);
-  const v = base + (top - base) * t;
-  // Jeżeli powyżej 36% — bonus do 100.
-  const bonus = annualRatePercent > 36 ? Math.min(100 - v, (annualRatePercent - 36) * 0.5) : 0;
-  return Math.round(Math.min(100, v + bonus));
+/** Domyślna stopa dla kalkulatorów klienta = odsetki maksymalne (dziś 14,5 %). */
+export function defaultAnnualRate(asOf: Date | string = new Date()): number {
+  return maxCapitalRate(asOf);
 }
+
+/** Przycina stopę do odsetek maksymalnych (suwaki). */
+export function clampAnnualRate(rate: number, asOf: Date | string = new Date()): number {
+  const max = maxCapitalRate(asOf);
+  if (!Number.isFinite(rate) || rate < 0) return 0;
+  return Math.min(rate, max);
+}
+
+export { fyCommission, maxCapitalRate, validateAnnualRate };
 
 // formatPLN — jedno źródło prawdy w labels.ts; tu tylko re-eksport, by import
 // z "@/lib/loan-math" dalej działał w istniejących miejscach.

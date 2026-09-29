@@ -30,7 +30,7 @@ import { submitLandingLoanApplication } from "@/lib/landing-application.function
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 
-import type { SecurityType } from "@/lib/loan-math";
+import { defaultAnnualRate, type SecurityType } from "@/lib/loan-math";
 
 const FANCY_INPUT_CLASS =
   "h-12 rounded-xl border-2 border-white/30 bg-white/10 text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40";
@@ -76,6 +76,8 @@ export function LandingWizardForm() {
   const [consentPrivacy, setConsentPrivacy] = useState(false);
   const [consentTerms, setConsentTerms] = useState(false);
   const [consentMarketing, setConsentMarketing] = useState(false);
+  // Bramka B2B: wymagane oświadczenie o celu gospodarczym.
+  const [businessPurpose, setBusinessPurpose] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const leadFiredRef = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -99,11 +101,8 @@ export function LandingWizardForm() {
     if (months > maxMonths) setMonths(maxMonths);
   }, [maxMonths, months]);
 
-  const suggestedRate = useMemo(() => {
-    const amountT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
-    const monthsT = Math.min(1, Math.max(0, (months - 6) / (72 - 6)));
-    return Math.round(Math.min(45, Math.max(15, 22 + amountT * 18 - monthsT * 8)) * 2) / 2;
-  }, [amount, months]);
+  // Domyślne oprocentowanie = odsetki maksymalne (art. 359 § 2¹ KC).
+  const suggestedRate = useMemo(() => defaultAnnualRate(), []);
   useEffect(() => {
     if (!rateTouchedRef.current) setAnnualRate(suggestedRate);
   }, [suggestedRate]);
@@ -151,9 +150,9 @@ export function LandingWizardForm() {
       /.+@.+\..+/.test(email.trim()) &&
       consentPrivacy &&
       consentTerms &&
-      consentMarketing,
+      businessPurpose,
     );
-  }, [firstName, lastName, phone, email, consentPrivacy, consentTerms, consentMarketing]);
+  }, [firstName, lastName, phone, email, consentPrivacy, consentTerms, businessPurpose]);
 
   const stepDone: Record<StepId, boolean> = {
     1: typeSelected && city.trim().length > 0,
@@ -234,6 +233,7 @@ export function LandingWizardForm() {
           city: city.trim() || null,
           annual_investor_rate: annualRate,
           max_monthly_payment: maxPayment > 0 ? maxPayment : null,
+          business_purpose_declared: businessPurpose,
           land_register_number: (() => {
             const parts = [...allKwNumbers];
             const ua = usableArea.trim();
@@ -646,7 +646,18 @@ export function LandingWizardForm() {
                 />
                 <span>
                   Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert
-                  Finance You. *
+                  Finance You. (opcjonalnie)
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
+                <Checkbox
+                  checked={businessPurpose}
+                  onCheckedChange={(v) => setBusinessPurpose(v === true)}
+                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
+                />
+                <span>
+                  Finansowanie przeznaczam na cel związany z działalnością gospodarczą (nie na cele
+                  konsumpcyjne ani prywatne potrzeby mieszkaniowe). *
                 </span>
               </label>
             </div>

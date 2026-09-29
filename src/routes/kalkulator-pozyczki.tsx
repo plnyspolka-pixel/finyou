@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
 import { MktButton } from "@/components/marketing/primitives";
 import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
+import { defaultAnnualRate } from "@/lib/loan-math";
 
 export const Route = createFileRoute("/kalkulator-pozyczki")({
   head: () => ({
@@ -30,7 +31,7 @@ function LoanCalculatorPage() {
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(36);
   const [maxPayment, setMaxPayment] = useState(0);
-  const [annualRate, setAnnualRate] = useState(30);
+  const [annualRate, setAnnualRate] = useState(defaultAnnualRate());
   const rateTouchedRef = useRef(false);
 
   // Max okres spłaty maleje wraz z kwotą:
@@ -44,12 +45,9 @@ function LoanCalculatorPage() {
     if (months > maxMonths) setMonths(maxMonths);
   }, [maxMonths, months]);
 
-  // Sugerowane wynagrodzenie inwestora — aktualizuje się, dopóki użytkownik nie ruszy suwaka.
-  const suggestedRate = useMemo(() => {
-    const amountT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
-    const monthsT = Math.min(1, Math.max(0, (months - 6) / (72 - 6)));
-    return Math.round(Math.min(45, Math.max(15, 22 + amountT * 18 - monthsT * 8)) * 2) / 2;
-  }, [amount, months]);
+  // Domyślne oprocentowanie = odsetki maksymalne (art. 359 § 2¹ KC) — twarda
+  // blokada powyżej; użytkownik może tylko obniżyć.
+  const suggestedRate = useMemo(() => defaultAnnualRate(), []);
   useEffect(() => {
     if (!rateTouchedRef.current) setAnnualRate(suggestedRate);
   }, [suggestedRate]);

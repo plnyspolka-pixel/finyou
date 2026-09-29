@@ -117,7 +117,15 @@ karty również przechodzą przez funkcje SQL z blokadą wiersza i są idempoten
 ## Cykl życia przypisania
 
 - 24 h od utworzenia (czas serwera); jedno przedłużenie o 12 h (maks. 36 h),
-  tylko przed wygaśnięciem.
+  tylko przed wygaśnięciem; inwestor może mieć naraz najwyżej 2 przedłużone
+  rezerwacje (`max_extended_assignments`).
+- Limity Zleceń (Umowa ramowa v7, § 5): najwyżej 5 aktywnych Zleceń na
+  inwestora, Zlecenie wygasa po 5 odrzuceniach (`increment_order_rejections`),
+  okres do 120 miesięcy, minimalny zysk nie wyższy niż odsetki maksymalne.
+- Teasery widzi wyłącznie inwestor z PRZYJĘTYM Zleceniem, i tylko dla
+  projektów dopasowanych do tego Zlecenia. Strony publiczne (`/dla-inwestora`,
+  `/embed/leady`) pokazują wyłącznie wygenerowane „przykładowe projekty
+  (ilustracja)”. Maksymalne LTV: 60%.
 - Swipe/przyciski wywołują te same server functions; UI usuwa kartę dopiero po
   potwierdzeniu serwera (offline → komunikat + ponowienie).
 - Odrzucenie natychmiast zwalnia projekt do puli (bez automatycznego wysłania

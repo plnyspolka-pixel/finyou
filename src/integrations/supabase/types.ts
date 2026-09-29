@@ -3453,13 +3453,6 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "analysis_pipeline_runs_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       audit_logs: {
@@ -3540,13 +3533,6 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "auto_distribution_proposals_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       auto_distribution_settings: {
@@ -3619,13 +3605,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "automation_events_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -3735,13 +3714,6 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "broker_settlements_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       call_queue: {
@@ -3821,13 +3793,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "call_queue_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -4018,13 +3983,6 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "chat_threads_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       client_lead_forwards: {
@@ -4088,13 +4046,6 @@ export type Database = {
             columns: ["source_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_profiles_source_application_id_fkey"
-            columns: ["source_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -4270,6 +4221,47 @@ export type Database = {
         }
         Relationships: []
       }
+      consent_acceptances: {
+        Row: {
+          accepted_at: string
+          document_id: string | null
+          id: string
+          ip: unknown
+          kind: Database["public"]["Enums"]["consent_kind"]
+          user_agent: string | null
+          user_id: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string
+          document_id?: string | null
+          id?: string
+          ip?: unknown
+          kind: Database["public"]["Enums"]["consent_kind"]
+          user_agent?: string | null
+          user_id: string
+          version: number
+        }
+        Update: {
+          accepted_at?: string
+          document_id?: string | null
+          id?: string
+          ip?: unknown
+          kind?: Database["public"]["Enums"]["consent_kind"]
+          user_agent?: string | null
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_acceptances_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "consent_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_documents: {
         Row: {
           content: string
@@ -4401,13 +4393,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contact_events_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -4746,13 +4731,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
           {
@@ -5438,13 +5416,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "generated_documents_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "generated_documents_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
@@ -5908,13 +5879,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "institution_qa_threads_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -6536,13 +6500,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "investor_offers_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -7629,13 +7586,6 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "kw_land_register_analyses_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       kw_location_observations: {
@@ -7690,13 +7640,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "kw_location_observations_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -8336,13 +8279,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "leads_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "leads_meta_lead_id_fkey"
             columns: ["meta_lead_id"]
             isOneToOne: false
@@ -8449,6 +8385,13 @@ export type Database = {
           business_legal_form: string | null
           business_nip_verified_at: string | null
           business_status: string | null
+          business_purpose_declared: boolean
+          business_purpose_declared_at: string | null
+          suggested_status: Database["public"]["Enums"]["loan_status"] | null
+          suggested_status_reason: string | null
+          suggested_at: string | null
+          suggested_by: string | null
+          status_decided_by: string | null
           client_id: string
           completeness_percent: number
           contact_attempts_email: number
@@ -8544,6 +8487,13 @@ export type Database = {
           business_legal_form?: string | null
           business_nip_verified_at?: string | null
           business_status?: string | null
+          business_purpose_declared?: boolean
+          business_purpose_declared_at?: string | null
+          suggested_status?: Database["public"]["Enums"]["loan_status"] | null
+          suggested_status_reason?: string | null
+          suggested_at?: string | null
+          suggested_by?: string | null
+          status_decided_by?: string | null
           client_id: string
           completeness_percent?: number
           contact_attempts_email?: number
@@ -8639,6 +8589,13 @@ export type Database = {
           business_legal_form?: string | null
           business_nip_verified_at?: string | null
           business_status?: string | null
+          business_purpose_declared?: boolean
+          business_purpose_declared_at?: string | null
+          suggested_status?: Database["public"]["Enums"]["loan_status"] | null
+          suggested_status_reason?: string | null
+          suggested_at?: string | null
+          suggested_by?: string | null
+          status_decided_by?: string | null
           client_id?: string
           completeness_percent?: number
           contact_attempts_email?: number
@@ -8725,13 +8682,6 @@ export type Database = {
             columns: ["merged_into_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "loan_applications_merged_into_id_fkey"
-            columns: ["merged_into_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
           {
@@ -8837,13 +8787,6 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "loan_proposals_source_application_id_fkey"
-            columns: ["source_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       loan_reminder_email_sends: {
@@ -8904,13 +8847,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "loan_reminder_email_sends_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
           {
@@ -9019,13 +8955,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "loan_status_history_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -9202,13 +9131,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "location_scoring_results_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -9777,13 +9699,6 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "meta_leads_lead_application_id_fkey"
-            columns: ["lead_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       meta_sync_log: {
@@ -9874,13 +9789,6 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "missing_info_follow_up_sends_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       missing_info_follow_ups: {
@@ -9935,13 +9843,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: true
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "missing_info_follow_ups_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: true
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -10104,13 +10005,6 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "offer_distribution_messages_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       offer_distributions: {
@@ -10172,13 +10066,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "offer_distributions_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -11038,13 +10925,6 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "properties_loan_application_id_fkey"
-            columns: ["loan_application_id"]
-            isOneToOne: false
-            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -12932,22 +12812,6 @@ export type Database = {
         }
         Relationships: []
       }
-      public_loan_teasers: {
-        Row: {
-          annual_investor_rate: number | null
-          area_sqm: number | null
-          city: string | null
-          created_at: string | null
-          estimated_value: number | null
-          id: string | null
-          loan_amount: number | null
-          preferred_period_months: number | null
-          property_type: string | null
-          status: string | null
-          voivodeship: string | null
-        }
-        Relationships: []
-      }
       v_team_activity: {
         Row: {
           details: string | null
@@ -13139,13 +13003,15 @@ export type Database = {
           area_sqm: number
           city: string
           created_at: string
-          description: string
           estimated_ltv: number
           estimated_value: number
           id: string
           loan_amount: number
-          photos: string[]
+          match_id: string
+          match_status: string
+          order_id: string
           preferred_period_months: number
+          project_ref: string
           property_type: string
           voivodeship: string
         }[]

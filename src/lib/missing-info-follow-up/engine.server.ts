@@ -34,13 +34,13 @@ import {
 
 /** Statusy kwalifikujące do dopytywania (kanoniczne, po normalizacji). */
 export const MISSING_INFO_ELIGIBLE_STATUSES = [
-  "brak_kwoty",
-  "brak_kw",
-  "brak_zdjec_dokumentow",
-  "kontakt",
-  "kompletowanie_danych",
+  "w_trakcie_uzupelniania",
+  "braki_w_dokumentach",
+  "do_kontaktu",
+  "w_follow_upie",
   // „Do korekty": status kompletny, ale brief wykrywa braki / otwarte pytania KW.
-  "szukamy_inwestora",
+  "wniosek_kompletny",
+  "wyslany_do_inwestorow",
 ] as const;
 
 /** Odstępy (dni) między kolejnymi próbami; po wyczerpaniu — ostatnia wartość. */
