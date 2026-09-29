@@ -158,6 +158,18 @@ export const CAPTION_STYLE_OPTIONS: ReadonlyArray<{
   })),
 ];
 
+/** Styl własny wybierany domyślnie — ten sam w panelu Studia i w MCP. */
+export const DEFAULT_CUSTOM_CAPTION_STYLE: CustomCaptionStyleId = "reels";
+
+/**
+ * Domyślny styl napisów rolki: własny („reels", wypalany naszą usługą), gdy
+ * usługa jest skonfigurowana — inaczej napisy HeyGena, bo własnych nie ma kto
+ * wypalić.
+ */
+export function defaultCaptionStyle(burnerConfigured: boolean): CaptionStyleId {
+  return burnerConfigured ? DEFAULT_CUSTOM_CAPTION_STYLE : "heygen";
+}
+
 export function isCaptionStyleId(v: unknown): v is CaptionStyleId {
   return typeof v === "string" && (CAPTION_STYLE_IDS as readonly string[]).includes(v);
 }
@@ -178,12 +190,15 @@ export function captionStyleLabel(id: unknown): string {
 
 // ── SRT ─────────────────────────────────────────────────────────────────────
 
-const TIME_RE = /(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})/;
+// Godziny opcjonalne — WebVTT pozwala na `mm:ss.ttt`.
+const TIME_RE =
+  /((?:\d{1,2}:)?\d{2}:\d{2}[,.]\d{1,3})\s*-->\s*((?:\d{1,2}:)?\d{2}:\d{2}[,.]\d{1,3})/;
 /** Kwestia bez sensownego końca dostaje tyle — lepsze niż zniknięcie. */
 const MIN_CUE_SECONDS = 0.5;
 
 function parseTimestamp(s: string): number {
-  const [h, m, rest] = s.split(":");
+  const parts = s.split(":");
+  const [h, m, rest] = parts.length === 2 ? ["0", ...parts] : parts;
   const [sec, ms = ""] = rest.split(/[,.]/);
   return Number(h) * 3600 + Number(m) * 60 + Number(sec) + Number(ms.padEnd(3, "0")) / 1000;
 }
@@ -222,6 +237,55 @@ export function parseSrt(srt: string): SrtCue[] {
     cues.push({ start, end: end > start ? end : start + MIN_CUE_SECONDS, text: body });
   }
   return cues.sort((a, b) => a.start - b.start);
+}
+
+/**
+ * Kwestie z pliku ASS (zdarzenia `Dialogue:` w sekcji `[Events]`) — tak
+ * oddają napisy niektóre filmy HeyGena spoza Studia (API v2). Kolumny bierzemy
+ * z linii `Format:`; tagi `{…}` i łamania `\N` wylatują.
+ */
+export function parseAssCues(ass: string): SrtCue[] {
+  const text = ass.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  const events = text.split(/^\[Events\]\s*$/im)[1] ?? "";
+  let cols = [
+    "layer",
+    "start",
+    "end",
+    "style",
+    "name",
+    "marginl",
+    "marginr",
+    "marginv",
+    "effect",
+    "text",
+  ];
+  const cues: SrtCue[] = [];
+  for (const line of events.split("\n")) {
+    const format = /^Format:\s*(.*)$/i.exec(line);
+    if (format) {
+      cols = format[1].split(",").map((c) => c.trim().toLowerCase());
+      continue;
+    }
+    const dialogue = /^Dialogue:\s*(.*)$/i.exec(line);
+    if (!dialogue) continue;
+    const textIdx = cols.indexOf("text");
+    const fields = dialogue[1].split(",");
+    if (textIdx < 0 || fields.length <= textIdx) continue;
+    const head = fields.slice(0, textIdx);
+    const raw = fields.slice(textIdx).join(",");
+    const start = parseTimestamp(head[cols.indexOf("start")]?.trim() ?? "");
+    const end = parseTimestamp(head[cols.indexOf("end")]?.trim() ?? "");
+    const body = cleanCueText(raw.replace(/\\[Nn]/g, " ").replace(/\\h/g, " "));
+    if (!body || !Number.isFinite(start) || !Number.isFinite(end)) continue;
+    cues.push({ start, end: end > start ? end : start + MIN_CUE_SECONDS, text: body });
+  }
+  return cues.sort((a, b) => a.start - b.start);
+}
+
+/** Napisy HeyGena w dowolnym z formatów, które zwraca: SRT, WebVTT albo ASS. */
+export function parseSubtitles(raw: string): SrtCue[] {
+  const text = raw.replace(/^\uFEFF/, "");
+  return /^\s*\[Script Info\]|^\[Events\]/im.test(text) ? parseAssCues(text) : parseSrt(text);
 }
 
 // ── Łamanie i cięcie kwestii ────────────────────────────────────────────────
@@ -419,15 +483,181 @@ function highlightedEvents(
   });
 }
 
+// ── Znaczek „AI" ────────────────────────────────────────────────────────────
+//
+// Oznaczenie treści wygenerowanej przez AI: mała półprzezroczysta „pigułka"
+// z napisem AI w prawym górnym rogu, przez cały film. Rysujemy ją w tym samym
+// pliku ASS co napisy (tryb rysowania libass `\p1`), więc usługa wypalania
+// nie potrzebuje żadnych zmian. Wymiary w pikselach kadru 720×1280 — libass
+// skaluje je do faktycznej rozdzielczości.
+//
+// Pozycja: prawy górny róg, ale PONIŻEJ paska aplikacji (Reels / TikTok /
+// Shorts trzymają tam ikonki aparatu i wyszukiwania, ok. 110 px w tym kadrze).
+// Prawy brzeg niżej zajmują przyciski polubień, więc wyżej niż ~40% kadru.
+
+export type AiBadgeSpec = {
+  text: string;
+  /** Szerokość i wysokość pigułki. */
+  width: number;
+  height: number;
+  radius: number;
+  /** Odległość od prawej krawędzi i od góry kadru. */
+  marginRight: number;
+  marginTop: number;
+  fontSize: number;
+  /** Wypełnienie pigułki i jego krycie (0–1). */
+  fill: string;
+  fillOpacity: number;
+  /** Cienka ramka — czytelność na jasnym i ciemnym tle. */
+  border: string;
+  borderWidth: number;
+  textColor: string;
+};
+
+export const AI_BADGE: AiBadgeSpec = {
+  text: "AI",
+  width: 64,
+  height: 36,
+  radius: 10,
+  marginRight: 28,
+  marginTop: 140,
+  fontSize: 22,
+  fill: "#000000",
+  fillOpacity: 0.45,
+  border: "#FFFFFF",
+  borderWidth: 1.5,
+  textColor: "#FFFFFF",
+};
+
+/** Do końca filmu — libass rysuje zdarzenie tylko w czasie trwania wideo. */
+const BADGE_END_CS = 9 * 360_000 + 59 * 6_000 + 59 * 100 + 99;
+/** Warstwa nad napisami (te leżą na 0). */
+const BADGE_LAYER = 5;
+
+const badgeStyleLine = (spec: AiBadgeSpec) =>
+  [
+    "AiBadge",
+    "Inter",
+    spec.fontSize,
+    assColor(spec.textColor),
+    assColor(spec.textColor),
+    assColor(spec.border),
+    assColor("#000000", 255),
+    -1,
+    0,
+    0,
+    0,
+    100,
+    100,
+    1,
+    0,
+    1,
+    0,
+    0,
+    7,
+    0,
+    0,
+    0,
+    1,
+  ].join(",");
+
+/** Zaokrąglony prostokąt w poleceniach rysowania ASS (0,0 = lewy górny róg). */
+function roundedRectPath(w: number, h: number, r: number): string {
+  const n = (v: number) => Math.round(v * 100) / 100;
+  const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+  return [
+    `m ${n(rr)} 0`,
+    `l ${n(w - rr)} 0`,
+    `b ${n(w)} 0 ${n(w)} 0 ${n(w)} ${n(rr)}`,
+    `l ${n(w)} ${n(h - rr)}`,
+    `b ${n(w)} ${n(h)} ${n(w)} ${n(h)} ${n(w - rr)} ${n(h)}`,
+    `l ${n(rr)} ${n(h)}`,
+    `b 0 ${n(h)} 0 ${n(h)} 0 ${n(h - rr)}`,
+    `l 0 ${n(rr)}`,
+    `b 0 0 0 0 ${n(rr)} 0`,
+  ].join(" ");
+}
+
+/** Dwa zdarzenia znaczka: pigułka (rysunek) i napis na jej środku. */
+export function aiBadgeEvents(
+  dims: AssDimensions = DEFAULT_ASS_DIMENSIONS,
+  spec: AiBadgeSpec = AI_BADGE,
+): string[] {
+  const x = dims.width - spec.marginRight - spec.width;
+  const y = spec.marginTop;
+  const cx = Math.round(x + spec.width / 2);
+  const cy = Math.round(y + spec.height / 2);
+  const fillAlpha = hex2((1 - spec.fillOpacity) * 255).toUpperCase();
+  const end = assTime(BADGE_END_CS);
+  const shape =
+    `{\\an7\\pos(${x},${y})\\p1\\1c&H${assBgr(spec.fill)}&\\1a&H${fillAlpha}&` +
+    `\\3c&H${assBgr(spec.border)}&\\3a&H40&\\bord${spec.borderWidth}\\shad0}` +
+    `${roundedRectPath(spec.width, spec.height, spec.radius)}{\\p0}`;
+  const label =
+    `{\\an5\\pos(${cx},${cy})\\fnInter\\fs${spec.fontSize}\\b1\\fsp1` +
+    `\\1c&H${assBgr(spec.textColor)}&\\bord0\\shad0}${escapeAss(spec.text)}`;
+  return [
+    `Dialogue: ${BADGE_LAYER},${assTime(0)},${end},AiBadge,,0,0,0,,${shape}`,
+    `Dialogue: ${BADGE_LAYER + 1},${assTime(0)},${end},AiBadge,,0,0,0,,${label}`,
+  ];
+}
+
+export type AssOptions = {
+  /** Dorysuj znaczek „AI" w rogu (przez cały film). */
+  aiBadge?: boolean;
+};
+
+function assDocument(opts: {
+  comment: string;
+  dims: AssDimensions;
+  styles: string[];
+  events: string[];
+}): string {
+  return [
+    "[Script Info]",
+    `; ${opts.comment}`,
+    "ScriptType: v4.00+",
+    `PlayResX: ${opts.dims.width}`,
+    `PlayResY: ${opts.dims.height}`,
+    "WrapStyle: 2",
+    "ScaledBorderAndShadow: yes",
+    "YCbCr Matrix: None",
+    "",
+    "[V4+ Styles]",
+    "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+    ...opts.styles.map((s) => `Style: ${s}`),
+    "",
+    "[Events]",
+    "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+    ...opts.events,
+    "",
+  ].join("\n");
+}
+
 /**
- * Buduje plik ASS: nagłówek z kadrem, jeden styl `Cap` i zdarzenia. Kwestie
- * powinny być już pocięte (`chunkCues`) — `WrapStyle: 2` wyłącza łamanie
- * po stronie libass, żeby wiersze wyglądały dokładnie tak, jak je policzyliśmy.
+ * Plik ASS z samym znaczkiem „AI" — do wideo, które ma już napisy HeyGena
+ * albo nie ma ich wcale; usługa wypalania dokłada wtedy tylko znaczek.
+ */
+export function aiBadgeAss(dims: AssDimensions = DEFAULT_ASS_DIMENSIONS): string {
+  return assDocument({
+    comment: "Finance You — znaczek AI",
+    dims,
+    styles: [badgeStyleLine(AI_BADGE)],
+    events: aiBadgeEvents(dims),
+  });
+}
+
+/**
+ * Buduje plik ASS: nagłówek z kadrem, styl `Cap` i zdarzenia (plus znaczek
+ * „AI", gdy `aiBadge`). Kwestie powinny być już pocięte (`chunkCues`) —
+ * `WrapStyle: 2` wyłącza łamanie po stronie libass, żeby wiersze wyglądały
+ * dokładnie tak, jak je policzyliśmy.
  */
 export function buildAss(
   cues: SrtCue[],
   style: CaptionStyle,
   dims: AssDimensions = DEFAULT_ASS_DIMENSIONS,
+  opts: AssOptions = {},
 ): string {
   const primaryBgr = assBgr(style.color);
   const highlightBgr = style.highlight ? assBgr(style.highlight) : null;
@@ -444,25 +674,12 @@ export function buildAss(
       .join("\\N");
     events.push(dialogue(toCentis(cue.start), toCentis(cue.end), text));
   }
-  return [
-    "[Script Info]",
-    `; Finance You — napisy własne (styl: ${style.id})`,
-    "ScriptType: v4.00+",
-    `PlayResX: ${dims.width}`,
-    `PlayResY: ${dims.height}`,
-    "WrapStyle: 2",
-    "ScaledBorderAndShadow: yes",
-    "YCbCr Matrix: None",
-    "",
-    "[V4+ Styles]",
-    "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    `Style: ${styleLine(style)}`,
-    "",
-    "[Events]",
-    "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
-    ...events,
-    "",
-  ].join("\n");
+  return assDocument({
+    comment: `Finance You — napisy własne (styl: ${style.id})${opts.aiBadge ? " + znaczek AI" : ""}`,
+    dims,
+    styles: opts.aiBadge ? [styleLine(style), badgeStyleLine(AI_BADGE)] : [styleLine(style)],
+    events: opts.aiBadge ? [...events, ...aiBadgeEvents(dims)] : events,
+  });
 }
 
 /**
@@ -474,11 +691,15 @@ export function srtToAss(
   srt: string,
   styleId: CustomCaptionStyleId,
   dims: AssDimensions = DEFAULT_ASS_DIMENSIONS,
+  opts: AssOptions = {},
 ): string | null {
   const style = CUSTOM_CAPTION_STYLES[styleId];
-  const cues = chunkCues(parseSrt(srt), { maxChars: style.maxChars, maxLines: style.maxLines });
+  const cues = chunkCues(parseSubtitles(srt), {
+    maxChars: style.maxChars,
+    maxLines: style.maxLines,
+  });
   if (!cues.length) return null;
-  return buildAss(cues, style, dims);
+  return buildAss(cues, style, dims, opts);
 }
 
 // ── Podgląd w panelu ────────────────────────────────────────────────────────

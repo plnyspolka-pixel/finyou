@@ -19,7 +19,7 @@
 //   * „przebitki AI" (applyScenePlan) — AI wskazuje, KTÓRE segmenty
 //     zilustrować; reszta zostaje na awatarze,
 //   * „struktura rolki" (planReelStructure) — stały rytm
-//     ujęcie → wizual hook → przebitka → a-roll KOLEJNEGO domyślnego awatara.
+//     ujęcie → przebitka → a-roll KOLEJNEGO domyślnego awatara.
 //     Tu AI nie decyduje już gdzie ciąć, tylko czym zilustrować.
 //
 // ZASADA: tekst mówiony dzielimy DETERMINISTYCZNIE (zdaniami). AI dostaje
@@ -31,8 +31,16 @@
 export const MAX_SCENES = 6;
 /** Minimalna liczba scen, żeby w ogóle było co urozmaicać. */
 export const MIN_SCENES_FOR_BROLL = 3;
+/**
+ * Ile twarzy domyślnie w jednej rolce: prowadzący + jeden partner z zestawu
+ * domyślnych (dobierany rotacyjnie). Dwie twarze dają zmianę rozmówcy bez
+ * chaosu w 30–60 s; resztę zestawu obsługują kolejne rolki.
+ */
+export const AVATARS_PER_REEL = 2;
+/** Górny limit twarzy w rolce — tyle, ile mieści zestaw domyślnych. */
+export const MAX_AVATARS_PER_REEL = 6;
 
-export type SceneKind = "avatar" | "broll" | "hook";
+export type SceneKind = "avatar" | "broll";
 
 export type ScenePlanItem = {
   kind: SceneKind;
@@ -41,7 +49,7 @@ export type ScenePlanItem = {
   /** Angielska fraza do banku/stocku — tylko dla `broll`. */
   query: string | null;
   /**
-   * Awatar, który mówi tę scenę. Dla `broll`/`hook` trzymamy tu awatara,
+   * Awatar, który mówi tę scenę. Dla `broll` trzymamy tu awatara,
    * na którego scena spadnie, gdy grafiki zabraknie — dzięki temu awaria
    * przebitki nie wybija rotacji a-rolli z rytmu.
    */
@@ -129,19 +137,19 @@ export function applyScenePlan(
 }
 
 /**
- * Stały rytm rolki po pierwszym ujęciu — dokładnie ten, o który chodzi
- * w strukturze: ujęcie → wizual hook → przebitka → a-roll innego awatara.
+ * Stały rytm rolki po pierwszym ujęciu: przebitka → a-roll innego awatara.
+ * (Wizual hooki — pełnoekranowe „efekty" po pierwszym zdaniu — wyleciały:
+ * obraz przechodzi wyłącznie na b-rolle ilustrujące treść.)
  */
-export const REEL_CYCLE: SceneKind[] = ["hook", "broll", "avatar"];
+export const REEL_CYCLE: SceneKind[] = ["broll", "avatar"];
 
 /**
  * STRUKTURA ROLKI (tryb „struktura", w odróżnieniu od trybu, w którym miejsca
  * przebitek wskazuje AI):
  *
  *   0. ujęcie z pierwszym domyślnym awatarem — hook mówi twarz,
- *   1. wizual hook — pełnoekranowy efekt, który zatrzymuje kciuk,
- *   2. przebitka (b-roll) ilustrująca treść,
- *   3. a-roll KOLEJNEGO domyślnego awatara — zmiana twarzy resetuje uwagę,
+ *   1. przebitka (b-roll) ilustrująca treść,
+ *   2. a-roll KOLEJNEGO domyślnego awatara — zmiana twarzy resetuje uwagę,
  *   … i tak w kółko, a ostatnia scena (CTA) zawsze wraca na awatara.
  *
  * Rytm jest deterministyczny — AI nie decyduje już GDZIE ciąć, tylko CZYM
@@ -180,9 +188,12 @@ export function planReelStructure(
   return items;
 }
 
-/** Ile scen planu czeka na grafikę (przebitki + wizual hooki). */
+/**
+ * Ile scen planu czeka na grafikę. Liczymy wszystko poza awatarem — stare
+ * joby w bazie mogą jeszcze mieć sceny `hook` sprzed usunięcia wizual hooków.
+ */
 export function visualSceneCount(items: ScenePlanItem[]): number {
-  return items.filter((i) => i.kind === "broll" || i.kind === "hook").length;
+  return items.filter((i) => i.kind !== "avatar").length;
 }
 
 /** Awatary faktycznie użyte w planie, w kolejności wejścia na ekran. */
@@ -196,7 +207,7 @@ export function avatarsInPlan(items: ScenePlanItem[]): string[] {
 
 /** Czy plan w ogóle coś zmienia względem jednego ujęcia gadającej głowy. */
 export function planHasBroll(items: ScenePlanItem[]): boolean {
-  return items.some((i) => i.kind === "broll" || i.kind === "hook");
+  return items.some((i) => i.kind !== "avatar");
 }
 
 /** Scena gotowa do wysłania — z podpiętym audio i (dla przebitki) grafiką. */
@@ -253,12 +264,10 @@ export function buildStudioScenes(
 
 /** Krótkie podsumowanie planu do panelu („3 ujęcia + 2 przebitki"). */
 export function describeScenePlan(items: ScenePlanItem[]): string {
-  const broll = items.filter((i) => i.kind === "broll").length;
-  const hooks = items.filter((i) => i.kind === "hook").length;
-  const avatar = items.length - broll - hooks;
+  const broll = items.filter((i) => i.kind !== "avatar").length;
+  const avatar = items.length - broll;
   const parts = [`${avatar} ${avatar === 1 ? "ujęcie" : "ujęcia"} z awatarem`];
   if (broll) parts.push(`${broll} ${broll === 1 ? "przebitka" : "przebitki"}`);
-  if (hooks) parts.push(`${hooks} ${hooks === 1 ? "wizual hook" : "wizual hooki"}`);
   const faces = avatarsInPlan(items).length;
   const summary = parts.join(" + ");
   return faces > 1 ? `${summary} (${faces} awatary)` : summary;

@@ -375,6 +375,9 @@ export const publishYoutubeQueueItemNow = defineTool({
             ok: true,
             video_id: r.videoId,
             url: r.videoId ? `https://www.youtube.com/watch?v=${r.videoId}` : null,
+            // Wideo jeszcze się kompresuje (video_renditions) — wpis został
+            // w kolejce, tick opublikuje go po zakończeniu.
+            preparing: !!r.preparing,
           })
         : fail(r.error ?? "Publikacja nie powiodła się.");
     }),

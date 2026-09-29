@@ -434,7 +434,7 @@ export const listStudioJobs = defineListTool({
     "Zadania studia wideo (awatar HeyGen + głos): status, tytuł publikacji, prompt, wideo, miniatura, platformy auto-publikacji, błąd. Tylko administrator/operator.",
   table: "studio_video_jobs",
   columns:
-    "id, status, publish_title, publish_privacy, prompt, avatar_id, voice_id, captions, video_url, thumbnail_url, auto_publish_platforms, auto_published_at, last_error, created_at, updated_at",
+    "id, status, publish_title, publish_privacy, prompt, avatar_id, avatar_ids, reel_structure, dynamic_scenes, voice_id, captions, video_url, thumbnail_url, auto_publish_platforms, auto_published_at, last_error, created_at, updated_at",
   resultKey: "jobs",
   access: "team",
   order: { column: "updated_at", ascending: false },
