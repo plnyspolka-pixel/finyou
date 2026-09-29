@@ -1,45 +1,36 @@
-// Cennik i zakres pakietów inwestora — JEDNO źródło prawdy dla panelu,
-// strony marketingowej, bramek serwerowych i testów.
+// Zakres dostępu inwestora — JEDNO źródło prawdy dla panelu, strony
+// marketingowej, bramek serwerowych i testów.
 //
-// Model (wrzesień 2026):
-//  • PODSTAWOWY — 0 zł. Inwestor przechodzi pipeline (dane pożyczkodawcy →
-//    rachunek spłaty → KYC Didit → screening sankcyjny → pakiet umów) i składa
-//    Zlecenie poszukiwania okazji. Znalezioną okazję kupuje pojedynczo:
-//    wyłączność na zdecydowanego klienta + raport o inwestycji + zaakceptowany
-//    przez pożyczkobiorcę harmonogram + dane kontaktowe + generator umowy.
-//  • PRO — 3 000 zł / 6 miesięcy + 5% od kwoty udzielonej pożyczki. To samo co
-//    w Podstawowym, bez opłat za pojedyncze okazje, plus Akademia inwestora,
-//    kalkulator compliance, moduł AML, windykacja AI, nielimitowane pełne
-//    raporty i pierwszeństwo wyboru ofert.
-//
-// UWAGA PRAWNA: opłata sukcesu 5% wymaga Umowy ramowej w wersji v6 (§ 7
-// dopuszcza odpłatność Pakietu PRO). Dla v5 usługa jest dla Inwestora
-// nieodpłatna — patrz docs/cennik-inwestora.md.
+// Model (wrzesień 2026, Umowa ramowa v7):
+//  • Usługa Finance You dla Inwestora jest NIEODPŁATNA. Nie ma Pakietu PRO,
+//    Opłaty Sukcesu ani opłaty za pojedynczą okazję. Inwestor przechodzi
+//    pipeline (dane pożyczkodawcy → rachunek spłaty → KYC Didit → screening
+//    sankcyjny → pakiet umów) i składa Zlecenie; Projekty dopasowane do
+//    przyjętego Zlecenia widzi bez opłat, razem z raportem, harmonogramem
+//    zaakceptowanym przez Klienta, danymi kontaktowymi i generatorem umowy.
+//  • Jedyną opłatą w systemie jest Prowizja Klientowska Finance You
+//    (7 % Kwoty Udzielonej, min 5 000 zł, bez VAT) obciążająca KLIENTA —
+//    patrz src/lib/contract-engine/fees.ts.
+//  • Abonament za dostęp do systemu — W PRZYSZŁOŚCI. Infrastruktura
+//    access_products / access_entitlements zostaje; produkty inwestora są
+//    nieaktywne, a `investor_tier()` zwraca zawsze 'podstawowy'.
 
-export type InvestorTier = "podstawowy" | "pro";
+/** Jedyny poziom dostępu inwestora. Typ zostaje dla zgodności sygnatur. */
+export type InvestorTier = "podstawowy";
 
-/** Kody produktów w katalogu `access_products`. */
+/** Kody produktów historycznych w katalogu `access_products` (nieaktywne). */
 export const PRODUCT_PRO_180D = "investor_pro_180d";
 export const PRODUCT_OKAZJA_UNLOCK = "investor_okazja_unlock";
 
-/** Pakiet PRO: 3 000 zł brutto za 180 dni (6 miesięcy). */
-export const PRO_PRICE_GROSZ = 300_000;
-export const PRO_DURATION_DAYS = 180;
+/** Opłata sukcesu: ZNIESIONA (0 punktów bazowych). */
+export const SUCCESS_FEE_BPS = 0;
 
-/** Opłata sukcesu PRO: 5% kwoty udzielonej pożyczki (punkty bazowe). */
-export const SUCCESS_FEE_BPS = 500;
-
-/** Pakiet Podstawowy: cena odblokowania jednej okazji (brutto). */
-export const UNLOCK_PRICE_GROSZ = 150_000;
-
-/** 5% od kwoty udzielonej pożyczki, zaokrąglone do pełnych groszy. */
-export function successFeeGrosz(loanAmountPln: number, bps: number = SUCCESS_FEE_BPS): number {
-  if (!Number.isFinite(loanAmountPln) || loanAmountPln <= 0) return 0;
+/** Kwota opłaty sukcesu — zawsze 0 (funkcja zostaje dla rozliczeń historycznych). */
+export function successFeeGrosz(_loanAmountPln: number, bps: number = SUCCESS_FEE_BPS): number {
   if (!Number.isFinite(bps) || bps <= 0) return 0;
-  return Math.round((loanAmountPln * 100 * bps) / 10_000);
+  return 0;
 }
 
-/** 5% od kwoty udzielonej pożyczki w złotych (2 miejsca po przecinku). */
 export function successFeePln(loanAmountPln: number, bps: number = SUCCESS_FEE_BPS): number {
   return successFeeGrosz(loanAmountPln, bps) / 100;
 }
@@ -49,72 +40,54 @@ export function successFeePln(loanAmountPln: number, bps: number = SUCCESS_FEE_B
 export type InvestorFeature =
   | "zlecenia"
   | "kyc_screening"
-  | "okazja_platna"
+  | "projekty"
   | "generator_umowy"
   | "raport_inwestycyjny"
   | "harmonogram_zaakceptowany"
   | "dane_kontaktowe"
+  | "analityka"
   | "akademia"
   | "kalkulator_compliance"
   | "aml"
   | "windykacja_ai"
-  | "raporty_bez_limitu"
-  | "pierwszenstwo_ofert";
+  | "raporty_bez_limitu";
 
 export const FEATURE_LABELS: Record<InvestorFeature, string> = {
-  zlecenia: "Składanie Zleceń poszukiwania okazji",
+  zlecenia: "Składanie Zleceń poszukiwania Projektów",
   kyc_screening: "KYC (Didit) i screening list sankcyjnych",
-  okazja_platna: "Zakup okazji na wyłączność (opłata za okazję)",
+  projekty: "Projekty dopasowane do przyjętego Zlecenia — bez opłat",
   generator_umowy: "Generator umowy pożyczki",
   raport_inwestycyjny: "Raport o inwestycji",
-  harmonogram_zaakceptowany: "Harmonogram zaakceptowany przez pożyczkobiorcę",
-  dane_kontaktowe: "Dane kontaktowe pożyczkobiorcy",
+  harmonogram_zaakceptowany: "Harmonogram zaakceptowany przez Klienta",
+  dane_kontaktowe: "Dane kontaktowe Klienta po akceptacji Karty Leada",
+  analityka: "Analityka: KW, właściciele, analiza KW, ocena ryzyka",
   akademia: "Akademia inwestora",
   kalkulator_compliance: "Kalkulator compliance",
   aml: "Moduł AML",
   windykacja_ai: "Moduł windykacji AI",
   raporty_bez_limitu: "Nielimitowana liczba pełnych raportów",
-  pierwszenstwo_ofert: "Pierwszeństwo wyboru ofert",
 };
 
-/** Funkcje bazowe — dostępne w każdym pakiecie (także darmowym). */
-const BASE_FEATURES: InvestorFeature[] = [
-  "zlecenia",
-  "kyc_screening",
-  "okazja_platna",
-  "generator_umowy",
-  "raport_inwestycyjny",
-  "harmonogram_zaakceptowany",
-  "dane_kontaktowe",
-];
-
-/** Funkcje wyłącznie dla PRO. */
-export const PRO_ONLY_FEATURES: InvestorFeature[] = [
-  "akademia",
-  "kalkulator_compliance",
-  "aml",
-  "windykacja_ai",
-  "raporty_bez_limitu",
-  "pierwszenstwo_ofert",
-];
+/** Wszystkie funkcje — dostępne dla każdego zweryfikowanego inwestora. */
+export const ALL_FEATURES: InvestorFeature[] = Object.keys(FEATURE_LABELS) as InvestorFeature[];
 
 export const TIER_FEATURES: Record<InvestorTier, InvestorFeature[]> = {
-  podstawowy: BASE_FEATURES,
-  pro: [...BASE_FEATURES, ...PRO_ONLY_FEATURES],
+  podstawowy: ALL_FEATURES,
 };
 
-export function tierHasFeature(tier: InvestorTier, feature: InvestorFeature): boolean {
-  return TIER_FEATURES[tier].includes(feature);
+/** Bez paywalli: każdy inwestor ma każdą funkcję. */
+export function tierHasFeature(_tier: InvestorTier, feature: InvestorFeature): boolean {
+  return ALL_FEATURES.includes(feature);
 }
 
-/** Najniższy pakiet, który daje daną funkcję. */
-export function requiredTier(feature: InvestorFeature): InvestorTier {
-  return PRO_ONLY_FEATURES.includes(feature) ? "pro" : "podstawowy";
+/** Najniższy (i jedyny) poziom dający daną funkcję. */
+export function requiredTier(_feature: InvestorFeature): InvestorTier {
+  return "podstawowy";
 }
 
-/** Czy okazję trzeba wykupić osobno (Podstawowy), czy jest w pakiecie (PRO). */
-export function needsUnlockPayment(tier: InvestorTier): boolean {
-  return tier !== "pro";
+/** Okazji nie trzeba wykupywać — nigdy. */
+export function needsUnlockPayment(_tier: InvestorTier): boolean {
+  return false;
 }
 
 export interface TierPresentation {
@@ -127,39 +100,29 @@ export interface TierPresentation {
   note: string;
 }
 
-/** Opis pakietów do UI (panel + strona marketingowa) — bez duplikowania tekstów. */
+/** Jeden pakiet „Dostęp inwestora" — 0 zł. Do UI (panel + strona marketingowa). */
+export const ACCESS_PRESENTATION: TierPresentation = {
+  tier: "podstawowy",
+  name: "Dostęp inwestora",
+  priceLabel: "0 zł",
+  periodLabel: "/ usługa nieodpłatna dla Inwestora",
+  tagline:
+    "Składasz Zlecenie, my szukamy Projektów. Nie płacisz nic — Prowizja Klientowska obciąża Klienta i jest potrącana z wypłaty.",
+  bullets: [
+    "Pełny pipeline: dane pożyczkodawcy, rachunek spłaty, KYC i screening sankcyjny",
+    "Akceptacja pakietu umów online",
+    "Składanie Zleceń poszukiwania Projektów",
+    "Projekty dopasowane do Zlecenia: raport o inwestycji, harmonogram zaakceptowany przez Klienta i dane kontaktowe",
+    "Generator umowy pożyczki",
+    "Analityka: KW, właściciele, analiza KW, ocena ryzyka",
+    "Akademia inwestora i kalkulator compliance",
+    "Moduł AML i moduł windykacji AI",
+    "Nielimitowana liczba pełnych raportów",
+  ],
+  note: "Usługa Finance You dla Inwestora jest nieodpłatna (Umowa ramowa § 2 i § 7). Abonament za dostęp do systemu jest planowany — wymagać będzie nowej wersji umowy.",
+};
+
+/** Zgodność wsteczna dla miejsc iterujących po pakietach. */
 export const TIER_PRESENTATION: Record<InvestorTier, TierPresentation> = {
-  podstawowy: {
-    tier: "podstawowy",
-    name: "Podstawowy",
-    priceLabel: "0 zł",
-    periodLabel: "/ konto bez opłat stałych",
-    tagline: "Składasz Zlecenie, my szukamy okazji. Płacisz tylko za okazję, którą bierzesz.",
-    bullets: [
-      "Pełny pipeline: dane pożyczkodawcy, rachunek spłaty, KYC i screening sankcyjny",
-      "Automatyczne wypełnienie i podpisanie pakietu umów",
-      "Składanie Zleceń poszukiwania okazji",
-      "Zakup okazji na wyłączność: zdecydowany klient, raport o inwestycji, harmonogram zaakceptowany przez pożyczkobiorcę i dane kontaktowe",
-      "Generator umowy pożyczki",
-    ],
-    note: "Opłata za odblokowanie pojedynczej okazji zgodnie z aktualnym cennikiem w panelu.",
-  },
-  pro: {
-    tier: "pro",
-    name: "PRO",
-    priceLabel: "3 000 zł",
-    periodLabel: "/ 6 miesięcy + 5% od udzielonej pożyczki",
-    tagline: "Wszystko z pakietu Podstawowego bez opłat za okazje, plus pełny warsztat inwestora.",
-    bullets: [
-      "Wszystko z pakietu Podstawowego — okazje bez opłat jednostkowych",
-      "Analityka — pipeline analityczny okazji: KW, właściciele, analiza KW, ryzyko",
-      "Akademia inwestora",
-      "Kalkulator compliance",
-      "Moduł AML",
-      "Moduł windykacji AI",
-      "Nielimitowana liczba pełnych raportów",
-      "Pierwszeństwo wyboru ofert",
-    ],
-    note: "3 000 zł brutto za 180 dni dostępu oraz 5% kwoty udzielonej pożyczki płatne po jej uruchomieniu.",
-  },
+  podstawowy: ACCESS_PRESENTATION,
 };

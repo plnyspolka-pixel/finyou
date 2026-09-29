@@ -145,7 +145,7 @@ describe("przypadek końcowy zlecenia (a)", () => {
     expect(k1.sha256).toBe(k2.sha256);
     expect(Buffer.from(k1.bytes).equals(Buffer.from(k2.bytes))).toBe(true);
     expect(k1.wersjaBiblioteki).toBe(WERSJA_BIBLIOTEKI);
-    expect(WERSJA_BIBLIOTEKI).toBe("1.3");
+    expect(WERSJA_BIBLIOTEKI).toBe("1.4");
   });
 
   it("plik .docx ma komplet części pakietu (document, styles, relacje)", async () => {
@@ -240,7 +240,7 @@ describe("poprawki treści istniejącej (zgoda z 24.09.2026) i rachunek Finance 
   });
 });
 
-describe("biblioteka 1.3 — przypadek końcowy (a): JDG kobieta, hipoteka na kolejnym miejscu", () => {
+describe("biblioteka 1.4 — przypadek końcowy (a): JDG kobieta, hipoteka na kolejnym miejscu", () => {
   it("§ 1 ust. 3 — zakaz celu nieruchomościowego (domyślnie włączony)", async () => {
     const { tekst } = await komplet(przypadekA());
     expect(tekst).toContain(

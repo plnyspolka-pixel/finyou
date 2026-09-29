@@ -76,6 +76,8 @@ function acceptConsents() {
   fireEvent.click(screen.getByRole("checkbox", { name: /politykę prywatności/i }));
   fireEvent.click(screen.getByRole("checkbox", { name: /regulamin serwisu/i }));
   fireEvent.click(screen.getByRole("checkbox", { name: /kontakt marketingowy/i }));
+  // Bramka B2B: oświadczenie o celu gospodarczym jest wymagane.
+  fireEvent.click(screen.getByRole("checkbox", { name: /działalnością gospodarczą/i }));
 }
 
 function submitForm() {

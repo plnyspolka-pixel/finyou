@@ -64,6 +64,41 @@
       "when": 1790619537746,
       "tag": "0008_wind_oplaty_umowne",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790644556182,
+      "tag": "0009_etap0_bezpieczenstwo_teaserow",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790645009562,
+      "tag": "0010_etap1_inwestor_bez_oplat",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790645505209,
+      "tag": "0011_etap2_ltv_60",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790645922135,
+      "tag": "0012_etap3_zlecenia_limity",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790646381310,
+      "tag": "0013_etap4_statusy_wniosku",
+      "breakpoints": true
     }
   ]
 }

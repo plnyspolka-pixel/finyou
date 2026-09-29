@@ -7,6 +7,12 @@
 // wersjonowana i powiązana z konkretną wersją projektu. Złożenie propozycji
 // NIE jest zawarciem umowy pożyczki.
 import { createServerFn } from "@tanstack/react-start";
+import {
+  LTV_MAX,
+  maxCapitalRate,
+  maxRateMessage,
+  rateExceedsMax,
+} from "@/lib/contract-engine/fees";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
@@ -215,15 +221,9 @@ const proposalParamsSchema = z.object({
   validUntil: z.string().optional(),
 });
 
-/** Górny limit odsetek: odsetki maksymalne = 2 × (stopa referencyjna NBP + 3,5 p.p.). */
+/** Górny limit odsetek: odsetki maksymalne kapitałowe z tabeli `fees.ts` (jedno miejsce). */
 async function maxLegalInterestPercent(): Promise<number> {
-  try {
-    const { getNbpRatesCached } = await import("@/lib/nbp-rates.server");
-    const rates = await getNbpRatesCached();
-    return 2 * (rates.referenceRate + 3.5);
-  } catch {
-    return 2 * (5.75 + 3.5);
-  }
+  return maxCapitalRate();
 }
 
 async function validateProposal(
@@ -244,16 +244,15 @@ async function validateProposal(
     );
   }
   const maxRate = await maxLegalInterestPercent();
-  if (params.interestRatePercent > maxRate) {
-    errors.push(
-      `Oprocentowanie przekracza odsetki maksymalne (${maxRate.toFixed(2)}% w skali roku).`,
-    );
+  if (rateExceedsMax(params.interestRatePercent)) {
+    errors.push(maxRateMessage());
   }
+  void maxRate;
   if (params.commission > params.amount * 0.2) {
     errors.push("Prowizja przekracza dopuszczalny limit (20% kwoty pożyczki).");
   }
   const ltv = computeLtv(params.amount, Number(project.property_value) || null);
-  const ltvLimit = Math.min(settings.max_ltv_percent, investorMaxLtv ?? Infinity);
+  const ltvLimit = Math.min(settings.max_ltv_percent, LTV_MAX, investorMaxLtv ?? Infinity);
   if (ltv != null && ltv > ltvLimit) {
     errors.push(`LTV proponowanej kwoty (${ltv}%) przekracza limit ${ltvLimit}%.`);
   }

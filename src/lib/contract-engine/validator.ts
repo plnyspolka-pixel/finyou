@@ -12,6 +12,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { umowaSchema } from "./schema";
+import { maxRateMessage, rateExceedsMax } from "./fees";
 
 export type Poziom = "BLAD" | "OSTRZEZENIE";
 
@@ -405,27 +406,14 @@ export function walidujReguly(d: any): Problem[] {
       );
   }
 
-  // R29: docelowa rata końcowa — ostatnia rata harmonogramu musi jej równać się co do grosza
-  const docelowa = h.kwota_raty_koncowej_docelowa?.cyframi;
-  if (docelowa) {
-    if (h.typ !== "balonowy")
-      blad(
-        "warunki.harmonogram.kwota_raty_koncowej_docelowa",
-        "Docelowa rata końcowa dotyczy wyłącznie harmonogramu balonowego",
-      );
-    const raty: any[] = Array.isArray(h.raty) ? h.raty : [];
-    const cel = naLiczbeBezp(docelowa);
-    const ostatnia = raty.length ? naLiczbeBezp(raty[raty.length - 1].rata_razem) : null;
-    if (raty.length === 0)
-      blad(
-        "warunki.harmonogram.kwota_raty_koncowej_docelowa",
-        "Nie da się ułożyć harmonogramu z docelową ratą końcową przy podanym pułapie raty (kwota_raty) — raty regularne przekroczyłyby pułap albo rata końcowa bez prowizji już przekracza cel",
-      );
-    else if (cel !== null && ostatnia !== null && Math.abs(cel - ostatnia) > 0.004)
-      blad(
-        "warunki.harmonogram.raty",
-        `Ostatnia rata harmonogramu (${fmt(ostatnia)}) różni się od docelowej raty końcowej (${fmt(cel)})`,
-      );
+  // R29: oprocentowanie umowne ≤ odsetki maksymalne kapitałowe (art. 359 § 2¹ KC)
+  // — twarda blokada; szczegółowe błędy silnika (pułap raty) dolicza
+  // `problemySilnika` w umowa-agent-core.
+  const stopa = naLiczbeBezp(d.warunki?.oprocentowanie);
+  const mData = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(String(d.meta?.data_umowy ?? ""));
+  const dzien = mData ? `${mData[3]}-${mData[2]}-${mData[1]}` : new Date();
+  if (stopa !== null && rateExceedsMax(stopa, dzien)) {
+    blad("warunki.oprocentowanie", maxRateMessage(dzien));
   }
 
   // R30: rachunki — wypłata (Pożyczkobiorcy) i spłata (Pożyczkodawcy) muszą być podane

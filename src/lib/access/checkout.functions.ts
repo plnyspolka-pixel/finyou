@@ -14,10 +14,7 @@ import {
   type AccessAudience,
   type BuyerType,
 } from "./core";
-import {
-  decideInFlightUnlockPayment,
-  PENDING_UNLOCK_STALE_MINUTES,
-} from "./pending-unlock";
+import { decideInFlightUnlockPayment, PENDING_UNLOCK_STALE_MINUTES } from "./pending-unlock";
 
 // Wersje dokumentów prawnych akceptowanych na formularzu.
 // TODO(prawne): podmień na wersje zatwierdzone przez obsługę prawną.
@@ -106,10 +103,12 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     try {
-      if (isLegacyPlanId(data.productCode)) {
+      if (isLegacyPlanId(data.productCode) || data.productCode.startsWith("investor_")) {
+        // Usługa dla Inwestora jest nieodpłatna (Umowa ramowa v7) — produkty
+        // inwestora są nieaktywne; abonament za dostęp do systemu w przyszłości.
         return {
           error:
-            "Ten pakiet nie jest już dostępny w sprzedaży. Wybierz aktualny pakiet 30 lub 365 dni.",
+            "Ten pakiet nie jest już dostępny w sprzedaży. Dostęp inwestora jest bezpłatny; pośrednik wybiera pakiet 30 lub 365 dni.",
         };
       }
 

@@ -25,16 +25,124 @@ export const ACTIVE_MATCH_STATUSES: MatchStatus[] = [
   "rezerwacja",
 ];
 
-/** Rezerwacja: 24 h wyłączności + jednorazowe przedłużenie o 12 h (§ 5). */
+/** Statusy Dopasowania, w których inwestor widzi teaser Projektu (do
+ *  Transakcji włącznie — po zawarciu umowy Projekt nadal jest „jego"). */
+export const TEASER_VISIBLE_MATCH_STATUSES: MatchStatus[] = [
+  ...ACTIVE_MATCH_STATUSES,
+  "transakcja",
+];
+
+export interface OrderWithMatches {
+  id: string;
+  status: string;
+  investor_order_matches?: Array<{
+    id: string;
+    application_id: string;
+    project_ref: string | null;
+    status: string;
+    created_at: string;
+  }> | null;
+}
+
+export interface TeaserRef {
+  orderId: string;
+  matchId: string;
+  applicationId: string;
+  projectRef: string | null;
+  matchStatus: string;
+  createdAt: string;
+}
+
+/**
+ * Teasery WYŁĄCZNIE z Dopasowań do PRZYJĘTYCH Zleceń (§ 5 Umowy ramowej,
+ * decyzja nadrzędna nr 7). Zlecenia złożone/wygasłe/cofnięte nie dają
+ * żadnego teasera; bez Zlecenia — pusta lista. Najnowsze dopasowania pierwsze.
+ */
+export function teasersForAcceptedOrders(orders: OrderWithMatches[]): TeaserRef[] {
+  const out: TeaserRef[] = [];
+  for (const o of orders) {
+    if (o.status !== "przyjete") continue;
+    for (const m of o.investor_order_matches ?? []) {
+      if (!TEASER_VISIBLE_MATCH_STATUSES.includes(m.status as MatchStatus)) continue;
+      out.push({
+        orderId: o.id,
+        matchId: m.id,
+        applicationId: m.application_id,
+        projectRef: m.project_ref ?? null,
+        matchStatus: m.status,
+        createdAt: m.created_at,
+      });
+    }
+  }
+  return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/**
+ * Rezerwacja: 24 h wyłączności + jednorazowe przedłużenie o 12 h (§ 5).
+ * Wartości DOMYŚLNE — źródłem prawdy są `project_module_settings`
+ * (assignment_hours / extension_hours / max_active_assignments /
+ * max_extended_assignments / rejection_review_threshold), które server
+ * functions przekazują tu jako `OrderLimits`.
+ */
 export const RESERVATION_HOURS = 24;
 export const RESERVATION_EXTENSION_HOURS = 12;
 
-export function reservationDeadline(from: Date): Date {
-  return new Date(from.getTime() + RESERVATION_HOURS * 3600_000);
+export interface OrderLimits {
+  /** Godziny rezerwacji po Ujawnieniu. */
+  assignmentHours: number;
+  /** Godziny jednorazowego przedłużenia. */
+  extensionHours: number;
+  /** Maks. przyjętych Zleceń / aktywnych rezerwacji naraz. */
+  maxActive: number;
+  /** Maks. przedłużonych rezerwacji naraz. */
+  maxExtended: number;
+  /** Po tylu odrzuceniach Zlecenie wygasa. */
+  rejectionThreshold: number;
+  /** Maks. okres Finansowania w Zleceniu (miesiące). */
+  maxPeriodMonths: number;
 }
 
-export function extendedReservationDeadline(current: Date): Date {
-  return new Date(current.getTime() + RESERVATION_EXTENSION_HOURS * 3600_000);
+export const DEFAULT_ORDER_LIMITS: OrderLimits = {
+  assignmentHours: RESERVATION_HOURS,
+  extensionHours: RESERVATION_EXTENSION_HOURS,
+  maxActive: 5,
+  maxExtended: 2,
+  rejectionThreshold: 5,
+  maxPeriodMonths: 120,
+};
+
+/** Mapowanie wiersza project_module_settings → limity cyklu Zlecenia. */
+export function orderLimitsFromSettings(
+  s: {
+    assignment_hours?: number | null;
+    extension_hours?: number | null;
+    max_active_assignments?: number | null;
+    max_extended_assignments?: number | null;
+    rejection_review_threshold?: number | null;
+    max_period_months?: number | null;
+  } | null,
+): OrderLimits {
+  const n = (v: number | null | undefined, d: number) =>
+    Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : d;
+  return {
+    assignmentHours: n(s?.assignment_hours, DEFAULT_ORDER_LIMITS.assignmentHours),
+    extensionHours: n(s?.extension_hours, DEFAULT_ORDER_LIMITS.extensionHours),
+    maxActive: n(s?.max_active_assignments, DEFAULT_ORDER_LIMITS.maxActive),
+    maxExtended: n(s?.max_extended_assignments, DEFAULT_ORDER_LIMITS.maxExtended),
+    rejectionThreshold: n(s?.rejection_review_threshold, DEFAULT_ORDER_LIMITS.rejectionThreshold),
+    maxPeriodMonths: Math.min(120, n(s?.max_period_months, DEFAULT_ORDER_LIMITS.maxPeriodMonths)),
+  };
+}
+
+export function reservationDeadline(from: Date, hours: number = RESERVATION_HOURS): Date {
+  return new Date(from.getTime() + hours * 3600_000);
+}
+
+export function extendedReservationDeadline(
+  current: Date,
+  hours: number = RESERVATION_EXTENSION_HOURS,
+): Date {
+  return new Date(current.getTime() + hours * 3600_000);
 }
 
 /** Prowizja Klientowska: 7% kwoty Finansowania, nie mniej niż 5000 zł

@@ -679,7 +679,23 @@ export function zbudujFakty(d: any): Record<string, any> {
     !!f.ma_uchwaly_do_przedlozenia ||
     f.ma_splaty_wierzycieli;
 
+  // Prowizja Klientowska Finance You — potrącana z wypłaty (Zał. 4 do Umowy
+  // = Zał. 6 do Umowy ramowej FY): pierwsza transza na rachunek FY.
+  const prowFY = d.warunki?.prowizja_finance_you?.kwota?.cyframi;
+  f.ma_prowizje_fy = !!prowFY && prowFY !== "0,00";
+  f.prowizja_fy_cyframi = prowFY ?? "0,00";
+  f.rachunek_fy = d.warunki?.rachunki?.finance_you ?? "";
+
   const transze: any[] = [];
+  if (f.ma_prowizje_fy) {
+    transze.push({
+      kwota: prowFY,
+      opis:
+        `na rachunek Finance You sp. z o.o. nr ${f.rachunek_fy || "wskazany w Załączniku nr 4"}, ` +
+        `tytułem Prowizji Klientowskiej Finance You potrącanej z wypłaty zgodnie z dyspozycją ` +
+        `${f.pb_dop} (Załącznik nr 4); przelew ten stanowi wypłatę odpowiedniej części Kwoty Pożyczki ${f.pb_cel}`,
+    });
+  }
   if (f.ma_splaty_wierzycieli) {
     for (const o of f.obciazenia_splata_ze_srodkow) {
       const kw = o.kwota_splaty;
@@ -693,9 +709,11 @@ export function zbudujFakty(d: any): Record<string, any> {
           `a Pożyczkodawca przekaz ten przyjmuje`,
       });
     }
+  }
+  if (f.ma_prowizje_fy || f.ma_splaty_wierzycieli) {
     transze.push({
       kwota: "pozostała część Kwoty Pożyczki",
-      opis: `na rachunek bankowy Pożyczkobiorcy nr ${d.warunki.rachunki.wyplata}`,
+      opis: `na rachunek bankowy ${f.pb_dop} nr ${d.warunki.rachunki.wyplata}`,
     });
   }
   f.wyplata_transze = transze;

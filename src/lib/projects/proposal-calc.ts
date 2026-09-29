@@ -4,6 +4,7 @@
 // prowizja w ratach, balon = ostatnia rata). Server function przelicza te same
 // dane ponownie przed zapisem propozycji.
 import { buildEngineSchedule } from "@/lib/contract-engine/loan-schedule";
+import { fyCommission } from "@/lib/contract-engine/fees";
 import { computeLtv } from "./risk";
 
 export interface ProposalParams {
@@ -78,6 +79,8 @@ export function computeProposal(
   const schedule = buildEngineSchedule({
     kwotaPozyczki: amount,
     prowizja: Math.max(0, params.commission),
+    // Prowizja Finance You potrącana z wypłaty (poza ratami) — koszt Klienta.
+    prowizjaFY: fyCommission(amount),
     annualRatePercent: params.interestRatePercent,
     months: params.periodMonths,
     maxMonthlyPayment: cap,
@@ -96,6 +99,8 @@ export function computeProposal(
     );
   }
   for (const w of schedule.warnings ?? []) warnings.push(w);
+  // Błędy silnika (stopa > max, pułap raty) — walidacja serwerowa blokuje zapis.
+  for (const e of schedule.errors ?? []) warnings.push(`BŁĄD: ${e}`);
 
   return {
     monthlyPayment: schedule.regularPayment,

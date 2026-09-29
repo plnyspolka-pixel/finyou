@@ -5,10 +5,10 @@ import { LOAN_STATUS_SHORT_LABELS, loanStatusLabel } from "./loan-status";
 // Status wniosku pożyczkowego — JEDNO źródło prawdy w `loan-status.ts`
 // (zsynchronizowane z enumem `public.loan_status`).
 // Proxy ujednolica statusy w całym serwisie: odczyt po dowolnym (także starym)
-// kodzie zwraca kanoniczną etykietę — np. `wyslany_do_inwestorow` → „Szukamy
-// inwestora / oferta" — więc żadne UI nie pokaże surowego, starego statusu.
-// Iteracja (Object.entries/keys — używana w dropdownach) widzi tylko 9
-// kanonicznych kluczy, bez zduplikowanych aliasów.
+// kodzie zwraca kanoniczną etykietę — np. `szukamy_inwestora` → „Wysłany do
+// inwestorów" — więc żadne UI nie pokaże surowego, starego statusu.
+// Iteracja (Object.entries/keys — używana w dropdownach) widzi tylko
+// kanoniczne klucze (LOAN_STATUS_ORDER), bez zduplikowanych aliasów.
 export const loanStatusLabels: Record<string, string> = new Proxy(LOAN_STATUS_SHORT_LABELS, {
   get(target, prop) {
     if (typeof prop === "string" && !(prop in target)) return loanStatusLabel(prop);

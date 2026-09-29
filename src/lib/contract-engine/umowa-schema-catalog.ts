@@ -12,9 +12,9 @@ STRONA (pozyczkodawca; pozyczkobiorca może być tablicą 1–6 stron):
 porecziciel?: jak strona + zakres_odpowiedzialnosci? ("rzeczowa"|"rzeczowa_i_osobista") + zgoda_malzonka? { na_hipoteke, na_poreczenie }
 
 warunki: {
-  kwota_pozyczki {cyframi}, prowizja { kwota {cyframi}, model? ("nie_potracana_raty" domyślnie | "potracana_z_wyplaty") },
+  kwota_pozyczki {cyframi} (Kwota Udzielona), prowizja { kwota {cyframi} — STAŁA prowizja inwestora rozłożona w ratach, model? ("nie_potracana_raty" domyślnie | "potracana_z_wyplaty") }, prowizja_finance_you? { kwota {cyframi} } (Prowizja Klientowska Finance You: 7 % Kwoty Udzielonej, min 5 000 zł, bez VAT — potrącana z wypłaty: inwestor przelewa ją na rachunek FY, resztę Pożyczkobiorcy; domyślnie wyliczana przez fees.ts),
   oprocentowanie (string, JEDNO miejsce po przecinku, np. "15,5"), cel (min. 5 znaków), zakaz_celu_nieruchomosciowego? (bool; domyślnie true — § 1 ust. 3 zakazuje przeznaczenia pożyczki na zakup, remont lub spłatę zobowiązań dotyczących nieruchomości; domyślnie false, gdy pożyczka spłaca wierzycieli hipotecznych),
-  harmonogram { liczba_rat (1–360), typ ("balonowy"|"rowne_raty"|"malejace"), data_pierwszej_raty "DD.MM.RRRR", dzien_miesiaca (1–28), kwota_raty? {cyframi} (przy typie balonowym = pułap raty miesięcznej — WYMAGANA do policzenia rat), kwota_raty_koncowej_docelowa? {cyframi} (tylko balonowy: docelowa ostatnia rata, np. kapitał + pułap — silnik sam dobierze prowizję do grosza i nadpisze warunki.prowizja.kwota) },
+  harmonogram { liczba_rat (1–360), typ ("balonowy"|"rowne_raty"|"malejace"), data_pierwszej_raty "DD.MM.RRRR", dzien_miesiaca (1–28), kwota_raty? {cyframi} (przy typie balonowym = pułap raty miesięcznej — WYMAGANA do policzenia rat) },
   rachunki { wyplata (nr rachunku pożyczkobiorcy), splata (nr rachunku pożyczkodawcy; gdy pożyczkodawcą jest Finance You i pole jest puste, system wstawi 56 1090 2590 0000 0001 5708 1371) }
 }
 

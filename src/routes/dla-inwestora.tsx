@@ -17,10 +17,9 @@ import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/m
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
 import { ChatWidget } from "@/components/landing/chat-widget";
 import { LoanCalculator } from "@/components/loan-calculator";
-import { LeadsTable } from "@/routes/embed.leady";
+import { ExampleProjectsSection } from "@/components/landing/example-projects-section";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import type { AccessProduct } from "@/lib/access/core";
-import { fetchPublicLeads, type PublicLead } from "@/lib/public-leads.functions";
 import { getLandingInvestorVideo } from "@/lib/landing-video.functions";
 import {
   LANDING_INVESTOR_VIDEO,
@@ -58,14 +57,6 @@ async function loadInvestorProducts(): Promise<AccessProduct[]> {
 }
 
 // Okazje ładowane bezpośrednio (bez iframe) — odporne na brak bazy podczas SSR.
-async function loadPublicLeads(): Promise<PublicLead[]> {
-  try {
-    return await fetchPublicLeads();
-  } catch {
-    return [];
-  }
-}
-
 // Kroki pipeline'u pokazywane na stronie — ta sama kolejność co w panelu
 // (src/lib/investor-plan/pipeline.ts).
 const PIPELINE_STEPS: { n: number; t: string; d: string; hue: number }[] = [
@@ -127,12 +118,8 @@ const PIPELINE_STEPS: { n: number; t: string; d: string; hue: number }[] = [
 
 export const Route = createFileRoute("/dla-inwestora")({
   loader: async () => {
-    const [products, leads, video] = await Promise.all([
-      loadInvestorProducts(),
-      loadPublicLeads(),
-      loadLandingVideo(),
-    ]);
-    return { products, leads, video };
+    const [products, video] = await Promise.all([loadInvestorProducts(), loadLandingVideo()]);
+    return { products, video };
   },
   head: () => ({
     meta: [
@@ -610,9 +597,9 @@ function CalculatorSection() {
   );
 }
 
-// Panel z okazjami renderowany bezpośrednio (bez iframe), na całą szerokość
-// strony — tylko lekki padding boczny, bez ograniczenia max-width.
-function LeadsSection({ leads }: { leads: PublicLead[] }) {
+// Przykładowe projekty (ilustracja) — bez logowania nie pokazujemy żadnych
+// prawdziwych wniosków (decyzja nadrzędna nr 7). Dane syntetyczne, seed dzienny.
+function LeadsSection() {
   return (
     <section
       style={{
@@ -623,25 +610,21 @@ function LeadsSection({ leads }: { leads: PublicLead[] }) {
       }}
     >
       <Eyebrow tone="gold" style={{ letterSpacing: "0.24em" }}>
-        Ostatnie okazje inwestycyjne
+        Przykładowe projekty
       </Eyebrow>
       <div style={{ marginTop: "1.1rem" }}>
-        {leads.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-10 text-center text-sm text-slate-300">
-            Brak okazji do wyświetlenia.
-          </div>
-        ) : (
-          <LeadsTable leads={leads} />
-        )}
+        <ExampleProjectsSection />
       </div>
       <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "center" }}>
         <MktButton variant="outline" href={JOIN}>
-          <BrandIcon name="handCoins" size={16} /> Zobacz wszystkie okazje w aplikacji
+          <BrandIcon name="handCoins" size={16} /> Złóż Zlecenie i zobacz dopasowane Projekty
         </MktButton>
       </div>
       <ComplianceNote style={{ marginTop: "1.5rem" }}>
-        Przykładowe okazje o charakterze poglądowym. Dane nie stanowią oferty ani rekomendacji
-        inwestycyjnej. Inwestowanie wiąże się z ryzykiem utraty kapitału.
+        Przykładowe projekty mają charakter wyłącznie ilustracyjny — nie są prawdziwymi wnioskami,
+        nie stanowią oferty ani rekomendacji inwestycyjnej. Prawdziwe Projekty przedstawiamy
+        wyłącznie inwestorowi z przyjętym Zleceniem. Inwestowanie wiąże się z ryzykiem utraty
+        kapitału.
       </ComplianceNote>
     </section>
   );
@@ -752,7 +735,7 @@ function PipelineSection() {
   );
 }
 
-function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: AccessProduct[] }) {
+function InvestorTabs({ products }: { products: AccessProduct[] }) {
   const [active, setActive] = useState<InvestorTabKey>("oferty");
   const barRef = useRef<HTMLDivElement>(null);
 
@@ -832,7 +815,7 @@ function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: Acce
         </div>
       </div>
 
-      {active === "oferty" && <LeadsSection leads={leads} />}
+      {active === "oferty" && <LeadsSection />}
 
       {active === "pipeline" && <PipelineSection />}
 
@@ -916,14 +899,14 @@ function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: Acce
 }
 
 function InvestorLanding() {
-  const { products, leads, video } = Route.useLoaderData();
+  const { products, video } = Route.useLoaderData();
   return (
     <MarketingShell page="inwestor" sticky={{ label: "Dołącz do Klubu", href: JOIN }}>
       <Hero video={video} />
 
       <CalculatorSection />
 
-      <InvestorTabs leads={leads} products={products} />
+      <InvestorTabs products={products} />
 
       <Section>
         <SectionHead

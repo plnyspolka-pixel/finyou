@@ -252,7 +252,7 @@ export function InvestorProposalCalculator({
           accepted_period_months: months,
           accepted_annual_rate: annualRate,
           accepted_max_monthly_payment: maxPayment || null,
-          status: "szukamy_inwestora",
+          status: "wniosek_kompletny",
         })
         .eq("id", loan.id);
       if (error) throw error;

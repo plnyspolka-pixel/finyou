@@ -161,8 +161,9 @@ function Hero() {
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Finance You łączy klientów szukających finansowania i prywatnych inwestorów w jednym
-            systemie: z CRM-em, AI, dokumentacją, szkoleniami i automatyzacją procesu.
+            Finance You łączy przedsiębiorców szukających finansowania i prywatnych inwestorów w
+            jednym systemie: z CRM-em, AI, dokumentacją, szkoleniami i automatyzacją procesu.
+            Finansowanie wyłącznie na cel związany z działalnością gospodarczą.
           </p>
           <div
             style={{

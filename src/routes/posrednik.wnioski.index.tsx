@@ -109,7 +109,7 @@ export function MojeWnioski() {
       .order("created_at", { ascending: false });
     query = isExternalBroker
       ? (query as any).eq("created_by_partner_user_id", user.id)
-      : query.eq("status", "szukamy_inwestora");
+      : query.eq("status", "wyslany_do_inwestorow");
     const { data } = await query;
     const all = (data as any as Row[]) ?? [];
     setRows(all);

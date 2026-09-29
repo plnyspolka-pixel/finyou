@@ -21,11 +21,13 @@ interface TinderDeckProps {
   /** Zwraca true, gdy serwer potwierdził decyzję (karta może zniknąć). */
   onDecision: (card: ProjectTeaser, decision: DeckDecision) => Promise<boolean>;
   busy: boolean;
+  /** Godziny jednorazowego przedłużenia (project_module_settings.extension_hours). */
+  extensionHours?: number;
 }
 
 const SWIPE_THRESHOLD = 110;
 
-export function TinderDeck({ cards, onDecision, busy }: TinderDeckProps) {
+export function TinderDeck({ cards, onDecision, busy, extensionHours = 12 }: TinderDeckProps) {
   const top = cards[0];
   if (!top) return null;
   return (
@@ -46,7 +48,13 @@ export function TinderDeck({ cards, onDecision, busy }: TinderDeckProps) {
           }}
         />
       ))}
-      <TopCard key={top.assignmentId} card={top} onDecision={onDecision} busy={busy} />
+      <TopCard
+        key={top.assignmentId}
+        card={top}
+        onDecision={onDecision}
+        busy={busy}
+        extensionHours={extensionHours}
+      />
     </div>
   );
 }
@@ -55,10 +63,12 @@ function TopCard({
   card,
   onDecision,
   busy,
+  extensionHours,
 }: {
   card: ProjectTeaser;
   onDecision: TinderDeckProps["onDecision"];
   busy: boolean;
+  extensionHours: number;
 }) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-240, 240], [-14, 14]);
@@ -165,7 +175,7 @@ function TopCard({
           title={
             card.extendedAt
               ? "Przedłużenie zostało już wykorzystane"
-              : "Przedłuż o 12 godzin (jednorazowo)"
+              : `Przedłuż o ${extensionHours} godzin (jednorazowo)`
           }
           className="h-12 w-12 rounded-full border-amber-300 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950"
           onClick={() => void settle("extend", false)}

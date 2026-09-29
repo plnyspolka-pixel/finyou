@@ -10,6 +10,7 @@ import type {
   SecurityData,
 } from "./client-profile-types";
 import { buildEngineSchedule } from "./contract-engine/loan-schedule";
+import { fyCommission } from "./contract-engine/fees";
 
 export function formatPLN(n: number | undefined | null): string {
   return new Intl.NumberFormat("pl-PL", {
@@ -72,9 +73,11 @@ export function buildDirectorSchedule(offer: ScheduleInput): ScheduleData | null
 
   if (!kwotaPozyczki || !maxPayment || !months || !payoutDate) return null;
 
+  const prowizjaFY = fyCommission(kwotaPozyczki);
   const eng = buildEngineSchedule({
     kwotaPozyczki,
     prowizja,
+    prowizjaFY,
     annualRatePercent: annualInterest,
     months,
     maxMonthlyPayment: maxPayment,
@@ -104,13 +107,13 @@ export function buildDirectorSchedule(offer: ScheduleInput): ScheduleData | null
     kwotaPozyczki > 0 ? round2((annualizedInvestorProfitAmount / kwotaPozyczki) * 100) : 0;
 
   const infos: string[] = [
-    "Pożyczkobiorca otrzymuje pełną Kwotę Pożyczki; prowizja nie jest potrącana z wypłaty, lecz rozłożona na raty (KWO_02).",
+    `Kwota Udzielona ${formatPLN(kwotaPozyczki)}: Prowizja Finance You ${formatPLN(prowizjaFY)} (7%, min 5 000 zł, bez VAT) potrącana z wypłaty — Klient otrzymuje ${formatPLN(eng.kwotaWyplaconaKlientowi)}; prowizja inwestora rozłożona na raty (KWO_02).`,
   ];
   if (eng.balloon > 0)
     infos.push(
       "Nadwyżka kapitału ponad pułap raty rozliczana jest w racie balonowej (ostatnia z rat).",
     );
-  const warnings = [...eng.warnings];
+  const warnings = [...eng.errors.map((e) => `BŁĄD: ${e}`), ...eng.warnings];
   if (prowizja <= 0)
     warnings.push("Brak prowizji — sprawdź pole „Prowizja”, jeśli miała zostać naliczona.");
 

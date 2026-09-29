@@ -292,10 +292,6 @@ const harmonogram = z
     dzien_miesiaca: z.number().int().min(1).max(28),
     kwota_raty: kwotaSchema.nullable().optional(),
     kwota_raty_koncowej: kwotaSchema.nullable().optional(),
-    // Docelowa rata końcowa (balonowa). Gdy podana, silnik sam dobiera prowizję
-    // (do grosza), tak by raty regularne mieściły się w pułapie `kwota_raty`,
-    // a ostatnia rata wyniosła dokładnie tyle (np. kapitał + pułap).
-    kwota_raty_koncowej_docelowa: kwotaSchema.nullable().optional(),
     raty: z.array(rataSchema).optional(),
   })
   .strict();
@@ -309,6 +305,11 @@ const warunki = z
         model: z.enum(["nie_potracana_raty", "potracana_z_wyplaty"]).optional(),
       })
       .strict(),
+    // Prowizja Klientowska Finance You (7 % Kwoty Udzielonej, min 5 000 zł,
+    // bez VAT) — POTRĄCANA z wypłaty zgodnie z dyspozycją Pożyczkobiorcy
+    // (Załącznik nr 4 do Umowy = Zał. 6 do Umowy ramowej FY). Brak = umowa
+    // bez pośrednictwa Finance You (pełna wypłata na rachunek Pożyczkobiorcy).
+    prowizja_finance_you: z.object({ kwota: kwotaSchema }).strict().nullable().optional(),
     oprocentowanie: z.string().regex(/^\d{1,2},\d$/),
     cel: z.string().min(5),
     // § 1: zakaz przeznaczenia pożyczki na zakup, remont lub spłatę zobowiązań
@@ -316,7 +317,14 @@ const warunki = z
     // wierzycieli hipotecznych).
     zakaz_celu_nieruchomosciowego: z.boolean().nullable().optional(),
     harmonogram,
-    rachunki: z.object({ wyplata: z.string(), splata: z.string() }).strict(),
+    rachunki: z
+      .object({
+        wyplata: z.string(),
+        splata: z.string(),
+        /** Rachunek Finance You na Prowizję Klientowską (wymagany, gdy prowizja_finance_you). */
+        finance_you: z.string().nullable().optional(),
+      })
+      .strict(),
   })
   .strict();
 

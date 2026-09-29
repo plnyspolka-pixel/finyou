@@ -6,6 +6,12 @@ export const FINANCE_YOU = {
   krs: "0000635207",
   /** Rachunek do spłaty pożyczek udzielanych przez Finance You (§ 2 — spłata). */
   rachunekSplaty: "56 1090 2590 0000 0001 5708 1371",
+  /**
+   * Rachunek Finance You na Prowizję Klientowską potrącaną z wypłaty (Zał. 6
+   * do Umowy ramowej / Zał. 4 do umowy pożyczki). Domyślnie ten sam rachunek
+   * — DO POTWIERDZENIA (raport końcowy, decyzja człowieka).
+   */
+  rachunekProwizji: "56 1090 2590 0000 0001 5708 1371",
 } as const;
 
 /** Czy strona to Finance You (po NIP albo KRS). */

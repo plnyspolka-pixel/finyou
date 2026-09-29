@@ -1,110 +1,158 @@
 // Kalkulatory czyste (bez bazy): harmonogram spłat, LTV.
+// JEDEN model matematyczny: silnik `buildEngineSchedule` + opłaty `fees.ts`
+// (Kwota Udzielona, prowizja Finance You potrącana z wypłaty, prowizja
+// inwestora w ratach, odsetki od salda, balon = ostatnia rata, blokada
+// odsetek maksymalnych).
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { fail, ok } from "../_helpers";
+import { buildEngineSchedule, type EngineSchedule } from "@/lib/contract-engine/loan-schedule";
+import {
+  FY_COMMISSION_MIN_PLN,
+  FY_COMMISSION_PCT,
+  LTV_MAX,
+  fyCommission,
+  ltvPercent,
+  maxCapitalRate,
+  maxLoanAtLtv,
+  validateAnnualRate,
+} from "@/lib/contract-engine/fees";
+import { monthlyPayment } from "@/lib/loan-math";
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
+
+/** Wspólny opis wyniku — te same pola w każdym kalkulatorze i w create_loan_proposal. */
+export interface EngineSummaryFields {
+  kwota_udzielona: number;
+  prowizja_fy: number;
+  prowizja_fy_opis: string;
+  kwota_na_reke: number;
+  prowizja_inwestora: number;
+  oprocentowanie_pct: number;
+  odsetki_maksymalne_pct: number;
+  liczba_rat: number;
+  rata: number;
+  rata_nominalna: number;
+  balon: number;
+  odsetki_razem: number;
+  do_splaty: number;
+  koszt_calkowity: number;
+}
+
+export type EngineSummaryResult =
+  | { ok: false; error: string }
+  | { ok: true; eng: EngineSchedule; summary: EngineSummaryFields };
+
+export function engineSummary(input: {
+  amount: number;
+  period_months: number;
+  yearly_rate_pct: number;
+  max_payment?: number | null;
+  investor_commission_pln?: number | null;
+  include_fy_commission?: boolean;
+}): EngineSummaryResult {
+  const rateError = validateAnnualRate(input.yearly_rate_pct);
+  if (rateError) return { ok: false, error: rateError };
+  const nominal = monthlyPayment(input.amount, input.yearly_rate_pct, input.period_months);
+  const cap =
+    input.max_payment && input.max_payment > 0 ? input.max_payment : Math.ceil(nominal * 100) / 100;
+  const feeFY = input.include_fy_commission === false ? 0 : fyCommission(input.amount);
+  const eng = buildEngineSchedule({
+    kwotaPozyczki: input.amount,
+    prowizja: Math.max(0, input.investor_commission_pln ?? 0),
+    prowizjaFY: feeFY,
+    annualRatePercent: input.yearly_rate_pct,
+    months: input.period_months,
+    maxMonthlyPayment: cap,
+  });
+  if (eng.errors.length > 0) return { ok: false, error: eng.errors.join(" ") };
+  return {
+    ok: true,
+    eng,
+    summary: {
+      kwota_udzielona: eng.kwotaUdzielona,
+      prowizja_fy: eng.prowizjaFY,
+      prowizja_fy_opis: `${FY_COMMISSION_PCT}% Kwoty Udzielonej, min ${FY_COMMISSION_MIN_PLN} zł, bez VAT — potrącana z wypłaty`,
+      kwota_na_reke: eng.kwotaWyplaconaKlientowi,
+      prowizja_inwestora: eng.prowizjaInwestora,
+      oprocentowanie_pct: input.yearly_rate_pct,
+      odsetki_maksymalne_pct: maxCapitalRate(),
+      liczba_rat: eng.months,
+      rata: eng.rows.length > 1 ? eng.rows[0].rata_razem : eng.regularPayment,
+      rata_nominalna: round2(nominal),
+      balon: eng.balloon,
+      odsetki_razem: eng.totalInterest,
+      do_splaty: eng.totalToRepay,
+      koszt_calkowity: eng.calkowityKoszt,
+    },
+  };
+}
 
 export const calculateRepaymentSchedule = defineTool({
   name: "calculate_repayment_schedule",
   title: "Calculate repayment schedule",
   description:
-    "Harmonogram spłat pożyczki: raty równe (annuitetowe), malejące albo odsetkowe z balonem kapitału na końcu. Zwraca listę rat (kapitał, odsetki, saldo), sumę odsetek, koszt całkowity, opcjonalnie prowizję. Czysta matematyka, bez bazy.",
+    "Harmonogram spłat pożyczki w modelu Finance You (jeden silnik): odsetki od kapitału pozostającego do spłaty, pułap raty steruje kapitałem, nadwyżka trafia do ostatniej raty (balon), stała prowizja inwestora rozłożona równo w ratach. Prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT) jest potrącana z wypłaty i nie wchodzi do rat. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity + listę rat. Oprocentowanie ponad odsetki maksymalne (art. 359 § 2¹ KC) jest blokowane. Czysta matematyka, bez bazy.",
   inputSchema: {
-    amount: z.number().positive().describe("Kwota pożyczki w PLN."),
-    period_months: z.number().int().min(1).max(360),
-    yearly_rate_pct: z.number().min(0).max(100).describe("Roczne oprocentowanie w %."),
-    type: z
-      .enum(["equal", "decreasing", "balloon"])
-      .default("equal")
-      .describe(
-        "equal = raty równe, decreasing = malejące, balloon = same odsetki + kapitał na końcu.",
-      ),
-    commission_pct: z
+    amount: z.number().positive().describe("Kwota Udzielona (kwota pożyczki z umowy) w PLN."),
+    period_months: z.number().int().min(1).max(120),
+    yearly_rate_pct: z
       .number()
       .min(0)
-      .max(30)
+      .max(100)
+      .describe("Roczne oprocentowanie w % (≤ odsetki maksymalne, dziś 14,5)."),
+    max_payment: z
+      .number()
+      .positive()
       .optional()
-      .describe("Prowizja w % kwoty (doliczana do kosztu)."),
+      .describe("Pułap raty miesięcznej; brak = rata annuitetowa (pełna amortyzacja)."),
+    investor_commission_pln: z
+      .number()
+      .min(0)
+      .optional()
+      .describe("Stała prowizja inwestora w PLN (rozkładana równo w ratach)."),
+    include_fy_commission: z
+      .boolean()
+      .default(true)
+      .describe("Czy doliczyć prowizję Finance You potrącaną z wypłaty (domyślnie tak)."),
     max_rows: z
       .number()
       .int()
       .min(1)
-      .max(360)
+      .max(120)
       .optional()
-      .describe("Ile rat zwrócić w liście (domyślnie wszystkie, maks. 360)."),
+      .describe("Ile rat zwrócić w liście (domyślnie wszystkie)."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: ({ amount, period_months, yearly_rate_pct, type, commission_pct, max_rows }) => {
-    const r = yearly_rate_pct / 100 / 12;
-    const rows: Array<{
-      month: number;
-      payment: number;
-      interest: number;
-      principal: number;
-      balance: number;
-    }> = [];
-    let balance = amount;
-    let totalInterest = 0;
-    if (type === "equal") {
-      const payment =
-        r === 0 ? amount / period_months : (amount * r) / (1 - Math.pow(1 + r, -period_months));
-      for (let m = 1; m <= period_months; m += 1) {
-        const interest = balance * r;
-        const principal = m === period_months ? balance : payment - interest;
-        balance = Math.max(0, balance - principal);
-        totalInterest += interest;
-        rows.push({
-          month: m,
-          payment: round2(principal + interest),
-          interest: round2(interest),
-          principal: round2(principal),
-          balance: round2(balance),
-        });
-      }
-    } else if (type === "decreasing") {
-      const principal = amount / period_months;
-      for (let m = 1; m <= period_months; m += 1) {
-        const interest = balance * r;
-        balance = Math.max(0, balance - principal);
-        totalInterest += interest;
-        rows.push({
-          month: m,
-          payment: round2(principal + interest),
-          interest: round2(interest),
-          principal: round2(principal),
-          balance: round2(balance),
-        });
-      }
-    } else {
-      for (let m = 1; m <= period_months; m += 1) {
-        const interest = amount * r;
-        const principal = m === period_months ? amount : 0;
-        balance = m === period_months ? 0 : amount;
-        totalInterest += interest;
-        rows.push({
-          month: m,
-          payment: round2(principal + interest),
-          interest: round2(interest),
-          principal: round2(principal),
-          balance: round2(balance),
-        });
-      }
-    }
-    const commission = commission_pct ? (amount * commission_pct) / 100 : 0;
-    if (rows.length === 0) return fail("Pusty harmonogram.");
-    return ok({
-      type,
+  handler: ({
+    amount,
+    period_months,
+    yearly_rate_pct,
+    max_payment,
+    investor_commission_pln,
+    include_fy_commission,
+    max_rows,
+  }) => {
+    const r = engineSummary({
       amount,
       period_months,
       yearly_rate_pct,
-      first_payment: rows[0].payment,
-      last_payment: rows[rows.length - 1].payment,
-      max_payment: round2(Math.max(...rows.map((x) => x.payment))),
-      total_interest: round2(totalInterest),
-      commission: round2(commission),
-      total_cost: round2(totalInterest + commission),
-      total_to_repay: round2(amount + totalInterest),
+      max_payment,
+      investor_commission_pln,
+      include_fy_commission,
+    });
+    if (!r.ok) return fail(r.error);
+    const rows = r.eng.rows.map((x) => ({
+      month: x.nr,
+      payment: x.rata_razem,
+      principal: x.kapital,
+      interest: x.odsetki,
+      investor_commission: x.prowizja,
+      balance: x.saldo,
+      is_balloon: x.isBalloon,
+    }));
+    return ok({
+      ...r.summary,
       schedule: rows.slice(0, max_rows ?? rows.length),
       schedule_truncated: max_rows !== undefined && max_rows < rows.length,
     });
@@ -115,7 +163,7 @@ export const calculateLtv = defineTool({
   name: "calculate_ltv",
   title: "Calculate LTV",
   description:
-    "LTV (loan-to-value) dla zabezpieczenia hipotecznego: kwota pożyczki (plus istniejące obciążenia) do wartości nieruchomości. Zwraca LTV w %, orientacyjny przedział i maksymalną kwotę przy zadanym limicie LTV. Czysta matematyka.",
+    "LTV (loan-to-value) dla zabezpieczenia hipotecznego: kwota pożyczki (plus istniejące obciążenia) do wartości nieruchomości. Jeden limit w systemie: 60%. Zwraca LTV w %, czy mieści się w limicie i maksymalną kwotę przy limicie. Czysta matematyka.",
   inputSchema: {
     loan_amount: z.number().positive().describe("Wnioskowana kwota pożyczki (PLN)."),
     property_value: z.number().positive().describe("Wartość nieruchomości (PLN)."),
@@ -127,24 +175,30 @@ export const calculateLtv = defineTool({
     max_ltv_pct: z
       .number()
       .min(1)
-      .max(100)
-      .default(60)
-      .describe("Limit LTV do wyliczenia maks. kwoty (domyślnie 60%)."),
+      .max(LTV_MAX)
+      .default(LTV_MAX)
+      .describe(`Limit LTV do wyliczenia maks. kwoty (domyślnie i maksymalnie ${LTV_MAX}%).`),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: ({ loan_amount, property_value, existing_encumbrances, max_ltv_pct }) => {
-    const exposure = loan_amount + existing_encumbrances;
-    const ltv = (exposure / property_value) * 100;
+    const ltv = ltvPercent(loan_amount, property_value, existing_encumbrances) ?? 0;
     const band =
-      ltv <= 40 ? "niskie" : ltv <= 60 ? "umiarkowane" : ltv <= 75 ? "podwyższone" : "wysokie";
-    const maxLoan = Math.max(0, (property_value * max_ltv_pct) / 100 - existing_encumbrances);
+      ltv <= 35
+        ? "bardzo konserwatywne"
+        : ltv <= 50
+          ? "akceptowalne"
+          : ltv <= LTV_MAX
+            ? "podwyższone"
+            : "poza limitem";
+    const maxLoan = maxLoanAtLtv(property_value, existing_encumbrances, max_ltv_pct);
     return ok({
-      ltv_pct: round2(ltv),
+      ltv_pct: ltv,
       band,
-      exposure,
+      exposure: loan_amount + existing_encumbrances,
       property_value,
       max_ltv_pct,
-      max_loan_at_limit: round2(maxLoan),
+      system_ltv_limit_pct: LTV_MAX,
+      max_loan_at_limit: maxLoan,
       headroom: round2(maxLoan - loan_amount),
       within_limit: ltv <= max_ltv_pct,
     });

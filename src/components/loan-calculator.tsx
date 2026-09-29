@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  FY_COMMISSION_MIN_PLN,
+  FY_COMMISSION_PCT,
+  maxCapitalRate,
+} from "@/lib/contract-engine/fees";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -260,9 +265,10 @@ export function LoanCalculator({
     // Model silnika: PEŁNA WYPŁATA — Pożyczkobiorca otrzymuje całą Kwotę Pożyczki.
     // Prowizja nie jest potrącana z wypłaty (jest rozłożona na raty), więc kwota
     // na rękę = Kwota Pożyczki (brak „ubruttowienia").
+    // Kwota Udzielona = kwota z umowy; Prowizja Finance You (7 %, min 5 000 zł,
+    // bez VAT) jest potrącana z wypłaty — klient dostaje mniej „na rękę".
     const amt = onHand;
-    const t = Math.min(1, Math.max(0, (amt - 20_000) / (1_000_000 - 20_000)));
-    const fyPct = hideFinanceYouFee ? 0 : Math.round((10 - t * 6) * 10) / 10;
+    const fyPct = hideFinanceYouFee ? 0 : FY_COMMISSION_PCT;
     return { amount: amt, financeYouFeePct: fyPct };
   }, [onHand, hideFinanceYouFee]);
 
@@ -308,10 +314,18 @@ export function LoanCalculator({
   }, [clientEmail]);
 
   const effectiveRefRate = investorGuidance && nbpOverride != null ? nbpOverride : liveRefRate;
-  const MAX_INTEREST_RATE = maxInterestRate(effectiveRefRate);
+  // Twarda blokada: odsetki maksymalne z tabeli stóp (fees.ts) — jedno miejsce
+  // w systemie; symulacja NBP (nbpOverride) tylko w trybie poglądowym inwestora.
+  const MAX_INTEREST_RATE =
+    investorGuidance && nbpOverride != null ? maxInterestRate(nbpOverride) : maxCapitalRate();
   const statutoryInterest = effectiveRefRate + 3.5;
 
-  const financeYouFeePln = Math.round((amount * financeYouFeePct) / 100);
+  // Prowizja Finance You: 7 % Kwoty Udzielonej, min 5 000 zł, bez VAT —
+  // POTRĄCANA z wypłaty (nie wchodzi do rat). Procent z suwaka = tylko podgląd.
+  const financeYouFeePln =
+    financeYouFeePct > 0
+      ? Math.max(Math.round((amount * financeYouFeePct) / 100), FY_COMMISSION_MIN_PLN)
+      : 0;
   // Kapitał, od którego liczone są odsetki i raty = Kwota Pożyczki (pełna
   // wypłata). Prowizja inwestora i Finance You NIE wchodzą do kapitału —
   // są rozłożone na raty jako osobny składnik (model silnika).
@@ -330,10 +344,10 @@ export function LoanCalculator({
     : 0;
   const investorNetCommissionPln = Math.max(0, commissionPln - operatorCommissionPln);
 
-  // Harmonogram = model silnika (jedno źródło prawdy): pełna wypłata kapitału,
-  // prowizja (inwestora + Finance You) rozłożona na raty, odsetki od salda,
-  // balon = ostatnia z N rat.
-  const scheduleCommission = commissionPln + financeYouFeePln;
+  // Harmonogram = model silnika (jedno źródło prawdy): Kwota Udzielona,
+  // prowizja INWESTORA rozłożona na raty, prowizja Finance You potrącana
+  // z wypłaty (poza ratami), odsetki od salda, balon = ostatnia z N rat.
+  const scheduleCommission = commissionPln;
   const schedule = useMemo(() => {
     if (!grossPrincipal || !months)
       return {
@@ -357,6 +371,7 @@ export function LoanCalculator({
     const eng = buildEngineSchedule({
       kwotaPozyczki: grossPrincipal,
       prowizja: scheduleCommission,
+      prowizjaFY: financeYouFeePln,
       annualRatePercent: annualRate,
       months,
       maxMonthlyPayment: cap,
@@ -476,7 +491,9 @@ export function LoanCalculator({
   const collateralShortfall = propertyValue > 0 && totalToRepay > secondAuctionPln + 1e-9;
 
   const interestExceeds = annualRate > MAX_INTEREST_RATE + 1e-9;
-  const nonInterestExceeds = nonInterestTotal > maxNonInterest + 1e-9;
+  // Model wyłącznie B2B (cel gospodarczy) — limit MPKK z ustawy o kredycie
+  // konsumenckim nie ma zastosowania; zostaje tylko kontrola rażącej dysproporcji.
+  const nonInterestExceeds = false;
   const commissionOver45 = commissionPln > amount * 0.45 + 1e-9;
   const krotnoscWarn = krotnosc > 1.5;
   const krotnoscDanger = krotnosc > 2.0;
@@ -1076,9 +1093,9 @@ export function LoanCalculator({
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>0%</span>
-                {nonInterestExceeds ? (
+                {commissionOver45 ? (
                   <span className="text-destructive font-medium">
-                    przekroczono limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}
+                    powyżej 45% kwoty — ryzyko rażącej dysproporcji
                   </span>
                 ) : (
                   <span />
@@ -1253,21 +1270,6 @@ export function LoanCalculator({
         </Card>
       </FancyShell>
 
-      {nonInterestExceeds && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Upewnij się, że pożyczka jest w modelu B2B</AlertTitle>
-          <AlertDescription className="pt-1">
-            Koszty pozaodsetkowe (prowizja inwestora) <b>{formatPLN(nonInterestTotal)}</b>{" "}
-            przekraczają limit MPKK <b>{formatPLN(maxNonInterest)}</b> (art. 36a UoKK; prowizja
-            Finance You nie wlicza się do limitu). Limit ten dotyczy <b>kredytu konsumenckiego</b> —
-            przy umowie z konsumentem nadwyżka będzie nienależna. Aby kontynuować z tą prowizją,
-            pożyczkobiorca musi być przedsiębiorcą, a pożyczka udzielona w <b>modelu B2B</b> (na
-            cele związane z prowadzoną działalnością gospodarczą).
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* STATUSY — 3 niezależne składniki: Odsetki / MPKK / Krotność (fancy) */}
       {(() => {
         const baseCls =
@@ -1301,33 +1303,26 @@ export function LoanCalculator({
               </Alert>
             )}
 
-            {/* 2) MPKK — zasady współżycia społecznego (art. 58 §2 KC) / wyzysk (art. 388 KC) */}
+            {/* 2) Rażąca dysproporcja (art. 58 §2 KC / art. 388 KC) — model B2B, bez MPKK */}
             {investorGuidance &&
-              (nonInterestExceeds || commissionOver45 ? (
+              (commissionOver45 ? (
                 <Alert className={dangerCls}>
                   <ShieldAlert className="h-4 w-4 !text-rose-300" />
-                  <AlertTitle>MPKK — silne ryzyko zasad współżycia społecznego</AlertTitle>
+                  <AlertTitle>Prowizja inwestora — ryzyko rażącej dysproporcji</AlertTitle>
                   <AlertDescription className="text-sm text-rose-100/90">
-                    Prowizja <b>{formatPLN(commissionPln)}</b>{" "}
-                    {commissionOver45 ? (
-                      "przekracza 45% kwoty pożyczki — absolutne maksimum referencyjne MPKK"
-                    ) : (
-                      <>
-                        przekracza limit MPKK <b>{formatPLN(maxNonInterest)}</b>
-                      </>
-                    )}
-                    . Ryzyko nieważności postanowień (art. 58 §2 KC) i wyzysku (art. 388 KC).
-                    Prowizja Finance You nie wlicza się do limitu MPKK.
+                    Prowizja <b>{formatPLN(commissionPln)}</b> przekracza 45% kwoty pożyczki —
+                    ryzyko nieważności postanowień (art. 58 §2 KC) i wyzysku (art. 388 KC). Prowizja
+                    Finance You (potrącana z wypłaty) nie wlicza się do tej oceny.
                   </AlertDescription>
                 </Alert>
               ) : (
                 <Alert className={okCls}>
                   <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
-                  <AlertTitle>MPKK w limicie — zgodne z zasadami współżycia społecznego</AlertTitle>
+                  <AlertTitle>Prowizja inwestora w rozsądnym zakresie</AlertTitle>
                   <AlertDescription className="text-sm text-emerald-100/90">
-                    Koszty pozaodsetkowe (prowizja inwestora) <b>{formatPLN(commissionPln)}</b> ≤{" "}
-                    <b>{formatPLN(maxNonInterest)}</b> (art. 58 §2 KC — referencyjny limit MPKK).
-                    Prowizja Finance You nie wlicza się do limitu.
+                    Koszty pozaodsetkowe (prowizja inwestora) <b>{formatPLN(commissionPln)}</b> —
+                    finansowanie wyłącznie na cel gospodarczy (B2B), bez limitu MPKK z ustawy o
+                    kredycie konsumenckim.
                   </AlertDescription>
                 </Alert>
               ))}

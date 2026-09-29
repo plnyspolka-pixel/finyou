@@ -19,7 +19,7 @@ import {
   parseKwota,
   type KorektaGroszowa,
 } from "./schedule";
-import { buildEngineSchedule } from "./loan-schedule";
+import { buildEngineSchedule, type EngineSchedule } from "./loan-schedule";
 import { validateKwNumber } from "../kw";
 import { FINANCE_YOU, jestFinanceYou } from "./finance-you";
 
@@ -69,65 +69,17 @@ export function uzupelnijIdNieruchomosci(umowa: any): void {
 /**
  * Dolicza harmonogram rat silnikiem (`buildEngineSchedule`), gdy tabela `raty`
  * jest pusta, a parametry §2 są kompletne. AI nigdy nie liczy rat — to robi
- * wyłącznie silnik (jedno źródło prawdy w /inwestor).
+ * wyłącznie silnik (jedno źródło prawdy w /inwestor). Prowizja inwestora
+ * (KWO_02) jest STAŁĄ kwotą z umowy — silnik jej nie dobiera. Prowizja
+ * Finance You (`warunki.prowizja_finance_you`) jest potrącana z wypłaty
+ * i nie wchodzi do rat. Błędy silnika (stopa > odsetki maksymalne, pułap
+ * niepokrywający odsetek + prowizji) zwraca `problemySilnika`.
  */
 export function uzupelnijHarmonogram(umowa: any): void {
-  const w = umowa?.warunki;
-  const h = w?.harmonogram;
-  if (!w || !h) return;
-  if (Array.isArray(h.raty) && h.raty.length > 0) return;
-
-  const kwota = parseKwota(w.kwota_pozyczki?.cyframi);
-  const prowizja = parseKwota(w.prowizja?.kwota?.cyframi);
-  const oprocentowanie = parseKwota(w.oprocentowanie);
-  const liczbaRat = Number(h.liczba_rat);
-  const pierwsza = String(h.data_pierwszej_raty ?? "");
+  const eng = policzHarmonogramSilnikiem(umowa);
+  if (!eng || eng.rows.length === 0) return;
+  const h = umowa.warunki.harmonogram;
   const typ = String(h.typ ?? "");
-  if (
-    Number.isNaN(kwota) ||
-    kwota <= 0 ||
-    !Number.isFinite(liczbaRat) ||
-    liczbaRat <= 0 ||
-    Number.isNaN(oprocentowanie) ||
-    !/^\d{2}\.\d{2}\.\d{4}$/.test(pierwsza)
-  )
-    return;
-
-  const prow = Number.isNaN(prowizja) ? 0 : prowizja;
-  const docelowa = parseKwota(h.kwota_raty_koncowej_docelowa?.cyframi);
-  const zCelem = typ === "balonowy" && !Number.isNaN(docelowa) && docelowa > 0;
-  let cap: number;
-  if (typ === "balonowy") {
-    const pulap = parseKwota(h.kwota_raty?.cyframi);
-    if (Number.isNaN(pulap) || pulap <= 0) return; // balon wymaga pułapu raty
-    cap = pulap;
-  } else if (typ === "rowne_raty") {
-    const r = oprocentowanie / 100 / 12;
-    const annuity = r > 0 ? (kwota * r) / (1 - Math.pow(1 + r, -liczbaRat)) : kwota / liczbaRat;
-    cap = Math.ceil((annuity + prow / liczbaRat) * 100) / 100;
-  } else {
-    return; // typ "malejace" — bez autouzupełnienia
-  }
-
-  const eng = buildEngineSchedule({
-    kwotaPozyczki: kwota,
-    prowizja: prow,
-    annualRatePercent: oprocentowanie,
-    months: liczbaRat,
-    maxMonthlyPayment: cap,
-    firstPaymentDate: pierwsza,
-    targetFinalPayment: zCelem ? docelowa : null,
-  });
-  if (eng.rows.length === 0) return;
-  if (zCelem) {
-    if (eng.targetError) return; // walidator zgłosi niespójność (R29)
-    // Silnik dobrał prowizję pod docelową ratę końcową — prowizja w §2 musi
-    // być sumą prowizji z harmonogramu (kwotę słownie doliczy uzupelnijSlownie).
-    w.prowizja = {
-      ...(w.prowizja ?? {}),
-      kwota: { cyframi: formatKwotaPL(eng.prowizja), slownie: "" },
-    };
-  }
 
   h.raty = formatujRaty(
     eng.rows.map((r) => ({
@@ -148,9 +100,85 @@ export function uzupelnijHarmonogram(umowa: any): void {
     h.kwota_raty = { cyframi: formatKwotaPL(eng.rows[0].rata_razem), slownie: "" };
   }
   if (h.dzien_miesiaca == null) {
+    const pierwsza = String(h.data_pierwszej_raty ?? "");
     const dzien = Number(pierwsza.slice(0, 2));
     h.dzien_miesiaca = Math.min(28, Math.max(1, Number.isFinite(dzien) ? dzien : 1));
   }
+}
+
+/**
+ * Parametry §2 → wynik silnika (albo null, gdy dane niekompletne / typ
+ * „malejace" bez autouzupełnienia). Używane przez uzupełnianie rat
+ * i przez walidację (błędy blokujące silnika).
+ */
+export function policzHarmonogramSilnikiem(umowa: any): EngineSchedule | null {
+  const w = umowa?.warunki;
+  const h = w?.harmonogram;
+  if (!w || !h) return null;
+
+  const kwota = parseKwota(w.kwota_pozyczki?.cyframi);
+  const prowizja = parseKwota(w.prowizja?.kwota?.cyframi);
+  const prowizjaFY = parseKwota(w.prowizja_finance_you?.kwota?.cyframi);
+  const oprocentowanie = parseKwota(w.oprocentowanie);
+  const liczbaRat = Number(h.liczba_rat);
+  const pierwsza = String(h.data_pierwszej_raty ?? "");
+  const typ = String(h.typ ?? "");
+  if (
+    Number.isNaN(kwota) ||
+    kwota <= 0 ||
+    !Number.isFinite(liczbaRat) ||
+    liczbaRat <= 0 ||
+    Number.isNaN(oprocentowanie) ||
+    !/^\d{2}\.\d{2}\.\d{4}$/.test(pierwsza)
+  )
+    return null;
+
+  const prow = Number.isNaN(prowizja) ? 0 : prowizja;
+  let cap: number;
+  if (typ === "balonowy") {
+    const pulap = parseKwota(h.kwota_raty?.cyframi);
+    if (Number.isNaN(pulap) || pulap <= 0) return null; // balon wymaga pułapu raty
+    cap = pulap;
+  } else if (typ === "rowne_raty") {
+    const r = oprocentowanie / 100 / 12;
+    const annuity = r > 0 ? (kwota * r) / (1 - Math.pow(1 + r, -liczbaRat)) : kwota / liczbaRat;
+    cap = Math.ceil((annuity + prow / liczbaRat) * 100) / 100;
+  } else {
+    return null; // typ "malejace" — bez autouzupełnienia
+  }
+
+  return buildEngineSchedule({
+    kwotaPozyczki: kwota,
+    prowizja: prow,
+    prowizjaFY: Number.isNaN(prowizjaFY) ? 0 : prowizjaFY,
+    annualRatePercent: oprocentowanie,
+    months: liczbaRat,
+    maxMonthlyPayment: cap,
+    firstPaymentDate: pierwsza,
+    asOf: dataUmowyLubDzis(umowa),
+  });
+}
+
+/** Data umowy (meta.data_umowy, DD.MM.RRRR) → ISO; brak → dziś. */
+function dataUmowyLubDzis(umowa: any): string | Date {
+  const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(String(umowa?.meta?.data_umowy ?? ""));
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : new Date();
+}
+
+/**
+ * Błędy BLOKUJĄCE silnika harmonogramu (jako problemy walidacji):
+ *  - pułap raty niepokrywający odsetek + prowizji inwestora,
+ *  - prowizja Finance You przekraczająca Kwotę Udzieloną.
+ */
+export function problemySilnika(umowa: any): Problem[] {
+  const out: Problem[] = [];
+  const eng = policzHarmonogramSilnikiem(umowa);
+  for (const e of eng?.errors ?? []) {
+    // stopę > max zgłasza walidator (R29, wg daty umowy) — tu bez duplikatu
+    if (/odsetki maksymalne/.test(e)) continue;
+    out.push({ poziom: "BLAD", sciezka: "warunki.harmonogram", komunikat: e });
+  }
+  return out;
 }
 
 /**
@@ -201,7 +229,12 @@ export function przetworzSzkic(umowa: any): {
   const autokorekty = umowa?.warunki ? autonaprawHarmonogram(umowa.warunki) : [];
   let problemy: Problem[] = [];
   try {
-    problemy = [...problemyKw, ...waliduj(umowa), ...walidujHarmonogram(umowa?.warunki ?? {})];
+    problemy = [
+      ...problemyKw,
+      ...waliduj(umowa),
+      ...walidujHarmonogram(umowa?.warunki ?? {}),
+      ...problemySilnika(umowa),
+    ];
   } catch (e: any) {
     problemy = [
       {

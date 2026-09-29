@@ -2,6 +2,7 @@
 // Każda akcja: bramka is_internal_staff + wpis w nieusuwalnym logu audytowym
 // (kto, kiedy, poprzedni status, nowy status, powód).
 import { createServerFn } from "@tanstack/react-start";
+import { LTV_MAX } from "@/lib/contract-engine/fees";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
@@ -1043,8 +1044,8 @@ export const adminUpdateModuleSettings = createServerFn({ method: "POST" })
           elevated: z.number().min(1).max(100),
         }),
         minPeriodMonths: z.number().int().min(1).max(360),
-        maxPeriodMonths: z.number().int().min(1).max(360),
-        maxLtvPercent: z.number().min(1).max(100),
+        maxPeriodMonths: z.number().int().min(1).max(120),
+        maxLtvPercent: z.number().min(1).max(LTV_MAX),
       })
       .parse(i),
   )

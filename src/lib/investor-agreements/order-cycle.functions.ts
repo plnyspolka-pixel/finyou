@@ -13,7 +13,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { AccessProduct } from "@/lib/access/core";
 import {
   buildKartaLeada,
   canTransition,
@@ -22,9 +21,12 @@ import {
   extendedReservationDeadline,
   isWithinWithdrawalWindow,
   reservationDeadline,
+  orderLimitsFromSettings,
   withdrawalDeadline,
   type MatchStatus,
 } from "./order-cycle-core";
+
+import { getModuleSettings } from "@/lib/projects/guards.server";
 
 const loose = (c: unknown) => c as any;
 
@@ -230,29 +232,13 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
-    // Cennik: pakiet inwestora + lista okazji już wykupionych (Podstawowy)
-    // — UI pokazuje na tej podstawie przycisk zakupu albo pełne dane.
-    const [{ data: tier }, { data: unlocks }, { data: unlockProduct }] = await Promise.all([
-      loose(supabaseAdmin).rpc("investor_tier", { _user_id: userId }),
-      loose(supabaseAdmin)
-        .from("investor_opportunity_unlocks")
-        .select("match_id")
-        .eq("user_id", userId),
-      loose(supabaseAdmin)
-        .from("access_products")
-        .select(
-          "id,code,audience,label,duration_days,amount_grosz,currency,active,sort_order,kind,tier,success_fee_bps",
-        )
-        .eq("code", "investor_okazja_unlock")
-        .eq("active", true)
-        .maybeSingle(),
-    ]);
-
     const acceptedAt = acceptance?.accepted_at ? new Date(acceptance.accepted_at) : null;
+    const limits = orderLimitsFromSettings(await getModuleSettings());
     return {
-      tier: (tier as string) === "pro" ? ("pro" as const) : ("podstawowy" as const),
-      unlockedMatchIds: ((unlocks ?? []) as { match_id: string }[]).map((u) => u.match_id),
-      unlockProduct: (unlockProduct ?? null) as AccessProduct | null,
+      // Usługa dla Inwestora nieodpłatna (Umowa ramowa v7) — bez pakietów i wykupów.
+      tier: "podstawowy" as const,
+      // Limity cyklu z project_module_settings (UI pokazuje je z ustawień, nie z hardcode).
+      limits,
       orders: orders ?? [],
       // Teaser widoczny dopiero po udostępnieniu (status >= teaser).
       matches: matches.filter((m: any) => m.status !== "dopasowane"),
@@ -345,19 +331,11 @@ export const requestDisclosure = createServerFn({ method: "POST" })
         "Karta Transferu Danych dla tego Projektu czeka na zatwierdzenie przez Finance You — damy znać, gdy Ujawnienie będzie możliwe.",
       );
     }
-    // Cennik: PRO ma okazje w pakiecie, Podstawowy wykupuje każdą osobno
-    // (wyłączność + raport + harmonogram + dane kontaktowe).
-    const { data: canOpen } = await loose(supabaseAdmin).rpc("investor_can_open_match", {
-      _user_id: userId,
-      _match_id: m.id,
-    });
-    if (!canOpen) {
-      throw new Error(
-        "UNLOCK_REQUIRED: Odsłonięcie danych Projektu wymaga wykupienia tej okazji albo pakietu PRO.",
-      );
-    }
+    // Ujawnienie po akceptacji Karty Leada nie wymaga żadnej płatności
+    // (Umowa ramowa v7: usługa dla Inwestora nieodpłatna).
+    const limits = orderLimitsFromSettings(await getModuleSettings());
     const now = new Date();
-    const expires = reservationDeadline(now);
+    const expires = reservationDeadline(now, limits.assignmentHours);
     await transition(supabaseAdmin, m, "rezerwacja", {
       disclosed_at: now.toISOString(),
       reservation_expires_at: expires.toISOString(),
@@ -385,9 +363,26 @@ export const extendReservation = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await myMatch(supabaseAdmin, userId, data.matchId);
+    const limits = orderLimitsFromSettings(await getModuleSettings());
     if (m.status !== "rezerwacja") throw new Error("Brak aktywnej rezerwacji.");
-    if (m.reservation_extended) throw new Error("Rezerwację można przedłużyć tylko raz (+12 h).");
-    const newDeadline = extendedReservationDeadline(new Date(m.reservation_expires_at));
+    if (m.reservation_extended)
+      throw new Error(`Rezerwację można przedłużyć tylko raz (+${limits.extensionHours} h).`);
+    // Maks. N przedłużonych rezerwacji naraz (project_module_settings).
+    const { count: extendedNow } = await loose(supabaseAdmin)
+      .from("investor_order_matches")
+      .select("id, investor_orders!inner(user_id)", { count: "exact", head: true })
+      .eq("investor_orders.user_id", userId)
+      .eq("status", "rezerwacja")
+      .eq("reservation_extended", true);
+    if ((extendedNow ?? 0) >= limits.maxExtended) {
+      throw new Error(
+        `Masz już ${limits.maxExtended} przedłużone rezerwacje naraz — limit z ustawień modułu (§ 5 Umowy ramowej).`,
+      );
+    }
+    const newDeadline = extendedReservationDeadline(
+      new Date(m.reservation_expires_at),
+      limits.extensionHours,
+    );
     const { error } = await loose(supabaseAdmin)
       .from("investor_order_matches")
       .update({
@@ -425,16 +420,23 @@ export const declineMatch = createServerFn({ method: "POST" })
       decided_by: userId,
       decision_reason: data.reason ?? null,
     });
-    // Licznik odrzuconych Projektów na Zleceniu.
-    const { data: order } = await loose(supabaseAdmin)
-      .from("investor_orders")
-      .select("rejected_projects_count")
-      .eq("id", m.order_id)
-      .maybeSingle();
-    await loose(supabaseAdmin)
-      .from("investor_orders")
-      .update({ rejected_projects_count: (order?.rejected_projects_count ?? 0) + 1 })
-      .eq("id", m.order_id);
+    // Atomowy licznik odrzuconych Projektów na Zleceniu; po progu
+    // (rejection_review_threshold) Zlecenie wygasa (§ 5 ust. 1).
+    const { data: counter, error: counterError } = await loose(supabaseAdmin).rpc(
+      "increment_order_rejections",
+      { _order_id: m.order_id },
+    );
+    if (counterError) throw new Error(counterError.message);
+    const counterRow = Array.isArray(counter) ? counter[0] : counter;
+    if (counterRow?.expired) {
+      await logCycleEvent(supabaseAdmin, {
+        orderId: m.order_id,
+        type: "zlecenie_wygaslo_po_odrzuceniach",
+        payload: { rejected_projects_count: counterRow.rejected_projects_count },
+        actor: userId,
+        actorKind: "system",
+      });
+    }
     await logCycleEvent(supabaseAdmin, {
       matchId: m.id,
       orderId: m.order_id,
@@ -910,21 +912,7 @@ export const confirmZal6 = createServerFn({ method: "POST" })
       })
       .eq("id", m.id);
     if (error) throw new Error(error.message);
-    // Pakiet PRO: opłata sukcesu 5% kwoty udzielonej pożyczki. Rejestrowana
-    // ze statusem `wstrzymana`, dopóki aktywna Umowa ramowa nie dopuszcza
-    // wynagrodzenia od Inwestora (§ 7) — nie generuje wezwania ani faktury.
-    let successFee: { feeGrosz: number; status: string } | null = null;
-    try {
-      const { registerSuccessFee } = await import("@/lib/investor-plan/plan.functions");
-      const res = await registerSuccessFee({
-        matchId: m.id,
-        loanAmountPln: data.payoutAmountPln,
-      });
-      if (res) successFee = { feeGrosz: res.feeGrosz, status: res.status };
-    } catch (e) {
-      console.error("[order-cycle] success fee registration failed", e);
-    }
-
+    // Inwestor nie płaci nic (Umowa ramowa v7) — brak Opłaty Sukcesu.
     await logCycleEvent(supabaseAdmin, {
       matchId: m.id,
       orderId: m.order_id,
@@ -932,12 +920,11 @@ export const confirmZal6 = createServerFn({ method: "POST" })
       payload: {
         payout_amount_pln: data.payoutAmountPln,
         provision_amount_pln: provision,
-        oplata_sukcesu_pro: successFee,
       },
       actor: context.userId,
       actorKind: "admin",
     });
-    return { ok: true, provisionAmountPln: provision, successFee };
+    return { ok: true, provisionAmountPln: provision };
   });
 
 export const confirmNdaAccession = createServerFn({ method: "POST" })

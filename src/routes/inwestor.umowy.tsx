@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 import {
   getMyLegalPackState,
+  getOrderLimits,
   getLegalDocumentText,
   deliverLegalPack,
   acceptLegalDocument,
@@ -46,6 +47,7 @@ import {
   getMyInvestorVerification,
 } from "@/lib/investor-agreements/didit-self.functions";
 import { OrderCycleSection } from "@/components/inwestor/order-cycle";
+import { InvestorTeaserList } from "@/components/access/InvestorTeaserList";
 import { PipelineProgress, PipelineStepCard } from "@/components/inwestor/pipeline-stepper";
 import {
   LenderDataStep,
@@ -54,7 +56,7 @@ import {
 } from "@/components/inwestor/pipeline-steps";
 import { TpayReturnStatus } from "@/components/access/TpayReturnStatus";
 import { formatGroszPln } from "@/lib/access/core";
-import { TIER_PRESENTATION } from "@/lib/investor-plan/plans";
+import { ACCESS_PRESENTATION } from "@/lib/investor-plan/plans";
 import type { PipelineStep, PipelineStepKey } from "@/lib/investor-plan/pipeline";
 
 export const Route = createFileRoute("/inwestor/umowy")({
@@ -91,6 +93,8 @@ function PipelinePage() {
   const legalQ = useQuery({ queryKey: ["legal-pack-state"], queryFn: () => fetchLegal() });
   const pipeQ = useQuery({ queryKey: ["investor-pipeline"], queryFn: () => fetchPipeline() });
   const planQ = useQuery({ queryKey: ["investor-plan"], queryFn: () => fetchPlan() });
+  const fetchLimits = useServerFn(getOrderLimits);
+  const limitsQ = useQuery({ queryKey: ["order-limits"], queryFn: () => fetchLimits() });
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["legal-pack-state"] });
@@ -122,7 +126,7 @@ function PipelinePage() {
     );
   };
 
-  const tier = TIER_PRESENTATION[pipe.tier];
+  const tier = ACCESS_PRESENTATION;
 
   return (
     <div className="space-y-5">
@@ -138,7 +142,7 @@ function PipelinePage() {
 
       <PipelineProgress steps={steps} progress={pipe.pipeline.progress} tierLabel={tier.name} />
 
-      <PlanBanner tier={pipe.tier} plan={plan} />
+      <PlanBanner />
 
       {!legal.packActive ? (
         <Card className="border-amber-300 bg-amber-50/40">
@@ -202,11 +206,24 @@ function PipelinePage() {
         <OrderForm
           canSubmit={pipe.pipeline.canSubmitOrder}
           isConsumer={pipe.input.isConsumer}
+          limits={limitsQ.data ?? null}
           onDone={refresh}
         />
       </PipelineStepCard>
 
       <OrdersList state={legal} onDone={refresh} />
+
+      {/* Teasery Projektów dopasowanych do PRZYJĘTYCH Zleceń (bez Zlecenia — pusto + CTA). */}
+      {legal.packActive ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Projekty dopasowane do Twoich Zleceń</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InvestorTeaserList />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Cykl Zlecenie–Projekt: teaser → Karta Leada → Ujawnienie → rezerwacja. */}
       {legal.packActive ? <OrderCycleSection /> : null}
@@ -216,7 +233,7 @@ function PipelinePage() {
   );
 }
 
-// ── Opłaty sukcesu PRO widoczne dla inwestora ────────────────────────────────
+// ── Historyczne opłaty sukcesu (nieaktywne od Umowy ramowej v7) ─────────────
 
 const FEE_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
   wstrzymana: {
@@ -236,7 +253,7 @@ function SuccessFeesList({ plan }: { plan: any }) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">
-          Opłaty sukcesu ({(plan?.successFeeBps ?? 500) / 100}% kwoty udzielonej pożyczki)
+          Historyczne opłaty sukcesu (nieaktywne — usługa dla Inwestora jest nieodpłatna)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -264,49 +281,28 @@ function SuccessFeesList({ plan }: { plan: any }) {
   );
 }
 
-// ── Baner pakietu ────────────────────────────────────────────────────────────
+// ── Baner dostępu ────────────────────────────────────────────────────────────
 
-function PlanBanner({ tier, plan }: { tier: "podstawowy" | "pro"; plan: any }) {
-  const p = TIER_PRESENTATION[tier];
-  const isPro = tier === "pro";
+function PlanBanner() {
+  const p = ACCESS_PRESENTATION;
   return (
     <Card
       className="overflow-hidden border-0 text-white"
       style={{
-        background: isPro
-          ? "linear-gradient(115deg, oklch(0.36 0.16 285), oklch(0.48 0.18 250) 55%, oklch(0.62 0.15 205))"
-          : "linear-gradient(115deg, oklch(0.30 0.08 265), oklch(0.38 0.10 250))",
+        background: "linear-gradient(115deg, oklch(0.30 0.08 265), oklch(0.38 0.10 250))",
       }}
     >
       <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] opacity-85">
-            <Sparkles className="h-3.5 w-3.5" /> Pakiet {p.name}
+            <Sparkles className="h-3.5 w-3.5" /> {p.name} — {p.priceLabel}
           </div>
           <p className="max-w-2xl text-sm opacity-90">{p.tagline}</p>
-          {isPro && plan?.activeUntil ? (
-            <p className="text-xs opacity-75">
-              Aktywny do {new Date(plan.activeUntil).toLocaleDateString("pl-PL")} · {plan.daysLeft}{" "}
-              dni · opłata sukcesu {(plan.successFeeBps ?? 500) / 100}% od udzielonej pożyczki
-            </p>
-          ) : (
-            <p className="text-xs opacity-75">
-              Odblokowanie pojedynczej okazji: {formatGroszPln(plan?.unlockPriceGrosz ?? 150000)} ·
-              pakiet PRO: 3 000 zł / 6 miesięcy + 5% od udzielonej pożyczki
-            </p>
-          )}
+          <p className="text-xs opacity-75">
+            Jedyna opłata w systemie: Prowizja Klientowska Finance You — 7 % Kwoty Udzielonej, nie
+            mniej niż 5 000 zł, bez VAT — obciąża Klienta i jest potrącana z wypłaty (Zał. 6).
+          </p>
         </div>
-        {!isPro ? (
-          <Button
-            variant="secondary"
-            className="bg-white text-slate-900 hover:bg-white/90"
-            onClick={() => {
-              window.location.href = "/inwestor/abonament?product=investor_pro_180d";
-            }}
-          >
-            Przejdź na PRO
-          </Button>
-        ) : null}
       </CardContent>
     </Card>
   );
@@ -657,15 +653,32 @@ function ComparisonPreview({ investor }: { investor: Record<string, any> | null 
 
 // ── Krok 9: Formularz Zlecenia ───────────────────────────────────────────────
 
+type OrderLimitsView = {
+  assignmentHours: number;
+  extensionHours: number;
+  maxActive: number;
+  maxExtended: number;
+  rejectionThreshold: number;
+  maxPeriodMonths: number;
+  maxAnnualYield: number;
+  amountTolerancePct: number;
+};
+
 function OrderForm({
   canSubmit,
   isConsumer,
+  limits,
   onDone,
 }: {
   canSubmit: boolean;
   isConsumer: boolean;
+  /** Limity z project_module_settings (null = jeszcze nie wczytane). */
+  limits: OrderLimitsView | null;
   onDone: () => void;
 }) {
+  const maxPeriod = limits?.maxPeriodMonths ?? 120;
+  const maxYield = limits?.maxAnnualYield ?? 14.5;
+  const tolerance = limits?.amountTolerancePct ?? 15;
   const submit = useServerFn(submitInvestorOrder);
   const [amount, setAmount] = useState("");
   const [period, setPeriod] = useState("");
@@ -714,10 +727,12 @@ function OrderForm({
     );
   }
 
+  const periodOk = Number(period) >= 1 && Number(period) <= maxPeriod;
+  const yieldOk = Number(yieldMin) >= 0 && Number(yieldMin) <= maxYield;
   const valid =
     Number(amount) > 0 &&
-    Number(period) > 0 &&
-    Number(yieldMin) >= 0 &&
+    periodOk &&
+    yieldOk &&
     s1 &&
     s2 &&
     s3 &&
@@ -727,7 +742,9 @@ function OrderForm({
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1.5">
-          <Label className="text-xs">Kwota inwestycji (zł, ± 15%)</Label>
+          <Label className="text-xs">
+            Kwota Finansowania (zł, dopuszczalne odchylenie ± {tolerance}%)
+          </Label>
           <Input
             type="number"
             min={1}
@@ -735,29 +752,44 @@ function OrderForm({
             onChange={(e) => setAmount(e.target.value)}
             placeholder="np. 200000"
           />
+          <p className="text-[11px] text-muted-foreground">
+            Projekt pasuje, gdy jego kwota mieści się w ±{tolerance}% kwoty Zlecenia.
+          </p>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Maks. okres (miesiące)</Label>
+          <Label className="text-xs">Maks. okres (1–{maxPeriod} miesięcy)</Label>
           <Input
             type="number"
             min={1}
-            max={360}
+            max={maxPeriod}
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
             placeholder="np. 24"
           />
+          {period !== "" && !periodOk ? (
+            <p className="text-[11px] text-destructive">
+              Okres musi mieścić się w 1–{maxPeriod} miesięcy.
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Min. zysk roczny (%)</Label>
+          <Label className="text-xs">
+            Min. zysk roczny (%, maks. {maxYield}% — odsetki maksymalne)
+          </Label>
           <Input
             type="number"
             min={0}
-            max={100}
+            max={maxYield}
             step="0.1"
             value={yieldMin}
             onChange={(e) => setYieldMin(e.target.value)}
             placeholder="np. 12"
           />
+          {yieldMin !== "" && !yieldOk ? (
+            <p className="text-[11px] text-destructive">
+              Oprocentowanie przekracza odsetki maksymalne ({maxYield}%).
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Termin ważności</Label>
@@ -781,7 +813,7 @@ function OrderForm({
             set: setS1,
             id: "o1",
             label:
-              "Składam Zlecenie na podstawie Ramowej umowy pośrednictwa (pakiet FY-LEGAL-2026-09-04).",
+              "Składam Zlecenie na podstawie aktualnie obowiązującej Ramowej umowy pośrednictwa (usługa dla Inwestora nieodpłatna; Prowizja Klientowska obciąża Klienta i jest potrącana z wypłaty).",
           },
           {
             v: s2,
@@ -824,6 +856,15 @@ function OrderForm({
             </SelectContent>
           </Select>
         </div>
+      ) : null}
+
+      {limits ? (
+        <p className="text-[11px] text-muted-foreground">
+          Limity (z ustawień modułu, § 5 Umowy ramowej): maks. {limits.maxActive} aktywnych Zleceń
+          naraz, Zlecenie wygasa po {limits.rejectionThreshold} odrzuceniach Projektów, rezerwacja{" "}
+          {limits.assignmentHours} h + jednorazowo {limits.extensionHours} h, maks.{" "}
+          {limits.maxExtended} przedłużone naraz, ważność 30/60/90 dni.
+        </p>
       ) : null}
 
       <Button disabled={!valid || mut.isPending} onClick={() => mut.mutate()}>
