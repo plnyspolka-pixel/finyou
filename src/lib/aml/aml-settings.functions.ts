@@ -6,7 +6,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
-import type { AmlInstitution, AmlPerson, AmlProfileGaps } from "@/lib/aml/aml-types";
+import {
+  readinessFromStatus,
+  statusFromReadiness,
+  type AmlGiifReadiness,
+  type AmlInstitution,
+  type AmlPerson,
+  type AmlProfileGaps,
+} from "@/lib/aml/aml-types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 type Loose = { from: (t: string) => any };
@@ -37,12 +44,8 @@ export interface AmlSettingsView {
   additionalPerson: AmlPerson | null;
   signerPerson: AmlPerson | null; // null = ta sama co odpowiedzialna
   institution: AmlInstitution;
-  giifConnectionStatus: string;
-  giifInstitutionId: string | null;
-  giifEnvironment: "test" | "production";
   profileGaps: AmlProfileGaps;
-  /** Aktywny provider szyfrowania kluczy certyfikatów (KMS vs lokalna koperta). */
-  keyProvider: { name: string; productionApproved: boolean; description: string };
+  giifReadiness: AmlGiifReadiness;
 }
 
 /** Braki danych wymaganych do finalnego zgłoszenia (ostrzegamy, nie blokujemy). */
@@ -105,26 +108,18 @@ async function buildDefaultsFromProfile(
   return { person, institution };
 }
 
-async function keyProviderInfo() {
-  const { getAmlKeyProvider } = await import("@/lib/aml/key-provider.server");
-  return getAmlKeyProvider().info();
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
-async function toView(row: any): Promise<AmlSettingsView> {
+function toView(row: any): AmlSettingsView {
   const person = (row.responsible_person ?? {}) as AmlPerson;
   const institution = (row.institution ?? {}) as AmlInstitution;
   return {
-    keyProvider: await keyProviderInfo(),
     id: row.id,
     responsiblePerson: person,
     additionalPerson: (row.additional_person as AmlPerson | null) ?? null,
     signerPerson: (row.signer_person as AmlPerson | null) ?? null,
     institution,
-    giifConnectionStatus: row.giif_connection_status,
-    giifInstitutionId: row.giif_institution_id ?? null,
-    giifEnvironment: row.giif_environment,
     profileGaps: computeProfileGaps(person, institution),
+    giifReadiness: readinessFromStatus(row.giif_connection_status),
   };
 }
 
@@ -163,9 +158,9 @@ export const getAmlSettings = createServerFn({ method: "POST" })
           .eq("id", existing.id)
           .select("*")
           .single();
-        return await toView(updated ?? { ...existing, ...merged });
+        return toView(updated ?? { ...existing, ...merged });
       }
-      return await toView(existing);
+      return toView(existing);
     }
 
     const defaults = await buildDefaultsFromProfile(context.supabase, context.userId);
@@ -188,7 +183,7 @@ export const getAmlSettings = createServerFn({ method: "POST" })
       action: "auto_initialized_from_profile",
       details: { person: defaults.person as unknown as Record<string, unknown> },
     });
-    return await toView(created);
+    return toView(created);
   });
 
 const UpdateSettingsInput = z.object({
@@ -196,7 +191,6 @@ const UpdateSettingsInput = z.object({
   additionalPerson: PersonSchema.nullable().optional(),
   signerPerson: PersonSchema.nullable().optional(),
   institution: InstitutionSchema.optional(),
-  giifEnvironment: z.enum(["test", "production"]).optional(),
 });
 
 export const updateAmlSettings = createServerFn({ method: "POST" })
@@ -209,7 +203,6 @@ export const updateAmlSettings = createServerFn({ method: "POST" })
     if (data.additionalPerson !== undefined) patch.additional_person = data.additionalPerson;
     if (data.signerPerson !== undefined) patch.signer_person = data.signerPerson;
     if (data.institution !== undefined) patch.institution = data.institution;
-    if (data.giifEnvironment !== undefined) patch.giif_environment = data.giifEnvironment;
 
     const { data: updated, error } = await db
       .from("aml_settings")
@@ -227,7 +220,39 @@ export const updateAmlSettings = createServerFn({ method: "POST" })
       action: "settings_updated",
       details: { fields: Object.keys(patch) },
     });
-    return await toView(updated);
+    return toView(updated);
+  });
+
+/** Inwestor oznacza kroki przygotowania do wysyłki w SI*GIIF. */
+export const setAmlGiifReadiness = createServerFn({ method: "POST" })
+  .middleware([requireInvestorPro])
+  .inputValidator((data) =>
+    z.object({ hasQualifiedSignature: z.boolean(), registeredInSiGiif: z.boolean() }).parse(data),
+  )
+  .handler(async ({ data, context }): Promise<AmlSettingsView> => {
+    // Rejestracja w SI*GIIF wymaga podpisu kwalifikowanego — bez podpisu nie ma rejestracji.
+    const readiness: AmlGiifReadiness = {
+      hasQualifiedSignature: data.hasQualifiedSignature || data.registeredInSiGiif,
+      registeredInSiGiif: data.registeredInSiGiif,
+    };
+    const db = loose(context.supabase);
+    const { data: updated, error } = await db
+      .from("aml_settings")
+      .update({ giif_connection_status: statusFromReadiness(readiness) })
+      .eq("user_id", context.userId)
+      .select("*")
+      .single();
+    if (error) throw new Error(`Nie udało się zapisać: ${error.message}`);
+
+    const { amlAudit } = await import("@/lib/aml/audit.server");
+    await amlAudit({
+      userId: context.userId,
+      entityType: "settings",
+      entityId: updated.id,
+      action: "giif_readiness_updated",
+      details: { ...readiness },
+    });
+    return toView(updated);
   });
 
 export interface AmlOverview {
@@ -241,7 +266,7 @@ export interface AmlOverview {
   reportsSubmitted: number;
   upoReceived: number;
   profileGaps: AmlProfileGaps;
-  giifConnectionStatus: string;
+  giifReadiness: AmlGiifReadiness;
 }
 
 /** Liczniki na ekran Przegląd. */
@@ -286,6 +311,6 @@ export const getAmlOverview = createServerFn({ method: "POST" })
       ),
       upoReceived: await count("aml_reports", (q) => q.eq("status", "upo_received")),
       profileGaps: gaps,
-      giifConnectionStatus: settingsRow?.giif_connection_status ?? "not_connected",
+      giifReadiness: readinessFromStatus(settingsRow?.giif_connection_status),
     };
   });
