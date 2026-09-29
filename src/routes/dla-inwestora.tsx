@@ -427,9 +427,9 @@ const FAQS = [
 ];
 
 // Duży złoty przycisk „Dołącz do klubu” — jedyny CTA w hero, prowadzi do
-// zakładki Cennik (#cennik). Zakładki reagują na `hashchange`; gdy hash już
-// jest ustawiony na #cennik (np. po kliknięciu w zakładkę), przeglądarka nie
-// wyśle zdarzenia, więc wysyłamy je sami, żeby strona przewinęła się do cennika.
+// zakładki Cennik (#cennik): inwestor najpierw wybiera pakiet, potem zakłada
+// konto. Przewijanie do zakładki obsługuje InvestorTabs (także gdy hash już
+// jest ustawiony na #cennik).
 function JoinClubButton() {
   return (
     <MktButton
@@ -441,11 +441,6 @@ function JoinClubButton() {
         padding: "0 clamp(1.6rem, 5vw, 3rem)",
         fontSize: "1.2rem",
         maxWidth: "100%",
-      }}
-      onClick={() => {
-        if (window.location.hash === PRICING_HASH) {
-          window.dispatchEvent(new HashChangeEvent("hashchange"));
-        }
       }}
     >
       <BrandIcon name="handCoins" size={22} /> Dołącz do klubu
@@ -791,8 +786,20 @@ function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: Acce
     };
     applyHash(window.location.hash !== "" && window.location.hash !== "#oferty");
     const onHash = () => applyHash(true);
+    // Klik w link do zakładki (złoty CTA w hero, nagłówek, pasek przyklejony),
+    // gdy hash już wskazuje tę zakładkę (np. po kliknięciu w nią): przeglądarka
+    // nie wyśle `hashchange`, więc sami przewijamy do paska zakładek.
+    const onClick = (e: MouseEvent) => {
+      if (!(e.target instanceof Element)) return;
+      const href = e.target.closest("a[href]")?.getAttribute("href");
+      if (href != null && href === window.location.hash) applyHash(true);
+    };
     window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
+    document.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("hashchange", onHash);
+      document.removeEventListener("click", onClick);
+    };
   }, []);
 
   const select = (tab: (typeof INVESTOR_TABS)[number]) => {
@@ -943,7 +950,7 @@ function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: Acce
 function InvestorLanding() {
   const { products, leads, video } = Route.useLoaderData();
   return (
-    <MarketingShell page="inwestor" sticky={{ label: "Dołącz do Klubu", href: JOIN }}>
+    <MarketingShell page="inwestor" sticky={{ label: "Dołącz do klubu", href: PRICING_HASH }}>
       <Hero video={video} />
 
       <CalculatorSection />
