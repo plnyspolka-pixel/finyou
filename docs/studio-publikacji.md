@@ -69,9 +69,10 @@ failed`) i `tiktok_fail_reason`. **Oba tory filtrują się wzajemnie po
   w naszej usłudze).
 - `studio_images` — wygenerowane grafiki; pliki w publicznym buckecie
   `studio-media` (trwałe URL-e, które Meta może pobrać przy publikacji).
-- `studio_broll_assets` — **bank b-rolli**: przebitki (`kind = 'broll'`)
-  i wizual hooki (`kind = 'hook'`). Pliki w tym samym buckecie `studio-media`,
-  dobór po tagach, rotacja po `last_used_at` / `use_count`.
+- `studio_broll_assets` — **bank b-rolli**: przebitki (`kind = 'broll'`).
+  Pliki w tym samym buckecie `studio-media`, dobór po tagach, rotacja po
+  `last_used_at` / `use_count`. Stare wiersze `kind = 'hook'` (wizual hooki,
+  usunięte) zostają w tabeli, ale kod ich nie czyta ani nie pokazuje.
 - `studio_default_avatars` — **stały zestaw domyślnych awatarów**; `position`
   wyznacza rotację a-rolli w rolce.
 
@@ -437,7 +438,7 @@ true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
    Regeneracja bazy pytań po zmianie pliku źródłowego:
    `bun run scripts/generate-shorts-question-bank.ts`.
 
-3. **B-rolle** — bank materiałów, z którego jadą przebitki i wizual hooki
+3. **B-rolle** — bank materiałów, z którego jadą przebitki
    (opis niżej: „Bank b-rolli").
 
 4. **Grafiki AI** — prompt → grafika zapisana w Storage; „Do posta"
@@ -488,11 +489,16 @@ problemy naraz: każdy przebieg oddaje co innego (rolki wychodzą niespójne),
 raz znalezionej dobrej grafiki nie da się użyć drugi raz, a cudzy URL może
 wygasnąć między planowaniem a renderem. Dlatego materiał trzymamy u siebie.
 
-- **Co jest w banku** — `studio_broll_assets`, dwa rodzaje: `broll`
-  (ilustracja treści) i `hook` (wizual hook, czyli efekciarskie ujęcie, które
-  ma zatrzymać kciuk, a nie coś tłumaczyć).
-- **Skąd** — przycisk „Uzupełnij bank ze stocku" (startowy zestaw fraz;
-  Pexels, gdy jest `PEXELS_API_KEY`, inaczej biblioteka HeyGena), ręczne
+- **Co jest w banku** — `studio_broll_assets`, wyłącznie przebitki (`broll`)
+  ilustrujące treść. Wizual hooki (efekciarskie ujęcia po pierwszym zdaniu)
+  zostały usunięte z montażu, banku i panelu.
+- **Skąd** — przycisk „Uzupełnij bank ze stocku" (startowy zestaw ok. 100
+  tematów — nieruchomości, umowy i formalności, pieniądze, inwestowanie,
+  biznes i ludzie — po `SEED_IMAGES_PER_QUERY` = 4 ujęcia na temat, czyli
+  kilkaset przebitek do wyboru; Pexels, gdy jest `PEXELS_API_KEY`, inaczej
+  biblioteka HeyGena). Seed idzie porcjami (`SEED_QUERIES_PER_CALL` tematów
+  na wywołanie — limit żądań funkcji), a panel woła go w pętli, pokazując
+  postęp na przycisku. Dalej: ręczne
   dodanie z publicznego URL-a, albo przycisk „do banku" przy grafice AI.
   **Każdy plik kopiujemy do bucketu `studio-media`** — HeyGen i Meta dostają
   trwały https, nie wygasający link stocku. Seed jest idempotentny (pomija
@@ -538,7 +544,7 @@ domyślnie 2 twarze, `avatars_per_reel`). Montaż z MCP domyślnie idzie struktu
 rolki z przebitkami b-roll (`reel_structure=false` wyłącza). Czat nie musi więc
 zgadywać domyślnych awatarów po nazwie.
 
-## Struktura rolki (montaż: ujęcie → wizual hook → b-roll → a-roll)
+## Struktura rolki (montaż: ujęcie → b-roll → a-roll)
 
 Pole **„Montaż rolki"** w zakładce „Wideo AI" ma trzy tryby:
 
@@ -551,9 +557,8 @@ Pole **„Montaż rolki"** w zakładce „Wideo AI" ma trzy tryby:
    | scena | co widać                                                        |
    | ----- | --------------------------------------------------------------- |
    | 0     | ujęcie z pierwszym domyślnym awatarem (hook mówi twarz)         |
-   | 1     | **wizual hook** — pełnoekranowy efekt z banku                   |
-   | 2     | **b-roll** — przebitka ilustrująca treść                        |
-   | 3     | **a-roll drugiej twarzy rolki** (partner z rotacji)             |
+   | 1     | **b-roll** — przebitka ilustrująca treść                        |
+   | 2     | **a-roll drugiej twarzy rolki** (partner z rotacji)             |
    | …     | cykl się powtarza; ostatnia scena (CTA) zawsze wraca na awatara |
 
    AI nie decyduje już **gdzie** ciąć — dostaje tylko indeksy przebitek
@@ -567,7 +572,8 @@ zdobyć ani jednej grafiki, rolka wychodzi jako pojedyncze ujęcie z powodem
 w `last_error`. Przy jednym domyślnym awatarze struktura nadal tnie — po prostu
 bez zmiany twarzy (panel o tym mówi). Plan faktycznie wysłany na render
 zapisujemy w `scene_plan`, a biblioteka pokazuje go jako
-„3 ujęcia z awatarem + 1 przebitka + 2 wizual hooki (3 awatary)".
+„4 ujęcia z awatarem + 2 przebitki (3 awatary)". Stare plany ze scenami
+`hook` (sprzed usunięcia wizual hooków) liczą się tam po prostu jako przebitki.
 
 ## Rolki przez MCP → Studio → materiały
 

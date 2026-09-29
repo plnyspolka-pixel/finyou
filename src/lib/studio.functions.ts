@@ -292,7 +292,7 @@ export type StudioVideoJob = {
   caption_burn_attempts: number;
   /** Czy rolka renderuje się jako sklejka scen (awatar + przebitki). */
   dynamic_scenes: boolean;
-  /** Czy poszła stałą strukturą (ujęcie → wizual hook → przebitka → a-roll). */
+  /** Czy poszła stałą strukturą (ujęcie → przebitka → a-roll). */
   reel_structure: boolean;
   /** Rotacja domyślnych awatarów użyta przy tym jobie. */
   avatar_ids: string[];
@@ -975,7 +975,7 @@ export const saveStudioDefaultAvatars = createServerFn({ method: "POST" })
 
 export type StudioBrollAsset = {
   id: string;
-  kind: "broll" | "hook";
+  kind: "broll";
   title: string;
   tags: string[];
   media_url: string;
@@ -991,21 +991,21 @@ export type StudioBrollAsset = {
 
 export const listStudioBroll = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d?: { kind?: "broll" | "hook"; search?: string }) => d ?? {})
+  .inputValidator((d?: { search?: string }) => d ?? {})
   .handler(async ({ data, context }): Promise<StudioBrollAsset[]> => {
     await assertAdmin(context.userId);
     const { listBrollAssets } = await import("./studio-broll.server");
     const items = await listBrollAssets({
-      kind: data.kind,
       search: data.search,
       includeInactive: true,
+      limit: 2000,
     });
     return items.map(({ storage_path: _ignored, ...rest }) => rest);
   });
 
 export const addStudioBroll = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { url: string; kind: "broll" | "hook"; title?: string; tags?: string }) => d)
+  .inputValidator((d: { url: string; title?: string; tags?: string }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { addBrollFromUrl } = await import("./studio-broll.server");
@@ -1015,7 +1015,6 @@ export const addStudioBroll = createServerFn({ method: "POST" })
       .filter(Boolean);
     const asset = await addBrollFromUrl({
       url: data.url,
-      kind: data.kind === "hook" ? "hook" : "broll",
       title: data.title,
       tags,
       source: "url",
@@ -1045,14 +1044,15 @@ export const deleteStudioBroll = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// Jedno kliknięcie = startowy bank ze stocku (Pexels, gdy jest PEXELS_API_KEY,
-// inaczej biblioteka HeyGena). Idempotentne — frazy już pobrane są pomijane.
+// Startowy bank ze stocku (Pexels, gdy jest PEXELS_API_KEY, inaczej biblioteka
+// HeyGena), po kilka ujęć na frazę. Jedno wywołanie = jedna porcja fraz;
+// panel woła w pętli, dopóki `remaining` > 0. Idempotentne — frazy już
+// pobrane są pomijane.
 export const seedStudioBroll = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d?: { kinds?: ("broll" | "hook")[] }) => d ?? {})
-  .handler(async ({ data, context }) => {
+  .inputValidator((d?: Record<string, never>) => d ?? {})
+  .handler(async ({ context }) => {
     await assertAdmin(context.userId);
     const { seedBrollBank } = await import("./studio-broll.server");
-    const kinds = data.kinds?.length ? data.kinds : (["broll", "hook"] as const).slice();
-    return await seedBrollBank({ kinds: [...kinds], userId: context.userId });
+    return await seedBrollBank({ userId: context.userId });
   });

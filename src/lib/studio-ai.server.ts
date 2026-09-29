@@ -110,8 +110,8 @@ Zwracaj WYŁĄCZNIE JSON: {"scenes":[{"index":1,"query":"signing mortgage contra
   return out;
 }
 
-// Tryb „struktura rolki": miejsca cięć są z góry ustalone (ujęcie → wizual
-// hook → przebitka → a-roll innego awatara), więc AI nie decyduje już GDZIE
+// Tryb „struktura rolki": miejsca cięć są z góry ustalone (ujęcie →
+// przebitka → a-roll innego awatara), więc AI nie decyduje już GDZIE
 // ciąć — dostaje konkretne indeksy segmentów i oddaje wyłącznie frazę
 // wyszukiwania dla każdego z nich. Brak odpowiedzi nie psuje montażu: render
 // weźmie wtedy materiał z banku po prostu najdawniej użyty.
