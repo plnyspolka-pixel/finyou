@@ -410,6 +410,12 @@ wsadowe i cron czytają go przez `resolveAvatarRotation` (kolumna
 Rotację prowadzi awatar wybrany w formularzu, za nim reszta zestawu
 (maks. 6 twarzy — więcej w 30–60 s to już nie montaż, tylko chaos).
 
+Konektor MCP czyta ten sam zapis: `heygen_status` i `list_heygen_avatars`
+pokazują zestaw (`default_avatars`, a w katalogu `is_default` /
+`default_position` — 1 = prowadzi rolkę), a `create_studio_video_job` bez
+`avatar_id` / `avatar_ids` używa go tak jak panel (`reel_structure=true` włącza
+strukturę rolki). Czat nie musi więc zgadywać domyślnych awatarów po nazwie.
+
 ## Struktura rolki (montaż: ujęcie → wizual hook → b-roll → a-roll)
 
 Pole **„Montaż rolki"** w zakładce „Wideo AI" ma trzy tryby:
