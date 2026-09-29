@@ -28,7 +28,7 @@ import {
   updateOne,
 } from "../_helpers";
 import { defineListTool, flag, search, text } from "../_list-tool";
-import { CAPTION_STYLE_IDS } from "@/lib/caption-style";
+import { CAPTION_STYLE_IDS, defaultCaptionStyle } from "@/lib/caption-style";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL } from "@/lib/studio-scenes";
 import type { StudioDefaultAvatar } from "@/lib/studio-avatars.server";
 
@@ -50,7 +50,7 @@ const CAPTIONS = ["burned", "sidecar", "off"] as const;
 const CAPTION_STYLE = z
   .enum(CAPTION_STYLE_IDS)
   .describe(
-    "Styl napisów: heygen (domyślne HeyGena, bez kontroli wyglądu) albo własny wypalany u nas: reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Własne wymagają usługi CAPTION_BURNER_URL.",
+    "Styl napisów: własny wypalany naszą usługą (renderer caption-burner) — reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu) — albo heygen (napisy HeyGena, bez kontroli wyglądu). Pomiń pole, a będzie jak w panelu Studia: reels, gdy usługa jest skonfigurowana, inaczej heygen. `heygen` wybieraj tylko na wyraźną prośbę.",
   );
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -153,6 +153,7 @@ export const heygenStatus = defineTool({
         caption_burner: burner.isCaptionBurnerConfigured()
           ? await burner.checkCaptionBurnerHealth()
           : { ok: false, ffmpeg: null, error: "nie skonfigurowana (CAPTION_BURNER_URL)" },
+        default_caption_style: defaultCaptionStyle(burner.isCaptionBurnerConfigured()),
         ai_badge: {
           enabled: burner.isAiBadgeEnabled(),
           active: burner.isAiBadgeEnabled() && burner.isCaptionBurnerConfigured(),
@@ -797,7 +798,7 @@ export const createStudioVideoJob = defineTool({
   name: "create_studio_video_job",
   title: "Create studio video job",
   description:
-    "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. `caption_style` wybiera wygląd napisów (HeyGen nie daje kontroli nad rozmiarem/pozycją — własne style wypala nasza usługa). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → wizual hook → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+    "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy domyślnie jak w panelu: własny styl `reels` wypalany naszą usługą (renderer), gdy jest skonfigurowana; `caption_style` zmienia wygląd, a `heygen` (napisy HeyGena, bez kontroli rozmiaru i pozycji) tylko na wyraźną prośbę. Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → wizual hook → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
   inputSchema: {
     prompt: z.string().min(3).max(2000).optional().describe("Temat / brief odcinka."),
     script: z.string().max(5000).optional().describe("Gotowy tekst lektora; pusty = AI."),
@@ -826,7 +827,7 @@ export const createStudioVideoJob = defineTool({
       ),
     voice_id: z.string().optional().describe("Głos ElevenLabs; domyślnie Filip."),
     captions: z.boolean().default(true),
-    caption_style: CAPTION_STYLE.default("heygen"),
+    caption_style: CAPTION_STYLE.optional(),
     dynamic_scenes: z
       .boolean()
       .default(false)
@@ -851,6 +852,9 @@ export const createStudioVideoJob = defineTool({
     handle(async () => {
       const s = await requireTeamAdmin(ctx);
       const d = await defaults();
+      // Styl napisów jak w panelu: własny (renderer), gdy usługa działa.
+      const { isCaptionBurnerConfigured } = await import("@/lib/caption-burner.server");
+      const captionStyle = a.caption_style ?? defaultCaptionStyle(isCaptionBurnerConfigured());
       let prompt = a.prompt?.trim() ?? "";
       let script = a.script?.trim() ?? "";
       let title = a.publish_title?.trim() ?? "";
@@ -896,7 +900,7 @@ export const createStudioVideoJob = defineTool({
         voice_id: a.voice_id ?? d.voiceId,
         status: a.start_now ? "generating_audio" : "queued",
         captions: a.captions,
-        caption_style: a.caption_style,
+        caption_style: captionStyle,
         dynamic_scenes: a.dynamic_scenes || a.reel_structure,
         reel_structure: a.reel_structure,
         auto_publish_platforms: a.auto_publish_platforms,
@@ -909,7 +913,7 @@ export const createStudioVideoJob = defineTool({
         s,
         "studio_video_jobs",
         row,
-        "id, status, prompt, publish_title, avatar_id, avatar_ids, reel_structure, dynamic_scenes, auto_publish_platforms",
+        "id, status, prompt, publish_title, avatar_id, avatar_ids, reel_structure, dynamic_scenes, caption_style, auto_publish_platforms",
       );
       const { setJobMaterialAudience } = await import("@/lib/studio-materials.server");
       await setJobMaterialAudience(job.id, a.material_audience);
@@ -1128,7 +1132,7 @@ export const importHeygenVideoToStudio = defineTool({
   name: "import_heygen_video_to_studio",
   title: "Import HeyGen video into Studio",
   description:
-    "Dołącza do Studia film wyrenderowany w HeyGen poza Studiem (np. `generate_avatar_video`, `heygen_api_request`, panel HeyGena): zakłada zadanie Studia z tym `heygen_video_id` — film widać w panelu Studia, dostaje znaczek AI i trafia do biblioteki materiałów (/admin/materialy); dalej publikacja jak zwykle (`publish_studio_job`). Nie renderuje ponownie i nie zużywa kredytów HeyGen. Film już dołączony zwraca istniejące zadanie. Tylko administrator/operator.",
+    "Dołącza do Studia film wyrenderowany w HeyGen poza Studiem (np. `generate_avatar_video`, `heygen_api_request`, panel HeyGena): zakłada zadanie Studia z tym `heygen_video_id` — film widać w panelu Studia, napisy dostaje z naszego renderera (styl jak w panelu, z pliku napisów HeyGena na czystym masterze; gdy się nie da — zostają napisy HeyGena), do tego znaczek AI, i trafia do biblioteki materiałów (/admin/materialy); dalej publikacja jak zwykle (`publish_studio_job`). Nie renderuje ponownie i nie zużywa kredytów HeyGen. Film już dołączony zwraca istniejące zadanie. Tylko administrator/operator.",
   inputSchema: {
     heygen_video_id: z.string().min(6).max(100),
     publish_title: z
@@ -1142,8 +1146,9 @@ export const importHeygenVideoToStudio = defineTool({
       .boolean()
       .optional()
       .describe(
-        "Czy publikować wersję z napisami HeyGena; domyślnie wykrywane (jest wersja z napisami = tak).",
+        "Czy rolka ma mieć napisy; domyślnie wykrywane (HeyGen oddał plik napisów albo wersję z napisami = tak).",
       ),
+    caption_style: CAPTION_STYLE.optional(),
     material_audience: MATERIAL_AUDIENCE.optional(),
   },
   annotations: WRITE,
@@ -1194,6 +1199,8 @@ export const importHeygenVideoToStudio = defineTool({
         }
       }
       const d = await defaults();
+      const { isCaptionBurnerConfigured } = await import("@/lib/caption-burner.server");
+      const hasCaptions = Boolean(status.captioned_video_url || status.subtitle_url);
       const row = {
         prompt: a.prompt?.trim() || title || `Film HeyGen ${videoId}`,
         script: "",
@@ -1201,8 +1208,10 @@ export const importHeygenVideoToStudio = defineTool({
         voice_id: d.voiceId,
         heygen_video_id: videoId,
         status: "rendering",
-        captions: a.captions ?? (completed ? Boolean(status.captioned_video_url) : true),
-        caption_style: "heygen",
+        captions: a.captions ?? (completed ? hasCaptions : true),
+        // Napisy z naszego renderera (jak w panelu); bez pliku napisów albo
+        // czystego mastera pipeline sam zostaje przy napisach HeyGena.
+        caption_style: a.caption_style ?? defaultCaptionStyle(isCaptionBurnerConfigured()),
         publish_title: title,
         publish_description: a.publish_description?.trim() ?? "",
         created_by: actorId(ctx),
@@ -1230,7 +1239,7 @@ export const importHeygenVideoToStudio = defineTool({
       const after = await oneOf(
         s
           .from("studio_video_jobs")
-          .select("id, status, publish_title, video_url, captions, last_error")
+          .select("id, status, publish_title, video_url, captions, caption_style, last_error")
           .eq("id", job.id),
         "studio_video_jobs",
       );

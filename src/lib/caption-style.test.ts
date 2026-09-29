@@ -6,6 +6,8 @@ import {
   aiBadgeAss,
   aiBadgeEvents,
   buildAss,
+  defaultCaptionStyle,
+  parseSubtitles,
   captionPreviewCss,
   captionStyleLabel,
   chunkCues,
@@ -252,5 +254,46 @@ describe("znaczek AI", () => {
 
   it("bez opcji nic się nie zmienia", () => {
     expect(srtToAss(SRT, "reels")).not.toContain("AiBadge");
+  });
+});
+
+describe("parseSubtitles — formaty napisów HeyGena", () => {
+  it("ASS (filmy spoza Studia): czasy z Dialogue, bez tagów i łamań", () => {
+    const ass = [
+      "[Script Info]",
+      "ScriptType: v4.00+",
+      "",
+      "[Events]",
+      "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+      "Dialogue: 0,0:00:01.50,0:00:03.00,Default,,0,0,0,,{\\b1}LTV, czyli{\\b0}\\Nstosunek kwoty",
+      "Dialogue: 0,0:00:00.00,0:00:01.50,Default,,0,0,0,,Cześć!",
+    ].join("\r\n");
+    expect(parseSubtitles(ass)).toEqual([
+      { start: 0, end: 1.5, text: "Cześć!" },
+      { start: 1.5, end: 3, text: "LTV, czyli stosunek kwoty" },
+    ]);
+  });
+
+  it("WebVTT z czasem bez godzin", () => {
+    const vtt = "WEBVTT\n\n00:01.000 --> 00:02.500\nKsięga wieczysta\n";
+    expect(parseSubtitles(vtt)).toEqual([{ start: 1, end: 2.5, text: "Księga wieczysta" }]);
+  });
+
+  it("SRT bez zmian", () => {
+    expect(parseSubtitles(SRT)).toEqual(parseSrt(SRT));
+  });
+
+  it("srtToAss przyjmuje też ASS z HeyGena", () => {
+    const ass =
+      "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n" +
+      "Dialogue: 0,0:00:00.00,0:00:02.00,Default,,0,0,0,,Pożyczka pod zastaw";
+    expect(dialogues(srtToAss(ass, "reels")!)).toHaveLength(1);
+  });
+});
+
+describe("defaultCaptionStyle", () => {
+  it("z usługą wypalania: własny styl jak w panelu; bez niej: HeyGen", () => {
+    expect(defaultCaptionStyle(true)).toBe("reels");
+    expect(defaultCaptionStyle(false)).toBe("heygen");
   });
 });

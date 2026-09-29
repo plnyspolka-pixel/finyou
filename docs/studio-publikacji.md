@@ -577,7 +577,11 @@ Cały proces da się zlecić z czatu (konektor MCP), a efekt widać w panelu:
    dwie twarze z zestawu domyślnych, znaczek „AI"; zadanie od razu widać
    w Studiu (`/admin/studio-publikacji`).
 2. Render, napisy i znaczek domyka tick Studia albo `poll_studio_jobs`
-   (`get_studio_job` pokazuje postęp).
+   (`get_studio_job` pokazuje postęp). Napisy domyślnie jak w panelu: własny
+   styl `reels` z naszego renderera (caption-burner), gdy usługa jest
+   skonfigurowana (`defaultCaptionStyle`); `heygen` tylko na wyraźną prośbę.
+   Import filmu spoza Studia też dostaje napisy z renderera — z pliku napisów
+   HeyGena (SRT, WebVTT albo ASS) na czystym masterze.
 3. Gotowa rolka **sama trafia do biblioteki materiałów** (`/admin/materialy`):
    plik kopiujemy do bucketu `marketing-materials` pod stałą ścieżką
    `studio/<id joba>.mp4` (trwale — linki HeyGena wygasają po ~7 dniach)
