@@ -230,7 +230,7 @@ function InwestorWniosek() {
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="mr-1 h-4 w-4" />
-        Wróć do okazji inwestycyjnych
+        Wróć do Zleceń i Projektów
       </Link>
       <FancyPageHeader
         eyebrow="Wniosek inwestycyjny"

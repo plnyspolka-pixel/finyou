@@ -1,3 +1,4 @@
+import { COMPANY_DATA, COMPANY_REGISTRY_LINE } from "@/lib/company";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
@@ -12,7 +13,7 @@ import { ACTIVE_SOCIAL_LINKS, type SocialKey } from "./social-links";
 
 export type MarketingPage = "home" | "klient" | "inwestor" | "posrednik" | "blog" | "kalkulator";
 
-const CONTACT = { phone: "+48 732 059 898", email: "kontakt@financeyou.pl" };
+const CONTACT = { phone: COMPANY_DATA.phone.display, email: COMPANY_DATA.email };
 
 /** Monochromatyczne glify marek (viewBox 24×24, wypełnienie `currentColor`). */
 const SOCIAL_ICON_PATHS: Record<SocialKey, string> = {
@@ -324,9 +325,9 @@ export function SiteFooter() {
               color: "var(--muted-foreground)",
             }}
           >
-            ul. Nowogrodzka 31
+            {COMPANY_DATA.street}
             <br />
-            00-511 Warszawa
+            {COMPANY_DATA.postalCode} {COMPANY_DATA.city}
           </address>
           <div
             style={{ marginTop: "0.8rem", fontSize: "0.78rem", color: "var(--muted-foreground)" }}
@@ -341,7 +342,7 @@ export function SiteFooter() {
               fontFamily: "var(--font-mono)",
             }}
           >
-            KRS 0000635207 · NIP 7010611803
+            {COMPANY_REGISTRY_LINE}
           </div>
           {ACTIVE_SOCIAL_LINKS.length > 0 && (
             <div className="fy-social" style={{ marginTop: "1.4rem" }}>

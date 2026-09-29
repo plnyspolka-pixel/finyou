@@ -9,6 +9,7 @@
 // do ręcznego uzupełnienia.
 // ════════════════════════════════════════════════════════════════════
 
+import { COMPANY_DATA } from "@/lib/company";
 import type { DocField } from "./document-fields";
 import { amountKind } from "./document-fields";
 import { amountToWordsPLN } from "./amount-to-words-pl";
@@ -27,9 +28,9 @@ function dmy(iso?: string | null): string {
 
 /** Dane Finance You jako wierzyciela (uzupełniane w pisma windykacyjne). */
 export const FY_CREDITOR = {
-  name: "Finance You sp. z o.o.",
-  legalForm: "spółka z ograniczoną odpowiedzialnością",
-  representative: "Filip Bielak – Prezes Zarządu",
+  name: COMPANY_DATA.legalName,
+  legalForm: COMPANY_DATA.legalForm,
+  representative: COMPANY_DATA.representative,
 };
 
 export interface WindFillContext {

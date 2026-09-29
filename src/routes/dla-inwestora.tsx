@@ -56,13 +56,13 @@ async function loadInvestorProducts(): Promise<AccessProduct[]> {
   }
 }
 
-// Okazje ładowane bezpośrednio (bez iframe) — odporne na brak bazy podczas SSR.
+// Sekcja projektów pokazuje wyłącznie wygenerowane przykłady (ilustracja) — bez danych z bazy.
 // Kroki pipeline'u pokazywane na stronie — ta sama kolejność co w panelu
 // (src/lib/investor-plan/pipeline.ts).
 const PIPELINE_STEPS: { n: number; t: string; d: string; hue: number }[] = [
   {
     n: 1,
-    t: "Dane pożyczkodawcy",
+    t: "Dane inwestora",
     d: "Osoba fizyczna, JDG albo spółka. Dla firm dane pobieramy z GUS i KRS po NIP, REGON lub numerze KRS.",
     hue: 262,
   },
@@ -110,8 +110,8 @@ const PIPELINE_STEPS: { n: number; t: string; d: string; hue: number }[] = [
   },
   {
     n: 9,
-    t: "Zlecenie poszukiwania okazji",
-    d: "Kwota ± 15%, maksymalny okres, minimalny zysk roczny i termin ważności. Od tego momentu szukamy dla Ciebie.",
+    t: "Zlecenie poszukiwania Projektów",
+    d: "Kwota ± 15%, maksymalny okres (do 120 mies.), minimalny zysk roczny i termin ważności. Od tego momentu szukamy dla Ciebie.",
     hue: 8,
   },
 ];
@@ -129,7 +129,7 @@ export const Route = createFileRoute("/dla-inwestora")({
       {
         name: "description",
         content:
-          "Klub Inwestorów Hipotecznych Finance You: konto Podstawowe bez opłat stałych (płacisz za okazję) i pakiet PRO — 3 000 zł / 6 miesięcy + 5% od udzielonej pożyczki.",
+          "Klub Inwestorów Hipotecznych Finance You: dostęp dla inwestorów bez opłat. Finansujesz projekty firm zabezpieczone hipoteką (LTV do 60%), oprocentowanie do wysokości odsetek maksymalnych.",
       },
       { property: "og:title", content: "Dla inwestorów — Finance You" },
       {
@@ -144,13 +144,13 @@ export const Route = createFileRoute("/dla-inwestora")({
   component: InvestorLanding,
 });
 
-// Zakres pakietu Podstawowego (0 zł) — to dostaje każde konto po przejściu
-// pipeline'u; dopłata dotyczy wyłącznie odblokowania konkretnej okazji.
+// Zakres dostępu inwestora — usługa Finance You jest dla Inwestora
+// nieodpłatna (Umowa ramowa v7); płaci wyłącznie klient (Prowizja Klientowska).
 const GET: FeatureItemData[] = [
   {
     icon: "access",
-    t: "Zlecenie okazji",
-    d: "Składasz Zlecenie, my szukamy pasujących projektów.",
+    t: "Zlecenie",
+    d: "Składasz Zlecenie, my szukamy pasujących Projektów.",
   },
   {
     icon: "shieldcheck",
@@ -160,8 +160,8 @@ const GET: FeatureItemData[] = [
   { icon: "dossier", t: "Umowy wypełnione przez system", d: "Komparycja, podpis i ślad audytowy." },
   {
     icon: "procedures",
-    t: "Wyłączność na okazję",
-    d: "Zdecydowany klient zarezerwowany tylko dla Ciebie.",
+    t: "Rezerwacja Projektu",
+    d: "Projekt dopasowany do Zlecenia zarezerwowany dla Ciebie na 24 h (+12 h).",
   },
   { icon: "knowledge", t: "Raport o inwestycji", d: "Nieruchomość, zabezpieczenie, LTV i ryzyko." },
   {
@@ -169,7 +169,11 @@ const GET: FeatureItemData[] = [
     t: "Zaakceptowany harmonogram",
     d: "Plan spłat potwierdzony przez pożyczkobiorcę.",
   },
-  { icon: "chat", t: "Dane kontaktowe", d: "Bezpośredni kontakt po odblokowaniu okazji." },
+  {
+    icon: "chat",
+    t: "Dane kontaktowe",
+    d: "Bezpośredni kontakt po Ujawnieniu i akceptacji Karty Leada.",
+  },
   {
     icon: "documents",
     t: "Generator umowy pożyczki",
@@ -177,14 +181,13 @@ const GET: FeatureItemData[] = [
   },
 ];
 
-// Zakres wyłącznie pakietu PRO.
-const PRO_ONLY: FeatureItemData[] = [
+// Narzędzia panelu — dostępne dla każdego inwestora bez dopłat.
+const TOOLS: FeatureItemData[] = [
   { icon: "training", t: "Akademia inwestora", d: "Siedem modułów — od strategii po windykację." },
   { icon: "shieldcheck", t: "Kalkulator compliance", d: "Limity kosztów i zgodność warunków." },
   { icon: "complianceAml", t: "Moduł AML", d: "Klienci, transakcje, ryzyko, zgłoszenia i UPO." },
   { icon: "aibrain", t: "Windykacja AI", d: "Sześć etapów od pierwszego kontaktu po egzekucję." },
   { icon: "knowledge", t: "Raporty bez limitu", d: "Nielimitowana liczba pełnych raportów." },
-  { icon: "updates", t: "Pierwszeństwo ofert", d: "Wybierasz z puli przed pozostałymi." },
 ];
 
 const AKADEMIA: TwoColSlide[] = [
@@ -193,7 +196,7 @@ const AKADEMIA: TwoColSlide[] = [
     etap: "Moduł 1",
     short: "Wprowadzenie",
     title: "Wprowadzenie i strategia",
-    desc: "Poznaj zasady działania rynku prywatnych pożyczek zabezpieczonych na nieruchomościach. Dowiedz się, jak inwestorzy wyszukują okazje, budują własną strategię oraz wybierają model działania dopasowany do posiadanego kapitału i doświadczenia.",
+    desc: "Poznaj zasady działania rynku prywatnych pożyczek zabezpieczonych na nieruchomościach. Dowiedz się, jak inwestorzy wyszukują projekty, budują własną strategię oraz wybierają model działania dopasowany do posiadanego kapitału i doświadczenia.",
   },
   {
     src: "/marketing/akademia/modul-2.png",
@@ -375,19 +378,19 @@ const FAQS = [
   },
   {
     q: "Ile to kosztuje?",
-    a: "Konto w pakiecie Podstawowym jest bez opłat stałych — płacisz wyłącznie za odblokowanie konkretnej okazji (wyłączność, raport o inwestycji, zaakceptowany harmonogram i dane kontaktowe). Pakiet PRO kosztuje 3 000 zł brutto za 6 miesięcy plus 5% kwoty udzielonej pożyczki i nie ma opłat za pojedyncze okazje.",
+    a: "Nic. Usługa Finance You jest dla inwestora nieodpłatna — bez abonamentu, opłat za Projekt i opłaty sukcesu. Jedyną opłatą w transakcji jest prowizja Finance You płacona przez klienta: 7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącana z wypłaty. Przy wypłacie przekazujesz ją Finance You z kwoty pożyczki, a resztę otrzymuje klient — np. 100 000 zł: 7 000 zł dla Finance You, 93 000 zł dla klienta.",
   },
   {
-    q: "Co dokładnie dostaję w pakiecie Podstawowym?",
-    a: "Pełny pipeline (dane pożyczkodawcy, rachunek do spłaty, weryfikacja tożsamości, screening list sankcyjnych, komplet umów wypełnionych przez system), składanie Zleceń, możliwość zakupu okazji na wyłączność wraz z raportem, harmonogramem zaakceptowanym przez pożyczkobiorcę i danymi kontaktowymi, a także generator umowy pożyczki.",
+    q: "Co dostaję jako inwestor?",
+    a: "Pełny pipeline (dane inwestora, rachunek do spłaty, weryfikacja tożsamości, screening list sankcyjnych, komplet umów wypełnionych przez system), składanie Zleceń, Projekty dopasowane do przyjętego Zlecenia z rezerwacją, raportem, harmonogramem zaakceptowanym przez klienta i danymi kontaktowymi, generator umowy pożyczki, a także Akademię, kalkulator compliance, moduł AML i windykację AI.",
   },
   {
-    q: "Czym różni się pakiet PRO?",
-    a: "PRO zawiera wszystko z pakietu Podstawowego bez opłat za pojedyncze okazje, a dodatkowo Akademię inwestora, kalkulator compliance, moduł AML, moduł windykacji AI, nielimitowaną liczbę pełnych raportów oraz pierwszeństwo wyboru ofert.",
+    q: "Jakie są zasady finansowania?",
+    a: "Finansujesz wyłącznie cel związany z działalnością gospodarczą klienta (B2B). LTV nie przekracza 60%, a oprocentowanie — odsetek maksymalnych (obecnie 14,5% rocznie); Twoja prowizja inwestora jest osobnym elementem rozłożonym w ratach. Relacja z klientem jest chroniona przez 5 lat.",
   },
   {
-    q: "Jak wygląda proces zanim zobaczę pierwszą okazję?",
-    a: "To jeden pipeline w panelu: podajesz dane pożyczkodawcy (dla firm pobieramy je z GUS/KRS po NIP lub KRS), wskazujesz obowiązkowy rachunek do spłaty pożyczki, przechodzisz zdalną weryfikację tożsamości, my uruchamiamy screening list sankcyjnych i PEP, następnie system wypełnia dokumenty Twoimi danymi, a Ty je podpisujesz i akceptujesz. Na końcu składasz Zlecenie.",
+    q: "Jak wygląda proces, zanim zobaczę pierwszy Projekt?",
+    a: "To jeden pipeline w panelu: podajesz dane inwestora (dla firm pobieramy je z GUS/KRS po NIP lub KRS), wskazujesz obowiązkowy rachunek do spłaty pożyczki, przechodzisz zdalną weryfikację tożsamości, my uruchamiamy screening list sankcyjnych i PEP, następnie system wypełnia dokumenty Twoimi danymi, a Ty je podpisujesz i akceptujesz. Na końcu składasz Zlecenie.",
   },
   {
     q: "Czy mogę finansować sprawy klientów?",
@@ -661,7 +664,7 @@ function PipelineSection() {
         center
         eyebrow="Jeden pipeline"
         title="Od rejestracji do Zlecenia — dziewięć kroków"
-        sub="Dane pożyczkodawcy, rachunek do spłaty, weryfikacja tożsamości, screening list sankcyjnych, komplet umów wypełnionych przez system i Zlecenie poszukiwania okazji. Wszystko w jednym miejscu, bez papierów."
+        sub="Dane inwestora, rachunek do spłaty, weryfikacja tożsamości, screening list sankcyjnych, komplet umów wypełnionych przez system i Zlecenie poszukiwania Projektów. Wszystko w jednym miejscu, bez papierów."
       />
       <div
         className="fy-pipeline"
@@ -880,17 +883,17 @@ function InvestorTabs({ products }: { products: AccessProduct[] }) {
           <SectionHead
             center
             eyebrow="Cennik"
-            title="Dwa pakiety — Podstawowy i PRO"
-            sub="W Podstawowym zakładasz konto bez opłat stałych, składasz Zlecenie i płacisz tylko za okazję, którą bierzesz. PRO to ten sam zakres bez opłat jednostkowych plus pełny warsztat inwestora."
+            title="Dla inwestora — 0 zł"
+            sub="Usługa Finance You jest dla inwestora nieodpłatna: bez abonamentu, opłat za Projekt i opłaty sukcesu. Płaci wyłącznie klient — prowizję Finance You potrącaną z wypłaty."
           />
           <div style={{ marginTop: "2.5rem" }}>
             <InvestorPricing products={products} />
           </div>
           <ComplianceNote style={{ marginTop: "2rem" }}>
-            Ceny brutto (PLN). Pakiet PRO: 3 000 zł za 180 dni dostępu oraz 5% kwoty udzielonej
-            pożyczki, płatne po jej uruchomieniu. Zakup wymaga konta inwestora — po wybraniu pakietu
-            przejdziesz do bezpiecznej płatności Tpay, a faktura zostanie wystawiona automatycznie.
-            Materiały mają charakter edukacyjny i informacyjny, a Finance You nie gwarantuje zysku.
+            Jedyną opłatą w transakcji jest prowizja Finance You płacona przez klienta: 7% Kwoty
+            Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącana z wypłaty (100 000 zł → 7 000 zł
+            dla Finance You, 93 000 zł dla klienta). Materiały mają charakter edukacyjny i
+            informacyjny, a Finance You nie gwarantuje zysku.
           </ComplianceNote>
         </Section>
       )}
@@ -910,9 +913,9 @@ function InvestorLanding() {
 
       <Section>
         <SectionHead
-          eyebrow="Pakiet Podstawowy"
-          title="Konto bez opłat stałych — płacisz za okazję, którą bierzesz"
-          sub="Po przejściu pipeline'u składasz Zlecenie. Gdy znajdziemy projekt, kupujesz go na wyłączność razem z raportem, harmonogramem i kontaktem."
+          eyebrow="Dostęp inwestora — 0 zł"
+          title="Usługa bez opłat — płaci wyłącznie klient"
+          sub="Po przejściu pipeline'u składasz Zlecenie. Projekty dopasowane do przyjętego Zlecenia widzisz najpierw jako teaser, a po rezerwacji — z raportem, harmonogramem i kontaktem. Jedyna opłata w transakcji: prowizja Finance You płacona przez klienta (7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT), potrącana z wypłaty."
         />
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={GET} icon3d />
@@ -921,12 +924,12 @@ function InvestorLanding() {
 
       <Section tint>
         <SectionHead
-          eyebrow="Pakiet PRO"
-          title="To samo bez opłat za okazje — plus pełny warsztat"
-          sub="3 000 zł za 6 miesięcy i 5% od udzielonej pożyczki. Akademia, compliance, AML, windykacja AI, raporty bez limitu i pierwszeństwo wyboru ofert."
+          eyebrow="Narzędzia w panelu"
+          title="Akademia, compliance, AML i windykacja — bez dopłat"
+          sub="Wszystkie moduły panelu są dostępne dla każdego inwestora."
         />
         <div style={{ marginTop: "2.5rem" }}>
-          <FeatureGrid items={PRO_ONLY} cols={3} icon3d />
+          <FeatureGrid items={TOOLS} cols={3} icon3d />
         </div>
       </Section>
 

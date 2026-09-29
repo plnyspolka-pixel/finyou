@@ -10,7 +10,11 @@ import {
   ShieldCheck,
   Target,
   BarChart3,
+  Undo2,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getMyInvestorFlags } from "@/lib/investor-agreements/legal-pack.functions";
 import { ConsentGate } from "@/components/consent/consent-gate";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 import { InvestorAssistantWidget } from "@/components/inwestor/assistant-widget";
@@ -46,13 +50,25 @@ const navGroups: NavGroup[] = [
   },
 ];
 
+// Konsument ma stały link do odstąpienia od Umowy ramowej (Zał. 4).
+const withdrawalGroup: NavGroup = {
+  items: [{ to: "/inwestor/odstapienie", label: "Odstąpienie od umowy", icon: Undo2 }],
+};
+
 function InwestorLayout() {
+  const fetchFlags = useServerFn(getMyInvestorFlags);
+  const { data: flags } = useQuery({
+    queryKey: ["investor-flags"],
+    queryFn: () => fetchFlags(),
+    staleTime: 10 * 60_000,
+  });
+  const groups = flags?.isConsumer ? [...navGroups, withdrawalGroup] : navGroups;
   return (
     <>
       <PanelShell
         title="Panel inwestora"
         allow={["inwestor", "administrator"]}
-        groups={navGroups}
+        groups={groups}
         wrapOutlet={(outlet) => <ConsentGate audience="inwestor">{outlet}</ConsentGate>}
       />
       <InvestorAssistantWidget />

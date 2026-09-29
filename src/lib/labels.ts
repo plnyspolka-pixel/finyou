@@ -166,3 +166,28 @@ export function formatRelative(value: string | Date | null | undefined): string 
   if (days < 7) return `${days} dni temu`;
   return new Intl.DateTimeFormat("pl-PL", { dateStyle: "short" }).format(d);
 }
+
+/**
+ * Słownik nazw w UI (sprzątanie spójności 2026-09). Jedne nazwy w panelach,
+ * stronach i e-mailach — poza tekstem umów, który ma własne definicje.
+ *  • Inwestor (nie: Finansujący, Pożyczkodawca — w UI),
+ *  • Klient (nie: Wnioskodawca),
+ *  • Zlecenie — zlecenie poszukiwania Projektów składane przez Inwestora,
+ *  • Projekt (nie: Okazja, Oferta) — sprawa Klienta przedstawiana Inwestorowi,
+ *  • teaser — anonimowy opis Projektu dla Inwestora z przyjętym Zleceniem,
+ *  • Prowizja Finance You — 7% Kwoty Udzielonej, min. 5 000 zł, bez VAT,
+ *    potrącana z wypłaty (nigdy „netto”/„brutto”).
+ */
+export const TERMS = {
+  investor: "Inwestor",
+  client: "Klient",
+  order: "Zlecenie",
+  orders: "Zlecenia",
+  project: "Projekt",
+  projects: "Projekty",
+  teaser: "teaser",
+  fyCommission: "Prowizja Finance You",
+  fyCommissionRule: "7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącana z wypłaty",
+  grantedAmount: "Kwota Udzielona",
+  exampleProjects: "Przykładowe projekty (ilustracja)",
+} as const;

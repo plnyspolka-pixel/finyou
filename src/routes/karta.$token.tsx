@@ -270,7 +270,7 @@ function OfferCardPage() {
                   <span className="font-semibold">{o.name ?? `Właściciel ${i + 1}`}</span>
                   {o.isApplicant && (
                     <Badge variant="outline" className="text-[10px]">
-                      wnioskodawca
+                      klient
                     </Badge>
                   )}
                   {o.longevityBand && o.longevityBand !== "nieznane" && (

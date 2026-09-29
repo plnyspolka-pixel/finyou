@@ -21,6 +21,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { COMPANY_DATA } from "@/lib/company";
 import type { Dokument } from "./renderer";
 import { tekstOdeslania } from "./renderer";
 import {
@@ -672,7 +673,10 @@ function dyspozycjaBloki(d: any, doc: Dokument): Blok[] {
           "Prowizja Klientowska Finance You (7% Kwoty Udzielonej, min 5 000,00 zł, bez VAT):",
           `${w.prowizja_finance_you?.kwota?.cyframi ?? "—"} zł`,
         ),
-        wiersz("Rachunek Finance You sp. z o.o. (KRS 0000635207):", f.rachunek_fy || "—"),
+        wiersz(
+          `Rachunek ${COMPANY_DATA.legalName} (KRS ${COMPANY_DATA.krs}):`,
+          f.rachunek_fy || "—",
+        ),
         wiersz(
           "Kwota wypłacana Pożyczkobiorcy („na rękę”):",
           Number.isNaN(naReke) ? "—" : `${formatKwotaPL(naReke)} zł`,

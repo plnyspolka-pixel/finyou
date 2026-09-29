@@ -687,3 +687,12 @@ export const getOrderLimits = createServerFn({ method: "GET" })
     const limits = orderLimitsFromSettings(await getModuleSettings());
     return { ...limits, maxAnnualYield: maxCapitalRate(), amountTolerancePct: 15 };
   });
+
+/** Flagi profilu inwestora dla nawigacji panelu (np. link „Odstąpienie od umowy”). */
+export const getMyInvestorFlags = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const inv = await myInvestorRow(supabaseAdmin, context.userId);
+    return { isConsumer: Boolean(inv?.is_consumer) };
+  });

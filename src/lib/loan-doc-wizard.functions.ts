@@ -13,6 +13,7 @@
 // `generateDocxFromTemplate` i podglądem (`previewSegments`).
 // ════════════════════════════════════════════════════════════════════
 
+import { COMPANY_DATA } from "@/lib/company";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -71,10 +72,10 @@ function financeYouLender(): ResolvedLender {
     bundle: {
       name: FY_CREDITOR.name,
       legalForm: FY_CREDITOR.legalForm,
-      krs: "0000635207",
-      nip: "7010611803",
-      regon: "365350668",
-      addressFull: "ul. Nowogrodzka 31, 00-511 Warszawa",
+      krs: COMPANY_DATA.krs,
+      nip: COMPANY_DATA.nip,
+      regon: COMPANY_DATA.regon,
+      addressFull: COMPANY_DATA.addressFull,
       representativeName: (repName ?? "").trim() || undefined,
       representativeRole: (repRole ?? "").trim() || undefined,
     },

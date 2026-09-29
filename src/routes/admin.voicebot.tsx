@@ -1,3 +1,4 @@
+import { COMPANY_DATA } from "@/lib/company";
 import { createFileRoute } from "@tanstack/react-router";
 import { formatDateTime } from "@/lib/labels";
 import { useEffect, useState } from "react";
@@ -52,7 +53,7 @@ function VoicebotAdmin() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [enriching, setEnriching] = useState(false);
-  const [testPhone, setTestPhone] = useState("+48889888700");
+  const [testPhone, setTestPhone] = useState<string>(COMPANY_DATA.phoneContracts.e164);
 
   // filtry
   const [filterStatus, setFilterStatus] = useState<string>("all");

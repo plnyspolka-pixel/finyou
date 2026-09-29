@@ -132,9 +132,9 @@ function PipelinePage() {
   return (
     <div className="space-y-5">
       <FancyPageHeader
-        eyebrow="Okazje inwestycyjne"
-        title="Od danych pożyczkodawcy do Zlecenia"
-        subtitle="Dziewięć kroków w jednym miejscu: dane stron, rachunek do spłaty, KYC, screening sankcyjny, komplet umów i Zlecenie poszukiwania okazji."
+        eyebrow="Zlecenia i Projekty"
+        title="Od danych inwestora do Zlecenia"
+        subtitle="Dziewięć kroków w jednym miejscu: dane stron, rachunek do spłaty, KYC, screening sankcyjny, komplet umów i Zlecenie poszukiwania Projektów."
       />
 
       {tpay && payment ? (
@@ -552,7 +552,7 @@ function DocumentStep({
       {!canSign ? (
         <p className="text-sm text-muted-foreground">
           {locked
-            ? "Podpis w formie dokumentowej będzie możliwy po ukończeniu wcześniejszych kroków pipeline'u (dane pożyczkodawcy, rachunek, KYC, screening, doręczenie i wcześniejsze umowy). Treść możesz przeczytać już teraz."
+            ? "Podpis w formie dokumentowej będzie możliwy po ukończeniu wcześniejszych kroków pipeline'u (dane inwestora, rachunek, KYC, screening, doręczenie i wcześniejsze umowy). Treść możesz przeczytać już teraz."
             : "Podpis będzie możliwy po aktywacji pakietu dokumentów przez kancelarię."}
         </p>
       ) : (

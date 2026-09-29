@@ -2,6 +2,7 @@
 // → Ujawnienie (rezerwacja assignment_hours + extension_hours z ustawień) → decyzja. Do tego internetowe
 // odstąpienie Konsumenta (Zał. 4) i przystąpienie spółki do NDA (Zał. 1 NDA).
 // § 15 ust. 7: żaden checkbox nie startuje zaznaczony.
+import { COMPANY_DATA } from "@/lib/company";
 import { useState } from "react";
 import { DEFAULT_ORDER_LIMITS, type OrderLimits } from "@/lib/investor-agreements/order-cycle-core";
 import { Link } from "@tanstack/react-router";
@@ -346,7 +347,8 @@ function MatchCard({
   );
 }
 
-function WithdrawalCard({ data, onDone }: { data: any; onDone: () => void }) {
+/** Odstąpienie Konsumenta od Umowy ramowej — widoczne zawsze dla Konsumenta. */
+export function WithdrawalCard({ data, onDone }: { data: any; onDone: () => void }) {
   const submit = useServerFn(submitConsumerWithdrawal);
   const [open, setOpen] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -371,10 +373,42 @@ function WithdrawalCard({ data, onDone }: { data: any; onDone: () => void }) {
       </Card>
     );
   }
-  if (!data.withdrawalWindow?.open) return null;
+  if (!data.withdrawalWindow?.open) {
+    // Karta zostaje widoczna także poza terminem — Konsument musi wiedzieć,
+    // jaki jest stan jego prawa odstąpienia (Umowa ramowa v7, § 15).
+    return (
+      <Card id="odstapienie">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Undo2 className="h-4 w-4" /> Odstąpienie od Umowy ramowej (Konsument)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          {data.withdrawalWindow ? (
+            <p>
+              Termin na odstąpienie bez podania przyczyny upłynął{" "}
+              {new Date(data.withdrawalWindow.deadline).toLocaleString("pl-PL")}. Umowę możesz
+              wypowiedzieć na zasadach z § 16 Umowy ramowej.
+            </p>
+          ) : (
+            <p>
+              Po akceptacji Umowy ramowej masz 14 dni na odstąpienie od niej bez podania przyczyny
+              (wzór: Załącznik nr 4). Formularz pojawi się tutaj po akceptacji.
+            </p>
+          )}
+          <p>
+            Pytania:{" "}
+            <a href={`mailto:${COMPANY_DATA.email}`} className="text-accent underline">
+              {COMPANY_DATA.email}
+            </a>
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card>
+    <Card id="odstapienie">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Undo2 className="h-4 w-4" /> Odstąpienie od Umowy ramowej (Konsument)

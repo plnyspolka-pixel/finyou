@@ -1,3 +1,4 @@
+import { COMPANY_DATA } from "@/lib/company";
 import { useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -58,7 +59,7 @@ export function ReminderScheduleCard() {
   });
 
   const sampleFn = useServerFn(sendFollowupSample);
-  const [sampleTo, setSampleTo] = useState("plnyspolka@gmail.com");
+  const [sampleTo, setSampleTo] = useState<string>(COMPANY_DATA.email);
   const sample = useMutation({
     mutationFn: () => sampleFn({ data: { to: sampleTo.trim(), count: 10 } }),
     onSuccess: (res: any) => {

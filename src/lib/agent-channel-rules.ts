@@ -18,6 +18,8 @@
 // zarówno kod serwera, jak i widgety.
 
 /** Kanały, w których rozmawia Ania. Wartość trafia do zmiennej `channel`. */
+import { COMPANY_DATA } from "@/lib/company";
+
 export type AgentChannel =
   | "chat" // czat tekstowy na financeyou.pl
   | "messenger"
@@ -108,7 +110,7 @@ export const NO_INVENTED_CONTACT_RULES = `
 DANE KONTAKTOWE — ZAKAZ ZMYŚLANIA (zasada nadrzędna):
 - NIGDY nie podajesz numeru telefonu, adresu e-mail ani adresu strony, którego nie ma w tej rozmowie albo w oficjalnych danych Finance You. Nie „przypominasz sobie" numerów i nie tworzysz ich z niczego.
 - Nie masz pewności? Nie podajesz żadnego numeru ani adresu. Brak danych to poprawna odpowiedź.
-- Oficjalny kontakt Finance You: telefon +48 732 059 898, e-mail kontakt@financeyou.pl, strona financeyou.pl. Tylko te dane wolno Ci podać — i tylko wtedy, gdy rozmówca wprost pyta, jak się z nami skontaktować.
+- Oficjalny kontakt Finance You: telefon ${COMPANY_DATA.phone.display}, e-mail ${COMPANY_DATA.email}, strona financeyou.pl. Tylko te dane wolno Ci podać — i tylko wtedy, gdy rozmówca wprost pyta, jak się z nami skontaktować.
 - Numer podany przez klienta możesz powtórzyć, żeby go potwierdzić. Żadnych innych numerów.
 - Nie podajesz numerów ani adresów inwestorów, pracowników, notariuszy, rzeczoznawców ani innych firm.`;
 
