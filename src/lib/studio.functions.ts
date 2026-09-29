@@ -306,6 +306,8 @@ export type StudioVideoJob = {
   auto_published_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Wpis w bibliotece materiałów (/admin/materialy), gdy rolka już tam trafiła. */
+  material?: { id: string; audience: string } | null;
 };
 
 export const listStudioVideoJobs = createServerFn({ method: "GET" })
@@ -319,7 +321,16 @@ export const listStudioVideoJobs = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
-    return (data ?? []) as StudioVideoJob[];
+    const jobs = (data ?? []) as StudioVideoJob[];
+    // Gotowe rolki lądują w bibliotece materiałów pod stałą ścieżką pliku.
+    const { findStudioMaterials } = await import("./studio-materials.server");
+    const materials = await findStudioMaterials(
+      jobs.filter((j) => j.status === "ready").map((j) => j.id),
+    );
+    return jobs.map((j) => {
+      const m = materials.get(j.id);
+      return { ...j, material: m ? { id: m.id, audience: m.audience } : null };
+    });
   });
 
 // Głosy ElevenLabs do wyboru w generatorze — pełna lista z konta przez

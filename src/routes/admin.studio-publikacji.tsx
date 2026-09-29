@@ -2040,6 +2040,17 @@ function StudioPage() {
                                   <Layers className="h-3 w-3" /> struktura rolki
                                 </Badge>
                               )}
+                              {j.material && (
+                                <a
+                                  href="/admin/materialy"
+                                  title="Rolka jest w bibliotece materiałów — otwórz /admin/materialy"
+                                >
+                                  <Badge variant="outline" className="gap-1">
+                                    <Library className="h-3 w-3" /> w materiałach (
+                                    {j.material.audience})
+                                  </Badge>
+                                </a>
+                              )}
                               {j.scene_plan?.length ? (
                                 <Badge
                                   variant="outline"

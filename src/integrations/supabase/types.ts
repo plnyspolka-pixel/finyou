@@ -11910,6 +11910,7 @@ export type Database = {
           heygen_video_id: string | null
           id: string
           last_error: string | null
+          material_audience: Database["public"]["Enums"]["marketing_audience"] | null
           prompt: string
           publish_description: string
           publish_privacy: string
@@ -11947,6 +11948,7 @@ export type Database = {
           heygen_video_id?: string | null
           id?: string
           last_error?: string | null
+          material_audience?: Database["public"]["Enums"]["marketing_audience"] | null
           prompt: string
           publish_description?: string
           publish_privacy?: string
@@ -11984,6 +11986,7 @@ export type Database = {
           heygen_video_id?: string | null
           id?: string
           last_error?: string | null
+          material_audience?: Database["public"]["Enums"]["marketing_audience"] | null
           prompt?: string
           publish_description?: string
           publish_privacy?: string
