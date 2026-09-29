@@ -33,9 +33,9 @@ etapy wdrożone w kodzie i migracjach; testy, typecheck i lint zielone.
 | `20260929122000_etap2_ltv_60.sql` | `0011` | `max_ltv_percent` 60, progi 35/50/60, CHECK ≤ 60 |
 | `20260929123000_etap3_zlecenia_limity.sql` | `0012` | limity Zleceń w ustawieniach; `increment_order_rejections` |
 | `20260929124000_etap4_statusy_wniosku.sql` | `0013` | mapowanie statusów; `suggested_*`; trigger `loan_status_guard`; bramka B2B |
-| `20260929125000_etap5_pakiet_inwestor_v7.sql` | `0014` | umowa ramowa v7, NDA v6, RODO v5 (`active = false`) — plik generowany |
+| `20260929125000_etap5_pakiet_inwestor_v7.sql` | `0014` | umowa ramowa v7, NDA v6, RODO v5 — aktywne (`active = true`) — plik generowany |
 | `20260929126000_etap5_zgody_v2.sql` | `0015` | Regulamin klienta v2, Polityka prywatności v2 (v1 wyłączone, zostają w tabeli) — plik generowany |
-| `20260929127000_etap5_akceptacje_zgod_i_boty.sql` | `0016` | `consent_acceptances`; u08 bez pola IOD; prompty botów |
+| `20260929127000_etap5_akceptacje_zgod_i_boty.sql` | `0016` | `consent_acceptances`; prompty botów |
 
 Test `src/lib/security/migrations-mirror.test.ts` pilnuje lustra i wpisów w
 `_journal.json`.
@@ -92,16 +92,19 @@ Pełny zestaw: 105 plików, 1289 testów — zielone. `tsc --noEmit` i
 
 ## Decyzje i działania po stronie człowieka
 
-1. **Zwolnienie z VAT prowizji** — teksty mówią „bez VAT”. Potwierdzić z
-   księgową podstawę zwolnienia i sposób fakturowania.
-2. **Aktywacja pakietu v7** — migracja wstawia v7/v6/v5 z `active = false`.
-   Po przeglądzie prawnym aktywować cały pakiet naraz w `/admin/umowy-inwestorow`.
-   Akceptacje v5/v6 nie przechodzą na v7.
-3. **Rachunek na Prowizję Klientowską** — domyślnie ten sam co rachunek spłat
-   (`COMPANY_DATA.bank.commission` w `src/lib/company.ts`). Potwierdzić albo podać inny.
-4. **Plik szablonu u08 w Storage** (`templates/U08_Klauzula_informacyjna_RODO.docx`)
-   nadal zawiera pole „IMIĘ I NAZWISKO IOD”. Kreator wpisuje w nie
-   „nie wyznaczono”; docelowo podmienić plik (narzędzia tej sesji nie mają zapisu do Storage).
+1. ✅ **Zwolnienie z VAT prowizji** — potwierdzone przez właściciela (2026-09-29).
+2. ✅ **Aktywacja pakietu v7** — zatwierdzona. Migracja `0014` wstawia v7/v6/v5
+   od razu z `active = true` (cały pakiet naraz). Akceptacje v5/v6 nie
+   przechodzą na v7 — Inwestor akceptuje v7 w panelu.
+3. ✅ **Jeden rachunek Finance You** — ten sam do spłat pożyczek FY i do
+   Prowizji Klientowskiej (`COMPANY_DATA.bankAccount`). Kreator umowy (agent AI
+   i MCP) przy Pożyczkodawcy innym niż Finance You sam wylicza prowizję FY
+   (7%, min. 5 000 zł), jeśli jej nie podano, i zawsze wpisuje ten rachunek
+   (nadpisuje inny). Kreator wzorów DOCX wpisuje go w pola rachunku Finance You
+   / prowizji.
+4. ✅ **Szablon u08** — pole „IMIĘ I NAZWISKO IOD” zostaje; kreator wpisuje w nie
+   dane Inwestora (osoba albo reprezentant firmy + e-mail lub telefon).
+   Plik w Storage nie wymaga zmian.
 5. **Prompty botów w bazie** — migracja `0016` poprawia sekcję kosztów bota
    klienta (dotąd 1,79–4% miesięcznie, czyli ponad odsetki maksymalne) i
    dopisuje blok „ZASADY OPŁAT I B2B”. Po wdrożeniu przejrzeć prompt w
@@ -138,5 +141,5 @@ DEFINER bez jawnego REVOKE: `affiliate_current_partner_id`,
 - `/propozycje` bez sesji: prośba o zalogowanie.
 - Kalkulator na stronie: stopa > 14,5% zablokowana; 100 000 zł → 7 000 / 93 000.
 - `list_access_products`: produkty inwestora `active = false`.
-- `list_legal_documents`: v7 / v6 / v5, `active = false`.
+- `list_legal_documents`: v7 / v6 / v5, `active = true`.
 - `project_module_settings`: LTV 60, 24/12 h, 5/2/5, 120 mies.

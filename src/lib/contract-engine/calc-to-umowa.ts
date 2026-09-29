@@ -79,7 +79,7 @@ export function kalkulacjaDoSzkicu(payload: LoanCalcPayload): Record<string, any
   });
 
   const warunki = usunPuste({
-    rachunki: prowizjaFY > 0 ? { finance_you: FINANCE_YOU.rachunekProwizji } : undefined,
+    rachunki: prowizjaFY > 0 ? { finance_you: FINANCE_YOU.rachunek } : undefined,
     kwota_pozyczki: kwota(payload.nominal),
     prowizja: { kwota: kwota(prowizjaInwestora), model: "nie_potracana_raty" },
     prowizja_finance_you: prowizjaFY > 0 ? { kwota: kwota(prowizjaFY) } : undefined,

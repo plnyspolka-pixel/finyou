@@ -68,7 +68,7 @@ describe("pakiet v7 — pliki i skróty", () => {
     }
   });
 
-  it("migracja SQL = wynik generatora, lustro drizzle identyczne, active = false", () => {
+  it("migracja SQL = wynik generatora, lustro drizzle identyczne, pakiet aktywny", () => {
     const sql = readFileSync(join(process.cwd(), "supabase", "migrations", MIG), "utf8");
     expect(sql).toBe(migracjaSqlV7(docs));
     const drizzle = readFileSync(
@@ -76,7 +76,9 @@ describe("pakiet v7 — pliki i skróty", () => {
       "utf8",
     );
     expect(drizzle).toBe(sql);
-    expect(sql.match(/active = false,/g)).toHaveLength(3);
-    expect(sql).not.toMatch(/active = true/);
+    expect(sql.match(/active = true,/g)).toHaveLength(3);
+    expect(sql).not.toMatch(/active = false/);
+    // Opłaty od Inwestora wyłączone we wszystkich trzech dokumentach.
+    expect(sql.match(/\n {2}false,\n {2}true\n\)/g)).toHaveLength(3);
   });
 });

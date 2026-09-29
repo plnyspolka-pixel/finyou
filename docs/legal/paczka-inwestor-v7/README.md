@@ -6,8 +6,8 @@ Wygenerowano skryptem `npx tsx scripts/legal/build-pakiet-v7.ts` z treści v6/v5
 - `CONTENT.sha256` — SHA-256 treści (`content_text`, UTF-8) = `legal_documents.sha256`;
   ta wartość trafia do akceptacji Inwestora (code:version:sha256).
 - `MANIFEST.sha256` — SHA-256 plików .docx (kontrola: `sha256sum -c MANIFEST.sha256`).
-- Wersje trafiają do bazy z `active = false`. Aktywacja całego pakietu naraz:
-  administrator w /admin/umowy-inwestorow po przeglądzie prawnym.
+- Pakiet trafia do bazy jako aktywny (`active = true`) — aktywację
+  zatwierdził właściciel 2026-09-29. Wyłączenie: /admin/umowy-inwestorow.
 
 | kod | wersja | plik | SHA-256 treści | SHA-256 .docx |
 |---|---|---|---|---|

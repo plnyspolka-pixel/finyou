@@ -81,7 +81,10 @@ export async function buildPakietV7(): Promise<DokumentV7[]> {
 
 const sqlStr = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
-/** Migracja SQL: upsert trzech dokumentów, `active = false` (aktywuje człowiek). */
+/**
+ * Migracja SQL: upsert trzech dokumentów z `active = true` — aktywację
+ * pakietu v7 zatwierdził właściciel 2026-09-29 (cały pakiet naraz).
+ */
 export function migracjaSqlV7(docs: DokumentV7[]): string {
   const naglowek = `-- =====================================================================
 -- ETAP 5 — PAKIET INWESTORA v7 (${PACKAGE_ID_V7})
@@ -102,10 +105,10 @@ export function migracjaSqlV7(docs: DokumentV7[]): string {
 -- (code:version:sha256). Skróty plików .docx: docs/legal/paczka-inwestor-v7/
 -- MANIFEST.sha256.
 --
--- active = false: nowa wersja nie wypiera obowiązującej automatycznie.
--- Aktywacja całego pakietu naraz — administrator w /admin/umowy-inwestorow
--- po przeglądzie prawnym. Akceptacje poprzednich wersji zostają w historii
--- (legal_acceptances) i nie są dziedziczone przez v7.
+-- active = true: aktywację całego pakietu zatwierdził właściciel
+-- (2026-09-29). Wszystkie trzy dokumenty są aktywne naraz. Akceptacje
+-- poprzednich wersji zostają w historii (investor_agreement_acceptances)
+-- i nie są dziedziczone przez v7 — Inwestor akceptuje pakiet v7 w panelu.
 -- allows_investor_fees = false: od v7 Inwestor nie płaci żadnych opłat.
 -- =====================================================================
 `;
@@ -129,7 +132,7 @@ values (
   ${sqlStr(Buffer.from(d.docx).toString("base64"))},
   ${sqlStr(d.docx_filename)},
   false,
-  false
+  true
 )
 on conflict (code) do update set
   package_id = excluded.package_id,
@@ -141,7 +144,7 @@ on conflict (code) do update set
   docx_base64 = excluded.docx_base64,
   docx_filename = excluded.docx_filename,
   allows_investor_fees = excluded.allows_investor_fees,
-  active = false,
+  active = true,
   updated_at = now();
 `,
     );

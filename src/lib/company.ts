@@ -24,16 +24,13 @@ export const COMPANY_DATA = {
   phone: { display: "+48 732 059 898", e164: "+48732059898" },
   /** Telefon kontaktowy wpisany w umowach inwestora (pakiet v7). */
   phoneContracts: { display: "889 888 700", e164: "+48889888700" },
-  bank: {
-    /** Rachunek do spłaty pożyczek udzielanych przez Finance You. */
-    repayment: "56 1090 2590 0000 0001 5708 1371",
-    /**
-     * Rachunek na Prowizję Klientowską potrącaną z wypłaty (Zał. 6 do Umowy
-     * ramowej / Zał. 4 do umowy pożyczki). Domyślnie ten sam rachunek —
-     * do potwierdzenia przez właściciela (raport końcowy).
-     */
-    commission: "56 1090 2590 0000 0001 5708 1371",
-  },
+  /**
+   * JEDYNY rachunek Finance You (potwierdzone 2026-09-29): spłaty pożyczek
+   * udzielanych przez Finance You ORAZ Prowizja Klientowska potrącana z
+   * wypłaty (Zał. 6 do Umowy ramowej / Zał. 4 do umowy pożyczki). Kreator
+   * umowy wpisuje go automatycznie, gdy Pożyczkodawcą jest inny podmiot.
+   */
+  bankAccount: "56 1090 2590 0000 0001 5708 1371",
 } as const;
 
 /** „KRS 0000635207 · NIP 7010611803 · REGON 365350668”. */

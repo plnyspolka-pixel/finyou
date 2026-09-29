@@ -22,6 +22,7 @@ import {
 import { buildEngineSchedule, type EngineSchedule } from "./loan-schedule";
 import { validateKwNumber } from "../kw";
 import { FINANCE_YOU, jestFinanceYou } from "./finance-you";
+import { fyCommission } from "./fees";
 
 // ── scalanie łatki danych ────────────────────────────────────────────
 /** Deep-merge łatki AI na szkic: obiekty scalane, tablice podmieniane, null czyści. */
@@ -212,7 +213,38 @@ export function normalizujNumeryKw(umowa: any): Problem[] {
 export function uzupelnijRachunekSplaty(umowa: any): void {
   if (!umowa?.warunki || !jestFinanceYou(umowa.pozyczkodawca)) return;
   const r = (umowa.warunki.rachunki ??= {});
-  if (!String(r.splata ?? "").trim()) r.splata = FINANCE_YOU.rachunekSplaty;
+  if (!String(r.splata ?? "").trim()) r.splata = FINANCE_YOU.rachunek;
+}
+
+/** Czy strona ma jakiekolwiek dane identyfikujące (nazwa, NIP, PESEL, KRS…). */
+function stronaWskazana(strona: any): boolean {
+  if (!strona || typeof strona !== "object") return false;
+  return Object.values(strona).some((v) => typeof v === "string" && v.trim() !== "");
+}
+
+/**
+ * Rozliczenie z Finance You, gdy Pożyczkodawcą jest INNY podmiot niż Finance
+ * You (Umowa ramowa v7, Zał. 6 → Zał. 4 do umowy pożyczki):
+ *  • brak `prowizja_finance_you` (pole pominięte) → wyliczamy 7% Kwoty
+ *    Udzielonej, nie mniej niż 5 000 zł; jawne `null` = umowa bez prowizji FY,
+ *  • rachunek Finance You do przelewu prowizji jest wpisywany ZAWSZE
+ *    automatycznie — Finance You ma jeden rachunek (spłaty i prowizja).
+ */
+export function uzupelnijRozliczenieFinanceYou(umowa: any): void {
+  const w = umowa?.warunki;
+  if (!w || !stronaWskazana(umowa?.pozyczkodawca) || jestFinanceYou(umowa.pozyczkodawca)) return;
+  if (w.prowizja_finance_you === undefined) {
+    const kwota = parseKwota(w.kwota_pozyczki?.cyframi);
+    if (!Number.isNaN(kwota) && kwota > 0) {
+      w.prowizja_finance_you = {
+        kwota: { cyframi: formatKwotaPL(fyCommission(kwota)), slownie: "" },
+      };
+    }
+  }
+  if (w.prowizja_finance_you) {
+    const r = (w.rachunki ??= {});
+    r.finance_you = FINANCE_YOU.rachunek;
+  }
 }
 
 /** Pełne uzupełnienie + autonaprawa + walidacja szkicu umowy. */
@@ -224,6 +256,7 @@ export function przetworzSzkic(umowa: any): {
   uzupelnijIdNieruchomosci(umowa);
   const problemyKw = normalizujNumeryKw(umowa);
   uzupelnijRachunekSplaty(umowa);
+  uzupelnijRozliczenieFinanceYou(umowa);
   uzupelnijHarmonogram(umowa);
   uzupelnijSlownie(umowa);
   const autokorekty = umowa?.warunki ? autonaprawHarmonogram(umowa.warunki) : [];

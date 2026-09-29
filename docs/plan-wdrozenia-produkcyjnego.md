@@ -27,8 +27,8 @@ kodzie i checklistę wdrożeniową.
 > Inwestora nieodpłatna, jedyna opłata to Prowizja Klientowska 7% Kwoty
 > Udzielonej (min. 5 000 zł, bez VAT, potrącana z wypłaty), kontakt
 > `kontakt@financeyou.pl`. Pliki i skróty SHA-256:
-> `docs/legal/paczka-inwestor-v7/`. Aktywacja — `/admin/umowy-inwestorow`
-> po przeglądzie prawnym. Opis poniżej dotyczy historii wdrożenia v5.
+> `docs/legal/paczka-inwestor-v7/`. Pakiet jest aktywny od wdrożenia
+> (decyzja właściciela 2026-09-29). Opis poniżej dotyczy historii wdrożenia v5.
 
 > **Zmiana architektury (2026-09-04):** właściciel dostarczył paczkę
 > kancelaryjną `Paczka_Inwestor_v5.zip`. Zastępuje ona wcześniejszy plan

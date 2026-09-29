@@ -3,9 +3,10 @@
  * 2, 5 i 6 sprzątania spójności 2026-09).
  *
  *  • Prowizja Klientowska Finance You: 7 % Kwoty Udzielonej (kwota pożyczki
- *    z umowy), nie mniej niż 5 000 zł, bez VAT (zwolnienie — do potwierdzenia
- *    z księgową; w tekstach NIE piszemy „netto"/„brutto", piszemy „bez VAT").
- *    POTRĄCANA z wypłaty: inwestor przelewa prowizję na rachunek FY, resztę
+ *    z umowy), nie mniej niż 5 000 zł, bez VAT (zwolnienie potwierdzone przez
+ *    właściciela 2026-09-29; w tekstach NIE piszemy „netto"/„brutto", piszemy
+ *    „bez VAT"). POTRĄCANA z wypłaty: inwestor przelewa prowizję na jedyny
+ *    rachunek FY (ten sam co do spłat — src/lib/company.ts), resztę
  *    Klientowi. Przykład: 100 000 zł → 7 000 zł do FY, 93 000 zł na rękę.
  *    To osobne pole od prowizji INWESTORA (KWO_02 — stała kwota z umowy,
  *    rozłożona równo w ratach).

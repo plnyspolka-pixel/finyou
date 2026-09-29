@@ -68,9 +68,9 @@ Udzielonej, min 5 000 zł, bez VAT, potrącana z wypłaty; § 5 — maks. 5
 przyjętych Zleceń, wygaśnięcie po 5 odrzuceniach, rezerwacja 24 h + 12 h,
 maks. 2 przedłużone naraz; Kara Obejściowa 5 % Sumy Hipotecznej i pięcioletni
 Okres Ochronny bez zmian. `allows_investor_fees = false`. Pakiet wchodzi do
-rejestru uśpiony (`active = false`) — aktywację wszystkich trzech dokumentów
-(umowa v7, NDA v6, RODO v5) wykonuje administrator w
-`/admin/umowy-inwestorow` po przeglądzie kancelarii.
+rejestru jako aktywny (`active = true`) — aktywację wszystkich trzech
+dokumentów (umowa v7, NDA v6, RODO v5) zatwierdził właściciel 2026-09-29.
+Wyłączenie pakietu: `/admin/umowy-inwestorow`.
 
 ## Jeden pipeline inwestora
 

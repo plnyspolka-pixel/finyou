@@ -1,15 +1,14 @@
 -- =====================================================================
--- ETAP 5 — AKCEPTACJE ZGÓD v2, KLAUZULA u08, ZASADY OPŁAT W BOTACH
+-- ETAP 5 — AKCEPTACJE ZGÓD v2, ZASADY OPŁAT W BOTACH
 --
 -- 1. consent_acceptances: dziennik akceptacji dokumentów z consent_documents
 --    (regulamin klienta, polityka prywatności) — wersja, czas, IP, urządzenie.
 --    Insert-only (zapis przez server function z rolą serwisową po
 --    uwierzytelnieniu). Panel klienta i inwestora wymaga akceptacji
 --    aktywnej wersji przy następnym wejściu (ConsentGate).
--- 2. document_templates u08 (klauzula RODO pożyczkodawcy): bez pola
---    „IMIĘ I NAZWISKO IOD” — IOD nie jest wyznaczany; kreator dokumentów
---    wypełnia takie pole wartością „nie wyznaczono”. Plik .docx w Storage
---    wymaga podmiany przez człowieka (raport).
+-- 2. document_templates u08 (klauzula RODO pożyczkodawcy): bez zmian w
+--    bazie — pole „IMIĘ I NAZWISKO IOD” zostaje, kreator dokumentów wpisuje
+--    w nie dane Inwestora (Pożyczkodawcy) i jego kontakt.
 -- 3. text_agent_settings: koszt w prompcie klienta (1,79–4% miesięcznie)
 --    przekraczał odsetki maksymalne — zastąpiony zasadami opłat i B2B;
 --    dołączony blok „ZASADY OPŁAT I B2B” (idempotentnie).
@@ -43,12 +42,6 @@ create policy consent_acceptances_own_read on public.consent_acceptances
 revoke all on public.consent_acceptances from public, anon;
 grant select on public.consent_acceptances to authenticated;
 grant all on public.consent_acceptances to service_role;
-
--- 2. Szablon u08 — bez pola IOD.
-update public.document_templates
-   set placeholders = placeholders - 'IMIĘ I NAZWISKO IOD'
- where slug = 'u08-klauzula-informacyjna-rodo'
-   and placeholders ? 'IMIĘ I NAZWISKO IOD';
 
 -- 3. Prompty botów.
 -- 3a. Bot klienta (id = 1): koszt zgodny z odsetkami maksymalnymi, cel B2B.

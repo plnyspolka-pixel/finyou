@@ -5,10 +5,12 @@ import { COMPANY_DATA } from "@/lib/company";
 export const FINANCE_YOU = {
   nip: COMPANY_DATA.nip,
   krs: COMPANY_DATA.krs,
+  /** Jedyny rachunek Finance You — spłaty pożyczek FY (§ 2) i prowizja. */
+  rachunek: COMPANY_DATA.bankAccount,
   /** Rachunek do spłaty pożyczek udzielanych przez Finance You (§ 2 — spłata). */
-  rachunekSplaty: COMPANY_DATA.bank.repayment,
+  rachunekSplaty: COMPANY_DATA.bankAccount,
   /** Rachunek na Prowizję Klientowską potrącaną z wypłaty (Zał. 6 / Zał. 4). */
-  rachunekProwizji: COMPANY_DATA.bank.commission,
+  rachunekProwizji: COMPANY_DATA.bankAccount,
 } as const;
 
 /** Czy strona to Finance You (po NIP albo KRS). */

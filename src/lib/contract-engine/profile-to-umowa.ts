@@ -225,7 +225,7 @@ function budujWarunki(profile: ClientProfile, payload: LoanCalcPayload): any {
     rachunki: czysc({
       wyplata: profile.borrowerData?.bankAccount || "",
       splata: inv.bankAccount || "",
-      finance_you: prowizjaFY > 0 ? FINANCE_YOU.rachunekProwizji : undefined,
+      finance_you: prowizjaFY > 0 ? FINANCE_YOU.rachunek : undefined,
     }),
   });
 }
