@@ -20,6 +20,9 @@ import {
 import { GIIF_POSTAL_ADDRESS, paperAllowedFor } from "@/lib/aml/giif-paper";
 import { REPORT_TYPE_LABELS, type AmlReportType } from "@/lib/aml/aml-types";
 import { ReportStatusBadge, AmlEmptyState, fileToBase64 } from "@/components/aml/aml-ui";
+import { getAmlSettings } from "@/lib/aml/aml-settings.functions";
+import { SI_GIIF_URL, type AmlGiifReadiness } from "@/lib/aml/aml-types";
+import { Link } from "@tanstack/react-router";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +60,6 @@ export const Route = createFileRoute("/inwestor/aml/zgloszenia")({
   component: AmlReportsScreen,
 });
 
-const SI_GIIF_URL = "https://giif.mofnet.gov.pl";
 const SENDABLE = ["complete", "content_approved", "correction_required", "error"];
 const SENT = ["submitted", "upo_received"];
 const CHANNEL_LABELS: Record<string, string> = {
@@ -69,6 +71,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 function AmlReportsScreen() {
   const fetchReports = useServerFn(listGiifReports);
+  const fetchSettings = useServerFn(getAmlSettings);
   const prepare = useServerFn(prepareGiifReport);
   const generate = useServerFn(generateGiifDocuments);
   const downloads = useServerFn(getGiifReportDownloads);
@@ -79,6 +82,7 @@ function AmlReportsScreen() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [readiness, setReadiness] = useState<AmlGiifReadiness | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [prepareOpen, setPrepareOpen] = useState(false);
   const [prepForm, setPrepForm] = useState({
@@ -108,7 +112,10 @@ function AmlReportsScreen() {
 
   useEffect(() => {
     void reload();
-  }, [reload]);
+    fetchSettings()
+      .then((st) => setReadiness(st.giifReadiness))
+      .catch(() => setReadiness(null));
+  }, [reload, fetchSettings]);
 
   const run = async (key: string, fn: () => Promise<void>, errMsg: string) => {
     setBusy(key);
@@ -445,6 +452,20 @@ function AmlReportsScreen() {
             </TabsList>
 
             <TabsContent value="si_giif" className="space-y-2 text-sm">
+              {readiness && !(readiness.hasQualifiedSignature && readiness.registeredInSiGiif) && (
+                <div className="flex gap-2 rounded-md border border-amber-300 p-3 dark:border-amber-700">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                  <p className="text-muted-foreground">
+                    {readiness.hasQualifiedSignature
+                      ? "Nie oznaczyłeś jeszcze rejestracji instytucji w SI*GIIF — bez niej nie wyślesz zgłoszenia."
+                      : "Do wysyłki w SI*GIIF potrzebujesz własnego kwalifikowanego podpisu elektronicznego i rejestracji instytucji."}{" "}
+                    <Link to="/inwestor/aml" className="underline">
+                      Zobacz przewodnik
+                    </Link>
+                    . Jeśli nie zdążysz przed terminem, użyj zakładki „Papierowo”.
+                  </p>
+                </div>
+              )}
               <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
                 <li>Pobierz XML i PDF zgłoszenia (przycisk na liście).</li>
                 <li>
@@ -457,10 +478,6 @@ function AmlReportsScreen() {
                 </li>
                 <li>Wpisz poniżej identyfikator zgłoszenia i dołącz UPO.</li>
               </ol>
-              <p className="text-xs text-muted-foreground">
-                Nie masz podpisu? Zgłoszenie może wysłać pełnomocnik (np. kancelaria) z własnym
-                podpisem kwalifikowanym.
-              </p>
             </TabsContent>
 
             <TabsContent value="paper" className="space-y-3 text-sm">
@@ -480,8 +497,8 @@ function AmlReportsScreen() {
                       <span className="font-medium text-foreground">Ścieżka awaryjna.</span> Ustawa
                       AML przewiduje przekazywanie zawiadomień do GIIF elektronicznie (SI*GIIF).
                       Papier stosuj tylko, gdy wysyłka elektroniczna nie jest możliwa — podaj
-                      przyczynę, a po uzyskaniu podpisu kwalifikowanego (lub przez pełnomocnika)
-                      prześlij zgłoszenie także przez SI*GIIF.
+                      przyczynę, a po uzyskaniu podpisu kwalifikowanego prześlij zgłoszenie także
+                      przez SI*GIIF.
                     </p>
                   </div>
                   <div>

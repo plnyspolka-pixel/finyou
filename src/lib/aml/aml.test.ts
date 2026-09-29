@@ -11,7 +11,12 @@ import { toEurEquivalent } from "@/lib/aml/nbp-eur.server";
 import { proposeRiskLevel } from "@/lib/aml/risk-proposal";
 import { buildPdfBytes } from "@/lib/aml/giif-pdf.server";
 import { buildGiifPaperNoticeHtml, paperAllowedFor } from "@/lib/aml/giif-paper";
-import { AML_THRESHOLD_EUR, type GiifReportPayload } from "@/lib/aml/aml-types";
+import {
+  AML_THRESHOLD_EUR,
+  readinessFromStatus,
+  statusFromReadiness,
+  type GiifReportPayload,
+} from "@/lib/aml/aml-types";
 
 const PAYLOAD: GiifReportPayload = {
   reportType: "transakcja_ponadprogowa",
@@ -160,5 +165,20 @@ describe("zawiadomienie papierowe", () => {
     expect(paperAllowedFor("transakcja_ponadprogowa")).toBe(false);
     expect(paperAllowedFor("okolicznosci_podejrzane")).toBe(true);
     expect(paperAllowedFor("planowana_transakcja_podejrzana")).toBe(true);
+  });
+});
+
+describe("gotowość do wysyłki w SI*GIIF", () => {
+  it("mapuje deklaracje inwestora na status i z powrotem", () => {
+    const cases = [
+      { hasQualifiedSignature: false, registeredInSiGiif: false },
+      { hasQualifiedSignature: true, registeredInSiGiif: false },
+      { hasQualifiedSignature: true, registeredInSiGiif: true },
+    ];
+    for (const r of cases) expect(readinessFromStatus(statusFromReadiness(r))).toEqual(r);
+    expect(statusFromReadiness(cases[0])).toBe("not_connected");
+    expect(statusFromReadiness(cases[2])).toBe("active");
+    // Stare statusy z usuniętego kreatora mTLS nie oznaczają gotowości.
+    expect(readinessFromStatus("csr_generated")).toEqual(cases[0]);
   });
 });

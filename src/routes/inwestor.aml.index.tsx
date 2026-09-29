@@ -4,7 +4,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { getAmlOverview, getAmlSettings, type AmlOverview } from "@/lib/aml/aml-settings.functions";
+import {
+  getAmlOverview,
+  getAmlSettings,
+  type AmlOverview,
+  type AmlSettingsView,
+} from "@/lib/aml/aml-settings.functions";
+import { GiifReadinessGuide } from "@/components/aml/giif-readiness";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, Loader2 } from "lucide-react";
@@ -17,6 +23,7 @@ function AmlOverviewScreen() {
   const fetchOverview = useServerFn(getAmlOverview);
   const fetchSettings = useServerFn(getAmlSettings);
   const [overview, setOverview] = useState<AmlOverview | null>(null);
+  const [settings, setSettings] = useState<AmlSettingsView | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,7 +31,7 @@ function AmlOverviewScreen() {
       try {
         // Pierwsze wejście: ustawienia tworzą się automatycznie z profilu
         // inwestora (osoba odpowiedzialna, organizacja, NIP, adres).
-        await fetchSettings();
+        setSettings(await fetchSettings());
         setOverview(await fetchOverview());
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Nie udało się wczytać przeglądu AML");
@@ -118,6 +125,16 @@ function AmlOverviewScreen() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {settings && (
+        <GiifReadinessGuide
+          compactWhenReady
+          readiness={settings.giifReadiness}
+          institution={settings.institution}
+          responsiblePerson={settings.responsiblePerson}
+          onChange={(r) => setSettings({ ...settings, giifReadiness: r })}
+        />
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">

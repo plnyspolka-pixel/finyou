@@ -6,7 +6,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
-import type { AmlInstitution, AmlPerson, AmlProfileGaps } from "@/lib/aml/aml-types";
+import {
+  readinessFromStatus,
+  statusFromReadiness,
+  type AmlGiifReadiness,
+  type AmlInstitution,
+  type AmlPerson,
+  type AmlProfileGaps,
+} from "@/lib/aml/aml-types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 type Loose = { from: (t: string) => any };
@@ -38,6 +45,7 @@ export interface AmlSettingsView {
   signerPerson: AmlPerson | null; // null = ta sama co odpowiedzialna
   institution: AmlInstitution;
   profileGaps: AmlProfileGaps;
+  giifReadiness: AmlGiifReadiness;
 }
 
 /** Braki danych wymaganych do finalnego zgłoszenia (ostrzegamy, nie blokujemy). */
@@ -111,6 +119,7 @@ function toView(row: any): AmlSettingsView {
     signerPerson: (row.signer_person as AmlPerson | null) ?? null,
     institution,
     profileGaps: computeProfileGaps(person, institution),
+    giifReadiness: readinessFromStatus(row.giif_connection_status),
   };
 }
 
@@ -214,6 +223,38 @@ export const updateAmlSettings = createServerFn({ method: "POST" })
     return toView(updated);
   });
 
+/** Inwestor oznacza kroki przygotowania do wysyłki w SI*GIIF. */
+export const setAmlGiifReadiness = createServerFn({ method: "POST" })
+  .middleware([requireInvestorPro])
+  .inputValidator((data) =>
+    z.object({ hasQualifiedSignature: z.boolean(), registeredInSiGiif: z.boolean() }).parse(data),
+  )
+  .handler(async ({ data, context }): Promise<AmlSettingsView> => {
+    // Rejestracja w SI*GIIF wymaga podpisu kwalifikowanego — bez podpisu nie ma rejestracji.
+    const readiness: AmlGiifReadiness = {
+      hasQualifiedSignature: data.hasQualifiedSignature || data.registeredInSiGiif,
+      registeredInSiGiif: data.registeredInSiGiif,
+    };
+    const db = loose(context.supabase);
+    const { data: updated, error } = await db
+      .from("aml_settings")
+      .update({ giif_connection_status: statusFromReadiness(readiness) })
+      .eq("user_id", context.userId)
+      .select("*")
+      .single();
+    if (error) throw new Error(`Nie udało się zapisać: ${error.message}`);
+
+    const { amlAudit } = await import("@/lib/aml/audit.server");
+    await amlAudit({
+      userId: context.userId,
+      entityType: "settings",
+      entityId: updated.id,
+      action: "giif_readiness_updated",
+      details: { ...readiness },
+    });
+    return toView(updated);
+  });
+
 export interface AmlOverview {
   customers: number;
   screeningsToReview: number;
@@ -225,6 +266,7 @@ export interface AmlOverview {
   reportsSubmitted: number;
   upoReceived: number;
   profileGaps: AmlProfileGaps;
+  giifReadiness: AmlGiifReadiness;
 }
 
 /** Liczniki na ekran Przegląd. */
@@ -269,5 +311,6 @@ export const getAmlOverview = createServerFn({ method: "POST" })
       ),
       upoReceived: await count("aml_reports", (q) => q.eq("status", "upo_received")),
       profileGaps: gaps,
+      giifReadiness: readinessFromStatus(settingsRow?.giif_connection_status),
     };
   });

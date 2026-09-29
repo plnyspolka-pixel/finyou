@@ -10,6 +10,7 @@ import {
   type AmlSettingsView,
 } from "@/lib/aml/aml-settings.functions";
 import { listAmlAudit } from "@/lib/aml/aml-cases.functions";
+import { GiifReadinessGuide } from "@/components/aml/giif-readiness";
 import type { AmlPerson } from "@/lib/aml/aml-types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -269,26 +270,14 @@ function AmlSettingsScreen() {
             </p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Wysyłka zgłoszeń do GIIF</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>
-              <span className="font-medium text-foreground">Elektronicznie (zalecane):</span>{" "}
-              instytucja rejestruje się w SI*GIIF formularzem identyfikującym i wysyła zgłoszenia z
-              kwalifikowanym podpisem elektronicznym lub pieczęcią — samodzielnie albo przez
-              pełnomocnika.
-            </p>
-            <p>
-              <span className="font-medium text-foreground">Papierowo (awaryjnie):</span> gdy
-              wysyłka elektroniczna nie jest możliwa, moduł wygeneruje zawiadomienie do wydruku,
-              podpisu własnoręcznego i wysyłki listem poleconym.
-            </p>
-          </CardContent>
-        </Card>
       </div>
+
+      <GiifReadinessGuide
+        readiness={settings.giifReadiness}
+        institution={settings.institution}
+        responsiblePerson={settings.responsiblePerson}
+        onChange={(r) => setSettings({ ...settings, giifReadiness: r })}
+      />
 
       <Button onClick={() => void submit()} disabled={busy}>
         {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Zapisz ustawienia

@@ -14,15 +14,15 @@ wysyłkę i dołącza potwierdzenie.
 
 ## Ekrany
 
-| Ekran | Ścieżka | Zakres |
-|---|---|---|
-| Przegląd | `/inwestor/aml` | liczniki, braki profilu (ostrzeżenie, nie blokada) |
-| Klienci | `/inwestor/aml/klienci` | profil AML, CRBR (beneficjenci/reprezentanci/rozbieżności), screening Dilisense, ocena trafień |
-| Oceny ryzyka | `/inwestor/aml/ryzyko` | propozycja systemu + ostateczna decyzja inwestora (zmiana wymaga uzasadnienia) |
-| Transakcje | `/inwestor/aml/transakcje` | rejestr transakcji + rejestr ponadprogowy (15 000 EUR wg NBP, termin 7 dni, decyzje, „raportuje bank") |
-| Sprawy AML | `/inwestor/aml/sprawy` | sprawy z klienta/screeningu/CRBR/ryzyka/transakcji/rejestru/ręcznie |
-| Zgłoszenia GIIF | `/inwestor/aml/zgloszenia` | przygotowanie, XML+PDF, wysyłka (SI\*GIIF albo papier), potwierdzenia UPO/ZPO |
-| Ustawienia | `/inwestor/aml/ustawienia` | osoba odpowiedzialna (auto z profilu), osoba podpisująca, instytucja, audyt |
+| Ekran           | Ścieżka                    | Zakres                                                                                                 |
+| --------------- | -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Przegląd        | `/inwestor/aml`            | liczniki, braki profilu (ostrzeżenie, nie blokada)                                                     |
+| Klienci         | `/inwestor/aml/klienci`    | profil AML, CRBR (beneficjenci/reprezentanci/rozbieżności), screening Dilisense, ocena trafień         |
+| Oceny ryzyka    | `/inwestor/aml/ryzyko`     | propozycja systemu + ostateczna decyzja inwestora (zmiana wymaga uzasadnienia)                         |
+| Transakcje      | `/inwestor/aml/transakcje` | rejestr transakcji + rejestr ponadprogowy (15 000 EUR wg NBP, termin 7 dni, decyzje, „raportuje bank") |
+| Sprawy AML      | `/inwestor/aml/sprawy`     | sprawy z klienta/screeningu/CRBR/ryzyka/transakcji/rejestru/ręcznie                                    |
+| Zgłoszenia GIIF | `/inwestor/aml/zgloszenia` | przygotowanie, XML+PDF, wysyłka (SI\*GIIF albo papier), potwierdzenia UPO/ZPO                          |
+| Ustawienia      | `/inwestor/aml/ustawienia` | osoba odpowiedzialna (auto z profilu), osoba podpisująca, instytucja, audyt                            |
 
 ## Osoba odpowiedzialna
 
@@ -40,9 +40,9 @@ można zmienić osobę odpowiedzialną i wskazać inną osobę podpisującą.
 - wywołania wyłącznie z backendu; klucz `DILISENSE_API_KEY` w sekretach,
   cache 24 h w `dilisense_cache`,
 - statusy: `not_started, in_progress, clear, review_required,
-  approved_after_review, blocked, error, invalidated`,
+approved_after_review, blocked, error, invalidated`,
 - oceny trafień: `false_positive, confirmed_pep, confirmed_sanction,
-  confirmed_criminal, unresolved`; **potwierdzona sankcja i trafienie
+confirmed_criminal, unresolved`; **potwierdzona sankcja i trafienie
   nierozstrzygnięte blokują zawarcie umowy**,
 - zmiana danych klienta/reprezentantów/beneficjentów przed umową unieważnia
   screening (fingerprint) i wymusza jego powtórzenie.
@@ -67,7 +67,7 @@ automatycznie podejrzana — można dla niej niezależnie utworzyć sprawę AML.
    - **Elektronicznie w SI\*GIIF** (ścieżka ustawowa, zalecana): inwestor
      loguje się do SI\*GIIF, wprowadza zgłoszenie i podpisuje je
      kwalifikowanym podpisem elektronicznym / kwalifikowaną pieczęcią
-     (samodzielnie albo przez pełnomocnika). Profil zaufany nie wystarcza.
+     (własnym — patrz „Model wysyłki” niżej). Profil zaufany nie wystarcza.
      W module wpisuje identyfikator zgłoszenia i dołącza UPO.
    - **Papierowo — bez podpisu kwalifikowanego (awaryjnie)**: inwestor podaje
      przyczynę, moduł generuje zawiadomienie do wydruku (HTML, pełne polskie
@@ -85,6 +85,30 @@ Kanał i numer są zapisywane w `aml_reports` (`giif_status` = `si_giif` /
 `paper`, `giif_submission_id`, `submitted_at`, `upo_storage_path`,
 `giif_response`), bez zmian schematu bazy.
 
+### Model wysyłki: każdy inwestor własnym podpisem
+
+Każdy inwestor jest odrębną instytucją obowiązaną, więc wysyła zgłoszenia
+sam, własnym kwalifikowanym podpisem elektronicznym (albo kwalifikowaną
+pieczęcią swojej spółki). Finance You nie podpisuje ani nie wysyła zgłoszeń
+za inwestorów — pieczęć Finance You identyfikowałaby Finance You, nie
+inwestora. Wysyłka przez pełnomocnika nie jest obsługiwana w module.
+
+Przewodnik „Przygotowanie do wysyłki zgłoszeń (SI\*GIIF)”
+(`src/components/aml/giif-readiness.tsx`, na Przeglądzie i w Ustawieniach):
+
+1. kwalifikowany podpis / pieczęć (dostawcy z rejestru NCCert, podpis
+   zdalny bez czytnika),
+2. rejestracja instytucji w SI\*GIIF formularzem identyfikującym (moduł
+   pokazuje dane z profilu do przepisania),
+3. wysyłka zgłoszeń z zakładki „Zgłoszenia GIIF”.
+
+Kroki 1–2 inwestor oznacza sam (deklaracja, audytowana). Stan jest trzymany
+w istniejącej kolumnie `aml_settings.giif_connection_status`:
+`not_connected` → brak, `documents_signed` → ma podpis, `active` → ma podpis
+i rejestrację (bez migracji bazy). Dopóki kroki nie są oznaczone, okno
+wysyłki w SI\*GIIF pokazuje ostrzeżenie z odesłaniem do przewodnika
+i do ścieżki papierowej.
+
 ### Czy ścieżka papierowa jest prawidłowa? (weryfikacja 09.2026)
 
 **Tylko jako ścieżka awaryjna.** Ustawa AML (t.j. Dz.U. z 2025 r. poz. 644)
@@ -100,8 +124,8 @@ Dlatego:
   (wyłącznie SI\*GIIF),
 - **zawiadomienia (art. 74, 86, 89)** — papier dozwolony z obowiązkową
   przyczyną; to udokumentowanie niezwłocznego działania, a zgłoszenie
-  należy jak najszybciej przekazać także przez SI\*GIIF (np. przez
-  pełnomocnika z podpisem kwalifikowanym). Przed pierwszym użyciem warto
+  należy jak najszybciej przekazać także przez SI\*GIIF. Przed pierwszym
+  użyciem warto
   potwierdzić tryb telefonicznie w GIIF.
 
 Terminy: art. 74 — niezwłocznie, nie później niż 2 dni robocze od

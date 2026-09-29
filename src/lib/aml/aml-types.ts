@@ -205,6 +205,38 @@ export const REPORT_STATUS_LABELS: Record<AmlReportStatus, string> = {
   error: "Błąd",
 };
 
+// ── Gotowość do wysyłki w SI*GIIF ───────────────────────────────────
+export const SI_GIIF_URL = "https://giif.mofnet.gov.pl";
+/** Rejestr kwalifikowanych dostawców usług zaufania (Narodowe Centrum Certyfikacji). */
+export const NCCERT_URL = "https://www.nccert.pl";
+
+/**
+ * Gotowość inwestora do wysyłki zgłoszeń przez SI*GIIF (wariant: każdy
+ * inwestor wysyła sam, własnym podpisem kwalifikowanym). Deklaracje
+ * inwestora trzymamy w istniejącej kolumnie aml_settings.giif_connection_status:
+ * not_connected → brak, documents_signed → ma podpis, active → ma podpis
+ * i instytucja jest zarejestrowana w SI*GIIF.
+ */
+export interface AmlGiifReadiness {
+  hasQualifiedSignature: boolean;
+  registeredInSiGiif: boolean;
+}
+
+export function readinessFromStatus(status: string | null | undefined): AmlGiifReadiness {
+  const registered = status === "active";
+  return {
+    hasQualifiedSignature: registered || status === "documents_signed",
+    registeredInSiGiif: registered,
+  };
+}
+
+export function statusFromReadiness(
+  r: AmlGiifReadiness,
+): "not_connected" | "documents_signed" | "active" {
+  if (r.hasQualifiedSignature && r.registeredInSiGiif) return "active";
+  return r.hasQualifiedSignature ? "documents_signed" : "not_connected";
+}
+
 // ── Osoby / instytucja ───────────────────────────────────────────────
 export interface AmlPerson {
   firstName: string;
