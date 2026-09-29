@@ -30,6 +30,30 @@ import {
 
 const JOIN = "/rejestracja?role=inwestor";
 
+// Układ one-pagera: filmy w hero, siatki z ikonami, cennik, FAQ i CTA — sekcje
+// jedna pod drugą, bez paska zakładek. Poniższe elementy są SCHOWANE, nie
+// usunięte: kod, dane i importy zostają, a każdą sekcję przywraca jedna flaga.
+const SHOW: Record<
+  | "zakladki"
+  | "kalkulator"
+  | "oferty"
+  | "pipeline"
+  | "system"
+  | "akademia"
+  | "ochrona"
+  | "windykacja",
+  boolean
+> = {
+  zakladki: false, // pasek zakładek zamiast sekcji jedna pod drugą
+  kalkulator: false, // pełny kalkulator inwestora pod hero
+  oferty: false, // tabela okazji „na żywo"
+  pipeline: false, // oś dziewięciu kroków onboardingu
+  system: false, // pokaz slajdów „Inteligentny system"
+  akademia: false, // pokaz slajdów Akademii inwestora
+  ochrona: false, // pokaz slajdów „7 warstw ochrony"
+  windykacja: false, // pokaz slajdów windykacji AI
+};
+
 // Filmy w hero. Pierwszy (Wistia) po prawej w rzędzie 1, drugi piętro niżej po
 // lewej — odtwarzany z naszego pliku w Storage (src/lib/landing-video.ts).
 // Dopóki kopii nie ma (panel /admin/materialy → „Film na landingu inwestora"),
@@ -550,14 +574,20 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
               color: "rgba(255,255,255,.8)",
             }}
           >
-            Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You. Bezpośrednio
-            poniżej masz pełną wersję kalkulatora inwestora — policz zysk, raty, limity ustawowe i
-            harmonogram spłat na własnych parametrach.
+            {SHOW.kalkulator
+              ? "Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You. Bezpośrednio poniżej masz pełną wersję kalkulatora inwestora — policz zysk, raty, limity ustawowe i harmonogram spłat na własnych parametrach."
+              : "Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You, a poniżej sprawdź, co zyskujesz jako inwestor i ile to kosztuje."}
           </p>
           <div style={{ marginTop: "1.4rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
-            <MktButton variant="outline" href="#kalkulator">
-              <BrandIcon name="ltv" size={16} /> Policz w kalkulatorze
-            </MktButton>
+            {SHOW.kalkulator ? (
+              <MktButton variant="outline" href="#kalkulator">
+                <BrandIcon name="ltv" size={16} /> Policz w kalkulatorze
+              </MktButton>
+            ) : (
+              <MktButton variant="outline" href="#korzysci">
+                Zobacz, co zyskujesz
+              </MktButton>
+            )}
           </div>
         </div>
       </div>
@@ -775,6 +805,95 @@ function PipelineSection() {
   );
 }
 
+// Sekcje dawnych zakładek. Te same komponenty renderuje pasek zakładek
+// (SHOW.zakladki) i układ one-pagera — kotwice (id) odpowiadają hashom
+// z INVESTOR_TABS i pod-menu „Inwestor" w nawigacji.
+function SmartOfferSection() {
+  return (
+    <Section id="system-inwestora">
+      <SmartOfferSlider />
+    </Section>
+  );
+}
+
+function AkademiaSection() {
+  return (
+    <Section id="akademia">
+      <SectionHead
+        center
+        eyebrow="Akademia inwestora"
+        title="Program szkolenia w 7 modułach"
+        sub="Od wprowadzenia i strategii, przez marketing, prawo i operacje, po analizę nieruchomości, analizę klienta i praktyczne case studies."
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <TwoColSlider slides={AKADEMIA} />
+      </div>
+    </Section>
+  );
+}
+
+function OchronaSection() {
+  return (
+    <Section id="ochrona" tint>
+      <SectionHead
+        center
+        eyebrow="Bezpieczeństwo"
+        title="7 warstw ochrony inwestora"
+        sub="Od zgodności z przepisami i stanu prawnego nieruchomości, przez wycenę, kalkulację i dokumenty, po ocenę ryzyka oraz monitoring spłaty."
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <TwoColSlider slides={OCHRONA} />
+      </div>
+      <ComplianceNote style={{ marginTop: "2rem" }}>
+        System wspiera analizę i porządkuje dane — decyzja należy do inwestora. Zakres zależy od
+        modelu i stron transakcji.
+      </ComplianceNote>
+    </Section>
+  );
+}
+
+function WindykacjaSection() {
+  return (
+    <Section id="windykacja-ai">
+      <SectionHead
+        center
+        eyebrow="Moduł AI"
+        title="Automatyczna windykacja krok po kroku"
+        sub="Sześć etapów procesu — od pierwszego kontaktu po egzekucję komorniczą. Każdy etap pokazuje działania systemu oraz prognozowany czas."
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <TwoColSlider slides={WINDYKACJA} />
+      </div>
+      <ComplianceNote style={{ marginTop: "2rem" }}>
+        Prognoza poglądowa — wartości zaokrąglone, zależne od umowy, harmonogramu i kosztów
+        czynności.
+      </ComplianceNote>
+    </Section>
+  );
+}
+
+function CennikSection({ products }: { products: AccessProduct[] }) {
+  return (
+    <Section id="cennik" tint>
+      <SectionHead
+        center
+        eyebrow="Cennik"
+        title="Dwa pakiety — Podstawowy i PRO"
+        sub="W Podstawowym zakładasz konto bez opłat stałych, składasz Zlecenie i płacisz tylko za okazję, którą bierzesz. PRO to ten sam zakres bez opłat jednostkowych plus pełny warsztat inwestora."
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <InvestorPricing products={products} />
+      </div>
+      <ComplianceNote style={{ marginTop: "2rem" }}>
+        Ceny brutto (PLN). Pakiet PRO: 3 000 zł za 180 dni dostępu oraz 5% kwoty udzielonej
+        pożyczki, płatne po jej uruchomieniu. Zakup wymaga konta inwestora — po wybraniu pakietu
+        przejdziesz do bezpiecznej płatności Tpay, a faktura zostanie wystawiona automatycznie.
+        Materiały mają charakter edukacyjny i informacyjny, a Finance You nie gwarantuje zysku.
+      </ComplianceNote>
+    </Section>
+  );
+}
+
 function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: AccessProduct[] }) {
   const [active, setActive] = useState<InvestorTabKey>("oferty");
   const barRef = useRef<HTMLDivElement>(null);
@@ -859,81 +978,15 @@ function InvestorTabs({ leads, products }: { leads: PublicLead[]; products: Acce
 
       {active === "pipeline" && <PipelineSection />}
 
-      {active === "system" && (
-        <Section>
-          <SmartOfferSlider />
-        </Section>
-      )}
+      {active === "system" && <SmartOfferSection />}
 
-      {active === "akademia" && (
-        <Section>
-          <SectionHead
-            center
-            eyebrow="Akademia inwestora"
-            title="Program szkolenia w 7 modułach"
-            sub="Od wprowadzenia i strategii, przez marketing, prawo i operacje, po analizę nieruchomości, analizę klienta i praktyczne case studies."
-          />
-          <div style={{ marginTop: "2.5rem" }}>
-            <TwoColSlider slides={AKADEMIA} />
-          </div>
-        </Section>
-      )}
+      {active === "akademia" && <AkademiaSection />}
 
-      {active === "ochrona" && (
-        <Section tint>
-          <SectionHead
-            center
-            eyebrow="Bezpieczeństwo"
-            title="7 warstw ochrony inwestora"
-            sub="Od zgodności z przepisami i stanu prawnego nieruchomości, przez wycenę, kalkulację i dokumenty, po ocenę ryzyka oraz monitoring spłaty."
-          />
-          <div style={{ marginTop: "2.5rem" }}>
-            <TwoColSlider slides={OCHRONA} />
-          </div>
-          <ComplianceNote style={{ marginTop: "2rem" }}>
-            System wspiera analizę i porządkuje dane — decyzja należy do inwestora. Zakres zależy od
-            modelu i stron transakcji.
-          </ComplianceNote>
-        </Section>
-      )}
+      {active === "ochrona" && <OchronaSection />}
 
-      {active === "windykacja" && (
-        <Section>
-          <SectionHead
-            center
-            eyebrow="Moduł AI"
-            title="Automatyczna windykacja krok po kroku"
-            sub="Sześć etapów procesu — od pierwszego kontaktu po egzekucję komorniczą. Każdy etap pokazuje działania systemu oraz prognozowany czas."
-          />
-          <div style={{ marginTop: "2.5rem" }}>
-            <TwoColSlider slides={WINDYKACJA} />
-          </div>
-          <ComplianceNote style={{ marginTop: "2rem" }}>
-            Prognoza poglądowa — wartości zaokrąglone, zależne od umowy, harmonogramu i kosztów
-            czynności.
-          </ComplianceNote>
-        </Section>
-      )}
+      {active === "windykacja" && <WindykacjaSection />}
 
-      {active === "cennik" && (
-        <Section tint>
-          <SectionHead
-            center
-            eyebrow="Cennik"
-            title="Dwa pakiety — Podstawowy i PRO"
-            sub="W Podstawowym zakładasz konto bez opłat stałych, składasz Zlecenie i płacisz tylko za okazję, którą bierzesz. PRO to ten sam zakres bez opłat jednostkowych plus pełny warsztat inwestora."
-          />
-          <div style={{ marginTop: "2.5rem" }}>
-            <InvestorPricing products={products} />
-          </div>
-          <ComplianceNote style={{ marginTop: "2rem" }}>
-            Ceny brutto (PLN). Pakiet PRO: 3 000 zł za 180 dni dostępu oraz 5% kwoty udzielonej
-            pożyczki, płatne po jej uruchomieniu. Zakup wymaga konta inwestora — po wybraniu pakietu
-            przejdziesz do bezpiecznej płatności Tpay, a faktura zostanie wystawiona automatycznie.
-            Materiały mają charakter edukacyjny i informacyjny, a Finance You nie gwarantuje zysku.
-          </ComplianceNote>
-        </Section>
-      )}
+      {active === "cennik" && <CennikSection products={products} />}
     </div>
   );
 }
@@ -944,9 +997,16 @@ function InvestorLanding() {
     <MarketingShell page="inwestor" sticky={{ label: "Dołącz do Klubu", href: JOIN }}>
       <Hero video={video} />
 
-      <CalculatorSection />
+      {SHOW.kalkulator && <CalculatorSection />}
 
-      <InvestorTabs leads={leads} products={products} />
+      {SHOW.zakladki ? (
+        <InvestorTabs leads={leads} products={products} />
+      ) : (
+        <>
+          {SHOW.oferty && <LeadsSection leads={leads} />}
+          {SHOW.pipeline && <PipelineSection />}
+        </>
+      )}
 
       <Section id="korzysci">
         <SectionHead
@@ -958,6 +1018,15 @@ function InvestorLanding() {
           <FeatureGrid items={BENEFITS} icon3d />
         </div>
       </Section>
+
+      {!SHOW.zakladki && (
+        <>
+          {SHOW.system && <SmartOfferSection />}
+          {SHOW.akademia && <AkademiaSection />}
+          {SHOW.ochrona && <OchronaSection />}
+          {SHOW.windykacja && <WindykacjaSection />}
+        </>
+      )}
 
       <Section tint>
         <SectionHead eyebrow="AI dla inwestora" title="Automatyzacja powtarzalnych czynności" />
@@ -1011,6 +1080,8 @@ function InvestorLanding() {
           prawnej.
         </ComplianceNote>
       </Section>
+
+      {!SHOW.zakladki && <CennikSection products={products} />}
 
       <Section id="faq">
         <SectionHead center eyebrow="FAQ" title="Najczęstsze pytania inwestorów" />

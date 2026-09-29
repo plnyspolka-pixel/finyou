@@ -62,11 +62,14 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
 };
 
-/** Kotwice podstron inwestora na /dla-inwestora — sub-menu pod pozycją "Inwestor". */
-const INVESTOR_ANCHORS = [
-  { label: "Akademia Inwestora", hash: "#akademia" },
-  { label: "7 warstw ochrony inwestycji", hash: "#ochrona" },
-  { label: "Windykacja AI", hash: "#windykacja-ai" },
+/** Kotwice podstron inwestora na /dla-inwestora — sub-menu pod pozycją "Inwestor".
+ *  `hidden` zdejmuje wpis z menu, gdy sekcja jest schowana na landingu
+ *  (flagi SHOW w routes/dla-inwestora.tsx) — wpis zostaje, żeby dało się go przywrócić. */
+const INVESTOR_ANCHORS: { label: string; hash: string; hidden?: boolean }[] = [
+  { label: "Akademia Inwestora", hash: "#akademia", hidden: true },
+  { label: "7 warstw ochrony inwestycji", hash: "#ochrona", hidden: true },
+  { label: "Windykacja AI", hash: "#windykacja-ai", hidden: true },
+  { label: "Co zyskujesz", hash: "#korzysci" },
   { label: "Cennik", hash: "#cennik" },
 ];
 
@@ -80,7 +83,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
     { label: "Blog", href: "/blog", key: "blog" },
     { label: "FAQ", href: page === "blog" ? "/dla-klienta#faq" : "#faq", key: "faq" },
   ];
-  const investorLinks = INVESTOR_ANCHORS.map((a) => ({
+  const investorLinks = INVESTOR_ANCHORS.filter((a) => !a.hidden).map((a) => ({
     label: a.label,
     href: page === "inwestor" ? a.hash : PAGE_PATH.inwestor + a.hash,
   }));
