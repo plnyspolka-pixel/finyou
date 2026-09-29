@@ -11897,11 +11897,11 @@ export type Database = {
           auto_published_at: string | null
           avatar_id: string
           avatar_ids: string[]
+          background_color: string
           caption_burn_attempts: number
           caption_burn_id: string | null
           caption_burn_started_at: string | null
           caption_style: string
-          background_color: string
           caption_wait_since: string | null
           captions: boolean
           created_at: string
@@ -11910,7 +11910,6 @@ export type Database = {
           heygen_video_id: string | null
           id: string
           last_error: string | null
-          material_audience: Database["public"]["Enums"]["marketing_audience"] | null
           prompt: string
           publish_description: string
           publish_privacy: string
@@ -11935,11 +11934,11 @@ export type Database = {
           auto_published_at?: string | null
           avatar_id: string
           avatar_ids?: string[]
+          background_color?: string
           caption_burn_attempts?: number
           caption_burn_id?: string | null
           caption_burn_started_at?: string | null
           caption_style?: string
-          background_color?: string
           caption_wait_since?: string | null
           captions?: boolean
           created_at?: string
@@ -11948,7 +11947,6 @@ export type Database = {
           heygen_video_id?: string | null
           id?: string
           last_error?: string | null
-          material_audience?: Database["public"]["Enums"]["marketing_audience"] | null
           prompt: string
           publish_description?: string
           publish_privacy?: string
@@ -11973,11 +11971,11 @@ export type Database = {
           auto_published_at?: string | null
           avatar_id?: string
           avatar_ids?: string[]
+          background_color?: string
           caption_burn_attempts?: number
           caption_burn_id?: string | null
           caption_burn_started_at?: string | null
           caption_style?: string
-          background_color?: string
           caption_wait_since?: string | null
           captions?: boolean
           created_at?: string
@@ -11986,7 +11984,6 @@ export type Database = {
           heygen_video_id?: string | null
           id?: string
           last_error?: string | null
-          material_audience?: Database["public"]["Enums"]["marketing_audience"] | null
           prompt?: string
           publish_description?: string
           publish_privacy?: string
@@ -12310,57 +12307,6 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
-        }
-        Relationships: []
-      }
-      video_renditions: {
-        Row: {
-          attempt_count: number
-          created_at: string
-          id: string
-          job_id: string | null
-          job_started_at: string | null
-          last_error: string | null
-          output_bytes: number | null
-          output_url: string | null
-          profile: string
-          source_bytes: number | null
-          source_url: string
-          status: string
-          unchanged: boolean
-          updated_at: string
-        }
-        Insert: {
-          attempt_count?: number
-          created_at?: string
-          id?: string
-          job_id?: string | null
-          job_started_at?: string | null
-          last_error?: string | null
-          output_bytes?: number | null
-          output_url?: string | null
-          profile?: string
-          source_bytes?: number | null
-          source_url: string
-          status?: string
-          unchanged?: boolean
-          updated_at?: string
-        }
-        Update: {
-          attempt_count?: number
-          created_at?: string
-          id?: string
-          job_id?: string | null
-          job_started_at?: string | null
-          last_error?: string | null
-          output_bytes?: number | null
-          output_url?: string | null
-          profile?: string
-          source_bytes?: number | null
-          source_url?: string
-          status?: string
-          unchanged?: boolean
-          updated_at?: string
         }
         Relationships: []
       }
