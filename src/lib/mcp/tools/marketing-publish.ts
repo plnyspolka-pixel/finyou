@@ -443,6 +443,15 @@ export const retrySocialQueueItem = defineTool({
   handler: ({ queue_id }, ctx: ToolContext) =>
     handle(async () => {
       const s = await requireTeamAdmin(ctx);
+      const current = await oneOf(
+        s.from("social_publish_queue").select("id, platform, video_url").eq("id", queue_id),
+        "social_publish_queue",
+      );
+      if (current?.video_url) {
+        // Nieudana kompresja wideo dostaje nowy budżet prób razem z wpisem.
+        const { resetVideoRendition } = await import("@/lib/video-rendition.server");
+        await resetVideoRendition(current.video_url).catch(() => {});
+      }
       const { data, error } = await s
         .from("social_publish_queue")
         .update({
@@ -457,6 +466,11 @@ export const retrySocialQueueItem = defineTool({
           x_media_id: null,
           x_media_status: null,
           x_media_at: null,
+          // Kontener IG ma sens tylko przy wpisie Instagrama (patrz retry w
+          // studio.functions.ts) — obcy ig_creation_id mógłby trafić na IG.
+          ...(current?.platform !== "instagram_reels"
+            ? { ig_creation_id: null, ig_container_at: null }
+            : {}),
         })
         .eq("id", queue_id)
         .in("status", ["failed", "cancelled", "processing"])

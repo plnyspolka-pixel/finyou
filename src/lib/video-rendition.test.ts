@@ -3,6 +3,7 @@ import {
   VIDEO_RENDITION_MAX_ATTEMPTS,
   VIDEO_RENDITION_TIMEOUT_MS,
   isRenditionCandidateUrl,
+  isTranscodeUnsupportedError,
   isVideoPreparingNote,
   preparingNote,
   renditionSourcesToDiscover,
@@ -162,5 +163,15 @@ describe("komunikaty", () => {
     expect(isVideoPreparingNote(note)).toBe(true);
     expect(isVideoPreparingNote("Plik za duży")).toBe(false);
     expect(isVideoPreparingNote(null)).toBe(false);
+  });
+});
+
+describe("isTranscodeUnsupportedError", () => {
+  it("rozpoznaje odpowiedź starej wersji usługi (sprzed zadania transcode)", () => {
+    expect(isTranscodeUnsupportedError("caption-burner: brak pola ass")).toBe(true);
+    expect(
+      isTranscodeUnsupportedError("caption-burner: ass nie zawiera sekcji [Events] z kwestiami"),
+    ).toBe(true);
+    expect(isTranscodeUnsupportedError("caption-burner: przekroczony czas odpowiedzi")).toBe(false);
   });
 });

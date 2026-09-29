@@ -25,7 +25,9 @@ import {
   VIDEO_RENDITION_MAX_ATTEMPTS,
   VIDEO_RENDITION_PROFILE,
   VIDEO_RENDITION_TARGET,
+  TRANSCODE_UNSUPPORTED_REASON,
   isRenditionCandidateUrl,
+  isTranscodeUnsupportedError,
   preparingNote,
   renditionGiveUpNote,
   renditionSourcesToDiscover,
@@ -127,12 +129,26 @@ export async function resetVideoRendition(sourceUrl: string | null | undefined):
 
 // ── Zlecenie i domknięcie ───────────────────────────────────────────────────
 
+type SubmitOutcome = {
+  /** Wiersz przejęty przez ten przebieg (false = ktoś inny zdążył). */
+  claimed: boolean;
+  /**
+   * Kompresja teraz niemożliwa (stara wersja usługi) — wołający publikuje
+   * oryginał od razu. Próba NIE jest zużyta: po redeployu usługi kolejna
+   * publikacja tego pliku spróbuje ponownie sama.
+   */
+  unsupported: string | null;
+};
+
 /**
  * Zleca zadanie w usłudze. Optymistyczne przejęcie wiersza (pending/failed →
  * processing) chroni przed podwójnym zleceniem, gdy tick i publikator trafią
- * na ten sam wiersz w tej samej chwili. Zwraca false, gdy ktoś inny zdążył.
+ * na ten sam wiersz w tej samej chwili.
  */
-async function submitRendition(row: VideoRenditionRow, reason: string | null): Promise<boolean> {
+async function submitRendition(
+  row: VideoRenditionRow,
+  reason: string | null,
+): Promise<SubmitOutcome> {
   const attempt = row.attempt_count + 1;
   const { data: claimed, error: claimErr } = await table()
     .update({
@@ -146,7 +162,7 @@ async function submitRendition(row: VideoRenditionRow, reason: string | null): P
     .in("status", ["pending", "failed"])
     .select("id");
   if (claimErr) throw new Error(`video_renditions: ${claimErr.message}`);
-  if (!claimed?.length) return false;
+  if (!claimed?.length) return { claimed: false, unsupported: null };
 
   try {
     const path = renditionStoragePath(row.id);
@@ -170,8 +186,21 @@ async function submitRendition(row: VideoRenditionRow, reason: string | null): P
     await table()
       .update({ job_id: jobId, job_started_at: new Date().toISOString() })
       .eq("id", row.id);
-    return true;
+    return { claimed: true, unsupported: null };
   } catch (e) {
+    if (isTranscodeUnsupportedError(errMsg(e))) {
+      await table()
+        .update({
+          status: "failed",
+          attempt_count: row.attempt_count,
+          job_id: null,
+          job_started_at: null,
+          last_error: TRANSCODE_UNSUPPORTED_REASON,
+        })
+        .eq("id", row.id);
+      console.warn(`[renditions] ${TRANSCODE_UNSUPPORTED_REASON} (${row.id})`);
+      return { claimed: true, unsupported: TRANSCODE_UNSUPPORTED_REASON };
+    }
     // Zlecenie nie doszło (usługa śpi, sieć): próba jest zużyta, wiersz wraca
     // do `pending` (albo `failed`, gdy to była ostatnia) — nic nie wisi.
     const exhausted = attempt >= VIDEO_RENDITION_MAX_ATTEMPTS;
@@ -184,7 +213,7 @@ async function submitRendition(row: VideoRenditionRow, reason: string | null): P
       })
       .eq("id", row.id);
     console.warn(`[renditions] zlecenie nieudane (${row.id}): ${errMsg(e)}`);
-    return true;
+    return { claimed: true, unsupported: null };
   }
 }
 
@@ -269,7 +298,8 @@ async function settleRendition(row: VideoRenditionRow): Promise<SettleOutcome> {
   if (resolution.state === "submit" || resolution.state === "retry") {
     const reason = resolution.state === "retry" ? resolution.reason : null;
     if (reason) console.warn(`[renditions] ponawiam kompresję (${row.id}): ${reason}`);
-    await submitRendition(row, reason);
+    const sub = await submitRendition(row, reason);
+    if (sub.unsupported) return { state: "original", url: row.source_url, reason: sub.unsupported };
     return { state: "waiting" };
   }
 
@@ -303,7 +333,10 @@ async function settleRendition(row: VideoRenditionRow): Promise<SettleOutcome> {
         now: new Date(),
       });
       if (again.state === "retry") {
-        await submitRendition(row, again.reason);
+        const sub = await submitRendition(row, again.reason);
+        if (sub.unsupported) {
+          return { state: "original", url: row.source_url, reason: sub.unsupported };
+        }
         return { state: "waiting" };
       }
       return giveUp(row, again.state === "give_up" ? again.reason : errMsg(e));
@@ -459,7 +492,13 @@ export async function runVideoRenditionTick(): Promise<{
     if (error) throw new Error(error.message);
     for (const row of (rows ?? []) as VideoRenditionRow[]) {
       try {
-        if (await submitRendition(row, null)) result.submitted += 1;
+        const sub = await submitRendition(row, null);
+        if (sub.unsupported) {
+          // Stara wersja usługi — nie ma sensu zlecać reszty w tym ticku.
+          result.errors.push(sub.unsupported);
+          break;
+        }
+        if (sub.claimed) result.submitted += 1;
       } catch (e) {
         result.errors.push(`${row.id}: ${errMsg(e)}`);
       }

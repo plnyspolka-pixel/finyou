@@ -3,7 +3,9 @@ import {
   MIN_CHUNK_BYTES,
   TARGET_CHUNK_BYTES,
   TITLE_MAX,
+  TIKTOK_UNAUDITED_ERROR,
   applyCreatorConstraints,
+  classifyTiktokError,
   parseTiktokPostOptions,
   planChunks,
   tiktokTitle,
@@ -184,5 +186,22 @@ describe("applyCreatorConstraints", () => {
     expect(out.privacyLevel).toBe("PUBLIC_TO_EVERYONE");
     expect(out.brandOrganic).toBe(true);
     expect(out.brandedContent).toBe(false);
+  });
+});
+
+describe("classifyTiktokError", () => {
+  it("błąd audytu aplikacji jest trwały i ma polski komunikat z kodem TikToka", () => {
+    const raw = `TikTok API ${TIKTOK_UNAUDITED_ERROR}: Please review our integration guidelines at https://developers.tiktok.com/doc/content-sharing-guidelines/`;
+    const r = classifyTiktokError(raw);
+    expect(r.permanent).toBe(true);
+    expect(r.message).toMatch(/nie przeszła jeszcze audytu/);
+    expect(r.message).toMatch(/konto prywatne/);
+    expect(r.message).toMatch(/Tylko ja/);
+    expect(r.message).toContain(TIKTOK_UNAUDITED_ERROR);
+  });
+
+  it("inne błędy zostają bez zmian i można je ponawiać", () => {
+    const r = classifyTiktokError("Pobranie wideo nieudane: HTTP 502");
+    expect(r).toEqual({ message: "Pobranie wideo nieudane: HTTP 502", permanent: false });
   });
 });

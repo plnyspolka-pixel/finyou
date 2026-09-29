@@ -145,7 +145,28 @@ zwraca **bezterminowy** token strony). `META_IG_USER_ID` znajdziesz przez
   publikacji ~15/dobę na konto, więc tick wysyła **jeden post na przebieg**.
   Tytuł do 150 znaków. Wideo idzie metodą `FILE_UPLOAD` (nie `PULL_FROM_URL`),
   więc plik pobieramy z bucketu `studio-media` i wysyłamy chunkami.
+  **Przed audytem aplikacji** w TikTok for Developers TikTok przyjmuje posty
+  tylko na konto prywatne z widocznością „Tylko ja" — inaczej init zwraca
+  `unaudited_client_can_only_post_to_private_accounts`. Ten błąd jest trwały:
+  wpis od razu dostaje `failed` z polskim komunikatem (bez trzech prób,
+  `classifyTiktokError` w `tiktok-upload.ts`). Rozwiązanie: audyt
+  (`docs/tiktok-audyt-nagranie.md`) albo na czas testów prywatne konto
+  i „Tylko ja".
 - **X**: wideo do 64 MB (bufor workera), tylko MP4 H.264/AAC.
+
+**Rozdział torów we wspólnej kolejce.** `social_publish_queue` obsługuje Meta,
+TikToka i X. Każdy tor filtruje po **swoich** platformach — tor Meta po liście
+`META_PLATFORMS`. Wcześniej filtr Meta wykluczał tylko TikToka, więc tick Meta
+przejmował wpisy X, robił z nich (nieopublikowany) kontener Instagrama i wpis X
+wisiał w „przetwarzanie…". Tick X sam odbija takie wpisy do kolejki
+(`reclaimHijackedItems`), a „Ponów" czyści obcy `ig_creation_id` przy każdej
+platformie innej niż Instagram — żeby ponowienie nie opublikowało tego
+kontenera na IG.
+
+**Facebook Reels — adres uploadu.** Plik idzie na adres `upload_url` z odpowiedzi
+`upload_phase=start` (zapasowo `rupload.facebook.com/video-upload/v21.0/{id}`).
+Wcześniej kod używał `/video-reels/…`, na co Meta odpowiadała
+„Endpoint … doesn't exist" i każdy FB Reel kończył się błędem.
 
 Te limity są pilnowane **automatycznie**: przed wysyłką na którąkolwiek
 platformę wideo przechodzi przez kompresję do wspólnego profilu publikacji

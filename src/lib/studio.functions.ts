@@ -161,7 +161,7 @@ export const retrySocialQueueItem = createServerFn({ method: "POST" })
     // prób — inaczej ponowienie od razu słałoby oryginał.
     const { data: current } = await supabaseAdmin
       .from("social_publish_queue")
-      .select("video_url")
+      .select("video_url, platform")
       .eq("id", data.id)
       .maybeSingle();
     if (current?.video_url) {
@@ -182,6 +182,12 @@ export const retrySocialQueueItem = createServerFn({ method: "POST" })
         x_media_id: null,
         x_media_status: null,
         x_media_at: null,
+        // Kontener IG ma sens tylko przy wpisie Instagrama. Wpisy X przejęte
+        // kiedyś przez tor Meta niosą obcy ig_creation_id — gdyby został,
+        // ponowienie mogłoby opublikować ten kontener na Instagramie.
+        ...(current?.platform !== "instagram_reels"
+          ? { ig_creation_id: null, ig_container_at: null }
+          : {}),
       })
       .eq("id", data.id)
       .in("status", ["failed", "cancelled", "processing"]);

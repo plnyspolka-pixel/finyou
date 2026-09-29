@@ -25,6 +25,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   applyCreatorConstraints,
+  classifyTiktokError,
   parseTiktokPostOptions,
   planChunks,
   tiktokTitle,
@@ -734,9 +735,12 @@ export async function processTiktokQueueItem(id: string): Promise<{
         .eq("id", item.id);
       return { ok: true, preparing: true };
     }
-    const msg = err instanceof Error ? err.message : String(err);
-    await markFailed(item, msg);
-    return { ok: false, error: msg };
+    const raw = err instanceof Error ? err.message : String(err);
+    // Błąd audytu aplikacji (i podobne trwałe) — od razu 'failed' z jasnym
+    // komunikatem zamiast trzech identycznych prób.
+    const { message, permanent } = classifyTiktokError(raw);
+    await markFailed(item, message, { noRetry: permanent });
+    return { ok: false, error: message };
   }
 }
 

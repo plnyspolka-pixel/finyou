@@ -208,6 +208,19 @@ export function isVideoPreparingNote(text: string | null | undefined): boolean {
   return typeof text === "string" && text.startsWith(PREPARING_PREFIX);
 }
 
+/**
+ * Usługa FFmpeg w starej wersji (sprzed zadania `transcode`) traktuje każde
+ * zlecenie jak wypalanie napisów i odrzuca je, bo nie ma pola `ass`. To nie
+ * jest chwilowa awaria — do czasu redeployu usługi publikujemy oryginał od
+ * razu, zamiast odkładać wpis na kolejne minuty.
+ */
+export function isTranscodeUnsupportedError(message: string): boolean {
+  return /brak pola ass|ass nie zawiera sekcji/i.test(message);
+}
+
+export const TRANSCODE_UNSUPPORTED_REASON =
+  "usługa FFmpeg nie obsługuje jeszcze kompresji (stara wersja) — zrób redeploy usługi caption-burner";
+
 /** Notatka, gdy kompresja się nie udała i jedzie oryginał. */
 export function renditionGiveUpNote(reason: string): string {
   return `Kompresja wideo nieudana (${reason}) — wysyłam oryginalny plik.`;

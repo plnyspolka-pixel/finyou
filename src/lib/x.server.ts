@@ -787,6 +787,47 @@ async function reclaimStalledItems(): Promise<void> {
     .lt("updated_at", cutoff);
 }
 
+/**
+ * Samonaprawa po błędzie toru Meta: do poprawki tick Meta przejmował wpisy X
+ * (filtr wykluczał tylko TikToka), robił z nich kontener Instagrama
+ * (`ig_creation_id`) i zostawiał w 'processing'. Taki wpis nie ma
+ * `x_media_id`, więc tor X go nie widział — „przetwarzanie…" na zawsze.
+ *
+ * Wracają do kolejki bez śladu IG. Bezpieczne: `x_media_id` jest NULL, więc
+ * upload na X się nie zaczął i nic nie poszło na profil; kontener IG nigdy
+ * nie został opublikowany (domykanie IG bierze tylko platform='instagram_reels')
+ * i sam wygaśnie po 24 h. Przejęcie zabrało jedną próbę — oddajemy ją.
+ */
+async function reclaimHijackedItems(): Promise<number> {
+  const { data: rows, error } = await supabaseAdmin
+    .from("social_publish_queue")
+    .select("id, attempt_count")
+    .eq("platform", "x")
+    .eq("status", "processing")
+    .is("x_media_id", null)
+    .not("ig_creation_id", "is", null)
+    .limit(20);
+  if (error || !rows?.length) return 0;
+  for (const row of rows) {
+    await supabaseAdmin
+      .from("social_publish_queue")
+      .update({
+        status: "pending",
+        ig_creation_id: null,
+        ig_container_at: null,
+        x_media_status: null,
+        x_media_at: null,
+        attempt_count: Math.max(0, row.attempt_count - 1),
+        last_error: null,
+        scheduled_at: new Date().toISOString(),
+      })
+      .eq("id", row.id)
+      .eq("status", "processing")
+      .is("x_media_id", null);
+  }
+  return rows.length;
+}
+
 /** Wpisy po uploadzie: dociągnij status materiału i opublikuj, gdy gotowy. */
 async function processProcessingItems(): Promise<{ published: number; errors: string[] }> {
   const { data: rows, error } = await supabaseAdmin
@@ -875,6 +916,9 @@ export async function runXPublishTick(): Promise<{
 
   await reclaimStalledItems().catch(() => {
     // Odbicie zawieszonych wpisów nie może wywalić ticka.
+  });
+  await reclaimHijackedItems().catch(() => {
+    // Samonaprawa nie może wywalić ticka.
   });
 
   const poll = await processProcessingItems().catch((e) => {

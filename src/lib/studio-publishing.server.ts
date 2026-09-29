@@ -36,7 +36,20 @@ import {
 } from "./meta-graph-errors";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
-const RUPLOAD = "https://rupload.facebook.com/video-reels/v21.0";
+// Upload Reels (hosted file_url): właściwy adres zwraca Meta w odpowiedzi na
+// upload_phase=start (`upload_url`); ten jest zapasem wg dokumentacji Reels
+// Publishing API. Wcześniej stał tu `/video-reels/…` — Meta odpowiadała
+// „Endpoint … doesn't exist" i każdy FB Reel kończył się błędem.
+const RUPLOAD = "https://rupload.facebook.com/video-upload/v21.0";
+
+/**
+ * Platformy obsługiwane przez ten moduł. Kolejka social_publish_queue jest
+ * wspólna z TikTokiem i X-em — każde zapytanie tego toru MUSI filtrować po
+ * tej liście. Wcześniej filtr wykluczał tylko TikToka, więc tick Meta
+ * przejmował wpisy X i robił z nich kontenery Instagrama (wpis X wisiał
+ * potem w „przetwarzanie…" na zawsze).
+ */
+const META_PLATFORMS = ["facebook_post", "facebook_reels", "instagram_reels"] as const;
 
 const MAX_ITEMS_PER_TICK = 3;
 const MAX_IG_CHECKS_PER_TICK = 5;
@@ -175,9 +188,13 @@ async function publishFacebookReel(item: QueueRow): Promise<string> {
   });
   const videoId = start.video_id as string | undefined;
   if (!videoId) throw new Error("Facebook nie zwrócił video_id (upload_phase=start).");
+  const uploadUrl =
+    typeof start.upload_url === "string" && start.upload_url.startsWith("https://")
+      ? start.upload_url
+      : `${RUPLOAD}/${videoId}`;
 
   // Hosted upload: Meta samo pobiera plik z podanego URL (nagłówek file_url).
-  const upRes = await fetch(`${RUPLOAD}/${videoId}`, {
+  const upRes = await fetch(uploadUrl, {
     method: "POST",
     headers: {
       Authorization: `OAuth ${pageToken}`,
@@ -346,7 +363,8 @@ async function deferAllDue(minutes: number, reason: string) {
       last_error: `${reason} ${formatNextAttempt(nextAt, minutes)}`,
     })
     .in("status", ["pending", "processing"])
-    .neq("platform", "tiktok")
+    // Limit Meta nie dotyczy TikToka ani X-a — ich wpisów nie odraczamy.
+    .in("platform", META_PLATFORMS)
     .lte("scheduled_at", new Date().toISOString());
 }
 
@@ -371,9 +389,9 @@ export async function processSocialQueueItem(
     .from("social_publish_queue")
     .update({ status: "publishing" })
     .eq("id", id)
-    // TikTok jedzie własnym torem (tiktok.server.ts) — bez tego filtra wpis
-    // 'tiktok' wpadłby do gałęzi Instagrama na końcu tej funkcji.
-    .neq("platform", "tiktok")
+    // TikTok i X jadą własnymi torami (tiktok.server.ts, x.server.ts) — bez
+    // tego filtra ich wpisy wpadałyby do gałęzi Instagrama na końcu funkcji.
+    .in("platform", META_PLATFORMS)
     .in("status", ["pending", "failed"])
     .select("*")
     .maybeSingle();
@@ -391,6 +409,12 @@ export async function processSocialQueueItem(
       const videoId = await publishFacebookReel(item);
       await markPublished(id, videoId, item.attempt_count + 1);
       return { ok: true, externalId: videoId };
+    }
+
+    // Zabezpieczenie: gałąź Instagrama tylko dla wpisów Instagrama — nigdy
+    // nie publikujemy na IG materiału zakolejkowanego na inną platformę.
+    if (item.platform !== "instagram_reels") {
+      throw new Error(`Platforma ${String(item.platform)} nie jest obsługiwana przez tor Meta.`);
     }
 
     // instagram_reels — kontener już istnieje (np. po odroczeniu przy limicie):
@@ -528,8 +552,8 @@ export async function runSocialPublishTick(): Promise<{
     .from("social_publish_queue")
     .select("id")
     .eq("status", "pending")
-    // Wpisy TikToka bierze runTiktokPublishTick — ta kolejka jest wspólna.
-    .neq("platform", "tiktok")
+    // Wpisy TikToka i X-a biorą ich własne ticki — ta kolejka jest wspólna.
+    .in("platform", META_PLATFORMS)
     .lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true })
     .limit(MAX_ITEMS_PER_TICK);
