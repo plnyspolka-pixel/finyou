@@ -15,6 +15,7 @@ import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
+import { TIER_PRESENTATION } from "@/lib/investor-plan/plans";
 import { ChatWidget } from "@/components/landing/chat-widget";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { LeadsTable } from "@/routes/embed.leady";
@@ -157,48 +158,160 @@ export const Route = createFileRoute("/dla-inwestora")({
   component: InvestorLanding,
 });
 
-// Zakres pakietu Podstawowego (0 zł) — to dostaje każde konto po przejściu
-// pipeline'u; dopłata dotyczy wyłącznie odblokowania konkretnej okazji.
-const GET: FeatureItemData[] = [
+// Jeden dział korzyści dla obu pakietów. Tytuł karty = co inwestor zyskuje,
+// opis = jak to dostaje. Odznaka mówi, w którym pakiecie jest dana korzyść:
+// „Podstawowy" (0 zł opłat stałych — każde konto po przejściu pipeline'u,
+// dopłata tylko za odblokowanie konkretnej okazji) albo „PRO" (dodatkowo
+// w pakiecie PRO). Kolejność: najpierw Podstawowy, potem PRO — od Zlecenia,
+// przez weryfikację i umowy, po spłatę.
+const PODSTAWOWY = { v: "secondary", t: "Podstawowy" } as const;
+const PRO = { v: "gold", t: "PRO" } as const;
+
+const BENEFITS: FeatureItemData[] = [
   {
     icon: "access",
-    t: "Zlecenie okazji",
-    d: "Składasz Zlecenie, my szukamy pasujących projektów.",
+    t: "Okazje trafiają do Ciebie",
+    d: "Składasz jedno Zlecenie, a my szukamy projektów pasujących do Twoich kryteriów.",
+    badge: PODSTAWOWY,
   },
   {
     icon: "shieldcheck",
-    t: "KYC i listy sankcyjne",
-    d: "Weryfikacja tożsamości i screening sankcji/PEP w jednym procesie.",
+    t: "Weryfikację przechodzisz raz, zdalnie",
+    d: "KYC z dokumentem i selfie oraz screening sankcji/PEP w jednym procesie — bez wizyt i papierów.",
+    badge: PODSTAWOWY,
   },
-  { icon: "dossier", t: "Umowy wypełnione przez system", d: "Komparycja, podpis i ślad audytowy." },
+  {
+    icon: "dossier",
+    t: "Umowy gotowe bez przepisywania",
+    d: "Komparycję, podpis i ślad audytowy uzupełnia system z Twoich zweryfikowanych danych.",
+    badge: PODSTAWOWY,
+  },
   {
     icon: "procedures",
-    t: "Wyłączność na okazję",
-    d: "Zdecydowany klient zarezerwowany tylko dla Ciebie.",
+    t: "Klient tylko dla Ciebie",
+    d: "Odblokowana okazja znika z puli — zdecydowany pożyczkobiorca jest zarezerwowany wyłącznie dla Ciebie.",
+    badge: PODSTAWOWY,
   },
-  { icon: "knowledge", t: "Raport o inwestycji", d: "Nieruchomość, zabezpieczenie, LTV i ryzyko." },
+  {
+    icon: "knowledge",
+    t: "Decyzja na podstawie faktów",
+    d: "Raport o nieruchomości, zabezpieczeniu, LTV i ryzyku dostajesz razem z okazją.",
+    badge: PODSTAWOWY,
+  },
   {
     icon: "status",
-    t: "Zaakceptowany harmonogram",
-    d: "Plan spłat potwierdzony przez pożyczkobiorcę.",
+    t: "Spłaty ustalone z góry",
+    d: "Harmonogram zaakceptowany przez pożyczkobiorcę znasz, zanim wyłożysz kapitał.",
+    badge: PODSTAWOWY,
   },
-  { icon: "chat", t: "Dane kontaktowe", d: "Bezpośredni kontakt po odblokowaniu okazji." },
+  {
+    icon: "chat",
+    t: "Rozmawiasz bezpośrednio z klientem",
+    d: "Dane kontaktowe dostajesz od razu po odblokowaniu okazji — bez pośredników.",
+    badge: PODSTAWOWY,
+  },
   {
     icon: "documents",
-    t: "Generator umowy pożyczki",
-    d: "Gotowy dokument na podstawie Twoich danych.",
+    t: "Umowa pożyczki w kilka minut",
+    d: "Generator składa gotowy dokument z Twoich danych i warunków okazji.",
+    badge: PODSTAWOWY,
+  },
+  {
+    icon: "loan",
+    t: "Okazje bez dopłat",
+    d: "W PRO nie płacisz za odblokowanie pojedynczej okazji — rozliczasz się dopiero od pożyczki, której udzielisz.",
+    badge: PRO,
+  },
+  {
+    icon: "updates",
+    t: "Wybierasz pierwszy",
+    d: "Nowe okazje widzisz i rezerwujesz przed pozostałymi inwestorami.",
+    badge: PRO,
+  },
+  {
+    icon: "knowledge",
+    t: "Analizujesz tyle okazji, ile chcesz",
+    d: "Nielimitowana liczba pełnych raportów o inwestycji.",
+    badge: PRO,
+  },
+  {
+    icon: "kalkulator",
+    t: "Warunki zgodne z prawem",
+    d: "Kalkulator compliance sprawdza limity kosztów, zanim złożysz ofertę.",
+    badge: PRO,
+  },
+  {
+    icon: "complianceAml",
+    t: "Obowiązki AML pod kontrolą",
+    d: "Klienci, transakcje, ocena ryzyka, zgłoszenia i UPO w jednym module.",
+    badge: PRO,
+  },
+  {
+    icon: "aibrain",
+    t: "Odzyskujesz należności krok po kroku",
+    d: "Windykacja AI prowadzi sześć etapów — od pierwszego kontaktu po egzekucję.",
+    badge: PRO,
+  },
+  {
+    icon: "training",
+    t: "Wiesz, jak inwestować od A do Z",
+    d: "Akademia inwestora — siedem modułów od strategii po windykację.",
+    badge: PRO,
   },
 ];
 
-// Zakres wyłącznie pakietu PRO.
-const PRO_ONLY: FeatureItemData[] = [
-  { icon: "training", t: "Akademia inwestora", d: "Siedem modułów — od strategii po windykację." },
-  { icon: "shieldcheck", t: "Kalkulator compliance", d: "Limity kosztów i zgodność warunków." },
-  { icon: "complianceAml", t: "Moduł AML", d: "Klienci, transakcje, ryzyko, zgłoszenia i UPO." },
-  { icon: "aibrain", t: "Windykacja AI", d: "Sześć etapów od pierwszego kontaktu po egzekucję." },
-  { icon: "knowledge", t: "Raporty bez limitu", d: "Nielimitowana liczba pełnych raportów." },
-  { icon: "updates", t: "Pierwszeństwo ofert", d: "Wybierasz z puli przed pozostałymi." },
-];
+// Pod działem korzyści: co kosztuje każdy pakiet (etykiety wspólne z cennikiem)
+// i przejście do zakładki „Cennik" z pełnym porównaniem.
+function TierLegend() {
+  const rows = [
+    {
+      badge: PODSTAWOWY,
+      text: `${TIER_PRESENTATION.podstawowy.priceLabel} ${TIER_PRESENTATION.podstawowy.periodLabel} — płacisz tylko za okazję, którą bierzesz.`,
+    },
+    {
+      badge: PRO,
+      text: `${TIER_PRESENTATION.pro.priceLabel} ${TIER_PRESENTATION.pro.periodLabel} — okazje bez dopłat i pełny warsztat inwestora.`,
+    },
+  ];
+  return (
+    <div
+      style={{
+        marginTop: "1.6rem",
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "0.8rem 1.5rem",
+      }}
+    >
+      <ul
+        style={{
+          margin: 0,
+          padding: 0,
+          listStyle: "none",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.5rem",
+          fontSize: "0.86rem",
+          color: "var(--muted-foreground)",
+        }}
+      >
+        {rows.map((r) => (
+          <li
+            key={r.badge.t}
+            style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}
+          >
+            <MktBadge variant={r.badge.v}>{r.badge.t}</MktBadge>
+            <span>{r.text}</span>
+          </li>
+        ))}
+      </ul>
+      <MktButton variant="outline" href="#cennik">
+        Porównaj pakiety w cenniku
+      </MktButton>
+    </div>
+  );
+}
 
 const AKADEMIA: TwoColSlide[] = [
   {
@@ -925,26 +1038,16 @@ function InvestorLanding() {
 
       <InvestorTabs leads={leads} products={products} />
 
-      <Section>
+      <Section id="korzysci">
         <SectionHead
-          eyebrow="Pakiet Podstawowy"
-          title="Konto bez opłat stałych — płacisz za okazję, którą bierzesz"
-          sub="Po przejściu pipeline'u składasz Zlecenie. Gdy znajdziemy projekt, kupujesz go na wyłączność razem z raportem, harmonogramem i kontaktem."
+          eyebrow="Co zyskujesz"
+          title="Mniej ryzyka i formalności, więcej dobrych okazji"
+          sub="Gotowy proces od Zlecenia po spłatę: sprawdzony klient, raport, harmonogram i umowy w jednym koncie. Karty z odznaką PRO dostajesz dodatkowo w pakiecie PRO."
         />
         <div style={{ marginTop: "2.5rem" }}>
-          <FeatureGrid items={GET} icon3d />
+          <FeatureGrid items={BENEFITS} icon3d />
         </div>
-      </Section>
-
-      <Section tint>
-        <SectionHead
-          eyebrow="Pakiet PRO"
-          title="To samo bez opłat za okazje — plus pełny warsztat"
-          sub="3 000 zł za 6 miesięcy i 5% od udzielonej pożyczki. Akademia, compliance, AML, windykacja AI, raporty bez limitu i pierwszeństwo wyboru ofert."
-        />
-        <div style={{ marginTop: "2.5rem" }}>
-          <FeatureGrid items={PRO_ONLY} cols={3} icon3d />
-        </div>
+        <TierLegend />
       </Section>
 
       <Section tint>
