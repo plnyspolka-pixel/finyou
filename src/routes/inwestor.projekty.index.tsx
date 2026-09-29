@@ -151,7 +151,7 @@ function ApprovedHome({
       if (decision === "extend") {
         const res = await extendFn({ data: { assignmentId: card.assignmentId } });
         if (res.ok) {
-          toast.success("Przedłużono o 12 godzin.");
+          toast.success(`Przedłużono o ${statsQ.data?.limits?.extensionHours ?? 12} godzin.`);
           refresh();
         } else if (res.code === "already_extended") {
           toast.error(
@@ -269,6 +269,7 @@ function ApprovedHome({
           <TinderDeck
             cards={cards}
             busy={deckBusy}
+            extensionHours={statsQ.data?.limits?.extensionHours ?? 12}
             onDecision={(card, decision) => {
               if (decision !== "extend") {
                 // pierwsze wyświetlenie karty oznaczamy jako otwarte (best-effort)

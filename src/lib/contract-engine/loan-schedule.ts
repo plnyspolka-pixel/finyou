@@ -1,29 +1,42 @@
 /**
  * Kanoniczny generator harmonogramu w modelu Finance You (model silnika).
  *
- * JEDNO źródło prawdy dla całej matematyki pożyczkowej w systemie. Zastępuje
- * rozjazd między `client-profile-math` (netto+prowizja, „opłata za ryzyko",
- * osobny wiersz „Balon") a modelem umowy.
+ * JEDNO źródło prawdy dla całej matematyki pożyczkowej w systemie: kalkulatory
+ * (landing, wniosek, kreator, panel inwestora), silnik umów i narzędzia MCP.
  *
- * Zasady modelu (decyzja nadrzędna, pkt 0/2 zlecenia):
- *  - **pełna wypłata**: Pożyczkobiorca otrzymuje pełną Kwotę Pożyczki (K);
- *    prowizja NIE jest potrącana z wypłaty,
- *  - **prowizja rozłożona równo na N rat** jako ułatwienie płatnicze
- *    (klauzula KWO_02) — ostatnia rata absorbuje zaokrąglenie groszowe,
- *  - **odsetki od kapitału pozostającego do spłaty**,
+ * Zasady modelu (decyzje nadrzędne 2, 4 i 5 sprzątania spójności 2026-09):
+ *  - **Kwota Udzielona (K)** = kwota pożyczki z umowy; od niej liczy się
+ *    odsetki i ją spłaca Pożyczkobiorca,
+ *  - **Prowizja Klientowska Finance You (`prowizjaFY`)** jest POTRĄCANA
+ *    z wypłaty i NIE wchodzi do rat: inwestor przelewa ją na rachunek FY,
+ *    resztę (`kwotaWyplaconaKlientowi`) Klientowi (Zał. 6) — patrz `fees.ts`,
+ *  - **prowizja inwestora (`prowizja`, klauzula KWO_02)** to stała kwota
+ *    z umowy rozłożona równo na N rat; ostatnia rata absorbuje zaokrąglenie,
+ *  - **odsetki od kapitału pozostającego do spłaty**, stopa roczna nie może
+ *    przekraczać odsetek maksymalnych (art. 359 § 2¹ KC) — inaczej BŁĄD,
  *  - **pułap „maks. rata" steruje kapitałem** — nadwyżka kapitału trafia do
- *    raty balonowej, którą jest **ostatnia z N rat** (nie osobny wiersz),
+ *    raty balonowej, którą jest **ostatnia z N rat** (nie osobny wiersz);
+ *    pułap niepokrywający odsetek + prowizji w racie to BŁĄD blokujący,
  *  - niezmienniki: Σ kapitał = K, Σ prowizja = P, saldo maleje o kapitał,
  *    saldo ostatniej raty = 0, rata_razem = kapitał + odsetki + prowizja.
  *    Dzięki temu wynik przechodzi `walidujHarmonogram`.
+ *  - całkowity koszt = odsetki + prowizja inwestora + prowizja FY.
  */
 
+import { fyCommission, maxCapitalRate, maxRateMessage, rateExceedsMax } from "./fees";
+
 export interface EngineScheduleInput {
-  /** K — pełna Kwota Pożyczki (kwota wypłacana Pożyczkobiorcy). */
+  /** K — Kwota Udzielona (kwota pożyczki z umowy). */
   kwotaPozyczki: number;
-  /** P — prowizja, rozkładana równo na N rat. */
+  /** P — prowizja INWESTORA (KWO_02), rozkładana równo na N rat. */
   prowizja: number;
-  /** Oprocentowanie roczne w %, np. 15.5. */
+  /**
+   * Prowizja Klientowska Finance You — potrącana z wypłaty, poza ratami.
+   * Domyślnie 0 (kontekst bez pośrednictwa FY); kalkulatory FY podają
+   * `fyCommission(kwotaPozyczki)`.
+   */
+  prowizjaFY?: number;
+  /** Oprocentowanie roczne w %, np. 14.5 (≤ odsetki maksymalne). */
   annualRatePercent: number;
   /** N — liczba rat. */
   months: number;
@@ -31,14 +44,8 @@ export interface EngineScheduleInput {
   maxMonthlyPayment: number;
   /** Data pierwszej raty — "YYYY-MM-DD" albo "DD.MM.RRRR". */
   firstPaymentDate?: string | null;
-  /**
-   * Docelowa kwota ostatniej (balonowej) raty. Gdy podana, silnik IGNORUJE
-   * `prowizja` i sam dobiera prowizję (do grosza) tak, by raty regularne
-   * mieściły się w pułapie, a ostatnia rata wyniosła dokładnie tyle —
-   * np. kapitał + pułap przy racie „odsetki + prowizja" w okresie spłaty.
-   * Różnica groszowa zawsze trafia do prowizji w ostatniej racie.
-   */
-  targetFinalPayment?: number | null;
+  /** Dzień, na który ocenia się odsetki maksymalne (domyślnie dziś). */
+  asOf?: Date | string;
 }
 
 export interface EngineScheduleRow {
@@ -56,24 +63,33 @@ export interface EngineScheduleRow {
 
 export interface EngineSchedule {
   rows: EngineScheduleRow[];
+  /** Alias `kwotaUdzielona` (zgodność wsteczna). */
   kwotaPozyczki: number;
+  /** K — Kwota Udzielona. */
+  kwotaUdzielona: number;
+  /** Prowizja Klientowska FY potrącana z wypłaty (poza ratami). */
+  prowizjaFY: number;
+  /** K − prowizjaFY — „na rękę". */
+  kwotaWyplaconaKlientowi: number;
+  /** Alias `prowizjaInwestora` (zgodność wsteczna). */
   prowizja: number;
+  /** Prowizja inwestora rozłożona w ratach (suma z harmonogramu). */
+  prowizjaInwestora: number;
   months: number;
-  /** Nominalna prowizja miesięczna (P / N). */
+  /** Nominalna prowizja inwestora miesięczna (P / N). */
   monthlyCommission: number;
   /** Rata regularna (pułap klienta). */
   regularPayment: number;
   totalInterest: number;
-  /** Suma wszystkich rat = należność Pożyczkobiorcy. */
+  /** Suma wszystkich rat = należność Pożyczkobiorcy wobec inwestora. */
   totalToRepay: number;
+  /** Całkowity koszt = odsetki + prowizja inwestora + prowizja FY. */
+  calkowityKoszt: number;
   /** Kwota raty balonowej (rata_razem ostatniej raty), 0 gdy brak balonu. */
   balloon: number;
   warnings: string[];
-  /**
-   * Przy `targetFinalPayment`: komunikat, gdy docelowej raty końcowej nie da
-   * się osiągnąć przy podanym pułapie (niespójne parametry). null = osiągnięta.
-   */
-  targetError?: string | null;
+  /** Błędy BLOKUJĄCE (stopa > max, pułap niepokrywający odsetek + prowizji). */
+  errors: string[];
 }
 
 function round2(n: number): number {
@@ -106,10 +122,6 @@ function formatDataPl(d: { y: number; m: number; d: number }): string {
   return `${pad(d.d)}.${pad(d.m)}.${d.y}`;
 }
 
-/**
- * Buduje harmonogram w modelu silnika. Wynik jest deterministyczny i spełnia
- * niezmienniki weryfikowane przez `walidujHarmonogram`.
- */
 /**
  * Rdzeń harmonogramu: raty 1..N-1 z prowizją `m` (grosze), ostatnia rata
  * z prowizją `last` (grosze) i całym pozostałym kapitałem.
@@ -157,95 +169,81 @@ function symuluj(
   return { rows, capped };
 }
 
-/**
- * Dobór prowizji pod docelową ratę końcową. Ostatnia rata rośnie monotonicznie
- * z prowizją miesięczną m (większa prowizja → mniej spłaconego kapitału →
- * większy balon), więc szukamy binarnie największego m (w groszach), dla
- * którego rata końcowa nie przekracza celu; resztę (grosze) dokładamy do
- * prowizji w ostatniej racie. Górna granica m: rata regularna nie może
- * przekroczyć pułapu.
- */
-function dobierzProwizje(
+/** Pusty wynik (brak kwoty / rat) — bez wierszy, z komunikatem. */
+function pusty(
   K: number,
-  r: number,
+  P: number,
+  fee: number,
   N: number,
   maxPay: number,
-  targetGr: number,
-  first: { y: number; m: number; d: number } | null,
-): { rows: EngineScheduleRow[]; error: string | null } {
-  const ostatniaGr = (mGr: number) => {
-    const { rows } = symuluj(K, r, N, maxPay, mGr, mGr, first);
-    return Math.round(rows[rows.length - 1].rata_razem * 100);
+  msg: string,
+  errors: string[],
+): EngineSchedule {
+  return {
+    rows: [],
+    kwotaPozyczki: K,
+    kwotaUdzielona: K,
+    prowizjaFY: fee,
+    kwotaWyplaconaKlientowi: round2(Math.max(0, K - fee)),
+    prowizja: P,
+    prowizjaInwestora: P,
+    months: N,
+    monthlyCommission: 0,
+    regularPayment: maxPay,
+    totalInterest: 0,
+    totalToRepay: 0,
+    calkowityKoszt: round2(P + fee),
+    balloon: 0,
+    warnings: [msg],
+    errors,
   };
-  const mMax = Math.max(0, Math.floor(Math.round((maxPay - round2(K * r)) * 100)));
-  if (ostatniaGr(0) > targetGr) {
-    const { rows } = symuluj(K, r, N, maxPay, 0, 0, first);
-    return {
-      rows,
-      error:
-        "Docelowa rata końcowa jest niższa niż rata końcowa bez prowizji — przy tych parametrach nie da się jej osiągnąć.",
-    };
-  }
-  let lo = 0;
-  let hi = mMax;
-  while (lo < hi) {
-    const mid = Math.ceil((lo + hi) / 2);
-    if (ostatniaGr(mid) <= targetGr) lo = mid;
-    else hi = mid - 1;
-  }
-  const delta = targetGr - ostatniaGr(lo);
-  const { rows } = symuluj(K, r, N, maxPay, lo, lo + delta, first);
-  // Reszta większa niż krok jednego grosza prowizji w każdej racie oznacza, że
-  // cel leży powyżej zasięgu pułapu (m = mMax) — parametry niespójne.
-  const error =
-    lo === mMax && delta > N
-      ? "Docelowa rata końcowa przekracza ratę osiągalną przy podanym pułapie raty — zwiększ pułap albo zmień ratę docelową."
-      : null;
-  return { rows, error };
 }
 
+/**
+ * Buduje harmonogram w modelu silnika. Wynik jest deterministyczny i spełnia
+ * niezmienniki weryfikowane przez `walidujHarmonogram`. Naruszenia reguł
+ * (stopa > max, pułap za niski) trafiają do `errors` — wiersze są nadal
+ * liczone do podglądu, ale konsument MUSI zablokować zapis/umowę.
+ */
 export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule {
   const K = Math.max(0, round2(input.kwotaPozyczki));
   const P = Math.max(0, round2(input.prowizja));
+  const fee = Math.max(0, round2(input.prowizjaFY ?? 0));
   const N = Math.max(0, Math.floor(input.months));
   const maxPay = Math.max(0, input.maxMonthlyPayment);
-  const r = input.annualRatePercent / 100 / 12;
+  const asOf = input.asOf ?? new Date();
+  const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (N <= 0 || K <= 0) {
-    return {
-      rows: [],
-      kwotaPozyczki: K,
-      prowizja: P,
-      months: N,
-      monthlyCommission: 0,
-      regularPayment: maxPay,
-      totalInterest: 0,
-      totalToRepay: 0,
-      balloon: 0,
-      warnings: ["Brak kwoty pożyczki lub liczby rat — harmonogram pusty."],
-    };
+  if (rateExceedsMax(input.annualRatePercent, asOf)) errors.push(maxRateMessage(asOf));
+  if (fee > K && K > 0) {
+    errors.push("Prowizja Finance You przekracza Kwotę Udzieloną — kwota na rękę byłaby ujemna.");
   }
 
+  if (N <= 0 || K <= 0) {
+    return pusty(
+      K,
+      P,
+      fee,
+      N,
+      maxPay,
+      "Brak kwoty pożyczki lub liczby rat — harmonogram pusty.",
+      errors,
+    );
+  }
+
+  const r = input.annualRatePercent / 100 / 12;
   const first = input.firstPaymentDate ? parseAnyDate(input.firstPaymentDate) : null;
 
-  let rows: EngineScheduleRow[];
-  let targetError: string | null | undefined;
-  if (input.targetFinalPayment != null && input.targetFinalPayment > 0 && N > 1) {
-    const t = dobierzProwizje(K, r, N, maxPay, Math.round(input.targetFinalPayment * 100), first);
-    rows = t.rows;
-    targetError = t.error;
-  } else {
-    // prowizja rozłożona równo; ostatnia rata absorbuje zaokrąglenie
-    const mGr = Math.round((P / N) * 100);
-    const lastGr = Math.round(P * 100) - mGr * (N - 1);
-    const sim = symuluj(K, r, N, maxPay, mGr, lastGr, first);
-    rows = sim.rows;
-    if (sim.capped) {
-      warnings.push(
-        "Pułap raty nie pokrywa odsetek i prowizji w części rat — rata przekracza deklarowany maksymalny pułap.",
-      );
-    }
+  // prowizja inwestora rozłożona równo; ostatnia rata absorbuje zaokrąglenie
+  const mGr = Math.round((P / N) * 100);
+  const lastGr = Math.round(P * 100) - mGr * (N - 1);
+  const sim = symuluj(K, r, N, maxPay, mGr, lastGr, first);
+  const rows = sim.rows;
+  if (sim.capped) {
+    errors.push(
+      "Pułap raty nie pokrywa odsetek i prowizji w części rat — zwiększ maksymalną ratę albo zmniejsz prowizję.",
+    );
   }
   const prowizjaRazem = round2(rows.reduce((a, r0) => a + r0.prowizja, 0));
   const monthlyCommission = rows[0]?.prowizja ?? 0;
@@ -262,14 +260,34 @@ export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule 
   return {
     rows,
     kwotaPozyczki: K,
+    kwotaUdzielona: K,
+    prowizjaFY: fee,
+    kwotaWyplaconaKlientowi: round2(Math.max(0, K - fee)),
     prowizja: prowizjaRazem,
+    prowizjaInwestora: prowizjaRazem,
     months: N,
     monthlyCommission,
     regularPayment: maxPay,
     totalInterest,
     totalToRepay,
+    calkowityKoszt: round2(totalInterest + prowizjaRazem + fee),
     balloon: hasBalloon ? last.rata_razem : 0,
     warnings,
-    ...(targetError !== undefined ? { targetError } : {}),
+    errors,
   };
+}
+
+/** Skrót: harmonogram z domyślną Prowizją Klientowską FY (7 %, min 5 000 zł). */
+export function buildFyEngineSchedule(
+  input: Omit<EngineScheduleInput, "prowizjaFY"> & { prowizjaFY?: number },
+): EngineSchedule {
+  return buildEngineSchedule({
+    ...input,
+    prowizjaFY: input.prowizjaFY ?? fyCommission(input.kwotaPozyczki),
+  });
+}
+
+/** Najwyższa dopuszczalna stopa (do suwaków / walidacji formularzy). */
+export function engineMaxRate(asOf: Date | string = new Date()): number {
+  return maxCapitalRate(asOf);
 }

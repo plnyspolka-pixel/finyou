@@ -4,6 +4,8 @@
 // potwierdzenie przed każdym wywołaniem.
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
+import { engineSummary } from "./calculators";
+import { isRejectingStatus } from "@/lib/loan-status";
 import { validateKwNumber } from "@/lib/kw";
 import {
   DESTRUCTIVE,
@@ -420,7 +422,7 @@ export const createLoanApplication = defineTool({
 export const updateApplication = defineTool({
   name: "update_application",
   title: "Update loan application",
-  description: `Edycja wniosku: status (${LOAN_STATUSES}), operator, decyzja administratora z uzasadnieniem, notatki, widoczność dla inwestorów, poziom anonimizacji, pauza automatyzacji / przypomnień, następny kontakt, ryzyko, kwota i okres, opis dla inwestorów. Zmiana statusu zapisuje się w historii i może wywołać standardowy e-mail statusowy do klienta (tak jak w panelu). Tylko administrator/operator.`,
+  description: `Edycja wniosku: status (${LOAN_STATUSES}; statusy odrzucające nie_rokuje/wniosek_odrzucony NIE są nadawane przez narzędzie — trafiają do suggested_status jako propozycja do zatwierdzenia przez operatora), operator, decyzja administratora z uzasadnieniem, notatki, widoczność dla inwestorów, poziom anonimizacji, pauza automatyzacji / przypomnień, następny kontakt, ryzyko, kwota i okres, opis dla inwestorów. Zmiana statusu zapisuje się w historii i może wywołać standardowy e-mail statusowy do klienta (tak jak w panelu). Tylko administrator/operator.`,
   inputSchema: {
     application_id: z.string().uuid(),
     status: z.string().min(2).max(60).optional(),
@@ -460,6 +462,15 @@ export const updateApplication = defineTool({
         "investor_description",
         "investor_purpose",
       ]);
+      // Decyzja nadrzędna nr 11: statusy odrzucające nigdy nie są nadawane
+      // automatycznie — narzędzie zapisuje PROPOZYCJĘ, operator zatwierdza w panelu.
+      if (typeof patch.status === "string" && isRejectingStatus(patch.status)) {
+        patch.suggested_status = patch.status;
+        patch.suggested_status_reason = a.decision_reason ?? "Propozycja z narzędzia MCP";
+        patch.suggested_at = new Date().toISOString();
+        patch.suggested_by = "mcp:update_application";
+        delete patch.status;
+      }
       if (a.next_contact_at !== undefined) {
         patch.next_contact_at =
           a.next_contact_at === null ? null : isoDate(a.next_contact_at, "next_contact_at");
@@ -605,62 +616,63 @@ export const createLoanProposal = defineTool({
   name: "create_loan_proposal",
   title: "Create loan proposal (kreator)",
   description:
-    "Tworzy propozycję pożyczki z kreatora: liczy ratę nominalną (annuitet), ratę ograniczoną do maks. raty klienta (reszta kapitału jako balon na końcu), odsetki, prowizję i koszt całkowity, zapisuje harmonogram jako szkic. Tylko administrator/operator.",
+    "Tworzy propozycję pożyczki z kreatora w JEDNYM modelu matematycznym (silnik Finance You): odsetki od salda, pułap raty steruje kapitałem (reszta w ostatniej racie — balon), stała prowizja inwestora w ratach, Prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT) potrącana z wypłaty. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity. Oprocentowanie ponad odsetki maksymalne jest blokowane. Zapisuje harmonogram jako szkic. Tylko administrator/operator.",
   inputSchema: {
-    amount: z.number().positive(),
-    months: z.number().int().min(1).max(360),
-    annual_rate: z.number().min(0).max(100).describe("Roczne oprocentowanie w %."),
+    amount: z.number().positive().describe("Kwota Udzielona (kwota pożyczki z umowy) w PLN."),
+    months: z.number().int().min(1).max(120),
+    annual_rate: z
+      .number()
+      .min(0)
+      .max(100)
+      .describe("Roczne oprocentowanie w % (≤ odsetki maksymalne)."),
     max_payment: z
       .number()
       .positive()
       .optional()
       .describe("Maksymalna rata, jaką klient może płacić."),
-    commission_pct: z.number().min(0).max(30).default(0),
+    commission_pct: z
+      .number()
+      .min(0)
+      .max(30)
+      .default(0)
+      .describe("Prowizja INWESTORA w % kwoty (stała kwota rozłożona w ratach)."),
     client_name: z.string().max(200).optional(),
     client_email: z.string().email().optional(),
     client_phone: z.string().max(40).optional(),
     note: z.string().max(2000).optional(),
     source_application_id: z.string().uuid().optional(),
-    is_public: z.boolean().default(false),
+    is_public: z
+      .boolean()
+      .default(false)
+      .describe("Widoczna dla zalogowanych inwestorów (nigdy publicznie bez logowania)."),
   },
   annotations: WRITE,
   handler: (a, ctx: ToolContext) =>
     handle(async () => {
       const s = await requireTeamAdmin(ctx);
-      const r = a.annual_rate / 100 / 12;
-      const nominal =
-        r === 0 ? a.amount / a.months : (a.amount * r) / (1 - Math.pow(1 + r, -a.months));
-      const capped = a.max_payment && a.max_payment < nominal ? a.max_payment : nominal;
-      let balance = a.amount;
-      let totalInterest = 0;
-      const schedule: Array<{
-        month: number;
-        payment: number;
-        interest: number;
-        principal: number;
-        balance: number;
-      }> = [];
-      for (let m = 1; m <= a.months; m += 1) {
-        const interest = balance * r;
-        const principal = capped - interest;
-        balance = balance - principal;
-        totalInterest += interest;
-        schedule.push({
-          month: m,
-          payment: round2(capped),
-          interest: round2(interest),
-          principal: round2(principal),
-          balance: round2(Math.max(0, balance)),
-        });
-      }
-      const balloon = Math.max(0, round2(balance));
-      if (balloon > 0) {
-        const last = schedule[schedule.length - 1];
-        last.payment = round2(last.payment + balloon);
-        last.principal = round2(last.principal + balloon);
-        last.balance = 0;
-      }
       const commissionPln = round2((a.amount * a.commission_pct) / 100);
+      const calc = engineSummary({
+        amount: a.amount,
+        period_months: a.months,
+        yearly_rate_pct: a.annual_rate,
+        max_payment: a.max_payment,
+        investor_commission_pln: commissionPln,
+      });
+      if (!calc.ok) throw new Error(calc.error);
+      const { eng, summary } = calc;
+      const schedule = eng.rows.map((row) => ({
+        month: row.nr,
+        payment: row.rata_razem,
+        interest: row.odsetki,
+        principal: row.kapital,
+        investor_commission: row.prowizja,
+        balance: row.saldo,
+        is_balloon: row.isBalloon,
+      }));
+      const nominal = summary.rata_nominalna;
+      const capped = summary.rata;
+      const balloon = eng.balloon;
+      const totalInterest = eng.totalInterest;
       const row = await insertOne(
         s,
         "loan_proposals",
@@ -675,8 +687,9 @@ export const createLoanProposal = defineTool({
           commission_pct: a.commission_pct,
           commission_pln: commissionPln,
           total_interest: round2(totalInterest),
-          total_cost: round2(totalInterest + commissionPln),
-          total_to_repay: round2(a.amount + totalInterest),
+          // koszt całkowity = odsetki + prowizja inwestora + prowizja FY (potrącana)
+          total_cost: eng.calkowityKoszt,
+          total_to_repay: eng.totalToRepay,
           schedule,
           client_name: a.client_name ?? null,
           client_email: a.client_email ?? null,

@@ -2,6 +2,7 @@
 // zastawnej. Czysty frontend — żadne dane nie są zapisywane ani wysyłane.
 // Wynik można udostępnić (parametry w URL) lub wydrukować / zapisać do PDF.
 import { useMemo, useState } from "react";
+import { LTV_MAX, maxCapitalRate } from "@/lib/contract-engine/fees";
 import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
 import { Section, ComplianceNote } from "@/components/marketing/sections";
@@ -14,9 +15,9 @@ const PAGE_URL = `${SITE_URL}/kalkulator-ltv`;
 
 // Widełki spójne z publicznym kalkulatorem pożyczki (wynagrodzenie inwestora
 // 15–45% rocznie, sugerowane zależnie od parametrów) oraz z komunikacją
-// produktu (finansowanie typowo do ok. 50–60% wartości nieruchomości).
+// produktu: jeden limit LTV w całym systemie = LTV_MAX (60 %), typowo 50–60 %.
 const MAX_LTV_LOW = 0.5;
-const MAX_LTV_HIGH = 0.6;
+const MAX_LTV_HIGH = LTV_MAX / 100;
 
 type SearchParams = { w?: number; k?: number };
 
@@ -104,8 +105,14 @@ function LtvCalculatorPage() {
     const maxHigh = Math.floor((value * MAX_LTV_HIGH) / 1000) * 1000;
     // Orientacyjne widełki rocznego wynagrodzenia inwestora — im niższe LTV,
     // tym niższy koszt (spójne z zakresem 15–45% z kalkulatora pożyczki).
+    // Oprocentowanie ≤ odsetki maksymalne (art. 359 § 2¹ KC) — dziś 14,5 %.
+    const maxRate = maxCapitalRate();
     const [rateLow, rateHigh] =
-      ltv <= 0.35 ? [15, 25] : ltv <= 0.5 ? [18, 32] : ltv <= 0.6 ? [22, 38] : [25, 45];
+      ltv <= 0.35
+        ? [maxRate - 4, maxRate]
+        : ltv <= 0.5
+          ? [maxRate - 2.5, maxRate]
+          : [maxRate - 1, maxRate];
     return { ltv, maxLow, maxHigh, rateLow, rateHigh, feasible: ltv <= MAX_LTV_HIGH };
   }, [value, amount]);
 

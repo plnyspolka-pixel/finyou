@@ -13,6 +13,7 @@
 // `generateDocxFromTemplate` i podglądem (`previewSegments`).
 // ════════════════════════════════════════════════════════════════════
 
+import { COMPANY_DATA } from "@/lib/company";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -24,6 +25,9 @@ import {
   amountKind,
   type DocField,
   type CompanyBundle,
+  iodValueFromLender,
+  isIodField,
+  isFinanceYouAccountField,
 } from "@/lib/document-fields";
 import { amountToWordsPLN } from "@/lib/amount-to-words-pl";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
@@ -69,10 +73,10 @@ function financeYouLender(): ResolvedLender {
     bundle: {
       name: FY_CREDITOR.name,
       legalForm: FY_CREDITOR.legalForm,
-      krs: "0000635207",
-      nip: "7010611803",
-      regon: "365350668",
-      addressFull: "ul. Nowogrodzka 31, 00-511 Warszawa",
+      krs: COMPANY_DATA.krs,
+      nip: COMPANY_DATA.nip,
+      regon: COMPANY_DATA.regon,
+      addressFull: COMPANY_DATA.addressFull,
       representativeName: (repName ?? "").trim() || undefined,
       representativeRole: (repRole ?? "").trim() || undefined,
     },
@@ -263,6 +267,16 @@ async function loadTemplateText(
 function seedLenderValues(fields: DocField[], lender: ResolvedLender): Record<string, string> {
   const values: Record<string, string> = {};
   for (const f of fields) {
+    if (isFinanceYouAccountField(f)) {
+      values[f.id] = COMPANY_DATA.bankAccount;
+      continue;
+    }
+    if (isIodField(f)) {
+      // Klauzula RODO Pożyczkodawcy (u08): dane Inwestora w polu IOD.
+      const iod = iodValueFromLender(lender.bundle, lender.isIndividual);
+      if (iod) values[f.id] = iod;
+      continue;
+    }
     if (f.groupKey !== "pozyczkodawca") continue;
     let v = companyValueForField(f, lender.bundle);
     if (!v && lender.bundle.pesel) {

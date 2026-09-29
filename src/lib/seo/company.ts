@@ -2,19 +2,21 @@
 // Jedno źródło prawdy — strony (index, /pozyczki/*, kalkulatory, raport)
 // importują stąd zamiast powielać dane adresowe i strukturę grafu.
 
-export const SITE_URL = "https://financeyou.pl";
+import { COMPANY_DATA } from "@/lib/company";
+
+export const SITE_URL = COMPANY_DATA.website;
 
 export const COMPANY = {
-  name: "Finance You",
-  legalName: "Finance You sp. z o.o.",
+  name: COMPANY_DATA.name,
+  legalName: COMPANY_DATA.legalName,
   url: SITE_URL,
-  email: "kontakt@financeyou.pl",
-  phone: "+48732059898",
-  nip: "7010611803",
+  email: COMPANY_DATA.email,
+  phone: COMPANY_DATA.phone.e164,
+  nip: COMPANY_DATA.nip,
   address: {
-    streetAddress: "ul. Nowogrodzka 31",
-    addressLocality: "Warszawa",
-    postalCode: "00-511",
+    streetAddress: COMPANY_DATA.street,
+    addressLocality: COMPANY_DATA.city,
+    postalCode: COMPANY_DATA.postalCode,
     addressCountry: "PL",
   },
 } as const;
@@ -41,7 +43,7 @@ export function financialServiceLd(opts?: { areaServedName?: string; pageUrl?: s
     },
     areaServed: opts?.areaServedName ? { "@type": "City", name: opts.areaServedName } : "PL",
     description:
-      "Prywatne pożyczki pod zastaw nieruchomości w Polsce — decyzja w 24 godziny, do 1 000 000 zł.",
+      "Prywatne pożyczki dla firm pod zastaw nieruchomości w Polsce (wyłącznie cel związany z działalnością gospodarczą) — decyzja w 24 godziny, do 1 000 000 zł.",
   };
 }
 

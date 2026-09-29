@@ -65,7 +65,7 @@ Zmienne środowiskowe (wszystkie opcjonalne):
 Nowy lead z Mety dostaje **dokładnie jedną** wiadomość:
 
 ```
-Finance You: pozyczki pod zastaw nieruchomosci juz od 1,79% - kliknij: https://financeyou.pl/s/ab3x9k
+Finance You: pozyczki dla firm pod zastaw nieruchomosci, decyzja nawet w 24h - kliknij: https://financeyou.pl/s/ab3x9k
 ```
 
 - bez polskich znaków — z diakrytykami Twilio koduje SMS jako UCS-2 (70 znaków

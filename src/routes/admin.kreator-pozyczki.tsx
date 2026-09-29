@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { fyCommission, kwotaNaReke } from "@/lib/contract-engine/fees";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1080,9 +1081,14 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
               <CardTitle>Wyliczenia automatyczne</CardTitle>
             </CardHeader>
             <CardContent className="grid md:grid-cols-4 gap-3 text-sm">
+              <Stat label="Kwota Udzielona" value={formatPLN(schedule?.nominalLoanAmount)} />
               <Stat
-                label="Kwota Pożyczki (pełna wypłata)"
-                value={formatPLN(schedule?.nominalLoanAmount)}
+                label="Prowizja Finance You (7%, min 5 000 zł, bez VAT) — potrącana"
+                value={formatPLN(fyCommission(schedule?.nominalLoanAmount ?? 0))}
+              />
+              <Stat
+                label="Klient otrzymuje na rękę"
+                value={formatPLN(kwotaNaReke(schedule?.nominalLoanAmount ?? 0))}
               />
               <Stat
                 label="Wynagrodzenie inwestora / mies. (odsetki + prowizja)"

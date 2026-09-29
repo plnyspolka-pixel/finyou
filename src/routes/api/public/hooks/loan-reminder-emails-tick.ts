@@ -1,5 +1,6 @@
 // Cron tick co minutę: sprawdza konfigurację w `reminder_email_schedule`
 // i wywołuje batch tylko jeśli aktualna minuta pasuje do wyrażenia cron.
+import { COMPANY_DATA } from "@/lib/company";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { requireCronSecret } from "@/lib/cron-auth.server";
@@ -34,7 +35,7 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails-tic
             const { EMAIL_FOLLOW_UPS, renderFollowUp, buildFollowUpVars } =
               await import("@/lib/follow-up-templates");
             const { sendResendEmail } = await import("@/lib/resend-send.server");
-            const to = process.env.FOLLOWUP_SAMPLE_RECIPIENT || "plnyspolka@gmail.com";
+            const to = process.env.FOLLOWUP_SAMPLE_RECIPIENT || COMPANY_DATA.email;
             const vars = buildFollowUpVars({
               firstName: "Test",
               link: "https://financeyou.pl",

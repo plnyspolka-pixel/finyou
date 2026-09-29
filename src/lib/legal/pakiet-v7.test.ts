@@ -1,0 +1,99 @@
+/**
+ * Pakiet inwestora v7: transformacje treści są deterministyczne i usuwają
+ * wszystkie elementy cennika, a zostawiają Karę Obejściową 5 % i 5-letni
+ * Okres Ochronny. Źródła (v6/v5/v4) czytamy z migracji SQL.
+ */
+import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
+import {
+  FORBIDDEN_IN_V7,
+  NEW_EMAIL,
+  OLD_EMAIL,
+  PACKAGE_ID_V7,
+  transformNdaV6,
+  transformRodoV5,
+  transformUmowaV7,
+} from "./pakiet-v7";
+import { readLegalSources } from "./sources";
+
+const src = readLegalSources();
+
+describe("umowa ramowa v7", () => {
+  const v7 = transformUmowaV7(src.umowa_ramowa.content_text);
+
+  it("nie zawiera Pakietów, Cennika, Opłat Inwestora, Zał. 8 ani starego e-maila", () => {
+    for (const f of FORBIDDEN_IN_V7) {
+      expect(v7, `fraza „${f}” nie może wystąpić`).not.toContain(f);
+    }
+    expect(v7).not.toMatch(/ZAŁĄCZNIK NR 8/);
+  });
+
+  it("nagłówek wersji spójny z package_id; usługa nieodpłatna; 7 % Kwoty Udzielonej bez VAT", () => {
+    expect(v7).toContain(`${PACKAGE_ID_V7}.v7`);
+    expect(v7).toContain("jest dla Inwestora nieodpłatna");
+    expect(v7).toContain("7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT");
+    expect(v7).toContain("§ 7. Nieodpłatność usługi dla Inwestora");
+    expect(v7).toContain("Załączniki nr 1–7");
+    expect(v7).toContain("Usługa Inwestora: nieodpłatna");
+    expect(v7).toContain("Inwestor nie płaci wynagrodzenia.");
+  });
+
+  it("§ 5: pięć Zleceń, pięć odrzuceń, 24 h + 12 h, dwie przedłużone", () => {
+    expect(v7).toContain("nie więcej niż pięć przyjętych Zleceń");
+    expect(v7).toContain("po odrzuceniu przez Inwestora pięciu kolejnych Projektów");
+    expect(v7).toContain("rezerwację na 24 godziny");
+    expect(v7).toContain("przedłużyć ją o 12 godzin");
+    expect(v7).toContain("nie więcej niż dwie rezerwacje przedłużone");
+  });
+
+  it("Kara Obejściowa 5 % Sumy Hipotecznej i pięcioletni Okres Ochronny bez zmian", () => {
+    expect(v7).toContain("Kara Obejściowa oznacza karę umowną równą 5% Sumy Hipotecznej");
+    expect(v7).toContain("Okres Ochronny oznacza pięć lat od Ujawnienia Identyfikującego");
+    expect(v7).toContain("§ 9. Pięcioletnia ochrona i zakaz obchodzenia");
+  });
+
+  it("kontakt: kontakt@financeyou.pl (telefon zostaje)", () => {
+    expect(v7).toContain(NEW_EMAIL);
+    expect(v7).not.toContain(OLD_EMAIL);
+    expect(v7).toContain("889 888 700");
+  });
+
+  it("jest deterministyczna (ten sam skrót SHA-256 z content_text)", () => {
+    const h1 = createHash("sha256").update(v7, "utf8").digest("hex");
+    const h2 = createHash("sha256")
+      .update(transformUmowaV7(src.umowa_ramowa.content_text), "utf8")
+      .digest("hex");
+    expect(h1).toBe(h2);
+    expect(h1).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe("NDA v6 i RODO v5 — tylko e-mail i package_id", () => {
+  it("NDA v6", () => {
+    const v6 = transformNdaV6(src.nda.content_text);
+    expect(v6).toContain(`${PACKAGE_ID_V7}.v6`);
+    expect(v6).not.toContain(OLD_EMAIL);
+    expect(v6.split("\n").length).toBe(src.nda.content_text.split("\n").length);
+  });
+  it("RODO v5", () => {
+    const v5 = transformRodoV5(src.rodo.content_text);
+    expect(v5).toContain(`${PACKAGE_ID_V7}.v5`);
+    expect(v5).not.toContain(OLD_EMAIL);
+    expect(v5).toContain(NEW_EMAIL);
+    expect(v5.split("\n").length).toBe(src.rodo.content_text.split("\n").length);
+  });
+});
+
+describe("linie podpisów", () => {
+  it("rola i opis pola podpisu są rozdzielone we wszystkich trzech dokumentach", () => {
+    const docs = [
+      transformUmowaV7(src.umowa_ramowa.content_text),
+      transformNdaV6(src.nda.content_text),
+      transformRodoV5(src.rodo.content_text),
+    ];
+    for (const d of docs) {
+      expect(d).not.toMatch(/[A-ZĄĆĘŁŃÓŚŹŻ]imię, nazwisko/);
+      expect(d).toContain("FINANCE YOU — imię, nazwisko");
+    }
+  });
+});

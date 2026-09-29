@@ -303,7 +303,7 @@ export const EMAIL_TEMPLATES: Record<number, Tpl> = {
   29: {
     subject: "Bez ukrytych kosztów. Bez gwiazdek. Bez „od”",
     body: (v) =>
-      `${greet(v)}\n\nPełna transparentność: oprocentowanie, prowizja, harmonogram — wszystko widzisz zanim cokolwiek podpiszesz.\n\n${ctaCalc(v)}${sig}`,
+      `${greet(v)}\n\nPełna transparentność: oprocentowanie (nie wyższe niż odsetki maksymalne), prowizja Finance You 7% kwoty pożyczki (nie mniej niż 5 000 zł, bez VAT, potrącana z wypłaty), harmonogram — wszystko widzisz, zanim cokolwiek podpiszesz.\n\n${ctaCalc(v)}${sig}`,
   },
   30: {
     subject: "Ostatnia szansa na wypłatę przed weekendem",

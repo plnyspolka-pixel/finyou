@@ -10,6 +10,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { buildEngineSchedule } from "@/lib/contract-engine/loan-schedule";
+import { fyCommission } from "@/lib/contract-engine/fees";
 import {
   buildLoanCalcPdfBlob,
   type LoanCalcPayload,
@@ -91,6 +92,7 @@ export function buildOfferPdfPayload(offer: OfferForPdf): LoanCalcPayload | null
     const eng = buildEngineSchedule({
       kwotaPozyczki: amount,
       prowizja: commissionPln,
+      prowizjaFY: fyCommission(amount),
       annualRatePercent: annualRate,
       months,
       maxMonthlyPayment: cap > 0 ? cap : amount, // bez pułapu → pełna amortyzacja

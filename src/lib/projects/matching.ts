@@ -7,6 +7,7 @@
 // Wynik i wagi są WEWNĘTRZNE — nie pokazujemy użytkownikowi algorytmu ani
 // punktacji (assignment_reason trafia tylko do panelu administratora).
 
+import { LTV_MAX } from "@/lib/contract-engine/fees";
 export interface MatchPreferences {
   availableCapital?: number;
   minInvestment?: number;
@@ -143,7 +144,8 @@ export function scoreProject(
 
   // LTV — im niższe względem limitu, tym lepiej (15 pkt).
   if (project.ltv_percent != null) {
-    const limit = prefs.maxLtvPercent ?? 80;
+    // Jeden limit LTV w systemie (fees.ts) — profil inwestora może go tylko obniżyć.
+    const limit = Math.min(prefs.maxLtvPercent ?? LTV_MAX, LTV_MAX);
     const headroom = Math.max(0, Math.min(1, (limit - project.ltv_percent) / limit));
     score += Math.round(15 * (0.4 + 0.6 * headroom));
     reasons.push(`LTV ${project.ltv_percent}%`);

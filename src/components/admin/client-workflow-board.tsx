@@ -204,22 +204,36 @@ const DIST_SENT = new Set([
 function columnForApp(app: AppRow, offers: OfferRow[]): ColumnKey {
   const s = normalizeLoanStatus(app.status);
   switch (s) {
-    case "zamkniete":
+    case "wyplacony":
+    case "zamkniety":
+    case "archiwalny":
+    case "nie_rokuje":
+    case "wniosek_odrzucony":
       return "faktura";
-    case "notariusz":
-    case "dokumenty_przygotowanie_umowy":
-    case "warunki_zaakceptowane":
+    case "zaakceptowany_przez_klienta":
+    case "do_umowy":
+    case "oczekuje_podpisania_umowy":
+    case "umowa_podpisana":
+    case "oczekuje_ustanowienia_zabezpieczen":
+    case "zabezpieczenia_ustanowione":
+    case "dokumenty_dostarczone_do_inwestora":
+    case "oczekuje_wyplaty":
       return "akt";
-    case "szukamy_inwestora":
+    case "oferta_od_inwestora":
+    case "oferta_przekazana_klientowi":
+      return "oferty";
+    case "wyslany_do_inwestorow":
       // Oferta od inwestora (poza szkicem) przenosi kafelek automatycznie do „Ofert".
       return offers.some((o) => o.offer_status !== "szkic") ? "oferty" : "dystrybucja";
-    case "kompletowanie_danych":
+    case "wniosek_kompletny":
+    case "do_analizy":
+    case "rokuje":
+    case "w_trakcie_uzupelniania":
       return "wniosek";
-    case "brak_kwoty":
-    case "brak_kw":
-    case "brak_zdjec_dokumentow":
+    case "braki_w_dokumentach":
+    case "w_follow_upie":
       return "korekta";
-    case "kontakt":
+    case "do_kontaktu":
       return "kontakt";
     case "nowy_lead":
     case "brak_kontaktu":
@@ -262,22 +276,20 @@ function dropStatusForColumn(col: ColumnKey, app: AppRow): LoanStatus {
     case "lead":
       return "nowy_lead";
     case "kontakt":
-      return "kontakt";
+      return "do_kontaktu";
     case "wniosek":
-      return "kompletowanie_danych";
-    case "korekta": {
-      if (!app.loan_amount) return "brak_kwoty";
-      const hasKw = app.properties?.some((p) => (p.land_register_number ?? "").trim().length > 0);
-      if (!hasKw) return "brak_kw";
-      return "brak_zdjec_dokumentow";
-    }
+      return "w_trakcie_uzupelniania";
+    case "korekta":
+      return "braki_w_dokumentach";
     case "dystrybucja":
+      // Bramka B2B (trigger loan_status_guard) — bez oświadczenia zapis odrzuci baza.
+      return "wyslany_do_inwestorow";
     case "oferty":
-      return "szukamy_inwestora";
+      return "oferta_od_inwestora";
     case "akt":
-      return "dokumenty_przygotowanie_umowy";
+      return "do_umowy";
     case "faktura":
-      return "zamkniete";
+      return "zamkniety";
   }
 }
 

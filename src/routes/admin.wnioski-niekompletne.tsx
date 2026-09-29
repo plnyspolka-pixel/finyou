@@ -87,17 +87,28 @@ type Row = {
 const INCOMPLETE_STATUSES = [
   "nowy_lead",
   "brak_kontaktu",
-  "brak_kw",
-  "brak_zdjec_dokumentow",
-  "kontakt",
-  "kompletowanie_danych",
+  "w_trakcie_uzupelniania",
+  "braki_w_dokumentach",
+  "do_kontaktu",
+  "w_follow_upie",
 ];
 const COMPLETE_STATUSES = [
-  "szukamy_inwestora",
-  "warunki_zaakceptowane",
-  "dokumenty_przygotowanie_umowy",
-  "notariusz",
-  "zamkniete",
+  "wniosek_kompletny",
+  "do_analizy",
+  "rokuje",
+  "wyslany_do_inwestorow",
+  "oferta_od_inwestora",
+  "oferta_przekazana_klientowi",
+  "zaakceptowany_przez_klienta",
+  "do_umowy",
+  "oczekuje_podpisania_umowy",
+  "umowa_podpisana",
+  "oczekuje_ustanowienia_zabezpieczen",
+  "zabezpieczenia_ustanowione",
+  "dokumenty_dostarczone_do_inwestora",
+  "oczekuje_wyplaty",
+  "wyplacony",
+  "zamkniety",
 ];
 
 // Ocena kompletności podstawowych danych wniosku — jedyne źródło prawdy w
@@ -412,7 +423,7 @@ export function ApplicationsPage({
       .is("merged_into_id", null)
       .is("archived_at", null)
       .neq("status", "archiwalny")
-      .neq("status", "zamkniete")
+      .neq("status", "zamkniety")
       .order("updated_at", { ascending: false })
       .limit(1000);
     if (!error && data) {
@@ -639,8 +650,7 @@ export function ApplicationsPage({
         await supabase
           .from("loan_applications")
           .update({
-            status: "szukamy_inwestora",
-            available_to_investors: true,
+            status: "wniosek_kompletny",
             completeness_percent: 100,
             updated_at: new Date().toISOString(),
           })
@@ -651,7 +661,7 @@ export function ApplicationsPage({
         for (const p of toPromote) {
           const r = list.find((x) => x.id === p.id);
           if (r) {
-            r.status = "szukamy_inwestora";
+            r.status = "wniosek_kompletny";
             r.completeness_percent = 100;
           }
         }
@@ -712,7 +722,7 @@ export function ApplicationsPage({
     const { error } = await supabase
       .from("loan_applications")
       .update({
-        status: "kompletowanie_danych",
+        status: "braki_w_dokumentach",
         available_to_investors: false,
         completeness_percent: 0,
         updated_at: new Date().toISOString(),
@@ -724,7 +734,7 @@ export function ApplicationsPage({
     }
     setRows((prev) =>
       prev.map((r) =>
-        ids.includes(r.id) ? { ...r, status: "kompletowanie_danych", completeness_percent: 0 } : r,
+        ids.includes(r.id) ? { ...r, status: "braki_w_dokumentach", completeness_percent: 0 } : r,
       ),
     );
     toast.success(

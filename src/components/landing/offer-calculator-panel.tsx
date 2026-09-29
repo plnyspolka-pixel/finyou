@@ -3,7 +3,8 @@ import { Check, ChevronRight, Lock } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { computeLoanFigures, formatPLN } from "@/lib/loan-math";
-import { buildEngineSchedule } from "@/lib/contract-engine/loan-schedule";
+import { buildFyEngineSchedule } from "@/lib/contract-engine/loan-schedule";
+import { maxCapitalRate, validateAnnualRate } from "@/lib/contract-engine/fees";
 
 /**
  * SHARED OFFER CALCULATOR — used by:
@@ -119,22 +120,23 @@ export function OfferCalculatorPanel({
   locked = false,
   lockedMessage = "Uzupełnij powyższe pola, żeby odblokować kalkulator.",
 }: OfferCalculatorPanelProps) {
-  // Kapitał pożyczki = kwota, o którą wnioskuje klient. Prowizja Finance You jest kosztem
-  // INWESTORA (wykłada ją na wejściu operatorowi) — nie jest kredytowana do kapitału klienta
-  // i nie powiększa jego rat. Spójne z kalkulatorem inwestora i kreatorem dokumentów.
+  // Kwota Udzielona = kwota, o którą wnioskuje klient; od niej liczone są
+  // odsetki i raty. Prowizja Finance You (7 %, min 5 000 zł, bez VAT) jest
+  // POTRĄCANA z wypłaty — klient dostaje „na rękę" kwotę pomniejszoną o nią.
+  // Spójne z silnikiem umów, kalkulatorem inwestora i narzędziami MCP.
   const grossPrincipal = amount;
 
-  // Reguły kosztu:
-  // - minimalne wynagrodzenie inwestora: 1,79% miesięcznie (21,48% rocznie)
+  // Reguły:
+  // - oprocentowanie ≤ odsetki maksymalne (art. 359 § 2¹ KC) — twarda blokada,
   // - okres ≤ 36 mies. → klient może płacić tylko odsetki (rata balonowa dopuszczalna)
   // - okres > 36 mies. → klient musi płacić pełną ratę kapitałowo-odsetkową
-  const minMonthlyRate = 1.79;
-  const minAnnualRate = minMonthlyRate * 12;
+  const maxAnnualRate = maxCapitalRate();
   const allowBalloon = months <= 36;
 
   useEffect(() => {
-    if (annualRate < minAnnualRate) setAnnualRate(minAnnualRate);
-  }, [minAnnualRate, annualRate, setAnnualRate]);
+    if (annualRate > maxAnnualRate) setAnnualRate(maxAnnualRate);
+  }, [maxAnnualRate, annualRate, setAnnualRate]);
+  const rateError = validateAnnualRate(annualRate);
 
   const r = annualRate / 100 / 12;
   const nominalFig = computeLoanFigures({
@@ -143,7 +145,7 @@ export function OfferCalculatorPanel({
     months,
   });
   // Minimalna rata musi w pełni pokryć odsetki miesiąca (ceil, nie round —
-  // inaczej pułap nie pokrywa odsetek i silnik zgłasza ostrzeżenie).
+  // inaczej pułap nie pokrywa odsetek i silnik zgłasza błąd).
   const interestOnly = Math.ceil(grossPrincipal * r);
   const minCap = allowBalloon ? Math.max(1, interestOnly) : Math.ceil(nominalFig.nominal);
   const maxCap = Math.max(minCap, Math.ceil(nominalFig.nominal));
@@ -154,7 +156,7 @@ export function OfferCalculatorPanel({
       : minCap
     : maxCap;
 
-  const eng = buildEngineSchedule({
+  const eng = buildFyEngineSchedule({
     kwotaPozyczki: grossPrincipal,
     prowizja: 0,
     annualRatePercent: annualRate,
@@ -235,28 +237,36 @@ export function OfferCalculatorPanel({
             </CalcRow>
 
             <CalcRow
-              label="Proponowane wynagrodzenie inwestora (miesięcznie)"
-              value={`${(annualRate / 12).toFixed(2)}%`}
-              minLabel={`${minMonthlyRate.toFixed(2)}% / mies.`}
-              maxLabel={`${(50 / 12).toFixed(2)}% / mies.`}
+              label="Oprocentowanie roczne"
+              value={`${annualRate.toFixed(2)}%`}
+              minLabel="0%"
+              maxLabel={`maks. ${maxAnnualRate.toFixed(2)}% (odsetki maksymalne)`}
               hint={
                 allowBalloon
-                  ? `Minimalne wynagrodzenie inwestora to ${minMonthlyRate.toFixed(2)}% miesięcznie.`
-                  : `Minimalne wynagrodzenie inwestora to ${minMonthlyRate.toFixed(2)}% miesięcznie. Powyżej 36 miesięcy spłacasz pełną ratę kapitałowo-odsetkową.`
+                  ? `Oprocentowanie nie może przekroczyć odsetek maksymalnych (art. 359 § 2¹ KC): ${maxAnnualRate.toFixed(2)}% rocznie.`
+                  : `Oprocentowanie nie może przekroczyć odsetek maksymalnych (${maxAnnualRate.toFixed(2)}% rocznie). Powyżej 36 miesięcy spłacasz pełną ratę kapitałowo-odsetkową.`
               }
             >
               <Slider
                 gradient="brand"
-                value={[annualRate / 12]}
-                min={minAnnualRate / 12}
-                max={50 / 12}
-                step={0.05}
+                value={[Math.min(annualRate, maxAnnualRate)]}
+                min={0}
+                max={maxAnnualRate}
+                step={0.1}
                 onValueChange={(v) => {
                   rateTouchedRef.current = true;
-                  setAnnualRate((v[0] ?? annualRate / 12) * 12);
+                  setAnnualRate(Math.min(v[0] ?? annualRate, maxAnnualRate));
                 }}
               />
             </CalcRow>
+            {rateError ? (
+              <div
+                className="p-3 text-xs font-semibold"
+                style={{ ...SUB_PANEL, color: "oklch(0.78 0.16 25)" }}
+              >
+                {rateError}
+              </div>
+            ) : null}
 
             {allowBalloon ? (
               <CalcRow
@@ -344,19 +354,10 @@ export function OfferCalculatorPanel({
                     className="text-[11px] font-semibold uppercase tracking-wider"
                     style={{ color: FY.faint }}
                   >
-                    Okres
+                    Prowizja Finance You (7%, min 5 000 zł, bez VAT)
                   </p>
-                  <p className="mt-0.5 text-lg font-extrabold tabular-nums">{months} mies.</p>
-                </div>
-                <div className="rounded-xl p-3" style={{ background: "rgba(84, 124, 214, 0.12)" }}>
-                  <p
-                    className="text-[11px] font-semibold uppercase tracking-wider"
-                    style={{ color: FY.faint }}
-                  >
-                    Łączna spłata
-                  </p>
-                  <p className="mt-0.5 text-xl font-extrabold tabular-nums">
-                    {formatPLN(eng.totalToRepay)}
+                  <p className="mt-0.5 text-lg font-extrabold tabular-nums">
+                    −{formatPLN(eng.prowizjaFY)}
                   </p>
                 </div>
                 <div
@@ -367,13 +368,48 @@ export function OfferCalculatorPanel({
                     className="text-[11px] font-semibold uppercase tracking-wider"
                     style={{ color: FY.faint }}
                   >
-                    Wynagrodzenie inwestora
+                    Otrzymasz na rękę
                   </p>
                   <p
                     className="mt-0.5 text-xl font-extrabold tabular-nums"
                     style={{ color: FY.gold }}
                   >
-                    {formatPLN(eng.totalInterest)}
+                    {formatPLN(eng.kwotaWyplaconaKlientowi)}
+                  </p>
+                </div>
+                <div>
+                  <p
+                    className="text-[11px] font-semibold uppercase tracking-wider"
+                    style={{ color: FY.faint }}
+                  >
+                    Okres
+                  </p>
+                  <p className="mt-0.5 text-lg font-extrabold tabular-nums">{months} mies.</p>
+                </div>
+                <div className="rounded-xl p-3" style={{ background: "rgba(84, 124, 214, 0.12)" }}>
+                  <p
+                    className="text-[11px] font-semibold uppercase tracking-wider"
+                    style={{ color: FY.faint }}
+                  >
+                    Do spłaty
+                  </p>
+                  <p className="mt-0.5 text-xl font-extrabold tabular-nums">
+                    {formatPLN(eng.totalToRepay)}
+                  </p>
+                </div>
+                <div className="rounded-xl p-3" style={{ background: "rgba(84, 124, 214, 0.12)" }}>
+                  <p
+                    className="text-[11px] font-semibold uppercase tracking-wider"
+                    style={{ color: FY.faint }}
+                  >
+                    Koszt całkowity
+                  </p>
+                  <p className="mt-0.5 text-xl font-extrabold tabular-nums">
+                    {formatPLN(eng.calkowityKoszt)}
+                  </p>
+                  <p className="text-[10px]" style={{ color: FY.faint }}>
+                    odsetki {formatPLN(eng.totalInterest)} + prowizja Finance You{" "}
+                    {formatPLN(eng.prowizjaFY)}
                   </p>
                 </div>
               </div>
@@ -432,15 +468,16 @@ export function OfferCalculatorPanel({
                 </table>
               </div>
               <p className="px-4 py-3 text-[11px]" style={{ color: FY.faint }}>
-                Kapitał pożyczki: {formatPLN(grossPrincipal)} — odsetki liczone są wyłącznie od
-                kapitału pozostającego do spłaty. Prowizja Finance You obciąża inwestora i nie jest
-                doliczana do Twojej spłaty.
+                Kwota pożyczki: {formatPLN(grossPrincipal)} — odsetki liczone są wyłącznie od
+                kapitału pozostającego do spłaty. Prowizja Finance You ({formatPLN(eng.prowizjaFY)},
+                bez VAT) jest potrącana z wypłaty i nie wchodzi do rat.
               </p>
             </details>
 
             <p className="text-[11px]" style={{ color: FY.faint }}>
-              Wyliczenia poglądowe przy wynagrodzeniu inwestora {annualRate}% rocznie. Ostateczne
-              warunki ustalisz indywidualnie z inwestorem.
+              Wyliczenia poglądowe przy oprocentowaniu {annualRate.toFixed(2)}% rocznie.
+              Finansowanie wyłącznie na cel związany z działalnością gospodarczą. Ostateczne warunki
+              ustalisz indywidualnie z inwestorem.
             </p>
           </div>
         </div>

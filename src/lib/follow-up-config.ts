@@ -61,7 +61,7 @@ export const FOLLOW_UP_ENGINES: FollowUpEngine[] = [
     purpose:
       "Dopytuje klienta o KONKRETNE braki wniosku: dane podstawowe, dokumenty wg typu nieruchomości i otwarte pytania z analizy KW (dług na hipotece, zgody współwłaścicieli).",
     trigger:
-      "Wniosek po kontakcie z brakami danych/dokumentów albo z nierozwiązanymi znaleziskami analizy KW (statusy: brak_kwoty, brak_kw, brak_zdjec_dokumentow, kontakt, kompletowanie_danych, szukamy_inwestora „do korekty”)",
+      "Wniosek po kontakcie z brakami danych/dokumentów albo z nierozwiązanymi znaleziskami analizy KW (statusy: w_trakcie_uzupelniania, braki_w_dokumentach, do_kontaktu, w_follow_upie, wniosek_kompletny/wyslany_do_inwestorow „do korekty”)",
     cadence:
       "start od razu, potem +2/+3/+4/+7/+7/+14/+14/+30… dni, maks. 12 prób; pauza 24 h po odpowiedzi klienta",
     channels: ["email", "sms", "messenger"],

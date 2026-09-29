@@ -9,7 +9,9 @@ import {
   przetworzSzkic,
   uzupelnijHarmonogram,
   uzupelnijSlownie,
+  uzupelnijRozliczenieFinanceYou,
 } from "./umowa-agent-core";
+import { FINANCE_YOU } from "./finance-you";
 import { walidujHarmonogram } from "./schedule";
 import S1 from "./fixtures/scenariusz_01_podstawowy.json";
 
@@ -87,5 +89,46 @@ describe("Agent umowy — przetworzSzkic (całość)", () => {
     const { problemy } = przetworzSzkic({});
     expect(problemy.length).toBeGreaterThan(0);
     expect(problemy.every((p) => p.poziom === "BLAD" || p.poziom === "OSTRZEZENIE")).toBe(true);
+  });
+});
+
+describe("Rozliczenie z Finance You (Pożyczkodawca ≠ Finance You)", () => {
+  const umowaInwestora = () => ({
+    pozyczkodawca: { nazwa: "Jan Inwestor", pesel: "80010112345" },
+    warunki: { kwota_pozyczki: { cyframi: "100 000,00", slownie: "" } },
+  });
+
+  it("dopisuje prowizję FY 7% (min 5 000 zł) i jedyny rachunek Finance You", () => {
+    const u: any = umowaInwestora();
+    uzupelnijRozliczenieFinanceYou(u);
+    expect(u.warunki.prowizja_finance_you.kwota.cyframi).toBe("7 000,00");
+    expect(u.warunki.rachunki.finance_you).toBe(FINANCE_YOU.rachunek);
+    expect(FINANCE_YOU.rachunek).toBe(FINANCE_YOU.rachunekSplaty);
+  });
+
+  it("nadpisuje inny rachunek FY — Finance You ma jeden rachunek", () => {
+    const u: any = umowaInwestora();
+    u.warunki.rachunki = { finance_you: "11 1111 1111 1111 1111 1111 1111" };
+    uzupelnijRozliczenieFinanceYou(u);
+    expect(u.warunki.rachunki.finance_you).toBe(FINANCE_YOU.rachunek);
+  });
+
+  it("jawne null = umowa bez prowizji FY; Finance You jako Pożyczkodawca — bez zmian", () => {
+    const bez: any = umowaInwestora();
+    bez.warunki.prowizja_finance_you = null;
+    uzupelnijRozliczenieFinanceYou(bez);
+    expect(bez.warunki.prowizja_finance_you).toBeNull();
+    expect(bez.warunki.rachunki).toBeUndefined();
+
+    const fy: any = umowaInwestora();
+    fy.pozyczkodawca = { nazwa: "Finance You sp. z o.o.", nip: FINANCE_YOU.nip };
+    uzupelnijRozliczenieFinanceYou(fy);
+    expect(fy.warunki.prowizja_finance_you).toBeUndefined();
+  });
+
+  it("bez wskazanego Pożyczkodawcy nic nie dopisuje", () => {
+    const u: any = { warunki: { kwota_pozyczki: { cyframi: "100 000,00", slownie: "" } } };
+    uzupelnijRozliczenieFinanceYou(u);
+    expect(u.warunki.prowizja_finance_you).toBeUndefined();
   });
 });

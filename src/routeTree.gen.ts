@@ -90,6 +90,7 @@ import { Route as InwestorProjektyRouteImport } from './routes/inwestor.projekty
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorPlatnosciRouteImport } from './routes/inwestor.platnosci'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
+import { Route as InwestorOdstapienieRouteImport } from './routes/inwestor.odstapienie'
 import { Route as InwestorKreatorUmowyRouteImport } from './routes/inwestor.kreator-umowy'
 import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
@@ -685,6 +686,11 @@ const InwestorPlatnosciRoute = InwestorPlatnosciRouteImport.update({
 const InwestorOfertyRoute = InwestorOfertyRouteImport.update({
   id: '/oferty',
   path: '/oferty',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorOdstapienieRoute = InwestorOdstapienieRouteImport.update({
+  id: '/odstapienie',
+  path: '/odstapienie',
   getParentRoute: () => InwestorRoute,
 } as any)
 const InwestorKreatorUmowyRoute = InwestorKreatorUmowyRouteImport.update({
@@ -1810,6 +1816,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
+  '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
@@ -2077,6 +2084,7 @@ export interface FileRoutesByTo {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
+  '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
@@ -2347,6 +2355,7 @@ export interface FileRoutesById {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
+  '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
@@ -2622,6 +2631,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
+    | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
@@ -2889,6 +2899,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
+    | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
@@ -3158,6 +3169,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
+    | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
@@ -4016,6 +4028,13 @@ declare module '@tanstack/react-router' {
       path: '/oferty'
       fullPath: '/inwestor/oferty'
       preLoaderRoute: typeof InwestorOfertyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/odstapienie': {
+      id: '/inwestor/odstapienie'
+      path: '/odstapienie'
+      fullPath: '/inwestor/odstapienie'
+      preLoaderRoute: typeof InwestorOdstapienieRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/inwestor/kreator-umowy': {
@@ -5626,6 +5645,7 @@ interface InwestorRouteChildren {
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
   InwestorKreatorDokumentowRoute: typeof InwestorKreatorDokumentowRoute
   InwestorKreatorUmowyRoute: typeof InwestorKreatorUmowyRoute
+  InwestorOdstapienieRoute: typeof InwestorOdstapienieRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
   InwestorPlatnosciRoute: typeof InwestorPlatnosciRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
@@ -5647,6 +5667,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorKalkulatorRoute: InwestorKalkulatorRoute,
   InwestorKreatorDokumentowRoute: InwestorKreatorDokumentowRoute,
   InwestorKreatorUmowyRoute: InwestorKreatorUmowyRoute,
+  InwestorOdstapienieRoute: InwestorOdstapienieRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,
   InwestorPlatnosciRoute: InwestorPlatnosciRoute,
   InwestorProfilRoute: InwestorProfilRoute,

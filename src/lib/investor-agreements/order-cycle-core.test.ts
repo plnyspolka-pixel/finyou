@@ -10,7 +10,12 @@ import {
   isWithinWithdrawalWindow,
   reservationDeadline,
   withdrawalDeadline,
+  teasersForAcceptedOrders,
+  TEASER_VISIBLE_MATCH_STATUSES,
+  DEFAULT_ORDER_LIMITS,
+  orderLimitsFromSettings,
 } from "./order-cycle-core";
+import { fyCommission } from "@/lib/contract-engine/fees";
 
 describe("clientProvisionPln (Zał. 6: 7% / min 5000 zł)", () => {
   it("liczy 7% dla dużych kwot", () => {
@@ -114,5 +119,78 @@ describe("buildKartaLeada (Zał. 1 v5)", () => {
     expect(k.parametry.lokalizacja).toBe("Warszawa, mazowieckie");
     expect(k.wersje_dokumentow[0]).toEqual({ code: "umowa_ramowa", version: "v5", sha256: "abc" });
     expect(k.kara_obejsciowa).toContain("5%");
+  });
+});
+
+describe("teasery wyłącznie z przyjętych Zleceń (decyzja nr 7)", () => {
+  const m = (id: string, status: string, created_at = "2026-09-20T10:00:00Z") => ({
+    id,
+    application_id: `app-${id}`,
+    project_ref: `FY-${id}`,
+    status,
+    created_at,
+  });
+
+  it("Zlecenie złożone, wygasłe albo cofnięte nie daje teaserów", () => {
+    for (const status of ["zlozone", "wygasle", "cofniete", "odmowa", "wykonane"]) {
+      expect(
+        teasersForAcceptedOrders([
+          { id: "o1", status, investor_order_matches: [m("a", "teaser")] },
+        ]),
+      ).toEqual([]);
+    }
+    expect(teasersForAcceptedOrders([])).toEqual([]);
+  });
+
+  it("z przyjętego Zlecenia — tylko dopasowania w statusach widocznych", () => {
+    const refs = teasersForAcceptedOrders([
+      {
+        id: "o1",
+        status: "przyjete",
+        investor_order_matches: [
+          m("a", "teaser"),
+          m("b", "odrzucone"),
+          m("c", "rezerwacja", "2026-09-25T10:00:00Z"),
+        ],
+      },
+    ]);
+    expect(refs.map((r) => r.matchId).sort()).toEqual(["a", "c"]);
+    for (const r of refs) expect(TEASER_VISIBLE_MATCH_STATUSES).toContain(r.matchStatus);
+    expect(refs.every((r) => r.orderId === "o1")).toBe(true);
+  });
+});
+
+describe("limity cyklu z project_module_settings", () => {
+  it("domyślnie 24 h + 12 h, 5 Zleceń, 2 przedłużone, 5 odrzuceń, 120 mies.", () => {
+    expect(DEFAULT_ORDER_LIMITS).toEqual({
+      assignmentHours: 24,
+      extensionHours: 12,
+      maxActive: 5,
+      maxExtended: 2,
+      rejectionThreshold: 5,
+      maxPeriodMonths: 120,
+    });
+    expect(orderLimitsFromSettings(null)).toEqual(DEFAULT_ORDER_LIMITS);
+  });
+
+  it("wartości z ustawień wygrywają; puste i niepoprawne → domyślne", () => {
+    const l = orderLimitsFromSettings({
+      assignment_hours: 48,
+      extension_hours: null,
+      max_active_assignments: 3,
+      max_extended_assignments: 0,
+      rejection_review_threshold: 7,
+      max_period_months: 60,
+    });
+    expect(l.assignmentHours).toBe(48);
+    expect(l.extensionHours).toBe(12);
+    expect(l.maxActive).toBe(3);
+    expect(l.maxExtended).toBe(2);
+    expect(l.rejectionThreshold).toBe(7);
+    expect(l.maxPeriodMonths).toBe(60);
+  });
+
+  it("prowizja klientowska z jednego źródła (fees.ts)", () => {
+    expect(clientProvisionPln(100_000)).toBe(fyCommission(100_000));
   });
 });

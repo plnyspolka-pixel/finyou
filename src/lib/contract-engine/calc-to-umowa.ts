@@ -12,6 +12,7 @@
  */
 import type { LoanCalcPayload } from "../loan-calc-pdf";
 import { formatKwotaPL, payloadDoRaty } from "./schedule";
+import { FINANCE_YOU } from "./finance-you";
 
 /** "2026-07-25" → "25.07.2026"; "25.07.2026" przepuszcza; inne → "". */
 function toDataPl(s: string | null | undefined): string {
@@ -55,8 +56,10 @@ function usunPuste<T extends Record<string, unknown>>(o: T): T {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- szkic umowy jest luźnym JSON-em (jak w agencie)
 export function kalkulacjaDoSzkicu(payload: LoanCalcPayload): Record<string, any> {
   const sched = Array.isArray(payload.schedule) ? payload.schedule : [];
-  const prowizjaCalk =
-    (Number(payload.commissionPln) || 0) + (Number(payload.financeYouFeePln) || 0);
+  // Prowizja inwestora (KWO_02, w ratach) i Prowizja Finance You (potrącana
+  // z wypłaty) to DWA różne pola — nie sumujemy ich.
+  const prowizjaInwestora = Number(payload.commissionPln) || 0;
+  const prowizjaFY = Number(payload.financeYouFeePln) || 0;
   const prowizjaRaty = sched.map((r) => Number(r.prow) || 0);
   const raty = sched.length ? payloadDoRaty(payload, prowizjaRaty) : [];
 
@@ -76,8 +79,10 @@ export function kalkulacjaDoSzkicu(payload: LoanCalcPayload): Record<string, any
   });
 
   const warunki = usunPuste({
+    rachunki: prowizjaFY > 0 ? { finance_you: FINANCE_YOU.rachunek } : undefined,
     kwota_pozyczki: kwota(payload.nominal),
-    prowizja: { kwota: kwota(prowizjaCalk), model: "nie_potracana_raty" },
+    prowizja: { kwota: kwota(prowizjaInwestora), model: "nie_potracana_raty" },
+    prowizja_finance_you: prowizjaFY > 0 ? { kwota: kwota(prowizjaFY) } : undefined,
     oprocentowanie: oprocentowanie(payload.annualRate),
     harmonogram,
   });
