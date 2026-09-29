@@ -280,7 +280,12 @@ function shortsTitle(title: string): string {
 async function uploadShort(item: QueueRow): Promise<string> {
   const accessToken = await getAccessToken();
 
-  const videoRes = await fetch(item.source_video_url);
+  // Kompresja do profilu publikacji (≤ 60 MB, H.264) — rzuca
+  // VideoPreparingError, gdy plik jeszcze się przygotowuje.
+  const { ensurePublishableVideo } = await import("./video-rendition.server");
+  const sourceUrl = await ensurePublishableVideo(item.source_video_url);
+
+  const videoRes = await fetch(sourceUrl);
   if (!videoRes.ok) throw new Error(`Pobranie wideo nieudane: HTTP ${videoRes.status}`);
   const declared = Number(videoRes.headers.get("content-length") || 0);
   if (declared > MAX_VIDEO_BYTES) {
@@ -340,7 +345,7 @@ async function uploadShort(item: QueueRow): Promise<string> {
 // uploading) chroni przed podwójnym uploadem przy nakładających się tickach.
 export async function processQueueItem(
   id: string,
-): Promise<{ ok: boolean; videoId?: string; error?: string }> {
+): Promise<{ ok: boolean; videoId?: string; preparing?: boolean; error?: string }> {
   const { data: claimed, error: claimErr } = await supabaseAdmin
     .from("youtube_publish_queue")
     .update({ status: "uploading" })
@@ -366,6 +371,20 @@ export async function processQueueItem(
       .eq("id", id);
     return { ok: true, videoId };
   } catch (err) {
+    const { VideoPreparingError } = await import("./video-rendition.server");
+    if (err instanceof VideoPreparingError) {
+      // Wideo się kompresuje — wpis wraca do kolejki na kilka minut,
+      // BEZ zużycia próby (to nie jest błąd publikacji).
+      await supabaseAdmin
+        .from("youtube_publish_queue")
+        .update({
+          status: "pending",
+          last_error: err.note,
+          scheduled_at: err.nextAt.toISOString(),
+        })
+        .eq("id", id);
+      return { ok: true, preparing: true };
+    }
     const msg = err instanceof Error ? err.message : String(err);
     const attempts = item.attempt_count + 1;
     const exhausted = attempts >= MAX_ATTEMPTS;
@@ -407,7 +426,7 @@ export async function runYoutubeShortsTick(): Promise<{
   const errors: string[] = [];
   for (const item of due ?? []) {
     const result = await processQueueItem(item.id);
-    if (result.ok) published += 1;
+    if (result.ok && !result.preparing) published += 1;
     else if (result.error) errors.push(result.error);
   }
   return { ok: true, processed: (due ?? []).length, published, errors };

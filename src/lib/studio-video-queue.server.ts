@@ -577,6 +577,14 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
       .update({ last_error: `Auto-publikacja: ${errors.join("; ")}` })
       .eq("id", job.id);
   }
+
+  // Kompresja przed publikacją (video_renditions) — rolka z HeyGena zwykle
+  // spełnia profil i wraca jako `unchanged`, ale sprawdzenie robi tick, nie
+  // publikator w chwili wysyłki.
+  const { requestVideoRendition } = await import("./video-rendition.server");
+  await requestVideoRendition(job.video_url).catch((e) =>
+    console.warn(`[renditions] ${errMsg(e)}`),
+  );
   return errors.length < job.auto_publish_platforms.length;
 }
 

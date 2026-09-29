@@ -1,25 +1,36 @@
 #!/usr/bin/env node
-// Finance You — caption-burner: mikrousługa wypalająca napisy ASS w MP4
-// (FFmpeg + libass). Backend Finance You działa na Cloudflare Workers, gdzie
-// nie ma FFmpega — to jedyne miejsce, w którym faktycznie przetwarzamy obraz.
+// Finance You — caption-burner: mikrousługa FFmpeg dla Studia publikacji.
+// Backend Finance You działa na Cloudflare Workers, gdzie nie ma FFmpega —
+// to jedyne miejsce, w którym faktycznie przetwarzamy obraz. Dwa rodzaje zadań:
 //
-// Usługa jest świadomie „głupia": dostaje adres wideo i GOTOWY plik ASS
-// (wygląd napisów decyduje kod Finance You — src/lib/caption-style.ts),
-// oddaje MP4. Zero zależności npm, jeden plik, Node 22+.
+//   * caption   — wypalanie napisów ASS w MP4 (FFmpeg + libass). Usługa jest
+//                 świadomie „głupia": dostaje adres wideo i GOTOWY plik ASS
+//                 (wygląd napisów decyduje src/lib/caption-style.ts), oddaje MP4.
+//   * transcode — kompresja do „profilu publikacji" (transcode-plan.mjs):
+//                 jeden MP4 H.264/AAC, ≤ 1080p, ≤ 30 kl./s, ≤ max_bytes, który
+//                 przyjmie każda platforma (YouTube / Reels / TikTok / X)
+//                 i który zmieści się w buforze workera. Plik już zgodny
+//                 z profilem wraca jako `unchanged` bez przekodowania. Wynik
+//                 usługa może sama wgrać na podpisany URL Supabase Storage
+//                 (`upload_url`), żeby bajty nie szły przez worker.
+//
+// Zero zależności npm, dwa pliki, Node 22+.
 //
 // API (nagłówek `Authorization: Bearer <CAPTION_BURNER_SECRET>`):
 //   GET    /health          — stan usługi (bez autoryzacji)
-//   POST   /jobs            — { video_url, ass, name? } → 202 { id, status }
-//   GET    /jobs/:id        — { id, status: queued|processing|done|failed, error, bytes }
-//   GET    /jobs/:id/file   — gotowy MP4 (tylko status done)
+//   POST   /jobs            — { video_url, ass, name? }                      → 202 { id, status }
+//                             { video_url, target?, upload_url?, name? }     → 202 { id, status }
+//   GET    /jobs/:id        — { id, kind, status: queued|processing|done|failed, error,
+//                              bytes, unchanged, uploaded, input, output }
+//   GET    /jobs/:id/file   — gotowy MP4 (tylko status done i gdy plik został w usłudze)
 //   DELETE /jobs/:id        — sprząta pliki zadania
 //
 // Zadania trzymamy w pamięci I na dysku roboczym (job.json w katalogu
 // zadania): po restarcie usługi — także po uśpieniu i wybudzeniu na Fly.io,
 // Render czy Koyeb — wczytujemy je z powrotem, przerwane wracają do kolejki,
 // gotowe pliki czekają na odbiór. Gdy dysk przepadł (nowy deploy), klient
-// (studio-video-queue.server.ts) traktuje „nieznane zadanie" jak nieudane,
-// ponawia raz albo schodzi na napisy HeyGena.
+// (studio-video-queue.server.ts / video-rendition.server.ts) traktuje
+// „nieznane zadanie" jak nieudane, ponawia raz albo schodzi na wersję zapasową.
 
 import http from "node:http";
 import path from "node:path";
@@ -29,6 +40,14 @@ import { createWriteStream, createReadStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { Readable, Transform } from "node:stream";
 import { randomUUID, timingSafeEqual } from "node:crypto";
+import {
+  complianceIssues,
+  ffmpegTranscodeArgs,
+  formatMb,
+  parseTarget,
+  planEncode,
+  summarizeProbe,
+} from "./transcode-plan.mjs";
 
 const env = (key, fallback) => {
   const v = process.env[key];
@@ -39,12 +58,17 @@ const PORT = Number(env("PORT", 8080));
 const SECRET = env("CAPTION_BURNER_SECRET", "");
 const WORK_DIR = env("CAPTION_WORK_DIR", "/tmp/caption-burner");
 const FFMPEG = env("FFMPEG_BIN", "ffmpeg");
+const FFPROBE = env("FFPROBE_BIN", "ffprobe");
 const MAX_CONCURRENCY = Math.max(1, Number(env("MAX_CONCURRENCY", 1)));
-const MAX_INPUT_BYTES = Math.max(1, Number(env("MAX_INPUT_MB", 300))) * 1024 * 1024;
+const MAX_INPUT_BYTES = Math.max(1, Number(env("MAX_INPUT_MB", 500))) * 1024 * 1024;
 const MAX_ASS_BYTES = 1024 * 1024;
 const JOB_TTL_MS = Math.max(5, Number(env("JOB_TTL_MINUTES", 360))) * 60_000;
 const DOWNLOAD_TIMEOUT_MS = Math.max(10, Number(env("DOWNLOAD_TIMEOUT_SECONDS", 300))) * 1000;
 const FFMPEG_TIMEOUT_MS = Math.max(30, Number(env("FFMPEG_TIMEOUT_SECONDS", 1200))) * 1000;
+// Kompresja długiego pliku na słabym CPU (0,1 vCPU na darmowym Renderze)
+// potrafi trwać dłużej niż wypalanie napisów w rolce — osobny limit.
+const TRANSCODE_TIMEOUT_MS = Math.max(60, Number(env("TRANSCODE_TIMEOUT_SECONDS", 3600))) * 1000;
+const UPLOAD_TIMEOUT_MS = Math.max(30, Number(env("UPLOAD_TIMEOUT_SECONDS", 600))) * 1000;
 const PRESET = env("FFMPEG_PRESET", "veryfast");
 const CRF = String(Math.min(35, Math.max(10, Number(env("FFMPEG_CRF", 20)))));
 const FONTS_DIR = env("CAPTION_FONTS_DIR", "");
@@ -107,22 +131,24 @@ async function readJson(req, limit) {
 const PRIVATE_HOST =
   /^(localhost|0\.0\.0\.0|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|\[?::1\]?$|fc|fd)/i;
 
-function validateVideoUrl(raw) {
+function validateHttpsUrl(raw, field) {
   let url;
   try {
     url = new URL(String(raw));
   } catch {
-    throw new HttpError(400, "video_url nie jest poprawnym adresem");
+    throw new HttpError(400, `${field} nie jest poprawnym adresem`);
   }
   const secure = url.protocol === "https:";
   if (!secure && !(ALLOW_PRIVATE_URLS && url.protocol === "http:")) {
-    throw new HttpError(400, "video_url musi być adresem https");
+    throw new HttpError(400, `${field} musi być adresem https`);
   }
   if (!ALLOW_PRIVATE_URLS && PRIVATE_HOST.test(url.hostname)) {
-    throw new HttpError(400, "video_url wskazuje na adres prywatny");
+    throw new HttpError(400, `${field} wskazuje na adres prywatny`);
   }
   return url.toString();
 }
+
+const validateVideoUrl = (raw) => validateHttpsUrl(raw, "video_url");
 
 function validateAss(raw) {
   if (typeof raw !== "string" || !raw.trim()) throw new HttpError(400, "brak pola ass");
@@ -166,7 +192,7 @@ async function download(url, dest) {
   return received;
 }
 
-function runFfmpeg(args, cwd) {
+function runFfmpeg(args, cwd, timeoutMs = FFMPEG_TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
     const child = spawn(FFMPEG, args, { cwd, stdio: ["ignore", "ignore", "pipe"] });
     let stderr = "";
@@ -175,8 +201,8 @@ function runFfmpeg(args, cwd) {
     });
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
-      reject(new Error(`ffmpeg: przekroczony czas ${Math.round(FFMPEG_TIMEOUT_MS / 1000)} s`));
-    }, FFMPEG_TIMEOUT_MS);
+      reject(new Error(`ffmpeg: przekroczony czas ${Math.round(timeoutMs / 1000)} s`));
+    }, timeoutMs);
     child.on("error", (e) => {
       clearTimeout(timer);
       reject(new Error(`ffmpeg: ${e.message}`));
@@ -227,6 +253,63 @@ function ffmpegVersion() {
   });
 }
 
+function ffprobeAvailable() {
+  return new Promise((resolve) => {
+    execFile(FFPROBE, ["-version"], { timeout: 5000 }, (err) => resolve(!err));
+  });
+}
+
+/** ffprobe → JSON (format + strumienie); błąd = plik nie jest wideo. */
+function ffprobe(file) {
+  return new Promise((resolve, reject) => {
+    execFile(
+      FFPROBE,
+      ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", file],
+      { timeout: 60_000, maxBuffer: 16 * 1024 * 1024 },
+      (err, stdout, stderr) => {
+        if (err) {
+          const tail = String(stderr ?? "")
+            .trim()
+            .split("\n")
+            .slice(-2)
+            .join(" | ");
+          reject(new Error(`ffprobe: ${tail || err.message}`));
+          return;
+        }
+        try {
+          resolve(JSON.parse(String(stdout)));
+        } catch {
+          reject(new Error("ffprobe: odpowiedź nie jest JSON-em"));
+        }
+      },
+    );
+  });
+}
+
+/** Wgrywa gotowy plik na podpisany URL (Supabase Storage: PUT + x-upsert). */
+async function uploadResult(file, uploadUrl, contentType) {
+  const info = await stat(file);
+  // Bufor zamiast strumienia: wynik jest ograniczony profilem (dziesiątki MB),
+  // a Storage wymaga znanego Content-Length.
+  const body = await readFile(file);
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      "content-type": contentType,
+      "content-length": String(info.size),
+      "x-upsert": "true",
+      "cache-control": "max-age=3600",
+    },
+    body,
+    signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`upload: HTTP ${res.status} ${text.slice(0, 200)}`.trim());
+  }
+  return info.size;
+}
+
 // ── Zadania ─────────────────────────────────────────────────────────────────
 
 /** Stan zadania na dysku — przeżywa restart / uśpienie usługi. */
@@ -251,7 +334,11 @@ async function restoreJobs() {
       continue;
     }
     const job = { ...data, dir };
-    if (job.status === "done") {
+    // Zadania sprzed rozróżnienia rodzajów to wypalanie napisów.
+    if (!job.kind) job.kind = "caption";
+    // Wynik wgrany do Storage albo zwrócony jako `unchanged` nie ma pliku
+    // w usłudze — to nie błąd.
+    if (job.status === "done" && !job.unchanged && !job.uploaded) {
       const ok = await stat(path.join(dir, "out.mp4")).catch(() => null);
       if (!ok) {
         job.status = "failed";
@@ -269,6 +356,102 @@ async function restoreJobs() {
   pump();
 }
 
+async function burnCaptions(job) {
+  try {
+    await runFfmpeg(ffmpegArgs("copy"), job.dir);
+  } catch (e) {
+    // Ścieżka audio, której MP4 nie przyjmie bez przekodowania — kosztuje
+    // ułamek sekundy, więc próbujemy raz jeszcze z AAC zamiast padać.
+    console.warn(`[${job.id}] kopiowanie audio nieudane, przekodowuję: ${e.message}`);
+    await runFfmpeg(ffmpegArgs("aac"), job.dir);
+  }
+  const out = await stat(path.join(job.dir, "out.mp4"));
+  job.bytes = out.size;
+}
+
+/** Pola z podsumowania ffprobe, które wracają do klienta (bez nadmiaru). */
+function compactSummary(s) {
+  return {
+    bytes: s.size,
+    duration: Math.round(s.duration * 100) / 100,
+    width: s.video?.width ?? null,
+    height: s.video?.height ?? null,
+    fps: s.video ? Math.round(s.video.fps * 100) / 100 : null,
+    video_codec: s.video?.codec ?? null,
+    audio_codec: s.audio?.codec ?? null,
+    // ffprobe zgłasza mov i mp4 jednym format_name — rozróżnia je major_brand.
+    container: /^qt/i.test(s.major_brand)
+      ? "mov"
+      : /\bmp4\b/.test(s.format_name)
+        ? "mp4"
+        : s.format_name.split(",")[0],
+  };
+}
+
+/**
+ * Kompresja do profilu: probe → (zgodny? koniec) → kodowanie z budżetem
+ * bitrate → gdy nadal za duży, druga próba z bitrate skorygowanym o nadwyżkę
+ * → probe wyniku → upload na podpisany URL (gdy podany).
+ */
+async function transcodeToProfile(job) {
+  const input = path.join(job.dir, "in.mp4");
+  const output = path.join(job.dir, "out.mp4");
+  const target = job.target;
+  const summary = summarizeProbe(await ffprobe(input));
+  job.input = compactSummary(summary);
+  const issues = complianceIssues(summary, target);
+  if (!issues.length) {
+    job.unchanged = true;
+    job.bytes = summary.size;
+    job.output = job.input;
+    job.note = "plik spełnia profil — bez przekodowania";
+    return;
+  }
+  job.note = `przekodowanie: ${issues.join(", ")}`;
+
+  let previous = null;
+  let plan = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    plan = planEncode(summary, target, previous);
+    job.plan = plan;
+    await persist(job);
+    await runFfmpeg(ffmpegTranscodeArgs(plan, { preset: PRESET }), job.dir, TRANSCODE_TIMEOUT_MS);
+    const size = (await stat(output)).size;
+    if (size <= target.max_bytes) break;
+    previous = { bytes: size, video_kbps: plan.video_kbps };
+    console.warn(
+      `[${job.id}] po kodowaniu ${formatMb(size)} > ${formatMb(target.max_bytes)} — ponawiam z niższym bitrate`,
+    );
+    if (attempt === 1) {
+      throw new Error(
+        `po kompresji plik ma ${formatMb(size)} — nie mieści się w ${formatMb(target.max_bytes)} (za długi materiał dla tego limitu)`,
+      );
+    }
+  }
+
+  const outSummary = summarizeProbe(await ffprobe(output));
+  job.output = compactSummary(outSummary);
+  job.bytes = outSummary.size;
+  const leftovers = complianceIssues(outSummary, target);
+  if (leftovers.length) {
+    throw new Error(`wynik nadal niezgodny z profilem: ${leftovers.join(", ")}`);
+  }
+
+  if (job.upload_url) {
+    try {
+      await uploadResult(output, job.upload_url, "video/mp4");
+      job.uploaded = true;
+      // Plik poszedł prosto do Storage — nie trzymamy kopii na dysku usługi.
+      await rm(output, { force: true }).catch(() => {});
+    } catch (e) {
+      // Wynik zostaje pod /jobs/:id/file — klient pobierze go sam.
+      job.uploaded = false;
+      job.upload_error = String(e?.message ?? e).slice(0, 500);
+      console.warn(`[${job.id}] upload wyniku nieudany: ${job.upload_error}`);
+    }
+  }
+}
+
 async function processJob(job) {
   job.status = "processing";
   job.started_at = new Date().toISOString();
@@ -276,16 +459,8 @@ async function processJob(job) {
   const input = path.join(job.dir, "in.mp4");
   try {
     job.input_bytes = await download(job.video_url, input);
-    try {
-      await runFfmpeg(ffmpegArgs("copy"), job.dir);
-    } catch (e) {
-      // Ścieżka audio, której MP4 nie przyjmie bez przekodowania — kosztuje
-      // ułamek sekundy, więc próbujemy raz jeszcze z AAC zamiast padać.
-      console.warn(`[${job.id}] kopiowanie audio nieudane, przekodowuję: ${e.message}`);
-      await runFfmpeg(ffmpegArgs("aac"), job.dir);
-    }
-    const out = await stat(path.join(job.dir, "out.mp4"));
-    job.bytes = out.size;
+    if (job.kind === "transcode") await transcodeToProfile(job);
+    else await burnCaptions(job);
     job.status = "done";
   } catch (e) {
     job.status = "failed";
@@ -325,11 +500,19 @@ async function sweep() {
 function publicJob(job) {
   return {
     id: job.id,
+    kind: job.kind ?? "caption",
     status: job.status,
     error: job.error ?? null,
     name: job.name,
     bytes: job.bytes ?? null,
     input_bytes: job.input_bytes ?? null,
+    // Transkodowanie: czy plik był już zgodny, czy wynik poszedł na upload_url.
+    unchanged: job.unchanged === true,
+    uploaded: job.uploaded === true,
+    upload_error: job.upload_error ?? null,
+    note: job.note ?? null,
+    input: job.input ?? null,
+    output: job.output ?? null,
     created_at: job.created_at,
     started_at: job.started_at ?? null,
     finished_at: job.finished_at ?? null,
@@ -345,7 +528,13 @@ async function route(req, res) {
   if (req.method === "GET" && url.pathname === "/health") {
     const counts = { queued: 0, processing: 0, done: 0, failed: 0 };
     for (const j of jobs.values()) counts[j.status] = (counts[j.status] ?? 0) + 1;
-    sendJson(res, 200, { ok: true, ffmpeg: await ffmpegVersion(), jobs: counts });
+    sendJson(res, 200, {
+      ok: true,
+      ffmpeg: await ffmpegVersion(),
+      ffprobe: await ffprobeAvailable(),
+      transcode: true,
+      jobs: counts,
+    });
     return;
   }
 
@@ -354,24 +543,33 @@ async function route(req, res) {
   if (req.method === "POST" && parts.length === 1 && parts[0] === "jobs") {
     const body = await readJson(req, MAX_ASS_BYTES + 64 * 1024);
     const video_url = validateVideoUrl(body.video_url);
-    const ass = validateAss(body.ass);
+    // Rodzaj zadania rozpoznajemy po treści: `ass` = napisy, inaczej kompresja.
+    const kind = body.ass !== undefined || body.kind === "caption" ? "caption" : "transcode";
     const id = randomUUID();
     const dir = path.join(WORK_DIR, id);
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, "subs.ass"), ass, "utf8");
     const job = {
       id,
       dir,
+      kind,
       video_url,
       name: safeName(body.name),
       status: "queued",
       created_at: new Date().toISOString(),
     };
+    if (kind === "caption") {
+      const ass = validateAss(body.ass);
+      await mkdir(dir, { recursive: true });
+      await writeFile(path.join(dir, "subs.ass"), ass, "utf8");
+    } else {
+      job.target = parseTarget(body.target);
+      job.upload_url = body.upload_url ? validateHttpsUrl(body.upload_url, "upload_url") : null;
+      await mkdir(dir, { recursive: true });
+    }
     await persist(job);
     jobs.set(id, job);
     queue.push(job);
     pump();
-    sendJson(res, 202, { id, status: job.status });
+    sendJson(res, 202, { id, kind, status: job.status });
     return;
   }
 
@@ -385,6 +583,8 @@ async function route(req, res) {
     }
     if (req.method === "GET" && parts.length === 3 && parts[2] === "file") {
       if (job.status !== "done") throw new HttpError(409, `zadanie ma status ${job.status}`);
+      if (job.unchanged) throw new HttpError(409, "plik był zgodny z profilem — użyj oryginału");
+      if (job.uploaded) throw new HttpError(409, "wynik został wgrany na upload_url");
       const file = path.join(job.dir, "out.mp4");
       const info = await stat(file);
       res.writeHead(200, {
@@ -425,7 +625,7 @@ setInterval(() => sweep().catch(() => {}), 10 * 60_000).unref();
 
 server.listen(PORT, () => {
   console.log(
-    `caption-burner nasłuchuje na :${PORT} (ffmpeg=${FFMPEG}, równolegle=${MAX_CONCURRENCY}, preset=${PRESET}, crf=${CRF})`,
+    `caption-burner nasłuchuje na :${PORT} (ffmpeg=${FFMPEG}, ffprobe=${FFPROBE}, równolegle=${MAX_CONCURRENCY}, preset=${PRESET}, crf=${CRF}, limit wejścia=${formatMb(MAX_INPUT_BYTES)})`,
   );
 });
 
