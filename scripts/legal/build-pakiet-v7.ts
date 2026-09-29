@@ -8,7 +8,7 @@
  *   docs/legal/paczka-inwestor-v7/*.txt        — content_text (to, co akceptuje Inwestor)
  *   docs/legal/paczka-inwestor-v7/MANIFEST.sha256 — SHA-256 plików .docx (format sha256sum)
  *   docs/legal/paczka-inwestor-v7/CONTENT.sha256  — SHA-256 content_text = legal_documents.sha256
- *   supabase/migrations/20260929125000_etap5_pakiet_inwestor_v7.sql
+ *   supabase/migrations/20260929155000_etap5_pakiet_inwestor_v7.sql
  * Lustro drizzle (drizzle/migrations/0014_…) tworzy się osobno, bajt w bajt.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -20,7 +20,7 @@ const MIGRATION = join(
   process.cwd(),
   "supabase",
   "migrations",
-  "20260929125000_etap5_pakiet_inwestor_v7.sql",
+  "20260929155000_etap5_pakiet_inwestor_v7.sql",
 );
 
 async function main() {

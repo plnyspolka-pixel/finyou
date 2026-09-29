@@ -4,7 +4,7 @@
 //
 // Enum `public.loan_status` w bazie zawiera dodatkowo starsze wartości (dla
 // wstecznej kompatybilności historii), ale dane zostały zmapowane migracją
-// `20260929124000_etap4_statusy_wniosku.sql`, a UI pokazuje tylko nowe.
+// `20260929154000_etap4_statusy_wniosku.sql`, a UI pokazuje tylko nowe.
 //
 // Decyzja nadrzędna nr 11: statusy ODRZUCAJĄCE (`nie_rokuje`,
 // `wniosek_odrzucony`) nigdy nie są nadawane automatycznie — automat może

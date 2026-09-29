@@ -12,7 +12,7 @@ import { buildPakietV7, migracjaSqlV7, sha256Hex, type DokumentV7 } from "./buil
 import { NEW_EMAIL, OLD_EMAIL, PACKAGE_ID_V7 } from "./pakiet-v7";
 
 const DIR = join(process.cwd(), "docs", "legal", "paczka-inwestor-v7");
-const MIG = "20260929125000_etap5_pakiet_inwestor_v7.sql";
+const MIG = "20260929155000_etap5_pakiet_inwestor_v7.sql";
 
 let docs: DokumentV7[];
 const byCode = (c: DokumentV7["code"]) => docs.find((d) => d.code === c)!;
@@ -72,7 +72,7 @@ describe("pakiet v7 — pliki i skróty", () => {
     const sql = readFileSync(join(process.cwd(), "supabase", "migrations", MIG), "utf8");
     expect(sql).toBe(migracjaSqlV7(docs));
     const drizzle = readFileSync(
-      join(process.cwd(), "drizzle", "migrations", "0014_etap5_pakiet_inwestor_v7.sql"),
+      join(process.cwd(), "drizzle", "migrations", "0016_etap5_pakiet_inwestor_v7.sql"),
       "utf8",
     );
     expect(drizzle).toBe(sql);

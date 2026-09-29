@@ -28,14 +28,14 @@ etapy wdrożone w kodzie i migracjach; testy, typecheck i lint zielone.
 
 | Supabase | Drizzle | Zakres |
 |---|---|---|
-| `20260929120000_etap0_bezpieczenstwo_teaserow.sql` | `0009` | usunięty widok `public_loan_teasers`; `investor_offer_teasers()` tylko przyjęte Zlecenia, bez opisów i zdjęć; propozycje tylko dla inwestora/personelu; REVOKE anon |
-| `20260929121000_etap1_inwestor_bez_oplat.sql` | `0010` | produkty inwestora nieaktywne; `investor_tier` = podstawowy; bez odblokowań |
-| `20260929122000_etap2_ltv_60.sql` | `0011` | `max_ltv_percent` 60, progi 35/50/60, CHECK ≤ 60 |
-| `20260929123000_etap3_zlecenia_limity.sql` | `0012` | limity Zleceń w ustawieniach; `increment_order_rejections` |
-| `20260929124000_etap4_statusy_wniosku.sql` | `0013` | mapowanie statusów; `suggested_*`; trigger `loan_status_guard`; bramka B2B |
-| `20260929125000_etap5_pakiet_inwestor_v7.sql` | `0014` | umowa ramowa v7, NDA v6, RODO v5 — aktywne (`active = true`) — plik generowany |
-| `20260929126000_etap5_zgody_v2.sql` | `0015` | Regulamin klienta v2, Polityka prywatności v2 (v1 wyłączone, zostają w tabeli) — plik generowany |
-| `20260929127000_etap5_akceptacje_zgod_i_boty.sql` | `0016` | `consent_acceptances`; prompty botów |
+| `20260929150000_etap0_bezpieczenstwo_teaserow.sql` | `0011` | usunięty widok `public_loan_teasers`; `investor_offer_teasers()` tylko przyjęte Zlecenia, bez opisów i zdjęć; propozycje tylko dla inwestora/personelu; REVOKE anon |
+| `20260929151000_etap1_inwestor_bez_oplat.sql` | `0012` | produkty inwestora nieaktywne; `investor_tier` = podstawowy; bez odblokowań |
+| `20260929152000_etap2_ltv_60.sql` | `0013` | `max_ltv_percent` 60, progi 35/50/60, CHECK ≤ 60 |
+| `20260929153000_etap3_zlecenia_limity.sql` | `0014` | limity Zleceń w ustawieniach; `increment_order_rejections` |
+| `20260929154000_etap4_statusy_wniosku.sql` | `0015` | mapowanie statusów; `suggested_*`; trigger `loan_status_guard`; bramka B2B |
+| `20260929155000_etap5_pakiet_inwestor_v7.sql` | `0016` | umowa ramowa v7, NDA v6, RODO v5 — aktywne (`active = true`) — plik generowany |
+| `20260929156000_etap5_zgody_v2.sql` | `0017` | Regulamin klienta v2, Polityka prywatności v2 (v1 wyłączone, zostają w tabeli) — plik generowany |
+| `20260929157000_etap5_akceptacje_zgod_i_boty.sql` | `0018` | `consent_acceptances`; prompty botów |
 
 Test `src/lib/security/migrations-mirror.test.ts` pilnuje lustra i wpisów w
 `_journal.json`.
@@ -93,7 +93,7 @@ Pełny zestaw: 105 plików, 1289 testów — zielone. `tsc --noEmit` i
 ## Decyzje i działania po stronie człowieka
 
 1. ✅ **Zwolnienie z VAT prowizji** — potwierdzone przez właściciela (2026-09-29).
-2. ✅ **Aktywacja pakietu v7** — zatwierdzona. Migracja `0014` wstawia v7/v6/v5
+2. ✅ **Aktywacja pakietu v7** — zatwierdzona. Migracja `0016` wstawia v7/v6/v5
    od razu z `active = true` (cały pakiet naraz). Akceptacje v5/v6 nie
    przechodzą na v7 — Inwestor akceptuje v7 w panelu.
 3. ✅ **Jeden rachunek Finance You** — ten sam do spłat pożyczek FY i do
@@ -105,7 +105,7 @@ Pełny zestaw: 105 plików, 1289 testów — zielone. `tsc --noEmit` i
 4. ✅ **Szablon u08** — pole „IMIĘ I NAZWISKO IOD” zostaje; kreator wpisuje w nie
    dane Inwestora (osoba albo reprezentant firmy + e-mail lub telefon).
    Plik w Storage nie wymaga zmian.
-5. **Prompty botów w bazie** — migracja `0016` poprawia sekcję kosztów bota
+5. **Prompty botów w bazie** — migracja `0018` poprawia sekcję kosztów bota
    klienta (dotąd 1,79–4% miesięcznie, czyli ponad odsetki maksymalne) i
    dopisuje blok „ZASADY OPŁAT I B2B”. Po wdrożeniu przejrzeć prompt w
    `/admin/text-agent` i zsynchronizować agentów głosowych.

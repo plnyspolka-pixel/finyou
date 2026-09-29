@@ -80,7 +80,7 @@ describe("pliki i migracja", () => {
 
   it("migracja = wynik generatora; lustro drizzle identyczne", () => {
     const sql = readFileSync(
-      join(process.cwd(), "supabase", "migrations", "20260929126000_etap5_zgody_v2.sql"),
+      join(process.cwd(), "supabase", "migrations", "20260929156000_etap5_zgody_v2.sql"),
       "utf8",
     );
     expect(sql).toBe(
@@ -90,7 +90,7 @@ describe("pliki i migracja", () => {
       ]),
     );
     expect(
-      readFileSync(join(process.cwd(), "drizzle", "migrations", "0015_etap5_zgody_v2.sql"), "utf8"),
+      readFileSync(join(process.cwd(), "drizzle", "migrations", "0017_etap5_zgody_v2.sql"), "utf8"),
     ).toBe(sql);
   });
 

@@ -9,9 +9,9 @@ import { join } from "node:path";
 
 const MIGRATION = join(
   process.cwd(),
-  "supabase/migrations/20260929120000_etap0_bezpieczenstwo_teaserow.sql",
+  "supabase/migrations/20260929150000_etap0_bezpieczenstwo_teaserow.sql",
 );
-const MIRROR = join(process.cwd(), "drizzle/migrations/0009_etap0_bezpieczenstwo_teaserow.sql");
+const MIRROR = join(process.cwd(), "drizzle/migrations/0011_etap0_bezpieczenstwo_teaserow.sql");
 
 const sql = readFileSync(MIGRATION, "utf-8").toLowerCase();
 

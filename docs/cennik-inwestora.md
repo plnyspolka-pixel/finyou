@@ -60,7 +60,7 @@ jedynie anulować stare rekordy. `investor_opportunity_unlocks` — analogicznie
 
 ## Umowa ramowa v7
 
-Migracja `20260929125000_etap5_pakiet_inwestor_v7.sql` (patrz
+Migracja `20260929155000_etap5_pakiet_inwestor_v7.sql` (patrz
 `docs/legal/paczka-inwestor-v7/`): usunięte Pakiety, Cennik, Opłata Sukcesu,
 Opłata Abonamentowa, Opłata za Udostępnienie Okazji i Zał. 8; § 2/§ 7 —
 usługa dla Inwestora **nieodpłatna**; Prowizja Klientowska 7 % Kwoty

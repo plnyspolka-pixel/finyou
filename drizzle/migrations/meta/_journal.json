@@ -68,57 +68,71 @@
     {
       "idx": 9,
       "version": "7",
-      "when": 1790644556182,
-      "tag": "0009_etap0_bezpieczenstwo_teaserow",
+      "when": 1790665027677,
+      "tag": "0009_video_renditions",
       "breakpoints": true
     },
     {
       "idx": 10,
       "version": "7",
-      "when": 1790645009562,
-      "tag": "0010_etap1_inwestor_bez_oplat",
+      "when": 1790665033297,
+      "tag": "0010_studio_material_audience",
       "breakpoints": true
     },
     {
       "idx": 11,
       "version": "7",
-      "when": 1790645505209,
-      "tag": "0011_etap2_ltv_60",
+      "when": 1790697821438,
+      "tag": "0011_etap0_bezpieczenstwo_teaserow",
       "breakpoints": true
     },
     {
       "idx": 12,
       "version": "7",
-      "when": 1790645922135,
-      "tag": "0012_etap3_zlecenia_limity",
+      "when": 1790697821464,
+      "tag": "0012_etap1_inwestor_bez_oplat",
       "breakpoints": true
     },
     {
       "idx": 13,
       "version": "7",
-      "when": 1790646381310,
-      "tag": "0013_etap4_statusy_wniosku",
+      "when": 1790697821485,
+      "tag": "0013_etap2_ltv_60",
       "breakpoints": true
     },
     {
       "idx": 14,
       "version": "7",
-      "when": 1790660055125,
-      "tag": "0014_etap5_pakiet_inwestor_v7",
+      "when": 1790697821505,
+      "tag": "0014_etap3_zlecenia_limity",
       "breakpoints": true
     },
     {
       "idx": 15,
       "version": "7",
-      "when": 1790660317287,
-      "tag": "0015_etap5_zgody_v2",
+      "when": 1790697821533,
+      "tag": "0015_etap4_statusy_wniosku",
       "breakpoints": true
     },
     {
       "idx": 16,
       "version": "7",
-      "when": 1790660452895,
-      "tag": "0016_etap5_akceptacje_zgod_i_boty",
+      "when": 1790697821560,
+      "tag": "0016_etap5_pakiet_inwestor_v7",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790697821584,
+      "tag": "0017_etap5_zgody_v2",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790697821610,
+      "tag": "0018_etap5_akceptacje_zgod_i_boty",
       "breakpoints": true
     }
   ]

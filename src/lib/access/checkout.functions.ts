@@ -17,7 +17,7 @@ import {
 import { decideInFlightUnlockPayment, PENDING_UNLOCK_STALE_MINUTES } from "./pending-unlock";
 
 // Wersje dokumentów prawnych akceptowanych na formularzu (consent_documents,
-// wersja 2 z 29 września 2026 r. — migracja 20260929126000_etap5_zgody_v2).
+// wersja 2 z 29 września 2026 r. — migracja 20260929156000_etap5_zgody_v2).
 export const TERMS_VERSION = "regulamin-platformy-v2";
 export const PRIVACY_VERSION = "polityka-prywatnosci-v2";
 

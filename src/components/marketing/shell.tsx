@@ -57,7 +57,9 @@ const PAGE_PATH: Record<MarketingPage, string> = {
 const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   home: { label: "Wybierz ścieżkę", href: "#sciezki" },
   klient: { label: "Złóż wniosek", href: "/rejestracja?role=klient" },
-  inwestor: { label: "Dołącz do klubu", href: "/rejestracja?role=inwestor" },
+  // Inwestor najpierw poznaje warunki w cenniku (dostęp 0 zł), potem zakłada konto
+  // (nagłówek z page="inwestor" renderuje się tylko na /dla-inwestora).
+  inwestor: { label: "Dołącz do klubu", href: "#cennik" },
   posrednik: { label: "Dołącz jako pośrednik", href: "/rejestracja?role=posrednik" },
   blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
@@ -239,7 +241,14 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
           <MktButton variant="ghost" href="/logowanie" style={{ marginTop: 8 }}>
             Zaloguj się do panelu
           </MktButton>
-          <MktButton variant="cta" href={cta.href} style={{ marginTop: 8 }}>
+          {/* CTA inwestora to kotwica na tej samej stronie (#cennik) — menu musi
+              się zamknąć, inaczej zasłoni cennik. */}
+          <MktButton
+            variant="cta"
+            href={cta.href}
+            onClick={() => setOpen(false)}
+            style={{ marginTop: 8 }}
+          >
             {cta.label}
           </MktButton>
         </div>

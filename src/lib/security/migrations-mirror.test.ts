@@ -11,14 +11,14 @@ const SUPA = join(process.cwd(), "supabase", "migrations");
 const DRIZZLE = join(process.cwd(), "drizzle", "migrations");
 
 const PAIRS: Array<[string, string]> = [
-  ["20260929120000_etap0_bezpieczenstwo_teaserow.sql", "0009_etap0_bezpieczenstwo_teaserow.sql"],
-  ["20260929121000_etap1_inwestor_bez_oplat.sql", "0010_etap1_inwestor_bez_oplat.sql"],
-  ["20260929122000_etap2_ltv_60.sql", "0011_etap2_ltv_60.sql"],
-  ["20260929123000_etap3_zlecenia_limity.sql", "0012_etap3_zlecenia_limity.sql"],
-  ["20260929124000_etap4_statusy_wniosku.sql", "0013_etap4_statusy_wniosku.sql"],
-  ["20260929125000_etap5_pakiet_inwestor_v7.sql", "0014_etap5_pakiet_inwestor_v7.sql"],
-  ["20260929126000_etap5_zgody_v2.sql", "0015_etap5_zgody_v2.sql"],
-  ["20260929127000_etap5_akceptacje_zgod_i_boty.sql", "0016_etap5_akceptacje_zgod_i_boty.sql"],
+  ["20260929150000_etap0_bezpieczenstwo_teaserow.sql", "0011_etap0_bezpieczenstwo_teaserow.sql"],
+  ["20260929151000_etap1_inwestor_bez_oplat.sql", "0012_etap1_inwestor_bez_oplat.sql"],
+  ["20260929152000_etap2_ltv_60.sql", "0013_etap2_ltv_60.sql"],
+  ["20260929153000_etap3_zlecenia_limity.sql", "0014_etap3_zlecenia_limity.sql"],
+  ["20260929154000_etap4_statusy_wniosku.sql", "0015_etap4_statusy_wniosku.sql"],
+  ["20260929155000_etap5_pakiet_inwestor_v7.sql", "0016_etap5_pakiet_inwestor_v7.sql"],
+  ["20260929156000_etap5_zgody_v2.sql", "0017_etap5_zgody_v2.sql"],
+  ["20260929157000_etap5_akceptacje_zgod_i_boty.sql", "0018_etap5_akceptacje_zgod_i_boty.sql"],
 ];
 
 describe("migracje 2026-09-29", () => {
@@ -38,7 +38,7 @@ describe("migracje 2026-09-29", () => {
   });
 
   it("consent_acceptances: RLS włączone, brak dostępu anon, zapisy tylko serwisowo", () => {
-    const sql = readFileSync(join(SUPA, "20260929127000_etap5_akceptacje_zgod_i_boty.sql"), "utf8");
+    const sql = readFileSync(join(SUPA, "20260929157000_etap5_akceptacje_zgod_i_boty.sql"), "utf8");
     expect(sql).toMatch(/alter table public\.consent_acceptances enable row level security/);
     expect(sql).toMatch(/revoke all on public\.consent_acceptances from public, anon/);
     expect(sql).not.toMatch(/grant [^;]*on public\.consent_acceptances to [^;]*anon/);
@@ -48,7 +48,7 @@ describe("migracje 2026-09-29", () => {
   });
 
   it("dopisanie bloku zasad do promptów jest idempotentne", () => {
-    const sql = readFileSync(join(SUPA, "20260929127000_etap5_akceptacje_zgod_i_boty.sql"), "utf8");
+    const sql = readFileSync(join(SUPA, "20260929157000_etap5_akceptacje_zgod_i_boty.sql"), "utf8");
     const appends = sql.match(/system_prompt = system_prompt \|\|/g) ?? [];
     const guards = sql.match(/position\('ZASADY OPŁAT I B2B' in system_prompt\) = 0/g) ?? [];
     expect(appends.length).toBe(2);

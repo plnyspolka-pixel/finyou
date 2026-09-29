@@ -5,7 +5,7 @@
  *
  * Wejście: docs/legal/klient/{regulamin-klienta,polityka-prywatnosci}-v1.md
  * Wynik:   docs/legal/klient/*-v2.md oraz
- *          supabase/migrations/20260929126000_etap5_zgody_v2.sql
+ *          supabase/migrations/20260929156000_etap5_zgody_v2.sql
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -23,7 +23,7 @@ const polityka = transformPolitykaV2(rd("polityka-prywatnosci-v1.md"));
 writeFileSync(join(DIR, "regulamin-klienta-v2.md"), regulamin, "utf8");
 writeFileSync(join(DIR, "polityka-prywatnosci-v2.md"), polityka, "utf8");
 writeFileSync(
-  join(process.cwd(), "supabase", "migrations", "20260929126000_etap5_zgody_v2.sql"),
+  join(process.cwd(), "supabase", "migrations", "20260929156000_etap5_zgody_v2.sql"),
   migracjaZgodV2([
     { kind: "terms", title: "Akceptuję regulamin klienta", content: regulamin },
     { kind: "privacy", title: "Akceptuję politykę prywatności", content: polityka },

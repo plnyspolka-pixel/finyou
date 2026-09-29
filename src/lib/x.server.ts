@@ -23,7 +23,14 @@
 //     wymaga pollingu (jak kontener IG albo publish_id TikToka).
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { X_TEXT_LIMIT, pickXMedia, planXChunks, xPostText, type XMedia } from "./x-post";
+import {
+  X_TEXT_LIMIT,
+  pickXMedia,
+  planXChunks,
+  xMediaFromUrl,
+  xPostText,
+  type XMedia,
+} from "./x-post";
 
 const OAUTH_AUTH_URL = "https://x.com/i/oauth2/authorize";
 const OAUTH_TOKEN_URL = "https://api.x.com/2/oauth2/token";
@@ -499,7 +506,17 @@ async function downloadMedia(media: XMedia): Promise<ArrayBuffer> {
  * Tą samą ścieżką idą grafiki i wideo — X przyjmuje oba, a jeden tor to
  * jeden zestaw błędów do obsłużenia zamiast dwóch.
  */
-async function uploadMedia(media: XMedia, token: string): Promise<string> {
+async function uploadMedia(source: XMedia, token: string): Promise<string> {
+  let media = source;
+  if (source.kind === "video") {
+    // Kompresja do profilu publikacji (≤ 60 MB, MP4 H.264/AAC — X nie
+    // przyjmuje HEVC ani MOV z telefonu). Rzuca VideoPreparingError, gdy
+    // plik jeszcze się przygotowuje. Wynik jest zawsze MP4, więc typ
+    // materiału liczymy od nowa z jego adresu.
+    const { ensurePublishableVideo } = await import("./video-rendition.server");
+    const url = await ensurePublishableVideo(source.url);
+    if (url !== source.url) media = xMediaFromUrl(url, "video");
+  }
   const buffer = await downloadMedia(media);
   const totalBytes = buffer.byteLength;
 
@@ -667,6 +684,8 @@ export async function processXQueueItem(id: string): Promise<{
   ok: boolean;
   postId?: string | null;
   processing?: boolean;
+  /** Wideo w kompresji — wpis odroczony, publikacja ruszy z ticka. */
+  preparing?: boolean;
   error?: string;
 }> {
   const { data: claimed, error: claimErr } = await supabaseAdmin
@@ -722,6 +741,21 @@ export async function processXQueueItem(id: string): Promise<{
     await markComplete(withMedia, postId);
     return { ok: true, postId };
   } catch (err) {
+    const { VideoPreparingError } = await import("./video-rendition.server");
+    if (err instanceof VideoPreparingError) {
+      // Wideo się kompresuje — wpis wraca do kolejki na kilka minut BEZ
+      // zużycia próby; upload się nie zaczął, więc nic nie poszło na profil.
+      await supabaseAdmin
+        .from("social_publish_queue")
+        .update({
+          status: "pending",
+          x_media_status: null,
+          last_error: err.note,
+          scheduled_at: err.nextAt.toISOString(),
+        })
+        .eq("id", item.id);
+      return { ok: true, preparing: true };
+    }
     const msg = err instanceof Error ? err.message : String(err);
     await markFailed(item, msg);
     return { ok: false, error: msg };
@@ -751,6 +785,47 @@ async function reclaimStalledItems(): Promise<void> {
     .is("x_media_id", null)
     .or("video_url.not.is.null,image_url.not.is.null")
     .lt("updated_at", cutoff);
+}
+
+/**
+ * Samonaprawa po błędzie toru Meta: do poprawki tick Meta przejmował wpisy X
+ * (filtr wykluczał tylko TikToka), robił z nich kontener Instagrama
+ * (`ig_creation_id`) i zostawiał w 'processing'. Taki wpis nie ma
+ * `x_media_id`, więc tor X go nie widział — „przetwarzanie…" na zawsze.
+ *
+ * Wracają do kolejki bez śladu IG. Bezpieczne: `x_media_id` jest NULL, więc
+ * upload na X się nie zaczął i nic nie poszło na profil; kontener IG nigdy
+ * nie został opublikowany (domykanie IG bierze tylko platform='instagram_reels')
+ * i sam wygaśnie po 24 h. Przejęcie zabrało jedną próbę — oddajemy ją.
+ */
+async function reclaimHijackedItems(): Promise<number> {
+  const { data: rows, error } = await supabaseAdmin
+    .from("social_publish_queue")
+    .select("id, attempt_count")
+    .eq("platform", "x")
+    .eq("status", "processing")
+    .is("x_media_id", null)
+    .not("ig_creation_id", "is", null)
+    .limit(20);
+  if (error || !rows?.length) return 0;
+  for (const row of rows) {
+    await supabaseAdmin
+      .from("social_publish_queue")
+      .update({
+        status: "pending",
+        ig_creation_id: null,
+        ig_container_at: null,
+        x_media_status: null,
+        x_media_at: null,
+        attempt_count: Math.max(0, row.attempt_count - 1),
+        last_error: null,
+        scheduled_at: new Date().toISOString(),
+      })
+      .eq("id", row.id)
+      .eq("status", "processing")
+      .is("x_media_id", null);
+  }
+  return rows.length;
 }
 
 /** Wpisy po uploadzie: dociągnij status materiału i opublikuj, gdy gotowy. */
@@ -842,6 +917,9 @@ export async function runXPublishTick(): Promise<{
   await reclaimStalledItems().catch(() => {
     // Odbicie zawieszonych wpisów nie może wywalić ticka.
   });
+  await reclaimHijackedItems().catch(() => {
+    // Samonaprawa nie może wywalić ticka.
+  });
 
   const poll = await processProcessingItems().catch((e) => {
     errors.push(e instanceof Error ? e.message : String(e));
@@ -867,7 +945,7 @@ export async function runXPublishTick(): Promise<{
     processed += 1;
     const result = await processXQueueItem(item.id);
     if (result.ok && result.processing) processing += 1;
-    else if (result.ok) published += 1;
+    else if (result.ok && !result.preparing) published += 1;
     else if (result.error) errors.push(result.error);
   }
 

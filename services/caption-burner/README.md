@@ -1,9 +1,27 @@
-# caption-burner — wypalanie napisów w rolkach Studia
+# caption-burner — FFmpeg dla Studia publikacji (napisy + kompresja)
 
-Mikrousługa FFmpeg + libass, która bierze **czysty master z HeyGena** i **gotowy
-plik ASS** (styl napisów liczy kod Finance You w `src/lib/caption-style.ts`)
-i oddaje MP4 z napisami wypalonymi w obrazie. Jeden plik (`server.mjs`),
-zero zależności npm, Node 22+.
+Mikrousługa FFmpeg + libass o dwóch zadaniach:
+
+1. **Napisy** — bierze **czysty master z HeyGena** i **gotowy plik ASS** (styl
+   napisów liczy kod Finance You w `src/lib/caption-style.ts`) i oddaje MP4
+   z napisami wypalonymi w obrazie.
+2. **Kompresja przed publikacją** (zadanie `transcode`) — sprowadza dowolne
+   wideo do **profilu publikacji**, który przyjmie każda platforma (YouTube,
+   Instagram / Facebook Reels, TikTok, X) i który zmieści się w buforze
+   workera Finance You: MP4, H.264 High 4.1 + AAC, ≤ 1080p, ≤ 30 kl./s,
+   ≤ 60 MB (parametry przysyła klient w `target`). Plik już zgodny z profilem
+   wraca jako `unchanged` — bez przekodowania. Wynik usługa może sama wgrać
+   na podpisany URL Supabase Storage (`upload_url`), więc bajty nie przechodzą
+   przez worker. Logika planu (probe → zgodność → budżet bitrate z długości
+   filmu → drabina rozdzielczości 1080 → 720 → 540 → 480) siedzi w
+   `transcode-plan.mjs` i ma testy (`node --test services/caption-burner/transcode-plan.test.mjs`).
+
+Dwa pliki (`server.mjs`, `transcode-plan.mjs`), zero zależności npm, Node 22+.
+
+Tą samą drogą Studio kładzie na każdą rolkę **znaczek „AI"** w prawym górnym
+rogu: to zwykłe zdarzenia w pliku ASS (rysunek `\p1` + napis), dopisywane do
+napisów albo wysyłane jako ASS z samym znaczkiem (wideo z napisami HeyGena
+lub bez napisów). Usługa nie rozróżnia tych przypadków i nie wymaga zmian.
 
 Dlaczego osobna usługa: HeyGen v3 przyjmuje w `caption.style` wyłącznie
 `"default"` (rozmiar, czcionka i pozycja napisów nie są sterowalne), a backend
@@ -105,35 +123,59 @@ wtedy tylko styl „HeyGen (domyślne)”.
 Każde wywołanie poza `/health` wymaga nagłówka
 `Authorization: Bearer <CAPTION_BURNER_SECRET>`.
 
-| Metoda   | Ścieżka          | Co robi                                                             |
-| -------- | ---------------- | ------------------------------------------------------------------- |
-| `GET`    | `/health`        | `{ ok, ffmpeg, jobs: { queued, processing, done, failed } }`        |
-| `POST`   | `/jobs`          | `{ video_url, ass, name? }` → `202 { id, status }`                  |
-| `GET`    | `/jobs/:id`      | `{ id, status: queued\|processing\|done\|failed, error, bytes, … }` |
-| `GET`    | `/jobs/:id/file` | gotowy MP4 (tylko `done`; `409` w innym stanie)                     |
-| `DELETE` | `/jobs/:id`      | usuwa pliki zadania (`409`, gdy właśnie się przetwarza)             |
+| Metoda   | Ścieżka          | Co robi                                                                                                                           |
+| -------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`    | `/health`        | `{ ok, ffmpeg, ffprobe, transcode, jobs: { queued, processing, done, failed } }`                                                  |
+| `POST`   | `/jobs`          | napisy: `{ video_url, ass, name? }` → `202 { id, kind, status }`                                                                  |
+|          |                  | kompresja: `{ video_url, target?, upload_url?, name? }` → `202 { id, kind, status }`                                              |
+| `GET`    | `/jobs/:id`      | `{ id, kind, status: queued\|processing\|done\|failed, error, bytes, unchanged, uploaded, upload_error, note, input, output, … }` |
+| `GET`    | `/jobs/:id/file` | gotowy MP4 (tylko `done`; `409` w innym stanie, po uploadzie na `upload_url` i przy `unchanged`)                                  |
+| `DELETE` | `/jobs/:id`      | usuwa pliki zadania (`409`, gdy właśnie się przetwarza)                                                                           |
 
 `video_url` musi być adresem **https** na publicznym hoście (HeyGen, bucket
-`studio-media`); `ass` — pełny plik ASS z sekcją `[Events]`, do 1 MB.
-Wynik to H.264 (`libx264`, `-preset veryfast`, `-crf 20`, `yuv420p`,
-`+faststart`); audio kopiowane 1:1, a gdy MP4 nie przyjmie ścieżki bez
-przekodowania — AAC 160 kb/s.
+`studio-media`). Rodzaj zadania rozpoznawany jest po treści: `ass` = napisy,
+inaczej kompresja.
+
+**Napisy**: `ass` — pełny plik ASS z sekcją `[Events]`, do 1 MB. Wynik to
+H.264 (`libx264`, `-preset veryfast`, `-crf 20`, `yuv420p`, `+faststart`);
+audio kopiowane 1:1, a gdy MP4 nie przyjmie ścieżki bez przekodowania — AAC
+160 kb/s.
+
+**Kompresja**: `target` (wszystkie pola opcjonalne, domyślne w nawiasach):
+`max_bytes` (60 MB), `max_long_edge` (1920), `max_short_edge` (1080),
+`max_fps` (30), `audio_kbps` (128), `video_kbps_cap` (6000). Usługa robi
+`ffprobe`, a gdy plik nie spełnia profilu (kontener MOV, HEVC, 4K, 60 kl./s,
+metadane obrotu, dodatkowe strumienie, rozmiar ponad limit…), koduje go:
+`libx264` High 4.1, `-crf 23` jako sufit jakości i `-maxrate`/`-bufsize`
+(VBV) jako sufit rozmiaru liczony z długości filmu, AAC 128 kb/s stereo
+48 kHz, `+faststart`, tylko główny obraz i pierwsze audio (napisy, dane
+i okładki odpadają), obrót z metadanych wypalony w obraz. Gdy wynik nadal
+przekracza `max_bytes`, druga próba obniża bitrate proporcjonalnie; gdy i to
+nie wystarczy — `failed` z komunikatem (materiał za długi dla limitu).
+`upload_url` — podpisany adres uploadu Supabase Storage
+(`createSignedUploadUrl`): usługa robi tam `PUT` z `x-upsert: true` i kasuje
+lokalną kopię (`uploaded: true`); gdy upload się nie uda, plik zostaje pod
+`/jobs/:id/file` (`uploaded: false`, `upload_error`). Plik zgodny z profilem
+kończy się `unchanged: true` bez pliku wynikowego — klient publikuje oryginał.
 
 ## Zmienne środowiskowe
 
-| Zmienna                        | Domyślnie             | Znaczenie                                        |
-| ------------------------------ | --------------------- | ------------------------------------------------ |
-| `CAPTION_BURNER_SECRET`        | — (wymagane)          | sekret Bearer                                    |
-| `PORT`                         | `8080`                |                                                  |
-| `MAX_CONCURRENCY`              | `1`                   | ile FFmpegów naraz (1 na maszynę 1–2 vCPU)       |
-| `MAX_INPUT_MB`                 | `300`                 | limit pobieranego wideo                          |
-| `JOB_TTL_MINUTES`              | `360`                 | po ilu minutach od zakończenia sprzątamy zadanie |
-| `DOWNLOAD_TIMEOUT_SECONDS`     | `300`                 |                                                  |
-| `FFMPEG_TIMEOUT_SECONDS`       | `1200`                |                                                  |
-| `FFMPEG_PRESET` / `FFMPEG_CRF` | `veryfast` / `20`     | jakość vs czas                                   |
-| `CAPTION_FONTS_DIR`            | —                     | dodatkowy katalog czcionek dla libass            |
-| `CAPTION_WORK_DIR`             | `/tmp/caption-burner` | katalog roboczy                                  |
-| `ALLOW_PRIVATE_URLS`           | `0`                   | `1` tylko do testów lokalnych (http, localhost)  |
+| Zmienna                        | Domyślnie             | Znaczenie                                                                 |
+| ------------------------------ | --------------------- | ------------------------------------------------------------------------- |
+| `CAPTION_BURNER_SECRET`        | — (wymagane)          | sekret Bearer                                                             |
+| `PORT`                         | `8080`                |                                                                           |
+| `MAX_CONCURRENCY`              | `1`                   | ile FFmpegów naraz (1 na maszynę 1–2 vCPU)                                |
+| `MAX_INPUT_MB`                 | `500`                 | limit pobieranego wideo (surowe filmy z biblioteki bywają po kilkaset MB) |
+| `JOB_TTL_MINUTES`              | `360`                 | po ilu minutach od zakończenia sprzątamy zadanie                          |
+| `DOWNLOAD_TIMEOUT_SECONDS`     | `300`                 |                                                                           |
+| `FFMPEG_TIMEOUT_SECONDS`       | `1200`                | limit wypalania napisów                                                   |
+| `TRANSCODE_TIMEOUT_SECONDS`    | `3600`                | limit kodowania przy kompresji (długi film na 0,1 vCPU)                   |
+| `UPLOAD_TIMEOUT_SECONDS`       | `600`                 | limit uploadu wyniku na `upload_url`                                      |
+| `FFMPEG_PRESET` / `FFMPEG_CRF` | `veryfast` / `20`     | jakość vs czas (CRF dotyczy napisów; kompresja ma własny `-crf 23`)       |
+| `FFPROBE_BIN`                  | `ffprobe`             |                                                                           |
+| `CAPTION_FONTS_DIR`            | —                     | dodatkowy katalog czcionek dla libass                                     |
+| `CAPTION_WORK_DIR`             | `/tmp/caption-burner` | katalog roboczy                                                           |
+| `ALLOW_PRIVATE_URLS`           | `0`                   | `1` tylko do testów lokalnych (http, localhost)                           |
 
 ## Test lokalny
 

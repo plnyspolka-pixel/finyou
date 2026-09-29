@@ -155,26 +155,38 @@ describe("planHasBroll / describeScenePlan", () => {
 describe("planReelStructure", () => {
   const segs = (n: number) => Array.from({ length: n }, (_, i) => `Zdanie ${i + 1}.`);
 
-  it("trzyma rytm: ujęcie → wizual hook → przebitka → a-roll, CTA na awatarze", () => {
+  it("trzyma rytm: ujęcie → przebitka → a-roll, CTA na awatarze, bez wizual hooków", () => {
     const out = planReelStructure(segs(6), { avatarIds: ["A", "B", "C"] });
-    expect(out.map((i) => i.kind)).toEqual(["avatar", "hook", "broll", "avatar", "hook", "avatar"]);
+    expect(out.map((i) => i.kind)).toEqual([
+      "avatar",
+      "broll",
+      "avatar",
+      "broll",
+      "avatar",
+      "avatar",
+    ]);
   });
 
   it("oddaje a-roll kolejnemu domyślnemu awatarowi", () => {
     const out = planReelStructure(segs(6), { avatarIds: ["A", "B", "C"] });
     const speakers = out.filter((i) => i.kind === "avatar").map((i) => i.avatarId);
-    expect(speakers).toEqual(["A", "B", "C"]);
+    expect(speakers).toEqual(["A", "B", "C", "A"]);
     expect(avatarsInPlan(out)).toEqual(["A", "B", "C"]);
   });
 
   it("zawija rotację, gdy domyślnych awatarów jest mniej niż ujęć", () => {
     const out = planReelStructure(segs(6), { avatarIds: ["A", "B"] });
-    expect(out.filter((i) => i.kind === "avatar").map((i) => i.avatarId)).toEqual(["A", "B", "A"]);
+    expect(out.filter((i) => i.kind === "avatar").map((i) => i.avatarId)).toEqual([
+      "A",
+      "B",
+      "A",
+      "B",
+    ]);
   });
 
   it("przy jednym awatarze nadal tnie, tylko bez zmiany twarzy", () => {
     const out = planReelStructure(segs(5), { avatarIds: ["A"] });
-    expect(out.map((i) => i.kind)).toEqual(["avatar", "hook", "broll", "avatar", "avatar"]);
+    expect(out.map((i) => i.kind)).toEqual(["avatar", "broll", "avatar", "broll", "avatar"]);
     expect(avatarsInPlan(out)).toEqual(["A"]);
   });
 
@@ -182,6 +194,7 @@ describe("planReelStructure", () => {
     const out = planReelStructure(segs(6), { avatarIds: ["A", "B", "C"] });
     expect(out[1].avatarId).toBe("B");
     expect(out[2].avatarId).toBe("B");
+    expect(out[3].avatarId).toBe("C");
   });
 
   it("nie tnie krótkiego materiału", () => {
@@ -195,13 +208,21 @@ describe("planReelStructure", () => {
     expect(planReelStructure(input, { avatarIds: ["A", "B"] }).map((i) => i.text)).toEqual(input);
   });
 
-  it("plan struktury liczy się jako urozmaicenie i ma opis z hookami", () => {
+  it("plan struktury liczy się jako urozmaicenie i ma opis z przebitkami", () => {
     const out = planReelStructure(segs(6), { avatarIds: ["A", "B", "C"] });
     expect(planHasBroll(out)).toBe(true);
-    expect(visualSceneCount(out)).toBe(3);
-    expect(describeScenePlan(out)).toBe(
-      "3 ujęcia z awatarem + 1 przebitka + 2 wizual hooki (3 awatary)",
-    );
+    expect(visualSceneCount(out)).toBe(2);
+    expect(describeScenePlan(out)).toBe("4 ujęcia z awatarem + 2 przebitki (3 awatary)");
+  });
+
+  it("stary plan z wizual hookiem (sprzed usunięcia) liczy się jak przebitka", () => {
+    const legacy = [
+      { kind: "avatar", text: "a", query: null },
+      { kind: "hook", text: "b", query: null },
+      { kind: "avatar", text: "c", query: null },
+    ] as unknown as Parameters<typeof describeScenePlan>[0];
+    expect(visualSceneCount(legacy)).toBe(1);
+    expect(describeScenePlan(legacy)).toBe("2 ujęcia z awatarem + 1 przebitka");
   });
 });
 
@@ -234,11 +255,11 @@ describe("buildStudioScenes — awatar per scena", () => {
     );
     expect(scenes[0]).toMatchObject({ input: { avatar_id: "A" } });
     expect(scenes[1]).toMatchObject({ type: "image" });
-    // CTA mówi już druga twarz — o to chodzi w „a-roll z innego awatara".
-    expect(scenes[3]).toMatchObject({ input: { avatar_id: "B" } });
+    // Po przebitce mówi już druga twarz — o to chodzi w „a-roll z innego awatara".
+    expect(scenes[2]).toMatchObject({ input: { avatar_id: "B" } });
   });
 
-  it("wizual hook bez grafiki wraca na awatara przypisanego scenie", () => {
+  it("przebitka bez grafiki wraca na awatara przypisanego scenie", () => {
     const plan = planReelStructure(["Hook.", "Treść.", "CTA."], { avatarIds: ["A", "B"] });
     const scenes = buildStudioScenes([{ item: plan[1], audioAssetId: "a1", imageUrl: null }], {
       avatarId: "zapas",

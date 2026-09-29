@@ -42,15 +42,17 @@ import {
 } from "@/lib/studio.functions";
 // Etykiety platform są wspólne z panelem materiałów (/admin/materialy).
 import { PLATFORM_LABELS } from "@/lib/studio-platforms";
+import { isVideoPreparingNote } from "@/lib/video-rendition";
 import { captionBadgeLabel } from "@/lib/studio-captions";
 import {
   CAPTION_STYLE_OPTIONS,
   CUSTOM_CAPTION_STYLES,
+  DEFAULT_CUSTOM_CAPTION_STYLE,
   captionPreviewCss,
   isCustomCaptionStyle,
   type CaptionStyleId,
 } from "@/lib/caption-style";
-import { describeScenePlan } from "@/lib/studio-scenes";
+import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL, describeScenePlan } from "@/lib/studio-scenes";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
 import { getTiktokIntegrationStatus, getTiktokCreatorInfo } from "@/lib/tiktok.functions";
 import { TiktokPostOptionsFields } from "@/components/admin/tiktok-post-options-fields";
@@ -145,7 +147,7 @@ const VIDEO_STATUS_LABELS: Record<string, string> = {
   generating_audio: "Generuję lektora…",
   uploading: "Wysyłam audio…",
   rendering: "Renderowanie w HeyGen…",
-  captioning: "Wypalam napisy…",
+  captioning: "Wypalam napisy / znaczek AI…",
   ready: "Gotowe",
   failed: "Błąd",
 };
@@ -447,16 +449,23 @@ function StudioPage() {
   // usługą FFmpeg. Gdy usługa jest skonfigurowana, domyślnie „rolka”.
   const [captionStyle, setCaptionStyle] = useState<CaptionStyleId>("heygen");
   const captionBurnerOn = !!status?.captionBurnerConfigured;
+  // Znaczek „AI" w rogu rolki kładzie usługa wypalania (HeyGen nie ma warstw).
+  const aiBadgeOn = status?.aiBadgeEnabled !== false;
   const captionStyleDefaulted = useRef(false);
   useEffect(() => {
     if (captionBurnerOn && !captionStyleDefaulted.current) {
       captionStyleDefaulted.current = true;
-      setCaptionStyle("reels");
+      setCaptionStyle(DEFAULT_CUSTOM_CAPTION_STYLE);
     }
   }, [captionBurnerOn]);
   // Montaż rolki: pojedyncze ujęcie | przebitki wskazane przez AI | stała
-  // struktura (ujęcie → wizual hook → przebitka → a-roll innego awatara).
-  const [montage, setMontage] = useState<"single" | "ai" | "structure">("single");
+  // struktura (ujęcie → przebitka → a-roll innego awatara).
+  // Domyślnie struktura z przebitkami b-roll — tak wychodzą rolki z panelu,
+  // serii, crona i MCP, chyba że ktoś świadomie wybierze pojedyncze ujęcie.
+  const [montage, setMontage] = useState<"single" | "ai" | "structure">("structure");
+  // Ile twarzy w jednej rolce: prowadzący + partnerzy z zestawu, których
+  // serwer dobiera rotacyjnie (najdawniej użyty pierwszy).
+  const [avatarsPerReel, setAvatarsPerReel] = useState<number>(AVATARS_PER_REEL);
   const dynamicScenesOn = montage !== "single";
   const reelStructureOn = montage === "structure";
 
@@ -520,37 +529,41 @@ function StudioPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Rotacja wysyłana z generatorem: wybrany awatar prowadzi, reszta zestawu
-  // przejmuje kolejne a-rolle.
+  // Pula twarzy wysyłana z generatorem: wybrany awatar prowadzi, a z reszty
+  // zestawu serwer dobiera partnerów do rolki (rotacja po ostatnich rolkach).
   const avatarRotation = useMemo(
     () => [...new Set([avatarId, ...avatarPicks])],
     [avatarId, avatarPicks],
   );
+  const partnerPool = avatarRotation.slice(1);
+  const facesInReel = Math.min(avatarsPerReel, avatarRotation.length);
 
   // ── Bank b-rolli ───────────────────────────────────────────────────────────
-  const [brollKindFilter, setBrollKindFilter] = useState<"all" | "broll" | "hook">("all");
+  const [brollStateFilter, setBrollStateFilter] = useState<"all" | "active" | "inactive">("all");
   const [brollSearch, setBrollSearch] = useState("");
   const [newBrollUrl, setNewBrollUrl] = useState("");
   const [newBrollTitle, setNewBrollTitle] = useState("");
   const [newBrollTags, setNewBrollTags] = useState("");
-  const [newBrollKind, setNewBrollKind] = useState<"broll" | "hook">("broll");
+  // Postęp zasilania banku — seed idzie porcjami fraz, panel woła go w pętli.
+  const [seedProgress, setSeedProgress] = useState<{ added: number; remaining: number } | null>(
+    null,
+  );
 
   const filteredBroll = useMemo(() => {
     const needle = brollSearch.trim().toLowerCase();
     return brollAssets.filter(
       (a) =>
-        (brollKindFilter === "all" || a.kind === brollKindFilter) &&
+        (brollStateFilter === "all" || a.active === (brollStateFilter === "active")) &&
         (!needle ||
           a.title.toLowerCase().includes(needle) ||
           a.source_query.toLowerCase().includes(needle) ||
           a.tags.some((t) => t.includes(needle))),
     );
-  }, [brollAssets, brollKindFilter, brollSearch]);
+  }, [brollAssets, brollStateFilter, brollSearch]);
 
   const brollCounts = useMemo(
     () => ({
-      broll: brollAssets.filter((a) => a.kind === "broll" && a.active).length,
-      hook: brollAssets.filter((a) => a.kind === "hook" && a.active).length,
+      broll: brollAssets.filter((a) => a.active).length,
     }),
     [brollAssets],
   );
@@ -562,7 +575,6 @@ function StudioPage() {
       addBrollFn({
         data: {
           url: newBrollUrl.trim(),
-          kind: newBrollKind,
           title: newBrollTitle.trim(),
           tags: newBrollTags,
         },
@@ -578,16 +590,34 @@ function StudioPage() {
   });
 
   const seedBrollM = useMutation({
-    mutationFn: () => seedBrollFn({ data: {} }),
+    // Serwer przerabia jedną porcję fraz na wywołanie (limit żądań funkcji),
+    // więc wołamy go, dopóki są frazy do pobrania albo porcja nic nie wniosła.
+    mutationFn: async () => {
+      let added = 0;
+      let failed = 0;
+      let remaining = 0;
+      setSeedProgress({ added: 0, remaining: 0 });
+      for (let round = 0; round < 50; round++) {
+        const r = await seedBrollFn({ data: {} });
+        added += r.added;
+        failed += r.failed;
+        remaining = r.remaining;
+        setSeedProgress({ added, remaining });
+        refreshBroll();
+        if (!r.remaining || !r.added) break;
+      }
+      return { added, failed, remaining };
+    },
     onSuccess: (r) => {
       toast.success(
-        `Bank uzupełniony: +${r.added}` +
-          (r.skipped ? `, pominięto ${r.skipped} (już są)` : "") +
-          (r.failed ? `, nieudane ${r.failed}` : ""),
+        `Bank uzupełniony: +${r.added} przebitek` +
+          (r.failed ? `, nieudane ${r.failed}` : "") +
+          (r.remaining ? ` (zostało ${r.remaining} fraz — kliknij ponownie)` : ""),
       );
       refreshBroll();
     },
     onError: (e: Error) => toast.error(e.message),
+    onSettled: () => setSeedProgress(null),
   });
 
   const brollActiveM = useMutation({
@@ -732,6 +762,7 @@ function StudioPage() {
           dynamic_scenes: dynamicScenesOn,
           reel_structure: reelStructureOn,
           avatar_ids: avatarRotation,
+          avatars_per_reel: avatarsPerReel,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
           publish_title: title,
@@ -771,6 +802,7 @@ function StudioPage() {
           dynamic_scenes: dynamicScenesOn,
           reel_structure: reelStructureOn,
           avatar_ids: avatarRotation,
+          avatars_per_reel: avatarsPerReel,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
           tiktok_post_options: autoTtSelected ? autoTtOptions : undefined,
@@ -1137,7 +1169,13 @@ function StudioPage() {
                               : `Plan: ${new Date(item.scheduled_at).toLocaleString("pl-PL")}`}
                           </p>
                           {item.last_error && (
-                            <p className="break-words text-xs text-destructive">
+                            <p
+                              className={`break-words text-xs ${
+                                isVideoPreparingNote(item.last_error)
+                                  ? "text-muted-foreground"
+                                  : "text-destructive"
+                              }`}
+                            >
                               {item.last_error}
                             </p>
                           )}
@@ -1227,7 +1265,13 @@ function StudioPage() {
                               ` • próby: ${item.attempt_count}/${MAX_PUBLISH_ATTEMPTS}`}
                           </p>
                           {item.last_error && (
-                            <p className="break-words text-xs text-destructive">
+                            <p
+                              className={`break-words text-xs ${
+                                isVideoPreparingNote(item.last_error)
+                                  ? "text-muted-foreground"
+                                  : "text-destructive"
+                              }`}
+                            >
                               {item.last_error}
                             </p>
                           )}
@@ -1830,6 +1874,19 @@ function StudioPage() {
                           ? CAPTION_STYLE_OPTIONS.find((o) => o.id === captionStyle)?.description
                           : "HeyGen nie pozwala ustawić rozmiaru, czcionki ani pozycji napisów. Własne style wypala usługa caption-burner — sekrety CAPTION_BURNER_URL i CAPTION_BURNER_SECRET (opis w docs/studio-publikacji.md)."}
                       </p>
+                      {aiBadgeOn && (
+                        <p
+                          className={
+                            captionBurnerOn
+                              ? "text-xs text-muted-foreground"
+                              : "text-xs text-amber-600 dark:text-amber-500"
+                          }
+                        >
+                          {captionBurnerOn
+                            ? "Każda rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner razem z napisami)."
+                            : "Znaczek „AI” w rogu wymaga usługi caption-burner — bez niej rolki wyjdą bez znaczka."}
+                        </p>
+                      )}
                     </>
                   )}
                 </div>
@@ -1845,9 +1902,28 @@ function StudioPage() {
                     <option value="single">Pojedyncze ujęcie (gadająca głowa)</option>
                     <option value="ai">Przebitki — miejsca cięć wskazuje AI</option>
                     <option value="structure">
-                      Struktura: ujęcie → wizual hook → b-roll → a-roll innego awatara
+                      Struktura: ujęcie → b-roll → a-roll innego awatara
                     </option>
                   </select>
+                  {montage !== "single" && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Label htmlFor="studio-avatars-per-reel" className="shrink-0">
+                        Twarze w rolce
+                      </Label>
+                      <select
+                        id="studio-avatars-per-reel"
+                        className="h-9 rounded-md border bg-background px-2 text-sm"
+                        value={avatarsPerReel}
+                        onChange={(e) => setAvatarsPerReel(Number(e.target.value))}
+                      >
+                        {Array.from({ length: MAX_AVATARS_PER_REEL }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n}>
+                            {n === 1 ? "1 (jedna twarz)" : n}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
               {montage === "ai" && (
@@ -1862,25 +1938,29 @@ function StudioPage() {
               {montage === "structure" && (
                 <div className="space-y-1 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
                   <p className="font-medium text-foreground">
-                    Stały rytm: ujęcie → wizual hook → b-roll → a-roll innego domyślnego awatara (i
-                    tak w kółko; CTA zawsze wraca na twarz).
+                    Stały rytm: ujęcie → b-roll → a-roll innego domyślnego awatara (i tak w kółko;
+                    CTA zawsze wraca na twarz).
                   </p>
                   <p>
                     Miejsca cięć są z góry ustalone — AI dobiera już tylko, czym zilustrować
-                    przebitkę. Wizual hooki i b-rolle lecą z banku (zakładka „B-rolle”:{" "}
-                    {brollCounts.hook} hooków, {brollCounts.broll} przebitek).
+                    przebitkę. B-rolle lecą z banku (zakładka „B-rolle”: {brollCounts.broll}{" "}
+                    przebitek do wyboru).
                   </p>
                   <p>
-                    Rotacja twarzy:{" "}
-                    {avatarRotation.length > 1
-                      ? avatarRotation.map(avatarName).join(" → ")
-                      : `${avatarName(avatarId)} (dodaj więcej domyślnych awatarów, żeby a-roll mówiła inna twarz)`}
+                    Twarze w rolce: prowadzi {avatarName(avatarId)}
+                    {facesInReel > 1 && partnerPool.length
+                      ? facesInReel - 1 >= partnerPool.length
+                        ? ` + ${partnerPool.map(avatarName).join(", ")}`
+                        : ` + ${facesInReel - 1} z: ${partnerPool.map(avatarName).join(", ")} (dobierane rotacyjnie — najdawniej użyta twarz wchodzi pierwsza, w serii każda rolka dostaje kolejną)`
+                      : avatarsPerReel > 1
+                        ? " (dodaj więcej domyślnych awatarów, żeby a-roll mówiła inna twarz)"
+                        : " (jedna twarz)"}
                     .
                   </p>
-                  {!brollCounts.hook && (
+                  {!brollCounts.broll && (
                     <p className="text-amber-600 dark:text-amber-500">
-                      Bank nie ma jeszcze wizual hooków — uzupełnij go w zakładce „B-rolle”, inaczej
-                      te sceny spadną z powrotem na awatara.
+                      Bank b-rolli jest pusty — uzupełnij go w zakładce „B-rolle”, inaczej przebitki
+                      będą dociągane ze stocku w trakcie renderu.
                     </p>
                   )}
                 </div>
@@ -1980,19 +2060,28 @@ function StudioPage() {
                                   <Layers className="h-3 w-3" /> struktura rolki
                                 </Badge>
                               )}
+                              {j.material && (
+                                <a
+                                  href="/admin/materialy"
+                                  title="Rolka jest w bibliotece materiałów — otwórz /admin/materialy"
+                                >
+                                  <Badge variant="outline" className="gap-1">
+                                    <Library className="h-3 w-3" /> w materiałach (
+                                    {j.material.audience})
+                                  </Badge>
+                                </a>
+                              )}
                               {j.scene_plan?.length ? (
                                 <Badge
                                   variant="outline"
                                   className="gap-1"
                                   title={j.scene_plan
                                     .map((s, i) =>
-                                      s.kind === "broll"
-                                        ? `${i + 1}. przebitka: ${s.query ?? "z banku"}`
-                                        : s.kind === "hook"
-                                          ? `${i + 1}. wizual hook`
-                                          : `${i + 1}. awatar${
-                                              s.avatarId ? `: ${avatarName(s.avatarId)}` : ""
-                                            }`,
+                                      s.kind === "avatar"
+                                        ? `${i + 1}. awatar${
+                                            s.avatarId ? `: ${avatarName(s.avatarId)}` : ""
+                                          }`
+                                        : `${i + 1}. przebitka: ${s.query ?? "z banku"}`,
                                     )
                                     .join("\n")}
                                 >
@@ -2157,15 +2246,12 @@ function StudioPage() {
         <TabsContent value="b-rolle" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Bank b-rolli i wizual hooków</CardTitle>
+              <CardTitle className="text-lg">Bank b-rolli</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">
                   <Film className="mr-1 h-3.5 w-3.5" /> {brollCounts.broll} przebitek
-                </Badge>
-                <Badge variant="secondary">
-                  <Layers className="mr-1 h-3.5 w-3.5" /> {brollCounts.hook} wizual hooków
                 </Badge>
                 <Button
                   size="sm"
@@ -2178,40 +2264,34 @@ function StudioPage() {
                   ) : (
                     <Sparkles className="mr-1 h-4 w-4" />
                   )}
-                  Uzupełnij bank ze stocku
+                  {seedProgress
+                    ? `Pobieram… +${seedProgress.added}${
+                        seedProgress.remaining ? ` (zostało ${seedProgress.remaining} fraz)` : ""
+                      }`
+                    : "Uzupełnij bank ze stocku"}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={refreshBroll}>
                   <RefreshCw className="mr-1 h-4 w-4" /> Odśwież
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Materiały z banku trafiają do rolek: przebitki dobierane są po tagach do frazy
-                planera, a wizual hooki rotują od najdawniej użytego. Każdy plik kopiujemy do
-                naszego bucketu <code>studio-media</code> — HeyGen i Meta czytają trwały URL, a nie
-                wygasający link stocku. „Uzupełnij bank ze stocku” pobiera startowy zestaw (Pexels,
-                gdy jest klucz <code>PEXELS_API_KEY</code>, inaczej biblioteka HeyGena) i pomija
-                frazy, które już masz.
+                Przebitki z banku trafiają do rolek dobierane po tagach do frazy planera (przy
+                remisie — najdawniej użyta). Każdy plik kopiujemy do naszego bucketu{" "}
+                <code>studio-media</code> — HeyGen i Meta czytają trwały URL, a nie wygasający link
+                stocku. „Uzupełnij bank ze stocku” pobiera startowy zestaw ok. 100 tematów po kilka
+                ujęć na temat (Pexels, gdy jest klucz <code>PEXELS_API_KEY</code>, inaczej
+                biblioteka HeyGena) i pomija tematy, które już masz. Nietrafione kadry wyłącz albo
+                usuń — nie wejdą do doboru.
               </p>
 
               <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_1fr_auto]">
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2 md:col-span-3">
                   <Label>Dodaj własny materiał (publiczny URL grafiki)</Label>
                   <Input
                     value={newBrollUrl}
                     onChange={(e) => setNewBrollUrl(e.target.value)}
                     placeholder="https://…/przebitka.jpg"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>Rodzaj</Label>
-                  <select
-                    className="h-10 w-full rounded-md border bg-background p-2 text-sm"
-                    value={newBrollKind}
-                    onChange={(e) => setNewBrollKind(e.target.value as "broll" | "hook")}
-                  >
-                    <option value="broll">Przebitka (b-roll)</option>
-                    <option value="hook">Wizual hook</option>
-                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label>Nazwa / opis</Label>
@@ -2258,12 +2338,14 @@ function StudioPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   className="h-9 rounded-md border bg-background px-2 text-sm"
-                  value={brollKindFilter}
-                  onChange={(e) => setBrollKindFilter(e.target.value as "all" | "broll" | "hook")}
+                  value={brollStateFilter}
+                  onChange={(e) =>
+                    setBrollStateFilter(e.target.value as "all" | "active" | "inactive")
+                  }
                 >
-                  <option value="all">Wszystko</option>
-                  <option value="broll">Tylko przebitki</option>
-                  <option value="hook">Tylko wizual hooki</option>
+                  <option value="all">Wszystkie</option>
+                  <option value="active">Tylko włączone</option>
+                  <option value="inactive">Tylko wyłączone</option>
                 </select>
                 <Input
                   className="h-9 w-56"
@@ -2296,9 +2378,6 @@ function StudioPage() {
                         loading="lazy"
                       />
                       <div className="flex flex-wrap items-center gap-1">
-                        <Badge variant={a.kind === "hook" ? "default" : "secondary"}>
-                          {a.kind === "hook" ? "wizual hook" : "przebitka"}
-                        </Badge>
                         {!a.active && <Badge variant="outline">wyłączony</Badge>}
                         <span className="text-[11px] text-muted-foreground">
                           użyć: {a.use_count}
@@ -2418,7 +2497,6 @@ function StudioPage() {
                             addBrollFn({
                               data: {
                                 url: im.image_url,
-                                kind: "broll",
                                 title: im.prompt.slice(0, 120),
                               },
                             })
