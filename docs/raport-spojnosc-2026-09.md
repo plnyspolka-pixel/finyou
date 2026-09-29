@@ -59,7 +59,7 @@ Dokumenty klienta — `docs/legal/klient/` (generator:
 | Dokument | Wersja | SHA-256 pliku .md |
 |---|---|---|
 | Regulamin klienta | 2 | `b633e661f91899e394fee88c022a11e4114ef8e2d337d2b481a260985fcf50d1` |
-| Polityka prywatności | 2 | `8c77e344ad8cd314b7c67b051f43b39d652383c0040221a43e38b0c3f6a598d3` |
+| Polityka prywatności | 2 | `cfaed73e69c141c7fab4d36937806d585f1776180dd0ca6c8b2daaa54b8804e0` |
 
 Zalogowani klienci (regulamin + polityka) i inwestorzy (polityka) akceptują
 wersję 2 przy następnym wejściu do panelu (`ConsentGate`, tabela
@@ -109,10 +109,18 @@ Pełny zestaw: 105 plików, 1289 testów — zielone. `tsc --noEmit` i
    klienta (dotąd 1,79–4% miesięcznie, czyli ponad odsetki maksymalne) i
    dopisuje blok „ZASADY OPŁAT I B2B”. Po wdrożeniu przejrzeć prompt w
    `/admin/text-agent` i zsynchronizować agentów głosowych.
-6. **Nazwy podmiotów przetwarzających** w Polityce prywatności v2 podano
-   markami (Supabase, AWS Bedrock, Didit, Dilisense, ElevenLabs, Twilio, Tpay,
-   Meta). Prawnik powinien uzupełnić pełne nazwy i siedziby oraz potwierdzić
-   podstawy transferu poza EOG.
+6. ✅ **Podmioty przetwarzające w Polityce prywatności v2** — uzupełnione
+   pełnymi nazwami, adresami i podstawami transferu na podstawie oficjalnych
+   stron dostawców (stan na 29.09.2026): Lovable (z dalszymi podmiotami
+   Supabase, Cloudflare, Google, OpenAI), Anthropic, Didit, dilisense,
+   ElevenLabs, Twilio, Tpay, Resend; Meta jako współadministrator dla piksela
+   i Conversions API. Platforma **nie korzysta z AWS Bedrock** (modele AI idą
+   przez Lovable AI Gateway i API Anthropic), więc Bedrock nie jest wymieniony.
+   Do ręcznego potwierdzenia przed publikacją (strony były niedostępne z
+   sandboxa): wpisy w rejestrze dataprivacyframework.gov (Eleven Labs, Resend,
+   Google, Cloudflare, Twilio, Meta — certyfikaty odnawiane co roku), region
+   Lovable Cloud wybrany dla projektu, aktualny adres siedziby Twilio Ireland
+   Limited w rejestrze CRO.
 7. **Brak lustra drizzle dla `20260928120000_studio_napisy_wlasne.sql`** —
    migracja sprzed tej pracy nie ma odpowiednika w `drizzle/migrations`, więc
    nie trafi na produkcję ścieżką drizzle. Poza zakresem — do decyzji.

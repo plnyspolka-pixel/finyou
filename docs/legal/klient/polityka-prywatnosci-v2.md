@@ -279,17 +279,19 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 5. Finance You przekazuje dane osobowe wyłącznie w zakresie niezbędnym do realizacji określonego celu.
 
-6. Główni dostawcy przetwarzający dane w imieniu Finance You:
-   1. **Supabase** – baza danych, uwierzytelnianie, przechowywanie plików i funkcje serwerowe Platformy (infrastruktura Amazon Web Services);
-   2. **Amazon Web Services (AWS Bedrock)** – modele językowe wykorzystywane do wstępnej analizy dokumentów, przygotowania opisów spraw i działania asystentów AI;
-   3. **Didit** – weryfikacja tożsamości (KYC), w tym weryfikacja dokumentu tożsamości i zdjęcia twarzy;
-   4. **Dilisense** – weryfikacja na listach sankcyjnych i list osób zajmujących eksponowane stanowiska polityczne (AML);
-   5. **ElevenLabs** – agenci głosowi i tekstowi AI, synteza i rozpoznawanie mowy, transkrypcja rozmów;
-   6. **Twilio** – połączenia telefoniczne i wiadomości SMS;
-   7. **Tpay** – obsługa płatności elektronicznych;
-   8. **Meta** (Facebook, Instagram, Messenger) – formularze reklamowe, komunikacja przez Messenger oraz narzędzia pomiaru reklam, w zakresie wymagającym zgody – na podstawie zgody.
+6. Podmioty przetwarzające dane w imieniu Finance You (stan na 29 września 2026 r.):
+   1. **Lovable Labs Incorporated** (USA), w Unii Europejskiej reprezentowana przez **Lovable Labs Sweden AB**, Regeringsgatan 25, 111 53 Sztokholm, Szwecja – hosting aplikacji i bazy danych Platformy (Lovable Cloud), uwierzytelnianie, przechowywanie plików oraz dostęp do modeli sztucznej inteligencji wykorzystywanych do wstępnej analizy dokumentów, przygotowania opisów spraw i działania asystentów AI. Dalszymi podmiotami przetwarzającymi Lovable są w szczególności: Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapur 049513 (baza danych na infrastrukturze Amazon Web Services), Cloudflare, Inc., 101 Townsend St., San Francisco, CA 94107, USA (uruchamianie aplikacji i sieć dostarczania treści), Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA (modele Gemini) oraz OpenAI (modele językowe i transkrypcja mowy);
+   2. **Anthropic Ireland, Limited**, 6th Floor, South Bank House, Barrow Street, Dublin 4, D04 TR29, Irlandia – model językowy Claude w narzędziach wewnętrznych zespołu Finance You; dane nie są wykorzystywane do trenowania modeli;
+   3. **Didit Identity Spain, S.L.**, Calle Nápoles 227, P. 1, 08013 Barcelona, Hiszpania (CIF B22929327) – weryfikacja tożsamości (KYC), w tym weryfikacja dokumentu tożsamości i zdjęcia twarzy;
+   4. **dilisense GmbH**, Weinbergstrasse 131, 8006 Zurych, Szwajcaria (UID CHE-406.519.053) – weryfikacja na listach sankcyjnych i listach osób zajmujących eksponowane stanowiska polityczne (AML);
+   5. **Eleven Labs Inc.**, 169 Madison Ave #2484, New York, NY 10016, USA – agenci głosowi i tekstowi AI, synteza i rozpoznawanie mowy, transkrypcja rozmów;
+   6. **Twilio Ireland Limited**, Dublin, Irlandia (nr rejestru CRO 557454) – połączenia telefoniczne i wiadomości SMS;
+   7. **Krajowy Integrator Płatności S.A.** (Tpay), pl. Władysława Andersa 3, 61-894 Poznań (KRS 0000412357, NIP 7773061579) – obsługa płatności elektronicznych;
+   8. **Plus Five Five, Inc.** (Resend), 2261 Market Street #5039, San Francisco, CA 94114, USA – wysyłka wiadomości e-mail.
 
-7. Aktualną listę podmiotów przetwarzających dane można uzyskać, pisząc na adres [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
+7. **Meta Platforms Ireland Limited**, Merrion Road, Dublin 4, D04 X2K5, Irlandia – formularze reklamowe (Lead Ads), komunikacja przez Messenger i Instagram oraz piksel Meta i Conversions API. W zakresie zbierania i przekazywania danych o zdarzeniach (piksel, Conversions API) Finance You i Meta Platforms Ireland Limited są współadministratorami (art. 26 RODO); w pozostałym zakresie Meta działa jako podmiot przetwarzający albo odrębny administrator. Narzędzia pomiaru reklam uruchamiamy na podstawie zgody.
+
+8. Aktualną listę podmiotów przetwarzających dane można uzyskać, pisząc na adres [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
 
 ---
 
@@ -306,7 +308,15 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
    3. dodatkowe środki bezpieczeństwa;
    4. inne podstawy przewidziane przez RODO.
 
-4. Przekazanie danych poza Europejski Obszar Gospodarczy może dotyczyć w szczególności dostawców z siedzibą lub infrastrukturą w Stanach Zjednoczonych (m.in. Twilio, ElevenLabs, Meta, Amazon Web Services, Supabase — zależnie od regionu usługi). Podstawą jest decyzja Komisji Europejskiej dotycząca EU-US Data Privacy Framework wobec podmiotów certyfikowanych albo standardowe klauzule umowne.
+4. Przekazanie danych poza Europejski Obszar Gospodarczy dotyczy w szczególności:
+   1. Lovable Labs Incorporated (USA) i jej dalszych podmiotów przetwarzających, w tym Supabase Pte. Ltd. (Singapur) – standardowe klauzule umowne;
+   2. Anthropic i OpenAI (USA) – standardowe klauzule umowne;
+   3. Eleven Labs Inc., Plus Five Five, Inc. (Resend), Google LLC i Cloudflare, Inc. (USA) – decyzja Komisji Europejskiej w sprawie EU-US Data Privacy Framework wobec podmiotów certyfikowanych oraz standardowe klauzule umowne;
+   4. Twilio Inc. (USA) – wiążące reguły korporacyjne (BCR), EU-US Data Privacy Framework oraz standardowe klauzule umowne;
+   5. Meta Platforms, Inc. (USA) – EU-US Data Privacy Framework oraz standardowe klauzule umowne;
+   6. dilisense GmbH (Szwajcaria) – decyzja Komisji Europejskiej stwierdzająca odpowiedni stopień ochrony danych w Szwajcarii.
+
+   Didit Identity Spain, S.L. i Krajowy Integrator Płatności S.A. przetwarzają dane co do zasady w Europejskim Obszarze Gospodarczym.
 
 5. Użytkownik może uzyskać dodatkowe informacje o stosowanych zabezpieczeniach, kontaktując się z Finance You pod adresem [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
 

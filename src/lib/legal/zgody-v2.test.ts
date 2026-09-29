@@ -41,19 +41,26 @@ describe("regulamin klienta v2", () => {
 describe("polityka prywatności v2", () => {
   it("IOD niewyznaczony, podmioty przetwarzające, § 17 udział człowieka, nagrywanie AI", () => {
     expect(polityka).toContain("Administrator nie wyznaczył inspektora ochrony danych (IOD).");
+    // Pełne nazwy podmiotów (stan na 29.09.2026) — tylko faktycznie używani dostawcy.
     for (const p of [
-      "Supabase",
-      "AWS Bedrock",
-      "Didit",
-      "Dilisense",
-      "ElevenLabs",
-      "Twilio",
-      "Tpay",
-      "Meta",
+      "Lovable Labs Sweden AB",
+      "Supabase Pte. Ltd.",
+      "Anthropic Ireland, Limited",
+      "Didit Identity Spain, S.L.",
+      "dilisense GmbH",
+      "Eleven Labs Inc.",
+      "Twilio Ireland Limited",
+      "Krajowy Integrator Płatności S.A.",
+      "Plus Five Five, Inc. (Resend)",
+      "Meta Platforms Ireland Limited",
+      "współadministratorami (art. 26 RODO)",
     ]) {
       expect(polityka).toContain(p);
     }
     expect(polityka).not.toContain("jeżeli w przyszłości zostaną wykorzystani");
+    // Platforma nie korzysta z AWS Bedrock — polityka nie może go wymieniać.
+    expect(polityka).not.toContain("Bedrock");
+    expect(polityka).toContain("standardowe klauzule umowne");
     expect(polityka).toContain("zawsze podejmuje człowiek");
     expect(polityka).toContain(
       "agent informuje, że jest asystentem AI i że rozmowa jest nagrywana",
