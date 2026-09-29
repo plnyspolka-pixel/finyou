@@ -3,6 +3,7 @@ import type { HeygenCatalogItem } from "./heygen-catalog.server";
 import {
   markDefaultAvatars,
   pickReelRotation,
+  pickReelRotations,
   type StudioDefaultAvatar,
 } from "./studio-avatars.server";
 
@@ -112,5 +113,23 @@ describe("pickReelRotation", () => {
       history.unshift(rotation);
     }
     expect(seen).toEqual(["B", "C", "D", "B"]);
+  });
+});
+
+describe("pickReelRotations", () => {
+  it("seria wsadowa obchodzi pulę, zaczynając od twarzy najdawniej użytej", () => {
+    const out = pickReelRotations({
+      lead: "A",
+      defaults: ["A", "B", "C", "D"],
+      count: 2,
+      recent: [["A", "B"]],
+      n: 4,
+    });
+    expect(out.map((r) => r.join(""))).toEqual(["AC", "AD", "AB", "AC"]);
+  });
+
+  it("zawsze zwraca co najmniej jedną rotację z prowadzącym", () => {
+    const out = pickReelRotations({ lead: "A", defaults: [], count: 2, recent: [], n: 3 });
+    expect(out).toEqual([["A"], ["A"], ["A"]]);
   });
 });

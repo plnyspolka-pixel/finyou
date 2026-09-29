@@ -2,8 +2,9 @@
 //
 // Zestaw ustawia przycisk w panelu (tabela `studio_default_avatars`), a czyta
 // go każdy tor generacji: pojedyncze wideo, seria wsadowa, cron i narzędzia
-// MCP. Kolejność (`position`) to rotacja a-rolli — pierwszy awatar mówi hook,
-// kolejni przejmują następne ujęcia („a-roll z innego awatara").
+// MCP. Kolejność (`position`) to kolejność puli — pierwszy awatar mówi hook,
+// a partnerów do rolki (domyślnie jeden, `AVATARS_PER_REEL`) dobiera rotacja
+// po ostatnich rolkach, żeby cały zestaw dostawał ekran po równo.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { HeygenCatalogItem } from "./heygen-catalog.server";
@@ -44,32 +45,20 @@ export async function getDefaultAvatarIds(): Promise<string[]> {
 }
 
 /**
- * Rotacja dla joba: to, co zapisano przy jobie, a gdy pusto — aktualny zestaw
- * domyślnych. Dzięki temu joby z kolejki (cron) też dostają pełną rotację.
- */
-export async function resolveAvatarRotation(
-  stored: string[] | null | undefined,
-): Promise<string[]> {
-  const fromJob = (stored ?? []).filter(Boolean);
-  if (fromJob.length) return fromJob;
-  return await getDefaultAvatarIds();
-}
-
-/**
- * Rotacja twarzy dla JEDNEJ rolki z zestawu domyślnych: prowadzący, a za nim
- * partnerzy z zestawu — najpierw ci, których ostatnie rolki nie użyły
- * (najdawniej użyty pierwszy; remis rozstrzyga kolejność zestawu). Dzięki
+ * Rotacja twarzy dla JEDNEJ rolki z puli (zwykle zestawu domyślnych):
+ * prowadzący, a za nim partnerzy — najpierw ci, których ostatnie rolki nie
+ * użyły (najdawniej użyty pierwszy; remis rozstrzyga kolejność puli). Dzięki
  * temu zestaw czterech twarzy przy dwóch na rolkę rozkłada się po równo,
  * zamiast wiecznie parować prowadzącego z pozycją 2. Gdy liczba twarzy
- * obejmuje cały zestaw, kolejność zostaje taka jak w panelu.
+ * obejmuje całą pulę, kolejność zostaje taka jak w panelu.
  */
 export function pickReelRotation(opts: {
   lead: string;
-  /** Zestaw domyślnych w kolejności z panelu. */
+  /** Pula twarzy w kolejności z panelu (prowadzący może w niej być). */
   defaults: string[];
   /** Ile twarzy w rolce razem z prowadzącym. */
   count: number;
-  /** `avatar_ids` ostatnich jobów, od najnowszego. */
+  /** Rotacje ostatnich rolek z montażem, od najnowszej. */
   recent: string[][];
 }): string[] {
   const { lead } = opts;
@@ -77,37 +66,89 @@ export function pickReelRotation(opts: {
   const partners = Math.max(0, Math.floor(opts.count) - 1);
   if (!partners || !pool.length) return [lead];
   if (partners >= pool.length) return [lead, ...pool];
-  // Wiek = indeks najnowszego joba z tą twarzą; nieużyta = starsza niż wszystko.
+  // Wiek = indeks najnowszej rolki z tą twarzą; nieużyta = starsza niż wszystko.
   const age = new Map<string, number>();
   opts.recent.forEach((ids, i) => {
     for (const id of ids ?? []) if (!age.has(id)) age.set(id, i);
   });
   const ageOf = (id: string) => age.get(id) ?? opts.recent.length;
-  // Sort jest stabilny — przy równym wieku zostaje kolejność zestawu.
+  // Sort jest stabilny — przy równym wieku zostaje kolejność puli.
   const ranked = [...pool].sort((a, b) => ageOf(b) - ageOf(a));
   return [lead, ...ranked.slice(0, partners)];
+}
+
+/**
+ * Rotacje dla `n` kolejnych rolek (seria wsadowa): każda następna widzi
+ * poprzednie jako „ostatnio użyte", więc partnerzy obchodzą całą pulę.
+ */
+export function pickReelRotations(opts: {
+  lead: string;
+  defaults: string[];
+  count: number;
+  recent: string[][];
+  n: number;
+}): string[][] {
+  const history = [...opts.recent];
+  const out: string[][] = [];
+  for (let i = 0; i < opts.n; i++) {
+    const rotation = pickReelRotation({ ...opts, recent: history });
+    out.push(rotation);
+    history.unshift(rotation);
+  }
+  return out;
 }
 
 /** Ile ostatnich jobów liczy się przy doborze partnera. */
 const RECENT_JOBS_FOR_ROTATION = 50;
 
 /**
- * Rotacja dla joba zakładanego bez `avatar_ids` (np. z MCP): prowadzący +
- * partnerzy z zestawu domyślnych dobrani po ostatnich jobach.
+ * Rotacje ostatnich rolek, od najnowszej. Liczą się tylko joby z montażem
+ * (struktura albo przebitki) — w pojedynczym ujęciu partnera nie widać,
+ * więc nie powinien tracić kolejki.
  */
-export async function defaultReelRotation(lead: string, count: number): Promise<string[]> {
-  const defaults = await getDefaultAvatarIds();
+async function recentReelRotations(): Promise<string[][]> {
   const { data, error } = await supabaseAdmin
     .from("studio_video_jobs")
-    .select("avatar_ids")
+    .select("avatar_ids, reel_structure, dynamic_scenes")
     .order("created_at", { ascending: false })
     .limit(RECENT_JOBS_FOR_ROTATION);
   if (error) {
     // Bez historii partner idzie po kolejności zestawu — rolka i tak wychodzi.
     console.warn(`[Studio] rotacja po ostatnich jobach: ${error.message}`);
+    return [];
   }
-  const recent = (data ?? []).map((r) => (r.avatar_ids ?? []).filter(Boolean));
-  return pickReelRotation({ lead, defaults, count, recent });
+  return (data ?? [])
+    .filter((r) => r.reel_structure || r.dynamic_scenes)
+    .map((r) => (r.avatar_ids ?? []).filter(Boolean));
+}
+
+/**
+ * Rotacje twarzy dla `n` nowych rolek: prowadzący + partnerzy z puli
+ * (podanej z panelu, a gdy pusta — zestawu domyślnych), dobrani po ostatnich
+ * rolkach. Wspólne dla panelu, serii wsadowej, kolejki i MCP.
+ */
+export async function reelRotations(opts: {
+  lead: string;
+  pool?: string[] | null;
+  count: number;
+  n?: number;
+}): Promise<string[][]> {
+  const given = (opts.pool ?? []).filter(Boolean);
+  const defaults = given.length ? given : await getDefaultAvatarIds();
+  const recent = await recentReelRotations();
+  return pickReelRotations({
+    lead: opts.lead,
+    defaults,
+    count: opts.count,
+    recent,
+    n: Math.max(1, opts.n ?? 1),
+  });
+}
+
+/** Rotacja jednej rolki z zestawu domyślnych (MCP, kolejka bez zapisanej rotacji). */
+export async function defaultReelRotation(lead: string, count: number): Promise<string[]> {
+  const [rotation] = await reelRotations({ lead, count });
+  return rotation ?? [lead];
 }
 
 export type CatalogAvatarWithDefault = HeygenCatalogItem & {

@@ -31,6 +31,14 @@
 export const MAX_SCENES = 6;
 /** Minimalna liczba scen, żeby w ogóle było co urozmaicać. */
 export const MIN_SCENES_FOR_BROLL = 3;
+/**
+ * Ile twarzy domyślnie w jednej rolce: prowadzący + jeden partner z zestawu
+ * domyślnych (dobierany rotacyjnie). Dwie twarze dają zmianę rozmówcy bez
+ * chaosu w 30–60 s; resztę zestawu obsługują kolejne rolki.
+ */
+export const AVATARS_PER_REEL = 2;
+/** Górny limit twarzy w rolce — tyle, ile mieści zestaw domyślnych. */
+export const MAX_AVATARS_PER_REEL = 6;
 
 export type SceneKind = "avatar" | "broll" | "hook";
 

@@ -404,17 +404,23 @@ W siatce awatarów każda kafelka ma gwiazdkę: klikanie buduje zestaw
 zapisuje go na stałe do `studio_default_avatars`. Zestaw zastępowany jest
 w całości — „domyślne" to dokładnie to, co widać w panelu.
 
-Zestaw obowiązuje wszystkie tory generacji, nie tylko otwarty panel: joby
-wsadowe i cron czytają go przez `resolveAvatarRotation` (kolumna
-`studio_video_jobs.avatar_ids`, a gdy pusta — aktualny zapis w tabeli).
-Rotację prowadzi awatar wybrany w formularzu, za nim reszta zestawu
-(maks. 6 twarzy — więcej w 30–60 s to już nie montaż, tylko chaos).
+Zestaw obowiązuje wszystkie tory generacji, nie tylko otwarty panel. Zestaw
+to **pula**, a nie lista twarzy jednej rolki: rolkę prowadzi awatar wybrany
+w formularzu, a partnerów (domyślnie jeden — **2 twarze w rolce**,
+`AVATARS_PER_REEL`; pole „Twarze w rolce", maks. 6) dobiera `reelRotations`
+z puli rotacyjnie — twarz najdawniej użyta w ostatnich 50 rolkach z montażem
+wchodzi pierwsza, a w serii wsadowej każda rolka dostaje kolejnego partnera.
+Wynik zapisujemy w `studio_video_jobs.avatar_ids`; job z kolejki bez zapisanej
+rotacji dostaje prowadzącego + partnera z aktualnego zestawu w chwili renderu.
+
+Domyślny montaż w panelu, serii, cronie i MCP to **struktura rolki z przebitkami
+b-roll** (poniżej); pojedyncze ujęcie trzeba wybrać świadomie.
 
 Konektor MCP czyta ten sam zapis: `heygen_status` i `list_heygen_avatars`
 pokazują zestaw (`default_avatars`, a w katalogu `is_default` /
 `default_position` — 1 = prowadzi rolkę), a `create_studio_video_job` bez
 `avatar_id` / `avatar_ids` bierze z niego prowadzącego i partnera dobieranego
-rotacyjnie po ostatnich rolkach (`pickReelRotation`: najdawniej użyty pierwszy;
+rotacyjnie po ostatnich rolkach (`reelRotations`: najdawniej użyty pierwszy;
 domyślnie 2 twarze, `avatars_per_reel`). Montaż z MCP domyślnie idzie strukturą
 rolki z przebitkami b-roll (`reel_structure=false` wyłącza). Czat nie musi więc
 zgadywać domyślnych awatarów po nazwie.
@@ -423,18 +429,18 @@ zgadywać domyślnych awatarów po nazwie.
 
 Pole **„Montaż rolki"** w zakładce „Wideo AI" ma trzy tryby:
 
-1. **Pojedyncze ujęcie** — gadająca głowa (jak dotąd).
+1. **Pojedyncze ujęcie** — gadająca głowa (trzeba wybrać ręcznie).
 2. **Przebitki — miejsca cięć wskazuje AI** (`applyScenePlan`) — dotychczasowe
    urozmaicenie, tylko materiał leci teraz z banku.
-3. **Struktura** (`planReelStructure`, kolumna `reel_structure`) — stały,
-   deterministyczny rytm:
+3. **Struktura** (`planReelStructure`, kolumna `reel_structure`) — **domyślna**;
+   stały, deterministyczny rytm:
 
    | scena | co widać                                                        |
    | ----- | --------------------------------------------------------------- |
    | 0     | ujęcie z pierwszym domyślnym awatarem (hook mówi twarz)         |
    | 1     | **wizual hook** — pełnoekranowy efekt z banku                   |
    | 2     | **b-roll** — przebitka ilustrująca treść                        |
-   | 3     | **a-roll KOLEJNEGO domyślnego awatara**                         |
+   | 3     | **a-roll drugiej twarzy rolki** (partner z rotacji)             |
    | …     | cykl się powtarza; ostatnia scena (CTA) zawsze wraca na awatara |
 
    AI nie decyduje już **gdzie** ciąć — dostaje tylko indeksy przebitek

@@ -32,6 +32,7 @@ import {
   type HeygenCaptionOutputs,
 } from "./studio-captions";
 import type { CustomCaptionStyleId } from "./caption-style";
+import { AVATARS_PER_REEL } from "./studio-scenes";
 
 export type StudioJobRow = {
   id: string;
@@ -178,10 +179,13 @@ async function processClaimedJob(job: JobRow): Promise<void> {
 
   await supabaseAdmin.from("studio_video_jobs").update({ status: "uploading" }).eq("id", job.id);
 
-  // Rotacja a-rolli: zapisana przy jobie, a gdy pusta — aktualny stały zestaw
-  // domyślnych awatarów (joby z kolejki nie przechodzą przez panel).
-  const { resolveAvatarRotation } = await import("./studio-avatars.server");
-  const avatarIds = await resolveAvatarRotation(job.avatar_ids);
+  // Twarze rolki: zapisane przy jobie, a gdy pusto — prowadzący + partner
+  // z aktualnego zestawu domyślnych (joby z kolejki nie przechodzą przez panel).
+  const stored = (job.avatar_ids ?? []).filter(Boolean);
+  const { defaultReelRotation } = await import("./studio-avatars.server");
+  const avatarIds = stored.length
+    ? stored
+    : await defaultReelRotation(job.avatar_id, AVATARS_PER_REEL);
 
   const { renderStudioVideo } = await import("./studio-render.server");
   const rendered = await renderStudioVideo({

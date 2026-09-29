@@ -29,6 +29,7 @@ import {
 } from "../_helpers";
 import { defineListTool, flag, search, text } from "../_list-tool";
 import { CAPTION_STYLE_IDS } from "@/lib/caption-style";
+import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL } from "@/lib/studio-scenes";
 import type { StudioDefaultAvatar } from "@/lib/studio-avatars.server";
 
 const ADMIN_ONLY = ["administrator"] as const;
@@ -116,9 +117,6 @@ async function defaults() {
 function defaultAvatarsPayload(set: StudioDefaultAvatar[]) {
   return set.map((a, i) => ({ position: i + 1, id: a.avatar_id, name: a.name, kind: a.kind }));
 }
-
-/** Ile twarzy w jednej rolce bez `avatar_ids`: prowadzący + partner z zestawu domyślnych. */
-const AVATARS_PER_REEL = 2;
 
 const DEFAULT_AVATARS_NOTE =
   "Zestaw domyślnych awatarów ustawia panel Studia (przycisk „Ustaw jako domyślne”): pozycja 1 prowadzi rolkę (mówi hook), kolejne przejmują a-rolle przy strukturze rolki. `create_studio_video_job` bez `avatar_id` / `avatar_ids` bierze z tego zestawu prowadzącego i partnera dobieranego rotacyjnie po ostatnich rolkach (domyślnie 2 twarze w rolce z przebitkami b-roll) — nie zgaduj domyślnych po nazwie.";
@@ -798,7 +796,7 @@ export const createStudioVideoJob = defineTool({
       ),
     avatar_ids: z
       .array(z.string().min(1))
-      .max(6)
+      .max(MAX_AVATARS_PER_REEL)
       .optional()
       .describe(
         "Rotacja twarzy wprost (kolejność = kolejność ujęć; prowadzący i tak idzie pierwszy). Bez tego: prowadzący + partnerzy z zestawu domyślnych dobrani rotacyjnie (`avatars_per_reel`).",
@@ -807,7 +805,7 @@ export const createStudioVideoJob = defineTool({
       .number()
       .int()
       .min(1)
-      .max(6)
+      .max(MAX_AVATARS_PER_REEL)
       .default(AVATARS_PER_REEL)
       .describe(
         "Ile twarzy w rolce, gdy rotacji nie podano wprost: prowadzący + partnerzy z zestawu domyślnych (domyślnie 2; 1 = jedna twarz).",

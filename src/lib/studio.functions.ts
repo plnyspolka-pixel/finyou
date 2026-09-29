@@ -9,7 +9,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { StudioPromptKind } from "./studio-ai.server";
 import type { StudioPlatform } from "./studio-platforms";
 import { isCustomCaptionStyle, parseCaptionStyleId } from "./caption-style";
-import type { ScenePlanItem } from "./studio-scenes";
+import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL, type ScenePlanItem } from "./studio-scenes";
 
 async function assertAdmin(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -467,6 +467,12 @@ async function sanitizeAutoPublish(d: {
   };
 }
 
+/** Liczba twarzy w rolce z panelu: 1–MAX, a gdy brak — domyślne dwie. */
+function avatarsPerReel(v: number | undefined): number {
+  if (typeof v !== "number" || !Number.isFinite(v)) return AVATARS_PER_REEL;
+  return Math.min(MAX_AVATARS_PER_REEL, Math.max(1, Math.floor(v)));
+}
+
 // Krok 2: scenariusz → ElevenLabs TTS → HeyGen avatar. Zwraca id joba do pollingu.
 export const startStudioVideo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -481,7 +487,10 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       caption_style?: string;
       dynamic_scenes?: boolean;
       reel_structure?: boolean;
+      /** Pula twarzy z panelu (prowadzący + zestaw domyślnych). */
       avatar_ids?: string[];
+      /** Ile twarzy z puli w jednej rolce (domyślnie AVATARS_PER_REEL). */
+      avatars_per_reel?: number;
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
       tiktok_post_options?: unknown;
@@ -496,10 +505,14 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
     const voiceId = data.voice_id || FILIP_VOICE_ID;
     const autoPub = await sanitizeAutoPublish(data);
-    // Rotacja a-rolli: to, co przyszło z panelu, a gdy nic — stały zestaw
-    // domyślnych awatarów (ten sam, którym jedzie kolejka i cron).
-    const { resolveAvatarRotation } = await import("./studio-avatars.server");
-    const avatarIds = await resolveAvatarRotation(data.avatar_ids);
+    // Twarze rolki: prowadzący + partner z puli panelu (a gdy pusta — ze stałego
+    // zestawu domyślnych), dobrany rotacyjnie po ostatnich rolkach.
+    const { reelRotations } = await import("./studio-avatars.server");
+    const [avatarIds] = await reelRotations({
+      lead: data.avatar_id,
+      pool: data.avatar_ids,
+      count: avatarsPerReel(data.avatars_per_reel),
+    });
     const reelStructure = data.reel_structure === true;
 
     const { data: job, error: insErr } = await supabaseAdmin
@@ -579,7 +592,10 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       caption_style?: string;
       dynamic_scenes?: boolean;
       reel_structure?: boolean;
+      /** Pula twarzy z panelu (prowadzący + zestaw domyślnych). */
       avatar_ids?: string[];
+      /** Ile twarzy z puli w jednej rolce (domyślnie AVATARS_PER_REEL). */
+      avatars_per_reel?: number;
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
       tiktok_post_options?: unknown;
@@ -594,8 +610,6 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
     const autoPub = await sanitizeAutoPublish(data);
-    const { resolveAvatarRotation } = await import("./studio-avatars.server");
-    const avatarIds = await resolveAvatarRotation(data.avatar_ids);
     const reelStructure = data.reel_structure === true;
 
     // Pomiń pytania, które mają już nie-failowy job (ochrona przed dublami).
@@ -630,7 +644,8 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
         caption_style: parseCaptionStyleId(data.caption_style),
         dynamic_scenes: data.dynamic_scenes === true || reelStructure,
         reel_structure: reelStructure,
-        avatar_ids: avatarIds,
+        // Uzupełniane niżej — każda rolka serii dostaje kolejnego partnera.
+        avatar_ids: [] as string[],
         auto_publish_platforms: autoPub.auto_publish_platforms,
         publish_privacy: autoPub.publish_privacy,
         tiktok_post_options: autoPub.tiktok_post_options as never,
@@ -639,6 +654,18 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       });
     }
     if (rows.length) {
+      // Rotacja po całej serii: partnerzy obchodzą zestaw po kolei, zamiast
+      // 25 razy tej samej pary.
+      const { reelRotations } = await import("./studio-avatars.server");
+      const rotations = await reelRotations({
+        lead: data.avatar_id,
+        pool: data.avatar_ids,
+        count: avatarsPerReel(data.avatars_per_reel),
+        n: rows.length,
+      });
+      rows.forEach((row, i) => {
+        row.avatar_ids = rotations[i] ?? [data.avatar_id];
+      });
       const { error } = await supabaseAdmin.from("studio_video_jobs").insert(rows);
       if (error) throw new Error(error.message);
     }
