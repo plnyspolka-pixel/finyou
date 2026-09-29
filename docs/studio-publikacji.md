@@ -14,37 +14,40 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 
 ## Architektura
 
-| Element                                      | Plik                                                                                     |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Publikacja Meta (Graph API)                  | `src/lib/studio-publishing.server.ts`                                                    |
-| Publikacja TikTok (Content Posting API)      | `src/lib/tiktok.server.ts`                                                               |
-| TikTok — czysta logika chunków/tytułu        | `src/lib/tiktok-upload.ts` (+ testy `tiktok-upload.test.ts`)                             |
-| TikTok — server functions panelu             | `src/lib/tiktok.functions.ts`                                                            |
-| TikTok — ekran publikacji (zgodny z audytem) | `src/components/admin/tiktok-post-options-fields.tsx`                                    |
-| TikTok — scenariusz nagrania do audytu       | `docs/tiktok-audyt-nagranie.md`                                                          |
-| TikTok — OAuth (start + callback)            | `src/routes/api/tiktok/auth.ts`, `src/routes/api/tiktok/callback.ts`                     |
-| Klasyfikacja błędów Meta + backoff           | `src/lib/meta-graph-errors.ts` (+ testy `meta-graph-errors.test.ts`)                     |
-| Helpery AI (scenariusz, prompty, grafiki)    | `src/lib/studio-ai.server.ts`                                                            |
-| Bank b-rolli (import, dobór, seed)           | `src/lib/studio-broll.server.ts`                                                         |
-| Bank b-rolli — czysta logika doboru          | `src/lib/studio-broll-match.ts` (+ testy `studio-broll-match.test.ts`)                   |
-| Domyślne awatary (rotacja a-rolli)           | `src/lib/studio-avatars.server.ts`                                                       |
-| Server functions                             | `src/lib/studio.functions.ts`                                                            |
-| Kolejki — wspólne wstawianie wpisów          | `src/lib/studio-enqueue.server.ts`, `src/lib/studio-platforms.ts`                        |
-| „Publikuj" przy materiale (Materiały)        | `src/lib/marketing-material-publish*.ts` (logika, kopia publiczna, server functions)     |
-| Dialog „Publikuj" (Materiały)                | `src/components/admin/material-publish-dialog.tsx`                                       |
-| Napisy własne — styl (SRT → ASS, presety)    | `src/lib/caption-style.ts` (+ testy `caption-style.test.ts`)                             |
-| Napisy własne — decyzje pipeline'u           | `src/lib/studio-captions.ts` (+ testy `studio-captions.test.ts`)                         |
-| Napisy własne — klient usługi wypalania      | `src/lib/caption-burner.server.ts`                                                       |
-| Usługa wypalania napisów (FFmpeg + libass)   | `services/caption-burner/` (server.mjs, Dockerfile, fly.toml, README)                    |
-| Baza 250 pytań do shortów (generowana)       | `src/lib/shorts-question-bank.ts`                                                        |
-| Źródło bazy pytań + generator                | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts` |
-| Cron tick Meta                               | `src/routes/api/public/hooks/social-publish-tick.ts`                                     |
-| Panel admina                                 | `src/routes/admin.studio-publikacji.tsx`                                                 |
-| Migracja (tabele + bucket + cron)            | `supabase/migrations/20260803130000_studio_publikacji.sql`                               |
-| Migracja: bank b-rolli + domyślne awatary    | `supabase/migrations/20260927120000_studio_bank_broll_i_domyslne_awatary.sql`            |
-| Migracja: napisy własne                      | `supabase/migrations/20260928120000_studio_napisy_wlasne.sql`                            |
-| Migracja TikToka                             | `supabase/migrations/20260926120000_tiktok_content_posting.sql`                          |
-| Migracja: ustawienia posta twórcy            | `supabase/migrations/20260926140000_tiktok_ustawienia_publikacji_tworcy.sql`             |
+| Element                                      | Plik                                                                                      |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Publikacja Meta (Graph API)                  | `src/lib/studio-publishing.server.ts`                                                     |
+| Publikacja TikTok (Content Posting API)      | `src/lib/tiktok.server.ts`                                                                |
+| TikTok — czysta logika chunków/tytułu        | `src/lib/tiktok-upload.ts` (+ testy `tiktok-upload.test.ts`)                              |
+| TikTok — server functions panelu             | `src/lib/tiktok.functions.ts`                                                             |
+| TikTok — ekran publikacji (zgodny z audytem) | `src/components/admin/tiktok-post-options-fields.tsx`                                     |
+| TikTok — scenariusz nagrania do audytu       | `docs/tiktok-audyt-nagranie.md`                                                           |
+| TikTok — OAuth (start + callback)            | `src/routes/api/tiktok/auth.ts`, `src/routes/api/tiktok/callback.ts`                      |
+| Klasyfikacja błędów Meta + backoff           | `src/lib/meta-graph-errors.ts` (+ testy `meta-graph-errors.test.ts`)                      |
+| Helpery AI (scenariusz, prompty, grafiki)    | `src/lib/studio-ai.server.ts`                                                             |
+| Bank b-rolli (import, dobór, seed)           | `src/lib/studio-broll.server.ts`                                                          |
+| Bank b-rolli — czysta logika doboru          | `src/lib/studio-broll-match.ts` (+ testy `studio-broll-match.test.ts`)                    |
+| Domyślne awatary (rotacja a-rolli)           | `src/lib/studio-avatars.server.ts`                                                        |
+| Server functions                             | `src/lib/studio.functions.ts`                                                             |
+| Kolejki — wspólne wstawianie wpisów          | `src/lib/studio-enqueue.server.ts`, `src/lib/studio-platforms.ts`                         |
+| „Publikuj" przy materiale (Materiały)        | `src/lib/marketing-material-publish*.ts` (logika, kopia publiczna, server functions)      |
+| Dialog „Publikuj" (Materiały)                | `src/components/admin/material-publish-dialog.tsx`                                        |
+| Napisy własne — styl (SRT → ASS, presety)    | `src/lib/caption-style.ts` (+ testy `caption-style.test.ts`)                              |
+| Napisy własne — decyzje pipeline'u           | `src/lib/studio-captions.ts` (+ testy `studio-captions.test.ts`)                          |
+| Napisy własne — klient usługi wypalania      | `src/lib/caption-burner.server.ts`                                                        |
+| Usługa FFmpeg (napisy + kompresja)           | `services/caption-burner/` (server.mjs, transcode-plan.mjs, Dockerfile, fly.toml, README) |
+| Kompresja przed publikacją — decyzje         | `src/lib/video-rendition.ts` (+ testy `video-rendition.test.ts`)                          |
+| Kompresja przed publikacją — usługa, Storage | `src/lib/video-rendition.server.ts`                                                       |
+| Migracja: kompresja (video_renditions)       | `supabase/migrations/20260929120000_video_renditions.sql`                                 |
+| Baza 250 pytań do shortów (generowana)       | `src/lib/shorts-question-bank.ts`                                                         |
+| Źródło bazy pytań + generator                | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts`  |
+| Cron tick Meta                               | `src/routes/api/public/hooks/social-publish-tick.ts`                                      |
+| Panel admina                                 | `src/routes/admin.studio-publikacji.tsx`                                                  |
+| Migracja (tabele + bucket + cron)            | `supabase/migrations/20260803130000_studio_publikacji.sql`                                |
+| Migracja: bank b-rolli + domyślne awatary    | `supabase/migrations/20260927120000_studio_bank_broll_i_domyslne_awatary.sql`             |
+| Migracja: napisy własne                      | `supabase/migrations/20260928120000_studio_napisy_wlasne.sql`                             |
+| Migracja TikToka                             | `supabase/migrations/20260926120000_tiktok_content_posting.sql`                           |
+| Migracja: ustawienia posta twórcy            | `supabase/migrations/20260926140000_tiktok_ustawienia_publikacji_tworcy.sql`              |
 
 Tabele:
 
@@ -103,22 +106,23 @@ co poprawić.
 
 ## Konfiguracja — sekrety środowiska
 
-| Sekret                         | Do czego                                                                                 |
-| ------------------------------ | ---------------------------------------------------------------------------------------- |
-| `META_PAGE_ID`                 | ID strony FB, na którą publikujemy                                                       |
-| `META_PAGE_ACCESS_TOKEN`       | Token strony (fallback: `META_ACCESS_TOKEN`)                                             |
-| `META_IG_USER_ID`              | ID konta Instagram **Business** powiązanego ze stroną                                    |
-| `TIKTOK_CLIENT_KEY`            | Klient TikTok for Developers (Content Posting API)                                       |
-| `TIKTOK_CLIENT_SECRET`         | Sekret tego klienta                                                                      |
-| `TIKTOK_REDIRECT_URI`          | Opcjonalny; domyślnie `https://financeyou.pl/api/tiktok/callback`                        |
-| `HEYGEN_API_KEY`               | Generowanie wideo awatara (już używany przez Awatar FAQ)                                 |
-| `PEXELS_API_KEY`               | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)                         |
-| `HEYGEN_CAPTION_STYLE`         | Opcjonalny styl napisów HeyGen (domyślnie `default`; API zna tylko tę wartość)           |
-| `CAPTION_BURNER_URL`           | Opcjonalny; adres usługi wypalania napisów (własne style napisów)                        |
-| `CAPTION_BURNER_SECRET`        | Sekret tej usługi (Bearer) — bez pary URL+sekret zostaje styl HeyGena                    |
-| `CAPTION_BURN_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na wynik usługi, zanim opublikujemy wersję HeyGena (domyślnie 45) |
-| `ELEVENLABS_API_KEY`           | Lektor TTS (już używany)                                                                 |
-| `LOVABLE_API_KEY`              | AI gateway: scenariusze, prompty, grafiki (już używany)                                  |
+| Sekret                            | Do czego                                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `META_PAGE_ID`                    | ID strony FB, na którą publikujemy                                                                     |
+| `META_PAGE_ACCESS_TOKEN`          | Token strony (fallback: `META_ACCESS_TOKEN`)                                                           |
+| `META_IG_USER_ID`                 | ID konta Instagram **Business** powiązanego ze stroną                                                  |
+| `TIKTOK_CLIENT_KEY`               | Klient TikTok for Developers (Content Posting API)                                                     |
+| `TIKTOK_CLIENT_SECRET`            | Sekret tego klienta                                                                                    |
+| `TIKTOK_REDIRECT_URI`             | Opcjonalny; domyślnie `https://financeyou.pl/api/tiktok/callback`                                      |
+| `HEYGEN_API_KEY`                  | Generowanie wideo awatara (już używany przez Awatar FAQ)                                               |
+| `PEXELS_API_KEY`                  | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)                                       |
+| `HEYGEN_CAPTION_STYLE`            | Opcjonalny styl napisów HeyGen (domyślnie `default`; API zna tylko tę wartość)                         |
+| `CAPTION_BURNER_URL`              | Opcjonalny; adres usługi FFmpeg (własne style napisów + kompresja przed publikacją)                    |
+| `CAPTION_BURNER_SECRET`           | Sekret tej usługi (Bearer) — bez pary URL+sekret zostaje styl HeyGena i publikacja oryginalnych plików |
+| `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na wynik usługi, zanim opublikujemy wersję HeyGena (domyślnie 45)               |
+| `VIDEO_RENDITION_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na kompresję wideo, zanim ponowimy / wyślemy oryginał (domyślnie 120)           |
+| `ELEVENLABS_API_KEY`              | Lektor TTS (już używany)                                                                               |
+| `LOVABLE_API_KEY`                 | AI gateway: scenariusze, prompty, grafiki (już używany)                                                |
 
 Token strony musi mieć uprawnienia: `pages_manage_posts`,
 `pages_read_engagement`, a dla Instagrama dodatkowo `instagram_basic`
@@ -135,12 +139,97 @@ zwraca **bezterminowy** token strony). `META_IG_USER_ID` znajdziesz przez
   `studio-media` albo inne trwałe źródło; URL-e HeyGen wygasają!).
 - **IG Reels** wymaga konta Instagram Business/Creator powiązanego ze stroną FB.
 - **YouTube**: limity quota — ok. 6 uploadów/dobę (opis w
-  `docs/youtube-shorts.md`).
+  `docs/youtube-shorts.md`); plik do 100 MB (limit bufora workera).
 - **Post FB**: tekst, tekst+grafika (`/photos`), tekst+wideo (`/videos`).
 - **TikTok**: MP4, pion 9:16, plik do 100 MB (limit bufora workera). Limit
   publikacji ~15/dobę na konto, więc tick wysyła **jeden post na przebieg**.
   Tytuł do 150 znaków. Wideo idzie metodą `FILE_UPLOAD` (nie `PULL_FROM_URL`),
   więc plik pobieramy z bucketu `studio-media` i wysyłamy chunkami.
+- **X**: wideo do 64 MB (bufor workera), tylko MP4 H.264/AAC.
+
+Te limity są pilnowane **automatycznie**: przed wysyłką na którąkolwiek
+platformę wideo przechodzi przez kompresję do wspólnego profilu publikacji
+(sekcja niżej). Ręcznie trzeba pilnować tylko **długości** materiału (Shorts
+≤ 3 min, X ≤ 2:20 na koncie bez Premium, TikTok wg `max_video_post_duration_sec`
+z `get_tiktok_creator_info`) — kompresja nie tnie treści.
+
+## Kompresja wideo przed publikacją (`video_renditions`)
+
+**Problem.** Każda platforma ma inne limity i wymagania, a do tego nasze
+publikatory TikToka, YouTube'a i X-a buforują plik w pamięci workera
+(Cloudflare: 128 MB), więc tną go na 100 MB / 100 MB / 64 MB. Filmy z biblioteki
+materiałów bywają nagrane telefonem (MOV, HEVC, 4K, 60 kl./s, po kilkaset MB)
+— publikacja kończyła się „Plik za duży" albo odrzuceniem po stronie
+platformy (X i Reels nie przyjmują HEVC/MOV), i to dopiero w chwili wysyłki.
+
+**Rozwiązanie.** Jeden **profil publikacji**, do którego usługa FFmpeg
+(`services/caption-burner`, zadanie `transcode`) sprowadza każde wideo PRZED
+wysyłką na jakąkolwiek platformę:
+
+| Parametr        | Wartość                                            | Dlaczego                                                                                                      |
+| --------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Kontener, kodek | MP4, H.264 High 4.1, yuv420p, `faststart`          | jedyny zestaw przyjmowany przez wszystkie cztery platformy                                                    |
+| Rozdzielczość   | ≤ 1080 px krótszy bok (1080×1920 / 1920×1080)      | Reels/TikTok i tak skalują do 1080p                                                                           |
+| Klatkaż         | ≤ 30 kl./s                                         | 60 kl./s podwaja rozmiar bez zysku na telefonie                                                               |
+| Audio           | AAC-LC 128 kb/s, stereo, 48 kHz                    | wymóg X-a (≤ 48 kHz) i Reels                                                                                  |
+| Rozmiar         | ≤ **60 MB**                                        | poniżej najciaśniejszego bufora (X: 64 MB) z zapasem                                                          |
+| Bitrate         | z długości filmu: `60 MB × 8 / czas`, sufit 6 Mb/s | rolka 60 s → pełne 6 Mb/s; 3 min → ~2,6 Mb/s; dłuższe schodzą do 720p / 540p / 480p, żeby nie rozmazać obrazu |
+
+Wartości siedzą w `VIDEO_RENDITION_TARGET` (`src/lib/video-rendition.ts`);
+zmiana progów w dół = **nowa wersja profilu** (`VIDEO_RENDITION_PROFILE`),
+żeby stare renditions nie były brane za dobre.
+
+**Jak to działa.**
+
+1. Wpis z wideo trafia do kolejki (Studio, „Publikuj" przy materiale, MCP
+   `queue_social_publication` / `publish_marketing_material`, auto-publikacja
+   HeyGena) → `requestVideoRendition(url)` zakłada wiersz `pending` w
+   `video_renditions` (klucz: adres źródłowy + profil). Tani zapis, bez
+   wołania usługi.
+2. Tick `social-publish-tick` (co 10 min) w `runVideoRenditionTick()`:
+   zakłada renditions dla wszystkich wpisów `pending` w obu kolejkach
+   (także YouTube — plik ma być gotowy PRZED terminem), domyka zadania w toku
+   (odpytanie usługi → zapis wyniku) i zleca nowe (2 na przebieg; usługa
+   koduje jedno naraz).
+3. Usługa robi `ffprobe`. Plik **zgodny z profilem** (typowa rolka z HeyGena
+   po wypaleniu napisów) wraca jako `unchanged` — publikujemy oryginał,
+   zero straty jakości. Inaczej koduje i **sama wgrywa wynik** na podpisany
+   URL Storage (`createSignedUploadUrl`, bajty nie idą przez worker) do
+   `studio-media/renditions/<profil>/<id>.mp4`; gdy upload jej nie wyjdzie,
+   plik pobiera worker (wynik jest ≤ 60 MB, więc mieści się w pamięci).
+4. Każdy publikator (YouTube `uploadShort`, TikTok `uploadVideo`, X
+   `uploadMedia`, Meta: post z wideo / FB Reels / kontener IG) woła
+   `ensurePublishableVideo(url)` **tuż przed pobraniem pliku**:
+   - rendition gotowy → dostaje adres skompresowanego pliku (albo oryginał
+     przy `unchanged`),
+   - trwa albo dopiero zlecony → `VideoPreparingError`: wpis wraca do
+     `pending` na 5 min z notatką „Wideo w przygotowaniu…" w `last_error`
+     (panel pokazuje ją szarym, nie czerwonym; **próba nie jest zużywana**;
+     nic nie poszło na platformę — przy FB Reels sprawdzenie jest przed
+     `upload_phase=start`, więc nie zostaje otwarta sesja),
+   - usługa nieskonfigurowana albo kompresja ostatecznie nieudana → oryginał,
+     jak dotąd (i dotychczasowy komunikat „Plik za duży", jeśli przekracza
+     bufor).
+     „Publikuj teraz" w panelu i w MCP zwraca wtedy `preparing: true`
+     (toast: „wideo jest kompresowane… wpis wyjdzie automatycznie").
+5. Ten sam film na cztery platformy = **jedna** kompresja (deduplikacja po
+   adresie źródłowym). Ponowna publikacja tego samego materiału używa
+   gotowego renditionu.
+
+**Odporność** (decyzje w `resolveVideoRendition`, testy w
+`video-rendition.test.ts`): usługa nie odpowiada (uśpiony kontener) → czekamy
+do limitu (`VIDEO_RENDITION_TIMEOUT_MINUTES`, domyślnie 120 — darmowy Render
+koduje wolno); błąd usługi, zaginione zadanie (restart) albo przekroczony
+czas → jedno ponowienie, potem `failed` i publikacja oryginału z powodem
+w `last_error` renditionu; „Ponów" przy wpisie kolejki zeruje też próby
+renditionu, więc po naprawie usługi kompresja rusza od nowa. Optymistyczne
+przejęcie wiersza (`pending → processing`) chroni przed podwójnym zleceniem,
+gdy tick i „Publikuj teraz" trafią na ten sam plik w tej samej chwili.
+
+Diagnostyka: `run_publish_tick` (MCP) zwraca sekcję `renditions`
+(`discovered / submitted / ready / failed / errors`), a `GET /health` usługi
+mówi, czy ma `ffprobe`. Stan konkretnego pliku: tabela `video_renditions`
+(`status`, `unchanged`, `output_url`, `last_error`).
 
 ## Użycie
 

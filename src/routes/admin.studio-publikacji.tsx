@@ -42,6 +42,7 @@ import {
 } from "@/lib/studio.functions";
 // Etykiety platform są wspólne z panelem materiałów (/admin/materialy).
 import { PLATFORM_LABELS } from "@/lib/studio-platforms";
+import { isVideoPreparingNote } from "@/lib/video-rendition";
 import { captionBadgeLabel } from "@/lib/studio-captions";
 import {
   CAPTION_STYLE_OPTIONS,
@@ -1137,7 +1138,13 @@ function StudioPage() {
                               : `Plan: ${new Date(item.scheduled_at).toLocaleString("pl-PL")}`}
                           </p>
                           {item.last_error && (
-                            <p className="break-words text-xs text-destructive">
+                            <p
+                              className={`break-words text-xs ${
+                                isVideoPreparingNote(item.last_error)
+                                  ? "text-muted-foreground"
+                                  : "text-destructive"
+                              }`}
+                            >
                               {item.last_error}
                             </p>
                           )}
@@ -1227,7 +1234,13 @@ function StudioPage() {
                               ` • próby: ${item.attempt_count}/${MAX_PUBLISH_ATTEMPTS}`}
                           </p>
                           {item.last_error && (
-                            <p className="break-words text-xs text-destructive">
+                            <p
+                              className={`break-words text-xs ${
+                                isVideoPreparingNote(item.last_error)
+                                  ? "text-muted-foreground"
+                                  : "text-destructive"
+                              }`}
+                            >
                               {item.last_error}
                             </p>
                           )}

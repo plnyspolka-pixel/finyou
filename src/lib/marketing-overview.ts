@@ -114,7 +114,7 @@ export function channelReadiness(status: {
     add(
       status.captionBurnerConfigured,
       "caption_burner",
-      "Usługa wypalania napisów (CAPTION_BURNER_URL) — bez niej zostaje styl napisów HeyGena.",
+      "Usługa FFmpeg (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET) — bez niej zostaje styl napisów HeyGena, a wideo idzie na platformy bez kompresji do profilu publikacji (ryzyko błędu „Plik za duży”).",
     );
   }
   return { ready, missing };

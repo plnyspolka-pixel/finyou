@@ -10,7 +10,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY server.mjs ./
+COPY server.mjs transcode-plan.mjs ./
 
 ENV NODE_ENV=production \
     PORT=8080 \

@@ -113,6 +113,17 @@ const graphPost = (path: string, params: Record<string, string>) =>
   graphFetch(path, params, "POST");
 const graphGet = (path: string, params: Record<string, string>) => graphFetch(path, params, "GET");
 
+/**
+ * Adres wideo do przekazania Meta: wersja skompresowana do profilu
+ * publikacji (MP4 H.264/AAC ≤ 1080p ≤ 60 MB — Reels odrzucają MOV/HEVC
+ * i pliki ponad limit). Rzuca VideoPreparingError, gdy plik jeszcze się
+ * przygotowuje; bez usługi oddaje oryginał.
+ */
+async function publishableVideoUrl(videoUrl: string): Promise<string> {
+  const { ensurePublishableVideo } = await import("./video-rendition.server");
+  return ensurePublishableVideo(videoUrl);
+}
+
 // ── Facebook: post na stronie (tekst / grafika / wideo) ──────────────────────
 
 async function publishFacebookPost(item: QueueRow): Promise<string> {
@@ -121,7 +132,7 @@ async function publishFacebookPost(item: QueueRow): Promise<string> {
 
   if (item.video_url) {
     const json = await graphPost(`${pageId}/videos`, {
-      file_url: item.video_url,
+      file_url: await publishableVideoUrl(item.video_url),
       description: item.message,
       ...(item.title ? { title: item.title } : {}),
       access_token: pageToken,
@@ -154,6 +165,9 @@ async function publishFacebookReel(item: QueueRow): Promise<string> {
   const { pageId, pageToken, facebookConfigured } = getMetaPublishEnv();
   if (!facebookConfigured) throw new Error("Brak META_PAGE_ID / META_PAGE_ACCESS_TOKEN.");
   if (!item.video_url) throw new Error("Facebook Reels wymaga URL wideo (MP4, pion 9:16).");
+  // Przed startem uploadu — gdy wideo jeszcze się kompresuje, nie zostawiamy
+  // po sobie otwartej sesji video_reels.
+  const videoUrl = await publishableVideoUrl(item.video_url);
 
   const start = await graphPost(`${pageId}/video_reels`, {
     upload_phase: "start",
@@ -167,7 +181,7 @@ async function publishFacebookReel(item: QueueRow): Promise<string> {
     method: "POST",
     headers: {
       Authorization: `OAuth ${pageToken}`,
-      file_url: item.video_url,
+      file_url: videoUrl,
     },
   });
   const upJson = (await upRes.json().catch(() => ({}))) as {
@@ -203,7 +217,7 @@ async function createInstagramContainer(item: QueueRow): Promise<string> {
 
   const json = await graphPost(`${igUserId}/media`, {
     media_type: "REELS",
-    video_url: item.video_url,
+    video_url: await publishableVideoUrl(item.video_url),
     caption: item.message,
     access_token: pageToken,
   });
@@ -347,6 +361,8 @@ export async function processSocialQueueItem(
   ok: boolean;
   externalId?: string;
   processing?: boolean;
+  /** Wideo w kompresji — wpis odroczony, publikacja ruszy z ticka. */
+  preparing?: boolean;
   deferred?: boolean;
   error?: string;
 }> {
@@ -416,6 +432,20 @@ export async function processSocialQueueItem(
         keepContainer: !!item.ig_creation_id,
       });
       return { ok: false, deferred: true, error: err.info.friendly };
+    }
+    const { VideoPreparingError } = await import("./video-rendition.server");
+    if (err instanceof VideoPreparingError) {
+      // Wideo się kompresuje — wpis wraca do kolejki na kilka minut BEZ
+      // zużycia próby (nic nie poszło do Meta).
+      await supabaseAdmin
+        .from("social_publish_queue")
+        .update({
+          status: "pending",
+          scheduled_at: err.nextAt.toISOString(),
+          last_error: err.note,
+        })
+        .eq("id", id);
+      return { ok: true, preparing: true };
     }
     const msg = err instanceof Error ? err.message : String(err);
     await markFailed(item, msg);
@@ -510,8 +540,8 @@ export async function runSocialPublishTick(): Promise<{
     if (state.rateLimited) break;
     processed += 1;
     const result = await processSocialQueueItem(item.id, state);
-    if (result.ok && !result.processing) published += 1;
-    else if (result.deferred) deferred += 1;
+    if (result.ok && !result.processing && !result.preparing) published += 1;
+    else if (result.deferred || result.preparing) deferred += 1;
     else if (result.error) errors.push(result.error);
   }
 

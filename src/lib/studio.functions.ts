@@ -157,6 +157,17 @@ export const retrySocialQueueItem = createServerFn({ method: "POST" })
     // TikTok odwrotnie: publish_id jest jednorazowy, więc czyścimy go razem
     // z tiktok_status (tick szuka wpisów z tiktok_status IS NULL). Tak samo X:
     // media_id wygasa, a tick X-a szuka wpisów z x_media_status IS NULL.
+    // Nieudana kompresja wideo (video_renditions) też dostaje nowy budżet
+    // prób — inaczej ponowienie od razu słałoby oryginał.
+    const { data: current } = await supabaseAdmin
+      .from("social_publish_queue")
+      .select("video_url")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (current?.video_url) {
+      const { resetVideoRendition } = await import("./video-rendition.server");
+      await resetVideoRendition(current.video_url).catch(() => {});
+    }
     const { error } = await supabaseAdmin
       .from("social_publish_queue")
       .update({
@@ -191,22 +202,24 @@ export const publishSocialQueueItemNow = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!row) throw new Error("Nie znaleziono wpisu w kolejce.");
 
+    // `preparing` = wideo jeszcze się kompresuje do profilu publikacji; wpis
+    // został w kolejce i tick opublikuje go, gdy plik będzie gotowy.
     if (row.platform === "tiktok") {
       const { processTiktokQueueItem } = await import("./tiktok.server");
       const result = await processTiktokQueueItem(data.id);
       if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
-      return { ok: true, processing: !!result.processing };
+      return { ok: true, processing: !!result.processing, preparing: !!result.preparing };
     }
     if (row.platform === "x") {
       const { processXQueueItem } = await import("./x.server");
       const result = await processXQueueItem(data.id);
       if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
-      return { ok: true, processing: !!result.processing };
+      return { ok: true, processing: !!result.processing, preparing: !!result.preparing };
     }
     const { processSocialQueueItem } = await import("./studio-publishing.server");
     const result = await processSocialQueueItem(data.id);
     if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
-    return { ok: true, processing: !!result.processing };
+    return { ok: true, processing: !!result.processing, preparing: !!result.preparing };
   });
 
 // Gotowe wideo do podstawienia jako źródło: joby Studia + Awatar FAQ.
