@@ -47,6 +47,7 @@ import { captionBadgeLabel } from "@/lib/studio-captions";
 import {
   CAPTION_STYLE_OPTIONS,
   CUSTOM_CAPTION_STYLES,
+  DEFAULT_CUSTOM_CAPTION_STYLE,
   captionPreviewCss,
   isCustomCaptionStyle,
   type CaptionStyleId,
@@ -454,7 +455,7 @@ function StudioPage() {
   useEffect(() => {
     if (captionBurnerOn && !captionStyleDefaulted.current) {
       captionStyleDefaulted.current = true;
-      setCaptionStyle("reels");
+      setCaptionStyle(DEFAULT_CUSTOM_CAPTION_STYLE);
     }
   }, [captionBurnerOn]);
   // Montaż rolki: pojedyncze ujęcie | przebitki wskazane przez AI | stała

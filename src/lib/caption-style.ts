@@ -158,6 +158,18 @@ export const CAPTION_STYLE_OPTIONS: ReadonlyArray<{
   })),
 ];
 
+/** Styl własny wybierany domyślnie — ten sam w panelu Studia i w MCP. */
+export const DEFAULT_CUSTOM_CAPTION_STYLE: CustomCaptionStyleId = "reels";
+
+/**
+ * Domyślny styl napisów rolki: własny („reels", wypalany naszą usługą), gdy
+ * usługa jest skonfigurowana — inaczej napisy HeyGena, bo własnych nie ma kto
+ * wypalić.
+ */
+export function defaultCaptionStyle(burnerConfigured: boolean): CaptionStyleId {
+  return burnerConfigured ? DEFAULT_CUSTOM_CAPTION_STYLE : "heygen";
+}
+
 export function isCaptionStyleId(v: unknown): v is CaptionStyleId {
   return typeof v === "string" && (CAPTION_STYLE_IDS as readonly string[]).includes(v);
 }
@@ -178,12 +190,15 @@ export function captionStyleLabel(id: unknown): string {
 
 // ── SRT ─────────────────────────────────────────────────────────────────────
 
-const TIME_RE = /(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})/;
+// Godziny opcjonalne — WebVTT pozwala na `mm:ss.ttt`.
+const TIME_RE =
+  /((?:\d{1,2}:)?\d{2}:\d{2}[,.]\d{1,3})\s*-->\s*((?:\d{1,2}:)?\d{2}:\d{2}[,.]\d{1,3})/;
 /** Kwestia bez sensownego końca dostaje tyle — lepsze niż zniknięcie. */
 const MIN_CUE_SECONDS = 0.5;
 
 function parseTimestamp(s: string): number {
-  const [h, m, rest] = s.split(":");
+  const parts = s.split(":");
+  const [h, m, rest] = parts.length === 2 ? ["0", ...parts] : parts;
   const [sec, ms = ""] = rest.split(/[,.]/);
   return Number(h) * 3600 + Number(m) * 60 + Number(sec) + Number(ms.padEnd(3, "0")) / 1000;
 }
@@ -222,6 +237,55 @@ export function parseSrt(srt: string): SrtCue[] {
     cues.push({ start, end: end > start ? end : start + MIN_CUE_SECONDS, text: body });
   }
   return cues.sort((a, b) => a.start - b.start);
+}
+
+/**
+ * Kwestie z pliku ASS (zdarzenia `Dialogue:` w sekcji `[Events]`) — tak
+ * oddają napisy niektóre filmy HeyGena spoza Studia (API v2). Kolumny bierzemy
+ * z linii `Format:`; tagi `{…}` i łamania `\N` wylatują.
+ */
+export function parseAssCues(ass: string): SrtCue[] {
+  const text = ass.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  const events = text.split(/^\[Events\]\s*$/im)[1] ?? "";
+  let cols = [
+    "layer",
+    "start",
+    "end",
+    "style",
+    "name",
+    "marginl",
+    "marginr",
+    "marginv",
+    "effect",
+    "text",
+  ];
+  const cues: SrtCue[] = [];
+  for (const line of events.split("\n")) {
+    const format = /^Format:\s*(.*)$/i.exec(line);
+    if (format) {
+      cols = format[1].split(",").map((c) => c.trim().toLowerCase());
+      continue;
+    }
+    const dialogue = /^Dialogue:\s*(.*)$/i.exec(line);
+    if (!dialogue) continue;
+    const textIdx = cols.indexOf("text");
+    const fields = dialogue[1].split(",");
+    if (textIdx < 0 || fields.length <= textIdx) continue;
+    const head = fields.slice(0, textIdx);
+    const raw = fields.slice(textIdx).join(",");
+    const start = parseTimestamp(head[cols.indexOf("start")]?.trim() ?? "");
+    const end = parseTimestamp(head[cols.indexOf("end")]?.trim() ?? "");
+    const body = cleanCueText(raw.replace(/\\[Nn]/g, " ").replace(/\\h/g, " "));
+    if (!body || !Number.isFinite(start) || !Number.isFinite(end)) continue;
+    cues.push({ start, end: end > start ? end : start + MIN_CUE_SECONDS, text: body });
+  }
+  return cues.sort((a, b) => a.start - b.start);
+}
+
+/** Napisy HeyGena w dowolnym z formatów, które zwraca: SRT, WebVTT albo ASS. */
+export function parseSubtitles(raw: string): SrtCue[] {
+  const text = raw.replace(/^\uFEFF/, "");
+  return /^\s*\[Script Info\]|^\[Events\]/im.test(text) ? parseAssCues(text) : parseSrt(text);
 }
 
 // ── Łamanie i cięcie kwestii ────────────────────────────────────────────────
@@ -630,7 +694,10 @@ export function srtToAss(
   opts: AssOptions = {},
 ): string | null {
   const style = CUSTOM_CAPTION_STYLES[styleId];
-  const cues = chunkCues(parseSrt(srt), { maxChars: style.maxChars, maxLines: style.maxLines });
+  const cues = chunkCues(parseSubtitles(srt), {
+    maxChars: style.maxChars,
+    maxLines: style.maxLines,
+  });
   if (!cues.length) return null;
   return buildAss(cues, style, dims, opts);
 }
