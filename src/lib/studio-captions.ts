@@ -150,7 +150,14 @@ export const CAPTION_BURN_TIMEOUT_MS = 45 * 60_000;
 export const CAPTION_BURN_MAX_ATTEMPTS = 2;
 
 export type CaptionBurnPlan =
-  | { action: "burn"; videoUrl: string; srtUrl: string; styleId: CustomCaptionStyleId }
+  | {
+      action: "burn";
+      videoUrl: string;
+      srtUrl: string;
+      styleId: CustomCaptionStyleId;
+      /** Ten sam przebieg dokłada znaczek „AI" w rogu. */
+      aiBadge: boolean;
+    }
   /** Zostajemy przy napisach HeyGena; `reason` trafia do `last_error`, gdy nie jest null. */
   | { action: "heygen"; reason: string | null };
 
@@ -164,6 +171,8 @@ export function planCaptionBurn(input: {
   captionStyle: string | null | undefined;
   burnerConfigured: boolean;
   outputs: HeygenCaptionOutputs;
+  /** Dołóż znaczek „AI" do wypalanych napisów. */
+  aiBadge?: boolean;
 }): CaptionBurnPlan {
   if (!input.captions) return { action: "heygen", reason: null };
   const style = parseCaptionStyleId(input.captionStyle);
@@ -184,7 +193,45 @@ export function planCaptionBurn(input: {
       reason: "Własne napisy pominięte: HeyGen nie oddał pliku SRT — napisy HeyGena.",
     };
   }
-  return { action: "burn", videoUrl, srtUrl, styleId: style };
+  return { action: "burn", videoUrl, srtUrl, styleId: style, aiBadge: input.aiBadge === true };
+}
+
+// ── Znaczek „AI" bez napisów własnych ───────────────────────────────────────
+
+export type BadgeBurnPlan =
+  | { action: "badge"; videoUrl: string }
+  /** Publikujemy bez znaczka; `reason` trafia do `last_error`, gdy nie jest null. */
+  | { action: "skip"; reason: string | null };
+
+/**
+ * Znaczek „AI" dla wideo, które nie idzie przez napisy własne (napisy HeyGena
+ * albo bez napisów): usługa wypalania dokłada sam znaczek na plik, który
+ * inaczej poszedłby prosto do publikacji. Bez usługi znaczka nie da się
+ * położyć (HeyGen nie ma warstw) — mówimy o tym w `last_error`.
+ */
+export function planBadgeBurn(input: {
+  aiBadge: boolean;
+  burnerConfigured: boolean;
+  videoUrl: string | null | undefined;
+}): BadgeBurnPlan {
+  if (!input.aiBadge) return { action: "skip", reason: null };
+  if (!input.burnerConfigured) {
+    return {
+      action: "skip",
+      reason:
+        "Znaczek AI pominięty: brak usługi wypalania (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET).",
+    };
+  }
+  if (!input.videoUrl) return { action: "skip", reason: null };
+  return { action: "badge", videoUrl: input.videoUrl };
+}
+
+/**
+ * Zadanie wypalania, które niesie SAM znaczek (bez napisów własnych) —
+ * rozpoznajemy po stylu: napisy własne zapisują przy jobie swój styl.
+ */
+export function isBadgeOnlyBurn(captionStyle: string | null | undefined): boolean {
+  return !isCustomCaptionStyle(captionStyle);
 }
 
 export type CaptionBurnState = "queued" | "processing" | "done" | "failed" | "missing";
@@ -222,9 +269,12 @@ export function resolveCaptionBurn(input: {
   fallback: CaptionBurnFallback;
   timeoutMs?: number;
   maxAttempts?: number;
+  /** Początek komunikatu przy porażce (np. „Znaczek AI nieudany"). */
+  failureLabel?: string;
 }): CaptionBurnResolution {
   const timeoutMs = input.timeoutMs ?? CAPTION_BURN_TIMEOUT_MS;
   const maxAttempts = input.maxAttempts ?? CAPTION_BURN_MAX_ATTEMPTS;
+  const label = input.failureLabel ?? "Własne napisy nieudane";
 
   if (input.status === "done") return { state: "store" };
 
@@ -234,13 +284,13 @@ export function resolveCaptionBurn(input: {
     if (elapsed < timeoutMs) return { state: "waiting" };
     return fallbackFor(
       input.fallback,
-      `Własne napisy nieudane: usługa nie skończyła w ciągu ${Math.round(timeoutMs / 60_000)} min`,
+      `${label}: usługa nie skończyła w ciągu ${Math.round(timeoutMs / 60_000)} min`,
     );
   }
 
   const why = input.error ?? (input.status === "missing" ? "zadanie zaginęło" : "błąd usługi");
   if (input.attempts < maxAttempts) return { state: "retry", reason: why };
-  return fallbackFor(input.fallback, `Własne napisy nieudane: ${why}`);
+  return fallbackFor(input.fallback, `${label}: ${why}`);
 }
 
 function fallbackFor(fallback: CaptionBurnFallback, note: string): CaptionBurnResolution {

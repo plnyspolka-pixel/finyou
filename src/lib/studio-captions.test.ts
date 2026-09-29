@@ -4,6 +4,8 @@ import {
   CAPTION_BURN_TIMEOUT_MS,
   CAPTION_GRACE_MS,
   captionBadgeLabel,
+  isBadgeOnlyBurn,
+  planBadgeBurn,
   planCaptionBurn,
   resolveCaptionBurn,
   resolveCaptionedOutput,
@@ -106,7 +108,19 @@ describe("planCaptionBurn", () => {
   it("wypala u siebie, gdy styl własny, usługa jest i HeyGen oddał SRT", () => {
     expect(
       planCaptionBurn({ captions: true, captionStyle: "reels", burnerConfigured: true, outputs }),
-    ).toEqual({ action: "burn", videoUrl: CLEAN, srtUrl: SRT, styleId: "reels" });
+    ).toEqual({ action: "burn", videoUrl: CLEAN, srtUrl: SRT, styleId: "reels", aiBadge: false });
+  });
+
+  it("znaczek AI jedzie tym samym przebiegiem co napisy własne", () => {
+    expect(
+      planCaptionBurn({
+        captions: true,
+        captionStyle: "tiktok",
+        burnerConfigured: true,
+        outputs,
+        aiBadge: true,
+      }),
+    ).toMatchObject({ action: "burn", styleId: "tiktok", aiBadge: true });
   });
 
   it("styl heygen, wyłączone napisy albo nieznany styl = bez powodu do zgłaszania", () => {
@@ -216,5 +230,55 @@ describe("captionBadgeLabel — styl własny", () => {
     expect(captionBadgeLabel({ captions: true, subtitle_url: SRT, caption_style: "heygen" })).toBe(
       "napisy na wideo",
     );
+  });
+});
+
+describe("planBadgeBurn", () => {
+  it("włączony znaczek i usługa → znaczek na pliku do publikacji", () => {
+    expect(planBadgeBurn({ aiBadge: true, burnerConfigured: true, videoUrl: BURNED })).toEqual({
+      action: "badge",
+      videoUrl: BURNED,
+    });
+  });
+
+  it("wyłączony znaczek albo brak pliku — bez komunikatu", () => {
+    expect(planBadgeBurn({ aiBadge: false, burnerConfigured: true, videoUrl: BURNED })).toEqual({
+      action: "skip",
+      reason: null,
+    });
+    expect(planBadgeBurn({ aiBadge: true, burnerConfigured: true, videoUrl: "" })).toEqual({
+      action: "skip",
+      reason: null,
+    });
+  });
+
+  it("brak usługi wypalania mówi wprost, że znaczka nie będzie", () => {
+    const plan = planBadgeBurn({ aiBadge: true, burnerConfigured: false, videoUrl: CLEAN });
+    expect(plan.action).toBe("skip");
+    expect((plan as { reason: string }).reason).toMatch(/Znaczek AI pominięty/);
+  });
+});
+
+describe("isBadgeOnlyBurn", () => {
+  it("styl własny = napisy (+ znaczek); heygen / brak = sam znaczek", () => {
+    expect(isBadgeOnlyBurn("reels")).toBe(false);
+    expect(isBadgeOnlyBurn("heygen")).toBe(true);
+    expect(isBadgeOnlyBurn(null)).toBe(true);
+  });
+});
+
+describe("resolveCaptionBurn — etykieta porażki", () => {
+  it("znaczek AI ma własny komunikat, a publikacja schodzi na plik HeyGena", () => {
+    const r = resolveCaptionBurn({
+      status: "failed",
+      error: "ffmpeg padł",
+      startedAt: NOW.toISOString(),
+      attempts: CAPTION_BURN_MAX_ATTEMPTS,
+      now: NOW,
+      fallback: { previous: null, heygen: { video_url: CLEAN, captioned_video_url: BURNED } },
+      failureLabel: "Znaczek AI nieudany",
+    });
+    expect(r).toMatchObject({ state: "fallback", videoUrl: BURNED, captionsBurned: true });
+    expect((r as { note: string }).note).toMatch(/^Znaczek AI nieudany: ffmpeg padł/);
   });
 });

@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
   CAPTION_STYLE_OPTIONS,
+  AI_BADGE,
   CUSTOM_CAPTION_STYLES,
+  aiBadgeAss,
+  aiBadgeEvents,
   buildAss,
   captionPreviewCss,
   captionStyleLabel,
@@ -213,5 +216,41 @@ describe("identyfikatory stylów", () => {
     );
     expect(captionPreviewCss(CUSTOM_CAPTION_STYLES.reels).textShadow).toContain("#000000");
     expect(captionPreviewCss(CUSTOM_CAPTION_STYLES.tiktok).textTransform).toBe("uppercase");
+  });
+});
+
+describe("znaczek AI", () => {
+  it("sam znaczek: kompletny ASS z pigułką i napisem AI przez cały film", () => {
+    const ass = aiBadgeAss();
+    expect(ass).toMatch(/\[Events\]/);
+    expect(ass).toMatch(/^Style: AiBadge,Inter,/m);
+    const events = dialogues(ass);
+    expect(events).toHaveLength(2);
+    expect(events[0]).toMatch(/\\p1/);
+    expect(events[0]).toMatch(/,9:59:59\.99,AiBadge,/);
+    expect(events[1]).toMatch(/\}AI$/);
+  });
+
+  it("pigułka w prawym górnym rogu, poniżej paska aplikacji", () => {
+    const [shape, label] = aiBadgeEvents({ width: 720, height: 1280 });
+    const x = 720 - AI_BADGE.marginRight - AI_BADGE.width;
+    expect(shape).toContain(`\\pos(${x},${AI_BADGE.marginTop})`);
+    expect(label).toContain(
+      `\\pos(${x + AI_BADGE.width / 2},${AI_BADGE.marginTop + AI_BADGE.height / 2})`,
+    );
+    expect(AI_BADGE.marginTop).toBeGreaterThanOrEqual(110);
+  });
+
+  it("napisy własne + znaczek: oba style, znaczek na wyższej warstwie", () => {
+    const ass = srtToAss(SRT, "reels", undefined, { aiBadge: true })!;
+    expect(ass.split("\n").filter((l) => l.startsWith("Style:"))).toHaveLength(2);
+    const events = dialogues(ass);
+    const badge = events.filter((l) => l.includes(",AiBadge,"));
+    expect(badge).toHaveLength(2);
+    expect(badge.every((l) => Number(l.split(",")[0].split(" ")[1]) > 0)).toBe(true);
+  });
+
+  it("bez opcji nic się nie zmienia", () => {
+    expect(srtToAss(SRT, "reels")).not.toContain("AiBadge");
   });
 });

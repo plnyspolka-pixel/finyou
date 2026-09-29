@@ -51,7 +51,7 @@ import {
   isCustomCaptionStyle,
   type CaptionStyleId,
 } from "@/lib/caption-style";
-import { describeScenePlan } from "@/lib/studio-scenes";
+import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL, describeScenePlan } from "@/lib/studio-scenes";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
 import { getTiktokIntegrationStatus, getTiktokCreatorInfo } from "@/lib/tiktok.functions";
 import { TiktokPostOptionsFields } from "@/components/admin/tiktok-post-options-fields";
@@ -146,7 +146,7 @@ const VIDEO_STATUS_LABELS: Record<string, string> = {
   generating_audio: "Generuję lektora…",
   uploading: "Wysyłam audio…",
   rendering: "Renderowanie w HeyGen…",
-  captioning: "Wypalam napisy…",
+  captioning: "Wypalam napisy / znaczek AI…",
   ready: "Gotowe",
   failed: "Błąd",
 };
@@ -448,6 +448,8 @@ function StudioPage() {
   // usługą FFmpeg. Gdy usługa jest skonfigurowana, domyślnie „rolka”.
   const [captionStyle, setCaptionStyle] = useState<CaptionStyleId>("heygen");
   const captionBurnerOn = !!status?.captionBurnerConfigured;
+  // Znaczek „AI" w rogu rolki kładzie usługa wypalania (HeyGen nie ma warstw).
+  const aiBadgeOn = status?.aiBadgeEnabled !== false;
   const captionStyleDefaulted = useRef(false);
   useEffect(() => {
     if (captionBurnerOn && !captionStyleDefaulted.current) {
@@ -457,7 +459,12 @@ function StudioPage() {
   }, [captionBurnerOn]);
   // Montaż rolki: pojedyncze ujęcie | przebitki wskazane przez AI | stała
   // struktura (ujęcie → wizual hook → przebitka → a-roll innego awatara).
-  const [montage, setMontage] = useState<"single" | "ai" | "structure">("single");
+  // Domyślnie struktura z przebitkami b-roll — tak wychodzą rolki z panelu,
+  // serii, crona i MCP, chyba że ktoś świadomie wybierze pojedyncze ujęcie.
+  const [montage, setMontage] = useState<"single" | "ai" | "structure">("structure");
+  // Ile twarzy w jednej rolce: prowadzący + partnerzy z zestawu, których
+  // serwer dobiera rotacyjnie (najdawniej użyty pierwszy).
+  const [avatarsPerReel, setAvatarsPerReel] = useState<number>(AVATARS_PER_REEL);
   const dynamicScenesOn = montage !== "single";
   const reelStructureOn = montage === "structure";
 
@@ -521,12 +528,14 @@ function StudioPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Rotacja wysyłana z generatorem: wybrany awatar prowadzi, reszta zestawu
-  // przejmuje kolejne a-rolle.
+  // Pula twarzy wysyłana z generatorem: wybrany awatar prowadzi, a z reszty
+  // zestawu serwer dobiera partnerów do rolki (rotacja po ostatnich rolkach).
   const avatarRotation = useMemo(
     () => [...new Set([avatarId, ...avatarPicks])],
     [avatarId, avatarPicks],
   );
+  const partnerPool = avatarRotation.slice(1);
+  const facesInReel = Math.min(avatarsPerReel, avatarRotation.length);
 
   // ── Bank b-rolli ───────────────────────────────────────────────────────────
   const [brollKindFilter, setBrollKindFilter] = useState<"all" | "broll" | "hook">("all");
@@ -733,6 +742,7 @@ function StudioPage() {
           dynamic_scenes: dynamicScenesOn,
           reel_structure: reelStructureOn,
           avatar_ids: avatarRotation,
+          avatars_per_reel: avatarsPerReel,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
           publish_title: title,
@@ -772,6 +782,7 @@ function StudioPage() {
           dynamic_scenes: dynamicScenesOn,
           reel_structure: reelStructureOn,
           avatar_ids: avatarRotation,
+          avatars_per_reel: avatarsPerReel,
           auto_publish_platforms: effectiveAutoPlatforms,
           publish_privacy: autoPrivacy,
           tiktok_post_options: autoTtSelected ? autoTtOptions : undefined,
@@ -1843,6 +1854,19 @@ function StudioPage() {
                           ? CAPTION_STYLE_OPTIONS.find((o) => o.id === captionStyle)?.description
                           : "HeyGen nie pozwala ustawić rozmiaru, czcionki ani pozycji napisów. Własne style wypala usługa caption-burner — sekrety CAPTION_BURNER_URL i CAPTION_BURNER_SECRET (opis w docs/studio-publikacji.md)."}
                       </p>
+                      {aiBadgeOn && (
+                        <p
+                          className={
+                            captionBurnerOn
+                              ? "text-xs text-muted-foreground"
+                              : "text-xs text-amber-600 dark:text-amber-500"
+                          }
+                        >
+                          {captionBurnerOn
+                            ? "Każda rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner razem z napisami)."
+                            : "Znaczek „AI” w rogu wymaga usługi caption-burner — bez niej rolki wyjdą bez znaczka."}
+                        </p>
+                      )}
                     </>
                   )}
                 </div>
@@ -1861,6 +1885,25 @@ function StudioPage() {
                       Struktura: ujęcie → wizual hook → b-roll → a-roll innego awatara
                     </option>
                   </select>
+                  {montage !== "single" && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Label htmlFor="studio-avatars-per-reel" className="shrink-0">
+                        Twarze w rolce
+                      </Label>
+                      <select
+                        id="studio-avatars-per-reel"
+                        className="h-9 rounded-md border bg-background px-2 text-sm"
+                        value={avatarsPerReel}
+                        onChange={(e) => setAvatarsPerReel(Number(e.target.value))}
+                      >
+                        {Array.from({ length: MAX_AVATARS_PER_REEL }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n}>
+                            {n === 1 ? "1 (jedna twarz)" : n}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
               {montage === "ai" && (
@@ -1884,10 +1927,14 @@ function StudioPage() {
                     {brollCounts.hook} hooków, {brollCounts.broll} przebitek).
                   </p>
                   <p>
-                    Rotacja twarzy:{" "}
-                    {avatarRotation.length > 1
-                      ? avatarRotation.map(avatarName).join(" → ")
-                      : `${avatarName(avatarId)} (dodaj więcej domyślnych awatarów, żeby a-roll mówiła inna twarz)`}
+                    Twarze w rolce: prowadzi {avatarName(avatarId)}
+                    {facesInReel > 1 && partnerPool.length
+                      ? facesInReel - 1 >= partnerPool.length
+                        ? ` + ${partnerPool.map(avatarName).join(", ")}`
+                        : ` + ${facesInReel - 1} z: ${partnerPool.map(avatarName).join(", ")} (dobierane rotacyjnie — najdawniej użyta twarz wchodzi pierwsza, w serii każda rolka dostaje kolejną)`
+                      : avatarsPerReel > 1
+                        ? " (dodaj więcej domyślnych awatarów, żeby a-roll mówiła inna twarz)"
+                        : " (jedna twarz)"}
                     .
                   </p>
                   {!brollCounts.hook && (

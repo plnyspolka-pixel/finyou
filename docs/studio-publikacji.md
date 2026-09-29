@@ -121,6 +121,7 @@ co poprawić.
 | `CAPTION_BURNER_SECRET`           | Sekret tej usługi (Bearer) — bez pary URL+sekret zostaje styl HeyGena i publikacja oryginalnych plików |
 | `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na wynik usługi, zanim opublikujemy wersję HeyGena (domyślnie 45)               |
 | `VIDEO_RENDITION_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na kompresję wideo, zanim ponowimy / wyślemy oryginał (domyślnie 120)           |
+| `STUDIO_AI_BADGE`                 | Opcjonalny; `0` / `off` wyłącza znaczek „AI" w rogu rolek (domyślnie włączony)                         |
 | `ELEVENLABS_API_KEY`              | Lektor TTS (już używany)                                                                               |
 | `LOVABLE_API_KEY`                 | AI gateway: scenariusze, prompty, grafiki (już używany)                                                |
 
@@ -514,28 +515,43 @@ W siatce awatarów każda kafelka ma gwiazdkę: klikanie buduje zestaw
 zapisuje go na stałe do `studio_default_avatars`. Zestaw zastępowany jest
 w całości — „domyślne" to dokładnie to, co widać w panelu.
 
-Zestaw obowiązuje wszystkie tory generacji, nie tylko otwarty panel: joby
-wsadowe i cron czytają go przez `resolveAvatarRotation` (kolumna
-`studio_video_jobs.avatar_ids`, a gdy pusta — aktualny zapis w tabeli).
-Rotację prowadzi awatar wybrany w formularzu, za nim reszta zestawu
-(maks. 6 twarzy — więcej w 30–60 s to już nie montaż, tylko chaos).
+Zestaw obowiązuje wszystkie tory generacji, nie tylko otwarty panel. Zestaw
+to **pula**, a nie lista twarzy jednej rolki: rolkę prowadzi awatar wybrany
+w formularzu, a partnerów (domyślnie jeden — **2 twarze w rolce**,
+`AVATARS_PER_REEL`; pole „Twarze w rolce", maks. 6) dobiera `reelRotations`
+z puli rotacyjnie — twarz najdawniej użyta w ostatnich 50 rolkach z montażem
+wchodzi pierwsza, a w serii wsadowej każda rolka dostaje kolejnego partnera.
+Wynik zapisujemy w `studio_video_jobs.avatar_ids`; job z kolejki bez zapisanej
+rotacji dostaje prowadzącego + partnera z aktualnego zestawu w chwili renderu.
+
+Domyślny montaż w panelu, serii, cronie i MCP to **struktura rolki z przebitkami
+b-roll** (poniżej); pojedyncze ujęcie trzeba wybrać świadomie.
+
+Konektor MCP czyta ten sam zapis: `heygen_status` i `list_heygen_avatars`
+pokazują zestaw (`default_avatars`, a w katalogu `is_default` /
+`default_position` — 1 = prowadzi rolkę), a `create_studio_video_job` bez
+`avatar_id` / `avatar_ids` bierze z niego prowadzącego i partnera dobieranego
+rotacyjnie po ostatnich rolkach (`reelRotations`: najdawniej użyty pierwszy;
+domyślnie 2 twarze, `avatars_per_reel`). Montaż z MCP domyślnie idzie strukturą
+rolki z przebitkami b-roll (`reel_structure=false` wyłącza). Czat nie musi więc
+zgadywać domyślnych awatarów po nazwie.
 
 ## Struktura rolki (montaż: ujęcie → wizual hook → b-roll → a-roll)
 
 Pole **„Montaż rolki"** w zakładce „Wideo AI" ma trzy tryby:
 
-1. **Pojedyncze ujęcie** — gadająca głowa (jak dotąd).
+1. **Pojedyncze ujęcie** — gadająca głowa (trzeba wybrać ręcznie).
 2. **Przebitki — miejsca cięć wskazuje AI** (`applyScenePlan`) — dotychczasowe
    urozmaicenie, tylko materiał leci teraz z banku.
-3. **Struktura** (`planReelStructure`, kolumna `reel_structure`) — stały,
-   deterministyczny rytm:
+3. **Struktura** (`planReelStructure`, kolumna `reel_structure`) — **domyślna**;
+   stały, deterministyczny rytm:
 
    | scena | co widać                                                        |
    | ----- | --------------------------------------------------------------- |
    | 0     | ujęcie z pierwszym domyślnym awatarem (hook mówi twarz)         |
    | 1     | **wizual hook** — pełnoekranowy efekt z banku                   |
    | 2     | **b-roll** — przebitka ilustrująca treść                        |
-   | 3     | **a-roll KOLEJNEGO domyślnego awatara**                         |
+   | 3     | **a-roll drugiej twarzy rolki** (partner z rotacji)             |
    | …     | cykl się powtarza; ostatnia scena (CTA) zawsze wraca na awatara |
 
    AI nie decyduje już **gdzie** ciąć — dostaje tylko indeksy przebitek
@@ -550,6 +566,32 @@ w `last_error`. Przy jednym domyślnym awatarze struktura nadal tnie — po pros
 bez zmiany twarzy (panel o tym mówi). Plan faktycznie wysłany na render
 zapisujemy w `scene_plan`, a biblioteka pokazuje go jako
 „3 ujęcia z awatarem + 1 przebitka + 2 wizual hooki (3 awatary)".
+
+## Znaczek „AI" w rogu rolki
+
+Każda rolka Studia dostaje w prawym górnym rogu mały znaczek **„AI"**
+(półprzezroczysta pigułka z białym napisem, 64×36 px w kadrze 720×1280,
+140 px od góry — poniżej ikonek aplikacji, powyżej przycisków polubień).
+Znaczek jest częścią pliku ASS, który wypala usługa `caption-burner`
+(`aiBadgeEvents` / `aiBadgeAss` w `src/lib/caption-style.ts`), więc sama
+usługa nie wymaga zmian. HeyGen nie ma warstw, na których dałoby się go położyć.
+
+Jak trafia na film (`settleHeygenCompletion`):
+
+- **napisy własne** (reels / tiktok / box / minimal) — znaczek jedzie tym samym
+  przebiegiem co napisy, bez dodatkowego kosztu;
+- **napisy HeyGena albo bez napisów** — po renderze (i karencji na wersję
+  z napisami) plik HeyGena idzie do usługi jeszcze raz, tylko po znaczek
+  (`planBadgeBurn`, status „captioning"; `caption_style` zostaje `heygen`);
+- **porażka** (usługa nie odpowiada, błąd FFmpega, limit czasu) — jedno
+  ponowienie, potem publikacja pliku HeyGena bez znaczka z adnotacją
+  „Znaczek AI nieudany…" w `last_error`; brak usługi = „Znaczek AI pominięty…".
+
+Zmiana napisów gotowego filmu (`restyle_studio_job_captions`) też dokłada
+znaczek; `video_url_clean` zostaje czystym masterem bez znaczka, żeby nowe
+wypalenie nie dołożyło drugiego. Filmy gotowe przed wdrożeniem znaczka go nie
+mają. Stan: `heygen_status` → `ai_badge` (MCP) i podpowiedź przy napisach
+w panelu.
 
 ## TikTok — Content Posting API (Direct Post)
 
