@@ -28,7 +28,7 @@ import {
   updateOne,
 } from "../_helpers";
 import { defineListTool, flag, search, text } from "../_list-tool";
-import { CAPTION_STYLE_IDS } from "@/lib/caption-style";
+import { CAPTION_STYLE_IDS, defaultCaptionStyle } from "@/lib/caption-style";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL } from "@/lib/studio-scenes";
 import type { StudioDefaultAvatar } from "@/lib/studio-avatars.server";
 
@@ -50,10 +50,17 @@ const CAPTIONS = ["burned", "sidecar", "off"] as const;
 const CAPTION_STYLE = z
   .enum(CAPTION_STYLE_IDS)
   .describe(
-    "Styl napisów: heygen (domyślne HeyGena, bez kontroli wyglądu) albo własny wypalany u nas: reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Własne wymagają usługi CAPTION_BURNER_URL.",
+    "Styl napisów: własny wypalany naszą usługą (renderer caption-burner) — reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu) — albo heygen (napisy HeyGena, bez kontroli wyglądu). Pomiń pole, a będzie jak w panelu Studia: reels, gdy usługa jest skonfigurowana, inaczej heygen. `heygen` wybieraj tylko na wyraźną prośbę.",
   );
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** Kategoria w bibliotece materiałów, do której trafia gotowa rolka Studia. */
+const MATERIAL_AUDIENCE = z
+  .enum(["klient", "inwestor", "posrednik"])
+  .describe(
+    "Kategoria w bibliotece materiałów (/admin/materialy), do której trafi gotowa rolka — to też zakładka w portalu pośrednika. Domyślnie sekret STUDIO_MATERIALS_AUDIENCE, a bez niego „klient”.",
+  );
 
 /**
  * Bloki podglądu do wyniku: miniatura (obraz), animowany GIF gotowego filmu
@@ -146,6 +153,7 @@ export const heygenStatus = defineTool({
         caption_burner: burner.isCaptionBurnerConfigured()
           ? await burner.checkCaptionBurnerHealth()
           : { ok: false, ffmpeg: null, error: "nie skonfigurowana (CAPTION_BURNER_URL)" },
+        default_caption_style: defaultCaptionStyle(burner.isCaptionBurnerConfigured()),
         ai_badge: {
           enabled: burner.isAiBadgeEnabled(),
           active: burner.isAiBadgeEnabled() && burner.isCaptionBurnerConfigured(),
@@ -455,7 +463,7 @@ export const generateAvatarVideo = defineTool({
   name: "generate_avatar_video",
   title: "Generate avatar video (HeyGen)",
   description:
-    "Zleca HeyGen film z awatarem poza kolejką Studia. Źródło lektora: `script` (tekst → głos ElevenLabs, domyślnie Filip; z `heygen_voice_id` czyta HeyGen), `audio_url` (gotowe MP3/WAV https) albo `audio_asset_id`. Awatar domyślnie pierwszy z zestawu domyślnych panelu Studia (bez zestawu — digital twin Filipa), kadr 9:16 720p, napisy jako plik SRT (`captions=burned` wypala w obrazie — do rolek). Zwraca video_id do `get_heygen_video` (render trwa kilka minut). Zużywa kredyty HeyGen. Tylko administrator/operator.",
+    "Zleca HeyGen film z awatarem poza kolejką Studia. Źródło lektora: `script` (tekst → głos ElevenLabs, domyślnie Filip; z `heygen_voice_id` czyta HeyGen), `audio_url` (gotowe MP3/WAV https) albo `audio_asset_id`. Awatar domyślnie pierwszy z zestawu domyślnych panelu Studia (bez zestawu — digital twin Filipa), kadr 9:16 720p, napisy jako plik SRT (`captions=burned` wypala w obrazie — do rolek). Zwraca video_id do `get_heygen_video` (render trwa kilka minut). UWAGA: film powstaje POZA Studiem — nie widać go w panelu Studia ani w materiałach. Rolek tym nie rób: służy do tego `create_studio_video_job` (dwie twarze, b-roll, znaczek AI, zapis do /admin/materialy); gotowy film stąd dołączysz `import_heygen_video_to_studio`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
   inputSchema: {
     script: z.string().min(1).max(5000).optional(),
     audio_url: z.string().url().optional(),
@@ -675,7 +683,7 @@ export const getStudioJob = defineTool({
   name: "get_studio_job",
   title: "Get studio video job",
   description:
-    "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status (… rendering → captioning, gdy wypalamy własne napisy → ready), plan scen, wideo (czyste i z napisami), styl napisów, miniatura, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`). Tylko administrator/operator.",
+    "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status (… rendering → captioning, gdy wypalamy własne napisy → ready), plan scen, wideo (czyste i z napisami), styl napisów, miniatura, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`), a przy gotowej rolce — wpis w bibliotece materiałów (`material`: id, kategoria). Tylko administrator/operator.",
   inputSchema: {
     id: z.string().uuid(),
     preview: z
@@ -710,7 +718,9 @@ export const getStudioJob = defineTool({
         videoUrl: job.video_url ?? live?.captioned_video_url ?? live?.video_url ?? null,
         name: job.publish_title || job.prompt.slice(0, 80),
       });
-      return okWith({ job, live }, blocks);
+      const { findStudioMaterials } = await import("@/lib/studio-materials.server");
+      const material = (await findStudioMaterials([job.id])).get(job.id) ?? null;
+      return okWith({ job, live, material }, blocks);
     }),
 });
 
@@ -788,7 +798,7 @@ export const createStudioVideoJob = defineTool({
   name: "create_studio_video_job",
   title: "Create studio video job",
   description:
-    "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. `caption_style` wybiera wygląd napisów (HeyGen nie daje kontroli nad rozmiarem/pozycją — własne style wypala nasza usługa). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+    "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy domyślnie jak w panelu: własny styl `reels` wypalany naszą usługą (renderer), gdy jest skonfigurowana; `caption_style` zmienia wygląd, a `heygen` (napisy HeyGena, bez kontroli rozmiaru i pozycji) tylko na wyraźną prośbę. Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
   inputSchema: {
     prompt: z.string().min(3).max(2000).optional().describe("Temat / brief odcinka."),
     script: z.string().max(5000).optional().describe("Gotowy tekst lektora; pusty = AI."),
@@ -817,7 +827,7 @@ export const createStudioVideoJob = defineTool({
       ),
     voice_id: z.string().optional().describe("Głos ElevenLabs; domyślnie Filip."),
     captions: z.boolean().default(true),
-    caption_style: CAPTION_STYLE.default("heygen"),
+    caption_style: CAPTION_STYLE.optional(),
     dynamic_scenes: z
       .boolean()
       .default(false)
@@ -834,6 +844,7 @@ export const createStudioVideoJob = defineTool({
     publish_privacy: z.enum(PRIVACY).default("public"),
     publish_title: z.string().max(100).optional(),
     publish_description: z.string().max(5000).optional(),
+    material_audience: MATERIAL_AUDIENCE.optional(),
     start_now: z.boolean().default(false),
   },
   annotations: WRITE,
@@ -841,6 +852,9 @@ export const createStudioVideoJob = defineTool({
     handle(async () => {
       const s = await requireTeamAdmin(ctx);
       const d = await defaults();
+      // Styl napisów jak w panelu: własny (renderer), gdy usługa działa.
+      const { isCaptionBurnerConfigured } = await import("@/lib/caption-burner.server");
+      const captionStyle = a.caption_style ?? defaultCaptionStyle(isCaptionBurnerConfigured());
       let prompt = a.prompt?.trim() ?? "";
       let script = a.script?.trim() ?? "";
       let title = a.publish_title?.trim() ?? "";
@@ -886,7 +900,7 @@ export const createStudioVideoJob = defineTool({
         voice_id: a.voice_id ?? d.voiceId,
         status: a.start_now ? "generating_audio" : "queued",
         captions: a.captions,
-        caption_style: a.caption_style,
+        caption_style: captionStyle,
         dynamic_scenes: a.dynamic_scenes || a.reel_structure,
         reel_structure: a.reel_structure,
         auto_publish_platforms: a.auto_publish_platforms,
@@ -899,8 +913,10 @@ export const createStudioVideoJob = defineTool({
         s,
         "studio_video_jobs",
         row,
-        "id, status, prompt, publish_title, avatar_id, avatar_ids, reel_structure, dynamic_scenes, auto_publish_platforms",
+        "id, status, prompt, publish_title, avatar_id, avatar_ids, reel_structure, dynamic_scenes, caption_style, auto_publish_platforms",
       );
+      const { setJobMaterialAudience } = await import("@/lib/studio-materials.server");
+      await setJobMaterialAudience(job.id, a.material_audience);
       if (!a.start_now) {
         return ok({
           ok: true,
@@ -1109,6 +1125,142 @@ export const deleteStudioJob = defineTool({
       if (error) throw new Error(`studio_video_jobs: ${error.message}`);
       if (!data?.length) return fail("Nie znaleziono zadania.");
       return ok({ ok: true, deleted: data[0], actor: actorId(ctx) });
+    }),
+});
+
+export const importHeygenVideoToStudio = defineTool({
+  name: "import_heygen_video_to_studio",
+  title: "Import HeyGen video into Studio",
+  description:
+    "Dołącza do Studia film wyrenderowany w HeyGen poza Studiem (np. `generate_avatar_video`, `heygen_api_request`, panel HeyGena): zakłada zadanie Studia z tym `heygen_video_id` — film widać w panelu Studia, napisy dostaje z naszego renderera (styl jak w panelu, z pliku napisów HeyGena na czystym masterze; gdy się nie da — zostają napisy HeyGena), do tego znaczek AI, i trafia do biblioteki materiałów (/admin/materialy); dalej publikacja jak zwykle (`publish_studio_job`). Nie renderuje ponownie i nie zużywa kredytów HeyGen. Film już dołączony zwraca istniejące zadanie. Tylko administrator/operator.",
+  inputSchema: {
+    heygen_video_id: z.string().min(6).max(100),
+    publish_title: z
+      .string()
+      .max(100)
+      .optional()
+      .describe("Tytuł do publikacji i w materiałach; domyślnie tytuł filmu w HeyGen."),
+    publish_description: z.string().max(5000).optional(),
+    prompt: z.string().max(2000).optional().describe("Temat rolki — widoczny na liście w Studiu."),
+    captions: z
+      .boolean()
+      .optional()
+      .describe(
+        "Czy rolka ma mieć napisy; domyślnie wykrywane (HeyGen oddał plik napisów albo wersję z napisami = tak).",
+      ),
+    caption_style: CAPTION_STYLE.optional(),
+    material_audience: MATERIAL_AUDIENCE.optional(),
+  },
+  annotations: WRITE,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      const s = await requireTeamAdmin(ctx);
+      const videoId = a.heygen_video_id.trim();
+      const existing = await oneOf(
+        s
+          .from("studio_video_jobs")
+          .select("id, status, publish_title, video_url")
+          .eq("heygen_video_id", videoId)
+          .limit(1),
+        "studio_video_jobs",
+      );
+      if (existing) {
+        return ok({
+          ok: true,
+          already_in_studio: true,
+          job: existing,
+          note: "Ten film jest już w Studiu — `get_studio_job` pokaże stan i wpis w materiałach.",
+        });
+      }
+
+      const { getHeygenVideoStatus } = await import("@/lib/avatar-faq.server");
+      let status: Awaited<ReturnType<typeof getHeygenVideoStatus>>;
+      try {
+        status = await getHeygenVideoStatus(videoId);
+      } catch (e) {
+        return fail(`HeyGen nie zwrócił filmu ${videoId}: ${errMsg(e)}`);
+      }
+      if (status.status === "failed") {
+        return fail(
+          `Film ${videoId} ma w HeyGen status failed: ${
+            typeof status.error === "string" ? status.error : JSON.stringify(status.error ?? {})
+          }`,
+        );
+      }
+      const completed = status.status === "completed" && Boolean(status.video_url);
+
+      let title = a.publish_title?.trim() ?? "";
+      if (!title) {
+        try {
+          const hg = await import("@/lib/heygen-api.server");
+          title = ((await hg.getVideo(videoId)).title ?? "").trim().slice(0, 100);
+        } catch {
+          // Bez tytułu z HeyGena zostaje prompt / id — import i tak idzie.
+        }
+      }
+      const d = await defaults();
+      const { isCaptionBurnerConfigured } = await import("@/lib/caption-burner.server");
+      const hasCaptions = Boolean(status.captioned_video_url || status.subtitle_url);
+      const row = {
+        prompt: a.prompt?.trim() || title || `Film HeyGen ${videoId}`,
+        script: "",
+        avatar_id: d.avatarId,
+        voice_id: d.voiceId,
+        heygen_video_id: videoId,
+        status: "rendering",
+        captions: a.captions ?? (completed ? hasCaptions : true),
+        // Napisy z naszego renderera (jak w panelu); bez pliku napisów albo
+        // czystego mastera pipeline sam zostaje przy napisach HeyGena.
+        caption_style: a.caption_style ?? defaultCaptionStyle(isCaptionBurnerConfigured()),
+        publish_title: title,
+        publish_description: a.publish_description?.trim() ?? "",
+        created_by: actorId(ctx),
+      };
+      const job = await insertOne(s, "studio_video_jobs", row, "*");
+      const { setJobMaterialAudience } = await import("@/lib/studio-materials.server");
+      await setJobMaterialAudience(String(job.id), a.material_audience);
+
+      if (!completed) {
+        return ok({
+          ok: true,
+          job: { id: job.id, status: job.status, publish_title: job.publish_title },
+          note: "Film jeszcze się renderuje w HeyGen — tick Studia (co 10 min) albo `poll_studio_jobs` domknie go: znaczek AI i zapis do /admin/materialy.",
+        });
+      }
+
+      const queue = await import("@/lib/studio-video-queue.server");
+      const outcome = await queue.settleHeygenCompletion(
+        {
+          ...(job as import("@/lib/studio-video-queue.server").StudioJobRow),
+          material_audience: a.material_audience ?? null,
+        },
+        status,
+      );
+      const after = await oneOf(
+        s
+          .from("studio_video_jobs")
+          .select("id, status, publish_title, video_url, captions, caption_style, last_error")
+          .eq("id", job.id),
+        "studio_video_jobs",
+      );
+      const { findStudioMaterials } = await import("@/lib/studio-materials.server");
+      const material = (await findStudioMaterials([String(job.id)])).get(String(job.id)) ?? null;
+      const note =
+        outcome.state === "captioning"
+          ? "Dokładam znaczek AI (usługa wypalania) — potem rolka będzie gotowa w Studiu i trafi do /admin/materialy; `get_studio_job` albo `poll_studio_jobs` domknie."
+          : outcome.state === "ready"
+            ? material
+              ? "Rolka gotowa w Studiu i zapisana w /admin/materialy."
+              : "Rolka gotowa w Studiu; zapis do materiałów — patrz `last_error`."
+            : "Czekam jeszcze na wersję z napisami HeyGena — tick Studia domknie.";
+      return ok({
+        ok: true,
+        job: after,
+        material,
+        outcome: outcome.state,
+        note,
+        actor: actorId(ctx),
+      });
     }),
 });
 
@@ -1440,7 +1592,7 @@ export const heygenApiRequest = defineTool({
   name: "heygen_api_request",
   title: "Raw HeyGen API request",
   description:
-    "Dowolne wywołanie API HeyGen (ścieżka /v1/…, /v2/… albo /v3/…; GET/POST/PUT/DELETE; parametry zapytania; body JSON) — do funkcji bez dedykowanego narzędzia (Avatar IV, grupy awatarów, webhooki, foldery). `host=upload` kieruje na upload.heygen.com. Odpowiedź binarna trafia do Storage jako podpisany link. Tylko administrator.",
+    "Dowolne wywołanie API HeyGen (ścieżka /v1/…, /v2/… albo /v3/…; GET/POST/PUT/DELETE; parametry zapytania; body JSON) — do funkcji bez dedykowanego narzędzia (Avatar IV, grupy awatarów, webhooki, foldery). Nie składaj nim rolek (sceny z awatarami i b-rollem): robi to `create_studio_video_job`, a tylko tak zlecona rolka jest w Studiu i w /admin/materialy; film zrobiony tutaj dołączysz `import_heygen_video_to_studio`. `host=upload` kieruje na upload.heygen.com. Odpowiedź binarna trafia do Storage jako podpisany link. Tylko administrator.",
   inputSchema: {
     path: z.string().regex(/^\/v[123]\//),
     method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]).default("GET"),
@@ -1501,6 +1653,7 @@ export const heygenTools = [
   restyleStudioJobCaptions,
   retryStudioJob,
   deleteStudioJob,
+  importHeygenVideoToStudio,
   publishStudioJob,
   pollStudioJobs,
   runStudioVideoTick,

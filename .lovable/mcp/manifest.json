@@ -8425,7 +8425,7 @@
       {
         "name": "run_publish_tick",
         "title": "Run publish tick now",
-        "description": "Uruchamia od razu to, co cron robi co 10 minut: publikuje wymagalne wpisy z kolejek Meta (FB / IG), TikToka, X i YouTube, domyka publikacje w toku (kontenery IG, uploady TikToka / X) i odświeża tokeny. Realne publikacje. Tylko administrator/operator.",
+        "description": "Uruchamia od razu to, co cron robi co 10 minut: kompresuje wideo czekające w kolejkach do profilu publikacji (video_renditions), publikuje wymagalne wpisy z kolejek Meta (FB / IG), TikToka, X i YouTube, domyka publikacje w toku (kontenery IG, uploady TikToka / X) i odświeża tokeny. Realne publikacje. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -16079,7 +16079,7 @@
       {
         "name": "heygen_status",
         "title": "HeyGen status",
-        "description": "Stan integracji HeyGen: klucz API, pozostałe kredyty, liczba awatarów (moje / publiczne / ze zdjęcia), domyślny awatar i głos (Filip), zadania Studia po statusach z ostatnim błędem, filmy Awatar FAQ. Tylko administrator/operator.",
+        "description": "Stan integracji HeyGen: klucz API, pozostałe kredyty, usługa wypalania napisów i znaczek „AI” w rogu rolek (`ai_badge`), liczba awatarów (moje / publiczne / ze zdjęcia), zestaw domyślnych awatarów z panelu Studia (rotacja) i domyślny głos (Filip), zadania Studia po statusach z ostatnim błędem, filmy Awatar FAQ. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -16095,7 +16095,7 @@
       {
         "name": "list_heygen_avatars",
         "title": "List HeyGen avatars",
-        "description": "Awatary dostępne na koncie HeyGen: własne (digital twin Filipa, grupy, awatary ze zdjęć) i publiczne — id, nazwa, rodzaj, podgląd. Domyślnie tylko własne; `mine_only=false` dodaje publiczne (kilkaset). Tylko administrator/operator.",
+        "description": "Awatary dostępne na koncie HeyGen: własne (digital twin Filipa, grupy, awatary ze zdjęć) i publiczne — id, nazwa, rodzaj, podgląd. Zestaw domyślnych ustawiony w panelu Studia („Ustaw jako domyślne”) idzie na początku listy z `is_default` i `default_position` (1 = prowadzi rolkę, mówi hook; kolejne = rotacja a-rolli) i jest też w `default_avatars` — to z niego korzysta Studio, nie zgaduj domyślnych po nazwie. Domyślnie tylko własne (plus domyślne); `mine_only=false` dodaje publiczne (kilkaset). Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -16324,7 +16324,7 @@
       {
         "name": "generate_avatar_video",
         "title": "Generate avatar video (HeyGen)",
-        "description": "Zleca HeyGen film z awatarem poza kolejką Studia. Źródło lektora: `script` (tekst → głos ElevenLabs, domyślnie Filip; z `heygen_voice_id` czyta HeyGen), `audio_url` (gotowe MP3/WAV https) albo `audio_asset_id`. Awatar domyślnie digital twin Filipa, kadr 9:16 720p, napisy jako plik SRT (`captions=burned` wypala w obrazie — do rolek). Zwraca video_id do `get_heygen_video` (render trwa kilka minut). Zużywa kredyty HeyGen. Tylko administrator/operator.",
+        "description": "Zleca HeyGen film z awatarem poza kolejką Studia. Źródło lektora: `script` (tekst → głos ElevenLabs, domyślnie Filip; z `heygen_voice_id` czyta HeyGen), `audio_url` (gotowe MP3/WAV https) albo `audio_asset_id`. Awatar domyślnie pierwszy z zestawu domyślnych panelu Studia (bez zestawu — digital twin Filipa), kadr 9:16 720p, napisy jako plik SRT (`captions=burned` wypala w obrazie — do rolek). Zwraca video_id do `get_heygen_video` (render trwa kilka minut). UWAGA: film powstaje POZA Studiem — nie widać go w panelu Studia ani w materiałach. Rolek tym nie rób: służy do tego `create_studio_video_job` (dwie twarze, b-roll, znaczek AI, zapis do /admin/materialy); gotowy film stąd dołączysz `import_heygen_video_to_studio`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -16348,7 +16348,7 @@
             },
             "avatar_id": {
               "type": "string",
-              "description": "Domyślnie awatar Filipa."
+              "description": "Domyślnie pierwszy z zestawu domyślnych awatarów panelu Studia (`list_heygen_avatars` → `default_avatars`), bez zestawu — Filip."
             },
             "voice_id": {
               "type": "string",
@@ -16667,7 +16667,7 @@
       {
         "name": "get_studio_job",
         "title": "Get studio video job",
-        "description": "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status (… rendering → captioning, gdy wypalamy własne napisy → ready), plan scen, wideo (czyste i z napisami), styl napisów, miniatura, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`). Tylko administrator/operator.",
+        "description": "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status (… rendering → captioning, gdy wypalamy własne napisy → ready), plan scen, wideo (czyste i z napisami), styl napisów, miniatura, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`), a przy gotowej rolce — wpis w bibliotece materiałów (`material`: id, kategoria). Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -16832,7 +16832,7 @@
       {
         "name": "create_studio_video_job",
         "title": "Create studio video job",
-        "description": "Zakłada zadanie wideo w Studiu publikacji (awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone): `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. `caption_style` wybiera wygląd napisów (HeyGen nie daje kontroli nad rozmiarem/pozycją — własne style wypala nasza usługa). Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+        "description": "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy domyślnie jak w panelu: własny styl `reels` wypalany naszą usługą (renderer), gdy jest skonfigurowana; `caption_style` zmienia wygląd, a `heygen` (napisy HeyGena, bez kontroli rozmiaru i pozycji) tylko na wyraźną prośbę. Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -16858,7 +16858,24 @@
               "minimum": 1
             },
             "avatar_id": {
-              "type": "string"
+              "type": "string",
+              "description": "Awatar prowadzący (mówi hook). Domyślnie pierwszy z zestawu domyślnych panelu Studia (`list_heygen_avatars` → `default_avatars`), bez zestawu — Filip."
+            },
+            "avatar_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maxItems": 6,
+              "description": "Rotacja twarzy wprost (kolejność = kolejność ujęć; prowadzący i tak idzie pierwszy). Bez tego: prowadzący + partnerzy z zestawu domyślnych dobrani rotacyjnie (`avatars_per_reel`)."
+            },
+            "avatars_per_reel": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6,
+              "default": 2,
+              "description": "Ile twarzy w rolce, gdy rotacji nie podano wprost: prowadzący + partnerzy z zestawu domyślnych (domyślnie 2; 1 = jedna twarz)."
             },
             "voice_id": {
               "type": "string",
@@ -16877,13 +16894,17 @@
                 "box",
                 "minimal"
               ],
-              "description": "Styl napisów: heygen (domyślne HeyGena, bez kontroli wyglądu) albo własny wypalany u nas: reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Własne wymagają usługi CAPTION_BURNER_URL.",
-              "default": "heygen"
+              "description": "Styl napisów: własny wypalany naszą usługą (renderer caption-burner) — reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu) — albo heygen (napisy HeyGena, bez kontroli wyglądu). Pomiń pole, a będzie jak w panelu Studia: reels, gdy usługa jest skonfigurowana, inaczej heygen. `heygen` wybieraj tylko na wyraźną prośbę."
             },
             "dynamic_scenes": {
               "type": "boolean",
               "default": false,
-              "description": "Przebitki ze stocku między ujęciami awatara."
+              "description": "Przebitki ze stocku w miejscach wskazanych przez AI (zamiast stałej struktury). Przy `reel_structure` i tak włączone."
+            },
+            "reel_structure": {
+              "type": "boolean",
+              "default": true,
+              "description": "Stała struktura rolki: ujęcie → przebitka b-roll → a-roll kolejnej twarzy z rotacji. Domyślnie włączona; `false` = pojedyncze ujęcie (albo przebitki AI przy `dynamic_scenes=true`)."
             },
             "auto_publish_platforms": {
               "type": "array",
@@ -16916,6 +16937,15 @@
               "type": "string",
               "maxLength": 5000
             },
+            "material_audience": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor",
+                "posrednik"
+              ],
+              "description": "Kategoria w bibliotece materiałów (/admin/materialy), do której trafi gotowa rolka — to też zakładka w portalu pośrednika. Domyślnie sekret STUDIO_MATERIALS_AUDIENCE, a bez niego „klient”."
+            },
             "start_now": {
               "type": "boolean",
               "default": false
@@ -16929,7 +16959,7 @@
       {
         "name": "update_studio_job",
         "title": "Update studio video job",
-        "description": "Zmienia zadanie Studia: scenariusz, awatar, głos, napisy (i ich styl) oraz przebitki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
+        "description": "Zmienia zadanie Studia: scenariusz, awatar (i rotację a-rolli `avatar_ids`), głos, napisy (i ich styl), przebitki oraz strukturę rolki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -16950,6 +16980,15 @@
             "avatar_id": {
               "type": "string"
             },
+            "avatar_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maxItems": 6,
+              "description": "Rotacja a-rolli; pusta lista = wróć do zestawu domyślnych z panelu."
+            },
             "voice_id": {
               "type": "string"
             },
@@ -16965,9 +17004,12 @@
                 "box",
                 "minimal"
               ],
-              "description": "Styl napisów: heygen (domyślne HeyGena, bez kontroli wyglądu) albo własny wypalany u nas: reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Własne wymagają usługi CAPTION_BURNER_URL."
+              "description": "Styl napisów: własny wypalany naszą usługą (renderer caption-burner) — reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu) — albo heygen (napisy HeyGena, bez kontroli wyglądu). Pomiń pole, a będzie jak w panelu Studia: reels, gdy usługa jest skonfigurowana, inaczej heygen. `heygen` wybieraj tylko na wyraźną prośbę."
             },
             "dynamic_scenes": {
+              "type": "boolean"
+            },
+            "reel_structure": {
               "type": "boolean"
             },
             "publish_title": {
@@ -17090,6 +17132,71 @@
           },
           "required": [
             "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "import_heygen_video_to_studio",
+        "title": "Import HeyGen video into Studio",
+        "description": "Dołącza do Studia film wyrenderowany w HeyGen poza Studiem (np. `generate_avatar_video`, `heygen_api_request`, panel HeyGena): zakłada zadanie Studia z tym `heygen_video_id` — film widać w panelu Studia, napisy dostaje z naszego renderera (styl jak w panelu, z pliku napisów HeyGena na czystym masterze; gdy się nie da — zostają napisy HeyGena), do tego znaczek AI, i trafia do biblioteki materiałów (/admin/materialy); dalej publikacja jak zwykle (`publish_studio_job`). Nie renderuje ponownie i nie zużywa kredytów HeyGen. Film już dołączony zwraca istniejące zadanie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "heygen_video_id": {
+              "type": "string",
+              "minLength": 6,
+              "maxLength": 100
+            },
+            "publish_title": {
+              "type": "string",
+              "maxLength": 100,
+              "description": "Tytuł do publikacji i w materiałach; domyślnie tytuł filmu w HeyGen."
+            },
+            "publish_description": {
+              "type": "string",
+              "maxLength": 5000
+            },
+            "prompt": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Temat rolki — widoczny na liście w Studiu."
+            },
+            "captions": {
+              "type": "boolean",
+              "description": "Czy rolka ma mieć napisy; domyślnie wykrywane (HeyGen oddał plik napisów albo wersję z napisami = tak)."
+            },
+            "caption_style": {
+              "type": "string",
+              "enum": [
+                "heygen",
+                "reels",
+                "tiktok",
+                "box",
+                "minimal"
+              ],
+              "description": "Styl napisów: własny wypalany naszą usługą (renderer caption-burner) — reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu) — albo heygen (napisy HeyGena, bez kontroli wyglądu). Pomiń pole, a będzie jak w panelu Studia: reels, gdy usługa jest skonfigurowana, inaczej heygen. `heygen` wybieraj tylko na wyraźną prośbę."
+            },
+            "material_audience": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor",
+                "posrednik"
+              ],
+              "description": "Kategoria w bibliotece materiałów (/admin/materialy), do której trafi gotowa rolka — to też zakładka w portalu pośrednika. Domyślnie sekret STUDIO_MATERIALS_AUDIENCE, a bez niego „klient”."
+            }
+          },
+          "required": [
+            "heygen_video_id"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
@@ -17420,7 +17527,7 @@
       {
         "name": "heygen_api_request",
         "title": "Raw HeyGen API request",
-        "description": "Dowolne wywołanie API HeyGen (ścieżka /v1/…, /v2/… albo /v3/…; GET/POST/PUT/DELETE; parametry zapytania; body JSON) — do funkcji bez dedykowanego narzędzia (Avatar IV, grupy awatarów, webhooki, foldery). `host=upload` kieruje na upload.heygen.com. Odpowiedź binarna trafia do Storage jako podpisany link. Tylko administrator.",
+        "description": "Dowolne wywołanie API HeyGen (ścieżka /v1/…, /v2/… albo /v3/…; GET/POST/PUT/DELETE; parametry zapytania; body JSON) — do funkcji bez dedykowanego narzędzia (Avatar IV, grupy awatarów, webhooki, foldery). Nie składaj nim rolek (sceny z awatarami i b-rollem): robi to `create_studio_video_job`, a tylko tak zlecona rolka jest w Studiu i w /admin/materialy; film zrobiony tutaj dołączysz `import_heygen_video_to_studio`. `host=upload` kieruje na upload.heygen.com. Odpowiedź binarna trafia do Storage jako podpisany link. Tylko administrator.",
         "annotations": {
           "readOnlyHint": false,
           "idempotentHint": false,

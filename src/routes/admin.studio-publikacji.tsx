@@ -47,6 +47,7 @@ import { captionBadgeLabel } from "@/lib/studio-captions";
 import {
   CAPTION_STYLE_OPTIONS,
   CUSTOM_CAPTION_STYLES,
+  DEFAULT_CUSTOM_CAPTION_STYLE,
   captionPreviewCss,
   isCustomCaptionStyle,
   type CaptionStyleId,
@@ -454,7 +455,7 @@ function StudioPage() {
   useEffect(() => {
     if (captionBurnerOn && !captionStyleDefaulted.current) {
       captionStyleDefaulted.current = true;
-      setCaptionStyle("reels");
+      setCaptionStyle(DEFAULT_CUSTOM_CAPTION_STYLE);
     }
   }, [captionBurnerOn]);
   // Montaż rolki: pojedyncze ujęcie | przebitki wskazane przez AI | stała
@@ -2058,6 +2059,17 @@ function StudioPage() {
                                 <Badge variant="secondary" className="gap-1">
                                   <Layers className="h-3 w-3" /> struktura rolki
                                 </Badge>
+                              )}
+                              {j.material && (
+                                <a
+                                  href="/admin/materialy"
+                                  title="Rolka jest w bibliotece materiałów — otwórz /admin/materialy"
+                                >
+                                  <Badge variant="outline" className="gap-1">
+                                    <Library className="h-3 w-3" /> w materiałach (
+                                    {j.material.audience})
+                                  </Badge>
+                                </a>
                               )}
                               {j.scene_plan?.length ? (
                                 <Badge

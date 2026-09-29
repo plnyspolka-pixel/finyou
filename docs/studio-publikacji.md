@@ -107,24 +107,26 @@ co poprawić.
 
 ## Konfiguracja — sekrety środowiska
 
-| Sekret                            | Do czego                                                                                               |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `META_PAGE_ID`                    | ID strony FB, na którą publikujemy                                                                     |
-| `META_PAGE_ACCESS_TOKEN`          | Token strony (fallback: `META_ACCESS_TOKEN`)                                                           |
-| `META_IG_USER_ID`                 | ID konta Instagram **Business** powiązanego ze stroną                                                  |
-| `TIKTOK_CLIENT_KEY`               | Klient TikTok for Developers (Content Posting API)                                                     |
-| `TIKTOK_CLIENT_SECRET`            | Sekret tego klienta                                                                                    |
-| `TIKTOK_REDIRECT_URI`             | Opcjonalny; domyślnie `https://financeyou.pl/api/tiktok/callback`                                      |
-| `HEYGEN_API_KEY`                  | Generowanie wideo awatara (już używany przez Awatar FAQ)                                               |
-| `PEXELS_API_KEY`                  | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)                                       |
-| `HEYGEN_CAPTION_STYLE`            | Opcjonalny styl napisów HeyGen (domyślnie `default`; API zna tylko tę wartość)                         |
-| `CAPTION_BURNER_URL`              | Opcjonalny; adres usługi FFmpeg (własne style napisów + kompresja przed publikacją)                    |
-| `CAPTION_BURNER_SECRET`           | Sekret tej usługi (Bearer) — bez pary URL+sekret zostaje styl HeyGena i publikacja oryginalnych plików |
-| `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na wynik usługi, zanim opublikujemy wersję HeyGena (domyślnie 45)               |
-| `VIDEO_RENDITION_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na kompresję wideo, zanim ponowimy / wyślemy oryginał (domyślnie 120)           |
-| `STUDIO_AI_BADGE`                 | Opcjonalny; `0` / `off` wyłącza znaczek „AI" w rogu rolek (domyślnie włączony)                         |
-| `ELEVENLABS_API_KEY`              | Lektor TTS (już używany)                                                                               |
-| `LOVABLE_API_KEY`                 | AI gateway: scenariusze, prompty, grafiki (już używany)                                                |
+| Sekret                            | Do czego                                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `META_PAGE_ID`                    | ID strony FB, na którą publikujemy                                                                           |
+| `META_PAGE_ACCESS_TOKEN`          | Token strony (fallback: `META_ACCESS_TOKEN`)                                                                 |
+| `META_IG_USER_ID`                 | ID konta Instagram **Business** powiązanego ze stroną                                                        |
+| `TIKTOK_CLIENT_KEY`               | Klient TikTok for Developers (Content Posting API)                                                           |
+| `TIKTOK_CLIENT_SECRET`            | Sekret tego klienta                                                                                          |
+| `TIKTOK_REDIRECT_URI`             | Opcjonalny; domyślnie `https://financeyou.pl/api/tiktok/callback`                                            |
+| `HEYGEN_API_KEY`                  | Generowanie wideo awatara (już używany przez Awatar FAQ)                                                     |
+| `PEXELS_API_KEY`                  | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)                                             |
+| `HEYGEN_CAPTION_STYLE`            | Opcjonalny styl napisów HeyGen (domyślnie `default`; API zna tylko tę wartość)                               |
+| `CAPTION_BURNER_URL`              | Opcjonalny; adres usługi FFmpeg (własne style napisów + kompresja przed publikacją)                          |
+| `CAPTION_BURNER_SECRET`           | Sekret tej usługi (Bearer) — bez pary URL+sekret zostaje styl HeyGena i publikacja oryginalnych plików       |
+| `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na wynik usługi, zanim opublikujemy wersję HeyGena (domyślnie 45)                     |
+| `VIDEO_RENDITION_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na kompresję wideo, zanim ponowimy / wyślemy oryginał (domyślnie 120)                 |
+| `STUDIO_AI_BADGE`                 | Opcjonalny; `0` / `off` wyłącza znaczek „AI" w rogu rolek (domyślnie włączony)                               |
+| `STUDIO_SAVE_TO_MATERIALS`        | Opcjonalny; `0` / `off` wyłącza zapis gotowych rolek do /admin/materialy (domyślnie włączony)                |
+| `STUDIO_MATERIALS_AUDIENCE`       | Opcjonalny; domyślna kategoria rolek w materiałach: `klient` / `inwestor` / `posrednik` (domyślnie `klient`) |
+| `ELEVENLABS_API_KEY`              | Lektor TTS (już używany)                                                                                     |
+| `LOVABLE_API_KEY`                 | AI gateway: scenariusze, prompty, grafiki (już używany)                                                      |
 
 Token strony musi mieć uprawnienia: `pages_manage_posts`,
 `pages_read_engagement`, a dla Instagrama dodatkowo `instagram_basic`
@@ -572,6 +574,39 @@ bez zmiany twarzy (panel o tym mówi). Plan faktycznie wysłany na render
 zapisujemy w `scene_plan`, a biblioteka pokazuje go jako
 „4 ujęcia z awatarem + 2 przebitki (3 awatary)". Stare plany ze scenami
 `hook` (sprzed usunięcia wizual hooków) liczą się tam po prostu jako przebitki.
+
+## Rolki przez MCP → Studio → materiały
+
+Cały proces da się zlecić z czatu (konektor MCP), a efekt widać w panelu:
+
+1. `create_studio_video_job` — jedyna droga do rolek: struktura z b-rollem,
+   dwie twarze z zestawu domyślnych, znaczek „AI"; zadanie od razu widać
+   w Studiu (`/admin/studio-publikacji`).
+2. Render, napisy i znaczek domyka tick Studia albo `poll_studio_jobs`
+   (`get_studio_job` pokazuje postęp). Napisy domyślnie jak w panelu: własny
+   styl `reels` z naszego renderera (caption-burner), gdy usługa jest
+   skonfigurowana (`defaultCaptionStyle`); `heygen` tylko na wyraźną prośbę.
+   Import filmu spoza Studia też dostaje napisy z renderera — z pliku napisów
+   HeyGena (SRT, WebVTT albo ASS) na czystym masterze.
+3. Gotowa rolka **sama trafia do biblioteki materiałów** (`/admin/materialy`):
+   plik kopiujemy do bucketu `marketing-materials` pod stałą ścieżką
+   `studio/<id joba>.mp4` (trwale — linki HeyGena wygasają po ~7 dniach)
+   i zakładamy wpis w `marketing_materials` (`studio-materials.server.ts`).
+   Kategoria: `material_audience` z zadania, a bez niej
+   `STUDIO_MATERIALS_AUDIENCE` albo „klient". Ponowny zapis (np. po zmianie
+   napisów) podmienia plik tego samego materiału; kategorię zmienioną ręcznie
+   w panelu materiałów zostawiamy. Na karcie rolki w Studiu pojawia się
+   plakietka „w materiałach (kategoria)", a `get_studio_job` zwraca `material`.
+4. Publikacja: `publish_studio_job` albo „Publikuj" przy materiale.
+
+Film wyrenderowany poza Studiem (`generate_avatar_video`, `heygen_api_request`,
+panel HeyGena) dołącza `import_heygen_video_to_studio` — bez ponownego renderu
+i kredytów: zadanie Studia z tym `heygen_video_id`, znaczek AI, zapis do
+materiałów. Status filmów spoza API v3 czytamy z v1 (`getHeygenVideoStatus`),
+więc takie zadanie nie utknie w „rendering".
+
+Uwaga: materiały widzą wszyscy zalogowani, a kategoria to zakładka w portalu
+pośrednika — gotowa rolka jest tam od razu, zanim ktoś ją opublikuje.
 
 ## Znaczek „AI" w rogu rolki
 

@@ -65,6 +65,8 @@ export type StudioJobRow = {
   auto_published_at: string | null;
   last_error: string | null;
   created_by: string | null;
+  /** Kategoria w /admin/materialy (kolumna z migracji; brak = domyślna). */
+  material_audience?: string | null;
 };
 
 type JobRow = StudioJobRow;
@@ -235,7 +237,31 @@ async function markReady(
     status: "ready",
     video_url: patch.video_url,
   });
+  const lastError = "last_error" in patch ? (patch.last_error as string | null) : job.last_error;
+  await copyToMaterials(job, patch.video_url, lastError);
   return { state: "ready", videoUrl: patch.video_url, autoPublished };
+}
+
+/**
+ * Gotowa rolka → biblioteka materiałów (/admin/materialy), trwała kopia pliku.
+ * Porażka nie cofa gotowości — dopisujemy tylko powód do `last_error`.
+ */
+async function copyToMaterials(
+  job: JobRow,
+  videoUrl: string,
+  lastError: string | null,
+): Promise<void> {
+  const materials = await import("./studio-materials.server");
+  if (!materials.isStudioMaterialsEnabled() || !videoUrl) return;
+  try {
+    await materials.saveStudioJobToMaterials({ ...job, video_url: videoUrl });
+  } catch (e) {
+    console.warn(`[Studio] zapis do materiałów nieudany (${job.id}): ${errMsg(e)}`);
+    await supabaseAdmin
+      .from("studio_video_jobs")
+      .update({ last_error: joinNotes(lastError, `Zapis do materiałów nieudany: ${errMsg(e)}`) })
+      .eq("id", job.id);
+  }
 }
 
 async function submitBurn(

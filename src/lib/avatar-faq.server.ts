@@ -222,6 +222,44 @@ export async function createHeygenStudioVideo(opts: {
   );
 }
 
+/** Status filmu z API v1 (`/v1/video_status.get`) — dla filmów spoza v3. */
+async function getHeygenVideoStatusV1(videoId: string): Promise<{
+  status: string;
+  video_url?: string | null;
+  captioned_video_url?: string | null;
+  thumbnail_url?: string | null;
+  subtitle_url?: string | null;
+  error?: unknown;
+}> {
+  const url = new URL(`${HEYGEN_BASE}/v1/video_status.get`);
+  url.searchParams.set("video_id", videoId);
+  const res = await fetch(url, { headers: { "X-Api-Key": HEYGEN_API_KEY() } });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`HeyGen status (v1) failed: ${res.status} ${t}`);
+  }
+  const json = (await res.json()) as {
+    data?: {
+      status?: string;
+      video_url?: string | null;
+      video_url_caption?: string | null;
+      captioned_video_url?: string | null;
+      thumbnail_url?: string | null;
+      caption_url?: string | null;
+      error?: unknown;
+    };
+  };
+  const d = json?.data;
+  return {
+    status: d?.status ?? "unknown",
+    video_url: d?.video_url ?? null,
+    captioned_video_url: d?.captioned_video_url ?? d?.video_url_caption ?? null,
+    thumbnail_url: d?.thumbnail_url ?? null,
+    subtitle_url: d?.caption_url ?? null,
+    error: d?.error ?? null,
+  };
+}
+
 export async function getHeygenVideoStatus(videoId: string): Promise<{
   status: string;
   /** Czysty master — HeyGen NIE wgrywa tu wersji z napisami. */
@@ -238,6 +276,9 @@ export async function getHeygenVideoStatus(videoId: string): Promise<{
   });
   if (!res.ok) {
     const t = await res.text();
+    // Filmy zlecone starszym API (v2 — np. przez `heygen_api_request`, a potem
+    // dołączone do Studia) v3 nie zna; status i pliki oddaje wtedy v1.
+    if (res.status === 404 || /not[ _-]?found/i.test(t)) return getHeygenVideoStatusV1(videoId);
     throw new Error(`HeyGen status failed: ${res.status} ${t}`);
   }
   const json = (await res.json()) as {
