@@ -3,8 +3,8 @@
 //
 // Od 2026-09-30 moduły wymagają aktywnego abonamentu inwestora (Umowa ramowa
 // v7 § 7): przepuszcza personel wewnętrzny oraz inwestora, dla którego SQL
-// `investor_has_full_access` zwraca true (abonament albo dostęp modułowy
-// nadany przez zespół — ta sama funkcja stoi za RLS). Składa się z
+// `investor_has_full_access` zwraca true (aktywny abonament — z płatności albo
+// nadany ręcznie przez zespół; ta sama funkcja stoi za RLS). Składa się z
 // requireSupabaseAuth, więc kontekst (supabase, userId, claims) zostaje ten sam.
 import { createMiddleware } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";

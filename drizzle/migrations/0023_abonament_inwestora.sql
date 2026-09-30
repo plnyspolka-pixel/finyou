@@ -45,22 +45,22 @@ update public.access_products
    and active = true;
 
 -- 3. investor_has_full_access(): personel ALBO inwestor z aktywnym
---    abonamentem (access_entitlements) ALBO z aktywnym dostępem do
---    zamkniętego modułu projektów nadanym przez zespół. Ta sama funkcja
---    stoi za politykami RLS danych inwestycyjnych (20260719106000) i za
---    bramkami serwerowymi (src/lib/access/guards.server.ts).
+--    abonamentem (access_entitlements — z płatności Tpay albo nadany ręcznie
+--    przez zespół funkcją admin_adjust_access). Ta sama funkcja stoi za
+--    politykami RLS danych inwestycyjnych i za bramkami serwerowymi
+--    (src/lib/access/guards.server.ts). Korzysta wyłącznie z funkcji
+--    obecnych na produkcji: is_internal_staff, has_role, has_active_paid_access.
 create or replace function public.investor_has_full_access(_user_id uuid)
 returns boolean
 language sql stable security definer set search_path = public
 as $$
   select public.is_internal_staff(_user_id)
       or (public.has_role(_user_id, 'inwestor')
-          and (public.has_active_paid_access(_user_id, 'investor')
-               or public.investor_module_access_active(_user_id)));
+          and public.has_active_paid_access(_user_id, 'investor'));
 $$;
 
 comment on function public.investor_has_full_access(uuid) is
-  'Od 2026-09-30: personel albo inwestor z aktywnym abonamentem (1 500 zł / 30 dni albo 7 000 zł / 365 dni) albo z dostępem modułowym nadanym przez zespół.';
+  'Od 2026-09-30: personel albo inwestor z aktywnym abonamentem (1 500 zł / 30 dni albo 7 000 zł / 365 dni; także nadanym ręcznie przez admin_adjust_access).';
 
 comment on function public.investor_tier(uuid) is
   'Jeden poziom dostępu inwestora (podstawowy). Płatny dostęp określa investor_has_full_access() — abonament od 2026-09-30.';

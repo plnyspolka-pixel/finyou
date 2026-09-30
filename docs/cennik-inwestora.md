@@ -56,7 +56,8 @@ o znaczniku `when` późniejszym niż ostatnio wgrany — nowy wpis musi mieć
   `createAccessCheckout` przyjmuje z kodów `investor_*` tylko te dwa i wymaga
   akceptacji aktywnej Umowy ramowej (`investorAcceptedActiveFramework`).
 - **Dostęp**: SQL `investor_has_full_access` = personel albo inwestor z
-  aktywnym abonamentem albo z dostępem modułowym nadanym przez zespół. Z tej
+  aktywnym abonamentem (z płatności albo nadanym ręcznie przez zespół —
+  `admin_adjust_access` w `/admin/platnosci-dostep`). Z tej
   funkcji korzystają RLS danych inwestycyjnych, `requireInvestorPro` (AML,
   windykacja), `assertInvestorPro` i `submitInvestorOrder` (Zlecenie wymaga
   abonamentu). W panelu `InvestorSubscriptionGate` pokazuje kartę zakupu w
@@ -89,7 +90,7 @@ rozliczenia. Produkty `investor_pro_180d` i `investor_okazja_unlock` mają
 - `investor_tier(_user_id)` zwraca zawsze `'podstawowy'` (jeden poziom),
 - `investor_can_open_match(_user_id, _match_id)` zwraca `true` dla właściciela
   Dopasowania (Ujawnienie po akceptacji Karty Leada — bez opłaty za Projekt),
-- `investor_has_full_access(_user_id)` — abonament / dostęp modułowy / personel,
+- `investor_has_full_access(_user_id)` — aktywny abonament albo personel,
 - `requireInvestorPro` (`src/lib/investor-plan/pro-middleware.ts`) wymaga
   `investor_has_full_access`.
 
