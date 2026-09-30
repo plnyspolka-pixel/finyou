@@ -13,6 +13,8 @@
 // Rozmiary w presetach są w pikselach kadru 720×1280 (PlayResY = 1280);
 // libass skaluje je proporcjonalnie, gdy plik ma inną rozdzielczość.
 
+import { fixBrandInCues } from "./caption-brand";
+
 export type SrtCue = {
   /** Sekundy od początku filmu. */
   start: number;
@@ -694,7 +696,9 @@ export function srtToAss(
   opts: AssOptions = {},
 ): string | null {
   const style = CUSTOM_CAPTION_STYLES[styleId];
-  const cues = chunkCues(parseSubtitles(srt), {
+  // Nazwa firmy z rozpoznawania mowy bywa przekręcona („fajnasiu") —
+  // poprawiamy ją, zanim cokolwiek trafi na obraz.
+  const cues = chunkCues(fixBrandInCues(parseSubtitles(srt)), {
     maxChars: style.maxChars,
     maxLines: style.maxLines,
   });
