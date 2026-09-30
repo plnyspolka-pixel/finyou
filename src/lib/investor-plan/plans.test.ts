@@ -52,11 +52,17 @@ describe("dostęp inwestora — bez opłat jednostkowych", () => {
     const p = ACCESS_PRESENTATION;
     expect(p.name).toBe("Abonament inwestora");
     expect(p.priceLabel).toBe("1\u00a0500\u00a0zł / mies. albo 7\u00a0000\u00a0zł / rok");
-    const text = [p.name, p.tagline, p.note, ...p.bullets].join("\n");
+    const text = [
+      p.name,
+      p.tagline,
+      p.note,
+      ...p.bullets.flatMap((b) => [b.cecha, b.zaleta, b.korzysc]),
+    ].join("\n");
     expect(text).not.toMatch(/\bPRO\b|Pakiet Podstawowy|0 zł|nieodpłatn/);
     expect(text).not.toMatch(/3 000|5% od|Opłat[ay] Sukcesu/i);
-    expect(p.bullets).toContain("Akceptacja pakietu umów online");
-    expect(p.bullets.join(" ")).not.toMatch(/Automatyczne wypełnienie i podpisanie/);
+    expect(p.bullets.map((b) => b.cecha)).toContain("Akceptacja pakietu umów online");
+    for (const b of p.bullets) expect(b.cecha && b.zaleta && b.korzysc).toBeTruthy();
+    expect(text).not.toMatch(/Automatyczne wypełnienie i podpisanie/);
   });
 });
 

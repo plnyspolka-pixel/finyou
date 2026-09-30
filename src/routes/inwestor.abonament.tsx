@@ -247,11 +247,15 @@ function InwestorAbonament() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <p className="text-muted-foreground">{t.tagline}</p>
-              <ul className="space-y-1">
+              <ul className="space-y-2">
                 {t.bullets.map((b) => (
-                  <li key={b} className="flex gap-2">
+                  <li key={b.cecha} className="flex gap-2">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                    <span>{b}</span>
+                    <span>
+                      <span className="font-medium">{b.cecha}</span>
+                      <span className="block text-muted-foreground">{b.zaleta}</span>
+                      <span className="block font-medium">{b.korzysc}</span>
+                    </span>
                   </li>
                 ))}
               </ul>

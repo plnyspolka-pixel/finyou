@@ -167,8 +167,18 @@ export interface TierPresentation {
   priceLabel: string;
   periodLabel: string;
   tagline: string;
-  bullets: string[];
+  bullets: BenefitBullet[];
   note: string;
+}
+
+/** Punkt oferty w układzie Cecha → Zaleta → Korzyść. */
+export interface BenefitBullet {
+  /** Co dostajesz (nazwa funkcji). */
+  cecha: string;
+  /** Co ta funkcja robi. */
+  zaleta: string;
+  /** Co z tego masz ty — język korzyści. */
+  korzysc: string;
 }
 
 /** Jeden abonament inwestora — pełny dostęp. Do UI (panel + strona marketingowa). */
@@ -178,17 +188,60 @@ export const ACCESS_PRESENTATION: TierPresentation = {
   priceLabel: `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} / mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} / rok`,
   periodLabel: `rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej · bez karty kredytowej`,
   tagline:
-    "Jeden abonament, pełny dostęp: składasz Zlecenie, my szukamy Projektów. Bez prowizji od Twojego zysku i bez opłat za Projekt — Prowizję Klientowską Finance You płaci Klient, potrącaną z wypłaty.",
+    "Jeden abonament otwiera wszystkie narzędzia: składasz Zlecenie, a my szukamy dla Ciebie Projektów. Cały zarobek z odsetek i Twojej prowizji zostaje u Ciebie — nie oddajesz części zysku i nie płacisz za Projekty, bo Prowizję Klientowską Finance You płaci Klient, potrącaną z wypłaty.",
   bullets: [
-    "Pełny pipeline: dane pożyczkodawcy, rachunek spłaty, KYC i screening sankcyjny",
-    "Akceptacja pakietu umów online",
-    "Składanie Zleceń poszukiwania Projektów",
-    "Projekty dopasowane do Zlecenia: raport o inwestycji, harmonogram zaakceptowany przez Klienta i dane kontaktowe",
-    "Generator umowy pożyczki",
-    "Analityka: KW, właściciele, analiza KW, ocena ryzyka",
-    "Akademia inwestora i kalkulator compliance",
-    "Moduł AML i moduł windykacji AI",
-    "Nielimitowana liczba pełnych raportów",
+    {
+      cecha: "Weryfikacja online",
+      zaleta:
+        "Dane, rachunek spłaty, KYC i screening sankcyjny załatwiasz zdalnie, w jednym procesie.",
+      korzysc: "Zaczynasz inwestować bez wizyt i papierów.",
+    },
+    {
+      cecha: "Akceptacja pakietu umów online",
+      zaleta: "Komplet umów dostajesz na trwałym nośniku, a każda akceptacja ma ślad audytowy.",
+      korzysc: "Formalności zamykasz bez spotkań i kuriera, z dowodem na wszystko.",
+    },
+    {
+      cecha: "Zlecenia poszukiwania Projektów",
+      zaleta: "Określasz kwotę, okres i minimalny zysk roczny.",
+      korzysc: "Nie przeszukujesz ofert — to my szukamy Projektów dla Ciebie.",
+    },
+    {
+      cecha: "Projekty dopasowane do Zlecenia",
+      zaleta:
+        "Każdy z raportem o inwestycji, harmonogramem zaakceptowanym przez Klienta i danymi kontaktowymi.",
+      korzysc: "Dostajesz tylko oferty spełniające Twoje kryteria i szybko oceniasz, czy warto.",
+    },
+    {
+      cecha: "Generator umowy pożyczki",
+      zaleta: "Umowa wypełnia się uzgodnionymi warunkami i Twoimi danymi.",
+      korzysc: "Oszczędzasz czas i koszty przygotowania dokumentów.",
+    },
+    {
+      cecha: "Analityka nieruchomości",
+      zaleta: "Księga wieczysta, właściciele, analiza KW i ocena ryzyka w jednym miejscu.",
+      korzysc: "Decydujesz na podstawie danych, zanim wyłożysz pieniądze.",
+    },
+    {
+      cecha: "Akademia inwestora i kalkulator compliance",
+      zaleta: "Szkolenie od podstaw i sprawdzenie zgodności transakcji.",
+      korzysc: "Inwestujesz pewnie, nawet jeśli zaczynasz bez doświadczenia.",
+    },
+    {
+      cecha: "Moduł AML",
+      zaleta: "Procedury, dokumentacja i zgłoszenia AML w jednym miejscu.",
+      korzysc: "Obowiązki AML wypełniasz sprawnie, bez osobnego systemu.",
+    },
+    {
+      cecha: "Moduł windykacji AI",
+      zaleta: "Przypomnienia, wezwania i rejestr kontaktu z Klientem idą automatycznie.",
+      korzysc: "Reagujesz na opóźnienie od pierwszego dnia, bez ręcznego monitowania.",
+    },
+    {
+      cecha: "Pełne raporty bez limitu",
+      zaleta: "Analizujesz każdy Projekt tak dokładnie, jak potrzebujesz.",
+      korzysc: "Nie dopłacasz za kolejne raporty.",
+    },
   ],
   note: SUBSCRIPTION_PAYMENT_SENTENCE,
 };

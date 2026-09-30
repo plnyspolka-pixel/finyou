@@ -219,10 +219,16 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
               flex: 1,
             }}
           >
-            {t.bullets.map((f) => (
-              <li key={f} style={{ display: "flex", gap: 10, fontSize: "0.9rem" }}>
+            {t.bullets.map((b) => (
+              <li key={b.cecha} style={{ display: "flex", gap: 10, fontSize: "0.9rem" }}>
                 <BrandIcon name="check" size={18} />
-                <span>{f}</span>
+                <span style={{ lineHeight: 1.45 }}>
+                  <strong>{b.cecha}</strong>
+                  <span style={{ display: "block", color: "var(--muted-foreground)" }}>
+                    {b.zaleta}
+                  </span>
+                  <span style={{ display: "block", fontWeight: 600 }}>{b.korzysc}</span>
+                </span>
               </li>
             ))}
           </ul>
