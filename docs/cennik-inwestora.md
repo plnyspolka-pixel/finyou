@@ -32,21 +32,31 @@ Ceny, rabat i zdania o płatności liczy jedno miejsce —
 `/dla-inwestora` (cennik z suwakiem Miesięcznie / Rocznie, FAQ, meta),
 panel `/inwestor/abonament` i baner w `/inwestor/umowy` czytają stamtąd.
 
-## Pobieranie abonamentu — jeszcze wyłączone
+## Pobieranie abonamentu — włączone
 
-Cennik jest opublikowany, ale **system jeszcze nie pobiera opłat**: aktywna
-Umowa ramowa v7 (`allows_investor_fees = false`) mówi, że usługa dla Inwestora
-jest nieodpłatna. Konta na v7 mają dostęp bez opłat, a panel mówi o tym wprost.
-Włączenie abonamentu wymaga:
+Podstawą jest Umowa ramowa v7 § 7 (Opłata Abonamentowa; `allows_investor_fees =
+true`). 30 września 2026 r. — przed pierwszą akceptacją v7 (w bazie zero
+akceptacji) — zapis o nieodpłatności zastąpiono Opłatą Abonamentową w
+generatorze `src/lib/legal/pakiet-v7.ts`; pakiet zregenerowano skryptem.
 
-1. nowej wersji Umowy ramowej (i ewentualnie Karty Leada) z abonamentem —
-   doręczenie na trwałym nośniku i wyraźna akceptacja przez Inwestora,
-2. aktywacji `investor_access_30d` / `investor_access_365d` w katalogu
-   `access_products` z cenami `150000` / `700000` gr i liczbą dni 30 / 365
-   (migracja),
-3. zdjęcia blokady kodów `investor_*` w `createAccessCheckout`,
-4. przywrócenia bramkowania (`investor_tier()`, `investor_has_full_access`,
-   `requireInvestorPro`) z okresem przejściowym dla kont na v7.
+- **Katalog**: migracja `20260930120000_abonament_inwestora.sql` (lustro
+  drizzle `0022`) aktywuje `investor_access_30d` (150 000 gr, 30 dni) i
+  `investor_access_365d` (700 000 gr, 365 dni); PRO i odblokowanie okazji
+  zostają nieaktywne. Przed migracją nie było żadnej płatności inwestora,
+  więc kody można było zachować.
+- **Zakup**: `/inwestor/abonament` — karty 30 / 365 dni i formularz Tpay.
+  `createAccessCheckout` przyjmuje z kodów `investor_*` tylko te dwa i wymaga
+  akceptacji aktywnej Umowy ramowej (`investorAcceptedActiveFramework`).
+- **Dostęp**: SQL `investor_has_full_access` = personel albo inwestor z
+  aktywnym abonamentem albo z dostępem modułowym nadanym przez zespół. Z tej
+  funkcji korzystają RLS danych inwestycyjnych, `requireInvestorPro` (AML,
+  windykacja), `assertInvestorPro` i `submitInvestorOrder` (Zlecenie wymaga
+  abonamentu). W panelu `InvestorSubscriptionGate` pokazuje kartę zakupu w
+  modułach poza pipeline'em, `/inwestor/abonament`, płatnościami, profilem i
+  odstąpieniem.
+- **Konsument**: odstąpienie w 14 dni — zwrot Opłaty Abonamentowej, a przy
+  żądaniu wcześniejszego rozpoczęcia pomniejszonej o wykorzystany okres
+  (§ 15 ust. 4).
 
 ## Jeden abonament — zakres
 
@@ -61,27 +71,19 @@ Zakres opisuje `src/lib/investor-plan/plans.ts` (`ACCESS_PRESENTATION`,
 - generator umowy pożyczki, analityka (KW, właściciele, ryzyko), Akademia,
   kalkulator compliance, moduł AML, moduł windykacji AI, raporty bez limitu.
 
-## Infrastruktura płatności (gotowa, wyłączona dla inwestora do czasu nowej umowy)
+## Infrastruktura płatności
 
 Tabele `access_products`, `access_entitlements`, `access_payments` i webhook
-Tpay pozostają — obsługują pośredników i historyczne rozliczenia. Produkty
-inwestora (`investor_pro_180d`, `investor_okazja_unlock`,
-`investor_access_30d`, `investor_access_365d`) mają `active = false`; rekordy,
-płatności i faktury historyczne zostają. `createAccessCheckout` odrzuca kody
-`investor_*`.
+Tpay obsługują abonament inwestora, pakiety pośrednika i historyczne
+rozliczenia. Produkty `investor_pro_180d` i `investor_okazja_unlock` mają
+`active = false` (rekordy zostają).
 
-- `investor_tier(_user_id)` zwraca zawsze `'podstawowy'`,
+- `investor_tier(_user_id)` zwraca zawsze `'podstawowy'` (jeden poziom),
 - `investor_can_open_match(_user_id, _match_id)` zwraca `true` dla właściciela
-  Dopasowania (Ujawnienie po akceptacji Karty Leada — bez płatności),
-- `investor_has_full_access(_user_id)` zwraca `true` dla roli `inwestor`,
-- `requireInvestorPro` (`src/lib/investor-plan/pro-middleware.ts`) przepuszcza
-  każdego zalogowanego inwestora — zostaje jako jedno miejsce bramkowania na
-  wypadek przyszłego abonamentu.
-
-**Abonament — cennik opublikowany, pobieranie wyłączone.** Kroki włączenia:
-sekcja „Pobieranie abonamentu" wyżej. Do tego czasu `/inwestor/abonament`
-pokazuje cennik i informację, że konto na dotychczasowych warunkach nic nie
-płaci — bez checkoutu.
+  Dopasowania (Ujawnienie po akceptacji Karty Leada — bez opłaty za Projekt),
+- `investor_has_full_access(_user_id)` — abonament / dostęp modułowy / personel,
+- `requireInvestorPro` (`src/lib/investor-plan/pro-middleware.ts`) wymaga
+  `investor_has_full_access`.
 
 ## Opłaty sukcesu — rejestr historyczny
 
@@ -94,12 +96,14 @@ jedynie anulować stare rekordy. `investor_opportunity_unlocks` — analogicznie
 
 Migracja `20260929155000_etap5_pakiet_inwestor_v7.sql` (patrz
 `docs/legal/paczka-inwestor-v7/`): usunięte Pakiety, Cennik, Opłata Sukcesu,
-Opłata Abonamentowa, Opłata za Udostępnienie Okazji i Zał. 8; § 2/§ 7 —
-usługa dla Inwestora **nieodpłatna**; Prowizja Klientowska 7 % Kwoty
+Opłata za Udostępnienie Okazji i Zał. 8; § 2/§ 7 — Inwestor płaci wyłącznie
+**Opłatę Abonamentową** (1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto
+za 365 dni; zmiana z 2026-09-30, przed pierwszą akceptacją); Prowizja Klientowska 7 % Kwoty
 Udzielonej, min 5 000 zł, bez VAT, potrącana z wypłaty; § 5 — maks. 5
 przyjętych Zleceń, wygaśnięcie po 5 odrzuceniach, rezerwacja 24 h + 12 h,
 maks. 2 przedłużone naraz; Kara Obejściowa 5 % Sumy Hipotecznej i pięcioletni
-Okres Ochronny bez zmian. `allows_investor_fees = false`. Pakiet wchodzi do
+Okres Ochronny bez zmian. `allows_investor_fees = true` dla umowy ramowej
+(false dla NDA i RODO). Pakiet wchodzi do
 rejestru jako aktywny (`active = true`) — aktywację wszystkich trzech
 dokumentów (umowa v7, NDA v6, RODO v5) zatwierdził właściciel 2026-09-29.
 Wyłączenie pakietu: `/admin/umowy-inwestorow`.

@@ -9,17 +9,17 @@ odnowień, punktów i opłat za pojedynczą ofertę/lead.
 | --- | --- | --- | --- | --- |
 | `broker_access_30d` | pośrednik | 499 zł (`49900` gr) | 30 | `access` |
 | `broker_access_365d` | pośrednik | 2 999 zł (`299900` gr) | 365 | `access` |
-| `investor_access_30d` | inwestor | 1 500 zł (`150000` gr) — cennik | 30 | `access`, **nieaktywny** |
-| `investor_access_365d` | inwestor | 7 000 zł (`700000` gr) — cennik | 365 | `access`, **nieaktywny** |
+| `investor_access_30d` | inwestor | 1 500 zł (`150000` gr) | 30 | `access` |
+| `investor_access_365d` | inwestor | 7 000 zł (`700000` gr) | 365 | `access` |
 | `investor_pro_180d`, `investor_okazja_unlock` | inwestor | — | — | **nieaktywne** (historia) |
 
 **Inwestor — abonament 1 500 zł / mies. albo 7 000 zł / rok (61 % rabatu
 przy płatności rocznej)**, opublikowany od 30 września 2026 r.
-(`docs/cennik-inwestora.md`, ceny w `src/lib/investor-plan/plans.ts`).
-Pobieranie jest jeszcze wyłączone: aktywna Umowa ramowa v7 mówi, że usługa dla
-Inwestora jest nieodpłatna. Produkty inwestora mają `active = false`, ceny
-w katalogu są jeszcze historyczne (aktualizacja migracją przy włączeniu),
-a `createAccessCheckout` odrzuca kody `investor_*`.
+(`docs/cennik-inwestora.md`, ceny w `src/lib/investor-plan/plans.ts`,
+podstawa: Umowa ramowa v7 § 7). Katalog: migracja
+`20260930120000_abonament_inwestora.sql`. `createAccessCheckout` przyjmuje
+z kodów `investor_*` tylko abonament 30 / 365 dni i wymaga wcześniejszej
+akceptacji aktywnej Umowy ramowej.
 
 Konto darmowe pośrednika (`broker_free`) nie jest produktem — wynika z roli
 `posrednik` / aktywnego rekordu `affiliate_partners` i nie wygasa.

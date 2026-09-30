@@ -10,12 +10,12 @@
 //  • Klient nadal płaci Prowizję Klientowską Finance You (7 % Kwoty
 //    Udzielonej, min 5 000 zł, bez VAT), potrącaną z wypłaty —
 //    patrz src/lib/contract-engine/fees.ts.
-//  • POBIERANIE abonamentu nie jest jeszcze włączone: Umowa ramowa v7 mówi,
-//    że usługa dla Inwestora jest nieodpłatna. Włączenie wymaga nowej wersji
-//    umowy (trwały nośnik + wyraźna akceptacja), aktywacji produktów
-//    SUBSCRIPTION_OPTIONS[*].productCode w katalogu access_products z cenami
-//    stąd i zdjęcia blokady `investor_*` w createAccessCheckout. Do tego czasu
-//    `investor_tier()` zwraca zawsze 'podstawowy', a panel nic nie nalicza.
+//  • Podstawa: Umowa ramowa v7 § 7 (Opłata Abonamentowa — kwoty w
+//    src/lib/legal/pakiet-v7.ts, ABONAMENT_UMOWA). Sprzedaż: produkty
+//    SUBSCRIPTION_OPTIONS[*].productCode w access_products (migracja
+//    20260930120000), createAccessCheckout po akceptacji Umowy ramowej.
+//    Dostęp: SQL investor_has_full_access (RLS), requireInvestorPro,
+//    submitInvestorOrder i InvestorSubscriptionGate w panelu.
 
 /** Jedyny poziom dostępu inwestora. Typ zostaje dla zgodności sygnatur. */
 export type InvestorTier = "podstawowy";
@@ -77,7 +77,7 @@ export const TIER_FEATURES: Record<InvestorTier, InvestorFeature[]> = {
   podstawowy: ALL_FEATURES,
 };
 
-/** Bez paywalli: każdy inwestor ma każdą funkcję. */
+/** Jeden poziom: abonament otwiera każdą funkcję (płatność sprawdza investor_has_full_access). */
 export function tierHasFeature(_tier: InvestorTier, feature: InvestorFeature): boolean {
   return ALL_FEATURES.includes(feature);
 }
@@ -125,7 +125,7 @@ export interface SubscriptionOption {
   periodLabel: string;
   /** Liczba dni dostępu za jedną płatność. */
   days: number;
-  /** Kod produktu w katalogu access_products (nieaktywny do czasu nowej umowy). */
+  /** Kod produktu w katalogu access_products (cena i liczba dni po stronie serwera). */
   productCode: string;
   /** Zdanie pod ceną: rabat albo zachęta do płatności rocznej. */
   hint: string;

@@ -129,8 +129,8 @@ function MatchCard({
   limits: OrderLimits;
   onDone: () => void;
 }) {
-  // Usługa dla Inwestora jest nieodpłatna (Umowa ramowa v7): Ujawnienie
-  // po akceptacji Karty Leada nie wymaga żadnej płatności.
+  // Ujawnienie po akceptacji Karty Leada nie wymaga dodatkowej płatności —
+  // Projekt jest w ramach abonamentu (Umowa ramowa v7 § 7).
   const accept = useServerFn(acceptKartaLeada);
   const disclose = useServerFn(requestDisclosure);
   const extend = useServerFn(extendReservation);

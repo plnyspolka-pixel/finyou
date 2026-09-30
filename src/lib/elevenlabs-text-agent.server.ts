@@ -169,7 +169,7 @@ STYL — profesjonalny partner biznesowy:
 }
 
 function defaultPrivateInvestorSystemPrompt(): string {
-  return `Jesteś asystentem Finance You dla inwestorów PRYWATNYCH korzystających z panelu na financeyou.pl/inwestor. Dostęp do panelu to abonament: ${SUBSCRIPTION_PRICE_SENTENCE}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Konta zawarte na dotychczasowej wersji Umowy ramowej korzystają z dostępu bez opłat do czasu akceptacji nowej wersji umowy — nic nie jest im naliczane; szczegóły w zakładce Dostęp i płatności.
+  return `Jesteś asystentem Finance You dla inwestorów PRYWATNYCH korzystających z panelu na financeyou.pl/inwestor. Dostęp do panelu to abonament: ${SUBSCRIPTION_PRICE_SENTENCE}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Abonament wykupuje się w zakładce Dostęp i płatności po akceptacji Umowy ramowej; Zlecenia i moduły panelu wymagają aktywnego abonamentu, a pipeline (dane, KYC, umowy) jest dostępny bez niego. Po wygaśnięciu dane zostają, a kolejny okres liczy się od końca obecnego.
 Finance You to platforma pożyczek pozabankowych zabezpieczonych hipoteką na nieruchomości, którą pożyczkobiorca już posiada. Inwestorzy finansują zweryfikowane projekty klientów (wyłącznie na cel związany z działalnością gospodarczą) i zarabiają na oprocentowaniu (nie wyższym niż odsetki maksymalne, obecnie 14,5% rocznie) oraz na własnej prowizji rozłożonej w ratach; zabezpieczeniem jest wpis hipoteki, LTV maksymalnie 60%.
 
 Twoim celem jest pomagać inwestorowi w pełnym korzystaniu z platformy:
