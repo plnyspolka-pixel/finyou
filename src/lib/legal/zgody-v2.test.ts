@@ -6,7 +6,15 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { migracjaZgodV2, naprawListy, transformPolitykaV2, transformRegulaminV2 } from "./zgody-v2";
+import {
+  migracjaZgodV2,
+  naprawListy,
+  poprawkaCookiesPolitykaV2,
+  POLITYKA_V2_COOKIES_NEW,
+  POLITYKA_V2_COOKIES_OLD,
+  transformPolitykaV2,
+  transformRegulaminV2,
+} from "./zgody-v2";
 
 const DIR = join(process.cwd(), "docs", "legal", "klient");
 const rd = (f: string) => readFileSync(join(DIR, f), "utf8");
@@ -67,6 +75,13 @@ describe("polityka prywatności v2", () => {
     );
   });
 
+  it("po poprawce opisuje wdrożony mechanizm zgód na cookies (§ 15)", () => {
+    const aktualna = poprawkaCookiesPolitykaV2(polityka);
+    expect(aktualna).not.toContain("jeżeli został wdrożony");
+    expect(aktualna).toContain("[Polityka cookies](https://financeyou.pl/polityka-cookies)");
+    expect(aktualna).toContain("„Ustawieniach cookies”");
+  });
+
   it("naprawia spłaszczone listy podstaw prawnych w § 6", () => {
     expect(polityka).not.toMatch(/^\d+\. art\. 6/m);
   });
@@ -75,7 +90,7 @@ describe("polityka prywatności v2", () => {
 describe("pliki i migracja", () => {
   it("docs/legal/klient/*-v2.md są aktualne", () => {
     expect(rd("regulamin-klienta-v2.md")).toBe(regulamin);
-    expect(rd("polityka-prywatnosci-v2.md")).toBe(polityka);
+    expect(rd("polityka-prywatnosci-v2.md")).toBe(poprawkaCookiesPolitykaV2(polityka));
   });
 
   it("migracja = wynik generatora; lustro drizzle identyczne", () => {
@@ -91,6 +106,22 @@ describe("pliki i migracja", () => {
     );
     expect(
       readFileSync(join(process.cwd(), "drizzle", "migrations", "0017_etap5_zgody_v2.sql"), "utf8"),
+    ).toBe(sql);
+  });
+
+  it("migracja poprawki cookies podmienia dokładnie § 15 ust. 6 i ma lustro drizzle", () => {
+    const sql = readFileSync(
+      join(process.cwd(), "supabase", "migrations", "20260930100000_polityka_v2_cookies.sql"),
+      "utf8",
+    );
+    const q = (t: string) => `'${t.replace(/'/g, "''")}'`;
+    expect(sql).toContain(q(POLITYKA_V2_COOKIES_OLD));
+    expect(sql).toContain(q(POLITYKA_V2_COOKIES_NEW));
+    expect(
+      readFileSync(
+        join(process.cwd(), "drizzle", "migrations", "0020_polityka_v2_cookies.sql"),
+        "utf8",
+      ),
     ).toBe(sql);
   });
 

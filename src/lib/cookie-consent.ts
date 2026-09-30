@@ -8,7 +8,9 @@
  *
  * Do chwili wyboru nic poza niezbędnymi się nie ładuje. Wybór trzymamy w
  * cookie pierwszej strony `fy_cookie_consent` (12 miesięcy); zmiana wersji
- * (`CONSENT_VERSION`) wymusza ponowne pytanie.
+ * (`CONSENT_VERSION`) wymusza ponowne pytanie. Każda decyzja trafia też do
+ * rejestru `cookie_consent_log` (rozliczalność, art. 7 ust. 1 RODO) pod
+ * losowym identyfikatorem `id` zapisanym w cookie.
  */
 import { useSyncExternalStore } from "react";
 
@@ -21,13 +23,29 @@ const OPEN_SETTINGS_EVENT = "fy:open-cookie-settings";
 
 export type ConsentCategory = "analytics" | "marketing";
 
+export type ConsentSource = "banner_accept_all" | "banner_reject" | "settings";
+
 export type CookieConsent = {
   v: number;
+  /** Losowy identyfikator zgody — klucz wpisów w cookie_consent_log. */
+  id: string;
   analytics: boolean;
   marketing: boolean;
   /** ISO — moment udzielenia/zmiany zgody. */
   ts: string;
 };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function newConsentId(): string {
+  const c = globalThis.crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  const b = c.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
 
 export function parseConsent(raw: string | undefined | null): CookieConsent | null {
   if (!raw) return null;
@@ -36,6 +54,7 @@ export function parseConsent(raw: string | undefined | null): CookieConsent | nu
     if (o?.v !== CONSENT_VERSION) return null;
     return {
       v: CONSENT_VERSION,
+      id: typeof o.id === "string" && UUID_RE.test(o.id) ? o.id : "",
       analytics: o.analytics === true,
       marketing: o.marketing === true,
       ts: typeof o.ts === "string" ? o.ts : "",
@@ -103,11 +122,34 @@ export function googleConsentState(c: CookieConsent | null) {
   } as const;
 }
 
-export function saveConsent(choice: { analytics: boolean; marketing: boolean }) {
+/** Zapis decyzji w rejestrze na serwerze; błąd nie blokuje strony. */
+async function logConsent(c: CookieConsent, source: ConsentSource) {
+  try {
+    const { logCookieConsent } = await import("./consent/cookie-consent.functions");
+    await logCookieConsent({
+      data: {
+        consentId: c.id,
+        version: c.v,
+        analytics: c.analytics,
+        marketing: c.marketing,
+        source,
+        pagePath: window.location.pathname.slice(0, 300),
+      },
+    });
+  } catch (e) {
+    console.warn("[cookie-consent] log", e);
+  }
+}
+
+export function saveConsent(
+  choice: { analytics: boolean; marketing: boolean },
+  source: ConsentSource = "settings",
+) {
   if (typeof document === "undefined") return;
   const prev = getConsent();
   const next: CookieConsent = {
     v: CONSENT_VERSION,
+    id: prev?.id || newConsentId(),
     analytics: choice.analytics,
     marketing: choice.marketing,
     ts: new Date().toISOString(),
@@ -130,11 +172,15 @@ export function saveConsent(choice: { analytics: boolean; marketing: boolean }) 
 
   const revoked = (["analytics", "marketing"] as const).filter((k) => prev?.[k] && !next[k]);
   listeners.forEach((l) => l());
+  const logged = logConsent(next, source);
   if (revoked.length > 0) {
     // Załadowanych skryptów nie da się „wyładować” — czyścimy ich cookies i
-    // przeładowujemy stronę, żeby nic już nie działało w tle.
+    // przeładowujemy stronę, żeby nic już nie działało w tle. Przeładowanie
+    // czeka na zapis w rejestrze (maks. 2 s), żeby go nie przerwać.
     deleteCookiesWithPrefixes(revoked.flatMap((k) => TRACKING_COOKIE_PREFIXES[k]));
-    window.location.reload();
+    void Promise.race([logged, new Promise((r) => setTimeout(r, 2000))]).then(() =>
+      window.location.reload(),
+    );
   }
 }
 

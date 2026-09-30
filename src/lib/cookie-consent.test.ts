@@ -1,4 +1,8 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("./consent/cookie-consent.functions", () => ({
+  logCookieConsent: vi.fn(async () => ({ ok: true })),
+}));
 import {
   __resetConsentCache,
   CONSENT_COOKIE,
@@ -42,12 +46,20 @@ describe("consent storage", () => {
     expect(hasConsent("analytics")).toBe(true);
     expect(hasConsent("marketing")).toBe(false);
   });
+
+  it("keeps the same consent id across changes (one browser = one log key)", () => {
+    saveConsent({ analytics: false, marketing: false });
+    const id = getConsent()!.id;
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+    saveConsent({ analytics: false, marketing: true });
+    expect(getConsent()!.id).toBe(id);
+  });
 });
 
 describe("googleConsentState", () => {
   it("maps categories to Consent Mode v2 signals", () => {
     expect(
-      googleConsentState({ v: CONSENT_VERSION, analytics: true, marketing: false, ts: "" }),
+      googleConsentState({ v: CONSENT_VERSION, id: "", analytics: true, marketing: false, ts: "" }),
     ).toEqual({
       analytics_storage: "granted",
       ad_storage: "denied",

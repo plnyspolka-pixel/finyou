@@ -15,7 +15,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { onOpenCookieSettings, saveConsent, useCookieConsent } from "@/lib/cookie-consent";
+import {
+  onOpenCookieSettings,
+  saveConsent,
+  useCookieConsent,
+  type ConsentSource,
+} from "@/lib/cookie-consent";
 
 const CATEGORIES = [
   {
@@ -57,9 +62,9 @@ export function CookieBanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tylko w chwili otwarcia
   }, [settingsOpen]);
 
-  const decide = (a: boolean, m: boolean) => {
+  const decide = (a: boolean, m: boolean, source: ConsentSource) => {
     setSettingsOpen(false);
-    saveConsent({ analytics: a, marketing: m });
+    saveConsent({ analytics: a, marketing: m }, source);
   };
 
   const values = { analytics, marketing } as const;
@@ -93,10 +98,12 @@ export function CookieBanner() {
               <Button variant="outline" onClick={() => setSettingsOpen(true)}>
                 Ustawienia
               </Button>
-              <Button variant="outline" onClick={() => decide(false, false)}>
+              <Button variant="outline" onClick={() => decide(false, false, "banner_reject")}>
                 Odrzuć opcjonalne
               </Button>
-              <Button onClick={() => decide(true, true)}>Akceptuj wszystkie</Button>
+              <Button onClick={() => decide(true, true, "banner_accept_all")}>
+                Akceptuj wszystkie
+              </Button>
             </div>
           </div>
         </div>
@@ -140,13 +147,13 @@ export function CookieBanner() {
             })}
           </ul>
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="outline" onClick={() => decide(false, false)}>
+            <Button variant="outline" onClick={() => decide(false, false, "settings")}>
               Odrzuć opcjonalne
             </Button>
-            <Button variant="outline" onClick={() => decide(analytics, marketing)}>
+            <Button variant="outline" onClick={() => decide(analytics, marketing, "settings")}>
               Zapisz wybór
             </Button>
-            <Button onClick={() => decide(true, true)}>Akceptuj wszystkie</Button>
+            <Button onClick={() => decide(true, true, "settings")}>Akceptuj wszystkie</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

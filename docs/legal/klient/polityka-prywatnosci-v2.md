@@ -441,7 +441,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 5. Cookies analityczne, marketingowe lub inne niewymagane technicznie są stosowane zgodnie z obowiązującymi przepisami, w szczególności na podstawie zgody użytkownika, jeżeli taka zgoda jest wymagana.
 
-6. Użytkownik może zarządzać cookies poprzez ustawienia przeglądarki lub mechanizm zgód dostępny na Platformie, jeżeli został wdrożony.
+6. Cookies analityczne (Google Analytics, Microsoft Clarity) i marketingowe (piksel Meta i Conversions API, Google Ads) są uruchamiane wyłącznie po wyrażeniu zgody w banerze wyświetlanym przy pierwszej wizycie. Zgodę można w każdej chwili zmienić lub wycofać w „Ustawieniach cookies” dostępnych w stopce strony, bez wpływu na zgodność z prawem przetwarzania dokonanego przed jej wycofaniem. Finance You zapisuje historię udzielonych i wycofanych zgód na cookies (identyfikator zgody, wybrane kategorie, data, skrócony adres IP, informacje o przeglądarce) w celu wykazania ich udzielenia – przez okres 3 lat od ostatniej zmiany. Cookies można również blokować lub usuwać w ustawieniach przeglądarki. Wykaz stosowanych cookies zawiera [Polityka cookies](https://financeyou.pl/polityka-cookies).
 
 7. Ograniczenie albo wyłączenie cookies może wpłynąć na działanie niektórych funkcjonalności Platformy.
 

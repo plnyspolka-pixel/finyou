@@ -164,6 +164,12 @@ export function transformRegulaminV2(v1: string): string {
   return t.value();
 }
 
+/** § 15 ust. 6 polityki v2 — przed i po wdrożeniu banera zgód na cookies. */
+export const POLITYKA_V2_COOKIES_OLD =
+  "6. Użytkownik może zarządzać cookies poprzez ustawienia przeglądarki lub mechanizm zgód dostępny na Platformie, jeżeli został wdrożony.";
+export const POLITYKA_V2_COOKIES_NEW =
+  "6. Cookies analityczne (Google Analytics, Microsoft Clarity) i marketingowe (piksel Meta i Conversions API, Google Ads) są uruchamiane wyłącznie po wyrażeniu zgody w banerze wyświetlanym przy pierwszej wizycie. Zgodę można w każdej chwili zmienić lub wycofać w „Ustawieniach cookies” dostępnych w stopce strony, bez wpływu na zgodność z prawem przetwarzania dokonanego przed jej wycofaniem. Finance You zapisuje historię udzielonych i wycofanych zgód na cookies (identyfikator zgody, wybrane kategorie, data, skrócony adres IP, informacje o przeglądarce) w celu wykazania ich udzielenia – przez okres 3 lat od ostatniej zmiany. Cookies można również blokować lub usuwać w ustawieniach przeglądarki. Wykaz stosowanych cookies zawiera [Polityka cookies](https://financeyou.pl/polityka-cookies).";
+
 export function transformPolitykaV2(v1: string): string {
   const t = new Transform(naprawListy(v1));
 
@@ -246,6 +252,18 @@ export function transformPolitykaV2(v1: string): string {
     `4. Polityka prywatności w wersji 2 obowiązuje od dnia ${ZGODY_V2_DATA_PL}.`,
   );
   return t.value();
+}
+
+/**
+ * Poprawka informacyjna do obowiązującej polityki v2 (30 września 2026 r.):
+ * § 15 ust. 6 opisuje wdrożony baner zgód. Stosowana na wyniku
+ * transformPolitykaV2 — migracja 20260929156000 zostaje bez zmian, bazę
+ * aktualizuje 20260930100000_polityka_v2_cookies.sql.
+ */
+export function poprawkaCookiesPolitykaV2(politykaV2: string): string {
+  return new Transform(politykaV2)
+    .replaceOnce(POLITYKA_V2_COOKIES_OLD, POLITYKA_V2_COOKIES_NEW)
+    .value();
 }
 
 export interface ZgodaV2 {
