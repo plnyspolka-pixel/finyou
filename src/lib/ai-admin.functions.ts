@@ -286,6 +286,10 @@ export const sendAdminChat = createServerFn({ method: "POST" })
     await assertAdmin(context as never);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { callAnthropic, runTool, buildMemoryBlock } = await import("./ai-admin.server");
+    // Token sesji administratora — narzędzia MCP (Studio, HeyGen…) działają jako on.
+    const { getRequest } = await import("@tanstack/react-start/server");
+    const mcpAccessToken =
+      getRequest()?.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || undefined;
     type AnthropicMessage = import("./ai-admin.server").AnthropicMessage;
     type AnthropicContent = Exclude<AnthropicMessage["content"], string>;
 
@@ -517,6 +521,8 @@ export const sendAdminChat = createServerFn({ method: "POST" })
             enableCommsSend: s.enable_comms_send === true,
             userId: context.userId,
             conversationId: convId,
+            accessToken: mcpAccessToken,
+            userEmail: (context.claims as { email?: string } | undefined)?.email,
           },
         );
         const content = r.ok
