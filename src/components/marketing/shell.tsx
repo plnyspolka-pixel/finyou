@@ -78,6 +78,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   const nav = [
     { label: "Klient", href: PAGE_PATH.klient, key: "klient" as const },
     { label: "Inwestor", href: PAGE_PATH.inwestor, key: "inwestor" as const },
+    { label: "Pośrednik", href: PAGE_PATH.posrednik, key: "posrednik" as const },
     { label: "Kalkulator pożyczki", href: PAGE_PATH.kalkulator, key: "kalkulator" as const },
     { label: "Jak działa", href: page === "home" ? "#jak-dziala" : "/#jak-dziala", key: "jak" },
     { label: "Blog", href: "/blog", key: "blog" },
@@ -288,6 +289,7 @@ export function SiteFooter() {
       links: [
         { t: "Klient", href: PAGE_PATH.klient },
         { t: "Inwestor", href: PAGE_PATH.inwestor },
+        { t: "Pośrednik", href: PAGE_PATH.posrednik },
       ],
     },
     {

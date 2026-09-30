@@ -72,6 +72,15 @@ const ROLES: RoleCardProps[] = [
     cta: "Dołącz do klubu",
     href: "/dla-inwestora",
   },
+  {
+    icon3d: "handshake",
+    accent: "var(--gold-600)",
+    badge: { v: "gold", t: "Pośrednik" },
+    title: "Dla pośredników",
+    desc: "Zarabiaj na obsłudze klientów z gotowym CRM-em, szkoleniem, AI i bazą inwestorów.",
+    cta: "Zostań partnerem",
+    href: "/dla-posrednika",
+  },
 ];
 
 const MODULES: { icon: Icon3DName; t: string }[] = [
@@ -89,7 +98,7 @@ const MODULES: { icon: Icon3DName; t: string }[] = [
 
 const FLOW = [
   {
-    t: "Klient dodaje sprawę",
+    t: "Klient lub pośrednik dodaje sprawę",
     d: "Numer KW i podstawowe informacje o nieruchomości.",
   },
   { t: "System porządkuje dane", d: "Sprawa zostaje ustrukturyzowana i opisana." },
@@ -97,7 +106,7 @@ const FLOW = [
     t: "Trafia do finansujących",
     d: "Inwestorzy z przyjętym Zleceniem widzą anonimowy opis sprawy.",
   },
-  { t: "Zespół prowadzi proces", d: "Obsługa w CRM z pełną historią kontaktu." },
+  { t: "Pośrednik prowadzi proces", d: "Obsługa w CRM z pełną historią kontaktu." },
   { t: "Inwestor analizuje", d: "LTV, typ nieruchomości, dokumenty w jednym miejscu." },
   { t: "Platforma wspiera obsługę", d: "Dokumentacja, komunikacja i monitoring." },
 ];
@@ -144,7 +153,7 @@ function Hero() {
               letterSpacing: "-0.025em",
             }}
           >
-            Jedna platforma dla klientów i inwestorów na rynku pożyczek pod{" "}
+            Jedna platforma dla klientów, inwestorów i pośredników na rynku pożyczek pod{" "}
             <span
               style={{
                 background: "linear-gradient(95deg,#f0c667,#f6dc9c 34%,#5fa2f6 82%)",
@@ -165,9 +174,9 @@ function Hero() {
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Finance You łączy przedsiębiorców szukających finansowania i prywatnych inwestorów w
-            jednym systemie: z CRM-em, AI, dokumentacją, szkoleniami i automatyzacją procesu.
-            Finansowanie wyłącznie na cel związany z działalnością gospodarczą.
+            Finance You łączy przedsiębiorców szukających finansowania, prywatnych inwestorów i
+            pośredników w jednym systemie: z CRM-em, AI, dokumentacją, szkoleniami i automatyzacją
+            procesu. Finansowanie wyłącznie na cel związany z działalnością gospodarczą.
           </p>
           <div
             style={{
@@ -192,6 +201,18 @@ function Hero() {
               }}
             >
               Inwestuję
+            </MktButton>
+            <MktButton
+              variant="outline"
+              size="lg"
+              href="/dla-posrednika"
+              style={{
+                background: "rgba(255,255,255,.08)",
+                borderColor: "rgba(255,255,255,.3)",
+                color: "#fff",
+              }}
+            >
+              Pośredniczę
             </MktButton>
           </div>
           <div
@@ -240,16 +261,15 @@ function Landing() {
       <Section id="sciezki">
         <SectionHead
           eyebrow="Wybierz ścieżkę"
-          title="Dwie role, jeden system"
+          title="Trzy role, jeden system"
           sub="Każda ścieżka prowadzi do osobnego, dopasowanego procesu w platformie Finance You."
         />
         <div
           className="fy-steps"
           style={{
-            margin: "2.5rem auto 0",
-            maxWidth: "56rem",
+            marginTop: "2.5rem",
             display: "grid",
-            gridTemplateColumns: "repeat(2,1fr)",
+            gridTemplateColumns: "repeat(3,1fr)",
             gap: "1.1rem",
           }}
         >
@@ -281,7 +301,7 @@ function Landing() {
         <SectionHead
           eyebrow="Blog"
           title="Wiedza o prywatnym finansowaniu"
-          sub="Praktyczne artykuły o pożyczkach pod nieruchomości i inwestowaniu."
+          sub="Praktyczne artykuły o pożyczkach pod nieruchomości, inwestowaniu i pracy pośrednika."
         />
         <div
           style={{
@@ -302,10 +322,11 @@ function Landing() {
 
       <CTASection
         title="Wybierz swoją ścieżkę w Finance You."
-        sub="Dwie role, jeden system operacyjny. Zacznij tam, gdzie jesteś."
+        sub="Trzy role, jeden system operacyjny. Zacznij tam, gdzie jesteś."
         buttons={[
           { label: "Pożyczam", href: "/dla-klienta" },
           { label: "Inwestuję", href: "/dla-inwestora" },
+          { label: "Pośredniczę", href: "/dla-posrednika" },
         ]}
       />
 

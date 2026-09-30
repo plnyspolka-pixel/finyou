@@ -7,13 +7,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const listSubscribers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const { data, error, count } = await context.supabase
       .from("email_subscribers")
-      .select("*")
+      .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
       .limit(1000);
     if (error) throw new Error(error.message);
-    return { subscribers: data ?? [] };
+    return { subscribers: data ?? [], total: count ?? data?.length ?? 0 };
   });
 
 export const addSubscriber = createServerFn({ method: "POST" })
@@ -104,6 +104,69 @@ export const importSubscribersFromLeads = createServerFn({ method: "POST" })
       .upsert(rows, { onConflict: "email", ignoreDuplicates: true });
     if (upErr) throw new Error(upErr.message);
     return { imported: rows.length };
+  });
+
+// Import listy z pliku (CSV) — przeglądarka dzieli plik na paczki i wysyła je
+// po kolei. Istniejących adresów nie nadpisujemy (ON CONFLICT DO NOTHING), żeby
+// import zewnętrznej bazy nie zmienił tagów/statusu klientów ani nie cofnął wypisu.
+export const IMPORT_BATCH_SIZE = 1000;
+
+export const importSubscribersBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        rows: z
+          .array(
+            z.object({
+              email: z.string().max(320),
+              first_name: z.string().max(120).optional(),
+              last_name: z.string().max(120).optional(),
+              tags: z.array(z.string().min(1).max(60)).max(10).optional(),
+            }),
+          )
+          .min(1)
+          .max(IMPORT_BATCH_SIZE),
+        tags: z.array(z.string().min(1).max(60)).max(10).default([]),
+        source: z.string().min(1).max(60).default("import"),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertStaff } = await import("@/lib/affiliate/db");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient;
+    await assertStaff(db, context.userId);
+
+    const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    const seen = new Set<string>();
+    let invalid = 0;
+    const rows = [];
+    for (const r of data.rows) {
+      const email = r.email.toLowerCase().trim();
+      if (!emailRe.test(email)) {
+        invalid++;
+        continue;
+      }
+      if (seen.has(email)) continue;
+      seen.add(email);
+      rows.push({
+        email,
+        first_name: r.first_name?.trim() || null,
+        last_name: r.last_name?.trim() || null,
+        tags: [...new Set([...data.tags, ...(r.tags ?? [])])],
+        source: data.source,
+      });
+    }
+    if (!rows.length) return { inserted: 0, skipped: 0, invalid };
+
+    const { data: ins, error } = await db
+      .from("email_subscribers")
+      .upsert(rows, { onConflict: "email", ignoreDuplicates: true })
+      .select("id");
+    if (error) throw new Error(error.message);
+    const inserted = ins?.length ?? 0;
+    return { inserted, skipped: rows.length - inserted, invalid };
   });
 
 // ---------------- Segments ----------------

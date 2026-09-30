@@ -2,6 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { parseSubscriberCsv } from "@/lib/subscriber-csv";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,12 +45,15 @@ import {
   BarChart3,
   Loader2,
   ShieldBan,
+  Upload,
 } from "lucide-react";
 import {
   listSubscribers,
   addSubscriber,
   deleteSubscriber,
   importSubscribersFromLeads,
+  importSubscribersBatch,
+  IMPORT_BATCH_SIZE,
   listSegments,
   saveSegment,
   deleteSegment,
@@ -206,6 +210,115 @@ function SuppressionsTab() {
 
 // ============== Subscribers ==============
 
+// Import listy adresów z pliku CSV (np. baza pośredników). Plik parsujemy w
+// przeglądarce i wysyłamy paczkami — 76 tys. adresów to ~77 zapytań po 1000.
+function CsvImportDialog({ onDone }: { onDone: () => void }) {
+  const importBatch = useServerFn(importSubscribersBatch);
+  const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [tags, setTags] = useState("posrednicy");
+  const [source, setSource] = useState("baza_posrednikow");
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+
+  const run = async () => {
+    if (!file) return;
+    const parsed = parseSubscriberCsv(await file.text());
+    if (parsed.error) {
+      toast.error(parsed.error);
+      return;
+    }
+    const baseTags = tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    setBusy(true);
+    setProgress({ done: 0, total: parsed.rows.length });
+    const sum = { inserted: 0, skipped: 0, invalid: 0 };
+    try {
+      for (let i = 0; i < parsed.rows.length; i += IMPORT_BATCH_SIZE) {
+        const r = await importBatch({
+          data: {
+            rows: parsed.rows.slice(i, i + IMPORT_BATCH_SIZE),
+            tags: baseTags,
+            source: source.trim() || "import",
+          },
+        });
+        sum.inserted += r.inserted;
+        sum.skipped += r.skipped;
+        sum.invalid += r.invalid;
+        setProgress({
+          done: Math.min(i + IMPORT_BATCH_SIZE, parsed.rows.length),
+          total: parsed.rows.length,
+        });
+      }
+      toast.success(
+        `Dodano ${sum.inserted}, pominięto istniejących ${sum.skipped}, błędnych ${sum.invalid}`,
+      );
+      setOpen(false);
+      setFile(null);
+    } catch (e) {
+      toast.error(`Import przerwany: ${(e as Error).message}`, {
+        description: `Dodano dotąd ${sum.inserted}. Ponowny import pominie już dodane adresy.`,
+      });
+    } finally {
+      setBusy(false);
+      setProgress(null);
+      onDone();
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !busy && setOpen(o)}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <Upload className="h-4 w-4 mr-2" />
+          Import CSV
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Import subskrybentów z pliku CSV</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Wymagana kolumna <code>email</code>; opcjonalnie <code>first_name</code>,{" "}
+            <code>last_name</code>, <code>tags</code> (kilka tagów rozdzielonych „|”). Adresy już
+            obecne na liście zostają bez zmian.
+          </p>
+          <div>
+            <Label>Plik CSV</Label>
+            <Input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+          </div>
+          <div>
+            <Label>Tagi dla wszystkich (po przecinku)</Label>
+            <Input value={tags} onChange={(e) => setTags(e.target.value)} />
+          </div>
+          <div>
+            <Label>Źródło</Label>
+            <Input value={source} onChange={(e) => setSource(e.target.value)} />
+          </div>
+          {progress && (
+            <p className="text-sm">
+              Import: {progress.done} / {progress.total}
+            </p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button onClick={run} disabled={!file || busy}>
+            {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Importuj
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function SubscribersTab() {
   const router = useRouter();
   const list = useServerFn(listSubscribers);
@@ -258,10 +371,11 @@ function SubscribersTab() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Subskrybenci ({data?.subscribers.length ?? 0})</CardTitle>
+          <CardTitle>Subskrybenci ({data?.total ?? data?.subscribers.length ?? 0})</CardTitle>
           <CardDescription>Lista odbiorców newslettera</CardDescription>
         </div>
         <div className="flex gap-2">
+          <CsvImportDialog onDone={() => refetch()} />
           <Button variant="outline" onClick={onImport}>
             <Download className="h-4 w-4 mr-2" />
             Importuj leady
