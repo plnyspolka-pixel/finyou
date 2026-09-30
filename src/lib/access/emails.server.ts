@@ -3,6 +3,35 @@
 import { sendResendEmail } from "@/lib/resend-send.server";
 import { formatGroszPln, formatWarsawDate, type AccessAudience } from "./core";
 import { resolveAppBaseUrl } from "./urls.server";
+import {
+  REGULAMIN_ABONAMENTU_VERSION,
+  regulaminAbonamentuInwestora,
+} from "@/lib/legal/regulamin-abonamentu";
+
+/** Snapshot zgód zapisany przy płatności (access_payments.consents). */
+export type PaymentConsentsSnapshot = {
+  termsVersion?: string;
+  digitalServiceConsent?: boolean;
+  acceptedAt?: string;
+};
+
+/** Potwierdzenie na trwałym nośniku (§ 6 ust. 2 Regulaminu abonamentu v2):
+ *  zgoda na natychmiastowe dostarczenie treści cyfrowych + pełny tekst
+ *  Regulaminu. Tylko dla zakupu abonamentu inwestora według wersji v2. */
+function abonamentConfirmationBlock(consents: PaymentConsentsSnapshot | null | undefined): string {
+  if (consents?.termsVersion !== REGULAMIN_ABONAMENTU_VERSION || !consents.digitalServiceConsent)
+    return "";
+  const when = consents.acceptedAt ? formatWarsawDate(consents.acceptedAt, true) : "";
+  return `
+
+Potwierdzenie zawarcia umowy o Abonament (sprzedawca: Fundacja Krzewienia Edukacji Finansowej im. Pieczaka):
+- zaakceptowałeś Regulamin abonamentu inwestora (${REGULAMIN_ABONAMENTU_VERSION})${when ? ` — ${when} (czas polski)` : ""};
+- zażądałeś rozpoczęcia dostarczania szkolenia (treści cyfrowych) bezpośrednio po opłaceniu, przed upływem terminu do odstąpienia od umowy, i przyjąłeś do wiadomości, że tracisz w ten sposób prawo odstąpienia od umowy (art. 38 ust. 1 pkt 13 ustawy o prawach konsumenta).
+
+Treść Regulaminu:
+
+${regulaminAbonamentuInwestora()}`;
+}
 
 function panelPath(audience: AccessAudience): string {
   return audience === "investor" ? "/inwestor" : "/posrednik";
@@ -16,6 +45,8 @@ export async function sendPaymentConfirmedEmail(opts: {
   audience: AccessAudience;
   /** Zakup jednej okazji — bez okresu ważności, inna treść potwierdzenia. */
   kind?: "access" | "unlock";
+  /** Snapshot zgód z płatności — dla abonamentu inwestora dołącza potwierdzenie. */
+  consents?: PaymentConsentsSnapshot | null;
 }): Promise<void> {
   const base = resolveAppBaseUrl();
   const until = formatWarsawDate(opts.grantedUntil, true);
@@ -38,7 +69,9 @@ Panel: ${base}${isUnlock ? "/inwestor/umowy" : panelPath(opts.audience)}
 Fakturę wyślemy osobnym e-mailem i znajdziesz ją w zakładce „Płatności i faktury".
 
 Pozdrawiamy,
-Zespół Finance You`;
+Zespół Finance You${
+    !isUnlock && opts.audience === "investor" ? abonamentConfirmationBlock(opts.consents) : ""
+  }`;
   await sendResendEmail({ to: opts.to, subject, text, category: "transactional" });
 }
 

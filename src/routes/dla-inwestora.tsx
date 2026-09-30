@@ -5,11 +5,11 @@ import {
   Section,
   SectionHead,
   FeatureGrid,
-  FAQGroups,
+  FAQ,
   ComplianceNote,
   CTASection,
   type FeatureItemData,
-  type FAQGroup,
+  type FAQItem,
 } from "@/components/marketing/sections";
 import { MktBadge, MktButton, Eyebrow } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
@@ -22,7 +22,6 @@ import {
   SUBSCRIPTION_PRICE_SENTENCE,
   SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
   SUBSCRIPTION_YEARLY_PLN,
-  SUBSCRIPTION_YEARLY_PER_MONTH_PLN,
   plnLabel,
 } from "@/lib/investor-plan/plans";
 import { ChatWidget } from "@/components/landing/chat-widget";
@@ -190,7 +189,7 @@ export const Route = createFileRoute("/dla-inwestora")({
 // Jeden dział korzyści — bez podziału na pakiety. Tytuł karty = co inwestor
 // zyskuje, opis = jak to dostaje. Inwestor płaci abonament (ceny w
 // lib/investor-plan/plans.ts); Prowizję od Pożyczkobiorcy płaci klient.
-// Fakty (rezerwacja, Karta Leada, raporty) muszą zgadzać się z FAQ_GROUPS niżej.
+// Fakty (rezerwacja, Karta Leada, raporty) muszą zgadzać się z FAQ_ALL niżej.
 // Kolejność: od kosztów i Zlecenia, przez weryfikację i umowy, po spłatę,
 // windykację i wiedzę.
 const BENEFITS: FeatureItemData[] = [
@@ -433,216 +432,53 @@ const COMPLIANCE: { icon: Icon3DName; t: string }[] = [
   { icon: "complianceProcess", t: "Zgodność procesu" },
 ];
 
-// FAQ inwestora w kategoriach. Fakty (opłaty, limity Zleceń i rezerwacji,
-// Okres Ochronny, Kara Obejściowa) muszą zgadzać się z Umową ramową v7
-// (docs/legal/paczka-inwestor-v7/, docs/cennik-inwestora.md) — przy zmianie
-// umowy zaktualizuj też te odpowiedzi. Treść trafia także do JSON-LD FAQPage.
-const FAQ_GROUPS: FAQGroup[] = [
+// FAQ inwestora — 10 podstawowych pytań, krótkie odpowiedzi bez rozwijania.
+// Finance You to zestaw narzędzi i szkolenie dla inwestora, nie platforma.
+// Fakty (opłaty, prowizja klienta, LTV, odsetki) muszą zgadzać się z Umową
+// ramową v7 (docs/legal/paczka-inwestor-v7/, docs/cennik-inwestora.md).
+// Treść trafia także do JSON-LD FAQPage.
+const FAQ_ALL: FAQItem[] = [
   {
-    key: "podstawy",
-    label: "Podstawy",
-    items: [
-      {
-        q: "Czym jest Klub Inwestorów Hipotecznych Finance You?",
-        a: "To zamknięta platforma dla osób i firm, które chcą finansować pożyczki dla przedsiębiorców zabezpieczone hipoteką na nieruchomości. Składasz Zlecenie z parametrami inwestycji, a my przedstawiamy Ci dopasowane Projekty klientów szukających finansowania — wraz z raportem, harmonogramem i narzędziami do przeprowadzenia transakcji.",
-      },
-      {
-        q: "Kto może zostać inwestorem?",
-        a: "Osoba fizyczna, jednoosobowa działalność gospodarcza albo spółka. Warunkiem jest przejście pipeline'u: podanie danych, wskazanie rachunku do spłaty, zdalna weryfikacja tożsamości (KYC), screening list sankcyjnych i PEP oraz akceptacja umów. Środki przeznaczone na finansowanie muszą pochodzić z legalnego źródła.",
-      },
-      {
-        q: "Czy muszę mieć doświadczenie?",
-        a: "Nie. Akademia inwestora w siedmiu modułach prowadzi od podstaw — od strategii, przez prawo, operacje i analizę nieruchomości oraz klienta, po case study i windykację. Materiały są dostosowane do różnych poziomów zaawansowania.",
-      },
-      {
-        q: "Kto jest stroną umowy pożyczki?",
-        a: "Umowę pożyczki zawierasz bezpośrednio z klientem — to Ty jesteś pożyczkodawcą i wierzycielem hipotecznym. Finance You przedstawia Projekt, porządkuje dokumenty i wspiera transakcję, ale nie udziela pożyczek, nie przechowuje Twoich środków i nie jest stroną umowy pożyczki.",
-      },
-      {
-        q: "Czy Finance You doradza inwestycyjnie?",
-        a: "Nie. Raporty, analizy i materiały mają charakter edukacyjny i informacyjny. System pokazuje dane, możliwości i ryzyko, ale decyzję o sfinansowaniu Projektu podejmujesz samodzielnie — w razie potrzeby po konsultacji z własnym doradcą prawnym lub podatkowym.",
-      },
-    ],
+    q: "Czym jest Finance You dla inwestora?",
+    a: "Zestawem narzędzi i szkoleniem dla osób, które chcą finansować pożyczki dla firm zabezpieczone hipoteką. Dostajesz dopasowane Projekty, raporty, dokumenty, obsługę spłat i windykacji oraz Akademię inwestora. Jeśli chcesz działać pod marką Finance You, możesz też korzystać z naszej sieci sprzedaży.",
   },
   {
-    key: "koszty",
-    label: "Koszty",
-    items: [
-      {
-        q: "Ile kosztuje dostęp dla inwestora?",
-        a: `Abonament kosztuje ${SUBSCRIPTION_PRICE_SENTENCE}. W abonamencie masz wszystko: składanie Zleceń, teasery, Karty Leada, ujawnienie danych, rezerwacje, raporty bez limitu, Akademię, kalkulator compliance, moduł AML i windykację AI. Nie ma opłaty za Projekt, za rezerwację ani opłaty sukcesu.`,
-      },
-      {
-        q: "Jaki rabat dostaję przy płatności rocznej?",
-        a: `${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}%. Rok płacony co miesiąc kosztuje ${plnLabel(SUBSCRIPTION_MONTHLY_PLN * 12)}, a abonament roczny ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} — oszczędzasz ${plnLabel(SUBSCRIPTION_MONTHLY_PLN * 12 - SUBSCRIPTION_YEARLY_PLN)}, czyli płacisz ok. ${plnLabel(SUBSCRIPTION_YEARLY_PER_MONTH_PLN)} miesięcznie. Okres wybierasz suwakiem w cenniku.`,
-      },
-      {
-        q: "Czy muszę podpinać kartę kredytową?",
-        a: `Nie. ${SUBSCRIPTION_PAYMENT_SENTENCE} Po wygaśnięciu okresu sam decydujesz, czy go przedłużyć.`,
-      },
-      {
-        q: "Kiedy opłacam abonament?",
-        a: "Na początku — abonament otwiera panel inwestora. Płacąc, akceptujesz Regulamin abonamentu inwestora (sprzedawcą abonamentu jest Fundacja Krzewienia Edukacji Finansowej im. Pieczaka). Gdy chcesz dostępu do Klientów i Projektów, uzupełniasz dane, przechodzisz weryfikację tożsamości i akceptujesz Umowę ramową, NDA i umowę RODO z Finance You — akceptacja otwiera moduł ofert, a Finance You nie pobiera za nie wynagrodzenia. Rejestracja konta nie wymaga płatności. Abonament kupujesz w panelu, w zakładce Dostęp i płatności, a fakturę (bez VAT) dostajesz automatycznie.",
-      },
-      {
-        q: "Co się dzieje, gdy abonament wygaśnie?",
-        a: "Wstrzymujemy przyjmowanie nowych Zleceń i dostęp do modułów panelu do czasu opłacenia kolejnego okresu. Twoje dane, dokumenty i historia zostają zapisane, a obowiązki z umowy — poufność, zabezpieczenie prowizji klienta i okres ochronny — pozostają w mocy. Kilka dni przed końcem okresu przypominamy e-mailem; kolejny okres możesz opłacić wcześniej, wtedy liczy się od końca obecnego.",
-      },
-      {
-        q: "Kto płaci prowizję Finance You od pożyczki?",
-        a: "Klient. Prowizja Finance You wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, i jest potrącana z wypłaty. Przy wypłacie przelewasz ją na rachunek Finance You, a resztę kwoty pożyczki klientowi — np. przy 100 000 zł: 7 000 zł dla Finance You i 93 000 zł dla klienta. Nie jest to koszt inwestora.",
-      },
-      {
-        q: "Na czym zarabiam jako inwestor?",
-        a: "Na odsetkach od pożyczki, których wysokość nie może przekroczyć odsetek maksymalnych (obecnie 14,5% rocznie), oraz na prowizji inwestora, która jest osobnym elementem umowy spłacanym w ratach razem z kapitałem. Kalkulator pokazuje odsetki, prowizję, harmonogram i łączny zysk jeszcze przed złożeniem propozycji.",
-      },
-      {
-        q: "Czy cena abonamentu może się zmienić?",
-        a: "Cena obowiązuje przez cały opłacony okres. Zmiana wysokości Opłaty Abonamentowej może dotyczyć wyłącznie kolejnych okresów, opłaconych po jej wejściu w życie, i wymaga wcześniejszego powiadomienia (§ 8 Regulaminu abonamentu inwestora). Jeśli nowa cena Ci nie odpowiada, po prostu nie opłacasz kolejnego okresu — abonament nie odnawia się automatycznie.",
-      },
-      {
-        q: "Czy muszę sam rozliczyć podatek od zysku?",
-        a: "Tak. Przychody z odsetek i prowizji rozliczasz samodzielnie, zgodnie z formą, w jakiej inwestujesz (osoba fizyczna, JDG, spółka). Finance You nie prowadzi rozliczeń podatkowych inwestorów — w razie wątpliwości skonsultuj się z doradcą podatkowym.",
-      },
-    ],
+    q: "Ile to kosztuje?",
+    a: `Abonament: ${SUBSCRIPTION_PRICE_SENTENCE}. Bez opłat za Projekt i bez opłaty sukcesu. ${SUBSCRIPTION_PAYMENT_SENTENCE}`,
   },
   {
-    key: "proces",
-    label: "Proces i Zlecenia",
-    items: [
-      {
-        q: "Jak wygląda droga do pierwszego Projektu?",
-        a: "To jeden pipeline w panelu: podajesz dane inwestora (dla firm pobieramy je z GUS/KRS po NIP, REGON lub numerze KRS), wskazujesz rachunek do spłaty pożyczki, przechodzisz zdalną weryfikację tożsamości, my wykonujemy screening list sankcyjnych i PEP, doręczamy pakiet dokumentów, system wypełnia umowy Twoimi danymi, a Ty je akceptujesz. Na końcu opłacasz abonament i składasz Zlecenie.",
-      },
-      {
-        q: "Jak przebiega weryfikacja tożsamości?",
-        a: "Zdalnie — robisz zdjęcie dokumentu i selfie, bez wizyty i bez papierów. Niezależnie od KYC sprawdzamy listy sankcyjne, PEP i listy ostrzegawcze u wyspecjalizowanego dostawcy. Potwierdzone trafienie sankcyjne blokuje dostęp; status PEP kieruje sprawę do dodatkowej analizy.",
-      },
-      {
-        q: "Jakie umowy podpisuję z Finance You?",
-        a: "Umowę ramową pośrednictwa zawieraną na odległość, NDA z zakazem obchodzenia oraz umowę o udostępnianiu i powierzeniu danych (RODO). Przed akceptacją otrzymujesz komplet na trwałym nośniku (PDF e-mailem). Akceptacja ma formę dokumentową z pełnym śladem audytowym: wersja, skrót SHA-256, czas, IP i urządzenie.",
-      },
-      {
-        q: "Czym jest Zlecenie i co w nim określam?",
-        a: "Zlecenie to Twoje zamówienie na poszukiwanie Projektów: kwota (± 15%), maksymalny okres finansowania (do 120 miesięcy), minimalny zysk roczny i termin ważności. Finance You przyjmuje Zlecenie albo odmawia jego przyjęcia w ciągu 2 dni roboczych. Jedno Zlecenie odpowiada jednemu finansowaniu — zmiana parametrów wymaga nowego Zlecenia.",
-      },
-      {
-        q: "Ile Zleceń mogę mieć jednocześnie?",
-        a: "Do pięciu przyjętych Zleceń naraz. Zlecenie wygasa z upływem terminu ważności, po jego cofnięciu, po zawarciu transakcji albo po odrzuceniu pięciu kolejnych Projektów. Zlecenia bezterminowe lub obejmujące „każde finansowanie” nie są przyjmowane.",
-      },
-      {
-        q: "Czy mogę przeglądać wszystkie dostępne Projekty?",
-        a: "Nie. Nie ma wspólnego katalogu — widzisz wyłącznie Projekty dopasowane do Twojego przyjętego Zlecenia. To chroni dane klientów i sprawia, że dostajesz oferty spełniające Twoje kryteria, a nie przypadkową listę.",
-      },
-    ],
+    q: "Na czym zarabiam?",
+    a: "Na odsetkach (do wysokości odsetek maksymalnych, obecnie 14,5% rocznie) i na prowizji inwestora spłacanej w ratach.",
   },
   {
-    key: "projekty",
-    label: "Projekty i rezerwacja",
-    items: [
-      {
-        q: "Jak wygląda przedstawienie Projektu?",
-        a: "Etapowo. Najpierw widzisz anonimowy teaser (kwota, rodzaj nieruchomości, lokalizacja). Jeśli jesteś zainteresowany, akceptujesz Kartę Leada dla tego Projektu, a po niej otrzymujesz dane niezbędne do oceny: raport o inwestycji, harmonogram zaakceptowany przez klienta i dane kontaktowe.",
-      },
-      {
-        q: "Czym jest Karta Leada?",
-        a: "To załącznik transakcyjny do konkretnego Projektu, akceptowany osobno dla każdego Projektu przed ujawnieniem danych identyfikujących. Wskazuje m.in. moment ujawnienia, okres ochronny, warunki prowizji klienta i mechanizm jej zabezpieczenia.",
-      },
-      {
-        q: "Jak długo Projekt jest zarezerwowany dla mnie?",
-        a: "24 godziny od przyjęcia Projektu. Rezerwację można jednokrotnie przedłużyć o 12 godzin, jeśli wykażesz postęp — np. zadasz pytania, potwierdzisz środki lub rozpoczniesz analizę dokumentów. W tym czasie Projekt nie jest przedstawiany innym inwestorom. Możesz mieć do pięciu aktywnych rezerwacji, w tym maksymalnie dwie przedłużone.",
-      },
-      {
-        q: "Co zawiera raport o inwestycji?",
-        a: "Analizę nieruchomości i jej stanu prawnego na podstawie księgi wieczystej (właściciele, hipoteki, roszczenia, ograniczenia), wycenę i LTV, ocenę płynności lokalizacji, ocenę ryzyka z uzasadnieniem oraz harmonogram spłat zaakceptowany przez klienta. Raporty są bez limitu.",
-      },
-      {
-        q: "Co jeśli Projekt mi nie odpowiada?",
-        a: "Odrzucasz go w systemie — bez konsekwencji finansowych. Po odrzuceniu usuwasz otrzymane pełne dane, a Projekt może zostać przedstawiony innemu inwestorowi. Obowiązki poufności i pięcioletnia ochrona relacji z klientem pozostają jednak w mocy.",
-      },
-      {
-        q: "Czy mogę negocjować warunki z klientem?",
-        a: "Tak. Kalkulator propozycji pozwala dopasować oprocentowanie, prowizję i harmonogram do Twojej strategii w granicach zasad finansowania, a generator umowy pożyczki przygotuje dokument na podstawie uzgodnionych warunków i Twoich danych.",
-      },
-    ],
+    q: "Kto płaci prowizję Finance You?",
+    a: "Klient — 7% Kwoty Udzielonej, nie mniej niż 5 000 zł, potrącane z wypłaty. To nie jest koszt inwestora.",
   },
   {
-    key: "zabezpieczenia",
-    label: "Zabezpieczenia i ryzyko",
-    items: [
-      {
-        q: "Jakie są zasady finansowania?",
-        a: "Finansujesz wyłącznie cel związany z działalnością gospodarczą klienta (B2B) — pożyczki na cele konsumpcyjne są wykluczone. LTV nie przekracza 60%, a oprocentowanie nie może przekroczyć odsetek maksymalnych (obecnie 14,5% rocznie). Prowizja inwestora jest osobnym elementem rozłożonym w ratach.",
-      },
-      {
-        q: "Jak zabezpieczona jest pożyczka?",
-        a: "Podstawą jest hipoteka na nieruchomości wpisana na Twoją rzecz, przy LTV do 60%. Dokumentacja może obejmować także poręczenie oraz oświadczenie o poddaniu się egzekucji z art. 777 k.p.c., które pozwala szybciej uzyskać tytuł wykonawczy w razie braku spłaty.",
-      },
-      {
-        q: "Co oznacza LTV do 60%?",
-        a: "Kwota finansowania nie przekracza 60% wartości nieruchomości stanowiącej zabezpieczenie. Przykładowo przy nieruchomości wartej 500 000 zł pożyczka może wynieść maksymalnie 300 000 zł. Bufor 40% ma chronić kapitał na wypadek spadku cen lub konieczności sprzedaży nieruchomości w egzekucji.",
-      },
-      {
-        q: "Czy Finance You gwarantuje zysk?",
-        a: "Nie. Finance You nie gwarantuje zysku, spłaty pożyczki ani braku ryzyka. Zabezpieczenie hipoteczne ogranicza ryzyko, ale go nie eliminuje — odzyskanie środków może wymagać czasu, kosztów i postępowania egzekucyjnego.",
-      },
-      {
-        q: "Jakie ryzyka wiążą się z inwestycją?",
-        a: "Przede wszystkim ryzyko opóźnień lub braku spłaty, spadku wartości nieruchomości, przedłużającej się egzekucji oraz kosztów prawnych. W skrajnym przypadku możliwa jest utrata części lub całości kapitału. Dlatego każdy Projekt warto zbadać samodzielnie i dopasować kwotę do własnej strategii.",
-      },
-    ],
+    q: "Jak zabezpieczona jest pożyczka?",
+    a: "Hipoteką na nieruchomości wpisaną na Twoją rzecz, przy LTV do 60%. Dodatkowo m.in. oświadczenie o poddaniu się egzekucji (art. 777 k.p.c.).",
   },
   {
-    key: "windykacja",
-    label: "Spłata i windykacja",
-    items: [
-      {
-        q: "Na jaki rachunek klient spłaca pożyczkę?",
-        a: "Na rachunek, który wskazujesz w pipeline'ie (NRB/IBAN). Jest obowiązkowy, bo trafia do umowy pożyczki i harmonogramu spłat — pieniądze płyną od klienta bezpośrednio do Ciebie, bez pośrednictwa Finance You.",
-      },
-      {
-        q: "Jak monitoruję spłatę?",
-        a: "W panelu widzisz terminy, saldo, naliczone odsetki i ewentualne opóźnienia. System wysyła automatyczne przypomnienia i prowadzi rejestr kontaktu z klientem, więc w każdej chwili wiesz, na jakim etapie jest sprawa.",
-      },
-      {
-        q: "Co się dzieje, gdy klient przestaje płacić?",
-        a: "Moduł windykacji AI prowadzi sprawę w sześciu etapach: od SMS-a, telefonu AI i e-maila w pierwszym tygodniu, przez wezwania do zapłaty, negocjacje i ugodę, wypowiedzenie umowy, aż po wniosek o klauzulę wykonalności i przekazanie sprawy komornikowi. Ty zachowujesz kontrolę nad każdą decyzją.",
-      },
-      {
-        q: "Czy AI zastępuje prawnika?",
-        a: "Nie. AI automatyzuje powtarzalne czynności operacyjne i komunikacyjne — przypomnienia, komunikaty, wezwania, rejestr kontaktu i monitoring. W przypadku sporu sądowego sprawa może wymagać profesjonalnej obsługi prawnej, której Finance You nie zapewnia.",
-      },
-    ],
+    q: "Czy zysk jest gwarantowany?",
+    a: "Nie. Hipoteka ogranicza ryzyko, ale go nie eliminuje. Decyzję o finansowaniu podejmujesz samodzielnie.",
   },
   {
-    key: "prawo",
-    label: "Prawo i dane",
-    items: [
-      {
-        q: "Czym jest okres ochronny relacji z klientem?",
-        a: "Przez pięć lat od ujawnienia danych identyfikujących klienta nie możesz zawrzeć z nim — bezpośrednio ani przez powiązane osoby — finansowania zabezpieczonego hipoteką z pominięciem Finance You. Okres biegnie niezależnie od odrzucenia Projektu, wygaśnięcia rezerwacji czy wypowiedzenia umowy.",
-      },
-      {
-        q: "Co grozi za obejście Finance You?",
-        a: "Kara Obejściowa w wysokości 5% Sumy Hipotecznej. Nie jest to cena usługi ani opłata — to kara umowna zabezpieczająca zakaz obchodzenia. Jeśli transakcję z klientem zawierasz prawidłowo, przez platformę i z przekazaniem prowizji klienta, kara nie powstaje.",
-      },
-      {
-        q: "Jak chronione są dane klientów i moje?",
-        a: "Dane Projektów są udostępniane tylko inwestorowi, któremu Projekt przypisano, w zakresie niezbędnym do oceny. Dokumenty otwierasz przez krótkotrwałe, podpisane linki, podgląd ma znak wodny z Twoimi danymi, a każde otwarcie jest logowane. Zasady przetwarzania określa umowa RODO, którą akceptujesz w pipeline'ie.",
-      },
-      {
-        q: "Czy mogę odstąpić od umowy lub ją wypowiedzieć?",
-        a: "Umowa ramowa jest zawierana na czas nieoznaczony i każda strona może ją wypowiedzieć z 30-dniowym okresem wypowiedzenia. Jeśli działasz jako konsument, możesz odstąpić od niej w ciągu 14 dni bez podania przyczyny; okres ochronny już ujawnionych Projektów pozostaje w mocy. Abonament to odrębna umowa: jako konsument możesz od niego odstąpić w ciągu 14 dni i dostajesz zwrot Opłaty Abonamentowej — pomniejszony o część za wykorzystany okres, jeśli zażądałeś dostępu od razu (§ 6 Regulaminu abonamentu inwestora).",
-      },
-      {
-        q: "Jak mogę się skontaktować z Finance You?",
-        a: "Napisz na kontakt@financeyou.pl albo skorzystaj z asystenta czatu na tej stronie — działa całą dobę i w sprawach współpracy przekaże kontakt opiekunowi.",
-      },
-    ],
+    q: "Kto jest stroną umowy pożyczki?",
+    a: "Ty i klient. Finance You nie udziela pożyczek i nie przechowuje Twoich pieniędzy — klient spłaca bezpośrednio na Twój rachunek.",
+  },
+  {
+    q: "Czy potrzebuję doświadczenia?",
+    a: "Nie. Akademia inwestora to 15 lat doświadczenia w jednym miejscu — uczysz się od podstaw, a nie na własnych błędach.",
+  },
+  {
+    q: "Jak zacząć?",
+    a: "Zakładasz konto i opłacasz abonament — to otwiera panel. Żeby dostawać Projekty, przechodzisz zdalną weryfikację tożsamości, akceptujesz umowy z Finance You i składasz Zlecenie z kwotą i oczekiwanym zyskiem.",
+  },
+  {
+    q: "Co jeśli klient nie płaci?",
+    a: "Moduł windykacji prowadzi sprawę krok po kroku — od przypomnień, przez wezwania i ugodę, po egzekucję. Każdą decyzję podejmujesz Ty.",
   },
 ];
-
-const FAQ_ALL = FAQ_GROUPS.flatMap((g) => g.items);
 
 // Duży złoty przycisk „Dołącz do klubu” — jedyny CTA w hero, prowadzi do
 // cennika (#cennik): inwestor najpierw poznaje warunki (abonament miesięczny
@@ -1278,13 +1114,8 @@ function InvestorLanding() {
       {!SHOW.zakladki && <CennikSection products={products} />}
 
       <Section id="faq">
-        <SectionHead
-          center
-          eyebrow="FAQ"
-          title="Najczęstsze pytania inwestorów"
-          sub={`${FAQ_ALL.length} odpowiedzi w ${FAQ_GROUPS.length} kategoriach — od pierwszych kroków i kosztów, przez Zlecenia i rezerwację Projektu, po zabezpieczenia, windykację i kwestie prawne.`}
-        />
-        <FAQGroups groups={FAQ_GROUPS} />
+        <SectionHead center eyebrow="FAQ" title="Najczęstsze pytania inwestorów" />
+        <FAQ items={FAQ_ALL} />
         <ComplianceNote style={{ marginTop: "2rem" }}>
           Nie znalazłeś odpowiedzi? Napisz na kontakt@financeyou.pl albo zapytaj asystenta czatu.
           Odpowiedzi mają charakter informacyjny — wiążące są postanowienia Umowy ramowej, NDA i

@@ -27,7 +27,7 @@ function admin() {
 }
 
 /** Prompt agenta windykacyjnego — zmienne dynamiczne w {{podwójnych klamrach}}. */
-const WIND_AGENT_PROMPT = `Jesteś uprzejmym, ale stanowczym asystentem windykacyjnym platformy Finance You. Dzwonisz w imieniu inwestora {{imie_inwestora}} do klienta {{imie_dluznika}} w sprawie zaległości ze spłatą pożyczki (umowa {{numer_umowy}}).
+const WIND_AGENT_PROMPT = `Jesteś uprzejmym, ale stanowczym asystentem windykacyjnym Finance You. Dzwonisz w imieniu inwestora {{imie_inwestora}} do klienta {{imie_dluznika}} w sprawie zaległości ze spłatą pożyczki (umowa {{numer_umowy}}).
 
 Aktualna kwota zaległości: {{kwota_zaleglosci}} zł.
 
@@ -42,7 +42,7 @@ Zasady rozmowy:
 8. Rozmawiaj wyłącznie po polsku. Kwoty czytaj słownie, np. „pięć tysięcy złotych".
 9. Na koniec podsumuj ustalenia i podziękuj za rozmowę.`;
 
-const WIND_AGENT_FIRST_MESSAGE = `Dzień dobry, dzwonię z platformy Finance You w imieniu {{imie_inwestora}}, w sprawie umowy pożyczki {{numer_umowy}}. Czy rozmawiam z {{imie_dluznika}}?`;
+const WIND_AGENT_FIRST_MESSAGE = `Dzień dobry, dzwonię z Finance You w imieniu {{imie_inwestora}}, w sprawie umowy pożyczki {{numer_umowy}}. Czy rozmawiam z {{imie_dluznika}}?`;
 
 /**
  * Zwraca ID agenta windykacyjnego ElevenLabs. Jeśli nie istnieje — tworzy
