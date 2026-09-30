@@ -1,5 +1,5 @@
 /**
- * Jedyna opłata: Prowizja Klientowska Finance You — 7% Kwoty Udzielonej,
+ * Jedyna opłata: Prowizja od Pożyczkobiorcy — 7% Kwoty Udzielonej,
  * min. 5 000 zł, bez VAT, potrącana z wypłaty. Odsetki maksymalne wg daty.
  * LTV maksymalnie 60%.
  */

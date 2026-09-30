@@ -22,6 +22,7 @@ const PAIRS: Array<[string, string]> = [
   ["20260930100000_polityka_v2_cookies.sql", "0020_polityka_v2_cookies.sql"],
   ["20260930101000_cookie_consent_log.sql", "0021_cookie_consent_log.sql"],
   ["20260930140000_abonament_inwestora.sql", "0023_abonament_inwestora.sql"],
+  ["20260930190000_prowizja_od_pozyczkobiorcy.sql", "0024_prowizja_od_pozyczkobiorcy.sql"],
 ];
 
 describe("migracje 2026-09-29", () => {
@@ -65,6 +66,20 @@ describe("migracje 2026-09-29", () => {
     expect(sql).toMatch(/revoke all on public\.cookie_consent_log from public, anon/);
     expect(sql).not.toMatch(/grant [^;]*on public\.cookie_consent_log to [^;]*anon/);
     expect(sql).not.toMatch(/grant [^;]*insert[^;]*on public\.cookie_consent_log to authenticated/);
+  });
+
+  it("0024: moduł ofert inwestora wymaga zaakceptowanego pakietu umów (RLS)", () => {
+    const sql = readFileSync(join(SUPA, "20260930190000_prowizja_od_pozyczkobiorcy.sql"), "utf8");
+    const fn = sql.slice(
+      sql.indexOf("create or replace function public.investor_can_view_application"),
+      sql.indexOf("comment on function public.investor_can_view_application"),
+    );
+    expect(fn).toMatch(/select public\.investor_legal_pack_complete\(_user_id\)\s+and \(/);
+    expect(fn).toContain("security definer set search_path = public");
+    const policy = sql.slice(sql.indexOf("create policy offers_investor_own"));
+    expect(policy.match(/investor_legal_pack_complete\(auth\.uid\(\)\)/g)).toHaveLength(2);
+    expect(policy).toContain("investor_can_view_application(auth.uid(), loan_application_id)");
+    expect(sql).not.toMatch(/grant [^;]*anon/);
   });
 
   it("dopisanie bloku zasad do promptów jest idempotentne", () => {

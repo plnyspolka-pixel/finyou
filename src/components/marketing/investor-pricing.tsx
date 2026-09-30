@@ -1,7 +1,7 @@
 // Cennik inwestora na stronie publicznej: JEDEN abonament z przełącznikiem
 // okresu (suwak Miesięcznie / Rocznie). Ceny, rabat i zdania o płatności
 // pochodzą z lib/investor-plan/plans.ts (jedno źródło prawdy dla strony,
-// panelu i botów). Prowizję Klientowską Finance You płaci klient.
+// panelu i botów). Prowizję od Pożyczkobiorcy płaci klient.
 import { useState } from "react";
 import type { AccessProduct } from "@/lib/access/core";
 import {
@@ -11,6 +11,7 @@ import {
   SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
   type BillingPeriod,
 } from "@/lib/investor-plan/plans";
+import { FUNDACJA, REGULAMIN_ABONAMENTU_PATH } from "@/lib/legal/regulamin-abonamentu";
 import { MktButton } from "./primitives";
 import { BrandIcon } from "./brand-icon";
 
@@ -234,7 +235,11 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
               color: "var(--muted-foreground)",
             }}
           >
-            {SUBSCRIPTION_PAYMENT_SENTENCE}
+            {SUBSCRIPTION_PAYMENT_SENTENCE} Sprzedawca: {FUNDACJA.nazwa} (bez VAT),{" "}
+            <a href={REGULAMIN_ABONAMENTU_PATH} style={{ textDecoration: "underline" }}>
+              regulamin abonamentu
+            </a>
+            .
           </p>
           <MktButton variant="cta" href={JOIN} style={{ width: "100%", marginTop: "1rem" }}>
             Załóż konto inwestora

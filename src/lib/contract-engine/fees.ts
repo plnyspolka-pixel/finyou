@@ -2,7 +2,7 @@
  * OPŁATY I LIMITY — jedno źródło prawdy dla całego systemu (decyzje nadrzędne
  * 2, 5 i 6 sprzątania spójności 2026-09).
  *
- *  • Prowizja Klientowska Finance You: 7 % Kwoty Udzielonej (kwota pożyczki
+ *  • Prowizja od Pożyczkobiorcy: 7 % Kwoty Udzielonej (kwota pożyczki
  *    z umowy), nie mniej niż 5 000 zł, bez VAT (zwolnienie potwierdzone przez
  *    właściciela 2026-09-29; w tekstach NIE piszemy „netto"/„brutto", piszemy
  *    „bez VAT"). POTRĄCANA z wypłaty: inwestor przelewa prowizję na jedyny
@@ -26,7 +26,7 @@ function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
-/** Prowizja Klientowska FY od Kwoty Udzielonej: max(7 %, 5 000 zł); 0 gdy brak kwoty. */
+/** Prowizja od Pożyczkobiorcy od Kwoty Udzielonej: max(7 %, 5 000 zł); 0 gdy brak kwoty. */
 export function fyCommission(kwotaUdzielona: number): number {
   const k = Number(kwotaUdzielona);
   if (!Number.isFinite(k) || k <= 0) return 0;

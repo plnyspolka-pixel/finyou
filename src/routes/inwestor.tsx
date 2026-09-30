@@ -24,8 +24,9 @@ export const Route = createFileRoute("/inwestor")({
   component: InwestorLayout,
 });
 
-// Jedna nawigacja dla każdego inwestora — bez podziału na pakiety. Moduły poza
-// pipeline'em, zakupem, płatnościami i profilem wymagają aktywnego abonamentu
+// Jedna nawigacja dla każdego inwestora — bez podziału na pakiety. Kolejność:
+// abonament (pierwsza bramka — bez niego tylko zakup, płatności, profil,
+// odstąpienie) → pipeline z akceptacją pakietu umów → moduł ofert
 // (InvestorSubscriptionGate; twarda bramka: RLS i server functions).
 const navGroups: NavGroup[] = [
   {

@@ -7,7 +7,7 @@
  * Zasady modelu (decyzje nadrzędne 2, 4 i 5 sprzątania spójności 2026-09):
  *  - **Kwota Udzielona (K)** = kwota pożyczki z umowy; od niej liczy się
  *    odsetki i ją spłaca Pożyczkobiorca,
- *  - **Prowizja Klientowska Finance You (`prowizjaFY`)** jest POTRĄCANA
+ *  - **Prowizja od Pożyczkobiorcy (`prowizjaFY`)** jest POTRĄCANA
  *    z wypłaty i NIE wchodzi do rat: inwestor przelewa ją na rachunek FY,
  *    resztę (`kwotaWyplaconaKlientowi`) Klientowi (Zał. 6) — patrz `fees.ts`,
  *  - **prowizja inwestora (`prowizja`, klauzula KWO_02)** to stała kwota
@@ -31,7 +31,7 @@ export interface EngineScheduleInput {
   /** P — prowizja INWESTORA (KWO_02), rozkładana równo na N rat. */
   prowizja: number;
   /**
-   * Prowizja Klientowska Finance You — potrącana z wypłaty, poza ratami.
+   * Prowizja od Pożyczkobiorcy — potrącana z wypłaty, poza ratami.
    * Domyślnie 0 (kontekst bez pośrednictwa FY); kalkulatory FY podają
    * `fyCommission(kwotaPozyczki)`.
    */
@@ -67,7 +67,7 @@ export interface EngineSchedule {
   kwotaPozyczki: number;
   /** K — Kwota Udzielona. */
   kwotaUdzielona: number;
-  /** Prowizja Klientowska FY potrącana z wypłaty (poza ratami). */
+  /** Prowizja od Pożyczkobiorcy potrącana z wypłaty (poza ratami). */
   prowizjaFY: number;
   /** K − prowizjaFY — „na rękę". */
   kwotaWyplaconaKlientowi: number;
@@ -277,7 +277,7 @@ export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule 
   };
 }
 
-/** Skrót: harmonogram z domyślną Prowizją Klientowską FY (7 %, min 5 000 zł). */
+/** Skrót: harmonogram z domyślną Prowizją od Pożyczkobiorcy (7 %, min 5 000 zł). */
 export function buildFyEngineSchedule(
   input: Omit<EngineScheduleInput, "prowizjaFY"> & { prowizjaFY?: number },
 ): EngineSchedule {

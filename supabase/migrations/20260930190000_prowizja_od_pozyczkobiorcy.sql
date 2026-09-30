@@ -1,0 +1,1720 @@
+-- =====================================================================
+-- PROWIZJA OD POŻYCZKOBIORCY I KOLEJNOŚĆ INWESTORA (2026-09-30)
+--
+-- Decyzja właściciela: prowizja Finance You płacona przez Klienta
+-- (pożyczkobiorcę) nazywa się „Prowizja od Pożyczkobiorcy”, a nie
+-- „Prowizja Klientowska”. Stawka i zasady bez zmian: 7% Kwoty Udzielonej,
+-- nie mniej niż 5 000,00 zł, bez VAT, potrącana z wypłaty.
+--
+-- 1. Pakiet inwestora v7: nowa treść umowy ramowej v7 i NDA v6 (UPDATE
+--    istniejących wierszy — żaden nie był jeszcze zaakceptowany; migracji
+--    20260929155000 i 20260930140000 nie zmieniamy). RODO v5 bez zmian.
+--    Umowa ramowa: Finance You nie pobiera od Inwestora wynagrodzenia
+--    (allows_investor_fees = false); dostęp do systemu wymaga Abonamentu,
+--    który sprzedaje Fundacja Krzewienia Edukacji Finansowej im. Pieczaka na
+--    podstawie Regulaminu Abonamentu Inwestora (akceptowanego przy płatności).
+--    Generowane: npx tsx scripts/legal/build-pakiet-v7.ts
+-- 2. Regulamin klienta v3 (consent_documents, kind = terms): v2 była już
+--    zaakceptowana, więc zostaje jako wersja historyczna, a klienci
+--    akceptują v3 przy następnym wejściu do panelu.
+--    Generowane: npx tsx scripts/legal/build-zgody-v3.ts
+-- 3. Kolejność inwestora: abonament → akceptacja pakietu umów → moduł ofert
+--    (RLS: investor_can_view_application i offers_investor_own).
+-- =====================================================================
+
+-- 1. Pakiet inwestora v7.
+-- >>> PAKIET v7 — Prowizja od Pożyczkobiorcy (generowane: npx tsx scripts/legal/build-pakiet-v7.ts)
+-- umowa_ramowa v7: content sha256 887010c826b83f43c8aa0b9165bac05540305fd76d61f45deeccd2b9b943f065
+--   docx sha256 67782eafc32764445b15833ed73704c9c21059c495c5b586a1157dfddba07fa8
+--   poprzednia treść: 0d098f1b568f65eb31a4fe9b177e8bdfae417cf347e4e269ad699ed16a782aa0
+update public.legal_documents
+   set sha256 = '887010c826b83f43c8aa0b9165bac05540305fd76d61f45deeccd2b9b943f065',
+       content_text = 'PAKIET UMOWNY
+Ramowa umowa pośrednictwa finansowego świadczonego na odległość
+Przedstawianie projektów finansowania gospodarczego zabezpieczonego hipoteką
+Wersja
+FY-LEGAL-2026-09-29.v7 • 29 września 2026 r.
+Zakres
+Finansowanie zabezpieczone hipoteką wyłącznie na cel związany z działalnością gospodarczą
+Forma
+papierowa, kwalifikowany podpis elektroniczny albo forma dokumentowa w systemie z pełnym śladem audytowym
+zawarta w formie dokumentowej na odległość albo podpisana w dniu wskazanym przy podpisach, pomiędzy:
+FINANCE YOU
+Finance You spółka z ograniczoną odpowiedzialnością z siedzibą w Warszawie, ul. Nowogrodzka 31, 00-511 Warszawa, wpisana do rejestru przedsiębiorców KRS pod numerem 0000635207, NIP 7010611803, REGON 365350668, kapitał zakładowy 389 600,00 zł, reprezentowana przez Filipa Roberta Bielaka – Prezesa Zarządu uprawnionego do samodzielnej reprezentacji, dalej: „Finance You” lub „Ujawniający”;
+a
+INWESTOR
+Wariant strony
+☐ osoba fizyczna  ☐ osoba fizyczna prowadząca działalność  ☐ osoba prawna / jednostka organizacyjna
+Imię i nazwisko / firma
+________________________________________________________________
+Adres / siedziba
+________________________________________________________________
+PESEL albo KRS
+________________________________________________________________
+NIP / REGON
+________________________________________________________________
+E-mail i telefon
+________________________________________________________________
+Reprezentacja
+________________________________________________________________
+dalej: „Inwestor” lub „Odbiorca”; Finance You i Inwestor dalej łącznie: „Strony”, a każdy z osobna: „Strona”.
+Preambuła
+Finance You pozyskuje i kwalifikuje projekty klientów poszukujących finansowania na cel związany z działalnością gospodarczą, które może zostać zabezpieczone hipoteką.
+Inwestor zleca Finance You poszukiwanie projektów odpowiadających parametrom wskazanym przez niego w Zleceniu, samodzielnie ocenia przedstawione projekty i — według własnej decyzji — zawiera transakcje finansowania bezpośrednio albo przez podmiot należący do Grupy Inwestora.
+Finance You nie pobiera od Inwestora wynagrodzenia za przedstawienie Projektu ani za wsparcie transakcyjne. Korzystanie z systemu Finance You wymaga aktywnego Abonamentu, nabywanego na podstawie Regulaminu Abonamentu Inwestora (§ 7). Prowizja od Pożyczkobiorcy jest należna Finance You od Klienta na podstawie odrębnej umowy i jest potrącana z kwoty Finansowania zgodnie z dyspozycją Klienta (Załącznik nr 6): Inwestor przekazuje ją bezpośrednio na rachunek Finance You, a pozostałą część wypłaca Klientowi. Abonament nie zwalnia z Mechanizmu Zabezpieczenia Prowizji.
+Strony chcą jednoznacznie ustalić zakres pięcioletniej ochrony relacji oraz Karę Obejściową równą 5% Sumy Hipotecznej za zawarcie lub wykonanie Transakcji Chronionej z naruszeniem niepieniężnego obowiązku zabezpieczenia Prowizji od Pożyczkobiorcy i zakazu obchodzenia Finance You.
+Strony wyłączają z zakresu Umowy finansowanie przeznaczone w całości lub części na cele konsumpcyjne oraz kredyt hipoteczny udzielany konsumentowi.
+Finance You nie prowadzi publicznie dostępnego katalogu Projektów. Projekt jest przedstawiany wyłącznie jako wynik indywidualnego Zlecenia i wyłącznie Inwestorowi, który je złożył; w czasie rezerwacji nie jest przedstawiany innym inwestorom działającym na podstawie Zlecenia.
+Model rozliczenia.  Finance You nie pobiera od Inwestora wynagrodzenia z Umowy; dostęp do systemu wymaga aktywnego Abonamentu (Regulamin Abonamentu Inwestora, obecnie 1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni). Klient płaci Prowizję od Pożyczkobiorcy według odrębnej umowy (7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT), a Inwestor zabezpiecza jej bezpośredni przelew z kwoty Finansowania i potrąca ją z wypłaty. Zawarcie lub wykonanie Transakcji Chronionej bez tego mechanizmu stanowi Naruszenie Obejściowe i uruchamia Karę Obejściową równą 5% Sumy Hipotecznej.
+§ 1. Definicje
+Klient oznacza osobę fizyczną działającą w związku z działalnością gospodarczą, przedsiębiorcę, osobę prawną albo jednostkę organizacyjną poszukującą Finansowania na Cel Gospodarczy, a także właściciela nieruchomości, dłużnika, poręczyciela, spółkę operacyjną lub celową i inne osoby uczestniczące w Projekcie.
+Cel Gospodarczy oznacza cel pozostający w bezpośrednim związku z działalnością gospodarczą lub zawodową finansowanego podmiotu, potwierdzony w Karcie Leada i dokumentacji Finansowania. Nie obejmuje celu konsumpcyjnego, zaspokajania prywatnych potrzeb mieszkaniowych ani kredytu hipotecznego w rozumieniu przepisów o kredycie hipotecznym.
+Projekt oznacza zidentyfikowaną przez Finance You możliwość Finansowania, oznaczoną unikalnym numerem i opisaną w Karcie Leada.
+Karta Leada oznacza załącznik transakcyjny dla konkretnego Projektu, zawierający co najmniej identyfikator, moment Ujawnienia Identyfikującego, okres ochronny, regułę Sumy Hipotecznej, potwierdzenie, że za Projekt nie są należne od Inwestora żadne opłaty, rzeczywiste warunki Prowizji od Pożyczkobiorcy, Mechanizm Zabezpieczenia Prowizji, Karę Obejściową wraz z przykładem kwotowym, zakres Grupy Inwestora, wynagrodzenie własne Inwestora od Klienta, konflikt interesów oraz sposób akceptacji.
+Ujawnienie Identyfikujące oznacza pierwsze ujawnienie Inwestorowi danych, które samodzielnie albo łącznie pozwalają rozsądnie ustalić Klienta lub konkretną nieruchomość. Moment ten wynika z rejestru systemowego, potwierdzenia wiadomości albo Karty Leada.
+Klient Chroniony oznacza Klienta poznanego dzięki Ujawnieniu Identyfikującemu oraz każdy podmiot przez niego kontrolowany, kontrolujący go, z nim powiązany lub użyty do zawarcia Transakcji Chronionej, jeżeli istnieje związek gospodarczy z Projektem lub relacją przedstawioną przez Finance You.
+Grupa Inwestora oznacza Inwestora oraz każdą osobę działającą bezpośrednio lub pośrednio na jego rzecz, na jego zlecenie, w jego interesie albo z jego udziałem, w tym jego obecną lub przyszłą spółkę, SPV, wspólnika, członka organu, pełnomocnika, beneficjenta rzeczywistego, osobę bliską, współinwestora, fundusz, cesjonariusza, nabywcę wierzytelności, powiernika, administratora hipoteki albo zabezpieczeń oraz podmiot powiązany kapitałowo, osobowo, rodzinnie lub kontraktowo.
+Finansowanie oznacza przekazanie pieniędzy, limitu, rzeczy, praw, odroczenia, gwarancji lub innej korzyści ekonomicznej, w szczególności na podstawie pożyczki, kredytu, refinansowania, faktoringu, wykupu lub cesji wierzytelności, subrogacji, obligacji, umowy inwestycyjnej, sprzedaży z prawem odkupu, leasingu zwrotnego albo konstrukcji o równoważnym skutku gospodarczym.
+Transakcja Chroniona oznacza każde Finansowanie zawarte, udzielone, nabyte, refinansowane, odnowione, przedłużone, zwiększone lub ekonomicznie zrealizowane w Okresie Ochronnym między Klientem Chronionym a Inwestorem lub Grupą Inwestora, jeżeli jest zabezpieczone hipoteką na nieruchomości przedstawionej w Projekcie albo na jakiejkolwiek innej nieruchomości Klienta Chronionego lub osoby udostępniającej mu zabezpieczenie. Obejmuje także nabycie zabezpieczonej wierzytelności i finansowanie przez pośredni podmiot.
+Suma Hipoteczna oznacza najwyższą kwotę pieniężną, do której hipoteka zabezpiecza lub ma zabezpieczać wierzytelności przypisane Inwestorowi lub Grupie Inwestora, wskazaną w oświadczeniu o ustanowieniu hipoteki, umowie Finansowania, wniosku wieczystoksięgowym, wzmiance albo wpisie. Jeżeli takiej kwoty nie da się ustalić, podstawą jest kwota Finansowania lub wartość korzyści ekonomicznej przypisana Inwestorowi. Jednej ekonomicznej ekspozycji zabezpieczonej łącznie na kilku nieruchomościach nie liczy się wielokrotnie, chyba że dokumenty ustanawiają odrębne lub dodatkowe limity zabezpieczenia.
+Prowizja od Pożyczkobiorcy oznacza odrębne wynagrodzenie Finance You wynikające wyłącznie z umowy z Klientem i ekonomicznie obciążające Klienta, a nie cenę usługi świadczonej Inwestorowi. Wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT, i jest potrącana z wypłaty Finansowania zgodnie z dyspozycją Klienta (Załącznik nr 6): Inwestor przekazuje ją bezpośrednio na rachunek Finance You, a pozostałą część Kwoty Udzielonej wypłaca Klientowi; jeżeli odrębna umowa z Klientem przewiduje inną stawkę, minimum albo podstawę, Karta Leada musi odzwierciedlać rzeczywiste warunki tej umowy.
+Abonament oznacza odpłatny dostęp Inwestora do systemu Finance You (panelu Inwestora) przez Okres Abonamentowy, sprzedawany przez Fundacja Krzewienia Edukacji Finansowej im. Pieczaka z siedzibą w Lublinie (KRS 0001140846, NIP 9462747637) na podstawie Regulaminu Abonamentu Inwestora, akceptowanego przy zakupie.
+Opłata Abonamentowa oznacza cenę Abonamentu określoną w Regulaminie Abonamentu Inwestora (obecnie 1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni, według wyboru Inwestora); nie jest wynagrodzeniem Finance You z tytułu Umowy.
+Okres Abonamentowy oznacza opłacony okres Abonamentu (30 albo 365 dni), liczony od zaksięgowania Opłaty Abonamentowej, a jeżeli poprzedni opłacony okres jeszcze trwa — od jego końca.
+Kwota Udzielona oznacza kwotę Finansowania wynikającą z zawartej umowy pożyczki albo innego dokumentu Finansowania, przed potrąceniami, prowizjami i kosztami.
+Mechanizm Zabezpieczenia Prowizji oznacza łączne spełnienie następujących warunków przed zawarciem lub najpóźniej w treści dokumentu Finansowania: potwierdzenie ważnej umowy prowizyjnej Klienta z Finance You; utrwalenie dyspozycji Klienta; zastrzeżenie w umowie Finansowania bezpośredniego świadczenia na rzecz Finance You; wskazanie kwoty albo jednoznacznej formuły Prowizji od Pożyczkobiorcy i rachunku Finance You; oraz obowiązek przekazania Prowizji od Pożyczkobiorcy nie później niż równocześnie z pierwszą wypłatą środków Klientowi.
+Naruszenie Obejściowe oznacza zawarcie, doprowadzenie do zawarcia lub wykonanie Transakcji Chronionej przez Inwestora albo Grupę Inwestora bez skutecznego Mechanizmu Zabezpieczenia Prowizji, z przyczyn, za które Inwestor odpowiada, w szczególności podpisanie dokumentu bez wymaganej klauzuli, wypłatę choćby części środków bez równoczesnego przekazania Prowizji od Pożyczkobiorcy albo użycie innego podmiotu lub konstrukcji w celu pominięcia Finance You. Zamiar obejścia nie jest konieczny; działania i zaniechania Grupy Inwestora przy realizacji Transakcji traktuje się jak działania i zaniechania Inwestora.
+Kara Obejściowa oznacza karę umowną równą 5% Sumy Hipotecznej, należną za Naruszenie Obejściowe. Zabezpiecza obowiązki niepieniężne Inwestora, nie stanowi ceny usługi ani prowizji od Transakcji i nie jest zwiększana o VAT, o ile bezwzględnie obowiązujące przepisy nie wymagają innej kwalifikacji.
+Okres Ochronny oznacza pięć lat od Ujawnienia Identyfikującego wskazanego w Karcie Leada. Korekta techniczna danych lub ponowne otwarcie tego samego Projektu nie rozpoczyna okresu od nowa, chyba że Strony indywidualnie uzgodnią inaczej.
+Konsument oznacza osobę fizyczną zawierającą Umowę bez bezpośredniego związku z jej działalnością gospodarczą lub zawodową. Postanowienia konsumenckie stosuje się także do osoby fizycznej prowadzącej działalność, gdy przepisy przyznają jej w tej relacji ochronę właściwą konsumentowi.
+Dzień Roboczy oznacza dzień od poniedziałku do piątku z wyłączeniem dni ustawowo wolnych od pracy w Polsce.
+Zlecenie oznacza indywidualną, terminową dyspozycję Inwestora poszukiwania jednego Finansowania, określającą: kwotę Finansowania z dopuszczalnym odchyleniem do 15%, maksymalny okres Finansowania, minimalny oczekiwany zysk roczny oraz termin ważności wynoszący 30, 60 albo 90 dni. Zlecenie ma status: złożone, przyjęte, wykonane, wygasłe albo cofnięte.
+Dopasowanie oznacza zgodność Projektu ze Zleceniem: kwota Finansowania mieści się w kwocie Zlecenia z uwzględnieniem odchylenia, okres Finansowania nie przekracza okresu Zlecenia, a wynagrodzenie oferowane przez Klienta nie jest niższe niż zysk wskazany w Zleceniu. Pozostałe kryteria selekcji, w szczególności zabezpieczenie, stosunek kwoty do wartości, lokalizację i wynik kwalifikacji, stosuje Finance You według własnej oceny.
+§ 2. Zakres usługi Finance You
+W ramach Umowy Finance You może, zależnie od Projektu:
+pozyskać i wstępnie zakwalifikować Projekt;
+przygotować anonimowy opis i Kartę Leada;
+na podstawie przyjętego Zlecenia przedstawić Inwestorowi Projekt wykazujący Dopasowanie, a następnie Klienta i nieruchomość w sposób etapowy;
+koordynować wymianę dokumentów, zapytania, oględziny, wycenę, negocjacje i czynności zamknięcia;
+monitorować status Finansowania, dokumenty zabezpieczeń i publiczne rejestry; oraz
+wykonywać inne czynności wskazane w Karcie Leada, bez uprawnienia do zaciągania zobowiązań za Inwestora lub Klienta, chyba że odrębne pełnomocnictwo stanowi inaczej.
+Finance You wykonuje usługę skojarzenia i wsparcia transakcyjnego z należytą starannością profesjonalną, lecz nie jest stroną Finansowania, nie przyjmuje depozytów, nie gwarantuje wypłacalności Klienta, wartości nieruchomości, pierwszeństwa hipoteki, wpisu w księdze wieczystej ani ekonomicznego wyniku inwestycji.
+Umowa nie stanowi rekomendacji inwestycyjnej, doradztwa prawnego, podatkowego ani wyceny. Inwestor podejmuje niezależną decyzję i odpowiada za własne badanie prawne, finansowe, techniczne, podatkowe oraz AML.
+Każde przedstawienie Projektu jest odrębną usługą przedstawienia w ramach Umowy ramowej. Finance You nie ma obowiązku przedstawienia minimalnej liczby Projektów, a Inwestor nie ma obowiązku zawarcia Transakcji Chronionej.
+Finance You nie pobiera od Inwestora wynagrodzenia za przedstawienie i wsparcie transakcyjne na podstawie niniejszej Umowy — ani opłaty za udostępnienie Projektu, ani wynagrodzenia od rezultatu. Warunkiem korzystania z systemu jest aktywny Abonament (§ 7); jego zasady, w tym zmianę ceny wyłącznie na przyszłość, określa Regulamin Abonamentu Inwestora.
+Finance You przedstawia Projekty wyłącznie w wykonaniu przyjętego Zlecenia. Inwestor nie ma dostępu do Projektów nieprzypisanych do jego Zleceń, do ich liczby ani do informacji o innych inwestorach. Finance You może przedstawiać Projekty również innym podmiotom na podstawie odrębnych umów; o tym, komu i w jakiej kolejności Projekt jest przedstawiany, decyduje Finance You.
+§ 3. Warunki regulacyjne i wyłączenie finansowania konsumenckiego
+Finance You aktywuje Projekt tylko po potwierdzeniu, że deklarowany cel Finansowania jest Celem Gospodarczym. Inwestor nie może wykorzystać Umowy do udzielenia kredytu konsumenckiego, kredytu hipotecznego konsumentowi ani finansowania prywatnych potrzeb mieszkaniowych.
+Jeżeli w toku procesu ujawni się choćby częściowy cel konsumpcyjny, Finance You może natychmiast wstrzymać ujawnianie danych i obsługę Projektu do czasu odrębnej kwalifikacji prawnej. Inwestor nie może obchodzić tego ograniczenia przez zmianę nazwy produktu, podstawienie spółki ani późniejsze przeznaczenie środków sprzeczne z dokumentacją.
+Umowa nie jest zapewnieniem, że działalność którejkolwiek Strony nie podlega zezwoleniu, rejestracji lub nadzorowi. Jeżeli model danego Projektu mieści się w zakresie działalności regulowanej, w tym usług finansowania społecznościowego, kredytu konsumenckiego, kredytu hipotecznego, usług płatniczych lub innej usługi finansowej, Projekt może być realizowany wyłącznie po spełnieniu właściwych wymogów albo z udziałem uprawnionego podmiotu.
+Finance You może odmówić albo zawiesić Projekt bez odpowiedzialności za utracone korzyści, jeżeli wymaga tego ocena regulacyjna, AML, sankcyjna, ochrona danych, ryzyko oszustwa, interes Klienta lub bezpieczeństwo systemu.
+Inwestor na żądanie przedstawi dane identyfikacyjne, informacje o beneficjentach rzeczywistych, źródle środków, strukturze Grupy Inwestora oraz dokumenty wymagane do oceny zgodności. Brak dokumentów w terminie wskazanym w wezwaniu może zakończyć rezerwację.
+§ 4. Zawarcie Umowy i dowody elektroniczne
+Umowa może zostać zawarta własnoręcznie, kwalifikowanym podpisem elektronicznym albo w formie dokumentowej na odległość przez imienne konto, jednorazowy kod, potwierdzenie e-mail lub inną metodę pozwalającą ustalić osobę składającą oświadczenie.
+Przed złożeniem oświadczenia Inwestor otrzymuje treść Umowy i wymagane informacje na trwałym nośniku, w szczególności jako plik PDF. Finance You utrwala co najmniej wersję i skrót dokumentu, identyfikator konta, datę i czas, metodę uwierzytelnienia, treść oświadczeń, identyfikator Karty Leada oraz — w granicach prawa — adres IP i dane urządzenia.
+Akceptacja Karty Leada następuje oddzielnie dla każdego Projektu przed Ujawnieniem Identyfikującym. Brak akceptacji oznacza brak prawa dostępu do danych. Jeżeli jednak Inwestor niebędący Konsumentem ani osobą objętą ochroną właściwą konsumentowi, związany już niniejszą Umową i NDA, otrzyma z kanału przypisanego Finance You Ujawnienie Identyfikujące bez uprzedniej Karty Leada, a następnie świadomie wykorzysta dane, podejmie kontakt z Klientem, przekaże dane Grupie Inwestora albo doprowadzi do Transakcji Chronionej, zastosowanie mają domyślne warunki: standardowy Mechanizm Zabezpieczenia Prowizji, Kara Obejściowa 5% Sumy Hipotecznej oraz pięcioletni Okres Ochronny liczony od tego Ujawnienia. Odbiorca twierdzący, że ujawnienie było przypadkowe, zawiadamia Finance You w ciągu 1 Dnia Roboczego, nie wykorzystuje danych i potwierdza ich usunięcie. Wobec Konsumenta lub osoby chronionej jak konsument zawsze jest wymagana uprzednia, wyraźna i indywidualna akceptacja Karty Leada oraz Kary Obejściowej.
+Dane z rejestrów systemowych, potwierdzenia doręczenia, znaki wodne, historia wersji, logi wyświetlenia i pobrania oraz wiadomości Stron mogą służyć jako dowody złożenia oświadczeń i wykonania usługi, z prawem Inwestora do wykazania błędu lub nieuprawnionego użycia konta.
+W razie rozbieżności pierwszeństwo ma indywidualna Karta Leada przed Umową wyłącznie w zakresie danych Projektu, rzeczywistych warunków Prowizji od Pożyczkobiorcy i szczególnych warunków, a Umowa przed ogólnym regulaminem. Karta Leada nie może ustanawiać żadnych opłat ani wynagrodzenia należnych Finance You od Inwestora. Kara Obejściowa wynosi dokładnie 5% Sumy Hipotecznej; jej zmiana wymaga odrębnego uzgodnienia Stron w formie dokumentowej i uprzedniego przeglądu prawnego.
+§ 5. Przedstawienie i rezerwacja Projektu
+Inwestor składa Zlecenie w systemie. Finance You w terminie 2 Dni Roboczych przyjmuje Zlecenie albo odmawia jego przyjęcia, jeżeli parametry nie pozwalają na selekcję, w szczególności gdy odpowiadałaby im przeważająca część Projektów; przyjęcie jest potwierdzane w systemie wraz z datą. Inwestor może mieć jednocześnie nie więcej niż pięć przyjętych Zleceń. Zlecenie bezterminowe albo obejmujące każde Finansowanie nie jest przyjmowane. Jedno Zlecenie odpowiada jednemu Finansowaniu; zmiana parametrów wymaga nowego Zlecenia. Zlecenie wygasa z upływem terminu ważności, po cofnięciu przez Inwestora, po zawarciu Transakcji Chronionej albo po odrzuceniu przez Inwestora pięciu kolejnych Projektów. Cofnięcie lub wygaśnięcie Zlecenia nie wpływa na Okres Ochronny Projektów już ujawnionych.
+Finance You może udostępnić anonimowy teaser Projektu wykazującego Dopasowanie wyłącznie Inwestorowi, którego Zlecenie zostało przyjęte, przed ujawnieniem danych identyfikujących. Teaser ma charakter informacyjny i może opierać się na danych niezweryfikowanych lub przybliżonych. Teaser nie jest publikowany ani rozsyłany do inwestorów bez przyjętego Zlecenia.
+Po przyjęciu Projektu Inwestor otrzymuje rezerwację na 24 godziny. Finance You może jednokrotnie przedłużyć ją o 12 godzin, jeżeli Inwestor wykaże rzeczywisty postęp, w szczególności złoży pytania, potwierdzi środki albo rozpocznie analizę dokumentów.
+W czasie aktywnej rezerwacji Finance You nie przedstawia Projektu ani nie udostępnia jego danych innemu inwestorowi działającemu na podstawie Zlecenia. Po odrzuceniu Projektu lub wygaśnięciu rezerwacji Projekt może zostać przedstawiony innemu inwestorowi. Inwestor może mieć jednocześnie nie więcej niż pięć aktywnych rezerwacji w ramach jednego lub kilku Zleceń, w tym nie więcej niż dwie rezerwacje przedłużone. Finance You może cofnąć rezerwację w przypadku bezczynności, braku dokumentów, naruszenia bezpieczeństwa, nieprawdziwych oświadczeń, ryzyka prawnego albo interesu Klienta.
+Ujawnienie następuje etapowo: teaser anonimowy, pakiet zanonimizowany lub spseudonimizowany, a następnie — po akceptacji wszystkich dokumentów — zakres danych niezbędny do oceny i realizacji Projektu. Finance You nie zobowiązuje się do przekazywania „wszystkich danych”; przekazuje dane adekwatne i niezbędne.
+Odrzucenie Projektu powinno nastąpić w systemie albo w formie dokumentowej. Inwestor po odrzuceniu usuwa pełne dane zgodnie z umową dotyczącą danych osobowych, lecz obowiązki poufności i pięcioletnia ochrona relacji pozostają w mocy.
+Składanie Zleceń, udostępnienie teasera, Karta Leada, Ujawnienie Identyfikujące i rezerwacja są dostępne w aktywnym Okresie Abonamentowym i nie wymagają żadnych opłat na rzecz Finance You. Inwestor nie ma dostępu do Projektów nieprzypisanych do jego Zleceń ani do ich zestawienia. Abonament jest niezależny od Prowizji od Pożyczkobiorcy i Kary Obejściowej i nie zwalnia z Mechanizmu Zabezpieczenia Prowizji.
+§ 6. Oświadczenia i obowiązki Inwestora
+Inwestor oświadcza i zobowiązuje się, że:
+podane dane, umocowanie i informacje o Grupie Inwestora są prawdziwe, aktualne i kompletne;
+dysponuje lub będzie dysponował środkami pochodzącymi z legalnego źródła oraz wymaganymi zgodami i kompetencjami;
+samodzielnie zbada Projekt i uzyska profesjonalne opinie w zakresie odpowiednim do ryzyka;
+nie będzie wywierał niedozwolonej presji na Klienta, wprowadzał go w błąd ani uzależniał transakcji od niedozwolonych świadczeń;
+nie użyje danych do innego celu ani nie udostępni ich osobie spoza prawidłowo zgłoszonej Grupy Inwestora;
+nie zawrze Finansowania na cel konsumpcyjny na podstawie danych otrzymanych w tym procesie; oraz
+nie zawrze ani nie wykona Transakcji Chronionej bez uprzedniego wdrożenia Mechanizmu Zabezpieczenia Prowizji i nie wypłaci żadnej transzy bez równoczesnego przekazania Prowizji od Pożyczkobiorcy zgodnie z dyspozycją Klienta;
+niezwłocznie zgłosi konflikt interesów, utratę zdolności do Finansowania, postępowanie sankcyjne, upadłościowe lub inne zdarzenie istotne dla Projektu; oraz
+przed zawarciem Transakcji Chronionej samodzielnie zweryfikuje, czy Klient jest przedsiębiorcą oraz czy Finansowanie jest zaciągane na Cel Gospodarczy, w szczególności czy umowa nie stanowi umowy o kredyt konsumencki ani umowy o kredyt hipoteczny udzielany konsumentowi; weryfikacja obejmuje co najmniej sprawdzenie wpisu Klienta w CEIDG albo KRS, uzyskanie od Klienta pisemnego oświadczenia o Celu Gospodarczym oraz ocenę sposobu wykorzystania nieruchomości stanowiącej zabezpieczenie. Potwierdzenie Celu Gospodarczego przez Finance You na podstawie § 3 ust. 1 opiera się na oświadczeniach Klienta i nie zastępuje weryfikacji Inwestora; skutki zawarcia Transakcji Chronionej z naruszeniem tego obowiązku obciążają Inwestora.
+Inwestor nie może składać Klientowi oświadczeń w imieniu Finance You ani przedstawiać się jako jej pracownik, agent uprawniony do reprezentacji lub wspólnik, chyba że odrębne pełnomocnictwo wyraźnie to dopuszcza.
+Inwestor ponosi koszty własnego badania, obsługi prawnej, wyceny, notariusza, wpisów i ustanowienia zabezpieczeń, chyba że Karta Leada albo umowa z Klientem stanowi inaczej.
+§ 7. Abonament i zabezpieczenie Prowizji od Pożyczkobiorcy
+Finance You nie pobiera od Inwestora wynagrodzenia z tytułu Umowy. Korzystanie z systemu Finance You, w tym składanie Zleceń, wymaga aktywnego Abonamentu, który Inwestor nabywa od Fundacji Krzewienia Edukacji Finansowej im. Pieczaka na podstawie Regulaminu Abonamentu Inwestora (obecnie 1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni, płatne z góry za wybrany okres, bez automatycznego odnowienia); faktury za Abonament wystawia Fundacja. Przyjęcie Zlecenia, udostępnienie teasera, Karta Leada, Ujawnienie Identyfikujące, rezerwacja, wsparcie transakcyjne oraz zawarcie Transakcji Chronionej nie wymagają żadnych opłat na rzecz Finance You. Po upływie Okresu Abonamentowego Finance You wstrzymuje przyjmowanie nowych Zleceń i dostęp do funkcji systemu do czasu opłacenia kolejnego okresu; dane i dokumenty Inwestora nie są usuwane, a poufność, Mechanizm Zabezpieczenia Prowizji i Okres Ochronny pozostają w mocy.
+Ekonomiczny ciężar Prowizji od Pożyczkobiorcy ponosi Klient na podstawie odrębnej umowy z Finance You; nie jest ona opłatą za usługę świadczoną Inwestorowi. Prowizja od Pożyczkobiorcy wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT, i jest potrącana z wypłaty, chyba że umowa Klienta przewiduje inną stawkę, minimum, podstawę albo moment należności. Karta Leada musi odzwierciedlać rzeczywiste, a nie przykładowe warunki. Odrębny obowiązek Inwestora wykonania dyspozycji Klienta i świadczenia na rzecz Finance You powstaje z dokumentu Finansowania zawierającego Mechanizm Zabezpieczenia Prowizji.
+Przed zawarciem Transakcji Chronionej Inwestor zapewni włączenie do umowy Finansowania klauzuli zgodnej z Załącznikiem nr 6 albo równoważnej, która utrwala dyspozycję Klienta i zastrzega bezpośrednie świadczenie na rzecz Finance You. Finance You może złożyć oświadczenie, że chce skorzystać z zastrzeżenia na rzecz osoby trzeciej.
+Inwestor wypłaci kwotę Finansowania w dwóch częściach: Prowizję od Pożyczkobiorcy przekaże bezpośrednio na rachunek Finance You wskazany w Karcie Leada, a pozostałą kwotę na rachunek Klienta albo zgodnie z jego pozostałymi dyspozycjami. Przelew Prowizji następuje nie później niż równocześnie z pierwszą wypłatą środków lub przekazaniem Klientowi korzyści ekonomicznej, chyba że Finance You wyraźnie zatwierdzi inny harmonogram.
+Przekazanie Prowizji od Pożyczkobiorcy przez Inwestora jest wykonaniem części zobowiązania do wypłaty Finansowania wobec Klienta oraz wykonaniem zobowiązania Klienta wobec Finance You. Nie stanowi kosztu, prowizji ani wynagrodzenia należnego od Inwestora.
+Inwestor nie wypłaci żadnej części Finansowania, jeżeli przed wypłatą nie otrzyma potwierdzonej kwoty albo jednoznacznej formuły Prowizji od Pożyczkobiorcy, numeru rachunku Finance You i dokumentu zawierającego Mechanizm Zabezpieczenia Prowizji. Brak któregokolwiek elementu oznacza obowiązek wstrzymania wypłaty i niezwłocznego zawiadomienia Finance You.
+W terminie 1 Dnia Roboczego od przelewu Inwestor przekaże Finance You potwierdzenie zapłaty zawierające identyfikator Projektu, kwotę, datę, rachunek nadawcy i tytuł płatności. Finance You potwierdzi zaliczenie kwoty na Prowizję od Pożyczkobiorcy.
+Własne odsetki, prowizje, opłaty, korzyści lub inne świadczenia Inwestora od Klienta muszą zostać opisane w Karcie Leada oddzielnie od Prowizji od Pożyczkobiorcy. Karta wskazuje także istotny konflikt interesów i środki jego ograniczenia; brak wymaganych informacji blokuje Ujawnienie Identyfikujące.
+Jeżeli Inwestor prawidłowo zastosuje Mechanizm Zabezpieczenia Prowizji i przekaże Prowizję od Pożyczkobiorcy zgodnie z dyspozycją Klienta, zawarcie Transakcji Chronionej nie rodzi po stronie Inwestora żadnego wynagrodzenia transakcyjnego ani Kary Obejściowej na rzecz Finance You.
+§ 8. Transakcja Chroniona, zdarzenia dowodowe i Naruszenie Obejściowe
+Dla ustalenia, czy w Okresie Ochronnym doszło do Transakcji Chronionej, uwzględnia się najwcześniejsze z następujących zdarzeń:
+zawarcia umowy Finansowania, umowy cesji, refinansowania, nabycia wierzytelności lub innego wiążącego dokumentu;
+wypłaty choćby części środków albo udostępnienia Klientowi innej korzyści ekonomicznej;
+złożenia oświadczenia o ustanowieniu hipoteki, podpisania aktu notarialnego lub złożenia wniosku wieczystoksięgowego;
+pojawienia się wzmianki albo wpisu w księdze wieczystej wskazującego Inwestora lub Grupę Inwestora jako wierzyciela, administratora, powiernika, cesjonariusza lub osobę korzystającą z zabezpieczenia; albo
+uzyskania przez Inwestora lub Grupę Inwestora ekonomicznego skutku równoważnego Finansowaniu, niezależnie od nazwy i liczby umów.
+Jeżeli w Okresie Ochronnym w dziale IV księgi wieczystej nieruchomości przedstawionej w Projekcie albo innej nieruchomości Klienta Chronionego pojawi się wpis lub wzmianka wskazująca imię i nazwisko, firmę, identyfikator albo podmiot z Grupy Inwestora jako wierzyciela, administratora, powiernika, cesjonariusza lub beneficjenta zabezpieczenia, domniemywa się, że doszło do Transakcji Chronionej. Inwestor może wykazać dokumentami, że zdarzenie było całkowicie niezależne od relacji i danych przedstawionych przez Finance You albo że zastosowano Mechanizm Zabezpieczenia Prowizji.
+Dla zachowania Okresu Ochronnego wystarczy, że w ciągu pięciu lat nastąpi którekolwiek zdarzenie z ust. 1. Późniejszy wpis lub wzmianka, także po upływie pięciu lat, może potwierdzać wcześniejszą Transakcję Chronioną lub Naruszenie Obejściowe. Sam wpis dokonany dopiero po upływie pięciu lat nie uruchamia Kary Obejściowej, jeżeli przed końcem Okresu Ochronnego nie nastąpiło żadne wcześniejsze zdarzenie Transakcji Chronionej.
+Samo wystąpienie Transakcji Chronionej nie rodzi obowiązku zapłaty Kary Obejściowej. Jeżeli przed jej zawarciem skutecznie zabezpieczono Prowizję od Pożyczkobiorcy i przekazano ją zgodnie z § 7, Kara Obejściowa nie powstaje, a Inwestor nie płaci Finance You od tej Transakcji żadnego wynagrodzenia.
+Naruszenie Obejściowe następuje najpóźniej z chwilą zawarcia wiążącego dokumentu Transakcji Chronionej bez Mechanizmu Zabezpieczenia Prowizji albo z chwilą pierwszej wypłaty lub korzyści przekazanej bez równoczesnego przelewu Prowizji od Pożyczkobiorcy — zależnie od tego, które zdarzenie nastąpi wcześniej.
+Jeżeli w chwili Naruszenia Obejściowego Suma Hipoteczna nie jest jeszcze ostateczna, Karę Obejściową ustala się tymczasowo od kwoty Finansowania lub znanej części zabezpieczenia, a po ustaleniu wyższej Sumy Hipotecznej Inwestor dopłaca różnicę. Nadpłata podlega zwrotowi, jeżeli ostateczna podstawa okaże się niższa.
+Kara Obejściowa jest płatna w terminie 7 dni od doręczenia wezwania zawierającego opis naruszenia i kalkulację. Za opóźnienie należą się właściwe odsetki ustawowe; brak faktury VAT nie wstrzymuje wymagalności kary, która nie stanowi wynagrodzenia za usługę.
+Późniejsza spłata, rozwiązanie, odstąpienie, bezskuteczność zabezpieczenia albo nieosiągnięcie zakładanego wyniku nie usuwa Naruszenia Obejściowego. Niewykonany projekt dokumentu nie wystarcza jednak do naliczenia kary, jeżeli nie zawarto wiążącej transakcji, nie przekazano korzyści i nie wystąpiło inne zdarzenie z ust. 1.
+§ 9. Pięcioletnia ochrona i zakaz obchodzenia
+Okres Ochronny biegnie przez pięć lat od Ujawnienia Identyfikującego i obowiązuje niezależnie od odrzucenia Projektu, wygaśnięcia rezerwacji, zawieszenia konta, wypowiedzenia Umowy albo zmiany osoby Inwestora na spółkę.
+Inwestor nie może projektować, inicjować ani akceptować konstrukcji, której celem lub skutkiem jest uniknięcie Mechanizmu Zabezpieczenia Prowizji albo zapłaty Prowizji od Pożyczkobiorcy, w szczególności przez użycie Grupy Inwestora, podział jednej transakcji, finansowanie przez pośrednika, cesję przed lub po wypłacie, administratora hipoteki, zmianę zabezpieczenia, rozliczenie poza systemem albo zawarcie kolejnej umowy bez informacji dla Finance You.
+Ochrona obejmuje każdą Transakcję Chronioną z Klientem Chronionym w Okresie Ochronnym, także gdy ostatecznie zabezpieczona zostanie inna nieruchomość niż wskazana pierwotnie, zmieni się kwota, harmonogram, dłużnik formalny, wierzyciel formalny, produkt albo sposób przekazania korzyści.
+Ochrona nie oznacza obowiązku zawarcia transakcji. Jeżeli Inwestor nie zawrze ani nie zrealizuje Transakcji Chronionej i nie użyje relacji w inny sposób, nie powstaje Kara Obejściowa; jeżeli zawrze ją prawidłowo z Mechanizmem Zabezpieczenia Prowizji, Inwestor nie płaci Finance You od tej Transakcji żadnego wynagrodzenia.
+§ 10. Relacja istniejąca przed przedstawieniem
+Inwestor może zgłosić, że znał Klienta przed Ujawnieniem Identyfikującym, wyłącznie w terminie 2 Dni Roboczych od tego ujawnienia, przed podjęciem dalszych czynności w Projekcie.
+Zgłoszenie musi wskazywać Klienta i zawierać wiarygodne dokumenty datowane przed ujawnieniem, potwierdzające aktywne, konkretne rozmowy dotyczące zasadniczo tego samego Finansowania albo tej samej możliwości zabezpieczenia. Sam wpis w bazie, wizytówka, wcześniejszy kontakt towarzyski, publiczna wiedza lub nieaktywna relacja nie wystarczają.
+Jeżeli Inwestor wykaże wcześniejsze, samodzielne i aktywne źródło tej samej Transakcji oraz brak wykorzystania Informacji Poufnych lub wkładu Finance You, dany zakres nie stanowi Transakcji Chronionej. Jeżeli Finance You ujawniła nową nieruchomość, potrzebę, strukturę, dokumenty albo doprowadziła do wznowienia rozmów, ochrona pozostaje w mocy w zakresie tego wkładu i przedstawionej możliwości Finansowania.
+Brak terminowego i udokumentowanego zgłoszenia oznacza przyjęcie, że Klient i Projekt zostały skutecznie przedstawione przez Finance You.
+§ 11. Raportowanie i weryfikacja
+Inwestor zawiadomi Finance You w terminie 1 Dnia Roboczego o:
+bezpośrednim kontakcie, spotkaniu lub wymianie istotnych dokumentów z Klientem Chronionym;
+złożeniu lub otrzymaniu term sheetu, oferty, promesy, projektu umowy albo uzgodnieniu istotnych warunków;
+zawarciu umowy, cesji, porozumienia, aktu notarialnego albo innego dokumentu;
+wypłacie środków lub przekazaniu innej korzyści;
+złożeniu wniosku wieczystoksięgowego, pojawieniu się wzmianki lub wpisu;
+zmianie kwoty, zabezpieczenia, podmiotu finansującego albo udziału członka Grupy Inwestora.
+Na żądanie Finance You Inwestor przekaże w terminie 3 Dni Roboczych kopie lub wyciągi dokumentów niezbędnych do potwierdzenia zdarzenia, zastosowania Mechanizmu Zabezpieczenia Prowizji, zapłaty Prowizji od Pożyczkobiorcy i — w razie naruszenia — obliczenia Kary Obejściowej. Może zanonimizować informacje niezwiązane z Projektem, o ile nie uniemożliwia to weryfikacji.
+Finance You może monitorować jawne rejestry, w tym księgi wieczyste i rejestry przedsiębiorców, przez Okres Ochronny oraz czas niezbędny do dochodzenia roszczeń. Monitoring ogranicza się do danych koniecznych do ochrony relacji, Prowizji od Pożyczkobiorcy i Kary Obejściowej.
+W razie uzasadnionego sporu Finance You może zlecić niezależnemu adwokatowi, radcy prawnemu, biegłemu rewidentowi lub doradcy podatkowemu poufną weryfikację dokumentów. Jeżeli wykaże ona niezgłoszoną Transakcję Chronioną, brak Mechanizmu Zabezpieczenia Prowizji albo brak należnego przelewu Prowizji od Pożyczkobiorcy, uzasadnione koszty weryfikacji ponosi Inwestor; w przeciwnym razie ponosi je Finance You.
+§ 12. Zmiana osoby fizycznej na spółkę i Grupa Inwestora
+Osoba fizyczna może wskazać spółkę lub inny podmiot jako przyszłego finansującego, składając formularz przystąpienia z Załącznika nr 2. Dostęp tej spółki do danych i możliwość działania w Projekcie powstają dopiero po akceptacji Finance You, weryfikacji reprezentacji i beneficjenta rzeczywistego oraz przyjęciu przez spółkę wskazanych wersji Umowy, NDA, Karty Leada i dokumentów dotyczących danych.
+Podmiot przystępujący wstępuje kumulatywnie do obowiązków wdrożenia Mechanizmu Zabezpieczenia Prowizji, raportowania, poufności i zakazu obchodzenia dotyczących wskazanych Projektów oraz do odpowiedzialności za Karę Obejściową. Odpowiada solidarnie z pierwotnym Inwestorem w zakresie dopuszczalnym prawem. Nie dochodzi do nowacji ani zwolnienia pierwotnego Inwestora, chyba że Finance You wyraźnie oświadczy inaczej w formie dokumentowej.
+Jeżeli transakcję zawiera członek Grupy Inwestora, który nie podpisał przystąpienia, Inwestor pozostaje odpowiedzialny za wykonanie obowiązków informacyjnych, zastosowanie Mechanizmu Zabezpieczenia Prowizji i — w razie Naruszenia Obejściowego — zapłatę Kary Obejściowej, a działanie tego podmiotu uważa się za działanie w ramach Transakcji Chronionej.
+Zmiana statusu z Konsumenta na przedsiębiorcę albo spółkę działa na przyszłość i nie pozbawia osoby fizycznej ochrony bezwzględnie przysługującej jej w odniesieniu do wcześniejszych oświadczeń. Do spółki stosuje się postanowienia B2B od chwili jej skutecznego przystąpienia. Przystąpienie nie resetuje Ujawnienia Identyfikującego, Okresu Ochronnego, Kary Obejściowej ani historii dowodowej.
+Inwestor zgłosi każdą zmianę nazwy, formy prawnej, siedziby, reprezentacji, beneficjenta rzeczywistego i danych kontaktowych w terminie 2 Dni Roboczych. Doręczenie na ostatni zgłoszony adres jest skuteczne w zakresie dopuszczalnym prawem.
+§ 13. Poufność i dane osobowe
+Przed Ujawnieniem Identyfikującym Inwestor zawiera Umowę o zachowaniu poufności i zakazie obchodzenia oraz Umowę udostępniania i — warunkowo — powierzenia danych osobowych. Dokumenty te mają zastosowanie równolegle.
+Co do zasady Finance You i Inwestor są odrębnymi administratorami danych w zakresie, w jakim każdy samodzielnie decyduje o celu i sposobie oceny lub realizacji Finansowania. Powierzenie występuje tylko dla ściśle opisanych czynności wykonywanych przez jedną Stronę wyłącznie na udokumentowane polecenie drugiej.
+Inwestor nie może wykorzystywać danych do marketingu, tworzenia własnej bazy klientów, automatycznego wzbogacania profili, innego finansowania poza zakresem Transakcji Chronionej ani ujawniać ich Grupie Inwestora bez spełnienia właściwych przesłanek prawnych i obowiązków informacyjnych.
+Naruszenie danych nie uchyla obowiązku zastosowania Mechanizmu Zabezpieczenia Prowizji ani odpowiedzialności za odrębne Naruszenie Obejściowe, ale może prowadzić do dodatkowej odpowiedzialności na zasadach właściwych dla ochrony danych.
+§ 14. Odpowiedzialność i kary umowne
+Strona odpowiada za rzeczywistą szkodę spowodowaną zawinionym niewykonaniem Umowy na zasadach ogólnych. Finance You nie odpowiada za decyzje gospodarcze Inwestora, wypłacalność Klienta, wahanie wartości zabezpieczenia, działanie sądu wieczystoksięgowego ani utracone korzyści wynikające z odmowy lub niepowodzenia Finansowania, chyba że bezwzględnie obowiązujące prawo stanowi inaczej.
+Za Naruszenie Obejściowe, za które Inwestor odpowiada, zapłaci on Finance You Karę Obejściową równą 5% Sumy Hipotecznej. Zamiar obejścia nie jest wymagany, a działania i zaniechania Grupy Inwestora przy realizacji Transakcji traktuje się jak działania i zaniechania Inwestora. Kara dotyczy naruszenia niepieniężnego obowiązku powstrzymania się od zawarcia lub wykonania Transakcji Chronionej bez Mechanizmu Zabezpieczenia Prowizji; nie jest karą za niewykonanie własnego zobowiązania pieniężnego Inwestora ani ceną usługi.
+Jeżeli kilka hipotek zabezpiecza tę samą ekspozycję albo ustanowiono hipotekę łączną, Karę Obejściową liczy się jeden raz od najwyższego łącznego limitu tej ekspozycji. Odrębne dodatkowe limity i ekonomicznie odrębne ekspozycje sumuje się. Przy kilku inwestorach podstawę przypisuje się według rzeczywistego udziału lub ryzyka; brak danych obciąża Inwestora obowiązkiem ich przedstawienia.
+Jeżeli po Naruszeniu Obejściowym Finansowanie zostanie zwiększone, odnowione albo refinansowane w Okresie Ochronnym bez naprawienia Mechanizmu Zabezpieczenia Prowizji, dodatkowa Kara Obejściowa wynosi 5% dodatniego przyrostu Sumy Hipotecznej. Tej samej ekspozycji nie liczy się drugi raz wyłącznie wskutek technicznego przeniesienia zabezpieczenia.
+Jeżeli Inwestor nie jest Konsumentem ani osobą objętą ochroną właściwą konsumentowi, za zawinione naruszenie obowiązku raportowego z § 11 zapłaci 5 000,00 zł za każde niezgłoszone zdarzenie, nie więcej niż 25 000,00 zł dla jednego Projektu, o ile wcześniej otrzymał wezwanie do uzupełnienia i nie wykonał go w ciągu 2 Dni Roboczych.
+Kara Obejściowa z niniejszej Umowy i Kara Obejściowa z NDA stanowią jedną karę za ten sam czyn i nie podlegają podwójnemu naliczeniu. Prowizja od Pożyczkobiorcy należna od Klienta pozostaje odrębnym roszczeniem. Finance You może dochodzić odszkodowania przewyższającego karę, jeżeli szkoda jest wyższa.
+Stała kara za naruszenie raportowania nie ma zastosowania do Konsumenta. Kara Obejściowa może zostać zastosowana wobec Konsumenta wyłącznie po jej rzeczywistym, indywidualnym uzgodnieniu przed Ujawnieniem Identyfikującym, w osobnym oświadczeniu zawierającym sposób obliczenia, kwotowy przykład oraz jednoznaczne wskazanie, że poza Karą Obejściową Inwestor nie płaci Finance You żadnego wynagrodzenia. W pozostałym zakresie odpowiedzialność Konsumenta podlega zasadom ogólnym.
+§ 15. Postanowienia dla Konsumenta i umowa na odległość
+Przed zawarciem Umowy Konsument otrzymuje na trwałym nośniku informacje z Załącznika nr 3, aktualną Umowę, wzór odstąpienia oraz informację, że Finance You nie pobiera od Inwestora wynagrodzenia, a Abonament jest nabywany na podstawie Regulaminu Abonamentu Inwestora. Przed każdym Ujawnieniem Identyfikującym otrzymuje także indywidualną Kartę Leada wskazującą, że za Projekt nie są należne od Inwestora żadne opłaty, warunki Prowizji od Pożyczkobiorcy, Mechanizm Zabezpieczenia Prowizji oraz sposób obliczenia i przykład Kary Obejściowej.
+Konsument może odstąpić od Umowy zawartej na odległość bez podania przyczyny w terminie 14 dni od jej zawarcia, a jeżeli wymagane warunki umowne lub informacje otrzyma później — od ich doręczenia, w zakresie wynikającym z prawa. Wystarczy jednoznaczne oświadczenie, w tym formularz z Załącznika nr 4; termin jest zachowany, jeżeli oświadczenie zostanie wysłane przed jego upływem.
+Dla każdego Zlecenia Konsument wybiera: (a) rozpoczęcie usługi po upływie 14 dni albo (b) wyraźne żądanie rozpoczęcia przed upływem tego terminu. Pełne Ujawnienie Identyfikujące przed upływem terminu następuje tylko po odrębnej zgodzie na rozpoczęcie i odrębnym potwierdzeniu przyjęcia do wiadomości, że po pełnym wykonaniu usługi przedstawienia prawo odstąpienia od tej usługi wygaśnie.
+Skuteczne odstąpienie Konsumenta po rozpoczęciu, lecz przed pełnym wykonaniem usługi, rodzi obowiązek zapłaty kwoty proporcjonalnej do świadczeń spełnionych do chwili odstąpienia — wyłącznie wtedy, gdy Konsument wyraźnie zażądał rozpoczęcia wykonywania przed upływem terminu odstąpienia i potwierdził, że utraci prawo odstąpienia po pełnym wykonaniu usługi. Odstąpienie od Umowy nie obejmuje Abonamentu — odstąpienie od umowy o Abonament i zwrot Opłaty Abonamentowej określa Regulamin Abonamentu Inwestora. Za przedstawienie Projektu nie nalicza się żadnej kwoty.
+Po pełnym wykonaniu konkretnej usługi przedstawienia za uprzednią wyraźną zgodą i przyjęciu informacji o utracie prawa odstąpienia, odstąpienie od Umowy ramowej nie usuwa skutków tej wykonanej usługi ani Okresu Ochronnego dotyczącego poznanego Klienta. Nie ogranicza to bezwzględnych praw Konsumenta.
+Finance You udziela Konsumentowi przed zawarciem Umowy bezpłatnych, zrozumiałych wyjaśnień pozwalających ocenić, czy usługa i jej skutki odpowiadają jego potrzebom. Konsument może uzyskać kontakt z człowiekiem przed związaniem się Umową oraz w toku obsługi; istotna decyzja, reklamacja lub spór o Karę Obejściową nie mogą być rozstrzygane wyłącznie automatycznie bez dostępnej interwencji człowieka.
+Interfejs nie może wykorzystywać domyślnie zaznaczonych pól, ukrytych kosztów, wymuszonej ścieżki, mylącej hierarchii przycisków ani innego rozwiązania utrudniającego świadomą decyzję lub odstąpienie. Jeżeli obowiązujące przepisy wymagają internetowej funkcji odstąpienia, Finance You udostępnia ją w sposób stale widoczny i łatwo dostępny oraz niezwłocznie potwierdza złożenie oświadczenia na trwałym nośniku.
+Jeżeli informacje przedumowne zostały przekazane później niż jeden dzień przed związaniem Konsumenta Umową, Finance You wysyła na trwałym nośniku przypomnienie o prawie odstąpienia w terminie i zakresie wymaganym przez obowiązujące przepisy, bez materiału marketingowego i bez zmiany wcześniej przekazanych warunków.
+Postanowienie sprzeczne z prawem konsumenckim nie wiąże Konsumenta, a pozostała część Umowy pozostaje w mocy. W razie wątpliwości pierwszeństwo ma interpretacja zgodna z obowiązkowymi informacjami przekazanymi przed zawarciem umowy.
+§ 16. Czas trwania, wypowiedzenie i zawieszenie
+Umowa zostaje zawarta na czas nieoznaczony. Każda Strona może ją wypowiedzieć w formie dokumentowej z 30-dniowym okresem wypowiedzenia; Konsument może wypowiedzieć ją ze skutkiem natychmiastowym, jeżeli prawo lub korzystniejsza informacja przedumowna tak stanowi.
+Finance You może natychmiast zawiesić dostęp do danych i Projektów w przypadku zagrożenia bezpieczeństwa, naruszenia Umowy, braku dokumentów AML, utraty umocowania albo ryzyka regulacyjnego. Przed rozwiązaniem z przyczyny usuwalnej wyznaczy rozsądny termin naprawczy, chyba że niezwłoczne działanie jest konieczne.
+Rozwiązanie Umowy nie wpływa na Prowizję od Pożyczkobiorcy, obowiązki związane z Mechanizmem Zabezpieczenia Prowizji, już powstałą Karę Obejściową, poufność, ochronę danych, dowody, kontrolę, zakaz obchodzenia ani Okres Ochronny Projektów ujawnionych przed rozwiązaniem.
+Strony przyjmują, że pięcioletni Okres Ochronny określa czas, w którym Transakcja Chroniona może prowadzić do Naruszenia Obejściowego; nie zmienia on ustawowych terminów przedawnienia roszczenia o już wymagalną Karę Obejściową lub Prowizję od Pożyczkobiorcy.
+§ 17. Reklamacje i komunikacja
+Oświadczenia dotyczące Projektu składa się przez konto w systemie lub na adres e-mail wskazany w Karcie Leada. Oświadczenia o wypowiedzeniu, odstąpieniu, zmianie strony, sporze o Prowizję od Pożyczkobiorcy lub Karę Obejściową i naruszeniu danych wymagają formy dokumentowej umożliwiającej utrwalenie treści.
+Reklamację można złożyć na adres Finance You, ul. Nowogrodzka 31, 00-511 Warszawa, albo e-mail: kontakt@financeyou.pl. Powinna opisywać zdarzenie, Projekt, żądanie i dane kontaktowe. Finance You potwierdzi wpływ i udzieli odpowiedzi na trwałym nośniku co do zasady w terminie 14 dni, a gdy sprawa jest szczególnie złożona — po uprzednim wyjaśnieniu przyczyny i wskazaniu terminu zgodnego z prawem.
+Konsument może skorzystać z bezpłatnej pomocy miejskiego lub powiatowego rzecznika konsumentów, organizacji konsumenckiej albo właściwego pozasądowego trybu, jeżeli jest dostępny dla danego rodzaju sporu. Umowa nie wprowadza obowiązkowego arbitrażu.
+Zmiana adresu lub e-maila wymaga niezwłocznego zgłoszenia. Wiadomość wysłana na ostatni prawidłowo zgłoszony adres jest dowodem podjęcia próby doręczenia, z zastrzeżeniem szczególnych zasad doręczeń konsumenckich.
+§ 18. Postanowienia końcowe
+Umowa podlega prawu polskiemu. Spory z przedsiębiorcą będą rozpoznawane przez sąd właściwy dla siedziby Finance You, o ile uzgodnienie właściwości zostało utrwalone w formie wymaganej przez prawo procesowe; w przeciwnym razie właściwość wynika z przepisów ogólnych. Wobec Konsumenta i osoby korzystającej z ochrony konsumenckiej właściwość sądu wynika wyłącznie z przepisów bezwzględnie obowiązujących.
+Inwestor nie może przenieść Umowy ani wierzytelności związanych z Projektem bez uprzedniej zgody Finance You, z wyjątkiem cesji w ramach ujawnionej i zaakceptowanej struktury, która zachowuje Mechanizm Zabezpieczenia Prowizji i odpowiedzialność za Karę Obejściową. Finance You może przenieść wymagalną wierzytelność, informując Inwestora w zakresie wymaganym prawem.
+Zmiana Umowy wymaga formy dokumentowej, chyba że prawo wymaga formy surowszej. Regulamin może zmieniać się na przyszłość po uprzednim powiadomieniu; nie zmieniają stawki ani zasad Projektu już objętego Ujawnieniem Identyfikującym.
+Nieważność albo bezskuteczność części postanowienia nie narusza pozostałej części. Strony zastąpią wadliwe postanowienie zgodnym z prawem rozwiązaniem możliwie najbliższym celowi gospodarczemu, bez ograniczania praw Konsumenta.
+Załączniki nr 1–7 stanowią integralną część Umowy. Inwestor potwierdza otrzymanie kompletu dokumentów na trwałym nośniku przed Ujawnieniem Identyfikującym.
+________________________________
+________________________________
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+INWESTOR / ODBIORCA — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 1
+Karta Leada / indywidualne warunki Projektu
+Wypełnić i zaakceptować przed pierwszym Ujawnieniem Identyfikującym.
+DANE TRANSAKCYJNE
+ID Projektu
+____________________________________________
+Nr Zlecenia
+____________________________________________
+Parametry Zlecenia
+kwota: __________ zł ± 15%; maks. okres: ______ mies.; min. zysk roczny: ______ %; ważne do: __________
+Przyjęcie Zlecenia / Dopasowanie
+data przyjęcia: __________ ☐ Dopasowanie potwierdzone
+Wersja Karty
+____________  data i czas: ______________________________
+Kod Klienta
+____________________________________________
+Kod nieruchomości
+____________________________________________
+Cel Gospodarczy
+Opis: ________________________________________________________________☐ potwierdzony  ☐ wymaga wyjaśnienia  ☐ projekt wstrzymany
+Zakres teasera
+________________________________________________________________
+Ujawnienie Identyfikujące
+data i czas: __________________  kanał / log: ______________________________
+Inwestor
+________________________________________________________________
+Ujawniona Grupa Inwestora
+________________________________________________________________
+Rezerwacja
+od: __________________  do: __________________  przedłużenie maks. 12 h do: __________________
+Cena usługi dla Inwestora
+za ten Projekt Finance You nie pobiera od Inwestora żadnych opłat (§ 7 Umowy)
+Suma Hipoteczna
+☐ kwota z wpisu  ☐ kwota z wniosku / oświadczenia  ☐ kwota Finansowania  ☐ udział InwestoraPlanowana kwota / waluta: ________________________________________________
+Reguła wspólnego zabezpieczenia
+☐ jedna ekspozycja / hipoteka łączna — liczyć jeden raz  ☐ odrębne limity — opis alokacji: ______________________________
+Kara Obejściowa
+5% Sumy Hipotecznej za Naruszenie Obejściowe; nie jest wynagrodzeniem i nie dolicza się VAT, o ile prawo nie wymaga inaczej
+Przykład Kary Obejściowej
+Przykład standardowy: 1 000 000,00 zł × 5% = 50 000,00 zł.Przykład dla Projektu: __________________ × 5% = __________________
+Okres Ochronny
+5 lat od Ujawnienia Identyfikującego, tj. do: ______________________________
+Prowizja od Pożyczkobiorcy
+Rzeczywiste warunki z odrębnej umowy Klienta: ______ % Kwoty Udzielonej; minimum: __________ zł; bez VAT; kwota / formuła: __________________; potrącana z wypłaty: ☐ tak; moment należności: __________________Standard, jeżeli umowa Klienta nie stanowi inaczej: 7% Kwoty Udzielonej, minimum 5 000,00 zł, bez VAT.
+Mechanizm Zabezpieczenia Prowizji
+☐ umowa Klienta potwierdzona  ☐ dyspozycja Klienta  ☐ klauzula w Finansowaniu  ☐ świadczenie na rzecz Finance You  ☐ zapłata z pierwszą wypłatąRachunek Finance You: ________________________________________________
+Wynagrodzenie Inwestora od Klienta
+rodzaj: __________________  stawka / kwota / podstawa: __________________  finansowane lub potrącane z wypłaty: ☐ tak ☐ nie
+Inni płatnicy / świadczenia
+☐ brak  ☐ płatnik: __________________  charakter i kwota / sposób ustalenia: ______________________________
+Konflikt i środki
+opis konfliktu: ________________________________________________środki zarządzania: __________________________________  status: ☐ zaakceptowany ☐ projekt wstrzymany
+Karta Transferu Danych
+ID / wersja: __________________  role i podstawy potwierdzone: ☐ tak ☐ nie
+Wersje / skróty dokumentów
+Umowa: __________________  NDA: __________________  RODO: __________________  Karta SHA-256: __________________
+Konsument — przebieg indywidualnego uzgodnienia kary
+☐ nie dotyczydata / kanał / uczestnicy: ________________________________________________propozycja Konsumenta i odpowiedź Finance You: ________________________________________________ostatecznie uzgodniona treść 5% i przykład: ________________________________________________identyfikator zapisu negocjacji: ________________________________________________
+Szczególne warunki
+________________________________________________________________
+Ujawnienie Identyfikujące jest niedopuszczalne, dopóki nie potwierdzono rzeczywistych warunków Prowizji od Pożyczkobiorcy, Mechanizmu Zabezpieczenia Prowizji, Kary Obejściowej, konfliktu interesów, Karty Transferu i wersji dokumentów.
+Oświadczenie o relacji istniejącej przed przedstawieniem
+☐ Nie zgłaszam wcześniejszej relacji z Klientem / Projektem.
+☐ Zgłaszam wcześniejszą aktywną relację i załączam dowody datowane przed ujawnieniem:
+________________________________________________________________________________________
+Wybór Konsumenta — wypełniać tylko, gdy Inwestor jest Konsumentem
+☐ Proszę rozpocząć usługę przedstawienia dopiero po upływie 14 dni.
+albo
+☐ Wyraźnie żądam rozpoczęcia usługi przedstawienia tego Projektu przed upływem 14 dni od zawarcia właściwej umowy na odległość.
+☐ Przyjmuję do wiadomości, że po pełnym wykonaniu usługi, polegającym na Ujawnieniu Identyfikującym zgodnie z Kartą Leada, utracę prawo odstąpienia od tej konkretnie wykonanej usługi.
+Opłata proporcjonalna za rozpoczętą usługę pośrednictwa: nie dotyczy — Finance You nie pobiera od Inwestora wynagrodzenia (§ 7 Umowy).
+☐ Jako Konsument potwierdzam, że po rzeczywistych negocjacjach opisanych wyżej indywidualnie uzgodniłem Karę Obejściową równą 5% Sumy Hipotecznej wyłącznie za Naruszenie Obejściowe, za które odpowiadam; otrzymałem wyjaśnienie i przykład kwotowy oraz miałem realną możliwość wpływu na treść postanowienia przed ujawnieniem danych.
+Akceptacja
+Potwierdzam, że za ten Projekt nie płacę Finance You żadnej opłaty. Akceptuję obowiązek zastosowania Mechanizmu Zabezpieczenia Prowizji, ujawnioną Prowizję od Pożyczkobiorcy, własne wynagrodzenie od Klienta, konflikt i środki zarządzania, Karę Obejściową 5% Sumy Hipotecznej, jej przykład kwotowy, pięcioletni Okres Ochronny oraz wersje dokumentów wskazane w Protokole Akceptacji.
+________________________________
+________________________________
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+INWESTOR / ODBIORCA — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 2
+Przystąpienie spółki / zmiana podmiotu finansującego
+Kumulatywne przystąpienie do obowiązków i odpowiedzialności — bez automatycznego zwolnienia pierwotnego Inwestora.
+DANE PODMIOTU
+Podmiot przystępujący
+Firma: ______________________________  KRS / rejestr: ______________________________
+Adres, NIP, REGON
+________________________________________________________________
+Reprezentacja
+________________________________________________________________
+Beneficjent rzeczywisty
+________________________________________________________________
+Pierwotny Inwestor
+________________________________________________________________
+Zakres przystąpienia
+☐ Projekty wskazane niżej  ☐ wszystkie Projekty ujawnione pierwotnemu Inwestorowi do daty przystąpieniaID Projektów / Kart Leadów: ________________________________________________________________
+Rola
+☐ finansujący  ☐ współinwestor  ☐ SPV  ☐ cesjonariusz  ☐ administrator / powiernik  ☐ inna: __________
+Wersje i SHA-256
+Umowa: __________________  NDA: __________________  RODO: __________________  Karty: __________________
+Karta Transferu
+ID / wersja: __________________  dostęp od: __________________  zatwierdzony przez: __________________
+§ A. Oświadczenie o przystąpieniu
+Podmiot przystępujący potwierdza otrzymanie dokładnych wersji Umowy ramowej, właściwych Kart Leadów, NDA i umowy dotyczącej danych wskazanych powyżej oraz przystępuje do nich w zakresie oznaczonych Projektów. Każdy przyszły Projekt wymaga odrębnej Karty Leada i akceptacji przed Ujawnieniem Identyfikującym.
+Podmiot przystępuje kumulatywnie do obowiązków zastosowania Mechanizmu Zabezpieczenia Prowizji, raportowania, zakazu obchodzenia, poufności, bezpieczeństwa i usunięcia danych oraz do odpowiedzialności za Karę Obejściową. Odpowiada solidarnie z pierwotnym Inwestorem w zakresie dopuszczalnym prawem.
+Przystąpienie nie stanowi odnowienia, cesji Umowy ani zwolnienia pierwotnego Inwestora. Zwolnienie wymaga odrębnego, wyraźnego oświadczenia Finance You w formie dokumentowej.
+Podmiot ujawni członków własnej grupy, współinwestorów, administratora zabezpieczeń i źródło środków oraz będzie raportował zdarzenia transakcyjne jak Inwestor.
+Dostęp do danych powstaje wyłącznie na przyszłość, od czasu wskazanego w zatwierdzeniu Finance You, po zweryfikowaniu reprezentacji, beneficjenta rzeczywistego, kont imiennych, uprawnień i dokumentów ochrony danych. Do tego czasu pierwotny Inwestor nie może przekazywać podmiotowi pełnych danych. Przystąpienie nie legalizuje wcześniejszego nieuprawnionego ujawnienia.
+________________________________
+________________________________
+PODMIOT PRZYSTĘPUJĄCY — imię, nazwisko, funkcja / podpis / data
+PIERWOTNY INWESTOR — imię, nazwisko, funkcja / podpis / data
+Akceptacja Finance You: ____________________________________   data: ____________________
+ZAŁĄCZNIK NR 3
+Informacja przedumowna dla Konsumenta
+Przekazać na trwałym nośniku przed zawarciem umowy na odległość. Uzupełnić pola cenowe i techniczne zgodnie z aktualnym systemem.
+Obszar
+Informacja
+Usługodawca
+Finance You spółka z ograniczoną odpowiedzialnością z siedzibą w Warszawie, ul. Nowogrodzka 31, 00-511 Warszawa, wpisana do rejestru przedsiębiorców KRS pod numerem 0000635207, NIP 7010611803, REGON 365350668, kapitał zakładowy 389 600,00 zł, reprezentowana przez Filipa Roberta Bielaka – Prezesa Zarządu uprawnionego do samodzielnej reprezentacji. Kontakt: kontakt@financeyou.pl, tel. 889 888 700.
+Rejestr
+Rejestr przedsiębiorców KRS 0000635207; sąd rejestrowy i aktualną reprezentację należy sprawdzić w odpisie aktualnym przed zawarciem.
+Nadzór / zezwolenie
+Niniejsza informacja nie oznacza, że Finance You posiada zezwolenie KNF. Jeżeli dla konkretnego modelu wymagane jest zezwolenie, rejestracja lub udział uprawnionego podmiotu, Projekt nie zostanie uruchomiony przed spełnieniem wymogów.
+Usługa
+Przedstawienie i wsparcie procesu Projektu Finansowania na Cel Gospodarczy. Każda Karta Leada stanowi odrębną usługę przedstawienia w ramach Umowy ramowej.
+Istotne cechy i ryzyko
+Finance You nie gwarantuje zawarcia ani wyniku Finansowania. Inwestor samodzielnie ocenia ryzyko kredytowe, prawne, techniczne i wartość zabezpieczenia. Inwestowanie może prowadzić do utraty części lub całości środków i kosztów egzekucji.
+Cena dla Inwestora
+Finance You nie pobiera od Inwestora wynagrodzenia — ani opłaty za udostępnienie Projektu, ani wynagrodzenia od rezultatu. Dostęp do systemu wymaga aktywnego Abonamentu, sprzedawanego przez Fundacja Krzewienia Edukacji Finansowej im. Pieczaka z siedzibą w Lublinie (KRS 0001140846, NIP 9462747637) na podstawie Regulaminu Abonamentu Inwestora (obecnie 1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni, płatny z góry, bez konieczności podawania danych karty płatniczej i bez automatycznego odnowienia).
+Prowizja od Klienta
+Finance You otrzymuje od Klienta Prowizję od Pożyczkobiorcy według odrębnej umowy. Standardowo: 7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT — potrącana z wypłaty. Inwestor przekazuje ją z kwoty Finansowania bezpośrednio Finance You zgodnie z dyspozycją Klienta; nie jest to opłata Inwestora.
+Kara Obejściowa
+Wyłącznie za zawarcie lub wykonanie Transakcji Chronionej bez Mechanizmu Zabezpieczenia Prowizji z przyczyn, za które Inwestor odpowiada: 5% Sumy Hipotecznej. Przykład: 1 000 000,00 zł × 5% = 50 000,00 zł. Kara nie jest ceną usługi; wobec Konsumenta wymaga indywidualnego uzgodnienia.
+Wynagrodzenie Inwestora / konflikt
+Karta Leada wskazuje również własne wynagrodzenie Inwestora od Klienta oraz konflikt wynikający z wielostronnych płatności i środki jego opanowania. Brak kompletu informacji blokuje ujawnienie danych.
+Podatki i koszty obce
+Podatki, opłaty sądowe, notarialne, wycena, doradcy, finansowanie przelewu i koszty zabezpieczeń nie są wliczone, chyba że Karta Leada wyraźnie stanowi inaczej.
+Płatność
+Konsument nie płaci wynagrodzenia transakcyjnego. Prowizję od Pożyczkobiorcy przekazuje z kwoty Finansowania zgodnie z dyspozycją Klienta. Ewentualna indywidualnie uzgodniona Kara Obejściowa jest płatna w terminie 7 dni od wezwania opisującego naruszenie i kalkulację.
+Ważność informacji
+Warunki Karty Leada obowiązują dla wskazanego Projektu. Rezerwacja standardowo trwa 24 godziny i może zostać przedłużona o 12 godzin.
+Komunikacja
+System internetowy i e-mail; podstawowa opłata odpowiada taryfie operatora Internetu lub telefonu Konsumenta. Wymagane są aktualna przeglądarka, dostęp do PDF, e-mail, imienne konto i — jeśli uruchomione — drugi składnik uwierzytelnienia.
+Język i prawo
+Język polski; prawo polskie. Sąd właściwy według przepisów bezwzględnie obowiązujących wobec Konsumenta.
+Odstąpienie
+14 dni od zawarcia umowy na odległość, a gdy wymagane warunki lub informacje doręczono później — od ich doręczenia, w zakresie wynikającym z prawa. Wzór stanowi Załącznik nr 4. Za rozpoczętą usługę pośrednictwa nalicza się kwotę proporcjonalną wyłącznie w przypadku wyraźnego żądania rozpoczęcia przed upływem terminu odstąpienia, na zasadach z § 15 ust. 5 Umowy. Po pełnym wykonaniu usługi za wyraźną zgodą i po potwierdzeniu utraty prawa odstąpienia, prawo to wygasa dla tej usługi.
+Wyjaśnienia i kontakt z człowiekiem
+Przed zawarciem Finance You udziela bezpłatnych, zrozumiałych wyjaśnień. Konsument może zażądać kontaktu z człowiekiem przed zawarciem i w toku obsługi; interfejs nie może utrudniać decyzji ani odstąpienia.
+Przypomnienie / funkcja odstąpienia
+Jeżeli informacje przekazano później niż jeden dzień przed związaniem Umową, Finance You przesyła wymagane prawem przypomnienie. Jeżeli prawo wymaga internetowej funkcji odstąpienia, pozostaje ona łatwo dostępna, a złożenie oświadczenia jest niezwłocznie potwierdzane na trwałym nośniku.
+Czas trwania i wypowiedzenie
+Umowa ramowa jest bezterminowa. Konsument może ją wypowiedzieć w formie dokumentowej; rozwiązanie nie cofa skutków już w pełni wykonanej usługi przedstawienia i prawnie skutecznej Karty Leada.
+Reklamacje
+Pisemnie na adres siedziby lub e-mail kontakt@financeyou.pl. Odpowiedź co do zasady w 14 dni na trwałym nośniku.
+Pozasądowe rozwiązanie
+Dostępna jest pomoc miejskiego lub powiatowego rzecznika konsumentów i organizacji konsumenckich oraz procedury pozasądowe właściwe dla rodzaju sporu, o ile spełnione są ich warunki.
+Fundusz gwarancyjny
+Usługa pośrednictwa Finance You nie jest objęta umownym funduszem gwarancyjnym ani systemem rekompensat. Ewentualne zabezpieczenie Finansowania wynika wyłącznie z dokumentów danej transakcji.
+Potwierdzam otrzymanie informacji przedumownej, Umowy, Karty Leada i formularza odstąpienia na trwałym nośniku przed złożeniem oświadczenia.
+________________________________
+________________________________
+KONSUMENT — imię, nazwisko, funkcja / podpis / data
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 4
+Wzór oświadczenia o odstąpieniu
+Formularz fakultatywny — wystarczy każde jednoznaczne oświadczenie.
+DANE OŚWIADCZENIA
+Adresat
+Finance You sp. z o.o., ul. Nowogrodzka 31, 00-511 Warszawa; e-mail: kontakt@financeyou.pl
+Konsument
+Imię i nazwisko: ________________________________________________
+Adres / e-mail
+________________________________________________________________
+Umowa
+Ramowa umowa z dnia: __________________  / ID konta: __________________
+Projekt — jeśli dotyczy
+ID Projektu / Karty Leada: ________________________________________________
+Niniejszym odstępuję od wskazanej wyżej umowy zawartej na odległość. Proszę o potwierdzenie otrzymania oświadczenia na trwałym nośniku.
+Data: ____________________________     podpis (jeżeli formularz papierowy): ____________________________
+Jeżeli konkretna usługa przedstawienia została już w pełni wykonana na wyraźne żądanie Konsumenta po przekazaniu informacji o utracie prawa odstąpienia, skutki odstąpienia ocenia się zgodnie z § 15 Umowy i bezwzględnie obowiązującym prawem.
+ZAŁĄCZNIK NR 5
+Protokół akceptacji elektronicznej
+Wypełniany automatycznie przez system; dołączyć do kopii PDF przekazywanej Inwestorowi.
+ŚLAD AUDYTOWY
+Użytkownik
+ID: __________________  imię / firma: ________________________________________________
+Uwierzytelnienie
+☐ hasło  ☐ OTP  ☐ kwalifikowany podpis  ☐ e-mail  ☐ inne: __________________
+Data i czas UTC
+________________________________________________________________
+IP / urządzenie
+________________________________________________________________
+Umowa ramowa
+wersja: __________________  SHA-256 / identyfikator: ______________________________
+NDA
+wersja: __________________  SHA-256 / identyfikator: ______________________________
+Umowa danych
+wersja: __________________  SHA-256 / identyfikator: ______________________________
+Karta Leada
+ID / wersja: ____________________________________________________________
+Karta Transferu Danych
+ID / wersja: __________________  role / podstawy potwierdzone: ☐ tak ☐ nie
+Rozliczenie i konflikt
+Opłata Inwestora za Projekt: brak  Prowizja od Pożyczkobiorcy: __________________  Mechanizm zabezpieczenia: ☐ tak ☐ nieKara Obejściowa 5% i przykład zaakceptowane: ☐ tak ☐ nie  Inwestor→Klient: __________________  konflikt i środki: ☐ tak ☐ nie
+Informacja konsumencka
+☐ nie dotyczy  ☐ doręczona PDF: __________________  data: __________________
+Zgody konsumenckie
+☐ nie dotyczy  ☐ start przed 14 dniami  ☐ potwierdzenie utraty prawa po pełnym wykonaniuindywidualne negocjacje Kary 5%: data / identyfikator / wynik ________________________________________________
+Ujawnienie danych
+data i czas: __________________  zakres / paczka: ______________________________
+Dowód doręczenia
+message ID / log / checksum: ________________________________________________
+System powinien przechowywać niezmienną kopię dokumentów i zdarzeń, a każda korekta powinna tworzyć nową wersję zamiast nadpisywać poprzednią.
+ZAŁĄCZNIK NR 6
+Dyspozycja Klienta i klauzula zabezpieczająca Prowizję od Pożyczkobiorcy
+Włączyć do umowy Finansowania albo podpisać jako jej integralny załącznik przed wypłatą jakiejkolwiek części środków.
+PARAMETRY ROZLICZENIA
+Klient / Pożyczkobiorca
+________________________________________________________________
+Inwestor / Pożyczkodawca
+________________________________________________________________
+ID Projektu / Karty Leada
+________________________________________________________________
+Kwota Udzielona (kwota Finansowania z umowy)
+__________________ zł / waluta: __________
+Kwota wypłacana Klientowi (Kwota Udzielona pomniejszona o Prowizję od Pożyczkobiorcy)
+__________________ zł
+Prowizja od Pożyczkobiorcy
+__________________ zł; podstawa / formuła: __________________________________________
+Rachunek Finance You
+________________________________________________________________
+Tytuł przelewu
+Prowizja Finance You — ID Projektu: ______________________________
+Termin
+nie później niż równocześnie z pierwszą wypłatą środków Klientowi
+Klauzula do dokumentu Finansowania
+§ A. Dyspozycja, przyjęcie obowiązku i świadczenie na rzecz Finance You
+Klient potwierdza, że na podstawie odrębnej umowy z Finance You jest zobowiązany do zapłaty Prowizji od Pożyczkobiorcy wskazanej powyżej. Klient poleca Inwestorowi, aby część należnej Klientowi wypłaty Finansowania w kwocie Prowizji od Pożyczkobiorcy przekazał bezpośrednio na rachunek Finance You, a pozostałą część wypłacił zgodnie z pozostałymi dyspozycjami Klienta.
+Inwestor przyjmuje tę dyspozycję i zobowiązuje się wobec Klienta przekazać Prowizję od Pożyczkobiorcy na rachunek Finance You nie później niż równocześnie z pierwszą wypłatą jakiejkolwiek części Finansowania. Jeżeli Strony przewidują transze, cała Prowizja od Pożyczkobiorcy jest przekazywana przy pierwszej transzy, chyba że Finance You uprzednio zatwierdzi inny harmonogram w formie dokumentowej.
+Strony zastrzegają spełnienie opisanego świadczenia na rzecz Finance You jako osoby trzeciej. Finance You może żądać bezpośrednio od Inwestora wykonania tego postanowienia. Gdy Finance You oświadczy którejkolwiek ze Stron, że chce skorzystać z zastrzeżenia, postanowienie nie może zostać odwołane ani zmienione bez zgody Finance You.
+Przelew Prowizji od Pożyczkobiorcy do Finance You stanowi wypłatę odpowiedniej części Finansowania Klientowi oraz równoczesne spełnienie jego zobowiązania prowizyjnego wobec Finance You. Nie stanowi prowizji, opłaty ani kosztu ponoszonego przez Inwestora na rzecz Finance You.
+Inwestor nie jest uprawniony do wypłaty Klientowi ani osobie przez niego wskazanej żadnej części Finansowania wcześniej niż równocześnie ze zleceniem przelewu Prowizji od Pożyczkobiorcy na rachunek Finance You. Zmiana kwoty, rachunku lub terminu wymaga potwierdzenia Finance You w formie dokumentowej.
+Finance You oświadcza, że chce skorzystać z powyższego zastrzeżenia świadczenia na jej rzecz i przyjmuje uprawnienie do bezpośredniego żądania zapłaty wskazanej Prowizji od Pożyczkobiorcy.
+________________________
+________________________
+________________________
+KLIENT — imię, nazwisko, funkcja / podpis / data
+INWESTOR — imię, nazwisko, funkcja / podpis / data
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 7
+Formularz Zlecenia
+Składany w systemie po zawarciu Umowy, NDA i umowy dotyczącej danych osobowych. Przedstawienie Projektu następuje wyłącznie w wykonaniu przyjętego Zlecenia.
+ZLECENIE
+Numer Zlecenia
+nadawany przez system
+Inwestor
+____________________________________________
+Data złożenia
+____________________________________________
+Kwota Finansowania
+__________ zł (dopuszczalne odchylenie ± 15%)
+Maksymalny okres Finansowania
+______ miesięcy
+Minimalny oczekiwany zysk roczny
+______ % w skali roku
+Termin ważności
+☐ 30 dni ☐ 60 dni ☐ 90 dni
+Oświadczenia
+☐ Zlecenie składam na podstawie Ramowej umowy pośrednictwa (wersja: ________). Wiem, że nie płacę Finance You za Projekty ani od rezultatu, a dostęp do systemu wymaga aktywnego Abonamentu (Regulamin Abonamentu Inwestora); Prowizja od Pożyczkobiorcy (7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT) obciąża Klienta, jest potrącana z wypłaty i podlega Mechanizmowi Zabezpieczenia Prowizji. ☐ Zobowiązuję się przed zawarciem Transakcji Chronionej samodzielnie zweryfikować status przedsiębiorcy Klienta i Cel Gospodarczy (§ 6 ust. 1 pkt 9). ☐ Przyjmuję do wiadomości, że Projekty są przedstawiane wyłącznie w wykonaniu przyjętego Zlecenia i nie mam dostępu do Projektów nieprzypisanych do moich Zleceń.
+Konsument
+☐ nie dotyczy ☐ Żądam rozpoczęcia wykonywania usługi przed upływem 14-dniowego terminu odstąpienia i przyjmuję do wiadomości, że po pełnym wykonaniu usługi przedstawienia prawo odstąpienia od tej usługi wygaśnie.
+Potwierdzenie
+kanał / log / OTP: ____________________  data i czas: ____________________
+Decyzja Finance You
+☐ Zlecenie przyjęte, data: __________ ☐ odmowa przyjęcia, powód: ______________________
+',
+       docx_base64 = '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',
+       docx_filename = '02_Ramowa_umowa_posrednictwa_na_odleglosc_Finance_You_v7.docx',
+       allows_investor_fees = false,
+       updated_at = now()
+ where code = 'umowa_ramowa'
+   and version = 'v7'
+   and package_id = 'FY-LEGAL-2026-09-29';
+
+-- nda v6: content sha256 822131729ad457da06c78c2b514126c50469a03f17944983c02d02969371326d
+--   docx sha256 a9f3eea7ded46ab16470f87cdf6debd8e2869a63057e6b9f2f739b162c84eef3
+--   poprzednia treść: 0730df56392cd49c28019fd98cb4b00237d811ee04355f7aed0baa046b73f581
+update public.legal_documents
+   set sha256 = '822131729ad457da06c78c2b514126c50469a03f17944983c02d02969371326d',
+       content_text = 'PAKIET UMOWNY
+Umowa o zachowaniu poufności i zakazie obchodzenia
+Ochrona danych klientów, nieruchomości, modeli finansowania i relacji handlowych
+Wersja
+FY-LEGAL-2026-09-29.v6 • 29 września 2026 r.
+Zakres
+Finansowanie zabezpieczone hipoteką wyłącznie na cel związany z działalnością gospodarczą
+Forma
+papierowa, kwalifikowany podpis elektroniczny albo forma dokumentowa w systemie z pełnym śladem audytowym
+zawarta w formie dokumentowej na odległość albo podpisana w dniu wskazanym przy podpisach, pomiędzy:
+FINANCE YOU
+Finance You spółka z ograniczoną odpowiedzialnością z siedzibą w Warszawie, ul. Nowogrodzka 31, 00-511 Warszawa, wpisana do rejestru przedsiębiorców KRS pod numerem 0000635207, NIP 7010611803, REGON 365350668, kapitał zakładowy 389 600,00 zł, reprezentowana przez Filipa Roberta Bielaka – Prezesa Zarządu uprawnionego do samodzielnej reprezentacji, dalej: „Finance You” lub „Ujawniający”;
+a
+INWESTOR / ODBIORCA INFORMACJI
+Wariant strony
+☐ osoba fizyczna  ☐ osoba fizyczna prowadząca działalność  ☐ osoba prawna / jednostka organizacyjna
+Imię i nazwisko / firma
+________________________________________________________________
+Adres / siedziba
+________________________________________________________________
+PESEL albo KRS
+________________________________________________________________
+NIP / REGON
+________________________________________________________________
+E-mail i telefon
+________________________________________________________________
+Reprezentacja
+________________________________________________________________
+dalej: „Inwestor” lub „Odbiorca”; Finance You i Inwestor dalej łącznie: „Strony”, a każdy z osobna: „Strona”.
+Preambuła
+Finance You prezentuje inwestorom, na ich indywidualne zlecenie, projekty finansowania zabezpieczonego hipoteką, przeznaczone wyłącznie na cel związany z działalnością gospodarczą klienta.
+W toku oceny projektu Inwestor może uzyskać informacje umożliwiające identyfikację klienta, właściciela nieruchomości, osób z nimi związanych, nieruchomości i planowanej transakcji.
+Strony chcą chronić te informacje oraz uniemożliwić wykorzystanie relacji przedstawionej przez Finance You z pominięciem procesu transakcyjnego, zabezpieczenia i zapłaty prowizji należnej Finance You od klienta.
+Pełne dane identyfikujące są udostępniane dopiero po skutecznym związaniu Inwestora niniejszą Umową, umową pośrednictwa oraz właściwą umową dotyczącą danych osobowych.
+Zasada dostępu.  Samo podpisanie NDA nie uprawnia do danych klienta. Każde ujawnienie identyfikujące wymaga aktywnej umowy pośrednictwa, akceptacji Karty Leada i spełnienia warunków ochrony danych.
+§ 1. Definicje
+Informacje Poufne oznaczają wszelkie informacje ujawnione Inwestorowi przed zawarciem albo w okresie obowiązywania Umowy, niezależnie od nośnika i oznaczenia, w szczególności dane osobowe, dane kontaktowe, numery ksiąg wieczystych, adresy i dokumentację nieruchomości, operaty i wyceny, dokumenty finansowe i prawne, strukturę transakcji, warunki cenowe, treść negocjacji, dane użytkowników, logi systemowe, algorytmy oceny, procedury, know-how, wzory umów oraz informacje o klientach, inwestorach i partnerach Finance You.
+Projekt oznacza możliwe finansowanie zabezpieczone hipoteką, przedstawione przez Finance You pod unikalnym identyfikatorem.
+Klient Chroniony oznacza klienta, właściciela nieruchomości, dłużnika, poręczyciela, spółkę celową lub inną osobę powiązaną z Projektem, której tożsamość albo dane pozwalające na jej rozsądne ustalenie Inwestor poznał dzięki Finance You.
+Ujawnienie Identyfikujące oznacza pierwsze udostępnienie danych, które samodzielnie albo łącznie z informacjami dostępnymi Inwestorowi pozwalają zidentyfikować Klienta Chronionego lub konkretną nieruchomość. Moment Ujawnienia Identyfikującego wynika w pierwszej kolejności z rejestru systemowego i Karty Leada.
+Grupa Inwestora oznacza Inwestora oraz każdą osobę działającą bezpośrednio lub pośrednio na jego rzecz, na jego zlecenie, w jego interesie albo z jego udziałem, w tym spółkę obecną lub przyszłą, SPV, wspólnika, członka organu, pełnomocnika, beneficjenta rzeczywistego, osobę bliską, współinwestora, cesjonariusza, fundusz, powiernika, administratora hipoteki lub zabezpieczeń oraz podmiot powiązany kapitałowo, osobowo, rodzinnie lub kontraktowo.
+Osoba Upoważniona oznacza pracownika, członka organu, doradcę prawnego, podatkowego, finansowego, rzeczoznawcę, notariusza lub współinwestora, który musi znać Informacje Poufne dla oceny Projektu, został ujawniony Finance You w zakresie wymaganym Kartą Leada i jest związany obowiązkiem ochrony co najmniej równoważnym z Umową.
+Umowa Pośrednictwa oznacza ramową umowę pośrednictwa finansowego świadczonego na odległość zawartą między Stronami wraz z Kartami Leadów.
+Prowizja od Pożyczkobiorcy, Transakcja Chroniona, Suma Hipoteczna i Naruszenie Obejściowe mają znaczenie nadane im w Umowie Pośrednictwa. Ekonomiczny ciężar Prowizji od Pożyczkobiorcy ponosi klient, a nie Inwestor; Inwestor wykonuje jedynie obowiązki wynikające z Mechanizmu Zabezpieczenia Prowizji.
+Kara Obejściowa oznacza karę umowną równą 5% Sumy Hipotecznej, zastrzeżoną za naruszenie niepieniężnego zakazu obchodzenia Finance You; nie jest ceną ani wynagrodzeniem za usługę dla Inwestora.
+Forma dokumentowa obejmuje oświadczenie utrwalone w sposób pozwalający ustalić osobę składającą oświadczenie, w szczególności akceptację w koncie użytkownika, wiadomość e-mail, plik PDF, kwalifikowany podpis elektroniczny albo podpis własnoręczny.
+§ 2. Cel i dozwolone wykorzystanie
+Finance You ujawnia Informacje Poufne wyłącznie w celu oceny, negocjowania, przygotowania i ewentualnego wykonania konkretnego Projektu zgodnie z Umową Pośrednictwa.
+Inwestor może wykorzystać Informacje Poufne tylko w zakresie koniecznym do tego celu. Zabronione jest wykorzystywanie ich do marketingu, profilowania poza Projektem, tworzenia własnej bazy leadów, wzbogacania danych, szkolenia modeli, pozyskiwania innych klientów, działalności konkurencyjnej albo jakiegokolwiek celu sprzecznego z interesem Klienta Chronionego lub Finance You.
+Ujawnienie nie stanowi oferty, rekomendacji inwestycyjnej, zapewnienia o zawarciu transakcji, przeniesienia praw własności intelektualnej ani licencji poza ograniczonym prawem do zapoznania się z informacjami na potrzeby Projektu.
+Inwestor nie może podejmować zautomatyzowanych prób pobierania danych, scrapingu, omijania kontroli dostępu ani łączenia danych z zewnętrznymi zbiorami w celu ponownej identyfikacji osób lub nieruchomości ujawnionych anonimowo.
+§ 3. Obowiązki ochronne Inwestora
+Inwestor zobowiązuje się:
+zachować Informacje Poufne w ścisłej poufności i stosować co najmniej środki przewidziane w umowie dotyczącej danych osobowych oraz Karcie Leada;
+ograniczyć dostęp do Osób Upoważnionych zgodnie z zasadą niezbędnej wiedzy i odpowiadać za ich działania jak za własne;
+korzystać wyłącznie z imiennego konta, silnego uwierzytelniania i urządzeń zabezpieczonych przed dostępem osób nieuprawnionych;
+nie udostępniać loginów, plików, wydruków, zrzutów ekranu, linków ani kopii osobom nieuprawnionym;
+niezwłocznie, nie później niż w ciągu 12 godzin od wykrycia, zgłosić Finance You utratę, ujawnienie, nieuprawniony dostęp albo podejrzenie naruszenia;
+na żądanie przedstawić listę kategorii Osób Upoważnionych i potwierdzenie ich zobowiązań do poufności, bez naruszania tajemnicy zawodowej;
+nie usuwać znaków wodnych, identyfikatorów, metadanych bezpieczeństwa ani innych oznaczeń źródła dokumentów.
+Inwestor odpowiada za dobór i legalność narzędzi, usług chmurowych oraz kanałów komunikacji używanych poza systemem Finance You.
+Bez uprzedniej zgody Finance You Inwestor nie może przenosić Informacji Poufnych poza Europejski Obszar Gospodarczy ani udostępniać ich podmiotowi, który przetwarza je w państwie trzecim.
+§ 4. Wyjątki i ujawnienie wymagane prawem
+Obowiązek poufności nie obejmuje informacji, co do których Inwestor wykaże dokumentami, że:
+były publicznie dostępne bez naruszenia Umowy;
+znajdowały się legalnie w jego posiadaniu przed ujawnieniem przez Finance You i nie były objęte obowiązkiem poufności;
+zostały niezależnie opracowane bez wykorzystania Informacji Poufnych; albo
+zostały zgodnie z prawem uzyskane od osoby trzeciej uprawnionej do ich ujawnienia.
+Jeżeli ujawnienia wymaga bezwzględnie obowiązujące prawo, prawomocne orzeczenie lub żądanie uprawnionego organu, Inwestor — o ile prawo na to pozwala — zawiadomi Finance You przed ujawnieniem, ograniczy zakres do niezbędnego minimum oraz podejmie rozsądne działania w celu zachowania poufności.
+Ciężar wykazania zastosowania wyjątku spoczywa na Inwestorze. Fakt ujawnienia części informacji publicznie nie znosi ochrony niepublicznego zestawienia, kontekstu ani powiązania danych z konkretnym Projektem.
+§ 5. Zakaz obchodzenia Finance You
+Przez okres ochronny wynikający z Umowy Pośrednictwa, nie krótszy jednak niż pięć lat od Ujawnienia Identyfikującego, Inwestor nie może doprowadzić, pośredniczyć, pomagać ani umożliwić Grupie Inwestora zawarcia z Klientem Chronionym Transakcji Chronionej bez uprzedniego zastosowania Mechanizmu Zabezpieczenia Prowizji określonego w Umowie Pośrednictwa.
+Zakaz obejmuje w szczególności bezpośrednie lub pośrednie finansowanie, refinansowanie, przejęcie albo nabycie wierzytelności, ustanowienie hipoteki na rzecz Inwestora lub dowolnego członka Grupy Inwestora, wykorzystanie administratora hipoteki lub zabezpieczeń, powiernika, cesjonariusza, SPV, współinwestora albo ekonomicznie równoważnej konstrukcji.
+Kontakt bezpośredni z Klientem Chronionym jest dopuszczalny wyłącznie dla należytej oceny lub realizacji Projektu, z zachowaniem obowiązków raportowych z Umowy Pośrednictwa. Inwestor nie może jednak zawrzeć ani wykonać Transakcji Chronionej, dopóki w jej dokumentacji nie zostanie skutecznie zabezpieczona Prowizja od Pożyczkobiorcy oraz sposób jej bezpośredniego przekazania Finance You z wypłacanej kwoty.
+Wpis, wzmianka, wniosek wieczystoksięgowy, oświadczenie o ustanowieniu hipoteki, dokument finansowania, przepływ środków lub uzyskanie korzyści przez Klienta Chronionego mogą stanowić dowód Transakcji Chronionej i naruszenia zakazu obchodzenia; wpis w księdze wieczystej nie jest jedynym warunkiem naliczenia Kary Obejściowej.
+Szczegółowe przesłanki Naruszenia Obejściowego, sposób ustalenia Sumy Hipotecznej i termin zapłaty Kary Obejściowej określa Umowa Pośrednictwa i właściwa Karta Leada. Pełne Ujawnienie Identyfikujące nie powinno nastąpić przed związaniem Inwestora wymaganymi dokumentami i przekazaniem mu rzeczywistych warunków Prowizji od Pożyczkobiorcy.
+§ 6. Zwrot, usunięcie i zachowanie dowodów
+Po odrzuceniu Projektu, wygaśnięciu rezerwacji, żądaniu Finance You albo ustaniu celu przetwarzania Inwestor niezwłocznie zaprzestanie korzystania z Informacji Poufnych i w terminie 14 dni zwróci je lub bezpiecznie usunie ze wszystkich aktywnych systemów i urządzeń, z zastrzeżeniem obowiązków prawnych oraz kopii zapasowych rotacyjnie nadpisywanych.
+Na żądanie Inwestor złoży potwierdzenie usunięcia w formie dokumentowej, wskazując zakres danych, datę i osobę odpowiedzialną.
+Inwestor może zachować wyłącznie minimalny, odseparowany zestaw dowodowy wymagany prawem lub niezbędny do obrony roszczeń, bez prawa dalszego wykorzystania operacyjnego. Finance You może zachować logi ujawnienia, akceptacje i dane konieczne do wykazania źródła relacji oraz dochodzenia Prowizji od Pożyczkobiorcy, Kary Obejściowej lub odszkodowania.
+Usunięcie Informacji Poufnych nie narusza obowiązków, które ze swojej natury obowiązują po zakończeniu Umowy.
+§ 7. Odpowiedzialność i kary umowne
+Inwestor odpowiada za szkodę wynikającą z naruszenia Umowy na zasadach ogólnych, w tym za uzasadnione koszty zabezpieczenia dowodów, obsługi incydentu, zawiadomień, audytu i dochodzenia roszczeń.
+Jeżeli Inwestor nie jest Konsumentem ani osobą objętą ochroną właściwą konsumentowi, za każde zawinione naruszenie obowiązku poufności, ograniczenia celu, zabezpieczenia danych, zakazu nieuprawnionego ujawnienia lub usunięcia znaków wodnych zapłaci Finance You karę umowną w wysokości 50 000,00 zł.
+Za Naruszenie Obejściowe, za które Inwestor odpowiada, polegające na zawarciu, doprowadzeniu do zawarcia lub wykonaniu Transakcji Chronionej bez skutecznego Mechanizmu Zabezpieczenia Prowizji, Inwestor zapłaci Finance You Karę Obejściową równą 5% Sumy Hipotecznej. Zamiar obejścia nie jest wymagany. Kara zabezpiecza obowiązek niepieniężny powstrzymania się od obchodzenia Finance You; nie jest wynagrodzeniem za usługę i nie dolicza się do niej VAT, o ile bezwzględnie obowiązujące przepisy nie nakazują innej kwalifikacji.
+Późniejsza zapłata Prowizji od Pożyczkobiorcy nie usuwa automatycznie już powstałej Kary Obejściowej, chyba że Finance You wyraźnie zrzeknie się jej w formie dokumentowej. Kara nie zwalnia Klienta z Prowizji od Pożyczkobiorcy ani Inwestora z dalszego wykonania obowiązków niepieniężnych.
+Kary są płatne w terminie 7 dni od doręczenia wezwania. Finance You może dochodzić odszkodowania przewyższającego karę, jeżeli szkoda jest wyższa. Zapłata kary nie uprawnia do dalszego naruszania Umowy.
+Stałej kary 50 000,00 zł za zwykłe naruszenie poufności nie stosuje się do Konsumenta. Kara Obejściowa może zostać zastosowana wobec Konsumenta wyłącznie po jej rzeczywistym, indywidualnym uzgodnieniu przed Ujawnieniem Identyfikującym, w odrębnym oświadczeniu zawierającym sposób obliczenia i przykład kwotowy; w przeciwnym razie odpowiedzialność Konsumenta ustala się na zasadach ogólnych.
+§ 8. Okres obowiązywania
+Umowa obowiązuje od chwili jej zawarcia i może być wypowiedziana w formie dokumentowej z 30-dniowym okresem wypowiedzenia. Wypowiedzenie nie uprawnia do dalszego korzystania z wcześniej ujawnionych danych.
+Obowiązek ochrony zwykłych Informacji Poufnych trwa przez dziesięć lat od ich ujawnienia. Ochrona tajemnicy przedsiębiorstwa trwa tak długo, jak informacja zachowuje taki charakter, a ochrona danych osobowych — do ich zgodnego z prawem usunięcia lub anonimizacji.
+Zakaz obchodzenia i obowiązki dotyczące Projektów ujawnionych przed rozwiązaniem Umowy trwają przez okres ochronny przypisany do właściwej Karty Leada, co do zasady pięć lat od Ujawnienia Identyfikującego.
+§ 9. Zmiana osoby fizycznej na spółkę lub inny podmiot
+Udostępnienie konta, informacji lub Projektu spółce wskazanej przez osobę fizyczną wymaga uprzedniego podpisania przez tę spółkę oświadczenia o przystąpieniu oraz zaakceptowania wymaganych umów dotyczących pośrednictwa i danych osobowych.
+Wskazanie spółki, SPV, funduszu, wspólnika lub innej jednostki nie zwalnia pierwotnego Inwestora z obowiązków powstałych przed ani po takim wskazaniu, chyba że Finance You wyraźnie zwolni go w formie dokumentowej. Do czasu zwolnienia odpowiedzialność podmiotów przystępujących jest solidarna w dopuszczalnym prawem zakresie.
+Jeżeli spółka nie przystąpi do Umowy, Inwestor nie może ujawnić jej Informacji Poufnych ani wykorzystać jej do zawarcia Transakcji Chronionej. Działanie takiej spółki przypisuje się Inwestorowi na potrzeby zakazu obchodzenia.
+Zmiana danych, formy prawnej, nazwy, siedziby, reprezentacji, beneficjenta rzeczywistego lub podmiotu finansującego wymaga zgłoszenia Finance You w terminie 2 dni roboczych.
+§ 10. Postanowienia końcowe
+Umowa podlega prawu polskiemu. Postanowienia nie ograniczają dalej idącej ochrony wynikającej z przepisów o tajemnicy przedsiębiorstwa, danych osobowych, prawach autorskich ani czynach nieuczciwej konkurencji.
+Zmiana Umowy wymaga formy dokumentowej, chyba że bezwzględnie obowiązujące prawo wymaga formy surowszej. Zmiana Karty Leada nie może być domniemana z milczenia Inwestora.
+Bez uprzedniej zgody Finance You Inwestor nie może przenieść praw ani obowiązków z Umowy. Finance You może przenieść wierzytelność pieniężną, informując o tym Inwestora, z poszanowaniem przepisów konsumenckich i o ochronie danych.
+Nieważność lub bezskuteczność części postanowienia nie narusza pozostałej części Umowy. Strony zastąpią wadliwe postanowienie rozwiązaniem zgodnym z prawem i możliwie najbliższym jego gospodarczemu celowi.
+Spory z przedsiębiorcą będą rozpoznawane przez sąd właściwy dla siedziby Finance You, o ile uzgodnienie właściwości zostało utrwalone w formie wymaganej przez prawo procesowe; w przeciwnym razie właściwość wynika z przepisów ogólnych. Wobec Konsumenta i osoby korzystającej z ochrony konsumenckiej właściwość sądu ustala się wyłącznie według przepisów bezwzględnie obowiązujących.
+Załącznik nr 1 stanowi integralną część Umowy. Umowa została udostępniona Stronom na trwałym nośniku.
+________________________________
+________________________________
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+INWESTOR / ODBIORCA — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 1
+Przystąpienie spółki lub innego podmiotu do NDA
+Stosować przed udostępnieniem danych podmiotowi innemu niż pierwotny Inwestor.
+DANE PRZYSTĘPUJĄCEGO PODMIOTU
+Podmiot przystępujący
+Firma: ______________________________  KRS / rejestr: ______________________________
+Adres i NIP
+________________________________________________________________
+Reprezentacja
+________________________________________________________________
+Pierwotny Inwestor
+________________________________________________________________
+Identyfikatory Projektów
+________________________________________________________________
+Wersja NDA / SHA-256
+FY-LEGAL-2026-09-29.v6 / ____________________________________________________________
+Data skutku
+________________________________________________________________
+§ A. Oświadczenia przystępującego podmiotu
+Podmiot przystępujący potwierdza otrzymanie i akceptację Umowy o zachowaniu poufności i zakazie obchodzenia w wersji wskazanej w śladzie audytowym.
+Podmiot przystępuje do wszystkich obowiązków Odbiorcy dotyczących Projektów wskazanych powyżej i Informacji Poufnych poznanych bezpośrednio lub pośrednio od pierwotnego Inwestora.
+Podmiot przyjmuje do wiadomości, że przystąpienie nie przenosi automatycznie praw do konta ani danych osobowych. Dostęp wymaga odrębnej autoryzacji Finance You i przyjęcia aktualnych dokumentów dotyczących pośrednictwa oraz danych.
+Podmiot przystępujący i pierwotny Inwestor odpowiadają solidarnie za obowiązki możliwe do objęcia solidarnością; Finance You nie zwalnia pierwotnego Inwestora, o ile nie uczyni tego wyraźnie w formie dokumentowej.
+________________________________
+________________________________
+PODMIOT PRZYSTĘPUJĄCY — imię, nazwisko, funkcja / podpis / data
+PIERWOTNY INWESTOR — imię, nazwisko, funkcja / podpis / data
+Akceptacja Finance You: ____________________________________   data: ____________________',
+       docx_base64 = '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',
+       docx_filename = '01_NDA_i_zakaz_obchodzenia_Finance_You_v6.docx',
+       updated_at = now()
+ where code = 'nda'
+   and version = 'v6'
+   and package_id = 'FY-LEGAL-2026-09-29';
+-- <<< PAKIET v7
+
+-- 2. Regulamin klienta v3.
+-- >>> REGULAMIN KLIENTA v3 (generowane: npx tsx scripts/legal/build-zgody-v3.ts)
+insert into public.consent_documents (kind, title, content, version, is_active)
+select 'terms'::public.consent_kind, 'Akceptuję regulamin klienta',
+'# REGULAMIN PLATFORMY FINANCE YOU
+
+## dla użytkowników składających wniosek o pożyczkę lub poszukujących finansowania
+
+**wersja 3 — obowiązuje od dnia 30 września 2026 r.**
+
+---
+
+## § 1. Postanowienia ogólne
+
+1. Niniejszy regulamin, zwany dalej „Regulaminem”, określa zasady korzystania z Platformy Finance You przez użytkowników zainteresowanych uzyskaniem finansowania, w szczególności pożyczki zabezpieczonej na nieruchomości.
+
+2. Regulamin dotyczy użytkowników, którzy w szczególności:
+
+   1. składają wniosek o pożyczkę;
+   2. publikują ogłoszenie o potrzebie finansowania;
+   3. przekazują dane dotyczące swojej sytuacji finansowej, majątkowej lub prawnej;
+   4. przekazują dane dotyczące nieruchomości proponowanej jako zabezpieczenie finansowania;
+   5. przesyłają dokumenty, zdjęcia, oświadczenia lub inne informacje potrzebne do analizy sprawy;
+   6. oczekują kontaktu ze strony Finance You;
+   7. oczekują przedstawienia ich sprawy potencjalnym finansującym, inwestorom, partnerom lub podmiotom współpracującym z Finance You;
+   8. korzystają z formularzy, panelu klienta, komunikacji elektronicznej lub innych funkcjonalności Platformy.
+
+3. Regulamin nie dotyczy inwestorów, osób zainteresowanych udzielaniem finansowania ani użytkowników korzystających z części inwestorskiej Platformy. Dla tych osób może obowiązywać odrębny regulamin.
+
+4. Właścicielem i operatorem Platformy Finance You jest:
+
+**FINANCE YOU spółka z ograniczoną odpowiedzialnością** z siedzibą w Warszawie,
+adres: ul. Nowogrodzka 31, 00-511 Warszawa,
+wpisana do rejestru przedsiębiorców Krajowego Rejestru Sądowego pod numerem KRS: 0000635207,
+NIP: 7010611803,
+REGON: 365350668,
+kapitał zakładowy: 389 600,00 zł,
+adres e-mail: [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl),
+
+zwana dalej „Usługodawcą”, „Operatorem”, „Spółką” albo „Finance You”.
+
+5. Platforma Finance You jest narzędziem elektronicznym służącym do przyjmowania, porządkowania, wstępnej analizy, publikowania i obsługi zgłoszeń użytkowników poszukujących finansowania.
+
+6. Za pośrednictwem Platformy Finance You organizuje wyłącznie finansowanie przeznaczone na Cel Gospodarczy (finansowanie B2B). Klientem może być przedsiębiorca, w tym osoba fizyczna prowadząca działalność gospodarczą, spółka albo inna jednostka organizacyjna, a także osoba fizyczna działająca w bezpośrednim związku z działalnością gospodarczą. Finance You nie organizuje finansowania na cele konsumpcyjne ani na zaspokojenie prywatnych potrzeb mieszkaniowych, w tym kredytu konsumenckiego i kredytu hipotecznego dla konsumenta.
+
+7. Platforma nie jest bankiem, instytucją kredytową, instytucją pożyczkową, firmą inwestycyjną, domem maklerskim, funduszem inwestycyjnym, alternatywną spółką inwestycyjną, platformą finansowania społecznościowego ani systemem automatycznego udzielania pożyczek.
+
+8. Finance You nie udziela za pośrednictwem Platformy porad prawnych, podatkowych, inwestycyjnych, księgowych ani doradztwa kredytowego w rozumieniu odrębnych przepisów.
+
+9. Złożenie wniosku, założenie konta, przesłanie dokumentów, opublikowanie ogłoszenia albo rozpoczęcie kontaktu z Finance You nie oznacza przyznania pożyczki, promesy finansowania, gwarancji pozyskania inwestora ani zobowiązania Finance You do zorganizowania finansowania.
+
+10. Finansowanie może zostać udzielone wyłącznie po odrębnej analizie sprawy, akceptacji warunków przez właściwe strony oraz podpisaniu odpowiednich dokumentów, w szczególności umowy pożyczki, dokumentów zabezpieczenia, oświadczeń oraz aktów notarialnych, jeżeli będą wymagane.
+
+11. Regulamin jest udostępniany użytkownikowi nieodpłatnie przed rozpoczęciem korzystania z Platformy, w sposób umożliwiający jego pozyskanie, utrwalenie, odtwarzanie i przechowywanie.
+
+12. Korzystanie z Platformy oznacza akceptację Regulaminu.
+
+---
+
+## § 2. Definicje
+
+Na potrzeby Regulaminu poniższe pojęcia oznaczają:
+
+1. **Platforma** albo **Platforma Finance You** – serwis internetowy, aplikacja, formularz, panel klienta, system obsługi zgłoszeń, moduł publikacji ogłoszeń, narzędzia komunikacyjne oraz inne rozwiązania cyfrowe prowadzone przez Usługodawcę pod marką Finance You.
+
+2. **Usługodawca** – Finance You sp. z o.o.
+
+3. **Użytkownik** – osoba fizyczna, osoba prawna albo jednostka organizacyjna korzystająca z Platformy w celu złożenia wniosku, przekazania danych, publikacji ogłoszenia, uzyskania kontaktu lub uzyskania informacji o możliwości finansowania.
+
+4. **Klient** – użytkownik zainteresowany uzyskaniem finansowania.
+
+5. **Konsument** – osoba fizyczna dokonująca z Usługodawcą czynności prawnej niezwiązanej bezpośrednio z jej działalnością gospodarczą lub zawodową.
+
+6. **Przedsiębiorca** – osoba fizyczna, osoba prawna albo jednostka organizacyjna prowadząca działalność gospodarczą lub zawodową.
+
+7. **Przedsiębiorca na prawach konsumenta** – osoba fizyczna zawierająca umowę bezpośrednio związaną z jej działalnością gospodarczą, gdy z treści tej umowy wynika, że nie ma ona dla tej osoby charakteru zawodowego, wynikającego w szczególności z przedmiotu wykonywanej działalności gospodarczej ujawnionego w CEIDG.
+
+8. **Wniosek** – formularz, zgłoszenie, ogłoszenie, wiadomość albo inna forma przekazania przez użytkownika informacji o potrzebie finansowania.
+
+9. **Ogłoszenie** – zaakceptowany przez administratora opis potrzeby finansowania, który może zostać udostępniony w Platformie albo przekazany wybranym inwestorom, finansującym, partnerom lub współpracownikom Finance You.
+
+10. **Finansowanie** – pożyczka, finansowanie prywatne, finansowanie pomostowe, finansowanie zabezpieczone na nieruchomości albo inna forma udostępnienia środków pieniężnych uzgodniona indywidualnie pomiędzy właściwymi stronami.
+
+11. **Inwestor** albo **Finansujący** – osoba albo podmiot potencjalnie zainteresowany udzieleniem finansowania, analizą wniosku albo kontaktem z klientem.
+
+12. **Partner** – podmiot współpracujący z Finance You, w szczególności inwestor, pośrednik, analityk, kancelaria, notariusz, rzeczoznawca, doradca, podmiot finansujący albo inny podmiot uczestniczący w procesie obsługi sprawy.
+
+13. **Administrator** – osoba działająca w imieniu Finance You, uprawniona do weryfikacji, akceptacji, odrzucania, edycji, publikowania i archiwizacji wniosków lub ogłoszeń.
+
+14. **Usługa elektroniczna** – usługa świadczona drogą elektroniczną przez Finance You, polegająca w szczególności na umożliwieniu złożenia wniosku, utworzenia konta, przesłania dokumentów, publikacji ogłoszenia, komunikacji z Finance You lub korzystania z panelu klienta.
+
+15. **Prowizja Finance You** (prowizja od pożyczkobiorcy) – jedyne wynagrodzenie Finance You należne od Klienta, wyłącznie w przypadku skutecznego zorganizowania finansowania: 7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT, potrącane z wypłaty finansowania, określone w § 12 Regulaminu.
+
+16. **Dokumenty** – wszelkie pliki, zdjęcia, skany, formularze, oświadczenia, zaświadczenia, dokumenty dotyczące nieruchomości, dokumenty dochodowe, dokumenty firmowe, dokumenty tożsamości oraz inne materiały przekazane przez użytkownika.
+
+17. **Dane sprawy** – dane osobowe, dane kontaktowe, dane finansowe, dane dotyczące nieruchomości, dokumenty, informacje o zadłużeniu, celu finansowania, zabezpieczeniu i sytuacji użytkownika.
+
+18. **Dni robocze** – dni od poniedziałku do piątku, z wyłączeniem dni ustawowo wolnych od pracy w Polsce.
+
+19. **Regulamin** – niniejszy regulamin Platformy Finance You dla użytkowników składających wniosek o pożyczkę lub poszukujących finansowania.
+
+20. **Cel Gospodarczy** – cel pozostający w bezpośrednim związku z działalnością gospodarczą lub zawodową Klienta, w szczególności finansowanie bieżącej działalności, inwestycji, zakupu lub remontu nieruchomości w ramach działalności, refinansowanie zobowiązań firmowych. Celem Gospodarczym nie jest cel konsumpcyjny ani zaspokojenie prywatnych potrzeb mieszkaniowych.
+
+21. **Kwota Udzielona** – kwota finansowania wynikająca z umowy pożyczki albo innej umowy finansowania, przed potrąceniem Prowizji Finance You i innych kosztów. Od Kwoty Udzielonej liczone są odsetki i spłata.
+
+---
+
+## § 3. Charakter Platformy
+
+1. Platforma Finance You służy do obsługi zgłoszeń osób i podmiotów poszukujących finansowania.
+
+2. Platforma może umożliwiać w szczególności:
+
+   1. złożenie wniosku o finansowanie;
+   2. opisanie celu finansowania;
+   3. wskazanie proponowanego zabezpieczenia;
+   4. podanie danych nieruchomości;
+   5. wpisanie numeru księgi wieczystej;
+   6. przesłanie zdjęć, dokumentów i załączników;
+   7. złożenie oświadczeń wymaganych w formularzu;
+   8. kontakt z administratorem;
+   9. uzupełnianie braków;
+   10. publikację ogłoszenia po akceptacji administratora;
+   11. przekazanie sprawy do analizy inwestorom, finansującym albo partnerom;
+   12. otrzymanie informacji zwrotnej o zainteresowaniu finansowaniem;
+   13. umówienie dalszych czynności, w tym spotkania, rozmowy, analizy dokumentów albo czynności notarialnych.
+
+3. Platforma ma charakter organizacyjny, informacyjny i pośredniczący w znaczeniu faktycznym. Jej celem jest zebranie, uporządkowanie, opisanie i przedstawienie sprawy potencjalnym finansującym.
+
+4. Finance You nie ma obowiązku udzielenia finansowania ze środków własnych.
+
+5. Finance You nie gwarantuje, że:
+
+   1. wniosek zostanie zaakceptowany;
+   2. ogłoszenie zostanie opublikowane;
+   3. inwestor zainteresuje się sprawą;
+   4. finansowanie zostanie przyznane;
+   5. finansowanie zostanie przyznane w oczekiwanej kwocie;
+   6. finansowanie zostanie przyznane na oczekiwany okres;
+   7. koszt finansowania będzie zgodny z oczekiwaniami użytkownika;
+   8. zabezpieczenie zostanie zaakceptowane;
+   9. sprawa zakończy się podpisaniem umowy pożyczki;
+   10. sprawa zakończy się wypłatą środków.
+
+6. Użytkownik przyjmuje do wiadomości, że każda sprawa wymaga indywidualnej analizy i może zostać odrzucona bez podania szczegółowego uzasadnienia, jeżeli Finance You albo potencjalny finansujący uzna, że nie spełnia ona wymogów formalnych, ekonomicznych, prawnych, zabezpieczeniowych lub ryzyka.
+
+7. Informacje dostępne na Platformie, przekazywane przez formularz, wiadomość e-mail, rozmowę telefoniczną, panel klienta albo inną formę kontaktu mają charakter organizacyjny i informacyjny, chyba że strony wyraźnie zawrą odrębną umowę o innym charakterze.
+
+---
+
+## § 4. Dostęp do Platformy dla klientów
+
+1. Dostęp do Platformy dla użytkowników poszukujących finansowania jest na dzień wejścia w życie Regulaminu nielimitowany i nieodpłatny.
+
+2. Użytkownik nie ponosi opłaty za samo:
+
+   1. wejście na stronę Platformy;
+   2. wypełnienie formularza;
+   3. przesłanie wniosku;
+   4. dodanie dokumentów;
+   5. przekazanie danych do wstępnej analizy;
+   6. samo opublikowanie ogłoszenia, o ile Finance You nie uzgodni z użytkownikiem inaczej w odrębnej umowie.
+
+3. Brak opłaty za korzystanie z Platformy nie oznacza, że usługa zorganizowania finansowania jest bezpłatna.
+
+4. W przypadku skutecznego zorganizowania finansowania Finance You przysługuje wynagrodzenie określone w § 12 Regulaminu.
+
+5. Finance You może w przyszłości wprowadzić dodatkowe funkcjonalności płatne, jednak będzie to wymagało wyraźnego poinformowania użytkownika przed skorzystaniem z takiej funkcjonalności.
+
+6. Żadna płatność nie zostanie naliczona użytkownikowi wyłącznie na podstawie samego wejścia na stronę Platformy albo samego przeglądania treści informacyjnych.
+
+7. Użytkownik poszukujący finansowania nie dokonuje płatności za pośrednictwem systemu płatności Platformy, chyba że w przyszłości zostanie wyraźnie poinformowany o wprowadzeniu takiej funkcjonalności i zaakceptuje odrębne warunki płatności.
+
+---
+
+## § 5. Zasady składania wniosku
+
+1. Użytkownik może złożyć wniosek poprzez formularz dostępny na Platformie, kontakt e-mailowy, kontakt telefoniczny, wiadomość elektroniczną albo inną formę zaakceptowaną przez Finance You.
+
+2. Wniosek może obejmować w szczególności:
+
+   1. dane identyfikacyjne użytkownika;
+   2. dane kontaktowe;
+   3. status użytkownika, w tym informację o prowadzonej działalności gospodarczej (NIP) albo o reprezentowanym podmiocie;
+   4. oczekiwaną kwotę finansowania;
+   5. oczekiwany termin spłaty;
+   6. cel finansowania;
+   7. opis sytuacji finansowej;
+   8. informacje o dochodach;
+   9. informacje o zobowiązaniach;
+   10. informacje o nieruchomości;
+   11. numer księgi wieczystej, jeżeli użytkownik go zna;
+   12. dokumenty dotyczące nieruchomości;
+   13. zdjęcia nieruchomości;
+   14. informacje o istniejących hipotekach, egzekucjach, zajęciach, służebnościach, najmach, dzierżawach lub innych obciążeniach;
+   15. inne informacje wymagane w formularzu.
+
+3. Użytkownik zobowiązuje się podawać dane prawdziwe, aktualne, kompletne i zgodne z rzeczywistością.
+
+4. Użytkownik nie może zatajać informacji istotnych dla oceny sprawy, w szczególności informacji o:
+
+   1. zadłużeniu;
+   2. egzekucjach;
+   3. postępowaniach sądowych;
+   4. upadłości;
+   5. restrukturyzacji;
+   6. zajęciach komorniczych;
+   7. hipotekach;
+   8. roszczeniach osób trzecich;
+   9. sporach dotyczących nieruchomości;
+   10. niezgodnościach w księdze wieczystej;
+   11. braku zgody współwłaścicieli;
+   12. ograniczeniach w rozporządzaniu nieruchomością;
+   13. toczących się postępowaniach dotyczących nieruchomości lub użytkownika;
+   14. innych okolicznościach, które mogą mieć wpływ na ocenę możliwości finansowania.
+
+5. Jeżeli użytkownik podaje dane innej osoby, w szczególności współwłaściciela, małżonka, wspólnika, członka zarządu, poręczyciela albo właściciela nieruchomości, oświadcza, że posiada podstawę prawną do przekazania tych danych Finance You.
+
+6. Finance You może żądać uzupełnienia wniosku, przesłania dodatkowych dokumentów albo złożenia dodatkowych oświadczeń.
+
+7. Nieuzupełnienie danych lub dokumentów może skutkować pozostawieniem wniosku bez dalszego rozpoznania.
+
+8. Finance You może odmówić dalszej obsługi wniosku, jeżeli:
+
+   1. dane są niepełne;
+   2. dane są sprzeczne;
+   3. dokumenty budzą wątpliwości;
+   4. użytkownik nie odpowiada na kontakt;
+   5. sprawa jest niezgodna z profilem Platformy;
+   6. ryzyko sprawy jest zbyt wysokie;
+   7. zabezpieczenie jest niewystarczające;
+   8. istnieje podejrzenie działania niezgodnego z prawem;
+   9. użytkownik zachowuje się w sposób agresywny, nieuczciwy lub naruszający dobre obyczaje;
+   10. dalsza obsługa sprawy mogłaby narazić Finance You, finansującego albo osobę trzecią na odpowiedzialność, szkodę lub ryzyko prawne;
+   11. finansowanie nie jest przeznaczone na Cel Gospodarczy.
+
+9. Składając wniosek, Klient oświadcza, że finansowanie przeznaczy wyłącznie na Cel Gospodarczy, i wskazuje ten cel. Oświadczenie jest składane przez zaznaczenie pola w formularzu (pole nie jest zaznaczone domyślnie) albo w innej utrwalonej formie. Bez tego oświadczenia wniosek nie jest przedstawiany inwestorom ani finansującym.
+
+10. Klient niezwłocznie informuje Finance You, jeżeli cel finansowania ulegnie zmianie. Podanie nieprawdziwej informacji o celu finansowania może skutkować odmową dalszej obsługi sprawy.
+
+---
+
+## § 6. Dokumenty i zdjęcia
+
+1. Użytkownik może przesyłać za pośrednictwem Platformy dokumenty i zdjęcia potrzebne do analizy sprawy.
+
+2. Dokumenty mogą obejmować w szczególności:
+
+   1. dokumenty dotyczące nieruchomości;
+   2. odpisy, wypisy, akty notarialne, umowy, decyzje administracyjne;
+   3. dokumenty dochodowe;
+   4. dokumenty firmowe;
+   5. dokumenty potwierdzające zadłużenie;
+   6. dokumenty komornicze;
+   7. dokumenty sądowe;
+   8. zdjęcia nieruchomości;
+   9. dokumenty potwierdzające cel finansowania;
+   10. inne dokumenty wymagane do oceny wniosku.
+
+3. Użytkownik powinien przesyłać dokumenty czytelne, kompletne i aktualne.
+
+4. Finance You może odmówić analizy dokumentu, który jest nieczytelny, uszkodzony, niepełny, nieaktualny albo budzi wątpliwości co do autentyczności.
+
+5. Użytkownik nie powinien przesyłać dokumentów, których nie jest właścicielem albo których nie ma prawa przekazać.
+
+6. Przesłanie dokumentów nie oznacza, że Finance You potwierdza ich prawdziwość, kompletność, skuteczność prawną albo wystarczalność do zawarcia transakcji.
+
+7. Finance You może korzystać z dokumentów wyłącznie w zakresie potrzebnym do obsługi sprawy, analizy wniosku, kontaktu z potencjalnymi finansującymi, przygotowania procesu finansowania oraz realizacji obowiązków prawnych i umownych.
+
+8. Użytkownik przyjmuje do wiadomości, że do oceny sprawy mogą być potrzebne dokumenty i informacje różnego rodzaju, zależne od rodzaju nieruchomości, celu finansowania, statusu użytkownika, stanu prawnego zabezpieczenia oraz oczekiwań potencjalnego finansującego.
+
+9. Przesłanie dokumentów przez użytkownika nie zobowiązuje Finance You do ich pełnej analizy, sporządzenia opinii ani przedstawienia użytkownikowi szczegółowego raportu, chyba że strony wyraźnie ustalą inaczej.
+
+---
+
+## § 7. Ogłoszenia o potrzebie finansowania
+
+1. Użytkownik może zgłosić sprawę jako ogłoszenie o potrzebie finansowania.
+
+2. Ogłoszenie może zostać opublikowane wyłącznie po akceptacji administratora.
+
+3. Użytkownik nie ma roszczenia o publikację ogłoszenia.
+
+4. Administrator może:
+
+   1. zaakceptować ogłoszenie;
+   2. odrzucić ogłoszenie;
+   3. zażądać uzupełnienia ogłoszenia;
+   4. poprawić oczywiste omyłki;
+   5. skrócić opis;
+   6. zanonimizować dane;
+   7. usunąć dane wrażliwe albo nadmiarowe;
+   8. ograniczyć widoczność ogłoszenia;
+   9. przekazać ogłoszenie tylko wybranym finansującym;
+   10. odmówić publikacji bez podania szczegółowego uzasadnienia.
+
+5. Ogłoszenie zaakceptowane przez administratora jest ważne przez okres 30 dni od dnia publikacji, chyba że Finance You usunie je wcześniej albo przedłuży jego widoczność.
+
+6. Po upływie 30 dni ogłoszenie może zostać:
+
+   1. automatycznie wygaszone;
+   2. przeniesione do archiwum;
+   3. przedłużone za zgodą administratora;
+   4. opublikowane ponownie po aktualizacji danych;
+   5. usunięte.
+
+7. Użytkownik zobowiązuje się niezwłocznie poinformować Finance You o każdej istotnej zmianie dotyczącej ogłoszenia, w szczególności:
+
+   1. zmianie kwoty potrzebnego finansowania;
+   2. zmianie celu finansowania;
+   3. zmianie stanu prawnego nieruchomości;
+   4. sprzedaży nieruchomości;
+   5. ustanowieniu nowej hipoteki;
+   6. wszczęciu egzekucji;
+   7. pojawieniu się nowych zobowiązań;
+   8. utracie aktualności dokumentów;
+   9. pozyskaniu finansowania z innego źródła;
+   10. rezygnacji z finansowania.
+
+8. Finance You może usunąć ogłoszenie w każdym czasie, jeżeli:
+
+   1. jest nieaktualne;
+   2. zawiera nieprawdziwe informacje;
+   3. narusza Regulamin;
+   4. narusza prawo;
+   5. narusza prawa osób trzecich;
+   6. może wprowadzać w błąd;
+   7. dotyczy sprawy, której dalsze prezentowanie jest niecelowe;
+   8. użytkownik nie odpowiada na kontakt;
+   9. użytkownik cofnął zgodę na dalszą obsługę sprawy;
+   10. wymaga tego bezpieczeństwo użytkownika, Finance You albo innych osób.
+
+9. Finance You może zdecydować, że dane ogłoszenie nie będzie widoczne publicznie, lecz zostanie przekazane jedynie wybranym inwestorom, finansującym lub partnerom.
+
+10. Użytkownik przyjmuje do wiadomości, że publikacja ogłoszenia nie oznacza akceptacji sprawy przez finansującego ani zobowiązania kogokolwiek do udzielenia finansowania.
+
+---
+
+## § 8. Zakres publikowanych i przekazywanych informacji
+
+1. Finance You może publikować albo przekazywać potencjalnym finansującym wybrane informacje dotyczące sprawy, w zakresie niezbędnym do oceny możliwości finansowania.
+
+2. Zakres publikowanych lub przekazywanych informacji może obejmować w szczególności:
+
+   1. oczekiwaną kwotę finansowania;
+   2. przybliżony okres finansowania;
+   3. cel finansowania;
+   4. rodzaj proponowanego zabezpieczenia;
+   5. miejscowość lub region nieruchomości;
+   6. przybliżoną wartość nieruchomości;
+   7. podstawowe informacje o stanie prawnym nieruchomości;
+   8. podstawowe informacje o hipotekach lub obciążeniach;
+   9. opis sytuacji sprawy;
+   10. zdjęcia nieruchomości, jeżeli ich użycie jest uzasadnione prezentacją sprawy;
+   11. dokumenty lub wybrane fragmenty dokumentów, jeżeli jest to niezbędne do oceny sprawy przez finansującego lub partnera.
+
+3. Finance You może ograniczyć zakres danych osobowych widocznych w ogłoszeniu.
+
+4. Dane identyfikujące użytkownika mogą zostać przekazane potencjalnemu finansującemu albo partnerowi wtedy, gdy jest to uzasadnione obsługą sprawy, analizą finansowania, przygotowaniem transakcji albo kontaktem z użytkownikiem.
+
+5. Użytkownik przyjmuje do wiadomości, że skuteczne zorganizowanie finansowania może wymagać przekazania danych sprawy innym podmiotom, w szczególności inwestorom, analitykom, notariuszom, prawnikom, rzeczoznawcom, pośrednikom, partnerom technicznym lub podmiotom wspierającym proces.
+
+6. Finance You nie publikuje w ogólnodostępnej części Platformy dokumentów zawierających dane wrażliwe, dane nadmiarowe albo pełne dane identyfikacyjne, chyba że użytkownik wyraźnie poleci inaczej, a publikacja jest zgodna z prawem.
+
+7. Finance You może anonimizować, skracać, redagować lub porządkować opis sprawy w celu zwiększenia czytelności ogłoszenia, ochrony danych osobowych lub ułatwienia analizy przez finansujących.
+
+---
+
+## § 9. Weryfikacja sprawy
+
+1. Finance You może dokonać wstępnej weryfikacji sprawy na podstawie danych przekazanych przez użytkownika.
+
+2. Weryfikacja może obejmować w szczególności:
+
+   1. analizę kompletności wniosku;
+   2. analizę podstawowych danych nieruchomości;
+   3. analizę księgi wieczystej;
+   4. analizę zadłużeń i obciążeń;
+   5. ocenę realności proponowanego zabezpieczenia;
+   6. ocenę celu finansowania;
+   7. ocenę możliwości przedstawienia sprawy potencjalnym finansującym;
+   8. ocenę zgodności sprawy z profilem Platformy;
+   9. ocenę, czy przekazane dane są wystarczające do dalszej obsługi.
+
+3. Weryfikacja prowadzona przez Finance You ma charakter wstępny i organizacyjny.
+
+4. Weryfikacja nie stanowi:
+
+   1. opinii prawnej;
+   2. operatu szacunkowego;
+   3. rekomendacji kredytowej;
+   4. gwarancji finansowania;
+   5. potwierdzenia zdolności kredytowej;
+   6. potwierdzenia wartości nieruchomości;
+   7. potwierdzenia skuteczności zabezpieczenia;
+   8. potwierdzenia braku ryzyka transakcji;
+   9. decyzji o udzieleniu finansowania.
+
+5. Potencjalny finansujący może przeprowadzić własną analizę sprawy i odmówić finansowania niezależnie od wstępnej oceny Finance You.
+
+6. Finance You może odmówić dalszej obsługi sprawy, jeżeli w wyniku weryfikacji uzna, że sprawa jest nierealna, niewystarczająco udokumentowana, zbyt ryzykowna, niezgodna z prawem albo niezgodna z profilem Platformy.
+
+7. Finance You może, ale nie musi, przedstawić użytkownikowi przyczyny odmowy dalszej obsługi sprawy.
+
+8. Narzędzia automatyczne Platformy, w tym modele sztucznej inteligencji, mogą przygotować wstępną ocenę wniosku albo zaproponować jego status, w tym propozycję odmowy. Decyzję o odmowie dalszej obsługi wniosku albo o jego odrzuceniu zawsze podejmuje pracownik Finance You po zapoznaniu się z propozycją. Użytkownik może przedstawić swoje stanowisko i poprosić o ponowne rozpatrzenie sprawy, pisząc na adres [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
+
+---
+
+## § 10. Kontakt z użytkownikiem
+
+1. Finance You może kontaktować się z użytkownikiem w sprawie złożonego wniosku poprzez:
+
+   1. e-mail;
+   2. telefon, jeżeli użytkownik podał numer telefonu;
+   3. SMS;
+   4. komunikatory internetowe;
+   5. panel klienta;
+   6. formularz kontaktowy;
+   7. inne kanały wskazane przez użytkownika.
+
+2. Kontakt może dotyczyć w szczególności:
+
+   1. potwierdzenia złożenia wniosku;
+   2. uzupełnienia danych;
+   3. prośby o dokumenty;
+   4. wyjaśnienia celu finansowania;
+   5. przekazania informacji o zainteresowaniu sprawą;
+   6. ustalenia warunków potencjalnego finansowania;
+   7. organizacji czynności formalnych;
+   8. przekazania informacji o odmowie dalszej obsługi;
+   9. przekazania informacji o wynagrodzeniu Finance You;
+   10. przygotowania sprawy do zawarcia umowy finansowania.
+
+3. Użytkownik powinien zapewnić aktualność danych kontaktowych.
+
+4. Brak odpowiedzi użytkownika przez okres dłuższy niż 7 dni może zostać uznany za rezygnację z dalszej obsługi sprawy, chyba że strony ustalą inaczej.
+
+5. Finance You nie odpowiada za skutki podania błędnego adresu e-mail, błędnego numeru telefonu, nieaktywnej skrzynki pocztowej, zablokowanych wiadomości albo braku odbioru wiadomości przez użytkownika.
+
+6. Kontakt dotyczący obsługi wniosku, uzupełnienia danych, organizacji finansowania lub wykonania umowy nie jest traktowany jako marketing, jeżeli jest niezbędny do obsługi sprawy użytkownika.
+
+---
+
+## § 11. Zorganizowanie finansowania
+
+1. Zorganizowanie finansowania oznacza doprowadzenie do sytuacji, w której użytkownik uzyska możliwość zawarcia umowy pożyczki albo innej umowy finansowania z finansującym wskazanym, pozyskanym, skojarzonym albo przedstawionym przez Finance You lub przy udziale Finance You.
+
+2. Za zorganizowanie finansowania może zostać uznane w szczególności:
+
+   1. przedstawienie sprawy potencjalnym finansującym;
+   2. pozyskanie zainteresowanego finansującego;
+   3. uzgodnienie wstępnych warunków finansowania;
+   4. doprowadzenie do akceptacji sprawy przez finansującego;
+   5. przygotowanie ścieżki formalnej;
+   6. koordynacja kontaktu pomiędzy użytkownikiem a finansującym;
+   7. doprowadzenie do podpisania umowy pożyczki;
+   8. doprowadzenie do wypłaty środków;
+   9. doprowadzenie do zawarcia dokumentów zabezpieczenia;
+   10. przygotowanie albo koordynacja przygotowania dokumentów transakcyjnych.
+
+3. Finance You nie ma obowiązku przedstawienia użytkownikowi więcej niż jednej propozycji finansowania.
+
+4. Użytkownik nie jest zobowiązany do przyjęcia zaproponowanego finansowania, chyba że zawrze odrębne zobowiązanie.
+
+5. Jeżeli użytkownik przyjmie finansowanie zorganizowane przez Finance You, zastosowanie ma § 12 Regulaminu dotyczący wynagrodzenia Finance You.
+
+6. Szczegółowe warunki finansowania, w tym kwota, termin, oprocentowanie, prowizje, zabezpieczenia, harmonogram spłaty, koszty notarialne, koszty sądowe, koszty wpisów i inne opłaty, są ustalane indywidualnie i wynikają z odrębnych dokumentów.
+
+7. Finance You może uczestniczyć w komunikacji pomiędzy użytkownikiem a finansującym, lecz nie staje się przez to stroną umowy pożyczki, chyba że z konkretnej umowy wyraźnie wynika inaczej.
+
+8. Oprocentowanie finansowania organizowanego przez Finance You nie może przekraczać odsetek maksymalnych określonych w art. 359 § 2¹ Kodeksu cywilnego, obowiązujących w dniu zawarcia umowy.
+
+---
+
+## § 12. Wynagrodzenie Finance You za zorganizowanie finansowania
+
+1. Korzystanie z Platformy przez użytkownika poszukującego finansowania jest nieodpłatne na etapie złożenia wniosku, publikacji ogłoszenia i wstępnej analizy sprawy.
+
+2. W przypadku skutecznego zorganizowania finansowania Finance You przysługuje wynagrodzenie za zorganizowanie finansowania.
+
+3. Wynagrodzenie Finance You (Prowizja Finance You) wynosi **7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT**, chyba że strony wyraźnie ustalą inaczej w formie dokumentowej, elektronicznej albo pisemnej. Jest to jedyne wynagrodzenie Finance You należne od Klienta.
+
+4. Prowizja Finance You nie jest powiększana o podatek VAT. Przykład: przy Kwocie Udzielonej 100 000,00 zł Prowizja Finance You wynosi 7 000,00 zł, a Klient otrzymuje 93 000,00 zł; przy Kwocie Udzielonej 50 000,00 zł Prowizja Finance You wynosi 5 000,00 zł (kwota minimalna), a Klient otrzymuje 45 000,00 zł. Wysokość Prowizji i kwota do wypłaty są podawane Klientowi przed podpisaniem umowy finansowania.
+
+5. Wynagrodzenie staje się należne w przypadku zawarcia przez użytkownika umowy pożyczki albo innej umowy finansowania z finansującym pozyskanym, wskazanym, skojarzonym albo przedstawionym przez Finance You lub przy udziale Finance You.
+
+6. Finance You ma prawo wystawić fakturę za zorganizowanie finansowania.
+
+7. Prowizja Finance You jest potrącana z wypłaty finansowania. Na podstawie dyspozycji wypłaty podpisanej przez Klienta finansujący przekazuje Prowizję Finance You bezpośrednio na rachunek Finance You, a pozostałą część Kwoty Udzielonej wypłaca Klientowi.
+
+8. Potrącenie oznacza, że Klient otrzymuje do dyspozycji Kwotę Udzieloną pomniejszoną o Prowizję Finance You, a odsetki i spłata są liczone od pełnej Kwoty Udzielonej.
+
+9. Jeżeli potrącenie wynagrodzenia z kwoty finansowania nie będzie możliwe, użytkownik zobowiązany jest zapłacić wynagrodzenie na podstawie faktury wystawionej przez Finance You, w terminie wskazanym na fakturze.
+
+10. Wynagrodzenie Finance You nie obejmuje kosztów zewnętrznych, w szczególności:
+
+   1. kosztów notarialnych;
+   2. podatków;
+
+   3. opłat sądowych;
+   4. opłat za wpisy w księgach wieczystych;
+
+   5. kosztów wyceny nieruchomości;
+   6. kosztów dokumentów urzędowych;
+
+   7. kosztów pełnomocnictw;
+   8. kosztów obsługi prawnej;
+
+   9. kosztów przelewów;
+   10. kosztów innych usług zewnętrznych.
+
+11. Koszty zewnętrzne ponosi użytkownik, chyba że strony wyraźnie ustalą inaczej.
+
+12. Jeżeli użytkownik po przedstawieniu mu finansującego lub po uzgodnieniu warunków finansowania zawrze umowę z pominięciem Finance You, z finansującym albo podmiotem powiązanym z finansującym przedstawionym przez Finance You, wynagrodzenie Finance You pozostaje należne, o ile zawarcie umowy nastąpiło w związku ze sprawą obsługiwaną przez Finance You.
+
+13. Postanowienie ust. 12 stosuje się przez okres 5 lat od dnia przedstawienia użytkownikowi finansującego albo przekazania sprawy finansującemu, chyba że strony ustalą inaczej.
+
+14. Użytkownik zobowiązuje się nie podejmować działań mających na celu obejście obowiązku zapłaty wynagrodzenia Finance You.
+
+15. Wobec przedsiębiorcy na prawach konsumenta postanowienia niniejszego paragrafu stosuje się wyłącznie w zakresie dopuszczalnym przez bezwzględnie obowiązujące przepisy prawa oraz po przekazaniu mu informacji o wynagrodzeniu przed związaniem go odpłatną usługą.
+
+16. Samo złożenie wniosku nie powoduje obowiązku zapłaty wynagrodzenia. Prowizja Finance You staje się należna dopiero w przypadku zawarcia umowy finansowania i jest pobierana przy wypłacie.
+
+---
+
+## § 13. Brak gwarancji finansowania
+
+1. Finance You nie gwarantuje uzyskania finansowania.
+
+2. Finance You nie odpowiada za decyzję finansującego o:
+
+   1. odmowie finansowania;
+   2. obniżeniu kwoty finansowania;
+   3. zmianie warunków finansowania;
+   4. żądaniu dodatkowych zabezpieczeń;
+   5. żądaniu dodatkowych dokumentów;
+   6. wycofaniu się z rozmów;
+   7. odmowie podpisania umowy.
+
+3. Użytkownik przyjmuje do wiadomości, że potencjalny finansujący może samodzielnie ocenić ryzyko sprawy i odmówić finansowania bez podania przyczyny.
+
+4. Finance You nie odpowiada za sytuację, w której sprawa nie zostanie sfinansowana z powodu:
+
+   1. niewystarczającej wartości zabezpieczenia;
+   2. nieuregulowanego stanu prawnego nieruchomości;
+   3. zbyt wysokiego zadłużenia;
+   4. zajęć komorniczych;
+   5. niezgodności danych;
+   6. niepełnych dokumentów;
+   7. braku zgody współwłaścicieli;
+   8. negatywnej oceny celu finansowania;
+   9. braku zainteresowania finansujących;
+   10. innych okoliczności niezależnych od Finance You.
+
+5. Użytkownik przyjmuje do wiadomości, że finansowanie zabezpieczone na nieruchomości może wymagać spełnienia dodatkowych warunków, w szczególności zawarcia aktu notarialnego, ustanowienia hipoteki, złożenia oświadczenia o poddaniu się egzekucji, uzyskania zgód, wykreślenia obciążeń lub przedstawienia dodatkowych dokumentów.
+
+---
+
+## § 14. Obowiązki użytkownika
+
+1. Użytkownik zobowiązuje się:
+
+   1. korzystać z Platformy zgodnie z prawem i Regulaminem;
+   2. podawać prawdziwe, aktualne i kompletne dane;
+   3. nie wprowadzać Finance You ani finansujących w błąd;
+   4. nie zatajać istotnych informacji;
+   5. posiadać prawo do przekazywania dokumentów i danych;
+   6. aktualizować dane sprawy;
+   7. odpowiadać na uzasadnione pytania Finance You;
+   8. nie publikować treści bezprawnych;
+   9. nie naruszać praw osób trzecich;
+   10. nie wykorzystywać Platformy do wyłudzeń, oszustw, obchodzenia prawa ani działań nieuczciwych.
+
+2. Użytkownik ponosi odpowiedzialność za treść przekazanych danych, dokumentów, zdjęć, oświadczeń i informacji.
+
+3. Użytkownik zobowiązuje się zwolnić Finance You z odpowiedzialności w przypadku roszczeń osób trzecich wynikających z przekazania przez użytkownika danych, dokumentów lub informacji bez wymaganej podstawy prawnej.
+
+4. Użytkownik nie może:
+
+   1. podszywać się pod inną osobę;
+   2. zgłaszać nieruchomości, do której nie ma praw albo upoważnienia;
+   3. przekazywać cudzych danych bez podstawy prawnej;
+   4. przesyłać fałszywych dokumentów;
+   5. przesyłać dokumentów przerobionych lub podrobionych;
+   6. ukrywać obciążeń nieruchomości;
+   7. ukrywać zadłużenia;
+   8. wykorzystywać Platformy do obejścia prawa;
+   9. kontaktować się z finansującymi w sposób naruszający ustalenia z Finance You;
+   10. omijać Finance You w celu uniknięcia zapłaty wynagrodzenia, jeżeli wynagrodzenie stało się należne.
+
+5. Użytkownik zobowiązuje się niezwłocznie poinformować Finance You, jeżeli po złożeniu wniosku pozyska finansowanie z innego źródła albo zrezygnuje z finansowania.
+
+---
+
+## § 15. Zasady korzystania z konta i panelu klienta
+
+1. Platforma może umożliwiać utworzenie konta albo panelu klienta.
+
+2. Konto może służyć w szczególności do:
+
+   1. zapisania wniosku;
+   2. uzupełniania danych;
+   3. przesyłania dokumentów;
+   4. śledzenia statusu sprawy;
+   5. odbierania wiadomości;
+   6. edycji danych;
+   7. kontaktu z administratorem.
+
+3. Użytkownik jest zobowiązany chronić dane logowania do konta.
+
+4. Użytkownik nie może udostępniać konta osobom trzecim bez zgody Finance You.
+
+5. Finance You może zablokować konto użytkownika, jeżeli:
+
+   1. użytkownik narusza Regulamin;
+   2. konto jest wykorzystywane niezgodnie z przeznaczeniem;
+   3. istnieje podejrzenie nieuprawnionego dostępu;
+   4. użytkownik podał nieprawdziwe dane;
+   5. użytkownik narusza prawa osób trzecich;
+   6. wymaga tego bezpieczeństwo Platformy.
+
+6. Użytkownik może zażądać usunięcia konta, wysyłając wiadomość na adres [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
+
+7. Usunięcie konta nie oznacza automatycznego usunięcia danych, które Finance You musi przechowywać w celu wykazania wykonania usług, obsługi roszczeń, wykonania obowiązków prawnych, księgowych, podatkowych lub ochrony przed roszczeniami.
+
+---
+
+## § 16. Treści zabronione
+
+1. Użytkownik nie może przekazywać za pomocą Platformy treści:
+
+   1. bezprawnych;
+   2. nieprawdziwych;
+   3. naruszających prawa osób trzecich;
+   4. naruszających dobra osobiste;
+   5. zawierających groźby;
+   6. obraźliwych;
+   7. dyskryminujących;
+   8. wulgarnych;
+   9. nawołujących do przemocy;
+   10. służących wyłudzeniu;
+   11. służących praniu pieniędzy;
+   12. naruszających tajemnicę przedsiębiorstwa;
+   13. zawierających dane osobowe osób trzecich bez podstawy prawnej;
+   14. zawierających wirusy, złośliwe oprogramowanie lub szkodliwe skrypty.
+
+2. Finance You może usuwać, blokować albo ograniczać dostęp do treści naruszających Regulamin.
+
+3. Finance You może zawiadomić właściwe organy, jeżeli treści lub zachowanie użytkownika wskazują na możliwość popełnienia przestępstwa albo innego naruszenia prawa.
+
+---
+
+## § 17. Odpowiedzialność Finance You
+
+1. Finance You odpowiada za prawidłowe świadczenie usług elektronicznych w zakresie wynikającym z Regulaminu i obowiązujących przepisów prawa.
+
+2. Finance You nie odpowiada za:
+
+   1. brak uzyskania finansowania;
+   2. decyzje finansujących;
+   3. treść decyzji inwestora;
+   4. warunki zaproponowane przez finansującego;
+   5. działania lub zaniechania użytkownika;
+   6. nieprawdziwe dane przekazane przez użytkownika;
+   7. nieaktualne dokumenty przekazane przez użytkownika;
+   8. błędy wynikające z niepełnych informacji;
+   9. brak skuteczności zabezpieczenia wynikający z okoliczności niezależnych od Finance You;
+   10. działania notariuszy, sądów, komorników, urzędów, rzeczoznawców, prawników, finansujących albo innych podmiotów zewnętrznych;
+   11. przerwy techniczne, awarie, problemy operatorów telekomunikacyjnych albo problemy dostawców usług zewnętrznych;
+   12. utratę danych wynikającą z działania użytkownika, siły wyższej albo zdarzeń niezależnych od Finance You.
+
+3. Finance You nie ponosi odpowiedzialności za treści przekazane przez użytkownika, jeżeli nie wie o ich bezprawnym charakterze, a w razie uzyskania wiarygodnej wiadomości o ich bezprawnym charakterze niezwłocznie uniemożliwi do nich dostęp.
+
+4. Wobec użytkowników będących konsumentami odpowiedzialność Finance You nie jest wyłączona ani ograniczona w zakresie, w jakim byłoby to sprzeczne z bezwzględnie obowiązującymi przepisami prawa.
+
+5. Wobec użytkowników niebędących konsumentami odpowiedzialność Finance You, w najszerszym dopuszczalnym przez prawo zakresie, ogranicza się do rzeczywistej straty poniesionej przez użytkownika i nie obejmuje utraconych korzyści.
+
+6. Finance You nie odpowiada za skutki decyzji użytkownika o przyjęciu albo odrzuceniu określonej propozycji finansowania.
+
+---
+
+## § 18. Zawarcie umowy o świadczenie usług elektronicznych
+
+1. Do zawarcia umowy o świadczenie usług elektronicznych dochodzi z chwilą rozpoczęcia korzystania przez użytkownika z danej funkcjonalności Platformy, w szczególności poprzez:
+
+   1. wejście na stronę Platformy;
+   2. rozpoczęcie wypełniania formularza;
+   3. wysłanie wniosku;
+   4. utworzenie konta;
+   5. przesłanie dokumentów;
+   6. zaakceptowanie Regulaminu;
+   7. wysłanie wiadomości przez formularz kontaktowy.
+
+2. Umowa o świadczenie usług elektronicznych dotycząca samego korzystania z Platformy jest zawierana na czas korzystania z danej usługi.
+
+3. Użytkownik może zakończyć korzystanie z Platformy w każdym czasie.
+
+4. Zakończenie korzystania z Platformy nie wpływa na:
+
+   1. obowiązek zapłaty wynagrodzenia, jeżeli stało się należne;
+   2. skuteczność wcześniej zawartych umów;
+   3. obowiązek przechowywania danych przez Finance You, jeżeli wynika on z prawa albo uzasadnionego interesu;
+   4. odpowiedzialność użytkownika za przekazane dane, dokumenty i oświadczenia.
+
+5. Umowa dotycząca odpłatnej usługi zorganizowania finansowania może zostać zawarta w sposób odrębny, w szczególności poprzez zaakceptowanie warunków wynagrodzenia, podpisanie dokumentów, zaakceptowanie ustaleń w wiadomości e-mail albo przystąpienie do czynności zmierzających do zawarcia finansowania po poinformowaniu użytkownika o wynagrodzeniu Finance You.
+
+---
+
+## § 19. Prawo odstąpienia od umowy przez konsumenta
+
+1. Użytkownik będący konsumentem, który zawarł z Finance You umowę na odległość, może co do zasady odstąpić od tej umowy w terminie 14 dni bez podawania przyczyny, o ile przepisy prawa nie stanowią inaczej.
+
+2. Termin do odstąpienia od umowy o świadczenie usług elektronicznych liczony jest od dnia zawarcia umowy.
+
+3. Do zachowania terminu wystarczy wysłanie oświadczenia o odstąpieniu przed upływem terminu.
+
+4. Oświadczenie o odstąpieniu można wysłać na adres e-mail: [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
+
+5. Użytkownik może skorzystać ze wzoru formularza odstąpienia stanowiącego załącznik nr 1 do Regulaminu, jednak nie jest to obowiązkowe.
+
+6. Prawo odstąpienia od umowy nie ma wpływu na prawo Finance You do wynagrodzenia za usługi wykonane na wyraźne żądanie konsumenta przed upływem terminu odstąpienia, jeżeli obowiązujące przepisy pozwalają na takie rozliczenie, a konsument został prawidłowo poinformowany o skutkach złożenia takiego żądania.
+
+7. Jeżeli konsument wyraźnie żąda rozpoczęcia świadczenia usługi przed upływem terminu do odstąpienia, powinien złożyć odpowiednie oświadczenie poprzez zaznaczenie właściwego pola w formularzu albo złożenie oświadczenia w innej utrwalonej formie.
+
+8. Jeżeli usługa została w pełni wykonana za wyraźną i uprzednią zgodą konsumenta, po poinformowaniu go o utracie prawa odstąpienia po spełnieniu świadczenia, konsument może utracić prawo odstąpienia w zakresie przewidzianym przez prawo.
+
+9. W przypadku samego nieodpłatnego korzystania z Platformy odstąpienie od umowy polega w praktyce na zaprzestaniu korzystania z Platformy, żądaniu usunięcia konta albo wysłaniu oświadczenia o odstąpieniu.
+
+10. Postanowienia niniejszego paragrafu stosuje się również do przedsiębiorcy na prawach konsumenta w zakresie przewidzianym przez przepisy prawa.
+
+---
+
+## § 20. Reklamacje
+
+1. Użytkownik może złożyć reklamację dotyczącą działania Platformy albo usług świadczonych przez Finance You.
+
+2. Reklamację należy wysłać na adres e-mail: [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
+
+3. Reklamacja powinna zawierać:
+
+   1. imię i nazwisko albo nazwę użytkownika;
+   2. adres e-mail;
+   3. opis sprawy;
+   4. datę wystąpienia problemu;
+   5. żądanie użytkownika;
+   6. ewentualne załączniki pomocne w rozpoznaniu reklamacji.
+
+4. Finance You rozpatruje reklamację w terminie 14 dni od dnia jej otrzymania, chyba że przepisy prawa wymagają innego terminu.
+
+5. Jeżeli rozpatrzenie reklamacji wymaga uzupełnienia danych, Finance You może zwrócić się do użytkownika o dodatkowe informacje.
+
+6. Odpowiedź na reklamację zostanie wysłana na adres e-mail wskazany przez użytkownika.
+
+7. Reklamacja dotycząca braku uzyskania finansowania nie będzie uznana za zasadną, jeżeli Finance You nie zobowiązało się wyraźnie do zapewnienia finansowania.
+
+8. Reklamacja dotycząca decyzji finansującego nie będzie uznana za reklamację dotyczącą działania Platformy, chyba że dotyczy błędu Finance You w przekazaniu danych albo obsłudze sprawy.
+
+---
+
+## § 21. Dane osobowe
+
+1. Administratorem danych osobowych użytkowników jest Finance You sp. z o.o.
+
+2. Dane osobowe są przetwarzane w szczególności w celu:
+
+   1. obsługi Platformy;
+   2. przyjęcia wniosku;
+   3. analizy sprawy;
+   4. kontaktu z użytkownikiem;
+   5. przekazania sprawy potencjalnym finansującym;
+   6. organizacji finansowania;
+   7. przygotowania dokumentów;
+   8. wykonania umów;
+   9. wystawienia faktury;
+   10. obsługi reklamacji;
+   11. obrony przed roszczeniami;
+   12. wykonania obowiązków prawnych, podatkowych i księgowych;
+   13. prowadzenia działań marketingowych, jeżeli użytkownik wyraził odpowiednią zgodę albo istnieje inna podstawa prawna.
+
+3. Szczegółowe zasady przetwarzania danych osobowych określa Polityka prywatności Platformy.
+
+4. Użytkownik przyjmuje do wiadomości, że obsługa sprawy może wymagać przekazania danych osobowych podmiotom trzecim, w szczególności:
+
+   1. potencjalnym finansującym;
+   2. inwestorom;
+   3. partnerom;
+   4. notariuszom;
+   5. prawnikom;
+   6. rzeczoznawcom;
+   7. analitykom;
+   8. podmiotom świadczącym usługi IT;
+   9. podmiotom księgowym;
+   10. podmiotom obsługującym komunikację elektroniczną;
+   11. organom publicznym, jeżeli wynika to z przepisów prawa.
+
+5. Użytkownik, przekazując dane osób trzecich, oświadcza, że posiada podstawę prawną do ich przekazania i zobowiązuje się poinformować te osoby o przekazaniu danych Finance You, jeżeli wymagają tego przepisy prawa.
+
+6. Użytkownik ma prawo dostępu do swoich danych, ich sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia danych, wniesienia sprzeciwu oraz wniesienia skargi do Prezesa Urzędu Ochrony Danych Osobowych, na zasadach określonych w przepisach prawa.
+
+---
+
+## § 22. Zgody marketingowe i kontakt handlowy
+
+1. Finance You może przesyłać użytkownikowi informacje handlowe drogą elektroniczną wyłącznie na podstawie właściwej zgody albo innej podstawy prawnej.
+
+2. Użytkownik może wyrazić zgodę na:
+
+   1. kontakt e-mailowy;
+   2. kontakt telefoniczny;
+   3. kontakt SMS;
+   4. kontakt przez komunikatory;
+   5. otrzymywanie newslettera;
+   6. otrzymywanie informacji o ofertach, usługach, szkoleniach lub możliwościach finansowania.
+
+3. Zgoda marketingowa jest dobrowolna i może zostać cofnięta w każdym czasie.
+
+4. Cofnięcie zgody nie wpływa na zgodność z prawem działań dokonanych przed jej cofnięciem.
+
+5. Kontakt dotyczący złożonego wniosku, obsługi sprawy, uzupełnienia dokumentów, organizacji finansowania albo wykonania umowy nie stanowi newslettera i może być prowadzony w zakresie niezbędnym do obsługi sprawy.
+
+---
+
+## § 23. Poufność
+
+1. Finance You zobowiązuje się zachować poufność informacji przekazanych przez użytkownika, z zastrzeżeniem sytuacji, w których przekazanie informacji jest konieczne do obsługi sprawy, organizacji finansowania, wykonania obowiązków prawnych albo ochrony uzasadnionych interesów Finance You.
+
+2. Użytkownik przyjmuje do wiadomości, że przekazanie sprawy potencjalnym finansującym wymaga ujawnienia im określonych informacji dotyczących sprawy.
+
+3. Finance You może udostępniać informacje o sprawie wyłącznie w zakresie uzasadnionym celem obsługi wniosku.
+
+4. Obowiązek poufności nie dotyczy informacji:
+
+   1. publicznie dostępnych;
+   2. ujawnionych za zgodą użytkownika;
+   3. wymaganych przez przepisy prawa;
+   4. wymaganych przez sąd, organ administracji, organ ścigania albo inny uprawniony organ;
+   5. niezbędnych do dochodzenia lub obrony roszczeń.
+
+---
+
+## § 24. Własność intelektualna
+
+1. Prawa do Platformy, jej układu, treści, formularzy, tekstów, grafik, znaków, logotypów, rozwiązań technicznych, baz danych, materiałów i dokumentów należą do Finance You albo podmiotów, od których Finance You uzyskało odpowiednie prawa.
+
+2. Użytkownik nie może kopiować, rozpowszechniać, sprzedawać, udostępniać, modyfikować ani wykorzystywać elementów Platformy poza zakresem dozwolonego korzystania wynikającego z Regulaminu.
+
+3. Użytkownik zachowuje prawa do dokumentów, zdjęć i treści, które sam przekazuje, z zastrzeżeniem ust. 4.
+
+4. Użytkownik udziela Finance You niewyłącznej, nieodpłatnej licencji na korzystanie z przekazanych treści, dokumentów i zdjęć w zakresie niezbędnym do obsługi sprawy, publikacji ogłoszenia, prezentacji sprawy finansującym, analizy wniosku, archiwizacji i wykonania umowy.
+
+5. Licencja, o której mowa w ust. 4, obejmuje w szczególności:
+
+   1. utrwalanie;
+   2. przechowywanie;
+   3. kopiowanie techniczne;
+   4. przesyłanie;
+   5. udostępnianie wybranym finansującym i partnerom;
+   6. publikację w Platformie w zakresie zaakceptowanym przez administratora;
+   7. anonimizację;
+   8. opracowanie opisu sprawy.
+
+6. Licencja wygasa w zakresie, w jakim dalsze korzystanie z treści nie jest potrzebne do obsługi sprawy, wykonania obowiązków prawnych, rozliczeń, archiwizacji albo obrony przed roszczeniami.
+
+---
+
+## § 25. Przerwy techniczne i dostępność Platformy
+
+1. Finance You dokłada starań, aby Platforma działała prawidłowo i była dostępna dla użytkowników.
+
+2. Finance You nie gwarantuje nieprzerwanej dostępności Platformy.
+
+3. Dostęp do Platformy może być ograniczony w szczególności z powodu:
+
+   1. prac technicznych;
+   2. aktualizacji;
+   3. awarii;
+   4. problemów z hostingiem;
+   5. problemów z dostawcami zewnętrznymi;
+   6. cyberataków;
+   7. siły wyższej;
+   8. konieczności zapewnienia bezpieczeństwa danych.
+
+4. Finance You może zmieniać funkcjonalności Platformy, jeżeli nie narusza to praw nabytych użytkowników ani bezwzględnie obowiązujących przepisów prawa.
+
+---
+
+## § 26. Zakończenie obsługi sprawy
+
+1. Obsługa sprawy może zostać zakończona w szczególności w przypadku:
+
+   1. uzyskania finansowania przez użytkownika;
+   2. odmowy finansowania;
+   3. braku zainteresowania finansujących;
+   4. rezygnacji użytkownika;
+   5. braku kontaktu z użytkownikiem;
+   6. nieuzupełnienia dokumentów;
+   7. upływu ważności ogłoszenia;
+   8. usunięcia ogłoszenia;
+   9. naruszenia Regulaminu;
+   10. podejrzenia działania niezgodnego z prawem.
+
+2. Zakończenie obsługi sprawy nie wyłącza prawa Finance You do wynagrodzenia, jeżeli wynagrodzenie stało się należne zgodnie z Regulaminem albo odrębnymi ustaleniami.
+
+3. Po zakończeniu obsługi sprawy Finance You może przechowywać dokumentację sprawy przez okres wymagany przepisami prawa albo uzasadniony ochroną przed roszczeniami.
+
+---
+
+## § 27. Pozasądowe rozwiązywanie sporów
+
+1. Użytkownik będący konsumentem może korzystać z pozasądowych sposobów rozpatrywania reklamacji i dochodzenia roszczeń.
+
+2. Informacje o pozasądowych sposobach rozwiązywania sporów konsumenckich są dostępne na stronach właściwych organów ochrony konsumentów.
+
+3. Finance You każdorazowo informuje konsumenta o swoim stanowisku wobec ewentualnego udziału w pozasądowym postępowaniu po zakończeniu procedury reklamacyjnej, jeżeli taki obowiązek wynika z przepisów prawa.
+
+---
+
+## § 28. Zmiany Regulaminu
+
+1. Finance You może zmienić Regulamin z ważnych przyczyn, w szczególności:
+
+   1. zmiany przepisów prawa;
+   2. zmiany funkcjonalności Platformy;
+   3. zmiany modelu działania Platformy;
+   4. zmiany danych Finance You;
+   5. potrzeby doprecyzowania postanowień;
+   6. potrzeby zwiększenia bezpieczeństwa;
+   7. zmiany zasad publikacji ogłoszeń;
+   8. zmiany zasad obsługi spraw;
+   9. zmiany zasad rozliczeń.
+
+2. Zmieniony Regulamin zostanie udostępniony na Platformie.
+
+3. W przypadku użytkowników posiadających konto albo aktywną sprawę Finance You może poinformować o zmianie Regulaminu drogą elektroniczną.
+
+4. Do spraw rozpoczętych przed zmianą Regulaminu stosuje się Regulamin obowiązujący w chwili rozpoczęcia sprawy, chyba że zmiana Regulaminu jest korzystna dla użytkownika albo bezwzględnie wymagają jej przepisy prawa.
+
+5. Użytkownik, który nie akceptuje zmian Regulaminu, może zaprzestać korzystania z Platformy albo zażądać usunięcia konta.
+
+---
+
+## § 29. Postanowienia końcowe
+
+1. Prawem właściwym dla Regulaminu jest prawo polskie.
+
+2. W sprawach nieuregulowanych Regulaminem zastosowanie mają właściwe przepisy prawa polskiego.
+
+3. Wszelkie spory z użytkownikiem będącym konsumentem będą rozstrzygane przez właściwy sąd zgodnie z przepisami prawa.
+
+4. Wszelkie spory z użytkownikiem niebędącym konsumentem będą rozstrzygane przez sąd właściwy miejscowo dla siedziby Finance You, o ile przepisy prawa pozwalają na takie ustalenie.
+
+5. Jeżeli którekolwiek postanowienie Regulaminu okaże się nieważne, bezskuteczne albo niewykonalne, nie wpływa to na ważność pozostałych postanowień Regulaminu.
+
+6. Regulamin w wersji 3 obowiązuje od dnia 30 września 2026 r. Do spraw rozpoczętych przed tym dniem stosuje się § 28 ust. 4.
+
+---
+
+# ZAŁĄCZNIK NR 1
+
+## Wzór formularza odstąpienia od umowy
+
+Adresat:
+Finance You sp. z o.o.
+ul. Nowogrodzka 31
+00-511 Warszawa
+e-mail: [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl)
+
+Ja, niżej podpisany/a:
+
+Imię i nazwisko: ............................................................
+
+Adres: ...........................................................................
+
+Adres e-mail: ..................................................................
+
+niniejszym informuję o moim odstąpieniu od umowy o świadczenie usług drogą elektroniczną zawartej za pośrednictwem Platformy Finance You.
+
+Data zawarcia umowy / rozpoczęcia korzystania z Platformy: ....................................
+
+Numer sprawy, jeżeli został nadany: ....................................
+
+Data: ....................................
+
+Podpis, jeżeli formularz jest składany w wersji papierowej: ....................................
+',
+  3, true
+where not exists (
+  select 1 from public.consent_documents
+   where kind = 'terms'::public.consent_kind and version = 3
+);
+
+update public.consent_documents
+   set is_active = false
+ where kind = 'terms'::public.consent_kind and version < 3 and is_active;
+-- <<< REGULAMIN KLIENTA v3
+
+-- 3. Moduł ofert inwestora otwiera akceptacja pakietu umów (decyzja
+--    właściciela 2026-09-30: abonament → akceptacja Umowy ramowej, NDA i RODO
+--    → oferty). investor_can_view_application stoi za politykami RLS wniosków,
+--    dokumentów, nieruchomości, analiz KW, ocen ryzyka i plików klienta
+--    widocznych dla inwestora — dopisujemy investor_legal_pack_complete
+--    (aktywne wersje pakietu zaakceptowane, bez odstąpienia). Personel ma
+--    własne polityki. Treść warunków bez zmian względem produkcji.
+create or replace function public.investor_can_view_application(_user_id uuid, _application_id uuid)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select public.investor_legal_pack_complete(_user_id)
+    and (
+      exists (
+        select 1
+        from public.investor_order_matches m
+        join public.investor_orders o on o.id = m.order_id
+        where m.application_id = _application_id
+          and o.user_id = _user_id
+          and m.status in ('rezerwacja', 'transakcja')
+      )
+      or exists (
+        select 1
+        from public.investor_offers io
+        join public.investors i on i.id = io.investor_id
+        where io.loan_application_id = _application_id
+          and i.user_id = _user_id
+      )
+      or exists (
+        select 1
+        from public.offer_distributions d
+        join public.investors i on i.id = d.investor_id
+        where d.loan_application_id = _application_id
+          and i.user_id = _user_id
+          and d.distribution_status not in ('szkic', 'gotowe_do_wysylki')
+      )
+    );
+$$;
+
+comment on function public.investor_can_view_application(uuid, uuid) is
+  'Od 2026-09-30: wymaga zaakceptowanego pakietu umów inwestora (investor_legal_pack_complete) — akceptacja otwiera moduł ofert.';
+
+-- Oferty inwestora: składanie i zmiana także dopiero po akceptacji pakietu
+-- (podgląd własnych ofert — offers_investor_own_select — bez zmian).
+drop policy if exists offers_investor_own on public.investor_offers;
+create policy offers_investor_own on public.investor_offers for all to authenticated
+  using (
+    public.investor_has_full_access(auth.uid())
+    and public.investor_legal_pack_complete(auth.uid())
+    and exists (select 1 from public.investors i where i.id = investor_id and i.user_id = auth.uid())
+  )
+  with check (
+    public.investor_has_full_access(auth.uid())
+    and public.investor_legal_pack_complete(auth.uid())
+    and exists (select 1 from public.investors i where i.id = investor_id and i.user_id = auth.uid())
+    and public.investor_can_view_application(auth.uid(), loan_application_id)
+  );
+
+notify pgrst, 'reload schema';

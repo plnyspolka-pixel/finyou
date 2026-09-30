@@ -26,7 +26,7 @@ export const COMPANY_DATA = {
   phoneContracts: { display: "889 888 700", e164: "+48889888700" },
   /**
    * JEDYNY rachunek Finance You (potwierdzone 2026-09-29): spłaty pożyczek
-   * udzielanych przez Finance You ORAZ Prowizja Klientowska potrącana z
+   * udzielanych przez Finance You ORAZ Prowizja od Pożyczkobiorcy potrącana z
    * wypłaty (Zał. 6 do Umowy ramowej / Zał. 4 do umowy pożyczki). Kreator
    * umowy wpisuje go automatycznie, gdy Pożyczkodawcą jest inny podmiot.
    */

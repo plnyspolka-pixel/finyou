@@ -305,7 +305,7 @@ const warunki = z
         model: z.enum(["nie_potracana_raty", "potracana_z_wyplaty"]).optional(),
       })
       .strict(),
-    // Prowizja Klientowska Finance You (7 % Kwoty Udzielonej, min 5 000 zł,
+    // Prowizja od Pożyczkobiorcy (7 % Kwoty Udzielonej, min 5 000 zł,
     // bez VAT) — POTRĄCANA z wypłaty zgodnie z dyspozycją Pożyczkobiorcy
     // (Załącznik nr 4 do Umowy = Zał. 6 do Umowy ramowej FY). Brak = umowa
     // bez pośrednictwa Finance You (pełna wypłata na rachunek Pożyczkobiorcy).
@@ -321,7 +321,7 @@ const warunki = z
       .object({
         wyplata: z.string(),
         splata: z.string(),
-        /** Rachunek Finance You na Prowizję Klientowską (wymagany, gdy prowizja_finance_you). */
+        /** Rachunek Finance You na Prowizję od Pożyczkobiorcy (wymagany, gdy prowizja_finance_you). */
         finance_you: z.string().nullable().optional(),
       })
       .strict(),

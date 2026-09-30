@@ -50,30 +50,6 @@ export async function assertInvestorFullAccess(userId: string): Promise<void> {
   }
 }
 
-/**
- * Czy inwestor zaakceptował AKTYWNĄ wersję Umowy ramowej (code:version:sha256
- * — tak samo liczy pipeline). Umowa jest podstawą Opłaty Abonamentowej, więc
- * zakup abonamentu wymaga jej wcześniejszej akceptacji.
- */
-export async function investorAcceptedActiveFramework(userId: string): Promise<boolean> {
-  const { data: doc } = await db
-    .from("legal_documents")
-    .select("version, sha256")
-    .eq("code", "umowa_ramowa")
-    .eq("active", true)
-    .maybeSingle();
-  if (!doc) return false;
-  const { data: acc } = await db
-    .from("investor_agreement_acceptances")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("document_code", "umowa_ramowa")
-    .eq("version", doc.version)
-    .eq("sha256", doc.sha256)
-    .limit(1);
-  return (acc ?? []).length > 0;
-}
-
 export async function assertBrokerPremium(userId: string): Promise<void> {
   if (!(await brokerHasPaidAccess(userId))) {
     throw new Error("PAYWALL_BROKER: Ta funkcja wymaga pełnego (płatnego) dostępu pośrednika.");
