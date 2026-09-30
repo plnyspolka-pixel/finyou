@@ -14,7 +14,7 @@ const GREETING =
 
 /**
  * Pływający asystent w panelu /inwestor — osobna logika od bota
- * instytucjonalnego: przewodnik po platformie dla inwestorów prywatnych
+ * instytucjonalnego: przewodnik po narzędziach dla inwestorów prywatnych
  * z wykupionym dostępem. Historia trzymana serwerowo per użytkownik
  * (investor_assistant_messages), rozmowa przez server functions.
  *

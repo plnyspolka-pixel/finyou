@@ -281,7 +281,7 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
           <span>
             Akceptuję{" "}
             <a href="/regulamin" target="_blank" rel="noreferrer" className="underline">
-              regulamin platformy Finance You
+              regulamin Finance You
             </a>{" "}
             *
           </span>
