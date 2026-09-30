@@ -19,6 +19,8 @@ const PAIRS: Array<[string, string]> = [
   ["20260929155000_etap5_pakiet_inwestor_v7.sql", "0016_etap5_pakiet_inwestor_v7.sql"],
   ["20260929156000_etap5_zgody_v2.sql", "0017_etap5_zgody_v2.sql"],
   ["20260929157000_etap5_akceptacje_zgod_i_boty.sql", "0018_etap5_akceptacje_zgod_i_boty.sql"],
+  ["20260930100000_polityka_v2_cookies.sql", "0020_polityka_v2_cookies.sql"],
+  ["20260930101000_cookie_consent_log.sql", "0021_cookie_consent_log.sql"],
 ];
 
 describe("migracje 2026-09-29", () => {
@@ -45,6 +47,14 @@ describe("migracje 2026-09-29", () => {
     expect(sql).not.toMatch(
       /grant [^;]*insert[^;]*on public\.consent_acceptances to authenticated/,
     );
+  });
+
+  it("cookie_consent_log: RLS włączone, brak dostępu anon, zapisy tylko serwisowo", () => {
+    const sql = readFileSync(join(SUPA, "20260930101000_cookie_consent_log.sql"), "utf8");
+    expect(sql).toMatch(/alter table public\.cookie_consent_log enable row level security/);
+    expect(sql).toMatch(/revoke all on public\.cookie_consent_log from public, anon/);
+    expect(sql).not.toMatch(/grant [^;]*on public\.cookie_consent_log to [^;]*anon/);
+    expect(sql).not.toMatch(/grant [^;]*insert[^;]*on public\.cookie_consent_log to authenticated/);
   });
 
   it("dopisanie bloku zasad do promptów jest idempotentne", () => {

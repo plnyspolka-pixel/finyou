@@ -304,6 +304,8 @@ export function SiteFooter() {
       links: [
         { t: "Polityka prywatności", href: "/polityka-prywatnosci" },
         { t: "Regulamin", href: "/regulamin" },
+        { t: "Polityka cookies", href: "/polityka-cookies" },
+        { t: "Ustawienia cookies", href: "#ustawienia-cookies" },
       ],
     },
   ];

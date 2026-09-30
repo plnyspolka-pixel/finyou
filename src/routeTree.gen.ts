@@ -18,6 +18,7 @@ import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as RaportLokalizacjeRouteImport } from './routes/raport-lokalizacje'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
+import { Route as PolitykaCookiesRouteImport } from './routes/polityka-cookies'
 import { Route as OperatorRejestracjaRouteImport } from './routes/operator-rejestracja'
 import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as OfertyRouteImport } from './routes/oferty'
@@ -323,6 +324,11 @@ const PosrednikRoute = PosrednikRouteImport.update({
 const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
   id: '/polityka-prywatnosci',
   path: '/polityka-prywatnosci',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PolitykaCookiesRoute = PolitykaCookiesRouteImport.update({
+  id: '/polityka-cookies',
+  path: '/polityka-cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OperatorRejestracjaRoute = OperatorRejestracjaRouteImport.update({
@@ -1722,6 +1728,7 @@ export interface FileRoutesByFullPath {
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
@@ -1990,6 +1997,7 @@ export interface FileRoutesByTo {
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
@@ -2257,6 +2265,7 @@ export interface FileRoutesById {
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
@@ -2531,6 +2540,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
+    | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/raport-lokalizacje'
@@ -2799,6 +2809,7 @@ export interface FileRouteTypes {
     | '/nowe-haslo'
     | '/oferty'
     | '/operator-rejestracja'
+    | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/raport-lokalizacje'
     | '/regulamin'
@@ -3065,6 +3076,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
+    | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/raport-lokalizacje'
@@ -3338,6 +3350,7 @@ export interface RootRouteChildren {
   OfertyRoute: typeof OfertyRoute
   OperatorRoute: typeof OperatorRouteWithChildren
   OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
+  PolitykaCookiesRoute: typeof PolitykaCookiesRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
   RaportLokalizacjeRoute: typeof RaportLokalizacjeRoute
@@ -3500,6 +3513,13 @@ declare module '@tanstack/react-router' {
       path: '/polityka-prywatnosci'
       fullPath: '/polityka-prywatnosci'
       preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/polityka-cookies': {
+      id: '/polityka-cookies'
+      path: '/polityka-cookies'
+      fullPath: '/polityka-cookies'
+      preLoaderRoute: typeof PolitykaCookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/operator-rejestracja': {
@@ -5791,6 +5811,7 @@ const rootRouteChildren: RootRouteChildren = {
   OfertyRoute: OfertyRoute,
   OperatorRoute: OperatorRouteWithChildren,
   OperatorRejestracjaRoute: OperatorRejestracjaRoute,
+  PolitykaCookiesRoute: PolitykaCookiesRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
   RaportLokalizacjeRoute: RaportLokalizacjeRoute,

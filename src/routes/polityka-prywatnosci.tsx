@@ -100,8 +100,16 @@ function PolitykaPrywatnosciStatyczny() {
           <section>
             <h2 className="text-xl font-bold text-foreground">6. Pliki cookies</h2>
             <p className="mt-2">
-              Serwis używa plików cookies w celach analitycznych i funkcjonalnych. Ustawienia plików
-              cookies możesz zmienić w swojej przeglądarce.
+              Serwis używa niezbędnych plików cookies, a za Twoją zgodą — także analitycznych i
+              marketingowych. Szczegóły opisuje{" "}
+              <Link to="/polityka-cookies" className="text-accent hover:underline">
+                polityka cookies
+              </Link>
+              . Zgodę możesz zmienić lub wycofać w{" "}
+              <a href="#ustawienia-cookies" className="text-accent hover:underline">
+                ustawieniach cookies
+              </a>
+              .
             </p>
           </section>
         </div>

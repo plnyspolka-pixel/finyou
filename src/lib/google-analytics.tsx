@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getConsent, googleConsentState, useCookieConsent } from "@/lib/cookie-consent";
 
 declare global {
   interface Window {
@@ -42,6 +43,9 @@ async function loadGoogleSettings(): Promise<Settings | null> {
  * polecenia (`config`, `event`, `consent`) wyłącznie po obiekcie `arguments`
  * — tablica jest po cichu ignorowana, przez co GA4 i Google Ads nie dostawały
  * żadnych zdarzeń mimo załadowanego skryptu.
+ *
+ * Pierwszym poleceniem jest `consent default` (Consent Mode v2) z aktualnym
+ * wyborem użytkownika — musi trafić do kolejki przed `config` i gtm.js.
  */
 export function ensureGtag() {
   if (typeof window === "undefined") return;
@@ -51,6 +55,7 @@ export function ensureGtag() {
       // eslint-disable-next-line prefer-rest-params
       (window.dataLayer as unknown[]).push(arguments);
     } as any;
+    window.gtag!("consent", "default", googleConsentState(getConsent()));
     window.gtag!("js", new Date());
   }
 }
@@ -72,7 +77,7 @@ function loadGtm(id: string) {
   if (typeof window === "undefined") return;
   window.__gtmLoaded = window.__gtmLoaded || {};
   if (window.__gtmLoaded[id]) return;
-  window.dataLayer = window.dataLayer || [];
+  ensureGtag();
   (window.dataLayer as unknown[]).push({ "gtm.start": Date.now(), event: "gtm.js" });
   const s = document.createElement("script");
   s.async = true;
@@ -101,17 +106,23 @@ export function trackGoogleEvent(event: string, params?: Record<string, unknown>
 
 export function GoogleAnalytics() {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const consent = useCookieConsent();
+  const analytics = consent?.analytics === true;
+  const marketing = consent?.marketing === true;
   const { data: settings } = useQuery({
     queryKey: ["google-tracking-settings"],
     queryFn: loadGoogleSettings,
     staleTime: 5 * 60 * 1000,
+    enabled: analytics || marketing,
   });
   const lastPath = useRef<string | null>(null);
 
   useEffect(() => {
     if (!settings) return;
-    if (settings.ga4_measurement_id) loadGa4(settings.ga4_measurement_id);
-    if (settings.gtm_container_id) loadGtm(settings.gtm_container_id);
+    // GA4 — analityka; Google Ads — marketing; GTM respektuje Consent Mode.
+    if (analytics && settings.ga4_measurement_id) loadGa4(settings.ga4_measurement_id);
+    if ((analytics || marketing) && settings.gtm_container_id) loadGtm(settings.gtm_container_id);
+    if (!marketing) return;
     if (settings.google_ads_conversion_id) loadGoogleAds(settings.google_ads_conversion_id);
     if (typeof window !== "undefined") {
       window.__gAdsConversionId = settings.google_ads_conversion_id;
@@ -122,10 +133,11 @@ export function GoogleAnalytics() {
         subscribe: settings.google_ads_label_subscribe,
       };
     }
-  }, [settings]);
+  }, [settings, analytics, marketing]);
 
   useEffect(() => {
-    if (!settings?.ga4_measurement_id || typeof window === "undefined" || !window.gtag) return;
+    if (!analytics || !settings?.ga4_measurement_id) return;
+    if (typeof window === "undefined" || !window.gtag) return;
     if (lastPath.current === path) return;
     lastPath.current = path;
     window.gtag("event", "page_view", {
@@ -134,7 +146,7 @@ export function GoogleAnalytics() {
       page_title: document.title,
       send_to: settings.ga4_measurement_id,
     });
-  }, [path, settings]);
+  }, [path, settings, analytics]);
 
   return null;
 }

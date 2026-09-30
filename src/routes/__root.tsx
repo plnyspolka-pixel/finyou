@@ -19,6 +19,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { FacebookPixel } from "@/lib/fb-pixel";
 import { GoogleAnalytics } from "@/lib/google-analytics";
 import { MicrosoftClarity } from "@/lib/clarity";
+import { CookieBanner } from "@/components/consent/cookie-banner";
 import { ReferralCapture } from "@/components/affiliate/referral-capture";
 
 function NotFoundComponent() {
@@ -185,6 +186,7 @@ function RootComponent() {
         <main id="main">
           <Outlet />
         </main>
+        <CookieBanner />
         <Toaster />
         <PreviewBypassToggle />
       </AuthProvider>
