@@ -6,17 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, LineChart } from "lucide-react";
+import { Briefcase, Building2, LineChart } from "lucide-react";
 import { toast } from "sonner";
 import { SocialSignIn, AuthDivider } from "@/components/auth/social-sign-in";
 import { SiteHeader, SiteFooter } from "@/components/marketing/shell";
 import { MktBadge } from "@/components/marketing/primitives";
 
-type SignupRole = "klient" | "inwestor";
+type SignupRole = "klient" | "inwestor" | "posrednik";
 
 const searchSchema = z.object({
-  // .catch — nieznana rola w URL (np. stare linki ?role=posrednik) nie wywala strony.
-  role: z.enum(["klient", "inwestor"]).optional().catch(undefined),
+  // .catch — nieznana rola w URL nie wywala strony.
+  role: z.enum(["klient", "inwestor", "posrednik"]).optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/rejestracja")({
@@ -26,12 +26,13 @@ export const Route = createFileRoute("/rejestracja")({
       { title: "Finance You — Załóż konto" },
       {
         name: "description",
-        content: "Załóż konto w Finance You jako klient lub inwestor. Decyzja w 24 godziny.",
+        content:
+          "Załóż konto w Finance You jako klient, inwestor lub pośrednik. Decyzja w 24 godziny.",
       },
       { property: "og:title", content: "Finance You — Rejestracja" },
       {
         property: "og:description",
-        content: "Konto Finance You — klient lub inwestor.",
+        content: "Konto Finance You — klient, inwestor lub pośrednik.",
       },
       { property: "og:url", content: "https://financeyou.pl/rejestracja" },
       { property: "og:type", content: "website" },
@@ -62,6 +63,13 @@ const ROLE_TILES: {
     icon: LineChart,
     badge: { v: "secondary", t: "Inwestor" },
   },
+  {
+    value: "posrednik",
+    title: "Pośrednik",
+    desc: "Przekazuj klientów, korzystaj z CRM i zarabiaj prowizje.",
+    icon: Briefcase,
+    badge: { v: "gold", t: "Pośrednik" },
+  },
 ];
 
 const HERO_COPY: Record<SignupRole, { title: string; lead: string }> = {
@@ -72,6 +80,10 @@ const HERO_COPY: Record<SignupRole, { title: string; lead: string }> = {
   inwestor: {
     title: "Załóż konto inwestora",
     lead: "Dołącz do Klubu Inwestorów Hipotecznych — zyskasz możliwość składania Zleceń oraz dostęp do edukacji, dokumentów i narzędzi AI.",
+  },
+  posrednik: {
+    title: "Załóż konto pośrednika",
+    lead: "Dołącz do Programu Pośrednika — gotowy CRM, szkolenia, materiały marketingowe i przejrzysty model prowizji.",
   },
 };
 
@@ -92,7 +104,8 @@ function RegisterPage() {
       return;
     }
     setLoading(true);
-    const target = role === "inwestor" ? "/inwestor" : "/klient";
+    const target =
+      role === "inwestor" ? "/inwestor" : role === "posrednik" ? "/posrednik" : "/klient";
     try {
       window.localStorage.setItem("pending_role_selection", role);
     } catch {}
@@ -188,7 +201,7 @@ function RegisterPage() {
               </div>
             ) : (
               <>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-3">
                   {ROLE_TILES.map((t) => {
                     const Icon = t.icon;
                     const active = role === t.value;

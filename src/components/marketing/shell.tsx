@@ -51,7 +51,7 @@ const PAGE_PATH: Record<MarketingPage, string> = {
   inwestor: "/dla-inwestora",
   posrednik: "/dla-posrednika",
   blog: "/blog",
-  kalkulator: "/kalkulator-pozyczki",
+  kalkulator: "/kalkulator-ltv",
 };
 
 const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
@@ -81,7 +81,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   const nav = [
     { label: "Klient", href: PAGE_PATH.klient, key: "klient" as const },
     { label: "Inwestor", href: PAGE_PATH.inwestor, key: "inwestor" as const },
-    { label: "Kalkulator pożyczki", href: PAGE_PATH.kalkulator, key: "kalkulator" as const },
+    { label: "Pośrednik", href: PAGE_PATH.posrednik, key: "posrednik" as const },
     { label: "Jak działa", href: page === "home" ? "#jak-dziala" : "/#jak-dziala", key: "jak" },
     { label: "Blog", href: "/blog", key: "blog" },
     { label: "FAQ", href: page === "blog" ? "/dla-klienta#faq" : "#faq", key: "faq" },
@@ -291,12 +291,12 @@ export function SiteFooter() {
       links: [
         { t: "Klient", href: PAGE_PATH.klient },
         { t: "Inwestor", href: PAGE_PATH.inwestor },
+        { t: "Pośrednik", href: PAGE_PATH.posrednik },
       ],
     },
     {
       h: "Platforma",
       links: [
-        { t: "Kalkulator pożyczki", href: PAGE_PATH.kalkulator },
         { t: "Jak działa", href: "/#jak-dziala" },
         { t: "Blog", href: "/blog" },
         { t: "FAQ", href: PAGE_PATH.klient + "#faq" },
