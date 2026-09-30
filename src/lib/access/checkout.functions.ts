@@ -19,7 +19,7 @@ import { decideInFlightUnlockPayment, PENDING_UNLOCK_STALE_MINUTES } from "./pen
 
 // Wersje dokumentów prawnych akceptowanych na formularzu (consent_documents,
 // wersja 2 z 29 września 2026 r. — migracja 20260929156000_etap5_zgody_v2).
-export const TERMS_VERSION = "regulamin-platformy-v2";
+export const TERMS_VERSION = "regulamin-platformy-v3";
 export const PRIVACY_VERSION = "polityka-prywatnosci-v2";
 
 const CheckoutSchema = z.object({
@@ -209,16 +209,11 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
       if (audience === "investor" && !roles.includes("inwestor") && !staff) {
         return { error: "Pakiet inwestora może kupić wyłącznie konto inwestora." };
       }
-      if (audience === "investor" && !staff) {
-        // Podstawą Opłaty Abonamentowej jest Umowa ramowa — najpierw akceptacja.
-        const { investorAcceptedActiveFramework } = await import("./guards.server");
-        if (!(await investorAcceptedActiveFramework(userId))) {
-          return {
-            error:
-              "Przed zakupem abonamentu zaakceptuj Umowę ramową w zakładce Zlecenia i Projekty — to ona określa Opłatę Abonamentową.",
-          };
-        }
-      }
+      // Kolejność inwestora (decyzja właściciela 2026-09-30): najpierw
+      // abonament, potem akceptacja pakietu umów, która otwiera moduł ofert
+      // (assertInvestorOffersAccess). Zakup nie wymaga więc wcześniejszej
+      // akceptacji Umowy ramowej — warunki Opłaty Abonamentowej (§ 7) inwestor
+      // potwierdza w formularzu płatności.
       if (audience === "broker" && !roles.includes("posrednik") && !partner && !staff) {
         return { error: "Pakiet pośrednika może kupić wyłącznie konto pośrednika." };
       }

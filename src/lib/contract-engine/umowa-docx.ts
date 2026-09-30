@@ -7,7 +7,7 @@
  *   3. Załącznik nr 1 — Harmonogram spłat (tabela rat + podsumowanie sum)
  *   4. Załącznik nr 2 — Protokół z negocjacji indywidualnych
  *   5. Załącznik nr 3 — Tabela opłat windykacyjnych
- *   6. Załącznik nr 4 — Dyspozycja wypłaty i klauzula Prowizji Klientowskiej
+ *   6. Załącznik nr 4 — Dyspozycja wypłaty i klauzula Prowizji od Pożyczkobiorcy
  *      Finance You (tylko gdy umowa przewiduje prowizję FY potrącaną z wypłaty)
  *
  * Zasada: dokument zawiera WYŁĄCZNIE treść wiążącą — bez ostrzeżeń, uwag,
@@ -566,7 +566,7 @@ function protokolBloki(d: any, doc: Dokument): Blok[] {
       pierwszy("KWO_02_prowizja_nie_potracana", "KWO_02b_prowizja_potracana"),
     ],
     [
-      "Prowizja Klientowska Finance You potrącana z wypłaty (7% Kwoty Udzielonej, min 5 000 zł, bez VAT)",
+      "Prowizja od Pożyczkobiorcy potrącana z wypłaty (7% Kwoty Udzielonej, min 5 000 zł, bez VAT)",
       odes("KWO_03e_prowizja_finance_you"),
     ],
     [
@@ -660,7 +660,7 @@ function dyspozycjaBloki(d: any, doc: Dokument): Blok[] {
   return [
     ...naglowekZalacznika(
       4,
-      "DYSPOZYCJA WYPŁATY I KLAUZULA PROWIZJI KLIENTOWSKIEJ FINANCE YOU (ZAŁ. NR 6 DO UMOWY RAMOWEJ FINANCE YOU)",
+      "DYSPOZYCJA WYPŁATY I KLAUZULA PROWIZJI OD POŻYCZKOBIORCY FINANCE YOU (ZAŁ. NR 6 DO UMOWY RAMOWEJ FINANCE YOU)",
       d,
     ),
     { t: "naglowek", tekst: "1. PARAMETRY WYPŁATY" },
@@ -670,7 +670,7 @@ function dyspozycjaBloki(d: any, doc: Dokument): Blok[] {
       wiersze: [
         wiersz("Kwota Udzielona (Kwota Pożyczki):", `${w.kwota_pozyczki?.cyframi ?? "—"} zł`),
         wiersz(
-          "Prowizja Klientowska Finance You (7% Kwoty Udzielonej, min 5 000,00 zł, bez VAT):",
+          "Prowizja od Pożyczkobiorcy (7% Kwoty Udzielonej, min 5 000,00 zł, bez VAT):",
           `${w.prowizja_finance_you?.kwota?.cyframi ?? "—"} zł`,
         ),
         wiersz(
@@ -689,22 +689,22 @@ function dyspozycjaBloki(d: any, doc: Dokument): Blok[] {
       tekst: "2. DYSPOZYCJA, PRZYJĘCIE OBOWIĄZKU I ŚWIADCZENIE NA RZECZ FINANCE YOU",
     },
     lista(
-      `${f.pb} ${f.pb_potwierdza}, że na podstawie odrębnej umowy z Finance You sp. z o.o. ${f.pb_zobowiazany_jest} do zapłaty Prowizji Klientowskiej Finance You wskazanej powyżej, i poleca Pożyczkodawcy, aby część należnej ${f.pb_dop} wypłaty Kwoty Pożyczki w kwocie Prowizji Klientowskiej przekazał bezpośrednio na rachunek Finance You, a pozostałą część wypłacił na rachunek ${f.pb_dop} wskazany powyżej.`,
+      `${f.pb} ${f.pb_potwierdza}, że na podstawie odrębnej umowy z Finance You sp. z o.o. ${f.pb_zobowiazany_jest} do zapłaty Prowizji od Pożyczkobiorcy wskazanej powyżej, i poleca Pożyczkodawcy, aby część należnej ${f.pb_dop} wypłaty Kwoty Pożyczki w kwocie Prowizji od Pożyczkobiorcy przekazał bezpośrednio na rachunek Finance You, a pozostałą część wypłacił na rachunek ${f.pb_dop} wskazany powyżej.`,
     ),
     lista(
-      "Pożyczkodawca przyjmuje tę dyspozycję i zobowiązuje się przekazać Prowizję Klientowską na rachunek Finance You nie później niż równocześnie z wypłatą pozostałej części Kwoty Pożyczki. Jeżeli wypłata następuje w transzach, cała Prowizja Klientowska jest przekazywana przy pierwszej transzy, chyba że Finance You uprzednio zatwierdzi inny harmonogram w formie dokumentowej.",
+      "Pożyczkodawca przyjmuje tę dyspozycję i zobowiązuje się przekazać Prowizję od Pożyczkobiorcy na rachunek Finance You nie później niż równocześnie z wypłatą pozostałej części Kwoty Pożyczki. Jeżeli wypłata następuje w transzach, cała Prowizja od Pożyczkobiorcy jest przekazywana przy pierwszej transzy, chyba że Finance You uprzednio zatwierdzi inny harmonogram w formie dokumentowej.",
     ),
     lista(
       "Strony zastrzegają spełnienie opisanego świadczenia na rzecz Finance You jako osoby trzeciej (art. 393 k.c.). Finance You może żądać bezpośrednio od Pożyczkodawcy wykonania tego postanowienia; po oświadczeniu Finance You o skorzystaniu z zastrzeżenia postanowienie nie może zostać odwołane ani zmienione bez zgody Finance You.",
     ),
     lista(
-      `Przelew Prowizji Klientowskiej na rachunek Finance You stanowi wypłatę odpowiedniej części Kwoty Pożyczki ${f.pb_cel} oraz równoczesne spełnienie zobowiązania prowizyjnego ${f.pb_dop} wobec Finance You. Nie stanowi prowizji, opłaty ani kosztu ponoszonego przez Pożyczkodawcę na rzecz Finance You; nie wchodzi do rat i nie jest oprocentowany.`,
+      `Przelew Prowizji od Pożyczkobiorcy na rachunek Finance You stanowi wypłatę odpowiedniej części Kwoty Pożyczki ${f.pb_cel} oraz równoczesne spełnienie zobowiązania prowizyjnego ${f.pb_dop} wobec Finance You. Nie stanowi prowizji, opłaty ani kosztu ponoszonego przez Pożyczkodawcę na rzecz Finance You; nie wchodzi do rat i nie jest oprocentowany.`,
     ),
     lista(
-      "Pożyczkodawca nie jest uprawniony do wypłaty Pożyczkobiorcy ani osobie przez niego wskazanej żadnej części Kwoty Pożyczki wcześniej niż równocześnie ze zleceniem przelewu Prowizji Klientowskiej na rachunek Finance You. Zmiana kwoty, rachunku lub terminu wymaga potwierdzenia Finance You w formie dokumentowej.",
+      "Pożyczkodawca nie jest uprawniony do wypłaty Pożyczkobiorcy ani osobie przez niego wskazanej żadnej części Kwoty Pożyczki wcześniej niż równocześnie ze zleceniem przelewu Prowizji od Pożyczkobiorcy na rachunek Finance You. Zmiana kwoty, rachunku lub terminu wymaga potwierdzenia Finance You w formie dokumentowej.",
     ),
     lista(
-      "Finance You oświadcza, że chce skorzystać z powyższego zastrzeżenia świadczenia na jej rzecz i przyjmuje uprawnienie do bezpośredniego żądania zapłaty wskazanej Prowizji Klientowskiej.",
+      "Finance You oświadcza, że chce skorzystać z powyższego zastrzeżenia świadczenia na jej rzecz i przyjmuje uprawnienie do bezpośredniego żądania zapłaty wskazanej Prowizji od Pożyczkobiorcy.",
     ),
     {
       t: "podpisy",

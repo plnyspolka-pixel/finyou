@@ -19,7 +19,7 @@ jednorazowa za wybrany okres przez Tpay (przelew, BLIK) — **bez konieczności
 podpinania karty kredytowej** i bez automatycznego odnawiania. Ceny prezentujemy
 jako brutto. Nie ma Pakietu PRO, Opłaty Sukcesu ani opłaty za pojedynczy Projekt.
 
-**Klient nadal płaci Prowizję Klientowską Finance You**: 7 % Kwoty Udzielonej
+**Klient nadal płaci Prowizję od Pożyczkobiorcy**: 7 % Kwoty Udzielonej
 (kwoty pożyczki z umowy), nie mniej niż 5 000 zł, bez VAT (zwolnienie — do
 potwierdzenia z księgową), **potrącaną z wypłaty**: inwestor przelewa 7 % na
 rachunek Finance You, resztę Klientowi (Zał. 6 do Umowy ramowej — dwie części
@@ -107,7 +107,7 @@ Migracja `20260929155000_etap5_pakiet_inwestor_v7.sql` (patrz
 `docs/legal/paczka-inwestor-v7/`): usunięte Pakiety, Cennik, Opłata Sukcesu,
 Opłata za Udostępnienie Okazji i Zał. 8; § 2/§ 7 — Inwestor płaci wyłącznie
 **Opłatę Abonamentową** (1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto
-za 365 dni; zmiana z 2026-09-30, przed pierwszą akceptacją); Prowizja Klientowska 7 % Kwoty
+za 365 dni; zmiana z 2026-09-30, przed pierwszą akceptacją); Prowizja od Pożyczkobiorcy 7 % Kwoty
 Udzielonej, min 5 000 zł, bez VAT, potrącana z wypłaty; § 5 — maks. 5
 przyjętych Zleceń, wygaśnięcie po 5 odrzuceniach, rezerwacja 24 h + 12 h,
 maks. 2 przedłużone naraz; Kara Obejściowa 5 % Sumy Hipotecznej i pięcioletni

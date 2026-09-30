@@ -1,7 +1,7 @@
 // Cennik inwestora na stronie publicznej: JEDEN abonament z przełącznikiem
 // okresu (suwak Miesięcznie / Rocznie). Ceny, rabat i zdania o płatności
 // pochodzą z lib/investor-plan/plans.ts (jedno źródło prawdy dla strony,
-// panelu i botów). Prowizję Klientowską Finance You płaci klient.
+// panelu i botów). Prowizję od Pożyczkobiorcy płaci klient.
 import { useState } from "react";
 import type { AccessProduct } from "@/lib/access/core";
 import {

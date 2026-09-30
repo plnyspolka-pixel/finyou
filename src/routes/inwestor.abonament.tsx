@@ -29,8 +29,8 @@ import {
 // jednorazowa płatność Tpay, bez karty kredytowej i bez automatycznego
 // odnowienia) oraz historia płatności z fakturami. Ceny z katalogu
 // access_products (serwer) — te same co w lib/investor-plan/plans.ts.
-// Zakup wymaga wcześniejszej akceptacji Umowy ramowej (§ 7 — podstawa
-// Opłaty Abonamentowej); serwer sprawdza to w createAccessCheckout.
+// Kolejność inwestora: abonament (to pierwsza bramka panelu) → akceptacja
+// pakietu umów (Zlecenia i Projekty) → moduł ofert.
 export type AbonamentTab = "pakiety" | "platnosci";
 
 const SUBSCRIPTION_CODES = new Set<string>(
@@ -102,8 +102,11 @@ function InwestorAbonament() {
 
   const state = stateQ.data ?? null;
   const active = Boolean(state?.hasPaidAccess || state?.isBypass || state?.hasModuleAccess);
-  const frameworkAccepted = Boolean(
-    pipelineQ.data?.input.documents.find((d) => d.code === "umowa_ramowa")?.accepted,
+  const packageAccepted = Boolean(
+    pipelineQ.data &&
+    ["umowa_ramowa", "nda", "rodo"].every(
+      (code) => pipelineQ.data?.input.documents.find((d) => d.code === code)?.accepted,
+    ),
   );
 
   return (
@@ -111,7 +114,7 @@ function InwestorAbonament() {
       <FancyPageHeader
         eyebrow="Dostęp i płatności"
         title="Abonament inwestora"
-        subtitle={`Abonament kosztuje ${SUBSCRIPTION_PRICE_SENTENCE}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Prowizję Klientowską Finance You (7 % Kwoty Udzielonej, min 5 000 zł, bez VAT) płaci Klient — jest potrącana z wypłaty.`}
+        subtitle={`Abonament kosztuje ${SUBSCRIPTION_PRICE_SENTENCE}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Prowizję od Pożyczkobiorcy (7 % Kwoty Udzielonej, min 5 000 zł, bez VAT) płaci Klient — jest potrącana z wypłaty.`}
       />
 
       {tpay && payment && (
@@ -180,8 +183,8 @@ function InwestorAbonament() {
               )}
               {!active && (
                 <p className="text-muted-foreground">
-                  Bez abonamentu masz dostęp do danych konta, umów i płatności. Zlecenia, Projekty i
-                  moduły panelu otwierają się po opłaceniu okresu.
+                  Panel inwestora otwiera się po opłaceniu abonamentu. Potem akceptujesz Umowę
+                  ramową, NDA i umowę RODO — akceptacja otwiera moduł ofert.
                 </p>
               )}
               {active && (
@@ -192,53 +195,51 @@ function InwestorAbonament() {
             </CardContent>
           </Card>
 
-          {!pipelineQ.isLoading && !frameworkAccepted && !state?.isBypass ? (
-            <Card className="border-amber-300">
+          {active && !state?.isBypass && !pipelineQ.isLoading && !packageAccepted && (
+            <Card className="border-sky-300">
               <CardHeader>
-                <CardTitle className="text-base">Najpierw zaakceptuj Umowę ramową</CardTitle>
+                <CardTitle className="text-base">Następny krok: zaakceptuj umowy</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <p>
-                  Opłatę Abonamentową określa § 7 Umowy ramowej, dlatego zakup jest możliwy po jej
-                  akceptacji w pipeline'ie inwestora.
+                  Abonament jest aktywny. Zaakceptuj Umowę ramową, NDA i umowę RODO — akceptacja
+                  otwiera moduł ofert: Zlecenia, dopasowane Projekty i oferty.
                 </p>
                 <Button asChild>
-                  <Link to="/inwestor/umowy">Przejdź do Zleceń i Projektów</Link>
+                  <Link to="/inwestor/umowy">Przejdź do umów</Link>
                 </Button>
               </CardContent>
             </Card>
-          ) : (
-            <>
-              {!selected && productsQ.isSuccess && products.length === 0 && (
-                <Card>
-                  <CardContent className="py-6 text-sm text-muted-foreground">
-                    Zakup abonamentu jest chwilowo niedostępny. Spróbuj ponownie później albo napisz
-                    na kontakt@financeyou.pl.
-                  </CardContent>
-                </Card>
-              )}
-              {!selected && products.length > 0 && (
-                <AccessPlanCards
-                  products={products}
-                  hasActiveAccess={Boolean(state?.hasPaidAccess)}
-                  onSelect={setSelected}
-                  featuresByDuration={FEATURES}
-                />
-              )}
-              {selected && (
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Płatność</CardTitle>
-                    <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-                      Anuluj
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    <TpayAccessCheckoutForm product={selected} />
-                  </CardContent>
-                </Card>
-              )}
-            </>
+          )}
+
+          {!selected && productsQ.isSuccess && products.length === 0 && (
+            <Card>
+              <CardContent className="py-6 text-sm text-muted-foreground">
+                Zakup abonamentu jest chwilowo niedostępny. Spróbuj ponownie później albo napisz na
+                kontakt@financeyou.pl.
+              </CardContent>
+            </Card>
+          )}
+          {!selected && products.length > 0 && (
+            <AccessPlanCards
+              products={products}
+              hasActiveAccess={Boolean(state?.hasPaidAccess)}
+              onSelect={setSelected}
+              featuresByDuration={FEATURES}
+            />
+          )}
+          {selected && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Płatność</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
+                  Anuluj
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <TpayAccessCheckoutForm product={selected} />
+              </CardContent>
+            </Card>
           )}
 
           <Card>

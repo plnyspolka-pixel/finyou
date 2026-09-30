@@ -76,7 +76,7 @@ aktywną wersję z bazy.
 - `src/lib/contract-engine/loan-schedule.ts`, `src/lib/loan-math.ts`,
   `src/lib/mcp/tools/calculators.ts` — jeden silnik dla kalkulatorów UI, MCP i umów.
 - `src/lib/contract-engine/clauses.json` (v1.4), `umowa-docx.ts` — Zał. 4 do
-  umowy pożyczki: dyspozycja wypłaty i klauzula Prowizji Klientowskiej.
+  umowy pożyczki: dyspozycja wypłaty i klauzula Prowizji od Pożyczkobiorcy.
 - `src/lib/loan-status.ts` — 25 statusów, mapowanie starych, `proposeAutoStatus`.
 - `src/lib/investor-agreements/order-cycle-core.ts` — teasery z przyjętych Zleceń, limity.
 - `src/lib/example-projects.ts` — przykładowe projekty (ilustracja).
@@ -101,7 +101,7 @@ Pełny zestaw: 105 plików, 1289 testów — zielone. `tsc --noEmit` i
    od razu z `active = true` (cały pakiet naraz). Akceptacje v5/v6 nie
    przechodzą na v7 — Inwestor akceptuje v7 w panelu.
 3. ✅ **Jeden rachunek Finance You** — ten sam do spłat pożyczek FY i do
-   Prowizji Klientowskiej (`COMPANY_DATA.bankAccount`). Kreator umowy (agent AI
+   Prowizji od Pożyczkobiorcy (`COMPANY_DATA.bankAccount`). Kreator umowy (agent AI
    i MCP) przy Pożyczkodawcy innym niż Finance You sam wylicza prowizję FY
    (7%, min. 5 000 zł), jeśli jej nie podano, i zawsze wpisuje ten rachunek
    (nadpisuje inny). Kreator wzorów DOCX wpisuje go w pola rachunku Finance You

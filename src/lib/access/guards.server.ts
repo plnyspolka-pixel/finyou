@@ -50,28 +50,48 @@ export async function assertInvestorFullAccess(userId: string): Promise<void> {
   }
 }
 
+/** Dokumenty pakietu inwestora, których akceptacja otwiera moduł ofert. */
+export const INVESTOR_PACKAGE_CODES = ["umowa_ramowa", "nda", "rodo"] as const;
+
 /**
- * Czy inwestor zaakceptował AKTYWNĄ wersję Umowy ramowej (code:version:sha256
- * — tak samo liczy pipeline). Umowa jest podstawą Opłaty Abonamentowej, więc
- * zakup abonamentu wymaga jej wcześniejszej akceptacji.
+ * Czy inwestor zaakceptował AKTYWNE wersje wszystkich dokumentów pakietu
+ * (code:version:sha256 — tak samo liczy pipeline). Kolejność inwestora:
+ * abonament → akceptacja pakietu → moduł ofert.
  */
-export async function investorAcceptedActiveFramework(userId: string): Promise<boolean> {
-  const { data: doc } = await db
+export async function investorAcceptedActivePackage(userId: string): Promise<boolean> {
+  const codes = [...INVESTOR_PACKAGE_CODES];
+  const { data: docs } = await db
     .from("legal_documents")
-    .select("version, sha256")
-    .eq("code", "umowa_ramowa")
-    .eq("active", true)
-    .maybeSingle();
-  if (!doc) return false;
+    .select("code, version, sha256")
+    .in("code", codes)
+    .eq("active", true);
+  const active = (docs ?? []) as { code: string; version: string; sha256: string }[];
+  if (codes.some((c) => !active.some((d) => d.code === c))) return false;
   const { data: acc } = await db
     .from("investor_agreement_acceptances")
-    .select("id")
+    .select("document_code, version, sha256")
     .eq("user_id", userId)
-    .eq("document_code", "umowa_ramowa")
-    .eq("version", doc.version)
-    .eq("sha256", doc.sha256)
-    .limit(1);
-  return (acc ?? []).length > 0;
+    .in("document_code", codes);
+  const accepted = (acc ?? []) as { document_code: string; version: string; sha256: string }[];
+  return active.every((d) =>
+    accepted.some(
+      (a) => a.document_code === d.code && a.version === d.version && a.sha256 === d.sha256,
+    ),
+  );
+}
+
+/**
+ * Moduł ofert inwestora (Zlecenia, Projekty, oferty): aktywny abonament ORAZ
+ * zaakceptowany pakiet umów. Personel — bez ograniczeń.
+ */
+export async function assertInvestorOffersAccess(userId: string): Promise<void> {
+  if (await isInternalStaff(userId)) return;
+  await assertInvestorFullAccess(userId);
+  if (!(await investorAcceptedActivePackage(userId))) {
+    throw new Error(
+      "UMOWY_INVESTOR: Moduł ofert otwiera się po akceptacji Umowy ramowej, NDA i umowy RODO (zakładka Zlecenia i Projekty).",
+    );
+  }
 }
 
 export async function assertBrokerPremium(userId: string): Promise<void> {

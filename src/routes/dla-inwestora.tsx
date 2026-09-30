@@ -189,7 +189,7 @@ export const Route = createFileRoute("/dla-inwestora")({
 
 // Jeden dział korzyści — bez podziału na pakiety. Tytuł karty = co inwestor
 // zyskuje, opis = jak to dostaje. Inwestor płaci abonament (ceny w
-// lib/investor-plan/plans.ts); Prowizję Klientowską Finance You płaci klient.
+// lib/investor-plan/plans.ts); Prowizję od Pożyczkobiorcy płaci klient.
 // Fakty (rezerwacja, Karta Leada, raporty) muszą zgadzać się z FAQ_GROUPS niżej.
 // Kolejność: od kosztów i Zlecenia, przez weryfikację i umowy, po spłatę,
 // windykację i wiedzę.

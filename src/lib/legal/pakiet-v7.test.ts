@@ -13,6 +13,7 @@ import {
   NEW_EMAIL,
   OLD_EMAIL,
   PACKAGE_ID_V7,
+  prowizjaOdPozyczkobiorcy,
   transformNdaV6,
   transformRodoV5,
   transformUmowaV7,
@@ -40,7 +41,7 @@ describe("umowa ramowa v7", () => {
 
   it("Opłata Abonamentowa: 1 500 zł / 30 dni albo 7 000 zł / 365 dni, jedyne wynagrodzenie od Inwestora", () => {
     expect(ABONAMENT_UMOWA).toBe("1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni");
-    expect(v7).toContain("§ 7. Opłata Abonamentowa i zabezpieczenie Prowizji Klientowskiej");
+    expect(v7).toContain("§ 7. Opłata Abonamentowa i zabezpieczenie Prowizji od Pożyczkobiorcy");
     expect(v7).toContain(
       `Opłata Abonamentowa oznacza jedyne wynagrodzenie Finance You należne od Inwestora`,
     );
@@ -94,11 +95,13 @@ describe("umowa ramowa v7", () => {
   });
 });
 
-describe("NDA v6 i RODO v5 — tylko e-mail i package_id", () => {
+describe("NDA v6 i RODO v5 — e-mail, package_id i nazwa prowizji", () => {
   it("NDA v6", () => {
     const v6 = transformNdaV6(src.nda.content_text);
     expect(v6).toContain(`${PACKAGE_ID_V7}.v6`);
     expect(v6).not.toContain(OLD_EMAIL);
+    expect(v6).not.toMatch(/klientowsk/i);
+    expect(v6).toContain("Prowizja od Pożyczkobiorcy");
     expect(v6.split("\n").length).toBe(src.nda.content_text.split("\n").length);
   });
   it("RODO v5", () => {
@@ -107,6 +110,23 @@ describe("NDA v6 i RODO v5 — tylko e-mail i package_id", () => {
     expect(v5).not.toContain(OLD_EMAIL);
     expect(v5).toContain(NEW_EMAIL);
     expect(v5.split("\n").length).toBe(src.rodo.content_text.split("\n").length);
+  });
+});
+
+describe("nazwa prowizji od pożyczkobiorcy", () => {
+  it("wszystkie formy „Prowizji Klientowskiej” dostają nową nazwę", () => {
+    expect(
+      prowizjaOdPozyczkobiorcy(
+        "Prowizja Klientowska, Prowizji Klientowskiej, Prowizję Klientowską, Prowizją Klientowską, prowizja klientowska, PROWIZJI KLIENTOWSKIEJ",
+      ),
+    ).toBe(
+      "Prowizja od Pożyczkobiorcy, Prowizji od Pożyczkobiorcy, Prowizję od Pożyczkobiorcy, Prowizją od Pożyczkobiorcy, prowizja od pożyczkobiorcy, PROWIZJI OD POŻYCZKOBIORCY",
+    );
+  });
+  it("umowa ramowa v7 używa nowej nazwy w definicji", () => {
+    expect(transformUmowaV7(src.umowa_ramowa.content_text)).toContain(
+      "Prowizja od Pożyczkobiorcy oznacza odrębne wynagrodzenie Finance You",
+    );
   });
 });
 

@@ -309,8 +309,8 @@ function PlanBanner() {
           <p className="max-w-2xl text-sm opacity-90">{p.tagline}</p>
           <p className="text-xs opacity-75">
             {p.periodLabel}. Abonament wykupisz w zakładce Dostęp i płatności po akceptacji Umowy
-            ramowej. Prowizja Klientowska Finance You — 7 % Kwoty Udzielonej, nie mniej niż 5 000
-            zł, bez VAT — obciąża Klienta i jest potrącana z wypłaty (Zał. 6).
+            ramowej. Prowizja od Pożyczkobiorcy — 7 % Kwoty Udzielonej, nie mniej niż 5 000 zł, bez
+            VAT — obciąża Klienta i jest potrącana z wypłaty (Zał. 6).
           </p>
         </div>
       </CardContent>
@@ -443,7 +443,7 @@ const DOC_STATEMENTS: Record<string, Array<{ key: string; label: string }>> = {
     {
       key: "oplata_abonamentowa",
       label:
-        "Znam wysokość Opłaty Abonamentowej — 1 500 zł brutto za 30 dni albo 7 000 zł brutto za 365 dni — i wiem, że poza nią nie płacę Finance You za Projekty ani od rezultatu. Prowizję Klientowską (7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT) płaci Klient, a przy wypłacie przekazuję ją Finance You z kwoty Finansowania (Zał. 6).",
+        "Znam wysokość Opłaty Abonamentowej — 1 500 zł brutto za 30 dni albo 7 000 zł brutto za 365 dni — i wiem, że poza nią nie płacę Finance You za Projekty ani od rezultatu. Prowizję od Pożyczkobiorcy (7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT) płaci Klient, a przy wypłacie przekazuję ją Finance You z kwoty Finansowania (Zał. 6).",
     },
     {
       key: "mechanizm_zabezpieczenia_prowizji",
@@ -823,7 +823,7 @@ function OrderForm({
             set: setS1,
             id: "o1",
             label:
-              "Składam Zlecenie na podstawie aktualnie obowiązującej Ramowej umowy pośrednictwa (w aktywnym Okresie Abonamentowym, bez dodatkowych opłat za Projekt; Prowizja Klientowska obciąża Klienta i jest potrącana z wypłaty).",
+              "Składam Zlecenie na podstawie aktualnie obowiązującej Ramowej umowy pośrednictwa (w aktywnym Okresie Abonamentowym, bez dodatkowych opłat za Projekt; Prowizja od Pożyczkobiorcy obciąża Klienta i jest potrącana z wypłaty).",
           },
           {
             v: s2,

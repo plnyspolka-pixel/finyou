@@ -22,6 +22,7 @@ const PAIRS: Array<[string, string]> = [
   ["20260930100000_polityka_v2_cookies.sql", "0020_polityka_v2_cookies.sql"],
   ["20260930101000_cookie_consent_log.sql", "0021_cookie_consent_log.sql"],
   ["20260930140000_abonament_inwestora.sql", "0023_abonament_inwestora.sql"],
+  ["20260930190000_prowizja_od_pozyczkobiorcy.sql", "0024_prowizja_od_pozyczkobiorcy.sql"],
 ];
 
 describe("migracje 2026-09-29", () => {

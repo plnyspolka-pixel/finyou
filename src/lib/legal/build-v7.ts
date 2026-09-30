@@ -86,47 +86,66 @@ const sqlStr = (s: string) => `'${s.replace(/'/g, "''")}'`;
 export const V7_UMOWA_SHA256_PRZED_ABONAMENTEM =
   "272d93b85cbac50822fab2f6ed984a94a67c65706177b999e7a444abe9020668";
 
-/** Znaczniki sekcji w migracji 20260930140000 wypełnianej przez skrypt. */
-export const V7_SEKCJA_START =
-  "-- >>> UMOWA RAMOWA v7 — treść z Opłatą Abonamentową (generowane: npx tsx scripts/legal/build-pakiet-v7.ts)";
-export const V7_SEKCJA_KONIEC = "-- <<< UMOWA RAMOWA v7";
+/** SHA-256 treści umowy ramowej v7 z Opłatą Abonamentową — wgranej migracją
+ *  20260930140000 (drizzle 0023, na produkcji od 2026-09-30). */
+export const V7_UMOWA_SHA256_ABONAMENT =
+  "0d098f1b568f65eb31a4fe9b177e8bdfae417cf347e4e269ad699ed16a782aa0";
+
+/** SHA-256 treści NDA v6 wgranej migracją 20260929155000. */
+export const V6_NDA_SHA256_PRZED_ZMIANA_NAZWY =
+  "0730df56392cd49c28019fd98cb4b00237d811ee04355f7aed0baa046b73f581";
+
+/** SHA-256 pliku migracji 20260930140000 / drizzle 0023 — wgranej na
+ *  produkcji (hash w drizzle.__drizzle_migrations). Plik nie może się zmienić. */
+export const MIGRACJA_0023_SHA256 =
+  "0b7f5fb0a58bb688635d39b0776e04950d62fb6ed97e1aebf3301797c5a88f55";
+
+/** Znaczniki sekcji w migracji 20260930190000 (drizzle 0024) wypełnianej przez skrypt. */
+export const PAKIET_SEKCJA_START =
+  "-- >>> PAKIET v7 — Prowizja od Pożyczkobiorcy (generowane: npx tsx scripts/legal/build-pakiet-v7.ts)";
+export const PAKIET_SEKCJA_KONIEC = "-- <<< PAKIET v7";
 
 /**
- * Aktualizacja treści umowy ramowej v7 w `legal_documents` (UPDATE istniejącego
- * wiersza): nowa treść z Opłatą Abonamentową, jej SHA-256, plik .docx i
- * `allows_investor_fees = true`. Wiersz v7 z migracji 20260929155000 był już
- * wgrany z treścią „nieodpłatną” — migracji wgranej nie zmieniamy, więc zmiana
- * idzie osobną migracją. Ewentualna akceptacja starej treści przestaje pasować
- * do skrótu, więc panel poprosi o ponowną akceptację.
+ * Aktualizacja treści umowy ramowej v7 i NDA v6 w `legal_documents` (UPDATE
+ * istniejących wierszy): nazwa „Prowizja od Pożyczkobiorcy” zamiast „Prowizja
+ * Klientowska”. Oba dokumenty nie miały jeszcze akceptacji; migracji już
+ * wgranych nie zmieniamy, więc zmiana idzie osobną migracją. Ewentualna
+ * akceptacja starej treści przestaje pasować do skrótu, więc panel poprosi
+ * o ponowną akceptację. RODO v5 się nie zmienia.
  */
-export function aktualizacjaUmowyV7Sql(docs: DokumentV7[]): string {
-  const d = docs.find((x) => x.code === "umowa_ramowa");
-  if (!d) throw new Error("Brak umowy ramowej w pakiecie v7.");
-  return `${V7_SEKCJA_START}
--- ${d.code} ${d.version}: content sha256 ${d.sha256}
+export function aktualizacjaPakietuV7Sql(docs: DokumentV7[]): string {
+  const poprzednie: Record<string, string> = {
+    umowa_ramowa: V7_UMOWA_SHA256_ABONAMENT,
+    nda: V6_NDA_SHA256_PRZED_ZMIANA_NAZWY,
+  };
+  const bloki = (["umowa_ramowa", "nda"] as const).map((code) => {
+    const d = docs.find((x) => x.code === code);
+    if (!d) throw new Error(`Brak dokumentu ${code} w pakiecie v7.`);
+    return `-- ${d.code} ${d.version}: content sha256 ${d.sha256}
 --   docx sha256 ${d.docx_sha256}
---   poprzednia treść (model nieodpłatny): ${V7_UMOWA_SHA256_PRZED_ABONAMENTEM}
+--   poprzednia treść: ${poprzednie[code]}
 update public.legal_documents
    set sha256 = ${sqlStr(d.sha256)},
        content_text = ${sqlStr(d.content_text)},
        docx_base64 = ${sqlStr(Buffer.from(d.docx).toString("base64"))},
-       docx_filename = ${sqlStr(d.docx_filename)},
-       allows_investor_fees = true,
+       docx_filename = ${sqlStr(d.docx_filename)},${code === "umowa_ramowa" ? "\n       allows_investor_fees = true," : ""}
        updated_at = now()
  where code = ${sqlStr(d.code)}
    and version = ${sqlStr(d.version)}
-   and package_id = ${sqlStr(d.package_id)};
-${V7_SEKCJA_KONIEC}`;
+   and package_id = ${sqlStr(d.package_id)};`;
+  });
+  return `${PAKIET_SEKCJA_START}\n${bloki.join("\n\n")}\n${PAKIET_SEKCJA_KONIEC}`;
 }
 
-/** Podmienia sekcję umowy v7 w treści migracji (między znacznikami). */
-export function wstawSekcjeV7(migracja: string, docs: DokumentV7[]): string {
-  const a = migracja.indexOf(V7_SEKCJA_START);
-  const b = migracja.indexOf(V7_SEKCJA_KONIEC);
-  if (a < 0 || b < 0 || b < a) throw new Error("Brak znaczników sekcji umowy v7 w migracji.");
-  return (
-    migracja.slice(0, a) +
-    aktualizacjaUmowyV7Sql(docs) +
-    migracja.slice(b + V7_SEKCJA_KONIEC.length)
-  );
+/** Podmienia sekcję między znacznikami w treści migracji. */
+export function wstawSekcje(
+  migracja: string,
+  start: string,
+  koniec: string,
+  sekcja: string,
+): string {
+  const a = migracja.indexOf(start);
+  const b = migracja.indexOf(koniec);
+  if (a < 0 || b < 0 || b < a) throw new Error(`Brak znaczników sekcji: ${start.slice(0, 60)}…`);
+  return migracja.slice(0, a) + sekcja + migracja.slice(b + koniec.length);
 }

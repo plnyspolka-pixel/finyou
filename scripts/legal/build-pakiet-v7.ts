@@ -8,27 +8,33 @@
  *   docs/legal/paczka-inwestor-v7/*.txt        — content_text (to, co akceptuje Inwestor)
  *   docs/legal/paczka-inwestor-v7/MANIFEST.sha256 — SHA-256 plików .docx (format sha256sum)
  *   docs/legal/paczka-inwestor-v7/CONTENT.sha256  — SHA-256 content_text = legal_documents.sha256
- *   supabase/migrations/20260930140000_abonament_inwestora.sql — sekcja
- *     „UMOWA RAMOWA v7” (UPDATE treści umowy) + lustro drizzle 0023 bajt w bajt.
- * Migracji 20260929155000 (pierwotne wgranie v7) już nie zmieniamy — jest
- * wgrana na produkcji.
+ *   supabase/migrations/20260930190000_prowizja_od_pozyczkobiorcy.sql — sekcja
+ *     „PAKIET v7” (UPDATE treści umowy ramowej v7 i NDA v6) + lustro drizzle 0024.
+ * Migracji 20260929155000 (pierwotne wgranie v7) i 20260930140000 (drizzle
+ * 0023, Opłata Abonamentowa) już nie zmieniamy — są wgrane na produkcji.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { buildPakietV7, wstawSekcjeV7 } from "../../src/lib/legal/build-v7";
+import {
+  PAKIET_SEKCJA_KONIEC,
+  PAKIET_SEKCJA_START,
+  aktualizacjaPakietuV7Sql,
+  buildPakietV7,
+  wstawSekcje,
+} from "../../src/lib/legal/build-v7";
 
 const OUT = join(process.cwd(), "docs", "legal", "paczka-inwestor-v7");
 const MIGRATION = join(
   process.cwd(),
   "supabase",
   "migrations",
-  "20260930140000_abonament_inwestora.sql",
+  "20260930190000_prowizja_od_pozyczkobiorcy.sql",
 );
 const MIGRATION_DRIZZLE = join(
   process.cwd(),
   "drizzle",
   "migrations",
-  "0023_abonament_inwestora.sql",
+  "0024_prowizja_od_pozyczkobiorcy.sql",
 );
 
 async function main() {
@@ -63,7 +69,10 @@ Wygenerowano skryptem \`npx tsx scripts/legal/build-pakiet-v7.ts\` z treści v6/
   zatwierdził właściciel 2026-09-29). 30 września 2026 r., przed pierwszą
   akceptacją, umowa ramowa v7 dostała Opłatę Abonamentową zamiast
   nieodpłatności — nową treść wgrywa migracja \`20260930140000_abonament_inwestora\`
-  (UPDATE wiersza v7, \`allows_investor_fees = true\`). Wyłączenie: /admin/umowy-inwestorow.
+  (UPDATE wiersza v7, \`allows_investor_fees = true\`). Tego samego dnia, nadal przed
+  pierwszą akceptacją, „Prowizja Klientowska” w umowie ramowej v7 i NDA v6 dostała nazwę
+  „Prowizja od Pożyczkobiorcy” — migracja \`20260930190000_prowizja_od_pozyczkobiorcy\`.
+  Wyłączenie: /admin/umowy-inwestorow.
 
 | kod | wersja | plik | SHA-256 treści | SHA-256 .docx |
 |---|---|---|---|---|
@@ -71,7 +80,12 @@ ${readme.join("\n")}
 `,
     "utf8",
   );
-  const sql = wstawSekcjeV7(readFileSync(MIGRATION, "utf8"), docs);
+  const sql = wstawSekcje(
+    readFileSync(MIGRATION, "utf8"),
+    PAKIET_SEKCJA_START,
+    PAKIET_SEKCJA_KONIEC,
+    aktualizacjaPakietuV7Sql(docs),
+  );
   writeFileSync(MIGRATION, sql, "utf8");
   writeFileSync(MIGRATION_DRIZZLE, sql, "utf8");
   for (const d of docs) {

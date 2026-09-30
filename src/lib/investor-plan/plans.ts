@@ -7,7 +7,7 @@
 //    jednorazowa za wybrany okres przez Tpay (przelew, BLIK) — bez podpinania
 //    karty kredytowej i bez automatycznego odnawiania. Nie ma Pakietu PRO,
 //    Opłaty Sukcesu ani opłaty za pojedynczy Projekt.
-//  • Klient nadal płaci Prowizję Klientowską Finance You (7 % Kwoty
+//  • Klient nadal płaci Prowizję od Pożyczkobiorcy (7 % Kwoty
 //    Udzielonej, min 5 000 zł, bez VAT), potrącaną z wypłaty —
 //    patrz src/lib/contract-engine/fees.ts.
 //  • Podstawa: Umowa ramowa v7 § 7 (Opłata Abonamentowa — kwoty w
@@ -178,7 +178,7 @@ export const ACCESS_PRESENTATION: TierPresentation = {
   priceLabel: `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} / mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} / rok`,
   periodLabel: `rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej · bez karty kredytowej`,
   tagline:
-    "Jeden abonament, pełny dostęp: składasz Zlecenie, my szukamy Projektów. Bez prowizji od Twojego zysku i bez opłat za Projekt — Prowizję Klientowską Finance You płaci Klient, potrącaną z wypłaty.",
+    "Jeden abonament, pełny dostęp: składasz Zlecenie, my szukamy Projektów. Bez prowizji od Twojego zysku i bez opłat za Projekt — Prowizję od Pożyczkobiorcy płaci Klient, potrącaną z wypłaty.",
   bullets: [
     "Pełny pipeline: dane pożyczkodawcy, rachunek spłaty, KYC i screening sankcyjny",
     "Akceptacja pakietu umów online",

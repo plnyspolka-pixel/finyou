@@ -13,8 +13,10 @@
  *    bez automatycznego odnowienia (decyzja właściciela 2026-09-30 — v7 nie
  *    był jeszcze przez nikogo zaakceptowany). Bez Pakietów, Cennika, Opłaty
  *    Sukcesu, Opłaty za Udostępnienie Okazji i Zał. 8,
- *  • Prowizja Klientowska: 7 % Kwoty Udzielonej, min 5 000 zł, bez VAT,
- *    potrącana z wypłaty (Zał. 6 — dwie części przelewu),
+ *  • Prowizja od Pożyczkobiorcy (dawniej „Prowizja Klientowska” — nazwa
+ *    zmieniona decyzją właściciela 2026-09-30, przed pierwszą akceptacją):
+ *    7 % Kwoty Udzielonej, min 5 000 zł, bez VAT, potrącana z wypłaty
+ *    (Zał. 6 — dwie części przelewu),
  *  • § 5: maks. 5 przyjętych Zleceń, wygaśnięcie po 5 odrzuceniach,
  *    24 h + 12 h, maks. 2 przedłużone naraz,
  *  • Kara Obejściowa 5 % Sumy Hipotecznej i 5-letni Okres Ochronny bez zmian,
@@ -108,6 +110,19 @@ export class Transform {
  */
 export function rozdzielPodpisy(text: string): string {
   return text.replace(/([A-ZĄĆĘŁŃÓŚŹŻ])imię, nazwisko/g, "$1 — imię, nazwisko");
+}
+
+/**
+ * Nazwa prowizji płaconej przez Klienta (pożyczkobiorcę): „Prowizja od
+ * Pożyczkobiorcy” zamiast „Prowizja Klientowska” — we wszystkich formach
+ * (decyzja właściciela 2026-09-30). Źródła v6/v5 zawierają starą nazwę,
+ * więc zmiana idzie ostatnim krokiem transformacji.
+ */
+export function prowizjaOdPozyczkobiorcy(text: string): string {
+  return text
+    .replace(/\b(Prowizj[aięą]) Klientowsk(?:a|iej|ą)/g, "$1 od Pożyczkobiorcy")
+    .replace(/\b(prowizj[aięą]) klientowsk(?:a|iej|ą)/g, "$1 od pożyczkobiorcy")
+    .replace(/\b(PROWIZJ[AIĘĄ]) KLIENTOWSK(?:A|IEJ|Ą)/g, "$1 OD POŻYCZKOBIORCY");
 }
 
 /** Umowa ramowa v6 → v7. */
@@ -306,10 +321,10 @@ export function transformUmowaV7(v6: string): string {
   // Zał. 8 — usunięty w całości
   t.truncateFromLineStartingWith("Załącznik nr 8 — Cennik Pakietów Inwestora");
 
-  return rozdzielPodpisy(t.value());
+  return rozdzielPodpisy(prowizjaOdPozyczkobiorcy(t.value()));
 }
 
-/** NDA v5 → v6: tylko e-mail i wspólny package_id / nagłówek wersji. */
+/** NDA v5 → v6: e-mail, wspólny package_id / nagłówek wersji i nazwa Prowizji od Pożyczkobiorcy. */
 export function transformNdaV6(v5: string): string {
   const t = new Transform(v5);
   t.replaceOnce(
@@ -318,7 +333,7 @@ export function transformNdaV6(v5: string): string {
   );
   t.replaceOnce("FY-LEGAL-2026-09-04.v5 / ", `${PACKAGE_ID_V7}.v6 / `);
   if (v5.includes(OLD_EMAIL)) t.replaceAll(OLD_EMAIL, NEW_EMAIL);
-  return rozdzielPodpisy(t.value());
+  return rozdzielPodpisy(prowizjaOdPozyczkobiorcy(t.value()));
 }
 
 /** RODO v4 → v5: tylko e-mail i wspólny package_id / nagłówek wersji. */
@@ -352,6 +367,8 @@ export const FORBIDDEN_IN_V7 = [
   "Usługa Inwestora: 0,00 zł",
   "3 000,00",
   "nieodpłatn",
+  "lientowsk",
+  "LIENTOWSK",
   OLD_EMAIL,
 ];
 
@@ -362,6 +379,8 @@ export const DOCX_PODMIANY_NDA = [
     na: `${PACKAGE_ID_V7}.v6 • ${PACKAGE_DATE_PL}`,
   },
   { z: "FY-LEGAL-2026-09-04.v5", na: `${PACKAGE_ID_V7}.v6` },
+  { z: "Prowizja Klientowska", na: "Prowizja od Pożyczkobiorcy" },
+  { z: "Prowizji Klientowskiej", na: "Prowizji od Pożyczkobiorcy" },
 ] as const;
 
 /** Podmiany w oryginalnym .docx RODO v4 → v5 (treść, stopki, e-mail). */
