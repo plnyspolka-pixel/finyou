@@ -11,7 +11,7 @@ describe("ensureGtag", () => {
     ensureGtag();
     window.gtag!("event", "page_view", { page_path: "/" });
     const entries = window.dataLayer as unknown[];
-    expect(entries.length).toBe(2);
+    expect(entries.length).toBe(3);
     const last = entries[entries.length - 1];
     // gtag.js ignores plain arrays; it only processes `arguments` objects.
     expect(Object.prototype.toString.call(last)).toBe("[object Arguments]");
@@ -20,6 +20,21 @@ describe("ensureGtag", () => {
       "event",
       "page_view",
       { page_path: "/" },
+    ]);
+  });
+
+  it("starts with a Consent Mode v2 default of denied when there is no choice", () => {
+    ensureGtag();
+    const first = Array.from((window.dataLayer as ArrayLike<unknown>[])[0]);
+    expect(first).toEqual([
+      "consent",
+      "default",
+      {
+        analytics_storage: "denied",
+        ad_storage: "denied",
+        ad_user_data: "denied",
+        ad_personalization: "denied",
+      },
     ]);
   });
 

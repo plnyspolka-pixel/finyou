@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { hasConsent, useCookieConsent } from "@/lib/cookie-consent";
 
 declare global {
   interface Window {
@@ -126,6 +127,8 @@ export async function trackEvent(
     /* ignore */
   }
 
+  // Conversions API przekazuje dane do Meta — tylko za zgodą marketingową.
+  if (!hasConsent("marketing")) return;
   try {
     const area: "client" | "investor" = window.location.pathname.startsWith("/inwestor")
       ? "investor"
@@ -162,15 +165,17 @@ function pixelForPath(path: string, s: Settings): string | null {
 
 export function FacebookPixel() {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const allowed = useCookieConsent()?.marketing === true;
   const { data: settings } = useQuery({
     queryKey: ["tracking-settings"],
     queryFn: loadTrackingSettings,
     staleTime: 5 * 60 * 1000,
+    enabled: allowed,
   });
   const lastPath = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!settings) return;
+    if (!allowed || !settings) return;
     const id = pixelForPath(path, settings);
     if (!id) return;
     injectPixelScript();
@@ -179,7 +184,7 @@ export function FacebookPixel() {
       lastPath.current = path;
       window.fbq?.("track", "PageView");
     }
-  }, [path, settings]);
+  }, [path, settings, allowed]);
 
   return null;
 }
