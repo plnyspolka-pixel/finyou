@@ -1,11 +1,14 @@
 /**
- * Pakiet inwestora v7: transformacje treści są deterministyczne i usuwają
- * wszystkie elementy cennika, a zostawiają Karę Obejściową 5 % i 5-letni
- * Okres Ochronny. Źródła (v6/v5/v4) czytamy z migracji SQL.
+ * Pakiet inwestora v7: transformacje treści są deterministyczne, usuwają
+ * Pakiety, Cennik i opłaty jednostkowe, wprowadzają jedną Opłatę Abonamentową,
+ * a zostawiają Karę Obejściową 5 % i 5-letni Okres Ochronny. Źródła
+ * (v6/v5/v4) czytamy z migracji SQL.
  */
 import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
+import { SUBSCRIPTION_MONTHLY_PLN, SUBSCRIPTION_YEARLY_PLN } from "@/lib/investor-plan/plans";
 import {
+  ABONAMENT_UMOWA,
   FORBIDDEN_IN_V7,
   NEW_EMAIL,
   OLD_EMAIL,
@@ -21,21 +24,44 @@ const src = readLegalSources();
 describe("umowa ramowa v7", () => {
   const v7 = transformUmowaV7(src.umowa_ramowa.content_text);
 
-  it("nie zawiera Pakietów, Cennika, Opłat Inwestora, Zał. 8 ani starego e-maila", () => {
+  it("nie zawiera Pakietów, Cennika, opłat jednostkowych, Zał. 8 ani starego e-maila", () => {
     for (const f of FORBIDDEN_IN_V7) {
       expect(v7, `fraza „${f}” nie może wystąpić`).not.toContain(f);
     }
     expect(v7).not.toMatch(/ZAŁĄCZNIK NR 8/);
   });
 
-  it("nagłówek wersji spójny z package_id; usługa nieodpłatna; 7 % Kwoty Udzielonej bez VAT", () => {
+  it("nagłówek wersji spójny z package_id; Opłata Abonamentowa; 7 % Kwoty Udzielonej bez VAT", () => {
     expect(v7).toContain(`${PACKAGE_ID_V7}.v7`);
-    expect(v7).toContain("jest dla Inwestora nieodpłatna");
     expect(v7).toContain("7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT");
-    expect(v7).toContain("§ 7. Nieodpłatność usługi dla Inwestora");
     expect(v7).toContain("Załączniki nr 1–7");
-    expect(v7).toContain("Usługa Inwestora: nieodpłatna");
-    expect(v7).toContain("Inwestor nie płaci wynagrodzenia.");
+    expect(v7).not.toMatch(/nieodpłatn/i);
+  });
+
+  it("Opłata Abonamentowa: 1 500 zł / 30 dni albo 7 000 zł / 365 dni, jedyne wynagrodzenie od Inwestora", () => {
+    expect(ABONAMENT_UMOWA).toBe("1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni");
+    expect(v7).toContain("§ 7. Opłata Abonamentowa i zabezpieczenie Prowizji Klientowskiej");
+    expect(v7).toContain(
+      `Opłata Abonamentowa oznacza jedyne wynagrodzenie Finance You należne od Inwestora`,
+    );
+    expect(v7).toContain("Okres Abonamentowy oznacza opłacony okres dostępu do systemu");
+    expect(v7).toContain(
+      `Finance You pobiera od Inwestora wyłącznie Opłatę Abonamentową za dostęp do systemu: ${ABONAMENT_UMOWA}`,
+    );
+    expect(v7).toContain(
+      "bez konieczności podawania danych karty płatniczej i bez automatycznego odnowienia",
+    );
+    expect(v7).toContain(
+      "Opłata Inwestora za Projekt: brak (dostęp w ramach Opłaty Abonamentowej)",
+    );
+    expect(v7).toContain("Inwestor płaci wyłącznie Opłatę Abonamentową");
+    // Kwoty w umowie = cennik na stronie i w panelu.
+    expect(SUBSCRIPTION_MONTHLY_PLN).toBe(1_500);
+    expect(SUBSCRIPTION_YEARLY_PLN).toBe(7_000);
+    // Konsument: zwrot Opłaty Abonamentowej przy odstąpieniu.
+    expect(v7).toContain(
+      "Finance You zwraca Opłatę Abonamentową pomniejszoną o kwotę proporcjonalną do wykorzystanej części Okresu Abonamentowego",
+    );
   });
 
   it("§ 5: pięć Zleceń, pięć odrzuceń, 24 h + 12 h, dwie przedłużone", () => {

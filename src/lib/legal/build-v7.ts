@@ -92,11 +92,13 @@ export function migracjaSqlV7(docs: DokumentV7[]): string {
 -- Plik wygenerowany: npx tsx scripts/legal/build-pakiet-v7.ts
 -- (nie edytować ręcznie — zmiany w src/lib/legal/pakiet-v7.ts).
 --
--- • Umowa ramowa v7: usługa dla Inwestora NIEODPŁATNA (bez Pakietów,
---   Cennika, Opłaty Sukcesu, Opłaty Abonamentowej, Opłaty za Udostępnienie
---   Okazji i Załącznika nr 8). Jedyna opłata w modelu: Prowizja Klientowska
---   7% Kwoty Udzielonej, min. 5 000,00 zł, bez VAT, potrącana z wypłaty
---   (Zał. 6). § 5: 5 Zleceń, 5 odrzuceń, rezerwacja 24 h + 12 h, maks. 2
+-- • Umowa ramowa v7: Inwestor płaci wyłącznie Opłatę Abonamentową za dostęp
+--   do systemu — 1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za
+--   365 dni, z góry, bez automatycznego odnowienia (decyzja właściciela
+--   2026-09-30; v7 nie był jeszcze akceptowany). Bez Pakietów, Cennika,
+--   Opłaty Sukcesu, Opłaty za Udostępnienie Okazji i Załącznika nr 8.
+--   Klient płaci Prowizję Klientowską 7% Kwoty Udzielonej, min. 5 000,00 zł,
+--   bez VAT, potrącaną z wypłaty (Zał. 6). § 5: 5 Zleceń, 5 odrzuceń, rezerwacja 24 h + 12 h, maks. 2
 --   przedłużone. Kara Obejściowa 5% Sumy Hipotecznej i 5-letni Okres
 --   Ochronny bez zmian. Kontakt: kontakt@financeyou.pl.
 -- • NDA v6, RODO v5: wspólny package_id, adres e-mail.
@@ -109,7 +111,8 @@ export function migracjaSqlV7(docs: DokumentV7[]): string {
 -- (2026-09-29). Wszystkie trzy dokumenty są aktywne naraz. Akceptacje
 -- poprzednich wersji zostają w historii (investor_agreement_acceptances)
 -- i nie są dziedziczone przez v7 — Inwestor akceptuje pakiet v7 w panelu.
--- allows_investor_fees = false: od v7 Inwestor nie płaci żadnych opłat.
+-- allows_investor_fees: true dla umowy ramowej (Opłata Abonamentowa),
+-- false dla NDA i RODO.
 -- =====================================================================
 `;
   const inserty = docs
@@ -131,7 +134,7 @@ values (
   ${sqlStr(d.content_text)},
   ${sqlStr(Buffer.from(d.docx).toString("base64"))},
   ${sqlStr(d.docx_filename)},
-  false,
+  ${d.code === "umowa_ramowa" ? "true" : "false"},
   true
 )
 on conflict (code) do update set
@@ -153,6 +156,6 @@ comment on column public.legal_documents.sha256 is
   'SHA-256 (hex) z content_text w UTF-8 — od pakietu ${PACKAGE_ID_V7}. Wartość zapisywana w akceptacjach (code:version:sha256). Skróty plików .docx: docs/legal/paczka-inwestor-v7/MANIFEST.sha256.';
 
 comment on table public.investor_success_fees is
-  'Tabela historyczna (model v6). Od pakietu v7 (${PACKAGE_ID_V7}) Inwestor nie płaci Finance You żadnych opłat — nowe rekordy nie powstają.';
+  'Tabela historyczna (model v6). Od pakietu v7 (${PACKAGE_ID_V7}) nie ma Opłaty Sukcesu — Inwestor płaci wyłącznie Opłatę Abonamentową; nowe rekordy nie powstają.';
 `;
 }

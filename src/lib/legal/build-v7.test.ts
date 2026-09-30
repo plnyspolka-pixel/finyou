@@ -78,7 +78,8 @@ describe("pakiet v7 — pliki i skróty", () => {
     expect(drizzle).toBe(sql);
     expect(sql.match(/active = true,/g)).toHaveLength(3);
     expect(sql).not.toMatch(/active = false/);
-    // Opłaty od Inwestora wyłączone we wszystkich trzech dokumentach.
-    expect(sql.match(/\n {2}false,\n {2}true\n\)/g)).toHaveLength(3);
+    // Opłata od Inwestora (abonament) dopuszczona tylko w umowie ramowej.
+    expect(sql.match(/\n {2}true,\n {2}true\n\)/g)).toHaveLength(1);
+    expect(sql.match(/\n {2}false,\n {2}true\n\)/g)).toHaveLength(2);
   });
 });
