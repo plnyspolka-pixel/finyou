@@ -227,7 +227,7 @@ export const ACCESS_PRESENTATION: TierPresentation = {
     {
       cecha: "Windykator AI",
       zaleta:
-        "Dzwoni, pisze i wysyła listy. Prowadzi sprawę od pierwszego dnia opóźnienia — przypomnienia, wezwania, ugoda, klauzula wykonalności — aż na biurko komornika.",
+        "Dzwoni, pisze i przygotowuje wezwania. Prowadzi sprawę od pierwszego dnia opóźnienia — przypomnienia, wezwania, ugoda, klauzula wykonalności — aż na biurko komornika.",
       korzysc: "Nie zostajesz sam z niespłaconą pożyczką.",
     },
   ],
