@@ -5,11 +5,18 @@ import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TpayReturnStatus } from "@/components/access/TpayReturnStatus";
 import { PaymentsAndInvoices } from "@/components/access/PaymentsAndInvoices";
-import { ACCESS_PRESENTATION } from "@/lib/investor-plan/plans";
+import {
+  ACCESS_PRESENTATION,
+  SUBSCRIPTION_OPTIONS,
+  SUBSCRIPTION_PAYMENT_SENTENCE,
+  SUBSCRIPTION_PRICE_SENTENCE,
+  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
+} from "@/lib/investor-plan/plans";
 
-// Moduł „Dostęp i płatności": strona informacyjna (dostęp inwestora jest
-// bezpłatny; abonament za dostęp do systemu planowany — bez checkoutu) oraz
-// zakładka historii płatności z fakturami (rozliczenia sprzed zmiany cennika).
+// Moduł „Dostęp i płatności": cennik abonamentu (te same ceny co strona
+// /dla-inwestora — lib/investor-plan/plans.ts) oraz zakładka historii
+// płatności z fakturami. Checkout abonamentu jest jeszcze wyłączony: konta
+// na Umowie ramowej v7 mają dostęp bez opłat do czasu akceptacji nowej wersji.
 export type AbonamentTab = "pakiety" | "platnosci";
 
 export const Route = createFileRoute("/inwestor/abonament")({
@@ -36,8 +43,8 @@ function InwestorAbonament() {
     <div className="space-y-6">
       <FancyPageHeader
         eyebrow="Dostęp i płatności"
-        title="Dostęp inwestora jest bezpłatny"
-        subtitle="Usługa Finance You dla Inwestora jest nieodpłatna: nie ma abonamentu, opłaty sukcesu ani opłat za Projekt. Jedyną opłatą w systemie jest Prowizja Klientowska (7 % Kwoty Udzielonej, min 5 000 zł, bez VAT), która obciąża Klienta i jest potrącana z wypłaty. Historię wcześniejszych płatności i faktur znajdziesz w drugiej zakładce."
+        title="Abonament inwestora"
+        subtitle={`Abonament kosztuje ${SUBSCRIPTION_PRICE_SENTENCE}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Prowizję Klientowską Finance You (7 % Kwoty Udzielonej, min 5 000 zł, bez VAT) płaci Klient — jest potrącana z wypłaty. Historię płatności i faktur znajdziesz w drugiej zakładce.`}
       />
 
       {tpay && payment && (
@@ -74,6 +81,30 @@ function InwestorAbonament() {
                 <CheckCircle2 className="h-5 w-5 text-emerald-600" /> {t.name} — {t.priceLabel}
               </CardTitle>
             </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              {(["miesiecznie", "rocznie"] as const).map((p) => {
+                const o = SUBSCRIPTION_OPTIONS[p];
+                return (
+                  <div key={p} className="rounded-xl border p-4">
+                    <div className="flex items-center justify-between gap-2 text-sm font-semibold">
+                      {o.label}
+                      {p === "rocznie" && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">
+                          −{SUBSCRIPTION_YEARLY_DISCOUNT_PCT}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 text-2xl font-black">
+                      {o.priceLabel}{" "}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {o.periodLabel}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{o.hint}</p>
+                  </div>
+                );
+              })}
+            </CardContent>
             <CardContent className="space-y-3 text-sm">
               <p className="text-muted-foreground">{t.tagline}</p>
               <ul className="space-y-1">
@@ -90,12 +121,12 @@ function InwestorAbonament() {
 
           <Card className="border-slate-300">
             <CardHeader>
-              <CardTitle className="text-base">Abonament — planowany</CardTitle>
+              <CardTitle className="text-base">Twój dostęp — kiedy zaczyna się abonament</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Abonament za dostęp do systemu jest planowany na przyszłość. Jego wprowadzenie będzie
-              wymagało nowej wersji Umowy ramowej doręczonej na trwałym nośniku i Twojej wyraźnej
-              akceptacji — do tego czasu nic nie płacisz i żadna płatność nie zostanie naliczona.
+              Abonament zacznie Cię obowiązywać dopiero po zaakceptowaniu nowej wersji Umowy
+              ramowej, doręczonej Ci na trwałym nośniku. Do tego czasu korzystasz z dostępu na
+              dotychczasowych warunkach — nic nie płacisz i żadna płatność nie zostanie naliczona.
             </CardContent>
           </Card>
         </TabsContent>

@@ -9,13 +9,17 @@ odnowień, punktów i opłat za pojedynczą ofertę/lead.
 | --- | --- | --- | --- | --- |
 | `broker_access_30d` | pośrednik | 499 zł (`49900` gr) | 30 | `access` |
 | `broker_access_365d` | pośrednik | 2 999 zł (`299900` gr) | 365 | `access` |
-| `investor_pro_180d`, `investor_okazja_unlock`, `investor_access_30d`, `investor_access_365d` | inwestor | — | — | **nieaktywne** (historia) |
+| `investor_access_30d` | inwestor | 1 500 zł (`150000` gr) — cennik | 30 | `access`, **nieaktywny** |
+| `investor_access_365d` | inwestor | 7 000 zł (`700000` gr) — cennik | 365 | `access`, **nieaktywny** |
+| `investor_pro_180d`, `investor_okazja_unlock` | inwestor | — | — | **nieaktywne** (historia) |
 
-**Inwestor nie płaci nic** — usługa Finance You dla Inwestora jest nieodpłatna
-(Umowa ramowa v7, `docs/cennik-inwestora.md`). Wszystkie produkty inwestora
-mają `active = false` od 29 września 2026 r.; rekordy zostają wyłącznie dla
-historycznych płatności i faktur, a `createAccessCheckout` odrzuca kody
-`investor_*`. Abonament za dostęp do systemu jest planowany na przyszłość.
+**Inwestor — abonament 1 500 zł / mies. albo 7 000 zł / rok (61 % rabatu
+przy płatności rocznej)**, opublikowany od 30 września 2026 r.
+(`docs/cennik-inwestora.md`, ceny w `src/lib/investor-plan/plans.ts`).
+Pobieranie jest jeszcze wyłączone: aktywna Umowa ramowa v7 mówi, że usługa dla
+Inwestora jest nieodpłatna. Produkty inwestora mają `active = false`, ceny
+w katalogu są jeszcze historyczne (aktualizacja migracją przy włączeniu),
+a `createAccessCheckout` odrzuca kody `investor_*`.
 
 Konto darmowe pośrednika (`broker_free`) nie jest produktem — wynika z roli
 `posrednik` / aktywnego rekordu `affiliate_partners` i nie wygasa.

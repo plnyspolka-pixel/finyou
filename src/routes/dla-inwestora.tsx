@@ -16,6 +16,15 @@ import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
+import {
+  SUBSCRIPTION_MONTHLY_PLN,
+  SUBSCRIPTION_PAYMENT_SENTENCE,
+  SUBSCRIPTION_PRICE_SENTENCE,
+  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
+  SUBSCRIPTION_YEARLY_PLN,
+  SUBSCRIPTION_YEARLY_PER_MONTH_PLN,
+  plnLabel,
+} from "@/lib/investor-plan/plans";
 import { ChatWidget } from "@/components/landing/chat-widget";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { ExampleProjectsSection } from "@/components/landing/example-projects-section";
@@ -30,8 +39,33 @@ import {
 } from "@/lib/landing-video";
 
 const JOIN = "/rejestracja?role=inwestor";
-// Kotwica zakładki Cennik (patrz INVESTOR_TABS) — cel złotego CTA w hero.
+// Kotwica sekcji Cennik (w układzie zakładek — zakładki, patrz INVESTOR_TABS)
+// — cel złotego CTA w hero, przycisku w nagłówku i paska przyklejonego.
 const PRICING_HASH = "#cennik";
+
+// Układ one-pagera: filmy w hero, siatki z ikonami, cennik, FAQ i CTA — sekcje
+// jedna pod drugą, bez paska zakładek. Poniższe elementy są SCHOWANE, nie
+// usunięte: kod, dane i importy zostają, a każdą sekcję przywraca jedna flaga.
+const SHOW: Record<
+  | "zakladki"
+  | "kalkulator"
+  | "oferty"
+  | "pipeline"
+  | "system"
+  | "akademia"
+  | "ochrona"
+  | "windykacja",
+  boolean
+> = {
+  zakladki: false, // pasek zakładek zamiast sekcji jedna pod drugą
+  kalkulator: true, // pełny kalkulator inwestora pod hero
+  oferty: false, // przykładowe projekty
+  pipeline: false, // oś dziewięciu kroków onboardingu
+  system: false, // pokaz slajdów „Inteligentny system"
+  akademia: false, // pokaz slajdów Akademii inwestora
+  ochrona: false, // pokaz slajdów „7 warstw ochrony"
+  windykacja: false, // pokaz slajdów windykacji AI
+};
 
 // Filmy w hero. Pierwszy (Wistia) po prawej w rzędzie 1, drugi piętro niżej po
 // lewej — odtwarzany z naszego pliku w Storage (src/lib/landing-video.ts).
@@ -132,8 +166,7 @@ export const Route = createFileRoute("/dla-inwestora")({
       },
       {
         name: "description",
-        content:
-          "Klub Inwestorów Hipotecznych Finance You: dostęp dla inwestorów bez opłat. Finansujesz projekty firm zabezpieczone hipoteką (LTV do 60%), oprocentowanie do wysokości odsetek maksymalnych.",
+        content: `Klub Inwestorów Hipotecznych Finance You: abonament ${plnLabel(SUBSCRIPTION_MONTHLY_PLN)}/mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)}/rok (rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej), bez karty kredytowej. Finansujesz projekty firm zabezpieczone hipoteką (LTV do 60%), oprocentowanie do wysokości odsetek maksymalnych.`,
       },
       { property: "og:title", content: "Dla inwestorów — Finance You" },
       {
@@ -154,50 +187,73 @@ export const Route = createFileRoute("/dla-inwestora")({
   component: InvestorLanding,
 });
 
-// Zakres dostępu inwestora — usługa Finance You jest dla Inwestora
-// nieodpłatna (Umowa ramowa v7); płaci wyłącznie klient (Prowizja Klientowska).
-const GET: FeatureItemData[] = [
+// Jeden dział korzyści — bez podziału na pakiety. Tytuł karty = co inwestor
+// zyskuje, opis = jak to dostaje. Inwestor płaci abonament (ceny w
+// lib/investor-plan/plans.ts); Prowizję Klientowską Finance You płaci klient.
+// Fakty (rezerwacja, Karta Leada, raporty) muszą zgadzać się z FAQ_GROUPS niżej.
+// Kolejność: od kosztów i Zlecenia, przez weryfikację i umowy, po spłatę,
+// windykację i wiedzę.
+const BENEFITS: FeatureItemData[] = [
+  {
+    icon: "loan",
+    t: "Stały abonament zamiast prowizji od zysku",
+    d: `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok (${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej) — bez opłat za Projekt, opłaty sukcesu i podpinania karty kredytowej. Prowizję Finance You płaci klient.`,
+  },
   {
     icon: "access",
-    t: "Zlecenie",
-    d: "Składasz Zlecenie, my szukamy pasujących Projektów.",
+    t: "Projekty trafiają do Ciebie",
+    d: "Składasz Zlecenie z kwotą, okresem i minimalnym zyskiem, a my przedstawiamy Projekty dopasowane do Twoich kryteriów.",
   },
   {
     icon: "shieldcheck",
-    t: "KYC i listy sankcyjne",
-    d: "Weryfikacja tożsamości i screening sankcji/PEP w jednym procesie.",
+    t: "Weryfikację przechodzisz raz, zdalnie",
+    d: "KYC z dokumentem i selfie oraz screening sankcji/PEP w jednym procesie — bez wizyt i papierów.",
   },
-  { icon: "dossier", t: "Umowy wypełnione przez system", d: "Komparycja, podpis i ślad audytowy." },
+  {
+    icon: "dossier",
+    t: "Umowy gotowe bez przepisywania",
+    d: "System wypełnia umowy Twoimi zweryfikowanymi danymi, a generator składa umowę pożyczki z uzgodnionych warunków.",
+  },
+  {
+    icon: "knowledge",
+    t: "Decyzja na podstawie faktów",
+    d: "Raport o nieruchomości, stanie prawnym, LTV i ryzyku przy każdym Projekcie — bez limitu raportów.",
+  },
   {
     icon: "procedures",
-    t: "Rezerwacja Projektu",
-    d: "Projekt dopasowany do Zlecenia zarezerwowany dla Ciebie na 24 h (+12 h).",
-  },
-  { icon: "knowledge", t: "Raport o inwestycji", d: "Nieruchomość, zabezpieczenie, LTV i ryzyko." },
-  {
-    icon: "status",
-    t: "Zaakceptowany harmonogram",
-    d: "Plan spłat potwierdzony przez pożyczkobiorcę.",
+    t: "Czas na decyzję tylko dla Ciebie",
+    d: "Projekt jest zarezerwowany dla Ciebie przez 24 h, z możliwością przedłużenia o 12 h — w tym czasie nie trafia do innych inwestorów.",
   },
   {
     icon: "chat",
-    t: "Dane kontaktowe",
-    d: "Bezpośredni kontakt po Ujawnieniu i akceptacji Karty Leada.",
+    t: "Rozmawiasz bezpośrednio z klientem",
+    d: "Dane kontaktowe dostajesz po akceptacji Karty Leada — bez pośredników w rozmowie.",
   },
   {
-    icon: "documents",
-    t: "Generator umowy pożyczki",
-    d: "Gotowy dokument na podstawie Twoich danych.",
+    icon: "status",
+    t: "Spłaty ustalone z góry",
+    d: "Harmonogram zaakceptowany przez klienta znasz, zanim wyłożysz kapitał.",
   },
-];
-
-// Narzędzia panelu — dostępne dla każdego inwestora bez dopłat.
-const TOOLS: FeatureItemData[] = [
-  { icon: "training", t: "Akademia inwestora", d: "Siedem modułów — od strategii po windykację." },
-  { icon: "shieldcheck", t: "Kalkulator compliance", d: "Limity kosztów i zgodność warunków." },
-  { icon: "complianceAml", t: "Moduł AML", d: "Klienci, transakcje, ryzyko, zgłoszenia i UPO." },
-  { icon: "aibrain", t: "Windykacja AI", d: "Sześć etapów od pierwszego kontaktu po egzekucję." },
-  { icon: "knowledge", t: "Raporty bez limitu", d: "Nielimitowana liczba pełnych raportów." },
+  {
+    icon: "kalkulator",
+    t: "Warunki zgodne z prawem",
+    d: "Kalkulator compliance pilnuje odsetek maksymalnych i limitów kosztów, zanim złożysz propozycję.",
+  },
+  {
+    icon: "complianceAml",
+    t: "Obowiązki AML pod kontrolą",
+    d: "Klienci, transakcje, ocena ryzyka, zgłoszenia i UPO w jednym module.",
+  },
+  {
+    icon: "aibrain",
+    t: "Odzyskujesz należności krok po kroku",
+    d: "Windykacja AI prowadzi sześć etapów — od pierwszego kontaktu po egzekucję. Decyzje zostają po Twojej stronie.",
+  },
+  {
+    icon: "training",
+    t: "Wiesz, jak inwestować od A do Z",
+    d: "Akademia inwestora — siedem modułów od strategii po windykację.",
+  },
 ];
 
 const AKADEMIA: TwoColSlide[] = [
@@ -414,19 +470,27 @@ const FAQ_GROUPS: FAQGroup[] = [
     items: [
       {
         q: "Ile kosztuje dostęp dla inwestora?",
-        a: "Nic. Usługa Finance You jest dla inwestora nieodpłatna — bez abonamentu, opłaty za Projekt, opłaty za rezerwację i opłaty sukcesu. Składanie Zleceń, teaser, Karta Leada, ujawnienie danych i rezerwacja są bezpłatne, podobnie jak Akademia, kalkulator compliance, moduł AML i windykacja AI.",
+        a: `Abonament kosztuje ${SUBSCRIPTION_PRICE_SENTENCE}. W abonamencie masz wszystko: składanie Zleceń, teasery, Karty Leada, ujawnienie danych, rezerwacje, raporty bez limitu, Akademię, kalkulator compliance, moduł AML i windykację AI. Nie ma opłaty za Projekt, za rezerwację ani opłaty sukcesu.`,
       },
       {
-        q: "Kto w takim razie płaci Finance You?",
-        a: "Wyłącznie klient. Prowizja Finance You wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, i jest potrącana z wypłaty. Przy wypłacie przelewasz ją na rachunek Finance You, a resztę kwoty pożyczki klientowi — np. przy 100 000 zł: 7 000 zł dla Finance You i 93 000 zł dla klienta. Nie jest to koszt inwestora.",
+        q: "Jaki rabat dostaję przy płatności rocznej?",
+        a: `${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}%. Rok płacony co miesiąc kosztuje ${plnLabel(SUBSCRIPTION_MONTHLY_PLN * 12)}, a abonament roczny ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} — oszczędzasz ${plnLabel(SUBSCRIPTION_MONTHLY_PLN * 12 - SUBSCRIPTION_YEARLY_PLN)}, czyli płacisz ok. ${plnLabel(SUBSCRIPTION_YEARLY_PER_MONTH_PLN)} miesięcznie. Okres wybierasz suwakiem w cenniku.`,
+      },
+      {
+        q: "Czy muszę podpinać kartę kredytową?",
+        a: `Nie. ${SUBSCRIPTION_PAYMENT_SENTENCE} Po wygaśnięciu okresu sam decydujesz, czy go przedłużyć.`,
+      },
+      {
+        q: "Kto płaci prowizję Finance You od pożyczki?",
+        a: "Klient. Prowizja Finance You wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, i jest potrącana z wypłaty. Przy wypłacie przelewasz ją na rachunek Finance You, a resztę kwoty pożyczki klientowi — np. przy 100 000 zł: 7 000 zł dla Finance You i 93 000 zł dla klienta. Nie jest to koszt inwestora.",
       },
       {
         q: "Na czym zarabiam jako inwestor?",
         a: "Na odsetkach od pożyczki, których wysokość nie może przekroczyć odsetek maksymalnych (obecnie 14,5% rocznie), oraz na prowizji inwestora, która jest osobnym elementem umowy spłacanym w ratach razem z kapitałem. Kalkulator pokazuje odsetki, prowizję, harmonogram i łączny zysk jeszcze przed złożeniem propozycji.",
       },
       {
-        q: "Czy w przyszłości pojawią się opłaty dla inwestora?",
-        a: "Ewentualny abonament za dostęp do systemu wymagałby aneksu albo nowej wersji Umowy ramowej, doręczonej Ci na trwałym nośniku i wyraźnie zaakceptowanej. Bez Twojej zgody warunki nie zmienią się na odpłatne.",
+        q: "Czy cena abonamentu może się zmienić?",
+        a: "Cena obowiązuje przez cały opłacony okres. Każda zmiana warunków wymaga aneksu albo nowej wersji Umowy ramowej, doręczonej Ci na trwałym nośniku i wyraźnie zaakceptowanej — bez Twojej zgody warunki się nie zmienią.",
       },
       {
         q: "Czy muszę sam rozliczyć podatek od zysku?",
@@ -474,7 +538,7 @@ const FAQ_GROUPS: FAQGroup[] = [
       },
       {
         q: "Czym jest Karta Leada?",
-        a: "To załącznik transakcyjny do konkretnego Projektu, akceptowany osobno dla każdego Projektu przed ujawnieniem danych identyfikujących. Wskazuje m.in. moment ujawnienia, okres ochronny, warunki prowizji klienta, mechanizm jej zabezpieczenia oraz potwierdza, że usługa jest dla Ciebie nieodpłatna.",
+        a: "To załącznik transakcyjny do konkretnego Projektu, akceptowany osobno dla każdego Projektu przed ujawnieniem danych identyfikujących. Wskazuje m.in. moment ujawnienia, okres ochronny, warunki prowizji klienta i mechanizm jej zabezpieczenia.",
       },
       {
         q: "Jak długo Projekt jest zarezerwowany dla mnie?",
@@ -552,7 +616,7 @@ const FAQ_GROUPS: FAQGroup[] = [
       },
       {
         q: "Co grozi za obejście Finance You?",
-        a: "Kara Obejściowa w wysokości 5% Sumy Hipotecznej. Nie jest to cena usługi ani opłata — to kara umowna zabezpieczająca zakaz obchodzenia. Jeśli transakcję z klientem zawierasz prawidłowo, przez platformę i z przekazaniem prowizji klienta, kara nie powstaje, a Ty nie płacisz Finance You nic.",
+        a: "Kara Obejściowa w wysokości 5% Sumy Hipotecznej. Nie jest to cena usługi ani opłata — to kara umowna zabezpieczająca zakaz obchodzenia. Jeśli transakcję z klientem zawierasz prawidłowo, przez platformę i z przekazaniem prowizji klienta, kara nie powstaje.",
       },
       {
         q: "Jak chronione są dane klientów i moje?",
@@ -573,9 +637,10 @@ const FAQ_GROUPS: FAQGroup[] = [
 const FAQ_ALL = FAQ_GROUPS.flatMap((g) => g.items);
 
 // Duży złoty przycisk „Dołącz do klubu” — jedyny CTA w hero, prowadzi do
-// zakładki Cennik (#cennik): inwestor najpierw poznaje warunki (dostęp 0 zł,
-// płaci wyłącznie klient), potem zakłada konto. Przewijanie do zakładki obsługuje InvestorTabs (także gdy hash już
-// jest ustawiony na #cennik).
+// cennika (#cennik): inwestor najpierw poznaje warunki (abonament miesięczny
+// albo roczny), potem zakłada konto. W one-pagerze to zwykła kotwica
+// sekcji; w układzie zakładek przewijanie do zakładki obsługuje InvestorTabs
+// (także gdy hash już jest ustawiony na #cennik).
 function JoinClubButton() {
   return (
     <MktButton
@@ -695,9 +760,9 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
               color: "rgba(255,255,255,.8)",
             }}
           >
-            Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You. Bezpośrednio
-            poniżej masz pełną wersję kalkulatora inwestora — policz zysk, raty, limity ustawowe i
-            harmonogram spłat na własnych parametrach.
+            {SHOW.kalkulator
+              ? "Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You. Bezpośrednio poniżej masz pełną wersję kalkulatora inwestora — policz zysk, raty, limity ustawowe i harmonogram spłat na własnych parametrach."
+              : "Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You, a poniżej sprawdź, co zyskujesz jako inwestor i ile kosztuje abonament."}
           </p>
           <div style={{ marginTop: "1.4rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
             <JoinClubButton />
@@ -914,6 +979,95 @@ function PipelineSection() {
   );
 }
 
+// Sekcje dawnych zakładek. Te same komponenty renderuje pasek zakładek
+// (SHOW.zakladki) i układ one-pagera — kotwice (id) odpowiadają hashom
+// z INVESTOR_TABS i pod-menu „Inwestor" w nawigacji.
+function SmartOfferSection() {
+  return (
+    <Section id="system-inwestora">
+      <SmartOfferSlider />
+    </Section>
+  );
+}
+
+function AkademiaSection() {
+  return (
+    <Section id="akademia">
+      <SectionHead
+        center
+        eyebrow="Akademia inwestora"
+        title="Program szkolenia w 7 modułach"
+        sub="Od wprowadzenia i strategii, przez marketing, prawo i operacje, po analizę nieruchomości, analizę klienta i praktyczne case studies."
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <TwoColSlider slides={AKADEMIA} />
+      </div>
+    </Section>
+  );
+}
+
+function OchronaSection() {
+  return (
+    <Section id="ochrona" tint>
+      <SectionHead
+        center
+        eyebrow="Bezpieczeństwo"
+        title="7 warstw ochrony inwestora"
+        sub="Od zgodności z przepisami i stanu prawnego nieruchomości, przez wycenę, kalkulację i dokumenty, po ocenę ryzyka oraz monitoring spłaty."
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <TwoColSlider slides={OCHRONA} />
+      </div>
+      <ComplianceNote style={{ marginTop: "2rem" }}>
+        System wspiera analizę i porządkuje dane — decyzja należy do inwestora. Zakres zależy od
+        modelu i stron transakcji.
+      </ComplianceNote>
+    </Section>
+  );
+}
+
+function WindykacjaSection() {
+  return (
+    <Section id="windykacja-ai">
+      <SectionHead
+        center
+        eyebrow="Moduł AI"
+        title="Automatyczna windykacja krok po kroku"
+        sub="Sześć etapów procesu — od pierwszego kontaktu po egzekucję komorniczą. Każdy etap pokazuje działania systemu oraz prognozowany czas."
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <TwoColSlider slides={WINDYKACJA} />
+      </div>
+      <ComplianceNote style={{ marginTop: "2rem" }}>
+        Prognoza poglądowa — wartości zaokrąglone, zależne od umowy, harmonogramu i kosztów
+        czynności.
+      </ComplianceNote>
+    </Section>
+  );
+}
+
+function CennikSection({ products }: { products: AccessProduct[] }) {
+  return (
+    <Section id="cennik" tint>
+      <SectionHead
+        center
+        eyebrow="Cennik"
+        title="Jeden abonament, pełny dostęp"
+        sub={`${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok — przesuń suwak i zobacz, ile oszczędzasz przy płatności rocznej (${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% rabatu). Bez konieczności podpinania karty kredytowej.`}
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <InvestorPricing products={products} />
+      </div>
+      <ComplianceNote style={{ marginTop: "2rem" }}>
+        Ceny brutto (PLN). {SUBSCRIPTION_PAYMENT_SENTENCE} Prowizję Finance You płaci klient: 7%
+        Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącaną z wypłaty (100 000 zł → 7 000
+        zł dla Finance You, 93 000 zł dla klienta). Materiały mają charakter edukacyjny i
+        informacyjny, a Finance You nie gwarantuje zysku.
+      </ComplianceNote>
+    </Section>
+  );
+}
+
 function InvestorTabs({ products }: { products: AccessProduct[] }) {
   const [active, setActive] = useState<InvestorTabKey>("oferty");
   const barRef = useRef<HTMLDivElement>(null);
@@ -1010,81 +1164,15 @@ function InvestorTabs({ products }: { products: AccessProduct[] }) {
 
       {active === "pipeline" && <PipelineSection />}
 
-      {active === "system" && (
-        <Section>
-          <SmartOfferSlider />
-        </Section>
-      )}
+      {active === "system" && <SmartOfferSection />}
 
-      {active === "akademia" && (
-        <Section>
-          <SectionHead
-            center
-            eyebrow="Akademia inwestora"
-            title="Program szkolenia w 7 modułach"
-            sub="Od wprowadzenia i strategii, przez marketing, prawo i operacje, po analizę nieruchomości, analizę klienta i praktyczne case studies."
-          />
-          <div style={{ marginTop: "2.5rem" }}>
-            <TwoColSlider slides={AKADEMIA} />
-          </div>
-        </Section>
-      )}
+      {active === "akademia" && <AkademiaSection />}
 
-      {active === "ochrona" && (
-        <Section tint>
-          <SectionHead
-            center
-            eyebrow="Bezpieczeństwo"
-            title="7 warstw ochrony inwestora"
-            sub="Od zgodności z przepisami i stanu prawnego nieruchomości, przez wycenę, kalkulację i dokumenty, po ocenę ryzyka oraz monitoring spłaty."
-          />
-          <div style={{ marginTop: "2.5rem" }}>
-            <TwoColSlider slides={OCHRONA} />
-          </div>
-          <ComplianceNote style={{ marginTop: "2rem" }}>
-            System wspiera analizę i porządkuje dane — decyzja należy do inwestora. Zakres zależy od
-            modelu i stron transakcji.
-          </ComplianceNote>
-        </Section>
-      )}
+      {active === "ochrona" && <OchronaSection />}
 
-      {active === "windykacja" && (
-        <Section>
-          <SectionHead
-            center
-            eyebrow="Moduł AI"
-            title="Automatyczna windykacja krok po kroku"
-            sub="Sześć etapów procesu — od pierwszego kontaktu po egzekucję komorniczą. Każdy etap pokazuje działania systemu oraz prognozowany czas."
-          />
-          <div style={{ marginTop: "2.5rem" }}>
-            <TwoColSlider slides={WINDYKACJA} />
-          </div>
-          <ComplianceNote style={{ marginTop: "2rem" }}>
-            Prognoza poglądowa — wartości zaokrąglone, zależne od umowy, harmonogramu i kosztów
-            czynności.
-          </ComplianceNote>
-        </Section>
-      )}
+      {active === "windykacja" && <WindykacjaSection />}
 
-      {active === "cennik" && (
-        <Section tint>
-          <SectionHead
-            center
-            eyebrow="Cennik"
-            title="Dla inwestora — 0 zł"
-            sub="Usługa Finance You jest dla inwestora nieodpłatna: bez abonamentu, opłat za Projekt i opłaty sukcesu. Płaci wyłącznie klient — prowizję Finance You potrącaną z wypłaty."
-          />
-          <div style={{ marginTop: "2.5rem" }}>
-            <InvestorPricing products={products} />
-          </div>
-          <ComplianceNote style={{ marginTop: "2rem" }}>
-            Jedyną opłatą w transakcji jest prowizja Finance You płacona przez klienta: 7% Kwoty
-            Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącana z wypłaty (100 000 zł → 7 000 zł
-            dla Finance You, 93 000 zł dla klienta). Materiały mają charakter edukacyjny i
-            informacyjny, a Finance You nie gwarantuje zysku.
-          </ComplianceNote>
-        </Section>
-      )}
+      {active === "cennik" && <CennikSection products={products} />}
     </div>
   );
 }
@@ -1095,31 +1183,36 @@ function InvestorLanding() {
     <MarketingShell page="inwestor" sticky={{ label: "Dołącz do klubu", href: PRICING_HASH }}>
       <Hero video={video} />
 
-      <CalculatorSection />
+      {SHOW.kalkulator && <CalculatorSection />}
 
-      <InvestorTabs products={products} />
+      {SHOW.zakladki ? (
+        <InvestorTabs products={products} />
+      ) : (
+        <>
+          {SHOW.oferty && <LeadsSection />}
+          {SHOW.pipeline && <PipelineSection />}
+        </>
+      )}
 
-      <Section>
+      <Section id="korzysci">
         <SectionHead
-          eyebrow="Dostęp inwestora — 0 zł"
-          title="Usługa bez opłat — płaci wyłącznie klient"
-          sub="Po przejściu pipeline'u składasz Zlecenie. Projekty dopasowane do przyjętego Zlecenia widzisz najpierw jako teaser, a po rezerwacji — z raportem, harmonogramem i kontaktem. Jedyna opłata w transakcji: prowizja Finance You płacona przez klienta (7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT), potrącana z wypłaty."
+          eyebrow="Co zyskujesz"
+          title="Mniej ryzyka i formalności, więcej dobrych Projektów"
+          sub="Jeden abonament, bez prowizji od Twojego zysku. Dostajesz gotowy proces od Zlecenia po spłatę: sprawdzony klient, pełny raport, harmonogram, umowy, compliance i windykacja w jednym koncie."
         />
         <div style={{ marginTop: "2.5rem" }}>
-          <FeatureGrid items={GET} icon3d />
+          <FeatureGrid items={BENEFITS} icon3d />
         </div>
       </Section>
 
-      <Section tint>
-        <SectionHead
-          eyebrow="Narzędzia w panelu"
-          title="Akademia, compliance, AML i windykacja — bez dopłat"
-          sub="Wszystkie moduły panelu są dostępne dla każdego inwestora."
-        />
-        <div style={{ marginTop: "2.5rem" }}>
-          <FeatureGrid items={TOOLS} cols={3} icon3d />
-        </div>
-      </Section>
+      {!SHOW.zakladki && (
+        <>
+          {SHOW.system && <SmartOfferSection />}
+          {SHOW.akademia && <AkademiaSection />}
+          {SHOW.ochrona && <OchronaSection />}
+          {SHOW.windykacja && <WindykacjaSection />}
+        </>
+      )}
 
       <Section tint>
         <SectionHead eyebrow="AI dla inwestora" title="Automatyzacja powtarzalnych czynności" />
@@ -1173,6 +1266,8 @@ function InvestorLanding() {
           prawnej.
         </ComplianceNote>
       </Section>
+
+      {!SHOW.zakladki && <CennikSection products={products} />}
 
       <Section id="faq">
         <SectionHead

@@ -46,7 +46,7 @@ export function PipelineProgress({
             background: "linear-gradient(95deg, oklch(0.45 0.22 268), oklch(0.62 0.17 220))",
           }}
         >
-          Pakiet {tierLabel}
+          {tierLabel}
         </span>
       </div>
 

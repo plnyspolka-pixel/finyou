@@ -1,25 +1,57 @@
-# Cennik inwestora: usługa nieodpłatna, jeden pipeline onboardingu
+# Cennik inwestora: abonament miesięczny albo roczny, jeden pipeline onboardingu
 
-Stan od 29 września 2026 r. (Umowa ramowa v7, pakiet `FY-LEGAL-2026-09-29`).
-Zastępuje cennik Podstawowy/PRO z 21 września 2026 r. oraz wcześniejsze
-produkty czasowe (30/365 dni).
+Stan od 30 września 2026 r. Zastępuje model „usługa nieodpłatna" z 29 września
+2026 r. (Umowa ramowa v7), cennik Podstawowy/PRO z 21 września 2026 r. oraz
+wcześniejsze produkty czasowe.
 
 ## Zasada
 
-**Inwestor nie płaci Finance You nic.** Nie ma abonamentu, Opłaty Sukcesu ani
-opłaty za udostępnienie pojedynczego Projektu. Jedyną opłatą w systemie jest
-**Prowizja Klientowska Finance You**: 7 % Kwoty Udzielonej (kwoty pożyczki z
-umowy), nie mniej niż 5 000 zł, bez VAT (zwolnienie — do potwierdzenia z
-księgową), **potrącana z wypłaty**: inwestor przelewa 7 % na rachunek Finance
-You, resztę Klientowi (Zał. 6 do Umowy ramowej — dwie części przelewu).
-Przykład: 100 000 zł → 7 000 zł do Finance You, 93 000 zł dla Klienta.
-Matematyka: `src/lib/contract-engine/fees.ts`.
+**Inwestor płaci abonament za dostęp do systemu:**
 
-## Jeden pakiet — „Dostęp inwestora" (0 zł)
+| Okres       | Cena     | Dni | Kod produktu (`access_products`) |
+| ----------- | -------- | --- | -------------------------------- |
+| miesięcznie | 1 500 zł | 30  | `investor_access_30d`            |
+| rocznie     | 7 000 zł | 365 | `investor_access_365d`           |
 
-Zakres opisuje jedno miejsce — `src/lib/investor-plan/plans.ts`
-(`ACCESS_PRESENTATION`, `ALL_FEATURES`). Panel, strona `/dla-inwestora`
-i bramki serwerowe czytają stamtąd.
+Rok płacony co miesiąc to 18 000 zł, więc płatność roczna oszczędza 11 000 zł —
+**61 % rabatu** (zaokrąglone w dół), ok. 583 zł miesięcznie. Płatność
+jednorazowa za wybrany okres przez Tpay (przelew, BLIK) — **bez konieczności
+podpinania karty kredytowej** i bez automatycznego odnawiania. Ceny prezentujemy
+jako brutto. Nie ma Pakietu PRO, Opłaty Sukcesu ani opłaty za pojedynczy Projekt.
+
+**Klient nadal płaci Prowizję Klientowską Finance You**: 7 % Kwoty Udzielonej
+(kwoty pożyczki z umowy), nie mniej niż 5 000 zł, bez VAT (zwolnienie — do
+potwierdzenia z księgową), **potrącaną z wypłaty**: inwestor przelewa 7 % na
+rachunek Finance You, resztę Klientowi (Zał. 6 do Umowy ramowej — dwie części
+przelewu). Przykład: 100 000 zł → 7 000 zł do Finance You, 93 000 zł dla
+Klienta. Matematyka: `src/lib/contract-engine/fees.ts`.
+
+Ceny, rabat i zdania o płatności liczy jedno miejsce —
+`src/lib/investor-plan/plans.ts` (`SUBSCRIPTION_*`, `SUBSCRIPTION_OPTIONS`,
+`SUBSCRIPTION_PRICE_SENTENCE`, `SUBSCRIPTION_PAYMENT_SENTENCE`). Strona
+`/dla-inwestora` (cennik z suwakiem Miesięcznie / Rocznie, FAQ, meta),
+panel `/inwestor/abonament` i baner w `/inwestor/umowy` czytają stamtąd.
+
+## Pobieranie abonamentu — jeszcze wyłączone
+
+Cennik jest opublikowany, ale **system jeszcze nie pobiera opłat**: aktywna
+Umowa ramowa v7 (`allows_investor_fees = false`) mówi, że usługa dla Inwestora
+jest nieodpłatna. Konta na v7 mają dostęp bez opłat, a panel mówi o tym wprost.
+Włączenie abonamentu wymaga:
+
+1. nowej wersji Umowy ramowej (i ewentualnie Karty Leada) z abonamentem —
+   doręczenie na trwałym nośniku i wyraźna akceptacja przez Inwestora,
+2. aktywacji `investor_access_30d` / `investor_access_365d` w katalogu
+   `access_products` z cenami `150000` / `700000` gr i liczbą dni 30 / 365
+   (migracja),
+3. zdjęcia blokady kodów `investor_*` w `createAccessCheckout`,
+4. przywrócenia bramkowania (`investor_tier()`, `investor_has_full_access`,
+   `requireInvestorPro`) z okresem przejściowym dla kont na v7.
+
+## Jeden abonament — zakres
+
+Zakres opisuje `src/lib/investor-plan/plans.ts` (`ACCESS_PRESENTATION`,
+`ALL_FEATURES`).
 
 - pełny pipeline: dane pożyczkodawcy, rachunek spłaty, KYC (Didit), screening
   sankcyjny, akceptacja pakietu umów online,
@@ -29,7 +61,7 @@ i bramki serwerowe czytają stamtąd.
 - generator umowy pożyczki, analityka (KW, właściciele, ryzyko), Akademia,
   kalkulator compliance, moduł AML, moduł windykacji AI, raporty bez limitu.
 
-## Infrastruktura płatności (zostaje, nieaktywna dla inwestora)
+## Infrastruktura płatności (gotowa, wyłączona dla inwestora do czasu nowej umowy)
 
 Tabele `access_products`, `access_entitlements`, `access_payments` i webhook
 Tpay pozostają — obsługują pośredników i historyczne rozliczenia. Produkty
@@ -46,10 +78,10 @@ płatności i faktury historyczne zostają. `createAccessCheckout` odrzuca kody
   każdego zalogowanego inwestora — zostaje jako jedno miejsce bramkowania na
   wypadek przyszłego abonamentu.
 
-**Abonament za dostęp do systemu — w przyszłości.** Wymaga nowej wersji Umowy
-ramowej (doręczenie na trwałym nośniku, wyraźna akceptacja) i ponownej
-aktywacji produktu w katalogu. Do tego czasu `/inwestor/abonament` jest stroną
-informacyjną bez checkoutu.
+**Abonament — cennik opublikowany, pobieranie wyłączone.** Kroki włączenia:
+sekcja „Pobieranie abonamentu" wyżej. Do tego czasu `/inwestor/abonament`
+pokazuje cennik i informację, że konto na dotychczasowych warunkach nic nie
+płaci — bez checkoutu.
 
 ## Opłaty sukcesu — rejestr historyczny
 
