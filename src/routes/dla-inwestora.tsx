@@ -468,7 +468,7 @@ const FAQ_ALL: FAQItem[] = [
   },
   {
     q: "Czy potrzebuję doświadczenia?",
-    a: "Nie. Akademia inwestora uczy od podstaw: prawo, analiza nieruchomości i klienta, transakcja, windykacja.",
+    a: "Nie. Akademia inwestora to 15 lat doświadczenia w jednym miejscu — uczysz się od podstaw, a nie na własnych błędach.",
   },
   {
     q: "Jak zacząć?",

@@ -191,41 +191,22 @@ export const ACCESS_PRESENTATION: TierPresentation = {
     "Jeden abonament otwiera wszystkie narzędzia: składasz Zlecenie, a my szukamy dla Ciebie Projektów. Cały zarobek z odsetek i Twojej prowizji zostaje u Ciebie — nie oddajesz części zysku i nie płacisz za Projekty, bo Prowizję Klientowską Finance You płaci Klient, potrącaną z wypłaty.",
   bullets: [
     {
-      cecha: "Weryfikacja online",
+      cecha: "Akademia inwestora",
       zaleta:
-        "Dane, rachunek spłaty, KYC i screening sankcyjny załatwiasz zdalnie, w jednym procesie.",
-      korzysc: "Zaczynasz inwestować bez wizyt i papierów.",
+        "15 lat doświadczenia w jednym miejscu: strategia, prawo, analiza nieruchomości i klienta, transakcja, windykacja.",
+      korzysc: "Nie uczysz się na własnych błędach.",
     },
     {
-      cecha: "Akceptacja pakietu umów online",
-      zaleta: "Komplet umów dostajesz na trwałym nośniku, a każda akceptacja ma ślad audytowy.",
-      korzysc: "Formalności zamykasz bez spotkań i kuriera, z dowodem na wszystko.",
-    },
-    {
-      cecha: "Zlecenia poszukiwania Projektów",
-      zaleta: "Określasz kwotę, okres i minimalny zysk roczny.",
-      korzysc: "Nie przeszukujesz ofert — to my szukamy Projektów dla Ciebie.",
-    },
-    {
-      cecha: "Projekty dopasowane do Zlecenia",
+      cecha: "Zaawansowany moduł analizy nieruchomości",
       zaleta:
-        "Każdy z raportem o inwestycji, harmonogramem zaakceptowanym przez Klienta i danymi kontaktowymi.",
-      korzysc: "Dostajesz tylko oferty spełniające Twoje kryteria i szybko oceniasz, czy warto.",
+        "Księga wieczysta, właściciele, obciążenia, wycena, LTV i ocena ryzyka — pełne raporty bez limitu.",
+      korzysc: "Masz własnego, profesjonalnego analityka AI, zanim wyłożysz pieniądze.",
     },
     {
-      cecha: "Generator umowy pożyczki",
-      zaleta: "Umowa wypełnia się uzgodnionymi warunkami i Twoimi danymi.",
+      cecha: "Kancelaria AI",
+      zaleta:
+        "30 wzorów dokumentów sprawdzonych w praktyce — od umowy pożyczki i hipoteki, przez wezwania i ugody, po wnioski do sądu i komornika — przygotowywanych jednym kliknięciem.",
       korzysc: "Oszczędzasz czas i koszty przygotowania dokumentów.",
-    },
-    {
-      cecha: "Analityka nieruchomości",
-      zaleta: "Księga wieczysta, właściciele, analiza KW i ocena ryzyka w jednym miejscu.",
-      korzysc: "Decydujesz na podstawie danych, zanim wyłożysz pieniądze.",
-    },
-    {
-      cecha: "Akademia inwestora i kalkulator compliance",
-      zaleta: "Szkolenie od podstaw i sprawdzenie zgodności transakcji.",
-      korzysc: "Inwestujesz pewnie, nawet jeśli zaczynasz bez doświadczenia.",
     },
     {
       cecha: "Moduł AML",
@@ -233,14 +214,15 @@ export const ACCESS_PRESENTATION: TierPresentation = {
       korzysc: "Obowiązki AML wypełniasz sprawnie, bez osobnego systemu.",
     },
     {
-      cecha: "Moduł windykacji AI",
-      zaleta: "Przypomnienia, wezwania i rejestr kontaktu z Klientem idą automatycznie.",
-      korzysc: "Reagujesz na opóźnienie od pierwszego dnia, bez ręcznego monitowania.",
+      cecha: "Moduł windykacji",
+      zaleta:
+        "Pełne prowadzenie sprawy od pierwszego dnia opóźnienia — przypomnienia, wezwania, ugoda, klauzula wykonalności — aż na biurko komornika.",
+      korzysc: "Nie zostajesz sam z niespłaconą pożyczką.",
     },
     {
-      cecha: "Pełne raporty bez limitu",
-      zaleta: "Analizujesz każdy Projekt tak dokładnie, jak potrzebujesz.",
-      korzysc: "Nie dopłacasz za kolejne raporty.",
+      cecha: "Wewnętrzna sieć sprzedaży",
+      zaleta: "Korzystasz z naszej sieci sprzedaży i działasz pod sprawdzoną marką Finance You.",
+      korzysc: "Nie szukasz klientów sam.",
     },
   ],
   note: SUBSCRIPTION_PAYMENT_SENTENCE,

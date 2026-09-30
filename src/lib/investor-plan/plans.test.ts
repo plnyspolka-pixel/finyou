@@ -48,7 +48,7 @@ describe("dostęp inwestora — bez opłat jednostkowych", () => {
     expect(Object.keys(TIER_PRESENTATION)).toEqual(["podstawowy"]);
   });
 
-  it("prezentacja: abonament, bez PRO, bez cen jednostkowych, akceptacja umów online", () => {
+  it("prezentacja: abonament, bez PRO, bez cen jednostkowych, cecha → zaleta → korzyść", () => {
     const p = ACCESS_PRESENTATION;
     expect(p.name).toBe("Abonament inwestora");
     expect(p.priceLabel).toBe("1\u00a0500\u00a0zł / mies. albo 7\u00a0000\u00a0zł / rok");
@@ -60,7 +60,14 @@ describe("dostęp inwestora — bez opłat jednostkowych", () => {
     ].join("\n");
     expect(text).not.toMatch(/\bPRO\b|Pakiet Podstawowy|0 zł|nieodpłatn/);
     expect(text).not.toMatch(/3 000|5% od|Opłat[ay] Sukcesu/i);
-    expect(p.bullets.map((b) => b.cecha)).toContain("Akceptacja pakietu umów online");
+    expect(p.bullets.map((b) => b.cecha)).toEqual([
+      "Akademia inwestora",
+      "Zaawansowany moduł analizy nieruchomości",
+      "Kancelaria AI",
+      "Moduł AML",
+      "Moduł windykacji",
+      "Wewnętrzna sieć sprzedaży",
+    ]);
     for (const b of p.bullets) expect(b.cecha && b.zaleta && b.korzysc).toBeTruthy();
     expect(text).not.toMatch(/Automatyczne wypełnienie i podpisanie/);
   });
