@@ -39,8 +39,7 @@ export function decideInFlightUnlockPayment(input: {
   const tpay = input.tpayStatus ? String(input.tpayStatus).toLowerCase() : null;
 
   if (tpay && TPAY_PAID_STATUSES.has(tpay)) return { action: "block_paid" };
-  if (tpay && TPAY_DEAD_STATUSES.has(tpay))
-    return { action: "cancel", reason: `tpay_status:${tpay}` };
+  if (tpay && TPAY_DEAD_STATUSES.has(tpay)) return { action: "cancel", reason: `tpay_status:${tpay}` };
 
   const window =
     input.status === "created" && !input.hasProviderTransaction
