@@ -62,11 +62,12 @@ describe("dostęp inwestora — bez opłat jednostkowych", () => {
     expect(text).not.toMatch(/3 000|5% od|Opłat[ay] Sukcesu/i);
     expect(p.bullets.map((b) => b.cecha)).toEqual([
       "Akademia inwestora",
+      "Wewnętrzna sieć sprzedaży",
       "Zaawansowany moduł analizy nieruchomości",
       "Kancelaria AI",
+      "Kalkulator compliance",
       "Moduł AML",
-      "Moduł windykacji",
-      "Wewnętrzna sieć sprzedaży",
+      "Windykator AI",
     ]);
     for (const b of p.bullets) expect(b.cecha && b.zaleta && b.korzysc).toBeTruthy();
     expect(text).not.toMatch(/Automatyczne wypełnienie i podpisanie/);

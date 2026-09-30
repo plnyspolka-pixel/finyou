@@ -197,6 +197,11 @@ export const ACCESS_PRESENTATION: TierPresentation = {
       korzysc: "Nie uczysz się na własnych błędach.",
     },
     {
+      cecha: "Wewnętrzna sieć sprzedaży",
+      zaleta: "Korzystasz z naszej sieci sprzedaży i działasz pod sprawdzoną marką Finance You.",
+      korzysc: "Nie szukasz klientów — to oni szukają Ciebie!",
+    },
+    {
       cecha: "Zaawansowany moduł analizy nieruchomości",
       zaleta:
         "Księga wieczysta, właściciele, obciążenia, wycena, LTV i ocena ryzyka — pełne raporty bez limitu.",
@@ -209,20 +214,21 @@ export const ACCESS_PRESENTATION: TierPresentation = {
       korzysc: "Oszczędzasz czas i koszty przygotowania dokumentów.",
     },
     {
+      cecha: "Kalkulator compliance",
+      zaleta:
+        "Ustawiasz kwotę, oprocentowanie i prowizję, a kalkulator od razu pokazuje harmonogram i ostrzega o limitach odsetek maksymalnych.",
+      korzysc: "Łatwo sprawdzisz, na ile możesz sobie pozwolić.",
+    },
+    {
       cecha: "Moduł AML",
       zaleta: "Procedury, dokumentacja i zgłoszenia AML w jednym miejscu.",
       korzysc: "Obowiązki AML wypełniasz sprawnie, bez osobnego systemu.",
     },
     {
-      cecha: "Moduł windykacji",
+      cecha: "Windykator AI",
       zaleta:
-        "Pełne prowadzenie sprawy od pierwszego dnia opóźnienia — przypomnienia, wezwania, ugoda, klauzula wykonalności — aż na biurko komornika.",
+        "Dzwoni, pisze i wysyła listy. Prowadzi sprawę od pierwszego dnia opóźnienia — przypomnienia, wezwania, ugoda, klauzula wykonalności — aż na biurko komornika.",
       korzysc: "Nie zostajesz sam z niespłaconą pożyczką.",
-    },
-    {
-      cecha: "Wewnętrzna sieć sprzedaży",
-      zaleta: "Korzystasz z naszej sieci sprzedaży i działasz pod sprawdzoną marką Finance You.",
-      korzysc: "Nie szukasz klientów sam.",
     },
   ],
   note: SUBSCRIPTION_PAYMENT_SENTENCE,
