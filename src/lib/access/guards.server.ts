@@ -50,50 +50,6 @@ export async function assertInvestorFullAccess(userId: string): Promise<void> {
   }
 }
 
-/** Dokumenty pakietu inwestora, których akceptacja otwiera moduł ofert. */
-export const INVESTOR_PACKAGE_CODES = ["umowa_ramowa", "nda", "rodo"] as const;
-
-/**
- * Czy inwestor zaakceptował AKTYWNE wersje wszystkich dokumentów pakietu
- * (code:version:sha256 — tak samo liczy pipeline). Kolejność inwestora:
- * abonament → akceptacja pakietu → moduł ofert.
- */
-export async function investorAcceptedActivePackage(userId: string): Promise<boolean> {
-  const codes = [...INVESTOR_PACKAGE_CODES];
-  const { data: docs } = await db
-    .from("legal_documents")
-    .select("code, version, sha256")
-    .in("code", codes)
-    .eq("active", true);
-  const active = (docs ?? []) as { code: string; version: string; sha256: string }[];
-  if (codes.some((c) => !active.some((d) => d.code === c))) return false;
-  const { data: acc } = await db
-    .from("investor_agreement_acceptances")
-    .select("document_code, version, sha256")
-    .eq("user_id", userId)
-    .in("document_code", codes);
-  const accepted = (acc ?? []) as { document_code: string; version: string; sha256: string }[];
-  return active.every((d) =>
-    accepted.some(
-      (a) => a.document_code === d.code && a.version === d.version && a.sha256 === d.sha256,
-    ),
-  );
-}
-
-/**
- * Moduł ofert inwestora (Zlecenia, Projekty, oferty): aktywny abonament ORAZ
- * zaakceptowany pakiet umów. Personel — bez ograniczeń.
- */
-export async function assertInvestorOffersAccess(userId: string): Promise<void> {
-  if (await isInternalStaff(userId)) return;
-  await assertInvestorFullAccess(userId);
-  if (!(await investorAcceptedActivePackage(userId))) {
-    throw new Error(
-      "UMOWY_INVESTOR: Moduł ofert otwiera się po akceptacji Umowy ramowej, NDA i umowy RODO (zakładka Zlecenia i Projekty).",
-    );
-  }
-}
-
 export async function assertBrokerPremium(userId: string): Promise<void> {
   if (!(await brokerHasPaidAccess(userId))) {
     throw new Error("PAYWALL_BROKER: Ta funkcja wymaga pełnego (płatnego) dostępu pośrednika.");

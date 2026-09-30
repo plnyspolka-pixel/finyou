@@ -83,7 +83,7 @@ function InwestorAbonament() {
     queryFn: () => productsFn({ data: { audience: "investor" } }),
   });
   const pipelineQ = useQuery({
-    queryKey: ["investor-pipeline-state"],
+    queryKey: ["investor-pipeline"],
     queryFn: () => pipelineFn(),
   });
 

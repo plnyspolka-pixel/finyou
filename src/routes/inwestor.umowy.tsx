@@ -308,9 +308,10 @@ function PlanBanner() {
           </div>
           <p className="max-w-2xl text-sm opacity-90">{p.tagline}</p>
           <p className="text-xs opacity-75">
-            {p.periodLabel}. Abonament wykupisz w zakładce Dostęp i płatności po akceptacji Umowy
-            ramowej. Prowizja od Pożyczkobiorcy — 7 % Kwoty Udzielonej, nie mniej niż 5 000 zł, bez
-            VAT — obciąża Klienta i jest potrącana z wypłaty (Zał. 6).
+            {p.periodLabel}. Akceptacja Umowy ramowej, NDA i umowy RODO otwiera moduł ofert:
+            Zlecenia, dopasowane Projekty i oferty. Prowizja od Pożyczkobiorcy — 7 % Kwoty
+            Udzielonej, nie mniej niż 5 000 zł, bez VAT — obciąża Klienta i jest potrącana z wypłaty
+            (Zał. 6).
           </p>
         </div>
       </CardContent>

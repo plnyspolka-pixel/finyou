@@ -1,5 +1,5 @@
 -- =====================================================================
--- PROWIZJA OD POŻYCZKOBIORCY (2026-09-30)
+-- PROWIZJA OD POŻYCZKOBIORCY I KOLEJNOŚĆ INWESTORA (2026-09-30)
 --
 -- Decyzja właściciela: prowizja Finance You płacona przez Klienta
 -- (pożyczkobiorcę) nazywa się „Prowizja od Pożyczkobiorcy”, a nie
@@ -14,6 +14,8 @@
 --    zaakceptowana, więc zostaje jako wersja historyczna, a klienci
 --    akceptują v3 przy następnym wejściu do panelu.
 --    Generowane: npx tsx scripts/legal/build-zgody-v3.ts
+-- 3. Kolejność inwestora: abonament → akceptacja pakietu umów → moduł ofert
+--    (RLS: investor_can_view_application i offers_investor_own).
 -- =====================================================================
 
 -- 1. Pakiet inwestora v7.
@@ -1651,5 +1653,63 @@ update public.consent_documents
    set is_active = false
  where kind = 'terms'::public.consent_kind and version < 3 and is_active;
 -- <<< REGULAMIN KLIENTA v3
+
+-- 3. Moduł ofert inwestora otwiera akceptacja pakietu umów (decyzja
+--    właściciela 2026-09-30: abonament → akceptacja Umowy ramowej, NDA i RODO
+--    → oferty). investor_can_view_application stoi za politykami RLS wniosków,
+--    dokumentów, nieruchomości, analiz KW, ocen ryzyka i plików klienta
+--    widocznych dla inwestora — dopisujemy investor_legal_pack_complete
+--    (aktywne wersje pakietu zaakceptowane, bez odstąpienia). Personel ma
+--    własne polityki. Treść warunków bez zmian względem produkcji.
+create or replace function public.investor_can_view_application(_user_id uuid, _application_id uuid)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select public.investor_legal_pack_complete(_user_id)
+    and (
+      exists (
+        select 1
+        from public.investor_order_matches m
+        join public.investor_orders o on o.id = m.order_id
+        where m.application_id = _application_id
+          and o.user_id = _user_id
+          and m.status in ('rezerwacja', 'transakcja')
+      )
+      or exists (
+        select 1
+        from public.investor_offers io
+        join public.investors i on i.id = io.investor_id
+        where io.loan_application_id = _application_id
+          and i.user_id = _user_id
+      )
+      or exists (
+        select 1
+        from public.offer_distributions d
+        join public.investors i on i.id = d.investor_id
+        where d.loan_application_id = _application_id
+          and i.user_id = _user_id
+          and d.distribution_status not in ('szkic', 'gotowe_do_wysylki')
+      )
+    );
+$$;
+
+comment on function public.investor_can_view_application(uuid, uuid) is
+  'Od 2026-09-30: wymaga zaakceptowanego pakietu umów inwestora (investor_legal_pack_complete) — akceptacja otwiera moduł ofert.';
+
+-- Oferty inwestora: składanie i zmiana także dopiero po akceptacji pakietu
+-- (podgląd własnych ofert — offers_investor_own_select — bez zmian).
+drop policy if exists offers_investor_own on public.investor_offers;
+create policy offers_investor_own on public.investor_offers for all to authenticated
+  using (
+    public.investor_has_full_access(auth.uid())
+    and public.investor_legal_pack_complete(auth.uid())
+    and exists (select 1 from public.investors i where i.id = investor_id and i.user_id = auth.uid())
+  )
+  with check (
+    public.investor_has_full_access(auth.uid())
+    and public.investor_legal_pack_complete(auth.uid())
+    and exists (select 1 from public.investors i where i.id = investor_id and i.user_id = auth.uid())
+    and public.investor_can_view_application(auth.uid(), loan_application_id)
+  );
 
 notify pgrst, 'reload schema';

@@ -68,6 +68,20 @@ describe("migracje 2026-09-29", () => {
     expect(sql).not.toMatch(/grant [^;]*insert[^;]*on public\.cookie_consent_log to authenticated/);
   });
 
+  it("0024: moduł ofert inwestora wymaga zaakceptowanego pakietu umów (RLS)", () => {
+    const sql = readFileSync(join(SUPA, "20260930190000_prowizja_od_pozyczkobiorcy.sql"), "utf8");
+    const fn = sql.slice(
+      sql.indexOf("create or replace function public.investor_can_view_application"),
+      sql.indexOf("comment on function public.investor_can_view_application"),
+    );
+    expect(fn).toMatch(/select public\.investor_legal_pack_complete\(_user_id\)\s+and \(/);
+    expect(fn).toContain("security definer set search_path = public");
+    const policy = sql.slice(sql.indexOf("create policy offers_investor_own"));
+    expect(policy.match(/investor_legal_pack_complete\(auth\.uid\(\)\)/g)).toHaveLength(2);
+    expect(policy).toContain("investor_can_view_application(auth.uid(), loan_application_id)");
+    expect(sql).not.toMatch(/grant [^;]*anon/);
+  });
+
   it("dopisanie bloku zasad do promptów jest idempotentne", () => {
     const sql = readFileSync(join(SUPA, "20260929157000_etap5_akceptacje_zgod_i_boty.sql"), "utf8");
     const appends = sql.match(/system_prompt = system_prompt \|\|/g) ?? [];

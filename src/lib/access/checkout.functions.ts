@@ -38,6 +38,8 @@ const CheckoutSchema = z.object({
     terms: z.literal(true),
     privacy: z.literal(true),
     digitalService: z.boolean().optional().default(false),
+    /** Inwestor: zna warunki Opłaty Abonamentowej (§ 7) i zwrotu (§ 15) Umowy ramowej. */
+    frameworkTerms: z.boolean().optional().default(false),
   }),
 });
 
@@ -211,9 +213,28 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
       }
       // Kolejność inwestora (decyzja właściciela 2026-09-30): najpierw
       // abonament, potem akceptacja pakietu umów, która otwiera moduł ofert
-      // (assertInvestorOffersAccess). Zakup nie wymaga więc wcześniejszej
-      // akceptacji Umowy ramowej — warunki Opłaty Abonamentowej (§ 7) inwestor
-      // potwierdza w formularzu płatności.
+      // (RLS: investor_can_view_application wymaga investor_legal_pack_complete).
+      // Zakup nie wymaga więc wcześniejszej akceptacji Umowy ramowej — inwestor
+      // potwierdza w formularzu, że zna jej warunki Opłaty Abonamentowej (§ 7)
+      // i zwrotu przy odstąpieniu (§ 15); wersję zapisujemy w płatności.
+      let frameworkVersion: string | null = null;
+      if (audience === "investor" && !staff) {
+        if (!data.consents.frameworkTerms) {
+          return {
+            error:
+              "Potwierdź, że znasz warunki Opłaty Abonamentowej z Umowy ramowej (§ 7) i zasady zwrotu (§ 15).",
+          };
+        }
+        const { data: framework } = await db
+          .from("legal_documents")
+          .select("version, sha256")
+          .eq("code", "umowa_ramowa")
+          .eq("active", true)
+          .maybeSingle();
+        frameworkVersion = framework
+          ? `umowa_ramowa:${framework.version}:${framework.sha256}`
+          : null;
+      }
       if (audience === "broker" && !roles.includes("posrednik") && !partner && !staff) {
         return { error: "Pakiet pośrednika może kupić wyłącznie konto pośrednika." };
       }
@@ -228,6 +249,8 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         termsAccepted: true,
         privacyAccepted: true,
         digitalServiceConsent: Boolean(data.consents.digitalService),
+        frameworkTermsAcknowledged: Boolean(data.consents.frameworkTerms),
+        frameworkVersion,
         acceptedAt: nowIso,
         ip: meta.ip,
         userAgent: meta.userAgent,

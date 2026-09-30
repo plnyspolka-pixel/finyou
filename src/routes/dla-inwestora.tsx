@@ -482,7 +482,7 @@ const FAQ_GROUPS: FAQGroup[] = [
       },
       {
         q: "Kiedy opłacam abonament?",
-        a: "Po akceptacji umów w pipeline'ie inwestora, a przed złożeniem pierwszego Zlecenia — Opłatę Abonamentową określa § 7 Umowy ramowej. Rejestracja, dane konta, weryfikacja tożsamości i akceptacja umów nie wymagają płatności. Abonament kupujesz w panelu, w zakładce Dostęp i płatności, a fakturę dostajesz automatycznie.",
+        a: "Na początku — abonament otwiera panel inwestora. Po opłaceniu uzupełniasz dane, przechodzisz weryfikację tożsamości i akceptujesz Umowę ramową, NDA i umowę RODO; akceptacja otwiera moduł ofert (Zlecenia, dopasowane Projekty i oferty). Przed zapłatą możesz przeczytać Umowę ramową — Opłatę Abonamentową określa jej § 7, a zwrot przy odstąpieniu § 15. Rejestracja konta nie wymaga płatności. Abonament kupujesz w panelu, w zakładce Dostęp i płatności, a fakturę dostajesz automatycznie.",
       },
       {
         q: "Co się dzieje, gdy abonament wygaśnie?",
