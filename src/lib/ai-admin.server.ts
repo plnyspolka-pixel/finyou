@@ -1,6 +1,7 @@
 // Server-only helpers for AI Administrator (Claude/Anthropic)
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { MCP_BRIDGE_TOOLS } from "./ai-admin-mcp.server";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -518,6 +519,8 @@ export const ANTHROPIC_TOOLS = [
       required: ["sql", "reason"],
     },
   },
+  // Dostęp do wszystkich narzędzi serwera MCP aplikacji (Studio, HeyGen, Meta…).
+  ...MCP_BRIDGE_TOOLS,
 ];
 
 // Blokujemy tylko pliki z sekretami; reszta projektu dostępna do odczytu.
@@ -547,11 +550,22 @@ export async function runTool(
     userId?: string;
     /** Rozmowa, z której pochodzi wywołanie (źródło wpisu pamięci). */
     conversationId?: string;
+    /** Token sesji administratora — narzędzia MCP działają jako on. */
+    accessToken?: string;
+    userEmail?: string;
   },
 ): Promise<{ ok: boolean; output: unknown; error?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   try {
+    if (call.name === "mcp_search_tools" || call.name === "mcp_call_tool") {
+      const { runMcpBridgeTool } = await import("./ai-admin-mcp.server");
+      return await runMcpBridgeTool(call, {
+        token: opts.accessToken,
+        userId: opts.userId,
+        email: opts.userEmail,
+      });
+    }
     if (call.name === "query_database") {
       if (!opts.enableDbRead) return { ok: false, output: null, error: "Odczyt bazy wyłączony." };
       const sql = String(call.input.sql ?? "");
@@ -1121,7 +1135,11 @@ Korespondencja z klientami i inwestorami (narzędzia "comms_*"):
 - W treści opieraj się wyłącznie na danych z bazy i historii wątku. Nie obiecuj kwot, oprocentowania, terminów ani decyzji, których nie ma w danych. Nie wymyślaj nazwisk, numerów umów ani ustaleń.
 - Odpowiadając mailem podawaj "reply_to_message_id" z "comms_read_thread" — inaczej wiadomość nie doklei się do wątku u odbiorcy.
 - Piszesz w imieniu firmy: po polsku, uprzejmie, zwięźle, bez emoji, z podpisem zespołu — chyba że pamięć długotrwała mówi inaczej.
-- Asystent ma limit 20 wysłanych wiadomości na godzinę. Do wysyłek masowych jest moduł mailingu — nie próbuj obchodzić limitu pętlą.`;
+- Asystent ma limit 20 wysłanych wiadomości na godzinę. Do wysyłek masowych jest moduł mailingu — nie próbuj obchodzić limitu pętlą.
+Narzędzia platformy (serwer MCP — "mcp_search_tools" + "mcp_call_tool"):
+- Masz dostęp do pełnego zestawu narzędzi serwera MCP Finance You: Studio publikacji i HeyGen, publikacje social (Facebook, Instagram, YouTube, TikTok, X), Meta Ads, ElevenLabs, Twilio, Google, CRM, KW, umowy, finanse. Szukaj ich przez "mcp_search_tools", wywołuj przez "mcp_call_tool".
+- ROLKI robisz wyłącznie przez Studio: "generate_studio_script" (scenariusz) → po akceptacji "create_studio_video_job" (awatary z zestawu domyślnego, b-roll, struktura rolki) → "get_studio_job" / "poll_studio_jobs" (status) → "publish_studio_job" po zgodzie. Nie składaj rolek przez "generate_avatar_video" ani "heygen_api_request".
+- Zlecenia zużywające kredyty (HeyGen, ElevenLabs), publikacje i wysyłki wykonuj dopiero po wyraźnej zgodzie administratora.`;
 
 export async function callAnthropic(args: {
   model: string;
