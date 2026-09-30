@@ -30,9 +30,31 @@ const searchSchema = z.object({
 async function loadInvestorProducts(): Promise<AccessProduct[]> {
   try {
     return await listAccessProducts({ data: { audience: "investor" } });
-  } catch {
+  } catch (e) {
+    console.error("[abonament-inwestora] listAccessProducts failed", e);
     return [];
   }
+}
+
+// Awaryjny produkt, gdy katalog nie odpowiedział — tylko do wyświetlenia
+// formularza. Płatność gościa wysyła wyłącznie okres, a cenę i liczbę dni
+// serwer bierze z access_products (createGuestInvestorCheckout).
+function fallbackProduct(period: BillingPeriod): AccessProduct {
+  const o = SUBSCRIPTION_OPTIONS[period];
+  return {
+    id: o.productCode,
+    code: o.productCode,
+    audience: "investor",
+    label: `Abonament inwestora — ${o.days} dni`,
+    duration_days: o.days,
+    amount_grosz: o.pricePln * 100,
+    currency: "PLN",
+    active: true,
+    sort_order: 0,
+    kind: "access",
+    tier: "podstawowy",
+    success_fee_bps: 0,
+  };
 }
 
 export const Route = createFileRoute("/abonament-inwestora")({
@@ -57,9 +79,10 @@ function InvestorCheckoutPage() {
   const { products } = Route.useLoaderData();
   const navigate = useNavigate({ from: "/abonament-inwestora" });
   const [period, setPeriod] = useState<BillingPeriod>(search.okres ?? "rocznie");
-  const product = (products as AccessProduct[]).find(
-    (p) => p.code === SUBSCRIPTION_OPTIONS[period].productCode,
-  );
+  const product =
+    (products as AccessProduct[]).find(
+      (p) => p.code === SUBSCRIPTION_OPTIONS[period].productCode,
+    ) ?? fallbackProduct(period);
   const returned = Boolean(search.tpay && search.payment);
 
   const changePeriod = (p: BillingPeriod) => {
@@ -126,16 +149,11 @@ function InvestorCheckoutPage() {
           <CardContent className="space-y-6 p-6 md:p-8">
             {returned ? (
               <GuestReturnStatus paymentId={search.payment!} tpayParam={search.tpay!} />
-            ) : product ? (
+            ) : (
               <>
                 <p className="text-xs text-muted-foreground">{SUBSCRIPTION_PAYMENT_SENTENCE}</p>
                 <TpayAccessCheckoutForm key={product.code} product={product} guestPeriod={period} />
               </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Płatności są chwilowo niedostępne. Odśwież stronę za chwilę albo napisz na
-                kontakt@financeyou.pl.
-              </p>
             )}
             <p className="text-center text-sm text-muted-foreground">
               Masz już konto?{" "}
