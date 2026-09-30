@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, ExternalLink, Search } from "lucide-react";
 import { toast } from "sonner";
 import { createAccessCheckout } from "@/lib/access/checkout.functions";
+import { FUNDACJA, REGULAMIN_ABONAMENTU_PATH } from "@/lib/legal/regulamin-abonamentu";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import {
   formatGroszPln,
@@ -42,6 +43,9 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [digitalConsent, setDigitalConsent] = useState(false);
+  // Inwestor płaci na podstawie Regulaminu Abonamentu Inwestora (sprzedawca:
+  // Fundacja); umowy o dostęp do Klientów akceptuje później w panelu.
+  const isInvestor = product.audience === "investor";
 
   const fetchFromGus = async () => {
     const nip = buyerNip.replace(/[\s-]/g, "");
@@ -280,9 +284,23 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
           />
           <span>
             Akceptuję{" "}
-            <a href="/regulamin" target="_blank" rel="noreferrer" className="underline">
-              regulamin Finance You
-            </a>{" "}
+            {isInvestor ? (
+              <>
+                <a
+                  href={REGULAMIN_ABONAMENTU_PATH}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                >
+                  Regulamin abonamentu inwestora
+                </a>{" "}
+                (sprzedawca: {FUNDACJA.nazwa})
+              </>
+            ) : (
+              <a href="/regulamin" target="_blank" rel="noreferrer" className="underline">
+                regulamin Finance You
+              </a>
+            )}{" "}
             *
           </span>
         </label>
@@ -313,6 +331,13 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
           </span>
         </label>
       </div>
+
+      {isInvestor && (
+        <p className="text-xs text-muted-foreground">
+          Umowę ramową, NDA i umowę RODO zaakceptujesz w panelu, gdy zechcesz dostępu do Klientów i
+          Projektów — Finance You nie pobiera za nie wynagrodzenia.
+        </p>
+      )}
 
       <Button onClick={handlePay} disabled={loading} className="w-full" size="lg">
         {loading ? (

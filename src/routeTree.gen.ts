@@ -14,6 +14,7 @@ import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
 import { Route as WyborPaneluRouteImport } from './routes/wybor-panelu'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
+import { Route as RegulaminInwestoraRouteImport } from './routes/regulamin-inwestora'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as RaportLokalizacjeRouteImport } from './routes/raport-lokalizacje'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
@@ -304,6 +305,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const RejestracjaRoute = RejestracjaRouteImport.update({
   id: '/rejestracja',
   path: '/rejestracja',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegulaminInwestoraRoute = RegulaminInwestoraRouteImport.update({
+  id: '/regulamin-inwestora',
+  path: '/regulamin-inwestora',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegulaminRoute = RegulaminRouteImport.update({
@@ -1733,6 +1739,7 @@ export interface FileRoutesByFullPath {
   '/posrednik': typeof PosrednikRouteWithChildren
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
+  '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-panelu': typeof WyborPaneluRoute
@@ -2001,6 +2008,7 @@ export interface FileRoutesByTo {
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
+  '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-panelu': typeof WyborPaneluRoute
@@ -2270,6 +2278,7 @@ export interface FileRoutesById {
   '/posrednik': typeof PosrednikRouteWithChildren
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
+  '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-panelu': typeof WyborPaneluRoute
@@ -2545,6 +2554,7 @@ export interface FileRouteTypes {
     | '/posrednik'
     | '/raport-lokalizacje'
     | '/regulamin'
+    | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wybor-panelu'
@@ -2813,6 +2823,7 @@ export interface FileRouteTypes {
     | '/polityka-prywatnosci'
     | '/raport-lokalizacje'
     | '/regulamin'
+    | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wybor-panelu'
@@ -3081,6 +3092,7 @@ export interface FileRouteTypes {
     | '/posrednik'
     | '/raport-lokalizacje'
     | '/regulamin'
+    | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wybor-panelu'
@@ -3355,6 +3367,7 @@ export interface RootRouteChildren {
   PosrednikRoute: typeof PosrednikRouteWithChildren
   RaportLokalizacjeRoute: typeof RaportLokalizacjeRoute
   RegulaminRoute: typeof RegulaminRoute
+  RegulaminInwestoraRoute: typeof RegulaminInwestoraRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WyborPaneluRoute: typeof WyborPaneluRoute
@@ -3492,6 +3505,13 @@ declare module '@tanstack/react-router' {
       path: '/regulamin'
       fullPath: '/regulamin'
       preLoaderRoute: typeof RegulaminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/regulamin-inwestora': {
+      id: '/regulamin-inwestora'
+      path: '/regulamin-inwestora'
+      fullPath: '/regulamin-inwestora'
+      preLoaderRoute: typeof RegulaminInwestoraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/raport-lokalizacje': {
@@ -5816,6 +5836,7 @@ const rootRouteChildren: RootRouteChildren = {
   PosrednikRoute: PosrednikRouteWithChildren,
   RaportLokalizacjeRoute: RaportLokalizacjeRoute,
   RegulaminRoute: RegulaminRoute,
+  RegulaminInwestoraRoute: RegulaminInwestoraRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WyborPaneluRoute: WyborPaneluRoute,

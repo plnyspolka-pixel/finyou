@@ -16,10 +16,12 @@ odnowień, punktów i opłat za pojedynczą ofertę/lead.
 **Inwestor — abonament 1 500 zł / mies. albo 7 000 zł / rok (61 % rabatu
 przy płatności rocznej)**, opublikowany od 30 września 2026 r.
 (`docs/cennik-inwestora.md`, ceny w `src/lib/investor-plan/plans.ts`,
-podstawa: Umowa ramowa v7 § 7). Katalog: migracja
+podstawa: Regulamin Abonamentu Inwestora akceptowany przy płatności;
+sprzedawca i wystawca faktur: Fundacja Krzewienia Edukacji Finansowej
+im. Pieczaka, bez VAT). Katalog: migracja
 `20260930140000_abonament_inwestora.sql`. `createAccessCheckout` przyjmuje
-z kodów `investor_*` tylko abonament 30 / 365 dni i wymaga wcześniejszej
-akceptacji aktywnej Umowy ramowej.
+z kodów `investor_*` tylko abonament 30 / 365 dni; umów o dostęp do Klientów
+nie wymaga (akceptowane później, otwierają moduł ofert).
 
 Konto darmowe pośrednika (`broker_free`) nie jest produktem — wynika z roli
 `posrednik` / aktywnego rekordu `affiliate_partners` i nie wygasa.

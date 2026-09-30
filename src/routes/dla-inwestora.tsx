@@ -188,7 +188,7 @@ export const Route = createFileRoute("/dla-inwestora")({
 
 // Jeden dział korzyści — bez podziału na pakiety. Tytuł karty = co inwestor
 // zyskuje, opis = jak to dostaje. Inwestor płaci abonament (ceny w
-// lib/investor-plan/plans.ts); Prowizję Klientowską Finance You płaci klient.
+// lib/investor-plan/plans.ts); Prowizję od Pożyczkobiorcy płaci klient.
 // Fakty (rezerwacja, Karta Leada, raporty) muszą zgadzać się z FAQ_ALL niżej.
 // Kolejność: od kosztów i Zlecenia, przez weryfikację i umowy, po spłatę,
 // windykację i wiedzę.
@@ -472,7 +472,7 @@ const FAQ_ALL: FAQItem[] = [
   },
   {
     q: "Jak zacząć?",
-    a: "Zakładasz konto, przechodzisz zdalną weryfikację tożsamości, akceptujesz umowy, opłacasz abonament i składasz Zlecenie z kwotą i oczekiwanym zyskiem.",
+    a: "Zakładasz konto i opłacasz abonament — to otwiera panel. Żeby dostawać Projekty, przechodzisz zdalną weryfikację tożsamości, akceptujesz umowy z Finance You i składasz Zlecenie z kwotą i oczekiwanym zyskiem.",
   },
   {
     q: "Co jeśli klient nie płaci?",

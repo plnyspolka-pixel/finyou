@@ -1,26 +1,32 @@
 /**
  * Pakiet v7 w repozytorium odpowiada kodowi: pliki w docs/legal/paczka-inwestor-v7
- * i sekcja umowy v7 w migracji 20260930140000 (z lustrem drizzle 0023) są
+ * i sekcja pakietu w migracji 20260930190000 (z lustrem drizzle 0024) są
  * dokładnie tym, co generuje `buildPakietV7()` (po zmianie transformacji trzeba
- * uruchomić `npx tsx scripts/legal/build-pakiet-v7.ts`). Migracja 20260929155000
- * (pierwotne wgranie v7) jest wgrana na produkcji i się nie zmienia.
+ * uruchomić `npx tsx scripts/legal/build-pakiet-v7.ts`). Migracje 20260929155000
+ * (pierwotne wgranie v7) i 20260930140000 (drizzle 0023) są wgrane na produkcji
+ * i się nie zmieniają.
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tekstZDocx } from "@/lib/contract-engine/umowa-docx";
 import {
+  MIGRACJA_0023_SHA256,
+  PAKIET_SEKCJA_KONIEC,
+  PAKIET_SEKCJA_START,
+  V6_NDA_SHA256_PRZED_ZMIANA_NAZWY,
+  V7_UMOWA_SHA256_ABONAMENT,
   V7_UMOWA_SHA256_PRZED_ABONAMENTEM,
-  aktualizacjaUmowyV7Sql,
+  aktualizacjaPakietuV7Sql,
   buildPakietV7,
   sha256Hex,
-  wstawSekcjeV7,
+  wstawSekcje,
   type DokumentV7,
 } from "./build-v7";
 import { NEW_EMAIL, OLD_EMAIL, PACKAGE_ID_V7 } from "./pakiet-v7";
 
 const DIR = join(process.cwd(), "docs", "legal", "paczka-inwestor-v7");
-const MIG = "20260930140000_abonament_inwestora.sql";
+const MIG = "20260930190000_prowizja_od_pozyczkobiorcy.sql";
 
 let docs: DokumentV7[];
 const byCode = (c: DokumentV7["code"]) => docs.find((d) => d.code === c)!;
@@ -76,18 +82,38 @@ describe("pakiet v7 — pliki i skróty", () => {
     }
   });
 
-  it("migracja 20260930140000 zawiera aktualną treść v7 (sekcja z generatora), lustro drizzle identyczne", () => {
+  it("migracja 20260930190000 zawiera aktualną treść umowy v7 i NDA v6 (sekcja z generatora), lustro drizzle identyczne", () => {
     const sql = readFileSync(join(process.cwd(), "supabase", "migrations", MIG), "utf8");
-    expect(sql).toContain(aktualizacjaUmowyV7Sql(docs));
-    expect(wstawSekcjeV7(sql, docs)).toBe(sql);
+    expect(sql).toContain(aktualizacjaPakietuV7Sql(docs));
+    expect(
+      wstawSekcje(sql, PAKIET_SEKCJA_START, PAKIET_SEKCJA_KONIEC, aktualizacjaPakietuV7Sql(docs)),
+    ).toBe(sql);
     const drizzle = readFileSync(
-      join(process.cwd(), "drizzle", "migrations", "0023_abonament_inwestora.sql"),
+      join(process.cwd(), "drizzle", "migrations", "0024_prowizja_od_pozyczkobiorcy.sql"),
       "utf8",
     );
     expect(drizzle).toBe(sql);
-    expect(sql).toContain("allows_investor_fees = true");
     expect(sql).toContain(`set sha256 = '${byCode("umowa_ramowa").sha256}'`);
-    expect(byCode("umowa_ramowa").sha256).not.toBe(V7_UMOWA_SHA256_PRZED_ABONAMENTEM);
+    expect(sql).toContain(`set sha256 = '${byCode("nda").sha256}'`);
+    expect(sql).not.toContain(`set sha256 = '${byCode("rodo").sha256}'`);
+    expect(byCode("umowa_ramowa").sha256).not.toBe(V7_UMOWA_SHA256_ABONAMENT);
+    expect(byCode("nda").sha256).not.toBe(V6_NDA_SHA256_PRZED_ZMIANA_NAZWY);
+  });
+
+  it("migracja 20260930140000 / drizzle 0023 (wgrana na produkcji) pozostaje bez zmian", () => {
+    for (const f of [
+      join(process.cwd(), "supabase", "migrations", "20260930140000_abonament_inwestora.sql"),
+      join(process.cwd(), "drizzle", "migrations", "0023_abonament_inwestora.sql"),
+    ]) {
+      expect(sha256Hex(readFileSync(f))).toBe(MIGRACJA_0023_SHA256);
+    }
+  });
+
+  it("pakiet v7 nie zawiera starej nazwy prowizji (treść i .docx)", async () => {
+    for (const d of docs) {
+      expect(d.content_text).not.toMatch(/klientowsk/i);
+      expect(await tekstZDocx(d.docx)).not.toMatch(/klientowsk/i);
+    }
   });
 
   it("migracja 20260929155000 (pierwotne wgranie v7) pozostaje bez zmian", () => {

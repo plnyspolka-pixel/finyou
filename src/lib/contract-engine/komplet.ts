@@ -26,7 +26,7 @@ export const CZESCI_KOMPLETU = [
   "Załącznik nr 1 — Harmonogram spłat",
   "Załącznik nr 2 — Protokół z negocjacji indywidualnych",
   "Załącznik nr 3 — Tabela opłat windykacyjnych",
-  "Załącznik nr 4 — Dyspozycja wypłaty i klauzula Prowizji Klientowskiej Finance You (gdy umowa przewiduje prowizję FY potrącaną z wypłaty)",
+  "Załącznik nr 4 — Dyspozycja wypłaty i klauzula Prowizji od Pożyczkobiorcy (gdy umowa przewiduje prowizję FY potrącaną z wypłaty)",
 ] as const;
 
 /** Slug rejestru generated_documents dla dokumentów z silnika. */

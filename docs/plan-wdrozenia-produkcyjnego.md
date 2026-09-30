@@ -25,7 +25,7 @@ kodzie i checklistę wdrożeniową.
 > **Aktualizacja 2026-09-29:** obowiązującym projektem jest pakiet
 > **FY-LEGAL-2026-09-29** (umowa ramowa v7, NDA v6, RODO v5) — Inwestor płaci
 > wyłącznie Opłatę Abonamentową (1 500 zł / 30 dni albo 7 000 zł / 365 dni,
-> zmiana z 2026-09-30), Klient płaci Prowizję Klientowską 7% Kwoty
+> zmiana z 2026-09-30), Klient płaci Prowizję od Pożyczkobiorcy 7% Kwoty
 > Udzielonej (min. 5 000 zł, bez VAT, potrącana z wypłaty), kontakt
 > `kontakt@financeyou.pl`. Pliki i skróty SHA-256:
 > `docs/legal/paczka-inwestor-v7/`. Pakiet jest aktywny od wdrożenia
@@ -126,7 +126,7 @@ punktów 1–7 poniżej — wszystkie pokryte:
    każde z datą i wersją dokumentów.
 4. **Karta Transferu Danych** (Moduł RODO) zatwierdzana per Projekt przed
    Ujawnieniem; **Załącznik nr 6** (dyspozycja Klienta + klauzula
-   prowizyjna) przy wypłacie — Prowizja Klientowska 7 % / min 5000 zł na
+   prowizyjna) przy wypłacie — Prowizja od Pożyczkobiorcy 7 % / min 5000 zł na
    rachunek Finance You najpóźniej z pierwszą wypłatą.
 5. **Internetowa funkcja odstąpienia** dla Konsumenta (wzór — Załącznik
    nr 4) + obsługa 14-dniowego biegu terminu per Zlecenie.

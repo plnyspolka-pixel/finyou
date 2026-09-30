@@ -190,7 +190,7 @@ describe("limity cyklu z project_module_settings", () => {
     expect(l.maxPeriodMonths).toBe(60);
   });
 
-  it("prowizja klientowska z jednego źródła (fees.ts)", () => {
+  it("prowizja od pożyczkobiorcy z jednego źródła (fees.ts)", () => {
     expect(clientProvisionPln(100_000)).toBe(fyCommission(100_000));
   });
 });

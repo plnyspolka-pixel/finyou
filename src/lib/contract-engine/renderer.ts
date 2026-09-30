@@ -422,11 +422,11 @@ function zalaczniki(d: any, f: Record<string, any>): { nr: number; tytul: string
   nr += 1;
   if (f.ma_prowizje_fy) {
     // Zał. 6 do Umowy ramowej Finance You — dyspozycja Pożyczkobiorcy
-    // (Prowizja Klientowska potrącana z wypłaty: część do FY, reszta do Klienta).
+    // (Prowizja od Pożyczkobiorcy potrącana z wypłaty: część do FY, reszta do Klienta).
     z.push({
       nr,
       tytul:
-        "Dyspozycja wypłaty i klauzula Prowizji Klientowskiej Finance You (Zał. nr 6 do Umowy ramowej Finance You)",
+        "Dyspozycja wypłaty i klauzula Prowizji od Pożyczkobiorcy (Zał. nr 6 do Umowy ramowej Finance You)",
     });
     nr += 1;
   }

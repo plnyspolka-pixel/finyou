@@ -169,6 +169,13 @@
       "when": 1790787116020,
       "tag": "0023_abonament_inwestora",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790794518987,
+      "tag": "0024_prowizja_od_pozyczkobiorcy",
+      "breakpoints": true
     }
   ]
 }

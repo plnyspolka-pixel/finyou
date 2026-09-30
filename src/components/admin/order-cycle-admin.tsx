@@ -155,7 +155,7 @@ function MatchesCard({ data, onDone }: { data: any; onDone: () => void }) {
     mutationFn: (input: { matchId: string; payoutAmountPln: number }) => zal6({ data: input }),
     onSuccess: (res: any) => {
       toast.success(
-        `Zał. 6 potwierdzony — Prowizja Klientowska ${Number(res.provisionAmountPln).toLocaleString("pl-PL")} zł`,
+        `Zał. 6 potwierdzony — Prowizja od Pożyczkobiorcy ${Number(res.provisionAmountPln).toLocaleString("pl-PL")} zł`,
       );
       onDone();
     },
