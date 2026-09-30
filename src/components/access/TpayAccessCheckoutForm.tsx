@@ -10,6 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, ExternalLink, Search } from "lucide-react";
 import { toast } from "sonner";
 import { createAccessCheckout } from "@/lib/access/checkout.functions";
+import { createGuestInvestorCheckout } from "@/lib/access/guest-checkout.functions";
+import type { BillingPeriod } from "@/lib/investor-plan/plans";
 import { FUNDACJA, REGULAMIN_ABONAMENTU_PATH } from "@/lib/legal/regulamin-abonamentu";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import {
@@ -24,10 +26,14 @@ interface Props {
   product: AccessProduct;
   /** Wymagane dla produktu „unlock" — okazja, którą odblokowuje ta płatność. */
   matchId?: string;
+  /** Zakup abonamentu inwestora BEZ konta (strona publiczna) — konto zakłada
+   *  webhook Tpay po wpłacie, z danych tego formularza. */
+  guestPeriod?: BillingPeriod;
 }
 
-export function TpayAccessCheckoutForm({ product, matchId }: Props) {
+export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props) {
   const checkoutFn = useServerFn(createAccessCheckout);
+  const guestCheckoutFn = useServerFn(createGuestInvestorCheckout);
   const gusFn = useServerFn(gusCompanyLookup);
 
   const [loading, setLoading] = useState(false);
@@ -96,26 +102,25 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
 
     setLoading(true);
     try {
-      const res = await checkoutFn({
-        data: {
-          productCode: product.code,
-          matchId,
-          buyerType,
-          buyerName: buyerName.trim(),
-          buyerEmail: buyerEmail.trim(),
-          buyerNip: buyerType === "company" ? buyerNip.trim() : undefined,
-          buyerStreet: buyerStreet.trim(),
-          buyerPostalCode: buyerPostalCode.trim(),
-          buyerCity: buyerCity.trim(),
-          buyerCountry,
-          consents: { terms: true, privacy: true, digitalService: digitalConsent },
-        },
-      });
-      if ("error" in res && res.error) {
+      const buyer = {
+        buyerType,
+        buyerName: buyerName.trim(),
+        buyerEmail: buyerEmail.trim(),
+        buyerNip: buyerType === "company" ? buyerNip.trim() : undefined,
+        buyerStreet: buyerStreet.trim(),
+        buyerPostalCode: buyerPostalCode.trim(),
+        buyerCity: buyerCity.trim(),
+        buyerCountry,
+        consents: { terms: true as const, privacy: true as const, digitalService: digitalConsent },
+      };
+      const res: { error?: string; paymentUrl?: string } = guestPeriod
+        ? await guestCheckoutFn({ data: { ...buyer, period: guestPeriod } })
+        : await checkoutFn({ data: { ...buyer, productCode: product.code, matchId } });
+      if (res.error) {
         toast.error(res.error);
         return;
       }
-      if ("paymentUrl" in res && res.paymentUrl) {
+      if (res.paymentUrl) {
         window.location.href = res.paymentUrl;
         return;
       }
@@ -207,7 +212,9 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
               />
             </div>
             <div className="sm:col-span-2">
-              <Label htmlFor="b-email">E-mail do faktury *</Label>
+              <Label htmlFor="b-email">
+                {guestPeriod ? "E-mail (login do konta i faktura) *" : "E-mail do faktury *"}
+              </Label>
               <Input
                 id="b-email"
                 type="email"
@@ -229,7 +236,9 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
               />
             </div>
             <div>
-              <Label htmlFor="p-email">E-mail *</Label>
+              <Label htmlFor="p-email">
+                {guestPeriod ? "E-mail (login do konta) *" : "E-mail *"}
+              </Label>
               <Input
                 id="p-email"
                 type="email"
@@ -331,6 +340,13 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
           </span>
         </label>
       </div>
+
+      {guestPeriod && (
+        <p className="text-xs text-muted-foreground">
+          Po zaksięgowaniu płatności automatycznie założymy Twoje konto inwestora na podstawie
+          powyższych danych i wyślemy na podany e-mail link do logowania.
+        </p>
+      )}
 
       {isInvestor && (
         <p className="text-xs text-muted-foreground">

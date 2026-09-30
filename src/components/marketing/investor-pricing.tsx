@@ -15,12 +15,14 @@ import { FUNDACJA, REGULAMIN_ABONAMENTU_PATH } from "@/lib/legal/regulamin-abona
 import { MktButton } from "./primitives";
 import { BrandIcon } from "./brand-icon";
 
-const JOIN = "/rejestracja?role=inwestor";
+// Przycisk prowadzi do płatności Tpay; konto inwestora powstaje z danych
+// płatności po jej zaksięgowaniu (lib/access/guest-checkout.functions.ts).
+const CHECKOUT = "/abonament-inwestora";
 const PERIODS: BillingPeriod[] = ["miesiecznie", "rocznie"];
 
 // Suwak okresu: pigułka z przesuwanym „kciukiem". Semantyka radiogroup —
 // strzałki w lewo/prawo przełączają okres jak w natywnych radio.
-function PeriodSlider({
+export function PeriodSlider({
   value,
   onChange,
 }: {
@@ -241,7 +243,11 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
             </a>
             .
           </p>
-          <MktButton variant="cta" href={JOIN} style={{ width: "100%", marginTop: "1rem" }}>
+          <MktButton
+            variant="cta"
+            href={`${CHECKOUT}?okres=${period}`}
+            style={{ width: "100%", marginTop: "1rem" }}
+          >
             Załóż konto inwestora
           </MktButton>
         </div>

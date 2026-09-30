@@ -47,7 +47,7 @@ export async function runPaidPostProcessing(
   const { data: payment } = await db
     .from("access_payments")
     .select(
-      "id,user_id,audience,buyer_email,buyer_type,paid_amount_grosz,expected_amount_grosz,granted_until,product_id",
+      "id,user_id,audience,buyer_email,buyer_type,paid_amount_grosz,expected_amount_grosz,granted_until,product_id,consents",
     )
     .eq("id", paymentId)
     .maybeSingle();
@@ -62,8 +62,24 @@ export async function runPaidPostProcessing(
   const productKind = product?.kind === "unlock" ? ("unlock" as const) : ("access" as const);
   const amountGrosz = Number(payment.paid_amount_grosz ?? payment.expected_amount_grosz);
 
-  // 1) Potwierdzenie płatności e-mailem.
-  if (payment.buyer_email && !opts.skipConfirmationEmail) {
+  // 1) Potwierdzenie płatności e-mailem. Zakup bez konta dostaje zamiast
+  //    niego powitanie z założonym kontem i linkiem do logowania.
+  const isGuestCheckout = Boolean(
+    (payment.consents as { guestCheckout?: boolean } | null)?.guestCheckout,
+  );
+  if (payment.buyer_email && !opts.skipConfirmationEmail && isGuestCheckout) {
+    try {
+      const { sendGuestInvestorWelcomeEmail } = await import("./emails.server");
+      await sendGuestInvestorWelcomeEmail({
+        to: payment.buyer_email,
+        productLabel,
+        amountGrosz,
+        grantedUntil: payment.granted_until,
+      });
+    } catch (e) {
+      console.error("[tpay-webhook] welcome email failed", (e as Error).message);
+    }
+  } else if (payment.buyer_email && !opts.skipConfirmationEmail) {
     try {
       const { sendPaymentConfirmedEmail } = await import("./emails.server");
       await sendPaymentConfirmedEmail({
@@ -134,7 +150,7 @@ async function handleAccessPayment(
 ): Promise<void> {
   const { data: payment } = await db
     .from("access_payments")
-    .select("id,status,processed_at")
+    .select("id,status,processed_at,user_id")
     .eq("id", paymentId)
     .maybeSingle();
   if (!payment) {
@@ -143,6 +159,24 @@ async function handleAccessPayment(
   }
 
   if (tx.status === "correct") {
+    // Zakup bez konta (/abonament-inwestora): konto inwestora zakładamy
+    // z danych nabywcy dopiero teraz — po potwierdzonej wpłacie, przed
+    // przyznaniem dostępu. Błąd → FALSE/500, Tpay ponowi powiadomienie.
+    if (!payment.user_id) {
+      try {
+        const { ensureInvestorAccountForPayment } = await import("./guest-investor.server");
+        await ensureInvestorAccountForPayment(paymentId);
+      } catch (e) {
+        await logWebhook({
+          transactionId: tx.transactionId,
+          paymentId,
+          payload,
+          result: "guest_account_error",
+          error: (e as Error).message,
+        });
+        throw e;
+      }
+    }
     const paidGrosz = plnToGrosz(tx.amount);
     const { data: result, error } = await db.rpc("process_access_payment_paid", {
       _payment_id: paymentId,

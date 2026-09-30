@@ -42,6 +42,42 @@ Zespół Finance You`;
   await sendResendEmail({ to: opts.to, subject, text, category: "transactional" });
 }
 
+/** Zakup abonamentu bez konta: konto inwestora założone z danych płatności. */
+export async function sendGuestInvestorWelcomeEmail(opts: {
+  to: string;
+  productLabel: string;
+  amountGrosz: number;
+  grantedUntil: string | Date;
+}): Promise<void> {
+  const base = resolveAppBaseUrl();
+  const until = formatWarsawDate(opts.grantedUntil, true);
+  const { investorLoginLink } = await import("./guest-investor.server");
+  const link = await investorLoginLink(opts.to, `${base}/inwestor`);
+  const subject = "Twoje konto inwestora jest gotowe | Finance You";
+  const text = `Dzień dobry,
+
+potwierdzamy zaksięgowanie płatności ${formatGroszPln(opts.amountGrosz)} — ${opts.productLabel}.
+
+Na podstawie danych podanych przy płatności założyliśmy Twoje konto inwestora w Finance You. Abonament jest aktywny do: ${until} (czas polski).
+
+${
+  link
+    ? `Zaloguj się jednym kliknięciem (link jednorazowy, ważny ok. 1 godziny):
+${link}
+
+Później zalogujesz się na ${base}/logowanie — podając ten adres e-mail otrzymasz nowy link do logowania.`
+    : `Zaloguj się na ${base}/logowanie — podaj ten adres e-mail, a wyślemy Ci link do logowania.`
+}
+
+W panelu uzupełnisz profil inwestora, a gdy zechcesz dostępu do Klientów i Projektów — zaakceptujesz Umowę ramową, NDA i umowę RODO.
+
+Fakturę wyślemy osobnym e-mailem i znajdziesz ją w zakładce „Płatności i faktury".
+
+Pozdrawiamy,
+Zespół Finance You`;
+  await sendResendEmail({ to: opts.to, subject, text, category: "transactional" });
+}
+
 export async function sendInvoiceIssuedEmail(opts: {
   to: string;
   invoiceNumber: string | null;
