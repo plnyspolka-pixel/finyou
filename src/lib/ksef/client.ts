@@ -101,30 +101,27 @@ export async function ksefSubmitInvoice(entity: KsefEntity, faXml: string): Prom
   }
 }
 
-// ---------------------------------------------------------------------
-// Realne wysyłanie faktury w KSeF 2.0 (szkielet). Sesję otwieramy przez
-// nowy openKsefSession (Bearer accessToken). Endpoint POST /api/v2/invoices/send
-// wymaga jeszcze zaszyfrowanego symetrycznie payloadu (klucz z certyfikatu
-// SymmetricKeyEncryption). Zamiast wysyłać niepoprawnie, zwracamy 'pending'
-// z jasnym komunikatem — flow księgowy zapisuje fakturę i można ją potem wypchnąć
-// ręcznie, kiedy wdrożymy pełne szyfrowanie payloadu.
+// Realne wysłanie faktury w KSeF 2.0 (sesja online, szyfrowanie AES-256-CBC).
 async function ksefRealSubmit(
   _base: string,
   entity: KsefEntity,
   _token: string,
-  _faXml: string,
+  faXml: string,
   _hash: string,
 ): Promise<KsefResult> {
   const { openKsefSession, closeKsefSession } = await import("./session");
+  const { ksefSendInvoice } = await import("./send");
+  const session = await openKsefSession(entity);
   try {
-    const session = await openKsefSession(entity);
-    await closeKsefSession(session);
+    const r = await ksefSendInvoice(session, faXml);
     return {
-      status: "pending",
-      message:
-        "KSeF 2.0: autoryzacja OK, ale wysyłka faktur wymaga jeszcze szyfrowania payloadu SymmetricKeyEncryption. Faktura oczekuje na wysłanie.",
+      status: r.status,
+      referenceNumber: r.ksefNumber ?? r.sessionReference,
+      elementReference: r.invoiceReference,
+      upoXml: null,
+      message: r.message ?? null,
     };
-  } catch (e) {
-    return { status: "error", message: `KSeF 2.0 auth: ${(e as Error).message}` };
+  } finally {
+    await closeKsefSession(session);
   }
 }

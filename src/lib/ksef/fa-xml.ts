@@ -118,10 +118,10 @@ export function buildFaXml(invoice: FaInvoice, seller: FaEntity): string {
   const today = invoice.issue_date;
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<Faktura xmlns="http://crd.gov.pl/wzor/2023/06/29/12648/">',
+    '<Faktura xmlns="http://crd.gov.pl/wzor/2025/06/25/13775/">',
     "  <Naglowek>",
-    '    <KodFormularza kodSystemowy="FA (2)" wersjaSchemy="1-0E">FA</KodFormularza>',
-    "    <WariantFormularza>2</WariantFormularza>",
+    '    <KodFormularza kodSystemowy="FA (3)" wersjaSchemy="1-0E">FA</KodFormularza>',
+    "    <WariantFormularza>3</WariantFormularza>",
     `    <DataWytworzeniaFa>${esc(today)}T00:00:00Z</DataWytworzeniaFa>`,
     "  </Naglowek>",
     "  <Podmiot1>",
