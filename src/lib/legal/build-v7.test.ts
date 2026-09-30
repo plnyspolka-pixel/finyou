@@ -1,18 +1,26 @@
 /**
- * Pakiet v7 w repozytorium odpowiada kodowi: pliki w docs/legal/paczka-inwestor-v7,
- * migracja SQL i jej lustro drizzle są dokładnie tym, co generuje
- * `buildPakietV7()` (po zmianie transformacji trzeba uruchomić
- * `npx tsx scripts/legal/build-pakiet-v7.ts`).
+ * Pakiet v7 w repozytorium odpowiada kodowi: pliki w docs/legal/paczka-inwestor-v7
+ * i sekcja umowy v7 w migracji 20260930140000 (z lustrem drizzle 0023) są
+ * dokładnie tym, co generuje `buildPakietV7()` (po zmianie transformacji trzeba
+ * uruchomić `npx tsx scripts/legal/build-pakiet-v7.ts`). Migracja 20260929155000
+ * (pierwotne wgranie v7) jest wgrana na produkcji i się nie zmienia.
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tekstZDocx } from "@/lib/contract-engine/umowa-docx";
-import { buildPakietV7, migracjaSqlV7, sha256Hex, type DokumentV7 } from "./build-v7";
+import {
+  V7_UMOWA_SHA256_PRZED_ABONAMENTEM,
+  aktualizacjaUmowyV7Sql,
+  buildPakietV7,
+  sha256Hex,
+  wstawSekcjeV7,
+  type DokumentV7,
+} from "./build-v7";
 import { NEW_EMAIL, OLD_EMAIL, PACKAGE_ID_V7 } from "./pakiet-v7";
 
 const DIR = join(process.cwd(), "docs", "legal", "paczka-inwestor-v7");
-const MIG = "20260929155000_etap5_pakiet_inwestor_v7.sql";
+const MIG = "20260930140000_abonament_inwestora.sql";
 
 let docs: DokumentV7[];
 const byCode = (c: DokumentV7["code"]) => docs.find((d) => d.code === c)!;
@@ -68,18 +76,27 @@ describe("pakiet v7 — pliki i skróty", () => {
     }
   });
 
-  it("migracja SQL = wynik generatora, lustro drizzle identyczne, pakiet aktywny", () => {
+  it("migracja 20260930140000 zawiera aktualną treść v7 (sekcja z generatora), lustro drizzle identyczne", () => {
     const sql = readFileSync(join(process.cwd(), "supabase", "migrations", MIG), "utf8");
-    expect(sql).toBe(migracjaSqlV7(docs));
+    expect(sql).toContain(aktualizacjaUmowyV7Sql(docs));
+    expect(wstawSekcjeV7(sql, docs)).toBe(sql);
     const drizzle = readFileSync(
-      join(process.cwd(), "drizzle", "migrations", "0016_etap5_pakiet_inwestor_v7.sql"),
+      join(process.cwd(), "drizzle", "migrations", "0023_abonament_inwestora.sql"),
       "utf8",
     );
     expect(drizzle).toBe(sql);
-    expect(sql.match(/active = true,/g)).toHaveLength(3);
-    expect(sql).not.toMatch(/active = false/);
-    // Opłata od Inwestora (abonament) dopuszczona tylko w umowie ramowej.
-    expect(sql.match(/\n {2}true,\n {2}true\n\)/g)).toHaveLength(1);
-    expect(sql.match(/\n {2}false,\n {2}true\n\)/g)).toHaveLength(2);
+    expect(sql).toContain("allows_investor_fees = true");
+    expect(sql).toContain(`set sha256 = '${byCode("umowa_ramowa").sha256}'`);
+    expect(byCode("umowa_ramowa").sha256).not.toBe(V7_UMOWA_SHA256_PRZED_ABONAMENTEM);
+  });
+
+  it("migracja 20260929155000 (pierwotne wgranie v7) pozostaje bez zmian", () => {
+    const sql = readFileSync(
+      join(process.cwd(), "supabase", "migrations", "20260929155000_etap5_pakiet_inwestor_v7.sql"),
+      "utf8",
+    );
+    expect(sql).toContain(
+      `-- umowa_ramowa v7: content sha256 ${V7_UMOWA_SHA256_PRZED_ABONAMENTEM}`,
+    );
   });
 });

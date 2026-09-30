@@ -17,7 +17,7 @@ odnowień, punktów i opłat za pojedynczą ofertę/lead.
 przy płatności rocznej)**, opublikowany od 30 września 2026 r.
 (`docs/cennik-inwestora.md`, ceny w `src/lib/investor-plan/plans.ts`,
 podstawa: Umowa ramowa v7 § 7). Katalog: migracja
-`20260930120000_abonament_inwestora.sql`. `createAccessCheckout` przyjmuje
+`20260930140000_abonament_inwestora.sql`. `createAccessCheckout` przyjmuje
 z kodów `investor_*` tylko abonament 30 / 365 dni i wymaga wcześniejszej
 akceptacji aktywnej Umowy ramowej.
 

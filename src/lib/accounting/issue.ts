@@ -88,6 +88,7 @@ export async function issueSalesInvoice(
         net_amount: Number(inv.net_amount),
         vat_amount: Number(inv.vat_amount),
         gross_amount: Number(inv.gross_amount),
+        vat_exemption_basis: ent.vat_exemption_basis ?? null,
       },
       {
         legal_name: ent.legal_name,

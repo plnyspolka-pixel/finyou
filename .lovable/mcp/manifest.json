@@ -735,7 +735,7 @@
       {
         "name": "calculate_loan_installment",
         "title": "Calculate loan installment",
-        "description": "Kalkulator raty równej pożyczki Finance You. Zwraca miesięczną ratę i całkowity koszt na podstawie kwoty, okresu i oprocentowania.",
+        "description": "Kalkulator raty pożyczki Finance You (jeden silnik): Kwota Udzielona, prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT — potrącana z wypłaty), kwota na rękę, rata, balon, do spłaty i koszt całkowity. Oprocentowanie nie może przekraczać odsetek maksymalnych (art. 359 § 2¹ KC).",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -747,7 +747,7 @@
             "amount": {
               "type": "number",
               "exclusiveMinimum": 0,
-              "description": "Kwota pożyczki w PLN"
+              "description": "Kwota Udzielona (kwota pożyczki z umowy) w PLN"
             },
             "period_months": {
               "type": "integer",
@@ -759,6 +759,16 @@
               "minimum": 0,
               "maximum": 100,
               "description": "Roczne oprocentowanie w %"
+            },
+            "max_payment": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Pułap raty miesięcznej; brak = pełna amortyzacja (rata annuitetowa)."
+            },
+            "investor_commission_pln": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Stała prowizja inwestora w PLN (w ratach)."
             }
           },
           "required": [
@@ -2439,7 +2449,7 @@
       {
         "name": "generate_contract_docx",
         "title": "Generate loan contract document set (.docx)",
-        "description": "Generuje z silnika klauzul JEDEN plik .docx z kompletem dokumentów pożyczki, w kolejności: (1) Wniosek o udzielenie pożyczki pieniężnej (dane, charakter niekonsumencki, warunki, oświadczenia AML, PEP, ocena AML dla pożyczkodawcy, odpowiedzialność karna), (2) Umowa pożyczki (§ z biblioteki klauzul: przedmiot, kwota/prowizja/wypłata, zabezpieczenia, windykacja, oświadczenia z RODO, postanowienia ogólne, wypowiedzenie), (3) Załącznik nr 1 — Harmonogram spłat (tabela rat: nr, termin, rata, kapitał, odsetki, prowizja, saldo + sumy), (4) Załącznik nr 2 — Protokół z negocjacji indywidualnych, (5) Załącznik nr 3 — Tabela opłat windykacyjnych; pod każdą częścią blok podpisów. Dokument zawiera wyłącznie treść wiążącą. Zapisuje plik w Storage i trwały wpis w rejestrze wygenerowanych dokumentów (powiązany z `loan_application_id`, gdy podany) wraz z audytem (kto, kiedy, SHA-256 treści, wersja biblioteki klauzul); zwraca link do pobrania (ważny 1 h) oraz pełny tekst kompletu (`tekst` — do porównania bez pobierania pliku; później: `get_generated_document_text`). Przyjmuje te same źródła co `draft_contract`; przy błędach walidacji nie generuje pliku i zwraca braki. Wywołuj po akceptacji podglądu przez użytkownika.",
+        "description": "Generuje z silnika klauzul JEDEN plik .docx z kompletem dokumentów pożyczki, w kolejności: (1) Wniosek o udzielenie pożyczki pieniężnej (dane, charakter niekonsumencki, warunki, oświadczenia AML, PEP, ocena AML dla pożyczkodawcy, odpowiedzialność karna), (2) Umowa pożyczki (§ z biblioteki klauzul: przedmiot, kwota/prowizja/wypłata, zabezpieczenia, windykacja, oświadczenia z RODO, postanowienia ogólne, wypowiedzenie), (3) Załącznik nr 1 — Harmonogram spłat (tabela rat: nr, termin, rata, kapitał, odsetki, prowizja, saldo + sumy), (4) Załącznik nr 2 — Protokół z negocjacji indywidualnych, (5) Załącznik nr 3 — Tabela opłat windykacyjnych, (6) Załącznik nr 4 — Dyspozycja wypłaty i klauzula Prowizji Klientowskiej Finance You (Zał. 6 do Umowy ramowej: kwota udzielona / do Finance You / do Pożyczkobiorcy — gdy umowa przewiduje prowizję FY); pod każdą częścią blok podpisów. Dokument zawiera wyłącznie treść wiążącą. Zapisuje plik w Storage i trwały wpis w rejestrze wygenerowanych dokumentów (powiązany z `loan_application_id`, gdy podany) wraz z audytem (kto, kiedy, SHA-256 treści, wersja biblioteki klauzul); zwraca link do pobrania (ważny 1 h) oraz pełny tekst kompletu (`tekst` — do porównania bez pobierania pliku; później: `get_generated_document_text`). Przyjmuje te same źródła co `draft_contract`; przy błędach walidacji nie generuje pliku i zwraca braki. Wywołuj po akceptacji podglądu przez użytkownika.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -5170,7 +5180,7 @@
       {
         "name": "calculate_repayment_schedule",
         "title": "Calculate repayment schedule",
-        "description": "Harmonogram spłat pożyczki: raty równe (annuitetowe), malejące albo odsetkowe z balonem kapitału na końcu. Zwraca listę rat (kapitał, odsetki, saldo), sumę odsetek, koszt całkowity, opcjonalnie prowizję. Czysta matematyka, bez bazy.",
+        "description": "Harmonogram spłat pożyczki w modelu Finance You (jeden silnik): odsetki od kapitału pozostającego do spłaty, pułap raty steruje kapitałem, nadwyżka trafia do ostatniej raty (balon), stała prowizja inwestora rozłożona równo w ratach. Prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT) jest potrącana z wypłaty i nie wchodzi do rat. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity + listę rat. Oprocentowanie ponad odsetki maksymalne (art. 359 § 2¹ KC) jest blokowane. Czysta matematyka, bez bazy.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -5182,40 +5192,39 @@
             "amount": {
               "type": "number",
               "exclusiveMinimum": 0,
-              "description": "Kwota pożyczki w PLN."
+              "description": "Kwota Udzielona (kwota pożyczki z umowy) w PLN."
             },
             "period_months": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 360
+              "maximum": 120
             },
             "yearly_rate_pct": {
               "type": "number",
               "minimum": 0,
               "maximum": 100,
-              "description": "Roczne oprocentowanie w %."
+              "description": "Roczne oprocentowanie w % (≤ odsetki maksymalne, dziś 14,5)."
             },
-            "type": {
-              "type": "string",
-              "enum": [
-                "equal",
-                "decreasing",
-                "balloon"
-              ],
-              "default": "equal",
-              "description": "equal = raty równe, decreasing = malejące, balloon = same odsetki + kapitał na końcu."
+            "max_payment": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Pułap raty miesięcznej; brak = rata annuitetowa (pełna amortyzacja)."
             },
-            "commission_pct": {
+            "investor_commission_pln": {
               "type": "number",
               "minimum": 0,
-              "maximum": 30,
-              "description": "Prowizja w % kwoty (doliczana do kosztu)."
+              "description": "Stała prowizja inwestora w PLN (rozkładana równo w ratach)."
+            },
+            "include_fy_commission": {
+              "type": "boolean",
+              "default": true,
+              "description": "Czy doliczyć prowizję Finance You potrącaną z wypłaty (domyślnie tak)."
             },
             "max_rows": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 360,
-              "description": "Ile rat zwrócić w liście (domyślnie wszystkie, maks. 360)."
+              "maximum": 120,
+              "description": "Ile rat zwrócić w liście (domyślnie wszystkie)."
             }
           },
           "required": [
@@ -5231,7 +5240,7 @@
       {
         "name": "calculate_ltv",
         "title": "Calculate LTV",
-        "description": "LTV (loan-to-value) dla zabezpieczenia hipotecznego: kwota pożyczki (plus istniejące obciążenia) do wartości nieruchomości. Zwraca LTV w %, orientacyjny przedział i maksymalną kwotę przy zadanym limicie LTV. Czysta matematyka.",
+        "description": "LTV (loan-to-value) dla zabezpieczenia hipotecznego: kwota pożyczki (plus istniejące obciążenia) do wartości nieruchomości. Jeden limit w systemie: 60%. Zwraca LTV w %, czy mieści się w limicie i maksymalną kwotę przy limicie. Czysta matematyka.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -5259,9 +5268,9 @@
             "max_ltv_pct": {
               "type": "number",
               "minimum": 1,
-              "maximum": 100,
+              "maximum": 60,
               "default": 60,
-              "description": "Limit LTV do wyliczenia maks. kwoty (domyślnie 60%)."
+              "description": "Limit LTV do wyliczenia maks. kwoty (domyślnie i maksymalnie 60%)."
             }
           },
           "required": [
@@ -5701,7 +5710,7 @@
       {
         "name": "update_application",
         "title": "Update loan application",
-        "description": "Edycja wniosku: status (nowy_lead, w_trakcie_uzupelniania, braki_w_dokumentach, do_kontaktu, w_follow_upie, wniosek_kompletny, do_analizy, rokuje, nie_rokuje, wyslany_do_inwestorow, oferta_od_inwestora, oferta_przekazana_klientowi, zaakceptowany_przez_klienta, do_umowy i dalsze (patrz enum loan_status)), operator, decyzja administratora z uzasadnieniem, notatki, widoczność dla inwestorów, poziom anonimizacji, pauza automatyzacji / przypomnień, następny kontakt, ryzyko, kwota i okres, opis dla inwestorów. Zmiana statusu zapisuje się w historii i może wywołać standardowy e-mail statusowy do klienta (tak jak w panelu). Tylko administrator/operator.",
+        "description": "Edycja wniosku: status (nowy_lead, w_trakcie_uzupelniania, braki_w_dokumentach, do_kontaktu, w_follow_upie, wniosek_kompletny, do_analizy, rokuje, nie_rokuje, wyslany_do_inwestorow, oferta_od_inwestora, oferta_przekazana_klientowi, zaakceptowany_przez_klienta, do_umowy i dalsze (patrz enum loan_status); statusy odrzucające nie_rokuje/wniosek_odrzucony NIE są nadawane przez narzędzie — trafiają do suggested_status jako propozycja do zatwierdzenia przez operatora), operator, decyzja administratora z uzasadnieniem, notatki, widoczność dla inwestorów, poziom anonimizacji, pauza automatyzacji / przypomnień, następny kontakt, ryzyko, kwota i okres, opis dla inwestorów. Zmiana statusu zapisuje się w historii i może wywołać standardowy e-mail statusowy do klienta (tak jak w panelu). Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -5987,7 +5996,7 @@
       {
         "name": "create_loan_proposal",
         "title": "Create loan proposal (kreator)",
-        "description": "Tworzy propozycję pożyczki z kreatora: liczy ratę nominalną (annuitet), ratę ograniczoną do maks. raty klienta (reszta kapitału jako balon na końcu), odsetki, prowizję i koszt całkowity, zapisuje harmonogram jako szkic. Tylko administrator/operator.",
+        "description": "Tworzy propozycję pożyczki z kreatora w JEDNYM modelu matematycznym (silnik Finance You): odsetki od salda, pułap raty steruje kapitałem (reszta w ostatniej racie — balon), stała prowizja inwestora w ratach, Prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT) potrącana z wypłaty. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity. Oprocentowanie ponad odsetki maksymalne jest blokowane. Zapisuje harmonogram jako szkic. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -5999,18 +6008,19 @@
           "properties": {
             "amount": {
               "type": "number",
-              "exclusiveMinimum": 0
+              "exclusiveMinimum": 0,
+              "description": "Kwota Udzielona (kwota pożyczki z umowy) w PLN."
             },
             "months": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 360
+              "maximum": 120
             },
             "annual_rate": {
               "type": "number",
               "minimum": 0,
               "maximum": 100,
-              "description": "Roczne oprocentowanie w %."
+              "description": "Roczne oprocentowanie w % (≤ odsetki maksymalne)."
             },
             "max_payment": {
               "type": "number",
@@ -6021,7 +6031,8 @@
               "type": "number",
               "minimum": 0,
               "maximum": 30,
-              "default": 0
+              "default": 0,
+              "description": "Prowizja INWESTORA w % kwoty (stała kwota rozłożona w ratach)."
             },
             "client_name": {
               "type": "string",
@@ -6045,7 +6056,8 @@
             },
             "is_public": {
               "type": "boolean",
-              "default": false
+              "default": false,
+              "description": "Widoczna dla zalogowanych inwestorów (nigdy publicznie bez logowania)."
             }
           },
           "required": [
@@ -18930,6 +18942,42 @@
           "required": [
             "name"
           ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "repair_client_files",
+        "title": "Repair client files moved without their data",
+        "description": "Naprawia pliki klienta w buckecie `pliki-klienta`, które mają wpis w bazie, ale nie dają się pobrać (404 NoSuchKey — puste miniatury i podgląd u operatora). Przyczyna: lipcowa migracja przeniosła tylko metadane ze starych bucketów. Narzędzie sprawdza partię plików sprzed migracji; uszkodzone pobiera ze starego bucketu i wgrywa ponownie do `pliki-klienta`. `dry_run: true` tylko liczy. Wywołuj w pętli z `after` = `next_after`, aż `done: true`. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "dry_run": {
+              "type": "boolean",
+              "default": true,
+              "description": "true — tylko raport, bez zmian."
+            },
+            "after": {
+              "type": "string",
+              "maxLength": 1000,
+              "default": "",
+              "description": "Kursor: nazwa ostatniego sprawdzonego pliku (`next_after` z poprzedniej partii)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },

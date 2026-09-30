@@ -13,7 +13,7 @@
 //  • Podstawa: Umowa ramowa v7 § 7 (Opłata Abonamentowa — kwoty w
 //    src/lib/legal/pakiet-v7.ts, ABONAMENT_UMOWA). Sprzedaż: produkty
 //    SUBSCRIPTION_OPTIONS[*].productCode w access_products (migracja
-//    20260930120000), createAccessCheckout po akceptacji Umowy ramowej.
+//    20260930140000), createAccessCheckout po akceptacji Umowy ramowej.
 //    Dostęp: SQL investor_has_full_access (RLS), requireInvestorPro,
 //    submitInvestorOrder i InvestorSubscriptionGate w panelu.
 

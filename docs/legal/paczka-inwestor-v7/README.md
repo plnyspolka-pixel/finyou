@@ -6,8 +6,11 @@ Wygenerowano skryptem `npx tsx scripts/legal/build-pakiet-v7.ts` z treści v6/v5
 - `CONTENT.sha256` — SHA-256 treści (`content_text`, UTF-8) = `legal_documents.sha256`;
   ta wartość trafia do akceptacji Inwestora (code:version:sha256).
 - `MANIFEST.sha256` — SHA-256 plików .docx (kontrola: `sha256sum -c MANIFEST.sha256`).
-- Pakiet trafia do bazy jako aktywny (`active = true`) — aktywację
-  zatwierdził właściciel 2026-09-29. Wyłączenie: /admin/umowy-inwestorow.
+- Pakiet wgrała do bazy jako aktywny migracja `20260929155000` (aktywację
+  zatwierdził właściciel 2026-09-29). 30 września 2026 r., przed pierwszą
+  akceptacją, umowa ramowa v7 dostała Opłatę Abonamentową zamiast
+  nieodpłatności — nową treść wgrywa migracja `20260930140000_abonament_inwestora`
+  (UPDATE wiersza v7, `allows_investor_fees = true`). Wyłączenie: /admin/umowy-inwestorow.
 
 | kod | wersja | plik | SHA-256 treści | SHA-256 .docx |
 |---|---|---|---|---|

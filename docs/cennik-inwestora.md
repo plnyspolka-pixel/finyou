@@ -38,9 +38,17 @@ Podstawą jest Umowa ramowa v7 § 7 (Opłata Abonamentowa; `allows_investor_fees
 true`). 30 września 2026 r. — przed pierwszą akceptacją v7 (w bazie zero
 akceptacji) — zapis o nieodpłatności zastąpiono Opłatą Abonamentową w
 generatorze `src/lib/legal/pakiet-v7.ts`; pakiet zregenerowano skryptem.
+Pierwotna treść v7 była już wgrana migracją `20260929155000` (drizzle `0016`),
+której nie zmieniamy — nową treść wgrywa UPDATE w migracji
+`20260930140000_abonament_inwestora.sql`. Kwoty są brutto; dopóki Finance You
+nie dolicza VAT, netto = brutto.
 
-- **Katalog**: migracja `20260930120000_abonament_inwestora.sql` (lustro
-  drizzle `0022`) aktywuje `investor_access_30d` (150 000 gr, 30 dni) i
+Uwaga dla nowych migracji: drizzle wgrywa tylko wpisy z `_journal.json`
+o znaczniku `when` późniejszym niż ostatnio wgrany — nowy wpis musi mieć
+`when` większy od poprzedniego (pilnuje tego test lustra migracji).
+
+- **Katalog**: migracja `20260930140000_abonament_inwestora.sql` (lustro
+  drizzle `0023`) aktywuje `investor_access_30d` (150 000 gr, 30 dni) i
   `investor_access_365d` (700 000 gr, 365 dni); PRO i odblokowanie okazji
   zostają nieaktywne. Przed migracją nie było żadnej płatności inwestora,
   więc kody można było zachować.

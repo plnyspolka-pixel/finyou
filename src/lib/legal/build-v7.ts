@@ -81,81 +81,52 @@ export async function buildPakietV7(): Promise<DokumentV7[]> {
 
 const sqlStr = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
+/** SHA-256 pierwotnej treści umowy ramowej v7 (model nieodpłatny) — wgranej
+ *  migracją 20260929155000 i nieakceptowanej przez nikogo przed zmianą. */
+export const V7_UMOWA_SHA256_PRZED_ABONAMENTEM =
+  "272d93b85cbac50822fab2f6ed984a94a67c65706177b999e7a444abe9020668";
+
+/** Znaczniki sekcji w migracji 20260930140000 wypełnianej przez skrypt. */
+export const V7_SEKCJA_START =
+  "-- >>> UMOWA RAMOWA v7 — treść z Opłatą Abonamentową (generowane: npx tsx scripts/legal/build-pakiet-v7.ts)";
+export const V7_SEKCJA_KONIEC = "-- <<< UMOWA RAMOWA v7";
+
 /**
- * Migracja SQL: upsert trzech dokumentów z `active = true` — aktywację
- * pakietu v7 zatwierdził właściciel 2026-09-29 (cały pakiet naraz).
+ * Aktualizacja treści umowy ramowej v7 w `legal_documents` (UPDATE istniejącego
+ * wiersza): nowa treść z Opłatą Abonamentową, jej SHA-256, plik .docx i
+ * `allows_investor_fees = true`. Wiersz v7 z migracji 20260929155000 był już
+ * wgrany z treścią „nieodpłatną” — migracji wgranej nie zmieniamy, więc zmiana
+ * idzie osobną migracją. Ewentualna akceptacja starej treści przestaje pasować
+ * do skrótu, więc panel poprosi o ponowną akceptację.
  */
-export function migracjaSqlV7(docs: DokumentV7[]): string {
-  const naglowek = `-- =====================================================================
--- ETAP 5 — PAKIET INWESTORA v7 (${PACKAGE_ID_V7})
---
--- Plik wygenerowany: npx tsx scripts/legal/build-pakiet-v7.ts
--- (nie edytować ręcznie — zmiany w src/lib/legal/pakiet-v7.ts).
---
--- • Umowa ramowa v7: Inwestor płaci wyłącznie Opłatę Abonamentową za dostęp
---   do systemu — 1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za
---   365 dni, z góry, bez automatycznego odnowienia (decyzja właściciela
---   2026-09-30; v7 nie był jeszcze akceptowany). Bez Pakietów, Cennika,
---   Opłaty Sukcesu, Opłaty za Udostępnienie Okazji i Załącznika nr 8.
---   Klient płaci Prowizję Klientowską 7% Kwoty Udzielonej, min. 5 000,00 zł,
---   bez VAT, potrącaną z wypłaty (Zał. 6). § 5: 5 Zleceń, 5 odrzuceń, rezerwacja 24 h + 12 h, maks. 2
---   przedłużone. Kara Obejściowa 5% Sumy Hipotecznej i 5-letni Okres
---   Ochronny bez zmian. Kontakt: kontakt@financeyou.pl.
--- • NDA v6, RODO v5: wspólny package_id, adres e-mail.
---
--- sha256 = SHA-256 z content_text (UTF-8) — ta wartość trafia do akceptacji
--- (code:version:sha256). Skróty plików .docx: docs/legal/paczka-inwestor-v7/
--- MANIFEST.sha256.
---
--- active = true: aktywację całego pakietu zatwierdził właściciel
--- (2026-09-29). Wszystkie trzy dokumenty są aktywne naraz. Akceptacje
--- poprzednich wersji zostają w historii (investor_agreement_acceptances)
--- i nie są dziedziczone przez v7 — Inwestor akceptuje pakiet v7 w panelu.
--- allows_investor_fees: true dla umowy ramowej (Opłata Abonamentowa),
--- false dla NDA i RODO.
--- =====================================================================
-`;
-  const inserty = docs
-    .slice()
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .map(
-      (d) => `
+export function aktualizacjaUmowyV7Sql(docs: DokumentV7[]): string {
+  const d = docs.find((x) => x.code === "umowa_ramowa");
+  if (!d) throw new Error("Brak umowy ramowej w pakiecie v7.");
+  return `${V7_SEKCJA_START}
 -- ${d.code} ${d.version}: content sha256 ${d.sha256}
 --   docx sha256 ${d.docx_sha256}
-insert into public.legal_documents
-  (code, package_id, version, title, sort_order, sha256, content_text, docx_base64, docx_filename, allows_investor_fees, active)
-values (
-  ${sqlStr(d.code)},
-  ${sqlStr(d.package_id)},
-  ${sqlStr(d.version)},
-  ${sqlStr(d.title)},
-  ${d.sort_order},
-  ${sqlStr(d.sha256)},
-  ${sqlStr(d.content_text)},
-  ${sqlStr(Buffer.from(d.docx).toString("base64"))},
-  ${sqlStr(d.docx_filename)},
-  ${d.code === "umowa_ramowa" ? "true" : "false"},
-  true
-)
-on conflict (code) do update set
-  package_id = excluded.package_id,
-  version = excluded.version,
-  title = excluded.title,
-  sort_order = excluded.sort_order,
-  sha256 = excluded.sha256,
-  content_text = excluded.content_text,
-  docx_base64 = excluded.docx_base64,
-  docx_filename = excluded.docx_filename,
-  allows_investor_fees = excluded.allows_investor_fees,
-  active = true,
-  updated_at = now();
-`,
-    );
-  return `${naglowek}${inserty.join("")}
-comment on column public.legal_documents.sha256 is
-  'SHA-256 (hex) z content_text w UTF-8 — od pakietu ${PACKAGE_ID_V7}. Wartość zapisywana w akceptacjach (code:version:sha256). Skróty plików .docx: docs/legal/paczka-inwestor-v7/MANIFEST.sha256.';
+--   poprzednia treść (model nieodpłatny): ${V7_UMOWA_SHA256_PRZED_ABONAMENTEM}
+update public.legal_documents
+   set sha256 = ${sqlStr(d.sha256)},
+       content_text = ${sqlStr(d.content_text)},
+       docx_base64 = ${sqlStr(Buffer.from(d.docx).toString("base64"))},
+       docx_filename = ${sqlStr(d.docx_filename)},
+       allows_investor_fees = true,
+       updated_at = now()
+ where code = ${sqlStr(d.code)}
+   and version = ${sqlStr(d.version)}
+   and package_id = ${sqlStr(d.package_id)};
+${V7_SEKCJA_KONIEC}`;
+}
 
-comment on table public.investor_success_fees is
-  'Tabela historyczna (model v6). Od pakietu v7 (${PACKAGE_ID_V7}) nie ma Opłaty Sukcesu — Inwestor płaci wyłącznie Opłatę Abonamentową; nowe rekordy nie powstają.';
-`;
+/** Podmienia sekcję umowy v7 w treści migracji (między znacznikami). */
+export function wstawSekcjeV7(migracja: string, docs: DokumentV7[]): string {
+  const a = migracja.indexOf(V7_SEKCJA_START);
+  const b = migracja.indexOf(V7_SEKCJA_KONIEC);
+  if (a < 0 || b < 0 || b < a) throw new Error("Brak znaczników sekcji umowy v7 w migracji.");
+  return (
+    migracja.slice(0, a) +
+    aktualizacjaUmowyV7Sql(docs) +
+    migracja.slice(b + V7_SEKCJA_KONIEC.length)
+  );
 }

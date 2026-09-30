@@ -159,8 +159,15 @@
     {
       "idx": 22,
       "version": "7",
-      "when": 1790699841733,
-      "tag": "0022_abonament_inwestora",
+      "when": 1790775409275,
+      "tag": "0022_accounting_vat_exemption_basis",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1790787116020,
+      "tag": "0023_abonament_inwestora",
       "breakpoints": true
     }
   ]

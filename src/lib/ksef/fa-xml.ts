@@ -34,6 +34,8 @@ export type FaInvoice = {
   net_amount: number;
   vat_amount: number;
   gross_amount: number;
+  /** Podstawa zwolnienia z VAT (P_19A) — wymagana, gdy pozycja ma stawkę „zw”. */
+  vat_exemption_basis?: string | null;
 };
 
 function esc(s: unknown): string {
@@ -50,9 +52,47 @@ function num(n: number): string {
 
 function vatRateValue(rate: string): { stawka: string; netToVat: (net: number) => number } {
   if (rate === "zw" || rate === "0")
-    return { stawka: rate === "zw" ? "zw" : "0", netToVat: () => 0 };
+    return { stawka: rate === "zw" ? "zw" : "0 KR", netToVat: () => 0 };
   const pct = Number(rate) || 0;
   return { stawka: String(pct), netToVat: (net) => Math.round(net * pct) / 100 };
+}
+
+function hasExempt(invoice: FaInvoice): boolean {
+  return invoice.items.some((it) => it.vatRate === "zw");
+}
+
+/**
+ * Sumy netto/VAT w polach właściwych dla stawki (FA(2)):
+ * 23/22 → P_13_1/P_14_1, 8/7 → P_13_2/P_14_2, 5 → P_13_3/P_14_3,
+ * 0 → P_13_6_1, zw → P_13_7 (sprzedaż zwolniona, bez VAT).
+ */
+function totalsByRate(invoice: FaInvoice): string[] {
+  const groups = new Map<string, { net: number; vat: number }>();
+  for (const it of invoice.items) {
+    const net = Math.round(it.quantity * it.unitNet * 100) / 100;
+    const key =
+      it.vatRate === "zw" ? "7" : it.vatRate === "0" ? "6_1"
+      : ["23", "22"].includes(it.vatRate) ? "1"
+      : ["8", "7"].includes(it.vatRate) ? "2"
+      : it.vatRate === "5" ? "3" : "1";
+    const g = groups.get(key) ?? { net: 0, vat: 0 };
+    g.net += net;
+    g.vat += vatRateValue(it.vatRate).netToVat(net);
+    groups.set(key, g);
+  }
+  // Jedna stawka: bierzemy sumy z faktury (zgodne z zaokrągleniem na fakturze).
+  if (groups.size === 1) {
+    const [k] = [...groups.keys()];
+    groups.set(k, { net: invoice.net_amount, vat: invoice.vat_amount });
+  }
+  const out: string[] = [];
+  for (const k of ["1", "2", "3", "6_1", "7"]) {
+    const g = groups.get(k);
+    if (!g) continue;
+    out.push(`    <P_13_${k}>${num(g.net)}</P_13_${k}>`);
+    if (["1", "2", "3"].includes(k)) out.push(`    <P_14_${k}>${num(g.vat)}</P_14_${k}>`);
+  }
+  return out;
 }
 
 /** Buduje XML faktury FA(2). */
@@ -78,10 +118,10 @@ export function buildFaXml(invoice: FaInvoice, seller: FaEntity): string {
   const today = invoice.issue_date;
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<Faktura xmlns="http://crd.gov.pl/wzor/2023/06/29/12648/">',
+    '<Faktura xmlns="http://crd.gov.pl/wzor/2025/06/25/13775/">',
     "  <Naglowek>",
-    '    <KodFormularza kodSystemowy="FA (2)" wersjaSchemy="1-0E">FA</KodFormularza>',
-    "    <WariantFormularza>2</WariantFormularza>",
+    '    <KodFormularza kodSystemowy="FA (3)" wersjaSchemy="1-0E">FA</KodFormularza>',
+    "    <WariantFormularza>3</WariantFormularza>",
     `    <DataWytworzeniaFa>${esc(today)}T00:00:00Z</DataWytworzeniaFa>`,
     "  </Naglowek>",
     "  <Podmiot1>",
@@ -105,18 +145,21 @@ export function buildFaXml(invoice: FaInvoice, seller: FaEntity): string {
     `      <AdresL1>${esc(invoice.buyer_street ?? "")}</AdresL1>`,
     `      <AdresL2>${esc(`${invoice.buyer_postal_code ?? ""} ${invoice.buyer_city ?? ""}`.trim())}</AdresL2>`,
     "    </Adres>",
+    "    <JST>2</JST>",
+    "    <GV>2</GV>",
     "  </Podmiot2>",
     "  <Fa>",
     `    <KodWaluty>${esc(invoice.currency)}</KodWaluty>`,
     `    <P_1>${esc(today)}</P_1>`,
     `    <P_2>${esc(invoice.invoice_number)}</P_2>`,
     invoice.sale_date ? `    <P_6>${esc(invoice.sale_date)}</P_6>` : "",
-    `    <P_13_1>${num(invoice.net_amount)}</P_13_1>`,
-    `    <P_14_1>${num(invoice.vat_amount)}</P_14_1>`,
+    ...totalsByRate(invoice),
     `    <P_15>${num(invoice.gross_amount)}</P_15>`,
     "    <Adnotacje>",
     "      <P_16>2</P_16><P_17>2</P_17><P_18>2</P_18><P_18A>2</P_18A>",
-    "      <Zwolnienie><P_19N>1</P_19N></Zwolnienie>",
+    hasExempt(invoice)
+      ? `      <Zwolnienie><P_19>1</P_19><P_19A>${esc(invoice.vat_exemption_basis || "art. 113 ust. 1 ustawy o VAT")}</P_19A></Zwolnienie>`
+      : "      <Zwolnienie><P_19N>1</P_19N></Zwolnienie>",
     "      <NoweSrodkiTransportu><P_22N>1</P_22N></NoweSrodkiTransportu>",
     "      <P_23>2</P_23>",
     "      <PMarzy><P_PMarzyN>1</P_PMarzyN></PMarzy>",
