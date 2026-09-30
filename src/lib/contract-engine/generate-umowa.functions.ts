@@ -26,6 +26,7 @@ import { autonaprawHarmonogram, walidujHarmonogram, type KorektaGroszowa } from 
 import { generujKomplet, tekstKompletu, type KompletWynik } from "./komplet";
 import { normalizujNumeryKw } from "./umowa-agent-core";
 import { nieruchomosciZKw } from "./kw-nieruchomosci.server";
+import { validateKwNumber } from "@/lib/kw";
 import type { Problem } from "./validator";
 import { zapiszUmoweDocx } from "./umowa-storage.server";
 
@@ -110,9 +111,15 @@ async function zbudujIzweryfikuj(supabase: any, profile: ClientProfile, input: U
   // treści w cache nie blokuje — nieruchomość zostaje ze szkicu profilu.
   const problemyKw: Problem[] = [];
   let kwOstrzezenia: string[] = [];
-  const kwNumbers = (input.kwNumbers ?? [profile.propertyData?.landRegisterNumber ?? ""]).filter(
-    (k) => String(k ?? "").trim(),
-  );
+  // Numer KW z profilu klienta (gdy operator nie podał numerów ani nieruchomości)
+  // to pole wpisywane ręcznie — literówka w cyfrze kontrolnej albo „brak" nie może
+  // blokować całego kompletu. Taki numer pomijamy przy KW i zgłaszamy jako
+  // OSTRZEZENIE; numery podane wprost przez operatora nadal są twardo walidowane.
+  const profilKw = String(profile.propertyData?.landRegisterNumber ?? "").trim();
+  const kwZProfilu = !input.kwNumbers && !input.nieruchomosci?.length && !!profilKw;
+  let kwNumbers = (input.kwNumbers ?? [profilKw]).filter((k) => String(k ?? "").trim());
+  // Ostrzeżenie o takim numerze dodaje niżej normalizacja szkicu (nr_kw ze stuba).
+  if (kwZProfilu) kwNumbers = kwNumbers.filter((k) => validateKwNumber(k).ok);
   if (!input.nieruchomosci?.length && kwNumbers.length) {
     try {
       const stub: any[] = umowa.nieruchomosci ?? [];
@@ -137,7 +144,28 @@ async function zbudujIzweryfikuj(supabase: any, profile: ClientProfile, input: U
     }
   }
   // Numery KW znormalizowane (dopełnienie do 8 cyfr + cyfra kontrolna).
-  problemyKw.push(...normalizujNumeryKw(umowa));
+  // Niepoprawny numer, który przyszedł wyłącznie ze szkicu profilu, nie blokuje:
+  // tekst niebędący numerem KW (np. „brak") nie trafia do umowy, a numer
+  // z błędną cyfrą kontrolną zostaje z ostrzeżeniem do sprawdzenia.
+  const surowe: string[] = (umowa.nieruchomosci ?? []).map((n: any) =>
+    String(n?.nr_kw ?? "").trim(),
+  );
+  for (const p of normalizujNumeryKw(umowa)) {
+    const m = /^nieruchomosci\[(\d+)\]\.nr_kw$/.exec(p.sciezka);
+    const i = m ? Number(m[1]) : -1;
+    if (kwZProfilu && i >= 0 && surowe[i] === profilKw) {
+      const n: any = (umowa.nieruchomosci as any[])[i];
+      const v = validateKwNumber(profilKw);
+      if (!v.ok && v.code !== "CHECK_DIGIT") n.nr_kw = "";
+      problemyKw.push({
+        ...p,
+        poziom: "OSTRZEZENIE",
+        komunikat: `${p.komunikat} (numer KW z profilu klienta — popraw go w profilu).`,
+      });
+    } else {
+      problemyKw.push(p);
+    }
+  }
 
   // Zmiana 4 (po Kańkowskich): rozjazd groszowy z zaokrągleń domykamy na racie
   // balonowej PRZED walidacją. Korekta jest odnotowana w wyniku (informacja

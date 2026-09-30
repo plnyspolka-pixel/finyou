@@ -27,6 +27,7 @@ import {
   buildCalcHandoffMessage,
   onCalcHandoffChange,
   readCalcHandoff,
+  type CalcHandoff,
 } from "@/lib/loan-calc-handoff";
 import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
 
@@ -88,9 +89,10 @@ function loadPersisted(): Persisted {
  * kod dolicza harmonogram i kwoty słownie, waliduje, renderuje podgląd i .docx.
  *
  * Start z kalkulatora: „Wyślij do kreatora" zapisuje kalkulację w handoffie;
- * panel po wejściu wykrywa nową kalkulację, zaczyna NOWĄ rozmowę i wysyła
- * harmonogram spłat jako jej pierwszą wiadomość (liczby wchodzą do szkicu
- * deterministycznie po stronie serwera).
+ * panel po wejściu wykrywa nową kalkulację i wysyła harmonogram spłat jako
+ * pierwszą wiadomość nowej rozmowy (liczby wchodzą do szkicu deterministycznie
+ * po stronie serwera). Gdy rozmowa jest już rozpoczęta, panel pyta, czy dołączyć
+ * kalkulację do szkicu, czy zacząć nową umowę — nic nie jest kasowane po cichu.
  */
 export function UmowaAgentPanel() {
   const sendFn = useServerFn(sendUmowaAgentMessage);
@@ -218,25 +220,48 @@ export function UmowaAgentPanel() {
     }
   }
 
-  // Harmonogram z kalkulatora („Wyślij do kreatora") → nowa rozmowa, której
-  // pierwszą wiadomością jest harmonogram spłat. Każdą kalkulację zużywamy raz.
+  // Harmonogram z kalkulatora („Wyślij do kreatora") → rozmowa, której
+  // wiadomością jest harmonogram spłat. Każdą kalkulację zużywamy raz.
+  // Pusta rozmowa startuje od razu; rozpoczętej NIE kasujemy po cichu —
+  // kalkulacja mogła przyjść z innego kalkulatora (np. z wniosku), więc
+  // inwestor sam wybiera: nowa umowa z kalkulacji albo dołączenie jej do szkicu.
   const startedFromCalcRef = useRef(false);
-  useEffect(() => {
-    const tryStart = () => {
-      if (sending || startedFromCalcRef.current) return;
-      const h = readCalcHandoff();
-      if (!h || h.ts <= readConsumedCalcTs()) return;
-      startedFromCalcRef.current = true;
-      markCalcConsumed(h.ts);
+  const [pendingCalc, setPendingCalc] = useState<CalcHandoff | null>(null);
+  const hasDraftRef = useRef(false);
+  hasDraftRef.current = messages.length > 0 || maDane;
+  const sendingRef = useRef(false);
+  sendingRef.current = sending;
+
+  function startFromCalc(h: CalcHandoff, fresh: boolean) {
+    startedFromCalcRef.current = true;
+    markCalcConsumed(h.ts);
+    setPendingCalc(null);
+    if (fresh) {
       setProblemy([]);
       setAutokorekty([]);
       setMissing([]);
       setPreview("");
-      void send(buildCalcHandoffMessage(h.payload), { calc: h.payload, fresh: true }).finally(
-        () => {
-          startedFromCalcRef.current = false;
-        },
-      );
+    }
+    void send(buildCalcHandoffMessage(h.payload), { calc: h.payload, fresh }).finally(() => {
+      startedFromCalcRef.current = false;
+    });
+  }
+
+  function dismissPendingCalc() {
+    if (pendingCalc) markCalcConsumed(pendingCalc.ts);
+    setPendingCalc(null);
+  }
+
+  useEffect(() => {
+    const tryStart = () => {
+      if (sendingRef.current || startedFromCalcRef.current) return;
+      const h = readCalcHandoff();
+      if (!h || h.ts <= readConsumedCalcTs()) return;
+      if (hasDraftRef.current) {
+        setPendingCalc(h);
+        return;
+      }
+      startFromCalc(h, true);
     };
     tryStart();
     return onCalcHandoffChange(tryStart);
@@ -306,6 +331,31 @@ export function UmowaAgentPanel() {
           </div>
         )}
       </div>
+
+      {pendingCalc && (
+        <div className="space-y-2 border-t border-border bg-accent/10 px-4 py-3 text-sm">
+          <div>
+            Z kalkulatora przyszedł nowy harmonogram spłat. Masz już rozpoczętą umowę — co z nim
+            zrobić?
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" disabled={sending} onClick={() => startFromCalc(pendingCalc, false)}>
+              Dołącz do bieżącej umowy
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={sending}
+              onClick={() => startFromCalc(pendingCalc, true)}
+            >
+              Nowa umowa z kalkulacji
+            </Button>
+            <Button size="sm" variant="ghost" onClick={dismissPendingCalc}>
+              Pomiń
+            </Button>
+          </div>
+        </div>
+      )}
 
       {messages.length === 0 && (
         <div className="flex flex-wrap gap-2 px-4 pb-2">

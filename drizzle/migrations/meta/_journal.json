@@ -176,6 +176,13 @@
       "when": 1790794518987,
       "tag": "0024_prowizja_od_pozyczkobiorcy",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790809834080,
+      "tag": "0025_cron_rozlozenie_tickow",
+      "breakpoints": true
     }
   ]
 }
