@@ -65,9 +65,15 @@ ${
     ? `Zaloguj się jednym kliknięciem (link jednorazowy, ważny ok. 1 godziny):
 ${link}
 
-Później zalogujesz się na ${base}/logowanie — podając ten adres e-mail otrzymasz nowy link do logowania.`
-    : `Zaloguj się na ${base}/logowanie — podaj ten adres e-mail, a wyślemy Ci link do logowania.`
+Jeśli link wygaśnie albo zechcesz zalogować się później, masz trzy sposoby:`
+    : `Jak się zalogować — masz trzy sposoby:`
 }
+
+1) Link na e-mail — wejdź na ${base}/logowanie, wpisz adres ${opts.to} na zakładce „Link e-mail". Wyślemy Ci nowy link, ile razy zechcesz.
+
+2) Własne hasło — wejdź na ${base}/zapomniane-haslo, wpisz adres ${opts.to} i ustaw hasło z linku, który przyjdzie e-mailem. Potem logujesz się na ${base}/logowanie adresem e-mail i hasłem.
+
+3) Konto Google — jeśli ${opts.to} to adres Google (np. Gmail), na ${base}/logowanie kliknij „Zaloguj się z Google". Trafisz na to samo konto inwestora.
 
 W panelu uzupełnisz profil inwestora, a gdy zechcesz dostępu do Klientów i Projektów — zaakceptujesz Umowę ramową, NDA i umowę RODO.
 

@@ -678,6 +678,8 @@ describe("zakup abonamentu bez konta (/abonament-inwestora)", () => {
     const welcome = emails.sent.find((e) => /konto inwestora jest gotowe/.test(e.subject));
     expect(welcome?.to).toBe("anna@example.com");
     expect(welcome?.text).toContain("https://login.test/magic");
+    expect(welcome?.text).toContain("https://app.test/zapomniane-haslo");
+    expect(welcome?.text).toContain("Zaloguj się z Google");
     expect(emails.sent.some((e) => /dostęp aktywny/.test(e.subject))).toBe(false);
   });
 
