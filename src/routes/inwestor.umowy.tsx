@@ -1,5 +1,5 @@
 // JEDEN pipeline inwestora (pakiet FY-LEGAL-2026-09-29: umowa ramowa v7, NDA v6, RODO v5;
-// usługa dla Inwestora nieodpłatna):
+// Inwestor płaci wyłącznie abonament):
 //   1. Dane pożyczkodawcy (osoba fizyczna / JDG / spółka, wyszukiwarka GUS/KRS)
 //   2. Rachunek bankowy do spłaty pożyczki (wymuszony)
 //   3. Weryfikacja tożsamości — KYC Didit
@@ -56,6 +56,8 @@ import {
   SanctionsScreeningStep,
 } from "@/components/inwestor/pipeline-steps";
 import { TpayReturnStatus } from "@/components/access/TpayReturnStatus";
+import { SubscriptionRequiredCard } from "@/components/inwestor/subscription-gate";
+import { useAccessState } from "@/hooks/use-access";
 import { formatGroszPln } from "@/lib/access/core";
 import { ACCESS_PRESENTATION } from "@/lib/investor-plan/plans";
 import type { PipelineStep, PipelineStepKey } from "@/lib/investor-plan/pipeline";
@@ -87,6 +89,8 @@ function errMsg(e: unknown): string {
 function PipelinePage() {
   const { tpay, payment } = useSearch({ from: "/inwestor/umowy" });
   const qc = useQueryClient();
+  // Zlecenie wymaga aktywnego abonamentu (twarda bramka: submitInvestorOrder).
+  const access = useAccessState("investor");
   const fetchLegal = useServerFn(getMyLegalPackState);
   const fetchPipeline = useServerFn(getInvestorPipelineState);
   const fetchPlan = useServerFn(getMyInvestorPlan);
@@ -204,12 +208,16 @@ function PipelinePage() {
       })}
 
       <PipelineStepCard step={step("zlecenie")}>
-        <OrderForm
-          canSubmit={pipe.pipeline.canSubmitOrder}
-          isConsumer={pipe.input.isConsumer}
-          limits={limitsQ.data ?? null}
-          onDone={refresh}
-        />
+        {pipe.pipeline.canSubmitOrder && !access.loading && !access.hasFullAccess ? (
+          <SubscriptionRequiredCard title="Zlecenie składasz w aktywnym abonamencie inwestora" />
+        ) : (
+          <OrderForm
+            canSubmit={pipe.pipeline.canSubmitOrder}
+            isConsumer={pipe.input.isConsumer}
+            limits={limitsQ.data ?? null}
+            onDone={refresh}
+          />
+        )}
       </PipelineStepCard>
 
       <OrdersList state={legal} onDone={refresh} />
@@ -254,7 +262,7 @@ function SuccessFeesList({ plan }: { plan: any }) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">
-          Historyczne opłaty sukcesu (nieaktywne — usługa dla Inwestora jest nieodpłatna)
+          Historyczne opłaty sukcesu (nieaktywne — od Umowy ramowej v7 nie ma Opłaty Sukcesu)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -300,10 +308,9 @@ function PlanBanner() {
           </div>
           <p className="max-w-2xl text-sm opacity-90">{p.tagline}</p>
           <p className="text-xs opacity-75">
-            {p.periodLabel}. Abonament zacznie Cię obowiązywać dopiero po zaakceptowaniu nowej
-            wersji Umowy ramowej — do tego czasu nic nie płacisz. Prowizja Klientowska Finance You —
-            7 % Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT — obciąża Klienta i jest potrącana
-            z wypłaty (Zał. 6).
+            {p.periodLabel}. Abonament wykupisz w zakładce Dostęp i płatności po akceptacji Umowy
+            ramowej. Prowizja Klientowska Finance You — 7 % Kwoty Udzielonej, nie mniej niż 5 000
+            zł, bez VAT — obciąża Klienta i jest potrącana z wypłaty (Zał. 6).
           </p>
         </div>
       </CardContent>
@@ -434,9 +441,9 @@ function DeliveryStep({ state, onDone }: { state: any; onDone: () => void }) {
 const DOC_STATEMENTS: Record<string, Array<{ key: string; label: string }>> = {
   umowa_ramowa: [
     {
-      key: "nieodplatnosc_uslugi",
+      key: "oplata_abonamentowa",
       label:
-        "Przyjmuję do wiadomości, że usługa Finance You jest dla mnie nieodpłatna. Jedyną opłatą jest Prowizja Klientowska: 7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT. Płaci ją Klient, a przy wypłacie przekazuję ją Finance You z kwoty Finansowania (Zał. 6).",
+        "Znam wysokość Opłaty Abonamentowej — 1 500 zł brutto za 30 dni albo 7 000 zł brutto za 365 dni — i wiem, że poza nią nie płacę Finance You za Projekty ani od rezultatu. Prowizję Klientowską (7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT) płaci Klient, a przy wypłacie przekazuję ją Finance You z kwoty Finansowania (Zał. 6).",
     },
     {
       key: "mechanizm_zabezpieczenia_prowizji",
@@ -816,7 +823,7 @@ function OrderForm({
             set: setS1,
             id: "o1",
             label:
-              "Składam Zlecenie na podstawie aktualnie obowiązującej Ramowej umowy pośrednictwa (usługa dla Inwestora nieodpłatna; Prowizja Klientowska obciąża Klienta i jest potrącana z wypłaty).",
+              "Składam Zlecenie na podstawie aktualnie obowiązującej Ramowej umowy pośrednictwa (w aktywnym Okresie Abonamentowym, bez dodatkowych opłat za Projekt; Prowizja Klientowska obciąża Klienta i jest potrącana z wypłaty).",
           },
           {
             v: s2,

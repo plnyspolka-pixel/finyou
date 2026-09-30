@@ -462,6 +462,15 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
       );
     }
 
+    // Bramka: aktywny abonament (Umowa ramowa v7 § 5 i § 7 — Zlecenia
+    // przyjmujemy w aktywnym Okresie Abonamentowym).
+    const { investorHasFullAccess } = await import("@/lib/access/guards.server");
+    if (!(await investorHasFullAccess(userId))) {
+      throw new Error(
+        "Zlecenie wymaga aktywnego abonamentu inwestora — wykup go w zakładce Dostęp i płatności (1 500 zł / 30 dni albo 7 000 zł / 365 dni).",
+      );
+    }
+
     const investor = await myInvestorRow(supabaseAdmin, userId);
     if (investor?.is_consumer && data.consumerChoice === "nie_dotyczy") {
       throw new Error(

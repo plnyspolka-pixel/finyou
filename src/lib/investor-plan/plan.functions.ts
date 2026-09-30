@@ -1,11 +1,11 @@
-// Dostęp inwestora (jeden poziom, nieodpłatny) + rejestr HISTORYCZNYCH opłat
+// Dostęp inwestora (jeden poziom, abonament) + rejestr HISTORYCZNYCH opłat
 // sukcesu w panelu administratora.
 //
-// Od 2026-09 (Umowa ramowa v7) usługa Finance You dla Inwestora jest
-// nieodpłatna: nie ma pakietu PRO, opłaty sukcesu ani odblokowań pojedynczych
-// okazji. `investorTier` i `assertInvestorPro` zostają jako no-op (abonament
-// w przyszłości), `registerSuccessFee` został usunięty — `confirmZal6` nie
-// nalicza już niczego inwestorowi.
+// Od 2026-09 (Umowa ramowa v7) nie ma pakietu PRO, opłaty sukcesu ani
+// odblokowań pojedynczych okazji; od 2026-09-30 Inwestor płaci wyłącznie
+// Opłatę Abonamentową (1 500 zł / 30 dni albo 7 000 zł / 365 dni).
+// `investorTier` zwraca jeden poziom, `assertInvestorPro` sprawdza aktywny
+// abonament; `confirmZal6` nie nalicza niczego inwestorowi.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -23,10 +23,12 @@ export async function investorTier(_userId: string): Promise<InvestorTier> {
   return "podstawowy";
 }
 
-/** Dawna bramka modułów PRO — przepuszcza każdego (abonament w przyszłości). */
+/** Bramka modułów panelu — aktywny abonament inwestora (albo personel). */
 export async function assertInvestorPro(userId: string, feature: InvestorFeature): Promise<void> {
   const tier = await investorTier(userId);
-  if (tierHasFeature(tier, feature)) return;
+  if (!tierHasFeature(tier, feature)) throw new Error("Funkcja niedostępna.");
+  const { assertInvestorFullAccess } = await import("@/lib/access/guards.server");
+  await assertInvestorFullAccess(userId);
 }
 
 export interface InvestorPlanState {
@@ -137,7 +139,8 @@ export const getSuccessFeesAdminState = createServerFn({ method: "GET" })
     }
 
     return {
-      // Od v7 żadna wersja umowy nie dopuszcza opłat od Inwestora.
+      // Opłata Sukcesu zniesiona w v7 (allows_investor_fees dotyczy dziś wyłącznie
+      // Opłaty Abonamentowej) — ta sekcja pozostaje historyczna.
       feesAllowed: false,
       contractVersion: (ramowa?.version as string | null) ?? null,
       contractActive: Boolean(ramowa?.active),
@@ -181,7 +184,7 @@ export const setSuccessFeeStatus = createServerFn({ method: "POST" })
       .from("investor_success_fees")
       .update({
         status: data.status,
-        note: data.note ?? "Anulowana — Umowa ramowa v7: usługa dla Inwestora nieodpłatna.",
+        note: data.note ?? "Anulowana — Umowa ramowa v7: bez Opłaty Sukcesu.",
       })
       .eq("id", data.feeId);
     if (error) throw new Error(error.message);
