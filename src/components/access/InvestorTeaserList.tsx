@@ -1,8 +1,8 @@
 // Teasery Projektów dopasowanych do PRZYJĘTYCH Zleceń inwestora.
 // Dane pochodzą wyłącznie z bezpiecznej funkcji serwerowej (tylko dozwolone
 // pola, bez opisu i zdjęć). Bez przyjętego Zlecenia lista jest pusta —
-// pokazujemy CTA „Złóż Zlecenie". Usługa dla inwestora jest nieodpłatna:
-// nie ma tu paywalla ani pakietów dostępu (abonament — w przyszłości).
+// pokazujemy CTA „Złóż Zlecenie". Bez opłat za pojedynczy Projekt — Zlecenia
+// składa się w aktywnym abonamencie (bramka w submitInvestorOrder).
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";

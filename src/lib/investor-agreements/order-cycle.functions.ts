@@ -235,7 +235,7 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
     const acceptedAt = acceptance?.accepted_at ? new Date(acceptance.accepted_at) : null;
     const limits = orderLimitsFromSettings(await getModuleSettings());
     return {
-      // Usługa dla Inwestora nieodpłatna (Umowa ramowa v7) — bez pakietów i wykupów.
+      // Jeden poziom (abonament, Umowa ramowa v7 § 7) — bez pakietów i wykupów.
       tier: "podstawowy" as const,
       // Limity cyklu z project_module_settings (UI pokazuje je z ustawień, nie z hardcode).
       limits,
@@ -331,8 +331,8 @@ export const requestDisclosure = createServerFn({ method: "POST" })
         "Karta Transferu Danych dla tego Projektu czeka na zatwierdzenie przez Finance You — damy znać, gdy Ujawnienie będzie możliwe.",
       );
     }
-    // Ujawnienie po akceptacji Karty Leada nie wymaga żadnej płatności
-    // (Umowa ramowa v7: usługa dla Inwestora nieodpłatna).
+    // Ujawnienie po akceptacji Karty Leada nie wymaga dodatkowej płatności
+    // (Umowa ramowa v7 § 7: poza abonamentem brak opłat za Projekt).
     const limits = orderLimitsFromSettings(await getModuleSettings());
     const now = new Date();
     const expires = reservationDeadline(now, limits.assignmentHours);
@@ -912,7 +912,7 @@ export const confirmZal6 = createServerFn({ method: "POST" })
       })
       .eq("id", m.id);
     if (error) throw new Error(error.message);
-    // Inwestor nie płaci nic (Umowa ramowa v7) — brak Opłaty Sukcesu.
+    // Brak Opłaty Sukcesu (Umowa ramowa v7) — Inwestor płaci wyłącznie abonament.
     await logCycleEvent(supabaseAdmin, {
       matchId: m.id,
       orderId: m.order_id,

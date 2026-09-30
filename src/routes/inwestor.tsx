@@ -18,14 +18,15 @@ import { getMyInvestorFlags } from "@/lib/investor-agreements/legal-pack.functio
 import { ConsentGate } from "@/components/consent/consent-gate";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 import { InvestorAssistantWidget } from "@/components/inwestor/assistant-widget";
+import { InvestorSubscriptionGate } from "@/components/inwestor/subscription-gate";
 
 export const Route = createFileRoute("/inwestor")({
   component: InwestorLayout,
 });
 
-// Jedna nawigacja dla każdego inwestora — bez podziału na pakiety. Cennik
-// abonamentu jest opublikowany (lib/investor-plan/plans.ts), ale paywall
-// wróci dopiero z nową wersją Umowy ramowej (v7: usługa nieodpłatna).
+// Jedna nawigacja dla każdego inwestora — bez podziału na pakiety. Moduły poza
+// pipeline'em, zakupem, płatnościami i profilem wymagają aktywnego abonamentu
+// (InvestorSubscriptionGate; twarda bramka: RLS i server functions).
 const navGroups: NavGroup[] = [
   {
     items: [
@@ -69,7 +70,11 @@ function InwestorLayout() {
         title="Panel inwestora"
         allow={["inwestor", "administrator"]}
         groups={groups}
-        wrapOutlet={(outlet) => <ConsentGate audience="inwestor">{outlet}</ConsentGate>}
+        wrapOutlet={(outlet) => (
+          <ConsentGate audience="inwestor">
+            <InvestorSubscriptionGate>{outlet}</InvestorSubscriptionGate>
+          </ConsentGate>
+        )}
       />
       <InvestorAssistantWidget />
     </>

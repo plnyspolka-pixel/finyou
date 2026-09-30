@@ -8,8 +8,11 @@
  * rzuca błąd — dzięki temu wynik jest powtarzalny i weryfikowalny testem.
  *
  * Decyzje nadrzędne:
- *  • usługa dla Inwestora NIEODPŁATNA (bez Pakietów, Cennika, Opłaty
- *    Sukcesu, Opłaty Abonamentowej, Opłaty za Udostępnienie Okazji, Zał. 8),
+ *  • Inwestor płaci wyłącznie OPŁATĘ ABONAMENTOWĄ za dostęp do systemu:
+ *    1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni, z góry,
+ *    bez automatycznego odnowienia (decyzja właściciela 2026-09-30 — v7 nie
+ *    był jeszcze przez nikogo zaakceptowany). Bez Pakietów, Cennika, Opłaty
+ *    Sukcesu, Opłaty za Udostępnienie Okazji i Zał. 8,
  *  • Prowizja Klientowska: 7 % Kwoty Udzielonej, min 5 000 zł, bez VAT,
  *    potrącana z wypłaty (Zał. 6 — dwie części przelewu),
  *  • § 5: maks. 5 przyjętych Zleceń, wygaśnięcie po 5 odrzuceniach,
@@ -19,6 +22,8 @@
  */
 
 export const PACKAGE_ID_V7 = "FY-LEGAL-2026-09-29";
+/** Kwoty Opłaty Abonamentowej w treści umowy — muszą zgadzać się z lib/investor-plan/plans.ts. */
+export const ABONAMENT_UMOWA = "1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni";
 export const PACKAGE_DATE_PL = "29 września 2026 r.";
 export const OLD_EMAIL = "plnyspolka@gmail.com";
 export const NEW_EMAIL = "kontakt@financeyou.pl";
@@ -117,17 +122,17 @@ export function transformUmowaV7(v6: string): string {
   // Preambuła — model rozliczenia
   t.replaceLineStartingWith(
     "Usługa pośrednictwa transakcyjnego na podstawie niniejszej Umowy jest odpłatna według Pakietu",
-    "Usługa pośrednictwa transakcyjnego na podstawie niniejszej Umowy jest dla Inwestora nieodpłatna. Prowizja Klientowska jest należna Finance You od Klienta na podstawie odrębnej umowy i jest potrącana z kwoty Finansowania zgodnie z dyspozycją Klienta (Załącznik nr 6): Inwestor przekazuje ją bezpośrednio na rachunek Finance You, a pozostałą część wypłaca Klientowi. Nieodpłatność usługi dla Inwestora nie zwalnia z Mechanizmu Zabezpieczenia Prowizji.",
+    "Za dostęp do systemu Finance You Inwestor płaci wyłącznie Opłatę Abonamentową (§ 7); za przedstawienie Projektu i wsparcie transakcyjne Finance You nie pobiera od Inwestora odrębnego wynagrodzenia. Prowizja Klientowska jest należna Finance You od Klienta na podstawie odrębnej umowy i jest potrącana z kwoty Finansowania zgodnie z dyspozycją Klienta (Załącznik nr 6): Inwestor przekazuje ją bezpośrednio na rachunek Finance You, a pozostałą część wypłaca Klientowi. Opłata Abonamentowa nie zwalnia z Mechanizmu Zabezpieczenia Prowizji.",
   );
   t.replaceLineStartingWith(
     "Model rozliczenia.  Inwestor płaci Finance You wyłącznie Opłaty",
-    "Model rozliczenia.  Inwestor nie płaci Finance You żadnego wynagrodzenia: usługa jest dla Inwestora nieodpłatna. Klient płaci Prowizję Klientowską według odrębnej umowy (7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT), a Inwestor zabezpiecza jej bezpośredni przelew z kwoty Finansowania i potrąca ją z wypłaty. Zawarcie lub wykonanie Transakcji Chronionej bez tego mechanizmu stanowi Naruszenie Obejściowe i uruchamia Karę Obejściową równą 5% Sumy Hipotecznej.",
+    `Model rozliczenia.  Inwestor płaci Finance You wyłącznie Opłatę Abonamentową za dostęp do systemu: ${ABONAMENT_UMOWA}, z góry za wybrany okres. Klient płaci Prowizję Klientowską według odrębnej umowy (7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT), a Inwestor zabezpiecza jej bezpośredni przelew z kwoty Finansowania i potrąca ją z wypłaty. Zawarcie lub wykonanie Transakcji Chronionej bez tego mechanizmu stanowi Naruszenie Obejściowe i uruchamia Karę Obejściową równą 5% Sumy Hipotecznej.`,
   );
 
   // § 1 Definicje
   t.replaceOnce(
     "regułę Sumy Hipotecznej, wskazanie Pakietu Inwestora oraz Opłat należnych od niego za ten Projekt, rzeczywiste warunki Prowizji Klientowskiej",
-    "regułę Sumy Hipotecznej, potwierdzenie nieodpłatności usługi dla Inwestora, rzeczywiste warunki Prowizji Klientowskiej",
+    "regułę Sumy Hipotecznej, potwierdzenie, że za Projekt nie są należne od Inwestora opłaty poza Opłatą Abonamentową, rzeczywiste warunki Prowizji Klientowskiej",
   );
   t.dropLineStartingWith("Kwota Wypłacona Klientowi oznacza");
   t.replaceOnce(
@@ -139,13 +144,16 @@ export function transformUmowaV7(v6: string): string {
   t.dropLineStartingWith("Pakiet Podstawowy oznacza");
   t.dropLineStartingWith("Pakiet PRO oznacza");
   t.dropLineStartingWith("Opłata za Udostępnienie Okazji oznacza");
-  t.dropLineStartingWith("Opłata Abonamentowa oznacza");
+  t.replaceLineStartingWith(
+    "Opłata Abonamentowa oznacza",
+    `Opłata Abonamentowa oznacza jedyne wynagrodzenie Finance You należne od Inwestora — za dostęp do systemu Finance You (panelu Inwestora) przez Okres Abonamentowy: ${ABONAMENT_UMOWA}, według wyboru Inwestora.\nOkres Abonamentowy oznacza opłacony okres dostępu do systemu (30 albo 365 dni), liczony od zaksięgowania Opłaty Abonamentowej, a jeżeli poprzedni opłacony okres jeszcze trwa — od jego końca.`,
+  );
   t.dropLineStartingWith("Opłata Sukcesu oznacza");
 
   // § 2
   t.replaceLineStartingWith(
     "Usługa przedstawienia i wsparcia transakcyjnego na podstawie niniejszej Umowy jest odpłatna według Pakietu",
-    "Usługa przedstawienia i wsparcia transakcyjnego na podstawie niniejszej Umowy jest dla Inwestora nieodpłatna: Finance You nie pobiera od Inwestora żadnych opłat — ani abonamentu, ani opłaty za udostępnienie Projektu, ani wynagrodzenia od rezultatu. Wprowadzenie w przyszłości abonamentu za dostęp do systemu wymaga aneksu albo nowej wersji Umowy doręczonej Inwestorowi na trwałym nośniku i wyraźnie przez niego zaakceptowanej; do tego czasu żadna opłata od Inwestora nie jest należna.",
+    "Usługa przedstawienia i wsparcia transakcyjnego na podstawie niniejszej Umowy jest świadczona w ramach Opłaty Abonamentowej (§ 7): Finance You nie pobiera od Inwestora opłaty za udostępnienie Projektu ani wynagrodzenia od rezultatu. Zmiana wysokości Opłaty Abonamentowej obowiązuje wyłącznie na przyszłość, dla Okresów Abonamentowych opłaconych po jej wejściu w życie, i wymaga uprzedniego powiadomienia Inwestora na trwałym nośniku; opłacony Okres Abonamentowy nie podlega zmianie.",
   );
 
   // § 4
@@ -155,7 +163,7 @@ export function transformUmowaV7(v6: string): string {
   );
   t.replaceOnce(
     "Karta Leada nie może ustanawiać Opłat wyższych niż wynikające z Cennika zaakceptowanego przez Inwestora przed zakupem ani wprowadzać Opłat w Cenniku nieprzewidzianych.",
-    "Karta Leada nie może ustanawiać żadnych opłat należnych od Inwestora.",
+    "Karta Leada nie może ustanawiać żadnych opłat należnych od Inwestora; jedynym wynagrodzeniem Finance You od Inwestora jest Opłata Abonamentowa (§ 7).",
   );
 
   // § 5 — limity
@@ -173,17 +181,17 @@ export function transformUmowaV7(v6: string): string {
   );
   t.replaceLineStartingWith(
     "Składanie Zleceń jest możliwe w obu Pakietach",
-    "Składanie Zleceń, udostępnienie teasera, Karta Leada, Ujawnienie Identyfikujące i rezerwacja są dla Inwestora nieodpłatne. Inwestor nie ma dostępu do Projektów nieprzypisanych do jego Zleceń ani do ich zestawienia. Nieodpłatność usługi jest niezależna od Prowizji Klientowskiej i Kary Obejściowej i nie zwalnia z Mechanizmu Zabezpieczenia Prowizji.",
+    "Składanie Zleceń, udostępnienie teasera, Karta Leada, Ujawnienie Identyfikujące i rezerwacja są dostępne w aktywnym Okresie Abonamentowym i nie wymagają dodatkowych opłat. Inwestor nie ma dostępu do Projektów nieprzypisanych do jego Zleceń ani do ich zestawienia. Opłata Abonamentowa jest niezależna od Prowizji Klientowskiej i Kary Obejściowej i nie zwalnia z Mechanizmu Zabezpieczenia Prowizji.",
   );
 
   // § 7
   t.replaceOnce(
     "§ 7. Opłaty Inwestora i zabezpieczenie Prowizji Klientowskiej",
-    "§ 7. Nieodpłatność usługi dla Inwestora i zabezpieczenie Prowizji Klientowskiej",
+    "§ 7. Opłata Abonamentowa i zabezpieczenie Prowizji Klientowskiej",
   );
   t.replaceLineStartingWith(
     "Finance You pobiera od Inwestora wyłącznie Opłaty wynikające z wybranego Pakietu i Cennika",
-    "Finance You nie pobiera od Inwestora żadnych opłat: przyjęcie Zlecenia, udostępnienie teasera, Karta Leada, Ujawnienie Identyfikujące, rezerwacja, wsparcie transakcyjne oraz zawarcie Transakcji Chronionej pozostają dla Inwestora nieodpłatne. Ewentualny przyszły abonament za dostęp do systemu wymaga aneksu albo nowej wersji Umowy (§ 2 ust. 5).",
+    `Finance You pobiera od Inwestora wyłącznie Opłatę Abonamentową za dostęp do systemu: ${ABONAMENT_UMOWA}, według wyboru Inwestora. Opłata jest płatna z góry, jednorazowo za wybrany Okres Abonamentowy, za pośrednictwem operatora płatności (w szczególności przelewem albo BLIK), bez konieczności podawania danych karty płatniczej i bez automatycznego odnowienia; Finance You wystawia za nią fakturę. Przyjęcie Zlecenia, udostępnienie teasera, Karta Leada, Ujawnienie Identyfikujące, rezerwacja, wsparcie transakcyjne oraz zawarcie Transakcji Chronionej nie wymagają dodatkowych opłat. Po upływie Okresu Abonamentowego Finance You wstrzymuje przyjmowanie nowych Zleceń i dostęp do funkcji systemu do czasu opłacenia kolejnego okresu; dane i dokumenty Inwestora nie są usuwane, a poufność, Mechanizm Zabezpieczenia Prowizji i Okres Ochronny pozostają w mocy.`,
   );
   t.replaceOnce(
     "Standardem operacyjnym jest 7% Kwoty Wypłaconej Klientowi, nie mniej niż 5 000,00 zł, chyba że umowa Klienta przewiduje",
@@ -193,15 +201,15 @@ export function transformUmowaV7(v6: string): string {
   // § 15 — Konsument
   t.replaceOnce(
     "wzór odstąpienia oraz Cennik Pakietów (Załącznik nr 8) z łączną ceną wszystkich Opłat.",
-    "wzór odstąpienia oraz potwierdzenie, że usługa jest dla Inwestora nieodpłatna.",
+    "wzór odstąpienia oraz informację o wysokości Opłaty Abonamentowej i sposobie jej zapłaty.",
   );
   t.replaceOnce(
     "indywidualną Kartę Leada wskazującą Pakiet, Opłaty należne za ten Projekt wraz z przykładem kwotowym, warunki Prowizji Klientowskiej",
-    "indywidualną Kartę Leada wskazującą nieodpłatność usługi, warunki Prowizji Klientowskiej",
+    "indywidualną Kartę Leada wskazującą, że za Projekt nie są należne opłaty poza Opłatą Abonamentową, warunki Prowizji Klientowskiej",
   );
   t.replaceOnce(
     " Jeżeli Ujawnienie Identyfikujące jeszcze nie nastąpiło, Opłata za Udostępnienie Okazji podlega zwrotowi w całości. Opłata Abonamentowa podlega zwrotowi proporcjonalnie do niewykorzystanego okresu. Opłata Sukcesu nie jest należna, jeżeli Transakcja Chroniona nie została zawarta.",
-    " Ponieważ usługa jest dla Inwestora nieodpłatna, obowiązek zapłaty kwoty proporcjonalnej nie powstaje.",
+    " W takim przypadku Finance You zwraca Opłatę Abonamentową pomniejszoną o kwotę proporcjonalną do wykorzystanej części Okresu Abonamentowego; w pozostałych przypadkach zwraca ją w całości. Za przedstawienie Projektu nie nalicza się odrębnej kwoty.",
   );
 
   // § 16
@@ -213,16 +221,16 @@ export function transformUmowaV7(v6: string): string {
   // § 17 / kontakt
   t.replaceOnce(
     "Inwestor płaci wyłącznie Opłaty wynikające z wybranego Pakietu, a Kara Obejściowa nie powstaje.",
-    "Kara Obejściowa nie powstaje, a Inwestor nie płaci Finance You żadnego wynagrodzenia.",
+    "Kara Obejściowa nie powstaje, a Inwestor nie płaci Finance You od tej Transakcji żadnego wynagrodzenia.",
   );
   // § 9–§ 12: ochrona i kary — bez odwołań do Opłaty Sukcesu i Pakietów.
   t.replaceOnce(
     "nie powstaje ani Kara Obejściowa, ani Opłata Sukcesu; jeżeli zawrze ją prawidłowo z Mechanizmem Zabezpieczenia Prowizji, należne są wyłącznie Opłaty z wybranego Pakietu.",
-    "nie powstaje Kara Obejściowa; jeżeli zawrze ją prawidłowo z Mechanizmem Zabezpieczenia Prowizji, Inwestor nie płaci Finance You żadnego wynagrodzenia.",
+    "nie powstaje Kara Obejściowa; jeżeli zawrze ją prawidłowo z Mechanizmem Zabezpieczenia Prowizji, Inwestor nie płaci Finance You od tej Transakcji żadnego wynagrodzenia.",
   );
   t.replaceOnce(
     "oraz jednoznaczne rozróżnienie Kary Obejściowej od Opłat należnych z Pakietu. Wobec Konsumenta Opłata Sukcesu wymaga uprzedniego, wyraźnego uzgodnienia z podaniem kwoty albo formuły i przykładu kwotowego; bez takiego uzgodnienia nie jest należna. W pozostałym zakresie",
-    "oraz jednoznaczne wskazanie, że poza Karą Obejściową Inwestor nie płaci Finance You żadnego wynagrodzenia. W pozostałym zakresie",
+    "oraz jednoznaczne wskazanie, że poza Opłatą Abonamentową i Karą Obejściową Inwestor nie płaci Finance You żadnego wynagrodzenia. W pozostałym zakresie",
   );
   t.replaceAll(OLD_EMAIL, NEW_EMAIL);
 
@@ -233,13 +241,13 @@ export function transformUmowaV7(v6: string): string {
   );
   t.replaceOnce(
     "Załączniki nr 1–7 stanowią integralną część Umowy.",
-    "Załączniki nr 1–7 stanowią integralną część Umowy; Umowa nie zawiera cennika ani innych załączników.",
+    "Załączniki nr 1–7 stanowią integralną część Umowy; wysokość Opłaty Abonamentowej określa § 7 ust. 1.",
   );
 
   // Zał. 1 — Karta Leada
   t.replaceLineStartingWith(
     "zgodnie z Pakietem Inwestora i Cennikiem (Załącznik nr 8)",
-    "usługa dla Inwestora nieodpłatna — Finance You nie pobiera od Inwestora żadnych opłat",
+    "za ten Projekt Finance You nie pobiera od Inwestora żadnych opłat — dostęp w ramach Opłaty Abonamentowej (§ 7 Umowy)",
   );
   t.replaceLineStartingWith(
     "Rzeczywiste warunki z odrębnej umowy Klienta: ______ % Kwoty Wypłaconej Klientowi",
@@ -251,17 +259,17 @@ export function transformUmowaV7(v6: string): string {
   );
   t.replaceLineStartingWith(
     "Opłata proporcjonalna za rozpoczętą usługę pośrednictwa:",
-    "Opłata proporcjonalna za rozpoczętą usługę pośrednictwa: nie powstaje — usługa jest dla Inwestora nieodpłatna (§ 15 ust. 4 Umowy).",
+    "Opłata proporcjonalna za rozpoczętą usługę pośrednictwa: nie dotyczy tego Projektu — rozliczenie Opłaty Abonamentowej przy odstąpieniu określa § 15 ust. 4 Umowy.",
   );
   t.replaceOnce(
     "Potwierdzam, że znam Pakiet, w którym działam, oraz wysokość i sposób obliczenia należnych ode mnie Opłat wskazanych w Cenniku. Akceptuję",
-    "Potwierdzam, że usługa Finance You jest dla mnie nieodpłatna. Akceptuję",
+    "Potwierdzam, że za ten Projekt nie płacę Finance You żadnej opłaty poza Opłatą Abonamentową. Akceptuję",
   );
 
   // Zał. 3 — informacja przedumowna
   t.replaceLineStartingWith(
     "Usługa przedstawienia i wsparcia Transakcji Chronionej jest odpłatna zgodnie z wybranym Pakietem",
-    "Usługa przedstawienia i wsparcia Transakcji Chronionej jest dla Inwestora nieodpłatna: Finance You nie pobiera od Inwestora abonamentu, opłaty za udostępnienie Projektu ani wynagrodzenia od rezultatu.",
+    `Opłata Abonamentowa za dostęp do systemu: ${ABONAMENT_UMOWA}, płatna z góry za wybrany okres przez operatora płatności, bez konieczności podawania danych karty płatniczej i bez automatycznego odnowienia. Finance You nie pobiera od Inwestora opłaty za udostępnienie Projektu ani wynagrodzenia od rezultatu.`,
   );
   t.replaceOnce(
     "Standardowo: 7% Kwoty Wypłaconej Klientowi, minimum 5 000,00 zł.",
@@ -269,7 +277,7 @@ export function transformUmowaV7(v6: string): string {
   );
   t.replaceOnce(
     "Konsument nie płaci wynagrodzenia transakcyjnego. Prowizję Klientowską przekazuje",
-    "Inwestor nie płaci wynagrodzenia. Prowizję Klientowską przekazuje",
+    "Inwestor płaci wyłącznie Opłatę Abonamentową, z góry za wybrany Okres Abonamentowy. Prowizję Klientowską przekazuje",
   );
   t.replaceOnce(
     "Potwierdzam otrzymanie informacji przedumownej, Umowy, Cennika Pakietów (Załącznik nr 8), Karty Leada",
@@ -277,7 +285,10 @@ export function transformUmowaV7(v6: string): string {
   );
 
   // Zał. 5 — protokół
-  t.replaceOnce("Usługa Inwestora: 0,00 zł", "Usługa Inwestora: nieodpłatna");
+  t.replaceOnce(
+    "Usługa Inwestora: 0,00 zł",
+    "Opłata Inwestora za Projekt: brak (dostęp w ramach Opłaty Abonamentowej)",
+  );
 
   // Zał. 6 — dyspozycja
   t.replaceOnce("Całkowita kwota Finansowania\n", "Kwota Udzielona (kwota Finansowania z umowy)\n");
@@ -289,7 +300,7 @@ export function transformUmowaV7(v6: string): string {
   // Zał. 7 — oświadczenia
   t.replaceOnce(
     "Znam Pakiet, w którym działam, i wysokość należnych ode mnie Opłat zgodnie z Cennikiem; Prowizja Klientowska obciąża Klienta i podlega Mechanizmowi Zabezpieczenia Prowizji.",
-    "Usługa Finance You jest dla mnie nieodpłatna; Prowizja Klientowska (7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT) obciąża Klienta, jest potrącana z wypłaty i podlega Mechanizmowi Zabezpieczenia Prowizji.",
+    `Znam wysokość Opłaty Abonamentowej (${ABONAMENT_UMOWA}) i wiem, że poza nią nie płacę Finance You za Projekty ani od rezultatu; Prowizja Klientowska (7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT) obciąża Klienta, jest potrącana z wypłaty i podlega Mechanizmowi Zabezpieczenia Prowizji.`,
   );
 
   // Zał. 8 — usunięty w całości
@@ -331,8 +342,6 @@ export const FORBIDDEN_IN_V7 = [
   "Pakietu Podstawowego",
   "Opłata Sukcesu",
   "Opłaty Sukcesu",
-  "Opłata Abonamentowa",
-  "Opłatę Abonamentową",
   "Opłata za Udostępnienie Okazji",
   "Opłatę za Udostępnienie Okazji",
   "Cennik",
@@ -341,8 +350,8 @@ export const FORBIDDEN_IN_V7 = [
   "Kwota Wypłacona Klientowi",
   "Kwoty Wypłaconej Klientowi",
   "Usługa Inwestora: 0,00 zł",
-  "1 500,00",
   "3 000,00",
+  "nieodpłatn",
   OLD_EMAIL,
 ];
 

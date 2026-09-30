@@ -1,5 +1,5 @@
 // Rejestr HISTORYCZNYCH opłat sukcesu w panelu administratora — sekcja
-// NIEAKTYWNA od 2026-09 (Umowa ramowa v7: usługa dla Inwestora nieodpłatna,
+// NIEAKTYWNA od 2026-09 (Umowa ramowa v7: bez Opłaty Sukcesu — Inwestor płaci wyłącznie abonament,
 // brak Opłaty Sukcesu). Nowe rekordy nie powstają; istniejące można wyłącznie
 // anulować. Karta zostaje dla audytu i rozliczeń sprzed zmiany.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -51,11 +51,10 @@ export function SuccessFeesCard() {
         <p className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-700">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
-            <b>Sekcja nieaktywna.</b> Od Umowy ramowej v7 usługa Finance You dla Inwestora jest
-            nieodpłatna — nie ma Opłaty Sukcesu ani opłaty za Projekt (abonament inwestora z cennika
-            zacznie obowiązywać dopiero z nową wersją umowy). Klient płaci Prowizję Klientowską (7 %
-            Kwoty Udzielonej, min 5 000 zł, bez VAT) potrącaną z wypłaty. Poniższe rekordy są
-            historyczne
+            <b>Sekcja nieaktywna.</b> Od Umowy ramowej v7 nie ma Opłaty Sukcesu ani opłaty za
+            Projekt — Inwestor płaci wyłącznie Opłatę Abonamentową (1 500 zł / 30 dni albo 7 000 zł
+            / 365 dni). Klient płaci Prowizję Klientowską (7 % Kwoty Udzielonej, min 5 000 zł, bez
+            VAT) potrącaną z wypłaty. Poniższe rekordy są historyczne
             {data.contractVersion ? ` (aktywna umowa: ${data.contractVersion})` : ""}; można je
             tylko anulować.
           </span>

@@ -23,8 +23,9 @@ kodzie i checklistę wdrożeniową.
 ## Obszar 1 — Umowy inwestora (pakiet FY-LEGAL-2026-09-04, paczka prawnika v5)
 
 > **Aktualizacja 2026-09-29:** obowiązującym projektem jest pakiet
-> **FY-LEGAL-2026-09-29** (umowa ramowa v7, NDA v6, RODO v5) — usługa dla
-> Inwestora nieodpłatna, jedyna opłata to Prowizja Klientowska 7% Kwoty
+> **FY-LEGAL-2026-09-29** (umowa ramowa v7, NDA v6, RODO v5) — Inwestor płaci
+> wyłącznie Opłatę Abonamentową (1 500 zł / 30 dni albo 7 000 zł / 365 dni,
+> zmiana z 2026-09-30), Klient płaci Prowizję Klientowską 7% Kwoty
 > Udzielonej (min. 5 000 zł, bez VAT, potrącana z wypłaty), kontakt
 > `kontakt@financeyou.pl`. Pliki i skróty SHA-256:
 > `docs/legal/paczka-inwestor-v7/`. Pakiet jest aktywny od wdrożenia

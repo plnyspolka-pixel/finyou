@@ -29,11 +29,8 @@ export function useAccessState(audience: AccessAudience) {
     void refresh();
   }, [refresh]);
 
-  // Inwestor: usługa nieodpłatna (Umowa ramowa v7) — pełny dostęp bez płatności.
-  // Pośrednik: nadal wg wykupionego pakietu / bypassu personelu.
-  const hasFullAccess =
-    audience === "investor"
-      ? true
-      : Boolean(state?.hasPaidAccess || state?.isBypass || state?.hasModuleAccess);
+  // Inwestor: aktywny abonament (Umowa ramowa v7 § 7), dostęp modułowy nadany
+  // przez zespół albo bypass personelu. Pośrednik: wykupiony pakiet / bypass.
+  const hasFullAccess = Boolean(state?.hasPaidAccess || state?.isBypass || state?.hasModuleAccess);
   return { state, loading, refresh, hasFullAccess };
 }

@@ -21,11 +21,21 @@ const PAIRS: Array<[string, string]> = [
   ["20260929157000_etap5_akceptacje_zgod_i_boty.sql", "0018_etap5_akceptacje_zgod_i_boty.sql"],
   ["20260930100000_polityka_v2_cookies.sql", "0020_polityka_v2_cookies.sql"],
   ["20260930101000_cookie_consent_log.sql", "0021_cookie_consent_log.sql"],
+  ["20260930140000_abonament_inwestora.sql", "0023_abonament_inwestora.sql"],
 ];
 
 describe("migracje 2026-09-29", () => {
   it.each(PAIRS)("%s ma identyczne lustro drizzle", (supa, drz) => {
     expect(readFileSync(join(DRIZZLE, drz), "utf8")).toBe(readFileSync(join(SUPA, supa), "utf8"));
+  });
+
+  it("znaczniki `when` w _journal.json rosną — drizzle pomija migrację starszą od ostatnio wgranej", () => {
+    const journal = JSON.parse(readFileSync(join(DRIZZLE, "meta", "_journal.json"), "utf8"));
+    const entries = journal.entries as { tag: string; when: number }[];
+    const idx = entries.findIndex((e) => e.tag === "0022_accounting_vat_exemption_basis");
+    for (let i = Math.max(idx, 1); i < entries.length; i++) {
+      expect(entries[i].when, entries[i].tag).toBeGreaterThan(entries[i - 1].when);
+    }
   });
 
   it("każde lustro ma wpis w _journal.json i snapshot", () => {

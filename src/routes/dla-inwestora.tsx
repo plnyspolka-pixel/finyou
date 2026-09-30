@@ -481,6 +481,14 @@ const FAQ_GROUPS: FAQGroup[] = [
         a: `Nie. ${SUBSCRIPTION_PAYMENT_SENTENCE} Po wygaśnięciu okresu sam decydujesz, czy go przedłużyć.`,
       },
       {
+        q: "Kiedy opłacam abonament?",
+        a: "Po akceptacji umów w pipeline'ie inwestora, a przed złożeniem pierwszego Zlecenia — Opłatę Abonamentową określa § 7 Umowy ramowej. Rejestracja, dane konta, weryfikacja tożsamości i akceptacja umów nie wymagają płatności. Abonament kupujesz w panelu, w zakładce Dostęp i płatności, a fakturę dostajesz automatycznie.",
+      },
+      {
+        q: "Co się dzieje, gdy abonament wygaśnie?",
+        a: "Wstrzymujemy przyjmowanie nowych Zleceń i dostęp do modułów panelu do czasu opłacenia kolejnego okresu. Twoje dane, dokumenty i historia zostają zapisane, a obowiązki z umowy — poufność, zabezpieczenie prowizji klienta i okres ochronny — pozostają w mocy. Kilka dni przed końcem okresu przypominamy e-mailem; kolejny okres możesz opłacić wcześniej, wtedy liczy się od końca obecnego.",
+      },
+      {
         q: "Kto płaci prowizję Finance You od pożyczki?",
         a: "Klient. Prowizja Finance You wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, i jest potrącana z wypłaty. Przy wypłacie przelewasz ją na rachunek Finance You, a resztę kwoty pożyczki klientowi — np. przy 100 000 zł: 7 000 zł dla Finance You i 93 000 zł dla klienta. Nie jest to koszt inwestora.",
       },
@@ -490,7 +498,7 @@ const FAQ_GROUPS: FAQGroup[] = [
       },
       {
         q: "Czy cena abonamentu może się zmienić?",
-        a: "Cena obowiązuje przez cały opłacony okres. Każda zmiana warunków wymaga aneksu albo nowej wersji Umowy ramowej, doręczonej Ci na trwałym nośniku i wyraźnie zaakceptowanej — bez Twojej zgody warunki się nie zmienią.",
+        a: "Cena obowiązuje przez cały opłacony okres. Zmiana wysokości Opłaty Abonamentowej może dotyczyć wyłącznie kolejnych okresów, opłaconych po jej wejściu w życie, i wymaga wcześniejszego powiadomienia Cię na trwałym nośniku (§ 2 Umowy ramowej). Jeśli nowa cena Ci nie odpowiada, nie opłacasz kolejnego okresu albo wypowiadasz umowę.",
       },
       {
         q: "Czy muszę sam rozliczyć podatek od zysku?",
@@ -504,7 +512,7 @@ const FAQ_GROUPS: FAQGroup[] = [
     items: [
       {
         q: "Jak wygląda droga do pierwszego Projektu?",
-        a: "To jeden pipeline w panelu: podajesz dane inwestora (dla firm pobieramy je z GUS/KRS po NIP, REGON lub numerze KRS), wskazujesz rachunek do spłaty pożyczki, przechodzisz zdalną weryfikację tożsamości, my wykonujemy screening list sankcyjnych i PEP, doręczamy pakiet dokumentów, system wypełnia umowy Twoimi danymi, a Ty je akceptujesz. Na końcu składasz Zlecenie.",
+        a: "To jeden pipeline w panelu: podajesz dane inwestora (dla firm pobieramy je z GUS/KRS po NIP, REGON lub numerze KRS), wskazujesz rachunek do spłaty pożyczki, przechodzisz zdalną weryfikację tożsamości, my wykonujemy screening list sankcyjnych i PEP, doręczamy pakiet dokumentów, system wypełnia umowy Twoimi danymi, a Ty je akceptujesz. Na końcu opłacasz abonament i składasz Zlecenie.",
       },
       {
         q: "Jak przebiega weryfikacja tożsamości?",
@@ -624,7 +632,7 @@ const FAQ_GROUPS: FAQGroup[] = [
       },
       {
         q: "Czy mogę odstąpić od umowy lub ją wypowiedzieć?",
-        a: "Umowa ramowa jest zawierana na czas nieoznaczony i każda strona może ją wypowiedzieć z 30-dniowym okresem wypowiedzenia. Jeśli działasz jako konsument, możesz odstąpić od umowy zawartej na odległość w ciągu 14 dni bez podania przyczyny. Okres ochronny już ujawnionych Projektów pozostaje w mocy.",
+        a: "Umowa ramowa jest zawierana na czas nieoznaczony i każda strona może ją wypowiedzieć z 30-dniowym okresem wypowiedzenia. Jeśli działasz jako konsument, możesz odstąpić od umowy zawartej na odległość w ciągu 14 dni bez podania przyczyny — zwracamy wtedy Opłatę Abonamentową, a jeśli na Twoje żądanie zaczęliśmy świadczyć usługę przed upływem tego terminu, pomniejszoną o część za wykorzystany okres. Okres ochronny już ujawnionych Projektów pozostaje w mocy.",
       },
       {
         q: "Jak mogę się skontaktować z Finance You?",

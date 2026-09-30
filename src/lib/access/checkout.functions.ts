@@ -4,6 +4,7 @@
 // z zaufanego katalogu `access_products` po stronie serwera — klient przesyła
 // wyłącznie kod produktu, typ nabywcy, dane nabywcy i zgody.
 import { createServerFn } from "@tanstack/react-start";
+import { SUBSCRIPTION_OPTIONS } from "@/lib/investor-plan/plans";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
@@ -97,19 +98,28 @@ async function resolveInFlightUnlockPayments(db: any, matchId: string): Promise<
   return null;
 }
 
+/** Jedyne produkty inwestora w sprzedaży — abonament 30 i 365 dni. */
+const INVESTOR_SUBSCRIPTION_CODES = new Set<string>(
+  Object.values(SUBSCRIPTION_OPTIONS).map((o) => o.productCode),
+);
+
 export const createAccessCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CheckoutSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
     try {
-      if (isLegacyPlanId(data.productCode) || data.productCode.startsWith("investor_")) {
-        // Abonament inwestora (cennik w lib/investor-plan/plans.ts) nie jest jeszcze
-        // pobierany: Umowa ramowa v7 mówi, że usługa dla Inwestora jest nieodpłatna.
-        // Produkty inwestora zostają nieaktywne do czasu nowej wersji umowy.
+      if (
+        isLegacyPlanId(data.productCode) ||
+        (data.productCode.startsWith("investor_") &&
+          !INVESTOR_SUBSCRIPTION_CODES.has(data.productCode))
+      ) {
+        // Inwestor kupuje wyłącznie abonament (30 albo 365 dni — Umowa ramowa v7
+        // § 7). Pakiet PRO, odblokowanie pojedynczej okazji i stare plany nie
+        // są już w sprzedaży.
         return {
           error:
-            "Zakup abonamentu inwestora online nie jest jeszcze dostępny — konta inwestorów korzystają z dostępu bez opłat do czasu akceptacji nowej wersji Umowy ramowej. Pośrednik wybiera pakiet 30 lub 365 dni.",
+            "Ten pakiet nie jest już dostępny w sprzedaży. Inwestor wybiera abonament na 30 albo 365 dni; pośrednik — pakiet 30 lub 365 dni.",
         };
       }
 
@@ -198,6 +208,16 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
       ]);
       if (audience === "investor" && !roles.includes("inwestor") && !staff) {
         return { error: "Pakiet inwestora może kupić wyłącznie konto inwestora." };
+      }
+      if (audience === "investor" && !staff) {
+        // Podstawą Opłaty Abonamentowej jest Umowa ramowa — najpierw akceptacja.
+        const { investorAcceptedActiveFramework } = await import("./guards.server");
+        if (!(await investorAcceptedActiveFramework(userId))) {
+          return {
+            error:
+              "Przed zakupem abonamentu zaakceptuj Umowę ramową w zakładce Zlecenia i Projekty — to ona określa Opłatę Abonamentową.",
+          };
+        }
       }
       if (audience === "broker" && !roles.includes("posrednik") && !partner && !staff) {
         return { error: "Pakiet pośrednika może kupić wyłącznie konto pośrednika." };

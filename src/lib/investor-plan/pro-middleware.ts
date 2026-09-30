@@ -1,12 +1,11 @@
-// Middleware dawnych modułów „PRO" (Akademia, kalkulator compliance, AML,
+// Middleware modułów panelu inwestora (Akademia, kalkulator compliance, AML,
 // windykacja AI, raporty bez limitu).
 //
-// Od 2026-09 (Umowa ramowa v7) usługa dla Inwestora jest NIEODPŁATNA i nie ma
-// paywalla: middleware przepuszcza każdego zalogowanego inwestora oraz
-// personel wewnętrzny. Zostaje jako jedno miejsce bramkowania — abonament za
-// dostęp do systemu w przyszłości wróci właśnie tutaj (wtedy dojdzie odczyt
-// access_entitlements). Składa się z requireSupabaseAuth, więc kontekst
-// (supabase, userId, claims) pozostaje ten sam.
+// Od 2026-09-30 moduły wymagają aktywnego abonamentu inwestora (Umowa ramowa
+// v7 § 7): przepuszcza personel wewnętrzny oraz inwestora, dla którego SQL
+// `investor_has_full_access` zwraca true (aktywny abonament — z płatności albo
+// nadany ręcznie przez zespół; ta sama funkcja stoi za RLS). Składa się z
+// requireSupabaseAuth, więc kontekst (supabase, userId, claims) zostaje ten sam.
 import { createMiddleware } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -24,6 +23,11 @@ export const requireInvestorPro = createMiddleware({ type: "function" })
     if (!ok) {
       throw new Error("Ten moduł jest dostępny dla zweryfikowanych inwestorów i personelu.");
     }
-    // abonament w przyszłości — tu wróci sprawdzenie uprawnień płatnych
+    const { investorHasFullAccess } = await import("@/lib/access/guards.server");
+    if (!(await investorHasFullAccess(context.userId))) {
+      throw new Error(
+        "Ten moduł jest dostępny w abonamencie inwestora — wykup go w zakładce Dostęp i płatności.",
+      );
+    }
     return next();
   });

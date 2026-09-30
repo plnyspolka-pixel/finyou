@@ -25,7 +25,7 @@ export async function sendPaymentConfirmedEmail(opts: {
     : "Płatność potwierdzona — dostęp aktywny | Finance You";
   const text = `Dzień dobry,
 
-potwierdzamy zaksięgowanie płatności ${formatGroszPln(opts.amountGrosz)} za pakiet: ${opts.productLabel}.
+potwierdzamy zaksięgowanie płatności ${formatGroszPln(opts.amountGrosz)} ${opts.audience === "investor" ? "—" : "za pakiet:"} ${opts.productLabel}.
 
 ${
   isUnlock
@@ -82,7 +82,7 @@ export async function sendExpiryReminderEmail(opts: {
 
 Twój pełny dostęp do platformy Finance You wygasa ${until} (za ${dni}).
 
-Aby zachować ciągłość dostępu, przedłuż pakiet tutaj: ${base}${renewPath}
+Aby zachować ciągłość dostępu, przedłuż ${opts.audience === "investor" ? "abonament" : "pakiet"} tutaj: ${base}${renewPath}
 
 Po przedłużeniu nowy okres doliczymy do końca bieżącego — nic nie przepada.
 
@@ -102,9 +102,9 @@ export async function sendAccessExpiredEmail(opts: {
     opts.audience === "investor"
       ? `Dzień dobry,
 
-Twój pełny dostęp inwestora wygasł. Pełne funkcje platformy (oferty, dokumenty, analizy, czat, umowy, windykacja) zostały zablokowane.
+Twój abonament inwestora wygasł. Nowe Zlecenia i moduły panelu (Projekty, dokumenty, analizy, czat, windykacja, AML, Akademia) są wstrzymane do czasu opłacenia kolejnego okresu.
 
-Twoje dane pozostają bezpiecznie zapisane — odzyskasz do nich dostęp natychmiast po opłaceniu kolejnego okresu: ${base}${renewPath}
+Twoje dane i dokumenty pozostają bezpiecznie zapisane, a obowiązki z Umowy ramowej (poufność, zabezpieczenie prowizji klienta, okres ochronny) obowiązują nadal. Dostęp odzyskasz natychmiast po opłaceniu kolejnego okresu — 1 500 zł za 30 dni albo 7 000 zł za 365 dni: ${base}${renewPath}
 
 Pozdrawiamy,
 Zespół Finance You`

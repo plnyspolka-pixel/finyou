@@ -60,10 +60,9 @@ export function ConsentGate({
         <CardContent className="space-y-4 text-sm">
           <p className="text-muted-foreground">
             Aby dalej korzystać z panelu, zapoznaj się z nowymi wersjami dokumentów i zaakceptuj je.
-            Najważniejsze zmiany: finansowanie wyłącznie na cel związany z działalnością
-            gospodarczą, jedyna opłata to prowizja Finance You 7% kwoty pożyczki (nie mniej niż 5
-            000 zł, bez VAT), potrącana z wypłaty, a decyzje o odrzuceniu wniosku zawsze podejmuje
-            człowiek.
+            {audience === "inwestor"
+              ? " Najważniejsze zmiany: finansowanie wyłącznie na cel związany z działalnością gospodarczą, prowizję Finance You 7% kwoty pożyczki (nie mniej niż 5 000 zł, bez VAT) płaci klient — potrącaną z wypłaty, a dostęp inwestora do systemu to abonament: 1 500 zł za 30 dni albo 7 000 zł za 365 dni."
+              : " Najważniejsze zmiany: finansowanie wyłącznie na cel związany z działalnością gospodarczą, jedyna opłata to prowizja Finance You 7% kwoty pożyczki (nie mniej niż 5 000 zł, bez VAT), potrącana z wypłaty, a decyzje o odrzuceniu wniosku zawsze podejmuje człowiek."}
           </p>
           <ul className="space-y-3">
             {pending.map((p) => {

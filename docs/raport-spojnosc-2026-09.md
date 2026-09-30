@@ -10,7 +10,8 @@ etapy wdrożone w kodzie i migracjach; testy, typecheck i lint zielone.
 - Jedyna opłata: **Prowizja Finance You — 7% Kwoty Udzielonej, nie mniej niż
   5 000 zł, bez VAT**, potrącana z wypłaty. Inwestor przekazuje ją Finance You,
   resztę wypłaca Klientowi (100 000 zł → 7 000 zł / 93 000 zł).
-- Inwestor nie płaci nic: brak Opłaty Sukcesu, PRO, opłaty 1 500 zł za Projekt.
+- Inwestor nie płaci opłat jednostkowych: brak Opłaty Sukcesu, PRO, opłaty 1 500 zł za Projekt
+  (od 30 września 2026 r. płaci wyłącznie Opłatę Abonamentową — `docs/cennik-inwestora.md`).
   Infrastruktura `access_products` / uprawnień zostaje, produkty inwestora
   są nieaktywne. Prowizja inwestora (KWO_02) to osobne pole, rozłożone w ratach.
 - Oprocentowanie ≤ odsetki maksymalne (14,5% od 2026-03-05). Jedna tabela stóp
@@ -47,9 +48,12 @@ Pakiet inwestora `FY-LEGAL-2026-09-29` — `docs/legal/paczka-inwestor-v7/`
 `legal_documents.sha256` = SHA-256 z `content_text` (UTF-8) — ta wartość
 trafia do akceptacji (code:version:sha256).
 
+30 września 2026 r. umowa v7 (przed pierwszą akceptacją) dostała Opłatę
+Abonamentową zamiast nieodpłatności — skróty poniżej są po tej zmianie.
+
 | Dokument | Wersja | SHA-256 treści (DB) | SHA-256 .docx |
 |---|---|---|---|
-| Umowa ramowa | v7 | `272d93b85cbac50822fab2f6ed984a94a67c65706177b999e7a444abe9020668` | `4a1068648a71f96cfbe4516e1cd999093c2daf143373021258a2ce7880250158` |
+| Umowa ramowa | v7 | `0d098f1b568f65eb31a4fe9b177e8bdfae417cf347e4e269ad699ed16a782aa0` | `d3ef9138d069ee31e43ebfde0d63fda79aa71a2994c4642b3a52e20fdc70cf51` |
 | NDA | v6 | `0730df56392cd49c28019fd98cb4b00237d811ee04355f7aed0baa046b73f581` | `94de39607660a0090b7a32afcd3f20b5fca10472ba2115e08eb2706aa2b6d9d8` |
 | RODO | v5 | `7b6dbd5818ccee74dff0ab095229895c91aa1779a16baf5ad65e2019eb2a19fb` | `94bfad8421b9b231e29d72084aeae12e4b5000ce5d170707562127921d39ad62` |
 
