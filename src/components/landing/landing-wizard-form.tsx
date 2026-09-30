@@ -84,8 +84,7 @@ export function LandingWizardForm() {
   const camRef = useRef<HTMLInputElement>(null);
   const deedRef = useRef<HTMLInputElement>(null);
 
-  // Calculator state (defaults submitted with the application; the interactive
-  // calculator lives on /kalkulator-pozyczki)
+  // Calculator state (defaults submitted with the application)
   const [amount] = useState(200_000);
   const [months, setMonths] = useState(36);
   const [maxPayment] = useState(0);

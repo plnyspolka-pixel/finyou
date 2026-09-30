@@ -4,14 +4,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { selectAccountRole } from "@/lib/account-role.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, LineChart } from "lucide-react";
+import { Briefcase, Building2, LineChart } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/wybor-roli")({
   component: RolePickerPage,
 });
 
-type Pick = "klient" | "inwestor";
+type Pick = "klient" | "inwestor" | "posrednik";
 
 function RolePickerPage() {
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ function RolePickerPage() {
       await refreshRoles();
       toast.success("Konto skonfigurowane");
       navigate({
-        to: role === "inwestor" ? "/inwestor" : "/klient",
+        to: role === "inwestor" ? "/inwestor" : role === "posrednik" ? "/posrednik" : "/klient",
       });
     } catch (e) {
       toast.error("Nie udało się zapisać wyboru", {
@@ -72,13 +72,19 @@ function RolePickerPage() {
           <CardTitle>Wybierz typ konta</CardTitle>
           <CardDescription>Określ, w jakiej roli chcesz korzystać z platformy.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+        <CardContent className="grid gap-4 sm:grid-cols-3">
           {tile("klient", Building2, "Klient", "Złóż wniosek o pożyczkę pod zastaw nieruchomości.")}
           {tile(
             "inwestor",
             LineChart,
             "Inwestor",
             "Przeglądaj oferty i inwestuj w zabezpieczone pożyczki.",
+          )}
+          {tile(
+            "posrednik",
+            Briefcase,
+            "Pośrednik",
+            "Przekazuj klientów, korzystaj z CRM i zarabiaj prowizje.",
           )}
         </CardContent>
       </Card>
