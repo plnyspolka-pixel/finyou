@@ -92,6 +92,8 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
       return;
     }
     if (!termsAccepted) return toast.error("Zaakceptuj regulamin, aby kontynuować");
+    if (isInvestor && !digitalConsent)
+      return toast.error("Potwierdź rozpoczęcie szkolenia od razu, aby kontynuować");
     if (!privacyAccepted) return toast.error("Zaakceptuj politykę prywatności, aby kontynuować");
 
     setLoading(true);
@@ -324,11 +326,19 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
             onCheckedChange={(v) => setDigitalConsent(v === true)}
             className="mt-0.5"
           />
-          <span className="text-muted-foreground">
-            Żądam rozpoczęcia świadczenia usługi cyfrowej bezpośrednio po opłaceniu i przyjmuję do
-            wiadomości, że tracę w ten sposób prawo odstąpienia od umowy w zakresie wykonanej
-            usługi.
-          </span>
+          {isInvestor ? (
+            <span>
+              Żądam rozpoczęcia dostarczania szkolenia (treści cyfrowych) bezpośrednio po opłaceniu,
+              przed upływem terminu do odstąpienia od umowy, i przyjmuję do wiadomości, że tracę w
+              ten sposób prawo odstąpienia od umowy. *
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              Żądam rozpoczęcia świadczenia usługi cyfrowej bezpośrednio po opłaceniu i przyjmuję do
+              wiadomości, że tracę w ten sposób prawo odstąpienia od umowy w zakresie wykonanej
+              usługi.
+            </span>
+          )}
         </label>
       </div>
 

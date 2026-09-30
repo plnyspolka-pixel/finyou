@@ -218,6 +218,15 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         return { error: "Pakiet pośrednika może kupić wyłącznie konto pośrednika." };
       }
 
+      // Regulamin abonamentu v2: żądanie natychmiastowego dostarczenia treści
+      // cyfrowych (utrata prawa odstąpienia) jest warunkiem zakupu inwestora.
+      if (audience === "investor" && !data.consents.digitalService) {
+        return {
+          error:
+            "Aby kupić abonament, zażądaj rozpoczęcia dostarczania szkolenia od razu i potwierdź utratę prawa odstąpienia.",
+        };
+      }
+
       // 3) Rekord płatności (status 'created') ze snapshotem nabywcy i zgód.
       const { requestClientMeta, resolveAppBaseUrl } = await import("./urls.server");
       const meta = requestClientMeta();
