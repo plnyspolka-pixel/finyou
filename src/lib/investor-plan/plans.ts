@@ -171,8 +171,18 @@ export interface TierPresentation {
   priceLabel: string;
   periodLabel: string;
   tagline: string;
-  bullets: string[];
+  bullets: BenefitBullet[];
   note: string;
+}
+
+/** Punkt oferty w układzie Cecha → Zaleta → Korzyść. */
+export interface BenefitBullet {
+  /** Co dostajesz (nazwa funkcji). */
+  cecha: string;
+  /** Co ta funkcja robi. */
+  zaleta: string;
+  /** Co z tego masz ty — język korzyści. */
+  korzysc: string;
 }
 
 /** Jeden abonament inwestora — pełny dostęp. Do UI (panel + strona marketingowa). */
@@ -182,17 +192,48 @@ export const ACCESS_PRESENTATION: TierPresentation = {
   priceLabel: `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} / mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} / rok`,
   periodLabel: `rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej · bez karty kredytowej`,
   tagline:
-    "Jeden abonament, pełny dostęp: składasz Zlecenie, my szukamy Projektów. Bez prowizji od Twojego zysku i bez opłat za Projekt — Prowizję od Pożyczkobiorcy płaci Klient, potrącaną z wypłaty.",
+    "Jeden abonament otwiera wszystkie narzędzia: składasz Zlecenie, a my szukamy dla Ciebie Projektów. Cały zarobek z odsetek i Twojej prowizji zostaje u Ciebie — nie oddajesz części zysku i nie płacisz za Projekty, bo Prowizję od Pożyczkobiorcy płaci Klient, potrącaną z wypłaty.",
   bullets: [
-    "Pełny pipeline: dane pożyczkodawcy, rachunek spłaty, KYC i screening sankcyjny",
-    "Akceptacja pakietu umów online",
-    "Składanie Zleceń poszukiwania Projektów",
-    "Projekty dopasowane do Zlecenia: raport o inwestycji, harmonogram zaakceptowany przez Klienta i dane kontaktowe",
-    "Generator umowy pożyczki",
-    "Analityka: KW, właściciele, analiza KW, ocena ryzyka",
-    "Akademia inwestora i kalkulator compliance",
-    "Moduł AML i moduł windykacji AI",
-    "Nielimitowana liczba pełnych raportów",
+    {
+      cecha: "Akademia inwestora",
+      zaleta:
+        "15 lat doświadczenia w jednym miejscu: strategia, prawo, analiza nieruchomości i klienta, transakcja, windykacja.",
+      korzysc: "Nie uczysz się na własnych błędach.",
+    },
+    {
+      cecha: "Wewnętrzna sieć sprzedaży",
+      zaleta: "Korzystasz z naszej sieci sprzedaży i działasz pod sprawdzoną marką Finance You.",
+      korzysc: "Nie szukasz klientów — to oni szukają Ciebie!",
+    },
+    {
+      cecha: "Zaawansowany moduł analizy nieruchomości",
+      zaleta:
+        "Księga wieczysta, właściciele, obciążenia, wycena, LTV i ocena ryzyka — pełne raporty bez limitu.",
+      korzysc: "Masz własnego, profesjonalnego analityka AI, zanim wyłożysz pieniądze.",
+    },
+    {
+      cecha: "Kancelaria AI",
+      zaleta:
+        "30 wzorów dokumentów sprawdzonych w praktyce — od umowy pożyczki i hipoteki, przez wezwania i ugody, po wnioski do sądu i komornika — przygotowywanych jednym kliknięciem.",
+      korzysc: "Oszczędzasz czas i koszty przygotowania dokumentów.",
+    },
+    {
+      cecha: "Kalkulator compliance",
+      zaleta:
+        "Ustawiasz kwotę, oprocentowanie i prowizję, a kalkulator od razu pokazuje harmonogram i ostrzega o limitach odsetek maksymalnych.",
+      korzysc: "Łatwo sprawdzisz, na ile możesz sobie pozwolić.",
+    },
+    {
+      cecha: "Moduł AML",
+      zaleta: "Procedury, dokumentacja i zgłoszenia AML w jednym miejscu.",
+      korzysc: "Obowiązki AML wypełniasz sprawnie, bez osobnego systemu.",
+    },
+    {
+      cecha: "Windykator AI",
+      zaleta:
+        "Dzwoni, pisze i przygotowuje wezwania. Prowadzi sprawę od pierwszego dnia opóźnienia — przypomnienia, ugoda, klauzula wykonalności — aż na biurko komornika.",
+      korzysc: "Nie zostajesz sam z niespłaconą pożyczką.",
+    },
   ],
   note: SUBSCRIPTION_PAYMENT_SENTENCE,
 };

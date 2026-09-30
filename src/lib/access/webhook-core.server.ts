@@ -8,6 +8,7 @@
 //    `process_access_payment_paid` (blokada rekordu płatności i uprawnienia),
 //  - faktura / zdarzenie afiliacyjne / e-maile są best-effort: ich awaria
 //    nie cofa przyznanego dostępu (błąd trafia do access_payments).
+import type { PaymentConsentsSnapshot } from "./emails.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { plnToGrosz } from "./core";
 
@@ -58,7 +59,7 @@ export async function runPaidPostProcessing(
     .select("label,kind")
     .eq("id", payment.product_id)
     .maybeSingle();
-  const productLabel = product?.label ?? "Dostęp do platformy Finance You";
+  const productLabel = product?.label ?? "Dostęp do Finance You";
   const productKind = product?.kind === "unlock" ? ("unlock" as const) : ("access" as const);
   const amountGrosz = Number(payment.paid_amount_grosz ?? payment.expected_amount_grosz);
 
@@ -75,6 +76,7 @@ export async function runPaidPostProcessing(
         productLabel,
         amountGrosz,
         grantedUntil: payment.granted_until,
+        consents: payment.consents as PaymentConsentsSnapshot | null,
       });
     } catch (e) {
       console.error("[tpay-webhook] welcome email failed", (e as Error).message);
@@ -89,6 +91,7 @@ export async function runPaidPostProcessing(
         grantedUntil: payment.granted_until,
         audience: payment.audience,
         kind: productKind,
+        consents: payment.consents as PaymentConsentsSnapshot | null,
       });
     } catch (e) {
       console.error("[tpay-webhook] confirmation email failed", (e as Error).message);

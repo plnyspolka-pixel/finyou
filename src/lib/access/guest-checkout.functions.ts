@@ -49,6 +49,14 @@ export const createGuestInvestorCheckout = createServerFn({ method: "POST" })
         buyerCountry: data.buyerCountry,
       });
       if (buyerErrors.length > 0) return { error: buyerErrors[0] };
+      // Regulamin abonamentu v2: żądanie natychmiastowego dostarczenia treści
+      // cyfrowych (utrata prawa odstąpienia) jest warunkiem zakupu inwestora.
+      if (!data.consents.digitalService) {
+        return {
+          error:
+            "Aby kupić abonament, zażądaj rozpoczęcia dostarczania szkolenia od razu i potwierdź utratę prawa odstąpienia.",
+        };
+      }
 
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const db = supabaseAdmin as any;

@@ -58,6 +58,7 @@ vi.mock("@/lib/access/urls.server", () => ({
 }));
 
 import { handleTpayNotification } from "./webhook-core.server";
+import { REGULAMIN_ABONAMENTU_VERSION } from "@/lib/legal/regulamin-abonamentu";
 import { ensureInvoiceForAccessPayment } from "./invoice.server";
 import { runAccessExpiryReminders } from "./reminders.server";
 
@@ -655,7 +656,11 @@ describe("zakup abonamentu bez konta (/abonament-inwestora)", () => {
       user_id: null,
       buyer_name: "Anna Maria Nowak",
       buyer_email: "anna@example.com",
-      consents: { guestCheckout: true },
+      consents: {
+        guestCheckout: true,
+        termsVersion: REGULAMIN_ABONAMENTU_VERSION,
+        digitalServiceConsent: true,
+      },
     });
     tpayCorrect("tr_G", paymentId, 999);
 
@@ -680,6 +685,8 @@ describe("zakup abonamentu bez konta (/abonament-inwestora)", () => {
     expect(welcome?.text).toContain("https://login.test/magic");
     expect(welcome?.text).toContain("https://app.test/zapomniane-haslo");
     expect(welcome?.text).toContain("Zaloguj się z Google");
+    // Potwierdzenie umowy o Abonament (trwały nośnik) — także przy zakupie bez konta.
+    expect(welcome?.text).toContain("Potwierdzenie zawarcia umowy o Abonament");
     expect(emails.sent.some((e) => /dostęp aktywny/.test(e.subject))).toBe(false);
   });
 

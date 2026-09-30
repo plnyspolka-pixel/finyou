@@ -1,53 +1,14 @@
-/**
- * Regulamin Abonamentu Inwestora — podstawa płatności za dostęp do panelu
- * inwestora (decyzja właściciela 2026-09-30: płacąc, inwestor akceptuje
- * regulamin; umowy o dostęp do Klientów — Umowę ramową, NDA i RODO —
- * akceptuje później, gdy chce korzystać z modułu ofert).
- *
- * Sprzedawcą Abonamentu jest Fundacja Krzewienia Edukacji Finansowej
- * im. Pieczaka (domyślny podmiot faktur, zwolniony z VAT). Treść jest
- * generowana z tych samych stałych co cennik (lib/investor-plan/plans.ts),
- * a skrót każdej wersji pilnuje test — zmiana ceny wymaga nowej wersji.
- *
- * Wersja 2 (decyzja właściciela 2026-09-30): Abonament w całości jest
- * szkoleniem w formie treści cyfrowych — po wyraźnym żądaniu rozpoczęcia
- * świadczenia przy płatności Konsument traci prawo odstąpienia
- * (art. 38 ust. 1 pkt 13 u.p.k.). Zgoda jest obowiązkowa przy zakupie, a
- * potwierdzenie z treścią Regulaminu idzie e-mailem po zaksięgowaniu.
- */
-import {
-  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
-  SUBSCRIPTION_YEARLY_PER_MONTH_PLN,
-} from "@/lib/investor-plan/plans";
+# REGULAMIN ABONAMENTU INWESTORA FINANCE YOU
 
-/** Cena w brzmieniu umów — test pilnuje zgodności z ABONAMENT_UMOWA (pakiet-v7.ts). */
-export const CENA_ABONAMENTU = "1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni";
-
-export const REGULAMIN_ABONAMENTU_VERSION = "regulamin-abonamentu-inwestora-v2";
-export const REGULAMIN_ABONAMENTU_DATA_PL = "30 września 2026 r.";
-export const REGULAMIN_ABONAMENTU_PATH = "/regulamin-inwestora";
-
-export const FUNDACJA = {
-  nazwa: "Fundacja Krzewienia Edukacji Finansowej im. Pieczaka",
-  adres: "ul. Wilhelma Orlika Ruckemana 4/18, 20-244 Lublin",
-  krs: "0001140846",
-  nip: "9462747637",
-  regon: "540280180",
-} as const;
-
-export function regulaminAbonamentuInwestora(): string {
-  const f = FUNDACJA;
-  return `# REGULAMIN ABONAMENTU INWESTORA FINANCE YOU
-
-**wersja 2 — obowiązuje od dnia ${REGULAMIN_ABONAMENTU_DATA_PL}**
+**wersja 2 — obowiązuje od dnia 30 września 2026 r.**
 
 ## § 1. Postanowienia ogólne
 
 1. Regulamin określa zasady sprzedaży i korzystania z Abonamentu — odpłatnego dostępu do panelu inwestora w systemie Finance You dostępnym pod adresem financeyou.pl.
-2. Sprzedawcą Abonamentu i usługodawcą w zakresie Abonamentu jest ${f.nazwa} z siedzibą w Lublinie, ${f.adres}, wpisana do Krajowego Rejestru Sądowego pod numerem KRS ${f.krs}, NIP ${f.nip}, REGON ${f.regon} („Fundacja”).
+2. Sprzedawcą Abonamentu i usługodawcą w zakresie Abonamentu jest Fundacja Krzewienia Edukacji Finansowej im. Pieczaka z siedzibą w Lublinie, ul. Wilhelma Orlika Ruckemana 4/18, 20-244 Lublin, wpisana do Krajowego Rejestru Sądowego pod numerem KRS 0001140846, NIP 9462747637, REGON 540280180 („Fundacja”).
 3. System Finance You prowadzi Finance You spółka z ograniczoną odpowiedzialnością z siedzibą w Warszawie, ul. Nowogrodzka 31, 00-511 Warszawa, KRS 0000635207, NIP 7010611803 („Finance You”).
 4. Kontakt w sprawach Abonamentu: kontakt@financeyou.pl.
-5. Regulamin jest udostępniany nieodpłatnie przed zakupem Abonamentu, pod adresem financeyou.pl${REGULAMIN_ABONAMENTU_PATH}, w sposób umożliwiający jego pobranie, utrwalenie i odtworzenie. Akceptacja Regulaminu przy płatności jest warunkiem zakupu Abonamentu.
+5. Regulamin jest udostępniany nieodpłatnie przed zakupem Abonamentu, pod adresem financeyou.pl/regulamin-inwestora, w sposób umożliwiający jego pobranie, utrwalenie i odtworzenie. Akceptacja Regulaminu przy płatności jest warunkiem zakupu Abonamentu.
 
 ## § 2. Definicje
 
@@ -67,7 +28,7 @@ export function regulaminAbonamentuInwestora(): string {
 
 ## § 4. Cena i płatność
 
-1. Opłata Abonamentowa wynosi ${CENA_ABONAMENTU}, według wyboru Inwestora. W wariancie rocznym odpowiada to ok. ${SUBSCRIPTION_YEARLY_PER_MONTH_PLN} zł miesięcznie — ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% mniej niż za dwanaście okresów 30-dniowych.
+1. Opłata Abonamentowa wynosi 1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni, według wyboru Inwestora. W wariancie rocznym odpowiada to ok. 583 zł miesięcznie — 61% mniej niż za dwanaście okresów 30-dniowych.
 2. Fundacja korzysta ze zwolnienia z VAT (art. 113 ust. 1 ustawy o podatku od towarów i usług) — cena netto jest równa cenie brutto.
 3. Opłata Abonamentowa jest płatna z góry, jednorazowo za wybrany Okres Abonamentowy, za pośrednictwem operatora płatności Tpay — przelewem albo BLIK-iem, bez konieczności podawania danych karty płatniczej. Abonament nie odnawia się automatycznie.
 4. Okres Abonamentowy biegnie od zaksięgowania płatności, a jeżeli poprzedni opłacony okres jeszcze trwa — od jego końca.
@@ -111,6 +72,4 @@ export function regulaminAbonamentuInwestora(): string {
 ## § 11. Postanowienia końcowe
 
 1. Do umowy o Abonament stosuje się prawo polskie. Wobec Konsumenta wybór prawa nie pozbawia go ochrony przysługującej mu na podstawie bezwzględnie obowiązujących przepisów.
-2. Regulamin obowiązuje od dnia ${REGULAMIN_ABONAMENTU_DATA_PL}
-`;
-}
+2. Regulamin obowiązuje od dnia 30 września 2026 r.
