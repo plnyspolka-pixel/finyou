@@ -88,7 +88,8 @@ async function loadLandingVideo(): Promise<LandingVideoInfo | null> {
 async function loadInvestorProducts(): Promise<AccessProduct[]> {
   try {
     return await listAccessProducts({ data: { audience: "investor" } });
-  } catch {
+  } catch (e) {
+    console.error("[dla-inwestora] listAccessProducts failed", e);
     return [];
   }
 }
