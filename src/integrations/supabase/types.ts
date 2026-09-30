@@ -457,6 +457,7 @@ export type Database = {
           provider: string
           regon: string | null
           updated_at: string
+          vat_exemption_basis: string | null
           vat_payer: boolean
         }
         Insert: {
@@ -484,6 +485,7 @@ export type Database = {
           provider?: string
           regon?: string | null
           updated_at?: string
+          vat_exemption_basis?: string | null
           vat_payer?: boolean
         }
         Update: {
@@ -511,6 +513,7 @@ export type Database = {
           provider?: string
           regon?: string | null
           updated_at?: string
+          vat_exemption_basis?: string | null
           vat_payer?: boolean
         }
         Relationships: []
@@ -4396,6 +4399,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cookie_consent_log: {
+        Row: {
+          analytics: boolean
+          consent_id: string
+          consent_version: number
+          created_at: string
+          id: number
+          ip_truncated: string | null
+          marketing: boolean
+          page_path: string | null
+          source: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          analytics: boolean
+          consent_id: string
+          consent_version: number
+          created_at?: string
+          id?: never
+          ip_truncated?: string | null
+          marketing: boolean
+          page_path?: string | null
+          source: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          analytics?: boolean
+          consent_id?: string
+          consent_version?: number
+          created_at?: string
+          id?: never
+          ip_truncated?: string | null
+          marketing?: boolean
+          page_path?: string | null
+          source?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       coowner_registry_checks: {
         Row: {
@@ -8384,14 +8429,9 @@ export type Database = {
           broker_notes: string | null
           business_legal_form: string | null
           business_nip_verified_at: string | null
-          business_status: string | null
           business_purpose_declared: boolean
           business_purpose_declared_at: string | null
-          suggested_status: Database["public"]["Enums"]["loan_status"] | null
-          suggested_status_reason: string | null
-          suggested_at: string | null
-          suggested_by: string | null
-          status_decided_by: string | null
+          business_status: string | null
           client_id: string
           completeness_percent: number
           contact_attempts_email: number
@@ -8460,6 +8500,11 @@ export type Database = {
           source: string | null
           startup_funding_dependency: boolean | null
           status: Database["public"]["Enums"]["loan_status"]
+          status_decided_by: string | null
+          suggested_at: string | null
+          suggested_by: string | null
+          suggested_status: Database["public"]["Enums"]["loan_status"] | null
+          suggested_status_reason: string | null
           updated_at: string
           view_count: number
           visibility_level: Database["public"]["Enums"]["visibility_level"]
@@ -8486,14 +8531,9 @@ export type Database = {
           broker_notes?: string | null
           business_legal_form?: string | null
           business_nip_verified_at?: string | null
-          business_status?: string | null
           business_purpose_declared?: boolean
           business_purpose_declared_at?: string | null
-          suggested_status?: Database["public"]["Enums"]["loan_status"] | null
-          suggested_status_reason?: string | null
-          suggested_at?: string | null
-          suggested_by?: string | null
-          status_decided_by?: string | null
+          business_status?: string | null
           client_id: string
           completeness_percent?: number
           contact_attempts_email?: number
@@ -8562,6 +8602,11 @@ export type Database = {
           source?: string | null
           startup_funding_dependency?: boolean | null
           status?: Database["public"]["Enums"]["loan_status"]
+          status_decided_by?: string | null
+          suggested_at?: string | null
+          suggested_by?: string | null
+          suggested_status?: Database["public"]["Enums"]["loan_status"] | null
+          suggested_status_reason?: string | null
           updated_at?: string
           view_count?: number
           visibility_level?: Database["public"]["Enums"]["visibility_level"]
@@ -8588,14 +8633,9 @@ export type Database = {
           broker_notes?: string | null
           business_legal_form?: string | null
           business_nip_verified_at?: string | null
-          business_status?: string | null
           business_purpose_declared?: boolean
           business_purpose_declared_at?: string | null
-          suggested_status?: Database["public"]["Enums"]["loan_status"] | null
-          suggested_status_reason?: string | null
-          suggested_at?: string | null
-          suggested_by?: string | null
-          status_decided_by?: string | null
+          business_status?: string | null
           client_id?: string
           completeness_percent?: number
           contact_attempts_email?: number
@@ -8664,6 +8704,11 @@ export type Database = {
           source?: string | null
           startup_funding_dependency?: boolean | null
           status?: Database["public"]["Enums"]["loan_status"]
+          status_decided_by?: string | null
+          suggested_at?: string | null
+          suggested_by?: string | null
+          suggested_status?: Database["public"]["Enums"]["loan_status"] | null
+          suggested_status_reason?: string | null
           updated_at?: string
           view_count?: number
           visibility_level?: Database["public"]["Enums"]["visibility_level"]
@@ -12969,6 +13014,14 @@ export type Database = {
         Returns: undefined
       }
       increment_loan_view: { Args: { _loan_id: string }; Returns: undefined }
+      increment_order_rejections: {
+        Args: { _order_id: string }
+        Returns: {
+          expired: boolean
+          rejected_projects_count: number
+          status: string
+        }[]
+      }
       investor_can_open_match: {
         Args: { _match_id: string; _user_id: string }
         Returns: boolean
@@ -13073,6 +13126,19 @@ export type Database = {
       }
       pl_first_name_canonical: { Args: { _name: string }; Returns: string }
       pl_strip_diacritics: { Args: { _s: string }; Returns: string }
+      pliki_klienta_cien: {
+        Args: { p_add: boolean; p_bucket: string; p_name: string }
+        Returns: boolean
+      }
+      pliki_klienta_do_naprawy: {
+        Args: { p_after?: string; p_before?: string; p_limit?: number }
+        Returns: {
+          created_at: string
+          mimetype: string
+          name: string
+          size: number
+        }[]
+      }
       process_access_payment_paid: {
         Args: {
           _paid_amount_grosz: number
