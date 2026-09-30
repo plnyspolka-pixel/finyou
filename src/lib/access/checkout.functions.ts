@@ -8,14 +8,7 @@ import { SUBSCRIPTION_OPTIONS } from "@/lib/investor-plan/plans";
 import { REGULAMIN_ABONAMENTU_VERSION } from "@/lib/legal/regulamin-abonamentu";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  groszToPln,
-  isLegacyPlanId,
-  normalizeNip,
-  validateBuyer,
-  type AccessAudience,
-  type BuyerType,
-} from "./core";
+import { isLegacyPlanId, validateBuyer, type AccessAudience, type BuyerType } from "./core";
 import { decideInFlightUnlockPayment, PENDING_UNLOCK_STALE_MINUTES } from "./pending-unlock";
 
 // Wersje dokumentów prawnych akceptowanych na formularzu (consent_documents,
@@ -227,8 +220,8 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         };
       }
 
-      // 3) Rekord płatności (status 'created') ze snapshotem nabywcy i zgód.
-      const { requestClientMeta, resolveAppBaseUrl } = await import("./urls.server");
+      // 3) Snapshot zgód nabywcy.
+      const { requestClientMeta } = await import("./urls.server");
       const meta = requestClientMeta();
       const nowIso = new Date().toISOString();
       const consents = {
@@ -242,85 +235,36 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         userAgent: meta.userAgent,
       };
 
-      const { data: payment, error: insErr } = await db
-        .from("access_payments")
-        .insert({
-          provider: "tpay",
-          user_id: userId,
-          product_id: product.id,
-          audience,
-          status: "created",
-          expected_amount_grosz: product.amount_grosz,
-          currency: product.currency ?? "PLN",
-          buyer_type: data.buyerType,
-          buyer_name: data.buyerName.trim(),
-          buyer_email: data.buyerEmail.trim(),
-          buyer_nip: data.buyerType === "company" ? normalizeNip(data.buyerNip ?? "") : null,
-          buyer_street: data.buyerStreet.trim(),
-          buyer_postal_code: data.buyerPostalCode.trim(),
-          buyer_city: data.buyerCity.trim(),
-          buyer_country: (data.buyerCountry || "PL").toUpperCase(),
-          unlock_match_id: unlockMatchId,
-          consents,
-        })
-        .select("id")
-        .single();
-      if (insErr && unlockMatchId && (insErr as { code?: string }).code === "23505") {
-        // Równoległe żądanie zdążyło rozpocząć płatność za tę okazję.
-        return { error: IN_FLIGHT_UNLOCK_MESSAGE(PENDING_UNLOCK_STALE_MINUTES) };
-      }
-      if (insErr || !payment) {
-        console.error("[access-checkout] insert payment failed", insErr?.message);
-        return { error: "Nie udało się rozpocząć płatności. Spróbuj ponownie." };
-      }
-      const paymentId = payment.id as string;
-
-      // 4) Transakcja w Tpay. W crc/hiddenDescription zapisujemy wewnętrzny
-      //    UUID płatności — webhook czyta wszystko z bazy, nie z przeglądarki.
-      const base = resolveAppBaseUrl();
+      // 4) Rekord płatności + transakcja w Tpay.
       const panel =
         product.kind === "unlock"
           ? "/inwestor/umowy"
           : audience === "investor"
             ? "/inwestor/abonament"
             : "/posrednik/abonament";
-      const successUrl = `${base}${panel}?tpay=success&payment=${paymentId}`;
-      const errorUrl = `${base}${panel}?tpay=error&payment=${paymentId}`;
-      const notifyUrl = `${base}/api/public/payments/tpay-webhook`;
-
-      const { createTpayTransaction } = await import("@/lib/tpay.server");
-      let tx;
-      try {
-        tx = await createTpayTransaction({
-          amount: groszToPln(product.amount_grosz),
-          description: product.label,
-          email: data.buyerEmail.trim(),
-          name: data.buyerName.trim(),
-          crc: paymentId,
-          notifyUrl,
-          successUrl,
-          errorUrl,
-        });
-      } catch (e) {
-        await db
-          .from("access_payments")
-          .update({
-            status: "failed",
-            failure_reason: `tpay_create_failed: ${(e as Error).message}`,
-          })
-          .eq("id", paymentId);
-        console.error("[access-checkout] tpay create failed", (e as Error).message);
-        return {
-          error: "Nie udało się połączyć z bramką płatności Tpay. Spróbuj ponownie za chwilę.",
-        };
+      const { startTpayPayment } = await import("./start-payment.server");
+      const started = await startTpayPayment({
+        db,
+        userId,
+        product,
+        audience,
+        buyer: data,
+        consents,
+        unlockMatchId,
+        returnPath: panel,
+      });
+      if (!started.ok) {
+        if (unlockMatchId && started.code === "23505") {
+          // Równoległe żądanie zdążyło rozpocząć płatność za tę okazję.
+          return { error: IN_FLIGHT_UNLOCK_MESSAGE(PENDING_UNLOCK_STALE_MINUTES) };
+        }
+        return { error: started.error };
       }
-
-      await db
-        .from("access_payments")
-        .update({ provider_transaction_id: String(tx.transactionId), status: "pending" })
-        .eq("id", paymentId);
-
-      return { paymentUrl: tx.transactionPaymentUrl, paymentId, transactionId: tx.transactionId };
+      return {
+        paymentUrl: started.paymentUrl,
+        paymentId: started.paymentId,
+        transactionId: started.transactionId,
+      };
     } catch (e) {
       console.error("[access-checkout] error", e);
       return { error: e instanceof Error ? e.message : "Błąd tworzenia płatności" };

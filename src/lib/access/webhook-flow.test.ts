@@ -40,12 +40,25 @@ vi.mock("@/lib/resend-send.server", () => ({
   },
 }));
 
+const authUsers = vi.hoisted(() => ({ byEmail: {} as Record<string, string>, calls: [] as any[] }));
+vi.mock("@/lib/auth-users.server", () => ({
+  ensureAuthUser: async (p: { email: string; userMetadata?: Record<string, unknown> }) => {
+    authUsers.calls.push(p);
+    const existing = authUsers.byEmail[p.email];
+    if (existing) return { userId: existing, created: false };
+    const id = "22222222-2222-4222-8222-222222222222";
+    authUsers.byEmail[p.email] = id;
+    return { userId: id, created: true };
+  },
+}));
+
 vi.mock("@/lib/access/urls.server", () => ({
   resolveAppBaseUrl: () => "https://app.test",
   requestClientMeta: () => ({ ip: null, userAgent: null }),
 }));
 
 import { handleTpayNotification } from "./webhook-core.server";
+import { REGULAMIN_ABONAMENTU_VERSION } from "@/lib/legal/regulamin-abonamentu";
 import { ensureInvoiceForAccessPayment } from "./invoice.server";
 import { runAccessExpiryReminders } from "./reminders.server";
 
@@ -187,6 +200,12 @@ beforeEach(() => {
   db().setNow(NOW);
   tpayState.tx = {};
   emails.sent = [];
+  authUsers.byEmail = {};
+  authUsers.calls = [];
+  db().auth.admin.generateLink = async () => ({
+    data: { properties: { action_link: "https://login.test/magic" } },
+    error: null,
+  });
   seedCatalog();
   seedEntity();
 });
@@ -625,5 +644,84 @@ describe("przypomnienia o końcu dostępu", () => {
     expect(r2.sent).toBe(0);
     expect(emails.sent).toHaveLength(1);
     expect(emails.sent[0].subject).toMatch(/wygasa/);
+  });
+});
+
+describe("zakup abonamentu bez konta (/abonament-inwestora)", () => {
+  const GUEST = "22222222-2222-4222-8222-222222222222";
+
+  it("po wpłacie zakłada konto inwestora z danych płatności i przyznaje dostęp", async () => {
+    const paymentId = seedPayment({
+      provider_transaction_id: "tr_G",
+      user_id: null,
+      buyer_name: "Anna Maria Nowak",
+      buyer_email: "anna@example.com",
+      consents: {
+        guestCheckout: true,
+        termsVersion: REGULAMIN_ABONAMENTU_VERSION,
+        digitalServiceConsent: true,
+      },
+    });
+    tpayCorrect("tr_G", paymentId, 999);
+
+    expect(await handleTpayNotification({ tr_id: "tr_G" })).toBe("TRUE");
+
+    const pay = db().tables.access_payments.find((p) => p.id === paymentId)!;
+    expect(pay.user_id).toBe(GUEST);
+    expect(pay.status).toBe("paid");
+    expect(authUsers.calls[0].userMetadata).toMatchObject({
+      first_name: "Anna",
+      last_name: "Maria Nowak",
+      signup_role: "inwestor",
+    });
+    expect(db().tables.user_roles).toContainEqual(
+      expect.objectContaining({ user_id: GUEST, role: "inwestor" }),
+    );
+    expect(db().tables.investors.some((i) => i.user_id === GUEST)).toBe(true);
+    expect(db().tables.access_entitlements[0].user_id).toBe(GUEST);
+
+    const welcome = emails.sent.find((e) => /konto inwestora jest gotowe/.test(e.subject));
+    expect(welcome?.to).toBe("anna@example.com");
+    expect(welcome?.text).toContain("https://login.test/magic");
+    expect(welcome?.text).toContain("https://app.test/zapomniane-haslo");
+    expect(welcome?.text).toContain("Zaloguj się z Google");
+    // Potwierdzenie umowy o Abonament (trwały nośnik) — także przy zakupie bez konta.
+    expect(welcome?.text).toContain("Potwierdzenie zawarcia umowy o Abonament");
+    expect(emails.sent.some((e) => /dostęp aktywny/.test(e.subject))).toBe(false);
+  });
+
+  it("istniejące konto o tym adresie — płatność trafia do niego, bez dubli przy ponowieniu", async () => {
+    authUsers.byEmail["jan@example.com"] = USER;
+    const paymentId = seedPayment({
+      provider_transaction_id: "tr_G2",
+      user_id: null,
+      consents: { guestCheckout: true },
+    });
+    tpayCorrect("tr_G2", paymentId, 999);
+
+    await handleTpayNotification({ tr_id: "tr_G2" });
+    await handleTpayNotification({ tr_id: "tr_G2" });
+
+    const pay = db().tables.access_payments.find((p) => p.id === paymentId)!;
+    expect(pay.user_id).toBe(USER);
+    expect(db().tables.access_entitlements).toHaveLength(1);
+    expect(db().tables.investors.filter((i) => i.user_id === USER)).toHaveLength(1);
+  });
+
+  it("anulowana płatność bez konta nie zakłada konta", async () => {
+    const paymentId = seedPayment({
+      provider_transaction_id: "tr_G3",
+      user_id: null,
+      consents: { guestCheckout: true },
+    });
+    tpayState.tx.tr_G3 = {
+      transactionId: "tr_G3",
+      status: "cancelled",
+      amount: 999,
+      hiddenDescription: paymentId,
+    };
+    await handleTpayNotification({ tr_id: "tr_G3" });
+    expect(authUsers.calls).toHaveLength(0);
+    expect(db().tables.access_payments.find((p) => p.id === paymentId)!.user_id).toBeNull();
   });
 });

@@ -1126,7 +1126,7 @@ function InvestorLanding() {
       <CTASection
         single
         title="Zbuduj proces inwestowania w pożyczki hipoteczne z narzędziami, dokumentami i AI."
-        buttons={[{ label: "Załóż konto inwestora", href: JOIN }]}
+        buttons={[{ label: "Załóż konto inwestora", href: "/abonament-inwestora" }]}
       />
 
       <ChatWidget

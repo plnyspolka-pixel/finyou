@@ -75,6 +75,50 @@ Zespół Finance You${
   await sendResendEmail({ to: opts.to, subject, text, category: "transactional" });
 }
 
+/** Zakup abonamentu bez konta: konto inwestora założone z danych płatności. */
+export async function sendGuestInvestorWelcomeEmail(opts: {
+  to: string;
+  productLabel: string;
+  amountGrosz: number;
+  grantedUntil: string | Date;
+  /** Snapshot zgód z płatności — dołącza potwierdzenie umowy o Abonament. */
+  consents?: PaymentConsentsSnapshot | null;
+}): Promise<void> {
+  const base = resolveAppBaseUrl();
+  const until = formatWarsawDate(opts.grantedUntil, true);
+  const { investorLoginLink } = await import("./guest-investor.server");
+  const link = await investorLoginLink(opts.to, `${base}/inwestor`);
+  const subject = "Twoje konto inwestora jest gotowe | Finance You";
+  const text = `Dzień dobry,
+
+potwierdzamy zaksięgowanie płatności ${formatGroszPln(opts.amountGrosz)} — ${opts.productLabel}.
+
+Na podstawie danych podanych przy płatności założyliśmy Twoje konto inwestora w Finance You. Abonament jest aktywny do: ${until} (czas polski).
+
+${
+  link
+    ? `Zaloguj się jednym kliknięciem (link jednorazowy, ważny ok. 1 godziny):
+${link}
+
+Jeśli link wygaśnie albo zechcesz zalogować się później, masz trzy sposoby:`
+    : `Jak się zalogować — masz trzy sposoby:`
+}
+
+1) Link na e-mail — wejdź na ${base}/logowanie, wpisz adres ${opts.to} na zakładce „Link e-mail". Wyślemy Ci nowy link, ile razy zechcesz.
+
+2) Własne hasło — wejdź na ${base}/zapomniane-haslo, wpisz adres ${opts.to} i ustaw hasło z linku, który przyjdzie e-mailem. Potem logujesz się na ${base}/logowanie adresem e-mail i hasłem.
+
+3) Konto Google — jeśli ${opts.to} to adres Google (np. Gmail), na ${base}/logowanie kliknij „Zaloguj się z Google". Trafisz na to samo konto inwestora.
+
+W panelu uzupełnisz profil inwestora, a gdy zechcesz dostępu do Klientów i Projektów — zaakceptujesz Umowę ramową, NDA i umowę RODO.
+
+Fakturę wyślemy osobnym e-mailem i znajdziesz ją w zakładce „Płatności i faktury".
+
+Pozdrawiamy,
+Zespół Finance You${abonamentConfirmationBlock(opts.consents)}`;
+  await sendResendEmail({ to: opts.to, subject, text, category: "transactional" });
+}
+
 export async function sendInvoiceIssuedEmail(opts: {
   to: string;
   invoiceNumber: string | null;

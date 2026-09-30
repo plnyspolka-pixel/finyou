@@ -37,6 +37,7 @@ import { Route as DlaInwestoraRouteImport } from './routes/dla-inwestora'
 import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AbonamentInwestoraRouteImport } from './routes/abonament-inwestora'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PozyczkiIndexRouteImport } from './routes/pozyczki.index'
@@ -420,6 +421,11 @@ const AuthRoute = AuthRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AbonamentInwestoraRoute = AbonamentInwestoraRouteImport.update({
+  id: '/abonament-inwestora',
+  path: '/abonament-inwestora',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -1717,6 +1723,7 @@ const ApiPublicEmailClickRoute = ApiPublicEmailClickRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/abonament-inwestora': typeof AbonamentInwestoraRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
@@ -1991,6 +1998,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/abonament-inwestora': typeof AbonamentInwestoraRoute
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
   '/dla-inwestora': typeof DlaInwestoraRoute
@@ -2256,6 +2264,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/abonament-inwestora': typeof AbonamentInwestoraRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
@@ -2532,6 +2541,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/abonament-inwestora'
     | '/admin'
     | '/auth'
     | '/connect'
@@ -2806,6 +2816,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/abonament-inwestora'
     | '/auth'
     | '/connect'
     | '/dla-inwestora'
@@ -3070,6 +3081,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/abonament-inwestora'
     | '/admin'
     | '/auth'
     | '/connect'
@@ -3345,6 +3357,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AbonamentInwestoraRoute: typeof AbonamentInwestoraRoute
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
   ConnectRoute: typeof ConnectRoute
@@ -3500,18 +3513,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RejestracjaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/regulamin': {
-      id: '/regulamin'
-      path: '/regulamin'
-      fullPath: '/regulamin'
-      preLoaderRoute: typeof RegulaminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/regulamin-inwestora': {
       id: '/regulamin-inwestora'
       path: '/regulamin-inwestora'
       fullPath: '/regulamin-inwestora'
       preLoaderRoute: typeof RegulaminInwestoraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/regulamin': {
+      id: '/regulamin'
+      path: '/regulamin'
+      fullPath: '/regulamin'
+      preLoaderRoute: typeof RegulaminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/raport-lokalizacje': {
@@ -3659,6 +3672,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abonament-inwestora': {
+      id: '/abonament-inwestora'
+      path: '/abonament-inwestora'
+      fullPath: '/abonament-inwestora'
+      preLoaderRoute: typeof AbonamentInwestoraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -5814,6 +5834,7 @@ const PosrednikRouteWithChildren = PosrednikRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AbonamentInwestoraRoute: AbonamentInwestoraRoute,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
   ConnectRoute: ConnectRoute,
@@ -5947,13 +5968,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
