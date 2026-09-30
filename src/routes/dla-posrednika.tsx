@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
   Section,
@@ -43,6 +43,10 @@ const PRICING_FEATURES: Record<number, string[]> = {
 };
 
 export const Route = createFileRoute("/dla-posrednika")({
+  // Moduł pośrednika ukryty na stronie publicznej — strona przekierowuje na główną.
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
   loader: async () => ({ products: await loadBrokerProducts() }),
   head: () => ({
     meta: [
