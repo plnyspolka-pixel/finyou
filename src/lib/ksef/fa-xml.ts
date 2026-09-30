@@ -52,7 +52,7 @@ function num(n: number): string {
 
 function vatRateValue(rate: string): { stawka: string; netToVat: (net: number) => number } {
   if (rate === "zw" || rate === "0")
-    return { stawka: rate === "zw" ? "zw" : "0", netToVat: () => 0 };
+    return { stawka: rate === "zw" ? "zw" : "0 KR", netToVat: () => 0 };
   const pct = Number(rate) || 0;
   return { stawka: String(pct), netToVat: (net) => Math.round(net * pct) / 100 };
 }
@@ -145,6 +145,8 @@ export function buildFaXml(invoice: FaInvoice, seller: FaEntity): string {
     `      <AdresL1>${esc(invoice.buyer_street ?? "")}</AdresL1>`,
     `      <AdresL2>${esc(`${invoice.buyer_postal_code ?? ""} ${invoice.buyer_city ?? ""}`.trim())}</AdresL2>`,
     "    </Adres>",
+    "    <JST>2</JST>",
+    "    <GV>2</GV>",
     "  </Podmiot2>",
     "  <Fa>",
     `    <KodWaluty>${esc(invoice.currency)}</KodWaluty>`,
