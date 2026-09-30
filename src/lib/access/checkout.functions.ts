@@ -104,11 +104,12 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
     const { userId } = context;
     try {
       if (isLegacyPlanId(data.productCode) || data.productCode.startsWith("investor_")) {
-        // Usługa dla Inwestora jest nieodpłatna (Umowa ramowa v7) — produkty
-        // inwestora są nieaktywne; abonament za dostęp do systemu w przyszłości.
+        // Abonament inwestora (cennik w lib/investor-plan/plans.ts) nie jest jeszcze
+        // pobierany: Umowa ramowa v7 mówi, że usługa dla Inwestora jest nieodpłatna.
+        // Produkty inwestora zostają nieaktywne do czasu nowej wersji umowy.
         return {
           error:
-            "Ten pakiet nie jest już dostępny w sprzedaży. Dostęp inwestora jest bezpłatny; pośrednik wybiera pakiet 30 lub 365 dni.",
+            "Zakup abonamentu inwestora online nie jest jeszcze dostępny — konta inwestorów korzystają z dostępu bez opłat do czasu akceptacji nowej wersji Umowy ramowej. Pośrednik wybiera pakiet 30 lub 365 dni.",
         };
       }
 

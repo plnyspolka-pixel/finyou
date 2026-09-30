@@ -12,7 +12,7 @@ import { DocumentCreatorPage } from "@/components/document-creator/DocumentCreat
  *    „Wyślij do kreatora" z kalkulatora otwiera ten ekran, a harmonogram
  *    spłat jest pierwszą wiadomością rozmowy.
  *  • pod spodem kreator dokumentów — wzory DOCX (bez kategorii „Umowy") —
- *    dostępny dla każdego inwestora (usługa nieodpłatna).
+ *    dostępny dla każdego inwestora (w ramach dostępu do panelu).
  * Stare trasy /inwestor/kreator-umowy i /inwestor/kreator-dokumentow
  * przekierowują tutaj.
  */
@@ -39,7 +39,7 @@ function DokumentyIUmowy() {
           <h2 className="text-lg font-bold">Kreator dokumentów (wzory DOCX)</h2>
         </div>
         {/* Bez kategorii „Umowy": umowy powstają wyłącznie w kreatorze umowy powyżej.
-            Kreator dokumentów jest dostępny dla każdego inwestora (usługa nieodpłatna). */}
+            Kreator dokumentów jest dostępny dla każdego inwestora (w ramach dostępu do panelu). */}
         <DocumentCreatorPage excludeCategories={["umowa"]} embedded />
       </section>
     </div>

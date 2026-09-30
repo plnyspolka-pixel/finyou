@@ -300,8 +300,10 @@ function PlanBanner() {
           </div>
           <p className="max-w-2xl text-sm opacity-90">{p.tagline}</p>
           <p className="text-xs opacity-75">
-            Jedyna opłata w systemie: Prowizja Klientowska Finance You — 7 % Kwoty Udzielonej, nie
-            mniej niż 5 000 zł, bez VAT — obciąża Klienta i jest potrącana z wypłaty (Zał. 6).
+            {p.periodLabel}. Abonament zacznie Cię obowiązywać dopiero po zaakceptowaniu nowej
+            wersji Umowy ramowej — do tego czasu nic nie płacisz. Prowizja Klientowska Finance You —
+            7 % Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT — obciąża Klienta i jest potrącana
+            z wypłaty (Zał. 6).
           </p>
         </div>
       </CardContent>

@@ -23,9 +23,9 @@ export const Route = createFileRoute("/inwestor")({
   component: InwestorLayout,
 });
 
-// Jedna nawigacja dla każdego inwestora — usługa Finance You dla Inwestora
-// jest nieodpłatna (Umowa ramowa v7), więc nie ma paywalla ani podziału na
-// pakiety. Abonament za dostęp do systemu — w przyszłości.
+// Jedna nawigacja dla każdego inwestora — bez podziału na pakiety. Cennik
+// abonamentu jest opublikowany (lib/investor-plan/plans.ts), ale paywall
+// wróci dopiero z nową wersją Umowy ramowej (v7: usługa nieodpłatna).
 const navGroups: NavGroup[] = [
   {
     items: [
@@ -43,7 +43,7 @@ const navGroups: NavGroup[] = [
       { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
       { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
       { to: "/inwestor/kalkulator", label: "Kalkulator compliance", icon: Calculator },
-      // Informacja o dostępie (bezpłatny) oraz historia płatności i faktur.
+      // Cennik abonamentu, stan dostępu oraz historia płatności i faktur.
       { to: "/inwestor/abonament", label: "Dostęp i płatności", icon: CreditCard },
       { to: "/inwestor/profil", label: "Profil", icon: User },
     ],

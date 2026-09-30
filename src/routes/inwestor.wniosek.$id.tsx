@@ -52,7 +52,7 @@ export const Route = createFileRoute("/inwestor/wniosek/$id")({
   component: InwestorWniosekGate,
 });
 
-// Szczegół wniosku: dostępny dla każdego inwestora (usługa nieodpłatna —
+// Szczegół wniosku: dostępny dla każdego inwestora (bez paywalla —
 // Umowa ramowa v7). Dane i tak chronią server functions i RLS.
 function InwestorWniosekGate() {
   return <InwestorWniosek />;

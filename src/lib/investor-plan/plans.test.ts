@@ -1,12 +1,20 @@
 /**
- * Zakres dostępu inwestora (Umowa ramowa v7): usługa nieodpłatna, jeden
- * pakiet „Dostęp inwestora" 0 zł, brak PRO / opłaty sukcesu / wykupu okazji.
+ * Zakres dostępu inwestora: jeden abonament (miesięczny albo roczny z rabatem),
+ * brak PRO / opłaty sukcesu / wykupu okazji.
  */
 import { describe, it, expect } from "vitest";
 import {
   ACCESS_PRESENTATION,
   ALL_FEATURES,
   FEATURE_LABELS,
+  SUBSCRIPTION_MONTHLY_PLN,
+  SUBSCRIPTION_OPTIONS,
+  SUBSCRIPTION_PAYMENT_SENTENCE,
+  SUBSCRIPTION_PRICE_SENTENCE,
+  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
+  SUBSCRIPTION_YEARLY_PER_MONTH_PLN,
+  SUBSCRIPTION_YEARLY_PLN,
+  SUBSCRIPTION_YEARLY_SAVINGS_PLN,
   SUCCESS_FEE_BPS,
   TIER_FEATURES,
   TIER_PRESENTATION,
@@ -14,10 +22,11 @@ import {
   requiredTier,
   successFeeGrosz,
   successFeePln,
+  plnLabel,
   tierHasFeature,
 } from "./plans";
 
-describe("dostęp inwestora — bez opłat", () => {
+describe("dostęp inwestora — bez opłat jednostkowych", () => {
   it("opłata sukcesu jest zniesiona (0 bps, 0 zł od dowolnej kwoty)", () => {
     expect(SUCCESS_FEE_BPS).toBe(0);
     expect(successFeeGrosz(200_000)).toBe(0);
@@ -39,13 +48,42 @@ describe("dostęp inwestora — bez opłat", () => {
     expect(Object.keys(TIER_PRESENTATION)).toEqual(["podstawowy"]);
   });
 
-  it("prezentacja: 0 zł, bez PRO, bez cen jednostkowych, akceptacja umów online", () => {
+  it("prezentacja: abonament, bez PRO, bez cen jednostkowych, akceptacja umów online", () => {
     const p = ACCESS_PRESENTATION;
-    expect(p.priceLabel).toBe("0 zł");
+    expect(p.name).toBe("Abonament inwestora");
+    expect(p.priceLabel).toBe("1\u00a0500\u00a0zł / mies. albo 7\u00a0000\u00a0zł / rok");
     const text = [p.name, p.tagline, p.note, ...p.bullets].join("\n");
-    expect(text).not.toMatch(/\bPRO\b|Pakiet Podstawowy/);
-    expect(text).not.toMatch(/1 500|3 000|5% od|Opłat[ay] Sukcesu|jednorazow/i);
+    expect(text).not.toMatch(/\bPRO\b|Pakiet Podstawowy|0 zł|nieodpłatn/);
+    expect(text).not.toMatch(/3 000|5% od|Opłat[ay] Sukcesu/i);
     expect(p.bullets).toContain("Akceptacja pakietu umów online");
     expect(p.bullets.join(" ")).not.toMatch(/Automatyczne wypełnienie i podpisanie/);
+  });
+});
+
+describe("abonament inwestora — cennik", () => {
+  it("1 500 zł miesięcznie albo 7 000 zł za rok", () => {
+    expect(SUBSCRIPTION_MONTHLY_PLN).toBe(1_500);
+    expect(SUBSCRIPTION_YEARLY_PLN).toBe(7_000);
+    expect(SUBSCRIPTION_OPTIONS.miesiecznie).toMatchObject({ pricePln: 1_500, days: 30 });
+    expect(SUBSCRIPTION_OPTIONS.rocznie).toMatchObject({ pricePln: 7_000, days: 365 });
+  });
+
+  it("rabat roczny: 11 000 zł oszczędności = 61 % (zaokrąglone w dół), ok. 583 zł / mies.", () => {
+    expect(SUBSCRIPTION_YEARLY_SAVINGS_PLN).toBe(11_000);
+    expect(SUBSCRIPTION_YEARLY_DISCOUNT_PCT).toBe(61);
+    expect(SUBSCRIPTION_YEARLY_PER_MONTH_PLN).toBe(583);
+    expect(SUBSCRIPTION_PRICE_SENTENCE).toContain("61% taniej");
+    expect(SUBSCRIPTION_OPTIONS.rocznie.hint).toContain("11\u00a0000\u00a0zł");
+  });
+
+  it("płatność bez karty kredytowej i bez automatycznego odnawiania", () => {
+    expect(SUBSCRIPTION_PAYMENT_SENTENCE).toMatch(/bez konieczności podpinania karty kredytowej/);
+    expect(SUBSCRIPTION_PAYMENT_SENTENCE).toMatch(/bez automatycznego odnawiania/);
+  });
+
+  it("plnLabel grupuje tysiące spacją nierozdzielającą", () => {
+    expect(plnLabel(7000)).toBe("7\u00a0000\u00a0zł");
+    expect(plnLabel(18000)).toBe("18\u00a0000\u00a0zł");
+    expect(plnLabel(583)).toBe("583\u00a0zł");
   });
 });

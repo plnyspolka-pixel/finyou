@@ -16,6 +16,15 @@ import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
+import {
+  SUBSCRIPTION_MONTHLY_PLN,
+  SUBSCRIPTION_PAYMENT_SENTENCE,
+  SUBSCRIPTION_PRICE_SENTENCE,
+  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
+  SUBSCRIPTION_YEARLY_PLN,
+  SUBSCRIPTION_YEARLY_PER_MONTH_PLN,
+  plnLabel,
+} from "@/lib/investor-plan/plans";
 import { ChatWidget } from "@/components/landing/chat-widget";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { ExampleProjectsSection } from "@/components/landing/example-projects-section";
@@ -49,7 +58,7 @@ const SHOW: Record<
   boolean
 > = {
   zakladki: false, // pasek zakładek zamiast sekcji jedna pod drugą
-  kalkulator: false, // pełny kalkulator inwestora pod hero
+  kalkulator: true, // pełny kalkulator inwestora pod hero
   oferty: false, // przykładowe projekty
   pipeline: false, // oś dziewięciu kroków onboardingu
   system: false, // pokaz slajdów „Inteligentny system"
@@ -157,8 +166,7 @@ export const Route = createFileRoute("/dla-inwestora")({
       },
       {
         name: "description",
-        content:
-          "Klub Inwestorów Hipotecznych Finance You: dostęp dla inwestorów bez opłat. Finansujesz projekty firm zabezpieczone hipoteką (LTV do 60%), oprocentowanie do wysokości odsetek maksymalnych.",
+        content: `Klub Inwestorów Hipotecznych Finance You: abonament ${plnLabel(SUBSCRIPTION_MONTHLY_PLN)}/mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)}/rok (rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej), bez karty kredytowej. Finansujesz projekty firm zabezpieczone hipoteką (LTV do 60%), oprocentowanie do wysokości odsetek maksymalnych.`,
       },
       { property: "og:title", content: "Dla inwestorów — Finance You" },
       {
@@ -180,16 +188,16 @@ export const Route = createFileRoute("/dla-inwestora")({
 });
 
 // Jeden dział korzyści — bez podziału na pakiety. Tytuł karty = co inwestor
-// zyskuje, opis = jak to dostaje. Usługa Finance You jest dla Inwestora
-// nieodpłatna (Umowa ramowa v7); płaci wyłącznie klient (Prowizja Klientowska).
+// zyskuje, opis = jak to dostaje. Inwestor płaci abonament (ceny w
+// lib/investor-plan/plans.ts); Prowizję Klientowską Finance You płaci klient.
 // Fakty (rezerwacja, Karta Leada, raporty) muszą zgadzać się z FAQ_GROUPS niżej.
 // Kolejność: od kosztów i Zlecenia, przez weryfikację i umowy, po spłatę,
 // windykację i wiedzę.
 const BENEFITS: FeatureItemData[] = [
   {
     icon: "loan",
-    t: "Zero opłat po Twojej stronie",
-    d: "Bez abonamentu, opłat za Projekt i opłaty sukcesu. Prowizję Finance You płaci wyłącznie klient — potrącaną z wypłaty.",
+    t: "Stały abonament zamiast prowizji od zysku",
+    d: `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok (${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej) — bez opłat za Projekt, opłaty sukcesu i podpinania karty kredytowej. Prowizję Finance You płaci klient.`,
   },
   {
     icon: "access",
@@ -462,19 +470,27 @@ const FAQ_GROUPS: FAQGroup[] = [
     items: [
       {
         q: "Ile kosztuje dostęp dla inwestora?",
-        a: "Nic. Usługa Finance You jest dla inwestora nieodpłatna — bez abonamentu, opłaty za Projekt, opłaty za rezerwację i opłaty sukcesu. Składanie Zleceń, teaser, Karta Leada, ujawnienie danych i rezerwacja są bezpłatne, podobnie jak Akademia, kalkulator compliance, moduł AML i windykacja AI.",
+        a: `Abonament kosztuje ${SUBSCRIPTION_PRICE_SENTENCE}. W abonamencie masz wszystko: składanie Zleceń, teasery, Karty Leada, ujawnienie danych, rezerwacje, raporty bez limitu, Akademię, kalkulator compliance, moduł AML i windykację AI. Nie ma opłaty za Projekt, za rezerwację ani opłaty sukcesu.`,
       },
       {
-        q: "Kto w takim razie płaci Finance You?",
-        a: "Wyłącznie klient. Prowizja Finance You wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, i jest potrącana z wypłaty. Przy wypłacie przelewasz ją na rachunek Finance You, a resztę kwoty pożyczki klientowi — np. przy 100 000 zł: 7 000 zł dla Finance You i 93 000 zł dla klienta. Nie jest to koszt inwestora.",
+        q: "Jaki rabat dostaję przy płatności rocznej?",
+        a: `${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}%. Rok płacony co miesiąc kosztuje ${plnLabel(SUBSCRIPTION_MONTHLY_PLN * 12)}, a abonament roczny ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} — oszczędzasz ${plnLabel(SUBSCRIPTION_MONTHLY_PLN * 12 - SUBSCRIPTION_YEARLY_PLN)}, czyli płacisz ok. ${plnLabel(SUBSCRIPTION_YEARLY_PER_MONTH_PLN)} miesięcznie. Okres wybierasz suwakiem w cenniku.`,
+      },
+      {
+        q: "Czy muszę podpinać kartę kredytową?",
+        a: `Nie. ${SUBSCRIPTION_PAYMENT_SENTENCE} Po wygaśnięciu okresu sam decydujesz, czy go przedłużyć.`,
+      },
+      {
+        q: "Kto płaci prowizję Finance You od pożyczki?",
+        a: "Klient. Prowizja Finance You wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, i jest potrącana z wypłaty. Przy wypłacie przelewasz ją na rachunek Finance You, a resztę kwoty pożyczki klientowi — np. przy 100 000 zł: 7 000 zł dla Finance You i 93 000 zł dla klienta. Nie jest to koszt inwestora.",
       },
       {
         q: "Na czym zarabiam jako inwestor?",
         a: "Na odsetkach od pożyczki, których wysokość nie może przekroczyć odsetek maksymalnych (obecnie 14,5% rocznie), oraz na prowizji inwestora, która jest osobnym elementem umowy spłacanym w ratach razem z kapitałem. Kalkulator pokazuje odsetki, prowizję, harmonogram i łączny zysk jeszcze przed złożeniem propozycji.",
       },
       {
-        q: "Czy w przyszłości pojawią się opłaty dla inwestora?",
-        a: "Ewentualny abonament za dostęp do systemu wymagałby aneksu albo nowej wersji Umowy ramowej, doręczonej Ci na trwałym nośniku i wyraźnie zaakceptowanej. Bez Twojej zgody warunki nie zmienią się na odpłatne.",
+        q: "Czy cena abonamentu może się zmienić?",
+        a: "Cena obowiązuje przez cały opłacony okres. Każda zmiana warunków wymaga aneksu albo nowej wersji Umowy ramowej, doręczonej Ci na trwałym nośniku i wyraźnie zaakceptowanej — bez Twojej zgody warunki się nie zmienią.",
       },
       {
         q: "Czy muszę sam rozliczyć podatek od zysku?",
@@ -522,7 +538,7 @@ const FAQ_GROUPS: FAQGroup[] = [
       },
       {
         q: "Czym jest Karta Leada?",
-        a: "To załącznik transakcyjny do konkretnego Projektu, akceptowany osobno dla każdego Projektu przed ujawnieniem danych identyfikujących. Wskazuje m.in. moment ujawnienia, okres ochronny, warunki prowizji klienta, mechanizm jej zabezpieczenia oraz potwierdza, że usługa jest dla Ciebie nieodpłatna.",
+        a: "To załącznik transakcyjny do konkretnego Projektu, akceptowany osobno dla każdego Projektu przed ujawnieniem danych identyfikujących. Wskazuje m.in. moment ujawnienia, okres ochronny, warunki prowizji klienta i mechanizm jej zabezpieczenia.",
       },
       {
         q: "Jak długo Projekt jest zarezerwowany dla mnie?",
@@ -600,7 +616,7 @@ const FAQ_GROUPS: FAQGroup[] = [
       },
       {
         q: "Co grozi za obejście Finance You?",
-        a: "Kara Obejściowa w wysokości 5% Sumy Hipotecznej. Nie jest to cena usługi ani opłata — to kara umowna zabezpieczająca zakaz obchodzenia. Jeśli transakcję z klientem zawierasz prawidłowo, przez platformę i z przekazaniem prowizji klienta, kara nie powstaje, a Ty nie płacisz Finance You nic.",
+        a: "Kara Obejściowa w wysokości 5% Sumy Hipotecznej. Nie jest to cena usługi ani opłata — to kara umowna zabezpieczająca zakaz obchodzenia. Jeśli transakcję z klientem zawierasz prawidłowo, przez platformę i z przekazaniem prowizji klienta, kara nie powstaje.",
       },
       {
         q: "Jak chronione są dane klientów i moje?",
@@ -621,8 +637,8 @@ const FAQ_GROUPS: FAQGroup[] = [
 const FAQ_ALL = FAQ_GROUPS.flatMap((g) => g.items);
 
 // Duży złoty przycisk „Dołącz do klubu” — jedyny CTA w hero, prowadzi do
-// cennika (#cennik): inwestor najpierw poznaje warunki (dostęp 0 zł, płaci
-// wyłącznie klient), potem zakłada konto. W one-pagerze to zwykła kotwica
+// cennika (#cennik): inwestor najpierw poznaje warunki (abonament miesięczny
+// albo roczny), potem zakłada konto. W one-pagerze to zwykła kotwica
 // sekcji; w układzie zakładek przewijanie do zakładki obsługuje InvestorTabs
 // (także gdy hash już jest ustawiony na #cennik).
 function JoinClubButton() {
@@ -746,7 +762,7 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
           >
             {SHOW.kalkulator
               ? "Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You. Bezpośrednio poniżej masz pełną wersję kalkulatora inwestora — policz zysk, raty, limity ustawowe i harmonogram spłat na własnych parametrach."
-              : "Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You, a poniżej sprawdź, co zyskujesz jako inwestor. Dostęp jest bez opłat — płaci wyłącznie klient."}
+              : "Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You, a poniżej sprawdź, co zyskujesz jako inwestor i ile kosztuje abonament."}
           </p>
           <div style={{ marginTop: "1.4rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
             <JoinClubButton />
@@ -1036,17 +1052,17 @@ function CennikSection({ products }: { products: AccessProduct[] }) {
       <SectionHead
         center
         eyebrow="Cennik"
-        title="Dla inwestora — 0 zł"
-        sub="Usługa Finance You jest dla inwestora nieodpłatna: bez abonamentu, opłat za Projekt i opłaty sukcesu. Płaci wyłącznie klient — prowizję Finance You potrącaną z wypłaty."
+        title="Jeden abonament, pełny dostęp"
+        sub={`${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok — przesuń suwak i zobacz, ile oszczędzasz przy płatności rocznej (${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% rabatu). Bez konieczności podpinania karty kredytowej.`}
       />
       <div style={{ marginTop: "2.5rem" }}>
         <InvestorPricing products={products} />
       </div>
       <ComplianceNote style={{ marginTop: "2rem" }}>
-        Jedyną opłatą w transakcji jest prowizja Finance You płacona przez klienta: 7% Kwoty
-        Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącana z wypłaty (100 000 zł → 7 000 zł dla
-        Finance You, 93 000 zł dla klienta). Materiały mają charakter edukacyjny i informacyjny, a
-        Finance You nie gwarantuje zysku.
+        Ceny brutto (PLN). {SUBSCRIPTION_PAYMENT_SENTENCE} Prowizję Finance You płaci klient: 7%
+        Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącaną z wypłaty (100 000 zł → 7 000
+        zł dla Finance You, 93 000 zł dla klienta). Materiały mają charakter edukacyjny i
+        informacyjny, a Finance You nie gwarantuje zysku.
       </ComplianceNote>
     </Section>
   );
@@ -1182,7 +1198,7 @@ function InvestorLanding() {
         <SectionHead
           eyebrow="Co zyskujesz"
           title="Mniej ryzyka i formalności, więcej dobrych Projektów"
-          sub="Dostęp bez opłat — płaci wyłącznie klient. Dostajesz gotowy proces od Zlecenia po spłatę: sprawdzony klient, pełny raport, harmonogram, umowy, compliance i windykacja w jednym koncie."
+          sub="Jeden abonament, bez prowizji od Twojego zysku. Dostajesz gotowy proces od Zlecenia po spłatę: sprawdzony klient, pełny raport, harmonogram, umowy, compliance i windykacja w jednym koncie."
         />
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={BENEFITS} icon3d />

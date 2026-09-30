@@ -52,9 +52,10 @@ export function SuccessFeesCard() {
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             <b>Sekcja nieaktywna.</b> Od Umowy ramowej v7 usługa Finance You dla Inwestora jest
-            nieodpłatna — nie ma Opłaty Sukcesu, abonamentu ani opłaty za Projekt. Jedyną opłatą w
-            systemie jest Prowizja Klientowska (7 % Kwoty Udzielonej, min 5 000 zł, bez VAT)
-            potrącana z wypłaty Klientowi. Poniższe rekordy są historyczne
+            nieodpłatna — nie ma Opłaty Sukcesu ani opłaty za Projekt (abonament inwestora z cennika
+            zacznie obowiązywać dopiero z nową wersją umowy). Klient płaci Prowizję Klientowską (7 %
+            Kwoty Udzielonej, min 5 000 zł, bez VAT) potrącaną z wypłaty. Poniższe rekordy są
+            historyczne
             {data.contractVersion ? ` (aktywna umowa: ${data.contractVersion})` : ""}; można je
             tylko anulować.
           </span>

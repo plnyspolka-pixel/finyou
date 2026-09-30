@@ -57,7 +57,7 @@ const PAGE_PATH: Record<MarketingPage, string> = {
 const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   home: { label: "Wybierz ścieżkę", href: "#sciezki" },
   klient: { label: "Złóż wniosek", href: "/rejestracja?role=klient" },
-  // Inwestor najpierw poznaje warunki w cenniku (dostęp 0 zł), potem zakłada konto
+  // Inwestor najpierw poznaje warunki w cenniku (abonament), potem zakłada konto
   // (nagłówek z page="inwestor" renderuje się tylko na /dla-inwestora).
   inwestor: { label: "Dołącz do klubu", href: "#cennik" },
   posrednik: { label: "Dołącz jako pośrednik", href: "/rejestracja?role=posrednik" },

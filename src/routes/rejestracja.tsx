@@ -26,13 +26,12 @@ export const Route = createFileRoute("/rejestracja")({
       { title: "Finance You — Załóż konto" },
       {
         name: "description",
-        content:
-          "Załóż darmowe konto w Finance You jako klient lub inwestor. Decyzja w 24 godziny.",
+        content: "Załóż konto w Finance You jako klient lub inwestor. Decyzja w 24 godziny.",
       },
       { property: "og:title", content: "Finance You — Rejestracja" },
       {
         property: "og:description",
-        content: "Darmowe konto Finance You — klient lub inwestor.",
+        content: "Konto Finance You — klient lub inwestor.",
       },
       { property: "og:url", content: "https://financeyou.pl/rejestracja" },
       { property: "og:type", content: "website" },

@@ -308,9 +308,13 @@ export function LoanCalculator({
   const grossPrincipal = amount;
 
   const maxNonInterest = maxNonInterestCosts(amount, months);
+  // Wartość referencyjna prowizji inwestora = wzór MPKK (art. 36a UoKK) jako % kwoty.
+  // Tylko punkt odniesienia — pożyczki są B2B, więc limit ustawowy ich nie obejmuje.
+  const referenceCommissionPct = amount > 0 ? (maxNonInterest / amount) * 100 : 0;
 
   // Prowizja inwestora — zawsze sterowana ręcznie suwakiem.
   const commissionPln = (amount * commissionPct) / 100;
+  const commissionAboveReference = commissionPln > maxNonInterest + 1e-9;
   const effectiveCommissionPct = commissionPct;
 
   // Prowizja wewnętrzna operatora — część prowizji inwestora (2–5%).
@@ -1044,7 +1048,7 @@ export function LoanCalculator({
                 <Label className="flex flex-[1_1_10rem] items-center gap-1.5">
                   Prowizja dla inwestora (jednorazowa, pozaodsetkowa){" "}
                   {investorGuidance && (
-                    <InfoTip text="Jedyny koszt pozaodsetkowy wliczany do limitu MPKK. Ustawiana ręcznie suwakiem; rozłożona na raty." />
+                    <InfoTip text="Jedyny koszt pozaodsetkowy po stronie inwestora, rozłożony na raty. Domyślnie ustawiona na wartość referencyjną ze wzoru MPKK — pożyczek B2B ten limit nie obejmuje, ale prowizja nie może naruszać zasad współżycia społecznego." />
                   )}
                 </Label>
                 <div className="flex shrink-0 items-center gap-2">
@@ -1277,29 +1281,51 @@ export function LoanCalculator({
               </Alert>
             )}
 
-            {/* 2) Rażąca dysproporcja (art. 58 §2 KC / art. 388 KC) — model B2B, bez MPKK */}
-            {investorGuidance &&
-              (commissionOver45 ? (
-                <Alert className={dangerCls}>
+            {/* 2) Prowizja inwestora: wartość referencyjna (wzór MPKK), nie limit ustawowy —
+                pożyczki są B2B; ocena według zasad współżycia społecznego (art. 5 i 58 §2 KC)
+                oraz wyzysku (art. 388 KC). */}
+            {investorGuidance && (
+              <Alert className={commissionOver45 ? dangerCls : okCls}>
+                {commissionOver45 ? (
                   <ShieldAlert className="h-4 w-4 !text-rose-300" />
-                  <AlertTitle>Prowizja inwestora — ryzyko rażącej dysproporcji</AlertTitle>
-                  <AlertDescription className="text-sm text-rose-100/90">
-                    Prowizja <b>{formatPLN(commissionPln)}</b> przekracza 45% kwoty pożyczki —
-                    ryzyko nieważności postanowień (art. 58 §2 KC) i wyzysku (art. 388 KC). Prowizja
-                    Finance You (potrącana z wypłaty) nie wlicza się do tej oceny.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <Alert className={okCls}>
+                ) : (
                   <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
-                  <AlertTitle>Prowizja inwestora w rozsądnym zakresie</AlertTitle>
-                  <AlertDescription className="text-sm text-emerald-100/90">
-                    Koszty pozaodsetkowe (prowizja inwestora) <b>{formatPLN(commissionPln)}</b> —
-                    finansowanie wyłącznie na cel gospodarczy (B2B), bez limitu MPKK z ustawy o
-                    kredycie konsumenckim.
-                  </AlertDescription>
-                </Alert>
-              ))}
+                )}
+                <AlertTitle>
+                  {commissionOver45
+                    ? "Prowizja inwestora — ryzyko rażącej dysproporcji"
+                    : "Prowizja inwestora — wartość referencyjna, nie limit ustawowy"}
+                </AlertTitle>
+                <AlertDescription
+                  className={`space-y-1.5 text-sm ${commissionOver45 ? "text-rose-100/90" : "text-emerald-100/90"}`}
+                >
+                  <p>
+                    Twoja prowizja: <b>{formatPLN(commissionPln)}</b> (
+                    {commissionPct.toFixed(1).replace(".", ",")}% kwoty). Wartość referencyjna dla{" "}
+                    {months} mies.: <b>{formatPLN(maxNonInterest)}</b> (
+                    {referenceCommissionPct.toFixed(1).replace(".", ",")}% kwoty)
+                    {commissionAboveReference
+                      ? " — Twoja prowizja jest powyżej wartości referencyjnej."
+                      : " — Twoja prowizja mieści się w wartości referencyjnej."}
+                  </p>
+                  <p>
+                    Wartość referencyjną liczymy wzorem MPKK z art. 36a ustawy o kredycie
+                    konsumenckim. To <b>wyłącznie punkt odniesienia</b>: limit MPKK dotyczy kredytów
+                    konsumenckich i <b>nie obejmuje pożyczek B2B</b>, udzielanych na cel
+                    gospodarczy.
+                  </p>
+                  <p>
+                    Przy pożyczkach B2B prowizja nadal musi być zgodna z{" "}
+                    <b>zasadami współżycia społecznego</b> (art. 5 i art. 58 §2 KC). Rażąco
+                    wygórowana prowizja może zostać uznana za nieważną albo za wyzysk (art. 388 KC).
+                    {commissionOver45
+                      ? " Powyżej 45% kwoty pożyczki to ryzyko jest wysokie — obniż prowizję."
+                      : " Im dalej ponad wartość referencyjną, tym większe to ryzyko."}{" "}
+                    Prowizja Finance You (potrącana z wypłaty) nie wlicza się do tej oceny.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* 3) Krotność spłaty — lichwa (art. 304 KK) */}
             {investorGuidance &&
