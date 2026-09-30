@@ -482,7 +482,7 @@ const FAQ_GROUPS: FAQGroup[] = [
       },
       {
         q: "Kiedy opłacam abonament?",
-        a: "Na początku — abonament otwiera panel inwestora. Po opłaceniu uzupełniasz dane, przechodzisz weryfikację tożsamości i akceptujesz Umowę ramową, NDA i umowę RODO; akceptacja otwiera moduł ofert (Zlecenia, dopasowane Projekty i oferty). Przed zapłatą możesz przeczytać Umowę ramową — Opłatę Abonamentową określa jej § 7, a zwrot przy odstąpieniu § 15. Rejestracja konta nie wymaga płatności. Abonament kupujesz w panelu, w zakładce Dostęp i płatności, a fakturę dostajesz automatycznie.",
+        a: "Na początku — abonament otwiera panel inwestora. Płacąc, akceptujesz Regulamin abonamentu inwestora (sprzedawcą abonamentu jest Fundacja Krzewienia Edukacji Finansowej im. Pieczaka). Gdy chcesz dostępu do Klientów i Projektów, uzupełniasz dane, przechodzisz weryfikację tożsamości i akceptujesz Umowę ramową, NDA i umowę RODO z Finance You — akceptacja otwiera moduł ofert, a Finance You nie pobiera za nie wynagrodzenia. Rejestracja konta nie wymaga płatności. Abonament kupujesz w panelu, w zakładce Dostęp i płatności, a fakturę (bez VAT) dostajesz automatycznie.",
       },
       {
         q: "Co się dzieje, gdy abonament wygaśnie?",
@@ -498,7 +498,7 @@ const FAQ_GROUPS: FAQGroup[] = [
       },
       {
         q: "Czy cena abonamentu może się zmienić?",
-        a: "Cena obowiązuje przez cały opłacony okres. Zmiana wysokości Opłaty Abonamentowej może dotyczyć wyłącznie kolejnych okresów, opłaconych po jej wejściu w życie, i wymaga wcześniejszego powiadomienia Cię na trwałym nośniku (§ 2 Umowy ramowej). Jeśli nowa cena Ci nie odpowiada, nie opłacasz kolejnego okresu albo wypowiadasz umowę.",
+        a: "Cena obowiązuje przez cały opłacony okres. Zmiana wysokości Opłaty Abonamentowej może dotyczyć wyłącznie kolejnych okresów, opłaconych po jej wejściu w życie, i wymaga wcześniejszego powiadomienia (§ 8 Regulaminu abonamentu inwestora). Jeśli nowa cena Ci nie odpowiada, po prostu nie opłacasz kolejnego okresu — abonament nie odnawia się automatycznie.",
       },
       {
         q: "Czy muszę sam rozliczyć podatek od zysku?",
@@ -632,7 +632,7 @@ const FAQ_GROUPS: FAQGroup[] = [
       },
       {
         q: "Czy mogę odstąpić od umowy lub ją wypowiedzieć?",
-        a: "Umowa ramowa jest zawierana na czas nieoznaczony i każda strona może ją wypowiedzieć z 30-dniowym okresem wypowiedzenia. Jeśli działasz jako konsument, możesz odstąpić od umowy zawartej na odległość w ciągu 14 dni bez podania przyczyny — zwracamy wtedy Opłatę Abonamentową, a jeśli na Twoje żądanie zaczęliśmy świadczyć usługę przed upływem tego terminu, pomniejszoną o część za wykorzystany okres. Okres ochronny już ujawnionych Projektów pozostaje w mocy.",
+        a: "Umowa ramowa jest zawierana na czas nieoznaczony i każda strona może ją wypowiedzieć z 30-dniowym okresem wypowiedzenia. Jeśli działasz jako konsument, możesz odstąpić od niej w ciągu 14 dni bez podania przyczyny; okres ochronny już ujawnionych Projektów pozostaje w mocy. Abonament to odrębna umowa: jako konsument możesz od niego odstąpić w ciągu 14 dni i dostajesz zwrot Opłaty Abonamentowej — pomniejszony o część za wykorzystany okres, jeśli zażądałeś dostępu od razu (§ 6 Regulaminu abonamentu inwestora).",
       },
       {
         q: "Jak mogę się skontaktować z Finance You?",

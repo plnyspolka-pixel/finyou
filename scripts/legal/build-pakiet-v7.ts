@@ -71,7 +71,10 @@ Wygenerowano skryptem \`npx tsx scripts/legal/build-pakiet-v7.ts\` z treści v6/
   nieodpłatności — nową treść wgrywa migracja \`20260930140000_abonament_inwestora\`
   (UPDATE wiersza v7, \`allows_investor_fees = true\`). Tego samego dnia, nadal przed
   pierwszą akceptacją, „Prowizja Klientowska” w umowie ramowej v7 i NDA v6 dostała nazwę
-  „Prowizja od Pożyczkobiorcy” — migracja \`20260930190000_prowizja_od_pozyczkobiorcy\`.
+  „Prowizja od Pożyczkobiorcy”, a Opłatę Abonamentową zastąpił Abonament sprzedawany przez
+  Fundację Krzewienia Edukacji Finansowej im. Pieczaka na podstawie Regulaminu Abonamentu
+  Inwestora (Finance You nie pobiera od Inwestora wynagrodzenia, \`allows_investor_fees = false\`)
+  — migracja \`20260930190000_prowizja_od_pozyczkobiorcy\`.
   Wyłączenie: /admin/umowy-inwestorow.
 
 | kod | wersja | plik | SHA-256 treści | SHA-256 .docx |

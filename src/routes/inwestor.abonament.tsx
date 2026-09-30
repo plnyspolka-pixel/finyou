@@ -14,6 +14,7 @@ import { AccessPlanCards } from "@/components/access/AccessPlanCards";
 import { PaymentsAndInvoices } from "@/components/access/PaymentsAndInvoices";
 import { getMyAccessState, listAccessProducts } from "@/lib/access/state.functions";
 import { getInvestorPipelineState } from "@/lib/investor-agreements/pipeline.functions";
+import { FUNDACJA } from "@/lib/legal/regulamin-abonamentu";
 import { formatWarsawDate, type AccessProduct } from "@/lib/access/core";
 import {
   ACCESS_PRESENTATION,
@@ -114,7 +115,7 @@ function InwestorAbonament() {
       <FancyPageHeader
         eyebrow="Dostęp i płatności"
         title="Abonament inwestora"
-        subtitle={`Abonament kosztuje ${SUBSCRIPTION_PRICE_SENTENCE}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Prowizję od Pożyczkobiorcy (7 % Kwoty Udzielonej, min 5 000 zł, bez VAT) płaci Klient — jest potrącana z wypłaty.`}
+        subtitle={`Abonament kosztuje ${SUBSCRIPTION_PRICE_SENTENCE}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Sprzedawcą jest ${FUNDACJA.nazwa} (faktura bez VAT), na podstawie Regulaminu abonamentu inwestora. Prowizję od Pożyczkobiorcy (7 % Kwoty Udzielonej, min 5 000 zł, bez VAT) płaci Klient — jest potrącana z wypłaty.`}
       />
 
       {tpay && payment && (

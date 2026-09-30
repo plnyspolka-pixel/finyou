@@ -5,6 +5,7 @@
 // wyłącznie kod produktu, typ nabywcy, dane nabywcy i zgody.
 import { createServerFn } from "@tanstack/react-start";
 import { SUBSCRIPTION_OPTIONS } from "@/lib/investor-plan/plans";
+import { REGULAMIN_ABONAMENTU_VERSION } from "@/lib/legal/regulamin-abonamentu";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
@@ -38,8 +39,6 @@ const CheckoutSchema = z.object({
     terms: z.literal(true),
     privacy: z.literal(true),
     digitalService: z.boolean().optional().default(false),
-    /** Inwestor: zna warunki Opłaty Abonamentowej (§ 7) i zwrotu (§ 15) Umowy ramowej. */
-    frameworkTerms: z.boolean().optional().default(false),
   }),
 });
 
@@ -211,30 +210,10 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
       if (audience === "investor" && !roles.includes("inwestor") && !staff) {
         return { error: "Pakiet inwestora może kupić wyłącznie konto inwestora." };
       }
-      // Kolejność inwestora (decyzja właściciela 2026-09-30): najpierw
-      // abonament, potem akceptacja pakietu umów, która otwiera moduł ofert
-      // (RLS: investor_can_view_application wymaga investor_legal_pack_complete).
-      // Zakup nie wymaga więc wcześniejszej akceptacji Umowy ramowej — inwestor
-      // potwierdza w formularzu, że zna jej warunki Opłaty Abonamentowej (§ 7)
-      // i zwrotu przy odstąpieniu (§ 15); wersję zapisujemy w płatności.
-      let frameworkVersion: string | null = null;
-      if (audience === "investor" && !staff) {
-        if (!data.consents.frameworkTerms) {
-          return {
-            error:
-              "Potwierdź, że znasz warunki Opłaty Abonamentowej z Umowy ramowej (§ 7) i zasady zwrotu (§ 15).",
-          };
-        }
-        const { data: framework } = await db
-          .from("legal_documents")
-          .select("version, sha256")
-          .eq("code", "umowa_ramowa")
-          .eq("active", true)
-          .maybeSingle();
-        frameworkVersion = framework
-          ? `umowa_ramowa:${framework.version}:${framework.sha256}`
-          : null;
-      }
+      // Kolejność inwestora (decyzje właściciela 2026-09-30): płacąc, inwestor
+      // akceptuje Regulamin Abonamentu Inwestora (sprzedawca: Fundacja); umowy
+      // o dostęp do Klientów (Umowa ramowa, NDA, RODO) akceptuje później —
+      // otwierają moduł ofert (RLS: investor_can_view_application).
       if (audience === "broker" && !roles.includes("posrednik") && !partner && !staff) {
         return { error: "Pakiet pośrednika może kupić wyłącznie konto pośrednika." };
       }
@@ -244,13 +223,11 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
       const meta = requestClientMeta();
       const nowIso = new Date().toISOString();
       const consents = {
-        termsVersion: TERMS_VERSION,
+        termsVersion: audience === "investor" ? REGULAMIN_ABONAMENTU_VERSION : TERMS_VERSION,
         privacyVersion: PRIVACY_VERSION,
         termsAccepted: true,
         privacyAccepted: true,
         digitalServiceConsent: Boolean(data.consents.digitalService),
-        frameworkTermsAcknowledged: Boolean(data.consents.frameworkTerms),
-        frameworkVersion,
         acceptedAt: nowIso,
         ip: meta.ip,
         userAgent: meta.userAgent,

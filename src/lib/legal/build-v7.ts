@@ -108,7 +108,10 @@ export const PAKIET_SEKCJA_KONIEC = "-- <<< PAKIET v7";
 /**
  * Aktualizacja treści umowy ramowej v7 i NDA v6 w `legal_documents` (UPDATE
  * istniejących wierszy): nazwa „Prowizja od Pożyczkobiorcy” zamiast „Prowizja
- * Klientowska”. Oba dokumenty nie miały jeszcze akceptacji; migracji już
+ * Klientowska”, a w umowie — Abonament sprzedawany przez Fundację na podstawie
+ * Regulaminu Abonamentu Inwestora zamiast Opłaty Abonamentowej pobieranej
+ * przez Finance You (`allows_investor_fees = false`: Finance You nie pobiera
+ * od Inwestora wynagrodzenia z Umowy). Oba dokumenty nie miały jeszcze akceptacji; migracji już
  * wgranych nie zmieniamy, więc zmiana idzie osobną migracją. Ewentualna
  * akceptacja starej treści przestaje pasować do skrótu, więc panel poprosi
  * o ponowną akceptację. RODO v5 się nie zmienia.
@@ -128,7 +131,7 @@ update public.legal_documents
    set sha256 = ${sqlStr(d.sha256)},
        content_text = ${sqlStr(d.content_text)},
        docx_base64 = ${sqlStr(Buffer.from(d.docx).toString("base64"))},
-       docx_filename = ${sqlStr(d.docx_filename)},${code === "umowa_ramowa" ? "\n       allows_investor_fees = true," : ""}
+       docx_filename = ${sqlStr(d.docx_filename)},${code === "umowa_ramowa" ? "\n       allows_investor_fees = false," : ""}
        updated_at = now()
  where code = ${sqlStr(d.code)}
    and version = ${sqlStr(d.version)}

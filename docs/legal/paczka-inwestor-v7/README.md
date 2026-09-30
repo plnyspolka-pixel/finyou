@@ -12,11 +12,14 @@ Wygenerowano skryptem `npx tsx scripts/legal/build-pakiet-v7.ts` z treści v6/v5
   nieodpłatności — nową treść wgrywa migracja `20260930140000_abonament_inwestora`
   (UPDATE wiersza v7, `allows_investor_fees = true`). Tego samego dnia, nadal przed
   pierwszą akceptacją, „Prowizja Klientowska” w umowie ramowej v7 i NDA v6 dostała nazwę
-  „Prowizja od Pożyczkobiorcy” — migracja `20260930190000_prowizja_od_pozyczkobiorcy`.
+  „Prowizja od Pożyczkobiorcy”, a Opłatę Abonamentową zastąpił Abonament sprzedawany przez
+  Fundację Krzewienia Edukacji Finansowej im. Pieczaka na podstawie Regulaminu Abonamentu
+  Inwestora (Finance You nie pobiera od Inwestora wynagrodzenia, `allows_investor_fees = false`)
+  — migracja `20260930190000_prowizja_od_pozyczkobiorcy`.
   Wyłączenie: /admin/umowy-inwestorow.
 
 | kod | wersja | plik | SHA-256 treści | SHA-256 .docx |
 |---|---|---|---|---|
-| umowa_ramowa | v7 | 02_Ramowa_umowa_posrednictwa_na_odleglosc_Finance_You_v7.docx | `4e68aa3bb26e2b2d7b8e6f30985ff624c76d07d90e036b77b7cd2467d34e34e9` | `448c980f7969b32a51e8d01625bc59ceb80f085e7c2f56a9a7c98df2ecbe428a` |
+| umowa_ramowa | v7 | 02_Ramowa_umowa_posrednictwa_na_odleglosc_Finance_You_v7.docx | `887010c826b83f43c8aa0b9165bac05540305fd76d61f45deeccd2b9b943f065` | `67782eafc32764445b15833ed73704c9c21059c495c5b586a1157dfddba07fa8` |
 | nda | v6 | 01_NDA_i_zakaz_obchodzenia_Finance_You_v6.docx | `822131729ad457da06c78c2b514126c50469a03f17944983c02d02969371326d` | `a9f3eea7ded46ab16470f87cdf6debd8e2869a63057e6b9f2f739b162c84eef3` |
 | rodo | v5 | 03_Umowa_udostepniania_i_powierzenia_danych_RODO_Finance_You_v5.docx | `7b6dbd5818ccee74dff0ab095229895c91aa1779a16baf5ad65e2019eb2a19fb` | `94bfad8421b9b231e29d72084aeae12e4b5000ce5d170707562127921d39ad62` |

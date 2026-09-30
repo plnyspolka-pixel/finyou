@@ -13,6 +13,7 @@ import {
   NEW_EMAIL,
   OLD_EMAIL,
   PACKAGE_ID_V7,
+  SPRZEDAWCA_ABONAMENTU,
   prowizjaOdPozyczkobiorcy,
   transformNdaV6,
   transformRodoV5,
@@ -39,29 +40,26 @@ describe("umowa ramowa v7", () => {
     expect(v7).not.toMatch(/nieodpłatn/i);
   });
 
-  it("Opłata Abonamentowa: 1 500 zł / 30 dni albo 7 000 zł / 365 dni, jedyne wynagrodzenie od Inwestora", () => {
+  it("Abonament od Fundacji na podstawie Regulaminu Abonamentu; Finance You bez wynagrodzenia od Inwestora", () => {
     expect(ABONAMENT_UMOWA).toBe("1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni");
-    expect(v7).toContain("§ 7. Opłata Abonamentowa i zabezpieczenie Prowizji od Pożyczkobiorcy");
+    expect(v7).toContain("§ 7. Abonament i zabezpieczenie Prowizji od Pożyczkobiorcy");
     expect(v7).toContain(
-      `Opłata Abonamentowa oznacza jedyne wynagrodzenie Finance You należne od Inwestora`,
+      `Abonament oznacza odpłatny dostęp Inwestora do systemu Finance You (panelu Inwestora) przez Okres Abonamentowy, sprzedawany przez ${SPRZEDAWCA_ABONAMENTU} na podstawie Regulaminu Abonamentu Inwestora`,
     );
-    expect(v7).toContain("Okres Abonamentowy oznacza opłacony okres dostępu do systemu");
-    expect(v7).toContain(
-      `Finance You pobiera od Inwestora wyłącznie Opłatę Abonamentową za dostęp do systemu: ${ABONAMENT_UMOWA}`,
-    );
-    expect(v7).toContain(
-      "bez konieczności podawania danych karty płatniczej i bez automatycznego odnowienia",
-    );
-    expect(v7).toContain(
-      "Opłata Inwestora za Projekt: brak (dostęp w ramach Opłaty Abonamentowej)",
-    );
-    expect(v7).toContain("Inwestor płaci wyłącznie Opłatę Abonamentową");
+    expect(v7).toContain("nie jest wynagrodzeniem Finance You z tytułu Umowy");
+    expect(v7).toContain("Okres Abonamentowy oznacza opłacony okres Abonamentu");
+    expect(v7).toContain("Finance You nie pobiera od Inwestora wynagrodzenia z tytułu Umowy.");
+    expect(v7).toContain(`Regulaminu Abonamentu Inwestora (obecnie ${ABONAMENT_UMOWA}`);
+    expect(v7).toContain("faktury za Abonament wystawia Fundacja");
+    expect(v7).toContain("Opłata Inwestora za Projekt: brak");
+    expect(v7).not.toMatch(/Finance You pobiera od Inwestora wyłącznie/);
+    expect(v7).not.toMatch(/jedyne wynagrodzenie Finance You/);
     // Kwoty w umowie = cennik na stronie i w panelu.
     expect(SUBSCRIPTION_MONTHLY_PLN).toBe(1_500);
     expect(SUBSCRIPTION_YEARLY_PLN).toBe(7_000);
-    // Konsument: zwrot Opłaty Abonamentowej przy odstąpieniu.
+    // Konsument: zwrot Opłaty Abonamentowej przy odstąpieniu — w Regulaminie Abonamentu.
     expect(v7).toContain(
-      "Finance You zwraca Opłatę Abonamentową pomniejszoną o kwotę proporcjonalną do wykorzystanej części Okresu Abonamentowego",
+      "Odstąpienie od Umowy nie obejmuje Abonamentu — odstąpienie od umowy o Abonament i zwrot Opłaty Abonamentowej określa Regulamin Abonamentu Inwestora.",
     );
   });
 

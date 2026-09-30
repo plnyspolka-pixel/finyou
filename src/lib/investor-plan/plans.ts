@@ -10,7 +10,10 @@
 //  • Klient nadal płaci Prowizję od Pożyczkobiorcy (7 % Kwoty
 //    Udzielonej, min 5 000 zł, bez VAT), potrącaną z wypłaty —
 //    patrz src/lib/contract-engine/fees.ts.
-//  • Podstawa: Umowa ramowa v7 § 7 (Opłata Abonamentowa — kwoty w
+//  • Podstawa płatności: Regulamin Abonamentu Inwestora
+//    (lib/legal/regulamin-abonamentu.ts; sprzedawca: Fundacja Krzewienia
+//    Edukacji Finansowej im. Pieczaka, bez VAT). Umowa ramowa v7 § 7 odsyła
+//    do niego i nie przewiduje wynagrodzenia Finance You (kwoty w
 //    src/lib/legal/pakiet-v7.ts, ABONAMENT_UMOWA). Sprzedaż: produkty
 //    SUBSCRIPTION_OPTIONS[*].productCode w access_products (migracja
 //    20260930140000), createAccessCheckout — abonament jest pierwszą bramką panelu, a akceptacja

@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, ExternalLink, Search } from "lucide-react";
 import { toast } from "sonner";
 import { createAccessCheckout } from "@/lib/access/checkout.functions";
-import { getLegalDocumentText } from "@/lib/investor-agreements/legal-pack.functions";
+import { FUNDACJA, REGULAMIN_ABONAMENTU_PATH } from "@/lib/legal/regulamin-abonamentu";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import {
   formatGroszPln,
@@ -43,25 +43,9 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [digitalConsent, setDigitalConsent] = useState(false);
-  // Inwestor płaci przed akceptacją pakietu umów — potwierdza, że zna warunki
-  // Opłaty Abonamentowej (§ 7) i zwrotu (§ 15) Umowy ramowej; może ją przeczytać tutaj.
+  // Inwestor płaci na podstawie Regulaminu Abonamentu Inwestora (sprzedawca:
+  // Fundacja); umowy o dostęp do Klientów akceptuje później w panelu.
   const isInvestor = product.audience === "investor";
-  const [frameworkTerms, setFrameworkTerms] = useState(false);
-  const fetchLegalText = useServerFn(getLegalDocumentText);
-  const [frameworkText, setFrameworkText] = useState<string | null>(null);
-  const [frameworkLoading, setFrameworkLoading] = useState(false);
-  const toggleFramework = async () => {
-    if (frameworkText !== null) return setFrameworkText(null);
-    setFrameworkLoading(true);
-    try {
-      const doc = await fetchLegalText({ data: { code: "umowa_ramowa" } });
-      setFrameworkText(doc.content_text ?? "");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Nie udało się pobrać Umowy ramowej");
-    } finally {
-      setFrameworkLoading(false);
-    }
-  };
 
   const fetchFromGus = async () => {
     const nip = buyerNip.replace(/[\s-]/g, "");
@@ -109,8 +93,6 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
     }
     if (!termsAccepted) return toast.error("Zaakceptuj regulamin, aby kontynuować");
     if (!privacyAccepted) return toast.error("Zaakceptuj politykę prywatności, aby kontynuować");
-    if (isInvestor && !frameworkTerms)
-      return toast.error("Potwierdź, że znasz warunki Opłaty Abonamentowej z Umowy ramowej");
 
     setLoading(true);
     try {
@@ -126,12 +108,7 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
           buyerPostalCode: buyerPostalCode.trim(),
           buyerCity: buyerCity.trim(),
           buyerCountry,
-          consents: {
-            terms: true,
-            privacy: true,
-            digitalService: digitalConsent,
-            frameworkTerms: isInvestor && frameworkTerms,
-          },
+          consents: { terms: true, privacy: true, digitalService: digitalConsent },
         },
       });
       if ("error" in res && res.error) {
@@ -307,9 +284,23 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
           />
           <span>
             Akceptuję{" "}
-            <a href="/regulamin" target="_blank" rel="noreferrer" className="underline">
-              regulamin platformy Finance You
-            </a>{" "}
+            {isInvestor ? (
+              <>
+                <a
+                  href={REGULAMIN_ABONAMENTU_PATH}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                >
+                  Regulamin abonamentu inwestora
+                </a>{" "}
+                (sprzedawca: {FUNDACJA.nazwa})
+              </>
+            ) : (
+              <a href="/regulamin" target="_blank" rel="noreferrer" className="underline">
+                regulamin platformy Finance You
+              </a>
+            )}{" "}
             *
           </span>
         </label>
@@ -327,41 +318,6 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
             *
           </span>
         </label>
-        {isInvestor && (
-          <div className="space-y-2">
-            <label className="flex items-start gap-2 cursor-pointer">
-              <Checkbox
-                checked={frameworkTerms}
-                onCheckedChange={(v) => setFrameworkTerms(v === true)}
-                className="mt-0.5"
-              />
-              <span>
-                Znam warunki Opłaty Abonamentowej (§ 7) i zwrotu przy odstąpieniu (§ 15) z Umowy
-                ramowej. Umowę ramową, NDA i umowę RODO zaakceptuję w panelu po opłaceniu abonamentu
-                — akceptacja otwiera moduł ofert. *
-              </span>
-            </label>
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="h-auto px-6 py-0"
-              onClick={() => void toggleFramework()}
-              disabled={frameworkLoading}
-            >
-              {frameworkLoading
-                ? "Wczytuję…"
-                : frameworkText !== null
-                  ? "Ukryj Umowę ramową"
-                  : "Przeczytaj Umowę ramową"}
-            </Button>
-            {frameworkText !== null && (
-              <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded border bg-muted/40 p-3 font-sans text-xs">
-                {frameworkText}
-              </pre>
-            )}
-          </div>
-        )}
         <label className="flex items-start gap-2 cursor-pointer">
           <Checkbox
             checked={digitalConsent}
@@ -375,6 +331,13 @@ export function TpayAccessCheckoutForm({ product, matchId }: Props) {
           </span>
         </label>
       </div>
+
+      {isInvestor && (
+        <p className="text-xs text-muted-foreground">
+          Umowę ramową, NDA i umowę RODO zaakceptujesz w panelu, gdy zechcesz dostępu do Klientów i
+          Projektów — Finance You nie pobiera za nie wynagrodzenia.
+        </p>
+      )}
 
       <Button onClick={handlePay} disabled={loading} className="w-full" size="lg">
         {loading ? (

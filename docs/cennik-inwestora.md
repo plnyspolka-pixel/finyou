@@ -34,14 +34,20 @@ panel `/inwestor/abonament` i baner w `/inwestor/umowy` czytają stamtąd.
 
 ## Pobieranie abonamentu — włączone
 
-Podstawą jest Umowa ramowa v7 § 7 (Opłata Abonamentowa; `allows_investor_fees =
-true`). 30 września 2026 r. — przed pierwszą akceptacją v7 (w bazie zero
-akceptacji) — zapis o nieodpłatności zastąpiono Opłatą Abonamentową w
-generatorze `src/lib/legal/pakiet-v7.ts`; pakiet zregenerowano skryptem.
-Pierwotna treść v7 była już wgrana migracją `20260929155000` (drizzle `0016`),
-której nie zmieniamy — nową treść wgrywa UPDATE w migracji
-`20260930140000_abonament_inwestora.sql`. Kwoty są brutto; dopóki Finance You
-nie dolicza VAT, netto = brutto.
+Podstawą płatności jest **Regulamin Abonamentu Inwestora**
+(`src/lib/legal/regulamin-abonamentu.ts`, strona `/regulamin-inwestora`,
+kopia `docs/legal/inwestor/`), akceptowany przy płatności — jego wersja trafia
+do `access_payments.consents.termsVersion`. Sprzedawcą Abonamentu i wystawcą
+faktur jest **Fundacja Krzewienia Edukacji Finansowej im. Pieczaka** (KRS
+0001140846, NIP 9462747637, zwolnienie z VAT art. 113 ust. 1 — netto = brutto;
+domyślny podmiot w `accounting_entities`). Umowę ramową v7, NDA i RODO
+inwestor akceptuje dopiero, gdy chce dostępu do Klientów i Projektów; Umowa
+ramowa nie przewiduje wynagrodzenia Finance You od Inwestora (§ 7 odsyła do
+Regulaminu Abonamentu; `allows_investor_fees = false`). Historia: 30 września
+2026 r. umowa v7 dostała najpierw Opłatę Abonamentową pobieraną przez Finance
+You (migracja `20260930140000`, drizzle `0023`), a tego samego dnia, nadal
+przed pierwszą akceptacją, model z Fundacją i regulaminem (migracja
+`20260930190000`, drizzle `0024`).
 
 Uwaga dla nowych migracji: drizzle wgrywa tylko wpisy z `_journal.json`
 o znaczniku `when` późniejszym niż ostatnio wgrany — nowy wpis musi mieć
@@ -53,8 +59,12 @@ o znaczniku `when` późniejszym niż ostatnio wgrany — nowy wpis musi mieć
   zostają nieaktywne. Przed migracją nie było żadnej płatności inwestora,
   więc kody można było zachować.
 - **Zakup**: `/inwestor/abonament` — karty 30 / 365 dni i formularz Tpay.
-  `createAccessCheckout` przyjmuje z kodów `investor_*` tylko te dwa i wymaga
-  akceptacji aktywnej Umowy ramowej (`investorAcceptedActiveFramework`).
+  `createAccessCheckout` przyjmuje z kodów `investor_*` tylko te dwa; inwestor
+  akceptuje przy płatności Regulamin Abonamentu Inwestora (bez wcześniejszej
+  akceptacji umów).
+- **Kolejność panelu**: abonament (pierwsza bramka) → akceptacja Umowy
+  ramowej, NDA i RODO → moduł ofert (RLS: `investor_can_view_application`
+  wymaga `investor_legal_pack_complete`, migracja `0024`).
 - **Dostęp**: SQL `investor_has_full_access` = personel albo inwestor z
   aktywnym abonamentem (z płatności albo nadanym ręcznie przez zespół —
   `admin_adjust_access` w `/admin/platnosci-dostep`). Z tej
@@ -105,9 +115,11 @@ jedynie anulować stare rekordy. `investor_opportunity_unlocks` — analogicznie
 
 Migracja `20260929155000_etap5_pakiet_inwestor_v7.sql` (patrz
 `docs/legal/paczka-inwestor-v7/`): usunięte Pakiety, Cennik, Opłata Sukcesu,
-Opłata za Udostępnienie Okazji i Zał. 8; § 2/§ 7 — Inwestor płaci wyłącznie
-**Opłatę Abonamentową** (1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto
-za 365 dni; zmiana z 2026-09-30, przed pierwszą akceptacją); Prowizja od Pożyczkobiorcy 7 % Kwoty
+Opłata za Udostępnienie Okazji i Zał. 8; § 2/§ 7 — Finance You nie pobiera od
+Inwestora wynagrodzenia, a dostęp do systemu wymaga **Abonamentu** kupowanego
+od Fundacji na podstawie Regulaminu Abonamentu Inwestora (1 500,00 zł brutto
+za 30 dni albo 7 000,00 zł brutto za 365 dni; zmiany z 2026-09-30, przed
+pierwszą akceptacją); Prowizja od Pożyczkobiorcy 7 % Kwoty
 Udzielonej, min 5 000 zł, bez VAT, potrącana z wypłaty; § 5 — maks. 5
 przyjętych Zleceń, wygaśnięcie po 5 odrzuceniach, rezerwacja 24 h + 12 h,
 maks. 2 przedłużone naraz; Kara Obejściowa 5 % Sumy Hipotecznej i pięcioletni
