@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,12 +15,12 @@ export const Route = createFileRoute("/propozycje/")({
       {
         name: "description",
         content:
-          "Otwarta lista wygenerowanych propozycji pożyczek z harmonogramem spłat. Zobacz parametry, koszty i harmonogram każdej oferty.",
+          "Propozycje pożyczek z harmonogramem spłat — dostępne dla zalogowanych inwestorów.",
       },
       { property: "og:title", content: "Propozycje pożyczek — Finance You" },
       {
         property: "og:description",
-        content: "Otwarta lista propozycji wygenerowanych w kalkulatorze inwestora.",
+        content: "Propozycje wygenerowane w kalkulatorze inwestora — po zalogowaniu.",
       },
     ],
   }),
@@ -27,8 +28,12 @@ export const Route = createFileRoute("/propozycje/")({
 });
 
 function PropozycjeList() {
+  // Propozycje widzi tylko zalogowany inwestor albo personel (Etap 0 —
+  // funkcja SQL wymaga auth.uid(); anon nie ma EXECUTE).
+  const { session, loading: authLoading } = useAuth();
   const q = useQuery({
-    queryKey: ["loan-proposals-public"],
+    queryKey: ["loan-proposals-public", session?.user?.id ?? null],
+    enabled: !!session,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("list_public_loan_proposals");
       if (error) throw error;
@@ -59,11 +64,12 @@ function PropozycjeList() {
             <h1 className="text-2xl font-bold">Propozycje pożyczek</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Otwarta lista propozycji wygenerowanych w kalkulatorze inwestora — każda zawiera
-            parametry pożyczki, koszty i harmonogram spłat.
+            Propozycje wygenerowane w kalkulatorze inwestora (widoczne po zalogowaniu) — każda
+            zawiera parametry pożyczki, koszty i harmonogram spłat.
           </p>
         </div>
 
+        {!authLoading && !session && <LoginRequiredNotice />}
         {q.isLoading && <p className="text-sm text-muted-foreground">Wczytuję...</p>}
         {q.error && <p className="text-sm text-destructive">Błąd: {(q.error as Error).message}</p>}
 
@@ -123,5 +129,21 @@ function PropozycjeList() {
         </div>
       </div>
     </div>
+  );
+}
+
+function LoginRequiredNotice() {
+  return (
+    <Card>
+      <CardContent className="space-y-2 py-8 text-center text-sm text-muted-foreground">
+        <p className="font-medium text-foreground">
+          Propozycje pożyczek są dostępne po zalogowaniu.
+        </p>
+        <p>Zaloguj się jako inwestor, aby zobaczyć parametry, koszty i harmonogram spłat.</p>
+        <Link to="/logowanie" className="text-primary underline">
+          Zaloguj się
+        </Link>
+      </CardContent>
+    </Card>
   );
 }

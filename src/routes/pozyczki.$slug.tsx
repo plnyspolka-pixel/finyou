@@ -354,9 +354,11 @@ function LocationPage() {
       <div style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1.5rem" }}>
         <ComplianceNote style={{ marginTop: "1.5rem" }}>
           Materiał ma charakter informacyjny i nie stanowi oferty w rozumieniu art. 66 Kodeksu
-          cywilnego. Finance You nie gwarantuje udzielenia finansowania — decyzja należy do
-          finansujących. Dane statystyczne pochodzą z opracowań GUS/TERYT (wersja: {c.dataVersion})
-          i mają charakter poglądowy.
+          cywilnego. Finansowanie wyłącznie na cel związany z działalnością gospodarczą (B2B);
+          jedyna opłata dla Finance You to prowizja 7% kwoty pożyczki (nie mniej niż 5 000 zł, bez
+          VAT), potrącana z wypłaty. Finance You nie gwarantuje udzielenia finansowania — decyzja
+          należy do inwestorów. Dane statystyczne pochodzą z opracowań GUS/TERYT (wersja:{" "}
+          {c.dataVersion}) i mają charakter poglądowy.
         </ComplianceNote>
       </div>
     </MarketingShell>

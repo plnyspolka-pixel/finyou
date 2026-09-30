@@ -55,7 +55,8 @@ function NegocjujPage() {
 
   const [clientPhone, setClientPhone] = useState("");
   const [note, setNote] = useState("");
-  const [isPublic, setIsPublic] = useState(true);
+  // Propozycje NIE są publiczne bez logowania (Etap 0) — domyślnie prywatne.
+  const [isPublic, setIsPublic] = useState(false);
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {

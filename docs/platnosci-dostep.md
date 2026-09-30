@@ -7,16 +7,15 @@ odnowień, punktów i opłat za pojedynczą ofertę/lead.
 
 | Kod | Odbiorca | Cena brutto | Dni | Rodzaj |
 | --- | --- | --- | --- | --- |
-| `investor_pro_180d` | inwestor | 3 000 zł (`300000` gr) | 180 | `access`, `tier='pro'`, `success_fee_bps=500` |
-| `investor_okazja_unlock` | inwestor | 1 500 zł (`150000` gr) | — | `unlock` (zakup jednej okazji) |
 | `broker_access_30d` | pośrednik | 499 zł (`49900` gr) | 30 | `access` |
 | `broker_access_365d` | pośrednik | 2 999 zł (`299900` gr) | 365 | `access` |
+| `investor_pro_180d`, `investor_okazja_unlock`, `investor_access_30d`, `investor_access_365d` | inwestor | — | — | **nieaktywne** (historia) |
 
-Cennik inwestora (pakiety Podstawowy / PRO, opłata sukcesu 5%, bramki modułów
-PRO i jeden pipeline onboardingu) opisuje `docs/cennik-inwestora.md`.
-Produkty `investor_access_30d` i `investor_access_365d` (999 zł / 5 999 zł)
-są **nieaktywne** od 21 września 2026 r. — rekordy zostają wyłącznie dla
-historycznych płatności i faktur.
+**Inwestor nie płaci nic** — usługa Finance You dla Inwestora jest nieodpłatna
+(Umowa ramowa v7, `docs/cennik-inwestora.md`). Wszystkie produkty inwestora
+mają `active = false` od 29 września 2026 r.; rekordy zostają wyłącznie dla
+historycznych płatności i faktur, a `createAccessCheckout` odrzuca kody
+`investor_*`. Abonament za dostęp do systemu jest planowany na przyszłość.
 
 Konto darmowe pośrednika (`broker_free`) nie jest produktem — wynika z roli
 `posrednik` / aktywnego rekordu `affiliate_partners` i nie wygasa.
@@ -71,16 +70,13 @@ transakcji rozpoczętych przed wdrożeniem.
    Partner zewnętrzny z historyczną rolą `operator` NIE dostaje bypassu
    personelu (`is_internal_staff` wyklucza aktywnych partnerów).
 
-Inwestor bez dostępu widzi wyłącznie zajawki z funkcji SQL
-`investor_offer_teasers()` (tylko dozwolone pola; zdjęcie główne podpisywane
-serwerowo) — i to DOPIERO po pozytywnej weryfikacji tożsamości (KYC) w module
-projektów (`project_module_access.kyc_status = 'approved'`); wcześniej server
-function nie zwraca żadnych danych ofert. Publiczne osadzenia korzystają
-z widoku kolumnowego `public_loan_teasers` (poprzednie polityki `anon` na
-pełnych tabelach usunięte). Dawne „darmowe konto inwestora" (składanie ofert
-z oprocentowaniem = odsetki maksymalne, bez prowizji inwestora, z prowizją
-Finance You 2×) zostało wycofane — składanie ofert i pełne dane wymagają
-pełnego dostępu.
+Teasery Projektów widzi WYŁĄCZNIE inwestor z przyjętym Zleceniem — funkcja
+SQL `investor_offer_teasers()` i server function `listInvestorTeasers` budują
+je z `investor_order_matches` dla `investor_orders.status = 'przyjete'`
+wywołującego (bez opisu i zdjęć; `anon` bez EXECUTE). Widok
+`public_loan_teasers` został usunięty. Publiczne osadzenia (`/embed/leady`,
+`/dla-inwestora`, `/oferty`) pokazują wyłącznie wygenerowane „Przykładowe
+projekty — ilustracja, nie oferta" (`src/lib/example-projects.ts`).
 
 ## Pośrednik
 

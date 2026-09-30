@@ -1,6 +1,6 @@
-// Sekcja AML panelu inwestora — dostępna w całości od pierwszego wejścia,
-// bez aktywacji, konfiguracji SI*GIIF i podpisu kwalifikowanego.
-// Wymóg podpisu pojawia się dopiero przy faktycznej wysyłce do GIIF.
+// Sekcja AML panelu inwestora — dostępna w całości od pierwszego wejścia.
+// Podpis kwalifikowany jest potrzebny tylko do wysyłki przez SI*GIIF;
+// awaryjnie zgłoszenie można wysłać papierowo (ekran Zgłoszenia GIIF).
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
@@ -10,14 +10,12 @@ export const Route = createFileRoute("/inwestor/aml")({
 
 const TABS: { to: string; label: string; exact?: boolean }[] = [
   { to: "/inwestor/aml", label: "Przegląd", exact: true },
-  { to: "/inwestor/aml/klienci", label: "Klienci i weryfikacje" },
+  { to: "/inwestor/aml/klienci", label: "Klienci" },
   { to: "/inwestor/aml/ryzyko", label: "Oceny ryzyka" },
   { to: "/inwestor/aml/transakcje", label: "Transakcje" },
-  { to: "/inwestor/aml/ponadprogowe", label: "Transakcje ponadprogowe" },
   { to: "/inwestor/aml/sprawy", label: "Sprawy AML" },
   { to: "/inwestor/aml/zgloszenia", label: "Zgłoszenia GIIF" },
-  { to: "/inwestor/aml/upo", label: "UPO i odpowiedzi GIIF" },
-  { to: "/inwestor/aml/ustawienia", label: "Ustawienia AML" },
+  { to: "/inwestor/aml/ustawienia", label: "Ustawienia" },
 ];
 
 function AmlLayout() {

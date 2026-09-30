@@ -11,7 +11,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 /* ----------------------------- Button ----------------------------------- */
 
-type ButtonVariant = "default" | "cta" | "outline" | "secondary" | "ghost" | "link";
+type ButtonVariant = "default" | "cta" | "gold" | "outline" | "secondary" | "ghost" | "link";
 type ButtonSize = "sm" | "default" | "lg" | "xl" | "cta" | "icon";
 
 const base: CSSProperties = {
@@ -72,6 +72,22 @@ const variants: Record<ButtonVariant, CSSProperties> = {
     letterSpacing: "0.01em",
     boxShadow: "var(--shadow-sm)",
   },
+  // Złoty CTA z mieniącym się gradientem. Kafelek gradientu (90deg, te same
+  // kolory na obu końcach) ma 200% szerokości i jest przesuwany animacją
+  // `fyGoldShimmer` (styles.css, klasa .fy-btn-gold dodawana automatycznie),
+  // dzięki czemu połysk płynnie przechodzi przez przycisk bez szwu.
+  gold: {
+    background:
+      "linear-gradient(90deg, #c48d2a 0%, #f0c667 18%, #fff1c2 34%, #f2c96b 50%, #d4a03a 64%, #f8e2a4 82%, #c48d2a 100%)",
+    backgroundSize: "200% auto",
+    color: "#17122f",
+    fontWeight: 900,
+    letterSpacing: "0.01em",
+    borderColor: "rgba(255, 238, 190, 0.55)",
+    boxShadow:
+      "0 14px 36px -12px rgba(240, 198, 103, 0.65), 0 0 0 1px rgba(120, 82, 12, 0.25), inset 0 1px 0 rgba(255,255,255,0.45)",
+    textShadow: "0 1px 0 rgba(255, 255, 255, 0.35)",
+  },
   outline: {
     background: "var(--card)",
     color: "var(--foreground)",
@@ -100,6 +116,13 @@ function hoverFor(variant: ButtonVariant): CSSProperties {
         filter: "brightness(1.08)",
         transform: "translateY(-1px)",
         boxShadow: "var(--shadow-md)",
+      };
+    case "gold":
+      return {
+        filter: "brightness(1.06) saturate(1.05)",
+        transform: "translateY(-2px)",
+        boxShadow:
+          "0 22px 46px -12px rgba(240, 198, 103, 0.85), 0 0 0 1px rgba(120, 82, 12, 0.3), inset 0 1px 0 rgba(255,255,255,0.5)",
       };
     case "default":
       return { background: "oklch(0.20 0.08 265 / 0.9)" };
@@ -162,6 +185,10 @@ export function MktButton({
     onMouseEnter: () => setHover(true),
     onMouseLeave: () => setHover(false),
   };
+  // Wariant złoty dostaje klasę z animacją połysku (i wyłączeniem jej przy
+  // prefers-reduced-motion) — tego nie da się zrobić w stylach inline.
+  const cls =
+    [variant === "gold" ? "fy-btn-gold" : "", className].filter(Boolean).join(" ") || undefined;
   if (href != null) {
     return (
       <a
@@ -169,7 +196,7 @@ export function MktButton({
         target={target}
         rel={rel}
         aria-label={ariaLabel}
-        className={className}
+        className={cls}
         style={composed}
         onClick={onClick}
         {...handlers}
@@ -183,7 +210,7 @@ export function MktButton({
       type={type ?? "button"}
       disabled={disabled}
       aria-label={ariaLabel}
-      className={className}
+      className={cls}
       style={composed}
       onClick={onClick}
       {...handlers}

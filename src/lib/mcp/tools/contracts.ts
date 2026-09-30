@@ -16,11 +16,11 @@ const ZASADY_DANYCH = [
   'Daty "DD.MM.RRRR"; oprocentowanie z jednym miejscem po przecinku (np. "15,5"); PESEL 11 cyfr, NIP 10 cyfr.',
   'Nie licz harmonogramu (warunki.harmonogram.raty) ani raty końcowej — policzy je silnik z kwoty, prowizji, oprocentowania, liczby rat, typu, daty pierwszej raty i (przy typie "balonowy") pułapu kwota_raty.',
   "Nie nadawaj identyfikatorów nieruchomości (id) — nada je system.",
-  'Domyślne praktyki Finance You: prowizja model "nie_potracana_raty"; hipoteka i kwota z art. 777 zwykle 2× łącznej kwoty do spłaty — zawsze potwierdź je z użytkownikiem.',
+  'Domyślne praktyki Finance You: prowizja inwestora model "nie_potracana_raty" (w ratach), Prowizja Finance You potrącana z wypłaty; hipoteka i kwota z art. 777 zwykle 2× łącznej kwoty do spłaty — zawsze potwierdź je z użytkownikiem.',
   "Łatka (patch) to deep-merge: obiekty są scalane, tablice podmieniane w całości (podając tablicę, podaj ją kompletną), null usuwa wartość.",
   "Silnik nie ocenia ryzyka prawnego ani parametrów (limity prowizji, odsetki maksymalne, terminy) — problemy walidatora to wyłącznie braki i niespójności konstrukcyjne. Dokument zawiera tylko treść wiążącą.",
   "Numery KW podawaj w dowolnym zapisie — system dopełnia numer zerami do 8 cyfr (KR1P/610770/2 → KR1P/00610770/2) i sprawdza cyfrę kontrolną; błędna cyfra blokuje umowę.",
-  "Harmonogram balonowy z ratą końcową „kapitał + pułap”: podaj warunki.harmonogram.kwota_raty (pułap) i kwota_raty_koncowej_docelowa — silnik sam dobierze prowizję do grosza.",
+  "Harmonogram balonowy: podaj warunki.harmonogram.kwota_raty (pułap raty) — silnik liczy raty z odsetek od salda i STAŁEJ prowizji inwestora (warunki.prowizja.kwota) rozłożonej równo; nadwyżka kapitału trafia do ostatniej raty. Oprocentowanie nie może przekraczać odsetek maksymalnych (art. 359 § 2¹ KC — dziś 14,5 %); Prowizja Finance You (7 % Kwoty Udzielonej, min 5 000 zł, bez VAT) jest potrącana z wypłaty (warunki.prowizja_finance_you — przy Pożyczkodawcy innym niż Finance You system wylicza ją sam, jeśli pole pominięto; rachunki.finance_you system wpisuje zawsze automatycznie: Finance You ma jeden rachunek), a klauzula wypłaty i Załącznik nr 4 rozbijają przelew na część do FY i część do Pożyczkobiorcy.",
 ];
 
 const excludedClausesSchema = z
@@ -123,7 +123,7 @@ export const getContractSchema = defineTool({
         workflow: [
           "1. draft_contract z profile_id (dane z profilu klienta i oferty) i/lub kw_numbers (nieruchomości z treści KW) albo z danymi od użytkownika w `umowa`.",
           "2. Uzupełniaj braki z listy `problemy.bledy`, przekazując poprzedni `umowa` z wyniku + `patch` ze zmianami.",
-          "3. Gdy `blocked=false`, pokaż użytkownikowi podgląd (`preview_text`) i po akceptacji wywołaj generate_contract_docx z tym samym `umowa` (i `loan_application_id`, gdy umowa dotyczy wniosku) — powstaje jeden .docx: wniosek, umowa, Zał. 1 harmonogram, Zał. 2 protokół z negocjacji, Zał. 3 tabela opłat windykacyjnych.",
+          "3. Gdy `blocked=false`, pokaż użytkownikowi podgląd (`preview_text`) i po akceptacji wywołaj generate_contract_docx z tym samym `umowa` (i `loan_application_id`, gdy umowa dotyczy wniosku) — powstaje jeden .docx: wniosek, umowa, Zał. 1 harmonogram, Zał. 2 protokół z negocjacji, Zał. 3 tabela opłat windykacyjnych, Zał. 4 dyspozycja wypłaty (prowizja Finance You).",
         ],
       };
       if (include_clauses) {
@@ -200,7 +200,7 @@ export const generateContractDocx = defineTool({
   name: "generate_contract_docx",
   title: "Generate loan contract document set (.docx)",
   description:
-    "Generuje z silnika klauzul JEDEN plik .docx z kompletem dokumentów pożyczki, w kolejności: (1) Wniosek o udzielenie pożyczki pieniężnej (dane, charakter niekonsumencki, warunki, oświadczenia AML, PEP, ocena AML dla pożyczkodawcy, odpowiedzialność karna), (2) Umowa pożyczki (§ z biblioteki klauzul: przedmiot, kwota/prowizja/wypłata, zabezpieczenia, windykacja, oświadczenia z RODO, postanowienia ogólne, wypowiedzenie), (3) Załącznik nr 1 — Harmonogram spłat (tabela rat: nr, termin, rata, kapitał, odsetki, prowizja, saldo + sumy), (4) Załącznik nr 2 — Protokół z negocjacji indywidualnych, (5) Załącznik nr 3 — Tabela opłat windykacyjnych; pod każdą częścią blok podpisów. Dokument zawiera wyłącznie treść wiążącą. Zapisuje plik w Storage i trwały wpis w rejestrze wygenerowanych dokumentów (powiązany z `loan_application_id`, gdy podany) wraz z audytem (kto, kiedy, SHA-256 treści, wersja biblioteki klauzul); zwraca link do pobrania (ważny 1 h) oraz pełny tekst kompletu (`tekst` — do porównania bez pobierania pliku; później: `get_generated_document_text`). Przyjmuje te same źródła co `draft_contract`; przy błędach walidacji nie generuje pliku i zwraca braki. Wywołuj po akceptacji podglądu przez użytkownika.",
+    "Generuje z silnika klauzul JEDEN plik .docx z kompletem dokumentów pożyczki, w kolejności: (1) Wniosek o udzielenie pożyczki pieniężnej (dane, charakter niekonsumencki, warunki, oświadczenia AML, PEP, ocena AML dla pożyczkodawcy, odpowiedzialność karna), (2) Umowa pożyczki (§ z biblioteki klauzul: przedmiot, kwota/prowizja/wypłata, zabezpieczenia, windykacja, oświadczenia z RODO, postanowienia ogólne, wypowiedzenie), (3) Załącznik nr 1 — Harmonogram spłat (tabela rat: nr, termin, rata, kapitał, odsetki, prowizja, saldo + sumy), (4) Załącznik nr 2 — Protokół z negocjacji indywidualnych, (5) Załącznik nr 3 — Tabela opłat windykacyjnych, (6) Załącznik nr 4 — Dyspozycja wypłaty i klauzula Prowizji Klientowskiej Finance You (Zał. 6 do Umowy ramowej: kwota udzielona / do Finance You / do Pożyczkobiorcy — gdy umowa przewiduje prowizję FY); pod każdą częścią blok podpisów. Dokument zawiera wyłącznie treść wiążącą. Zapisuje plik w Storage i trwały wpis w rejestrze wygenerowanych dokumentów (powiązany z `loan_application_id`, gdy podany) wraz z audytem (kto, kiedy, SHA-256 treści, wersja biblioteki klauzul); zwraca link do pobrania (ważny 1 h) oraz pełny tekst kompletu (`tekst` — do porównania bez pobierania pliku; później: `get_generated_document_text`). Przyjmuje te same źródła co `draft_contract`; przy błędach walidacji nie generuje pliku i zwraca braki. Wywołuj po akceptacji podglądu przez użytkownika.",
   inputSchema: {
     profile_id: z.string().uuid().optional(),
     calc: z.record(z.string(), z.any()).optional(),

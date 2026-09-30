@@ -1,0 +1,136 @@
+PAKIET UMOWNY
+Umowa o zachowaniu poufności i zakazie obchodzenia
+Ochrona danych klientów, nieruchomości, modeli finansowania i relacji handlowych
+Wersja
+FY-LEGAL-2026-09-29.v6 • 29 września 2026 r.
+Zakres
+Finansowanie zabezpieczone hipoteką wyłącznie na cel związany z działalnością gospodarczą
+Forma
+papierowa, kwalifikowany podpis elektroniczny albo forma dokumentowa w systemie z pełnym śladem audytowym
+zawarta w formie dokumentowej na odległość albo podpisana w dniu wskazanym przy podpisach, pomiędzy:
+FINANCE YOU
+Finance You spółka z ograniczoną odpowiedzialnością z siedzibą w Warszawie, ul. Nowogrodzka 31, 00-511 Warszawa, wpisana do rejestru przedsiębiorców KRS pod numerem 0000635207, NIP 7010611803, REGON 365350668, kapitał zakładowy 389 600,00 zł, reprezentowana przez Filipa Roberta Bielaka – Prezesa Zarządu uprawnionego do samodzielnej reprezentacji, dalej: „Finance You” lub „Ujawniający”;
+a
+INWESTOR / ODBIORCA INFORMACJI
+Wariant strony
+☐ osoba fizyczna  ☐ osoba fizyczna prowadząca działalność  ☐ osoba prawna / jednostka organizacyjna
+Imię i nazwisko / firma
+________________________________________________________________
+Adres / siedziba
+________________________________________________________________
+PESEL albo KRS
+________________________________________________________________
+NIP / REGON
+________________________________________________________________
+E-mail i telefon
+________________________________________________________________
+Reprezentacja
+________________________________________________________________
+dalej: „Inwestor” lub „Odbiorca”; Finance You i Inwestor dalej łącznie: „Strony”, a każdy z osobna: „Strona”.
+Preambuła
+Finance You prezentuje inwestorom, na ich indywidualne zlecenie, projekty finansowania zabezpieczonego hipoteką, przeznaczone wyłącznie na cel związany z działalnością gospodarczą klienta.
+W toku oceny projektu Inwestor może uzyskać informacje umożliwiające identyfikację klienta, właściciela nieruchomości, osób z nimi związanych, nieruchomości i planowanej transakcji.
+Strony chcą chronić te informacje oraz uniemożliwić wykorzystanie relacji przedstawionej przez Finance You z pominięciem procesu transakcyjnego, zabezpieczenia i zapłaty prowizji należnej Finance You od klienta.
+Pełne dane identyfikujące są udostępniane dopiero po skutecznym związaniu Inwestora niniejszą Umową, umową pośrednictwa oraz właściwą umową dotyczącą danych osobowych.
+Zasada dostępu.  Samo podpisanie NDA nie uprawnia do danych klienta. Każde ujawnienie identyfikujące wymaga aktywnej umowy pośrednictwa, akceptacji Karty Leada i spełnienia warunków ochrony danych.
+§ 1. Definicje
+Informacje Poufne oznaczają wszelkie informacje ujawnione Inwestorowi przed zawarciem albo w okresie obowiązywania Umowy, niezależnie od nośnika i oznaczenia, w szczególności dane osobowe, dane kontaktowe, numery ksiąg wieczystych, adresy i dokumentację nieruchomości, operaty i wyceny, dokumenty finansowe i prawne, strukturę transakcji, warunki cenowe, treść negocjacji, dane użytkowników, logi systemowe, algorytmy oceny, procedury, know-how, wzory umów oraz informacje o klientach, inwestorach i partnerach Finance You.
+Projekt oznacza możliwe finansowanie zabezpieczone hipoteką, przedstawione przez Finance You pod unikalnym identyfikatorem.
+Klient Chroniony oznacza klienta, właściciela nieruchomości, dłużnika, poręczyciela, spółkę celową lub inną osobę powiązaną z Projektem, której tożsamość albo dane pozwalające na jej rozsądne ustalenie Inwestor poznał dzięki Finance You.
+Ujawnienie Identyfikujące oznacza pierwsze udostępnienie danych, które samodzielnie albo łącznie z informacjami dostępnymi Inwestorowi pozwalają zidentyfikować Klienta Chronionego lub konkretną nieruchomość. Moment Ujawnienia Identyfikującego wynika w pierwszej kolejności z rejestru systemowego i Karty Leada.
+Grupa Inwestora oznacza Inwestora oraz każdą osobę działającą bezpośrednio lub pośrednio na jego rzecz, na jego zlecenie, w jego interesie albo z jego udziałem, w tym spółkę obecną lub przyszłą, SPV, wspólnika, członka organu, pełnomocnika, beneficjenta rzeczywistego, osobę bliską, współinwestora, cesjonariusza, fundusz, powiernika, administratora hipoteki lub zabezpieczeń oraz podmiot powiązany kapitałowo, osobowo, rodzinnie lub kontraktowo.
+Osoba Upoważniona oznacza pracownika, członka organu, doradcę prawnego, podatkowego, finansowego, rzeczoznawcę, notariusza lub współinwestora, który musi znać Informacje Poufne dla oceny Projektu, został ujawniony Finance You w zakresie wymaganym Kartą Leada i jest związany obowiązkiem ochrony co najmniej równoważnym z Umową.
+Umowa Pośrednictwa oznacza ramową umowę pośrednictwa finansowego świadczonego na odległość zawartą między Stronami wraz z Kartami Leadów.
+Prowizja Klientowska, Transakcja Chroniona, Suma Hipoteczna i Naruszenie Obejściowe mają znaczenie nadane im w Umowie Pośrednictwa. Ekonomiczny ciężar Prowizji Klientowskiej ponosi klient, a nie Inwestor; Inwestor wykonuje jedynie obowiązki wynikające z Mechanizmu Zabezpieczenia Prowizji.
+Kara Obejściowa oznacza karę umowną równą 5% Sumy Hipotecznej, zastrzeżoną za naruszenie niepieniężnego zakazu obchodzenia Finance You; nie jest ceną ani wynagrodzeniem za usługę dla Inwestora.
+Forma dokumentowa obejmuje oświadczenie utrwalone w sposób pozwalający ustalić osobę składającą oświadczenie, w szczególności akceptację w koncie użytkownika, wiadomość e-mail, plik PDF, kwalifikowany podpis elektroniczny albo podpis własnoręczny.
+§ 2. Cel i dozwolone wykorzystanie
+Finance You ujawnia Informacje Poufne wyłącznie w celu oceny, negocjowania, przygotowania i ewentualnego wykonania konkretnego Projektu zgodnie z Umową Pośrednictwa.
+Inwestor może wykorzystać Informacje Poufne tylko w zakresie koniecznym do tego celu. Zabronione jest wykorzystywanie ich do marketingu, profilowania poza Projektem, tworzenia własnej bazy leadów, wzbogacania danych, szkolenia modeli, pozyskiwania innych klientów, działalności konkurencyjnej albo jakiegokolwiek celu sprzecznego z interesem Klienta Chronionego lub Finance You.
+Ujawnienie nie stanowi oferty, rekomendacji inwestycyjnej, zapewnienia o zawarciu transakcji, przeniesienia praw własności intelektualnej ani licencji poza ograniczonym prawem do zapoznania się z informacjami na potrzeby Projektu.
+Inwestor nie może podejmować zautomatyzowanych prób pobierania danych, scrapingu, omijania kontroli dostępu ani łączenia danych z zewnętrznymi zbiorami w celu ponownej identyfikacji osób lub nieruchomości ujawnionych anonimowo.
+§ 3. Obowiązki ochronne Inwestora
+Inwestor zobowiązuje się:
+zachować Informacje Poufne w ścisłej poufności i stosować co najmniej środki przewidziane w umowie dotyczącej danych osobowych oraz Karcie Leada;
+ograniczyć dostęp do Osób Upoważnionych zgodnie z zasadą niezbędnej wiedzy i odpowiadać za ich działania jak za własne;
+korzystać wyłącznie z imiennego konta, silnego uwierzytelniania i urządzeń zabezpieczonych przed dostępem osób nieuprawnionych;
+nie udostępniać loginów, plików, wydruków, zrzutów ekranu, linków ani kopii osobom nieuprawnionym;
+niezwłocznie, nie później niż w ciągu 12 godzin od wykrycia, zgłosić Finance You utratę, ujawnienie, nieuprawniony dostęp albo podejrzenie naruszenia;
+na żądanie przedstawić listę kategorii Osób Upoważnionych i potwierdzenie ich zobowiązań do poufności, bez naruszania tajemnicy zawodowej;
+nie usuwać znaków wodnych, identyfikatorów, metadanych bezpieczeństwa ani innych oznaczeń źródła dokumentów.
+Inwestor odpowiada za dobór i legalność narzędzi, usług chmurowych oraz kanałów komunikacji używanych poza systemem Finance You.
+Bez uprzedniej zgody Finance You Inwestor nie może przenosić Informacji Poufnych poza Europejski Obszar Gospodarczy ani udostępniać ich podmiotowi, który przetwarza je w państwie trzecim.
+§ 4. Wyjątki i ujawnienie wymagane prawem
+Obowiązek poufności nie obejmuje informacji, co do których Inwestor wykaże dokumentami, że:
+były publicznie dostępne bez naruszenia Umowy;
+znajdowały się legalnie w jego posiadaniu przed ujawnieniem przez Finance You i nie były objęte obowiązkiem poufności;
+zostały niezależnie opracowane bez wykorzystania Informacji Poufnych; albo
+zostały zgodnie z prawem uzyskane od osoby trzeciej uprawnionej do ich ujawnienia.
+Jeżeli ujawnienia wymaga bezwzględnie obowiązujące prawo, prawomocne orzeczenie lub żądanie uprawnionego organu, Inwestor — o ile prawo na to pozwala — zawiadomi Finance You przed ujawnieniem, ograniczy zakres do niezbędnego minimum oraz podejmie rozsądne działania w celu zachowania poufności.
+Ciężar wykazania zastosowania wyjątku spoczywa na Inwestorze. Fakt ujawnienia części informacji publicznie nie znosi ochrony niepublicznego zestawienia, kontekstu ani powiązania danych z konkretnym Projektem.
+§ 5. Zakaz obchodzenia Finance You
+Przez okres ochronny wynikający z Umowy Pośrednictwa, nie krótszy jednak niż pięć lat od Ujawnienia Identyfikującego, Inwestor nie może doprowadzić, pośredniczyć, pomagać ani umożliwić Grupie Inwestora zawarcia z Klientem Chronionym Transakcji Chronionej bez uprzedniego zastosowania Mechanizmu Zabezpieczenia Prowizji określonego w Umowie Pośrednictwa.
+Zakaz obejmuje w szczególności bezpośrednie lub pośrednie finansowanie, refinansowanie, przejęcie albo nabycie wierzytelności, ustanowienie hipoteki na rzecz Inwestora lub dowolnego członka Grupy Inwestora, wykorzystanie administratora hipoteki lub zabezpieczeń, powiernika, cesjonariusza, SPV, współinwestora albo ekonomicznie równoważnej konstrukcji.
+Kontakt bezpośredni z Klientem Chronionym jest dopuszczalny wyłącznie dla należytej oceny lub realizacji Projektu, z zachowaniem obowiązków raportowych z Umowy Pośrednictwa. Inwestor nie może jednak zawrzeć ani wykonać Transakcji Chronionej, dopóki w jej dokumentacji nie zostanie skutecznie zabezpieczona Prowizja Klientowska oraz sposób jej bezpośredniego przekazania Finance You z wypłacanej kwoty.
+Wpis, wzmianka, wniosek wieczystoksięgowy, oświadczenie o ustanowieniu hipoteki, dokument finansowania, przepływ środków lub uzyskanie korzyści przez Klienta Chronionego mogą stanowić dowód Transakcji Chronionej i naruszenia zakazu obchodzenia; wpis w księdze wieczystej nie jest jedynym warunkiem naliczenia Kary Obejściowej.
+Szczegółowe przesłanki Naruszenia Obejściowego, sposób ustalenia Sumy Hipotecznej i termin zapłaty Kary Obejściowej określa Umowa Pośrednictwa i właściwa Karta Leada. Pełne Ujawnienie Identyfikujące nie powinno nastąpić przed związaniem Inwestora wymaganymi dokumentami i przekazaniem mu rzeczywistych warunków Prowizji Klientowskiej.
+§ 6. Zwrot, usunięcie i zachowanie dowodów
+Po odrzuceniu Projektu, wygaśnięciu rezerwacji, żądaniu Finance You albo ustaniu celu przetwarzania Inwestor niezwłocznie zaprzestanie korzystania z Informacji Poufnych i w terminie 14 dni zwróci je lub bezpiecznie usunie ze wszystkich aktywnych systemów i urządzeń, z zastrzeżeniem obowiązków prawnych oraz kopii zapasowych rotacyjnie nadpisywanych.
+Na żądanie Inwestor złoży potwierdzenie usunięcia w formie dokumentowej, wskazując zakres danych, datę i osobę odpowiedzialną.
+Inwestor może zachować wyłącznie minimalny, odseparowany zestaw dowodowy wymagany prawem lub niezbędny do obrony roszczeń, bez prawa dalszego wykorzystania operacyjnego. Finance You może zachować logi ujawnienia, akceptacje i dane konieczne do wykazania źródła relacji oraz dochodzenia Prowizji Klientowskiej, Kary Obejściowej lub odszkodowania.
+Usunięcie Informacji Poufnych nie narusza obowiązków, które ze swojej natury obowiązują po zakończeniu Umowy.
+§ 7. Odpowiedzialność i kary umowne
+Inwestor odpowiada za szkodę wynikającą z naruszenia Umowy na zasadach ogólnych, w tym za uzasadnione koszty zabezpieczenia dowodów, obsługi incydentu, zawiadomień, audytu i dochodzenia roszczeń.
+Jeżeli Inwestor nie jest Konsumentem ani osobą objętą ochroną właściwą konsumentowi, za każde zawinione naruszenie obowiązku poufności, ograniczenia celu, zabezpieczenia danych, zakazu nieuprawnionego ujawnienia lub usunięcia znaków wodnych zapłaci Finance You karę umowną w wysokości 50 000,00 zł.
+Za Naruszenie Obejściowe, za które Inwestor odpowiada, polegające na zawarciu, doprowadzeniu do zawarcia lub wykonaniu Transakcji Chronionej bez skutecznego Mechanizmu Zabezpieczenia Prowizji, Inwestor zapłaci Finance You Karę Obejściową równą 5% Sumy Hipotecznej. Zamiar obejścia nie jest wymagany. Kara zabezpiecza obowiązek niepieniężny powstrzymania się od obchodzenia Finance You; nie jest wynagrodzeniem za usługę i nie dolicza się do niej VAT, o ile bezwzględnie obowiązujące przepisy nie nakazują innej kwalifikacji.
+Późniejsza zapłata Prowizji Klientowskiej nie usuwa automatycznie już powstałej Kary Obejściowej, chyba że Finance You wyraźnie zrzeknie się jej w formie dokumentowej. Kara nie zwalnia Klienta z Prowizji Klientowskiej ani Inwestora z dalszego wykonania obowiązków niepieniężnych.
+Kary są płatne w terminie 7 dni od doręczenia wezwania. Finance You może dochodzić odszkodowania przewyższającego karę, jeżeli szkoda jest wyższa. Zapłata kary nie uprawnia do dalszego naruszania Umowy.
+Stałej kary 50 000,00 zł za zwykłe naruszenie poufności nie stosuje się do Konsumenta. Kara Obejściowa może zostać zastosowana wobec Konsumenta wyłącznie po jej rzeczywistym, indywidualnym uzgodnieniu przed Ujawnieniem Identyfikującym, w odrębnym oświadczeniu zawierającym sposób obliczenia i przykład kwotowy; w przeciwnym razie odpowiedzialność Konsumenta ustala się na zasadach ogólnych.
+§ 8. Okres obowiązywania
+Umowa obowiązuje od chwili jej zawarcia i może być wypowiedziana w formie dokumentowej z 30-dniowym okresem wypowiedzenia. Wypowiedzenie nie uprawnia do dalszego korzystania z wcześniej ujawnionych danych.
+Obowiązek ochrony zwykłych Informacji Poufnych trwa przez dziesięć lat od ich ujawnienia. Ochrona tajemnicy przedsiębiorstwa trwa tak długo, jak informacja zachowuje taki charakter, a ochrona danych osobowych — do ich zgodnego z prawem usunięcia lub anonimizacji.
+Zakaz obchodzenia i obowiązki dotyczące Projektów ujawnionych przed rozwiązaniem Umowy trwają przez okres ochronny przypisany do właściwej Karty Leada, co do zasady pięć lat od Ujawnienia Identyfikującego.
+§ 9. Zmiana osoby fizycznej na spółkę lub inny podmiot
+Udostępnienie konta, informacji lub Projektu spółce wskazanej przez osobę fizyczną wymaga uprzedniego podpisania przez tę spółkę oświadczenia o przystąpieniu oraz zaakceptowania wymaganych umów dotyczących pośrednictwa i danych osobowych.
+Wskazanie spółki, SPV, funduszu, wspólnika lub innej jednostki nie zwalnia pierwotnego Inwestora z obowiązków powstałych przed ani po takim wskazaniu, chyba że Finance You wyraźnie zwolni go w formie dokumentowej. Do czasu zwolnienia odpowiedzialność podmiotów przystępujących jest solidarna w dopuszczalnym prawem zakresie.
+Jeżeli spółka nie przystąpi do Umowy, Inwestor nie może ujawnić jej Informacji Poufnych ani wykorzystać jej do zawarcia Transakcji Chronionej. Działanie takiej spółki przypisuje się Inwestorowi na potrzeby zakazu obchodzenia.
+Zmiana danych, formy prawnej, nazwy, siedziby, reprezentacji, beneficjenta rzeczywistego lub podmiotu finansującego wymaga zgłoszenia Finance You w terminie 2 dni roboczych.
+§ 10. Postanowienia końcowe
+Umowa podlega prawu polskiemu. Postanowienia nie ograniczają dalej idącej ochrony wynikającej z przepisów o tajemnicy przedsiębiorstwa, danych osobowych, prawach autorskich ani czynach nieuczciwej konkurencji.
+Zmiana Umowy wymaga formy dokumentowej, chyba że bezwzględnie obowiązujące prawo wymaga formy surowszej. Zmiana Karty Leada nie może być domniemana z milczenia Inwestora.
+Bez uprzedniej zgody Finance You Inwestor nie może przenieść praw ani obowiązków z Umowy. Finance You może przenieść wierzytelność pieniężną, informując o tym Inwestora, z poszanowaniem przepisów konsumenckich i o ochronie danych.
+Nieważność lub bezskuteczność części postanowienia nie narusza pozostałej części Umowy. Strony zastąpią wadliwe postanowienie rozwiązaniem zgodnym z prawem i możliwie najbliższym jego gospodarczemu celowi.
+Spory z przedsiębiorcą będą rozpoznawane przez sąd właściwy dla siedziby Finance You, o ile uzgodnienie właściwości zostało utrwalone w formie wymaganej przez prawo procesowe; w przeciwnym razie właściwość wynika z przepisów ogólnych. Wobec Konsumenta i osoby korzystającej z ochrony konsumenckiej właściwość sądu ustala się wyłącznie według przepisów bezwzględnie obowiązujących.
+Załącznik nr 1 stanowi integralną część Umowy. Umowa została udostępniona Stronom na trwałym nośniku.
+________________________________
+________________________________
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+INWESTOR / ODBIORCA — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 1
+Przystąpienie spółki lub innego podmiotu do NDA
+Stosować przed udostępnieniem danych podmiotowi innemu niż pierwotny Inwestor.
+DANE PRZYSTĘPUJĄCEGO PODMIOTU
+Podmiot przystępujący
+Firma: ______________________________  KRS / rejestr: ______________________________
+Adres i NIP
+________________________________________________________________
+Reprezentacja
+________________________________________________________________
+Pierwotny Inwestor
+________________________________________________________________
+Identyfikatory Projektów
+________________________________________________________________
+Wersja NDA / SHA-256
+FY-LEGAL-2026-09-29.v6 / ____________________________________________________________
+Data skutku
+________________________________________________________________
+§ A. Oświadczenia przystępującego podmiotu
+Podmiot przystępujący potwierdza otrzymanie i akceptację Umowy o zachowaniu poufności i zakazie obchodzenia w wersji wskazanej w śladzie audytowym.
+Podmiot przystępuje do wszystkich obowiązków Odbiorcy dotyczących Projektów wskazanych powyżej i Informacji Poufnych poznanych bezpośrednio lub pośrednio od pierwotnego Inwestora.
+Podmiot przyjmuje do wiadomości, że przystąpienie nie przenosi automatycznie praw do konta ani danych osobowych. Dostęp wymaga odrębnej autoryzacji Finance You i przyjęcia aktualnych dokumentów dotyczących pośrednictwa oraz danych.
+Podmiot przystępujący i pierwotny Inwestor odpowiadają solidarnie za obowiązki możliwe do objęcia solidarnością; Finance You nie zwalnia pierwotnego Inwestora, o ile nie uczyni tego wyraźnie w formie dokumentowej.
+________________________________
+________________________________
+PODMIOT PRZYSTĘPUJĄCY — imię, nazwisko, funkcja / podpis / data
+PIERWOTNY INWESTOR — imię, nazwisko, funkcja / podpis / data
+Akceptacja Finance You: ____________________________________   data: ____________________

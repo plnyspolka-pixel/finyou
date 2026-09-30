@@ -1,8 +1,9 @@
 // Rejestr transakcji ponadprogowych (> 15 000 EUR) — kurs/tabela NBP,
 // termin 7 dni, decyzja inwestora; dla przelewów opcja „raportuje bank".
+// Wyświetlany na ekranie Transakcje (odświeżany po zmianie rejestru).
 // Transakcja ponadprogowa nie jest automatycznie podejrzana — można dla
 // niej niezależnie utworzyć sprawę AML.
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -47,15 +48,11 @@ import {
 } from "@/components/ui/select";
 import { Loader2, FileWarning, FolderPlus, Send } from "lucide-react";
 
-export const Route = createFileRoute("/inwestor/aml/ponadprogowe")({
-  component: AmlThresholdScreen,
-});
-
 function daysLeft(deadline: string): number {
   return Math.ceil((new Date(deadline).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
 }
 
-function AmlThresholdScreen() {
+export function ThresholdRegister({ refreshKey = 0 }: { refreshKey?: number }) {
   const navigate = useNavigate();
   const fetchEntries = useServerFn(listAmlThresholdEntries);
   const decideEntry = useServerFn(decideAmlThresholdEntry);
@@ -86,7 +83,7 @@ function AmlThresholdScreen() {
 
   useEffect(() => {
     void reload();
-  }, [reload]);
+  }, [reload, refreshKey]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const openDecision = (entry: any) => {
@@ -153,7 +150,7 @@ function AmlThresholdScreen() {
       await prepareReport({
         data: { reportType: "transakcja_ponadprogowa", thresholdEntryId: entry.id },
       });
-      toast.success("Przygotowano zgłoszenie GIIF — przejdź do zakładki Zgłoszenia GIIF");
+      toast.success("Przygotowano zgłoszenie GIIF");
       void navigate({ to: "/inwestor/aml/zgloszenia" });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd przygotowania zgłoszenia");
@@ -164,9 +161,9 @@ function AmlThresholdScreen() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold flex items-center gap-2">
-        <FileWarning className="h-5 w-5" /> Rejestr transakcji ponadprogowych
-      </h2>
+      <h3 className="text-base font-semibold flex items-center gap-2">
+        <FileWarning className="h-5 w-5" /> Rejestr transakcji ponadprogowych (art. 72)
+      </h3>
 
       {loading ? (
         <div className="flex justify-center py-10">

@@ -46,6 +46,19 @@ const SubmitSchema = z.object({
   city: z.string().trim().max(120).optional().nullable(),
   annual_investor_rate: z.number().min(0).max(100).optional().nullable(),
   max_monthly_payment: z.number().min(0).max(1_000_000).optional().nullable(),
+  // Bramka B2B (decyzja nadrzędna nr 1): oświadczenie o celu gospodarczym.
+  // Opcjonalne w schemacie (starsze osadzenia), ale bez `true` wniosek nie
+  // przejdzie do wyslany_do_inwestorow (trigger loan_status_guard).
+  business_purpose_declared: z.boolean().optional().default(false),
+  business_status: z.enum(["prowadzi", "zamierza", "nie_zamierza"]).optional().nullable(),
+  nip: z
+    .string()
+    .trim()
+    .max(20)
+    .optional()
+    .nullable()
+    .transform((v) => (v ? v.replace(/[^0-9]/g, "") : null))
+    .refine((v) => v == null || v === "" || v.length === 10, "NIP musi mieć 10 cyfr"),
   photos: z.array(PhotoSchema).max(40).optional().default([]),
   source: z.string().max(120).optional().nullable(),
   // Zachowane dla zgodności wstecznej wywołań publicznych; ignorowane —
@@ -124,6 +137,11 @@ async function submitApplicationCore(
       kw_status: data.land_register_number ? "znam" : "nie_znam",
       annual_investor_rate: data.annual_investor_rate ?? null,
       max_monthly_payment: data.max_monthly_payment ?? null,
+      business_purpose_declared: data.business_purpose_declared === true,
+      business_purpose_declared_at:
+        data.business_purpose_declared === true ? new Date().toISOString() : null,
+      business_status: data.business_status ?? null,
+      nip: data.nip || null,
       source,
       assigned_operator: broker?.userId ?? null,
       // Trwałe, niezmienne autorstwo oferty pośrednika (limit 5 na koncie

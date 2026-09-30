@@ -1,6 +1,6 @@
 {
   "$comment": "Biblioteka klauzul. Każda klauzula ma warunek włączenia (wyrażenie nad danymi) i szablon tekstu. Renderer iteruje po sekcjach w kolejności 'order'.",
-  "wersja": "1.3",
+  "wersja": "1.4",
   "sekcje": {
     "PRZEDMIOT": {
       "tytul": "PRZEDMIOT UMOWY",
@@ -84,17 +84,24 @@
       "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja potrącana jest w całości z Kwoty Pożyczki przy wypłacie. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji."
     },
     {
+      "id": "KWO_03e_prowizja_finance_you",
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 25,
+      "warunek": "ma_prowizje_fy",
+      "tekst": "{{pb}} {{pb_potwierdza}}, że na podstawie odrębnej umowy z Finance You spółką z ograniczoną odpowiedzialnością z siedzibą w Warszawie (KRS 0000635207) {{pb_zobowiazany_jest}} do zapłaty Prowizji Klientowskiej Finance You w wysokości {{warunki.prowizja_finance_you.kwota.slownie}} ({{warunki.prowizja_finance_you.kwota.cyframi}} zł), stanowiącej 7% Kwoty Pożyczki (Kwoty Udzielonej), nie mniej niż 5 000,00 zł, bez VAT. Zgodnie z dyspozycją {{pb_dop}} stanowiącą Załącznik nr 4 do Umowy, Prowizja Klientowska Finance You jest potrącana z wypłaty: Pożyczkodawca przekazuje ją bezpośrednio na rachunek Finance You nie później niż równocześnie z wypłatą pozostałej części Kwoty Pożyczki {{pb_cel}}. Przelew Prowizji Klientowskiej na rachunek Finance You stanowi wypłatę odpowiedniej części Kwoty Pożyczki {{pb_cel}} i spełnienie zobowiązania prowizyjnego {{pb_dop}} wobec Finance You; nie jest prowizją, opłatą ani kosztem Pożyczkodawcy. Prowizja Klientowska Finance You nie wchodzi do rat i nie jest oprocentowana."
+    },
+    {
       "id": "KWO_03_wyplata_pelna",
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 30,
-      "warunek": "warunki.prowizja.model == 'nie_potracana_raty' and not ma_splaty_wierzycieli and not ma_warunki_zawieszajace",
+      "warunek": "warunki.prowizja.model == 'nie_potracana_raty' and not ma_splaty_wierzycieli and not ma_warunki_zawieszajace and not ma_prowizje_fy",
       "tekst": "Pożyczkodawca wypłaci {{pb_cel}} całą Kwotę Pożyczki, bez potrącania prowizji, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), przelewem na rachunek bankowy {{pb_dop}} nr {{warunki.rachunki.wyplata}}, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}."
     },
     {
       "id": "KWO_03c_wyplata_pelna_z_warunkami",
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 30,
-      "warunek": "warunki.prowizja.model == 'nie_potracana_raty' and not ma_splaty_wierzycieli and ma_warunki_zawieszajace",
+      "warunek": "warunki.prowizja.model == 'nie_potracana_raty' and not ma_splaty_wierzycieli and ma_warunki_zawieszajace and not ma_prowizje_fy",
       "tekst": "Pożyczkodawca wypłaci {{pb_cel}} całą Kwotę Pożyczki, bez potrącania prowizji, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), przelewem na rachunek bankowy {{pb_dop}} nr {{warunki.rachunki.wyplata}}, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}, i spełnienia warunków, o których mowa w {{ref:WZA_00_wprowadzenie}}."
     },
     {
@@ -103,6 +110,22 @@
       "order": 30,
       "warunek": "ma_splaty_wierzycieli",
       "tekst": "Pożyczkodawca wypłaci Kwotę Pożyczki w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}, i spełnienia warunków, o których mowa w {{ref:WZA_00_wprowadzenie}}, w następujący sposób:",
+      "podpunkty_dynamiczne": "wyplata_transze"
+    },
+    {
+      "id": "KWO_03d_wyplata_fy_bez_warunkow",
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 30,
+      "warunek": "ma_prowizje_fy and not ma_splaty_wierzycieli and not ma_warunki_zawieszajace",
+      "tekst": "Pożyczkodawca wypłaci Kwotę Pożyczki, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), w dwóch częściach, zgodnie z dyspozycją {{pb_dop}} stanowiącą Załącznik nr 4 do Umowy, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}, w następujący sposób:",
+      "podpunkty_dynamiczne": "wyplata_transze"
+    },
+    {
+      "id": "KWO_03f_wyplata_fy_z_warunkami",
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 30,
+      "warunek": "ma_prowizje_fy and not ma_splaty_wierzycieli and ma_warunki_zawieszajace",
+      "tekst": "Pożyczkodawca wypłaci Kwotę Pożyczki, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), w dwóch częściach, zgodnie z dyspozycją {{pb_dop}} stanowiącą Załącznik nr 4 do Umowy, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}, i spełnienia warunków, o których mowa w {{ref:WZA_00_wprowadzenie}}, w następujący sposób:",
       "podpunkty_dynamiczne": "wyplata_transze"
     },
     {

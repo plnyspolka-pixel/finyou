@@ -263,7 +263,7 @@ const SO_SLIDES = [
     label: "Krok 1",
     short: "Wyłączność",
     title: "Oferta wybrana specjalnie dla Ciebie",
-    desc: "Naszym Partnerom Biznesowym zapewniamy indywidualny dostęp do wybranych okazji inwestycyjnych. Każda propozycja trafia w danym momencie tylko do jednego Partnera i zostaje zarezerwowana dla niego na 24 godziny, z możliwością przedłużenia o kolejne 12 godzin.",
+    desc: "Naszym Partnerom Biznesowym zapewniamy indywidualny dostęp do wybranych projektów inwestycyjnych. Każda propozycja trafia w danym momencie tylko do jednego Partnera i zostaje zarezerwowana dla niego na 24 godziny, z możliwością przedłużenia o kolejne 12 godzin.",
   },
   {
     src: "/marketing/system-inwestora/slide-2.png",

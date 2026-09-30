@@ -170,6 +170,17 @@ export const retryYoutubeQueueItem = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Nieudana kompresja wideo (video_renditions) dostaje nowy budżet prób
+    // razem z ponowieniem wpisu — inaczej od razu poszedłby oryginał.
+    const { data: current } = await supabaseAdmin
+      .from("youtube_publish_queue")
+      .select("source_video_url")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (current?.source_video_url) {
+      const { resetVideoRendition } = await import("@/lib/video-rendition.server");
+      await resetVideoRendition(current.source_video_url).catch(() => {});
+    }
     const { error } = await supabaseAdmin
       .from("youtube_publish_queue")
       .update({ status: "pending", last_error: null, scheduled_at: new Date().toISOString() })
@@ -187,5 +198,7 @@ export const publishYoutubeQueueItemNow = createServerFn({ method: "POST" })
     const { processQueueItem } = await import("@/lib/youtube-shorts.server");
     const result = await processQueueItem(data.id);
     if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
-    return { ok: true, videoId: result.videoId };
+    // `preparing` = wideo jeszcze się kompresuje; wpis został w kolejce
+    // i tick opublikuje go, gdy plik będzie gotowy.
+    return { ok: true, videoId: result.videoId, preparing: !!result.preparing };
   });

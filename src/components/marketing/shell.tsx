@@ -1,3 +1,4 @@
+import { COMPANY_DATA, COMPANY_REGISTRY_LINE } from "@/lib/company";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
@@ -12,7 +13,7 @@ import { ACTIVE_SOCIAL_LINKS, type SocialKey } from "./social-links";
 
 export type MarketingPage = "home" | "klient" | "inwestor" | "posrednik" | "blog" | "kalkulator";
 
-const CONTACT = { phone: "+48 732 059 898", email: "kontakt@financeyou.pl" };
+const CONTACT = { phone: COMPANY_DATA.phone.display, email: COMPANY_DATA.email };
 
 /** Monochromatyczne glify marek (viewBox 24×24, wypełnienie `currentColor`). */
 const SOCIAL_ICON_PATHS: Record<SocialKey, string> = {
@@ -56,7 +57,9 @@ const PAGE_PATH: Record<MarketingPage, string> = {
 const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   home: { label: "Wybierz ścieżkę", href: "#sciezki" },
   klient: { label: "Złóż wniosek", href: "/rejestracja?role=klient" },
-  inwestor: { label: "Dołącz do klubu", href: "/rejestracja?role=inwestor" },
+  // Inwestor najpierw poznaje warunki w cenniku (dostęp 0 zł), potem zakłada konto
+  // (nagłówek z page="inwestor" renderuje się tylko na /dla-inwestora).
+  inwestor: { label: "Dołącz do klubu", href: "#cennik" },
   posrednik: { label: "Dołącz jako pośrednik", href: "/rejestracja?role=posrednik" },
   blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
@@ -241,7 +244,14 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
           <MktButton variant="ghost" href="/logowanie" style={{ marginTop: 8 }}>
             Zaloguj się do panelu
           </MktButton>
-          <MktButton variant="cta" href={cta.href} style={{ marginTop: 8 }}>
+          {/* CTA inwestora to kotwica na tej samej stronie (#cennik) — menu musi
+              się zamknąć, inaczej zasłoni cennik. */}
+          <MktButton
+            variant="cta"
+            href={cta.href}
+            onClick={() => setOpen(false)}
+            style={{ marginTop: 8 }}
+          >
             {cta.label}
           </MktButton>
         </div>
@@ -297,6 +307,8 @@ export function SiteFooter() {
       links: [
         { t: "Polityka prywatności", href: "/polityka-prywatnosci" },
         { t: "Regulamin", href: "/regulamin" },
+        { t: "Polityka cookies", href: "/polityka-cookies" },
+        { t: "Ustawienia cookies", href: "#ustawienia-cookies" },
       ],
     },
   ];
@@ -327,9 +339,9 @@ export function SiteFooter() {
               color: "var(--muted-foreground)",
             }}
           >
-            ul. Nowogrodzka 31
+            {COMPANY_DATA.street}
             <br />
-            00-511 Warszawa
+            {COMPANY_DATA.postalCode} {COMPANY_DATA.city}
           </address>
           <div
             style={{ marginTop: "0.8rem", fontSize: "0.78rem", color: "var(--muted-foreground)" }}
@@ -344,7 +356,7 @@ export function SiteFooter() {
               fontFamily: "var(--font-mono)",
             }}
           >
-            KRS 0000635207 · NIP 7010611803
+            {COMPANY_REGISTRY_LINE}
           </div>
           {ACTIVE_SOCIAL_LINKS.length > 0 && (
             <div className="fy-social" style={{ marginTop: "1.4rem" }}>

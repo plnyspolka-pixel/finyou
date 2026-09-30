@@ -22,6 +22,14 @@ kodzie i checklistę wdrożeniową.
 
 ## Obszar 1 — Umowy inwestora (pakiet FY-LEGAL-2026-09-04, paczka prawnika v5)
 
+> **Aktualizacja 2026-09-29:** obowiązującym projektem jest pakiet
+> **FY-LEGAL-2026-09-29** (umowa ramowa v7, NDA v6, RODO v5) — usługa dla
+> Inwestora nieodpłatna, jedyna opłata to Prowizja Klientowska 7% Kwoty
+> Udzielonej (min. 5 000 zł, bez VAT, potrącana z wypłaty), kontakt
+> `kontakt@financeyou.pl`. Pliki i skróty SHA-256:
+> `docs/legal/paczka-inwestor-v7/`. Pakiet jest aktywny od wdrożenia
+> (decyzja właściciela 2026-09-29). Opis poniżej dotyczy historii wdrożenia v5.
+
 > **Zmiana architektury (2026-09-04):** właściciel dostarczył paczkę
 > kancelaryjną `Paczka_Inwestor_v5.zip`. Zastępuje ona wcześniejszy plan
 > „NDA + powierzenie + pośrednictwo z placeholderami" — obowiązuje model:
@@ -75,9 +83,10 @@ Zaimplementowane i wdrożone; pakiet startuje z `legal_documents.active=false`
 
 **Uwagi dla właściciela (nie do pominięcia):**
 
-1. W treściach dokumentów prawnik zaszył na sztywno `plnyspolka@gmail.com`
-   i tel. `889 888 700` — każda zmiana tych danych wymaga NOWEJ wersji
-   dokumentu od kancelarii (zmienia się hash).
+1. W treściach dokumentów v5/v6 prawnik zaszył na sztywno prywatny adres
+   e-mail i tel. `889 888 700` — każda zmiana tych danych wymaga NOWEJ wersji
+   dokumentu (zmienia się hash). Pakiet v7 (2026-09-29) używa już
+   `kontakt@financeyou.pl`.
 2. Aktywacja pakietu = przycisk w `/admin/umowy-inwestorow`, dopiero po
    przeglądzie kancelarii (w szczególności: sekwencyjne przedstawianie tego
    samego Projektu kolejnym zleceniodawcom i Kara Obejściowa wobec

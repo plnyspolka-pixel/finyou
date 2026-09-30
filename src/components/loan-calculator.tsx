@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { FY_COMMISSION_PCT, fyCommission, maxCapitalRate } from "@/lib/contract-engine/fees";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -167,7 +168,7 @@ export type LoanCalculatorState = {
 
 type Props = {
   initialAmount?: number;
-  /** Kwota pożyczki wypłacana klientowi w całości (pełna wypłata). Ma pierwszeństwo przed initialAmount. */
+  /** Kwota pożyczki (Kwota Udzielona z umowy). Ma pierwszeństwo przed initialAmount. */
   initialOnHand?: number;
   initialMonths?: number;
   initialAnnualRate?: number;
@@ -243,28 +244,14 @@ export function LoanCalculator({
   const [maxPayment, setMaxPayment] = useState(initialMaxPayment);
   const [operatorCommissionPct, setOperatorCommissionPct] = useState(3);
 
-  // ŹRÓDŁO PRAWDY: kwota pożyczki wypłacana klientowi w całości (pełna wypłata).
-  // Prowizje (inwestora i Finance You) nie są potrącane z wypłaty — są rozłożone
-  // na raty jako osobny składnik, więc nie istnieje odrębna „kwota nominalna".
+  // ŹRÓDŁO PRAWDY: Kwota Udzielona (kwota pożyczki z umowy) — od niej liczone są
+  // odsetki i raty. Model silnika (fees.ts / loan-schedule.ts):
+  //  • prowizja INWESTORA jest rozłożona równo na raty,
+  //  • prowizja Finance You (7 %, min 5 000 zł, bez VAT) jest POTRĄCANA z wypłaty
+  //    — inwestor przelewa ją na rachunek FY, resztę klientowi; NIE wchodzi do rat.
   const [onHand, setOnHand] = useState<number>(initialOnHand ?? initialAmount);
-
-  // Prowizja Finance You — koszt POŻYCZKOBIORCY (klient dostaje na nią fakturę VAT
-  // od Finance You). Jest potrącana z kwoty udzielonej pożyczki, powiększa kapitał
-  // pożyczki, klient ją spłaca w ratach (odsetki liczą się także od niej), a przez raty
-  // wraca ona do inwestora — dlatego podnosi jego wkład gotówkowy na starcie
-  // (inwestor wykłada onHand + prowizję FY), ale jest neutralna dla jego zysku.
-  // Skala liniowa od 10% (przy 20 000 zł) do 4% (przy 1 000 000 zł) kwoty pożyczki.
-  // W trybie oferty wewnętrznej (hideFinanceYouFee) prowizja FY = 0.
-  // Ponieważ % FY zależy od nominału, a nominał zależy od %, iterujemy do punktu stałego.
-  const { amount, financeYouFeePct } = useMemo(() => {
-    // Model silnika: PEŁNA WYPŁATA — Pożyczkobiorca otrzymuje całą Kwotę Pożyczki.
-    // Prowizja nie jest potrącana z wypłaty (jest rozłożona na raty), więc kwota
-    // na rękę = Kwota Pożyczki (brak „ubruttowienia").
-    const amt = onHand;
-    const t = Math.min(1, Math.max(0, (amt - 20_000) / (1_000_000 - 20_000)));
-    const fyPct = hideFinanceYouFee ? 0 : Math.round((10 - t * 6) * 10) / 10;
-    return { amount: amt, financeYouFeePct: fyPct };
-  }, [onHand, hideFinanceYouFee]);
+  const amount = onHand;
+  const financeYouFeePct = hideFinanceYouFee ? 0 : FY_COMMISSION_PCT;
 
   const rateTouched = useRef(false);
   const commissionTouched = useRef(false);
@@ -308,13 +295,16 @@ export function LoanCalculator({
   }, [clientEmail]);
 
   const effectiveRefRate = investorGuidance && nbpOverride != null ? nbpOverride : liveRefRate;
-  const MAX_INTEREST_RATE = maxInterestRate(effectiveRefRate);
+  // Twarda blokada: odsetki maksymalne z tabeli stóp (fees.ts) — jedno miejsce
+  // w systemie; symulacja NBP (nbpOverride) tylko w trybie poglądowym inwestora.
+  const MAX_INTEREST_RATE =
+    investorGuidance && nbpOverride != null ? maxInterestRate(nbpOverride) : maxCapitalRate();
   const statutoryInterest = effectiveRefRate + 3.5;
 
-  const financeYouFeePln = Math.round((amount * financeYouFeePct) / 100);
-  // Kapitał, od którego liczone są odsetki i raty = Kwota Pożyczki (pełna
-  // wypłata). Prowizja inwestora i Finance You NIE wchodzą do kapitału —
-  // są rozłożone na raty jako osobny składnik (model silnika).
+  // Prowizja Finance You: 7 % Kwoty Udzielonej, min 5 000 zł, bez VAT —
+  // POTRĄCANA z wypłaty (nie wchodzi do rat).
+  const financeYouFeePln = hideFinanceYouFee ? 0 : fyCommission(amount);
+  // Kapitał, od którego liczone są odsetki i raty = Kwota Udzielona.
   const grossPrincipal = amount;
 
   const maxNonInterest = maxNonInterestCosts(amount, months);
@@ -330,10 +320,10 @@ export function LoanCalculator({
     : 0;
   const investorNetCommissionPln = Math.max(0, commissionPln - operatorCommissionPln);
 
-  // Harmonogram = model silnika (jedno źródło prawdy): pełna wypłata kapitału,
-  // prowizja (inwestora + Finance You) rozłożona na raty, odsetki od salda,
-  // balon = ostatnia z N rat.
-  const scheduleCommission = commissionPln + financeYouFeePln;
+  // Harmonogram = model silnika (jedno źródło prawdy): Kwota Udzielona,
+  // prowizja INWESTORA rozłożona na raty, prowizja Finance You potrącana
+  // z wypłaty (poza ratami), odsetki od salda, balon = ostatnia z N rat.
+  const scheduleCommission = commissionPln;
   const schedule = useMemo(() => {
     if (!grossPrincipal || !months)
       return {
@@ -357,6 +347,7 @@ export function LoanCalculator({
     const eng = buildEngineSchedule({
       kwotaPozyczki: grossPrincipal,
       prowizja: scheduleCommission,
+      prowizjaFY: financeYouFeePln,
       annualRatePercent: annualRate,
       months,
       maxMonthlyPayment: cap,
@@ -386,7 +377,7 @@ export function LoanCalculator({
       nominalRata: nominalRata + monthlyComm,
       cappedRata: Math.min(nominalRata + monthlyComm, cap),
     };
-  }, [grossPrincipal, months, annualRate, maxPayment, scheduleCommission]);
+  }, [grossPrincipal, months, annualRate, maxPayment, scheduleCommission, financeYouFeePln]);
 
   // MPKK obejmuje wyłącznie prowizję inwestora. Prowizja Finance You NIE wlicza się
   // do limitu MPKK — to wynagrodzenie operatora za odrębną usługę (faktura VAT od
@@ -394,35 +385,25 @@ export function LoanCalculator({
   const nonInterestTotal = commissionPln;
   // Całkowity koszt pożyczki PO STRONIE KLIENTA = odsetki + prowizja inwestora + prowizja FY.
   const totalCost = schedule.totalOds + commissionPln + financeYouFeePln;
-  // Pełna wypłata: klient otrzymuje całą kwotę pożyczki.
-  const disbursedOnHand = Math.max(0, onHand);
+  // Klient dostaje „na rękę" Kwotę Udzieloną pomniejszoną o prowizję Finance You.
+  const disbursedOnHand = Math.max(0, amount - financeYouFeePln);
 
   // Łączna kwota spłacana przez pożyczkobiorcę = raty z harmonogramu
-  // (zwrot kapitału + odsetki + prowizje rozłożone na raty).
+  // (zwrot kapitału + odsetki + prowizja inwestora rozłożona na raty).
   const totalToRepay = schedule.totalRata;
 
-  // Inwestor: realny wkład gotówkowy na starcie = środki wychodzące z jego konta:
-  //  • pełna wypłata kwoty pożyczki dla klienta,
-  //  • prowizja Finance You — inwestor przekazuje ją operatorowi (Finance You) przy uruchomieniu;
-  //    klient dostaje na nią fakturę VAT od Finance You. Klient spłaca ją w ratach (kredytowana
-  //    do kapitału), więc wraca do inwestora — jest neutralna dla zysku, ale podnosi wkład startowy,
-  //  • w ofercie wewnętrznej dodatkowo prowizja operatora pośrednika (z własnych środków inwestora);
-  //    tam prowizja FY = 0.
-  const investorCashOut = Math.max(0, disbursedOnHand + financeYouFeePln + operatorCommissionPln);
-  // Inwestor odbiera łącznie = wszystkie raty z harmonogramu (zwrot nominału + odsetki).
-  // Prowizja FY spłacana przez klienta wraca do inwestora w ratach — dlatego nie odejmujemy jej z zysku.
+  // Inwestor: realny wkład gotówkowy na starcie = Kwota Udzielona (wypłata dla
+  // klienta + prowizja FY przelana na rachunek Finance You). W ofercie wewnętrznej
+  // dodatkowo prowizja operatora pośrednika (z własnych środków inwestora; FY = 0).
+  const investorCashOut = Math.max(0, amount + operatorCommissionPln);
+  // Inwestor odbiera łącznie = wszystkie raty z harmonogramu.
   const investorTotalIn = totalToRepay;
-  // Zysk = to, co wraca, minus to, co wyszło z konta:
-  // odsetki + prowizja inwestora (netto). Prowizja FY jest przelotowa (wyłożona i zwrócona w ratach).
+  // Zysk = odsetki + prowizja inwestora (netto, po prowizji operatora).
   const investorProfit = investorTotalIn - investorCashOut;
   const investorRoiPct = investorCashOut > 0 ? (investorProfit / investorCashOut) * 100 : 0;
   const investorRoiAnnualPct = months > 0 ? (investorRoiPct * 12) / months : 0;
-  // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
-  // Prowizja FY jest kosztem klienta (kredytowana), ale klient dostaje ją w formie usługi FY —
-  // krotność liczymy klasycznie: łączna spłata ÷ kwota na rękę.
-  const krotnoscBasis = Math.max(0, disbursedOnHand);
-  const krotnoscRepay = totalToRepay;
-  const krotnosc = krotnoscBasis > 0 ? krotnoscRepay / krotnoscBasis : 0;
+  // Krotność: łączna spłata ÷ kwota faktycznie otrzymana na rękę.
+  const krotnosc = disbursedOnHand > 0 ? totalToRepay / disbursedOnHand : 0;
 
   // Wskaźniki rynkowe (tylko tryb inwestora): inflacja CPI r/r z GUS
   // oraz kurs EUR NBP do progu AML 15 000 EUR.
@@ -449,8 +430,8 @@ export function LoanCalculator({
   // Próg AML: wypłata pożyczki jako transakcja ponadprogowa (≥ 15 000 EUR).
   const eurRate = indicatorsQ.data?.eur?.rate ?? null;
   const amlThresholdPln = eurRate != null ? AML_THRESHOLD_EUR * eurRate : null;
-  const disbursedEur = eurRate != null ? disbursedOnHand / eurRate : null;
-  const amlAboveThreshold = amlThresholdPln != null && disbursedOnHand + 1e-9 >= amlThresholdPln;
+  const disbursedEur = eurRate != null ? amount / eurRate : null;
+  const amlAboveThreshold = amlThresholdPln != null && amount + 1e-9 >= amlThresholdPln;
 
   // Proponowane zabezpieczenia: domyślnie dwukrotność sumy wszystkich należności
   // inwestora (łącznej kwoty do spłaty). Edytowalne — override ma pierwszeństwo.
@@ -476,7 +457,9 @@ export function LoanCalculator({
   const collateralShortfall = propertyValue > 0 && totalToRepay > secondAuctionPln + 1e-9;
 
   const interestExceeds = annualRate > MAX_INTEREST_RATE + 1e-9;
-  const nonInterestExceeds = nonInterestTotal > maxNonInterest + 1e-9;
+  // Model wyłącznie B2B (cel gospodarczy) — limit MPKK z ustawy o kredycie
+  // konsumenckim nie ma zastosowania; zostaje tylko kontrola rażącej dysproporcji.
+  const nonInterestExceeds = false;
   const commissionOver45 = commissionPln > amount * 0.45 + 1e-9;
   const krotnoscWarn = krotnosc > 1.5;
   const krotnoscDanger = krotnosc > 2.0;
@@ -606,7 +589,9 @@ export function LoanCalculator({
       <h1 style="font-size:20px;margin:0 0 4px;">Harmonogram spłat pożyczki</h1>
       ${clientName ? `<p style="margin:0 0 12px;color:#555;">dla: <b>${escapeHtml(clientName)}</b></p>` : ""}
       <table style="width:100%;border-collapse:collapse;margin:12px 0 4px;font-size:14px;">
-        ${sum("Kwota Pożyczki (pełna wypłata)", m(onHand), true)}
+        ${sum("Kwota Pożyczki", m(amount), true)}
+        ${financeYouFeePln > 0 ? sum("Prowizja Finance You (potrącana z wypłaty)", m(financeYouFeePln)) : ""}
+        ${sum("Do wypłaty na rękę", m(disbursedOnHand))}
         ${sum("Okres", `${months} mies.`)}
         ${sum("Oprocentowanie", `${annualRate.toFixed(2).replace(".", ",")}% / rok`)}
         ${sum("Rata miesięczna", m(schedule.cappedRata))}
@@ -638,7 +623,11 @@ export function LoanCalculator({
     return [
       "Harmonogram spłat pożyczki",
       clientName ? `dla: ${clientName}` : "",
-      `Kwota Pożyczki (pełna wypłata): ${formatPLN(onHand)}`,
+      `Kwota Pożyczki: ${formatPLN(amount)}`,
+      financeYouFeePln > 0
+        ? `Prowizja Finance You (potrącana z wypłaty): ${formatPLN(financeYouFeePln)}`
+        : "",
+      `Do wypłaty na rękę: ${formatPLN(disbursedOnHand)}`,
       `Okres: ${months} mies.`,
       `Oprocentowanie: ${annualRate.toFixed(2).replace(".", ",")}% / rok`,
       `Rata miesięczna: ${formatPLN(schedule.cappedRata)}`,
@@ -658,7 +647,7 @@ export function LoanCalculator({
     return {
       v: 1,
       generatedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
-      onHand: Math.round(onHand),
+      onHand: Math.round(disbursedOnHand),
       nominal: Math.round(amount),
       months,
       annualRate,
@@ -793,7 +782,7 @@ export function LoanCalculator({
             )}
             <span className="text-white/70">
               Maks. odsetki ustawowe:{" "}
-              <b className="tabular-nums whitespace-nowrap text-right text-emerald-300">
+              <b className="shrink-0 tabular-nums whitespace-nowrap text-right text-emerald-300">
                 {MAX_INTEREST_RATE.toFixed(2)}%
               </b>
             </span>
@@ -839,8 +828,8 @@ export function LoanCalculator({
                 {internalOperatorMode
                   ? "gotówka z konta inwestora (wypłata dla klienta + prowizja operatora)"
                   : hideFinanceYouFee
-                    ? "gotówka z konta inwestora (pełna wypłata kwoty pożyczki)"
-                    : `gotówka z konta inwestora: wypłata dla klienta ${formatPLN(disbursedOnHand)} + prowizja Finance You ${formatPLN(financeYouFeePln)} (przelotowa — klient spłaca ją w ratach, wraca do inwestora)`}
+                    ? "gotówka z konta inwestora (pełna kwota pożyczki)"
+                    : `gotówka z konta inwestora = kwota pożyczki: ${formatPLN(disbursedOnHand)} klientowi + ${formatPLN(financeYouFeePln)} prowizji Finance You (potrącanej z wypłaty)`}
               </p>
             </div>
 
@@ -884,22 +873,22 @@ export function LoanCalculator({
                 {formatPLN(disbursedOnHand)}
               </p>
               <p className="mt-1 text-xs text-amber-100/80">
-                pełna kwota pożyczki — prowizja inwestora{" "}
-                <b className="text-white">{formatPLN(commissionPln)}</b>
-                {!hideFinanceYouFee && (
+                {hideFinanceYouFee ? (
+                  "pełna kwota pożyczki"
+                ) : (
                   <>
-                    {" "}
-                    i prowizja Finance You{" "}
-                    <b className="text-white">{formatPLN(financeYouFeePln)}</b> (FV od Finance You
-                    dla klienta)
+                    kwota pożyczki minus prowizja Finance You{" "}
+                    <b className="text-white">{formatPLN(financeYouFeePln)}</b> (potrącana z
+                    wypłaty)
                   </>
                 )}{" "}
-                rozłożon{hideFinanceYouFee ? "a" : "e"} na raty
+                — prowizja inwestora <b className="text-white">{formatPLN(commissionPln)}</b>{" "}
+                rozłożona na raty
               </p>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-xs text-white/75 md:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-xs text-white/75 md:grid-cols-4">
             <div>
               <span className="text-white/55">Rata miesięczna</span>
               <div className="mt-0.5 text-base font-bold tabular-nums text-white">
@@ -942,11 +931,11 @@ export function LoanCalculator({
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-1.5">
-                  Kwota pożyczki (wypłacana klientowi w całości){" "}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label className="flex flex-[1_1_10rem] items-center gap-1.5">
+                  Kwota pożyczki (z umowy){" "}
                   {investorGuidance && (
-                    <InfoTip text="Klient otrzymuje całą kwotę pożyczki — prowizje nie są potrącane z wypłaty, lecz rozłożone na raty jako osobny składnik. Odsetki liczone są od tej kwoty (kapitału)." />
+                    <InfoTip text="Kwota Udzielona z umowy — od niej liczone są odsetki i raty. Prowizja Finance You jest potrącana z wypłaty (klient dostaje kwotę pomniejszoną o nią), a prowizja inwestora jest rozłożona na raty." />
                   )}
                 </Label>
                 <NumberField
@@ -954,7 +943,7 @@ export function LoanCalculator({
                   onCommit={(target) =>
                     setOnHand(Math.min(1_000_000, Math.max(1_000, target || 0)))
                   }
-                  className="w-40"
+                  className="w-36 shrink-0"
                 />
               </div>
               <Slider
@@ -970,8 +959,10 @@ export function LoanCalculator({
               </div>
               <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
                 <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Do wypłaty klientowi (pełna kwota)</span>
-                  <b className="tabular-nums whitespace-nowrap text-right">
+                  <span className="text-muted-foreground">
+                    Do wypłaty klientowi{hideFinanceYouFee ? " (pełna kwota)" : " (na rękę)"}
+                  </span>
+                  <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                     {formatPLN(disbursedOnHand)}
                   </b>
                 </div>
@@ -980,7 +971,7 @@ export function LoanCalculator({
                     Realny wkład gotówkowy inwestora
                     {internalOperatorMode && " (z prowizją operatora)"}
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right text-primary">
+                  <b className="shrink-0 tabular-nums whitespace-nowrap text-right text-primary">
                     {formatPLN(investorCashOut)}
                   </b>
                 </div>
@@ -1016,19 +1007,19 @@ export function LoanCalculator({
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label className="flex flex-[1_1_10rem] items-center gap-1.5">
                   Roczne oprocentowanie (odsetki){" "}
                   {investorGuidance && (
                     <InfoTip text="Górny limit z art. 359 §2¹ KC = 2 × (stopa ref. NBP + 3,5 p.p.). Odsetki ponad limit są nienależne i podlegają zwrotowi." />
                   )}
                 </Label>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <NumberField
                     step="0.1"
                     value={annualRate}
                     onCommit={(n) => setAnnualRateTouched(n || 0)}
-                    className="w-24"
+                    className="w-20"
                   />
                   <span className="text-sm">%</span>
                 </div>
@@ -1040,31 +1031,30 @@ export function LoanCalculator({
                 value={[Math.min(MAX_INTEREST_RATE, Math.max(0, annualRate))]}
                 onValueChange={(v) => setAnnualRateTouched(v[0])}
               />
-              <div className="flex justify-between text-xs text-muted-foreground">
+              <div className="flex justify-between gap-2 text-xs text-muted-foreground">
                 <span>0%</span>
                 <span className={interestExceeds ? "text-destructive font-medium" : ""}>
                   {`limit ustawowy: ${MAX_INTEREST_RATE.toFixed(2)}%`}
                 </span>
-                <span>{MAX_INTEREST_RATE.toFixed(2)}%</span>
               </div>
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label className="flex flex-[1_1_10rem] items-center gap-1.5">
                   Prowizja dla inwestora (jednorazowa, pozaodsetkowa){" "}
                   {investorGuidance && (
                     <InfoTip text="Jedyny koszt pozaodsetkowy wliczany do limitu MPKK. Ustawiana ręcznie suwakiem; rozłożona na raty." />
                   )}
                 </Label>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <NumberField
                     step="0.5"
                     value={commissionPct}
                     onCommit={(n) => setCommissionPctTouched(n || 0)}
-                    className="w-24"
+                    className="w-20"
                   />
-                  <span className="text-sm">% ({formatPLN(commissionPln)})</span>
+                  <span className="whitespace-nowrap text-sm">% ({formatPLN(commissionPln)})</span>
                 </div>
               </div>
               <Slider
@@ -1076,9 +1066,9 @@ export function LoanCalculator({
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>0%</span>
-                {nonInterestExceeds ? (
+                {commissionOver45 ? (
                   <span className="text-destructive font-medium">
-                    przekroczono limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}
+                    powyżej 45% kwoty — ryzyko rażącej dysproporcji
                   </span>
                 ) : (
                   <span />
@@ -1120,13 +1110,13 @@ export function LoanCalculator({
                 <div className="grid gap-1.5 border-t border-white/15 pt-2 text-sm sm:grid-cols-2">
                   <div className="flex justify-between gap-3 text-white/80">
                     <span>Prowizja operatora</span>
-                    <b className="tabular-nums whitespace-nowrap text-right text-amber-200">
+                    <b className="shrink-0 tabular-nums whitespace-nowrap text-right text-amber-200">
                       {formatPLN(operatorCommissionPln)}
                     </b>
                   </div>
                   <div className="flex justify-between gap-3 text-white/80">
                     <span>Prowizja netto dla inwestora</span>
-                    <b className="tabular-nums whitespace-nowrap text-right text-emerald-200">
+                    <b className="shrink-0 tabular-nums whitespace-nowrap text-right text-emerald-200">
                       {formatPLN(investorNetCommissionPln)}
                     </b>
                   </div>
@@ -1175,12 +1165,13 @@ export function LoanCalculator({
               <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground flex items-center gap-1">
-                    Prowizja Finance You ({financeYouFeePct}%, koszt klienta — FV od Finance You)
+                    Prowizja Finance You ({financeYouFeePct}%, min 5 000 zł, bez VAT — potrącana z
+                    wypłaty)
                     {investorGuidance && (
-                      <InfoTip text="Wynagrodzenie operatora. Klient dostaje na nią fakturę VAT od Finance You. Klient spłaca ją w ratach, a przez to wraca ona do inwestora. Podnosi wkład gotówkowy inwestora na starcie, ale jest neutralna dla jego zysku. Nie wlicza się do limitu MPKK." />
+                      <InfoTip text="Wynagrodzenie Finance You — koszt klienta. Przy wypłacie inwestor przelewa ją z kwoty pożyczki na rachunek Finance You, a resztę klientowi. Nie wchodzi do rat i nie zmienia wkładu ani zysku inwestora. Nie wlicza się do limitu MPKK." />
                     )}
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right">
+                  <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                     {formatPLN(financeYouFeePln)}
                   </b>
                 </div>
@@ -1188,7 +1179,7 @@ export function LoanCalculator({
                   <span className="text-muted-foreground">
                     Kapitał pożyczki (od którego liczone są odsetki)
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right">
+                  <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                     {formatPLN(grossPrincipal)}
                   </b>
                 </div>
@@ -1196,12 +1187,12 @@ export function LoanCalculator({
             )}
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Maksymalna rata dla klienta</Label>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label className="flex-[1_1_10rem]">Maksymalna rata dla klienta</Label>
                 <NumberField
                   value={maxPayment}
                   onCommit={(n) => setMaxPayment(n || 0)}
-                  className="w-40"
+                  className="w-36 shrink-0"
                 />
               </div>
               <Slider
@@ -1223,7 +1214,7 @@ export function LoanCalculator({
                       <InfoTip text="Pełna rata annuitetowa wyliczona od kwoty pożyczki i oprocentowania." />
                     )}
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right">
+                  <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                     {formatPLN(schedule.nominalRata)}
                   </b>
                 </div>
@@ -1234,7 +1225,7 @@ export function LoanCalculator({
                       <InfoTip text="Jednorazowa spłata nadwyżki kapitału na koniec umowy, gdy rata miesięczna jest ograniczona limitem." />
                     )}
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right">
+                  <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                     {formatPLN(schedule.balloon)}
                   </b>
                 </div>
@@ -1252,21 +1243,6 @@ export function LoanCalculator({
           </CardContent>
         </Card>
       </FancyShell>
-
-      {nonInterestExceeds && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Upewnij się, że pożyczka jest w modelu B2B</AlertTitle>
-          <AlertDescription className="pt-1">
-            Koszty pozaodsetkowe (prowizja inwestora) <b>{formatPLN(nonInterestTotal)}</b>{" "}
-            przekraczają limit MPKK <b>{formatPLN(maxNonInterest)}</b> (art. 36a UoKK; prowizja
-            Finance You nie wlicza się do limitu). Limit ten dotyczy <b>kredytu konsumenckiego</b> —
-            przy umowie z konsumentem nadwyżka będzie nienależna. Aby kontynuować z tą prowizją,
-            pożyczkobiorca musi być przedsiębiorcą, a pożyczka udzielona w <b>modelu B2B</b> (na
-            cele związane z prowadzoną działalnością gospodarczą).
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* STATUSY — 3 niezależne składniki: Odsetki / MPKK / Krotność (fancy) */}
       {(() => {
@@ -1301,33 +1277,26 @@ export function LoanCalculator({
               </Alert>
             )}
 
-            {/* 2) MPKK — zasady współżycia społecznego (art. 58 §2 KC) / wyzysk (art. 388 KC) */}
+            {/* 2) Rażąca dysproporcja (art. 58 §2 KC / art. 388 KC) — model B2B, bez MPKK */}
             {investorGuidance &&
-              (nonInterestExceeds || commissionOver45 ? (
+              (commissionOver45 ? (
                 <Alert className={dangerCls}>
                   <ShieldAlert className="h-4 w-4 !text-rose-300" />
-                  <AlertTitle>MPKK — silne ryzyko zasad współżycia społecznego</AlertTitle>
+                  <AlertTitle>Prowizja inwestora — ryzyko rażącej dysproporcji</AlertTitle>
                   <AlertDescription className="text-sm text-rose-100/90">
-                    Prowizja <b>{formatPLN(commissionPln)}</b>{" "}
-                    {commissionOver45 ? (
-                      "przekracza 45% kwoty pożyczki — absolutne maksimum referencyjne MPKK"
-                    ) : (
-                      <>
-                        przekracza limit MPKK <b>{formatPLN(maxNonInterest)}</b>
-                      </>
-                    )}
-                    . Ryzyko nieważności postanowień (art. 58 §2 KC) i wyzysku (art. 388 KC).
-                    Prowizja Finance You nie wlicza się do limitu MPKK.
+                    Prowizja <b>{formatPLN(commissionPln)}</b> przekracza 45% kwoty pożyczki —
+                    ryzyko nieważności postanowień (art. 58 §2 KC) i wyzysku (art. 388 KC). Prowizja
+                    Finance You (potrącana z wypłaty) nie wlicza się do tej oceny.
                   </AlertDescription>
                 </Alert>
               ) : (
                 <Alert className={okCls}>
                   <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
-                  <AlertTitle>MPKK w limicie — zgodne z zasadami współżycia społecznego</AlertTitle>
+                  <AlertTitle>Prowizja inwestora w rozsądnym zakresie</AlertTitle>
                   <AlertDescription className="text-sm text-emerald-100/90">
-                    Koszty pozaodsetkowe (prowizja inwestora) <b>{formatPLN(commissionPln)}</b> ≤{" "}
-                    <b>{formatPLN(maxNonInterest)}</b> (art. 58 §2 KC — referencyjny limit MPKK).
-                    Prowizja Finance You nie wlicza się do limitu.
+                    Koszty pozaodsetkowe (prowizja inwestora) <b>{formatPLN(commissionPln)}</b> —
+                    finansowanie wyłącznie na cel gospodarczy (B2B), bez limitu MPKK z ustawy o
+                    kredycie konsumenckim.
                   </AlertDescription>
                 </Alert>
               ))}
@@ -1377,7 +1346,7 @@ export function LoanCalculator({
                     AML — transakcja ponadprogowa (≥ 15 000 EUR) przy działalności gospodarczej
                   </AlertTitle>
                   <AlertDescription className="text-sm text-amber-100/90">
-                    Wypłata pożyczki <b>{formatPLN(disbursedOnHand)}</b>
+                    Wypłata pożyczki <b>{formatPLN(amount)}</b>
                     {disbursedEur != null && eurRate != null && (
                       <>
                         {" "}
@@ -1392,7 +1361,7 @@ export function LoanCalculator({
                     obowiązek wpisać tę transakcję do <b>rejestru transakcji ponadprogowych</b> oraz
                     przekazać informację do GIIF w terminie 7 dni (art. 72 ustawy AML).{" "}
                     <Link
-                      to="/inwestor/aml/ponadprogowe"
+                      to="/inwestor/aml/transakcje"
                       className="font-semibold underline underline-offset-2"
                     >
                       Prowadź rejestr w module AML →
@@ -1404,12 +1373,12 @@ export function LoanCalculator({
                   <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
                   <AlertTitle>AML — wypłata poniżej progu 15 000 EUR</AlertTitle>
                   <AlertDescription className="text-sm text-emerald-100/90">
-                    Wypłata <b>{formatPLN(disbursedOnHand)}</b> nie przekracza równowartości 15 000
-                    EUR (<b>{formatPLN(amlThresholdPln)}</b> po kursie NBP) — obowiązek wpisu do
-                    rejestru transakcji ponadprogowych nie powstaje. Pamiętaj: przy inwestowaniu
-                    przez działalność gospodarczą każda transakcja ≥ 15 000 EUR wymaga wpisu do
-                    rejestru i zgłoszenia do GIIF w 7 dni (art. 72 ustawy AML); prywatnego portfela
-                    ten obowiązek nie dotyczy.
+                    Wypłata <b>{formatPLN(amount)}</b> nie przekracza równowartości 15 000 EUR (
+                    <b>{formatPLN(amlThresholdPln)}</b> po kursie NBP) — obowiązek wpisu do rejestru
+                    transakcji ponadprogowych nie powstaje. Pamiętaj: przy inwestowaniu przez
+                    działalność gospodarczą każda transakcja ≥ 15 000 EUR wymaga wpisu do rejestru i
+                    zgłoszenia do GIIF w 7 dni (art. 72 ustawy AML); prywatnego portfela ten
+                    obowiązek nie dotyczy.
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -1423,7 +1392,7 @@ export function LoanCalculator({
                     transakcji ponadprogowych i zgłaszasz do GIIF w terminie 7 dni (art. 72 ustawy
                     AML). Kurs EUR NBP chwilowo niedostępny — nie można przeliczyć progu na PLN.{" "}
                     <Link
-                      to="/inwestor/aml/ponadprogowe"
+                      to="/inwestor/aml/transakcje"
                       className="font-semibold underline underline-offset-2"
                     >
                       Prowadź rejestr w module AML →
@@ -1444,14 +1413,22 @@ export function LoanCalculator({
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
             <div className="flex justify-between gap-3">
-              <span>Kwota pożyczki (kapitał, wypłacana klientowi w całości)</span>
-              <b className="tabular-nums whitespace-nowrap text-right text-emerald-300">
-                {formatPLN(disbursedOnHand)}
+              <span>Kwota pożyczki (kapitał z umowy)</span>
+              <b className="shrink-0 tabular-nums whitespace-nowrap text-right text-emerald-300">
+                {formatPLN(amount)}
               </b>
             </div>
+            {!hideFinanceYouFee && (
+              <div className="flex justify-between gap-3">
+                <span>Klient dostaje na rękę</span>
+                <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
+                  {formatPLN(disbursedOnHand)}
+                </b>
+              </div>
+            )}
             <div className="flex justify-between gap-3">
               <span>Odsetki razem</span>
-              <b className="tabular-nums whitespace-nowrap text-right">
+              <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                 {formatPLN(schedule.totalOds)}
               </b>
             </div>
@@ -1461,7 +1438,7 @@ export function LoanCalculator({
                 Prowizja dla inwestora{" "}
                 <span className="text-xs text-white/60">(koszt pozaodsetkowy)</span>
               </span>
-              <b className="tabular-nums whitespace-nowrap text-right">
+              <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                 {formatPLN(commissionPln)}
               </b>
             </div>
@@ -1471,13 +1448,13 @@ export function LoanCalculator({
                   <span className="pl-3">
                     ↳ prowizja operatora ({operatorCommissionPctClamped.toFixed(1)}%)
                   </span>
-                  <b className="tabular-nums whitespace-nowrap text-right text-amber-200">
+                  <b className="shrink-0 tabular-nums whitespace-nowrap text-right text-amber-200">
                     {formatPLN(operatorCommissionPln)}
                   </b>
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="pl-3">↳ prowizja netto inwestora</span>
-                  <b className="tabular-nums whitespace-nowrap text-right text-emerald-200">
+                  <b className="shrink-0 tabular-nums whitespace-nowrap text-right text-emerald-200">
                     {formatPLN(investorNetCommissionPln)}
                   </b>
                 </div>
@@ -1488,10 +1465,10 @@ export function LoanCalculator({
                 <span>
                   Prowizja Finance You{" "}
                   <span className="text-xs text-white/60">
-                    (koszt klienta, FV od Finance You — kredytowana do kapitału)
+                    (koszt klienta, bez VAT — potrącana z wypłaty)
                   </span>
                 </span>
-                <b className="tabular-nums whitespace-nowrap text-right">
+                <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                   {formatPLN(financeYouFeePln)}
                 </b>
               </div>
@@ -1501,10 +1478,10 @@ export function LoanCalculator({
               <div className="flex justify-between gap-3">
                 <span className="flex items-center gap-1">
                   Krotność spłaty{" "}
-                  <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał (łączna spłata ÷ kwota pożyczki). Prowizje inwestora i Finance You są rozłożone na raty — dlatego podnoszą krotność." />
+                  <InfoTip text="Ile razy pożyczkobiorca oddaje względem tego, co otrzymał (łączna spłata ÷ kwota na rękę). Prowizja inwestora w ratach i prowizja Finance You potrącana z wypłaty — obie podnoszą krotność." />
                 </span>
                 <b
-                  className={`tabular-nums whitespace-nowrap ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}
+                  className={`shrink-0 tabular-nums whitespace-nowrap ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}
                 >
                   {krotnosc.toFixed(2)}×
                 </b>
@@ -1517,16 +1494,18 @@ export function LoanCalculator({
                   (odsetki + prowizja inwestora{!hideFinanceYouFee && " + prowizja FY"})
                 </span>
               </span>
-              <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(totalCost)}</b>
+              <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
+                {formatPLN(totalCost)}
+              </b>
             </div>
             <div className="flex justify-between gap-3">
               <span>
                 Wkład gotówkowy inwestora{" "}
                 <span className="text-xs text-white/60">
-                  {hideFinanceYouFee ? "" : "(na rękę dla klienta + prowizja FY do Finance You)"}
+                  {hideFinanceYouFee ? "" : "(= kwota pożyczki: na rękę + prowizja FY)"}
                 </span>
               </span>
-              <b className="tabular-nums whitespace-nowrap text-right">
+              <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                 {formatPLN(investorCashOut)}
               </b>
             </div>
@@ -1535,13 +1514,15 @@ export function LoanCalculator({
                 Zysk inwestora{" "}
                 <span className="text-xs text-white/60">(odsetki + prowizja inwestora netto)</span>
               </span>
-              <b className="tabular-nums whitespace-nowrap text-right text-emerald-300">
+              <b className="shrink-0 tabular-nums whitespace-nowrap text-right text-emerald-300">
                 {formatPLN(investorProfit)}
               </b>
             </div>
             <div className="flex justify-between gap-3 md:col-span-2 border-t border-white/15 pt-2">
               <span>Łączna kwota do spłaty (raty z harmonogramu)</span>
-              <b className="tabular-nums whitespace-nowrap text-right">{formatPLN(totalToRepay)}</b>
+              <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
+                {formatPLN(totalToRepay)}
+              </b>
             </div>
           </CardContent>
         </Card>
@@ -1620,22 +1601,24 @@ export function LoanCalculator({
                   </div>
 
                   <div className="rounded-md border border-white/15 bg-white/[0.05] p-3 text-sm grid gap-1.5 sm:grid-cols-3">
-                    <div className="flex justify-between sm:flex-col sm:gap-0.5">
+                    <div className="flex justify-between gap-3 sm:flex-col sm:gap-0.5">
                       <span className="text-white/70">Zysk nominalny</span>
-                      <b className="tabular-nums">{formatPLN(investorProfit)}</b>
+                      <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
+                        {formatPLN(investorProfit)}
+                      </b>
                     </div>
-                    <div className="flex justify-between sm:flex-col sm:gap-0.5">
+                    <div className="flex justify-between gap-3 sm:flex-col sm:gap-0.5">
                       <span className="text-white/70">
                         Utrata siły nabywczej kapitału ({months} mies.)
                       </span>
-                      <b className="tabular-nums text-rose-300">
+                      <b className="shrink-0 tabular-nums whitespace-nowrap text-right text-rose-300">
                         −{formatPLN(inflationErosionPln)}
                       </b>
                     </div>
-                    <div className="flex justify-between sm:flex-col sm:gap-0.5">
+                    <div className="flex justify-between gap-3 sm:flex-col sm:gap-0.5">
                       <span className="text-white/70">Realny zysk ponad inflację</span>
                       <b
-                        className={`tabular-nums ${realProfitPln >= 0 ? "text-emerald-300" : "text-rose-300"}`}
+                        className={`shrink-0 tabular-nums whitespace-nowrap text-right ${realProfitPln >= 0 ? "text-emerald-300" : "text-rose-300"}`}
                       >
                         {formatPLN(realProfitPln)}
                       </b>
@@ -1646,10 +1629,9 @@ export function LoanCalculator({
                     <Alert className="py-2 border-emerald-400/60 bg-emerald-950/60 text-emerald-50">
                       <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
                       <AlertDescription className="text-xs">
-                        Ta pożyczka wychodzi{" "}
+                        Realna stopa zwrotu z tej pożyczki to{" "}
                         <b>
-                          {realAnnualRoiPct.toFixed(1).replace(".", ",")} p.p. rocznie lepiej niż
-                          inflacja
+                          +{realAnnualRoiPct.toFixed(1).replace(".", ",")}% rocznie ponad inflację
                         </b>{" "}
                         — po urealnieniu o CPI zostaje <b>{formatPLN(realProfitPln)}</b> realnego
                         zysku (kapitał trzymany w gotówce straciłby w tym okresie{" "}
@@ -1720,13 +1702,13 @@ export function LoanCalculator({
                   <div className="rounded-md border border-white/15 bg-white/[0.05] p-3 text-sm grid gap-1.5 sm:grid-cols-2">
                     <div className="flex justify-between gap-3">
                       <span className="text-white/70">LTV (kwota pożyczki / wartość)</span>
-                      <b className="tabular-nums whitespace-nowrap text-right">
+                      <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                         {ltvPct.toFixed(1)}%
                       </b>
                     </div>
                     <div className="flex justify-between gap-3">
                       <span className="text-white/70">Próg 5% licytacji (art. 952¹ § 2 KPC)</span>
-                      <b className="tabular-nums whitespace-nowrap text-right">
+                      <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                         {auctionBlock.applicable
                           ? formatPLN(auctionBlock.thresholdPln ?? 0)
                           : "nie dotyczy"}
@@ -1734,7 +1716,7 @@ export function LoanCalculator({
                     </div>
                     <div className="flex justify-between gap-3">
                       <span className="text-white/70">I licytacja — cena wywołania (3/4)</span>
-                      <b className="tabular-nums whitespace-nowrap text-right">
+                      <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                         {formatPLN(firstAuctionPln)}
                       </b>
                     </div>
@@ -1742,7 +1724,7 @@ export function LoanCalculator({
                       <span className="text-white/70">
                         Wartość „po komorniku" (2/3 — II licytacja / przejęcie)
                       </span>
-                      <b className="tabular-nums whitespace-nowrap text-right">
+                      <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                         {formatPLN(secondAuctionPln)}
                       </b>
                     </div>
@@ -1752,7 +1734,7 @@ export function LoanCalculator({
                         komorniku"
                       </span>
                       <b
-                        className={`tabular-nums whitespace-nowrap ${collateralShortfall ? "text-rose-300" : "text-emerald-300"}`}
+                        className={`shrink-0 tabular-nums whitespace-nowrap ${collateralShortfall ? "text-rose-300" : "text-emerald-300"}`}
                       >
                         {collateralCoveragePct.toFixed(0)}%
                       </b>
@@ -1849,7 +1831,7 @@ export function LoanCalculator({
 
       <FancyShell>
         <Card className={FANCY_CARD_CLS}>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-white">Harmonogram spłat</CardTitle>
             {investorGuidance && schedule.rows.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
@@ -1912,25 +1894,25 @@ export function LoanCalculator({
                         <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
                           <div className="flex justify-between gap-3">
                             <span className="text-muted-foreground">Do wypłaty na rękę</span>
-                            <b className="tabular-nums whitespace-nowrap text-right">
-                              {formatPLN(onHand)}
+                            <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
+                              {formatPLN(disbursedOnHand)}
                             </b>
                           </div>
                           <div className="flex justify-between gap-3">
                             <span className="text-muted-foreground">Rata miesięczna</span>
-                            <b className="tabular-nums whitespace-nowrap text-right">
+                            <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                               {formatPLN(schedule.cappedRata)}
                             </b>
                           </div>
                           <div className="flex justify-between gap-3">
                             <span className="text-muted-foreground">Okres</span>
-                            <b className="tabular-nums whitespace-nowrap text-right">
+                            <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                               {months} mies.
                             </b>
                           </div>
                           <div className="flex justify-between gap-3">
                             <span className="text-muted-foreground">Łączna kwota do spłaty</span>
-                            <b className="tabular-nums whitespace-nowrap text-right">
+                            <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
                               {formatPLN(totalToRepay)}
                             </b>
                           </div>

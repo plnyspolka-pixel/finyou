@@ -24,11 +24,7 @@ export const SCREENING_STATUS_LABELS: Record<AmlScreeningStatus, string> = {
 };
 
 export type AmlHitResolution =
-  | "false_positive"
-  | "confirmed_pep"
-  | "confirmed_sanction"
-  | "confirmed_criminal"
-  | "unresolved";
+  "false_positive" | "confirmed_pep" | "confirmed_sanction" | "confirmed_criminal" | "unresolved";
 
 export const HIT_RESOLUTION_LABELS: Record<AmlHitResolution, string> = {
   false_positive: "Fałszywe trafienie",
@@ -134,10 +130,10 @@ export const CASE_STATUS_LABELS: Record<AmlCaseStatus, string> = {
   no_basis_for_report: "Brak podstaw do zgłoszenia",
   suspicion_confirmed: "Podejrzenie potwierdzone",
   report_in_preparation: "Zgłoszenie w przygotowaniu",
-  ready_for_signature: "Gotowa do podpisu",
+  ready_for_signature: "Zgłoszenie gotowe do wysyłki",
   signed: "Podpisana",
   submitted: "Wysłana",
-  upo_received: "Otrzymano UPO",
+  upo_received: "Wysyłka potwierdzona (UPO / ZPO)",
   rejected: "Odrzucona",
   correction_required: "Wymaga korekty",
   closed: "Zamknięta",
@@ -194,45 +190,52 @@ export type AmlReportStatus =
 
 export const REPORT_STATUS_LABELS: Record<AmlReportStatus, string> = {
   draft: "W przygotowaniu",
-  complete: "Kompletne (XML/PDF wygenerowane)",
+  complete: "Gotowe do wysyłki (XML/PDF)",
   content_approved: "Treść zatwierdzona",
   awaiting_signature: "Oczekuje na podpis kwalifikowany",
   signed: "Podpisane",
   encrypted: "Zaszyfrowane",
   queued: "W kolejce wysyłki",
-  submitted: "Wysłane do GIIF",
+  submitted: "Wysłane — brak potwierdzenia",
   status_pending: "Oczekiwanie na status",
   accepted: "Przyjęte przez GIIF",
-  upo_received: "Otrzymano UPO",
+  upo_received: "Potwierdzone (UPO / ZPO)",
   rejected: "Odrzucone",
   correction_required: "Wymaga korekty",
   error: "Błąd",
 };
 
-export type AmlGiifConnectionStatus =
-  | "not_connected"
-  | "registration_in_progress"
-  | "csr_generated"
-  | "documents_signed"
-  | "submitted_to_giif"
-  | "certificate_issued"
-  | "mtls_verified"
-  | "active"
-  | "expired"
-  | "error";
+// ── Gotowość do wysyłki w SI*GIIF ───────────────────────────────────
+export const SI_GIIF_URL = "https://giif.mofnet.gov.pl";
+/** Rejestr kwalifikowanych dostawców usług zaufania (Narodowe Centrum Certyfikacji). */
+export const NCCERT_URL = "https://www.nccert.pl";
 
-export const GIIF_CONNECTION_LABELS: Record<AmlGiifConnectionStatus, string> = {
-  not_connected: "Brak połączenia z SI*GIIF",
-  registration_in_progress: "Rejestracja w toku",
-  csr_generated: "Wygenerowano klucz i CSR",
-  documents_signed: "Dokumenty podpisane",
-  submitted_to_giif: "Dokumenty przesłane do SI*GIIF",
-  certificate_issued: "Certyfikat wydany",
-  mtls_verified: "Połączenie mTLS przetestowane",
-  active: "Połączenie aktywne",
-  expired: "Certyfikat wygasł",
-  error: "Błąd",
-};
+/**
+ * Gotowość inwestora do wysyłki zgłoszeń przez SI*GIIF (wariant: każdy
+ * inwestor wysyła sam, własnym podpisem kwalifikowanym). Deklaracje
+ * inwestora trzymamy w istniejącej kolumnie aml_settings.giif_connection_status:
+ * not_connected → brak, documents_signed → ma podpis, active → ma podpis
+ * i instytucja jest zarejestrowana w SI*GIIF.
+ */
+export interface AmlGiifReadiness {
+  hasQualifiedSignature: boolean;
+  registeredInSiGiif: boolean;
+}
+
+export function readinessFromStatus(status: string | null | undefined): AmlGiifReadiness {
+  const registered = status === "active";
+  return {
+    hasQualifiedSignature: registered || status === "documents_signed",
+    registeredInSiGiif: registered,
+  };
+}
+
+export function statusFromReadiness(
+  r: AmlGiifReadiness,
+): "not_connected" | "documents_signed" | "active" {
+  if (r.hasQualifiedSignature && r.registeredInSiGiif) return "active";
+  return r.hasQualifiedSignature ? "documents_signed" : "not_connected";
+}
 
 // ── Osoby / instytucja ───────────────────────────────────────────────
 export interface AmlPerson {

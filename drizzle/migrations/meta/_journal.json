@@ -64,6 +64,97 @@
       "when": 1790619537746,
       "tag": "0008_wind_oplaty_umowne",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790665027677,
+      "tag": "0009_video_renditions",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790665033297,
+      "tag": "0010_studio_material_audience",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790697821438,
+      "tag": "0011_etap0_bezpieczenstwo_teaserow",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790697821464,
+      "tag": "0012_etap1_inwestor_bez_oplat",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790697821485,
+      "tag": "0013_etap2_ltv_60",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790697821505,
+      "tag": "0014_etap3_zlecenia_limity",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1790697821533,
+      "tag": "0015_etap4_statusy_wniosku",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790697821560,
+      "tag": "0016_etap5_pakiet_inwestor_v7",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790697821584,
+      "tag": "0017_etap5_zgody_v2",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790697821610,
+      "tag": "0018_etap5_akceptacje_zgod_i_boty",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790699841643,
+      "tag": "0019_pliki_klienta_naprawa_przeniesionych",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790699841673,
+      "tag": "0020_polityka_v2_cookies",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790699841703,
+      "tag": "0021_cookie_consent_log",
+      "breakpoints": true
     }
   ]
 }

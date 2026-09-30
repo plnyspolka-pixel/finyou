@@ -4,11 +4,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { getAmlOverview, getAmlSettings, type AmlOverview } from "@/lib/aml/aml-settings.functions";
-import { GIIF_CONNECTION_LABELS, type AmlGiifConnectionStatus } from "@/lib/aml/aml-types";
+import {
+  getAmlOverview,
+  getAmlSettings,
+  type AmlOverview,
+  type AmlSettingsView,
+} from "@/lib/aml/aml-settings.functions";
+import { GiifReadinessGuide } from "@/components/aml/giif-readiness";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/aml/")({
@@ -19,6 +23,7 @@ function AmlOverviewScreen() {
   const fetchOverview = useServerFn(getAmlOverview);
   const fetchSettings = useServerFn(getAmlSettings);
   const [overview, setOverview] = useState<AmlOverview | null>(null);
+  const [settings, setSettings] = useState<AmlSettingsView | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,7 +31,7 @@ function AmlOverviewScreen() {
       try {
         // Pierwsze wejście: ustawienia tworzą się automatycznie z profilu
         // inwestora (osoba odpowiedzialna, organizacja, NIP, adres).
-        await fetchSettings();
+        setSettings(await fetchSettings());
         setOverview(await fetchOverview());
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Nie udało się wczytać przeglądu AML");
@@ -62,13 +67,13 @@ function AmlOverviewScreen() {
         {
           label: "Ponadprogowe bez decyzji",
           value: overview.thresholdPending,
-          to: "/inwestor/aml/ponadprogowe",
+          to: "/inwestor/aml/transakcje",
           warn: overview.thresholdPending > 0,
         },
         {
           label: "Po terminie 7 dni",
           value: overview.thresholdOverdue,
-          to: "/inwestor/aml/ponadprogowe",
+          to: "/inwestor/aml/transakcje",
           warn: overview.thresholdOverdue > 0,
         },
         { label: "Otwarte sprawy AML", value: overview.openCases, to: "/inwestor/aml/sprawy" },
@@ -77,8 +82,17 @@ function AmlOverviewScreen() {
           value: overview.reportsInPreparation,
           to: "/inwestor/aml/zgloszenia",
         },
-        { label: "Wysłane do GIIF", value: overview.reportsSubmitted, to: "/inwestor/aml/upo" },
-        { label: "Otrzymane UPO", value: overview.upoReceived, to: "/inwestor/aml/upo" },
+        {
+          label: "Wysłane bez potwierdzenia",
+          value: overview.reportsSubmitted,
+          to: "/inwestor/aml/zgloszenia",
+          warn: overview.reportsSubmitted > 0,
+        },
+        {
+          label: "Potwierdzone (UPO / ZPO)",
+          value: overview.upoReceived,
+          to: "/inwestor/aml/zgloszenia",
+        },
       ]
     : [];
 
@@ -87,7 +101,7 @@ function AmlOverviewScreen() {
       <FancyPageHeader
         eyebrow="AML"
         title="Przeciwdziałanie praniu pieniędzy"
-        subtitle="Weryfikacja klientów, oceny ryzyka, rejestry transakcji i zgłoszenia GIIF. Cały moduł działa bez podpisu kwalifikowanego — podpis będzie potrzebny dopiero przy wysyłce zgłoszenia do SI*GIIF."
+        subtitle="Weryfikacja klientów, oceny ryzyka, rejestr transakcji i zgłoszenia GIIF. Podpis kwalifikowany jest potrzebny tylko do wysyłki przez SI*GIIF — awaryjnie zgłoszenie można wysłać papierowo."
       />
 
       {overview && !overview.profileGaps.ready && (
@@ -113,6 +127,16 @@ function AmlOverviewScreen() {
         </Card>
       )}
 
+      {settings && (
+        <GiifReadinessGuide
+          compactWhenReady
+          readiness={settings.giifReadiness}
+          institution={settings.institution}
+          responsiblePerson={settings.responsiblePerson}
+          onChange={(r) => setSettings({ ...settings, giifReadiness: r })}
+        />
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {tiles.map((t) => (
           <Link key={t.label + t.to} to={t.to}>
@@ -129,25 +153,6 @@ function AmlOverviewScreen() {
           </Link>
         ))}
       </div>
-
-      {overview && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Połączenie z SI*GIIF</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <Badge variant="outline">
-              {GIIF_CONNECTION_LABELS[overview.giifConnectionStatus as AmlGiifConnectionStatus] ??
-                overview.giifConnectionStatus}
-            </Badge>
-            <p>
-              Rejestracja w SI*GIIF i certyfikat komunikacyjny będą potrzebne dopiero przy wysyłce
-              pierwszego zgłoszenia — kreator uruchomi się wtedy automatycznie, bez utraty
-              przygotowanego zgłoszenia.
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

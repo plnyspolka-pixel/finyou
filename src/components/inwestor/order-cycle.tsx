@@ -1,12 +1,14 @@
 // Cykl Zlecenie–Projekt w panelu inwestora (Etap U2): teaser → Karta Leada
-// → Ujawnienie (rezerwacja 24 h + 12 h) → decyzja. Do tego internetowe
+// → Ujawnienie (rezerwacja assignment_hours + extension_hours z ustawień) → decyzja. Do tego internetowe
 // odstąpienie Konsumenta (Zał. 4) i przystąpienie spółki do NDA (Zał. 1 NDA).
 // § 15 ust. 7: żaden checkbox nie startuje zaznaczony.
+import { COMPANY_DATA } from "@/lib/company";
 import { useState } from "react";
+import { DEFAULT_ORDER_LIMITS, type OrderLimits } from "@/lib/investor-agreements/order-cycle-core";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Building2, Clock, Eye, FileSignature, Loader2, Undo2, Wallet } from "lucide-react";
+import { Building2, Clock, Eye, FileSignature, Loader2, Undo2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,8 +26,6 @@ import {
   submitConsumerWithdrawal,
   submitNdaAccession,
 } from "@/lib/investor-agreements/order-cycle.functions";
-import { TpayAccessCheckoutForm } from "@/components/access/TpayAccessCheckoutForm";
-import { formatGroszPln, type AccessProduct } from "@/lib/access/core";
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : "Wystąpił błąd";
@@ -61,7 +61,8 @@ export function OrderCycleSection() {
             <CardTitle className="text-base">
               Projekty w wykonaniu Twoich Zleceń{" "}
               <span className="text-sm font-normal text-muted-foreground">
-                (teaser → Karta Leada → Ujawnienie → rezerwacja 24 h)
+                (teaser → Karta Leada → Ujawnienie → rezerwacja {data.limits?.assignmentHours ?? 24}{" "}
+                h)
               </span>
             </CardTitle>
           </CardHeader>
@@ -71,9 +72,7 @@ export function OrderCycleSection() {
                 key={m.id}
                 match={m}
                 isConsumer={data.isConsumer}
-                tier={data.tier}
-                unlocked={data.unlockedMatchIds.includes(m.id)}
-                unlockProduct={data.unlockProduct}
+                limits={data.limits ?? DEFAULT_ORDER_LIMITS}
                 onDone={refresh}
               />
             ))}
@@ -122,21 +121,16 @@ function TeaserGrid({ teaser }: { teaser: any }) {
 function MatchCard({
   match,
   isConsumer,
-  tier,
-  unlocked,
-  unlockProduct,
+  limits,
   onDone,
 }: {
   match: any;
   isConsumer: boolean;
-  tier: "podstawowy" | "pro";
-  unlocked: boolean;
-  unlockProduct: AccessProduct | null;
+  limits: OrderLimits;
   onDone: () => void;
 }) {
-  // Pakiet Podstawowy kupuje każdą okazję osobno; PRO ma je w abonamencie.
-  const [buying, setBuying] = useState(false);
-  const needsUnlock = tier !== "pro" && !unlocked;
+  // Usługa dla Inwestora jest nieodpłatna (Umowa ramowa v7): Ujawnienie
+  // po akceptacji Karty Leada nie wymaga żadnej płatności.
   const accept = useServerFn(acceptKartaLeada);
   const disclose = useServerFn(requestDisclosure);
   const extend = useServerFn(extendReservation);
@@ -157,7 +151,9 @@ function MatchCard({
   const discloseMut = useMutation({
     mutationFn: () => disclose({ data: { matchId: match.id } }),
     onSuccess: () => {
-      toast.success("Dane Projektu odsłonięte — rezerwacja 24 h wystartowała");
+      toast.success(
+        `Dane Projektu odsłonięte — rezerwacja ${limits.assignmentHours} h wystartowała`,
+      );
       onDone();
     },
     onError: (e) => toast.error(errMsg(e)),
@@ -165,7 +161,7 @@ function MatchCard({
   const extendMut = useMutation({
     mutationFn: () => extend({ data: { matchId: match.id } }),
     onSuccess: () => {
-      toast.success("Rezerwacja przedłużona o 12 h");
+      toast.success(`Rezerwacja przedłużona o ${limits.extensionHours} h`);
       onDone();
     },
     onError: (e) => toast.error(errMsg(e)),
@@ -290,53 +286,7 @@ function MatchCard({
         </div>
       ) : null}
 
-      {match.status === "karta_leada" && needsUnlock ? (
-        <div className="space-y-3 border-t pt-3">
-          <div className="rounded-xl border border-amber-300 bg-amber-50/60 p-3 text-sm">
-            <p className="font-semibold text-amber-900">
-              Okazja na wyłączność —{" "}
-              {unlockProduct ? formatGroszPln(unlockProduct.amount_grosz) : "cena z cennika"} brutto
-            </p>
-            <p className="mt-1 text-xs text-amber-900/85">
-              W cenie: wyłączność na zdecydowanego klienta, raport o inwestycji, harmonogram
-              zaakceptowany przez pożyczkobiorcę oraz dane kontaktowe. W pakiecie PRO okazje są bez
-              opłat jednostkowych.
-            </p>
-          </div>
-          {!buying ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" disabled={!unlockProduct} onClick={() => setBuying(true)}>
-                <Wallet className="mr-2 h-4 w-4" /> Kup tę okazję
-              </Button>
-              <Button size="sm" variant="outline" asChild>
-                <Link to="/inwestor/abonament" search={{ product: "investor_pro_180d" }}>
-                  Przejdź na PRO
-                </Link>
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={declineMut.isPending}
-                onClick={() => declineMut.mutate()}
-              >
-                Rezygnuję
-              </Button>
-            </div>
-          ) : unlockProduct ? (
-            <div className="rounded-xl border p-3">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-medium">Płatność za okazję {match.project_ref}</span>
-                <Button size="sm" variant="ghost" onClick={() => setBuying(false)}>
-                  Anuluj
-                </Button>
-              </div>
-              <TpayAccessCheckoutForm product={unlockProduct} matchId={match.id} />
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {match.status === "karta_leada" && !needsUnlock ? (
+      {match.status === "karta_leada" ? (
         <div className="flex flex-wrap items-center gap-2 border-t pt-3">
           <Button size="sm" disabled={discloseMut.isPending} onClick={() => discloseMut.mutate()}>
             {discloseMut.isPending ? (
@@ -344,7 +294,7 @@ function MatchCard({
             ) : (
               <Eye className="mr-2 h-4 w-4" />
             )}
-            Odsłoń dane Projektu (start rezerwacji 24 h)
+            Odsłoń dane Projektu (start rezerwacji {limits.assignmentHours} h)
           </Button>
           {!match.transfer_card_approved_at ? (
             <span className="text-xs text-amber-700">
@@ -380,7 +330,7 @@ function MatchCard({
               disabled={extendMut.isPending}
               onClick={() => extendMut.mutate()}
             >
-              Przedłuż o 12 h
+              Przedłuż o {limits.extensionHours} h
             </Button>
           ) : null}
           <Button
@@ -397,7 +347,8 @@ function MatchCard({
   );
 }
 
-function WithdrawalCard({ data, onDone }: { data: any; onDone: () => void }) {
+/** Odstąpienie Konsumenta od Umowy ramowej — widoczne zawsze dla Konsumenta. */
+export function WithdrawalCard({ data, onDone }: { data: any; onDone: () => void }) {
   const submit = useServerFn(submitConsumerWithdrawal);
   const [open, setOpen] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -422,10 +373,42 @@ function WithdrawalCard({ data, onDone }: { data: any; onDone: () => void }) {
       </Card>
     );
   }
-  if (!data.withdrawalWindow?.open) return null;
+  if (!data.withdrawalWindow?.open) {
+    // Karta zostaje widoczna także poza terminem — Konsument musi wiedzieć,
+    // jaki jest stan jego prawa odstąpienia (Umowa ramowa v7, § 15).
+    return (
+      <Card id="odstapienie">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Undo2 className="h-4 w-4" /> Odstąpienie od Umowy ramowej (Konsument)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          {data.withdrawalWindow ? (
+            <p>
+              Termin na odstąpienie bez podania przyczyny upłynął{" "}
+              {new Date(data.withdrawalWindow.deadline).toLocaleString("pl-PL")}. Umowę możesz
+              wypowiedzieć na zasadach z § 16 Umowy ramowej.
+            </p>
+          ) : (
+            <p>
+              Po akceptacji Umowy ramowej masz 14 dni na odstąpienie od niej bez podania przyczyny
+              (wzór: Załącznik nr 4). Formularz pojawi się tutaj po akceptacji.
+            </p>
+          )}
+          <p>
+            Pytania:{" "}
+            <a href={`mailto:${COMPANY_DATA.email}`} className="text-accent underline">
+              {COMPANY_DATA.email}
+            </a>
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card>
+    <Card id="odstapienie">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Undo2 className="h-4 w-4" /> Odstąpienie od Umowy ramowej (Konsument)

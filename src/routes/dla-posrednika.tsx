@@ -141,7 +141,7 @@ const EARN = [
   { t: "Pozyskujesz klienta", d: "Z własnej sieci lub z kampanii wspieranych AI." },
   { t: "Wprowadzasz go do systemu", d: "Sprawa trafia do uporządkowanego procesu." },
   { t: "Prowadzisz sprawę w CRM", d: "Dokumenty, komunikacja i statusy w jednym miejscu." },
-  { t: "Sprawa trafia do inwestorów", d: "Finansujący analizują okazję." },
+  { t: "Sprawa trafia do inwestorów", d: "Inwestorzy analizują projekt." },
   { t: "Powstaje prowizja", d: "Po uruchomieniu finansowania naliczana jest prowizja." },
   {
     t: "Rozliczenie",
@@ -204,7 +204,7 @@ const FAQS = [
   },
   {
     q: "Czy Finance You daje inwestorów?",
-    a: "Tak. Uzyskujesz dostęp do bazy finansujących współpracujących z platformą.",
+    a: "Tak. Uzyskujesz dostęp do bazy inwestorów współpracujących z platformą.",
   },
   {
     q: "Czy mogę korzystać z kampanii AI?",

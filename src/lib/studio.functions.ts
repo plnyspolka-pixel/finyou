@@ -9,7 +9,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { StudioPromptKind } from "./studio-ai.server";
 import type { StudioPlatform } from "./studio-platforms";
 import { isCustomCaptionStyle, parseCaptionStyleId } from "./caption-style";
-import type { ScenePlanItem } from "./studio-scenes";
+import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL, type ScenePlanItem } from "./studio-scenes";
 
 async function assertAdmin(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -34,6 +34,8 @@ export type StudioStatus = {
   aiConfigured: boolean;
   /** Usługa wypalania napisów (własne style) — bez niej zostaje styl HeyGena. */
   captionBurnerConfigured: boolean;
+  /** Znaczek „AI" w rogu rolek (STUDIO_AI_BADGE); kładzie go usługa wypalania. */
+  aiBadgeEnabled?: boolean;
 };
 
 export const getStudioStatus = createServerFn({ method: "GET" })
@@ -157,6 +159,17 @@ export const retrySocialQueueItem = createServerFn({ method: "POST" })
     // TikTok odwrotnie: publish_id jest jednorazowy, więc czyścimy go razem
     // z tiktok_status (tick szuka wpisów z tiktok_status IS NULL). Tak samo X:
     // media_id wygasa, a tick X-a szuka wpisów z x_media_status IS NULL.
+    // Nieudana kompresja wideo (video_renditions) też dostaje nowy budżet
+    // prób — inaczej ponowienie od razu słałoby oryginał.
+    const { data: current } = await supabaseAdmin
+      .from("social_publish_queue")
+      .select("video_url, platform")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (current?.video_url) {
+      const { resetVideoRendition } = await import("./video-rendition.server");
+      await resetVideoRendition(current.video_url).catch(() => {});
+    }
     const { error } = await supabaseAdmin
       .from("social_publish_queue")
       .update({
@@ -171,6 +184,12 @@ export const retrySocialQueueItem = createServerFn({ method: "POST" })
         x_media_id: null,
         x_media_status: null,
         x_media_at: null,
+        // Kontener IG ma sens tylko przy wpisie Instagrama. Wpisy X przejęte
+        // kiedyś przez tor Meta niosą obcy ig_creation_id — gdyby został,
+        // ponowienie mogłoby opublikować ten kontener na Instagramie.
+        ...(current?.platform !== "instagram_reels"
+          ? { ig_creation_id: null, ig_container_at: null }
+          : {}),
       })
       .eq("id", data.id)
       .in("status", ["failed", "cancelled", "processing"]);
@@ -191,22 +210,24 @@ export const publishSocialQueueItemNow = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!row) throw new Error("Nie znaleziono wpisu w kolejce.");
 
+    // `preparing` = wideo jeszcze się kompresuje do profilu publikacji; wpis
+    // został w kolejce i tick opublikuje go, gdy plik będzie gotowy.
     if (row.platform === "tiktok") {
       const { processTiktokQueueItem } = await import("./tiktok.server");
       const result = await processTiktokQueueItem(data.id);
       if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
-      return { ok: true, processing: !!result.processing };
+      return { ok: true, processing: !!result.processing, preparing: !!result.preparing };
     }
     if (row.platform === "x") {
       const { processXQueueItem } = await import("./x.server");
       const result = await processXQueueItem(data.id);
       if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
-      return { ok: true, processing: !!result.processing };
+      return { ok: true, processing: !!result.processing, preparing: !!result.preparing };
     }
     const { processSocialQueueItem } = await import("./studio-publishing.server");
     const result = await processSocialQueueItem(data.id);
     if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
-    return { ok: true, processing: !!result.processing };
+    return { ok: true, processing: !!result.processing, preparing: !!result.preparing };
   });
 
 // Gotowe wideo do podstawienia jako źródło: joby Studia + Awatar FAQ.
@@ -271,7 +292,7 @@ export type StudioVideoJob = {
   caption_burn_attempts: number;
   /** Czy rolka renderuje się jako sklejka scen (awatar + przebitki). */
   dynamic_scenes: boolean;
-  /** Czy poszła stałą strukturą (ujęcie → wizual hook → przebitka → a-roll). */
+  /** Czy poszła stałą strukturą (ujęcie → przebitka → a-roll). */
   reel_structure: boolean;
   /** Rotacja domyślnych awatarów użyta przy tym jobie. */
   avatar_ids: string[];
@@ -285,6 +306,8 @@ export type StudioVideoJob = {
   auto_published_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Wpis w bibliotece materiałów (/admin/materialy), gdy rolka już tam trafiła. */
+  material?: { id: string; audience: string } | null;
 };
 
 export const listStudioVideoJobs = createServerFn({ method: "GET" })
@@ -298,7 +321,16 @@ export const listStudioVideoJobs = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
-    return (data ?? []) as StudioVideoJob[];
+    const jobs = (data ?? []) as StudioVideoJob[];
+    // Gotowe rolki lądują w bibliotece materiałów pod stałą ścieżką pliku.
+    const { findStudioMaterials } = await import("./studio-materials.server");
+    const materials = await findStudioMaterials(
+      jobs.filter((j) => j.status === "ready").map((j) => j.id),
+    );
+    return jobs.map((j) => {
+      const m = materials.get(j.id);
+      return { ...j, material: m ? { id: m.id, audience: m.audience } : null };
+    });
   });
 
 // Głosy ElevenLabs do wyboru w generatorze — pełna lista z konta przez
@@ -467,6 +499,12 @@ async function sanitizeAutoPublish(d: {
   };
 }
 
+/** Liczba twarzy w rolce z panelu: 1–MAX, a gdy brak — domyślne dwie. */
+function avatarsPerReel(v: number | undefined): number {
+  if (typeof v !== "number" || !Number.isFinite(v)) return AVATARS_PER_REEL;
+  return Math.min(MAX_AVATARS_PER_REEL, Math.max(1, Math.floor(v)));
+}
+
 // Krok 2: scenariusz → ElevenLabs TTS → HeyGen avatar. Zwraca id joba do pollingu.
 export const startStudioVideo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -481,7 +519,10 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       caption_style?: string;
       dynamic_scenes?: boolean;
       reel_structure?: boolean;
+      /** Pula twarzy z panelu (prowadzący + zestaw domyślnych). */
       avatar_ids?: string[];
+      /** Ile twarzy z puli w jednej rolce (domyślnie AVATARS_PER_REEL). */
+      avatars_per_reel?: number;
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
       tiktok_post_options?: unknown;
@@ -496,10 +537,14 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
     const voiceId = data.voice_id || FILIP_VOICE_ID;
     const autoPub = await sanitizeAutoPublish(data);
-    // Rotacja a-rolli: to, co przyszło z panelu, a gdy nic — stały zestaw
-    // domyślnych awatarów (ten sam, którym jedzie kolejka i cron).
-    const { resolveAvatarRotation } = await import("./studio-avatars.server");
-    const avatarIds = await resolveAvatarRotation(data.avatar_ids);
+    // Twarze rolki: prowadzący + partner z puli panelu (a gdy pusta — ze stałego
+    // zestawu domyślnych), dobrany rotacyjnie po ostatnich rolkach.
+    const { reelRotations } = await import("./studio-avatars.server");
+    const [avatarIds] = await reelRotations({
+      lead: data.avatar_id,
+      pool: data.avatar_ids,
+      count: avatarsPerReel(data.avatars_per_reel),
+    });
     const reelStructure = data.reel_structure === true;
 
     const { data: job, error: insErr } = await supabaseAdmin
@@ -579,7 +624,10 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       caption_style?: string;
       dynamic_scenes?: boolean;
       reel_structure?: boolean;
+      /** Pula twarzy z panelu (prowadzący + zestaw domyślnych). */
       avatar_ids?: string[];
+      /** Ile twarzy z puli w jednej rolce (domyślnie AVATARS_PER_REEL). */
+      avatars_per_reel?: number;
       auto_publish_platforms?: StudioPlatform[];
       publish_privacy?: string;
       tiktok_post_options?: unknown;
@@ -594,8 +642,6 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
     const autoPub = await sanitizeAutoPublish(data);
-    const { resolveAvatarRotation } = await import("./studio-avatars.server");
-    const avatarIds = await resolveAvatarRotation(data.avatar_ids);
     const reelStructure = data.reel_structure === true;
 
     // Pomiń pytania, które mają już nie-failowy job (ochrona przed dublami).
@@ -630,7 +676,8 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
         caption_style: parseCaptionStyleId(data.caption_style),
         dynamic_scenes: data.dynamic_scenes === true || reelStructure,
         reel_structure: reelStructure,
-        avatar_ids: avatarIds,
+        // Uzupełniane niżej — każda rolka serii dostaje kolejnego partnera.
+        avatar_ids: [] as string[],
         auto_publish_platforms: autoPub.auto_publish_platforms,
         publish_privacy: autoPub.publish_privacy,
         tiktok_post_options: autoPub.tiktok_post_options as never,
@@ -639,6 +686,18 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       });
     }
     if (rows.length) {
+      // Rotacja po całej serii: partnerzy obchodzą zestaw po kolei, zamiast
+      // 25 razy tej samej pary.
+      const { reelRotations } = await import("./studio-avatars.server");
+      const rotations = await reelRotations({
+        lead: data.avatar_id,
+        pool: data.avatar_ids,
+        count: avatarsPerReel(data.avatars_per_reel),
+        n: rows.length,
+      });
+      rows.forEach((row, i) => {
+        row.avatar_ids = rotations[i] ?? [data.avatar_id];
+      });
       const { error } = await supabaseAdmin.from("studio_video_jobs").insert(rows);
       if (error) throw new Error(error.message);
     }
@@ -916,7 +975,7 @@ export const saveStudioDefaultAvatars = createServerFn({ method: "POST" })
 
 export type StudioBrollAsset = {
   id: string;
-  kind: "broll" | "hook";
+  kind: "broll";
   title: string;
   tags: string[];
   media_url: string;
@@ -932,21 +991,21 @@ export type StudioBrollAsset = {
 
 export const listStudioBroll = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d?: { kind?: "broll" | "hook"; search?: string }) => d ?? {})
+  .inputValidator((d?: { search?: string }) => d ?? {})
   .handler(async ({ data, context }): Promise<StudioBrollAsset[]> => {
     await assertAdmin(context.userId);
     const { listBrollAssets } = await import("./studio-broll.server");
     const items = await listBrollAssets({
-      kind: data.kind,
       search: data.search,
       includeInactive: true,
+      limit: 2000,
     });
     return items.map(({ storage_path: _ignored, ...rest }) => rest);
   });
 
 export const addStudioBroll = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { url: string; kind: "broll" | "hook"; title?: string; tags?: string }) => d)
+  .inputValidator((d: { url: string; title?: string; tags?: string }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { addBrollFromUrl } = await import("./studio-broll.server");
@@ -956,7 +1015,6 @@ export const addStudioBroll = createServerFn({ method: "POST" })
       .filter(Boolean);
     const asset = await addBrollFromUrl({
       url: data.url,
-      kind: data.kind === "hook" ? "hook" : "broll",
       title: data.title,
       tags,
       source: "url",
@@ -986,14 +1044,15 @@ export const deleteStudioBroll = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// Jedno kliknięcie = startowy bank ze stocku (Pexels, gdy jest PEXELS_API_KEY,
-// inaczej biblioteka HeyGena). Idempotentne — frazy już pobrane są pomijane.
+// Startowy bank ze stocku (Pexels, gdy jest PEXELS_API_KEY, inaczej biblioteka
+// HeyGena), po kilka ujęć na frazę. Jedno wywołanie = jedna porcja fraz;
+// panel woła w pętli, dopóki `remaining` > 0. Idempotentne — frazy już
+// pobrane są pomijane.
 export const seedStudioBroll = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d?: { kinds?: ("broll" | "hook")[] }) => d ?? {})
-  .handler(async ({ data, context }) => {
+  .inputValidator((d?: Record<string, never>) => d ?? {})
+  .handler(async ({ context }) => {
     await assertAdmin(context.userId);
     const { seedBrollBank } = await import("./studio-broll.server");
-    const kinds = data.kinds?.length ? data.kinds : (["broll", "hook"] as const).slice();
-    return await seedBrollBank({ kinds: [...kinds], userId: context.userId });
+    return await seedBrollBank({ userId: context.userId });
   });

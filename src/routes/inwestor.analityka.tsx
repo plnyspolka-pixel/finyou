@@ -1,10 +1,10 @@
 // Moduł „Analityka" panelu inwestora: pipeline analityczny (pobranie KW →
 // właściciele → analiza KW → analiza ryzyka) — ten sam, którym posługuje się
-// zespół Finance You w panelu admina — dla okazji i wniosków inwestora.
+// zespół Finance You w panelu admina — dla Projektów i wniosków inwestora.
 // Lewa kolumna: lista z postępem czterech kroków; prawa: szczegóły wybranego
 // wniosku krok po kroku oraz uruchomienie przebiegu na żądanie.
 // Zakres: wyłącznie wnioski wybrane dla inwestora (nie cała pula) — i tylko
-// PO złożeniu Zlecenia poszukiwania okazji: bez Zlecenia inwestor nie widzi
+// PO złożeniu Zlecenia poszukiwania Projektów: bez Zlecenia inwestor nie widzi
 // tu żadnych ofert (bramka po stronie serwera, tu wyłącznie komunikat).
 // Druga zakładka to szybka analiza KW własnego wniosku spoza Finance You.
 import { useMemo, useState, type ReactNode } from "react";
@@ -161,7 +161,7 @@ function AnalitykaPage() {
   );
 }
 
-/** Zakładka „Wnioski wybrane dla Ciebie": okazje, oferty, przekazania. */
+/** Zakładka „Wnioski wybrane dla Ciebie": Projekty, oferty, przekazania. */
 function SelectedApplications({ tabs }: { tabs: ReactNode }) {
   const { app } = useSearch({ from: "/inwestor/analityka" });
   const navigate = useNavigate();
@@ -237,7 +237,7 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
       <FancyPageHeader
         eyebrow="Analityka"
         title="Pipeline analityczny"
-        subtitle="Cztery kroki, które przechodzi każda okazja u zespołu Finance You: pobranie księgi wieczystej, właściciele w rejestrach, analiza KW silnikiem reguł i analiza ryzyka z prognozą wartości. Okazje i propozycje pojawiają się tu wyłącznie w wykonaniu Twojego Zlecenia poszukiwania okazji — bez złożonego Zlecenia niczego nie szukamy i nie pokazujemy."
+        subtitle="Cztery kroki, które przechodzi każdy Projekt u zespołu Finance You: pobranie księgi wieczystej, właściciele w rejestrach, analiza KW silnikiem reguł i analiza ryzyka z prognozą wartości. Projekty i propozycje pojawiają się tu wyłącznie w wykonaniu Twojego Zlecenia poszukiwania Projektów — bez złożonego Zlecenia niczego nie szukamy i nie pokazujemy."
         actions={
           <Button
             size="sm"
@@ -285,18 +285,18 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
             <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary/10">
               <FileSignature className="h-7 w-7 text-primary" />
             </div>
-            <CardTitle>Najpierw złóż Zlecenie poszukiwania okazji</CardTitle>
+            <CardTitle>Najpierw złóż Zlecenie poszukiwania Projektów</CardTitle>
             <CardDescription>
               Bez złożonego Zlecenia nie widzisz tu żadnych ofert ani wniosków — także tych, do
               których składałeś ofertę, ani przekazanych przez zespół. Dopiero na podstawie Zlecenia
-              szukamy dla Ciebie okazji i przedstawiamy propozycje. Zlecenie składasz w module
-              „Okazje inwestycyjne” po przejściu pipeline'u (dane pożyczkodawcy, rachunek, KYC,
+              szukamy dla Ciebie Projektów i przedstawiamy propozycje. Zlecenie składasz w module
+              „Zlecenia i Projekty” po przejściu pipeline'u (dane inwestora, rachunek, KYC,
               screening i komplet umów).
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Button asChild>
-              <Link to="/inwestor/umowy">Złóż Zlecenie w Okazjach inwestycyjnych</Link>
+              <Link to="/inwestor/umowy">Złóż Zlecenie</Link>
             </Button>
           </CardContent>
         </Card>
@@ -308,15 +308,15 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
             </div>
             <CardTitle>Brak wniosków do analizy</CardTitle>
             <CardDescription>
-              Analityka obejmuje tylko wnioski wybrane dla Ciebie: okazje ujawnione w wykonaniu
+              Analityka obejmuje tylko wnioski wybrane dla Ciebie: Projekty ujawnione w wykonaniu
               Twoich Zleceń, wnioski, do których złożyłeś ofertę, oraz wnioski przekazane Ci przez
-              zespół Finance You. Złóż Zlecenie poszukiwania okazji — analizy pojawią się tu
+              zespół Finance You. Złóż Zlecenie poszukiwania Projektów — analizy pojawią się tu
               automatycznie.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Button asChild>
-              <Link to="/inwestor/umowy">Przejdź do okazji inwestycyjnych</Link>
+              <Link to="/inwestor/umowy">Przejdź do Zleceń i Projektów</Link>
             </Button>
           </CardContent>
         </Card>
@@ -324,7 +324,7 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
         <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
           <Card className="h-fit lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
             <CardHeader className="space-y-3 pb-3">
-              <CardTitle className="text-base">Okazje i wnioski</CardTitle>
+              <CardTitle className="text-base">Projekty i wnioski</CardTitle>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -348,7 +348,7 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
                 {(
                   [
                     ["all", "Wszystkie"],
-                    ["okazja", "Okazje"],
+                    ["okazja", "Projekty"],
                     ["oferta", "Oferty"],
                     ["przekazany", "Przekazane"],
                   ] as const
@@ -499,7 +499,7 @@ function ListRow({
           )}
         >
           {item.source === "okazja" && item.projectRef
-            ? `Okazja ${item.projectRef}`
+            ? `Projekt ${item.projectRef}`
             : ANALYTICS_SOURCE_LABELS[item.source]}
         </span>
         <span className="flex items-center gap-2 text-[11px] text-muted-foreground">

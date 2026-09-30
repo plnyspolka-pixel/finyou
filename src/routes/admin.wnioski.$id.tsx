@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -198,24 +199,31 @@ export function WniosekDetail({
     void load();
   };
 
-  const setDecision = async (
-    decision: "szukamy_inwestora" | "zamkniete" | "kompletowanie_danych",
-  ) => {
-    const legacyDecision =
-      decision === "szukamy_inwestora"
-        ? "rokuje"
-        : decision === "zamkniete"
-          ? "nie_rokuje"
-          : "do_analizy";
+  // Decyzje operatora (kliknięcie) — jedyna droga do statusów odrzucających.
+  // Bramka B2B: „rokuje" wysyła do inwestorów tylko z oświadczeniem o celu
+  // gospodarczym (trigger loan_status_guard egzekwuje to również w bazie).
+  const setDecision = async (decision: "rokuje" | "nie_rokuje" | "do_analizy") => {
+    if (decision === "rokuje" && !app?.business_purpose_declared) {
+      toast.error("Brak oświadczenia o celu gospodarczym", {
+        description:
+          "Zaznacz „Klient oświadczył cel gospodarczy (B2B)” w kwalifikacji — bez tego wniosek nie może trafić do inwestorów.",
+      });
+      return;
+    }
+    const nextStatus = decision === "rokuje" ? "wyslany_do_inwestorow" : decision;
     const { error } = await supabase
       .from("loan_applications")
       .update({
-        status: decision,
-        admin_decision: legacyDecision,
+        status: nextStatus,
+        admin_decision: decision,
         decision_reason: reason || null,
         decision_at: new Date().toISOString(),
-        available_to_investors: decision === "szukamy_inwestora",
-      })
+        available_to_investors: decision === "rokuje",
+        // propozycja automatu jest rozstrzygnięta decyzją operatora
+        suggested_status: null,
+        suggested_status_reason: null,
+        suggested_at: null,
+      } as any)
       .eq("id", id);
     if (error) {
       toast.error("Błąd", { description: error.message });
@@ -836,6 +844,69 @@ export function WniosekDetail({
               <CardTitle>Kwalifikacja wniosku</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {app.suggested_status ? (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
+                  <p className="font-semibold text-amber-900">
+                    Propozycja automatu:{" "}
+                    {loanStatusLabels[app.suggested_status] ?? app.suggested_status}
+                  </p>
+                  <p className="mt-1 text-xs text-amber-900/85">
+                    {app.suggested_status_reason ?? "bez uzasadnienia"}
+                    {app.suggested_by ? ` · źródło: ${app.suggested_by}` : ""}
+                    {app.suggested_at
+                      ? ` · ${new Date(app.suggested_at).toLocaleString("pl-PL")}`
+                      : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-amber-900/85">
+                    Automat nie zmienia statusu na odrzucający — decyzję podejmuje operator
+                    przyciskami poniżej albo odrzuca propozycję.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        const { error } = await supabase
+                          .from("loan_applications")
+                          .update({
+                            suggested_status: null,
+                            suggested_status_reason: null,
+                            suggested_at: null,
+                          } as any)
+                          .eq("id", id);
+                        if (error) toast.error("Błąd", { description: error.message });
+                        else {
+                          toast.success("Propozycja odrzucona");
+                          void load();
+                        }
+                      }}
+                    >
+                      Odrzuć propozycję
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+              <label className="flex items-start gap-2 rounded-xl border p-3 text-sm">
+                <Checkbox
+                  checked={Boolean(app.business_purpose_declared)}
+                  onCheckedChange={async (v) => {
+                    const declared = v === true;
+                    const { error } = await supabase
+                      .from("loan_applications")
+                      .update({
+                        business_purpose_declared: declared,
+                        business_purpose_declared_at: declared ? new Date().toISOString() : null,
+                      } as any)
+                      .eq("id", id);
+                    if (error) toast.error("Błąd", { description: error.message });
+                    else void load();
+                  }}
+                />
+                <span>
+                  Klient oświadczył cel gospodarczy (B2B) — finansowanie na cel związany z
+                  działalnością gospodarczą. Bez oświadczenia wniosek nie trafi do inwestorów.
+                </span>
+              </label>
               <Label>Uzasadnienie (opcjonalne)</Label>
               <Textarea
                 value={reason}
@@ -844,19 +915,19 @@ export function WniosekDetail({
               />
               <div className="flex gap-2 flex-wrap">
                 <Button
-                  onClick={() => setDecision("szukamy_inwestora")}
+                  onClick={() => setDecision("rokuje")}
                   className="bg-emerald-600 hover:bg-emerald-600/90"
                 >
                   <ThumbsUp className="mr-2 h-4 w-4" />
-                  Rokuje → do inwestorów
+                  Rokuje → wyślij do inwestorów
                 </Button>
-                <Button onClick={() => setDecision("zamkniete")} variant="destructive">
+                <Button onClick={() => setDecision("nie_rokuje")} variant="destructive">
                   <ThumbsDown className="mr-2 h-4 w-4" />
-                  Nie rokuje → zamknij
+                  Nie rokuje (decyzja operatora)
                 </Button>
-                <Button onClick={() => setDecision("kompletowanie_danych")} variant="outline">
+                <Button onClick={() => setDecision("do_analizy")} variant="outline">
                   <Search className="mr-2 h-4 w-4" />
-                  Wróć do kompletowania
+                  Wróć do analizy
                 </Button>
               </div>
               {app.decision_reason && (

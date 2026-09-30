@@ -86,6 +86,8 @@ export function EmbedApplicationForm() {
   const [kwNumber, setKwNumber] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [consent, setConsent] = useState(false);
+  // Bramka B2B: wymagane oświadczenie o celu gospodarczym.
+  const [businessPurpose, setBusinessPurpose] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -179,7 +181,7 @@ export function EmbedApplicationForm() {
       case "photos":
         return allPhotosReady;
       case "consent":
-        return consent && allPhotosReady;
+        return consent && businessPurpose && allPhotosReady;
       default:
         return false;
     }
@@ -223,6 +225,7 @@ export function EmbedApplicationForm() {
           preferred_period_months: months,
           property_type: secType,
           land_register_number: kwNumber.trim(),
+          business_purpose_declared: businessPurpose,
           photos: photoPayload,
           source: "embed_wniosek",
         },
@@ -563,6 +566,17 @@ export function EmbedApplicationForm() {
                   <span>
                     Akceptuję politykę prywatności i regulamin serwisu Finance You oraz zgadzam się
                     na kontakt w sprawie mojego wniosku.
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-white/25 bg-white/10 p-3 text-xs text-white backdrop-blur-sm">
+                  <Checkbox
+                    checked={businessPurpose}
+                    onCheckedChange={(v) => setBusinessPurpose(v === true)}
+                    className="mt-0.5 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground"
+                  />
+                  <span>
+                    Finansowanie przeznaczam na cel związany z działalnością gospodarczą (nie na
+                    cele konsumpcyjne ani prywatne potrzeby mieszkaniowe).
                   </span>
                 </label>
               </div>

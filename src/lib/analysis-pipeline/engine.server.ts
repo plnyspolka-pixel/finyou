@@ -39,12 +39,13 @@ function freshSteps(): RunSteps {
 
 /** Statusy wniosku, w których pipeline ma sens. */
 const CANDIDATE_STATUSES = new Set([
-  "brak_kwoty",
-  "brak_kw",
-  "brak_zdjec_dokumentow",
-  "kontakt",
-  "kompletowanie_danych",
-  "szukamy_inwestora",
+  "braki_w_dokumentach",
+  "do_kontaktu",
+  "w_follow_upie",
+  "wniosek_kompletny",
+  "do_analizy",
+  "rokuje",
+  "wyslany_do_inwestorow",
 ]);
 
 export interface PipelineSyncResult {

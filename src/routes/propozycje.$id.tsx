@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,8 +39,10 @@ type ScheduleRow = {
 
 function PropozycjaDetail() {
   const { id } = Route.useParams();
+  const { session, loading: authLoading } = useAuth();
   const q = useQuery({
-    queryKey: ["loan-proposal", id],
+    queryKey: ["loan-proposal", id, session?.user?.id ?? null],
+    enabled: !!session,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_public_loan_proposal", { _id: id });
       if (error) throw error;
@@ -57,9 +60,10 @@ function PropozycjaDetail() {
           <ArrowLeft className="h-4 w-4" /> Wszystkie propozycje
         </Link>
 
+        {!authLoading && !session && <LoginRequiredNotice />}
         {q.isLoading && <p className="text-sm text-muted-foreground">Wczytuję...</p>}
         {q.error && <p className="text-sm text-destructive">Błąd: {(q.error as Error).message}</p>}
-        {q.data === null && (
+        {session && q.data === null && (
           <p className="text-sm text-muted-foreground">
             Propozycja nie istnieje lub nie jest publiczna.
           </p>
@@ -173,5 +177,21 @@ function PropozycjaDetail() {
         )}
       </div>
     </div>
+  );
+}
+
+function LoginRequiredNotice() {
+  return (
+    <Card>
+      <CardContent className="space-y-2 py-8 text-center text-sm text-muted-foreground">
+        <p className="font-medium text-foreground">
+          Propozycje pożyczek są dostępne po zalogowaniu.
+        </p>
+        <p>Zaloguj się jako inwestor, aby zobaczyć parametry, koszty i harmonogram spłat.</p>
+        <Link to="/logowanie" className="text-primary underline">
+          Zaloguj się
+        </Link>
+      </CardContent>
+    </Card>
   );
 }

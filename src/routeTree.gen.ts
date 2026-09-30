@@ -18,6 +18,7 @@ import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as RaportLokalizacjeRouteImport } from './routes/raport-lokalizacje'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
+import { Route as PolitykaCookiesRouteImport } from './routes/polityka-cookies'
 import { Route as OperatorRejestracjaRouteImport } from './routes/operator-rejestracja'
 import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as OfertyRouteImport } from './routes/oferty'
@@ -90,6 +91,7 @@ import { Route as InwestorProjektyRouteImport } from './routes/inwestor.projekty
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorPlatnosciRouteImport } from './routes/inwestor.platnosci'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
+import { Route as InwestorOdstapienieRouteImport } from './routes/inwestor.odstapienie'
 import { Route as InwestorKreatorUmowyRouteImport } from './routes/inwestor.kreator-umowy'
 import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
@@ -184,11 +186,9 @@ import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umow
 import { Route as InwestorProjektyPropozycjeRouteImport } from './routes/inwestor.projekty.propozycje'
 import { Route as InwestorAmlZgloszeniaRouteImport } from './routes/inwestor.aml.zgloszenia'
 import { Route as InwestorAmlUstawieniaRouteImport } from './routes/inwestor.aml.ustawienia'
-import { Route as InwestorAmlUpoRouteImport } from './routes/inwestor.aml.upo'
 import { Route as InwestorAmlTransakcjeRouteImport } from './routes/inwestor.aml.transakcje'
 import { Route as InwestorAmlSprawyRouteImport } from './routes/inwestor.aml.sprawy'
 import { Route as InwestorAmlRyzykoRouteImport } from './routes/inwestor.aml.ryzyko'
-import { Route as InwestorAmlPonadprogoweRouteImport } from './routes/inwestor.aml.ponadprogowe'
 import { Route as InwestorAmlKlienciRouteImport } from './routes/inwestor.aml.klienci'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
 import { Route as ApiXCallbackRouteImport } from './routes/api/x/callback'
@@ -324,6 +324,11 @@ const PosrednikRoute = PosrednikRouteImport.update({
 const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
   id: '/polityka-prywatnosci',
   path: '/polityka-prywatnosci',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PolitykaCookiesRoute = PolitykaCookiesRouteImport.update({
+  id: '/polityka-cookies',
+  path: '/polityka-cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OperatorRejestracjaRoute = OperatorRejestracjaRouteImport.update({
@@ -685,6 +690,11 @@ const InwestorPlatnosciRoute = InwestorPlatnosciRouteImport.update({
 const InwestorOfertyRoute = InwestorOfertyRouteImport.update({
   id: '/oferty',
   path: '/oferty',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorOdstapienieRoute = InwestorOdstapienieRouteImport.update({
+  id: '/odstapienie',
+  path: '/odstapienie',
   getParentRoute: () => InwestorRoute,
 } as any)
 const InwestorKreatorUmowyRoute = InwestorKreatorUmowyRouteImport.update({
@@ -1166,11 +1176,6 @@ const InwestorAmlUstawieniaRoute = InwestorAmlUstawieniaRouteImport.update({
   path: '/ustawienia',
   getParentRoute: () => InwestorAmlRoute,
 } as any)
-const InwestorAmlUpoRoute = InwestorAmlUpoRouteImport.update({
-  id: '/upo',
-  path: '/upo',
-  getParentRoute: () => InwestorAmlRoute,
-} as any)
 const InwestorAmlTransakcjeRoute = InwestorAmlTransakcjeRouteImport.update({
   id: '/transakcje',
   path: '/transakcje',
@@ -1184,11 +1189,6 @@ const InwestorAmlSprawyRoute = InwestorAmlSprawyRouteImport.update({
 const InwestorAmlRyzykoRoute = InwestorAmlRyzykoRouteImport.update({
   id: '/ryzyko',
   path: '/ryzyko',
-  getParentRoute: () => InwestorAmlRoute,
-} as any)
-const InwestorAmlPonadprogoweRoute = InwestorAmlPonadprogoweRouteImport.update({
-  id: '/ponadprogowe',
-  path: '/ponadprogowe',
   getParentRoute: () => InwestorAmlRoute,
 } as any)
 const InwestorAmlKlienciRoute = InwestorAmlKlienciRouteImport.update({
@@ -1728,6 +1728,7 @@ export interface FileRoutesByFullPath {
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
@@ -1810,6 +1811,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
+  '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
@@ -1911,11 +1913,9 @@ export interface FileRoutesByFullPath {
   '/api/x/callback': typeof ApiXCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
-  '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
   '/inwestor/aml/ryzyko': typeof InwestorAmlRyzykoRoute
   '/inwestor/aml/sprawy': typeof InwestorAmlSprawyRoute
   '/inwestor/aml/transakcje': typeof InwestorAmlTransakcjeRoute
-  '/inwestor/aml/upo': typeof InwestorAmlUpoRoute
   '/inwestor/aml/ustawienia': typeof InwestorAmlUstawieniaRoute
   '/inwestor/aml/zgloszenia': typeof InwestorAmlZgloszeniaRoute
   '/inwestor/projekty/propozycje': typeof InwestorProjektyPropozycjeRoute
@@ -1997,6 +1997,7 @@ export interface FileRoutesByTo {
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
@@ -2077,6 +2078,7 @@ export interface FileRoutesByTo {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
+  '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
@@ -2174,11 +2176,9 @@ export interface FileRoutesByTo {
   '/api/x/callback': typeof ApiXCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
-  '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
   '/inwestor/aml/ryzyko': typeof InwestorAmlRyzykoRoute
   '/inwestor/aml/sprawy': typeof InwestorAmlSprawyRoute
   '/inwestor/aml/transakcje': typeof InwestorAmlTransakcjeRoute
-  '/inwestor/aml/upo': typeof InwestorAmlUpoRoute
   '/inwestor/aml/ustawienia': typeof InwestorAmlUstawieniaRoute
   '/inwestor/aml/zgloszenia': typeof InwestorAmlZgloszeniaRoute
   '/inwestor/projekty/propozycje': typeof InwestorProjektyPropozycjeRoute
@@ -2265,6 +2265,7 @@ export interface FileRoutesById {
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
@@ -2347,6 +2348,7 @@ export interface FileRoutesById {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
+  '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
@@ -2448,11 +2450,9 @@ export interface FileRoutesById {
   '/api/x/callback': typeof ApiXCallbackRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
-  '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
   '/inwestor/aml/ryzyko': typeof InwestorAmlRyzykoRoute
   '/inwestor/aml/sprawy': typeof InwestorAmlSprawyRoute
   '/inwestor/aml/transakcje': typeof InwestorAmlTransakcjeRoute
-  '/inwestor/aml/upo': typeof InwestorAmlUpoRoute
   '/inwestor/aml/ustawienia': typeof InwestorAmlUstawieniaRoute
   '/inwestor/aml/zgloszenia': typeof InwestorAmlZgloszeniaRoute
   '/inwestor/projekty/propozycje': typeof InwestorProjektyPropozycjeRoute
@@ -2540,6 +2540,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
+    | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/raport-lokalizacje'
@@ -2622,6 +2623,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
+    | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
@@ -2723,11 +2725,9 @@ export interface FileRouteTypes {
     | '/api/x/callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
-    | '/inwestor/aml/ponadprogowe'
     | '/inwestor/aml/ryzyko'
     | '/inwestor/aml/sprawy'
     | '/inwestor/aml/transakcje'
-    | '/inwestor/aml/upo'
     | '/inwestor/aml/ustawienia'
     | '/inwestor/aml/zgloszenia'
     | '/inwestor/projekty/propozycje'
@@ -2809,6 +2809,7 @@ export interface FileRouteTypes {
     | '/nowe-haslo'
     | '/oferty'
     | '/operator-rejestracja'
+    | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/raport-lokalizacje'
     | '/regulamin'
@@ -2889,6 +2890,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
+    | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
@@ -2986,11 +2988,9 @@ export interface FileRouteTypes {
     | '/api/x/callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
-    | '/inwestor/aml/ponadprogowe'
     | '/inwestor/aml/ryzyko'
     | '/inwestor/aml/sprawy'
     | '/inwestor/aml/transakcje'
-    | '/inwestor/aml/upo'
     | '/inwestor/aml/ustawienia'
     | '/inwestor/aml/zgloszenia'
     | '/inwestor/projekty/propozycje'
@@ -3076,6 +3076,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
+    | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/raport-lokalizacje'
@@ -3158,6 +3159,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
+    | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
@@ -3259,11 +3261,9 @@ export interface FileRouteTypes {
     | '/api/x/callback'
     | '/embed/l/$slug'
     | '/inwestor/aml/klienci'
-    | '/inwestor/aml/ponadprogowe'
     | '/inwestor/aml/ryzyko'
     | '/inwestor/aml/sprawy'
     | '/inwestor/aml/transakcje'
-    | '/inwestor/aml/upo'
     | '/inwestor/aml/ustawienia'
     | '/inwestor/aml/zgloszenia'
     | '/inwestor/projekty/propozycje'
@@ -3350,6 +3350,7 @@ export interface RootRouteChildren {
   OfertyRoute: typeof OfertyRoute
   OperatorRoute: typeof OperatorRouteWithChildren
   OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
+  PolitykaCookiesRoute: typeof PolitykaCookiesRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
   RaportLokalizacjeRoute: typeof RaportLokalizacjeRoute
@@ -3512,6 +3513,13 @@ declare module '@tanstack/react-router' {
       path: '/polityka-prywatnosci'
       fullPath: '/polityka-prywatnosci'
       preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/polityka-cookies': {
+      id: '/polityka-cookies'
+      path: '/polityka-cookies'
+      fullPath: '/polityka-cookies'
+      preLoaderRoute: typeof PolitykaCookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/operator-rejestracja': {
@@ -4016,6 +4024,13 @@ declare module '@tanstack/react-router' {
       path: '/oferty'
       fullPath: '/inwestor/oferty'
       preLoaderRoute: typeof InwestorOfertyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/odstapienie': {
+      id: '/inwestor/odstapienie'
+      path: '/odstapienie'
+      fullPath: '/inwestor/odstapienie'
+      preLoaderRoute: typeof InwestorOdstapienieRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/inwestor/kreator-umowy': {
@@ -4676,13 +4691,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorAmlUstawieniaRouteImport
       parentRoute: typeof InwestorAmlRoute
     }
-    '/inwestor/aml/upo': {
-      id: '/inwestor/aml/upo'
-      path: '/upo'
-      fullPath: '/inwestor/aml/upo'
-      preLoaderRoute: typeof InwestorAmlUpoRouteImport
-      parentRoute: typeof InwestorAmlRoute
-    }
     '/inwestor/aml/transakcje': {
       id: '/inwestor/aml/transakcje'
       path: '/transakcje'
@@ -4702,13 +4710,6 @@ declare module '@tanstack/react-router' {
       path: '/ryzyko'
       fullPath: '/inwestor/aml/ryzyko'
       preLoaderRoute: typeof InwestorAmlRyzykoRouteImport
-      parentRoute: typeof InwestorAmlRoute
-    }
-    '/inwestor/aml/ponadprogowe': {
-      id: '/inwestor/aml/ponadprogowe'
-      path: '/ponadprogowe'
-      fullPath: '/inwestor/aml/ponadprogowe'
-      preLoaderRoute: typeof InwestorAmlPonadprogoweRouteImport
       parentRoute: typeof InwestorAmlRoute
     }
     '/inwestor/aml/klienci': {
@@ -5549,11 +5550,9 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface InwestorAmlRouteChildren {
   InwestorAmlKlienciRoute: typeof InwestorAmlKlienciRoute
-  InwestorAmlPonadprogoweRoute: typeof InwestorAmlPonadprogoweRoute
   InwestorAmlRyzykoRoute: typeof InwestorAmlRyzykoRoute
   InwestorAmlSprawyRoute: typeof InwestorAmlSprawyRoute
   InwestorAmlTransakcjeRoute: typeof InwestorAmlTransakcjeRoute
-  InwestorAmlUpoRoute: typeof InwestorAmlUpoRoute
   InwestorAmlUstawieniaRoute: typeof InwestorAmlUstawieniaRoute
   InwestorAmlZgloszeniaRoute: typeof InwestorAmlZgloszeniaRoute
   InwestorAmlIndexRoute: typeof InwestorAmlIndexRoute
@@ -5561,11 +5560,9 @@ interface InwestorAmlRouteChildren {
 
 const InwestorAmlRouteChildren: InwestorAmlRouteChildren = {
   InwestorAmlKlienciRoute: InwestorAmlKlienciRoute,
-  InwestorAmlPonadprogoweRoute: InwestorAmlPonadprogoweRoute,
   InwestorAmlRyzykoRoute: InwestorAmlRyzykoRoute,
   InwestorAmlSprawyRoute: InwestorAmlSprawyRoute,
   InwestorAmlTransakcjeRoute: InwestorAmlTransakcjeRoute,
-  InwestorAmlUpoRoute: InwestorAmlUpoRoute,
   InwestorAmlUstawieniaRoute: InwestorAmlUstawieniaRoute,
   InwestorAmlZgloszeniaRoute: InwestorAmlZgloszeniaRoute,
   InwestorAmlIndexRoute: InwestorAmlIndexRoute,
@@ -5626,6 +5623,7 @@ interface InwestorRouteChildren {
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
   InwestorKreatorDokumentowRoute: typeof InwestorKreatorDokumentowRoute
   InwestorKreatorUmowyRoute: typeof InwestorKreatorUmowyRoute
+  InwestorOdstapienieRoute: typeof InwestorOdstapienieRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
   InwestorPlatnosciRoute: typeof InwestorPlatnosciRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
@@ -5647,6 +5645,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorKalkulatorRoute: InwestorKalkulatorRoute,
   InwestorKreatorDokumentowRoute: InwestorKreatorDokumentowRoute,
   InwestorKreatorUmowyRoute: InwestorKreatorUmowyRoute,
+  InwestorOdstapienieRoute: InwestorOdstapienieRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,
   InwestorPlatnosciRoute: InwestorPlatnosciRoute,
   InwestorProfilRoute: InwestorProfilRoute,
@@ -5812,6 +5811,7 @@ const rootRouteChildren: RootRouteChildren = {
   OfertyRoute: OfertyRoute,
   OperatorRoute: OperatorRouteWithChildren,
   OperatorRejestracjaRoute: OperatorRejestracjaRoute,
+  PolitykaCookiesRoute: PolitykaCookiesRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
   RaportLokalizacjeRoute: RaportLokalizacjeRoute,

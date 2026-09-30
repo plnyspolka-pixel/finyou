@@ -21,7 +21,7 @@ export async function sendPaymentConfirmedEmail(opts: {
   const until = formatWarsawDate(opts.grantedUntil, true);
   const isUnlock = opts.kind === "unlock";
   const subject = isUnlock
-    ? "Płatność potwierdzona — okazja odblokowana | Finance You"
+    ? "Płatność potwierdzona — Projekt odblokowany | Finance You"
     : "Płatność potwierdzona — dostęp aktywny | Finance You";
   const text = `Dzień dobry,
 
@@ -29,7 +29,7 @@ potwierdzamy zaksięgowanie płatności ${formatGroszPln(opts.amountGrosz)} za p
 
 ${
   isUnlock
-    ? "Okazja została odblokowana — w panelu znajdziesz raport o inwestycji, harmonogram zaakceptowany przez pożyczkobiorcę oraz dane kontaktowe. Wyłączność obowiązuje zgodnie z regulaminem cyklu Zleceń."
+    ? "Projekt został odblokowany — w panelu znajdziesz raport o inwestycji, harmonogram zaakceptowany przez pożyczkobiorcę oraz dane kontaktowe. Wyłączność obowiązuje zgodnie z regulaminem cyklu Zleceń."
     : `Twój pełny dostęp jest aktywny do: ${until} (czas polski).`
 }
 

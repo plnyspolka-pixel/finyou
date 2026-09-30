@@ -1,24 +1,19 @@
 import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { formatPLN } from "@/lib/labels";
-import { fetchPublicLeads, type PublicLead } from "@/lib/public-leads.functions";
+import type { PublicLead } from "@/lib/public-leads.functions";
 import { property3dIcon, propertyLabel } from "@/lib/property-3d-icons";
+import { ExampleProjectsSection } from "@/components/landing/example-projects-section";
 
-const leadsQO = queryOptions({
-  queryKey: ["embed", "public-leads"],
-  queryFn: () => fetchPublicLeads(),
-  staleTime: 2 * 60 * 1000,
-});
-
+// Embed bez logowania pokazuje WYŁĄCZNIE przykładowe projekty (ilustracja) —
+// prawdziwe wnioski widzi tylko inwestor z przyjętym Zleceniem (decyzja nr 7).
 export const Route = createFileRoute("/embed/leady")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(leadsQO),
   head: () => ({
     meta: [
-      { title: "Ostatnie okazje inwestycyjne — Finance You" },
+      { title: "Przykładowe projekty — Finance You" },
       {
         name: "description",
-        content: "Zanonimizowana lista ostatnich okazji inwestycyjnych Finance You.",
+        content: "Przykładowe projekty inwestycyjne Finance You (ilustracja, nie oferta).",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -27,8 +22,6 @@ export const Route = createFileRoute("/embed/leady")({
 });
 
 function EmbedLeads() {
-  const { data } = useSuspenseQuery(leadsQO);
-
   // Tło pod treścią (widoczne, zanim iframe dopasuje wysokość) musi być tak
   // samo ciemne jak karta — inaczej prześwituje jasny motyw aplikacji.
   useEffect(() => {
@@ -58,13 +51,7 @@ function EmbedLeads() {
   return (
     <div className="bg-[#0a1030] p-4 sm:p-6 text-slate-100">
       <div className="mx-auto max-w-6xl">
-        {data.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-10 text-center text-sm text-slate-300">
-            Brak okazji do wyświetlenia.
-          </div>
-        ) : (
-          <LeadsTable leads={data} />
-        )}
+        <ExampleProjectsSection />
       </div>
     </div>
   );
@@ -125,7 +112,10 @@ export function LeadsTable({ leads }: { leads: PublicLead[] }) {
 function LeadRow({ lead }: { lead: PublicLead }) {
   const icon = property3dIcon(lead.property_type);
   const label = propertyLabel(lead.property_type);
-  const subtitle = lead.kw_masked ?? "KW w przygotowaniu";
+  const isExample = (lead as { is_example?: boolean }).is_example === true;
+  const subtitle = isExample
+    ? "Przykład — ilustracja, nie oferta"
+    : (lead.kw_masked ?? "KW w przygotowaniu");
   const dateStr = new Date(lead.created_at).toLocaleDateString("pl-PL", {
     day: "2-digit",
     month: "short",

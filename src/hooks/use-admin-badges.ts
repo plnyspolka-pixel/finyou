@@ -52,7 +52,7 @@ export function useAdminBadges(): Record<string, number> {
         // Brak dostępu (RLS) — bez badge'a.
       }
 
-      // TODO: `nieprzeczytaneMaile` i `nieprzeczytaneDM` — tabela
+      // Ograniczenie (świadome): `nieprzeczytaneMaile` i `nieprzeczytaneDM` — tabela
       // `lead_communications` nie ma flagi przeczytania (brak kolumny w schemacie),
       // więc nie da się policzyć nieprzeczytanych bez zmiany schematu. Po dodaniu
       // kolumny (np. `read_at`) dodać tu analogiczne zapytania count/head

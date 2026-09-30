@@ -1,8 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   CAPTION_STYLE_OPTIONS,
+  AI_BADGE,
   CUSTOM_CAPTION_STYLES,
+  aiBadgeAss,
+  aiBadgeEvents,
   buildAss,
+  defaultCaptionStyle,
+  parseSubtitles,
   captionPreviewCss,
   captionStyleLabel,
   chunkCues,
@@ -213,5 +218,82 @@ describe("identyfikatory stylów", () => {
     );
     expect(captionPreviewCss(CUSTOM_CAPTION_STYLES.reels).textShadow).toContain("#000000");
     expect(captionPreviewCss(CUSTOM_CAPTION_STYLES.tiktok).textTransform).toBe("uppercase");
+  });
+});
+
+describe("znaczek AI", () => {
+  it("sam znaczek: kompletny ASS z pigułką i napisem AI przez cały film", () => {
+    const ass = aiBadgeAss();
+    expect(ass).toMatch(/\[Events\]/);
+    expect(ass).toMatch(/^Style: AiBadge,Inter,/m);
+    const events = dialogues(ass);
+    expect(events).toHaveLength(2);
+    expect(events[0]).toMatch(/\\p1/);
+    expect(events[0]).toMatch(/,9:59:59\.99,AiBadge,/);
+    expect(events[1]).toMatch(/\}AI$/);
+  });
+
+  it("pigułka w prawym górnym rogu, poniżej paska aplikacji", () => {
+    const [shape, label] = aiBadgeEvents({ width: 720, height: 1280 });
+    const x = 720 - AI_BADGE.marginRight - AI_BADGE.width;
+    expect(shape).toContain(`\\pos(${x},${AI_BADGE.marginTop})`);
+    expect(label).toContain(
+      `\\pos(${x + AI_BADGE.width / 2},${AI_BADGE.marginTop + AI_BADGE.height / 2})`,
+    );
+    expect(AI_BADGE.marginTop).toBeGreaterThanOrEqual(110);
+  });
+
+  it("napisy własne + znaczek: oba style, znaczek na wyższej warstwie", () => {
+    const ass = srtToAss(SRT, "reels", undefined, { aiBadge: true })!;
+    expect(ass.split("\n").filter((l) => l.startsWith("Style:"))).toHaveLength(2);
+    const events = dialogues(ass);
+    const badge = events.filter((l) => l.includes(",AiBadge,"));
+    expect(badge).toHaveLength(2);
+    expect(badge.every((l) => Number(l.split(",")[0].split(" ")[1]) > 0)).toBe(true);
+  });
+
+  it("bez opcji nic się nie zmienia", () => {
+    expect(srtToAss(SRT, "reels")).not.toContain("AiBadge");
+  });
+});
+
+describe("parseSubtitles — formaty napisów HeyGena", () => {
+  it("ASS (filmy spoza Studia): czasy z Dialogue, bez tagów i łamań", () => {
+    const ass = [
+      "[Script Info]",
+      "ScriptType: v4.00+",
+      "",
+      "[Events]",
+      "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+      "Dialogue: 0,0:00:01.50,0:00:03.00,Default,,0,0,0,,{\\b1}LTV, czyli{\\b0}\\Nstosunek kwoty",
+      "Dialogue: 0,0:00:00.00,0:00:01.50,Default,,0,0,0,,Cześć!",
+    ].join("\r\n");
+    expect(parseSubtitles(ass)).toEqual([
+      { start: 0, end: 1.5, text: "Cześć!" },
+      { start: 1.5, end: 3, text: "LTV, czyli stosunek kwoty" },
+    ]);
+  });
+
+  it("WebVTT z czasem bez godzin", () => {
+    const vtt = "WEBVTT\n\n00:01.000 --> 00:02.500\nKsięga wieczysta\n";
+    expect(parseSubtitles(vtt)).toEqual([{ start: 1, end: 2.5, text: "Księga wieczysta" }]);
+  });
+
+  it("SRT bez zmian", () => {
+    expect(parseSubtitles(SRT)).toEqual(parseSrt(SRT));
+  });
+
+  it("srtToAss przyjmuje też ASS z HeyGena", () => {
+    const ass =
+      "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n" +
+      "Dialogue: 0,0:00:00.00,0:00:02.00,Default,,0,0,0,,Pożyczka pod zastaw";
+    expect(dialogues(srtToAss(ass, "reels")!)).toHaveLength(1);
+  });
+});
+
+describe("defaultCaptionStyle", () => {
+  it("z usługą wypalania: własny styl jak w panelu; bez niej: HeyGen", () => {
+    expect(defaultCaptionStyle(true)).toBe("reels");
+    expect(defaultCaptionStyle(false)).toBe("heygen");
   });
 });

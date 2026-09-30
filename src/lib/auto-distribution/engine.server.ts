@@ -9,12 +9,13 @@ import { LEGACY_STATUS_MAP, normalizeLoanStatus } from "@/lib/loan-status";
 
 /** Statusy, w których wniosek może kwalifikować się do dystrybucji. */
 const CANDIDATE_STATUSES = new Set([
-  "brak_kwoty",
-  "brak_kw",
-  "brak_zdjec_dokumentow",
-  "kontakt",
-  "kompletowanie_danych",
-  "szukamy_inwestora",
+  "braki_w_dokumentach",
+  "do_kontaktu",
+  "w_follow_upie",
+  "wniosek_kompletny",
+  "do_analizy",
+  "rokuje",
+  "wyslany_do_inwestorow",
 ]);
 
 /** Lista wartości enuma w bazie (kanoniczne + legacy mapowane na kandydatów) —

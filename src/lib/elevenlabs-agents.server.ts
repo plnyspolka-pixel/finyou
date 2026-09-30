@@ -51,10 +51,11 @@ const SURFACE_NAME: Record<AgentSurface, string> = {
 
 const SURFACE_FIRST_MESSAGE: Record<AgentSurface, string> = {
   intake:
-    "Dzień dobry! Pomogę złożyć wniosek o pożyczkę pod zabezpieczenie nieruchomości. W czym mogę pomóc?",
+    "Dzień dobry, tu asystent AI Finance You — rozmowa jest nagrywana. Pomogę złożyć wniosek o finansowanie dla firmy pod zabezpieczenie nieruchomości. W czym mogę pomóc?",
   investor_info:
-    "Dzień dobry! Chętnie opowiem, jak działa finansowanie spraw na Finance You. W czym mogę pomóc?",
-  investor_panel: "Dzień dobry! Pomogę w korzystaniu z panelu inwestora. O co chcesz zapytać?",
+    "Dzień dobry, tu asystent AI Finance You — rozmowa jest nagrywana. Chętnie opowiem, jak działa finansowanie projektów na Finance You. W czym mogę pomóc?",
+  investor_panel:
+    "Dzień dobry, tu asystent AI Finance You — rozmowa jest nagrywana. Pomogę w korzystaniu z panelu inwestora. O co chcesz zapytać?",
 };
 
 /** Twarde zasady rozmowy A1 (decyzja właściciela) — doklejane do promptu. */

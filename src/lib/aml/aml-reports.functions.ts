@@ -1,15 +1,13 @@
-// Zgłoszenia GIIF — cały przepływ:
-//  1) przygotowanie zgłoszenia BEZ podpisu (auto-zbieranie danych inwestora,
-//     osoby odpowiedzialnej, klienta, stron, rachunków, kwot, umowy,
-//     uzasadnienia i załączników; kompletność; XML + PDF; wersja + hash),
-//  2) zatwierdzenie treści i pobranie przygotowanego pakietu,
-//  3) „Podpisz i zgłoś do GIIF": dopiero tu pojawia się wymóg kwalifikowanego
-//     podpisu elektronicznego — dokument schodzi do inwestora do podpisania
-//     LOKALNIE (Finance You nie przechowuje podpisu, PIN-u ani klucza),
-//     wraca podpisany plik CMS/PKCS#7, jest weryfikowany, szyfrowany
-//     certyfikatem GIIF i wysyłany przez mTLS (kolejka + idempotency),
-//  4) kontekstowy kreator rejestracji SI*GIIF (wariant B) — bez porzucania
-//     przygotowanego zgłoszenia.
+// Zgłoszenia GIIF — przepływ uproszczony:
+//  1) przygotowanie zgłoszenia (auto-zbieranie danych instytucji, osoby
+//     odpowiedzialnej, klienta, stron, rachunków, kwot, umowy, uzasadnienia),
+//  2) generowanie XML + PDF (wersja + SHA-256) do pobrania,
+//  3) wysyłka poza platformą jedną z dwóch ścieżek i jej zarejestrowanie:
+//     - elektronicznie w SI*GIIF (ścieżka ustawowa; kwalifikowany podpis
+//       inwestora — Finance You nie przechowuje podpisu, PIN-u ani klucza),
+//     - papierowo (awaryjnie, bez podpisu kwalifikowanego) — generujemy
+//       zawiadomienie do wydruku, podpisu własnoręcznego i wysyłki poleconym,
+//  4) potwierdzenie: UPO z SI*GIIF albo dowód nadania / ZPO.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
@@ -206,30 +204,6 @@ export const prepareGiifReport = createServerFn({ method: "POST" })
     return { report, completeness };
   });
 
-/** Aktualizacja ładunku (uzasadnienie, strony, korekty) przed wygenerowaniem. */
-export const updateGiifReportPayload = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
-  .inputValidator((data) =>
-    z
-      .object({ reportId: z.string().uuid(), payload: z.record(z.string(), z.unknown()) })
-      .parse(data),
-  )
-  .handler(async ({ data, context }) => {
-    const db = loose(context.supabase);
-    const { checkCompleteness } = await import("@/lib/aml/giif-xml.server");
-    const completeness = checkCompleteness(data.payload as unknown as GiifReportPayload);
-    const { data: report, error } = await db
-      .from("aml_reports")
-      .update({ payload: data.payload, completeness, status: "draft" })
-      .eq("id", data.reportId)
-      .eq("user_id", context.userId)
-      .in("status", ["draft", "complete", "content_approved", "correction_required"])
-      .select("*")
-      .single();
-    if (error) throw new Error(error.message);
-    return { report, completeness };
-  });
-
 // ── 2. Generowanie XML + PDF, wersja i hash ──────────────────────────
 export const generateGiifDocuments = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
@@ -342,6 +316,8 @@ export const generateGiifDocuments = createServerFn({ method: "POST" })
       action: "documents_generated",
       details: { version, xmlHash, pdfHash },
     });
+    if (report.case_id)
+      await db.from("aml_cases").update({ status: "ready_for_signature" }).eq("id", report.case_id);
     return {
       ok: true as const,
       report: updated,
@@ -352,40 +328,7 @@ export const generateGiifDocuments = createServerFn({ method: "POST" })
     };
   });
 
-/** Zatwierdzenie treści zgłoszenia (nadal bez podpisu). */
-export const approveGiifReportContent = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
-  .inputValidator((data) => z.object({ reportId: z.string().uuid() }).parse(data))
-  .handler(async ({ data, context }) => {
-    const db = loose(context.supabase);
-    const { data: report, error } = await db
-      .from("aml_reports")
-      .update({
-        status: "content_approved",
-        content_approved_by: context.userId,
-        content_approved_at: new Date().toISOString(),
-      })
-      .eq("id", data.reportId)
-      .eq("user_id", context.userId)
-      .eq("status", "complete")
-      .select("*")
-      .single();
-    if (error) throw new Error("Zgłoszenie musi mieć wygenerowane dokumenty (status: kompletne).");
-
-    const { amlAudit } = await import("@/lib/aml/audit.server");
-    await amlAudit({
-      userId: context.userId,
-      entityType: "report",
-      entityId: report.id,
-      action: "content_approved",
-      details: {},
-    });
-    if (report.case_id)
-      await db.from("aml_cases").update({ status: "ready_for_signature" }).eq("id", report.case_id);
-    return { report };
-  });
-
-/** Linki do pobrania przygotowanego pakietu (XML, PDF, UPO). */
+/** Linki do pobrania: XML, PDF i potwierdzenie (UPO / dowód nadania). */
 export const getGiifReportDownloads = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
   .inputValidator((data) => z.object({ reportId: z.string().uuid() }).parse(data))
@@ -393,7 +336,7 @@ export const getGiifReportDownloads = createServerFn({ method: "POST" })
     const db = loose(context.supabase);
     const { data: report, error } = await db
       .from("aml_reports")
-      .select("xml_storage_path, pdf_storage_path, upo_storage_path, signed_storage_path")
+      .select("xml_storage_path, pdf_storage_path, upo_storage_path")
       .eq("id", data.reportId)
       .eq("user_id", context.userId)
       .single();
@@ -411,7 +354,6 @@ export const getGiifReportDownloads = createServerFn({ method: "POST" })
       xmlUrl: await sign(report.xml_storage_path),
       pdfUrl: await sign(report.pdf_storage_path),
       upoUrl: await sign(report.upo_storage_path),
-      signedUrl: await sign(report.signed_storage_path),
     };
   });
 
@@ -428,486 +370,228 @@ export const listGiifReports = createServerFn({ method: "POST" })
     return { reports: data ?? [] };
   });
 
-// ── 3. „Podpisz i zgłoś do GIIF" ─────────────────────────────────────
+// ── 3. Wysyłka: SI*GIIF (elektronicznie) albo papier (awaryjnie) ─────
+export type GiifSubmissionChannel = "si_giif" | "paper";
+
+/** Statusy, z których można wysłać / zarejestrować wysyłkę. */
+const SENDABLE_STATUSES = ["complete", "content_approved", "correction_required", "error"];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
+async function loadOwnReport(db: Loose, userId: string, reportId: string): Promise<any> {
+  const { data: report, error } = await db
+    .from("aml_reports")
+    .select("*")
+    .eq("id", reportId)
+    .eq("user_id", userId)
+    .single();
+  if (error || !report) throw new Error("Nie znaleziono zgłoszenia");
+  return report;
+}
+
+function safeFileName(name: string): string {
+  const ext = (name.match(/\.[A-Za-z0-9]{1,8}$/)?.[0] ?? "").toLowerCase();
+  return `potwierdzenie-${Date.now()}${ext}`;
+}
+
+async function storeConfirmation(
+  userId: string,
+  reportId: string,
+  file: { base64: string; fileName: string },
+): Promise<{ path: string; sha256: string }> {
+  const bytes = new Uint8Array(Buffer.from(file.base64, "base64"));
+  if (bytes.length === 0) throw new Error("Pusty plik potwierdzenia");
+  if (bytes.length > 15 * 1024 * 1024)
+    throw new Error("Plik potwierdzenia jest za duży (maks. 15 MB)");
+  const path = `${userId}/reports/${reportId}/${safeFileName(file.fileName)}`;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { error } = await supabaseAdmin.storage
+    .from("aml-private")
+    .upload(path, new Blob([bytes.buffer as ArrayBuffer]), { upsert: true });
+  if (error) throw new Error(`Zapis potwierdzenia nie powiódł się: ${error.message}`);
+  const { sha256Hex } = await import("@/lib/aml/giif-xml.server");
+  return { path, sha256: sha256Hex(bytes) };
+}
+
+const ConfirmationFile = z.object({
+  base64: z.string().min(1),
+  fileName: z.string().min(1).max(200),
+});
+
 /**
- * Krok 1 klikniętego „Podpisz i zgłoś": sprawdzenie połączenia z SI*GIIF.
- * Wariant A (aktywny certyfikat) → zwracamy dokument do podpisu.
- * Wariant B (brak połączenia) → sygnał do uruchomienia kreatora rejestracji
- * KONTEKSTOWO, bez porzucania zgłoszenia.
+ * Zawiadomienie papierowe (bez podpisu kwalifikowanego) — HTML do wydruku,
+ * podpisu własnoręcznego i wysyłki listem poleconym za ZPO. Kopia + hash
+ * trafiają do archiwum zgłoszenia.
  */
-export const startGiifSubmission = createServerFn({ method: "POST" })
+export const buildGiifPaperNotice = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
-  .inputValidator((data) => z.object({ reportId: z.string().uuid() }).parse(data))
+  .inputValidator((data) =>
+    z
+      .object({
+        reportId: z.string().uuid(),
+        reason: z.string().trim().min(5, "Podaj przyczynę wysyłki papierowej"),
+      })
+      .parse(data),
+  )
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
-    const { data: report, error } = await db
-      .from("aml_reports")
-      .select("*")
-      .eq("id", data.reportId)
-      .eq("user_id", context.userId)
-      .single();
-    if (error || !report) throw new Error("Nie znaleziono zgłoszenia");
-    if (!["content_approved", "correction_required", "error"].includes(report.status)) {
-      throw new Error("Najpierw wygeneruj dokumenty i zatwierdź treść zgłoszenia.");
+    const report = await loadOwnReport(db, context.userId, data.reportId);
+    if (!report.current_version) throw new Error("Najpierw wygeneruj dokumenty zgłoszenia.");
+
+    const { buildGiifPaperNoticeHtml, paperAllowedFor } = await import("@/lib/aml/giif-paper");
+    const payload = report.payload as GiifReportPayload;
+    if (!paperAllowedFor(payload.reportType)) {
+      throw new Error(
+        "Informacje o transakcjach ponadprogowych (art. 72) przekazuje się wyłącznie elektronicznie przez SI*GIIF — papier nie wykonuje tego obowiązku.",
+      );
     }
 
-    const { data: settings } = await db
-      .from("aml_settings")
-      .select("giif_connection_status, giif_institution_id, giif_environment")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-
-    const connected = settings?.giif_connection_status === "active";
-    if (!connected) {
-      return {
-        variant: "B" as const,
-        message:
-          "Aby wysłać pierwsze zgłoszenie, musisz jednorazowo zarejestrować instytucję w SI*GIIF i uzyskać certyfikat komunikacyjny. Potrzebny jest kwalifikowany podpis elektroniczny.",
-        connectionStatus: settings?.giif_connection_status ?? "not_connected",
-      };
-    }
-
-    // Wariant A: dokument do podpisania kwalifikowanym podpisem — LOKALNIE.
+    const html = buildGiifPaperNoticeHtml(payload, {
+      reportId: report.id,
+      version: report.current_version,
+      reason: data.reason,
+      date: new Date().toLocaleDateString("pl-PL"),
+    });
+    const { sha256Hex } = await import("@/lib/aml/giif-xml.server");
+    const sha256 = sha256Hex(html);
+    const path = `${context.userId}/reports/${report.id}/v${report.current_version}/zawiadomienie-papierowe.html`;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: url } = await supabaseAdmin.storage
+    await supabaseAdmin.storage
       .from("aml-private")
-      .createSignedUrl(report.xml_storage_path, 900);
+      .upload(path, new Blob([html], { type: "text/html;charset=utf-8" }), { upsert: true });
 
-    await db.from("aml_reports").update({ status: "awaiting_signature" }).eq("id", report.id);
+    await db
+      .from("aml_reports")
+      .update({
+        giif_response: {
+          ...(report.giif_response ?? {}),
+          paperNotice: { path, sha256, reason: data.reason, generatedAt: new Date().toISOString() },
+        },
+      })
+      .eq("id", report.id);
+
     const { amlAudit } = await import("@/lib/aml/audit.server");
     await amlAudit({
       userId: context.userId,
       entityType: "report",
       entityId: report.id,
-      action: "signature_requested",
-      details: { xmlHash: report.xml_sha256 },
+      action: "paper_notice_generated",
+      details: { sha256, reason: data.reason, version: report.current_version },
     });
-    return {
-      variant: "A" as const,
-      documentUrl: url?.signedUrl ?? null,
-      xmlSha256: report.xml_sha256,
-      instructions:
-        "Podpisz plik XML kwalifikowanym podpisem elektronicznym (format CAdES/PKCS#7, np. w aplikacji dostawcy podpisu), a następnie wgraj podpisany plik. Finance You nie pobiera i nie zapisuje PIN-u ani klucza podpisu.",
-    };
+    return { html, sha256 };
   });
 
 /**
- * Krok 2: odbiór podpisanego pliku → weryfikacja podpisu → zaszyfrowanie
- * certyfikatem GIIF → kolejka wysyłki mTLS (idempotency, ponowienia).
+ * Rejestracja wysyłki wykonanej poza platformą: w SI*GIIF (identyfikator
+ * zgłoszenia, opcjonalnie UPO) albo papierowo (data i numer nadania,
+ * opcjonalnie skan dowodu nadania).
  */
-export const uploadSignedGiifReport = createServerFn({ method: "POST" })
+export const recordGiifSubmission = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
   .inputValidator((data) =>
-    z.object({ reportId: z.string().uuid(), signedBase64: z.string().min(1) }).parse(data),
+    z
+      .object({
+        reportId: z.string().uuid(),
+        channel: z.enum(["si_giif", "paper"]),
+        submittedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        reference: z.string().trim().max(200).optional(),
+        confirmation: ConfirmationFile.optional(),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
-    const { data: report, error } = await db
-      .from("aml_reports")
-      .select("*")
-      .eq("id", data.reportId)
-      .eq("user_id", context.userId)
-      .single();
-    if (error || !report) throw new Error("Nie znaleziono zgłoszenia");
-
-    const signedBytes = new Uint8Array(Buffer.from(data.signedBase64, "base64"));
-
-    // Weryfikacja podpisu kwalifikowanego (CMS/PKCS#7).
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: xmlFile } = await supabaseAdmin.storage
-      .from("aml-private")
-      .download(report.xml_storage_path);
-    const xmlBytes = xmlFile ? new Uint8Array(await xmlFile.arrayBuffer()) : undefined;
-
-    const { verifyCmsSignature, sha256Hex } = await Promise.all([
-      import("@/lib/aml/crypto.server"),
-      import("@/lib/aml/giif-xml.server"),
-    ]).then(([c, x]) => ({ verifyCmsSignature: c.verifyCmsSignature, sha256Hex: x.sha256Hex }));
-
-    const verification = verifyCmsSignature(signedBytes, xmlBytes);
-    const { amlAudit } = await import("@/lib/aml/audit.server");
-    if (!verification.valid) {
-      await amlAudit({
-        userId: context.userId,
-        entityType: "report",
-        entityId: report.id,
-        action: "signature_rejected",
-        details: { errors: verification.errors },
-      });
-      return { ok: false as const, errors: verification.errors };
+    const report = await loadOwnReport(db, context.userId, data.reportId);
+    if (!SENDABLE_STATUSES.includes(report.status))
+      throw new Error("Najpierw wygeneruj dokumenty zgłoszenia (XML + PDF).");
+    if (data.channel === "paper") {
+      const { paperAllowedFor } = await import("@/lib/aml/giif-paper");
+      if (!paperAllowedFor((report.payload as GiifReportPayload).reportType))
+        throw new Error(
+          "Transakcje ponadprogowe (art. 72) zgłasza się wyłącznie elektronicznie przez SI*GIIF.",
+        );
+      if (!report.giif_response?.paperNotice)
+        throw new Error("Najpierw wygeneruj i wydrukuj zawiadomienie papierowe.");
     }
 
-    const signedPath = `${context.userId}/reports/${report.id}/v${report.current_version}/zgloszenie-podpisane.p7s`;
-    const signedCopy = new Uint8Array(signedBytes);
-    await supabaseAdmin.storage
-      .from("aml-private")
-      .upload(signedPath, new Blob([signedCopy.buffer as ArrayBuffer]), { upsert: true });
+    const stored = data.confirmation
+      ? await storeConfirmation(context.userId, report.id, data.confirmation)
+      : null;
+    const now = new Date().toISOString();
+    const status = stored ? "upo_received" : "submitted";
+    const { error } = await db
+      .from("aml_reports")
+      .update({
+        status,
+        giif_submission_id: data.reference || null,
+        submitted_at: new Date(`${data.submittedAt}T12:00:00Z`).toISOString(),
+        giif_status: data.channel,
+        giif_status_checked_at: now,
+        upo_storage_path: stored?.path ?? null,
+        upo_received_at: stored ? now : null,
+        giif_response: {
+          ...(report.giif_response ?? {}),
+          channel: data.channel,
+          reference: data.reference ?? null,
+          confirmationSha256: stored?.sha256 ?? null,
+        },
+      })
+      .eq("id", report.id);
+    if (error) throw new Error(error.message);
 
-    // Szyfrowanie aktualnym certyfikatem GIIF pobranym z publicznego
-    // GET /certyfikatSzyfrowania (fingerprint zapisujemy przy zgłoszeniu;
-    // GIIF_ENCRYPTION_CERT_PEM to wyłącznie fallback dla trybu mock).
-    const { data: settingsRow } = await db
-      .from("aml_settings")
-      .select("giif_environment")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-    const environment = (settingsRow?.giif_environment ?? "test") as "test" | "production";
-    const { getGiifEncryptionCert } = await import("@/lib/aml/giif-encryption-cert.server");
-    const giifCert = await getGiifEncryptionCert(environment);
-    const { encryptForGiif } = await import("@/lib/aml/crypto.server");
-    const encrypted = encryptForGiif(signedBytes, giifCert.pem);
-    const encryptedCopy = new Uint8Array(encrypted);
-    await supabaseAdmin.storage
-      .from("aml-private")
-      .upload(`${signedPath}.enc`, new Blob([encryptedCopy.buffer as ArrayBuffer]), {
-        upsert: true,
-      });
+    if (report.case_id) await db.from("aml_cases").update({ status }).eq("id", report.case_id);
+    if (report.threshold_entry_id)
+      await db
+        .from("aml_threshold_entries")
+        .update({ decision: "submitted" })
+        .eq("id", report.threshold_entry_id);
 
-    // Kolejka z kluczem idempotency: report + wersja + hash — ponowienie
-    // nigdy nie wyśle drugi raz tej samej treści.
-    const idempotencyKey = `giif-${report.id}-v${report.current_version}-${sha256Hex(signedBytes).slice(0, 16)}`;
-    await db.from("aml_submission_queue").upsert(
-      {
-        user_id: context.userId,
-        report_id: report.id,
-        idempotency_key: idempotencyKey,
-        state: "pending",
-        next_attempt_at: new Date().toISOString(),
+    const { amlAudit } = await import("@/lib/aml/audit.server");
+    await amlAudit({
+      userId: context.userId,
+      entityType: "report",
+      entityId: report.id,
+      action: data.channel === "paper" ? "submitted_on_paper" : "submitted_via_si_giif",
+      details: {
+        submittedAt: data.submittedAt,
+        reference: data.reference ?? null,
+        confirmationSha256: stored?.sha256 ?? null,
       },
-      { onConflict: "idempotency_key" },
-    );
+    });
+    return { ok: true as const, status };
+  });
 
+/** Dołączenie potwierdzenia po fakcie: UPO z SI*GIIF albo dowód nadania / ZPO. */
+export const uploadGiifConfirmation = createServerFn({ method: "POST" })
+  .middleware([requireInvestorPro])
+  .inputValidator((data) =>
+    z.object({ reportId: z.string().uuid(), confirmation: ConfirmationFile }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const db = loose(context.supabase);
+    const report = await loadOwnReport(db, context.userId, data.reportId);
+    if (!["submitted", "upo_received"].includes(report.status))
+      throw new Error("Najpierw zarejestruj wysyłkę zgłoszenia.");
+
+    const stored = await storeConfirmation(context.userId, report.id, data.confirmation);
     await db
       .from("aml_reports")
       .update({
-        status: "queued",
-        signed_storage_path: signedPath,
-        signed_sha256: sha256Hex(signedBytes),
-        signature_verified_at: new Date().toISOString(),
-        signer_subject: verification.signerSubject ?? null,
-        encryption_cert_fingerprint: giifCert.fingerprintSha256,
+        status: "upo_received",
+        upo_storage_path: stored.path,
+        upo_received_at: new Date().toISOString(),
+        giif_response: { ...(report.giif_response ?? {}), confirmationSha256: stored.sha256 },
       })
       .eq("id", report.id);
     if (report.case_id)
-      await db.from("aml_cases").update({ status: "signed" }).eq("id", report.case_id);
+      await db.from("aml_cases").update({ status: "upo_received" }).eq("id", report.case_id);
 
+    const { amlAudit } = await import("@/lib/aml/audit.server");
     await amlAudit({
       userId: context.userId,
       entityType: "report",
       entityId: report.id,
-      action: "signed_and_queued",
-      details: {
-        signer: verification.signerSubject,
-        idempotencyKey,
-        encryptionCertFingerprint: giifCert.fingerprintSha256,
-        encryptionCertSource: giifCert.source,
-        encryptionCertValidTo: giifCert.validTo,
-      },
+      action: "confirmation_uploaded",
+      details: { sha256: stored.sha256 },
     });
-
-    // Natychmiastowa próba wysyłki (kolejka obsłuży ewentualne ponowienia).
-    const { processSubmissionQueue } = await import("@/lib/aml/giif-connector.server");
-    await processSubmissionQueue(3);
-
-    const { data: fresh } = await db.from("aml_reports").select("*").eq("id", report.id).single();
-    return { ok: true as const, report: fresh, signer: verification.signerSubject };
-  });
-
-/** Ręczne odświeżenie statusów + pobranie UPO. */
-export const refreshGiifStatuses = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
-  .handler(async () => {
-    const { processSubmissionQueue, pollSubmittedReports } =
-      await import("@/lib/aml/giif-connector.server");
-    const q = await processSubmissionQueue(10);
-    const s = await pollSubmittedReports(20);
-    return { queueProcessed: q.processed, statusesChecked: s.checked };
-  });
-
-// ── 4. Kreator rejestracji SI*GIIF (wariant B — kontekstowy) ─────────
-/**
- * Krok kreatora: przygotowanie dokumentu rejestracji instytucji z danych
- * profilu + bezpieczne wygenerowanie klucza i CSR (klucz od razu do "KMS",
- * nigdy do frontendu).
- */
-export const giifRegistrationPrepare = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
-  .handler(async ({ context }) => {
-    const db = loose(context.supabase);
-    const { data: settings } = await db
-      .from("aml_settings")
-      .select("*")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-    if (!settings) throw new Error("Brak ustawień AML — wejdź na Przegląd AML.");
-
-    const inst = settings.institution ?? {};
-    const person = settings.responsible_person ?? {};
-    if (!inst.name || !inst.nip) {
-      return {
-        ok: false as const,
-        missing: [
-          !inst.name ? "Nazwa organizacji" : null,
-          !inst.nip ? "NIP organizacji" : null,
-        ].filter(Boolean),
-      };
-    }
-
-    // Dokument rejestracyjny (do podpisu kwalifikowanego przez inwestora).
-    const registrationDoc = [
-      "ZGŁOSZENIE INSTYTUCJI OBOWIĄZANEJ DO SI*GIIF",
-      `Instytucja: ${inst.name}`,
-      `NIP: ${inst.nip}`,
-      `Adres: ${inst.address ?? ""} ${inst.postalCode ?? ""} ${inst.city ?? ""}`.trim(),
-      `Osoba odpowiedzialna (art. 8): ${person.firstName ?? ""} ${person.lastName ?? ""}`,
-      `E-mail: ${person.email ?? ""}  Telefon: ${person.phone ?? ""}`,
-      `Data przygotowania: ${new Date().toISOString()}`,
-    ].join("\n");
-
-    // Bezpieczne wygenerowanie klucza + CSR. Klucz prywatny natychmiast
-    // szyfrujemy przez AmlKeyProvider (lokalna koperta w dev/testach,
-    // produkcyjnie KMS/HSM) — nigdy nie trafia do bazy ani frontendu.
-    const { generateCsr } = await import("@/lib/aml/crypto.server");
-    const csr = generateCsr({
-      commonName: `SI*GIIF ${inst.name}`.slice(0, 64),
-      organization: inst.name,
-      country: (inst.country ?? "PL").slice(0, 2).toUpperCase(),
-      serialNumber: String(inst.nip).replace(/\D/g, ""),
-    });
-
-    const { getAmlKeyProvider } = await import("@/lib/aml/key-provider.server");
-    const keyProvider = getAmlKeyProvider();
-    const wrapped = await keyProvider.encrypt(context.userId, csr.privateKeyPem);
-    csr.privateKeyPem = ""; // nie trzymaj plaintextu dłużej niż to konieczne
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const envPath = `${context.userId}/keys/${wrapped.keyRef.replace(/[^\w-]/g, "_")}.enc`;
-    await supabaseAdmin.storage
-      .from("aml-private")
-      .upload(envPath, new Blob([wrapped.ciphertext], { type: "text/plain" }), {
-        upsert: true,
-      });
-
-    const environment = settings.giif_environment ?? "test";
-    const { data: cert, error } = await db
-      .from("aml_certificates")
-      .insert({
-        user_id: context.userId,
-        environment,
-        status: "csr_generated",
-        kms_key_ref: wrapped.keyRef,
-        csr_pem: csr.csrPem,
-        subject_dn: csr.subjectDn,
-      })
-      .select("*")
-      .single();
-    if (error) throw new Error(error.message);
-
-    await db
-      .from("aml_settings")
-      .update({ giif_connection_status: "csr_generated" })
-      .eq("user_id", context.userId);
-
-    const { amlAudit } = await import("@/lib/aml/audit.server");
-    await amlAudit({
-      userId: context.userId,
-      entityType: "certificate",
-      entityId: cert.id,
-      action: "csr_generated",
-      details: {
-        subjectDn: csr.subjectDn,
-        keyRef: wrapped.keyRef,
-        keyProvider: keyProvider.info().name,
-        keyProviderProductionApproved: keyProvider.info().productionApproved,
-      },
-    });
-
-    return {
-      ok: true as const,
-      certificateId: cert.id,
-      registrationDocument: registrationDoc,
-      csrPem: csr.csrPem,
-      subjectDn: csr.subjectDn,
-      note: "Podpisz dokument rejestracyjny kwalifikowanym podpisem elektronicznym lokalnie i wgraj podpisany plik. Profil Zaufany ani podpis zaufany nie zastępują kwalifikowanego podpisu elektronicznego wymaganego przez SI*GIIF.",
-    };
-  });
-
-/** Krok kreatora: odbiór podpisanych dokumentów rejestracyjnych + wysyłka do SI*GIIF. */
-export const giifRegistrationSubmit = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
-  .inputValidator((data) =>
-    z
-      .object({
-        certificateId: z.string().uuid(),
-        signedRegistrationBase64: z.string().min(1),
-      })
-      .parse(data),
-  )
-  .handler(async ({ data, context }) => {
-    const db = loose(context.supabase);
-    const { data: cert } = await db
-      .from("aml_certificates")
-      .select("*")
-      .eq("id", data.certificateId)
-      .eq("user_id", context.userId)
-      .single();
-    if (!cert) throw new Error("Nie znaleziono wniosku certyfikacyjnego");
-
-    const signedBytes = new Uint8Array(Buffer.from(data.signedRegistrationBase64, "base64"));
-    const { verifyCmsSignature } = await import("@/lib/aml/crypto.server");
-    const verification = verifyCmsSignature(signedBytes);
-    if (!verification.valid) {
-      return { ok: false as const, errors: verification.errors };
-    }
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const signedCopy = new Uint8Array(signedBytes);
-    await supabaseAdmin.storage
-      .from("aml-private")
-      .upload(
-        `${context.userId}/giif-registration/${cert.id}.p7s`,
-        new Blob([signedCopy.buffer as ArrayBuffer]),
-        {
-          upsert: true,
-        },
-      );
-    await db
-      .from("aml_settings")
-      .update({ giif_connection_status: "documents_signed" })
-      .eq("user_id", context.userId);
-
-    const environment = (cert.environment ?? "test") as "test" | "production";
-    const { giifRegisterInstitution, giifSubmitCsr } =
-      await import("@/lib/aml/giif-connector.server");
-    const reg = await giifRegisterInstitution(environment, context.userId, signedBytes);
-    if (!reg.ok) {
-      await db
-        .from("aml_settings")
-        .update({ giif_connection_status: "error" })
-        .eq("user_id", context.userId);
-      return {
-        ok: false as const,
-        errors: [reg.error ?? "Rejestracja w SI*GIIF nie powiodła się"],
-      };
-    }
-
-    const csrRes = await giifSubmitCsr(
-      environment,
-      context.userId,
-      reg.institutionId ?? "",
-      cert.csr_pem,
-    );
-    await db
-      .from("aml_certificates")
-      .update({ status: "requested", serial_number: csrRes.requestId ?? null })
-      .eq("id", cert.id);
-    await db
-      .from("aml_settings")
-      .update({
-        giif_connection_status: "submitted_to_giif",
-        giif_institution_id: reg.institutionId ?? null,
-      })
-      .eq("user_id", context.userId);
-
-    const { amlAudit } = await import("@/lib/aml/audit.server");
-    await amlAudit({
-      userId: context.userId,
-      entityType: "certificate",
-      entityId: cert.id,
-      action: "registration_submitted",
-      details: { institutionId: reg.institutionId, signer: verification.signerSubject },
-    });
-    return { ok: true as const, institutionId: reg.institutionId, csrRequestId: csrRes.requestId };
-  });
-
-/**
- * Krok kreatora: pobranie/wgranie certyfikatu komunikacyjnego, kontrola
- * zgodności z CSR i test mTLS. Po sukcesie połączenie = 'active' i kreator
- * wraca do przygotowanego zgłoszenia.
- */
-export const giifRegistrationFinish = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
-  .inputValidator((data) =>
-    z
-      .object({
-        certificateId: z.string().uuid(),
-        certificatePem: z.string().optional(), // ręczne wgranie, gdy GIIF wydał plik
-      })
-      .parse(data),
-  )
-  .handler(async ({ data, context }) => {
-    const db = loose(context.supabase);
-    const { data: cert } = await db
-      .from("aml_certificates")
-      .select("*")
-      .eq("id", data.certificateId)
-      .eq("user_id", context.userId)
-      .single();
-    if (!cert) throw new Error("Nie znaleziono wniosku certyfikacyjnego");
-    const environment = (cert.environment ?? "test") as "test" | "production";
-
-    // 1. Certyfikat: z wejścia albo pobrany z SI*GIIF.
-    let certificatePem = data.certificatePem ?? null;
-    if (!certificatePem) {
-      const { data: settings } = await db
-        .from("aml_settings")
-        .select("giif_institution_id")
-        .eq("user_id", context.userId)
-        .maybeSingle();
-      const { giifFetchCertificate } = await import("@/lib/aml/giif-connector.server");
-      const fetched = await giifFetchCertificate(
-        environment,
-        context.userId,
-        settings?.giif_institution_id ?? "",
-        cert.serial_number ?? "",
-      );
-      if (!fetched.ok)
-        return { ok: false as const, step: "fetch_certificate", error: fetched.error };
-      certificatePem = fetched.certificatePem ?? null;
-    }
-    if (!certificatePem)
-      return { ok: false as const, step: "fetch_certificate", error: "Brak certyfikatu" };
-
-    // 2. Zgodność z CSR.
-    const { certificateMatchesCsr } = await import("@/lib/aml/crypto.server");
-    const matches = certificateMatchesCsr(certificatePem, cert.csr_pem);
-    if (!matches) {
-      await db
-        .from("aml_certificates")
-        .update({ status: "error", matches_csr: false })
-        .eq("id", cert.id);
-      return {
-        ok: false as const,
-        step: "csr_match",
-        error: "Certyfikat nie odpowiada kluczowi z CSR.",
-      };
-    }
-
-    // 3. Test mTLS.
-    const { giifTestMtls } = await import("@/lib/aml/giif-connector.server");
-    const mtls = await giifTestMtls(environment, context.userId);
-    const now = new Date().toISOString();
-    await db
-      .from("aml_certificates")
-      .update({
-        status: mtls.ok ? "active" : "issued",
-        certificate_pem: certificatePem,
-        matches_csr: true,
-        mtls_tested_at: mtls.ok ? now : null,
-      })
-      .eq("id", cert.id);
-    await db
-      .from("aml_settings")
-      .update({ giif_connection_status: mtls.ok ? "active" : "certificate_issued" })
-      .eq("user_id", context.userId);
-
-    const { amlAudit } = await import("@/lib/aml/audit.server");
-    await amlAudit({
-      userId: context.userId,
-      entityType: "certificate",
-      entityId: cert.id,
-      action: mtls.ok ? "connection_active" : "certificate_stored",
-      details: { environment, mtlsOk: mtls.ok, mtlsError: mtls.error },
-    });
-    return { ok: true as const, mtlsOk: mtls.ok, mtlsError: mtls.error ?? null };
+    return { ok: true as const };
   });

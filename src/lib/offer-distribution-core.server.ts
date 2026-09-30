@@ -1,7 +1,7 @@
 // Rdzeń dystrybucji ofert do inwestorów instytucjonalnych — wydzielony z
 // sendOfferDistribution, żeby ręczna wysyłka z panelu i auto-dystrybucja
 // (src/lib/auto-distribution/) szły DOKŁADNIE tą samą ścieżką: dedup per
-// instytucja, alias zwrotny, log wątku, przejście wniosku w „szukamy_inwestora".
+// instytucja, alias zwrotny, log wątku, przejście wniosku w „wyslany_do_inwestorow".
 // Bez autoryzacji — wywołujący (server fn po assertAdminOrOperator albo
 // silnik cron) odpowiada za uprawnienia.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -198,12 +198,15 @@ export async function distributeOfferToInvestors(input: {
     else failed.push({ investorId: inv.id, error: `${invName}: ${send.error ?? "błąd"}` });
   }
 
-  // 6) Wniosek przechodzi w „szukamy inwestora" po pierwszej realnej wysyłce
+  // 6) Wniosek przechodzi w „wysłany do inwestorów" po pierwszej realnej
+  //    wysyłce (bramka B2B: trigger loan_status_guard wymaga
+  //    business_purpose_declared — bez oświadczenia zapis się nie powiedzie).
   if (sent.length > 0) {
-    await supabaseAdmin
+    const { error: stErr } = await supabaseAdmin
       .from("loan_applications")
-      .update({ status: "szukamy_inwestora" as any })
+      .update({ status: "wyslany_do_inwestorow" as any })
       .eq("id", input.applicationId);
+    if (stErr) failed.push({ investorId: "", error: `status: ${stErr.message}` });
   }
 
   return { sent, failed, skipped, cardUrl };

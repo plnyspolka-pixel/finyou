@@ -1,0 +1,473 @@
+PAKIET UMOWNY
+Ramowa umowa pośrednictwa finansowego świadczonego na odległość
+Przedstawianie projektów finansowania gospodarczego zabezpieczonego hipoteką
+Wersja
+FY-LEGAL-2026-09-29.v7 • 29 września 2026 r.
+Zakres
+Finansowanie zabezpieczone hipoteką wyłącznie na cel związany z działalnością gospodarczą
+Forma
+papierowa, kwalifikowany podpis elektroniczny albo forma dokumentowa w systemie z pełnym śladem audytowym
+zawarta w formie dokumentowej na odległość albo podpisana w dniu wskazanym przy podpisach, pomiędzy:
+FINANCE YOU
+Finance You spółka z ograniczoną odpowiedzialnością z siedzibą w Warszawie, ul. Nowogrodzka 31, 00-511 Warszawa, wpisana do rejestru przedsiębiorców KRS pod numerem 0000635207, NIP 7010611803, REGON 365350668, kapitał zakładowy 389 600,00 zł, reprezentowana przez Filipa Roberta Bielaka – Prezesa Zarządu uprawnionego do samodzielnej reprezentacji, dalej: „Finance You” lub „Ujawniający”;
+a
+INWESTOR
+Wariant strony
+☐ osoba fizyczna  ☐ osoba fizyczna prowadząca działalność  ☐ osoba prawna / jednostka organizacyjna
+Imię i nazwisko / firma
+________________________________________________________________
+Adres / siedziba
+________________________________________________________________
+PESEL albo KRS
+________________________________________________________________
+NIP / REGON
+________________________________________________________________
+E-mail i telefon
+________________________________________________________________
+Reprezentacja
+________________________________________________________________
+dalej: „Inwestor” lub „Odbiorca”; Finance You i Inwestor dalej łącznie: „Strony”, a każdy z osobna: „Strona”.
+Preambuła
+Finance You pozyskuje i kwalifikuje projekty klientów poszukujących finansowania na cel związany z działalnością gospodarczą, które może zostać zabezpieczone hipoteką.
+Inwestor zleca Finance You poszukiwanie projektów odpowiadających parametrom wskazanym przez niego w Zleceniu, samodzielnie ocenia przedstawione projekty i — według własnej decyzji — zawiera transakcje finansowania bezpośrednio albo przez podmiot należący do Grupy Inwestora.
+Usługa pośrednictwa transakcyjnego na podstawie niniejszej Umowy jest dla Inwestora nieodpłatna. Prowizja Klientowska jest należna Finance You od Klienta na podstawie odrębnej umowy i jest potrącana z kwoty Finansowania zgodnie z dyspozycją Klienta (Załącznik nr 6): Inwestor przekazuje ją bezpośrednio na rachunek Finance You, a pozostałą część wypłaca Klientowi. Nieodpłatność usługi dla Inwestora nie zwalnia z Mechanizmu Zabezpieczenia Prowizji.
+Strony chcą jednoznacznie ustalić zakres pięcioletniej ochrony relacji oraz Karę Obejściową równą 5% Sumy Hipotecznej za zawarcie lub wykonanie Transakcji Chronionej z naruszeniem niepieniężnego obowiązku zabezpieczenia Prowizji Klientowskiej i zakazu obchodzenia Finance You.
+Strony wyłączają z zakresu Umowy finansowanie przeznaczone w całości lub części na cele konsumpcyjne oraz kredyt hipoteczny udzielany konsumentowi.
+Finance You nie prowadzi publicznie dostępnego katalogu Projektów. Projekt jest przedstawiany wyłącznie jako wynik indywidualnego Zlecenia i wyłącznie Inwestorowi, który je złożył; w czasie rezerwacji nie jest przedstawiany innym inwestorom działającym na podstawie Zlecenia.
+Model rozliczenia.  Inwestor nie płaci Finance You żadnego wynagrodzenia: usługa jest dla Inwestora nieodpłatna. Klient płaci Prowizję Klientowską według odrębnej umowy (7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT), a Inwestor zabezpiecza jej bezpośredni przelew z kwoty Finansowania i potrąca ją z wypłaty. Zawarcie lub wykonanie Transakcji Chronionej bez tego mechanizmu stanowi Naruszenie Obejściowe i uruchamia Karę Obejściową równą 5% Sumy Hipotecznej.
+§ 1. Definicje
+Klient oznacza osobę fizyczną działającą w związku z działalnością gospodarczą, przedsiębiorcę, osobę prawną albo jednostkę organizacyjną poszukującą Finansowania na Cel Gospodarczy, a także właściciela nieruchomości, dłużnika, poręczyciela, spółkę operacyjną lub celową i inne osoby uczestniczące w Projekcie.
+Cel Gospodarczy oznacza cel pozostający w bezpośrednim związku z działalnością gospodarczą lub zawodową finansowanego podmiotu, potwierdzony w Karcie Leada i dokumentacji Finansowania. Nie obejmuje celu konsumpcyjnego, zaspokajania prywatnych potrzeb mieszkaniowych ani kredytu hipotecznego w rozumieniu przepisów o kredycie hipotecznym.
+Projekt oznacza zidentyfikowaną przez Finance You możliwość Finansowania, oznaczoną unikalnym numerem i opisaną w Karcie Leada.
+Karta Leada oznacza załącznik transakcyjny dla konkretnego Projektu, zawierający co najmniej identyfikator, moment Ujawnienia Identyfikującego, okres ochronny, regułę Sumy Hipotecznej, potwierdzenie nieodpłatności usługi dla Inwestora, rzeczywiste warunki Prowizji Klientowskiej, Mechanizm Zabezpieczenia Prowizji, Karę Obejściową wraz z przykładem kwotowym, zakres Grupy Inwestora, wynagrodzenie własne Inwestora od Klienta, konflikt interesów oraz sposób akceptacji.
+Ujawnienie Identyfikujące oznacza pierwsze ujawnienie Inwestorowi danych, które samodzielnie albo łącznie pozwalają rozsądnie ustalić Klienta lub konkretną nieruchomość. Moment ten wynika z rejestru systemowego, potwierdzenia wiadomości albo Karty Leada.
+Klient Chroniony oznacza Klienta poznanego dzięki Ujawnieniu Identyfikującemu oraz każdy podmiot przez niego kontrolowany, kontrolujący go, z nim powiązany lub użyty do zawarcia Transakcji Chronionej, jeżeli istnieje związek gospodarczy z Projektem lub relacją przedstawioną przez Finance You.
+Grupa Inwestora oznacza Inwestora oraz każdą osobę działającą bezpośrednio lub pośrednio na jego rzecz, na jego zlecenie, w jego interesie albo z jego udziałem, w tym jego obecną lub przyszłą spółkę, SPV, wspólnika, członka organu, pełnomocnika, beneficjenta rzeczywistego, osobę bliską, współinwestora, fundusz, cesjonariusza, nabywcę wierzytelności, powiernika, administratora hipoteki albo zabezpieczeń oraz podmiot powiązany kapitałowo, osobowo, rodzinnie lub kontraktowo.
+Finansowanie oznacza przekazanie pieniędzy, limitu, rzeczy, praw, odroczenia, gwarancji lub innej korzyści ekonomicznej, w szczególności na podstawie pożyczki, kredytu, refinansowania, faktoringu, wykupu lub cesji wierzytelności, subrogacji, obligacji, umowy inwestycyjnej, sprzedaży z prawem odkupu, leasingu zwrotnego albo konstrukcji o równoważnym skutku gospodarczym.
+Transakcja Chroniona oznacza każde Finansowanie zawarte, udzielone, nabyte, refinansowane, odnowione, przedłużone, zwiększone lub ekonomicznie zrealizowane w Okresie Ochronnym między Klientem Chronionym a Inwestorem lub Grupą Inwestora, jeżeli jest zabezpieczone hipoteką na nieruchomości przedstawionej w Projekcie albo na jakiejkolwiek innej nieruchomości Klienta Chronionego lub osoby udostępniającej mu zabezpieczenie. Obejmuje także nabycie zabezpieczonej wierzytelności i finansowanie przez pośredni podmiot.
+Suma Hipoteczna oznacza najwyższą kwotę pieniężną, do której hipoteka zabezpiecza lub ma zabezpieczać wierzytelności przypisane Inwestorowi lub Grupie Inwestora, wskazaną w oświadczeniu o ustanowieniu hipoteki, umowie Finansowania, wniosku wieczystoksięgowym, wzmiance albo wpisie. Jeżeli takiej kwoty nie da się ustalić, podstawą jest kwota Finansowania lub wartość korzyści ekonomicznej przypisana Inwestorowi. Jednej ekonomicznej ekspozycji zabezpieczonej łącznie na kilku nieruchomościach nie liczy się wielokrotnie, chyba że dokumenty ustanawiają odrębne lub dodatkowe limity zabezpieczenia.
+Prowizja Klientowska oznacza odrębne wynagrodzenie Finance You wynikające wyłącznie z umowy z Klientem i ekonomicznie obciążające Klienta, a nie cenę usługi świadczonej Inwestorowi. Wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT, i jest potrącana z wypłaty Finansowania zgodnie z dyspozycją Klienta (Załącznik nr 6): Inwestor przekazuje ją bezpośrednio na rachunek Finance You, a pozostałą część Kwoty Udzielonej wypłaca Klientowi; jeżeli odrębna umowa z Klientem przewiduje inną stawkę, minimum albo podstawę, Karta Leada musi odzwierciedlać rzeczywiste warunki tej umowy.
+Kwota Udzielona oznacza kwotę Finansowania wynikającą z zawartej umowy pożyczki albo innego dokumentu Finansowania, przed potrąceniami, prowizjami i kosztami.
+Mechanizm Zabezpieczenia Prowizji oznacza łączne spełnienie następujących warunków przed zawarciem lub najpóźniej w treści dokumentu Finansowania: potwierdzenie ważnej umowy prowizyjnej Klienta z Finance You; utrwalenie dyspozycji Klienta; zastrzeżenie w umowie Finansowania bezpośredniego świadczenia na rzecz Finance You; wskazanie kwoty albo jednoznacznej formuły Prowizji Klientowskiej i rachunku Finance You; oraz obowiązek przekazania Prowizji Klientowskiej nie później niż równocześnie z pierwszą wypłatą środków Klientowi.
+Naruszenie Obejściowe oznacza zawarcie, doprowadzenie do zawarcia lub wykonanie Transakcji Chronionej przez Inwestora albo Grupę Inwestora bez skutecznego Mechanizmu Zabezpieczenia Prowizji, z przyczyn, za które Inwestor odpowiada, w szczególności podpisanie dokumentu bez wymaganej klauzuli, wypłatę choćby części środków bez równoczesnego przekazania Prowizji Klientowskiej albo użycie innego podmiotu lub konstrukcji w celu pominięcia Finance You. Zamiar obejścia nie jest konieczny; działania i zaniechania Grupy Inwestora przy realizacji Transakcji traktuje się jak działania i zaniechania Inwestora.
+Kara Obejściowa oznacza karę umowną równą 5% Sumy Hipotecznej, należną za Naruszenie Obejściowe. Zabezpiecza obowiązki niepieniężne Inwestora, nie stanowi ceny usługi ani prowizji od Transakcji i nie jest zwiększana o VAT, o ile bezwzględnie obowiązujące przepisy nie wymagają innej kwalifikacji.
+Okres Ochronny oznacza pięć lat od Ujawnienia Identyfikującego wskazanego w Karcie Leada. Korekta techniczna danych lub ponowne otwarcie tego samego Projektu nie rozpoczyna okresu od nowa, chyba że Strony indywidualnie uzgodnią inaczej.
+Konsument oznacza osobę fizyczną zawierającą Umowę bez bezpośredniego związku z jej działalnością gospodarczą lub zawodową. Postanowienia konsumenckie stosuje się także do osoby fizycznej prowadzącej działalność, gdy przepisy przyznają jej w tej relacji ochronę właściwą konsumentowi.
+Dzień Roboczy oznacza dzień od poniedziałku do piątku z wyłączeniem dni ustawowo wolnych od pracy w Polsce.
+Zlecenie oznacza indywidualną, terminową dyspozycję Inwestora poszukiwania jednego Finansowania, określającą: kwotę Finansowania z dopuszczalnym odchyleniem do 15%, maksymalny okres Finansowania, minimalny oczekiwany zysk roczny oraz termin ważności wynoszący 30, 60 albo 90 dni. Zlecenie ma status: złożone, przyjęte, wykonane, wygasłe albo cofnięte.
+Dopasowanie oznacza zgodność Projektu ze Zleceniem: kwota Finansowania mieści się w kwocie Zlecenia z uwzględnieniem odchylenia, okres Finansowania nie przekracza okresu Zlecenia, a wynagrodzenie oferowane przez Klienta nie jest niższe niż zysk wskazany w Zleceniu. Pozostałe kryteria selekcji, w szczególności zabezpieczenie, stosunek kwoty do wartości, lokalizację i wynik kwalifikacji, stosuje Finance You według własnej oceny.
+§ 2. Zakres usługi Finance You
+W ramach Umowy Finance You może, zależnie od Projektu:
+pozyskać i wstępnie zakwalifikować Projekt;
+przygotować anonimowy opis i Kartę Leada;
+na podstawie przyjętego Zlecenia przedstawić Inwestorowi Projekt wykazujący Dopasowanie, a następnie Klienta i nieruchomość w sposób etapowy;
+koordynować wymianę dokumentów, zapytania, oględziny, wycenę, negocjacje i czynności zamknięcia;
+monitorować status Finansowania, dokumenty zabezpieczeń i publiczne rejestry; oraz
+wykonywać inne czynności wskazane w Karcie Leada, bez uprawnienia do zaciągania zobowiązań za Inwestora lub Klienta, chyba że odrębne pełnomocnictwo stanowi inaczej.
+Finance You wykonuje usługę skojarzenia i wsparcia transakcyjnego z należytą starannością profesjonalną, lecz nie jest stroną Finansowania, nie przyjmuje depozytów, nie gwarantuje wypłacalności Klienta, wartości nieruchomości, pierwszeństwa hipoteki, wpisu w księdze wieczystej ani ekonomicznego wyniku inwestycji.
+Umowa nie stanowi rekomendacji inwestycyjnej, doradztwa prawnego, podatkowego ani wyceny. Inwestor podejmuje niezależną decyzję i odpowiada za własne badanie prawne, finansowe, techniczne, podatkowe oraz AML.
+Każde przedstawienie Projektu jest odrębną usługą przedstawienia w ramach Umowy ramowej. Finance You nie ma obowiązku przedstawienia minimalnej liczby Projektów, a Inwestor nie ma obowiązku zawarcia Transakcji Chronionej.
+Usługa przedstawienia i wsparcia transakcyjnego na podstawie niniejszej Umowy jest dla Inwestora nieodpłatna: Finance You nie pobiera od Inwestora żadnych opłat — ani abonamentu, ani opłaty za udostępnienie Projektu, ani wynagrodzenia od rezultatu. Wprowadzenie w przyszłości abonamentu za dostęp do systemu wymaga aneksu albo nowej wersji Umowy doręczonej Inwestorowi na trwałym nośniku i wyraźnie przez niego zaakceptowanej; do tego czasu żadna opłata od Inwestora nie jest należna.
+Finance You przedstawia Projekty wyłącznie w wykonaniu przyjętego Zlecenia. Inwestor nie ma dostępu do Projektów nieprzypisanych do jego Zleceń, do ich liczby ani do informacji o innych inwestorach. Finance You może przedstawiać Projekty również innym podmiotom na podstawie odrębnych umów; o tym, komu i w jakiej kolejności Projekt jest przedstawiany, decyduje Finance You.
+§ 3. Warunki regulacyjne i wyłączenie finansowania konsumenckiego
+Finance You aktywuje Projekt tylko po potwierdzeniu, że deklarowany cel Finansowania jest Celem Gospodarczym. Inwestor nie może wykorzystać Umowy do udzielenia kredytu konsumenckiego, kredytu hipotecznego konsumentowi ani finansowania prywatnych potrzeb mieszkaniowych.
+Jeżeli w toku procesu ujawni się choćby częściowy cel konsumpcyjny, Finance You może natychmiast wstrzymać ujawnianie danych i obsługę Projektu do czasu odrębnej kwalifikacji prawnej. Inwestor nie może obchodzić tego ograniczenia przez zmianę nazwy produktu, podstawienie spółki ani późniejsze przeznaczenie środków sprzeczne z dokumentacją.
+Umowa nie jest zapewnieniem, że działalność którejkolwiek Strony nie podlega zezwoleniu, rejestracji lub nadzorowi. Jeżeli model danego Projektu mieści się w zakresie działalności regulowanej, w tym usług finansowania społecznościowego, kredytu konsumenckiego, kredytu hipotecznego, usług płatniczych lub innej usługi finansowej, Projekt może być realizowany wyłącznie po spełnieniu właściwych wymogów albo z udziałem uprawnionego podmiotu.
+Finance You może odmówić albo zawiesić Projekt bez odpowiedzialności za utracone korzyści, jeżeli wymaga tego ocena regulacyjna, AML, sankcyjna, ochrona danych, ryzyko oszustwa, interes Klienta lub bezpieczeństwo systemu.
+Inwestor na żądanie przedstawi dane identyfikacyjne, informacje o beneficjentach rzeczywistych, źródle środków, strukturze Grupy Inwestora oraz dokumenty wymagane do oceny zgodności. Brak dokumentów w terminie wskazanym w wezwaniu może zakończyć rezerwację.
+§ 4. Zawarcie Umowy i dowody elektroniczne
+Umowa może zostać zawarta własnoręcznie, kwalifikowanym podpisem elektronicznym albo w formie dokumentowej na odległość przez imienne konto, jednorazowy kod, potwierdzenie e-mail lub inną metodę pozwalającą ustalić osobę składającą oświadczenie.
+Przed złożeniem oświadczenia Inwestor otrzymuje treść Umowy i wymagane informacje na trwałym nośniku, w szczególności jako plik PDF. Finance You utrwala co najmniej wersję i skrót dokumentu, identyfikator konta, datę i czas, metodę uwierzytelnienia, treść oświadczeń, identyfikator Karty Leada oraz — w granicach prawa — adres IP i dane urządzenia.
+Akceptacja Karty Leada następuje oddzielnie dla każdego Projektu przed Ujawnieniem Identyfikującym. Brak akceptacji oznacza brak prawa dostępu do danych. Jeżeli jednak Inwestor niebędący Konsumentem ani osobą objętą ochroną właściwą konsumentowi, związany już niniejszą Umową i NDA, otrzyma z kanału przypisanego Finance You Ujawnienie Identyfikujące bez uprzedniej Karty Leada, a następnie świadomie wykorzysta dane, podejmie kontakt z Klientem, przekaże dane Grupie Inwestora albo doprowadzi do Transakcji Chronionej, zastosowanie mają domyślne warunki: standardowy Mechanizm Zabezpieczenia Prowizji, Kara Obejściowa 5% Sumy Hipotecznej oraz pięcioletni Okres Ochronny liczony od tego Ujawnienia. Odbiorca twierdzący, że ujawnienie było przypadkowe, zawiadamia Finance You w ciągu 1 Dnia Roboczego, nie wykorzystuje danych i potwierdza ich usunięcie. Wobec Konsumenta lub osoby chronionej jak konsument zawsze jest wymagana uprzednia, wyraźna i indywidualna akceptacja Karty Leada oraz Kary Obejściowej.
+Dane z rejestrów systemowych, potwierdzenia doręczenia, znaki wodne, historia wersji, logi wyświetlenia i pobrania oraz wiadomości Stron mogą służyć jako dowody złożenia oświadczeń i wykonania usługi, z prawem Inwestora do wykazania błędu lub nieuprawnionego użycia konta.
+W razie rozbieżności pierwszeństwo ma indywidualna Karta Leada przed Umową wyłącznie w zakresie danych Projektu, rzeczywistych warunków Prowizji Klientowskiej i szczególnych warunków, a Umowa przed ogólnym regulaminem. Karta Leada nie może ustanawiać żadnych opłat należnych od Inwestora. Kara Obejściowa wynosi dokładnie 5% Sumy Hipotecznej; jej zmiana wymaga odrębnego uzgodnienia Stron w formie dokumentowej i uprzedniego przeglądu prawnego.
+§ 5. Przedstawienie i rezerwacja Projektu
+Inwestor składa Zlecenie w systemie. Finance You w terminie 2 Dni Roboczych przyjmuje Zlecenie albo odmawia jego przyjęcia, jeżeli parametry nie pozwalają na selekcję, w szczególności gdy odpowiadałaby im przeważająca część Projektów; przyjęcie jest potwierdzane w systemie wraz z datą. Inwestor może mieć jednocześnie nie więcej niż pięć przyjętych Zleceń. Zlecenie bezterminowe albo obejmujące każde Finansowanie nie jest przyjmowane. Jedno Zlecenie odpowiada jednemu Finansowaniu; zmiana parametrów wymaga nowego Zlecenia. Zlecenie wygasa z upływem terminu ważności, po cofnięciu przez Inwestora, po zawarciu Transakcji Chronionej albo po odrzuceniu przez Inwestora pięciu kolejnych Projektów. Cofnięcie lub wygaśnięcie Zlecenia nie wpływa na Okres Ochronny Projektów już ujawnionych.
+Finance You może udostępnić anonimowy teaser Projektu wykazującego Dopasowanie wyłącznie Inwestorowi, którego Zlecenie zostało przyjęte, przed ujawnieniem danych identyfikujących. Teaser ma charakter informacyjny i może opierać się na danych niezweryfikowanych lub przybliżonych. Teaser nie jest publikowany ani rozsyłany do inwestorów bez przyjętego Zlecenia.
+Po przyjęciu Projektu Inwestor otrzymuje rezerwację na 24 godziny. Finance You może jednokrotnie przedłużyć ją o 12 godzin, jeżeli Inwestor wykaże rzeczywisty postęp, w szczególności złoży pytania, potwierdzi środki albo rozpocznie analizę dokumentów.
+W czasie aktywnej rezerwacji Finance You nie przedstawia Projektu ani nie udostępnia jego danych innemu inwestorowi działającemu na podstawie Zlecenia. Po odrzuceniu Projektu lub wygaśnięciu rezerwacji Projekt może zostać przedstawiony innemu inwestorowi. Inwestor może mieć jednocześnie nie więcej niż pięć aktywnych rezerwacji w ramach jednego lub kilku Zleceń, w tym nie więcej niż dwie rezerwacje przedłużone. Finance You może cofnąć rezerwację w przypadku bezczynności, braku dokumentów, naruszenia bezpieczeństwa, nieprawdziwych oświadczeń, ryzyka prawnego albo interesu Klienta.
+Ujawnienie następuje etapowo: teaser anonimowy, pakiet zanonimizowany lub spseudonimizowany, a następnie — po akceptacji wszystkich dokumentów — zakres danych niezbędny do oceny i realizacji Projektu. Finance You nie zobowiązuje się do przekazywania „wszystkich danych”; przekazuje dane adekwatne i niezbędne.
+Odrzucenie Projektu powinno nastąpić w systemie albo w formie dokumentowej. Inwestor po odrzuceniu usuwa pełne dane zgodnie z umową dotyczącą danych osobowych, lecz obowiązki poufności i pięcioletnia ochrona relacji pozostają w mocy.
+Składanie Zleceń, udostępnienie teasera, Karta Leada, Ujawnienie Identyfikujące i rezerwacja są dla Inwestora nieodpłatne. Inwestor nie ma dostępu do Projektów nieprzypisanych do jego Zleceń ani do ich zestawienia. Nieodpłatność usługi jest niezależna od Prowizji Klientowskiej i Kary Obejściowej i nie zwalnia z Mechanizmu Zabezpieczenia Prowizji.
+§ 6. Oświadczenia i obowiązki Inwestora
+Inwestor oświadcza i zobowiązuje się, że:
+podane dane, umocowanie i informacje o Grupie Inwestora są prawdziwe, aktualne i kompletne;
+dysponuje lub będzie dysponował środkami pochodzącymi z legalnego źródła oraz wymaganymi zgodami i kompetencjami;
+samodzielnie zbada Projekt i uzyska profesjonalne opinie w zakresie odpowiednim do ryzyka;
+nie będzie wywierał niedozwolonej presji na Klienta, wprowadzał go w błąd ani uzależniał transakcji od niedozwolonych świadczeń;
+nie użyje danych do innego celu ani nie udostępni ich osobie spoza prawidłowo zgłoszonej Grupy Inwestora;
+nie zawrze Finansowania na cel konsumpcyjny na podstawie danych otrzymanych w tym procesie; oraz
+nie zawrze ani nie wykona Transakcji Chronionej bez uprzedniego wdrożenia Mechanizmu Zabezpieczenia Prowizji i nie wypłaci żadnej transzy bez równoczesnego przekazania Prowizji Klientowskiej zgodnie z dyspozycją Klienta;
+niezwłocznie zgłosi konflikt interesów, utratę zdolności do Finansowania, postępowanie sankcyjne, upadłościowe lub inne zdarzenie istotne dla Projektu; oraz
+przed zawarciem Transakcji Chronionej samodzielnie zweryfikuje, czy Klient jest przedsiębiorcą oraz czy Finansowanie jest zaciągane na Cel Gospodarczy, w szczególności czy umowa nie stanowi umowy o kredyt konsumencki ani umowy o kredyt hipoteczny udzielany konsumentowi; weryfikacja obejmuje co najmniej sprawdzenie wpisu Klienta w CEIDG albo KRS, uzyskanie od Klienta pisemnego oświadczenia o Celu Gospodarczym oraz ocenę sposobu wykorzystania nieruchomości stanowiącej zabezpieczenie. Potwierdzenie Celu Gospodarczego przez Finance You na podstawie § 3 ust. 1 opiera się na oświadczeniach Klienta i nie zastępuje weryfikacji Inwestora; skutki zawarcia Transakcji Chronionej z naruszeniem tego obowiązku obciążają Inwestora.
+Inwestor nie może składać Klientowi oświadczeń w imieniu Finance You ani przedstawiać się jako jej pracownik, agent uprawniony do reprezentacji lub wspólnik, chyba że odrębne pełnomocnictwo wyraźnie to dopuszcza.
+Inwestor ponosi koszty własnego badania, obsługi prawnej, wyceny, notariusza, wpisów i ustanowienia zabezpieczeń, chyba że Karta Leada albo umowa z Klientem stanowi inaczej.
+§ 7. Nieodpłatność usługi dla Inwestora i zabezpieczenie Prowizji Klientowskiej
+Finance You nie pobiera od Inwestora żadnych opłat: przyjęcie Zlecenia, udostępnienie teasera, Karta Leada, Ujawnienie Identyfikujące, rezerwacja, wsparcie transakcyjne oraz zawarcie Transakcji Chronionej pozostają dla Inwestora nieodpłatne. Ewentualny przyszły abonament za dostęp do systemu wymaga aneksu albo nowej wersji Umowy (§ 2 ust. 5).
+Ekonomiczny ciężar Prowizji Klientowskiej ponosi Klient na podstawie odrębnej umowy z Finance You; nie jest ona opłatą za usługę świadczoną Inwestorowi. Prowizja Klientowska wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT, i jest potrącana z wypłaty, chyba że umowa Klienta przewiduje inną stawkę, minimum, podstawę albo moment należności. Karta Leada musi odzwierciedlać rzeczywiste, a nie przykładowe warunki. Odrębny obowiązek Inwestora wykonania dyspozycji Klienta i świadczenia na rzecz Finance You powstaje z dokumentu Finansowania zawierającego Mechanizm Zabezpieczenia Prowizji.
+Przed zawarciem Transakcji Chronionej Inwestor zapewni włączenie do umowy Finansowania klauzuli zgodnej z Załącznikiem nr 6 albo równoważnej, która utrwala dyspozycję Klienta i zastrzega bezpośrednie świadczenie na rzecz Finance You. Finance You może złożyć oświadczenie, że chce skorzystać z zastrzeżenia na rzecz osoby trzeciej.
+Inwestor wypłaci kwotę Finansowania w dwóch częściach: Prowizję Klientowską przekaże bezpośrednio na rachunek Finance You wskazany w Karcie Leada, a pozostałą kwotę na rachunek Klienta albo zgodnie z jego pozostałymi dyspozycjami. Przelew Prowizji następuje nie później niż równocześnie z pierwszą wypłatą środków lub przekazaniem Klientowi korzyści ekonomicznej, chyba że Finance You wyraźnie zatwierdzi inny harmonogram.
+Przekazanie Prowizji Klientowskiej przez Inwestora jest wykonaniem części zobowiązania do wypłaty Finansowania wobec Klienta oraz wykonaniem zobowiązania Klienta wobec Finance You. Nie stanowi kosztu, prowizji ani wynagrodzenia należnego od Inwestora.
+Inwestor nie wypłaci żadnej części Finansowania, jeżeli przed wypłatą nie otrzyma potwierdzonej kwoty albo jednoznacznej formuły Prowizji Klientowskiej, numeru rachunku Finance You i dokumentu zawierającego Mechanizm Zabezpieczenia Prowizji. Brak któregokolwiek elementu oznacza obowiązek wstrzymania wypłaty i niezwłocznego zawiadomienia Finance You.
+W terminie 1 Dnia Roboczego od przelewu Inwestor przekaże Finance You potwierdzenie zapłaty zawierające identyfikator Projektu, kwotę, datę, rachunek nadawcy i tytuł płatności. Finance You potwierdzi zaliczenie kwoty na Prowizję Klientowską.
+Własne odsetki, prowizje, opłaty, korzyści lub inne świadczenia Inwestora od Klienta muszą zostać opisane w Karcie Leada oddzielnie od Prowizji Klientowskiej. Karta wskazuje także istotny konflikt interesów i środki jego ograniczenia; brak wymaganych informacji blokuje Ujawnienie Identyfikujące.
+Jeżeli Inwestor prawidłowo zastosuje Mechanizm Zabezpieczenia Prowizji i przekaże Prowizję Klientowską zgodnie z dyspozycją Klienta, zawarcie Transakcji Chronionej nie rodzi po stronie Inwestora żadnego wynagrodzenia transakcyjnego ani Kary Obejściowej na rzecz Finance You.
+§ 8. Transakcja Chroniona, zdarzenia dowodowe i Naruszenie Obejściowe
+Dla ustalenia, czy w Okresie Ochronnym doszło do Transakcji Chronionej, uwzględnia się najwcześniejsze z następujących zdarzeń:
+zawarcia umowy Finansowania, umowy cesji, refinansowania, nabycia wierzytelności lub innego wiążącego dokumentu;
+wypłaty choćby części środków albo udostępnienia Klientowi innej korzyści ekonomicznej;
+złożenia oświadczenia o ustanowieniu hipoteki, podpisania aktu notarialnego lub złożenia wniosku wieczystoksięgowego;
+pojawienia się wzmianki albo wpisu w księdze wieczystej wskazującego Inwestora lub Grupę Inwestora jako wierzyciela, administratora, powiernika, cesjonariusza lub osobę korzystającą z zabezpieczenia; albo
+uzyskania przez Inwestora lub Grupę Inwestora ekonomicznego skutku równoważnego Finansowaniu, niezależnie od nazwy i liczby umów.
+Jeżeli w Okresie Ochronnym w dziale IV księgi wieczystej nieruchomości przedstawionej w Projekcie albo innej nieruchomości Klienta Chronionego pojawi się wpis lub wzmianka wskazująca imię i nazwisko, firmę, identyfikator albo podmiot z Grupy Inwestora jako wierzyciela, administratora, powiernika, cesjonariusza lub beneficjenta zabezpieczenia, domniemywa się, że doszło do Transakcji Chronionej. Inwestor może wykazać dokumentami, że zdarzenie było całkowicie niezależne od relacji i danych przedstawionych przez Finance You albo że zastosowano Mechanizm Zabezpieczenia Prowizji.
+Dla zachowania Okresu Ochronnego wystarczy, że w ciągu pięciu lat nastąpi którekolwiek zdarzenie z ust. 1. Późniejszy wpis lub wzmianka, także po upływie pięciu lat, może potwierdzać wcześniejszą Transakcję Chronioną lub Naruszenie Obejściowe. Sam wpis dokonany dopiero po upływie pięciu lat nie uruchamia Kary Obejściowej, jeżeli przed końcem Okresu Ochronnego nie nastąpiło żadne wcześniejsze zdarzenie Transakcji Chronionej.
+Samo wystąpienie Transakcji Chronionej nie rodzi obowiązku zapłaty Kary Obejściowej. Jeżeli przed jej zawarciem skutecznie zabezpieczono Prowizję Klientowską i przekazano ją zgodnie z § 7, Kara Obejściowa nie powstaje, a Inwestor nie płaci Finance You żadnego wynagrodzenia.
+Naruszenie Obejściowe następuje najpóźniej z chwilą zawarcia wiążącego dokumentu Transakcji Chronionej bez Mechanizmu Zabezpieczenia Prowizji albo z chwilą pierwszej wypłaty lub korzyści przekazanej bez równoczesnego przelewu Prowizji Klientowskiej — zależnie od tego, które zdarzenie nastąpi wcześniej.
+Jeżeli w chwili Naruszenia Obejściowego Suma Hipoteczna nie jest jeszcze ostateczna, Karę Obejściową ustala się tymczasowo od kwoty Finansowania lub znanej części zabezpieczenia, a po ustaleniu wyższej Sumy Hipotecznej Inwestor dopłaca różnicę. Nadpłata podlega zwrotowi, jeżeli ostateczna podstawa okaże się niższa.
+Kara Obejściowa jest płatna w terminie 7 dni od doręczenia wezwania zawierającego opis naruszenia i kalkulację. Za opóźnienie należą się właściwe odsetki ustawowe; brak faktury VAT nie wstrzymuje wymagalności kary, która nie stanowi wynagrodzenia za usługę.
+Późniejsza spłata, rozwiązanie, odstąpienie, bezskuteczność zabezpieczenia albo nieosiągnięcie zakładanego wyniku nie usuwa Naruszenia Obejściowego. Niewykonany projekt dokumentu nie wystarcza jednak do naliczenia kary, jeżeli nie zawarto wiążącej transakcji, nie przekazano korzyści i nie wystąpiło inne zdarzenie z ust. 1.
+§ 9. Pięcioletnia ochrona i zakaz obchodzenia
+Okres Ochronny biegnie przez pięć lat od Ujawnienia Identyfikującego i obowiązuje niezależnie od odrzucenia Projektu, wygaśnięcia rezerwacji, zawieszenia konta, wypowiedzenia Umowy albo zmiany osoby Inwestora na spółkę.
+Inwestor nie może projektować, inicjować ani akceptować konstrukcji, której celem lub skutkiem jest uniknięcie Mechanizmu Zabezpieczenia Prowizji albo zapłaty Prowizji Klientowskiej, w szczególności przez użycie Grupy Inwestora, podział jednej transakcji, finansowanie przez pośrednika, cesję przed lub po wypłacie, administratora hipoteki, zmianę zabezpieczenia, rozliczenie poza systemem albo zawarcie kolejnej umowy bez informacji dla Finance You.
+Ochrona obejmuje każdą Transakcję Chronioną z Klientem Chronionym w Okresie Ochronnym, także gdy ostatecznie zabezpieczona zostanie inna nieruchomość niż wskazana pierwotnie, zmieni się kwota, harmonogram, dłużnik formalny, wierzyciel formalny, produkt albo sposób przekazania korzyści.
+Ochrona nie oznacza obowiązku zawarcia transakcji. Jeżeli Inwestor nie zawrze ani nie zrealizuje Transakcji Chronionej i nie użyje relacji w inny sposób, nie powstaje Kara Obejściowa; jeżeli zawrze ją prawidłowo z Mechanizmem Zabezpieczenia Prowizji, Inwestor nie płaci Finance You żadnego wynagrodzenia.
+§ 10. Relacja istniejąca przed przedstawieniem
+Inwestor może zgłosić, że znał Klienta przed Ujawnieniem Identyfikującym, wyłącznie w terminie 2 Dni Roboczych od tego ujawnienia, przed podjęciem dalszych czynności w Projekcie.
+Zgłoszenie musi wskazywać Klienta i zawierać wiarygodne dokumenty datowane przed ujawnieniem, potwierdzające aktywne, konkretne rozmowy dotyczące zasadniczo tego samego Finansowania albo tej samej możliwości zabezpieczenia. Sam wpis w bazie, wizytówka, wcześniejszy kontakt towarzyski, publiczna wiedza lub nieaktywna relacja nie wystarczają.
+Jeżeli Inwestor wykaże wcześniejsze, samodzielne i aktywne źródło tej samej Transakcji oraz brak wykorzystania Informacji Poufnych lub wkładu Finance You, dany zakres nie stanowi Transakcji Chronionej. Jeżeli Finance You ujawniła nową nieruchomość, potrzebę, strukturę, dokumenty albo doprowadziła do wznowienia rozmów, ochrona pozostaje w mocy w zakresie tego wkładu i przedstawionej możliwości Finansowania.
+Brak terminowego i udokumentowanego zgłoszenia oznacza przyjęcie, że Klient i Projekt zostały skutecznie przedstawione przez Finance You.
+§ 11. Raportowanie i weryfikacja
+Inwestor zawiadomi Finance You w terminie 1 Dnia Roboczego o:
+bezpośrednim kontakcie, spotkaniu lub wymianie istotnych dokumentów z Klientem Chronionym;
+złożeniu lub otrzymaniu term sheetu, oferty, promesy, projektu umowy albo uzgodnieniu istotnych warunków;
+zawarciu umowy, cesji, porozumienia, aktu notarialnego albo innego dokumentu;
+wypłacie środków lub przekazaniu innej korzyści;
+złożeniu wniosku wieczystoksięgowego, pojawieniu się wzmianki lub wpisu;
+zmianie kwoty, zabezpieczenia, podmiotu finansującego albo udziału członka Grupy Inwestora.
+Na żądanie Finance You Inwestor przekaże w terminie 3 Dni Roboczych kopie lub wyciągi dokumentów niezbędnych do potwierdzenia zdarzenia, zastosowania Mechanizmu Zabezpieczenia Prowizji, zapłaty Prowizji Klientowskiej i — w razie naruszenia — obliczenia Kary Obejściowej. Może zanonimizować informacje niezwiązane z Projektem, o ile nie uniemożliwia to weryfikacji.
+Finance You może monitorować jawne rejestry, w tym księgi wieczyste i rejestry przedsiębiorców, przez Okres Ochronny oraz czas niezbędny do dochodzenia roszczeń. Monitoring ogranicza się do danych koniecznych do ochrony relacji, Prowizji Klientowskiej i Kary Obejściowej.
+W razie uzasadnionego sporu Finance You może zlecić niezależnemu adwokatowi, radcy prawnemu, biegłemu rewidentowi lub doradcy podatkowemu poufną weryfikację dokumentów. Jeżeli wykaże ona niezgłoszoną Transakcję Chronioną, brak Mechanizmu Zabezpieczenia Prowizji albo brak należnego przelewu Prowizji Klientowskiej, uzasadnione koszty weryfikacji ponosi Inwestor; w przeciwnym razie ponosi je Finance You.
+§ 12. Zmiana osoby fizycznej na spółkę i Grupa Inwestora
+Osoba fizyczna może wskazać spółkę lub inny podmiot jako przyszłego finansującego, składając formularz przystąpienia z Załącznika nr 2. Dostęp tej spółki do danych i możliwość działania w Projekcie powstają dopiero po akceptacji Finance You, weryfikacji reprezentacji i beneficjenta rzeczywistego oraz przyjęciu przez spółkę wskazanych wersji Umowy, NDA, Karty Leada i dokumentów dotyczących danych.
+Podmiot przystępujący wstępuje kumulatywnie do obowiązków wdrożenia Mechanizmu Zabezpieczenia Prowizji, raportowania, poufności i zakazu obchodzenia dotyczących wskazanych Projektów oraz do odpowiedzialności za Karę Obejściową. Odpowiada solidarnie z pierwotnym Inwestorem w zakresie dopuszczalnym prawem. Nie dochodzi do nowacji ani zwolnienia pierwotnego Inwestora, chyba że Finance You wyraźnie oświadczy inaczej w formie dokumentowej.
+Jeżeli transakcję zawiera członek Grupy Inwestora, który nie podpisał przystąpienia, Inwestor pozostaje odpowiedzialny za wykonanie obowiązków informacyjnych, zastosowanie Mechanizmu Zabezpieczenia Prowizji i — w razie Naruszenia Obejściowego — zapłatę Kary Obejściowej, a działanie tego podmiotu uważa się za działanie w ramach Transakcji Chronionej.
+Zmiana statusu z Konsumenta na przedsiębiorcę albo spółkę działa na przyszłość i nie pozbawia osoby fizycznej ochrony bezwzględnie przysługującej jej w odniesieniu do wcześniejszych oświadczeń. Do spółki stosuje się postanowienia B2B od chwili jej skutecznego przystąpienia. Przystąpienie nie resetuje Ujawnienia Identyfikującego, Okresu Ochronnego, Kary Obejściowej ani historii dowodowej.
+Inwestor zgłosi każdą zmianę nazwy, formy prawnej, siedziby, reprezentacji, beneficjenta rzeczywistego i danych kontaktowych w terminie 2 Dni Roboczych. Doręczenie na ostatni zgłoszony adres jest skuteczne w zakresie dopuszczalnym prawem.
+§ 13. Poufność i dane osobowe
+Przed Ujawnieniem Identyfikującym Inwestor zawiera Umowę o zachowaniu poufności i zakazie obchodzenia oraz Umowę udostępniania i — warunkowo — powierzenia danych osobowych. Dokumenty te mają zastosowanie równolegle.
+Co do zasady Finance You i Inwestor są odrębnymi administratorami danych w zakresie, w jakim każdy samodzielnie decyduje o celu i sposobie oceny lub realizacji Finansowania. Powierzenie występuje tylko dla ściśle opisanych czynności wykonywanych przez jedną Stronę wyłącznie na udokumentowane polecenie drugiej.
+Inwestor nie może wykorzystywać danych do marketingu, tworzenia własnej bazy klientów, automatycznego wzbogacania profili, innego finansowania poza zakresem Transakcji Chronionej ani ujawniać ich Grupie Inwestora bez spełnienia właściwych przesłanek prawnych i obowiązków informacyjnych.
+Naruszenie danych nie uchyla obowiązku zastosowania Mechanizmu Zabezpieczenia Prowizji ani odpowiedzialności za odrębne Naruszenie Obejściowe, ale może prowadzić do dodatkowej odpowiedzialności na zasadach właściwych dla ochrony danych.
+§ 14. Odpowiedzialność i kary umowne
+Strona odpowiada za rzeczywistą szkodę spowodowaną zawinionym niewykonaniem Umowy na zasadach ogólnych. Finance You nie odpowiada za decyzje gospodarcze Inwestora, wypłacalność Klienta, wahanie wartości zabezpieczenia, działanie sądu wieczystoksięgowego ani utracone korzyści wynikające z odmowy lub niepowodzenia Finansowania, chyba że bezwzględnie obowiązujące prawo stanowi inaczej.
+Za Naruszenie Obejściowe, za które Inwestor odpowiada, zapłaci on Finance You Karę Obejściową równą 5% Sumy Hipotecznej. Zamiar obejścia nie jest wymagany, a działania i zaniechania Grupy Inwestora przy realizacji Transakcji traktuje się jak działania i zaniechania Inwestora. Kara dotyczy naruszenia niepieniężnego obowiązku powstrzymania się od zawarcia lub wykonania Transakcji Chronionej bez Mechanizmu Zabezpieczenia Prowizji; nie jest karą za niewykonanie własnego zobowiązania pieniężnego Inwestora ani ceną usługi.
+Jeżeli kilka hipotek zabezpiecza tę samą ekspozycję albo ustanowiono hipotekę łączną, Karę Obejściową liczy się jeden raz od najwyższego łącznego limitu tej ekspozycji. Odrębne dodatkowe limity i ekonomicznie odrębne ekspozycje sumuje się. Przy kilku inwestorach podstawę przypisuje się według rzeczywistego udziału lub ryzyka; brak danych obciąża Inwestora obowiązkiem ich przedstawienia.
+Jeżeli po Naruszeniu Obejściowym Finansowanie zostanie zwiększone, odnowione albo refinansowane w Okresie Ochronnym bez naprawienia Mechanizmu Zabezpieczenia Prowizji, dodatkowa Kara Obejściowa wynosi 5% dodatniego przyrostu Sumy Hipotecznej. Tej samej ekspozycji nie liczy się drugi raz wyłącznie wskutek technicznego przeniesienia zabezpieczenia.
+Jeżeli Inwestor nie jest Konsumentem ani osobą objętą ochroną właściwą konsumentowi, za zawinione naruszenie obowiązku raportowego z § 11 zapłaci 5 000,00 zł za każde niezgłoszone zdarzenie, nie więcej niż 25 000,00 zł dla jednego Projektu, o ile wcześniej otrzymał wezwanie do uzupełnienia i nie wykonał go w ciągu 2 Dni Roboczych.
+Kara Obejściowa z niniejszej Umowy i Kara Obejściowa z NDA stanowią jedną karę za ten sam czyn i nie podlegają podwójnemu naliczeniu. Prowizja Klientowska należna od Klienta pozostaje odrębnym roszczeniem. Finance You może dochodzić odszkodowania przewyższającego karę, jeżeli szkoda jest wyższa.
+Stała kara za naruszenie raportowania nie ma zastosowania do Konsumenta. Kara Obejściowa może zostać zastosowana wobec Konsumenta wyłącznie po jej rzeczywistym, indywidualnym uzgodnieniu przed Ujawnieniem Identyfikującym, w osobnym oświadczeniu zawierającym sposób obliczenia, kwotowy przykład oraz jednoznaczne wskazanie, że poza Karą Obejściową Inwestor nie płaci Finance You żadnego wynagrodzenia. W pozostałym zakresie odpowiedzialność Konsumenta podlega zasadom ogólnym.
+§ 15. Postanowienia dla Konsumenta i umowa na odległość
+Przed zawarciem Umowy Konsument otrzymuje na trwałym nośniku informacje z Załącznika nr 3, aktualną Umowę, wzór odstąpienia oraz potwierdzenie, że usługa jest dla Inwestora nieodpłatna. Przed każdym Ujawnieniem Identyfikującym otrzymuje także indywidualną Kartę Leada wskazującą nieodpłatność usługi, warunki Prowizji Klientowskiej, Mechanizm Zabezpieczenia Prowizji oraz sposób obliczenia i przykład Kary Obejściowej.
+Konsument może odstąpić od Umowy zawartej na odległość bez podania przyczyny w terminie 14 dni od jej zawarcia, a jeżeli wymagane warunki umowne lub informacje otrzyma później — od ich doręczenia, w zakresie wynikającym z prawa. Wystarczy jednoznaczne oświadczenie, w tym formularz z Załącznika nr 4; termin jest zachowany, jeżeli oświadczenie zostanie wysłane przed jego upływem.
+Dla każdego Zlecenia Konsument wybiera: (a) rozpoczęcie usługi po upływie 14 dni albo (b) wyraźne żądanie rozpoczęcia przed upływem tego terminu. Pełne Ujawnienie Identyfikujące przed upływem terminu następuje tylko po odrębnej zgodzie na rozpoczęcie i odrębnym potwierdzeniu przyjęcia do wiadomości, że po pełnym wykonaniu usługi przedstawienia prawo odstąpienia od tej usługi wygaśnie.
+Skuteczne odstąpienie Konsumenta po rozpoczęciu, lecz przed pełnym wykonaniem usługi, rodzi obowiązek zapłaty kwoty proporcjonalnej do świadczeń spełnionych do chwili odstąpienia — wyłącznie wtedy, gdy Konsument wyraźnie zażądał rozpoczęcia wykonywania przed upływem terminu odstąpienia i potwierdził, że utraci prawo odstąpienia po pełnym wykonaniu usługi. Ponieważ usługa jest dla Inwestora nieodpłatna, obowiązek zapłaty kwoty proporcjonalnej nie powstaje.
+Po pełnym wykonaniu konkretnej usługi przedstawienia za uprzednią wyraźną zgodą i przyjęciu informacji o utracie prawa odstąpienia, odstąpienie od Umowy ramowej nie usuwa skutków tej wykonanej usługi ani Okresu Ochronnego dotyczącego poznanego Klienta. Nie ogranicza to bezwzględnych praw Konsumenta.
+Finance You udziela Konsumentowi przed zawarciem Umowy bezpłatnych, zrozumiałych wyjaśnień pozwalających ocenić, czy usługa i jej skutki odpowiadają jego potrzebom. Konsument może uzyskać kontakt z człowiekiem przed związaniem się Umową oraz w toku obsługi; istotna decyzja, reklamacja lub spór o Karę Obejściową nie mogą być rozstrzygane wyłącznie automatycznie bez dostępnej interwencji człowieka.
+Interfejs nie może wykorzystywać domyślnie zaznaczonych pól, ukrytych kosztów, wymuszonej ścieżki, mylącej hierarchii przycisków ani innego rozwiązania utrudniającego świadomą decyzję lub odstąpienie. Jeżeli obowiązujące przepisy wymagają internetowej funkcji odstąpienia, Finance You udostępnia ją w sposób stale widoczny i łatwo dostępny oraz niezwłocznie potwierdza złożenie oświadczenia na trwałym nośniku.
+Jeżeli informacje przedumowne zostały przekazane później niż jeden dzień przed związaniem Konsumenta Umową, Finance You wysyła na trwałym nośniku przypomnienie o prawie odstąpienia w terminie i zakresie wymaganym przez obowiązujące przepisy, bez materiału marketingowego i bez zmiany wcześniej przekazanych warunków.
+Postanowienie sprzeczne z prawem konsumenckim nie wiąże Konsumenta, a pozostała część Umowy pozostaje w mocy. W razie wątpliwości pierwszeństwo ma interpretacja zgodna z obowiązkowymi informacjami przekazanymi przed zawarciem umowy.
+§ 16. Czas trwania, wypowiedzenie i zawieszenie
+Umowa zostaje zawarta na czas nieoznaczony. Każda Strona może ją wypowiedzieć w formie dokumentowej z 30-dniowym okresem wypowiedzenia; Konsument może wypowiedzieć ją ze skutkiem natychmiastowym, jeżeli prawo lub korzystniejsza informacja przedumowna tak stanowi.
+Finance You może natychmiast zawiesić dostęp do danych i Projektów w przypadku zagrożenia bezpieczeństwa, naruszenia Umowy, braku dokumentów AML, utraty umocowania albo ryzyka regulacyjnego. Przed rozwiązaniem z przyczyny usuwalnej wyznaczy rozsądny termin naprawczy, chyba że niezwłoczne działanie jest konieczne.
+Rozwiązanie Umowy nie wpływa na Prowizję Klientowską, obowiązki związane z Mechanizmem Zabezpieczenia Prowizji, już powstałą Karę Obejściową, poufność, ochronę danych, dowody, kontrolę, zakaz obchodzenia ani Okres Ochronny Projektów ujawnionych przed rozwiązaniem.
+Strony przyjmują, że pięcioletni Okres Ochronny określa czas, w którym Transakcja Chroniona może prowadzić do Naruszenia Obejściowego; nie zmienia on ustawowych terminów przedawnienia roszczenia o już wymagalną Karę Obejściową lub Prowizję Klientowską.
+§ 17. Reklamacje i komunikacja
+Oświadczenia dotyczące Projektu składa się przez konto w systemie lub na adres e-mail wskazany w Karcie Leada. Oświadczenia o wypowiedzeniu, odstąpieniu, zmianie strony, sporze o Prowizję Klientowską lub Karę Obejściową i naruszeniu danych wymagają formy dokumentowej umożliwiającej utrwalenie treści.
+Reklamację można złożyć na adres Finance You, ul. Nowogrodzka 31, 00-511 Warszawa, albo e-mail: kontakt@financeyou.pl. Powinna opisywać zdarzenie, Projekt, żądanie i dane kontaktowe. Finance You potwierdzi wpływ i udzieli odpowiedzi na trwałym nośniku co do zasady w terminie 14 dni, a gdy sprawa jest szczególnie złożona — po uprzednim wyjaśnieniu przyczyny i wskazaniu terminu zgodnego z prawem.
+Konsument może skorzystać z bezpłatnej pomocy miejskiego lub powiatowego rzecznika konsumentów, organizacji konsumenckiej albo właściwego pozasądowego trybu, jeżeli jest dostępny dla danego rodzaju sporu. Umowa nie wprowadza obowiązkowego arbitrażu.
+Zmiana adresu lub e-maila wymaga niezwłocznego zgłoszenia. Wiadomość wysłana na ostatni prawidłowo zgłoszony adres jest dowodem podjęcia próby doręczenia, z zastrzeżeniem szczególnych zasad doręczeń konsumenckich.
+§ 18. Postanowienia końcowe
+Umowa podlega prawu polskiemu. Spory z przedsiębiorcą będą rozpoznawane przez sąd właściwy dla siedziby Finance You, o ile uzgodnienie właściwości zostało utrwalone w formie wymaganej przez prawo procesowe; w przeciwnym razie właściwość wynika z przepisów ogólnych. Wobec Konsumenta i osoby korzystającej z ochrony konsumenckiej właściwość sądu wynika wyłącznie z przepisów bezwzględnie obowiązujących.
+Inwestor nie może przenieść Umowy ani wierzytelności związanych z Projektem bez uprzedniej zgody Finance You, z wyjątkiem cesji w ramach ujawnionej i zaakceptowanej struktury, która zachowuje Mechanizm Zabezpieczenia Prowizji i odpowiedzialność za Karę Obejściową. Finance You może przenieść wymagalną wierzytelność, informując Inwestora w zakresie wymaganym prawem.
+Zmiana Umowy wymaga formy dokumentowej, chyba że prawo wymaga formy surowszej. Regulamin może zmieniać się na przyszłość po uprzednim powiadomieniu; nie zmieniają stawki ani zasad Projektu już objętego Ujawnieniem Identyfikującym.
+Nieważność albo bezskuteczność części postanowienia nie narusza pozostałej części. Strony zastąpią wadliwe postanowienie zgodnym z prawem rozwiązaniem możliwie najbliższym celowi gospodarczemu, bez ograniczania praw Konsumenta.
+Załączniki nr 1–7 stanowią integralną część Umowy; Umowa nie zawiera cennika ani innych załączników. Inwestor potwierdza otrzymanie kompletu dokumentów na trwałym nośniku przed Ujawnieniem Identyfikującym.
+________________________________
+________________________________
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+INWESTOR / ODBIORCA — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 1
+Karta Leada / indywidualne warunki Projektu
+Wypełnić i zaakceptować przed pierwszym Ujawnieniem Identyfikującym.
+DANE TRANSAKCYJNE
+ID Projektu
+____________________________________________
+Nr Zlecenia
+____________________________________________
+Parametry Zlecenia
+kwota: __________ zł ± 15%; maks. okres: ______ mies.; min. zysk roczny: ______ %; ważne do: __________
+Przyjęcie Zlecenia / Dopasowanie
+data przyjęcia: __________ ☐ Dopasowanie potwierdzone
+Wersja Karty
+____________  data i czas: ______________________________
+Kod Klienta
+____________________________________________
+Kod nieruchomości
+____________________________________________
+Cel Gospodarczy
+Opis: ________________________________________________________________☐ potwierdzony  ☐ wymaga wyjaśnienia  ☐ projekt wstrzymany
+Zakres teasera
+________________________________________________________________
+Ujawnienie Identyfikujące
+data i czas: __________________  kanał / log: ______________________________
+Inwestor
+________________________________________________________________
+Ujawniona Grupa Inwestora
+________________________________________________________________
+Rezerwacja
+od: __________________  do: __________________  przedłużenie maks. 12 h do: __________________
+Cena usługi dla Inwestora
+usługa dla Inwestora nieodpłatna — Finance You nie pobiera od Inwestora żadnych opłat
+Suma Hipoteczna
+☐ kwota z wpisu  ☐ kwota z wniosku / oświadczenia  ☐ kwota Finansowania  ☐ udział InwestoraPlanowana kwota / waluta: ________________________________________________
+Reguła wspólnego zabezpieczenia
+☐ jedna ekspozycja / hipoteka łączna — liczyć jeden raz  ☐ odrębne limity — opis alokacji: ______________________________
+Kara Obejściowa
+5% Sumy Hipotecznej za Naruszenie Obejściowe; nie jest wynagrodzeniem i nie dolicza się VAT, o ile prawo nie wymaga inaczej
+Przykład Kary Obejściowej
+Przykład standardowy: 1 000 000,00 zł × 5% = 50 000,00 zł.Przykład dla Projektu: __________________ × 5% = __________________
+Okres Ochronny
+5 lat od Ujawnienia Identyfikującego, tj. do: ______________________________
+Prowizja Klientowska
+Rzeczywiste warunki z odrębnej umowy Klienta: ______ % Kwoty Udzielonej; minimum: __________ zł; bez VAT; kwota / formuła: __________________; potrącana z wypłaty: ☐ tak; moment należności: __________________Standard, jeżeli umowa Klienta nie stanowi inaczej: 7% Kwoty Udzielonej, minimum 5 000,00 zł, bez VAT.
+Mechanizm Zabezpieczenia Prowizji
+☐ umowa Klienta potwierdzona  ☐ dyspozycja Klienta  ☐ klauzula w Finansowaniu  ☐ świadczenie na rzecz Finance You  ☐ zapłata z pierwszą wypłatąRachunek Finance You: ________________________________________________
+Wynagrodzenie Inwestora od Klienta
+rodzaj: __________________  stawka / kwota / podstawa: __________________  finansowane lub potrącane z wypłaty: ☐ tak ☐ nie
+Inni płatnicy / świadczenia
+☐ brak  ☐ płatnik: __________________  charakter i kwota / sposób ustalenia: ______________________________
+Konflikt i środki
+opis konfliktu: ________________________________________________środki zarządzania: __________________________________  status: ☐ zaakceptowany ☐ projekt wstrzymany
+Karta Transferu Danych
+ID / wersja: __________________  role i podstawy potwierdzone: ☐ tak ☐ nie
+Wersje / skróty dokumentów
+Umowa: __________________  NDA: __________________  RODO: __________________  Karta SHA-256: __________________
+Konsument — przebieg indywidualnego uzgodnienia kary
+☐ nie dotyczydata / kanał / uczestnicy: ________________________________________________propozycja Konsumenta i odpowiedź Finance You: ________________________________________________ostatecznie uzgodniona treść 5% i przykład: ________________________________________________identyfikator zapisu negocjacji: ________________________________________________
+Szczególne warunki
+________________________________________________________________
+Ujawnienie Identyfikujące jest niedopuszczalne, dopóki nie potwierdzono rzeczywistych warunków Prowizji Klientowskiej, Mechanizmu Zabezpieczenia Prowizji, Kary Obejściowej, konfliktu interesów, Karty Transferu i wersji dokumentów.
+Oświadczenie o relacji istniejącej przed przedstawieniem
+☐ Nie zgłaszam wcześniejszej relacji z Klientem / Projektem.
+☐ Zgłaszam wcześniejszą aktywną relację i załączam dowody datowane przed ujawnieniem:
+________________________________________________________________________________________
+Wybór Konsumenta — wypełniać tylko, gdy Inwestor jest Konsumentem
+☐ Proszę rozpocząć usługę przedstawienia dopiero po upływie 14 dni.
+albo
+☐ Wyraźnie żądam rozpoczęcia usługi przedstawienia tego Projektu przed upływem 14 dni od zawarcia właściwej umowy na odległość.
+☐ Przyjmuję do wiadomości, że po pełnym wykonaniu usługi, polegającym na Ujawnieniu Identyfikującym zgodnie z Kartą Leada, utracę prawo odstąpienia od tej konkretnie wykonanej usługi.
+Opłata proporcjonalna za rozpoczętą usługę pośrednictwa: nie powstaje — usługa jest dla Inwestora nieodpłatna (§ 15 ust. 4 Umowy).
+☐ Jako Konsument potwierdzam, że po rzeczywistych negocjacjach opisanych wyżej indywidualnie uzgodniłem Karę Obejściową równą 5% Sumy Hipotecznej wyłącznie za Naruszenie Obejściowe, za które odpowiadam; otrzymałem wyjaśnienie i przykład kwotowy oraz miałem realną możliwość wpływu na treść postanowienia przed ujawnieniem danych.
+Akceptacja
+Potwierdzam, że usługa Finance You jest dla mnie nieodpłatna. Akceptuję obowiązek zastosowania Mechanizmu Zabezpieczenia Prowizji, ujawnioną Prowizję Klientowską, własne wynagrodzenie od Klienta, konflikt i środki zarządzania, Karę Obejściową 5% Sumy Hipotecznej, jej przykład kwotowy, pięcioletni Okres Ochronny oraz wersje dokumentów wskazane w Protokole Akceptacji.
+________________________________
+________________________________
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+INWESTOR / ODBIORCA — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 2
+Przystąpienie spółki / zmiana podmiotu finansującego
+Kumulatywne przystąpienie do obowiązków i odpowiedzialności — bez automatycznego zwolnienia pierwotnego Inwestora.
+DANE PODMIOTU
+Podmiot przystępujący
+Firma: ______________________________  KRS / rejestr: ______________________________
+Adres, NIP, REGON
+________________________________________________________________
+Reprezentacja
+________________________________________________________________
+Beneficjent rzeczywisty
+________________________________________________________________
+Pierwotny Inwestor
+________________________________________________________________
+Zakres przystąpienia
+☐ Projekty wskazane niżej  ☐ wszystkie Projekty ujawnione pierwotnemu Inwestorowi do daty przystąpieniaID Projektów / Kart Leadów: ________________________________________________________________
+Rola
+☐ finansujący  ☐ współinwestor  ☐ SPV  ☐ cesjonariusz  ☐ administrator / powiernik  ☐ inna: __________
+Wersje i SHA-256
+Umowa: __________________  NDA: __________________  RODO: __________________  Karty: __________________
+Karta Transferu
+ID / wersja: __________________  dostęp od: __________________  zatwierdzony przez: __________________
+§ A. Oświadczenie o przystąpieniu
+Podmiot przystępujący potwierdza otrzymanie dokładnych wersji Umowy ramowej, właściwych Kart Leadów, NDA i umowy dotyczącej danych wskazanych powyżej oraz przystępuje do nich w zakresie oznaczonych Projektów. Każdy przyszły Projekt wymaga odrębnej Karty Leada i akceptacji przed Ujawnieniem Identyfikującym.
+Podmiot przystępuje kumulatywnie do obowiązków zastosowania Mechanizmu Zabezpieczenia Prowizji, raportowania, zakazu obchodzenia, poufności, bezpieczeństwa i usunięcia danych oraz do odpowiedzialności za Karę Obejściową. Odpowiada solidarnie z pierwotnym Inwestorem w zakresie dopuszczalnym prawem.
+Przystąpienie nie stanowi odnowienia, cesji Umowy ani zwolnienia pierwotnego Inwestora. Zwolnienie wymaga odrębnego, wyraźnego oświadczenia Finance You w formie dokumentowej.
+Podmiot ujawni członków własnej grupy, współinwestorów, administratora zabezpieczeń i źródło środków oraz będzie raportował zdarzenia transakcyjne jak Inwestor.
+Dostęp do danych powstaje wyłącznie na przyszłość, od czasu wskazanego w zatwierdzeniu Finance You, po zweryfikowaniu reprezentacji, beneficjenta rzeczywistego, kont imiennych, uprawnień i dokumentów ochrony danych. Do tego czasu pierwotny Inwestor nie może przekazywać podmiotowi pełnych danych. Przystąpienie nie legalizuje wcześniejszego nieuprawnionego ujawnienia.
+________________________________
+________________________________
+PODMIOT PRZYSTĘPUJĄCY — imię, nazwisko, funkcja / podpis / data
+PIERWOTNY INWESTOR — imię, nazwisko, funkcja / podpis / data
+Akceptacja Finance You: ____________________________________   data: ____________________
+ZAŁĄCZNIK NR 3
+Informacja przedumowna dla Konsumenta
+Przekazać na trwałym nośniku przed zawarciem umowy na odległość. Uzupełnić pola cenowe i techniczne zgodnie z aktualnym systemem.
+Obszar
+Informacja
+Usługodawca
+Finance You spółka z ograniczoną odpowiedzialnością z siedzibą w Warszawie, ul. Nowogrodzka 31, 00-511 Warszawa, wpisana do rejestru przedsiębiorców KRS pod numerem 0000635207, NIP 7010611803, REGON 365350668, kapitał zakładowy 389 600,00 zł, reprezentowana przez Filipa Roberta Bielaka – Prezesa Zarządu uprawnionego do samodzielnej reprezentacji. Kontakt: kontakt@financeyou.pl, tel. 889 888 700.
+Rejestr
+Rejestr przedsiębiorców KRS 0000635207; sąd rejestrowy i aktualną reprezentację należy sprawdzić w odpisie aktualnym przed zawarciem.
+Nadzór / zezwolenie
+Niniejsza informacja nie oznacza, że Finance You posiada zezwolenie KNF. Jeżeli dla konkretnego modelu wymagane jest zezwolenie, rejestracja lub udział uprawnionego podmiotu, Projekt nie zostanie uruchomiony przed spełnieniem wymogów.
+Usługa
+Przedstawienie i wsparcie procesu Projektu Finansowania na Cel Gospodarczy. Każda Karta Leada stanowi odrębną usługę przedstawienia w ramach Umowy ramowej.
+Istotne cechy i ryzyko
+Finance You nie gwarantuje zawarcia ani wyniku Finansowania. Inwestor samodzielnie ocenia ryzyko kredytowe, prawne, techniczne i wartość zabezpieczenia. Inwestowanie może prowadzić do utraty części lub całości środków i kosztów egzekucji.
+Cena dla Inwestora
+Usługa przedstawienia i wsparcia Transakcji Chronionej jest dla Inwestora nieodpłatna: Finance You nie pobiera od Inwestora abonamentu, opłaty za udostępnienie Projektu ani wynagrodzenia od rezultatu.
+Prowizja od Klienta
+Finance You otrzymuje od Klienta Prowizję Klientowską według odrębnej umowy. Standardowo: 7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT — potrącana z wypłaty. Inwestor przekazuje ją z kwoty Finansowania bezpośrednio Finance You zgodnie z dyspozycją Klienta; nie jest to opłata Inwestora.
+Kara Obejściowa
+Wyłącznie za zawarcie lub wykonanie Transakcji Chronionej bez Mechanizmu Zabezpieczenia Prowizji z przyczyn, za które Inwestor odpowiada: 5% Sumy Hipotecznej. Przykład: 1 000 000,00 zł × 5% = 50 000,00 zł. Kara nie jest ceną usługi; wobec Konsumenta wymaga indywidualnego uzgodnienia.
+Wynagrodzenie Inwestora / konflikt
+Karta Leada wskazuje również własne wynagrodzenie Inwestora od Klienta oraz konflikt wynikający z wielostronnych płatności i środki jego opanowania. Brak kompletu informacji blokuje ujawnienie danych.
+Podatki i koszty obce
+Podatki, opłaty sądowe, notarialne, wycena, doradcy, finansowanie przelewu i koszty zabezpieczeń nie są wliczone, chyba że Karta Leada wyraźnie stanowi inaczej.
+Płatność
+Inwestor nie płaci wynagrodzenia. Prowizję Klientowską przekazuje z kwoty Finansowania zgodnie z dyspozycją Klienta. Ewentualna indywidualnie uzgodniona Kara Obejściowa jest płatna w terminie 7 dni od wezwania opisującego naruszenie i kalkulację.
+Ważność informacji
+Warunki Karty Leada obowiązują dla wskazanego Projektu. Rezerwacja standardowo trwa 24 godziny i może zostać przedłużona o 12 godzin.
+Komunikacja
+System internetowy i e-mail; podstawowa opłata odpowiada taryfie operatora Internetu lub telefonu Konsumenta. Wymagane są aktualna przeglądarka, dostęp do PDF, e-mail, imienne konto i — jeśli uruchomione — drugi składnik uwierzytelnienia.
+Język i prawo
+Język polski; prawo polskie. Sąd właściwy według przepisów bezwzględnie obowiązujących wobec Konsumenta.
+Odstąpienie
+14 dni od zawarcia umowy na odległość, a gdy wymagane warunki lub informacje doręczono później — od ich doręczenia, w zakresie wynikającym z prawa. Wzór stanowi Załącznik nr 4. Za rozpoczętą usługę pośrednictwa nalicza się kwotę proporcjonalną wyłącznie w przypadku wyraźnego żądania rozpoczęcia przed upływem terminu odstąpienia, na zasadach z § 15 ust. 5 Umowy. Po pełnym wykonaniu usługi za wyraźną zgodą i po potwierdzeniu utraty prawa odstąpienia, prawo to wygasa dla tej usługi.
+Wyjaśnienia i kontakt z człowiekiem
+Przed zawarciem Finance You udziela bezpłatnych, zrozumiałych wyjaśnień. Konsument może zażądać kontaktu z człowiekiem przed zawarciem i w toku obsługi; interfejs nie może utrudniać decyzji ani odstąpienia.
+Przypomnienie / funkcja odstąpienia
+Jeżeli informacje przekazano później niż jeden dzień przed związaniem Umową, Finance You przesyła wymagane prawem przypomnienie. Jeżeli prawo wymaga internetowej funkcji odstąpienia, pozostaje ona łatwo dostępna, a złożenie oświadczenia jest niezwłocznie potwierdzane na trwałym nośniku.
+Czas trwania i wypowiedzenie
+Umowa ramowa jest bezterminowa. Konsument może ją wypowiedzieć w formie dokumentowej; rozwiązanie nie cofa skutków już w pełni wykonanej usługi przedstawienia i prawnie skutecznej Karty Leada.
+Reklamacje
+Pisemnie na adres siedziby lub e-mail kontakt@financeyou.pl. Odpowiedź co do zasady w 14 dni na trwałym nośniku.
+Pozasądowe rozwiązanie
+Dostępna jest pomoc miejskiego lub powiatowego rzecznika konsumentów i organizacji konsumenckich oraz procedury pozasądowe właściwe dla rodzaju sporu, o ile spełnione są ich warunki.
+Fundusz gwarancyjny
+Usługa pośrednictwa Finance You nie jest objęta umownym funduszem gwarancyjnym ani systemem rekompensat. Ewentualne zabezpieczenie Finansowania wynika wyłącznie z dokumentów danej transakcji.
+Potwierdzam otrzymanie informacji przedumownej, Umowy, Karty Leada i formularza odstąpienia na trwałym nośniku przed złożeniem oświadczenia.
+________________________________
+________________________________
+KONSUMENT — imię, nazwisko, funkcja / podpis / data
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 4
+Wzór oświadczenia o odstąpieniu
+Formularz fakultatywny — wystarczy każde jednoznaczne oświadczenie.
+DANE OŚWIADCZENIA
+Adresat
+Finance You sp. z o.o., ul. Nowogrodzka 31, 00-511 Warszawa; e-mail: kontakt@financeyou.pl
+Konsument
+Imię i nazwisko: ________________________________________________
+Adres / e-mail
+________________________________________________________________
+Umowa
+Ramowa umowa z dnia: __________________  / ID konta: __________________
+Projekt — jeśli dotyczy
+ID Projektu / Karty Leada: ________________________________________________
+Niniejszym odstępuję od wskazanej wyżej umowy zawartej na odległość. Proszę o potwierdzenie otrzymania oświadczenia na trwałym nośniku.
+Data: ____________________________     podpis (jeżeli formularz papierowy): ____________________________
+Jeżeli konkretna usługa przedstawienia została już w pełni wykonana na wyraźne żądanie Konsumenta po przekazaniu informacji o utracie prawa odstąpienia, skutki odstąpienia ocenia się zgodnie z § 15 Umowy i bezwzględnie obowiązującym prawem.
+ZAŁĄCZNIK NR 5
+Protokół akceptacji elektronicznej
+Wypełniany automatycznie przez system; dołączyć do kopii PDF przekazywanej Inwestorowi.
+ŚLAD AUDYTOWY
+Użytkownik
+ID: __________________  imię / firma: ________________________________________________
+Uwierzytelnienie
+☐ hasło  ☐ OTP  ☐ kwalifikowany podpis  ☐ e-mail  ☐ inne: __________________
+Data i czas UTC
+________________________________________________________________
+IP / urządzenie
+________________________________________________________________
+Umowa ramowa
+wersja: __________________  SHA-256 / identyfikator: ______________________________
+NDA
+wersja: __________________  SHA-256 / identyfikator: ______________________________
+Umowa danych
+wersja: __________________  SHA-256 / identyfikator: ______________________________
+Karta Leada
+ID / wersja: ____________________________________________________________
+Karta Transferu Danych
+ID / wersja: __________________  role / podstawy potwierdzone: ☐ tak ☐ nie
+Rozliczenie i konflikt
+Usługa Inwestora: nieodpłatna  Prowizja Klientowska: __________________  Mechanizm zabezpieczenia: ☐ tak ☐ nieKara Obejściowa 5% i przykład zaakceptowane: ☐ tak ☐ nie  Inwestor→Klient: __________________  konflikt i środki: ☐ tak ☐ nie
+Informacja konsumencka
+☐ nie dotyczy  ☐ doręczona PDF: __________________  data: __________________
+Zgody konsumenckie
+☐ nie dotyczy  ☐ start przed 14 dniami  ☐ potwierdzenie utraty prawa po pełnym wykonaniuindywidualne negocjacje Kary 5%: data / identyfikator / wynik ________________________________________________
+Ujawnienie danych
+data i czas: __________________  zakres / paczka: ______________________________
+Dowód doręczenia
+message ID / log / checksum: ________________________________________________
+System powinien przechowywać niezmienną kopię dokumentów i zdarzeń, a każda korekta powinna tworzyć nową wersję zamiast nadpisywać poprzednią.
+ZAŁĄCZNIK NR 6
+Dyspozycja Klienta i klauzula zabezpieczająca Prowizję Klientowską
+Włączyć do umowy Finansowania albo podpisać jako jej integralny załącznik przed wypłatą jakiejkolwiek części środków.
+PARAMETRY ROZLICZENIA
+Klient / Pożyczkobiorca
+________________________________________________________________
+Inwestor / Pożyczkodawca
+________________________________________________________________
+ID Projektu / Karty Leada
+________________________________________________________________
+Kwota Udzielona (kwota Finansowania z umowy)
+__________________ zł / waluta: __________
+Kwota wypłacana Klientowi (Kwota Udzielona pomniejszona o Prowizję Klientowską)
+__________________ zł
+Prowizja Klientowska
+__________________ zł; podstawa / formuła: __________________________________________
+Rachunek Finance You
+________________________________________________________________
+Tytuł przelewu
+Prowizja Finance You — ID Projektu: ______________________________
+Termin
+nie później niż równocześnie z pierwszą wypłatą środków Klientowi
+Klauzula do dokumentu Finansowania
+§ A. Dyspozycja, przyjęcie obowiązku i świadczenie na rzecz Finance You
+Klient potwierdza, że na podstawie odrębnej umowy z Finance You jest zobowiązany do zapłaty Prowizji Klientowskiej wskazanej powyżej. Klient poleca Inwestorowi, aby część należnej Klientowi wypłaty Finansowania w kwocie Prowizji Klientowskiej przekazał bezpośrednio na rachunek Finance You, a pozostałą część wypłacił zgodnie z pozostałymi dyspozycjami Klienta.
+Inwestor przyjmuje tę dyspozycję i zobowiązuje się wobec Klienta przekazać Prowizję Klientowską na rachunek Finance You nie później niż równocześnie z pierwszą wypłatą jakiejkolwiek części Finansowania. Jeżeli Strony przewidują transze, cała Prowizja Klientowska jest przekazywana przy pierwszej transzy, chyba że Finance You uprzednio zatwierdzi inny harmonogram w formie dokumentowej.
+Strony zastrzegają spełnienie opisanego świadczenia na rzecz Finance You jako osoby trzeciej. Finance You może żądać bezpośrednio od Inwestora wykonania tego postanowienia. Gdy Finance You oświadczy którejkolwiek ze Stron, że chce skorzystać z zastrzeżenia, postanowienie nie może zostać odwołane ani zmienione bez zgody Finance You.
+Przelew Prowizji Klientowskiej do Finance You stanowi wypłatę odpowiedniej części Finansowania Klientowi oraz równoczesne spełnienie jego zobowiązania prowizyjnego wobec Finance You. Nie stanowi prowizji, opłaty ani kosztu ponoszonego przez Inwestora na rzecz Finance You.
+Inwestor nie jest uprawniony do wypłaty Klientowi ani osobie przez niego wskazanej żadnej części Finansowania wcześniej niż równocześnie ze zleceniem przelewu Prowizji Klientowskiej na rachunek Finance You. Zmiana kwoty, rachunku lub terminu wymaga potwierdzenia Finance You w formie dokumentowej.
+Finance You oświadcza, że chce skorzystać z powyższego zastrzeżenia świadczenia na jej rzecz i przyjmuje uprawnienie do bezpośredniego żądania zapłaty wskazanej Prowizji Klientowskiej.
+________________________
+________________________
+________________________
+KLIENT — imię, nazwisko, funkcja / podpis / data
+INWESTOR — imię, nazwisko, funkcja / podpis / data
+FINANCE YOU — imię, nazwisko, funkcja / podpis / data
+ZAŁĄCZNIK NR 7
+Formularz Zlecenia
+Składany w systemie po zawarciu Umowy, NDA i umowy dotyczącej danych osobowych. Przedstawienie Projektu następuje wyłącznie w wykonaniu przyjętego Zlecenia.
+ZLECENIE
+Numer Zlecenia
+nadawany przez system
+Inwestor
+____________________________________________
+Data złożenia
+____________________________________________
+Kwota Finansowania
+__________ zł (dopuszczalne odchylenie ± 15%)
+Maksymalny okres Finansowania
+______ miesięcy
+Minimalny oczekiwany zysk roczny
+______ % w skali roku
+Termin ważności
+☐ 30 dni ☐ 60 dni ☐ 90 dni
+Oświadczenia
+☐ Zlecenie składam na podstawie Ramowej umowy pośrednictwa (wersja: ________). Usługa Finance You jest dla mnie nieodpłatna; Prowizja Klientowska (7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT) obciąża Klienta, jest potrącana z wypłaty i podlega Mechanizmowi Zabezpieczenia Prowizji. ☐ Zobowiązuję się przed zawarciem Transakcji Chronionej samodzielnie zweryfikować status przedsiębiorcy Klienta i Cel Gospodarczy (§ 6 ust. 1 pkt 9). ☐ Przyjmuję do wiadomości, że Projekty są przedstawiane wyłącznie w wykonaniu przyjętego Zlecenia i nie mam dostępu do Projektów nieprzypisanych do moich Zleceń.
+Konsument
+☐ nie dotyczy ☐ Żądam rozpoczęcia wykonywania usługi przed upływem 14-dniowego terminu odstąpienia i przyjmuję do wiadomości, że po pełnym wykonaniu usługi przedstawienia prawo odstąpienia od tej usługi wygaśnie.
+Potwierdzenie
+kanał / log / OTP: ____________________  data i czas: ____________________
+Decyzja Finance You
+☐ Zlecenie przyjęte, data: __________ ☐ odmowa przyjęcia, powód: ______________________

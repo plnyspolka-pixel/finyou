@@ -273,7 +273,7 @@ export const decideAssignment = createServerFn({ method: "POST" })
     return out;
   });
 
-/** „Potrzebuję więcej czasu" — jednorazowe przedłużenie o 12 h (maks. 36 h). */
+/** „Potrzebuję więcej czasu" — jednorazowe przedłużenie o extension_hours (project_module_settings). */
 export const extendAssignment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ assignmentId: z.string().uuid() }).parse(i))
@@ -300,7 +300,17 @@ export const getMyProjectStats = createServerFn({ method: "GET" })
       .eq("investor_id", userId);
     if (error) throw new Error(error.message);
     const rows = (data ?? []) as { status: string; opened_at: string | null }[];
+    // Limity z ustawień modułu — UI pokazuje godziny/limity stąd, nie z hardcode.
+    const settings = await getModuleSettings();
     return {
+      limits: {
+        assignmentHours: settings.assignment_hours,
+        extensionHours: settings.extension_hours,
+        maxActive: settings.max_active_assignments,
+        maxExtended: settings.max_extended_assignments,
+        rejectionThreshold: settings.rejection_review_threshold,
+        maxLtvPercent: settings.max_ltv_percent,
+      },
       viewed: rows.filter((r) => r.opened_at != null).length,
       rejected: rows.filter((r) => r.status === "rejected").length,
       interested: rows.filter((r) => r.status === "interested").length,

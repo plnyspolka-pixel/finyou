@@ -121,7 +121,7 @@ export function LenderDataStep({
         },
       }),
     onSuccess: () => {
-      toast.success("Dane pożyczkodawcy zapisane — system wypełni nimi umowy.");
+      toast.success("Dane inwestora zapisane — system wypełni nimi umowy.");
       onDone();
     },
     onError: (e) => toast.error(errMsg(e)),
@@ -247,7 +247,7 @@ export function LenderDataStep({
         ) : (
           <Save className="mr-2 h-4 w-4" />
         )}
-        Zapisz dane pożyczkodawcy
+        Zapisz dane inwestora
       </Button>
     </div>
   );

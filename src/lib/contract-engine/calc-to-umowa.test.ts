@@ -33,7 +33,9 @@ describe("kalkulacjaDoSzkicu", () => {
   it("przepisuje warunki finansowe i harmonogram deterministycznie", () => {
     const p = kalkulacjaDoSzkicu(payload);
     expect(p.warunki.kwota_pozyczki.cyframi).toBe("55 000,00");
-    expect(p.warunki.prowizja.kwota.cyframi).toBe("6 500,00");
+    // prowizja inwestora (w ratach) i prowizja Finance You (potrącana) osobno
+    expect(p.warunki.prowizja.kwota.cyframi).toBe("5 000,00");
+    expect(p.warunki.prowizja_finance_you.kwota.cyframi).toBe("1 500,00");
     expect(p.warunki.prowizja.model).toBe("nie_potracana_raty");
     expect(p.warunki.oprocentowanie).toBe("12,0");
     expect(p.warunki.harmonogram.liczba_rat).toBe(3);

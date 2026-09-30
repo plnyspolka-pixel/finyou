@@ -21,7 +21,9 @@ export const WELCOME_SMS_SOURCE = "lead_welcome";
  * Reszta szablonów SMS w systemie trzyma tę samą konwencję.
  */
 export function buildWelcomeSmsBody(link: string): string {
-  return `Finance You: pozyczki pod zastaw nieruchomosci juz od 1,79% - kliknij: ${link}`;
+  // Bez stawek miesięcznych (np. „od 1,79%”) — oprocentowanie jest ograniczone
+  // odsetkami maksymalnymi (14,5% rocznie), a finansujemy wyłącznie cel firmowy.
+  return `Finance You: pozyczki dla firm pod zastaw nieruchomosci, decyzja nawet w 24h - kliknij: ${link}`;
 }
 
 /** Czy na ten numer poszedł już powitalny SMS (kiedykolwiek). */

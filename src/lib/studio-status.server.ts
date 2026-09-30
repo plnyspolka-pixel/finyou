@@ -39,5 +39,6 @@ export async function collectStudioStatus(): Promise<StudioStatus> {
     elevenlabsConfigured: !!process.env.ELEVENLABS_API_KEY,
     aiConfigured: !!process.env.LOVABLE_API_KEY,
     captionBurnerConfigured: (await import("./caption-burner.server")).isCaptionBurnerConfigured(),
+    aiBadgeEnabled: (await import("./caption-burner.server")).isAiBadgeEnabled(),
   };
 }

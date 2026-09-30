@@ -1,5 +1,5 @@
 // Testy jednostkowe modułu AML: generator/walidator XML GIIF, hash,
-// przeliczenie progu EUR, propozycja ryzyka, CSR/KMS i szyfrowanie CMS.
+// przeliczenie progu EUR, propozycja ryzyka, PDF i zawiadomienie papierowe.
 import { describe, it, expect } from "vitest";
 import {
   buildGiifXml,
@@ -10,7 +10,13 @@ import {
 import { toEurEquivalent } from "@/lib/aml/nbp-eur.server";
 import { proposeRiskLevel } from "@/lib/aml/risk-proposal";
 import { buildPdfBytes } from "@/lib/aml/giif-pdf.server";
-import { AML_THRESHOLD_EUR, type GiifReportPayload } from "@/lib/aml/aml-types";
+import { buildGiifPaperNoticeHtml, paperAllowedFor } from "@/lib/aml/giif-paper";
+import {
+  AML_THRESHOLD_EUR,
+  readinessFromStatus,
+  statusFromReadiness,
+  type GiifReportPayload,
+} from "@/lib/aml/aml-types";
 
 const PAYLOAD: GiifReportPayload = {
   reportType: "transakcja_ponadprogowa",
@@ -130,46 +136,49 @@ describe("PDF", () => {
   });
 });
 
-describe("kryptografia (CSR / koperta / CMS)", () => {
-  it("generuje CSR PKCS#10, a AmlKeyProvider szyfruje i odszyfrowuje klucz", async () => {
-    process.env.AML_ENVELOPE_MASTER_KEY = "test-master-key";
-    const { generateCsr, pemToDer, parseDer } = await import("@/lib/aml/crypto.server");
-    const { getAmlKeyProvider } = await import("@/lib/aml/key-provider.server");
-    const csr = generateCsr({
-      commonName: "SI*GIIF Test",
-      organization: "Testowy Inwestor Sp. z o.o.",
-      country: "PL",
-      serialNumber: "1234567890",
+describe("zawiadomienie papierowe", () => {
+  const SAR: GiifReportPayload = {
+    ...PAYLOAD,
+    reportType: "okolicznosci_podejrzane",
+    justification: "Klient <b>odmówił</b> wskazania źródła środków.",
+  };
+
+  it("zawiera adresata GIIF, podstawę prawną, przyczynę i miejsce na podpis", () => {
+    const html = buildGiifPaperNoticeHtml(SAR, {
+      reportId: "00000000-0000-0000-0000-000000000001",
+      version: 2,
+      reason: "brak kwalifikowanego podpisu elektronicznego",
+      date: "29.09.2026",
     });
-    expect(csr.csrPem).toContain("BEGIN CERTIFICATE REQUEST");
-    expect(csr.privateKeyPem).toContain("BEGIN PRIVATE KEY");
-
-    const provider = getAmlKeyProvider();
-    expect(provider.info().productionApproved).toBe(false); // lokalna koperta ≠ KMS
-    const wrapped = await provider.encrypt("org-1", csr.privateKeyPem);
-    expect(wrapped.keyRef.startsWith("envelope:local:")).toBe(true);
-    expect(wrapped.ciphertext).not.toContain("PRIVATE KEY");
-    const roundtrip = await provider.decrypt("org-1", wrapped.ciphertext);
-    expect(roundtrip).toBe(csr.privateKeyPem);
-
-    // Struktura DER CSR parsuje się: SEQ(cri, alg, sig).
-    const root = parseDer(pemToDer(csr.csrPem));
-    expect(root.children.length).toBe(3);
+    expect(html).toContain("ul. Świętokrzyska 12");
+    expect(html).toContain("art. 74 ust. 1");
+    expect(html).toContain("Dz.U. z 2025 r. poz. 644");
+    expect(html).toContain("brak kwalifikowanego podpisu elektronicznego");
+    expect(html).toContain("podpis własnoręczny");
+    expect(html).toContain("Jan Kowalski");
+    // Treść użytkownika jest escapowana.
+    expect(html).toContain("&lt;b&gt;odmówił&lt;/b&gt;");
+    expect(html).not.toContain("<b>odmówił</b>");
   });
 
-  it("szyfruje payload certyfikatem odbiorcy (CMS EnvelopedData)", async () => {
-    const { generateKeyPairSync, createSign } = await import("node:crypto");
-    // Samopodpisany certyfikat X.509 do testu szyfrowania zbudujemy przez
-    // node:crypto — użyjemy istniejącego cert z fixture minimalnego:
-    // zamiast tego sprawdzamy, że funkcja odrzuca niepoprawny PEM.
-    const { encryptForGiif } = await import("@/lib/aml/crypto.server");
-    expect(() =>
-      encryptForGiif(
-        new Uint8Array([1, 2, 3]),
-        "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----",
-      ),
-    ).toThrow();
-    void generateKeyPairSync;
-    void createSign;
+  it("nie dopuszcza papieru dla transakcji ponadprogowych (art. 72)", () => {
+    expect(paperAllowedFor("transakcja_ponadprogowa")).toBe(false);
+    expect(paperAllowedFor("okolicznosci_podejrzane")).toBe(true);
+    expect(paperAllowedFor("planowana_transakcja_podejrzana")).toBe(true);
+  });
+});
+
+describe("gotowość do wysyłki w SI*GIIF", () => {
+  it("mapuje deklaracje inwestora na status i z powrotem", () => {
+    const cases = [
+      { hasQualifiedSignature: false, registeredInSiGiif: false },
+      { hasQualifiedSignature: true, registeredInSiGiif: false },
+      { hasQualifiedSignature: true, registeredInSiGiif: true },
+    ];
+    for (const r of cases) expect(readinessFromStatus(statusFromReadiness(r))).toEqual(r);
+    expect(statusFromReadiness(cases[0])).toBe("not_connected");
+    expect(statusFromReadiness(cases[2])).toBe("active");
+    // Stare statusy z usuniętego kreatora mTLS nie oznaczają gotowości.
+    expect(readinessFromStatus("csr_generated")).toEqual(cases[0]);
   });
 });
