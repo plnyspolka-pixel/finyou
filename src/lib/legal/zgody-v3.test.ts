@@ -23,7 +23,7 @@ describe("regulamin klienta v3", () => {
     expect(v3).toContain("Regulamin w wersji 3 obowiązuje od dnia 30 września 2026 r. Do spraw");
     expect(v3.split("\n").length).toBe(v2.split("\n").length);
     const rozne = v2.split("\n").filter((l, i) => l !== v3.split("\n")[i]);
-    expect(rozne).toHaveLength(3);
+    expect(rozne).toHaveLength(5); // wersja, data, def. prowizji, § 12 ust. 3 i 4 (5%)
   });
 
   it("docs/legal/klient/regulamin-klienta-v3.md i migracja 20260930190000 są aktualne", () => {
@@ -39,5 +39,13 @@ describe("regulamin klienta v3", () => {
     );
     expect(sql).toContain(migracjaRegulaminV3(v3));
     expect(sql).toMatch(/version < 3 and is_active/);
+  });
+});
+
+describe("regulamin klienta v3 — prowizja 5%", () => {
+  it("5% Kwoty Udzielonej, przykład 5 000 / 95 000", () => {
+    expect(v3).toContain("**5% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT**");
+    expect(v3).toContain("Klient otrzymuje 95 000,00 zł");
+    expect(v3).not.toMatch(/\b7% Kwoty/);
   });
 });

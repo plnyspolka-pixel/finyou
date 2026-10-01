@@ -2,12 +2,12 @@
  * OPŁATY I LIMITY — jedno źródło prawdy dla całego systemu (decyzje nadrzędne
  * 2, 5 i 6 sprzątania spójności 2026-09).
  *
- *  • Prowizja od Pożyczkobiorcy: 7 % Kwoty Udzielonej (kwota pożyczki
+ *  • Prowizja od Pożyczkobiorcy: 5 % Kwoty Udzielonej (kwota pożyczki
  *    z umowy), nie mniej niż 5 000 zł, bez VAT (zwolnienie potwierdzone przez
  *    właściciela 2026-09-29; w tekstach NIE piszemy „netto"/„brutto", piszemy
  *    „bez VAT"). POTRĄCANA z wypłaty: inwestor przelewa prowizję na jedyny
  *    rachunek FY (ten sam co do spłat — src/lib/company.ts), resztę
- *    Klientowi. Przykład: 100 000 zł → 7 000 zł do FY, 93 000 zł na rękę.
+ *    Klientowi. Przykład: 100 000 zł → 5 000 zł do FY, 95 000 zł na rękę.
  *    To osobne pole od prowizji INWESTORA (KWO_02 — stała kwota z umowy,
  *    rozłożona równo w ratach).
  *  • Odsetki maksymalne (art. 359 § 2¹ KC): 2 × (stopa referencyjna NBP +
@@ -19,14 +19,14 @@
  * Czyste funkcje, bez I/O. Import po obu stronach (klient + serwer + MCP).
  */
 
-export const FY_COMMISSION_PCT = 7;
+export const FY_COMMISSION_PCT = 5;
 export const FY_COMMISSION_MIN_PLN = 5000;
 
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
-/** Prowizja od Pożyczkobiorcy od Kwoty Udzielonej: max(7 %, 5 000 zł); 0 gdy brak kwoty. */
+/** Prowizja od Pożyczkobiorcy od Kwoty Udzielonej: max(5 %, 5 000 zł); 0 gdy brak kwoty. */
 export function fyCommission(kwotaUdzielona: number): number {
   const k = Number(kwotaUdzielona);
   if (!Number.isFinite(k) || k <= 0) return 0;

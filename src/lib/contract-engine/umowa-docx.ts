@@ -566,7 +566,7 @@ function protokolBloki(d: any, doc: Dokument): Blok[] {
       pierwszy("KWO_02_prowizja_nie_potracana", "KWO_02b_prowizja_potracana"),
     ],
     [
-      "Prowizja od Pożyczkobiorcy potrącana z wypłaty (7% Kwoty Udzielonej, min 5 000 zł, bez VAT)",
+      "Prowizja od Pożyczkobiorcy potrącana z wypłaty (5% Kwoty Udzielonej, min 5 000 zł, bez VAT)",
       odes("KWO_03e_prowizja_finance_you"),
     ],
     [
@@ -670,7 +670,7 @@ function dyspozycjaBloki(d: any, doc: Dokument): Blok[] {
       wiersze: [
         wiersz("Kwota Udzielona (Kwota Pożyczki):", `${w.kwota_pozyczki?.cyframi ?? "—"} zł`),
         wiersz(
-          "Prowizja od Pożyczkobiorcy (7% Kwoty Udzielonej, min 5 000,00 zł, bez VAT):",
+          "Prowizja od Pożyczkobiorcy (5% Kwoty Udzielonej, min 5 000,00 zł, bez VAT):",
           `${w.prowizja_finance_you?.kwota?.cyframi ?? "—"} zł`,
         ),
         wiersz(

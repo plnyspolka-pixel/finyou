@@ -92,7 +92,7 @@ export const calculateRepaymentSchedule = defineTool({
   name: "calculate_repayment_schedule",
   title: "Calculate repayment schedule",
   description:
-    "Harmonogram spłat pożyczki w modelu Finance You (jeden silnik): odsetki od kapitału pozostającego do spłaty, pułap raty steruje kapitałem, nadwyżka trafia do ostatniej raty (balon), stała prowizja inwestora rozłożona równo w ratach. Prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT) jest potrącana z wypłaty i nie wchodzi do rat. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity + listę rat. Oprocentowanie ponad odsetki maksymalne (art. 359 § 2¹ KC) jest blokowane. Czysta matematyka, bez bazy.",
+    "Harmonogram spłat pożyczki w modelu Finance You (jeden silnik): odsetki od kapitału pozostającego do spłaty, pułap raty steruje kapitałem, nadwyżka trafia do ostatniej raty (balon), stała prowizja inwestora rozłożona równo w ratach. Prowizja Finance You (5% Kwoty Udzielonej, min 5 000 zł, bez VAT) jest potrącana z wypłaty i nie wchodzi do rat. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity + listę rat. Oprocentowanie ponad odsetki maksymalne (art. 359 § 2¹ KC) jest blokowane. Czysta matematyka, bez bazy.",
   inputSchema: {
     amount: z.number().positive().describe("Kwota Udzielona (kwota pożyczki z umowy) w PLN."),
     period_months: z.number().int().min(1).max(120),

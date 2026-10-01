@@ -53,7 +53,7 @@ export function SuccessFeesCard() {
           <span>
             <b>Sekcja nieaktywna.</b> Od Umowy ramowej v7 nie ma Opłaty Sukcesu ani opłaty za
             Projekt — Inwestor płaci wyłącznie Opłatę Abonamentową (1 500 zł / 30 dni albo 7 000 zł
-            / 365 dni). Klient płaci Prowizję od Pożyczkobiorcy (7 % Kwoty Udzielonej, min 5 000 zł,
+            / 365 dni). Klient płaci Prowizję od Pożyczkobiorcy (5% Kwoty Udzielonej, min 5 000 zł,
             bez VAT) potrącaną z wypłaty. Poniższe rekordy są historyczne
             {data.contractVersion ? ` (aktywna umowa: ${data.contractVersion})` : ""}; można je
             tylko anulować.

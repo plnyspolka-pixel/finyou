@@ -36,7 +36,7 @@ export const startInvestorSelfVerification = createServerFn({ method: "POST" })
     // Jedna aktywna/zatwierdzona sesja wystarczy — nie mnożymy weryfikacji.
     const { data: existing } = await loose(supabaseAdmin)
       .from("didit_verifications")
-      .select("id, status, verification_url, session_id")
+      .select("id, status, verification_url, session_id, created_at")
       .eq("vendor_data", vendorData)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -44,7 +44,15 @@ export const startInvestorSelfVerification = createServerFn({ method: "POST" })
     if (existing && existing.status === "Approved") {
       return { status: "already_approved" as const, sessionId: existing.session_id };
     }
-    if (existing && ["Not Started", "In Progress", "In Review"].includes(existing.status)) {
+    // Didit wygasza linki po 7 dniach — starszych nie podsuwamy ponownie.
+    const fresh =
+      existing?.created_at &&
+      Date.now() - new Date(existing.created_at).getTime() < 6 * 24 * 3600 * 1000;
+    if (
+      existing &&
+      fresh &&
+      ["Not Started", "In Progress"].includes(existing.status)
+    ) {
       return {
         status: "ok" as const,
         sessionId: existing.session_id,

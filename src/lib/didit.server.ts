@@ -49,9 +49,14 @@ export function diditAppUrl(): string {
   return (process.env.DIDIT_APP_URL || DEFAULT_APP_URL).replace(/\/+$/, "");
 }
 
+/** Klucz API: DIDIT_API_KEY_NEW (nowy klucz) ma pierwszeństwo przed DIDIT_API_KEY. */
+function diditApiKey(): string | undefined {
+  return process.env.DIDIT_API_KEY_NEW?.trim() || process.env.DIDIT_API_KEY?.trim() || undefined;
+}
+
 /** Czy integracja jest skonfigurowana (klucz API obecny w sekretach). */
 export function hasDiditConfig(): boolean {
-  return Boolean(process.env.DIDIT_API_KEY);
+  return Boolean(diditApiKey());
 }
 
 /**
@@ -63,12 +68,14 @@ export function hasDiditConfig(): boolean {
  */
 export function selectWorkflowId(kind: DiditWorkflowKind): string | null {
   const fallback = process.env.DIDIT_WORKFLOW_ID || null;
-  if (kind === "kyb") return process.env.DIDIT_WORKFLOW_ID_KYB || fallback;
+  // Bez osobnego workflowu KYB weryfikujemy reprezentanta firmy darmowym KYC.
+  if (kind === "kyb")
+    return process.env.DIDIT_WORKFLOW_ID_KYB || fallback || process.env.DIDIT_WORKFLOW_ID_KYC || null;
   return process.env.DIDIT_WORKFLOW_ID_KYC || fallback;
 }
 
 function requireApiKey(): string {
-  const key = process.env.DIDIT_API_KEY;
+  const key = diditApiKey();
   if (!key) throw new Error("Brak konfiguracji Didit (DIDIT_API_KEY).");
   return key;
 }
@@ -163,7 +170,9 @@ export async function createDiditSession(input: {
       (json.error as string) ||
       text ||
       `HTTP ${res.status}`;
-    throw new Error(`Didit: nie udało się utworzyć sesji (${msg})`);
+    throw new Error(
+      `Didit: nie udało się utworzyć sesji (${msg}) [workflow ${input.workflowId.slice(0, 8)}…]`,
+    );
   }
 
   const sessionId = (json.session_id as string) ?? "";

@@ -54,7 +54,7 @@ describe("stała prowizja inwestora w ratach", () => {
 });
 
 describe("prowizja Finance You potrącana z wypłaty", () => {
-  it("100 000 zł: 7 000 zł do FY, 93 000 zł na rękę, raty od pełnej Kwoty Udzielonej", () => {
+  it("100 000 zł: 5 000 zł do FY, 95 000 zł na rękę, raty od pełnej Kwoty Udzielonej", () => {
     const s = buildFyEngineSchedule({
       kwotaPozyczki: 100_000,
       prowizja: 0,
@@ -64,12 +64,12 @@ describe("prowizja Finance You potrącana z wypłaty", () => {
       asOf: "2026-09-29",
     });
     expect(s.kwotaUdzielona).toBe(100_000);
-    expect(s.prowizjaFY).toBe(7_000);
-    expect(s.kwotaWyplaconaKlientowi).toBe(93_000);
+    expect(s.prowizjaFY).toBe(5_000);
+    expect(s.kwotaWyplaconaKlientowi).toBe(95_000);
     // prowizja FY NIE wchodzi do rat
     expect(s.rows.reduce((a, r) => a + r.prowizja, 0)).toBe(0);
     expect(s.rows.reduce((a, r) => a + r.kapital, 0)).toBeCloseTo(100_000, 2);
-    expect(s.calkowityKoszt).toBe(Math.round((s.totalInterest + 7_000) * 100) / 100);
+    expect(s.calkowityKoszt).toBe(Math.round((s.totalInterest + 5_000) * 100) / 100);
     expect(s.totalToRepay).toBeCloseTo(100_000 + s.totalInterest, 2);
   });
 

@@ -309,7 +309,7 @@ function PlanBanner() {
           <p className="max-w-2xl text-sm opacity-90">{p.tagline}</p>
           <p className="text-xs opacity-75">
             {p.periodLabel}. Akceptacja Umowy ramowej, NDA i umowy RODO otwiera moduł ofert:
-            Zlecenia, dopasowane Projekty i oferty. Prowizja od Pożyczkobiorcy — 7 % Kwoty
+            Zlecenia, dopasowane Projekty i oferty. Prowizja od Pożyczkobiorcy — 5% Kwoty
             Udzielonej, nie mniej niż 5 000 zł, bez VAT — obciąża Klienta i jest potrącana z wypłaty
             (Zał. 6).
           </p>
@@ -444,7 +444,7 @@ const DOC_STATEMENTS: Record<string, Array<{ key: string; label: string }>> = {
     {
       key: "oplata_abonamentowa",
       label:
-        "Wiem, że nie płacę Finance You za Projekty ani od rezultatu, a dostęp do systemu wymaga aktywnego abonamentu (Regulamin abonamentu inwestora). Prowizję od Pożyczkobiorcy (7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT) płaci Klient, a przy wypłacie przekazuję ją Finance You z kwoty Finansowania (Zał. 6).",
+        "Wiem, że nie płacę Finance You za Projekty ani od rezultatu, a dostęp do systemu wymaga aktywnego abonamentu (Regulamin abonamentu inwestora). Prowizję od Pożyczkobiorcy (5% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT) płaci Klient, a przy wypłacie przekazuję ją Finance You z kwoty Finansowania (Zał. 6).",
     },
     {
       key: "mechanizm_zabezpieczenia_prowizji",
@@ -671,8 +671,6 @@ type OrderLimitsView = {
   maxExtended: number;
   rejectionThreshold: number;
   maxPeriodMonths: number;
-  maxAnnualYield: number;
-  amountTolerancePct: number;
 };
 
 function OrderForm({
@@ -687,14 +685,8 @@ function OrderForm({
   limits: OrderLimitsView | null;
   onDone: () => void;
 }) {
-  const maxPeriod = limits?.maxPeriodMonths ?? 120;
-  const maxYield = limits?.maxAnnualYield ?? 14.5;
-  const tolerance = limits?.amountTolerancePct ?? 15;
   const submit = useServerFn(submitInvestorOrder);
   const [amount, setAmount] = useState("");
-  const [period, setPeriod] = useState("");
-  const [yieldMin, setYieldMin] = useState("");
-  const [validity, setValidity] = useState<string>("60");
   const [consumerChoice, setConsumerChoice] = useState<string>("");
   const [s1, setS1] = useState(false);
   const [s2, setS2] = useState(false);
@@ -705,9 +697,6 @@ function OrderForm({
       submit({
         data: {
           amountPln: Number(amount),
-          maxPeriodMonths: Number(period),
-          minAnnualYield: Number(yieldMin),
-          validityDays: Number(validity) as 30 | 60 | 90,
           statements: {
             zlecenie_na_podstawie_umowy: true as const,
             samodzielna_weryfikacja_przedsiebiorcy_i_celu: true as const,
@@ -719,8 +708,6 @@ function OrderForm({
     onSuccess: (res: any) => {
       toast.success(`Zlecenie ${res.orderNo} złożone — decyzja w 2 dni robocze.`);
       setAmount("");
-      setPeriod("");
-      setYieldMin("");
       setS1(false);
       setS2(false);
       setS3(false);
@@ -738,12 +725,8 @@ function OrderForm({
     );
   }
 
-  const periodOk = Number(period) >= 1 && Number(period) <= maxPeriod;
-  const yieldOk = Number(yieldMin) >= 0 && Number(yieldMin) <= maxYield;
   const valid =
     Number(amount) > 0 &&
-    periodOk &&
-    yieldOk &&
     s1 &&
     s2 &&
     s3 &&
@@ -751,70 +734,18 @@ function OrderForm({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-1.5">
-          <Label className="text-xs">
-            Kwota Finansowania (zł, dopuszczalne odchylenie ± {tolerance}%)
-          </Label>
-          <Input
-            type="number"
-            min={1}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="np. 200000"
-          />
-          <p className="text-[11px] text-muted-foreground">
-            Projekt pasuje, gdy jego kwota mieści się w ±{tolerance}% kwoty Zlecenia.
-          </p>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Maks. okres (1–{maxPeriod} miesięcy)</Label>
-          <Input
-            type="number"
-            min={1}
-            max={maxPeriod}
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            placeholder="np. 24"
-          />
-          {period !== "" && !periodOk ? (
-            <p className="text-[11px] text-destructive">
-              Okres musi mieścić się w 1–{maxPeriod} miesięcy.
-            </p>
-          ) : null}
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">
-            Min. zysk roczny (%, maks. {maxYield}% — odsetki maksymalne)
-          </Label>
-          <Input
-            type="number"
-            min={0}
-            max={maxYield}
-            step="0.1"
-            value={yieldMin}
-            onChange={(e) => setYieldMin(e.target.value)}
-            placeholder="np. 12"
-          />
-          {yieldMin !== "" && !yieldOk ? (
-            <p className="text-[11px] text-destructive">
-              Oprocentowanie przekracza odsetki maksymalne ({maxYield}%).
-            </p>
-          ) : null}
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Termin ważności</Label>
-          <Select value={validity} onValueChange={setValidity}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="30">30 dni</SelectItem>
-              <SelectItem value="60">60 dni</SelectItem>
-              <SelectItem value="90">90 dni</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="max-w-sm space-y-1.5">
+        <Label className="text-xs">Kwota maksymalna Finansowania (zł)</Label>
+        <Input
+          type="number"
+          min={1}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="np. 200000"
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Szukamy Projektów, których kwota nie przekracza kwoty Zlecenia.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -874,7 +805,7 @@ function OrderForm({
           Limity (z ustawień modułu, § 5 Umowy ramowej): maks. {limits.maxActive} aktywnych Zleceń
           naraz, Zlecenie wygasa po {limits.rejectionThreshold} odrzuceniach Projektów, rezerwacja{" "}
           {limits.assignmentHours} h + jednorazowo {limits.extensionHours} h, maks.{" "}
-          {limits.maxExtended} przedłużone naraz, ważność 30/60/90 dni.
+          {limits.maxExtended} przedłużone naraz.
         </p>
       ) : null}
 
@@ -915,13 +846,11 @@ function OrdersList({ state, onDone }: { state: any; onDone: () => void }) {
             >
               <div className="space-y-0.5">
                 <div className="font-medium">
-                  FY-Z-{o.order_seq} · {Number(o.amount_pln).toLocaleString("pl-PL")} zł ± 15%
+                  FY-Z-{o.order_seq} · do {Number(o.amount_pln).toLocaleString("pl-PL")} zł
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  maks. {o.max_period_months} mies. · min. {o.min_annual_yield}% rocznie · ważne{" "}
-                  {o.validity_days} dni
                   {o.expires_at
-                    ? ` · do ${new Date(o.expires_at).toLocaleDateString("pl-PL")}`
+                    ? `ważne do ${new Date(o.expires_at).toLocaleDateString("pl-PL")}`
                     : ""}
                   {o.rejection_reason ? ` · powód: ${o.rejection_reason}` : ""}
                 </div>

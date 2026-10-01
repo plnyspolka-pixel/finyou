@@ -59,9 +59,18 @@ Workflowy opublikowane, webhook utworzony (podpis dostępny w konsoli Didit):
 - Webhook → `https://jqvepxhulxdnbwbogkhe.supabase.co/functions/v1/didit-webhook`
   (v2, `status.updated` + `data.updated`).
 
-Odpowiedniki produkcyjne (aplikacja „My Application") istnieją jako *draft* —
-przed wejściem na produkcję trzeba je opublikować i użyć ich ID:
-`1612939d-f7e3-4fe1-bba2-d0274b23a0fb` (KYC), `c7f1dde1-35ae-4190-8c4b-939239fa367c` (KYB).
+Odpowiedniki produkcyjne (aplikacja „My Application"):
+
+- **KYC → „Free KYC"** (`OCR + LIVENESS + FACE_MATCH + IP_ANALYSIS`), opublikowany
+  2026-10-01: `aa6131b3-a54b-4871-81a6-aa33b71a7fc8`. Mieści się w darmowym limicie
+  Didit (500/mies.), więc działa przy saldzie 0 USD. Nie robi AML — screening
+  zostaje w module `aml_*`.
+- **KYB**: `c7f1dde1-35ae-4190-8c4b-939239fa367c` (płatny, ok. 2,20 USD/sesję).
+
+Uwaga: workflow „KYC + AML" (`1612939d…` prod, `d762fc3c…` sandbox) jest płatny
+(0,42–0,65 USD/sesję) i przy saldzie 0 Didit odrzuca sesje komunikatem
+„You don't have enough credits to perform this request". Nie używaj go jako
+`DIDIT_WORKFLOW_ID_KYC`, dopóki konto nie ma doładowanego salda.
 
 ## Do zrobienia po stronie wdrożenia (Ty)
 

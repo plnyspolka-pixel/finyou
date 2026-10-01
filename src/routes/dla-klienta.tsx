@@ -123,7 +123,7 @@ const WHY: FeatureItemData[] = [
 const FAQS = [
   {
     q: "Czy złożenie wniosku jest płatne?",
-    a: "Nie. Złożenie wniosku jest całkowicie bezpłatne i nie zobowiązuje Cię do niczego. Jedyną opłatą po Twojej stronie jest Prowizja Finance You należna dopiero po udzieleniu pożyczki: 7% kwoty udzielonej, nie mniej niż 5 000 zł, bez VAT — potrącana z wypłaty (inwestor przelewa ją na rachunek Finance You, resztę na Twój rachunek).",
+    a: "Nie. Złożenie wniosku jest całkowicie bezpłatne i nie zobowiązuje Cię do niczego. Jedyną opłatą po Twojej stronie jest Prowizja Finance You należna dopiero po udzieleniu pożyczki: 5% kwoty udzielonej, nie mniej niż 5 000 zł, bez VAT — potrącana z wypłaty (inwestor przelewa ją na rachunek Finance You, resztę na Twój rachunek).",
   },
   {
     q: "Na jaki cel mogę przeznaczyć finansowanie?",

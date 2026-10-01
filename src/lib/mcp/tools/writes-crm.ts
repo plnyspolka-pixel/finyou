@@ -616,7 +616,7 @@ export const createLoanProposal = defineTool({
   name: "create_loan_proposal",
   title: "Create loan proposal (kreator)",
   description:
-    "Tworzy propozycję pożyczki z kreatora w JEDNYM modelu matematycznym (silnik Finance You): odsetki od salda, pułap raty steruje kapitałem (reszta w ostatniej racie — balon), stała prowizja inwestora w ratach, Prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT) potrącana z wypłaty. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity. Oprocentowanie ponad odsetki maksymalne jest blokowane. Zapisuje harmonogram jako szkic. Tylko administrator/operator.",
+    "Tworzy propozycję pożyczki z kreatora w JEDNYM modelu matematycznym (silnik Finance You): odsetki od salda, pułap raty steruje kapitałem (reszta w ostatniej racie — balon), stała prowizja inwestora w ratach, Prowizja Finance You (5% Kwoty Udzielonej, min 5 000 zł, bez VAT) potrącana z wypłaty. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity. Oprocentowanie ponad odsetki maksymalne jest blokowane. Zapisuje harmonogram jako szkic. Tylko administrator/operator.",
   inputSchema: {
     amount: z.number().positive().describe("Kwota Udzielona (kwota pożyczki z umowy) w PLN."),
     months: z.number().int().min(1).max(120),

@@ -116,7 +116,7 @@ const STEP_META: Record<PipelineStepKey, { title: string; subtitle: string; hue:
   },
   zlecenie: {
     title: "Zlecenie poszukiwania okazji",
-    subtitle: "Kwota ± 15%, maksymalny okres, minimalny zysk roczny i termin ważności.",
+    subtitle: "Podajesz jedynie maksymalną kwotę Finansowania.",
     hue: 8,
   },
 };

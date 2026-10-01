@@ -1,5 +1,5 @@
 /**
- * Jedyna opłata: Prowizja od Pożyczkobiorcy — 7% Kwoty Udzielonej,
+ * Jedyna opłata: Prowizja od Pożyczkobiorcy — 5% Kwoty Udzielonej,
  * min. 5 000 zł, bez VAT, potrącana z wypłaty. Odsetki maksymalne wg daty.
  * LTV maksymalnie 60%.
  */
@@ -22,21 +22,21 @@ import {
 } from "./fees";
 
 describe("Prowizja Finance You", () => {
-  it("100 000 zł → 7 000 zł dla FY, 93 000 zł dla Klienta", () => {
-    expect(fyCommission(100_000)).toBe(7_000);
-    expect(kwotaNaReke(100_000)).toBe(93_000);
+  it("100 000 zł → 5 000 zł dla FY, 95 000 zł dla Klienta", () => {
+    expect(fyCommission(100_000)).toBe(5_000);
+    expect(kwotaNaReke(100_000)).toBe(95_000);
     expect(splitPayout(100_000)).toEqual({
       kwotaUdzielona: 100_000,
-      prowizjaFY: 7_000,
-      kwotaWyplaconaKlientowi: 93_000,
+      prowizjaFY: 5_000,
+      kwotaWyplaconaKlientowi: 95_000,
     });
   });
 
   it("minimum 5 000 zł (50 000 zł → 5 000 / 45 000)", () => {
     expect(fyCommission(50_000)).toBe(5_000);
     expect(kwotaNaReke(50_000)).toBe(45_000);
-    // próg: 7% z 71 428,57 zł ≈ 5 000 zł
-    expect(fyCommission(80_000)).toBe(5_600);
+    // próg: 5% ze 100 000 zł = 5 000 zł
+    expect(fyCommission(120_000)).toBe(6_000);
   });
 
   it("brak kwoty → 0; prowizja nigdy nie daje ujemnej wypłaty", () => {
@@ -46,7 +46,7 @@ describe("Prowizja Finance You", () => {
   });
 
   it("zaokrąglenie do grosza", () => {
-    expect(fyCommission(123_456.78)).toBe(8_641.97);
+    expect(fyCommission(123_456.78)).toBe(6_172.84);
   });
 
   it("etykieta: bez VAT, nigdy netto/brutto", () => {

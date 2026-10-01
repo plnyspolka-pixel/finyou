@@ -247,7 +247,7 @@ export function LoanCalculator({
   // ŹRÓDŁO PRAWDY: Kwota Udzielona (kwota pożyczki z umowy) — od niej liczone są
   // odsetki i raty. Model silnika (fees.ts / loan-schedule.ts):
   //  • prowizja INWESTORA jest rozłożona równo na raty,
-  //  • prowizja Finance You (7 %, min 5 000 zł, bez VAT) jest POTRĄCANA z wypłaty
+  //  • prowizja Finance You (5 %, min 5 000 zł, bez VAT) jest POTRĄCANA z wypłaty
   //    — inwestor przelewa ją na rachunek FY, resztę klientowi; NIE wchodzi do rat.
   const [onHand, setOnHand] = useState<number>(initialOnHand ?? initialAmount);
   const amount = onHand;
@@ -301,7 +301,7 @@ export function LoanCalculator({
     investorGuidance && nbpOverride != null ? maxInterestRate(nbpOverride) : maxCapitalRate();
   const statutoryInterest = effectiveRefRate + 3.5;
 
-  // Prowizja Finance You: 7 % Kwoty Udzielonej, min 5 000 zł, bez VAT —
+  // Prowizja Finance You: 5 % Kwoty Udzielonej, min 5 000 zł, bez VAT —
   // POTRĄCANA z wypłaty (nie wchodzi do rat).
   const financeYouFeePln = hideFinanceYouFee ? 0 : fyCommission(amount);
   // Kapitał, od którego liczone są odsetki i raty = Kwota Udzielona.
@@ -314,7 +314,8 @@ export function LoanCalculator({
 
   // Prowizja inwestora — zawsze sterowana ręcznie suwakiem.
   const commissionPln = (amount * commissionPct) / 100;
-  const commissionAboveReference = commissionPln > maxNonInterest + 1e-9;
+  // Prowizja Finance You (5 %) wlicza się do limitu MPKK razem z prowizją inwestora.
+  const commissionAboveReference = commissionPln + financeYouFeePln > maxNonInterest + 1e-9;
   const effectiveCommissionPct = commissionPct;
 
   // Prowizja wewnętrzna operatora — część prowizji inwestora (2–5%).
@@ -383,10 +384,8 @@ export function LoanCalculator({
     };
   }, [grossPrincipal, months, annualRate, maxPayment, scheduleCommission, financeYouFeePln]);
 
-  // MPKK obejmuje wyłącznie prowizję inwestora. Prowizja Finance You NIE wlicza się
-  // do limitu MPKK — to wynagrodzenie operatora za odrębną usługę (faktura VAT od
-  // Finance You dla klienta), a nie koszt pozaodsetkowy pożyczki.
-  const nonInterestTotal = commissionPln;
+  // MPKK obejmuje prowizję inwestora ORAZ prowizję Finance You (potrącaną z wypłaty).
+  const nonInterestTotal = commissionPln + financeYouFeePln;
   // Całkowity koszt pożyczki PO STRONIE KLIENTA = odsetki + prowizja inwestora + prowizja FY.
   const totalCost = schedule.totalOds + commissionPln + financeYouFeePln;
   // Klient dostaje „na rękę" Kwotę Udzieloną pomniejszoną o prowizję Finance You.
@@ -464,7 +463,7 @@ export function LoanCalculator({
   // Model wyłącznie B2B (cel gospodarczy) — limit MPKK z ustawy o kredycie
   // konsumenckim nie ma zastosowania; zostaje tylko kontrola rażącej dysproporcji.
   const nonInterestExceeds = false;
-  const commissionOver45 = commissionPln > amount * 0.45 + 1e-9;
+  const commissionOver45 = nonInterestTotal > amount * 0.45 + 1e-9;
   const krotnoscWarn = krotnosc > 1.5;
   const krotnoscDanger = krotnosc > 2.0;
   const periodWarn = months > 24;
@@ -490,11 +489,13 @@ export function LoanCalculator({
     if (!commissionTouched.current) {
       // Maksymalna prowizja bez wątpliwości prawnych = limit MPKK (% kwoty pożyczki),
       // przycięta do ustawowego pułapu MPKK (45% kwoty); suwak pozwala ręcznie do 50%.
-      const mpkkPct = Math.min(45, Math.max(0, 10 + 10 * (months / 12)));
-      const rounded = Math.floor(mpkkPct * 2) / 2; // krok 0,5%
+      // Prowizja Finance You wlicza się do MPKK, więc prowizja inwestora = limit − prowizja FY.
+      const fyPct = amount > 0 ? (financeYouFeePln / amount) * 100 : 0;
+      const mpkkPct = Math.min(45, Math.max(0, 10 + 10 * (months / 12))) - fyPct;
+      const rounded = Math.max(0, Math.floor(mpkkPct * 2) / 2); // krok 0,5%
       if (Math.abs(commissionPct - rounded) > 1e-9) setCommissionPct(rounded);
     }
-  }, [months, commissionPct]);
+  }, [months, commissionPct, amount, financeYouFeePln]);
 
   useEffect(() => {
     onChange?.({
@@ -1172,7 +1173,7 @@ export function LoanCalculator({
                     Prowizja Finance You ({financeYouFeePct}%, min 5 000 zł, bez VAT — potrącana z
                     wypłaty)
                     {investorGuidance && (
-                      <InfoTip text="Wynagrodzenie Finance You — koszt klienta. Przy wypłacie inwestor przelewa ją z kwoty pożyczki na rachunek Finance You, a resztę klientowi. Nie wchodzi do rat i nie zmienia wkładu ani zysku inwestora. Nie wlicza się do limitu MPKK." />
+                      <InfoTip text="Wynagrodzenie Finance You — koszt klienta. Przy wypłacie inwestor przelewa ją z kwoty pożyczki na rachunek Finance You, a resztę klientowi. Nie wchodzi do rat i nie zmienia wkładu ani zysku inwestora. Wlicza się do limitu MPKK." />
                     )}
                   </span>
                   <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
@@ -1301,7 +1302,8 @@ export function LoanCalculator({
                 >
                   <p>
                     Twoja prowizja: <b>{formatPLN(commissionPln)}</b> (
-                    {commissionPct.toFixed(1).replace(".", ",")}% kwoty). Wartość referencyjna dla{" "}
+                    {commissionPct.toFixed(1).replace(".", ",")}% kwoty) + prowizja Finance You{" "}
+                    <b>{formatPLN(financeYouFeePln)}</b>. Wartość referencyjna dla{" "}
                     {months} mies.: <b>{formatPLN(maxNonInterest)}</b> (
                     {referenceCommissionPct.toFixed(1).replace(".", ",")}% kwoty)
                     {commissionAboveReference
@@ -1321,7 +1323,7 @@ export function LoanCalculator({
                     {commissionOver45
                       ? " Powyżej 45% kwoty pożyczki to ryzyko jest wysokie — obniż prowizję."
                       : " Im dalej ponad wartość referencyjną, tym większe to ryzyko."}{" "}
-                    Prowizja Finance You (potrącana z wypłaty) nie wlicza się do tej oceny.
+                    Prowizja Finance You (potrącana z wypłaty) wlicza się do tej oceny.
                   </p>
                 </AlertDescription>
               </Alert>
@@ -2013,7 +2015,7 @@ export function LoanCalculator({
                         <span>
                           Prowizja <b>{formatPLN(commissionPln)}</b> mieści się w przyjętym limicie
                           referencyjnym
-                          {commissionPln > maxNonInterest ? " (UWAGA: powyżej MPKK)" : ""}.
+                          {commissionPln + financeYouFeePln > maxNonInterest ? " (UWAGA: wraz z prowizją Finance You powyżej MPKK)" : ""}.
                         </span>
                       </label>
                       <label className="flex items-start gap-2 text-sm">

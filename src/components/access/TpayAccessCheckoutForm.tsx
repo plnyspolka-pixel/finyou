@@ -321,8 +321,14 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
             </button>
             <button
               type="button"
+              disabled={buyerType === "company"}
+              title={
+                buyerType === "company"
+                  ? "Raty TubaPay są dostępne tylko dla osoby prywatnej"
+                  : undefined
+              }
               onClick={() => choosePaymentMethod("tubapay")}
-              className={`rounded-md border px-3 py-2 text-sm transition ${
+              className={`rounded-md border px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
                 isTubapay ? "border-primary bg-primary/10 font-medium" : "hover:bg-muted"
               }`}
             >
@@ -389,6 +395,20 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
               Firma
             </button>
           </div>
+          {isTubapay ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Raty TubaPay są dostępne tylko dla osób prywatnych (umowę z TubaPay zawiera osoba
+              fizyczna). Aby kupić jako firma, wybierz „Jednorazowo (Tpay)”.
+            </p>
+          ) : (
+            tubapayOptions.length > 0 &&
+            buyerType === "company" && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Jako firma możesz zapłacić jednorazowo przez Tpay — raty TubaPay są tylko dla osób
+                prywatnych.
+              </p>
+            )
+          )}
         </div>
 
         {buyerType === "company" ? (
