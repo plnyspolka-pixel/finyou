@@ -6771,8 +6771,8 @@ export type Database = {
           decided_by: string | null
           expires_at: string | null
           id: string
-          max_period_months: number
-          min_annual_yield: number
+          max_period_months: number | null
+          min_annual_yield: number | null
           order_seq: number
           rejected_projects_count: number
           rejection_reason: string | null
@@ -6780,7 +6780,7 @@ export type Database = {
           status: string
           submitted_at: string
           user_id: string
-          validity_days: number
+          validity_days: number | null
         }
         Insert: {
           amount_pln: number
@@ -6790,8 +6790,8 @@ export type Database = {
           decided_by?: string | null
           expires_at?: string | null
           id?: string
-          max_period_months: number
-          min_annual_yield: number
+          max_period_months?: number | null
+          min_annual_yield?: number | null
           order_seq?: never
           rejected_projects_count?: number
           rejection_reason?: string | null
@@ -6799,7 +6799,7 @@ export type Database = {
           status?: string
           submitted_at?: string
           user_id: string
-          validity_days: number
+          validity_days?: number | null
         }
         Update: {
           amount_pln?: number
@@ -6809,8 +6809,8 @@ export type Database = {
           decided_by?: string | null
           expires_at?: string | null
           id?: string
-          max_period_months?: number
-          min_annual_yield?: number
+          max_period_months?: number | null
+          min_annual_yield?: number | null
           order_seq?: never
           rejected_projects_count?: number
           rejection_reason?: string | null
@@ -6818,7 +6818,7 @@ export type Database = {
           status?: string
           submitted_at?: string
           user_id?: string
-          validity_days?: number
+          validity_days?: number | null
         }
         Relationships: []
       }

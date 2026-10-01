@@ -216,9 +216,7 @@ function OrdersCard({ state, onDone }: { state: any; onDone: () => void }) {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="font-medium">FY-Z-{o.order_seq}</span> ·{" "}
-                  {Number(o.amount_pln).toLocaleString("pl-PL")} zł ± 15% · maks.{" "}
-                  {o.max_period_months} mies. · min. {o.min_annual_yield}% · ważność{" "}
-                  {o.validity_days} dni
+                  do {Number(o.amount_pln).toLocaleString("pl-PL")} zł
                   <div className="text-xs text-muted-foreground">
                     złożone {new Date(o.submitted_at).toLocaleString("pl-PL")} · user{" "}
                     {String(o.user_id).slice(0, 8)}…

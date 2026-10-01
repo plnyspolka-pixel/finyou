@@ -33,14 +33,13 @@ describe("clientProvisionPln (Zał. 6: 7% / min 5000 zł)", () => {
   });
 });
 
-describe("amountMatchesOrder (Zlecenie ± 15%)", () => {
-  it("akceptuje granice tolerancji", () => {
-    expect(amountMatchesOrder(200_000, 170_000)).toBe(true); // -15%
-    expect(amountMatchesOrder(200_000, 230_000)).toBe(true); // +15%
-    expect(amountMatchesOrder(200_000, 169_999)).toBe(false);
-    expect(amountMatchesOrder(200_000, 230_001)).toBe(false);
+describe("amountMatchesOrder (Zlecenie: kwota maksymalna)", () => {
+  it("Projekt do kwoty maksymalnej pasuje, powyżej — nie", () => {
+    expect(amountMatchesOrder(200_000, 200_000)).toBe(true);
+    expect(amountMatchesOrder(200_000, 50_000)).toBe(true);
+    expect(amountMatchesOrder(200_000, 200_001)).toBe(false);
   });
-  it("odrzuca kwoty niepoprawne", () => {
+  it("nieprawidłowe kwoty nie pasują", () => {
     expect(amountMatchesOrder(0, 100)).toBe(false);
     expect(amountMatchesOrder(100, 0)).toBe(false);
   });

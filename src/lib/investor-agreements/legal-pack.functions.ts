@@ -18,7 +18,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 import { getModuleSettings } from "@/lib/projects/guards.server";
 import { orderLimitsFromSettings } from "./order-cycle-core";
-import { maxCapitalRate, rateExceedsMax } from "@/lib/contract-engine/fees";
 
 const loose = (c: unknown) => c as any;
 
@@ -78,7 +77,7 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
       loose(supabaseAdmin)
         .from("investor_orders")
         .select(
-          "id, order_seq, amount_pln, max_period_months, min_annual_yield, validity_days, status, consumer_choice, submitted_at, decided_at, expires_at, rejection_reason",
+          "id, order_seq, amount_pln, status, consumer_choice, submitted_at, decided_at, expires_at, rejection_reason",
         )
         .eq("user_id", userId)
         .order("submitted_at", { ascending: false })
@@ -433,9 +432,6 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
     z
       .object({
         amountPln: z.number().positive().max(100_000_000),
-        maxPeriodMonths: z.number().int().min(1).max(120),
-        minAnnualYield: z.number().min(0).max(100),
-        validityDays: z.union([z.literal(30), z.literal(60), z.literal(90)]),
         statements: z.object({
           zlecenie_na_podstawie_umowy: z.literal(true),
           samodzielna_weryfikacja_przedsiebiorcy_i_celu: z.literal(true),
@@ -478,20 +474,8 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
       );
     }
 
-    // Limity z project_module_settings (Zał. 7 / § 5 Umowy ramowej v7):
-    // okres ≤ max_period_months (120), min. zysk ≤ odsetki maksymalne,
-    // aktywnych Zleceń (złożone + przyjęte) ≤ max_active_assignments.
+    // Limit z project_module_settings (§ 5 Umowy ramowej v7): aktywnych Zleceń (złożone + przyjęte) ≤ max_active_assignments.
     const limits = orderLimitsFromSettings(await getModuleSettings());
-    if (data.maxPeriodMonths > limits.maxPeriodMonths) {
-      throw new Error(
-        `Maksymalny okres Finansowania w Zleceniu to ${limits.maxPeriodMonths} miesięcy.`,
-      );
-    }
-    if (rateExceedsMax(data.minAnnualYield)) {
-      throw new Error(
-        `Minimalny oczekiwany zysk roczny nie może przekraczać odsetek maksymalnych (${maxCapitalRate()}%).`,
-      );
-    }
     const { count: activeOrders } = await loose(supabaseAdmin)
       .from("investor_orders")
       .select("id", { count: "exact", head: true })
@@ -509,9 +493,6 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
       .insert({
         user_id: userId,
         amount_pln: data.amountPln,
-        max_period_months: data.maxPeriodMonths,
-        min_annual_yield: data.minAnnualYield,
-        validity_days: data.validityDays,
         statements: { ...data.statements, ip, user_agent: userAgent },
         consumer_choice: investor?.is_consumer ? data.consumerChoice : "nie_dotyczy",
       })
@@ -586,7 +567,7 @@ export const getLegalPackAdminState = createServerFn({ method: "GET" })
       loose(supabaseAdmin)
         .from("investor_orders")
         .select(
-          "id, order_seq, user_id, amount_pln, max_period_months, min_annual_yield, validity_days, status, consumer_choice, submitted_at, decided_at, expires_at, rejection_reason",
+          "id, order_seq, user_id, amount_pln, status, consumer_choice, submitted_at, decided_at, expires_at, rejection_reason",
         )
         .order("submitted_at", { ascending: false })
         .limit(100),
@@ -627,7 +608,7 @@ export const decideInvestorOrder = createServerFn({ method: "POST" })
 
     const { data: order } = await loose(supabaseAdmin)
       .from("investor_orders")
-      .select("id, user_id, status, validity_days")
+      .select("id, user_id, status")
       .eq("id", data.orderId)
       .maybeSingle();
     if (!order) throw new Error("Nie znaleziono Zlecenia");
@@ -647,14 +628,12 @@ export const decideInvestorOrder = createServerFn({ method: "POST" })
         );
       }
       const now = new Date();
-      const expires = new Date(now.getTime() + order.validity_days * 24 * 3600 * 1000);
       const { error } = await loose(supabaseAdmin)
         .from("investor_orders")
         .update({
           status: "przyjete",
           decided_at: now.toISOString(),
           decided_by: context.userId,
-          expires_at: expires.toISOString(),
         })
         .eq("id", order.id)
         .eq("status", "zlozone");
@@ -665,7 +644,7 @@ export const decideInvestorOrder = createServerFn({ method: "POST" })
           .insert({
             order_id: order.id,
             event_type: "zlecenie_przyjete",
-            payload: { expires_at: expires.toISOString() },
+            payload: {},
             actor: context.userId,
             actor_kind: "admin",
           });
@@ -689,12 +668,12 @@ export const decideInvestorOrder = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Limity Zleceń i rezerwacji (z project_module_settings) + odsetki maksymalne — dla UI. */
+/** Limity Zleceń i rezerwacji (z project_module_settings) — dla UI. */
 export const getOrderLimits = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
     const limits = orderLimitsFromSettings(await getModuleSettings());
-    return { ...limits, maxAnnualYield: maxCapitalRate(), amountTolerancePct: 15 };
+    return limits;
   });
 
 /** Flagi profilu inwestora dla nawigacji panelu (np. link „Odstąpienie od umowy”). */

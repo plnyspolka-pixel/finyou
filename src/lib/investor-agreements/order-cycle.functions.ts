@@ -608,7 +608,7 @@ export const getOrderCycleAdminState = createServerFn({ method: "GET" })
       loose(supabaseAdmin)
         .from("investor_orders")
         .select(
-          "id, order_seq, user_id, amount_pln, max_period_months, min_annual_yield, status, expires_at",
+          "id, order_seq, user_id, amount_pln, status",
         )
         .eq("status", "przyjete")
         .order("order_seq"),
@@ -635,7 +635,7 @@ export const getOrderCycleAdminState = createServerFn({ method: "GET" })
     ]);
     await expireStaleReservations(supabaseAdmin, matches ?? []);
 
-    // Sugestie Dopasowań: kompletne wnioski w kwocie ± 15% Zlecenia,
+    // Sugestie Dopasowań: kompletne wnioski do kwoty maksymalnej Zlecenia,
     // bez aktywnego obiegu (wyłączność sekwencyjna).
     const activeAppIds = new Set(
       (matches ?? [])
