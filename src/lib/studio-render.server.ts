@@ -26,6 +26,12 @@ import {
   type ResolvedScene,
   type ScenePlanItem,
 } from "./studio-scenes";
+import {
+  joinNarration,
+  NARRATION_VOICE_SETTINGS,
+  narrationCutTimes,
+  splitMp3AtTimes,
+} from "./studio-narration";
 
 export type StudioRenderResult = {
   videoId: string;
@@ -69,7 +75,11 @@ async function renderSingleShot(
 ): Promise<StudioRenderResult> {
   const { ttsElevenLabs, uploadAudioToHeygen, createHeygenVideoFromAudio } =
     await import("./avatar-faq.server");
-  const audio = await ttsElevenLabs({ text: args.script, voiceId: args.voiceId });
+  const audio = await ttsElevenLabs({
+    text: args.script,
+    voiceId: args.voiceId,
+    voiceSettings: NARRATION_VOICE_SETTINGS,
+  });
   const assetId = await uploadAudioToHeygen(audio);
   const created = await createHeygenVideoFromAudio({
     avatarId: args.avatarId,
@@ -104,6 +114,46 @@ async function planByAi(args: RenderArgs, segments: string[]): Promise<ScenePlan
   const { planVideoScenes } = await import("./studio-ai.server");
   const decisions = await planVideoScenes({ segments, topic: args.topic });
   return applyScenePlan(segments, decisions, avatarRotation(args));
+}
+
+/**
+ * Jedno wywołanie ElevenLabs na cały scenariusz, pocięte w pauzach między
+ * scenami — każda scena dostaje kawałek tego samego nagrania.
+ */
+async function narrateAsOne(
+  voiceId: string,
+  segments: string[],
+): Promise<Uint8Array<ArrayBuffer>[]> {
+  const { ttsElevenLabsWithTimestamps } = await import("./avatar-faq.server");
+  const { audio, alignment } = await ttsElevenLabsWithTimestamps({
+    text: joinNarration(segments),
+    voiceId,
+    voiceSettings: NARRATION_VOICE_SETTINGS,
+  });
+  const pieces = splitMp3AtTimes(audio, narrationCutTimes(segments, alignment));
+  if (pieces.length !== segments.length) throw new Error("Lektor: liczba kawałków ≠ liczba scen.");
+  return pieces;
+}
+
+/**
+ * Zapas: synteza per scena, ale z sąsiednim tekstem jako kontekstem
+ * (previous_text / next_text) i tymi samymi stabilnymi ustawieniami głosu.
+ */
+async function narratePerScene(voiceId: string, segments: string[]): Promise<ArrayBuffer[]> {
+  const { ttsElevenLabs } = await import("./avatar-faq.server");
+  const out: ArrayBuffer[] = [];
+  for (const [i, text] of segments.entries()) {
+    out.push(
+      await ttsElevenLabs({
+        text,
+        voiceId,
+        voiceSettings: NARRATION_VOICE_SETTINGS,
+        previousText: segments.slice(0, i).join(" ") || undefined,
+        nextText: segments.slice(i + 1).join(" ") || undefined,
+      }),
+    );
+  }
+  return out;
 }
 
 export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderResult> {
@@ -171,15 +221,26 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
     );
   }
 
-  // Lektor per scena — długość sceny HeyGen wylicza z jej audio.
-  const { ttsElevenLabs, uploadAudioToHeygen, createHeygenStudioVideo } =
-    await import("./avatar-faq.server");
+  // Lektor: cały scenariusz jednym ciągiem, pocięty na sceny (długość sceny
+  // HeyGen wylicza z jej audio). Osobna synteza per scena dawała skoki
+  // tempa i intonacji na złączeniach.
+  const { uploadAudioToHeygen, createHeygenStudioVideo } = await import("./avatar-faq.server");
+  let narrationNote: string | null = null;
+  const sceneTexts = plan.map((item) => item.text);
+  let sceneAudio: (ArrayBuffer | Uint8Array<ArrayBuffer>)[];
+  try {
+    sceneAudio = await narrateAsOne(args.voiceId, sceneTexts);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn(`[Studio] lektor jednym ciągiem nieudany, syntezuję per scena: ${msg}`);
+    narrationNote = "Lektor syntezowany per scena (jednym ciągiem się nie udało).";
+    sceneAudio = await narratePerScene(args.voiceId, sceneTexts);
+  }
   const resolved: ResolvedScene[] = [];
   for (const [i, item] of plan.entries()) {
-    const audio = await ttsElevenLabs({ text: item.text, voiceId: args.voiceId });
     resolved.push({
       item,
-      audioAssetId: await uploadAudioToHeygen(audio),
+      audioAssetId: await uploadAudioToHeygen(sceneAudio[i]),
       imageUrl: images[i],
     });
   }
@@ -203,7 +264,7 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
           ? { kind: "avatar", text: item.text, query: null, avatarId: item.avatarId ?? null }
           : item,
     );
-    return { ...created, scenePlan: effective, note: null };
+    return { ...created, scenePlan: effective, note: narrationNote };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.warn(`[Studio] render wieloscenowy nieudany, schodzę na jedno ujęcie: ${msg}`);
