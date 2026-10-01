@@ -5,6 +5,7 @@
 // externalRef) — webhook czyta wszystko z bazy, nie z przeglądarki.
 import { FUNDACJA } from "@/lib/legal/regulamin-abonamentu";
 import { groszToPln, normalizeNip, type AccessAudience, type BuyerType } from "./core";
+import { applyDiscountGrosz } from "./discount-code";
 
 export interface StartPaymentBuyer {
   buyerType: BuyerType;
@@ -32,6 +33,20 @@ export interface StartPaymentOptions {
   unlockMatchId?: string | null;
   /** Ścieżka powrotu (bez domeny); dopinamy ?tpay=success|error&payment=<id>. */
   returnPath: string;
+  /** Zweryfikowany kod rabatowy (resolveDiscountCode) — obniża kwotę. */
+  discount?: { code: string; pct: number } | null;
+}
+
+/** Kwota do pobrania (po ewentualnym rabacie), w groszach. */
+export function paymentAmountGrosz(
+  opts: Pick<StartPaymentOptions, "product" | "discount">,
+): number {
+  const list = opts.product.amount_grosz;
+  return opts.discount ? applyDiscountGrosz(list, opts.discount.pct) : list;
+}
+
+function paymentDescription(opts: StartPaymentOptions): string {
+  return opts.discount ? `${opts.product.label} (rabat ${opts.discount.pct}%)` : opts.product.label;
 }
 
 async function insertPaymentRecord(
@@ -47,7 +62,10 @@ async function insertPaymentRecord(
       product_id: opts.product.id,
       audience: opts.audience,
       status: "created",
-      expected_amount_grosz: opts.product.amount_grosz,
+      expected_amount_grosz: paymentAmountGrosz(opts),
+      list_amount_grosz: opts.product.amount_grosz,
+      discount_code: opts.discount?.code ?? null,
+      discount_pct: opts.discount?.pct ?? null,
       currency: opts.product.currency ?? "PLN",
       buyer_type: buyer.buyerType,
       buyer_name: buyer.buyerName.trim(),
@@ -90,8 +108,8 @@ export async function startTpayPayment(opts: StartPaymentOptions): Promise<Start
   let tx;
   try {
     tx = await createTpayTransaction({
-      amount: groszToPln(opts.product.amount_grosz),
-      description: opts.product.label,
+      amount: groszToPln(paymentAmountGrosz(opts)),
+      description: paymentDescription(opts),
       email: buyer.buyerEmail.trim(),
       name: buyer.buyerName.trim(),
       crc: paymentId,
@@ -179,10 +197,10 @@ export async function startTubapayPayment(
         phone: opts.tubapay.phone,
         email: buyer.buyerEmail.trim(),
       },
-      itemName: opts.product.label,
+      itemName: paymentDescription(opts),
       // TubaPay pokazuje to pole jako „Od kogo kupujesz” — sprzedawcą jest Fundacja.
       brand: `${FUNDACJA.nazwa}, NIP ${FUNDACJA.nip}`,
-      amountPln: groszToPln(opts.product.amount_grosz),
+      amountPln: groszToPln(paymentAmountGrosz(opts)),
       installments: opts.tubapay.installments,
       externalRef: paymentId,
       callbackUrl,

@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, ExternalLink, Search } from "lucide-react";
+import { Loader2, ExternalLink, Search, Tag, X } from "lucide-react";
 import { toast } from "sonner";
 import { createAccessCheckout } from "@/lib/access/checkout.functions";
 import { createGuestInvestorCheckout } from "@/lib/access/guest-checkout.functions";
 import { getTubapayInstallmentOffer } from "@/lib/access/tubapay.functions";
+import { checkDiscountCode } from "@/lib/access/discount.functions";
+import { applyDiscountGrosz, formatValidUntil } from "@/lib/access/discount-code";
 import { normalizePlPhone, type PaymentMethod } from "@/lib/access/tubapay-checkout";
 import type { BillingPeriod } from "@/lib/investor-plan/plans";
 import { FUNDACJA, REGULAMIN_ABONAMENTU_PATH } from "@/lib/legal/regulamin-abonamentu";
@@ -38,6 +40,7 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
   const guestCheckoutFn = useServerFn(createGuestInvestorCheckout);
   const gusFn = useServerFn(gusCompanyLookup);
   const tubapayOfferFn = useServerFn(getTubapayInstallmentOffer);
+  const discountFn = useServerFn(checkDiscountCode);
 
   const [loading, setLoading] = useState(false);
   const [gusLoading, setGusLoading] = useState(false);
@@ -58,17 +61,63 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
   const [buyerPhone, setBuyerPhone] = useState("");
   const [tubapayConsent, setTubapayConsent] = useState(false);
   const isTubapay = paymentMethod === "tubapay";
+  const [discountInput, setDiscountInput] = useState("");
+  const [discount, setDiscount] = useState<{
+    code: string;
+    pct: number;
+    validUntil: string;
+  } | null>(null);
+  const [discountChecking, setDiscountChecking] = useState(false);
+  const amountGrosz = discount
+    ? applyDiscountGrosz(product.amount_grosz, discount.pct)
+    : product.amount_grosz;
+
+  const applyDiscount = async () => {
+    const code = discountInput.trim();
+    if (!code) return toast.error("Wpisz kod rabatowy");
+    setDiscountChecking(true);
+    try {
+      const res = await discountFn({ data: { code } });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setDiscount({ code: res.code, pct: res.pct, validUntil: res.validUntil });
+      setDiscountInput(res.code);
+      toast.success(
+        `Kod przyjęty — rabat ${res.pct}% (ważny do ${formatValidUntil(res.validUntil)})`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się sprawdzić kodu");
+    } finally {
+      setDiscountChecking(false);
+    }
+  };
+
+  const removeDiscount = () => {
+    setDiscount(null);
+    setDiscountInput("");
+  };
 
   // Raty TubaPay — tylko dla dostępu czasowego, gdy TubaPay zwróci ofertę
   // dla ceny produktu (bez oferty formularz działa wyłącznie z Tpay).
   useEffect(() => {
     if (product.kind === "unlock") return;
     let cancelled = false;
-    tubapayOfferFn({ data: { productCode: product.code } })
+    tubapayOfferFn({ data: { productCode: product.code, discountCode: discount?.code ?? null } })
       .then((res) => {
-        if (cancelled || !res.available) return;
+        if (cancelled) return;
+        if (!res.available) {
+          // Po rabacie kwota może wypaść poza ofertę TubaPay — wracamy do Tpay.
+          setTubapayOptions([]);
+          setInstallments(null);
+          setPaymentMethod("tpay");
+          return;
+        }
         setTubapayOptions(res.options);
-        setInstallments(res.options[res.options.length - 1] ?? null);
+        setInstallments((cur) =>
+          cur && res.options.includes(cur) ? cur : (res.options[res.options.length - 1] ?? null),
+        );
       })
       .catch(() => {
         // brak oferty — zostaje Tpay
@@ -76,7 +125,7 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
     return () => {
       cancelled = true;
     };
-  }, [product.code, product.kind, tubapayOfferFn]);
+  }, [product.code, product.kind, tubapayOfferFn, discount?.code]);
 
   const choosePaymentMethod = (m: PaymentMethod) => {
     setPaymentMethod(m);
@@ -162,6 +211,7 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
           tubapay: isTubapay && tubapayConsent,
         },
         paymentMethod,
+        discountCode: discount?.code ?? null,
         ...(isTubapay ? { buyerPhone: buyerPhone.trim(), installments } : {}),
       };
       const res: { error?: string; paymentUrl?: string } = guestPeriod
@@ -187,7 +237,20 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
     <div className="space-y-4">
       <div className="rounded-lg border bg-muted/30 p-4">
         <div className="text-sm text-muted-foreground">{product.label}</div>
-        <div className="text-3xl font-bold mt-1">{formatGroszPln(product.amount_grosz)} brutto</div>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
+          <span className="text-3xl font-bold">{formatGroszPln(amountGrosz)} brutto</span>
+          {discount && (
+            <span className="text-base text-muted-foreground line-through">
+              {formatGroszPln(product.amount_grosz)}
+            </span>
+          )}
+        </div>
+        {discount && (
+          <div className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+            Rabat {discount.pct}% z kodem {discount.code} — oszczędzasz{" "}
+            {formatGroszPln(product.amount_grosz - amountGrosz)}
+          </div>
+        )}
         <div className="text-xs text-muted-foreground mt-1">
           Płatność jednorazowa ·{" "}
           {product.duration_days
@@ -198,6 +261,49 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
             ? "Zostaniesz przeniesiony do TubaPay — podpiszesz umowę płatności podzielonej i opłacisz pierwszą ratę szybkim przelewem z własnego konta."
             : "Zostaniesz przeniesiony do bezpiecznej bramki płatności Tpay (BLIK, karta, szybki przelew)."}
         </div>
+      </div>
+
+      <div className="rounded-lg border p-4 space-y-2">
+        <Label htmlFor="discount-code" className="text-sm font-medium">
+          Kod rabatowy
+        </Label>
+        {discount ? (
+          <div className="flex items-center justify-between gap-2 rounded-md border border-emerald-600/40 bg-emerald-50 px-3 py-2 text-sm dark:bg-emerald-950/30">
+            <span className="flex items-center gap-2 font-mono">
+              <Tag className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
+              {discount.code} · −{discount.pct}% · ważny do {formatValidUntil(discount.validUntil)}
+            </span>
+            <Button type="button" variant="ghost" size="sm" onClick={removeDiscount}>
+              <X className="h-4 w-4" />
+              <span className="ml-1">Usuń</span>
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              id="discount-code"
+              value={discountInput}
+              onChange={(e) => setDiscountInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void applyDiscount();
+                }
+              }}
+              placeholder="np. RABAT20-311226-XXXX-XXXXXXXX"
+              autoComplete="off"
+              className="font-mono uppercase"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={applyDiscount}
+              disabled={discountChecking || !discountInput.trim()}
+            >
+              {discountChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Zastosuj"}
+            </Button>
+          </div>
+        )}
       </div>
 
       {tubapayOptions.length > 0 && (
@@ -251,8 +357,8 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
               {installments && (
                 <p className="text-xs text-muted-foreground">
                   Orientacyjnie {installments} ×{" "}
-                  {formatGroszPln(Math.ceil(product.amount_grosz / installments))}. Ostateczny
-                  harmonogram zobaczysz w umowie z TubaPay przed jej zawarciem.
+                  {formatGroszPln(Math.ceil(amountGrosz / installments))}. Ostateczny harmonogram
+                  zobaczysz w umowie z TubaPay przed jej zawarciem.
                 </p>
               )}
             </div>
@@ -541,7 +647,7 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
           <>
             {isTubapay
               ? `Zapłać w ${installments ?? ""} ratach z TubaPay`
-              : `Zapłać ${formatGroszPln(product.amount_grosz)} przez Tpay`}
+              : `Zapłać ${formatGroszPln(amountGrosz)} przez Tpay`}
             <ExternalLink className="ml-2 h-4 w-4" />
           </>
         )}
