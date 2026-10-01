@@ -24,7 +24,7 @@ export const Route = createFileRoute("/embed/l/$slug")({
     <div className="p-6 text-sm text-muted-foreground">Landing nie istnieje.</div>
   ),
   errorComponent: ({ error }) => (
-    <div className="p-6 text-sm text-destructive">{error.message}</div>
+    <div className="p-6 text-sm text-destructive">{(error as Error).message}</div>
   ),
 });
 

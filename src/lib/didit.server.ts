@@ -68,7 +68,9 @@ export function hasDiditConfig(): boolean {
  */
 export function selectWorkflowId(kind: DiditWorkflowKind): string | null {
   const fallback = process.env.DIDIT_WORKFLOW_ID || null;
-  if (kind === "kyb") return process.env.DIDIT_WORKFLOW_ID_KYB || fallback;
+  // Bez osobnego workflowu KYB weryfikujemy reprezentanta firmy darmowym KYC.
+  if (kind === "kyb")
+    return process.env.DIDIT_WORKFLOW_ID_KYB || fallback || process.env.DIDIT_WORKFLOW_ID_KYC || null;
   return process.env.DIDIT_WORKFLOW_ID_KYC || fallback;
 }
 
