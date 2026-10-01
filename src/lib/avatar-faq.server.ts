@@ -3,6 +3,7 @@
 
 import type { CaptionMode } from "./studio-captions";
 import type { HeygenStudioScene } from "./studio-scenes";
+import { base64ToBytes, type CharAlignment } from "./studio-narration";
 
 const HEYGEN_BASE = "https://api.heygen.com";
 
@@ -18,7 +19,34 @@ const ELEVENLABS_API_KEY = () => {
   return k;
 };
 
-export async function ttsElevenLabs(opts: { text: string; voiceId: string }): Promise<ArrayBuffer> {
+const DEFAULT_VOICE_SETTINGS = {
+  stability: 0.55,
+  similarity_boost: 0.8,
+  style: 0.25,
+  use_speaker_boost: true,
+  speed: 1.0,
+};
+
+type TtsOptions = {
+  text: string;
+  voiceId: string;
+  /** Nadpisanie ustawień głosu (np. stabilniejszy lektor rolek). */
+  voiceSettings?: Record<string, number | boolean>;
+  /** Tekst przed / po fragmencie — ElevenLabs dopasowuje do niego intonację. */
+  previousText?: string;
+  nextText?: string;
+};
+
+const ttsBody = (opts: TtsOptions) =>
+  JSON.stringify({
+    text: opts.text,
+    model_id: "eleven_multilingual_v2",
+    voice_settings: opts.voiceSettings ?? DEFAULT_VOICE_SETTINGS,
+    ...(opts.previousText ? { previous_text: opts.previousText } : {}),
+    ...(opts.nextText ? { next_text: opts.nextText } : {}),
+  });
+
+export async function ttsElevenLabs(opts: TtsOptions): Promise<ArrayBuffer> {
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${opts.voiceId}?output_format=mp3_44100_128`,
     {
@@ -27,17 +55,7 @@ export async function ttsElevenLabs(opts: { text: string; voiceId: string }): Pr
         "xi-api-key": ELEVENLABS_API_KEY(),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        text: opts.text,
-        model_id: "eleven_multilingual_v2",
-        voice_settings: {
-          stability: 0.55,
-          similarity_boost: 0.8,
-          style: 0.25,
-          use_speaker_boost: true,
-          speed: 1.0,
-        },
-      }),
+      body: ttsBody(opts),
     },
   );
   if (!res.ok) {
@@ -47,8 +65,37 @@ export async function ttsElevenLabs(opts: { text: string; voiceId: string }): Pr
   return res.arrayBuffer();
 }
 
+/** TTS z czasami znaków — do cięcia jednego nagrania na sceny. */
+export async function ttsElevenLabsWithTimestamps(opts: TtsOptions): Promise<{
+  audio: Uint8Array;
+  alignment: CharAlignment;
+}> {
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${opts.voiceId}/with-timestamps?output_format=mp3_44100_128`,
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_API_KEY(),
+        "Content-Type": "application/json",
+      },
+      body: ttsBody(opts),
+    },
+  );
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`ElevenLabs TTS failed: ${res.status} ${t}`);
+  }
+  const json = (await res.json()) as { audio_base64?: string; alignment?: CharAlignment | null };
+  if (!json.audio_base64 || !json.alignment) {
+    throw new Error("ElevenLabs TTS: brak audio albo wyrównania znaków w odpowiedzi.");
+  }
+  return { audio: base64ToBytes(json.audio_base64), alignment: json.alignment };
+}
+
 // Uploads bytes to HeyGen and returns an asset_id usable as audio input.
-export async function uploadAudioToHeygen(audio: ArrayBuffer): Promise<string> {
+export async function uploadAudioToHeygen(
+  audio: ArrayBuffer | Uint8Array<ArrayBuffer>,
+): Promise<string> {
   const form = new FormData();
   form.append("file", new Blob([audio], { type: "audio/mpeg" }), "filip-faq.mp3");
 
