@@ -57,7 +57,7 @@ export function InvestorTeaserList() {
           <p className="font-medium">Projekty pojawią się po przyjęciu Twojego Zlecenia.</p>
           <p className="text-sm text-muted-foreground">
             Finance You przedstawia Projekty wyłącznie w wykonaniu przyjętego Zlecenia (§ 5 Umowy
-            ramowej). Złóż Zlecenie z kwotą, okresem i minimalnym zyskiem — dopasowane Projekty
+            ramowej). Złóż Zlecenie z maksymalną kwotą Finansowania — dopasowane Projekty
             zobaczysz tutaj.
           </p>
           <Button asChild>
