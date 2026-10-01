@@ -113,6 +113,28 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
       activeDocs.every((d: any) => acceptedSet.has(`${d.code}:${d.version}:${d.sha256}`));
     const hasDelivery = (deliveries ?? []).length > 0;
 
+    // Zlecenie trwa tak długo jak abonament: po odnowieniu abonamentu
+    // przedłużamy termin przyjętych Zleceń do nowego końca Okresu.
+    const subUntil = await subscriptionEnd(supabaseAdmin, userId);
+    if (subUntil) {
+      const toExtend = (orders ?? []).filter(
+        (o: any) =>
+          o.status === "przyjete" &&
+          o.expires_at &&
+          new Date(o.expires_at).getTime() < subUntil.getTime(),
+      );
+      if (toExtend.length > 0) {
+        await loose(supabaseAdmin)
+          .from("investor_orders")
+          .update({ expires_at: subUntil.toISOString() })
+          .in(
+            "id",
+            toExtend.map((o: any) => o.id),
+          );
+        for (const o of toExtend) o.expires_at = subUntil.toISOString();
+      }
+    }
+
     // Leniwe wygaszanie: przyjęte zlecenia po terminie ważności.
     const now = Date.now();
     const staleIds = (orders ?? [])
@@ -539,6 +561,17 @@ export const withdrawInvestorOrder = createServerFn({ method: "POST" })
 
 // ── Panel administratora ────────────────────────────────────────────────────
 
+/** Koniec aktywnego abonamentu inwestora (null — brak/personel wewnętrzny). */
+async function subscriptionEnd(supabaseAdmin: any, userId: string): Promise<Date | null> {
+  const { data } = await loose(supabaseAdmin)
+    .from("access_entitlements")
+    .select("active_until")
+    .eq("user_id", userId)
+    .eq("audience", "investor")
+    .maybeSingle();
+  return data?.active_until ? new Date(data.active_until) : null;
+}
+
 async function assertAdmin(supabase: any, userId: string) {
   const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
   const ok = (roles ?? []).some((r: { role: string }) => r.role === "administrator");
@@ -628,12 +661,15 @@ export const decideInvestorOrder = createServerFn({ method: "POST" })
         );
       }
       const now = new Date();
+      // Termin Zlecenia = koniec abonamentu inwestora (brak = bez terminu).
+      const expires = await subscriptionEnd(supabaseAdmin, order.user_id);
       const { error } = await loose(supabaseAdmin)
         .from("investor_orders")
         .update({
           status: "przyjete",
           decided_at: now.toISOString(),
           decided_by: context.userId,
+          expires_at: expires?.toISOString() ?? null,
         })
         .eq("id", order.id)
         .eq("status", "zlozone");
@@ -644,7 +680,7 @@ export const decideInvestorOrder = createServerFn({ method: "POST" })
           .insert({
             order_id: order.id,
             event_type: "zlecenie_przyjete",
-            payload: {},
+            payload: { expires_at: expires?.toISOString() ?? null },
             actor: context.userId,
             actor_kind: "admin",
           });
