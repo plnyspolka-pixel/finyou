@@ -149,7 +149,7 @@ const PIPELINE_STEPS: { n: number; t: string; d: string; hue: number }[] = [
   {
     n: 9,
     t: "Zlecenie poszukiwania Projektów",
-    d: "Kwota ± 15%, maksymalny okres (do 120 mies.), minimalny zysk roczny i termin ważności. Od tego momentu szukamy dla Ciebie.",
+    d: "Podajesz tylko maksymalną kwotę Finansowania. Od tego momentu szukamy dla Ciebie.",
     hue: 8,
   },
 ];

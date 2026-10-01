@@ -89,7 +89,7 @@ export const getInvestor = defineTool({
                   s
                     .from("investor_orders")
                     .select(
-                      "id, order_seq, amount_pln, max_period_months, min_annual_yield, status, submitted_at, expires_at, rejected_projects_count",
+                      "id, order_seq, amount_pln, status, submitted_at, expires_at, rejected_projects_count",
                     )
                     .eq("user_id", inv.user_id)
                     .order("created_at", { ascending: false })
@@ -172,7 +172,7 @@ export const listInvestorOrders = defineListTool({
     "Zlecenia inwestorów (moduł „Zlecenie–Projekt”): kwota, maks. okres, min. rentowność, ważność, status, wybór konsumencki, terminy. Inwestor widzi swoje (RLS), zespół — wszystkie.",
   table: "investor_orders",
   columns:
-    "id, order_seq, user_id, amount_pln, max_period_months, min_annual_yield, validity_days, status, consumer_choice, submitted_at, decided_at, rejection_reason, expires_at, rejected_projects_count, created_at",
+    "id, order_seq, user_id, amount_pln, status, consumer_choice, submitted_at, decided_at, rejection_reason, expires_at, rejected_projects_count, created_at",
   resultKey: "orders",
   filters: {
     status: text("status", "Status zlecenia."),

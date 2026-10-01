@@ -157,15 +157,11 @@ export function clientProvisionPln(payoutAmountPln: number): number {
   return fyCommission(payoutAmountPln);
 }
 
-/** Zlecenie: kwota ± 15% (Zał. 7). */
-export const ORDER_AMOUNT_TOLERANCE = 0.15;
-
-export function amountMatchesOrder(orderAmountPln: number, projectAmountPln: number): boolean {
-  if (!(orderAmountPln > 0) || !(projectAmountPln > 0)) return false;
-  // Granice zaokrąglone do groszy — bez artefaktów zmiennoprzecinkowych.
-  const lo = Math.round(orderAmountPln * (1 - ORDER_AMOUNT_TOLERANCE) * 100) / 100;
-  const hi = Math.round(orderAmountPln * (1 + ORDER_AMOUNT_TOLERANCE) * 100) / 100;
-  return projectAmountPln >= lo && projectAmountPln <= hi;
+/** Zlecenie: jedyny parametr to kwota maksymalna (Zał. 7) — Projekt pasuje,
+ *  gdy jego kwota nie przekracza kwoty Zlecenia. */
+export function amountMatchesOrder(orderMaxAmountPln: number, projectAmountPln: number): boolean {
+  if (!(orderMaxAmountPln > 0) || !(projectAmountPln > 0)) return false;
+  return projectAmountPln <= orderMaxAmountPln;
 }
 
 /** Konsument: prawo odstąpienia od Umowy ramowej — 14 dni od akceptacji

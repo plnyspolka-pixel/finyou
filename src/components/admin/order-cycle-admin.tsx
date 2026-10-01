@@ -1,5 +1,5 @@
 // Panel administratora cyklu Zlecenie–Projekt (Etap U2): sugestie Dopasowań
-// (kwota ± 15%, wyłączność sekwencyjna), stany obiegu, Karta Transferu Danych,
+// (kwota maksymalna, wyłączność sekwencyjna), stany obiegu, Karta Transferu Danych,
 // decyzje (transakcja / przekazanie / odrzucenie), Zał. 6 przy wypłacie,
 // przystąpienia NDA, odstąpienia Konsumentów i dziennik zdarzeń.
 import { useState } from "react";
@@ -78,7 +78,7 @@ function SuggestionsCard({ data, onDone }: { data: any; onDone: () => void }) {
         <CardTitle className="text-base">
           Sugestie Dopasowań{" "}
           <span className="text-sm font-normal text-muted-foreground">
-            (przyjęte Zlecenia × kompletne wnioski w kwocie ± 15%; jeden aktywny obieg Projektu)
+            (przyjęte Zlecenia × kompletne wnioski do kwoty maksymalnej; jeden aktywny obieg Projektu)
           </span>
         </CardTitle>
       </CardHeader>
