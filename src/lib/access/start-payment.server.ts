@@ -3,6 +3,7 @@
 // w Tpay albo umowa płatności podzielonej w TubaPay. Bramka dostaje
 // wewnętrzny UUID płatności (Tpay: crc/hiddenDescription, TubaPay:
 // externalRef) — webhook czyta wszystko z bazy, nie z przeglądarki.
+import { FUNDACJA } from "@/lib/legal/regulamin-abonamentu";
 import { groszToPln, normalizeNip, type AccessAudience, type BuyerType } from "./core";
 
 export interface StartPaymentBuyer {
@@ -179,7 +180,8 @@ export async function startTubapayPayment(
         email: buyer.buyerEmail.trim(),
       },
       itemName: opts.product.label,
-      brand: "Finance You",
+      // TubaPay pokazuje to pole jako „Od kogo kupujesz” — sprzedawcą jest Fundacja.
+      brand: `${FUNDACJA.nazwa}, NIP ${FUNDACJA.nip}`,
       amountPln: groszToPln(opts.product.amount_grosz),
       installments: opts.tubapay.installments,
       externalRef: paymentId,
