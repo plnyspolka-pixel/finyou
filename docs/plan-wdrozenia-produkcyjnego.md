@@ -95,7 +95,7 @@ Zaimplementowane i wdrożone; pakiet startuje z `legal_documents.active=false`
 3. ~~Sekrety Didit~~ ZAŁATWIONE (2026-09-07): `DIDIT_API_KEY` i
    `DIDIT_WEBHOOK_SECRET` były już w Lovable od lipca;
    `DIDIT_WORKFLOW_ID_KYC/KYB` ustawione na produkcyjne workflowy
-   (KYC `1612939d…`, KYB `c7f1dde1…`). Webhook w konsoli Didit przekierowany
+   (KYC `aa6131b3…` = „Free KYC”, zmienione 2026-10-01 z płatnego „KYC + AML” `1612939d…`, które dawało błąd „not enough credits”; KYB `c7f1dde1…`). Webhook w konsoli Didit przekierowany
    z nieistniejącego `financeyou.pl/api/public/didit-webhook` (100 % błędów
    dostaw) na edge function
    `https://jqvepxhulxdnbwbogkhe.supabase.co/functions/v1/didit-webhook`.
