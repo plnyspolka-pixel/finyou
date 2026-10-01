@@ -64,7 +64,7 @@ import {
 
 export const Route = createFileRoute("/admin/marketing/email")({
   component: EmailMarketingPage,
-  errorComponent: ({ error }) => <div className="p-4 text-destructive">Błąd: {error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-4 text-destructive">Błąd: {(error as Error).message}</div>,
   notFoundComponent: () => <div className="p-4">Nie znaleziono.</div>,
 });
 

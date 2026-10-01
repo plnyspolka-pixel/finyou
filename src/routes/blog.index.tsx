@@ -103,7 +103,7 @@ export const Route = createFileRoute("/blog/")({
   errorComponent: ({ error }) => (
     <MarketingShell page="blog">
       <Section>
-        <p style={{ textAlign: "center", color: "var(--muted-foreground)" }}>{error.message}</p>
+        <p style={{ textAlign: "center", color: "var(--muted-foreground)" }}>{(error as Error).message}</p>
       </Section>
     </MarketingShell>
   ),
