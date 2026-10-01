@@ -162,7 +162,7 @@ export type Database = {
           status: string
           unlock_match_id: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           affiliate_event_id?: string | null
@@ -194,7 +194,7 @@ export type Database = {
           status?: string
           unlock_match_id?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           affiliate_event_id?: string | null
@@ -226,7 +226,7 @@ export type Database = {
           status?: string
           unlock_match_id?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
