@@ -49,9 +49,14 @@ export function diditAppUrl(): string {
   return (process.env.DIDIT_APP_URL || DEFAULT_APP_URL).replace(/\/+$/, "");
 }
 
+/** Klucz API: DIDIT_API_KEY_NEW (nowy klucz) ma pierwszeństwo przed DIDIT_API_KEY. */
+function diditApiKey(): string | undefined {
+  return process.env.DIDIT_API_KEY_NEW?.trim() || process.env.DIDIT_API_KEY?.trim() || undefined;
+}
+
 /** Czy integracja jest skonfigurowana (klucz API obecny w sekretach). */
 export function hasDiditConfig(): boolean {
-  return Boolean(process.env.DIDIT_API_KEY);
+  return Boolean(diditApiKey());
 }
 
 /**
@@ -68,7 +73,7 @@ export function selectWorkflowId(kind: DiditWorkflowKind): string | null {
 }
 
 function requireApiKey(): string {
-  const key = process.env.DIDIT_API_KEY;
+  const key = diditApiKey();
   if (!key) throw new Error("Brak konfiguracji Didit (DIDIT_API_KEY).");
   return key;
 }
