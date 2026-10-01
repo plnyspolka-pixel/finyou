@@ -35,6 +35,8 @@ const GuestCheckoutSchema = z.object({
     tubapay: z.boolean().optional().default(false),
   }),
   ...TubapayCheckoutFields,
+  /** Kod rabatowy — zniżkę odczytujemy z treści kodu (discount-code.ts). */
+  discountCode: z.string().trim().max(40).optional().nullable(),
 });
 
 export const createGuestInvestorCheckout = createServerFn({ method: "POST" })
@@ -93,6 +95,11 @@ export const createGuestInvestorCheckout = createServerFn({ method: "POST" })
         .maybeSingle();
       if (!product) return { error: "Wybrany abonament jest chwilowo niedostępny." };
 
+      const { resolveDiscountCode } = await import("./discount.server");
+      const disc = await resolveDiscountCode(db, data.discountCode);
+      if (disc && !disc.ok) return { error: disc.error };
+      const discount = disc?.ok ? { code: disc.code, pct: disc.pct } : null;
+
       const { requestClientMeta } = await import("./urls.server");
       const meta = requestClientMeta();
       const consents = {
@@ -121,6 +128,7 @@ export const createGuestInvestorCheckout = createServerFn({ method: "POST" })
         buyer: { ...data, buyerEmail: email },
         consents,
         returnPath: GUEST_CHECKOUT_PATH,
+        discount,
       };
       const started =
         data.paymentMethod === "tubapay"

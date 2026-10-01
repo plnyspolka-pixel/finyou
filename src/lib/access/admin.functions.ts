@@ -216,3 +216,27 @@ export const adminListPartnerOperatorAudit = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+// Generowanie kodów rabatowych do wysłania klientom. Zniżka jest zapisana
+// w treści kodu (RABAT<procent>-…) i chroniona podpisem — kodów nie trzeba
+// nigdzie zapisywać; każdy działa jednorazowo (do pierwszej opłaconej płatności).
+export const adminGenerateDiscountCodes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) =>
+    z
+      .object({
+        pct: z.number().int().min(1).max(90),
+        count: z.number().int().min(1).max(50).optional().default(1),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { generateDiscountCode } = await import("./discount-code");
+    const { getDiscountSecret } = await import("./discount.server");
+    const secret = getDiscountSecret();
+    if (!secret) throw new Error("Brak sekretu DISCOUNT_CODE_SECRET");
+    const codes: string[] = [];
+    for (let i = 0; i < data.count; i++) codes.push(await generateDiscountCode(data.pct, secret));
+    return { codes };
+  });

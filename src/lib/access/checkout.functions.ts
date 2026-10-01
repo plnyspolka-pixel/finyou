@@ -38,6 +38,8 @@ const CheckoutSchema = z.object({
     tubapay: z.boolean().optional().default(false),
   }),
   ...TubapayCheckoutFields,
+  /** Kod rabatowy — zniżkę odczytujemy z treści kodu (discount-code.ts). */
+  discountCode: z.string().trim().max(40).optional().nullable(),
 });
 
 export type CreateAccessCheckoutInput = z.infer<typeof CheckoutSchema>;
@@ -231,6 +233,12 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         };
       }
 
+      // 2b) Kod rabatowy (podpis + jednorazowość).
+      const { resolveDiscountCode } = await import("./discount.server");
+      const disc = await resolveDiscountCode(db, data.discountCode);
+      if (disc && !disc.ok) return { error: disc.error };
+      const discount = disc?.ok ? { code: disc.code, pct: disc.pct } : null;
+
       // 3) Snapshot zgód nabywcy.
       const { requestClientMeta } = await import("./urls.server");
       const meta = requestClientMeta();
@@ -266,6 +274,7 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         consents,
         unlockMatchId,
         returnPath: panel,
+        discount,
       };
       const started =
         data.paymentMethod === "tubapay"

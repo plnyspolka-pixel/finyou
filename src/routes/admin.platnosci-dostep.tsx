@@ -22,7 +22,16 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Mail, FileText, ScrollText, ShieldAlert } from "lucide-react";
+import {
+  Loader2,
+  RefreshCw,
+  Mail,
+  FileText,
+  ScrollText,
+  ShieldAlert,
+  Tag,
+  Copy,
+} from "lucide-react";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import {
   adminListAccessPayments,
@@ -32,6 +41,7 @@ import {
   adminSetPaymentReviewFlag,
   adminListWebhookLogs,
   adminListPartnerOperatorAudit,
+  adminGenerateDiscountCodes,
 } from "@/lib/access/admin.functions";
 import { formatGroszPln, formatWarsawDate } from "@/lib/access/core";
 
@@ -58,6 +68,7 @@ function AdminAccessPayments() {
   const reviewFn = useServerFn(adminSetPaymentReviewFlag);
   const logsFn = useServerFn(adminListWebhookLogs);
   const auditFn = useServerFn(adminListPartnerOperatorAudit);
+  const discountFn = useServerFn(adminGenerateDiscountCodes);
 
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +84,29 @@ function AdminAccessPayments() {
   const [adjustUntil, setAdjustUntil] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
   const [audit, setAudit] = useState<any[] | null>(null);
+  const [discountOpen, setDiscountOpen] = useState(false);
+  const [discountPct, setDiscountPct] = useState("20");
+  const [discountCount, setDiscountCount] = useState("1");
+  const [discountCodes, setDiscountCodes] = useState<string[]>([]);
+  const [discountBusy, setDiscountBusy] = useState(false);
+
+  const generateCodes = async () => {
+    const pct = Number(discountPct);
+    const count = Number(discountCount);
+    if (!Number.isInteger(pct) || pct < 1 || pct > 90)
+      return toast.error("Zniżka: liczba całkowita 1–90%");
+    if (!Number.isInteger(count) || count < 1 || count > 50)
+      return toast.error("Liczba kodów: 1–50");
+    setDiscountBusy(true);
+    try {
+      const res = await discountFn({ data: { pct, count } });
+      setDiscountCodes(res.codes);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się wygenerować kodów");
+    } finally {
+      setDiscountBusy(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -139,6 +173,9 @@ function AdminAccessPayments() {
         subtitle="Rejestr płatności za czasowy dostęp inwestorów i pośredników, faktury, dostęp i log webhooków."
         actions={
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setDiscountOpen(true)}>
+              <Tag className="mr-2 h-4 w-4" /> Kody rabatowe
+            </Button>
             <Button variant="outline" onClick={() => void openLogs(null)}>
               <ScrollText className="mr-2 h-4 w-4" /> Log webhooków
             </Button>
@@ -233,6 +270,13 @@ function AdminAccessPayments() {
                       <b className="text-foreground">
                         {formatGroszPln(Number(p.paid_amount_grosz ?? p.expected_amount_grosz))}
                       </b>
+                      {p.discount_code && (
+                        <>
+                          {" "}
+                          (rabat {p.discount_pct}% z {formatGroszPln(Number(p.list_amount_grosz))} ·
+                          kod <span className="font-mono">{p.discount_code}</span>)
+                        </>
+                      )}
                       {" · "}Utworzona: {formatWarsawDate(p.created_at, true)}
                       {" · "}Tpay ID:{" "}
                       <span className="font-mono">{p.provider_transaction_id ?? "—"}</span>
@@ -469,6 +513,70 @@ function AdminAccessPayments() {
           przedłużenie lub cofnięcie dostępu jest audytowane w access_audit_logs.
         </CardContent>
       </Card>
+
+      <Dialog open={discountOpen} onOpenChange={setDiscountOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kody rabatowe</DialogTitle>
+            <DialogDescription>
+              Zniżka jest zapisana w treści kodu (np. RABAT20-… = 20%) i zabezpieczona podpisem —
+              klient nie podrobi kodu na inną wartość. Każdy kod działa jednorazowo: do pierwszej
+              opłaconej płatności. Klient wpisuje go na formularzu płatności.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="dc-pct">Zniżka (%)</Label>
+              <Input
+                id="dc-pct"
+                type="number"
+                min={1}
+                max={90}
+                value={discountPct}
+                onChange={(e) => setDiscountPct(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="dc-count">Liczba kodów</Label>
+              <Input
+                id="dc-count"
+                type="number"
+                min={1}
+                max={50}
+                value={discountCount}
+                onChange={(e) => setDiscountCount(e.target.value)}
+              />
+            </div>
+          </div>
+          <Button onClick={generateCodes} disabled={discountBusy}>
+            {discountBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Generuj
+          </Button>
+          {discountCodes.length > 0 && (
+            <div className="space-y-2">
+              <div className="max-h-64 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-sm">
+                {discountCodes.map((c) => (
+                  <div key={c}>{c}</div>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(discountCodes.join("\n"));
+                    toast.success("Skopiowano");
+                  } catch {
+                    toast.error("Nie udało się skopiować");
+                  }
+                }}
+              >
+                <Copy className="mr-2 h-4 w-4" /> Kopiuj
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
