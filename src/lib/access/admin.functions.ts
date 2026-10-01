@@ -217,15 +217,18 @@ export const adminListPartnerOperatorAudit = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-// Generowanie kodów rabatowych do wysłania klientom. Zniżka jest zapisana
-// w treści kodu (RABAT<procent>-…) i chroniona podpisem — kodów nie trzeba
-// nigdzie zapisywać; każdy działa jednorazowo (do pierwszej opłaconej płatności).
+// Generowanie kodów rabatowych do wysłania klientom. Zniżka i data ważności
+// są zapisane w treści kodu (RABAT<procent>-<DDMMRR>-…) i chronione podpisem —
+// kodów nie trzeba nigdzie zapisywać; każdy działa jednorazowo (do pierwszej
+// opłaconej płatności) i najpóźniej do końca dnia ważności (czas polski).
 export const adminGenerateDiscountCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
     z
       .object({
         pct: z.number().int().min(1).max(90),
+        /** Ostatni dzień ważności, YYYY-MM-DD (włącznie). */
+        validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         count: z.number().int().min(1).max(50).optional().default(1),
       })
       .parse(i),
@@ -237,6 +240,7 @@ export const adminGenerateDiscountCodes = createServerFn({ method: "POST" })
     const secret = getDiscountSecret();
     if (!secret) throw new Error("Brak sekretu DISCOUNT_CODE_SECRET");
     const codes: string[] = [];
-    for (let i = 0; i < data.count; i++) codes.push(await generateDiscountCode(data.pct, secret));
-    return { codes };
+    for (let i = 0; i < data.count; i++)
+      codes.push(await generateDiscountCode(data.pct, data.validUntil, secret));
+    return { codes, validUntil: data.validUntil };
   });

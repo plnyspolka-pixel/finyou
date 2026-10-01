@@ -30,10 +30,13 @@ export const getTubapayInstallmentOffer = createServerFn({ method: "GET" })
     // Oferta dla kwoty po rabacie (gdy kod poprawny) — tyle obejmie umowa.
     let amountGrosz = Number(product.amount_grosz);
     if (data.discountCode) {
-      const { verifyDiscountCode, applyDiscountGrosz } = await import("./discount-code");
+      const { verifyDiscountCode, isDiscountCodeActive, applyDiscountGrosz } =
+        await import("./discount-code");
       const { getDiscountSecret } = await import("./discount.server");
       const parsed = await verifyDiscountCode(data.discountCode, getDiscountSecret());
-      if (parsed) amountGrosz = applyDiscountGrosz(amountGrosz, parsed.pct);
+      if (parsed && isDiscountCodeActive(parsed)) {
+        amountGrosz = applyDiscountGrosz(amountGrosz, parsed.pct);
+      }
     }
 
     try {

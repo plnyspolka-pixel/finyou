@@ -13,7 +13,7 @@ import { createAccessCheckout } from "@/lib/access/checkout.functions";
 import { createGuestInvestorCheckout } from "@/lib/access/guest-checkout.functions";
 import { getTubapayInstallmentOffer } from "@/lib/access/tubapay.functions";
 import { checkDiscountCode } from "@/lib/access/discount.functions";
-import { applyDiscountGrosz } from "@/lib/access/discount-code";
+import { applyDiscountGrosz, formatValidUntil } from "@/lib/access/discount-code";
 import { normalizePlPhone, type PaymentMethod } from "@/lib/access/tubapay-checkout";
 import type { BillingPeriod } from "@/lib/investor-plan/plans";
 import { FUNDACJA, REGULAMIN_ABONAMENTU_PATH } from "@/lib/legal/regulamin-abonamentu";
@@ -62,7 +62,11 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
   const [tubapayConsent, setTubapayConsent] = useState(false);
   const isTubapay = paymentMethod === "tubapay";
   const [discountInput, setDiscountInput] = useState("");
-  const [discount, setDiscount] = useState<{ code: string; pct: number } | null>(null);
+  const [discount, setDiscount] = useState<{
+    code: string;
+    pct: number;
+    validUntil: string;
+  } | null>(null);
   const [discountChecking, setDiscountChecking] = useState(false);
   const amountGrosz = discount
     ? applyDiscountGrosz(product.amount_grosz, discount.pct)
@@ -78,9 +82,11 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
         toast.error(res.error);
         return;
       }
-      setDiscount({ code: res.code, pct: res.pct });
+      setDiscount({ code: res.code, pct: res.pct, validUntil: res.validUntil });
       setDiscountInput(res.code);
-      toast.success(`Kod przyjęty — rabat ${res.pct}%`);
+      toast.success(
+        `Kod przyjęty — rabat ${res.pct}% (ważny do ${formatValidUntil(res.validUntil)})`,
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nie udało się sprawdzić kodu");
     } finally {
@@ -265,7 +271,7 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
           <div className="flex items-center justify-between gap-2 rounded-md border border-emerald-600/40 bg-emerald-50 px-3 py-2 text-sm dark:bg-emerald-950/30">
             <span className="flex items-center gap-2 font-mono">
               <Tag className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
-              {discount.code} · −{discount.pct}%
+              {discount.code} · −{discount.pct}% · ważny do {formatValidUntil(discount.validUntil)}
             </span>
             <Button type="button" variant="ghost" size="sm" onClick={removeDiscount}>
               <X className="h-4 w-4" />
@@ -284,7 +290,7 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
                   void applyDiscount();
                 }
               }}
-              placeholder="np. RABAT20-XXXX-XXXXXXXX"
+              placeholder="np. RABAT20-311226-XXXX-XXXXXXXX"
               autoComplete="off"
               className="font-mono uppercase"
             />

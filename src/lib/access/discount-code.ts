@@ -1,11 +1,14 @@
 // Kody rabatowe do płatności za dostęp. Wysokość zniżki wynika z SAMEJ treści
 // kodu — nie ma osobnej tabeli kodów:
 //
-//   RABAT20-7K2M-Q9X4HT3P
-//   └─┬──┘  └┬─┘ └──┬───┘
-//     │      │      └ podpis HMAC (8 znaków) — bez sekretu nie da się go
-//     │      │        policzyć, więc „RABAT90-…" wpisany z ręki nie przejdzie
-//     │      └ losowy identyfikator — każdy wygenerowany kod jest inny
+//   RABAT20-311226-7K2M-Q9X4HT3P
+//   └─┬──┘  └─┬──┘ └┬─┘ └──┬───┘
+//     │       │     │      └ podpis HMAC (8 znaków) obejmujący procent, datę
+//     │       │     │        i identyfikator — bez sekretu nie da się go
+//     │       │     │        policzyć, więc zmiana „20" na „90" albo
+//     │       │     │        przesunięcie daty unieważnia kod
+//     │       │     └ losowy identyfikator — każdy wygenerowany kod jest inny
+//     │       └ ważny do (DDMMRR) — włącznie, do końca dnia czasu polskiego
 //     └ zniżka w procentach (1–90)
 //
 // Kod jest jednorazowy: po zaksięgowanej płatności z danym kodem kolejna próba
@@ -23,15 +26,59 @@ const NONCE_LEN = 4;
 const SIG_LEN = 8;
 
 const CODE_RE = new RegExp(
-  `^${DISCOUNT_PREFIX}(\\d{1,2})-([${ALPHABET}]{${NONCE_LEN}})-([${ALPHABET}]{${SIG_LEN}})$`,
+  `^${DISCOUNT_PREFIX}(\\d{1,2})-(\\d{6})-([${ALPHABET}]{${NONCE_LEN}})-([${ALPHABET}]{${SIG_LEN}})$`,
 );
+
+/** Najdłuższa ważność kodu przy generowaniu. */
+export const DISCOUNT_MAX_VALID_DAYS = 2 * 365;
 
 export interface ParsedDiscountCode {
   /** Kod w postaci kanonicznej (wielkie litery, z myślnikami). */
   code: string;
   pct: number;
+  /** Ostatni dzień ważności, YYYY-MM-DD (czas polski, włącznie). */
+  validUntil: string;
   nonce: string;
   sig: string;
+}
+
+/** Dzisiejsza data w Polsce, YYYY-MM-DD. */
+export function warsawToday(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+/** YYYY-MM-DD → DDMMRR (segment kodu). */
+function toCodeDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-");
+  return `${d}${m}${y.slice(2)}`;
+}
+
+/** DDMMRR → YYYY-MM-DD albo null, gdy data nie istnieje (np. 310226). */
+function fromCodeDate(seg: string): string | null {
+  const d = Number(seg.slice(0, 2));
+  const m = Number(seg.slice(2, 4));
+  const y = 2000 + Number(seg.slice(4, 6));
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) {
+    return null;
+  }
+  return `${y}-${seg.slice(2, 4)}-${seg.slice(0, 2)}`;
+}
+
+/** YYYY-MM-DD → DD.MM.RRRR (do komunikatów). */
+export function formatValidUntil(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-");
+  return `${d}.${m}.${y}`;
+}
+
+/** Czy kod jest jeszcze ważny w dniu `today` (YYYY-MM-DD, czas polski). */
+export function isDiscountCodeActive(parsed: ParsedDiscountCode, today = warsawToday()): boolean {
+  return today <= parsed.validUntil;
 }
 
 /** Ujednolica wpis klienta: wielkie litery, bez spacji, O→0 / I,L→1. */
@@ -40,10 +87,11 @@ export function normalizeDiscountCode(raw: string): string {
     .toUpperCase()
     .replace(/[\s_–—]+/g, "")
     .replace(/-+/g, "-");
-  const m = /^RABAT(\d{1,2})-?(.{4})-?(.{8})$/.exec(compact);
+  // Długości segmentów są stałe, więc kod wpisany bez myślników też się rozkłada.
+  const m = /^RABAT(\d{1,2})-?(\d{6})-?(.{4})-?(.{8})$/.exec(compact);
   if (!m) return compact;
   const fix = (s: string) => s.replace(/O/g, "0").replace(/[IL]/g, "1");
-  return `${DISCOUNT_PREFIX}${m[1]}-${fix(m[2])}-${fix(m[3])}`;
+  return `${DISCOUNT_PREFIX}${m[1]}-${m[2]}-${fix(m[3])}-${fix(m[4])}`;
 }
 
 /** Rozbiór składni (bez sprawdzania podpisu). */
@@ -54,7 +102,9 @@ export function parseDiscountCode(raw: string): ParsedDiscountCode | null {
   const pct = Number(m[1]);
   if (!Number.isInteger(pct) || pct < DISCOUNT_MIN_PCT || pct > DISCOUNT_MAX_PCT) return null;
   if (m[1].startsWith("0")) return null;
-  return { code, pct, nonce: m[2], sig: m[3] };
+  const validUntil = fromCodeDate(m[2]);
+  if (!validUntil) return null;
+  return { code, pct, validUntil, nonce: m[3], sig: m[4] };
 }
 
 async function hmacBase32(secret: string, message: string, len: number): Promise<string> {
@@ -85,8 +135,8 @@ async function hmacBase32(secret: string, message: string, len: number): Promise
   return out;
 }
 
-function signedPart(pct: number, nonce: string): string {
-  return `discount:v1:${DISCOUNT_PREFIX}${pct}-${nonce}`;
+function signedPart(pct: number, validUntil: string, nonce: string): string {
+  return `discount:v2:${DISCOUNT_PREFIX}${pct}-${toCodeDate(validUntil)}-${nonce}`;
 }
 
 function randomNonce(): string {
@@ -94,25 +144,47 @@ function randomNonce(): string {
   return Array.from(bytes, (b) => ALPHABET[b & 31]).join("");
 }
 
-/** Nowy kod na `pct` procent zniżki. */
-export async function generateDiscountCode(pct: number, secret: string): Promise<string> {
+/**
+ * Nowy kod na `pct` procent zniżki, ważny do `validUntil` (YYYY-MM-DD, włącznie).
+ * `today` — do testów; domyślnie dzisiejsza data w Polsce.
+ */
+export async function generateDiscountCode(
+  pct: number,
+  validUntil: string,
+  secret: string,
+  today: string = warsawToday(),
+): Promise<string> {
   if (!Number.isInteger(pct) || pct < DISCOUNT_MIN_PCT || pct > DISCOUNT_MAX_PCT) {
     throw new Error(`Zniżka musi być liczbą całkowitą ${DISCOUNT_MIN_PCT}–${DISCOUNT_MAX_PCT}%`);
   }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(validUntil) || !fromCodeDate(toCodeDate(validUntil))) {
+    throw new Error("Podaj prawidłową datę ważności kodu");
+  }
+  if (validUntil < today) throw new Error("Data ważności nie może być wcześniejsza niż dziś");
+  const maxDate = new Date(`${today}T00:00:00Z`);
+  maxDate.setUTCDate(maxDate.getUTCDate() + DISCOUNT_MAX_VALID_DAYS);
+  if (validUntil > maxDate.toISOString().slice(0, 10)) {
+    throw new Error(`Kod może być ważny najdłużej ${DISCOUNT_MAX_VALID_DAYS} dni`);
+  }
   if (!secret) throw new Error("Brak sekretu kodów rabatowych");
   const nonce = randomNonce();
-  const sig = await hmacBase32(secret, signedPart(pct, nonce), SIG_LEN);
-  return `${DISCOUNT_PREFIX}${pct}-${nonce}-${sig}`;
+  const sig = await hmacBase32(secret, signedPart(pct, validUntil, nonce), SIG_LEN);
+  return `${DISCOUNT_PREFIX}${pct}-${toCodeDate(validUntil)}-${nonce}-${sig}`;
 }
 
-/** Sprawdza składnię i podpis. Zwraca rozbity kod albo null. */
+/** Sprawdza składnię i podpis (NIE datę — patrz isDiscountCodeActive).
+ *  Zwraca rozbity kod albo null. */
 export async function verifyDiscountCode(
   raw: string,
   secret: string,
 ): Promise<ParsedDiscountCode | null> {
   const parsed = parseDiscountCode(raw);
   if (!parsed || !secret) return null;
-  const expected = await hmacBase32(secret, signedPart(parsed.pct, parsed.nonce), SIG_LEN);
+  const expected = await hmacBase32(
+    secret,
+    signedPart(parsed.pct, parsed.validUntil, parsed.nonce),
+    SIG_LEN,
+  );
   let diff = 0;
   for (let i = 0; i < SIG_LEN; i++) diff |= expected.charCodeAt(i) ^ parsed.sig.charCodeAt(i);
   return diff === 0 ? parsed : null;

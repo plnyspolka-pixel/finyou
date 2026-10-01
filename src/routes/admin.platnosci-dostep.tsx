@@ -44,6 +44,14 @@ import {
   adminGenerateDiscountCodes,
 } from "@/lib/access/admin.functions";
 import { formatGroszPln, formatWarsawDate } from "@/lib/access/core";
+import { formatValidUntil, warsawToday } from "@/lib/access/discount-code";
+
+/** Domyślna ważność nowego kodu rabatowego: 30 dni od dziś (czas polski). */
+function defaultDiscountValidUntil(): string {
+  const d = new Date(`${warsawToday()}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 30);
+  return d.toISOString().slice(0, 10);
+}
 
 export const Route = createFileRoute("/admin/platnosci-dostep")({
   component: AdminAccessPayments,
@@ -87,6 +95,8 @@ function AdminAccessPayments() {
   const [discountOpen, setDiscountOpen] = useState(false);
   const [discountPct, setDiscountPct] = useState("20");
   const [discountCount, setDiscountCount] = useState("1");
+  const [discountValidUntil, setDiscountValidUntil] = useState(defaultDiscountValidUntil);
+  const [discountCodesValidUntil, setDiscountCodesValidUntil] = useState("");
   const [discountCodes, setDiscountCodes] = useState<string[]>([]);
   const [discountBusy, setDiscountBusy] = useState(false);
 
@@ -97,10 +107,12 @@ function AdminAccessPayments() {
       return toast.error("Zniżka: liczba całkowita 1–90%");
     if (!Number.isInteger(count) || count < 1 || count > 50)
       return toast.error("Liczba kodów: 1–50");
+    if (!discountValidUntil) return toast.error("Podaj datę ważności kodu");
     setDiscountBusy(true);
     try {
-      const res = await discountFn({ data: { pct, count } });
+      const res = await discountFn({ data: { pct, count, validUntil: discountValidUntil } });
       setDiscountCodes(res.codes);
+      setDiscountCodesValidUntil(res.validUntil);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nie udało się wygenerować kodów");
     } finally {
@@ -519,9 +531,10 @@ function AdminAccessPayments() {
           <DialogHeader>
             <DialogTitle>Kody rabatowe</DialogTitle>
             <DialogDescription>
-              Zniżka jest zapisana w treści kodu (np. RABAT20-… = 20%) i zabezpieczona podpisem —
-              klient nie podrobi kodu na inną wartość. Każdy kod działa jednorazowo: do pierwszej
-              opłaconej płatności. Klient wpisuje go na formularzu płatności.
+              Zniżka i data ważności są zapisane w treści kodu (np. RABAT20-311226-… = 20%, ważny do
+              31.12.2026 włącznie) i zabezpieczone podpisem — klient nie zmieni ani wartości, ani
+              daty. Każdy kod działa jednorazowo: do pierwszej opłaconej płatności. Klient wpisuje
+              go na formularzu płatności.
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
@@ -547,6 +560,16 @@ function AdminAccessPayments() {
                 onChange={(e) => setDiscountCount(e.target.value)}
               />
             </div>
+            <div className="col-span-2">
+              <Label htmlFor="dc-until">Ważny do (włącznie)</Label>
+              <Input
+                id="dc-until"
+                type="date"
+                min={warsawToday()}
+                value={discountValidUntil}
+                onChange={(e) => setDiscountValidUntil(e.target.value)}
+              />
+            </div>
           </div>
           <Button onClick={generateCodes} disabled={discountBusy}>
             {discountBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -554,6 +577,9 @@ function AdminAccessPayments() {
           </Button>
           {discountCodes.length > 0 && (
             <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Ważne do {formatValidUntil(discountCodesValidUntil)} · {discountCodes.length} szt.
+              </p>
               <div className="max-h-64 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-sm">
                 {discountCodes.map((c) => (
                   <div key={c}>{c}</div>

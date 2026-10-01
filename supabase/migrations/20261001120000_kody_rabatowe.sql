@@ -1,6 +1,7 @@
--- Kody rabatowe przy płatności za dostęp. Zniżka wynika z treści kodu
--- (RABAT<procent>-<id>-<podpis HMAC>), więc nie ma tabeli kodów — płatność
--- zapamiętuje użyty kod, procent i cenę katalogową sprzed rabatu.
+-- Kody rabatowe przy płatności za dostęp. Zniżka i data ważności wynikają
+-- z treści kodu (RABAT<procent>-<DDMMRR>-<id>-<podpis HMAC>), więc nie ma
+-- tabeli kodów — płatność zapamiętuje użyty kod, procent i cenę katalogową
+-- sprzed rabatu.
 -- expected_amount_grosz to już kwota PO rabacie (tyle pobiera bramka).
 ALTER TABLE public.access_payments
   ADD COLUMN IF NOT EXISTS discount_code text,

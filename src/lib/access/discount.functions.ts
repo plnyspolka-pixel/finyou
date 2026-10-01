@@ -8,7 +8,9 @@ export const checkDiscountCode = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<{ ok: true; code: string; pct: number } | { ok: false; error: string }> => {
+    }): Promise<
+      { ok: true; code: string; pct: number; validUntil: string } | { ok: false; error: string }
+    > => {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { resolveDiscountCode } = await import("./discount.server");
       const res = await resolveDiscountCode(supabaseAdmin as any, data.code);
