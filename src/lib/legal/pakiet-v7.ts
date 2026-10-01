@@ -19,7 +19,7 @@
  *    Sukcesu, Opłaty za Udostępnienie Okazji i Zał. 8,
  *  • Prowizja od Pożyczkobiorcy (dawniej „Prowizja Klientowska” — nazwa
  *    zmieniona decyzją właściciela 2026-09-30, przed pierwszą akceptacją):
- *    7 % Kwoty Udzielonej, min 5 000 zł, bez VAT, potrącana z wypłaty
+ *    5% Kwoty Udzielonej, min 5 000 zł, bez VAT, potrącana z wypłaty
  *    (Zał. 6 — dwie części przelewu),
  *  • § 5: maks. 5 przyjętych Zleceń, wygaśnięcie po 5 odrzuceniach,
  *    24 h + 12 h, maks. 2 przedłużone naraz,
@@ -148,7 +148,7 @@ export function transformUmowaV7(v6: string): string {
   );
   t.replaceLineStartingWith(
     "Model rozliczenia.  Inwestor płaci Finance You wyłącznie Opłaty",
-    `Model rozliczenia.  Finance You nie pobiera od Inwestora wynagrodzenia z Umowy; dostęp do systemu wymaga aktywnego Abonamentu (Regulamin Abonamentu Inwestora, obecnie ${ABONAMENT_UMOWA}). Klient płaci Prowizję Klientowską według odrębnej umowy (7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT), a Inwestor zabezpiecza jej bezpośredni przelew z kwoty Finansowania i potrąca ją z wypłaty. Zawarcie lub wykonanie Transakcji Chronionej bez tego mechanizmu stanowi Naruszenie Obejściowe i uruchamia Karę Obejściową równą 5% Sumy Hipotecznej.`,
+    `Model rozliczenia.  Finance You nie pobiera od Inwestora wynagrodzenia z Umowy; dostęp do systemu wymaga aktywnego Abonamentu (Regulamin Abonamentu Inwestora, obecnie ${ABONAMENT_UMOWA}). Klient płaci Prowizję Klientowską według odrębnej umowy (5% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT), a Inwestor zabezpiecza jej bezpośredni przelew z kwoty Finansowania i potrąca ją z wypłaty. Zawarcie lub wykonanie Transakcji Chronionej bez tego mechanizmu stanowi Naruszenie Obejściowe i uruchamia Karę Obejściową równą 5% Sumy Hipotecznej.`,
   );
 
   // § 1 Definicje
@@ -159,7 +159,7 @@ export function transformUmowaV7(v6: string): string {
   t.dropLineStartingWith("Kwota Wypłacona Klientowi oznacza");
   t.replaceOnce(
     "Standardowo wynosi 7% Kwoty Wypłaconej Klientowi, nie mniej niż 5 000,00 zł, chyba że odrębna umowa z Klientem przewiduje inną stawkę, minimum albo podstawę; w takim przypadku Karta Leada musi odzwierciedlać rzeczywiste warunki tej umowy.",
-    "Wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT, i jest potrącana z wypłaty Finansowania zgodnie z dyspozycją Klienta (Załącznik nr 6): Inwestor przekazuje ją bezpośrednio na rachunek Finance You, a pozostałą część Kwoty Udzielonej wypłaca Klientowi; jeżeli odrębna umowa z Klientem przewiduje inną stawkę, minimum albo podstawę, Karta Leada musi odzwierciedlać rzeczywiste warunki tej umowy.",
+    "Wynosi 5% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT, i jest potrącana z wypłaty Finansowania zgodnie z dyspozycją Klienta (Załącznik nr 6): Inwestor przekazuje ją bezpośrednio na rachunek Finance You, a pozostałą część Kwoty Udzielonej wypłaca Klientowi; jeżeli odrębna umowa z Klientem przewiduje inną stawkę, minimum albo podstawę, Karta Leada musi odzwierciedlać rzeczywiste warunki tej umowy.",
   );
   t.dropLineStartingWith("Pakiet oznacza wariant odpłatności");
   t.dropLineStartingWith("Cennik oznacza aktualny cennik");
@@ -217,7 +217,7 @@ export function transformUmowaV7(v6: string): string {
   );
   t.replaceOnce(
     "Standardem operacyjnym jest 7% Kwoty Wypłaconej Klientowi, nie mniej niż 5 000,00 zł, chyba że umowa Klienta przewiduje",
-    "Prowizja Klientowska wynosi 7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT, i jest potrącana z wypłaty, chyba że umowa Klienta przewiduje",
+    "Prowizja Klientowska wynosi 5% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT, i jest potrącana z wypłaty, chyba że umowa Klienta przewiduje",
   );
 
   // § 15 — Konsument
@@ -269,7 +269,7 @@ export function transformUmowaV7(v6: string): string {
   );
   t.replaceLineStartingWith(
     "Rzeczywiste warunki z odrębnej umowy Klienta: ______ % Kwoty Wypłaconej Klientowi",
-    "Rzeczywiste warunki z odrębnej umowy Klienta: ______ % Kwoty Udzielonej; minimum: __________ zł; bez VAT; kwota / formuła: __________________; potrącana z wypłaty: ☐ tak; moment należności: __________________Standard, jeżeli umowa Klienta nie stanowi inaczej: 7% Kwoty Udzielonej, minimum 5 000,00 zł, bez VAT.",
+    "Rzeczywiste warunki z odrębnej umowy Klienta: ______ % Kwoty Udzielonej; minimum: __________ zł; bez VAT; kwota / formuła: __________________; potrącana z wypłaty: ☐ tak; moment należności: __________________Standard, jeżeli umowa Klienta nie stanowi inaczej: 5% Kwoty Udzielonej, minimum 5 000,00 zł, bez VAT.",
   );
   t.replaceOnce(
     "dopóki nie potwierdzono Pakietu i Opłat należnych od Inwestora za ten Projekt (a w Pakiecie Podstawowym — zapłaty Opłaty za Udostępnienie Okazji), rzeczywistych warunków",
@@ -291,7 +291,7 @@ export function transformUmowaV7(v6: string): string {
   );
   t.replaceOnce(
     "Standardowo: 7% Kwoty Wypłaconej Klientowi, minimum 5 000,00 zł.",
-    "Standardowo: 7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT — potrącana z wypłaty.",
+    "Standardowo: 5% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT — potrącana z wypłaty.",
   );
   t.replaceOnce(
     "Potwierdzam otrzymanie informacji przedumownej, Umowy, Cennika Pakietów (Załącznik nr 8), Karty Leada",
@@ -311,7 +311,7 @@ export function transformUmowaV7(v6: string): string {
   // Zał. 7 — oświadczenia
   t.replaceOnce(
     "Znam Pakiet, w którym działam, i wysokość należnych ode mnie Opłat zgodnie z Cennikiem; Prowizja Klientowska obciąża Klienta i podlega Mechanizmowi Zabezpieczenia Prowizji.",
-    `Wiem, że nie płacę Finance You za Projekty ani od rezultatu, a dostęp do systemu wymaga aktywnego Abonamentu (Regulamin Abonamentu Inwestora); Prowizja Klientowska (7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT) obciąża Klienta, jest potrącana z wypłaty i podlega Mechanizmowi Zabezpieczenia Prowizji.`,
+    `Wiem, że nie płacę Finance You za Projekty ani od rezultatu, a dostęp do systemu wymaga aktywnego Abonamentu (Regulamin Abonamentu Inwestora); Prowizja Klientowska (5% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT) obciąża Klienta, jest potrącana z wypłaty i podlega Mechanizmowi Zabezpieczenia Prowizji.`,
   );
 
   // Zał. 8 — usunięty w całości

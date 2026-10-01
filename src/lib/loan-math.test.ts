@@ -44,9 +44,9 @@ describe("computeLoanFigures", () => {
     // do spłaty = kapitał + odsetki + prowizja inwestora
     expect(f.total).toBeCloseTo(200_000 + f.totalInterest + 9_000, 2);
     // koszt całkowity = odsetki + prowizja inwestora + prowizja FY
-    expect(f.totalCost).toBeCloseTo(f.totalInterest + 9_000 + 14_000, 2);
+    expect(f.totalCost).toBeCloseTo(f.totalInterest + 9_000 + 10_000, 2);
     expect(f.feeFY).toBe(base.feeFY);
-    expect(f.netToClient).toBe(186_000);
+    expect(f.netToClient).toBe(190_000);
   });
 
   it("stopa ponad odsetki maksymalne → błąd blokujący", () => {

@@ -46,7 +46,7 @@ describe("Prowizja Finance You", () => {
   });
 
   it("zaokrąglenie do grosza", () => {
-    expect(fyCommission(123_456.78)).toBe(8_641.97);
+    expect(fyCommission(123_456.78)).toBe(6_172.84);
   });
 
   it("etykieta: bez VAT, nigdy netto/brutto", () => {

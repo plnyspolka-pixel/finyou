@@ -6,7 +6,8 @@
  * Klientowska” (decyzja właściciela 2026-09-30). Wersja 2 była już
  * zaakceptowana, więc nie zmieniamy jej treści — zostaje w tabeli jako
  * dokument historyczny, a klienci akceptują v3 przy następnym wejściu
- * do panelu (ConsentGate). Polityka prywatności się nie zmienia (v2).
+ * do panelu (ConsentGate). Od 2026-10-01 v3 wprowadza też prowizję 5% (zamiast 7%)
+ * Kwoty Udzielonej; minimum 5 000,00 zł bez zmian. Polityka prywatności się nie zmienia (v2).
  */
 import { Transform } from "./pakiet-v7";
 
@@ -26,6 +27,19 @@ export function transformRegulaminV3(v2: string): string {
     .replaceOnce(
       "Regulamin w wersji 2 obowiązuje od dnia 29 września 2026 r.. ",
       `Regulamin w wersji 3 obowiązuje od dnia ${ZGODY_V3_DATA_PL} `,
+    )
+    // Obniżenie prowizji Finance You z 7% do 5% Kwoty Udzielonej (decyzja właściciela 2026-10-01).
+    .replaceOnce(
+      "skutecznego zorganizowania finansowania: 7% Kwoty Udzielonej",
+      "skutecznego zorganizowania finansowania: 5% Kwoty Udzielonej",
+    )
+    .replaceOnce(
+      "wynosi **7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT**",
+      "wynosi **5% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT**",
+    )
+    .replaceOnce(
+      "Prowizja Finance You wynosi 7 000,00 zł, a Klient otrzymuje 93 000,00 zł",
+      "Prowizja Finance You wynosi 5 000,00 zł, a Klient otrzymuje 95 000,00 zł",
     )
     .value();
 }
