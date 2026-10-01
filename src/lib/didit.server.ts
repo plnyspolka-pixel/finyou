@@ -163,7 +163,9 @@ export async function createDiditSession(input: {
       (json.error as string) ||
       text ||
       `HTTP ${res.status}`;
-    throw new Error(`Didit: nie udało się utworzyć sesji (${msg})`);
+    throw new Error(
+      `Didit: nie udało się utworzyć sesji (${msg}) [workflow ${input.workflowId.slice(0, 8)}…]`,
+    );
   }
 
   const sessionId = (json.session_id as string) ?? "";
