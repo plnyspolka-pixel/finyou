@@ -113,12 +113,51 @@ export const Route = createFileRoute("/api/public/twilio-sms-inbound")({
                 .eq("phone_normalized", phone)
                 .maybeSingle();
               if (!client?.do_not_sms) {
+                const { sendSmsInternal } = await import("@/lib/voicebot.functions");
+
+                // Klient prosi, żeby Ania oddzwoniła → planujemy telefon i potwierdzamy
+                // krótkim SMS-em zamiast odpowiedzi modelu (która nie wolno obiecywać
+                // kontaktu). Gdy bot przed chwilą zapytał „kiedy?", wystarcza sama pora.
+                const { data: lastOut } = await supabaseAdmin
+                  .from("lead_communications")
+                  .select("content")
+                  .eq("phone_normalized", phone)
+                  .eq("channel", "sms")
+                  .eq("direction", "outbound")
+                  .order("created_at", { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+                const awaitingTime =
+                  /kiedy|o\s+kt[óo]rej|jaka\s+pora|w\s+jakim\s+terminie|pasowa[łl]|pasuje/i.test(
+                    String(lastOut?.content ?? ""),
+                  );
+                const { detectCallbackRequest, describeCallbackTime } =
+                  await import("@/lib/callback-request");
+                const cb = detectCallbackRequest([body], new Date(), { awaitingTime });
+                if (cb.requested && cb.dueAt) {
+                  const { scheduleClientCallback } = await import("@/lib/callback-schedule.server");
+                  const sched = await scheduleClientCallback({
+                    phone,
+                    dueAt: cb.dueAt,
+                    via: "sms",
+                    evidence: body,
+                  });
+                  if (sched.ok) {
+                    await sendSmsInternal({
+                      phone,
+                      body: `Jasne, oddzwonię ${describeCallbackTime(sched.scheduledAt)}.`,
+                      source: "sms_agent_reply",
+                      category: "conversational",
+                    });
+                    return emptyTwiml();
+                  }
+                }
+
                 const { runAgentTurn } = await import("@/lib/elevenlabs-text-agent.server");
                 const agent = await runAgentTurn({ leadId, channel: "sms", userMessage: body });
                 const reply = agent.reply.trim().slice(0, 450);
                 if (reply) {
                   // sendSmsInternal sam loguje wysyłkę w lead_communications.
-                  const { sendSmsInternal } = await import("@/lib/voicebot.functions");
                   await sendSmsInternal({
                     phone,
                     body: reply,
@@ -127,6 +166,18 @@ export const Route = createFileRoute("/api/public/twilio-sms-inbound")({
                     // bezpiecznikiem pętli w hamulcu SMS.
                     category: "conversational",
                   });
+                  // Model obiecał link, ale go nie wstawił → dosyłamy, żeby klient
+                  // nie czekał na coś, co nie przyjdzie.
+                  const { promisesLinkWithoutUrl, SMS_APPLICATION_LINK_BODY } =
+                    await import("@/lib/sms-link-promise");
+                  if (promisesLinkWithoutUrl(reply)) {
+                    await sendSmsInternal({
+                      phone,
+                      body: SMS_APPLICATION_LINK_BODY,
+                      source: "sms_agent_reply",
+                      category: "conversational",
+                    });
+                  }
                 }
               }
             } catch (e: any) {

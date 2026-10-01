@@ -46,8 +46,8 @@ describe("classifySmsSource", () => {
     expect(classifySmsSource("sms_agent_reply")).toBe("conversational");
   });
 
-  it("link wysyłany przez Anię w rozmowie podlega limitom (na wejściu wystarczy SMS powitalny)", () => {
-    expect(classifySmsSource("elevenlabs_agent")).toBe("automated");
+  it("SMS zamówiony przez klienta u Ani w rozmowie jest konwersacyjny (nie blokuje go limit dobowy)", () => {
+    expect(classifySmsSource("elevenlabs_agent")).toBe("conversational");
   });
 
   it("wszystko inne (kadencja, callbacki, meta_lead) jest automatyczne", () => {

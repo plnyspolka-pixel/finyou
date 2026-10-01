@@ -209,7 +209,7 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           // kolejna próba nie odbija się od hamulca.
           // Po rozmowie z człowiekiem nie oddzwaniamy — nawet gdy agent uznał ją
           // za nieudaną (patrz `shouldRetryCall`).
-          if (shouldRetryCall(outcome, durationSec)) {
+          if (shouldRetryCall(outcome, durationSec) && queueRow.source !== "client_callback") {
             try {
               let cntQ = supabase
                 .from("call_queue")
@@ -246,6 +246,24 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
               }
             } catch (e) {
               console.error("[elevenlabs-webhook] schedule auto_retry failed", e);
+            }
+          }
+          // Telefon na prośbę klienta, a on znów nie odebrał → ponawiamy po kilku godzinach
+          // (max 3 telefony na numer w 24 h — pilnuje `scheduleClientCallback`).
+          if (queueRow.source === "client_callback" && shouldRetryCall(outcome, durationSec)) {
+            try {
+              const { scheduleClientCallback, CALLBACK_RETRY_DELAY_MS } =
+                await import("@/lib/callback-schedule.server");
+              await scheduleClientCallback({
+                phone: queueRow.phone_normalized,
+                dueAt: new Date(Date.now() + CALLBACK_RETRY_DELAY_MS),
+                via: "retry",
+                clientId: queueRow.client_id ?? null,
+                loanApplicationId: queueRow.loan_application_id ?? null,
+                metaLeadId: queueRow.meta_lead_id ?? null,
+              });
+            } catch (e) {
+              console.error("[elevenlabs-webhook] callback retry failed", e);
             }
           }
         }
@@ -332,6 +350,40 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           (isInbound
             ? (phoneCallMeta?.external_number ?? dynVars?.caller_phone ?? phone)
             : phone) ?? null;
+
+        // ── Klient prosi o oddzwonienie → zaplanuj telefon ───────────────────
+        // Analizujemy wyłącznie wypowiedzi KLIENTA (role: user). Odmowa kontaktu
+        // („nie dzwońcie", „usuńcie mnie") blokuje zaplanowanie — patrz `callback-request`.
+        if (outcome === "answered") {
+          try {
+            const { detectCallbackRequest, userUtterancesFromTranscript } =
+              await import("@/lib/callback-request");
+            const cb = detectCallbackRequest(
+              userUtterancesFromTranscript(
+                body?.transcript ?? body?.transcript_segments ?? body?.turns,
+              ),
+            );
+            const cbPhone = queueRow?.phone_normalized ?? callerPhone;
+            if (cb.requested && cb.dueAt && cbPhone) {
+              const { scheduleClientCallback } = await import("@/lib/callback-schedule.server");
+              const res = await scheduleClientCallback({
+                phone: cbPhone,
+                dueAt: cb.dueAt,
+                via: "voice",
+                clientId: queueRow?.client_id ?? (dynVars?.client_id as string) ?? null,
+                loanApplicationId:
+                  queueRow?.loan_application_id ?? (dynVars?.loan_application_id as string) ?? null,
+                metaLeadId: queueRow?.meta_lead_id ?? null,
+                evidence: cb.evidence ?? null,
+              });
+              if (!res.ok) {
+                console.warn("[elevenlabs-webhook] callback not scheduled", res);
+              }
+            }
+          } catch (e) {
+            console.error("[elevenlabs-webhook] callback detect/schedule failed", e);
+          }
+        }
 
         // Zapis do zunifikowanego logu komunikacji widocznego w panelu admina
         try {

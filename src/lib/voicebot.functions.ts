@@ -274,6 +274,8 @@ export async function placeOutboundCallInternal(opts: {
   dynamicVariables?: Record<string, string> | null;
   /** Konkretny agent ElevenLabs zamiast domyślnego z ustawień (np. windykacja). */
   agentIdOverride?: string | null;
+  /** Własne pierwsze zdanie agenta (np. „miałam oddzwonić — czy możemy teraz porozmawiać?"). */
+  firstMessage?: string | null;
 }): Promise<{ ok: boolean; conversationId?: string; callSid?: string; error?: string }> {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) return { ok: false, error: "Brak ELEVENLABS_API_KEY" };
@@ -299,7 +301,9 @@ export async function placeOutboundCallInternal(opts: {
   // co 20 minut. `started_at` ustawia wyłącznie realne wybranie numeru (ten kod
   // i backfill z ElevenLabs), więc placeholdery z kolejki (`oczekuje` → `blad`)
   // niczego nie blokują i odrzucenie przez throttle nie przedłuża samo siebie.
-  if (opts.source !== "test") {
+  // `client_callback` — klient sam poprosił o telefon, więc dobowy odstęp go nie dotyczy
+  // (limit prób pilnuje `scheduleClientCallback`).
+  if (opts.source !== "test" && opts.source !== "client_callback") {
     const minGapMs = CALL_MIN_GAP_MS;
     const since = new Date(Date.now() - minGapMs).toISOString();
     const { data: recent } = await s
@@ -385,7 +389,7 @@ export async function placeOutboundCallInternal(opts: {
   // SMS „za chwilę zadzwoni Ania" — tylko przed PIERWSZYM telefonem na ten numer.
   // Przy kolejnych podejściach zapowiedź nic nie wnosi, a klient dostawał ją
   // ponownie przy każdej próbie (patrz zgłoszenie: ta sama treść o 9:15 i 11:15).
-  if (!(await hasEverBeenCalled(phone))) {
+  if (opts.source !== "client_callback" && !(await hasEverBeenCalled(phone))) {
     await maybeSendSms("before_call", {
       phone,
       source: opts.source,
@@ -417,27 +421,50 @@ export async function placeOutboundCallInternal(opts: {
       agent_phone_number_id: settings.agent_phone_number_id,
       to_number: phone,
     };
-    if (opts.dynamicVariables && Object.keys(opts.dynamicVariables).length > 0) {
-      body.conversation_initiation_client_data = {
-        // Kanał dokładamy zawsze, gdy w ogóle wysyłamy zmienne: prompt agenta
-        // rozdziela zasady rozmowy po `channel` (telefon ≠ czat ≠ Messenger).
-        // Rozmowy bez własnych zmiennych dostają kanał z webhooka
-        // /hooks/elevenlabs-conversation-init.
-        dynamic_variables: {
-          ...channelDynamicVariables("voice_phone"),
-          ...opts.dynamicVariables,
-        },
-      };
-    }
-    const res = await fetch("https://api.elevenlabs.io/v1/convai/twilio/outbound-call", {
-      method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        "content-type": "application/json",
+    const hasVars = !!opts.dynamicVariables && Object.keys(opts.dynamicVariables).length > 0;
+    const firstMessage = opts.firstMessage?.trim() || null;
+    const initData = (withFirstMessage: boolean) => ({
+      // Kanał dokładamy zawsze, gdy w ogóle wysyłamy zmienne: prompt agenta
+      // rozdziela zasady rozmowy po `channel` (telefon ≠ czat ≠ Messenger).
+      // Rozmowy bez własnych zmiennych dostają kanał z webhooka
+      // /hooks/elevenlabs-conversation-init.
+      dynamic_variables: {
+        ...channelDynamicVariables("voice_phone"),
+        ...(opts.dynamicVariables ?? {}),
       },
-      body: JSON.stringify(body),
+      ...(withFirstMessage && firstMessage
+        ? { conversation_config_override: { agent: { first_message: firstMessage } } }
+        : {}),
     });
-    const json: any = await res.json().catch(() => ({}));
+    const callElevenLabs = (withFirstMessage: boolean) => {
+      if (hasVars || (withFirstMessage && firstMessage)) {
+        body.conversation_initiation_client_data = initData(withFirstMessage);
+      } else {
+        delete body.conversation_initiation_client_data;
+      }
+      return fetch("https://api.elevenlabs.io/v1/convai/twilio/outbound-call", {
+        method: "POST",
+        headers: {
+          "xi-api-key": apiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    };
+    let res = await callElevenLabs(true);
+    let json: any = await res.json().catch(() => ({}));
+    // Agent może nie mieć włączonego nadpisywania pierwszego zdania — wtedy dzwonimy
+    // z jego domyślnym powitaniem (zmienna `callback_opening` zostaje do wykorzystania
+    // w prompcie), zamiast tracić telefon.
+    if (
+      !res.ok &&
+      firstMessage &&
+      /overrid|not\s+allowed|first_message/i.test(JSON.stringify(json))
+    ) {
+      console.warn("[voicebot] nadpisanie first_message odrzucone, ponawiam bez niego", json);
+      res = await callElevenLabs(false);
+      json = await res.json().catch(() => ({}));
+    }
 
     await s.from("automation_events").insert({
       automation_type: "elevenlabs_outbound_call",
@@ -462,11 +489,13 @@ export async function placeOutboundCallInternal(opts: {
           })
           .eq("id", queueRow.id);
       }
-      await maybeSendSms("on_failure", {
-        phone,
-        source: opts.source,
-        firstName: opts.firstName,
-      }).catch(() => {});
+      if (opts.source !== "client_callback") {
+        await maybeSendSms("on_failure", {
+          phone,
+          source: opts.source,
+          firstName: opts.firstName,
+        }).catch(() => {});
+      }
       return {
         ok: false,
         error: json?.message ?? json?.detail?.message ?? `ElevenLabs HTTP ${res.status}`,

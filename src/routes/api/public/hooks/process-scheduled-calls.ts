@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { placeOutboundCallInternal } from "@/lib/voicebot.functions";
 import { requireCronSecret } from "@/lib/cron-auth.server";
+import { CALLBACK_FIRST_MESSAGE } from "@/lib/callback-request";
+import { CLIENT_CALLBACK_SOURCE } from "@/lib/callback-schedule.server";
 
 /**
  * Cron tick (co 1 min). Pobiera zaplanowane wpisy z call_queue (status='oczekuje',
@@ -92,10 +94,20 @@ async function handler() {
       }
     }
 
+    // Telefon na prośbę klienta: Ania zaczyna od „miałam oddzwonić — czy możemy teraz
+    // porozmawiać?". Zmienne zostają też w rozmowie, gdy agent nie pozwala nadpisać
+    // pierwszego zdania i mówi swoim domyślnym powitaniem.
+    const isClientCallback = row.source === CLIENT_CALLBACK_SOURCE;
+    if (isClientCallback) {
+      dynamicVariables.callback_requested = "true";
+      dynamicVariables.callback_opening = CALLBACK_FIRST_MESSAGE;
+    }
+
     try {
       const result = await placeOutboundCallInternal({
         phone: row.phone_normalized,
         source: row.source ?? "scheduled",
+        firstMessage: isClientCallback ? CALLBACK_FIRST_MESSAGE : null,
         clientId: row.client_id ?? null,
         loanApplicationId: row.loan_application_id ?? null,
         metaLeadId: row.meta_lead_id ?? null,

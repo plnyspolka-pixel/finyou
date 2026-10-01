@@ -62,11 +62,15 @@ export function defaultSmsLimits(): SmsLimits {
 const CRITICAL_SOURCES = new Set(["phone_verification", "panel_manual", "windykacja", "test"]);
 
 /**
- * Źródła konwersacyjne — odpowiedź na SMS, który klient sam do nas wysłał.
- * `elevenlabs_agent` (link wysyłany przez Anię w trakcie rozmowy) świadomie tu
- * NIE jest: na wejściu leada wystarczy jeden SMS powitalny z tym samym linkiem.
+ * Źródła konwersacyjne — SMS wysyłany w odpowiedzi na działanie klienta:
+ *   • `sms_agent_reply` — odpowiedź na SMS, który klient sam do nas wysłał,
+ *   • `elevenlabs_agent` — SMS (np. link do wniosku), o który klient poprosił Anię
+ *     w trakcie rozmowy. Wcześniej liczył się jako automatyczny, więc dobowy limit
+ *     (1 SMS/24 h) i dedup po SMS-ie powitalnym po cichu go blokowały, a Ania
+ *     mówiła „wysłałam link", którego klient nie dostawał.
+ * Proaktywne wysyłki systemu (kadencja, powitalny, przypomnienia) zostają `automated`.
  */
-const CONVERSATIONAL_SOURCES = new Set(["sms_agent_reply"]);
+const CONVERSATIONAL_SOURCES = new Set(["sms_agent_reply", "elevenlabs_agent"]);
 
 export function classifySmsSource(source: string | null | undefined): SmsCategory {
   const s = String(source ?? "").trim();
