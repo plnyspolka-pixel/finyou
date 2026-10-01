@@ -244,6 +244,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as InwestorWindykacjaCaseIdRaportRouteImport } from './routes/inwestor.windykacja.$caseId.raport'
 import { Route as InwestorProjektyOfertaAssignmentIdRouteImport } from './routes/inwestor.projekty.oferta.$assignmentId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicPaymentsTubapayWebhookRouteImport } from './routes/api/public/payments/tubapay-webhook'
 import { Route as ApiPublicPaymentsTpayWebhookRouteImport } from './routes/api/public/payments/tpay-webhook'
 import { Route as ApiPublicHooksYoutubeShortsTickRouteImport } from './routes/api/public/hooks/youtube-shorts-tick'
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
@@ -1495,6 +1496,12 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicPaymentsTubapayWebhookRoute =
+  ApiPublicPaymentsTubapayWebhookRouteImport.update({
+    id: '/api/public/payments/tubapay-webhook',
+    path: '/api/public/payments/tubapay-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsTpayWebhookRoute =
   ApiPublicPaymentsTpayWebhookRouteImport.update({
     id: '/api/public/payments/tpay-webhook',
@@ -1989,6 +1996,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/hooks/youtube-shorts-tick': typeof ApiPublicHooksYoutubeShortsTickRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
+  '/api/public/payments/tubapay-webhook': typeof ApiPublicPaymentsTubapayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/inwestor/projekty/oferta/$assignmentId': typeof InwestorProjektyOfertaAssignmentIdRoute
   '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
@@ -2254,6 +2262,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/hooks/youtube-shorts-tick': typeof ApiPublicHooksYoutubeShortsTickRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
+  '/api/public/payments/tubapay-webhook': typeof ApiPublicPaymentsTubapayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/inwestor/projekty/oferta/$assignmentId': typeof InwestorProjektyOfertaAssignmentIdRoute
   '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
@@ -2530,6 +2539,7 @@ export interface FileRoutesById {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/hooks/youtube-shorts-tick': typeof ApiPublicHooksYoutubeShortsTickRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
+  '/api/public/payments/tubapay-webhook': typeof ApiPublicPaymentsTubapayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/inwestor/projekty/oferta/$assignmentId': typeof InwestorProjektyOfertaAssignmentIdRoute
   '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
@@ -2807,6 +2817,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/hooks/youtube-shorts-tick'
     | '/api/public/payments/tpay-webhook'
+    | '/api/public/payments/tubapay-webhook'
     | '/api/public/payments/webhook'
     | '/inwestor/projekty/oferta/$assignmentId'
     | '/inwestor/windykacja/$caseId/raport'
@@ -3072,6 +3083,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/hooks/youtube-shorts-tick'
     | '/api/public/payments/tpay-webhook'
+    | '/api/public/payments/tubapay-webhook'
     | '/api/public/payments/webhook'
     | '/inwestor/projekty/oferta/$assignmentId'
     | '/inwestor/windykacja/$caseId/raport'
@@ -3347,6 +3359,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/hooks/youtube-shorts-tick'
     | '/api/public/payments/tpay-webhook'
+    | '/api/public/payments/tubapay-webhook'
     | '/api/public/payments/webhook'
     | '/inwestor/projekty/oferta/$assignmentId'
     | '/inwestor/windykacja/$caseId/raport'
@@ -3470,6 +3483,7 @@ export interface RootRouteChildren {
   ApiPublicHooksVoicebotOptOutRoute: typeof ApiPublicHooksVoicebotOptOutRoute
   ApiPublicHooksYoutubeShortsTickRoute: typeof ApiPublicHooksYoutubeShortsTickRoute
   ApiPublicPaymentsTpayWebhookRoute: typeof ApiPublicPaymentsTpayWebhookRoute
+  ApiPublicPaymentsTubapayWebhookRoute: typeof ApiPublicPaymentsTubapayWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -5123,6 +5137,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/payments/tubapay-webhook': {
+      id: '/api/public/payments/tubapay-webhook'
+      path: '/api/public/payments/tubapay-webhook'
+      fullPath: '/api/public/payments/tubapay-webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsTubapayWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/tpay-webhook': {
       id: '/api/public/payments/tpay-webhook'
       path: '/api/public/payments/tpay-webhook'
@@ -5960,6 +5981,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksVoicebotOptOutRoute: ApiPublicHooksVoicebotOptOutRoute,
   ApiPublicHooksYoutubeShortsTickRoute: ApiPublicHooksYoutubeShortsTickRoute,
   ApiPublicPaymentsTpayWebhookRoute: ApiPublicPaymentsTpayWebhookRoute,
+  ApiPublicPaymentsTubapayWebhookRoute: ApiPublicPaymentsTubapayWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,

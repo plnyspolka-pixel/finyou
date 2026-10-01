@@ -11,6 +11,7 @@ import { SUBSCRIPTION_OPTIONS } from "@/lib/investor-plan/plans";
 import { REGULAMIN_ABONAMENTU_VERSION } from "@/lib/legal/regulamin-abonamentu";
 import { validateBuyer } from "./core";
 import { PRIVACY_VERSION } from "./checkout.functions";
+import { TubapayCheckoutFields, validateTubapayCheckout } from "./tubapay-checkout";
 
 export const GUEST_CHECKOUT_PATH = "/abonament-inwestora";
 
@@ -31,13 +32,18 @@ const GuestCheckoutSchema = z.object({
     terms: z.literal(true),
     privacy: z.literal(true),
     digitalService: z.boolean().optional().default(false),
+    tubapay: z.boolean().optional().default(false),
   }),
+  ...TubapayCheckoutFields,
 });
 
 export const createGuestInvestorCheckout = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => GuestCheckoutSchema.parse(input))
   .handler(async ({ data }) => {
     try {
+      const tubapayError = validateTubapayCheckout(data);
+      if (tubapayError) return { error: tubapayError };
+
       const buyerErrors = validateBuyer({
         buyerType: data.buyerType,
         buyerName: data.buyerName,
@@ -101,18 +107,28 @@ export const createGuestInvestorCheckout = createServerFn({ method: "POST" })
         // Webhook zakłada konto inwestora z danych nabywcy i wysyła link
         // do logowania (runPaidPostProcessing).
         guestCheckout: true,
+        ...(data.paymentMethod === "tubapay"
+          ? { paymentMethod: "tubapay", tubapayDataConsent: true, installments: data.installments }
+          : {}),
       };
 
-      const { startTpayPayment } = await import("./start-payment.server");
-      const started = await startTpayPayment({
+      const { startTpayPayment, startTubapayPayment } = await import("./start-payment.server");
+      const startOpts = {
         db,
         userId: null,
         product,
-        audience: "investor",
+        audience: "investor" as const,
         buyer: { ...data, buyerEmail: email },
         consents,
         returnPath: GUEST_CHECKOUT_PATH,
-      });
+      };
+      const started =
+        data.paymentMethod === "tubapay"
+          ? await startTubapayPayment({
+              ...startOpts,
+              tubapay: { phone: data.buyerPhone!, installments: data.installments! },
+            })
+          : await startTpayPayment(startOpts);
       if (!started.ok) return { error: started.error };
       return { paymentUrl: started.paymentUrl, paymentId: started.paymentId };
     } catch (e) {

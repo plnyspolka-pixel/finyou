@@ -79,7 +79,8 @@ export function TpayReturnStatus({ paymentId, tpayParam, onPaid }: Props) {
             <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
           )}
           <div className="text-sm">
-            Płatność została przekazana do weryfikacji. Oczekujemy na potwierdzenie Tpay.
+            Płatność została przekazana do weryfikacji. Oczekujemy na potwierdzenie operatora
+            płatności (Tpay albo TubaPay).
             {attempts >= 48 &&
               " Potwierdzenie może chwilę potrwać — status znajdziesz w zakładce „Płatności i faktury”."}
           </div>

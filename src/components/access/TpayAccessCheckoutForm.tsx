@@ -1,7 +1,7 @@
 // Formularz nabywcy + przejście do bramki Tpay (jednorazowa płatność za
-// czasowy dostęp). Zastępuje dawny komponent "StripeEmbeddedCheckout" —
-// faktyczną bramką jest Tpay i tylko ona jest komunikowana użytkownikowi.
-import { useState } from "react";
+// czasowy dostęp) albo do TubaPay (ta sama kwota w płatnościach miesięcznych).
+// Zastępuje dawny komponent "StripeEmbeddedCheckout".
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { Loader2, ExternalLink, Search } from "lucide-react";
 import { toast } from "sonner";
 import { createAccessCheckout } from "@/lib/access/checkout.functions";
 import { createGuestInvestorCheckout } from "@/lib/access/guest-checkout.functions";
+import { getTubapayInstallmentOffer } from "@/lib/access/tubapay.functions";
+import { normalizePlPhone, type PaymentMethod } from "@/lib/access/tubapay-checkout";
 import type { BillingPeriod } from "@/lib/investor-plan/plans";
 import { FUNDACJA, REGULAMIN_ABONAMENTU_PATH } from "@/lib/legal/regulamin-abonamentu";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
@@ -35,6 +37,7 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
   const checkoutFn = useServerFn(createAccessCheckout);
   const guestCheckoutFn = useServerFn(createGuestInvestorCheckout);
   const gusFn = useServerFn(gusCompanyLookup);
+  const tubapayOfferFn = useServerFn(getTubapayInstallmentOffer);
 
   const [loading, setLoading] = useState(false);
   const [gusLoading, setGusLoading] = useState(false);
@@ -49,6 +52,37 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [digitalConsent, setDigitalConsent] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("tpay");
+  const [tubapayOptions, setTubapayOptions] = useState<number[]>([]);
+  const [installments, setInstallments] = useState<number | null>(null);
+  const [buyerPhone, setBuyerPhone] = useState("");
+  const [tubapayConsent, setTubapayConsent] = useState(false);
+  const isTubapay = paymentMethod === "tubapay";
+
+  // Raty TubaPay — tylko dla dostępu czasowego, gdy TubaPay zwróci ofertę
+  // dla ceny produktu (bez oferty formularz działa wyłącznie z Tpay).
+  useEffect(() => {
+    if (product.kind === "unlock") return;
+    let cancelled = false;
+    tubapayOfferFn({ data: { productCode: product.code } })
+      .then((res) => {
+        if (cancelled || !res.available) return;
+        setTubapayOptions(res.options);
+        setInstallments(res.options[res.options.length - 1] ?? null);
+      })
+      .catch(() => {
+        // brak oferty — zostaje Tpay
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [product.code, product.kind, tubapayOfferFn]);
+
+  const choosePaymentMethod = (m: PaymentMethod) => {
+    setPaymentMethod(m);
+    // Umowę z TubaPay zawiera osoba fizyczna.
+    if (m === "tubapay") setBuyerType("person");
+  };
   // Inwestor płaci na podstawie Regulaminu Abonamentu Inwestora (sprzedawca:
   // Fundacja); umowy o dostęp do Klientów akceptuje później w panelu.
   const isInvestor = product.audience === "investor";
@@ -101,6 +135,14 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
     if (isInvestor && !digitalConsent)
       return toast.error("Potwierdź rozpoczęcie szkolenia od razu, aby kontynuować");
     if (!privacyAccepted) return toast.error("Zaakceptuj politykę prywatności, aby kontynuować");
+    if (isTubapay) {
+      if (buyerName.trim().split(/\s+/).length < 2)
+        return toast.error("Do płatności TubaPay podaj imię i nazwisko");
+      if (!normalizePlPhone(buyerPhone))
+        return toast.error("Podaj numer telefonu komórkowego (9 cyfr)");
+      if (!installments) return toast.error("Wybierz liczbę płatności miesięcznych");
+      if (!tubapayConsent) return toast.error("Wyraź zgodę na przekazanie danych TubaPay");
+    }
 
     setLoading(true);
     try {
@@ -113,7 +155,14 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
         buyerPostalCode: buyerPostalCode.trim(),
         buyerCity: buyerCity.trim(),
         buyerCountry,
-        consents: { terms: true as const, privacy: true as const, digitalService: digitalConsent },
+        consents: {
+          terms: true as const,
+          privacy: true as const,
+          digitalService: digitalConsent,
+          tubapay: isTubapay && tubapayConsent,
+        },
+        paymentMethod,
+        ...(isTubapay ? { buyerPhone: buyerPhone.trim(), installments } : {}),
       };
       const res: { error?: string; paymentUrl?: string } = guestPeriod
         ? await guestCheckoutFn({ data: { ...buyer, period: guestPeriod } })
@@ -144,10 +193,66 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
           {product.duration_days
             ? `dostęp na ${product.duration_days} dni`
             : "jednorazowe odblokowanie okazji"}
-          . Zostaniesz przeniesiony do bezpiecznej bramki płatności Tpay (BLIK, karta, szybki
-          przelew).
+          .{" "}
+          {isTubapay
+            ? "Zostaniesz przeniesiony do TubaPay — podpiszesz umowę płatności podzielonej i opłacisz pierwszą ratę szybkim przelewem z własnego konta."
+            : "Zostaniesz przeniesiony do bezpiecznej bramki płatności Tpay (BLIK, karta, szybki przelew)."}
         </div>
       </div>
+
+      {tubapayOptions.length > 0 && (
+        <div className="rounded-lg border p-4 space-y-3">
+          <Label className="text-sm font-medium">Sposób płatności</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => choosePaymentMethod("tpay")}
+              className={`rounded-md border px-3 py-2 text-sm transition ${
+                !isTubapay ? "border-primary bg-primary/10 font-medium" : "hover:bg-muted"
+              }`}
+            >
+              Jednorazowo (Tpay)
+            </button>
+            <button
+              type="button"
+              onClick={() => choosePaymentMethod("tubapay")}
+              className={`rounded-md border px-3 py-2 text-sm transition ${
+                isTubapay ? "border-primary bg-primary/10 font-medium" : "hover:bg-muted"
+              }`}
+            >
+              W ratach (TubaPay)
+            </button>
+          </div>
+          {isTubapay && (
+            <div className="space-y-2">
+              <Label className="text-sm">Liczba płatności miesięcznych</Label>
+              <div className="flex flex-wrap gap-2">
+                {tubapayOptions.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setInstallments(n)}
+                    className={`rounded-md border px-3 py-1.5 text-sm transition ${
+                      installments === n
+                        ? "border-primary bg-primary/10 font-medium"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              {installments && (
+                <p className="text-xs text-muted-foreground">
+                  Orientacyjnie {installments} ×{" "}
+                  {formatGroszPln(Math.ceil(product.amount_grosz / installments))}. Ostateczny
+                  harmonogram zobaczysz w umowie z TubaPay przed jej zawarciem.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="rounded-lg border p-4 space-y-4">
         <div>
@@ -166,12 +271,14 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
             </button>
             <button
               type="button"
+              disabled={isTubapay}
+              title={isTubapay ? "Płatność w ratach TubaPay — tylko osoba prywatna" : undefined}
               onClick={() => setBuyerType("company")}
               className={`rounded-md border px-3 py-2 text-sm transition ${
                 buyerType === "company"
                   ? "border-primary bg-primary/10 font-medium"
                   : "hover:bg-muted"
-              }`}
+              } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               Firma
             </button>
@@ -248,6 +355,19 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
                 onChange={(e) => setBuyerEmail(e.target.value)}
               />
             </div>
+            {isTubapay && (
+              <div>
+                <Label htmlFor="p-phone">Telefon komórkowy *</Label>
+                <Input
+                  id="p-phone"
+                  type="tel"
+                  inputMode="tel"
+                  value={buyerPhone}
+                  onChange={(e) => setBuyerPhone(e.target.value)}
+                  placeholder="500 600 700"
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -351,6 +471,32 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
         </label>
       </div>
 
+      {isTubapay && (
+        <div className="rounded-lg border p-4 text-sm">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <Checkbox
+              checked={tubapayConsent}
+              onCheckedChange={(v) => setTubapayConsent(v === true)}
+              className="mt-0.5"
+            />
+            <span>
+              Wyrażam zgodę na przekazanie moich danych (imię i nazwisko, adres, e-mail, telefon)
+              TubaPay sp. z o.o. w celu zawarcia umowy płatności podzielonej. Administratorem tych
+              danych w TubaPay jest TubaPay sp. z o.o. —{" "}
+              <a
+                href="https://tubapay.pl/platform/polityka-prywatnosci"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                polityka prywatności TubaPay
+              </a>
+              . *
+            </span>
+          </label>
+        </div>
+      )}
+
       {guestPeriod && (
         <p className="text-xs text-muted-foreground">
           Po zaksięgowaniu płatności automatycznie założymy Twoje konto inwestora na podstawie
@@ -369,11 +515,13 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
         {loading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Łączenie z Tpay…
+            {isTubapay ? "Łączenie z TubaPay…" : "Łączenie z Tpay…"}
           </>
         ) : (
           <>
-            Zapłać {formatGroszPln(product.amount_grosz)} przez Tpay
+            {isTubapay
+              ? `Zapłać w ${installments ?? ""} ratach z TubaPay`
+              : `Zapłać ${formatGroszPln(product.amount_grosz)} przez Tpay`}
             <ExternalLink className="ml-2 h-4 w-4" />
           </>
         )}
