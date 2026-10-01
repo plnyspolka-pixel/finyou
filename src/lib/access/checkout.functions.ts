@@ -1,4 +1,5 @@
-// Tworzenie jednorazowej płatności Tpay za czasowy dostęp do platformy.
+// Tworzenie jednorazowej płatności Tpay (albo płatności podzielonej TubaPay)
+// za czasowy dostęp do platformy.
 // Zastępuje dawną funkcję `createInvestorAccessCheckout` (ograniczoną do
 // inwestora). Cena, waluta, czas dostępu i nazwa produktu są ZAWSZE pobierane
 // z zaufanego katalogu `access_products` po stronie serwera — klient przesyła
@@ -10,6 +11,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isLegacyPlanId, validateBuyer, type AccessAudience, type BuyerType } from "./core";
 import { decideInFlightUnlockPayment, PENDING_UNLOCK_STALE_MINUTES } from "./pending-unlock";
+import { TubapayCheckoutFields, validateTubapayCheckout } from "./tubapay-checkout";
 
 // Wersje dokumentów prawnych akceptowanych na formularzu (consent_documents,
 // wersja 2 z 29 września 2026 r. — migracja 20260929156000_etap5_zgody_v2).
@@ -32,7 +34,10 @@ const CheckoutSchema = z.object({
     terms: z.literal(true),
     privacy: z.literal(true),
     digitalService: z.boolean().optional().default(false),
+    /** Zgoda na przekazanie danych TubaPay (RODO_BP) — wymagana dla rat. */
+    tubapay: z.boolean().optional().default(false),
   }),
+  ...TubapayCheckoutFields,
 });
 
 export type CreateAccessCheckoutInput = z.infer<typeof CheckoutSchema>;
@@ -117,6 +122,9 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         };
       }
 
+      const tubapayError = validateTubapayCheckout(data);
+      if (tubapayError) return { error: tubapayError };
+
       const buyerErrors = validateBuyer({
         buyerType: data.buyerType as BuyerType,
         buyerName: data.buyerName,
@@ -150,6 +158,9 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
       //     mieć ujawnione dane i nie być jeszcze odblokowane.
       let unlockMatchId: string | null = null;
       if (product.kind === "unlock") {
+        if (data.paymentMethod === "tubapay") {
+          return { error: "Odblokowanie okazji można opłacić wyłącznie przez Tpay." };
+        }
         if (!data.matchId) {
           return { error: "Brak wskazanej okazji do odblokowania." };
         }
@@ -233,6 +244,9 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         acceptedAt: nowIso,
         ip: meta.ip,
         userAgent: meta.userAgent,
+        ...(data.paymentMethod === "tubapay"
+          ? { paymentMethod: "tubapay", tubapayDataConsent: true, installments: data.installments }
+          : {}),
       };
 
       // 4) Rekord płatności + transakcja w Tpay.
@@ -242,8 +256,8 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
           : audience === "investor"
             ? "/inwestor/abonament"
             : "/posrednik/abonament";
-      const { startTpayPayment } = await import("./start-payment.server");
-      const started = await startTpayPayment({
+      const { startTpayPayment, startTubapayPayment } = await import("./start-payment.server");
+      const startOpts = {
         db,
         userId,
         product,
@@ -252,7 +266,14 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         consents,
         unlockMatchId,
         returnPath: panel,
-      });
+      };
+      const started =
+        data.paymentMethod === "tubapay"
+          ? await startTubapayPayment({
+              ...startOpts,
+              tubapay: { phone: data.buyerPhone!, installments: data.installments! },
+            })
+          : await startTpayPayment(startOpts);
       if (!started.ok) {
         if (unlockMatchId && started.code === "23505") {
           // Równoległe żądanie zdążyło rozpocząć płatność za tę okazję.

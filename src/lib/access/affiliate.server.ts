@@ -17,7 +17,7 @@ export async function createAffiliateEventForAccessPayment(
 ): Promise<{ ok: boolean; eventId?: string; skipped?: string }> {
   const { data: payment } = await (db.from("access_payments") as any)
     .select(
-      "id,user_id,audience,status,paid_amount_grosz,expected_amount_grosz,provider_transaction_id,product_id,processed_at,affiliate_event_id,currency",
+      "id,user_id,audience,status,paid_amount_grosz,expected_amount_grosz,provider,provider_transaction_id,product_id,processed_at,affiliate_event_id,currency",
     )
     .eq("id", paymentId)
     .maybeSingle();
@@ -41,8 +41,10 @@ export async function createAffiliateEventForAccessPayment(
 
   const gross = groszToPln(Number(payment.paid_amount_grosz ?? payment.expected_amount_grosz));
   const net = round2(gross / 1.23);
+  // Tpay: `tpay:<transactionId>` (bez zmian względem historycznych zdarzeń);
+  // TubaPay: `tubapay:tubapay-<paymentId>`.
   const externalRef = payment.provider_transaction_id
-    ? `tpay:${payment.provider_transaction_id}`
+    ? `${payment.provider ?? "tpay"}:${payment.provider_transaction_id}`
     : `access:${payment.id}`;
   const eventType =
     payment.audience === "investor" ? "investor_account_paid" : "broker_account_paid";

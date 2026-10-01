@@ -16,7 +16,8 @@ const db = supabaseAdmin as any;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function logWebhook(entry: {
+async function logWebhookRaw(entry: {
+  provider?: "tpay" | "tubapay";
   transactionId?: string | null;
   paymentId?: string | null;
   payload?: unknown;
@@ -25,7 +26,7 @@ async function logWebhook(entry: {
 }): Promise<void> {
   try {
     await db.from("access_webhook_logs").insert({
-      provider: "tpay",
+      provider: entry.provider ?? "tpay",
       provider_transaction_id: entry.transactionId ?? null,
       payment_id: entry.paymentId ?? null,
       payload: entry.payload ?? null,
@@ -33,9 +34,11 @@ async function logWebhook(entry: {
       error: entry.error ?? null,
     });
   } catch (e) {
-    console.error("[tpay-webhook] log failed", (e as Error).message);
+    console.error("[access-webhook] log failed", (e as Error).message);
   }
 }
+
+const logWebhook = logWebhookRaw;
 
 /** Post-processing po przyznaniu dostępu: faktura + afiliacja + e-maile.
  *  Każdy krok niezależnie best-effort; wywoływane też przez akcje admina.
@@ -150,7 +153,10 @@ async function handleAccessPayment(
   paymentId: string,
   tx: { transactionId: string; status: string; amount: number },
   payload: unknown,
+  provider: "tpay" | "tubapay" = "tpay",
 ): Promise<void> {
+  const logWebhook = (entry: Parameters<typeof logWebhookRaw>[0]) =>
+    logWebhookRaw({ provider, ...entry });
   const { data: payment } = await db
     .from("access_payments")
     .select("id,status,processed_at,user_id")
@@ -258,7 +264,7 @@ async function handleAccessPayment(
   ) {
     await db
       .from("access_payments")
-      .update({ status: "cancelled", failure_reason: `tpay_status:${tx.status}` })
+      .update({ status: "cancelled", failure_reason: `${provider}_status:${tx.status}` })
       .eq("id", paymentId)
       .in("status", ["created", "pending"]);
   }
@@ -497,4 +503,133 @@ export async function handleTpayNotification(
   console.error("[tpay-webhook] unrecognized crc", crc);
   await logWebhook({ transactionId: String(trId), payload: body, result: "unrecognized_crc" });
   return "TRUE";
+}
+
+// ── TubaPay ────────────────────────────────────────────────────────────────
+
+/**
+ * Webhook TubaPay (POST JSON na callbackUrl transakcji).
+ *
+ * TubaPay nie podpisuje powiadomień ani nie udostępnia odczytu statusu
+ * transakcji, więc źródłem zaufania jest nasz podpis w callbackUrl
+ * (`?payment=<uuid>&sig=HMAC`), nadany przy tworzeniu transakcji. Dodatkowo
+ * `externalRef` z treści musi wskazywać tę samą płatność. Zwraca kod HTTP:
+ * 200 — przyjęte (także zignorowane), 400 — odrzucone, 500 — błąd do ponowienia.
+ */
+export async function handleTubapayNotification(input: {
+  paymentId: string | null;
+  signature: string | null;
+  body: unknown;
+}): Promise<{ status: number; body: string }> {
+  const { paymentId, signature, body } = input;
+  const b = (body ?? {}) as {
+    metaData?: { commandType?: string };
+    payload?: {
+      transaction?: { externalRef?: unknown; agreementStatus?: unknown; agreementNumber?: unknown };
+    };
+  };
+  const log = (entry: Parameters<typeof logWebhookRaw>[0]) =>
+    logWebhookRaw({ provider: "tubapay", ...entry });
+
+  const { verifyTubapayCallback, mapTubapayAgreementStatus } = await import("@/lib/tubapay.server");
+  const validSig =
+    !!paymentId &&
+    UUID_RE.test(paymentId) &&
+    (await verifyTubapayCallback(paymentId, signature ?? ""));
+  if (!validSig) {
+    // Np. powiadomienie na domyślny URL z panelu (bez podpisu) — nie zmienia
+    // stanu; zostaje w logu do ręcznego wyjaśnienia.
+    const ref = String(b.payload?.transaction?.externalRef ?? "");
+    await log({
+      paymentId: UUID_RE.test(ref) ? ref : null,
+      payload: body,
+      result: "invalid_signature",
+    });
+    if (UUID_RE.test(ref)) {
+      await db
+        .from("access_payments")
+        .update({ needs_review: true })
+        .eq("id", ref)
+        .eq("provider", "tubapay")
+        .in("status", ["created", "pending"]);
+    }
+    return { status: 400, body: "invalid signature" };
+  }
+
+  const commandType = b.metaData?.commandType;
+  if (commandType !== "TRANSACTION_STATUS_CHANGED") {
+    // CUSTOMER_RECURRING_ORDER_REQUEST itd. — nie dotyczy płatności za dostęp.
+    await log({ paymentId, payload: body, result: `ignored_command:${commandType ?? "none"}` });
+    return { status: 200, body: "OK" };
+  }
+
+  const tr = b.payload?.transaction;
+  const externalRef = String(tr?.externalRef ?? "").trim();
+  if (externalRef !== paymentId) {
+    await log({ paymentId, payload: body, result: "external_ref_mismatch" });
+    return { status: 400, body: "externalRef mismatch" };
+  }
+  const agreementStatus = String(tr?.agreementStatus ?? "").trim();
+
+  const { data: payment } = await db
+    .from("access_payments")
+    .select("id,provider,status,expected_amount_grosz,provider_transaction_id")
+    .eq("id", paymentId)
+    .maybeSingle();
+  if (!payment || payment.provider !== "tubapay") {
+    await log({ paymentId, payload: body, result: "payment_not_found" });
+    return { status: 200, body: "OK" };
+  }
+  const { tubapayTransactionId } = await import("./start-payment.server");
+  const transactionId = String(payment.provider_transaction_id ?? tubapayTransactionId(paymentId));
+
+  const action = mapTubapayAgreementStatus(agreementStatus);
+  if (action === "paid") {
+    // TubaPay finansuje cały zakup — przyznajemy dostęp za pełną kwotę
+    // z katalogu (rozliczenie prowizji TubaPay po stronie partnera).
+    await handleAccessPayment(
+      paymentId,
+      {
+        transactionId,
+        status: "correct",
+        amount: Number(payment.expected_amount_grosz) / 100,
+      },
+      body,
+      "tubapay",
+    );
+    return { status: 200, body: "OK" };
+  }
+  if (action === "cancel") {
+    await handleAccessPayment(
+      paymentId,
+      { transactionId, status: "cancelled", amount: 0 },
+      body,
+      "tubapay",
+    );
+    return { status: 200, body: "OK" };
+  }
+  if (action === "review") {
+    // Odstąpienie od umowy / wypowiedzenie przez TubaPay — bez automatycznego
+    // cofania dostępu; decyzja administratora.
+    if (payment.status === "paid") {
+      await db
+        .from("access_payments")
+        .update({ needs_review: true, failure_reason: `tubapay_${agreementStatus}` })
+        .eq("id", paymentId);
+    }
+    await log({
+      transactionId,
+      paymentId,
+      payload: body,
+      result: `review:${agreementStatus}`,
+    });
+    return { status: 200, body: "OK" };
+  }
+  await log({
+    transactionId,
+    paymentId,
+    payload: body,
+    result: `status:${agreementStatus || "unknown"}`,
+  });
+  return { status: 200, body: "OK" };
 }

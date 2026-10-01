@@ -112,12 +112,63 @@ historyczną rolą `operator` (widok `partner_operator_role_audit`).
 Cron `access-expiry-tick` (pg_cron, co godzinę) → 7/3/1 dni przed końcem i po
 wygaśnięciu (dedup w `access_expiry_notifications`).
 
+## Raty TubaPay (płatność podzielona)
+
+Druga bramka obok Tpay — ta sama cena z katalogu, rozłożona przez TubaPay na
+płatności miesięczne. Dostępna dla abonamentu inwestora i pakietów pośrednika
+(nie dla `kind = 'unlock'`), wyłącznie dla **osoby prywatnej** (umowę
+z TubaPay zawiera osoba fizyczna), w checkoucie zalogowanym i bez konta.
+Przełącznik „Jednorazowo (Tpay) / W ratach (TubaPay)" pojawia się na
+formularzu tylko wtedy, gdy TubaPay zwróci ofertę rat dla ceny produktu
+(`getTubapayInstallmentOffer`).
+
+Kontrakt API odtworzony z oficjalnej wtyczki WooCommerce `tubapay-v2`
+(`src/lib/tubapay.server.ts`):
+
+| Krok | Endpoint |
+| --- | --- |
+| Token | `POST /api/v1/partner/auth/token` (`PARTNER_CLIENT_CREDENTIALS`) |
+| Oferta rat | `POST /api/v1/external/transaction/create-offer` |
+| Umowa + link | `POST /api/v1/external/transaction/create` → `transactionLink` |
+| Webhook | `POST` JSON na `order.callbackUrl`, `TRANSACTION_STATUS_CHANGED` |
+
+Przepływ:
+
+1. `startTubapayPayment` (`start-payment.server.ts`): rekord `access_payments`
+   z `provider = 'tubapay'`, `provider_transaction_id = tubapay-<UUID>`;
+   `externalRef` = UUID płatności. `callbackUrl` =
+   `/api/public/payments/tubapay-webhook?payment=<UUID>&sig=<HMAC-SHA256>`
+   (klucz: `TUBAPAY_API_KEY`).
+2. Webhook → `handleTubapayNotification` (`webhook-core.server.ts`).
+   **TubaPay nie podpisuje powiadomień i nie ma endpointu statusu**, więc
+   zaufanie opiera się na naszym podpisie w URL + zgodności `externalRef`.
+   Bez poprawnego podpisu: 400, brak zmian, płatność `needs_review`.
+3. Statusy umowy (`agreementStatus`):
+   - `accepted` → ta sama ścieżka co Tpay `correct` (`process_access_payment_paid`
+     za pełną kwotę z katalogu, faktura, afiliacja, e-maile, konto gościa);
+   - `rejected` / `canceled` → `cancelled`;
+   - `withdrew` / `terminated*` po opłaceniu → `needs_review` (bez cofania
+     dostępu — decyzja administratora);
+   - `registered` / `signed` / `repaid` / `closed` → tylko log.
+4. Afiliacja: `external_ref = tubapay:tubapay-<UUID>` (Tpay bez zmian:
+   `tpay:<transactionId>`).
+
+Panel TubaPay → „Dane do integracji": pole **Domyślny URL dla callback** może
+zostać puste — adres z podpisem idzie w każdej transakcji. Powiadomienie bez
+podpisu (np. na adres domyślny) nie przyzna dostępu; trafia do
+`access_webhook_logs` (`invalid_signature`).
+
+Migracja: `20261001090000_tubapay_platnosci.sql` (CHECK `provider IN
+('tpay','tubapay')`).
+
 ## Zmienne środowiskowe
 
 Wymagane (istniejące): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
 `SUPABASE_PUBLISHABLE_KEY`, `TPAY_CLIENT_ID`, `TPAY_CLIENT_SECRET`,
 (`TPAY_API_BASE`), `LOVABLE_API_KEY` + `RESEND_API_KEY` (e-maile), `CRON_SECRET`,
-`BIR_API_KEY` (GUS). Opcjonalne nowe: `APP_URL` — kanoniczna baza adresów
+`BIR_API_KEY` (GUS), `TUBAPAY_PARTNER_ID` + `TUBAPAY_API_KEY` (raty TubaPay;
+bez nich opcja rat się nie pokazuje; `TUBAPAY_API_BASE` — opcjonalnie
+środowisko testowe `https://tubapay-test.bacca.pl`). Opcjonalne nowe: `APP_URL` — kanoniczna baza adresów
 powrotu/notyfikacji Tpay (fallback: origin żądania z białej listy, potem
 `https://app.financeyou.pl`). KSeF: `KSEF_TOKEN_FINANCE_YOU` itd. — bez nich
 faktury mają uczciwy status `disabled`/`not_sent` (nigdy „wysłana", jeśli nie
