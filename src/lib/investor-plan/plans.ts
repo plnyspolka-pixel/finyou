@@ -7,7 +7,7 @@
 //    jednorazowa za wybrany okres przez Tpay (przelew, BLIK) — bez podpinania
 //    karty kredytowej i bez automatycznego odnawiania. Nie ma Pakietu PRO,
 //    Opłaty Sukcesu ani opłaty za pojedynczy Projekt.
-//  • Klient nadal płaci Prowizję od Pożyczkobiorcy (7 % Kwoty
+//  • Klient nadal płaci Prowizję od Pożyczkobiorcy (5% Kwoty
 //    Udzielonej, min 5 000 zł, bez VAT), potrącaną z wypłaty —
 //    patrz src/lib/contract-engine/fees.ts.
 //  • Podstawa płatności: Regulamin Abonamentu Inwestora

@@ -25,7 +25,7 @@ const code = (f: string) =>
 describe("słownik nazw i teksty inwestora", () => {
   it("słownik ma jedną regułę prowizji", () => {
     expect(TERMS.fyCommissionRule).toBe(
-      "7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącana z wypłaty",
+      "5% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącana z wypłaty",
     );
   });
 

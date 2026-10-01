@@ -12,15 +12,15 @@ describe("engineSummary (MCP)", () => {
     if (!r.ok) return;
     const s = r.summary;
     expect(s.kwota_udzielona).toBe(100_000);
-    expect(s.prowizja_fy).toBe(7_000);
-    expect(s.kwota_na_reke).toBe(93_000);
+    expect(s.prowizja_fy).toBe(5_000);
+    expect(s.kwota_na_reke).toBe(95_000);
     expect(s.prowizja_fy_opis).toContain("bez VAT");
     expect(s.prowizja_fy_opis).not.toMatch(/netto|brutto/);
     for (const k of ["rata", "balon", "do_splaty", "koszt_calkowity", "odsetki_razem"] as const) {
       expect(typeof s[k]).toBe("number");
     }
     expect(s.do_splaty).toBeGreaterThan(100_000);
-    expect(s.koszt_calkowity).toBeCloseTo(s.odsetki_razem + 7_000, 2);
+    expect(s.koszt_calkowity).toBeCloseTo(s.odsetki_razem + 5_000, 2);
   });
 
   it("stopa ponad odsetki maksymalne → błąd, bez wyniku", () => {

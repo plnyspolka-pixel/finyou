@@ -11,7 +11,7 @@ export default defineTool({
   name: "calculate_loan_installment",
   title: "Calculate loan installment",
   description:
-    "Kalkulator raty pożyczki Finance You (jeden silnik): Kwota Udzielona, prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT — potrącana z wypłaty), kwota na rękę, rata, balon, do spłaty i koszt całkowity. Oprocentowanie nie może przekraczać odsetek maksymalnych (art. 359 § 2¹ KC).",
+    "Kalkulator raty pożyczki Finance You (jeden silnik): Kwota Udzielona, prowizja Finance You (5% Kwoty Udzielonej, min 5 000 zł, bez VAT — potrącana z wypłaty), kwota na rękę, rata, balon, do spłaty i koszt całkowity. Oprocentowanie nie może przekraczać odsetek maksymalnych (art. 359 § 2¹ KC).",
   inputSchema: {
     amount: z.number().positive().describe("Kwota Udzielona (kwota pożyczki z umowy) w PLN"),
     period_months: z.number().int().min(1).max(120),

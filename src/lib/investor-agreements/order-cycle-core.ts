@@ -146,7 +146,7 @@ export function extendedReservationDeadline(
   return new Date(current.getTime() + hours * 3600_000);
 }
 
-/** Prowizja od Pożyczkobiorcy: 7% kwoty Finansowania, nie mniej niż 5000 zł
+/** Prowizja od Pożyczkobiorcy: 5% kwoty Finansowania, nie mniej niż 5000 zł
  *  (Zał. 6 — dyspozycja Klienta i klauzula prowizyjna przy wypłacie). */
 export const PROVISION_RATE = FY_COMMISSION_PCT / 100;
 export const PROVISION_MIN_PLN = FY_COMMISSION_MIN_PLN;

@@ -175,7 +175,7 @@ export function formatRelative(value: string | Date | null | undefined): string 
  *  • Zlecenie — zlecenie poszukiwania Projektów składane przez Inwestora,
  *  • Projekt (nie: Okazja, Oferta) — sprawa Klienta przedstawiana Inwestorowi,
  *  • teaser — anonimowy opis Projektu dla Inwestora z przyjętym Zleceniem,
- *  • Prowizja Finance You — 7% Kwoty Udzielonej, min. 5 000 zł, bez VAT,
+ *  • Prowizja Finance You — 5% Kwoty Udzielonej, min. 5 000 zł, bez VAT,
  *    potrącana z wypłaty (nigdy „netto”/„brutto”).
  */
 export const TERMS = {
@@ -187,7 +187,7 @@ export const TERMS = {
   projects: "Projekty",
   teaser: "teaser",
   fyCommission: "Prowizja Finance You",
-  fyCommissionRule: "7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącana z wypłaty",
+  fyCommissionRule: "5% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącana z wypłaty",
   grantedAmount: "Kwota Udzielona",
   exampleProjects: "Przykładowe projekty (ilustracja)",
 } as const;

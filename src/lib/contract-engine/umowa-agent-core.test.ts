@@ -98,10 +98,10 @@ describe("Rozliczenie z Finance You (Pożyczkodawca ≠ Finance You)", () => {
     warunki: { kwota_pozyczki: { cyframi: "100 000,00", slownie: "" } },
   });
 
-  it("dopisuje prowizję FY 7% (min 5 000 zł) i jedyny rachunek Finance You", () => {
+  it("dopisuje prowizję FY 5% (min 5 000 zł) i jedyny rachunek Finance You", () => {
     const u: any = umowaInwestora();
     uzupelnijRozliczenieFinanceYou(u);
-    expect(u.warunki.prowizja_finance_you.kwota.cyframi).toBe("7 000,00");
+    expect(u.warunki.prowizja_finance_you.kwota.cyframi).toBe("5 000,00");
     expect(u.warunki.rachunki.finance_you).toBe(FINANCE_YOU.rachunek);
     expect(FINANCE_YOU.rachunek).toBe(FINANCE_YOU.rachunekSplaty);
   });

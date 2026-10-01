@@ -305,7 +305,7 @@ const warunki = z
         model: z.enum(["nie_potracana_raty", "potracana_z_wyplaty"]).optional(),
       })
       .strict(),
-    // Prowizja od Pożyczkobiorcy (7 % Kwoty Udzielonej, min 5 000 zł,
+    // Prowizja od Pożyczkobiorcy (5% Kwoty Udzielonej, min 5 000 zł,
     // bez VAT) — POTRĄCANA z wypłaty zgodnie z dyspozycją Pożyczkobiorcy
     // (Załącznik nr 4 do Umowy = Zał. 6 do Umowy ramowej FY). Brak = umowa
     // bez pośrednictwa Finance You (pełna wypłata na rachunek Pożyczkobiorcy).
