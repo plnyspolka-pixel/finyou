@@ -37,7 +37,7 @@ type ScheduleRow = {
   balance: number;
 };
 type OfferFigures = {
-  /** Prowizja Finance You w % Kwoty Udzielonej (7 %, min 5 000 zł, bez VAT). */
+  /** Prowizja Finance You w % Kwoty Udzielonej (5%, min 5 000 zł, bez VAT). */
   feePct: number;
   /** Prowizja Finance You (potrącana z wypłaty). */
   fee: number;

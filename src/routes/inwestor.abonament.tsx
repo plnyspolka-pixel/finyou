@@ -115,7 +115,7 @@ function InwestorAbonament() {
       <FancyPageHeader
         eyebrow="Dostęp i płatności"
         title="Abonament inwestora"
-        subtitle={`Abonament kosztuje ${SUBSCRIPTION_PRICE_SENTENCE}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Sprzedawcą jest ${FUNDACJA.nazwa} (faktura bez VAT), na podstawie Regulaminu abonamentu inwestora. Prowizję od Pożyczkobiorcy (7 % Kwoty Udzielonej, min 5 000 zł, bez VAT) płaci Klient — jest potrącana z wypłaty.`}
+        subtitle={`Abonament kosztuje ${SUBSCRIPTION_PRICE_SENTENCE}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Sprzedawcą jest ${FUNDACJA.nazwa} (faktura bez VAT), na podstawie Regulaminu abonamentu inwestora. Prowizję od Pożyczkobiorcy (5% Kwoty Udzielonej, min 5 000 zł, bez VAT) płaci Klient — jest potrącana z wypłaty.`}
       />
 
       {tpay && payment && (

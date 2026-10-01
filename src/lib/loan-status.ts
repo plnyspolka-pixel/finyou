@@ -168,7 +168,7 @@ export const LOAN_STATUS_LABELS: Record<LoanStatus, string> = {
   zabezpieczenia_ustanowione: "Zabezpieczenia ustanowione",
   dokumenty_dostarczone_do_inwestora: "Dokumenty dostarczone do inwestora",
   oczekuje_wyplaty: "Oczekuje wypłaty środków",
-  wyplacony: "Wypłacony — środki przekazane (7% do Finance You, reszta klientowi)",
+  wyplacony: "Wypłacony — środki przekazane (5% do Finance You, reszta klientowi)",
   zamkniety: "Sprawa zamknięta",
   archiwalny: "Archiwalny",
   wniosek_odrzucony: "Wniosek odrzucony — decyzja operatora",
@@ -289,7 +289,7 @@ export const CLIENT_STATUS_DESCRIPTIONS: Record<LoanStatus, string> = {
   dokumenty_dostarczone_do_inwestora:
     "Dokumenty trafiły do inwestora. Po ich weryfikacji nastąpi wypłata.",
   oczekuje_wyplaty:
-    "Czekasz na wypłatę środków. Prowizja Finance You (7%, min 5 000 zł, bez VAT) jest potrącana z wypłaty — resztę otrzymasz na rachunek.",
+    "Czekasz na wypłatę środków. Prowizja Finance You (5%, min 5 000 zł, bez VAT) jest potrącana z wypłaty — resztę otrzymasz na rachunek.",
   wyplacony: "Środki zostały wypłacone. Spłacasz raty zgodnie z harmonogramem.",
   zamkniety: "Sprawa została zakończona.",
   archiwalny: "Sprawa została zarchiwizowana.",

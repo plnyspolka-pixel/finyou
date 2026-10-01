@@ -453,7 +453,7 @@ const FAQ_ALL: FAQItem[] = [
   },
   {
     q: "Kto płaci prowizję Finance You?",
-    a: "Klient — 7% Kwoty Udzielonej, nie mniej niż 5 000 zł, potrącane z wypłaty. To nie jest koszt inwestora.",
+    a: "Klient — 5% Kwoty Udzielonej, nie mniej niż 5 000 zł, potrącane z wypłaty. To nie jest koszt inwestora.",
   },
   {
     q: "Jak zabezpieczona jest pożyczka?",
@@ -904,9 +904,9 @@ function CennikSection({ products }: { products: AccessProduct[] }) {
         <InvestorPricing products={products} />
       </div>
       <ComplianceNote style={{ marginTop: "2rem" }}>
-        Ceny brutto (PLN). {SUBSCRIPTION_PAYMENT_SENTENCE} Prowizję Finance You płaci klient: 7%
-        Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącaną z wypłaty (100 000 zł → 7 000
-        zł dla Finance You, 93 000 zł dla klienta). Materiały mają charakter edukacyjny i
+        Ceny brutto (PLN). {SUBSCRIPTION_PAYMENT_SENTENCE} Prowizję Finance You płaci klient: 5%
+        Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącaną z wypłaty (100 000 zł → 5 000
+        zł dla Finance You, 95 000 zł dla klienta). Materiały mają charakter edukacyjny i
         informacyjny, a Finance You nie gwarantuje zysku.
       </ComplianceNote>
     </Section>

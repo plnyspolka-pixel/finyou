@@ -33,9 +33,9 @@ describe("umowa ramowa v7", () => {
     expect(v7).not.toMatch(/ZAŁĄCZNIK NR 8/);
   });
 
-  it("nagłówek wersji spójny z package_id; Opłata Abonamentowa; 7 % Kwoty Udzielonej bez VAT", () => {
+  it("nagłówek wersji spójny z package_id; Opłata Abonamentowa; 5% Kwoty Udzielonej bez VAT", () => {
     expect(v7).toContain(`${PACKAGE_ID_V7}.v7`);
-    expect(v7).toContain("7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT");
+    expect(v7).toContain("5% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT");
     expect(v7).toContain("Załączniki nr 1–7");
     expect(v7).not.toMatch(/nieodpłatn/i);
   });

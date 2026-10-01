@@ -17,15 +17,15 @@ import {
 } from "./order-cycle-core";
 import { fyCommission } from "@/lib/contract-engine/fees";
 
-describe("clientProvisionPln (Zał. 6: 7% / min 5000 zł)", () => {
-  it("liczy 7% dla dużych kwot", () => {
-    expect(clientProvisionPln(200_000)).toBe(14_000);
-    expect(clientProvisionPln(1_000_000)).toBe(70_000);
+describe("clientProvisionPln (Zał. 6: 5% / min 5000 zł)", () => {
+  it("liczy 5% dla dużych kwot", () => {
+    expect(clientProvisionPln(200_000)).toBe(10_000);
+    expect(clientProvisionPln(1_000_000)).toBe(50_000);
   });
   it("stosuje minimum 5000 zł", () => {
-    expect(clientProvisionPln(50_000)).toBe(5000); // 7% = 3500 < 5000
-    expect(clientProvisionPln(71_428)).toBe(5000); // 7% = 4999.96
-    expect(clientProvisionPln(71_429)).toBe(5000.03);
+    expect(clientProvisionPln(50_000)).toBe(5000); // 5% = 2500 < 5000
+    expect(clientProvisionPln(99_999)).toBe(5000); // 5% = 4999.95
+    expect(clientProvisionPln(100_001)).toBe(5000.05);
   });
   it("wartości niepoprawne → minimum", () => {
     expect(clientProvisionPln(0)).toBe(5000);

@@ -107,7 +107,7 @@ export function buildDirectorSchedule(offer: ScheduleInput): ScheduleData | null
     kwotaPozyczki > 0 ? round2((annualizedInvestorProfitAmount / kwotaPozyczki) * 100) : 0;
 
   const infos: string[] = [
-    `Kwota Udzielona ${formatPLN(kwotaPozyczki)}: Prowizja Finance You ${formatPLN(prowizjaFY)} (7%, min 5 000 zł, bez VAT) potrącana z wypłaty — Klient otrzymuje ${formatPLN(eng.kwotaWyplaconaKlientowi)}; prowizja inwestora rozłożona na raty (KWO_02).`,
+    `Kwota Udzielona ${formatPLN(kwotaPozyczki)}: Prowizja Finance You ${formatPLN(prowizjaFY)} (5%, min 5 000 zł, bez VAT) potrącana z wypłaty — Klient otrzymuje ${formatPLN(eng.kwotaWyplaconaKlientowi)}; prowizja inwestora rozłożona na raty (KWO_02).`,
   ];
   if (eng.balloon > 0)
     infos.push(

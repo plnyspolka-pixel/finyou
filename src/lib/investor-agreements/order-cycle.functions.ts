@@ -884,7 +884,7 @@ export const adminDecideMatch = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Zał. 6 przy wypłacie: Prowizja od Pożyczkobiorcy 7% / min 5000 zł. */
+/** Zał. 6 przy wypłacie: Prowizja od Pożyczkobiorcy 5% / min 5000 zł. */
 export const confirmZal6 = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>

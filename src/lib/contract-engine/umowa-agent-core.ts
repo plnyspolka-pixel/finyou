@@ -225,7 +225,7 @@ function stronaWskazana(strona: any): boolean {
 /**
  * Rozliczenie z Finance You, gdy Pożyczkodawcą jest INNY podmiot niż Finance
  * You (Umowa ramowa v7, Zał. 6 → Zał. 4 do umowy pożyczki):
- *  • brak `prowizja_finance_you` (pole pominięte) → wyliczamy 7% Kwoty
+ *  • brak `prowizja_finance_you` (pole pominięte) → wyliczamy 5% Kwoty
  *    Udzielonej, nie mniej niż 5 000 zł; jawne `null` = umowa bez prowizji FY,
  *  • rachunek Finance You do przelewu prowizji jest wpisywany ZAWSZE
  *    automatycznie — Finance You ma jeden rachunek (spłaty i prowizja).

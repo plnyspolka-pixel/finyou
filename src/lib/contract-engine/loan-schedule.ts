@@ -277,7 +277,7 @@ export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule 
   };
 }
 
-/** Skrót: harmonogram z domyślną Prowizją od Pożyczkobiorcy (7 %, min 5 000 zł). */
+/** Skrót: harmonogram z domyślną Prowizją od Pożyczkobiorcy (5%, min 5 000 zł). */
 export function buildFyEngineSchedule(
   input: Omit<EngineScheduleInput, "prowizjaFY"> & { prowizjaFY?: number },
 ): EngineSchedule {

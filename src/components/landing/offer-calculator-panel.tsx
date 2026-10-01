@@ -121,7 +121,7 @@ export function OfferCalculatorPanel({
   lockedMessage = "Uzupełnij powyższe pola, żeby odblokować kalkulator.",
 }: OfferCalculatorPanelProps) {
   // Kwota Udzielona = kwota, o którą wnioskuje klient; od niej liczone są
-  // odsetki i raty. Prowizja Finance You (7 %, min 5 000 zł, bez VAT) jest
+  // odsetki i raty. Prowizja Finance You (5%, min 5 000 zł, bez VAT) jest
   // POTRĄCANA z wypłaty — klient dostaje „na rękę" kwotę pomniejszoną o nią.
   // Spójne z silnikiem umów, kalkulatorem inwestora i narzędziami MCP.
   const grossPrincipal = amount;
@@ -354,7 +354,7 @@ export function OfferCalculatorPanel({
                     className="text-[11px] font-semibold uppercase tracking-wider"
                     style={{ color: FY.faint }}
                   >
-                    Prowizja Finance You (7%, min 5 000 zł, bez VAT)
+                    Prowizja Finance You (5%, min 5 000 zł, bez VAT)
                   </p>
                   <p className="mt-0.5 text-lg font-extrabold tabular-nums">
                     −{formatPLN(eng.prowizjaFY)}

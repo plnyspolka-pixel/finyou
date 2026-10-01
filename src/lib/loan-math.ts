@@ -25,7 +25,7 @@ export function monthlyPayment(amount: number, annualRatePercent: number, months
 export type LoanFigures = {
   /** Kwota Udzielona (kwota pożyczki z umowy). */
   amount: number;
-  /** Prowizja Finance You (7 %, min 5 000 zł, bez VAT) — potrącana z wypłaty. */
+  /** Prowizja Finance You (5%, min 5 000 zł, bez VAT) — potrącana z wypłaty. */
   feeFY: number;
   /** Otrzymasz na rękę = kwota − prowizja FY. */
   netToClient: number;
@@ -54,7 +54,7 @@ export function computeLoanFigures(input: {
   maxPayment?: number;
   /** Prowizja INWESTORA (rozłożona na raty). Domyślnie 0. */
   commission?: number;
-  /** Prowizja Finance You — domyślnie włączona (7 %, min 5 000 zł); podaj 0, by wyłączyć. */
+  /** Prowizja Finance You — domyślnie włączona (5%, min 5 000 zł); podaj 0, by wyłączyć. */
   commissionFY?: number;
   /** Dzień oceny odsetek maksymalnych (domyślnie dziś). */
   asOf?: Date | string;

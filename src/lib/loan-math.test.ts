@@ -9,7 +9,7 @@ import { clampAnnualRate, computeLoanFigures, defaultAnnualRate } from "./loan-m
 const AS_OF = "2026-09-29";
 
 describe("computeLoanFigures", () => {
-  it("100 000 zł: prowizja FY 7 000 zł, na rękę 93 000 zł, rata od pełnej kwoty", () => {
+  it("100 000 zł: prowizja FY 5 000 zł, na rękę 95 000 zł, rata od pełnej kwoty", () => {
     const f = computeLoanFigures({
       amount: 100_000,
       annualRatePercent: 14.5,
@@ -17,13 +17,13 @@ describe("computeLoanFigures", () => {
       asOf: AS_OF,
     });
     expect(f.amount).toBe(100_000);
-    expect(f.feeFY).toBe(7_000);
-    expect(f.netToClient).toBe(93_000);
+    expect(f.feeFY).toBe(5_000);
+    expect(f.netToClient).toBe(95_000);
     expect(f.errors).toEqual([]);
     // do spłaty = kapitał + odsetki (bez prowizji inwestora)
     expect(f.total).toBeCloseTo(100_000 + f.totalInterest, 2);
     // koszt całkowity = odsetki + prowizja FY
-    expect(f.totalCost).toBeCloseTo(f.totalInterest + 7_000, 2);
+    expect(f.totalCost).toBeCloseTo(f.totalInterest + 5_000, 2);
   });
 
   it("prowizja inwestora wchodzi do rat i do kosztu, prowizja FY nie", () => {
@@ -44,9 +44,9 @@ describe("computeLoanFigures", () => {
     // do spłaty = kapitał + odsetki + prowizja inwestora
     expect(f.total).toBeCloseTo(200_000 + f.totalInterest + 9_000, 2);
     // koszt całkowity = odsetki + prowizja inwestora + prowizja FY
-    expect(f.totalCost).toBeCloseTo(f.totalInterest + 9_000 + 14_000, 2);
+    expect(f.totalCost).toBeCloseTo(f.totalInterest + 9_000 + 10_000, 2);
     expect(f.feeFY).toBe(base.feeFY);
-    expect(f.netToClient).toBe(186_000);
+    expect(f.netToClient).toBe(190_000);
   });
 
   it("stopa ponad odsetki maksymalne → błąd blokujący", () => {

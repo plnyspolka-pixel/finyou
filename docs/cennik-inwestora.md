@@ -19,11 +19,11 @@ jednorazowa za wybrany okres przez Tpay (przelew, BLIK) — **bez konieczności
 podpinania karty kredytowej** i bez automatycznego odnawiania. Ceny prezentujemy
 jako brutto. Nie ma Pakietu PRO, Opłaty Sukcesu ani opłaty za pojedynczy Projekt.
 
-**Klient nadal płaci Prowizję od Pożyczkobiorcy**: 7 % Kwoty Udzielonej
+**Klient nadal płaci Prowizję od Pożyczkobiorcy**: 5 % Kwoty Udzielonej
 (kwoty pożyczki z umowy), nie mniej niż 5 000 zł, bez VAT (zwolnienie — do
-potwierdzenia z księgową), **potrącaną z wypłaty**: inwestor przelewa 7 % na
+potwierdzenia z księgową), **potrącaną z wypłaty**: inwestor przelewa 5 % na
 rachunek Finance You, resztę Klientowi (Zał. 6 do Umowy ramowej — dwie części
-przelewu). Przykład: 100 000 zł → 7 000 zł do Finance You, 93 000 zł dla
+przelewu). Przykład: 100 000 zł → 5 000 zł do Finance You, 95 000 zł dla
 Klienta. Matematyka: `src/lib/contract-engine/fees.ts`.
 
 Ceny, rabat i zdania o płatności liczy jedno miejsce —
@@ -119,7 +119,7 @@ Opłata za Udostępnienie Okazji i Zał. 8; § 2/§ 7 — Finance You nie pobier
 Inwestora wynagrodzenia, a dostęp do systemu wymaga **Abonamentu** kupowanego
 od Fundacji na podstawie Regulaminu Abonamentu Inwestora (1 500,00 zł brutto
 za 30 dni albo 7 000,00 zł brutto za 365 dni; zmiany z 2026-09-30, przed
-pierwszą akceptacją); Prowizja od Pożyczkobiorcy 7 % Kwoty
+pierwszą akceptacją); Prowizja od Pożyczkobiorcy 5 % Kwoty
 Udzielonej, min 5 000 zł, bez VAT, potrącana z wypłaty; § 5 — maks. 5
 przyjętych Zleceń, wygaśnięcie po 5 odrzuceniach, rezerwacja 24 h + 12 h,
 maks. 2 przedłużone naraz; Kara Obejściowa 5 % Sumy Hipotecznej i pięcioletni

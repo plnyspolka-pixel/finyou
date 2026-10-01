@@ -7,7 +7,7 @@ etapy wdrożone w kodzie i migracjach; testy, typecheck i lint zielone.
 
 - Finansowanie wyłącznie B2B (cel związany z działalnością gospodarczą).
   Inwestor może być konsumentem.
-- Jedyna opłata: **Prowizja Finance You — 7% Kwoty Udzielonej, nie mniej niż
+- Jedyna opłata: **Prowizja Finance You — 5% Kwoty Udzielonej, nie mniej niż
   5 000 zł, bez VAT**, potrącana z wypłaty. Inwestor przekazuje ją Finance You,
   resztę wypłaca Klientowi (100 000 zł → 7 000 zł / 93 000 zł).
 - Inwestor nie płaci opłat jednostkowych: brak Opłaty Sukcesu, PRO, opłaty 1 500 zł za Projekt

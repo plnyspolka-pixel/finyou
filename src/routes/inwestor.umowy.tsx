@@ -309,7 +309,7 @@ function PlanBanner() {
           <p className="max-w-2xl text-sm opacity-90">{p.tagline}</p>
           <p className="text-xs opacity-75">
             {p.periodLabel}. Akceptacja Umowy ramowej, NDA i umowy RODO otwiera moduł ofert:
-            Zlecenia, dopasowane Projekty i oferty. Prowizja od Pożyczkobiorcy — 7 % Kwoty
+            Zlecenia, dopasowane Projekty i oferty. Prowizja od Pożyczkobiorcy — 5% Kwoty
             Udzielonej, nie mniej niż 5 000 zł, bez VAT — obciąża Klienta i jest potrącana z wypłaty
             (Zał. 6).
           </p>
@@ -444,7 +444,7 @@ const DOC_STATEMENTS: Record<string, Array<{ key: string; label: string }>> = {
     {
       key: "oplata_abonamentowa",
       label:
-        "Wiem, że nie płacę Finance You za Projekty ani od rezultatu, a dostęp do systemu wymaga aktywnego abonamentu (Regulamin abonamentu inwestora). Prowizję od Pożyczkobiorcy (7% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT) płaci Klient, a przy wypłacie przekazuję ją Finance You z kwoty Finansowania (Zał. 6).",
+        "Wiem, że nie płacę Finance You za Projekty ani od rezultatu, a dostęp do systemu wymaga aktywnego abonamentu (Regulamin abonamentu inwestora). Prowizję od Pożyczkobiorcy (5% Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT) płaci Klient, a przy wypłacie przekazuję ją Finance You z kwoty Finansowania (Zał. 6).",
     },
     {
       key: "mechanizm_zabezpieczenia_prowizji",
