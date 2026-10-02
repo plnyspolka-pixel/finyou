@@ -72,7 +72,7 @@ export const Route = createFileRoute("/inwestor/umowy")({
 
 const ORDER_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
   zlozone: {
-    label: "Złożone — czekamy na decyzję (2 dni robocze)",
+    label: "Złożone — szukamy dla Ciebie klienta",
     tone: "bg-amber-100 text-amber-800",
   },
   przyjete: { label: "Przyjęte", tone: "bg-emerald-100 text-emerald-800" },
@@ -706,7 +706,7 @@ function OrderForm({
         },
       }),
     onSuccess: (res: any) => {
-      toast.success(`Zlecenie ${res.orderNo} złożone — decyzja w 2 dni robocze.`);
+      toast.success(`Zlecenie ${res.orderNo} złożone — szukamy dla Ciebie klienta.`);
       setAmount("");
       setS1(false);
       setS2(false);
