@@ -515,6 +515,11 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
       .insert({
         user_id: userId,
         amount_pln: data.amountPln,
+        // Wartości neutralne — kolumny są już nieużywane (w bazie bez migracji
+        // 20261001100000 nadal NOT NULL).
+        max_period_months: 120,
+        min_annual_yield: 0,
+        validity_days: 90,
         statements: { ...data.statements, ip, user_agent: userAgent },
         consumer_choice: investor?.is_consumer ? data.consumerChoice : "nie_dotyczy",
       })

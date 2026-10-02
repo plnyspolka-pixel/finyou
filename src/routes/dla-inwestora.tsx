@@ -202,7 +202,7 @@ const BENEFITS: FeatureItemData[] = [
   {
     icon: "access",
     t: "Projekty trafiają do Ciebie",
-    d: "Składasz Zlecenie z kwotą, okresem i minimalnym zyskiem, a my przedstawiamy Projekty dopasowane do Twoich kryteriów.",
+    d: "Składasz Zlecenie z maksymalną kwotą, a my przedstawiamy Projekty mieszczące się w tej kwocie.",
   },
   {
     icon: "shieldcheck",
