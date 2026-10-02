@@ -334,6 +334,25 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
       .select("id, order_seq, amount_pln, status, expires_at")
       .eq("user_id", userId)
       .order("submitted_at", { ascending: false });
+    // Zlecenia nie wymagają decyzji admina — wcześniej złożone przyjmujemy teraz.
+    const pending = (orders ?? []).filter((o: any) => o.status === "zlozone");
+    if (pending.length > 0) {
+      const { autoAcceptOrder } = await import("./legal-pack.functions");
+      for (const o of pending) {
+        try {
+          await autoAcceptOrder(supabaseAdmin, o.id, userId);
+          o.status = "przyjete";
+          const { data: fresh } = await loose(supabaseAdmin)
+            .from("investor_orders")
+            .select("expires_at")
+            .eq("id", o.id)
+            .maybeSingle();
+          o.expires_at = fresh?.expires_at ?? null;
+        } catch (e) {
+          console.error("[order-accept] nieudane:", e);
+        }
+      }
+    }
     // Automat dopasowań: nowy pasujący Projekt pojawia się przy otwarciu widoku.
     try {
       await autoMatchInvestorOrders(supabaseAdmin, orders ?? []);

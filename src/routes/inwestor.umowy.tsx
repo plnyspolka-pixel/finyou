@@ -72,7 +72,7 @@ export const Route = createFileRoute("/inwestor/umowy")({
 
 const ORDER_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
   zlozone: {
-    label: "Złożone — szukamy dla Ciebie klienta",
+    label: "Przyjęte — szukamy dla Ciebie klienta",
     tone: "bg-amber-100 text-amber-800",
   },
   przyjete: { label: "Przyjęte", tone: "bg-emerald-100 text-emerald-800" },
@@ -706,7 +706,7 @@ function OrderForm({
         },
       }),
     onSuccess: (res: any) => {
-      toast.success(`Zlecenie ${res.orderNo} złożone — szukamy dla Ciebie klienta.`);
+      toast.success(`Zlecenie ${res.orderNo} przyjęte — szukamy dla Ciebie klienta.`);
       setAmount("");
       setS1(false);
       setS2(false);
