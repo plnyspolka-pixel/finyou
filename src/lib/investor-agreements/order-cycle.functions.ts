@@ -23,6 +23,8 @@ import {
   reservationDeadline,
   orderLimitsFromSettings,
   withdrawalDeadline,
+  ACTIVE_MATCH_STATUSES,
+  amountMatchesOrder,
   type MatchStatus,
 } from "./order-cycle-core";
 
@@ -119,6 +121,149 @@ async function buildTeaser(db: any, applicationId: string) {
   };
 }
 
+/** Utworzenie pary Projekt–Zlecenie (+ teaser, Karta Leada, dziennik) —
+ *  wspólne dla ręcznego dopasowania admina i automatu. */
+async function insertMatch(
+  db: any,
+  input: {
+    orderId: string;
+    applicationId: string;
+    releaseTeaser: boolean;
+    passedFromMatchId?: string;
+    actorId: string | null;
+    actorKind: "admin" | "system";
+  },
+) {
+  const { data: order } = await loose(db)
+    .from("investor_orders")
+    .select("id, order_seq, status, expires_at, amount_pln")
+    .eq("id", input.orderId)
+    .maybeSingle();
+  if (!order) throw new Error("Nie znaleziono Zlecenia.");
+  if (order.status !== "przyjete")
+    throw new Error(`Zlecenie ma status ${order.status} (wymagane: przyjęte).`);
+  if (order.expires_at && new Date(order.expires_at).getTime() < Date.now()) {
+    throw new Error("Zlecenie wygasło.");
+  }
+
+  const teaser = await buildTeaser(db, input.applicationId);
+  const now = new Date();
+  const { data: inserted, error } = await loose(db)
+    .from("investor_order_matches")
+    .insert({
+      order_id: input.orderId,
+      application_id: input.applicationId,
+      status: input.releaseTeaser ? "teaser" : "dopasowane",
+      teaser,
+      teaser_released_at: input.releaseTeaser ? now.toISOString() : null,
+      passed_from_match_id: input.passedFromMatchId ?? null,
+      created_by: input.actorId,
+    })
+    .select("id, project_ref")
+    .single();
+  if (error) {
+    if (String(error.message).includes("iom_active_project_uq")) {
+      throw new Error(
+        "Ten Projekt ma już aktywny obieg u innego zleceniodawcy (wyłączność sekwencyjna) — poczekaj na decyzję albo przekaż go po jej zapadnięciu.",
+      );
+    }
+    throw new Error(error.message);
+  }
+
+  // Karta Leada budowana od razu dla pary (nigdy bez numeru Zlecenia).
+  const docs = await packDocumentVersions(db);
+  const karta = buildKartaLeada({
+    projectRef: inserted.project_ref,
+    orderSeq: Number(order.order_seq),
+    matchedAt: now,
+    teaser,
+    documents: docs,
+  });
+  await loose(db).from("investor_order_matches").update({ karta_leada: karta }).eq("id", inserted.id);
+
+  await logCycleEvent(db, {
+    matchId: inserted.id,
+    orderId: input.orderId,
+    type: "dopasowanie",
+    payload: {
+      project_ref: inserted.project_ref,
+      application_id: input.applicationId,
+      auto: input.actorKind === "system",
+    },
+    actor: input.actorId,
+    actorKind: input.actorKind,
+  });
+  if (input.releaseTeaser) {
+    await logCycleEvent(db, {
+      matchId: inserted.id,
+      orderId: input.orderId,
+      type: "teaser_udostepniony",
+      payload: { project_ref: inserted.project_ref },
+      actor: input.actorId,
+      actorKind: input.actorKind,
+    });
+  }
+  return { ok: true, matchId: inserted.id as string, projectRef: inserted.project_ref as string };
+}
+
+/** Automat: dla przyjętych, nieprzeterminowanych Zleceń inwestora bez aktywnego
+ *  obiegu dobiera najstarszy wolny Projekt mieszczący się w kwocie Zlecenia
+ *  (z pominięciem Projektów już wcześniej obiegowanych w tym Zleceniu) i od razu
+ *  udostępnia teaser. Wyłączność sekwencyjna pilnowana indeksem w bazie. */
+async function autoMatchInvestorOrders(db: any, orders: any[]) {
+  const { CANDIDATE_DB_STATUSES } = await import("@/lib/auto-distribution/engine.server");
+  const now = Date.now();
+  const eligible = orders.filter(
+    (o) =>
+      o.status === "przyjete" && (!o.expires_at || new Date(o.expires_at).getTime() >= now),
+  );
+  if (eligible.length === 0) return;
+
+  const { data: orderMatches } = await loose(db)
+    .from("investor_order_matches")
+    .select("order_id, application_id, status")
+    .in(
+      "order_id",
+      eligible.map((o) => o.id),
+    );
+  const { data: busy } = await loose(db)
+    .from("investor_order_matches")
+    .select("application_id")
+    .in("status", ACTIVE_MATCH_STATUSES);
+  const busyApps = new Set((busy ?? []).map((m: any) => m.application_id));
+  const { data: apps } = await loose(db)
+    .from("loan_applications")
+    .select("id, loan_amount")
+    .in("status", CANDIDATE_DB_STATUSES)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true })
+    .limit(300);
+
+  const taken = new Set<string>();
+  for (const o of eligible) {
+    const mine = (orderMatches ?? []).filter((m: any) => m.order_id === o.id);
+    if (mine.some((m: any) => ACTIVE_MATCH_STATUSES.includes(m.status))) continue;
+    const seen = new Set(mine.map((m: any) => m.application_id));
+    for (const a of apps ?? []) {
+      if (busyApps.has(a.id) || taken.has(a.id) || seen.has(a.id)) continue;
+      if (!amountMatchesOrder(Number(o.amount_pln), Number(a.loan_amount ?? 0))) continue;
+      try {
+        await insertMatch(db, {
+          orderId: o.id,
+          applicationId: a.id,
+          releaseTeaser: true,
+          actorId: null,
+          actorKind: "system",
+        });
+        taken.add(a.id);
+        break;
+      } catch {
+        // wyścig o Projekt albo błąd teasera — próbujemy następny
+      }
+    }
+  }
+}
+
 async function myMatch(db: any, userId: string, matchId: string) {
   const { data: m } = await loose(db)
     .from("investor_order_matches")
@@ -189,6 +334,12 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
       .select("id, order_seq, amount_pln, status, expires_at")
       .eq("user_id", userId)
       .order("submitted_at", { ascending: false });
+    // Automat dopasowań: nowy pasujący Projekt pojawia się przy otwarciu widoku.
+    try {
+      await autoMatchInvestorOrders(supabaseAdmin, orders ?? []);
+    } catch (e) {
+      console.error("[auto-match] nieudane:", e);
+    }
     const orderIds = (orders ?? []).map((o: any) => o.id);
 
     let matches: any[] = [];
@@ -651,7 +802,6 @@ export const getOrderCycleAdminState = createServerFn({ method: "GET" })
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(200);
-    const { amountMatchesOrder } = await import("./order-cycle-core");
     const suggestions = (orders ?? []).map((o: any) => ({
       orderId: o.id,
       orderSeq: o.order_seq,
@@ -690,76 +840,14 @@ export const createMatch = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase as any, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: order } = await loose(supabaseAdmin)
-      .from("investor_orders")
-      .select("id, order_seq, status, expires_at, amount_pln")
-      .eq("id", data.orderId)
-      .maybeSingle();
-    if (!order) throw new Error("Nie znaleziono Zlecenia.");
-    if (order.status !== "przyjete")
-      throw new Error(`Zlecenie ma status ${order.status} (wymagane: przyjęte).`);
-    if (order.expires_at && new Date(order.expires_at).getTime() < Date.now()) {
-      throw new Error("Zlecenie wygasło.");
-    }
-
-    const teaser = await buildTeaser(supabaseAdmin, data.applicationId);
-    const now = new Date();
-    const { data: inserted, error } = await loose(supabaseAdmin)
-      .from("investor_order_matches")
-      .insert({
-        order_id: data.orderId,
-        application_id: data.applicationId,
-        status: data.releaseTeaser ? "teaser" : "dopasowane",
-        teaser,
-        teaser_released_at: data.releaseTeaser ? now.toISOString() : null,
-        passed_from_match_id: data.passedFromMatchId ?? null,
-        created_by: context.userId,
-      })
-      .select("id, project_ref")
-      .single();
-    if (error) {
-      if (String(error.message).includes("iom_active_project_uq")) {
-        throw new Error(
-          "Ten Projekt ma już aktywny obieg u innego zleceniodawcy (wyłączność sekwencyjna) — poczekaj na decyzję albo przekaż go po jej zapadnięciu.",
-        );
-      }
-      throw new Error(error.message);
-    }
-
-    // Karta Leada budowana od razu dla pary (nigdy bez numeru Zlecenia).
-    const docs = await packDocumentVersions(supabaseAdmin);
-    const karta = buildKartaLeada({
-      projectRef: inserted.project_ref,
-      orderSeq: Number(order.order_seq),
-      matchedAt: now,
-      teaser,
-      documents: docs,
-    });
-    await loose(supabaseAdmin)
-      .from("investor_order_matches")
-      .update({ karta_leada: karta })
-      .eq("id", inserted.id);
-
-    await logCycleEvent(supabaseAdmin, {
-      matchId: inserted.id,
+    return insertMatch(supabaseAdmin, {
       orderId: data.orderId,
-      type: "dopasowanie",
-      payload: { project_ref: inserted.project_ref, application_id: data.applicationId },
-      actor: context.userId,
+      applicationId: data.applicationId,
+      releaseTeaser: data.releaseTeaser,
+      passedFromMatchId: data.passedFromMatchId,
+      actorId: context.userId,
       actorKind: "admin",
     });
-    if (data.releaseTeaser) {
-      await logCycleEvent(supabaseAdmin, {
-        matchId: inserted.id,
-        orderId: data.orderId,
-        type: "teaser_udostepniony",
-        payload: { project_ref: inserted.project_ref },
-        actor: context.userId,
-        actorKind: "admin",
-      });
-    }
-    return { ok: true, matchId: inserted.id, projectRef: inserted.project_ref };
   });
 
 export const releaseTeaser = createServerFn({ method: "POST" })

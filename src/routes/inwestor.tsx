@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Tag,
+  ClipboardList,
   FileText,
   GraduationCap,
   Calculator,
@@ -34,6 +35,7 @@ const navGroups: NavGroup[] = [
       // Pierwszy ekran panelu: pipeline inwestora (dane stron → KYC → screening
       // → pakiet umów → Zlecenie) i Projekty z wykonania Zleceń.
       { to: "/inwestor/umowy", label: "Zlecenia i Projekty", icon: Target },
+      { to: "/inwestor/zlecenia", label: "Moje zlecenia", icon: ClipboardList },
       { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
       // Pipeline analityczny (KW → właściciele → analiza KW → ryzyko) — ten
       // sam, którym posługuje się zespół Finance You — dla Projektów inwestora.
