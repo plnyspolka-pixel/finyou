@@ -545,8 +545,40 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
     } catch (e) {
       console.error("[legal-pack] order event log failed", e);
     }
+    await autoAcceptOrder(supabaseAdmin, inserted.id, userId);
     return { ok: true, orderId: inserted.id, orderNo: `FY-Z-${inserted.order_seq}` };
   });
+
+/** Złożone Zlecenie jest przyjmowane automatycznie (bez decyzji admina). Limit
+ *  aktywnych Zleceń pilnuje submitInvestorOrder; termin = koniec abonamentu. */
+export async function autoAcceptOrder(db: any, orderId: string, userId: string) {
+  const expires = await subscriptionEnd(db, userId);
+  const { data: updated, error } = await loose(db)
+    .from("investor_orders")
+    .update({
+      status: "przyjete",
+      decided_at: new Date().toISOString(),
+      expires_at: expires?.toISOString() ?? null,
+    })
+    .eq("id", orderId)
+    .eq("status", "zlozone")
+    .select("id");
+  if (error) throw new Error(error.message);
+  if (!updated?.length) return;
+  try {
+    await loose(db)
+      .from("investor_order_events")
+      .insert({
+        order_id: orderId,
+        event_type: "zlecenie_przyjete",
+        payload: { expires_at: expires?.toISOString() ?? null, auto: true },
+        actor: null,
+        actor_kind: "system",
+      });
+  } catch (e) {
+    console.error("[legal-pack] order event log failed", e);
+  }
+}
 
 /** Cofnięcie własnego Zlecenia (status „cofnięte"). */
 export const withdrawInvestorOrder = createServerFn({ method: "POST" })
