@@ -444,6 +444,22 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
+    // Wcześniejsze zgłoszenia czekające na ręczne potwierdzenie — potwierdzamy automatycznie.
+    const nowIso = new Date().toISOString();
+    if ((accessions ?? []).some((a: any) => !a.confirmed_at)) {
+      await loose(supabaseAdmin)
+        .from("nda_accessions")
+        .update({ confirmed_at: nowIso })
+        .eq("user_id", userId)
+        .is("confirmed_at", null);
+      for (const a of accessions ?? []) a.confirmed_at ??= nowIso;
+    }
+    await loose(supabaseAdmin)
+      .from("consumer_withdrawals")
+      .update({ acknowledged_at: nowIso })
+      .eq("user_id", userId)
+      .is("acknowledged_at", null);
+
     const acceptedAt = acceptance?.accepted_at ? new Date(acceptance.accepted_at) : null;
     const limits = orderLimitsFromSettings(await getModuleSettings());
     return {
@@ -704,6 +720,7 @@ export const submitConsumerWithdrawal = createServerFn({ method: "POST" })
       content,
       ip,
       user_agent: userAgent,
+      acknowledged_at: new Date().toISOString(),
     });
     if (error) throw new Error(error.message);
 
@@ -786,6 +803,8 @@ export const submitNdaAccession = createServerFn({ method: "POST" })
         },
         ip,
         user_agent: userAgent,
+        // Bez ręcznego potwierdzenia przez admina — przystąpienie skuteczne od razu.
+        confirmed_at: new Date().toISOString(),
       });
     if (error) throw new Error(error.message);
     await logCycleEvent(supabaseAdmin, {
