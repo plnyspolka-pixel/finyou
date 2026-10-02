@@ -296,11 +296,6 @@ function MatchCard({
             )}
             Odsłoń dane Projektu (start rezerwacji {limits.assignmentHours} h)
           </Button>
-          {!match.transfer_card_approved_at ? (
-            <span className="text-xs text-amber-700">
-              Karta Transferu Danych czeka na zatwierdzenie przez Finance You.
-            </span>
-          ) : null}
           <Button
             size="sm"
             variant="ghost"

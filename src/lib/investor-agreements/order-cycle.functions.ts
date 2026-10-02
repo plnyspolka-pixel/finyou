@@ -264,6 +264,48 @@ async function autoMatchInvestorOrders(db: any, orders: any[]) {
   }
 }
 
+/** Karta Transferu Danych (Moduł RODO) per Projekt — wystawiana automatycznie
+ *  przy akceptacji Karty Leada (bądź przy Ujawnieniu), ręcznie przez admina. */
+async function issueTransferCard(
+  db: any,
+  m: { id: string; order_id: string; project_ref: string; transfer_card_approved_at?: string | null },
+  opts: { notes?: string; actorId: string | null; actorKind: "admin" | "system" },
+) {
+  if (m.transfer_card_approved_at) return { ok: true, already: true };
+  const now = new Date().toISOString();
+  const card = {
+    projekt_ref: m.project_ref,
+    podstawa: "Umowa udostępniania i ochrony danych osobowych (Moduł A — odrębni administratorzy)",
+    kategorie_danych:
+      "dane identyfikacyjne klienta i właściciela nieruchomości, dane nieruchomości (adres, nr KW), dokumentacja finansowa i prawna Projektu",
+    cel: "ocena, negocjowanie i ewentualne wykonanie Projektu w wykonaniu przyjętego Zlecenia",
+    uwagi: opts.notes ?? null,
+    zatwierdzono: now,
+  };
+  const { data: updated, error } = await loose(db)
+    .from("investor_order_matches")
+    .update({
+      transfer_card: card,
+      transfer_card_approved_at: now,
+      transfer_card_approved_by: opts.actorId,
+      updated_at: now,
+    })
+    .eq("id", m.id)
+    .is("transfer_card_approved_at", null)
+    .select("id");
+  if (error) throw new Error(error.message);
+  if (!updated?.length) return { ok: true, already: true };
+  await logCycleEvent(db, {
+    matchId: m.id,
+    orderId: m.order_id,
+    type: "karta_transferu_zatwierdzona",
+    payload: { ...card, auto: opts.actorKind === "system" },
+    actor: opts.actorId,
+    actorKind: opts.actorKind,
+  });
+  return { ok: true };
+}
+
 async function myMatch(db: any, userId: string, matchId: string) {
   const { data: m } = await loose(db)
     .from("investor_order_matches")
@@ -483,6 +525,7 @@ export const acceptKartaLeada = createServerFn({ method: "POST" })
       actor: userId,
       actorKind: "inwestor",
     });
+    await issueTransferCard(supabaseAdmin, m, { actorId: null, actorKind: "system" });
     return { ok: true };
   });
 
@@ -496,11 +539,8 @@ export const requestDisclosure = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await myMatch(supabaseAdmin, userId, data.matchId);
     if (m.status !== "karta_leada") throw new Error("Najpierw zaakceptuj Kartę Leada.");
-    if (!m.transfer_card_approved_at) {
-      throw new Error(
-        "Karta Transferu Danych dla tego Projektu czeka na zatwierdzenie przez Finance You — damy znać, gdy Ujawnienie będzie możliwe.",
-      );
-    }
+    // Karta Transferu Danych wystawiana automatycznie (starsze Dopasowania bez karty).
+    await issueTransferCard(supabaseAdmin, m, { actorId: null, actorKind: "system" });
     // Ujawnienie po akceptacji Karty Leada nie wymaga dodatkowej płatności
     // (Umowa ramowa v7 § 7: poza abonamentem brak opłat za Projekt).
     const limits = orderLimitsFromSettings(await getModuleSettings());
@@ -908,36 +948,11 @@ export const approveTransferCard = createServerFn({ method: "POST" })
       .eq("id", data.matchId)
       .maybeSingle();
     if (!m) throw new Error("Nie znaleziono Dopasowania.");
-    if (m.transfer_card_approved_at) return { ok: true, already: true };
-    const card = {
-      projekt_ref: m.project_ref,
-      podstawa:
-        "Umowa udostępniania i ochrony danych osobowych (Moduł A — odrębni administratorzy)",
-      kategorie_danych:
-        "dane identyfikacyjne klienta i właściciela nieruchomości, dane nieruchomości (adres, nr KW), dokumentacja finansowa i prawna Projektu",
-      cel: "ocena, negocjowanie i ewentualne wykonanie Projektu w wykonaniu przyjętego Zlecenia",
-      uwagi: data.notes ?? null,
-      zatwierdzono: new Date().toISOString(),
-    };
-    const { error } = await loose(supabaseAdmin)
-      .from("investor_order_matches")
-      .update({
-        transfer_card: card,
-        transfer_card_approved_at: new Date().toISOString(),
-        transfer_card_approved_by: context.userId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", m.id);
-    if (error) throw new Error(error.message);
-    await logCycleEvent(supabaseAdmin, {
-      matchId: m.id,
-      orderId: m.order_id,
-      type: "karta_transferu_zatwierdzona",
-      payload: card,
-      actor: context.userId,
+    return issueTransferCard(supabaseAdmin, m, {
+      notes: data.notes,
+      actorId: context.userId,
       actorKind: "admin",
     });
-    return { ok: true };
   });
 
 /** Decyzja administratora: transakcja / przekazanie dalej / odrzucenie. */
