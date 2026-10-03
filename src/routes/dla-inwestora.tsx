@@ -66,11 +66,13 @@ const SHOW: Record<
   windykacja: false, // pokaz slajdów windykacji AI
 };
 
-// Filmy w hero. Pierwszy (Wistia) po prawej w rzędzie 1, drugi piętro niżej po
+// Filmy w hero. Pierwszy (nasza prezentacja ze Storage) po prawej w rzędzie 1, drugi piętro niżej po
 // lewej — odtwarzany z naszego pliku w Storage (src/lib/landing-video.ts).
 // Dopóki kopii nie ma (panel /admin/materialy → „Film na landingu inwestora"),
 // zapasowo gra odtwarzacz HeyGen.
-const WISTIA_EMBED_URL = "https://fast.wistia.net/embed/iframe/kjp6klcd5u?seo=false";
+const HERO_VIDEO_URL =
+  "https://jqvepxhulxdnbwbogkhe.supabase.co/storage/v1/object/public/studio-media/marketing-materials/Finance You - Kompleksowa Prezentacja (Merged)_1080p_caption (2).mp4";
+const HERO_VIDEO_TITLE = "Klub Inwestorów Hipotecznych";
 const VIDEO2_TITLE = LANDING_INVESTOR_VIDEO.title;
 
 // Adres kopii filmu w Storage — null, gdy kopii jeszcze nie ma albo Storage
@@ -557,7 +559,19 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
           </div>
         </div>
         <HeroFrame glow="linear-gradient(135deg, oklch(0.65 0.13 235 / .3), oklch(0.40 0.25 268 / .25))">
-          <HeroIframe src={WISTIA_EMBED_URL} title="Klub Inwestorów Hipotecznych" />
+          <video
+            src={encodeURI(HERO_VIDEO_URL)}
+            controls
+            playsInline
+            preload="metadata"
+            aria-label={HERO_VIDEO_TITLE}
+            style={{
+              width: "100%",
+              aspectRatio: "16 / 9",
+              display: "block",
+              background: "#05081c",
+            }}
+          />
         </HeroFrame>
 
         {/* Rząd 2 siatki hero: drugi film piętro niżej niż pierwszy, po lewej stronie
@@ -619,7 +633,7 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
 }
 
 // Ramka wideo w hero: poświata za kartą + zaokrąglona ramka. W środku <video>
-// z naszego pliku albo iframe (Wistia / zapasowy HeyGen).
+// z naszego pliku albo iframe (zapasowy HeyGen).
 function HeroFrame({ glow, children }: { glow: string; children: ReactNode }) {
   return (
     <div style={{ position: "relative" }}>
