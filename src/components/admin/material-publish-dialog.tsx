@@ -1,6 +1,7 @@
 // Dialog „Publikuj" przy materiale marketingowym (/admin/materialy): wybór
-// platform, tytuł i treść (z generatorem opisu AI), termin, widoczność
-// YouTube i ekran publikacji TikToka. Trzy akcje: sam zapis opisu w
+// platform, tytuł i treść (z generatorem opisu AI) jako punkt wyjścia, osobny
+// opis dla każdej platformy (karty z limitami — jedna platforma, jeden opis),
+// termin, widoczność YouTube i ekran publikacji TikToka. Trzy akcje: sam zapis opisu w
 // materiale, dodanie do kolejki (cron co 10 min / wybrany termin) albo
 // publikacja od ręki (wpis w kolejce + natychmiastowe przetworzenie).
 //
@@ -26,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TiktokPostOptionsFields } from "@/components/admin/tiktok-post-options-fields";
+import { PlatformCopyFields } from "@/components/admin/platform-copy-fields";
 import {
   getStudioStatus,
   publishSocialQueueItemNow,
@@ -33,6 +35,16 @@ import {
 } from "@/lib/studio.functions";
 import { publishYoutubeQueueItemNow } from "@/lib/youtube-shorts.functions";
 import { getTiktokCreatorInfo } from "@/lib/tiktok.functions";
+import { getXIntegrationStatus } from "@/lib/x.functions";
+import {
+  copyOverridesFrom,
+  effectiveCopyMap,
+  explicitCopyMap,
+  platformCopyError,
+  type CopyLimits,
+  type PlatformCopy,
+  type PlatformCopyMap,
+} from "@/lib/platform-copy";
 import { generateMaterialDescription } from "@/lib/marketing-materials.functions";
 import {
   enqueueMaterialPublication,
@@ -84,10 +96,14 @@ export function MaterialPublishDialog({
   const saveTextFn = useServerFn(updateMaterialText);
   const publishSocialNowFn = useServerFn(publishSocialQueueItemNow);
   const publishYoutubeNowFn = useServerFn(publishYoutubeQueueItemNow);
+  const xStatusFn = useServerFn(getXIntegrationStatus);
 
   const [platforms, setPlatforms] = useState<StudioPlatform[]>([]);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  // Opisy per platforma: karta bez własnej edycji odbija tytuł / treść
+  // wyżej (złożone pod limity platformy), edytowana trzyma swój tekst.
+  const [copyOverrides, setCopyOverrides] = useState<PlatformCopyMap>({});
   const [scheduledAt, setScheduledAt] = useState("");
   const [privacy, setPrivacy] = useState<Privacy>("public");
   const [saveToMaterial, setSaveToMaterial] = useState(true);
@@ -103,6 +119,7 @@ export function MaterialPublishDialog({
     setTitle(t.title);
     setMessage(t.message);
     setPlatforms([]);
+    setCopyOverrides({});
     setScheduledAt("");
     setPrivacy("public");
     setSaveToMaterial(true);
@@ -119,6 +136,25 @@ export function MaterialPublishDialog({
   const availability = useMemo(() => platformAvailability(status), [status]);
   const mediaType = material?.media_type ?? "video";
   const allowed = useMemo(() => platformsForMediaType(mediaType), [mediaType]);
+
+  // Limit posta X zależy od konta (Premium) — ten sam cache co karta połączenia X.
+  const { data: xStatus } = useQuery({
+    queryKey: ["x-status"],
+    queryFn: () => xStatusFn(),
+    enabled: open,
+    staleTime: 60_000,
+  });
+  const copyLimits = useMemo<CopyLimits>(
+    () => ({ xTextMax: xStatus?.postLimit }),
+    [xStatus?.postLimit],
+  );
+  const sharedCopy = useMemo<PlatformCopy>(() => ({ title, message }), [title, message]);
+  const copyMap = useMemo(
+    () => effectiveCopyMap(platforms, copyOverrides, sharedCopy, copyLimits),
+    [platforms, copyOverrides, sharedCopy, copyLimits],
+  );
+  const onCopyChange = (next: PlatformCopyMap) =>
+    setCopyOverrides((prev) => copyOverridesFrom(next, platforms, prev, sharedCopy, copyLimits));
 
   const ttSelected = platforms.includes("tiktok");
   const tiktokConnected = !!status?.tiktokConnected;
@@ -169,9 +205,10 @@ export function MaterialPublishDialog({
     if (!material) return "Brak materiału.";
     const p = materialPlatformsError(material.media_type, platforms);
     if (p) return p;
-    if (platforms.includes("youtube") && !title.trim()) return "YouTube wymaga tytułu.";
-    if (platforms.includes("x") && !message.trim() && !title.trim()) {
-      return "Post na X wymaga treści (lub tytułu).";
+    // Opis każdej platformy: brak wymaganego pola albo przekroczony limit.
+    for (const platform of platforms) {
+      const issue = platformCopyError(platform, copyMap[platform], copyLimits);
+      if (issue) return `${PLATFORM_LABELS[platform]}: ${issue}`;
     }
     if (ttSelected) {
       if (!tiktokConnected) return "Konto TikTok nie jest połączone.";
@@ -180,7 +217,7 @@ export function MaterialPublishDialog({
       if (e) return e;
     }
     return null;
-  }, [material, platforms, title, message, ttSelected, tiktokConnected, ttCreator, ttOptions]);
+  }, [material, platforms, copyMap, copyLimits, ttSelected, tiktokConnected, ttCreator, ttOptions]);
 
   const enqueue = async () => {
     const r = await enqueueFn({
@@ -189,6 +226,8 @@ export function MaterialPublishDialog({
         platforms,
         title,
         message,
+        // Osobny opis dla każdej platformy (z karty) — oba pola wprost.
+        platform_copy: explicitCopyMap(copyMap, platforms, sharedCopy, copyLimits),
         privacy_status: privacy,
         scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
         tiktok_post_options: ttSelected ? ttOptions : undefined,
@@ -334,13 +373,13 @@ export function MaterialPublishDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Tytuł (YouTube / wideo na FB / TikTok)</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={92} />
+            <Label>Tytuł (wspólny — punkt wyjścia dla platform)</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <Label>Treść / opis (opis filmu, caption Reels, treść posta)</Label>
+              <Label>Treść / opis (wspólny — punkt wyjścia dla platform)</Label>
               <Button
                 type="button"
                 size="sm"
@@ -365,6 +404,16 @@ export function MaterialPublishDialog({
               Zapisz tytuł i opis także w materiale
             </label>
           </div>
+
+          {/* Jedna platforma — jeden opis: karty z polami i limitami każdej
+              zaznaczonej platformy (publikuje się to, co w kartach). */}
+          <PlatformCopyFields
+            platforms={platforms}
+            value={copyMap}
+            onChange={onCopyChange}
+            base={sharedCopy}
+            limits={copyLimits}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

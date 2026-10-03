@@ -5,6 +5,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { StudioPlatform } from "./studio-platforms";
+import type { PlatformCopyMap } from "./platform-copy";
 import { materialPlatformsError } from "./marketing-material-publish";
 
 async function assertAdmin(userId: string) {
@@ -20,6 +21,8 @@ export type EnqueueMaterialPublicationInput = {
   platforms: StudioPlatform[];
   title?: string;
   message?: string;
+  /** Opisy per platforma (karty dialogu) — wygrywają nad wspólnym tytułem / treścią. */
+  platform_copy?: PlatformCopyMap;
   privacy_status?: "public" | "unlisted" | "private";
   scheduled_at?: string;
   tiktok_post_options?: unknown;
@@ -64,6 +67,7 @@ export const enqueueMaterialPublication = createServerFn({ method: "POST" })
       platforms: data.platforms,
       title: title || m.title,
       message,
+      platform_copy: data.platform_copy,
       video_url: m.media_type === "video" ? mediaUrl : undefined,
       image_url: m.media_type === "image" ? mediaUrl : undefined,
       privacy_status: data.privacy_status,

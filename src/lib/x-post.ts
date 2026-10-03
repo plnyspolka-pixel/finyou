@@ -91,8 +91,9 @@ export function xPostText(raw: string | null | undefined, limit = X_TEXT_LIMIT):
   if (!text) return "";
   if (xWeightedLength(text) <= limit) return text;
 
-  // Miejsce na wielokropek doklejany po przycięciu.
-  const budget = limit - 1;
+  // Miejsce na wielokropek doklejany po przycięciu — „…" (U+2026) leży poza
+  // zakresami wagi 1, więc X liczy go jako 2 znaki.
+  const budget = limit - xWeightedLength("…");
   // Granice, na których wolno ciąć: początki „kawałków" tekstu i linków.
   const pieces = splitOnUrls(text);
   let used = 0;

@@ -8,6 +8,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { StudioPromptKind } from "./studio-ai.server";
 import type { StudioPlatform } from "./studio-platforms";
+import { compactCopyMap, parsePlatformCopyMap, type PlatformCopyMap } from "./platform-copy";
 import { isCustomCaptionStyle, parseCaptionStyleId } from "./caption-style";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL, type ScenePlanItem } from "./studio-scenes";
 
@@ -97,8 +98,11 @@ export const enqueueStudioPublish = createServerFn({ method: "POST" })
   .inputValidator(
     (d: {
       platforms: StudioPlatform[];
+      /** Opis wspólny — punkt wyjścia dla platform bez własnego wpisu. */
       title?: string;
       message?: string;
+      /** Opisy per platforma (karty formularza) — jedna platforma, jeden opis. */
+      platform_copy?: PlatformCopyMap;
       video_url?: string;
       image_url?: string;
       privacy_status?: "public" | "unlisted" | "private";
@@ -303,6 +307,8 @@ export type StudioVideoJob = {
   publish_privacy: string;
   publish_title: string;
   publish_description: string;
+  /** Opisy per platforma dla auto-publikacji (puste pola uzupełnia AI ze scenariusza). */
+  publish_copy: PlatformCopyMap | null;
   auto_published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -480,6 +486,7 @@ async function sanitizeAutoPublish(d: {
     "facebook_reels",
     "instagram_reels",
     "tiktok",
+    "x",
   ];
   const platforms = (d.auto_publish_platforms ?? []).filter((p) => allowed.includes(p));
   const privacy = ["public", "unlisted", "private"].includes(d.publish_privacy ?? "")
@@ -528,6 +535,8 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       tiktok_post_options?: unknown;
       publish_title?: string;
       publish_description?: string;
+      /** Opisy per platforma (karty w panelu) — pola puste uzupełni AI po renderze. */
+      publish_copy?: PlatformCopyMap;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -537,6 +546,12 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
     const voiceId = data.voice_id || FILIP_VOICE_ID;
     const autoPub = await sanitizeAutoPublish(data);
+    // Opisy per platforma tylko dla platform auto-publikacji i tylko niepuste
+    // pola — resztę składa auto-publikacja ze wspólnego tytułu / opisu.
+    const publishCopy = compactCopyMap(
+      parsePlatformCopyMap(data.publish_copy),
+      autoPub.auto_publish_platforms,
+    );
     // Twarze rolki: prowadzący + partner z puli panelu (a gdy pusta — ze stałego
     // zestawu domyślnych), dobrany rotacyjnie po ostatnich rolkach.
     const { reelRotations } = await import("./studio-avatars.server");
@@ -565,6 +580,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         tiktok_post_options: autoPub.tiktok_post_options as never,
         publish_title: data.publish_title?.trim() ?? "",
         publish_description: data.publish_description?.trim() ?? "",
+        publish_copy: Object.keys(publishCopy).length ? publishCopy : null,
         created_by: context.userId,
       })
       .select("id")

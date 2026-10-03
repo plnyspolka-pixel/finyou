@@ -42,6 +42,21 @@ import {
 } from "@/lib/studio.functions";
 // Etykiety platform są wspólne z panelem materiałów (/admin/materialy).
 import { PLATFORM_LABELS } from "@/lib/studio-platforms";
+// Opisy per platforma (jedna platforma — jeden opis): reguły i limity w
+// platform-copy.ts, karty w platform-copy-fields.tsx — te same w dialogu
+// „Publikuj" przy materiale.
+import { PlatformCopyFields } from "@/components/admin/platform-copy-fields";
+import {
+  compactCopyMap,
+  copyOverridesFrom,
+  effectiveCopyMap,
+  explicitCopyMap,
+  platformCopyIssues,
+  type CopyLimits,
+  type PlatformCopy,
+  type PlatformCopyMap,
+} from "@/lib/platform-copy";
+import { getXIntegrationStatus } from "@/lib/x.functions";
 import { isVideoPreparingNote } from "@/lib/video-rendition";
 import { captionBadgeLabel } from "@/lib/studio-captions";
 import {
@@ -261,6 +276,7 @@ function StudioPage() {
   const seedBrollFn = useServerFn(seedStudioBroll);
   const tiktokStatusFn = useServerFn(getTiktokIntegrationStatus);
   const tiktokCreatorFn = useServerFn(getTiktokCreatorInfo);
+  const xStatusFn = useServerFn(getXIntegrationStatus);
 
   const [tab, setTab] = useState("publikacja");
 
@@ -384,6 +400,36 @@ function StudioPage() {
   const togglePlatform = (p: StudioPlatform) =>
     setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
 
+  // Opisy per platforma — jedna platforma, jeden opis. Wspólne `title` /
+  // `message` to punkt wyjścia: karta platformy bez własnej edycji odbija go
+  // na żywo (złożony pod jej limity), karta edytowana trzyma swój tekst.
+  // Limit X zależy od konta (Premium) — ten sam cache co karta połączenia X.
+  const { data: xStatus } = useQuery({
+    queryKey: ["x-status"],
+    queryFn: () => xStatusFn(),
+    staleTime: 60_000,
+  });
+  const copyLimits = useMemo<CopyLimits>(
+    () => ({ xTextMax: xStatus?.postLimit }),
+    [xStatus?.postLimit],
+  );
+  const sharedCopy = useMemo<PlatformCopy>(() => ({ title, message }), [title, message]);
+  const [copyOverrides, setCopyOverrides] = useState<PlatformCopyMap>({});
+  const copyMap = useMemo(
+    () => effectiveCopyMap(platforms, copyOverrides, sharedCopy, copyLimits),
+    [platforms, copyOverrides, sharedCopy, copyLimits],
+  );
+  const onCopyChange = (next: PlatformCopyMap) =>
+    setCopyOverrides((prev) => copyOverridesFrom(next, platforms, prev, sharedCopy, copyLimits));
+  // Te same reguły, które sprawdzi serwer — przycisk nie puści, czego kolejka odrzuci.
+  const copyIssues = useMemo(
+    () =>
+      platforms.flatMap((p) =>
+        platformCopyIssues(p, copyMap[p], copyLimits).map((i) => `${PLATFORM_LABELS[p]}: ${i}`),
+      ),
+    [platforms, copyMap, copyLimits],
+  );
+
   const enqueueM = useMutation({
     mutationFn: () =>
       enqueueFn({
@@ -391,6 +437,9 @@ function StudioPage() {
           platforms,
           title,
           message,
+          // Każda zaznaczona platforma dostaje swój opis (z karty) — oba pola
+          // wprost, żeby pusty tytuł był świadomą decyzją, nie brakiem.
+          platform_copy: explicitCopyMap(copyMap, platforms, sharedCopy, copyLimits),
           video_url: videoUrl || undefined,
           image_url: imageUrl || undefined,
           privacy_status: privacy,
@@ -660,6 +709,20 @@ function StudioPage() {
   const autoTtBlocked =
     autoTtSelected &&
     (!autoTtCreator || !!tiktokOptionsError(autoTtOptions, autoTtCreator.privacyOptions));
+  // Opisy per platforma dla auto-publikacji: do zadania idą tylko karty
+  // edytowane ręcznie (reszta: AI ze scenariusza, dopasowane po renderze).
+  const [autoCopyOverrides, setAutoCopyOverrides] = useState<PlatformCopyMap>({});
+  const autoCopyMap = useMemo(
+    () => effectiveCopyMap(autoPlatforms, autoCopyOverrides, sharedCopy, copyLimits),
+    [autoPlatforms, autoCopyOverrides, sharedCopy, copyLimits],
+  );
+  const onAutoCopyChange = (next: PlatformCopyMap) =>
+    setAutoCopyOverrides((prev) =>
+      copyOverridesFrom(next, autoPlatforms, prev, sharedCopy, copyLimits),
+    );
+  const autoCopyBlocked = effectiveAutoPlatforms.some(
+    (p) => platformCopyIssues(p, autoCopyMap[p], copyLimits, { allowEmpty: true }).length > 0,
+  );
 
   // ── Baza 250 pytań do shortów ──────────────────────────────────────────────
   const [bankCategory, setBankCategory] = useState<"all" | ShortsCategory>("all");
@@ -767,6 +830,7 @@ function StudioPage() {
           publish_privacy: autoPrivacy,
           publish_title: title,
           publish_description: message,
+          publish_copy: compactCopyMap(autoCopyOverrides, effectiveAutoPlatforms),
           tiktok_post_options: autoTtSelected ? autoTtOptions : undefined,
         },
       }),
@@ -1002,8 +1066,8 @@ function StudioPage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Tytuł (YouTube / wideo na FB)</Label>
-                  <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={92} />
+                  <Label>Tytuł (wspólny — punkt wyjścia dla platform)</Label>
+                  <Input value={title} onChange={(e) => setTitle(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>URL wideo MP4 (pion 9:16 dla Reels/Shorts)</Label>
@@ -1041,9 +1105,19 @@ function StudioPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Treść / opis (opis filmu, caption Reels, treść posta)</Label>
+                <Label>Treść / opis (wspólny — punkt wyjścia dla platform)</Label>
                 <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} />
               </div>
+
+              {/* Jedna platforma — jeden opis: karty z polami, limitami i
+                  wymaganiami każdej zaznaczonej platformy. */}
+              <PlatformCopyFields
+                platforms={platforms}
+                value={copyMap}
+                onChange={onCopyChange}
+                base={sharedCopy}
+                limits={copyLimits}
+              />
 
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
@@ -1118,6 +1192,8 @@ function StudioPage() {
                     enqueueM.isPending ||
                     !platforms.length ||
                     (needsVideo && !videoUrl.trim()) ||
+                    // Opis poza limitem platformy (albo brak wymaganego) blokuje.
+                    copyIssues.length > 0 ||
                     // TikTok bez kompletnych wyborów twórcy nie idzie dalej.
                     (ttSelected &&
                       (!ttCreator || !!tiktokOptionsError(ttOptions, ttCreator.privacyOptions)))
@@ -1130,10 +1206,14 @@ function StudioPage() {
                   )}
                   Dodaj do kolejki publikacji
                 </Button>
-                <p className="text-xs text-muted-foreground">
-                  Cron publikuje co 10 minut. Uwaga: URL-e wideo z HeyGen wygasają — przy publikacji
-                  planowanej z wyprzedzeniem wgraj plik do Storage.
-                </p>
+                {copyIssues[0] ? (
+                  <p className="text-xs text-destructive">{copyIssues[0]}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Cron publikuje co 10 minut. Uwaga: URL-e wideo z HeyGen wygasają — przy
+                    publikacji planowanej z wyprzedzeniem wgraj plik do Storage.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1525,10 +1605,37 @@ function StudioPage() {
                       }
                     />
                   )}
+                  {/* Tytuł i opis wspólne (te same, co w zakładce Publikacja) —
+                      puste uzupełnia AI razem ze scenariuszem; karty niżej
+                      pozwalają ustawić osobny opis dla każdej platformy. */}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Tytuł (wspólny; pusty = AI ze scenariusza)</Label>
+                      <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Opis (wspólny; pusty = AI ze scenariusza)</Label>
+                      <Textarea
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                  <PlatformCopyFields
+                    optional
+                    platforms={autoPlatforms}
+                    value={autoCopyMap}
+                    onChange={onAutoCopyChange}
+                    base={sharedCopy}
+                    limits={copyLimits}
+                  />
                   <p className="text-xs text-muted-foreground">
                     Gdy render w HeyGen się skończy, wideo trafi automatycznie do kolejek publikacji
-                    zaznaczonych platform (tytuł i opis generuje AI razem ze scenariuszem). Działa
-                    też przy zamkniętej przeglądarce — dogląda tego cron co 10 minut.
+                    zaznaczonych platform. Puste tytuł i opis generuje AI razem ze scenariuszem, a
+                    każda platforma dostaje wersję dopasowaną do swoich limitów (chyba że wpiszesz
+                    jej własną w karcie powyżej). Działa też przy zamkniętej przeglądarce — dogląda
+                    tego cron co 10 minut.
                     {autoPublishOn &&
                       !autoPlatforms.length &&
                       " Zaznacz co najmniej jedną platformę."}
@@ -1968,7 +2075,9 @@ function StudioPage() {
 
               <Button
                 onClick={() => startVideoM.mutate()}
-                disabled={startVideoM.isPending || !fullScript.trim() || autoTtBlocked}
+                disabled={
+                  startVideoM.isPending || !fullScript.trim() || autoTtBlocked || autoCopyBlocked
+                }
               >
                 {startVideoM.isPending ? (
                   <Loader2 className="mr-1 h-4 w-4 animate-spin" />

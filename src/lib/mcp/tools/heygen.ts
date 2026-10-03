@@ -28,6 +28,7 @@ import {
   updateOne,
 } from "../_helpers";
 import { defineListTool, flag, search, text } from "../_list-tool";
+import { platformCopySchema } from "../_publish";
 import { CAPTION_STYLE_IDS, defaultCaptionStyle } from "@/lib/caption-style";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL } from "@/lib/studio-scenes";
 import type { StudioDefaultAvatar } from "@/lib/studio-avatars.server";
@@ -41,6 +42,7 @@ const PLATFORMS = [
   "facebook_reels",
   "instagram_reels",
   "tiktok",
+  "x",
 ] as const;
 const PRIVACY = ["public", "unlisted", "private"] as const;
 const ASPECT = ["9:16", "16:9", "1:1"] as const;
@@ -844,6 +846,7 @@ export const createStudioVideoJob = defineTool({
     publish_privacy: z.enum(PRIVACY).default("public"),
     publish_title: z.string().max(100).optional(),
     publish_description: z.string().max(5000).optional(),
+    publish_copy: platformCopySchema,
     material_audience: MATERIAL_AUDIENCE.optional(),
     start_now: z.boolean().default(false),
   },
@@ -907,6 +910,7 @@ export const createStudioVideoJob = defineTool({
         publish_privacy: a.publish_privacy,
         publish_title: title,
         publish_description: description,
+        publish_copy: a.publish_copy ?? null,
         created_by: actorId(ctx),
       };
       const job = await insertOne(
@@ -987,6 +991,7 @@ export const updateStudioJob = defineTool({
     reel_structure: z.boolean().optional(),
     publish_title: z.string().max(100).optional(),
     publish_description: z.string().max(5000).optional(),
+    publish_copy: platformCopySchema,
     publish_privacy: z.enum(PRIVACY).optional(),
     auto_publish_platforms: z.array(z.enum(PLATFORMS)).optional(),
   },
@@ -1017,6 +1022,7 @@ export const updateStudioJob = defineTool({
       const publishPatch = patchOf(a, [
         "publish_title",
         "publish_description",
+        "publish_copy",
         "publish_privacy",
         "auto_publish_platforms",
       ]);
@@ -1275,6 +1281,7 @@ export const publishStudioJob = defineTool({
     publish_privacy: z.enum(PRIVACY).optional().describe("Prywatność na YouTube."),
     publish_title: z.string().max(100).optional(),
     publish_description: z.string().max(5000).optional(),
+    publish_copy: platformCopySchema,
   },
   annotations: {
     readOnlyHint: false,
@@ -1298,7 +1305,7 @@ export const publishStudioJob = defineTool({
         );
       const patch = {
         auto_publish_platforms: a.platforms,
-        ...patchOf(a, ["publish_privacy", "publish_title", "publish_description"]),
+        ...patchOf(a, ["publish_privacy", "publish_title", "publish_description", "publish_copy"]),
       };
       const updated = await updateOne(s, "studio_video_jobs", a.id, patch, "*");
       const { maybeAutoPublishJob } = await import("@/lib/studio-video-queue.server");

@@ -77,6 +77,12 @@ describe("xPostText", () => {
     expect(xPostText(text, 25_000)).toBe(text);
   });
 
+  it("nie przekracza limitu przy tekście bez spacji (wielokropek waży 2)", () => {
+    const out = xPostText("y".repeat(400));
+    expect(xWeightedLength(out)).toBeLessThanOrEqual(X_TEXT_LIMIT);
+    expect(out.endsWith("…")).toBe(true);
+  });
+
   it("nie przekracza limitu przy tekście z emoji", () => {
     const out = xPostText("🔥".repeat(300));
     expect(xWeightedLength(out)).toBeLessThanOrEqual(X_TEXT_LIMIT);

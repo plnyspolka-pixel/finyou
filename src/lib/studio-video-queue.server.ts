@@ -35,6 +35,13 @@ import {
 } from "./studio-captions";
 import type { CustomCaptionStyleId } from "./caption-style";
 import { AVATARS_PER_REEL } from "./studio-scenes";
+import type { StudioPlatform } from "./studio-platforms";
+import {
+  fitCopyToPlatform,
+  nonEmptyCopy,
+  parsePlatformCopyMap,
+  resolvePlatformCopy,
+} from "./platform-copy";
 
 export type StudioJobRow = {
   id: string;
@@ -62,6 +69,8 @@ export type StudioJobRow = {
   tiktok_post_options: unknown;
   publish_title: string;
   publish_description: string;
+  /** Opisy per platforma z panelu / MCP (jsonb; puste pola uzupełnia AI). */
+  publish_copy?: unknown;
   auto_published_at: string | null;
   last_error: string | null;
   created_by: string | null;
@@ -679,15 +688,24 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
     .select("id");
   if (!stamped?.length) return false;
 
-  const title = fallbackTitle(job);
-  const message = job.publish_description;
+  // Opis per platforma: pole wpisane przy zadaniu wygrywa, resztę składa
+  // szkic ze wspólnego tytułu / opisu (z panelu albo od AI razem ze
+  // scenariuszem) — wszystko dopasowane do limitów platformy, bo automat nie
+  // ma komu zgłosić „za długie" (reguły: src/lib/platform-copy.ts).
+  const base = { title: fallbackTitle(job), message: job.publish_description };
+  const overrides = parsePlatformCopyMap(job.publish_copy);
+  const { publishCopyLimits } = await import("./studio-enqueue.server");
+  const limits = await publishCopyLimits();
+  const copyFor = (p: StudioPlatform) =>
+    fitCopyToPlatform(p, resolvePlatformCopy(p, base, nonEmptyCopy(overrides[p]), limits), limits);
   const now = new Date().toISOString();
   const errors: string[] = [];
 
   if (job.auto_publish_platforms.includes("youtube")) {
+    const yt = copyFor("youtube");
     const { error } = await supabaseAdmin.from("youtube_publish_queue").insert({
-      title,
-      description: message,
+      title: yt.title,
+      description: yt.message,
       source_video_url: job.video_url,
       privacy_status: job.publish_privacy || "public",
       scheduled_at: now,
@@ -696,24 +714,29 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
     if (error) errors.push(`youtube: ${error.message}`);
   }
 
-  // Meta i TikTok dzielą kolejkę social_publish_queue (różnią się `platform`).
+  // Meta, TikTok i X dzielą kolejkę social_publish_queue (różnią się `platform`).
   const queuePlatforms = job.auto_publish_platforms.filter(
-    (p): p is "facebook_post" | "facebook_reels" | "instagram_reels" | "tiktok" => p !== "youtube",
+    (p): p is Exclude<StudioPlatform, "youtube"> => p !== "youtube",
   );
   if (queuePlatforms.length) {
     const { error } = await supabaseAdmin.from("social_publish_queue").insert(
-      queuePlatforms.map((platform) => ({
-        platform,
-        title,
-        message,
-        video_url: job.video_url,
-        image_url: null,
-        scheduled_at: now,
-        created_by: job.created_by,
-        // Wybory twórcy z formularza zadania jadą do kolejki — tick publikuje
-        // dokładnie je, bez dobierania prywatności za niego.
-        ...(platform === "tiktok" ? { tiktok_post_options: job.tiktok_post_options as never } : {}),
-      })),
+      queuePlatforms.map((platform) => {
+        const copy = copyFor(platform);
+        return {
+          platform,
+          title: copy.title,
+          message: copy.message,
+          video_url: job.video_url,
+          image_url: null,
+          scheduled_at: now,
+          created_by: job.created_by,
+          // Wybory twórcy z formularza zadania jadą do kolejki — tick publikuje
+          // dokładnie je, bez dobierania prywatności za niego.
+          ...(platform === "tiktok"
+            ? { tiktok_post_options: job.tiktok_post_options as never }
+            : {}),
+        };
+      }),
     );
     if (error) errors.push(`social: ${error.message}`);
   }
