@@ -406,6 +406,14 @@
 
 /* hero two-column grid */
 .fy-hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 3rem; align-items: center; }
+/* Landing inwestora (dwa filmy w hero, jeden w prawej, drugi w lewej kolumnie):
+   równe kolumny, żeby oba filmy miały dokładnie tę samą szerokość. Układ
+   dwukolumnowy jak na desktopie zostaje też na tabletach i telefonach w poziomie;
+   dopiero poniżej 640 px (telefon w pionie) kolumny układają się jedna pod drugą,
+   a oba filmy mają wtedy pełną, tę samą szerokość. */
+@media (min-width: 641px) {
+  .fy-hero-grid.fy-hero-videos { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
 
 /* złoty CTA z mieniącym się gradientem (MktButton variant="gold") —
    kafelek tła ma 200% szerokości, więc przesunięcie o 200% to dokładnie jedna
