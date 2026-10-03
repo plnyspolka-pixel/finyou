@@ -69,7 +69,9 @@ const SHOW: Record<
 // Filmy w hero. Pierwszy (nasza prezentacja ze Storage) po prawej w rzędzie 1, drugi piętro niżej po
 // lewej — odtwarzany z naszego pliku w Storage (src/lib/landing-video.ts).
 // Dopóki kopii nie ma (panel /admin/materialy → „Film na landingu inwestora"),
-// zapasowo gra odtwarzacz HeyGen.
+// zapasowo gra odtwarzacz HeyGen (bez reakcji i komentarzy). Oba filmy mają tę
+// samą ramkę 16:9 i równe kolumny siatki (klasa fy-hero-videos w styles.css),
+// więc są identycznej wielkości — na desktopie i na telefonie.
 const HERO_VIDEO_URL =
   "https://jqvepxhulxdnbwbogkhe.supabase.co/storage/v1/object/public/studio-media/marketing-materials/Finance You - Kompleksowa Prezentacja (Merged)_1080p_caption (2).mp4";
 const HERO_VIDEO_TITLE = "Klub Inwestorów Hipotecznych";
@@ -511,7 +513,7 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
     <section className="fy-hero" style={{ color: "#fff", borderBottom: "1px solid var(--border)" }}>
       <div aria-hidden className="fy-hero-fx" />
       <div
-        className="fy-hero-grid"
+        className="fy-hero-grid fy-hero-videos"
         style={{
           position: "relative",
           maxWidth: "80rem",
@@ -679,15 +681,29 @@ function HeroIframe({ src, title }: { src: string; title: string }) {
 // odsetek i MPKK, zysk ponad inflację, analiza zabezpieczenia, próg AML,
 // harmonogram, PDF i CSV. Bez dwóch przycisków wymagających konta („Wyślij do
 // kreatora", „Wyślij do klienta"). Sekcja stoi pod filmami, przed zakładkami.
+// Nad kalkulatorem stoi jedno duże pytanie zamiast nadtytułu, tytułu i opisu
+// (złoty gradient jak w nagłówku hero).
 function CalculatorSection() {
   return (
     <Section id="kalkulator">
-      <SectionHead
-        center
-        eyebrow="Kalkulator inwestora"
-        title="Pełny kalkulator pożyczki hipotecznej"
-        sub="Ta sama, najbardziej rozbudowana wersja co w panelu inwestora: stopy NBP na żywo, limit odsetek maksymalnych i MPKK, prowizje, realna stopa zwrotu po inflacji, analiza zabezpieczenia, próg AML oraz harmonogram spłat z eksportem do PDF i CSV."
-      />
+      <h2
+        style={{
+          margin: "0 auto",
+          maxWidth: "60rem",
+          textAlign: "center",
+          fontSize: "clamp(2.4rem, 6vw, 4.5rem)",
+          fontWeight: 900,
+          lineHeight: 1.05,
+          letterSpacing: "-0.03em",
+          textTransform: "uppercase",
+          background: "linear-gradient(95deg,#f0c667,#f6dc9c 34%,#5fa2f6 82%)",
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          color: "transparent",
+        }}
+      >
+        Ile można na tym zarobić?
+      </h2>
       <div style={{ marginTop: "2.5rem" }}>
         <LoanCalculator investorGuidance hideAccountActions />
       </div>

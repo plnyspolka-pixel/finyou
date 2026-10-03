@@ -13,8 +13,12 @@ export const LANDING_INVESTOR_VIDEO = {
   posterPath: "landing/dla-inwestora/twoja-droga-do-prywatnego-finansowania-nieruchomosci.jpg",
 } as const;
 
-/** Zapasowy odtwarzacz HeyGen — używany tylko, dopóki kopii nie ma w Storage. */
-export const LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL = `https://app.heygen.com/embeds/${LANDING_INVESTOR_VIDEO.heygenVideoId}`;
+/**
+ * Zapasowy odtwarzacz HeyGen — używany tylko, dopóki kopii nie ma w Storage.
+ * Parametry `reactions=0` i `comments=0` wyłączają w odtwarzaczu reakcje
+ * (emoji) i panel komentarzy, których na landingu nie chcemy — zostaje sam film.
+ */
+export const LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL = `https://app.heygen.com/embeds/${LANDING_INVESTOR_VIDEO.heygenVideoId}?reactions=0&comments=0`;
 
 export type LandingVideoInfo = {
   /** Publiczny adres pliku mp4 w naszym Storage. */
