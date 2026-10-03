@@ -41,7 +41,10 @@ export const Route = createFileRoute("/inwestor/zlecenia")({
 
 const ORDER_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
   zlozone: { label: "Złożone — przyjmujemy", tone: "bg-amber-100 text-amber-800" },
-  przyjete: { label: "Przyjęte — szukamy dla Ciebie klienta", tone: "bg-emerald-100 text-emerald-800" },
+  przyjete: {
+    label: "Przyjęte — szukamy dla Ciebie klienta",
+    tone: "bg-emerald-100 text-emerald-800",
+  },
   wykonane: { label: "Wykonane", tone: "bg-blue-100 text-blue-800" },
   wygasle: { label: "Wygasłe", tone: "bg-slate-100 text-slate-600" },
   cofniete: { label: "Cofnięte", tone: "bg-slate-100 text-slate-600" },
@@ -97,8 +100,8 @@ function MyOrdersPage() {
       <div>
         <h1 className="text-2xl font-semibold">Moje zlecenia</h1>
         <p className="text-sm text-muted-foreground">
-          Do każdego przyjętego Zlecenia pokazujemy Projekty w jego kwocie, utworzone w systemie
-          od 3 dni przed złożeniem Zlecenia. Zamów raport analityczny, a potem jednym przyciskiem
+          Do każdego przyjętego Zlecenia pokazujemy Projekty w jego kwocie, utworzone w systemie od
+          3 dni przed złożeniem Zlecenia. Zamów raport analityczny, a potem jednym przyciskiem
           pobierz dane kontaktowe i zarezerwuj Projekt.
         </p>
       </div>
@@ -207,8 +210,7 @@ function ProjectCard({
   if (p.report.finishedAt && p.report.finishedAt !== report.finishedAt) setReport(p.report);
 
   const reportMut = useMutation({
-    mutationFn: () =>
-      reportFn({ data: { orderId: p.orderId, applicationId: p.applicationId } }),
+    mutationFn: () => reportFn({ data: { orderId: p.orderId, applicationId: p.applicationId } }),
     onSuccess: (res) => {
       setReport(res.report);
       setShowReport(true);
@@ -446,9 +448,7 @@ function FilesRow({
             </a>
           ))}
           {photos.length > 7 ? (
-            <span className="self-center text-xs text-muted-foreground">
-              +{photos.length - 7}
-            </span>
+            <span className="self-center text-xs text-muted-foreground">+{photos.length - 7}</span>
           ) : null}
         </div>
       ) : null}
@@ -538,7 +538,8 @@ function ReportView({ report: r }: { report: OrderProjectReport }) {
                 : ""}
             </span>
             <span>
-              Szybka sprzedaż: {PLN(v.quickSale.expectedLowPln)} – {PLN(v.quickSale.expectedHighPln)}
+              Szybka sprzedaż: {PLN(v.quickSale.expectedLowPln)} –{" "}
+              {PLN(v.quickSale.expectedHighPln)}
             </span>
           </div>
         ) : (

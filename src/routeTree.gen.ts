@@ -117,7 +117,6 @@ import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor
 import { Route as InwestorKreatorUmowyRouteImport } from './routes/inwestor.kreator-umowy'
 import { Route as InwestorOdstapienieRouteImport } from './routes/inwestor.odstapienie'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
-import { Route as InwestorZleceniaRouteImport } from './routes/inwestor.zlecenia'
 import { Route as InwestorPlatnosciRouteImport } from './routes/inwestor.platnosci'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorProjektyRouteImport } from './routes/inwestor.projekty'
@@ -125,6 +124,7 @@ import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolen
 import { Route as InwestorUmowyRouteImport } from './routes/inwestor.umowy'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windykacja'
+import { Route as InwestorZleceniaRouteImport } from './routes/inwestor.zlecenia'
 import { Route as KartaTokenRouteImport } from './routes/karta.$token'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
@@ -830,11 +830,6 @@ const InwestorOfertyRoute = InwestorOfertyRouteImport.update({
   path: '/oferty',
   getParentRoute: () => InwestorRoute,
 } as any)
-const InwestorZleceniaRoute = InwestorZleceniaRouteImport.update({
-  id: '/zlecenia',
-  path: '/zlecenia',
-  getParentRoute: () => InwestorRoute,
-} as any)
 const InwestorPlatnosciRoute = InwestorPlatnosciRouteImport.update({
   id: '/platnosci',
   path: '/platnosci',
@@ -868,6 +863,11 @@ const InwestorWiadomosciRoute = InwestorWiadomosciRouteImport.update({
 const InwestorWindykacjaRoute = InwestorWindykacjaRouteImport.update({
   id: '/windykacja',
   path: '/windykacja',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorZleceniaRoute = InwestorZleceniaRouteImport.update({
+  id: '/zlecenia',
+  path: '/zlecenia',
   getParentRoute: () => InwestorRoute,
 } as any)
 const KartaTokenRoute = KartaTokenRouteImport.update({
@@ -1840,7 +1840,6 @@ export interface FileRoutesByFullPath {
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
   '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
-  '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/projekty': typeof InwestorProjektyRouteWithChildren
@@ -1848,6 +1847,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/umowy': typeof InwestorUmowyRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
+  '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/karta/$token': typeof KartaTokenRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
@@ -2111,12 +2111,12 @@ export interface FileRoutesByTo {
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
   '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
-  '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/umowy': typeof InwestorUmowyRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
+  '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/karta/$token': typeof KartaTokenRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
@@ -2385,7 +2385,6 @@ export interface FileRoutesById {
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
   '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
-  '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/projekty': typeof InwestorProjektyRouteWithChildren
@@ -2393,6 +2392,7 @@ export interface FileRoutesById {
   '/inwestor/umowy': typeof InwestorUmowyRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
+  '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/karta/$token': typeof KartaTokenRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
@@ -2664,7 +2664,6 @@ export interface FileRouteTypes {
     | '/inwestor/kreator-umowy'
     | '/inwestor/odstapienie'
     | '/inwestor/oferty'
-    | '/inwestor/zlecenia'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
     | '/inwestor/projekty'
@@ -2672,6 +2671,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowy'
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
+    | '/inwestor/zlecenia'
     | '/karta/$token'
     | '/klient/powiadomienia'
     | '/klient/profil'
@@ -2935,12 +2935,12 @@ export interface FileRouteTypes {
     | '/inwestor/kreator-umowy'
     | '/inwestor/odstapienie'
     | '/inwestor/oferty'
-    | '/inwestor/zlecenia'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/umowy'
     | '/inwestor/wiadomosci'
+    | '/inwestor/zlecenia'
     | '/karta/$token'
     | '/klient/powiadomienia'
     | '/klient/profil'
@@ -3208,7 +3208,6 @@ export interface FileRouteTypes {
     | '/inwestor/kreator-umowy'
     | '/inwestor/odstapienie'
     | '/inwestor/oferty'
-    | '/inwestor/zlecenia'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
     | '/inwestor/projekty'
@@ -3216,6 +3215,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowy'
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
+    | '/inwestor/zlecenia'
     | '/karta/$token'
     | '/klient/powiadomienia'
     | '/klient/profil'
@@ -4260,13 +4260,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorOfertyRouteImport
       parentRoute: typeof InwestorRoute
     }
-    '/inwestor/zlecenia': {
-      id: '/inwestor/zlecenia'
-      path: '/zlecenia'
-      fullPath: '/inwestor/zlecenia'
-      preLoaderRoute: typeof InwestorZleceniaRouteImport
-      parentRoute: typeof InwestorRoute
-    }
     '/inwestor/platnosci': {
       id: '/inwestor/platnosci'
       path: '/platnosci'
@@ -4314,6 +4307,13 @@ declare module '@tanstack/react-router' {
       path: '/windykacja'
       fullPath: '/inwestor/windykacja'
       preLoaderRoute: typeof InwestorWindykacjaRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/zlecenia': {
+      id: '/inwestor/zlecenia'
+      path: '/zlecenia'
+      fullPath: '/inwestor/zlecenia'
+      preLoaderRoute: typeof InwestorZleceniaRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/karta/$token': {
@@ -5705,7 +5705,6 @@ interface InwestorRouteChildren {
   InwestorKreatorUmowyRoute: typeof InwestorKreatorUmowyRoute
   InwestorOdstapienieRoute: typeof InwestorOdstapienieRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
-  InwestorZleceniaRoute: typeof InwestorZleceniaRoute
   InwestorPlatnosciRoute: typeof InwestorPlatnosciRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorProjektyRoute: typeof InwestorProjektyRouteWithChildren
@@ -5713,6 +5712,7 @@ interface InwestorRouteChildren {
   InwestorUmowyRoute: typeof InwestorUmowyRoute
   InwestorWiadomosciRoute: typeof InwestorWiadomosciRoute
   InwestorWindykacjaRoute: typeof InwestorWindykacjaRouteWithChildren
+  InwestorZleceniaRoute: typeof InwestorZleceniaRoute
   InwestorIndexRoute: typeof InwestorIndexRoute
   InwestorUmowaOfferIdRoute: typeof InwestorUmowaOfferIdRoute
   InwestorWniosekIdRoute: typeof InwestorWniosekIdRoute
@@ -5728,7 +5728,6 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorKreatorUmowyRoute: InwestorKreatorUmowyRoute,
   InwestorOdstapienieRoute: InwestorOdstapienieRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,
-  InwestorZleceniaRoute: InwestorZleceniaRoute,
   InwestorPlatnosciRoute: InwestorPlatnosciRoute,
   InwestorProfilRoute: InwestorProfilRoute,
   InwestorProjektyRoute: InwestorProjektyRouteWithChildren,
@@ -5736,6 +5735,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorUmowyRoute: InwestorUmowyRoute,
   InwestorWiadomosciRoute: InwestorWiadomosciRoute,
   InwestorWindykacjaRoute: InwestorWindykacjaRouteWithChildren,
+  InwestorZleceniaRoute: InwestorZleceniaRoute,
   InwestorIndexRoute: InwestorIndexRoute,
   InwestorUmowaOfferIdRoute: InwestorUmowaOfferIdRoute,
   InwestorWniosekIdRoute: InwestorWniosekIdRoute,

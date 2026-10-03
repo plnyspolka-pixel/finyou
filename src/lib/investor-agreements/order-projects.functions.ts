@@ -20,16 +20,10 @@ import {
   orderLimitsFromSettings,
   reservationDeadline,
 } from "./order-cycle-core";
-import {
-  insertMatch,
-  issueTransferCard,
-  logCycleEvent,
-  requestMeta,
-  transition,
-} from "./order-cycle.functions";
 import { getModuleSettings } from "@/lib/projects/guards.server";
 
 const loose = (c: unknown) => c as any;
+const srv = () => import("./order-cycle.server");
 
 /** Okno „świeżości" Projektu względem złożenia Zlecenia. */
 export const PROJECT_WINDOW_DAYS_BEFORE_ORDER = 3;
@@ -109,7 +103,11 @@ const APP_SELECT =
   "id, created_at, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, situation_description, investor_description, location_potential_score, client_id, status, deleted_at, properties(property_type, city, voivodeship, estimated_value, area_sqm, land_register_number, photos, created_at)";
 
 function propertyOf(app: any): any | null {
-  const list = Array.isArray(app?.properties) ? app.properties : app?.properties ? [app.properties] : [];
+  const list = Array.isArray(app?.properties)
+    ? app.properties
+    : app?.properties
+      ? [app.properties]
+      : [];
   if (list.length === 0) return null;
   return [...list].sort((a, b) =>
     String(a?.created_at ?? "").localeCompare(String(b?.created_at ?? "")),
@@ -404,7 +402,9 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
     ]);
     const myOrderIdSet = new Set(orderIds);
     const busyElsewhere = new Set(
-      (busy ?? []).filter((m: any) => !myOrderIdSet.has(m.order_id)).map((m: any) => m.application_id),
+      (busy ?? [])
+        .filter((m: any) => !myOrderIdSet.has(m.order_id))
+        .map((m: any) => m.application_id),
     );
 
     // Kandydaci: od najwcześniejszego okna wśród przyjętych Zleceń.
@@ -544,7 +544,9 @@ export const orderProjectReport = createServerFn({ method: "POST" })
       } catch (e) {
         console.error("[order-projects] advance failed", e);
       }
-      await logCycleEvent(supabaseAdmin, {
+      await (
+        await srv()
+      ).logCycleEvent(supabaseAdmin, {
         orderId: order.id,
         type: "raport_zamowiony",
         payload: { application_id: app.id, run_id: run.id },
@@ -612,7 +614,9 @@ export const reserveOrderProject = createServerFn({ method: "POST" })
     };
     let m = await matchFor();
     if (!m) {
-      await insertMatch(supabaseAdmin, {
+      await (
+        await srv()
+      ).insertMatch(supabaseAdmin, {
         orderId: order.id,
         applicationId: app.id,
         releaseTeaser: true,
@@ -623,9 +627,11 @@ export const reserveOrderProject = createServerFn({ method: "POST" })
       if (!m) throw new Error("Nie udało się utworzyć Dopasowania.");
     }
 
-    const { ip, userAgent } = requestMeta();
+    const { ip, userAgent } = (await srv()).requestMeta();
     if (m.status === "dopasowane") {
-      await transition(supabaseAdmin, m, "teaser", { teaser_released_at: new Date().toISOString() });
+      await (
+        await srv()
+      ).transition(supabaseAdmin, m, "teaser", { teaser_released_at: new Date().toISOString() });
       m = await matchFor();
     }
     if (m.status === "teaser") {
@@ -633,14 +639,18 @@ export const reserveOrderProject = createServerFn({ method: "POST" })
       const karaStatement = isConsumer
         ? consumerKaraStatement(Number(m.teaser?.loan_amount ?? app.loan_amount ?? 100_000))
         : null;
-      await transition(supabaseAdmin, m, "karta_leada", {
+      await (
+        await srv()
+      ).transition(supabaseAdmin, m, "karta_leada", {
         karta_leada_accepted_at: now,
         karta_leada_ip: ip,
         karta_leada_user_agent: userAgent,
         kara_consumer_statement: karaStatement,
         kara_consumer_accepted_at: isConsumer ? now : null,
       });
-      await logCycleEvent(supabaseAdmin, {
+      await (
+        await srv()
+      ).logCycleEvent(supabaseAdmin, {
         matchId: m.id,
         orderId: m.order_id,
         type: "karta_leada_zaakceptowana",
@@ -650,16 +660,20 @@ export const reserveOrderProject = createServerFn({ method: "POST" })
       });
       m = await matchFor();
     }
-    await issueTransferCard(supabaseAdmin, m, { actorId: null, actorKind: "system" });
+    await (await srv()).issueTransferCard(supabaseAdmin, m, { actorId: null, actorKind: "system" });
     if (m.status === "karta_leada") {
       const limits = orderLimitsFromSettings(await getModuleSettings());
       const now = new Date();
       const expires = reservationDeadline(now, limits.assignmentHours);
-      await transition(supabaseAdmin, m, "rezerwacja", {
+      await (
+        await srv()
+      ).transition(supabaseAdmin, m, "rezerwacja", {
         disclosed_at: now.toISOString(),
         reservation_expires_at: expires.toISOString(),
       });
-      await logCycleEvent(supabaseAdmin, {
+      await (
+        await srv()
+      ).logCycleEvent(supabaseAdmin, {
         matchId: m.id,
         orderId: m.order_id,
         type: "ujawnienie_identyfikujace",
