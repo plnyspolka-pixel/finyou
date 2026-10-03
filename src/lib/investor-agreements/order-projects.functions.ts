@@ -284,6 +284,33 @@ async function loadContact(db: any, clientId: string | null): Promise<OrderProje
   };
 }
 
+/** Wniosek istnieje tylko z pełnymi danymi klienta — bez imienia, nazwiska
+ *  i telefonu Projekt nie trafia na listę ani do rezerwacji. */
+function contactComplete(c: OrderProjectContact | null): boolean {
+  return Boolean(c && c.name && c.name.includes(" ") && c.phone);
+}
+
+async function loadContactsByClient(
+  db: any,
+  clientIds: string[],
+): Promise<Map<string, OrderProjectContact>> {
+  const out = new Map<string, OrderProjectContact>();
+  const ids = [...new Set(clientIds.filter(Boolean))];
+  if (ids.length === 0) return out;
+  const { data } = await loose(db)
+    .from("clients")
+    .select("id, first_name, last_name, phone, email")
+    .in("id", ids);
+  for (const c of data ?? []) {
+    out.set(c.id, {
+      name: [c.first_name, c.last_name].filter(Boolean).join(" ") || null,
+      phone: c.phone ?? null,
+      email: c.email ?? null,
+    });
+  }
+  return out;
+}
+
 async function buildProject(
   db: any,
   order: any,
@@ -407,6 +434,13 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
       apps = [...apps, ...(data ?? [])];
     }
 
+    // Tylko wnioski z kompletem danych klienta (imię, nazwisko, telefon).
+    const contacts = await loadContactsByClient(
+      supabaseAdmin,
+      apps.map((a) => a.client_id as string),
+    );
+    apps = apps.filter((a) => contactComplete(contacts.get(a.client_id) ?? null));
+
     const result: MyOrderProjectsResult["orders"] = [];
     for (const o of orders ?? []) {
       const projects: OrderProject[] = [];
@@ -447,6 +481,9 @@ async function eligibleApp(db: any, order: any, applicationId: string) {
     .eq("id", applicationId)
     .maybeSingle();
   if (!app || app.deleted_at) throw new Error("Nie znaleziono Projektu.");
+  if (!contactComplete(await loadContact(db, app.client_id ?? null))) {
+    throw new Error("Projekt nie ma kompletu danych klienta (imię, nazwisko, telefon).");
+  }
   const { data: match } = await loose(db)
     .from("investor_order_matches")
     .select("*")
