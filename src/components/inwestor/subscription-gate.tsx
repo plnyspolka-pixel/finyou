@@ -85,7 +85,7 @@ export function PackageAcceptanceRequiredCard() {
       </CardHeader>
       <CardContent className="space-y-3 text-sm text-muted-foreground">
         <p>
-          Zaakceptuj Umowę ramową, NDA i umowę RODO w zakładce Zlecenia i Projekty — wtedy zobaczysz
+          Zaakceptuj Umowę ramową, NDA i umowę RODO w zakładce „Złóż zlecenie” — wtedy zobaczysz
           Projekty, wnioski i swoje oferty.
         </p>
         <Button asChild>

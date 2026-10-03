@@ -264,3 +264,20 @@ export function buildKartaLeada(input: {
     })),
   };
 }
+
+/**
+ * Czy inwestor ma „żywe" Zlecenie: złożone (czeka na przyjęcie) albo przyjęte
+ * i jeszcze ważne. Steruje menu panelu: po złożeniu Zlecenia zakładka „Złóż
+ * zlecenie" znika; wraca, gdy Zlecenie zostanie cofnięte, odrzucone,
+ * wykonane lub wygaśnie — wtedy inwestor może złożyć kolejne.
+ */
+export function hasLiveOrder(
+  orders: Array<{ status: string; expires_at?: string | null }>,
+  now: Date = new Date(),
+): boolean {
+  return orders.some((o) => {
+    if (o.status === "zlozone") return true;
+    if (o.status !== "przyjete") return false;
+    return !o.expires_at || new Date(o.expires_at).getTime() > now.getTime();
+  });
+}

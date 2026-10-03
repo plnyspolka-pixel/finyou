@@ -71,6 +71,8 @@ function MyOrdersPage() {
     void qc.invalidateQueries({ queryKey: PROJECTS_KEY });
     void qc.invalidateQueries({ queryKey: ["order-cycle"] });
     void qc.invalidateQueries({ queryKey: ["legal-pack-state"] });
+    // Cofnięcie Zlecenia przywraca w menu zakładkę „Złóż zlecenie".
+    void qc.invalidateQueries({ queryKey: ["investor-flags"] });
   };
   const withdrawMut = useMutation({
     mutationFn: (orderId: string) => withdraw({ data: { orderId } }),

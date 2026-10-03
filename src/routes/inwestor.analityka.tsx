@@ -289,9 +289,9 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
             <CardDescription>
               Bez złożonego Zlecenia nie widzisz tu żadnych ofert ani wniosków — także tych, do
               których składałeś ofertę, ani przekazanych przez zespół. Dopiero na podstawie Zlecenia
-              szukamy dla Ciebie Projektów i przedstawiamy propozycje. Zlecenie składasz w module
-              „Zlecenia i Projekty” po przejściu pipeline'u (dane inwestora, rachunek, KYC,
-              screening i komplet umów).
+              szukamy dla Ciebie Projektów i przedstawiamy propozycje. Zlecenie składasz w zakładce
+              „Złóż zlecenie” po przejściu pipeline'u (dane inwestora, rachunek, KYC, screening i
+              komplet umów).
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
@@ -316,7 +316,7 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
           </CardHeader>
           <CardContent className="flex justify-center">
             <Button asChild>
-              <Link to="/inwestor/umowy">Przejdź do Zleceń i Projektów</Link>
+              <Link to="/inwestor/zlecenia">Przejdź do Moich zleceń</Link>
             </Button>
           </CardContent>
         </Card>
