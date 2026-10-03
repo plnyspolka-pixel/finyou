@@ -340,6 +340,16 @@ administrator)
 | `twilio_place_call`                              | Telefon z odczytanym komunikatem (pl-PL) albo z TwiML — realne połączenie, po potwierdzeniu. |
 | `twilio_api_request`                             | Dowolny zasób REST Twilio (GET/POST/DELETE).                                                 |
 
+**Render — hosting, wdrożenia** (administrator/operator; wdrożenie i ogólne wywołanie —
+administrator; wymaga `RENDER_API_KEY` w środowisku serwera)
+
+| Narzędzie                                      | Co daje                                              |
+| ---------------------------------------------- | ---------------------------------------------------- |
+| `render_status`, `list_render_services`        | Czy klucz jest ustawiony, lista usług z adresami.    |
+| `get_render_service`, `list_render_deploys`    | Szczegóły usługi i ostatnie wdrożenia ze statusem.   |
+| `trigger_render_deploy`                        | Nowe wdrożenie (opcjonalnie bez cache) — po potwierdzeniu. |
+| `render_api_request`                           | Dowolny zasób REST Render (api.render.com/v1).       |
+
 SMS do klienta wysyła `send_sms` (ze strażnikami „dość to dość", blokad i
 limitów); narzędzia Twilio powyżej służą do historii, nagrań, kosztów i połączeń
 z komunikatem.
