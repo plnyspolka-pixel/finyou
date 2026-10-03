@@ -7,17 +7,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  Building2,
-  Clock,
-  Eye,
-  FileText,
-  Loader2,
-  MapPin,
-  Phone,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { Clock, Eye, FileText, Loader2, MapPin, Phone, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { OrderCycleSection } from "@/components/inwestor/order-cycle";
+import {
+  ProjectPhotoGallery,
+  ProjectPhotoThumbs,
+} from "@/components/inwestor/project-photo-gallery";
 import { withdrawInvestorOrder } from "@/lib/investor-agreements/legal-pack.functions";
 import {
   getMyOrderProjects,
@@ -243,7 +237,7 @@ function ProjectCard({
     onError: (e) => toast.error(errMsg(e)),
   });
 
-  const hero = p.photos[0]?.url ?? null;
+  const [photoIdx, setPhotoIdx] = useState(0);
   const location = [p.city, p.voivodeship].filter(Boolean).join(", ");
   const typeLabel = p.propertyType ? (propertyTypeLabels[p.propertyType] ?? p.propertyType) : null;
   const finished = p.match && ["odrzucone", "przekazane", "wygasle"].includes(p.match.status);
@@ -251,15 +245,7 @@ function ProjectCard({
   return (
     <div className="rounded-lg border">
       <div className="grid gap-4 p-4 sm:grid-cols-[160px_1fr]">
-        <div className="overflow-hidden rounded-md bg-muted">
-          {hero ? (
-            <img src={hero} alt="" className="h-36 w-full object-cover sm:h-full" loading="lazy" />
-          ) : (
-            <div className="flex h-36 items-center justify-center text-muted-foreground sm:h-full">
-              <Building2 className="h-8 w-8" />
-            </div>
-          )}
-        </div>
+        <ProjectPhotoGallery photos={p.photos} index={photoIdx} onIndexChange={setPhotoIdx} />
         <div className="space-y-2 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="font-medium">
@@ -268,13 +254,9 @@ function ProjectCard({
             </div>
             {p.match ? <MatchBadge status={p.match.status} /> : null}
           </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-3">
+          {/* Inwestor widzi tylko kwotę pożyczki — reszta parametrów w raporcie/po rezerwacji. */}
+          <div className="text-sm">
             <Info k="Wnioskowana kwota" v={PLN(p.loanAmount)} strong />
-            <Info k="Okres" v={p.periodMonths ? `${p.periodMonths} mies.` : "—"} />
-            <Info k="Oprocentowanie" v={p.annualRate ? `${p.annualRate}% rocznie` : "—"} />
-            <Info k="Wartość szacunkowa" v={PLN(p.estimatedValue)} />
-            <Info k="Powierzchnia" v={p.areaSqm ? `${p.areaSqm} m²` : "—"} />
-            <Info k="LTV" v={p.ltv != null ? `${Math.round(p.ltv * 100) / 100}` : "—"} />
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs">
             {location ? (
@@ -293,6 +275,7 @@ function ProjectCard({
           {p.description ? (
             <p className="line-clamp-3 text-xs text-muted-foreground">{p.description}</p>
           ) : null}
+          <ProjectPhotoThumbs photos={p.photos} index={photoIdx} onIndexChange={setPhotoIdx} />
           <FilesRow photos={p.photos} files={p.files} />
         </div>
       </div>
@@ -435,38 +418,25 @@ function FilesRow({
   photos: OrderProject["photos"];
   files: OrderProject["files"];
 }) {
-  if (photos.length === 0 && files.length === 0) {
-    return <p className="text-xs text-muted-foreground">Brak zdjęć i dokumentów.</p>;
+  // Zdjęcia obsługuje slajder (ProjectPhotoGallery) — tu tylko dokumenty.
+  if (files.length === 0) {
+    return photos.length === 0 ? (
+      <p className="text-xs text-muted-foreground">Brak zdjęć i dokumentów.</p>
+    ) : null;
   }
   return (
-    <div className="space-y-1">
-      {photos.length > 1 ? (
-        <div className="flex gap-1 overflow-x-auto">
-          {photos.slice(1, 7).map((ph) => (
-            <a key={ph.url} href={ph.url} target="_blank" rel="noreferrer" className="shrink-0">
-              <img src={ph.url} alt="" className="h-14 w-20 rounded object-cover" loading="lazy" />
-            </a>
-          ))}
-          {photos.length > 7 ? (
-            <span className="self-center text-xs text-muted-foreground">+{photos.length - 7}</span>
-          ) : null}
-        </div>
-      ) : null}
-      {files.length > 0 ? (
-        <div className="flex flex-wrap gap-2 text-xs">
-          {files.map((f) => (
-            <a
-              key={f.url}
-              href={f.url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 underline"
-            >
-              <FileText className="h-3.5 w-3.5" /> {f.name}
-            </a>
-          ))}
-        </div>
-      ) : null}
+    <div className="flex flex-wrap gap-2 text-xs">
+      {files.map((f) => (
+        <a
+          key={f.url}
+          href={f.url}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 underline"
+        >
+          <FileText className="h-3.5 w-3.5" /> {f.name}
+        </a>
+      ))}
     </div>
   );
 }
