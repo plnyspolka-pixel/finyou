@@ -41,7 +41,7 @@ const MATCH_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
   wygasle: { label: "Rezerwacja wygasła", tone: "bg-slate-100 text-slate-600" },
 };
 
-export function OrderCycleSection() {
+export function OrderCycleSection({ hideMatches = false }: { hideMatches?: boolean } = {}) {
   const qc = useQueryClient();
   const fetchCycle = useServerFn(getMyOrderCycle);
   const { data, isLoading } = useQuery({
@@ -55,7 +55,7 @@ export function OrderCycleSection() {
 
   return (
     <>
-      {data.matches.length > 0 ? (
+      {!hideMatches && data.matches.length > 0 ? (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">

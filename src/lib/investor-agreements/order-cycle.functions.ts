@@ -32,7 +32,7 @@ import { getModuleSettings } from "@/lib/projects/guards.server";
 
 const loose = (c: unknown) => c as any;
 
-function requestMeta(): { ip: string | null; userAgent: string | null } {
+export function requestMeta(): { ip: string | null; userAgent: string | null } {
   const request = getRequest();
   return {
     ip:
@@ -66,7 +66,7 @@ async function packDocumentVersions(
   }));
 }
 
-async function logCycleEvent(
+export async function logCycleEvent(
   db: any,
   input: {
     matchId?: string | null;
@@ -123,7 +123,7 @@ async function buildTeaser(db: any, applicationId: string) {
 
 /** Utworzenie pary Projekt–Zlecenie (+ teaser, Karta Leada, dziennik) —
  *  wspólne dla ręcznego dopasowania admina i automatu. */
-async function insertMatch(
+export async function insertMatch(
   db: any,
   input: {
     orderId: string;
@@ -266,7 +266,7 @@ async function autoMatchInvestorOrders(db: any, orders: any[]) {
 
 /** Karta Transferu Danych (Moduł RODO) per Projekt — wystawiana automatycznie
  *  przy akceptacji Karty Leada (bądź przy Ujawnieniu), ręcznie przez admina. */
-async function issueTransferCard(
+export async function issueTransferCard(
   db: any,
   m: { id: string; order_id: string; project_ref: string; transfer_card_approved_at?: string | null },
   opts: { notes?: string; actorId: string | null; actorKind: "admin" | "system" },
@@ -316,7 +316,7 @@ async function myMatch(db: any, userId: string, matchId: string) {
   return m;
 }
 
-async function transition(
+export async function transition(
   db: any,
   match: any,
   to: MatchStatus,
