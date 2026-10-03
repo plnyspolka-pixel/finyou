@@ -41,7 +41,7 @@ const MATCH_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
   wygasle: { label: "Rezerwacja wygasła", tone: "bg-slate-100 text-slate-600" },
 };
 
-export function OrderCycleSection() {
+export function OrderCycleSection({ hideMatches = false }: { hideMatches?: boolean } = {}) {
   const qc = useQueryClient();
   const fetchCycle = useServerFn(getMyOrderCycle);
   const { data, isLoading } = useQuery({
@@ -55,7 +55,7 @@ export function OrderCycleSection() {
 
   return (
     <>
-      {data.matches.length > 0 ? (
+      {!hideMatches && data.matches.length > 0 ? (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">
@@ -296,11 +296,6 @@ function MatchCard({
             )}
             Odsłoń dane Projektu (start rezerwacji {limits.assignmentHours} h)
           </Button>
-          {!match.transfer_card_approved_at ? (
-            <span className="text-xs text-amber-700">
-              Karta Transferu Danych czeka na zatwierdzenie przez Finance You.
-            </span>
-          ) : null}
           <Button
             size="sm"
             variant="ghost"

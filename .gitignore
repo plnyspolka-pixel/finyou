@@ -30,3 +30,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Projekt używa buna (bun.lock) — lock npm-a tylko wprowadza w błąd.
+package-lock.json
