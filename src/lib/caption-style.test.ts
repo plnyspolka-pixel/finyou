@@ -200,16 +200,17 @@ describe("srtToAss", () => {
 });
 
 describe("identyfikatory stylów", () => {
-  it("nieznana wartość = heygen; własne style rozpoznawane", () => {
-    expect(parseCaptionStyleId(undefined)).toBe("heygen");
-    expect(parseCaptionStyleId("cokolwiek")).toBe("heygen");
+  it("nieznana wartość (także stare „heygen”) = styl domyślny; style rozpoznawane", () => {
+    expect(parseCaptionStyleId(undefined)).toBe("reels");
+    expect(parseCaptionStyleId("cokolwiek")).toBe("reels");
+    expect(parseCaptionStyleId("heygen")).toBe("reels");
     expect(parseCaptionStyleId("tiktok")).toBe("tiktok");
     expect(isCustomCaptionStyle("heygen")).toBe(false);
     expect(isCustomCaptionStyle("box")).toBe(true);
     expect(captionStyleLabel("reels")).toBe(CUSTOM_CAPTION_STYLES.reels.label);
-    expect(captionStyleLabel(null)).toBe("HeyGen (domyślne)");
-    expect(CAPTION_STYLE_OPTIONS[0].id).toBe("heygen");
-    expect(CAPTION_STYLE_OPTIONS).toHaveLength(5);
+    expect(captionStyleLabel("heygen")).toBe("HeyGen (dawne)");
+    expect(captionStyleLabel(null)).toBe("nieznany styl");
+    expect(CAPTION_STYLE_OPTIONS.map((o) => o.id)).toEqual(["reels", "tiktok", "box", "minimal"]);
   });
 
   it("podgląd CSS: ramka daje tło, obrys daje cień tekstu", () => {
@@ -292,8 +293,7 @@ describe("parseSubtitles — formaty napisów HeyGena", () => {
 });
 
 describe("defaultCaptionStyle", () => {
-  it("z usługą wypalania: własny styl jak w panelu; bez niej: HeyGen", () => {
-    expect(defaultCaptionStyle(true)).toBe("reels");
-    expect(defaultCaptionStyle(false)).toBe("heygen");
+  it("zawsze własny styl jak w panelu — napisów HeyGena nie ma", () => {
+    expect(defaultCaptionStyle()).toBe("reels");
   });
 });

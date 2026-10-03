@@ -2,17 +2,21 @@
 //
 // Joby ze statusem 'queued' (wstawiane hurtowo z bazy pytań lub pojedynczo)
 // przetwarza processStudioVideoQueue: scenariusz AI (jeśli pusty) → ElevenLabs
-// TTS → HeyGen. Renderujące joby domyka pollStudioRenderingJobs, a gotowe
-// z ustawionymi auto_publish_platforms trafiają automatycznie do kolejek
-// publikacji (youtube_publish_queue / social_publish_queue — ta druga obsługuje
-// Meta i TikTok).
+// TTS (model z ustawień Studia) → HeyGen. Renderujące joby domyka
+// pollStudioRenderingJobs, a gotowe z ustawionymi auto_publish_platforms
+// trafiają automatycznie do kolejek publikacji (youtube_publish_queue /
+// social_publish_queue — ta druga obsługuje Meta i TikTok).
 //
-// NAPISY WŁASNE: gdy job ma `caption_style` inny niż 'heygen', gotowy render
-// nie idzie od razu do publikacji — czysty master + SRT HeyGena lecą do usługi
-// wypalania (services/caption-burner), job dostaje status 'captioning', a
-// kolejne odpytanie zapisuje gotowy plik w buckecie `studio-media` i dopiero
-// wtedy publikuje. Każda awaria tej drogi kończy się wersją HeyGena z jasnym
-// komunikatem w `last_error` — nigdy zawieszonym jobem.
+// NAPISY: zawsze nasze. Przy renderze powstaje plik SRT z tekstu scenariusza
+// i czasów znaków ElevenLabs (`subtitle_url`); gdy job ma napisy włączone,
+// gotowy render nie idzie od razu do publikacji — czysty master + ten SRT
+// lecą do usługi wypalania (services/caption-burner), job dostaje status
+// 'captioning', a kolejne odpytanie zapisuje gotowy plik w buckecie
+// `studio-media` i dopiero wtedy publikuje. HeyGen nie dostaje zlecenia na
+// napisy i nie ma „wersji z napisami HeyGena" na zapas: gdy napisów nie da
+// się wypalić, job kończy się statusem 'failed' z jasnym powodem, z masterem
+// i SRT zachowanymi do ponowienia (`retryStudioJob` wypala wtedy napisy bez
+// nowego renderu). Nigdy zawieszonym jobem.
 //
 // Wołane z dwóch miejsc: tick social-publish-tick (pg_cron co 10 min,
 // działa też przy zamkniętej przeglądarce) oraz otwarty panel admina
@@ -24,11 +28,9 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parseShortsPromptTag, findShortsQuestion } from "./shorts-question-bank";
 import {
   CAPTION_BURN_MAX_ATTEMPTS,
-  isBadgeOnlyBurn,
   planBadgeBurn,
   planCaptionBurn,
   resolveCaptionBurn,
-  resolveCaptionedOutput,
   type CaptionBurnPlan,
   type CaptionBurnState,
   type HeygenCaptionOutputs,
@@ -67,6 +69,8 @@ export type StudioJobRow = {
   created_by: string | null;
   /** Kategoria w /admin/materialy (kolumna z migracji; brak = domyślna). */
   material_audience?: string | null;
+  /** Model ElevenLabs lektora (NULL = ustawienie Studia w chwili renderu). */
+  tts_model_id?: string | null;
 };
 
 type JobRow = StudioJobRow;
@@ -191,24 +195,31 @@ async function processClaimedJob(job: JobRow): Promise<void> {
     ? stored
     : await defaultReelRotation(job.avatar_id, AVATARS_PER_REEL);
 
+  // Model lektora: nadpisanie z joba, a gdy go nie ma — ustawienie Studia.
+  const { resolveJobTtsModelId } = await import("./studio-settings.server");
+  const ttsModelId = await resolveJobTtsModelId(job.tts_model_id);
+
   const { renderStudioVideo } = await import("./studio-render.server");
   const rendered = await renderStudioVideo({
     script,
     topic: job.prompt,
     avatarId: job.avatar_id,
     voiceId: job.voice_id,
+    ttsModelId,
     captions: job.captions !== false,
     dynamicScenes: job.dynamic_scenes === true || job.reel_structure === true,
     reelStructure: job.reel_structure === true,
     avatarIds,
+    name: publishTitle || job.prompt,
   });
   await supabaseAdmin
     .from("studio_video_jobs")
     .update({
       heygen_video_id: rendered.videoId,
       status: "rendering",
-      captions: rendered.captionMode === "burned",
-      caption_wait_since: null,
+      // Nasz SRT (tekst scenariusza + czasy ElevenLabs) — wypalany po renderze.
+      subtitle_url: rendered.subtitleUrl,
+      tts_model_id: rendered.ttsModelId,
       scene_plan: rendered.scenePlan,
       last_error: rendered.note,
     })
@@ -218,11 +229,13 @@ async function processClaimedJob(job: JobRow): Promise<void> {
 // ── Domykanie renderu i napisów ─────────────────────────────────────────────
 
 export type SettleOutcome =
-  /** Wideo gotowe, ale czekamy jeszcze (wersja z napisami HeyGena albo usługa wypalania). */
+  /** Czekamy jeszcze na usługę wypalania. */
   | { state: "waiting" }
-  /** Zlecono własne napisy — job w statusie 'captioning'. */
+  /** Zlecono napisy (albo sam znaczek AI) — job w statusie 'captioning'. */
   | { state: "captioning" }
-  | { state: "ready"; videoUrl: string; autoPublished: boolean };
+  | { state: "ready"; videoUrl: string; autoPublished: boolean }
+  /** Napisów nie dało się wypalić — job 'failed' z powodem, master i SRT zostają. */
+  | { state: "failed"; note: string };
 
 async function markReady(
   job: JobRow,
@@ -268,6 +281,7 @@ async function submitBurn(
   job: JobRow,
   plan: Extract<CaptionBurnPlan, { action: "burn" }>,
   thumbnailUrl: string | null,
+  extra: Record<string, unknown> = {},
 ): Promise<void> {
   const { submitCaptionBurn } = await import("./caption-burner.server");
   const burnId = await submitCaptionBurn({
@@ -288,26 +302,22 @@ async function submitBurn(
       video_url_clean: plan.videoUrl,
       subtitle_url: plan.srtUrl,
       thumbnail_url: thumbnailUrl ?? job.thumbnail_url ?? null,
-      caption_wait_since: null,
+      ...extra,
     })
     .eq("id", job.id);
 }
 
 /**
- * Sam znaczek „AI" na pliku, który inaczej poszedłby prosto do publikacji
- * (napisy HeyGena albo bez napisów). Job przechodzi w 'captioning' jak przy
- * napisach własnych; styl zostaje „heygen", po nim rozpoznajemy ten rodzaj
- * wypalania przy domykaniu (`isBadgeOnlyBurn`).
+ * Sam znaczek „AI" na czystym masterze rolki zamówionej BEZ napisów. Job
+ * przechodzi w 'captioning' jak przy napisach; przy domykaniu rozpoznajemy
+ * ten rodzaj po `captions = false`.
  */
 async function submitBadgeBurn(
   job: JobRow,
   src: {
-    /** Plik, na który kładziemy znaczek. */
+    /** Czysty master, na który kładziemy znaczek. */
     videoUrl: string;
-    /** Czysty master (bez napisów), gdy `videoUrl` ma napisy HeyGena. */
-    cleanVideoUrl: string | null;
     subtitleUrl: string | null;
-    captionsBurned: boolean;
     thumbnailUrl: string | null;
     lastError: string | null;
   },
@@ -322,36 +332,64 @@ async function submitBadgeBurn(
     .from("studio_video_jobs")
     .update({
       status: "captioning",
-      caption_style: "heygen",
-      captions: src.captionsBurned,
+      captions: false,
       caption_burn_id: burnId,
       caption_burn_started_at: new Date().toISOString(),
       caption_burn_attempts: job.caption_burn_attempts + 1,
-      // Czysty master zostaje czysty: bez napisów to sam plik źródłowy, a nie
-      // wynik ze znaczkiem (inaczej zmiana napisów dołożyłaby drugi znaczek).
-      video_url_clean: src.captionsBurned ? src.cleanVideoUrl : src.videoUrl,
+      // Czysty master zostaje czysty — nie wynik ze znaczkiem (inaczej zmiana
+      // napisów dołożyłaby drugi znaczek).
+      video_url_clean: src.videoUrl,
       subtitle_url: src.subtitleUrl,
       thumbnail_url: src.thumbnailUrl ?? job.thumbnail_url ?? null,
-      caption_wait_since: null,
       last_error: src.lastError,
     })
     .eq("id", job.id);
 }
 
-/** Plik pod znaczek przy ponowieniu: wersja z napisami HeyGena albo czysty master. */
-async function badgeSourceFor(job: JobRow): Promise<string | null> {
-  if (!job.captions) return job.video_url_clean;
-  if (!job.heygen_video_id) return null;
-  const { getHeygenVideoStatus } = await import("./avatar-faq.server");
-  const status = await getHeygenVideoStatus(job.heygen_video_id).catch(() => null);
-  return status?.captioned_video_url ?? null;
+const RETRY_HINT =
+  "Ponów zadanie (przycisk „Ponów” / `retry_studio_job`) — napisy wypalą się na nowo bez kolejnego renderu w HeyGen.";
+
+/**
+ * Napisy zamówione, a nie wypalone: job pada z powodem, ale czysty master,
+ * plik SRT i miniatura zostają — ponowienie wypala napisy od razu, bez
+ * nowego renderu (i kredytów) HeyGena. Rolka bez napisów NIE idzie do
+ * publikacji.
+ */
+async function markCaptionFailure(
+  job: JobRow,
+  src: {
+    videoUrlClean: string | null;
+    subtitleUrl: string | null;
+    thumbnailUrl: string | null;
+    note: string;
+  },
+): Promise<SettleOutcome> {
+  if (job.caption_burn_id) {
+    const burner = await import("./caption-burner.server");
+    await burner.discardCaptionBurn(job.caption_burn_id);
+  }
+  const note = `${src.note} ${RETRY_HINT}`;
+  await supabaseAdmin
+    .from("studio_video_jobs")
+    .update({
+      status: "failed",
+      video_url: null,
+      video_url_clean: src.videoUrlClean,
+      subtitle_url: src.subtitleUrl,
+      thumbnail_url: src.thumbnailUrl ?? job.thumbnail_url ?? null,
+      caption_burn_id: null,
+      caption_burn_started_at: null,
+      last_error: joinNotes(job.last_error, note),
+    })
+    .eq("id", job.id);
+  console.warn(`[Studio] napisy nieudane (${job.id}): ${src.note}`);
+  return { state: "failed", note };
 }
 
 /**
- * Gotowy render HeyGena: własne napisy (jeśli zamówione i możliwe) albo
- * publikacja wersji HeyGena — z dotychczasową karencją na wypaloną wersję.
- * Każda ścieżka dokłada znaczek „AI" w rogu, gdy jest włączony i jest usługa.
- * Jedna funkcja dla ticka i pollingu z panelu.
+ * Gotowy render HeyGena: napisy własne (gdy zamówione — a bez możliwości ich
+ * wypalenia job pada) albo czysty master ze znaczkiem „AI" (rolka bez
+ * napisów). Jedna funkcja dla ticka i pollingu z panelu.
  */
 export async function settleHeygenCompletion(
   job: JobRow,
@@ -360,54 +398,53 @@ export async function settleHeygenCompletion(
   const { isCaptionBurnerConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
   const burnerConfigured = isCaptionBurnerConfigured();
   const aiBadge = isAiBadgeEnabled();
+  const videoUrl = status.video_url ?? "";
+  const thumbnailUrl = status.thumbnail_url ?? null;
+  // Nasz SRT z renderu; film dołączony spoza Studia może mieć tylko plik SRT
+  // HeyGena — ten też idzie przez nasz renderer (z poprawką nazwy firmy).
+  const srtUrl = job.subtitle_url ?? status.subtitle_url ?? null;
+
   const plan = planCaptionBurn({
     captions: job.captions,
     captionStyle: job.caption_style,
     burnerConfigured,
-    outputs: status,
+    videoUrl,
+    srtUrl,
     aiBadge,
   });
-  let planNote: string | null = plan.action === "heygen" ? plan.reason : null;
-
   if (plan.action === "burn") {
     try {
-      await submitBurn(job, plan, status.thumbnail_url ?? null);
+      await submitBurn(job, plan, thumbnailUrl);
       return { state: "captioning" };
     } catch (e) {
-      console.warn(`[Studio] zlecenie napisów własnych nieudane (${job.id}): ${errMsg(e)}`);
-      planNote = `Własne napisy nieudane przy zleceniu: ${errMsg(e)} — napisy HeyGena.`;
+      return markCaptionFailure(job, {
+        videoUrlClean: videoUrl,
+        subtitleUrl: srtUrl,
+        thumbnailUrl,
+        note: `Napisy nieudane przy zleceniu: ${errMsg(e)}`,
+      });
     }
   }
-
-  // HeyGen oddaje wersję z wypalonymi napisami jako OSOBNY plik
-  // (captioned_video_url) — publikujemy ją, nie czysty master.
-  const resolved = resolveCaptionedOutput({
-    want: job.captions ? "burned" : "sidecar",
-    outputs: status,
-    waitSince: job.caption_wait_since,
-    now: new Date(),
-  });
-  if (resolved.state === "waiting") {
-    // Zostajemy w 'rendering' — kolejny tick dokończy albo odpuści.
-    await supabaseAdmin
-      .from("studio_video_jobs")
-      .update({ caption_wait_since: resolved.waitSince })
-      .eq("id", job.id);
-    return { state: "waiting" };
+  if (plan.action === "fail") {
+    return markCaptionFailure(job, {
+      videoUrlClean: videoUrl,
+      subtitleUrl: srtUrl,
+      thumbnailUrl,
+      note: plan.reason,
+    });
   }
 
-  // Znaczek „AI" na pliku HeyGena, zanim pójdzie do publikacji.
+  // Rolka bez napisów: sam znaczek „AI" na czystym masterze, zanim pójdzie
+  // do publikacji; bez usługi — publikacja bez znaczka z adnotacją.
   let badgeNote: string | null = null;
-  const badge = planBadgeBurn({ aiBadge, burnerConfigured, videoUrl: resolved.videoUrl });
+  const badge = planBadgeBurn({ aiBadge, burnerConfigured, videoUrl });
   if (badge.action === "badge") {
     try {
       await submitBadgeBurn(job, {
         videoUrl: badge.videoUrl,
-        cleanVideoUrl: resolved.cleanVideoUrl,
-        subtitleUrl: resolved.subtitleUrl,
-        captionsBurned: resolved.captionsBurned,
-        thumbnailUrl: status.thumbnail_url ?? null,
-        lastError: joinNotes(job.last_error, resolved.note, planNote),
+        subtitleUrl: srtUrl,
+        thumbnailUrl,
+        lastError: job.last_error,
       });
       return { state: "captioning" };
     } catch (e) {
@@ -419,24 +456,21 @@ export async function settleHeygenCompletion(
   }
 
   return markReady(job, {
-    video_url: resolved.videoUrl,
-    video_url_clean: resolved.cleanVideoUrl,
-    thumbnail_url: status.thumbnail_url ?? null,
-    subtitle_url: resolved.subtitleUrl,
-    captions: resolved.captionsBurned,
-    // Cokolwiek zamówiono, tu publikujemy plik HeyGena — flaga ma mówić prawdę.
-    caption_style: "heygen",
-    caption_wait_since: null,
+    video_url: videoUrl,
+    video_url_clean: null,
+    thumbnail_url: thumbnailUrl,
+    subtitle_url: srtUrl,
+    captions: false,
     caption_burn_id: null,
     caption_burn_started_at: null,
-    last_error: joinNotes(job.last_error, resolved.note, planNote, badgeNote),
+    last_error: joinNotes(job.last_error, badgeNote),
   });
 }
 
 /**
  * Job w statusie 'captioning': odpytuje usługę wypalania i domyka — zapis
- * gotowego pliku, ponowienie (usługa mogła się zrestartować) albo wersja
- * zapasowa po błędzie / przekroczeniu czasu.
+ * gotowego pliku, ponowienie (usługa mogła się zrestartować) albo porażka
+ * po błędzie / przekroczeniu czasu.
  */
 export async function settleCaptionBurn(job: JobRow): Promise<SettleOutcome> {
   const burner = await import("./caption-burner.server");
@@ -465,33 +499,19 @@ async function finishCaptionBurn(
   const previous = job.video_url
     ? { videoUrl: job.video_url, captions: job.captions, captionStyle: job.caption_style }
     : null;
-  // Zadanie z samym znaczkiem (napisy HeyGena / bez napisów) — przy porażce
-  // publikujemy plik HeyGena, tylko bez znaczka.
-  const badgeOnly = isBadgeOnlyBurn(job.caption_style);
-  const resolveWith = (heygen: HeygenCaptionOutputs | null) =>
-    resolveCaptionBurn({
-      status: probe.status,
-      error: probe.error,
-      startedAt: job.caption_burn_started_at,
-      attempts: job.caption_burn_attempts,
-      now: new Date(),
-      fallback: { previous, heygen },
-      timeoutMs: captionBurnTimeoutMs(),
-      failureLabel: badgeOnly ? "Znaczek AI nieudany" : "Własne napisy nieudane",
-    });
-
-  let resolution = resolveWith(null);
-  if (resolution.state === "fallback" && !previous) {
-    // Wersja zapasowa z HeyGena: może już jest plik z ich napisami.
-    let heygen: HeygenCaptionOutputs | null = null;
-    if (job.heygen_video_id) {
-      const { getHeygenVideoStatus } = await import("./avatar-faq.server");
-      heygen = await getHeygenVideoStatus(job.heygen_video_id).catch(() => null);
-    }
-    // Bez napisów HeyGena ich wersji nie publikujemy — nawet jeśli jest.
-    if (heygen && badgeOnly && !job.captions) heygen = { ...heygen, captioned_video_url: null };
-    resolution = resolveWith(heygen ?? { video_url: job.video_url_clean });
-  }
+  // Rolka bez napisów niesie w usłudze sam znaczek — przy porażce wychodzi
+  // bez znaczka, zamiast padać.
+  const badgeOnly = !job.captions;
+  const resolution = resolveCaptionBurn({
+    status: probe.status,
+    error: probe.error,
+    startedAt: job.caption_burn_started_at,
+    attempts: job.caption_burn_attempts,
+    now: new Date(),
+    fallback: { previous },
+    timeoutMs: captionBurnTimeoutMs(),
+    failureLabel: badgeOnly ? "Znaczek AI nieudany" : "Napisy nieudane",
+  });
 
   if (resolution.state === "waiting") return { state: "waiting" };
 
@@ -502,10 +522,9 @@ async function finishCaptionBurn(
       return await markReady(job, {
         video_url: stored.url,
         // Sam znaczek nie zmienia tego, czy plik ma napisy.
-        captions: badgeOnly ? job.captions : true,
+        captions: !badgeOnly,
         caption_burn_id: null,
         caption_burn_started_at: null,
-        caption_wait_since: null,
       });
     } catch (e) {
       console.warn(`[Studio] zapis wypalonego pliku nieudany (${job.id}): ${errMsg(e)}`);
@@ -514,15 +533,13 @@ async function finishCaptionBurn(
   }
 
   if (resolution.state === "retry" && badgeOnly) {
-    const source = burner.isCaptionBurnerConfigured() ? await badgeSourceFor(job) : null;
+    const source = burner.isCaptionBurnerConfigured() ? job.video_url_clean : null;
     if (source) {
       try {
         console.warn(`[Studio] ponawiam znaczek AI (${job.id}): ${resolution.reason}`);
         await submitBadgeBurn(job, {
           videoUrl: source,
-          cleanVideoUrl: job.video_url_clean,
           subtitleUrl: job.subtitle_url,
-          captionsBurned: job.captions,
           thumbnailUrl: job.thumbnail_url,
           lastError: job.last_error,
         });
@@ -537,55 +554,63 @@ async function finishCaptionBurn(
   }
 
   if (resolution.state === "retry") {
-    const styleId = job.caption_style as CustomCaptionStyleId;
     const plan = planCaptionBurn({
       captions: true,
-      captionStyle: styleId,
+      captionStyle: job.caption_style,
       burnerConfigured: burner.isCaptionBurnerConfigured(),
-      outputs: { video_url: job.video_url_clean, subtitle_url: job.subtitle_url },
+      videoUrl: job.video_url_clean,
+      srtUrl: job.subtitle_url,
       aiBadge: burner.isAiBadgeEnabled(),
     });
     if (plan.action === "burn") {
       try {
-        console.warn(`[Studio] ponawiam napisy własne (${job.id}): ${resolution.reason}`);
+        console.warn(`[Studio] ponawiam napisy (${job.id}): ${resolution.reason}`);
         await submitBurn(job, plan, job.thumbnail_url);
         return { state: "captioning" };
       } catch (e) {
         probe = { status: "failed", error: `ponowienie: ${errMsg(e)}` };
       }
     } else {
-      probe = { status: "failed", error: plan.reason ?? resolution.reason };
+      probe = { status: "failed", error: plan.action === "fail" ? plan.reason : resolution.reason };
     }
-    // Ponowienie niemożliwe — domykamy wersją zapasową bez kolejnych prób.
+    // Ponowienie niemożliwe — domykamy porażką bez kolejnych prób.
     return finishCaptionBurn({ ...job, caption_burn_attempts: CAPTION_BURN_MAX_ATTEMPTS }, probe);
   }
 
-  if (job.caption_burn_id) await burner.discardCaptionBurn(job.caption_burn_id);
-  if (!resolution.videoUrl) {
-    await supabaseAdmin
-      .from("studio_video_jobs")
-      .update({
-        status: "failed",
-        caption_burn_id: null,
-        caption_burn_started_at: null,
-        last_error: joinNotes(job.last_error, `${resolution.note} Brak też pliku HeyGena.`),
-      })
-      .eq("id", job.id);
-    return { state: "waiting" };
+  if (resolution.state === "fallback") {
+    if (job.caption_burn_id) await burner.discardCaptionBurn(job.caption_burn_id);
+    return markReady(job, {
+      video_url: resolution.videoUrl,
+      captions: resolution.captionsBurned,
+      caption_style: resolution.captionStyle,
+      caption_burn_id: null,
+      caption_burn_started_at: null,
+      last_error: joinNotes(job.last_error, resolution.note),
+    });
   }
-  return markReady(job, {
-    video_url: resolution.videoUrl,
-    captions: resolution.captionsBurned,
-    caption_style: resolution.captionStyle,
-    caption_burn_id: null,
-    caption_burn_started_at: null,
-    last_error: joinNotes(job.last_error, resolution.note),
+
+  // resolution.state === "fail"
+  if (badgeOnly && job.video_url_clean) {
+    if (job.caption_burn_id) await burner.discardCaptionBurn(job.caption_burn_id);
+    return markReady(job, {
+      video_url: job.video_url_clean,
+      captions: false,
+      caption_burn_id: null,
+      caption_burn_started_at: null,
+      last_error: joinNotes(job.last_error, `${resolution.note} — opublikowano bez znaczka.`),
+    });
+  }
+  return markCaptionFailure(job, {
+    videoUrlClean: job.video_url_clean,
+    subtitleUrl: job.subtitle_url,
+    thumbnailUrl: job.thumbnail_url,
+    note: resolution.note,
   });
 }
 
 /**
  * Zmiana napisów gotowego wideo: czysty master (video_url_clean, a gdy go nie
- * ma — video_url bez napisów) + SRT HeyGena lecą do usługi w nowym stylu.
+ * ma — video_url bez napisów) + nasz SRT lecą do usługi w nowym stylu.
  * Poprzedni plik zostaje pod video_url do czasu sukcesu (wraca przy porażce).
  * Nie publikuje ponownie — auto_published_at zostaje, publikacja ręcznie.
  */
@@ -594,7 +619,7 @@ export async function restyleJobCaptions(
   styleId: CustomCaptionStyleId,
 ): Promise<void> {
   if (job.status !== "ready") throw new Error("Napisy można zmienić tylko dla gotowego wideo.");
-  const { isCaptionBurnerConfigured } = await import("./caption-burner.server");
+  const { isCaptionBurnerConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
   if (!isCaptionBurnerConfigured()) {
     throw new Error(
       "Usługa wypalania napisów nie jest skonfigurowana (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET).",
@@ -603,17 +628,76 @@ export async function restyleJobCaptions(
   const clean = job.video_url_clean ?? (!job.captions ? job.video_url : null);
   if (!clean) throw new Error("Brak czystego mastera bez napisów — nie ma na czym wypalić nowych.");
   if (!job.subtitle_url)
-    throw new Error("Brak pliku SRT z HeyGena — nie ma z czego zbudować napisów.");
-  const { isAiBadgeEnabled } = await import("./caption-burner.server");
+    throw new Error(
+      "Brak pliku SRT (tekst scenariusza z czasami ElevenLabs) — nie ma z czego zbudować napisów.",
+    );
   const plan = planCaptionBurn({
     captions: true,
     captionStyle: styleId,
     burnerConfigured: true,
-    outputs: { video_url: clean, subtitle_url: job.subtitle_url },
+    videoUrl: clean,
+    srtUrl: job.subtitle_url,
     aiBadge: isAiBadgeEnabled(),
   });
-  if (plan.action !== "burn") throw new Error(plan.reason ?? "Nie można zlecić napisów.");
+  if (plan.action !== "burn")
+    throw new Error(plan.action === "fail" ? plan.reason : "Nie można zlecić napisów.");
   await submitBurn({ ...job, caption_burn_attempts: 0 }, plan, job.thumbnail_url);
+}
+
+/**
+ * Ponowienie nieudanego zadania. Gdy padło na napisach (jest czysty master
+ * i nasz SRT), wypalamy je od razu — bez nowego renderu i kredytów HeyGena.
+ * W każdym innym przypadku zadanie wraca do kolejki i renderuje się od nowa.
+ */
+export async function retryStudioJob(job: JobRow): Promise<{ mode: "captions" | "rerender" }> {
+  if (job.status !== "failed") throw new Error("Ponowić można tylko zadanie ze statusem failed.");
+  const burner = await import("./caption-burner.server");
+  if (
+    job.captions &&
+    job.video_url_clean &&
+    job.subtitle_url &&
+    burner.isCaptionBurnerConfigured()
+  ) {
+    const plan = planCaptionBurn({
+      captions: true,
+      captionStyle: job.caption_style,
+      burnerConfigured: true,
+      videoUrl: job.video_url_clean,
+      srtUrl: job.subtitle_url,
+      aiBadge: burner.isAiBadgeEnabled(),
+    });
+    if (plan.action === "burn") {
+      try {
+        await submitBurn({ ...job, caption_burn_attempts: 0 }, plan, job.thumbnail_url, {
+          last_error: null,
+        });
+        return { mode: "captions" };
+      } catch (e) {
+        // Usługa nie przyjęła zlecenia — zostaje pełny render od nowa.
+        console.warn(`[Studio] ponowienie napisów nieudane (${job.id}): ${errMsg(e)}`);
+      }
+    }
+  }
+  const { error } = await supabaseAdmin
+    .from("studio_video_jobs")
+    .update({
+      status: "queued",
+      last_error: null,
+      heygen_video_id: null,
+      video_url: null,
+      video_url_clean: null,
+      thumbnail_url: null,
+      subtitle_url: null,
+      caption_wait_since: null,
+      caption_burn_id: null,
+      caption_burn_started_at: null,
+      caption_burn_attempts: 0,
+      scene_plan: null,
+    })
+    .eq("id", job.id)
+    .eq("status", "failed");
+  if (error) throw new Error(`studio_video_jobs: ${error.message}`);
+  return { mode: "rerender" };
 }
 
 // Odpytuje HeyGen o joby 'rendering' i usługę napisów o joby 'captioning';

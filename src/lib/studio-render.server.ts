@@ -7,15 +7,27 @@
 //   * struktura rolki — stały rytm: ujęcie → przebitka →
 //     a-roll KOLEJNEGO domyślnego awatara (patrz src/lib/studio-scenes.ts).
 //
+// LEKTOR I NAPISY: głos powstaje w ElevenLabs (model z ustawień Studia,
+// src/lib/studio-tts-models.ts) wywołaniem `/with-timestamps`, które oddaje
+// czas każdego znaku. Z tych czasów i TEKSTU SCENARIUSZA budujemy własny plik
+// SRT (src/lib/studio-subtitles.ts), zapisujemy go w buckecie `studio-media`
+// i oddajemy jako `subtitleUrl` — po renderze HeyGena wypala go nasza usługa
+// (caption-burner). HeyGen dostaje gotowe audio i NIE zamawiamy u niego
+// napisów (ich rozpoznawanie mowy przekręcało nazwę firmy).
+//
 // Materiał na przebitki bierzemy z BANKU B-ROLLI
 // (src/lib/studio-broll.server.ts): najpierw własna biblioteka, a czego w niej
 // nie ma, bank dociąga ze stocku i od razu u siebie zapisuje.
 //
 // ZASADA: urozmaicenie nigdy nie blokuje generacji. Każdy krok, który może się
 // nie udać (planowanie AI, dobór grafik, render wieloscenowy), ma zejście na
-// pojedyncze ujęcie i zapisuje powód, zamiast wywalać joba.
+// pojedyncze ujęcie i zapisuje powód, zamiast wywalać joba. Wyjątek: napisy —
+// gdy są zamówione, a nie da się zbudować SRT (ElevenLabs bez czasów znaków,
+// Storage niedostępny), render nie rusza i zadanie pada z powodem, zamiast
+// wypuścić rolkę bez napisów.
 
 import type { CaptionMode } from "./studio-captions";
+import type { SrtCue } from "./caption-style";
 import {
   applyScenePlan,
   buildStudioScenes,
@@ -28,16 +40,22 @@ import {
 } from "./studio-scenes";
 import {
   joinNarration,
+  mp3DurationSeconds,
   NARRATION_VOICE_SETTINGS,
   narrationCutTimes,
   splitMp3AtTimes,
 } from "./studio-narration";
+import { cuesFromAlignment, cuesToSrt, shiftCues } from "./studio-subtitles";
+import { DEFAULT_TTS_MODEL_ID, parseTtsModelId, type TtsModelId } from "./studio-tts-models";
 
 export type StudioRenderResult = {
   videoId: string;
-  captionMode: CaptionMode;
   /** Plan scen, jeśli render poszedł jako sklejka; null = pojedyncze ujęcie. */
   scenePlan: ScenePlanItem[] | null;
+  /** Nasz plik SRT (tekst scenariusza + czasy ElevenLabs) — do wypalenia po renderze. */
+  subtitleUrl: string | null;
+  /** Model ElevenLabs, którym faktycznie nagrano lektora. */
+  ttsModelId: TtsModelId;
   /** Dlaczego urozmaicenie nie doszło do skutku (do pokazania w panelu). */
   note: string | null;
 };
@@ -48,15 +66,29 @@ type RenderArgs = {
   topic: string;
   avatarId: string;
   voiceId: string;
+  /** Model ElevenLabs lektora; brak = najlepszy (`DEFAULT_TTS_MODEL_ID`). */
+  ttsModelId?: string | null;
   captions: boolean;
   dynamicScenes: boolean;
   /** Stały rytm rolki zamiast decyzji AI o miejscach cięć. */
   reelStructure?: boolean;
   /** Domyślne awatary — rotacja a-rolli („a-roll z innego awatara"). */
   avatarIds?: string[];
+  /** Czytelna nazwa do pliku SRT w Storage (tytuł publikacji / temat). */
+  name?: string;
 };
 
 const AVATAR_BACKGROUND = "#101728";
+/** HeyGen nie dostaje zlecenia na napisy — wypalamy je sami z własnego SRT. */
+const HEYGEN_CAPTIONS: CaptionMode = "off";
+
+type Narration = {
+  /** Audio dla kolejnych scen (jedna scena = cały scenariusz). */
+  pieces: Array<ArrayBuffer | Uint8Array<ArrayBuffer>>;
+  /** Kwestie napisów na osi czasu gotowego filmu. */
+  cues: SrtCue[];
+  note: string | null;
+};
 
 /**
  * Rotacja twarzy: prowadzi awatar wybrany w panelu, za nim reszta stałego
@@ -67,26 +99,140 @@ function avatarRotation(args: RenderArgs): string[] {
   return [...new Set([args.avatarId, ...(args.avatarIds ?? [])])].filter(Boolean);
 }
 
+/**
+ * Jedno wywołanie ElevenLabs na cały scenariusz (z czasami znaków), pocięte
+ * w pauzach między scenami — każda scena dostaje kawałek tego samego
+ * nagrania, a napisy mają czasy prosto z syntezy. Osobna synteza per scena
+ * dawała skoki tempa i intonacji na złączeniach.
+ */
+async function narrateAsOne(
+  voiceId: string,
+  modelId: TtsModelId,
+  segments: string[],
+): Promise<Narration> {
+  const { ttsElevenLabsWithTimestamps } = await import("./avatar-faq.server");
+  const { audio, alignment } = await ttsElevenLabsWithTimestamps({
+    text: joinNarration(segments),
+    voiceId,
+    modelId,
+    voiceSettings: NARRATION_VOICE_SETTINGS,
+  });
+  const cues = cuesFromAlignment(alignment);
+  if (segments.length === 1)
+    return { pieces: [audio as Uint8Array<ArrayBuffer>], cues, note: null };
+  const pieces = splitMp3AtTimes(audio, narrationCutTimes(segments, alignment));
+  if (pieces.length !== segments.length) throw new Error("Lektor: liczba kawałków ≠ liczba scen.");
+  return { pieces, cues, note: null };
+}
+
+/**
+ * Zapas: synteza per scena (też z czasami znaków), z sąsiednim tekstem jako
+ * kontekstem (previous_text / next_text). Napisy każdej sceny przesuwamy
+ * o łączną długość poprzednich kawałków — HeyGen skleja sceny jedna za drugą.
+ */
+async function narratePerScene(
+  voiceId: string,
+  modelId: TtsModelId,
+  segments: string[],
+): Promise<Narration> {
+  const { ttsElevenLabsWithTimestamps } = await import("./avatar-faq.server");
+  const pieces: Uint8Array<ArrayBuffer>[] = [];
+  const cues: SrtCue[] = [];
+  let offset = 0;
+  for (const [i, text] of segments.entries()) {
+    const { audio, alignment } = await ttsElevenLabsWithTimestamps({
+      text,
+      voiceId,
+      modelId,
+      voiceSettings: NARRATION_VOICE_SETTINGS,
+      previousText: segments.slice(0, i).join(" ") || undefined,
+      nextText: segments.slice(i + 1).join(" ") || undefined,
+    });
+    pieces.push(audio as Uint8Array<ArrayBuffer>);
+    cues.push(...shiftCues(cuesFromAlignment(alignment), offset));
+    offset += mp3DurationSeconds(audio);
+  }
+  return {
+    pieces,
+    cues,
+    note: "Lektor syntezowany per scena (jednym ciągiem się nie udało).",
+  };
+}
+
+async function narrate(
+  args: RenderArgs,
+  modelId: TtsModelId,
+  segments: string[],
+): Promise<Narration> {
+  try {
+    return await narrateAsOne(args.voiceId, modelId, segments);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn(`[Studio] lektor jednym ciągiem nieudany, syntezuję per scena: ${msg}`);
+    return narratePerScene(args.voiceId, modelId, segments);
+  }
+}
+
+/**
+ * Plik SRT z kwestii → bucket `studio-media` (trwały publiczny link; usługa
+ * wypalania pobiera go po renderze HeyGena, także z innego ticka).
+ */
+async function storeSubtitles(cues: SrtCue[], name: string): Promise<string> {
+  if (!cues.length) throw new Error("Napisy: ElevenLabs nie oddał czasów ani jednego słowa.");
+  const { storeMedia } = await import("./media-storage.server");
+  const stored = await storeMedia(new TextEncoder().encode(cuesToSrt(cues)), {
+    contentType: "text/plain; charset=utf-8",
+    visibility: "public",
+    prefix: "studio-napisy",
+    name,
+    ext: "srt",
+  });
+  return stored.url;
+}
+
+/**
+ * Lektor + napisy dla scen: nagranie i (gdy napisy włączone) zapisany SRT.
+ * Bez napisów SRT i tak zapisujemy, jeśli się da (plik „tylko SRT" do
+ * pobrania w panelu) — ale jego brak nie blokuje rolki.
+ */
+async function narrateWithSubtitles(
+  args: RenderArgs,
+  modelId: TtsModelId,
+  segments: string[],
+): Promise<Narration & { subtitleUrl: string | null }> {
+  const narration = await narrate(args, modelId, segments);
+  const name = (args.name ?? args.topic).trim() || "rolka";
+  try {
+    return { ...narration, subtitleUrl: await storeSubtitles(narration.cues, name) };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (args.captions) throw new Error(`Napisy z czasów ElevenLabs nie powstały: ${msg}`);
+    console.warn(`[Studio] plik SRT pominięty (rolka bez napisów): ${msg}`);
+    return { ...narration, subtitleUrl: null };
+  }
+}
+
 /** Pojedyncze ujęcie: jeden lektor, jeden render awatara. */
 async function renderSingleShot(
   args: RenderArgs,
-  captionMode: CaptionMode,
+  modelId: TtsModelId,
   note: string | null,
 ): Promise<StudioRenderResult> {
-  const { ttsElevenLabs, uploadAudioToHeygen, createHeygenVideoFromAudio } =
-    await import("./avatar-faq.server");
-  const audio = await ttsElevenLabs({
-    text: args.script,
-    voiceId: args.voiceId,
-    voiceSettings: NARRATION_VOICE_SETTINGS,
-  });
-  const assetId = await uploadAudioToHeygen(audio);
+  const { uploadAudioToHeygen, createHeygenVideoFromAudio } = await import("./avatar-faq.server");
+  const narration = await narrateWithSubtitles(args, modelId, [args.script]);
+  const assetId = await uploadAudioToHeygen(narration.pieces[0]);
   const created = await createHeygenVideoFromAudio({
     avatarId: args.avatarId,
     audioAssetId: assetId,
-    captions: captionMode,
+    captions: HEYGEN_CAPTIONS,
   });
-  return { ...created, scenePlan: null, note };
+  return {
+    videoId: created.videoId,
+    scenePlan: null,
+    subtitleUrl: narration.subtitleUrl,
+    ttsModelId: modelId,
+    note: [note, narration.note].filter(Boolean).join(" ") || null,
+  };
 }
 
 /** Plan scen dla trybu „struktura rolki" — rytm stały, frazy od AI. */
@@ -116,56 +262,16 @@ async function planByAi(args: RenderArgs, segments: string[]): Promise<ScenePlan
   return applyScenePlan(segments, decisions, avatarRotation(args));
 }
 
-/**
- * Jedno wywołanie ElevenLabs na cały scenariusz, pocięte w pauzach między
- * scenami — każda scena dostaje kawałek tego samego nagrania.
- */
-async function narrateAsOne(
-  voiceId: string,
-  segments: string[],
-): Promise<Uint8Array<ArrayBuffer>[]> {
-  const { ttsElevenLabsWithTimestamps } = await import("./avatar-faq.server");
-  const { audio, alignment } = await ttsElevenLabsWithTimestamps({
-    text: joinNarration(segments),
-    voiceId,
-    voiceSettings: NARRATION_VOICE_SETTINGS,
-  });
-  const pieces = splitMp3AtTimes(audio, narrationCutTimes(segments, alignment));
-  if (pieces.length !== segments.length) throw new Error("Lektor: liczba kawałków ≠ liczba scen.");
-  return pieces;
-}
-
-/**
- * Zapas: synteza per scena, ale z sąsiednim tekstem jako kontekstem
- * (previous_text / next_text) i tymi samymi stabilnymi ustawieniami głosu.
- */
-async function narratePerScene(voiceId: string, segments: string[]): Promise<ArrayBuffer[]> {
-  const { ttsElevenLabs } = await import("./avatar-faq.server");
-  const out: ArrayBuffer[] = [];
-  for (const [i, text] of segments.entries()) {
-    out.push(
-      await ttsElevenLabs({
-        text,
-        voiceId,
-        voiceSettings: NARRATION_VOICE_SETTINGS,
-        previousText: segments.slice(0, i).join(" ") || undefined,
-        nextText: segments.slice(i + 1).join(" ") || undefined,
-      }),
-    );
-  }
-  return out;
-}
-
 export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderResult> {
-  const captionMode: CaptionMode = args.captions ? "burned" : "off";
+  const modelId = parseTtsModelId(args.ttsModelId, DEFAULT_TTS_MODEL_ID);
   const structured = args.reelStructure === true;
-  if (!args.dynamicScenes && !structured) return renderSingleShot(args, captionMode, null);
+  if (!args.dynamicScenes && !structured) return renderSingleShot(args, modelId, null);
 
   const segments = splitScriptIntoSegments(args.script);
   if (segments.length < MIN_SCENES_FOR_BROLL) {
     return renderSingleShot(
       args,
-      captionMode,
+      modelId,
       "Urozmaicenie pominięte: scenariusz za krótki na cięcia.",
     );
   }
@@ -175,16 +281,12 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
     plan = structured ? await planStructured(args, segments) : await planByAi(args, segments);
   } catch (e) {
     console.warn(`[Studio] planowanie scen nieudane: ${e instanceof Error ? e.message : e}`);
-    return renderSingleShot(
-      args,
-      captionMode,
-      "Urozmaicenie pominięte: planer scen nie odpowiedział.",
-    );
+    return renderSingleShot(args, modelId, "Urozmaicenie pominięte: planer scen nie odpowiedział.");
   }
   if (!planHasBroll(plan)) {
     return renderSingleShot(
       args,
-      captionMode,
+      modelId,
       "Urozmaicenie pominięte: AI nie wskazało sensownych ilustracji.",
     );
   }
@@ -216,31 +318,21 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
   if (!images.some(Boolean)) {
     return renderSingleShot(
       args,
-      captionMode,
+      modelId,
       "Urozmaicenie pominięte: brak materiałów w banku b-rolli i w stocku.",
     );
   }
 
   // Lektor: cały scenariusz jednym ciągiem, pocięty na sceny (długość sceny
-  // HeyGen wylicza z jej audio). Osobna synteza per scena dawała skoki
-  // tempa i intonacji na złączeniach.
+  // HeyGen wylicza z jej audio); napisy z tych samych czasów.
   const { uploadAudioToHeygen, createHeygenStudioVideo } = await import("./avatar-faq.server");
-  let narrationNote: string | null = null;
   const sceneTexts = plan.map((item) => item.text);
-  let sceneAudio: (ArrayBuffer | Uint8Array<ArrayBuffer>)[];
-  try {
-    sceneAudio = await narrateAsOne(args.voiceId, sceneTexts);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.warn(`[Studio] lektor jednym ciągiem nieudany, syntezuję per scena: ${msg}`);
-    narrationNote = "Lektor syntezowany per scena (jednym ciągiem się nie udało).";
-    sceneAudio = await narratePerScene(args.voiceId, sceneTexts);
-  }
+  const narration = await narrateWithSubtitles(args, modelId, sceneTexts);
   const resolved: ResolvedScene[] = [];
   for (const [i, item] of plan.entries()) {
     resolved.push({
       item,
-      audioAssetId: await uploadAudioToHeygen(sceneAudio[i]),
+      audioAssetId: await uploadAudioToHeygen(narration.pieces[i]),
       imageUrl: images[i],
     });
   }
@@ -250,7 +342,7 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
     backgroundColor: AVATAR_BACKGROUND,
   });
   try {
-    const created = await createHeygenStudioVideo({ scenes, captions: captionMode });
+    const created = await createHeygenStudioVideo({ scenes, captions: HEYGEN_CAPTIONS });
     // Zużycie odnotowujemy dopiero, gdy render faktycznie ruszył — inaczej
     // nieudana próba przesuwałaby rotację banku.
     await markBrollUsed([...usedAssets]).catch((e) =>
@@ -264,10 +356,16 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
           ? { kind: "avatar", text: item.text, query: null, avatarId: item.avatarId ?? null }
           : item,
     );
-    return { ...created, scenePlan: effective, note: narrationNote };
+    return {
+      videoId: created.videoId,
+      scenePlan: effective,
+      subtitleUrl: narration.subtitleUrl,
+      ttsModelId: modelId,
+      note: narration.note,
+    };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.warn(`[Studio] render wieloscenowy nieudany, schodzę na jedno ujęcie: ${msg}`);
-    return renderSingleShot(args, captionMode, `Urozmaicenie pominięte: render scen odrzucony.`);
+    return renderSingleShot(args, modelId, `Urozmaicenie pominięte: render scen odrzucony.`);
   }
 }

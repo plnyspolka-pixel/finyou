@@ -11815,6 +11815,27 @@ export type Database = {
         }
         Relationships: []
       }
+      studio_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       studio_video_jobs: {
         Row: {
           aspect_ratio: string
@@ -11851,6 +11872,7 @@ export type Database = {
           subtitle_url: string | null
           thumbnail_url: string | null
           tiktok_post_options: Json | null
+          tts_model_id: string | null
           updated_at: string
           video_url: string | null
           video_url_clean: string | null
@@ -11891,6 +11913,7 @@ export type Database = {
           subtitle_url?: string | null
           thumbnail_url?: string | null
           tiktok_post_options?: Json | null
+          tts_model_id?: string | null
           updated_at?: string
           video_url?: string | null
           video_url_clean?: string | null
@@ -11931,6 +11954,7 @@ export type Database = {
           subtitle_url?: string | null
           thumbnail_url?: string | null
           tiktok_post_options?: Json | null
+          tts_model_id?: string | null
           updated_at?: string
           video_url?: string | null
           video_url_clean?: string | null

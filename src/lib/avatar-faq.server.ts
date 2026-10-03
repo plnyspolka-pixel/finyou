@@ -4,6 +4,7 @@
 import type { CaptionMode } from "./studio-captions";
 import type { HeygenStudioScene } from "./studio-scenes";
 import { base64ToBytes, type CharAlignment } from "./studio-narration";
+import { voiceSettingsForModel } from "./studio-tts-models";
 
 const HEYGEN_BASE = "https://api.heygen.com";
 
@@ -27,9 +28,14 @@ const DEFAULT_VOICE_SETTINGS = {
   speed: 1.0,
 };
 
+/** Model, gdy wołający go nie wskaże (Awatar FAQ); Studio podaje swój z ustawień. */
+const FALLBACK_TTS_MODEL = "eleven_multilingual_v2";
+
 type TtsOptions = {
   text: string;
   voiceId: string;
+  /** Model ElevenLabs (np. eleven_v4); ustawienia głosu dopasowujemy do niego. */
+  modelId?: string;
   /** Nadpisanie ustawień głosu (np. stabilniejszy lektor rolek). */
   voiceSettings?: Record<string, number | boolean>;
   /** Tekst przed / po fragmencie — ElevenLabs dopasowuje do niego intonację. */
@@ -37,14 +43,25 @@ type TtsOptions = {
   nextText?: string;
 };
 
-const ttsBody = (opts: TtsOptions) =>
-  JSON.stringify({
+const ttsBody = (opts: TtsOptions) => {
+  const modelId = opts.modelId ?? FALLBACK_TTS_MODEL;
+  const base = (opts.voiceSettings ?? DEFAULT_VOICE_SETTINGS) as {
+    stability: number;
+    similarity_boost: number;
+    style?: number;
+    use_speaker_boost?: boolean;
+    speed?: number;
+  };
+  return JSON.stringify({
     text: opts.text,
-    model_id: "eleven_multilingual_v2",
-    voice_settings: opts.voiceSettings ?? DEFAULT_VOICE_SETTINGS,
+    model_id: modelId,
+    // v3 / v4 / Flash nie przyjmują `style` ani `use_speaker_boost`, a v3 / v4
+    // znają tylko trzy tryby stabilności — dopasowanie robi jedno miejsce.
+    voice_settings: voiceSettingsForModel(modelId, base),
     ...(opts.previousText ? { previous_text: opts.previousText } : {}),
     ...(opts.nextText ? { next_text: opts.nextText } : {}),
   });
+};
 
 export async function ttsElevenLabs(opts: TtsOptions): Promise<ArrayBuffer> {
   const res = await fetch(
@@ -85,11 +102,19 @@ export async function ttsElevenLabsWithTimestamps(opts: TtsOptions): Promise<{
     const t = await res.text();
     throw new Error(`ElevenLabs TTS failed: ${res.status} ${t}`);
   }
-  const json = (await res.json()) as { audio_base64?: string; alignment?: CharAlignment | null };
-  if (!json.audio_base64 || !json.alignment) {
+  const json = (await res.json()) as {
+    audio_base64?: string;
+    alignment?: CharAlignment | null;
+    normalized_alignment?: CharAlignment | null;
+  };
+  // `alignment` opisuje tekst, który wysłaliśmy; `normalized_alignment` —
+  // tekst po normalizacji (liczby słownie). Wolimy oryginał, bo z niego
+  // budujemy napisy i tniemy sceny.
+  const alignment = json.alignment ?? json.normalized_alignment ?? null;
+  if (!json.audio_base64 || !alignment) {
     throw new Error("ElevenLabs TTS: brak audio albo wyrównania znaków w odpowiedzi.");
   }
-  return { audio: base64ToBytes(json.audio_base64), alignment: json.alignment };
+  return { audio: base64ToBytes(json.audio_base64), alignment };
 }
 
 // Uploads bytes to HeyGen and returns an asset_id usable as audio input.

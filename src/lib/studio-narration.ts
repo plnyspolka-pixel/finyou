@@ -167,6 +167,11 @@ export function splitMp3AtTimes(bytes: Uint8Array, cutTimes: number[]): Uint8Arr
   return pieces;
 }
 
+/** Długość pliku MP3 (s) z sumy ramek — do przesuwania napisów scen syntezowanych osobno. */
+export function mp3DurationSeconds(bytes: Uint8Array): number {
+  return parseMp3Frames(bytes).reduce((t, f) => t + f.duration, 0);
+}
+
 /** Base64 → bajty (działa w Node i w Workerach). */
 export function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
   const bin = atob(b64);

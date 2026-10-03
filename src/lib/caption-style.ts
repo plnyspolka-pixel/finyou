@@ -1,13 +1,14 @@
 // Napisy własne — czysta logika: SRT → ASS ze stylem (bez I/O, testowalna).
 //
-// DLACZEGO: HeyGen v3 przyjmuje w `caption.style` wyłącznie "default"
-// (sprawdzone na żywym API — walidacja odpowiada „Input should be 'default'"),
-// więc rozmiar, czcionka i pozycja napisów NIE są sterowalne po stronie
-// HeyGena. Backend chodzi na Cloudflare Workers, gdzie nie ma FFmpega, więc
-// obraz wypala osobna usługa (services/caption-burner). Cały wygląd napisów
-// rozstrzyga się TUTAJ: z pliku SRT HeyGena budujemy ASS (Advanced SubStation
-// Alpha — format, w którym styl jest częścią pliku), a usługa tylko nakłada
-// go filtrem libass. Usługa nic nie interpretuje, więc zmiana wyglądu to
+// DLACZEGO: napisów HeyGena nie da się ostylować (v3 przyjmuje w
+// `caption.style` wyłącznie "default"), a ich tekst z rozpoznawania mowy
+// przekręcał nazwę firmy — Studio nie zamawia ich wcale. Plik SRT budujemy
+// sami z tekstu scenariusza i czasów znaków ElevenLabs (studio-subtitles.ts).
+// Backend chodzi na Cloudflare Workers, gdzie nie ma FFmpega, więc obraz
+// wypala osobna usługa (services/caption-burner). Cały wygląd napisów
+// rozstrzyga się TUTAJ: z SRT budujemy ASS (Advanced SubStation Alpha —
+// format, w którym styl jest częścią pliku), a usługa tylko nakłada go
+// filtrem libass. Usługa nic nie interpretuje, więc zmiana wyglądu to
 // zmiana w tym pliku, nie w infrastrukturze.
 //
 // Rozmiary w presetach są w pikselach kadru 720×1280 (PlayResY = 1280);
@@ -23,10 +24,15 @@ export type SrtCue = {
   text: string;
 };
 
-export const CAPTION_STYLE_IDS = ["heygen", "reels", "tiktok", "box", "minimal"] as const;
+// Wszystkie style wypalamy u nas (usługa caption-burner) — napisów HeyGena
+// Studio nie zamawia. Wartość 'heygen' zostaje tylko w starych wierszach
+// `studio_video_jobs.caption_style` (rozpoznajemy ją po etykiecie, nie oferujemy).
+export const CAPTION_STYLE_IDS = ["reels", "tiktok", "box", "minimal"] as const;
 export type CaptionStyleId = (typeof CAPTION_STYLE_IDS)[number];
-/** Style wypalane u nas — wszystko poza domyślnymi napisami HeyGena. */
-export type CustomCaptionStyleId = Exclude<CaptionStyleId, "heygen">;
+/** Alias historyczny — dziś każdy styl jest własny. */
+export type CustomCaptionStyleId = CaptionStyleId;
+/** Wartość w starych wierszach: napisy wypalone przez HeyGen (już nie zamawiane). */
+export const LEGACY_HEYGEN_CAPTION_STYLE = "heygen";
 
 export type CaptionStyle = {
   id: CustomCaptionStyleId;
@@ -142,34 +148,23 @@ export const CUSTOM_CAPTION_STYLES: Record<CustomCaptionStyleId, CaptionStyle> =
   },
 };
 
-/** Opcje do selecta w panelu — pierwsza to napisy HeyGena (bez usługi). */
+/** Opcje do selecta w panelu — wszystkie wypalane u nas, w kolejności presetów. */
 export const CAPTION_STYLE_OPTIONS: ReadonlyArray<{
   id: CaptionStyleId;
   label: string;
   description: string;
-}> = [
-  {
-    id: "heygen",
-    label: "HeyGen (domyślne)",
-    description: "Napisy wypalane przez HeyGen — bez wpływu na rozmiar, czcionkę i pozycję.",
-  },
-  ...Object.values(CUSTOM_CAPTION_STYLES).map(({ id, label, description }) => ({
-    id,
-    label,
-    description,
-  })),
-];
+}> = Object.values(CUSTOM_CAPTION_STYLES).map(({ id, label, description }) => ({
+  id,
+  label,
+  description,
+}));
 
-/** Styl własny wybierany domyślnie — ten sam w panelu Studia i w MCP. */
+/** Styl wybierany domyślnie — ten sam w panelu Studia, serii, cronie i MCP. */
 export const DEFAULT_CUSTOM_CAPTION_STYLE: CustomCaptionStyleId = "reels";
 
-/**
- * Domyślny styl napisów rolki: własny („reels", wypalany naszą usługą), gdy
- * usługa jest skonfigurowana — inaczej napisy HeyGena, bo własnych nie ma kto
- * wypalić.
- */
-export function defaultCaptionStyle(burnerConfigured: boolean): CaptionStyleId {
-  return burnerConfigured ? DEFAULT_CUSTOM_CAPTION_STYLE : "heygen";
+/** Domyślny styl napisów rolki — zawsze własny, wypalany naszą usługą. */
+export function defaultCaptionStyle(): CaptionStyleId {
+  return DEFAULT_CUSTOM_CAPTION_STYLE;
 }
 
 export function isCaptionStyleId(v: unknown): v is CaptionStyleId {
@@ -177,17 +172,18 @@ export function isCaptionStyleId(v: unknown): v is CaptionStyleId {
 }
 
 export function isCustomCaptionStyle(v: unknown): v is CustomCaptionStyleId {
-  return isCaptionStyleId(v) && v !== "heygen";
+  return isCaptionStyleId(v);
 }
 
-/** Nieznana / pusta wartość = napisy HeyGena (zachowanie sprzed tej zmiany). */
+/** Nieznana / pusta wartość (także stare 'heygen') = styl domyślny. */
 export function parseCaptionStyleId(v: unknown): CaptionStyleId {
-  return isCaptionStyleId(v) ? v : "heygen";
+  return isCaptionStyleId(v) ? v : DEFAULT_CUSTOM_CAPTION_STYLE;
 }
 
 export function captionStyleLabel(id: unknown): string {
   const found = CAPTION_STYLE_OPTIONS.find((o) => o.id === id);
-  return found?.label ?? "HeyGen (domyślne)";
+  if (found) return found.label;
+  return id === LEGACY_HEYGEN_CAPTION_STYLE ? "HeyGen (dawne)" : "nieznany styl";
 }
 
 // ── SRT ─────────────────────────────────────────────────────────────────────
@@ -284,7 +280,7 @@ export function parseAssCues(ass: string): SrtCue[] {
   return cues.sort((a, b) => a.start - b.start);
 }
 
-/** Napisy HeyGena w dowolnym z formatów, które zwraca: SRT, WebVTT albo ASS. */
+/** Napisy w dowolnym z formatów: SRT (nasz plik), WebVTT albo ASS (import z HeyGena). */
 export function parseSubtitles(raw: string): SrtCue[] {
   const text = raw.replace(/^\uFEFF/, "");
   return /^\s*\[Script Info\]|^\[Events\]/im.test(text) ? parseAssCues(text) : parseSrt(text);
@@ -335,8 +331,8 @@ function balanceTwoLines(lines: string[], maxChars: number): string[] {
 /**
  * Tnie kwestie SRT na porcje mieszczące się w `maxLines` wierszach po
  * `maxChars` znaków. Czas kwestii dzielimy proporcjonalnie do liczby znaków —
- * SRT HeyGena nie niesie czasów słów, a proporcja jest wystarczająco blisko
- * tempa lektora, żeby napis nadążał za mową.
+ * SRT nie niesie czasów słów, a kwestie z ElevenLabs są krótkie (zdanie /
+ * fraza), więc proporcja trzyma się tempa lektora.
  */
 export function chunkCues(cues: SrtCue[], opts: { maxChars: number; maxLines: number }): SrtCue[] {
   const out: SrtCue[] = [];
@@ -637,8 +633,8 @@ function assDocument(opts: {
 }
 
 /**
- * Plik ASS z samym znaczkiem „AI" — do wideo, które ma już napisy HeyGena
- * albo nie ma ich wcale; usługa wypalania dokłada wtedy tylko znaczek.
+ * Plik ASS z samym znaczkiem „AI" — do rolki bez napisów; usługa wypalania
+ * dokłada wtedy tylko znaczek.
  */
 export function aiBadgeAss(dims: AssDimensions = DEFAULT_ASS_DIMENSIONS): string {
   return assDocument({
@@ -686,8 +682,7 @@ export function buildAss(
 
 /**
  * Cała droga SRT → ASS dla wybranego stylu. `null`, gdy w SRT nie ma ani
- * jednej kwestii — wtedy nie ma czego wypalać i pipeline zostaje przy
- * napisach HeyGena.
+ * jednej kwestii — wtedy nie ma czego wypalać.
  */
 export function srtToAss(
   srt: string,
@@ -696,8 +691,9 @@ export function srtToAss(
   opts: AssOptions = {},
 ): string | null {
   const style = CUSTOM_CAPTION_STYLES[styleId];
-  // Nazwa firmy z rozpoznawania mowy bywa przekręcona („fajnasiu") —
-  // poprawiamy ją, zanim cokolwiek trafi na obraz.
+  // Zabezpieczenie dla SRT spoza Studia (import filmu z HeyGena): nazwa firmy
+  // z rozpoznawania mowy bywa przekręcona („fajnasiu") — poprawiamy ją, zanim
+  // cokolwiek trafi na obraz. Dla SRT z tekstu scenariusza to przejście puste.
   const cues = chunkCues(fixBrandInCues(parseSubtitles(srt)), {
     maxChars: style.maxChars,
     maxLines: style.maxLines,
