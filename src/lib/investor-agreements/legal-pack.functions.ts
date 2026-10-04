@@ -215,7 +215,7 @@ export const saveLegalIdentification = createServerFn({ method: "POST" })
 
 /**
  * Krok 2: doręczenie pakietu na trwałym nośniku (e-mail z kanonicznymi
- * plikami DOCX). Dla Konsumenta obowiązkowe PRZED akceptacją Umowy ramowej
+ * plikami PDF). Dla Konsumenta obowiązkowe PRZED akceptacją Umowy ramowej
  * (§ 15 ust. 1); dla pozostałych — kopia dokumentów.
  */
 export const deliverLegalPack = createServerFn({ method: "POST" })
@@ -229,17 +229,36 @@ export const deliverLegalPack = createServerFn({ method: "POST" })
 
     const { data: docs, error } = await loose(supabaseAdmin)
       .from("legal_documents")
-      .select("code, title, version, docx_base64, docx_filename")
+      .select("code, package_id, title, version, sha256, content_text, docx_filename")
       .eq("active", true)
       .order("sort_order");
     if (error) throw new Error(error.message);
     if (!docs?.length) throw new Error("Pakiet dokumentów nie jest jeszcze aktywny.");
 
+    // Załączniki PDF renderowane z kanonicznej treści (`content_text`) — tej
+    // samej, której SHA-256 trafia do akceptacji. Inwestor dostaje plik do
+    // odczytu wszędzie, bez Worda; identyfikator (wersja + SHA-256) jest w pliku.
+    const { pdfFilename, pdfZTekstuBase64 } = await import("@/lib/legal/pdf-z-tekstu");
+    const attachments: Array<{ filename: string; content: string; contentType: string }> = [];
+    for (const d of docs as any[]) {
+      attachments.push({
+        filename: pdfFilename(d.docx_filename, d.code),
+        content: await pdfZTekstuBase64({
+          contentText: d.content_text,
+          title: d.title,
+          version: d.version,
+          sha256: d.sha256,
+          packageId: d.package_id,
+        }),
+        contentType: "application/pdf",
+      });
+    }
+
     const { sendResendEmail } = await import("@/lib/resend-send.server");
     const text = [
       "Dzień dobry,",
       "",
-      "w załączeniu przekazujemy na trwałym nośniku pakiet dokumentów Finance You:",
+      "w załączeniu przekazujemy na trwałym nośniku pakiet dokumentów Finance You (pliki PDF):",
       ...docs.map((d: any) => `- ${d.title} (${d.version})`),
       "",
       "Umowa ramowa zawiera informację przedumowną dla Konsumenta (Załącznik nr 3),",
@@ -254,11 +273,7 @@ export const deliverLegalPack = createServerFn({ method: "POST" })
       subject: "Finance You — pakiet dokumentów inwestora (trwały nośnik)",
       category: "transactional",
       text,
-      attachments: docs.map((d: any) => ({
-        filename: d.docx_filename,
-        content: d.docx_base64,
-        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      })),
+      attachments,
     });
     if (!sent.ok) throw new Error(sent.error ?? "Nie udało się wysłać pakietu.");
 
@@ -754,6 +769,19 @@ export const getMyInvestorFlags = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const inv = await myInvestorRow(supabaseAdmin, context.userId);
-    return { isConsumer: Boolean(inv?.is_consumer) };
+    const { hasLiveOrder } = await import("./order-cycle-core");
+    const [inv, { data: orders }] = await Promise.all([
+      myInvestorRow(supabaseAdmin, context.userId),
+      loose(supabaseAdmin)
+        .from("investor_orders")
+        .select("status, expires_at")
+        .eq("user_id", context.userId)
+        .in("status", ["zlozone", "przyjete"]),
+    ]);
+    return {
+      isConsumer: Boolean(inv?.is_consumer),
+      // Pipeline przeszedł do złożenia Zlecenia → zakładka „Złóż zlecenie"
+      // znika z menu, a panel startuje od „Moich zleceń".
+      hasLiveOrder: hasLiveOrder((orders ?? []) as any[]),
+    };
   });

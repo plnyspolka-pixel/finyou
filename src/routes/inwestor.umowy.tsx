@@ -75,7 +75,10 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
     label: "Złożone — przyjmujemy",
     tone: "bg-amber-100 text-amber-800",
   },
-  przyjete: { label: "Przyjęte — szukamy dla Ciebie klienta", tone: "bg-emerald-100 text-emerald-800" },
+  przyjete: {
+    label: "Przyjęte — szukamy dla Ciebie klienta",
+    tone: "bg-emerald-100 text-emerald-800",
+  },
   wykonane: { label: "Wykonane", tone: "bg-blue-100 text-blue-800" },
   wygasle: { label: "Wygasłe", tone: "bg-slate-100 text-slate-600" },
   cofniete: { label: "Cofnięte", tone: "bg-slate-100 text-slate-600" },
@@ -105,6 +108,8 @@ function PipelinePage() {
     void qc.invalidateQueries({ queryKey: ["legal-pack-state"] });
     void qc.invalidateQueries({ queryKey: ["investor-pipeline"] });
     void qc.invalidateQueries({ queryKey: ["investor-plan"] });
+    // Złożenie/cofnięcie Zlecenia zmienia menu panelu („Złóż zlecenie" znika).
+    void qc.invalidateQueries({ queryKey: ["investor-flags"] });
   };
 
   if (legalQ.isLoading || pipeQ.isLoading || !legalQ.data || !pipeQ.data) {
@@ -136,7 +141,7 @@ function PipelinePage() {
   return (
     <div className="space-y-5">
       <FancyPageHeader
-        eyebrow="Zlecenia i Projekty"
+        eyebrow="Złóż zlecenie"
         title="Od danych inwestora do Zlecenia"
         subtitle="Dziewięć kroków w jednym miejscu: dane stron, rachunek do spłaty, KYC, screening sankcyjny, komplet umów i Zlecenie poszukiwania Projektów."
       />
@@ -414,7 +419,7 @@ function DeliveryStep({ state, onDone }: { state: any; onDone: () => void }) {
       <p className="text-sm text-muted-foreground">
         {isConsumer
           ? "Jako Konsument musisz otrzymać informacje przedumowne (Załączniki nr 3 i 4) e-mailem PRZED akceptacją Umowy ramowej."
-          : "Wysyłamy komplet dokumentów (DOCX) na Twój e-mail — kopia do zachowania."}
+          : "Wysyłamy komplet dokumentów (PDF) na Twój e-mail — kopia do zachowania."}
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button size="sm" variant="outline" disabled={mut.isPending} onClick={() => mut.mutate()}>
@@ -725,12 +730,7 @@ function OrderForm({
     );
   }
 
-  const valid =
-    Number(amount) > 0 &&
-    s1 &&
-    s2 &&
-    s3 &&
-    (!isConsumer || consumerChoice !== "");
+  const valid = Number(amount) > 0 && s1 && s2 && s3 && (!isConsumer || consumerChoice !== "");
 
   return (
     <div className="space-y-4">

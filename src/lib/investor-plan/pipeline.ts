@@ -96,7 +96,7 @@ const STEP_META: Record<PipelineStepKey, { title: string; subtitle: string; hue:
   },
   doreczenie: {
     title: "Doręczenie pakietu",
-    subtitle: "Komplet dokumentów na trwałym nośniku (e-mail z plikami DOCX).",
+    subtitle: "Komplet dokumentów na trwałym nośniku (e-mail z plikami PDF).",
     hue: 130,
   },
   umowa_ramowa: {

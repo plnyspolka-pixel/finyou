@@ -14,6 +14,7 @@ import {
   TEASER_VISIBLE_MATCH_STATUSES,
   DEFAULT_ORDER_LIMITS,
   orderLimitsFromSettings,
+  hasLiveOrder,
 } from "./order-cycle-core";
 import { fyCommission } from "@/lib/contract-engine/fees";
 
@@ -191,5 +192,38 @@ describe("limity cyklu z project_module_settings", () => {
 
   it("prowizja od pożyczkobiorcy z jednego źródła (fees.ts)", () => {
     expect(clientProvisionPln(100_000)).toBe(fyCommission(100_000));
+  });
+});
+
+describe("hasLiveOrder — zakładka „Złóż zlecenie” w menu", () => {
+  const now = new Date("2026-10-03T12:00:00Z");
+
+  it("bez Zleceń albo tylko zakończone → brak żywego Zlecenia (menu widoczne)", () => {
+    expect(hasLiveOrder([], now)).toBe(false);
+    expect(
+      hasLiveOrder(
+        [
+          { status: "cofniete", expires_at: "2027-01-01T00:00:00Z" },
+          { status: "odmowa", expires_at: null },
+          { status: "wykonane", expires_at: null },
+          { status: "wygasle", expires_at: "2026-01-01T00:00:00Z" },
+        ],
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("złożone (czeka na przyjęcie) liczy się niezależnie od terminu", () => {
+    expect(hasLiveOrder([{ status: "zlozone", expires_at: null }], now)).toBe(true);
+  });
+
+  it("przyjęte liczy się tylko do upływu ważności", () => {
+    expect(hasLiveOrder([{ status: "przyjete", expires_at: "2026-12-31T00:00:00Z" }], now)).toBe(
+      true,
+    );
+    expect(hasLiveOrder([{ status: "przyjete", expires_at: null }], now)).toBe(true);
+    expect(hasLiveOrder([{ status: "przyjete", expires_at: "2026-10-03T11:59:59Z" }], now)).toBe(
+      false,
+    );
   });
 });
