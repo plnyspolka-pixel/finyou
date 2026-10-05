@@ -27,6 +27,7 @@ import {
   parseCaptionStyleId,
   type CaptionStyleId,
   type CustomCaptionStyleId,
+  type DynamicOverlays,
 } from "./caption-style";
 
 /** Co zamawiamy u HeyGena (parametr `caption` API). */
@@ -74,6 +75,8 @@ export type CaptionBurnPlan =
       styleId: CustomCaptionStyleId;
       /** Ten sam przebieg dokłada znaczek „AI" w rogu. */
       aiBadge: boolean;
+      /** …i nakładki dynamiczne (znacznik kategorii + duże pytanie). */
+      overlays: DynamicOverlays | null;
     }
   /** Napisy wyłączone dla tej rolki — nic do wypalenia (poza znaczkiem). */
   | { action: "skip" }
@@ -100,6 +103,8 @@ export function planCaptionBurn(input: {
   srtUrl: string | null | undefined;
   /** Dołóż znaczek „AI" do wypalanych napisów. */
   aiBadge?: boolean;
+  /** Dołóż nakładki dynamiczne (rolki z paczki 250 pytań). */
+  overlays?: DynamicOverlays | null;
 }): CaptionBurnPlan {
   if (!input.captions) return { action: "skip" };
   if (!input.burnerConfigured) return { action: "fail", reason: NO_BURNER_REASON };
@@ -113,36 +118,45 @@ export function planCaptionBurn(input: {
     srtUrl,
     styleId: parseCaptionStyleId(input.captionStyle),
     aiBadge: input.aiBadge === true,
+    overlays: input.overlays ?? null,
   };
 }
 
 // ── Znaczek „AI" bez napisów ────────────────────────────────────────────────
 
 export type BadgeBurnPlan =
-  | { action: "badge"; videoUrl: string }
+  | { action: "badge"; videoUrl: string; aiBadge: boolean; overlays: DynamicOverlays | null }
   /** Publikujemy bez znaczka; `reason` trafia do `last_error`, gdy nie jest null. */
   | { action: "skip"; reason: string | null };
 
 /**
- * Znaczek „AI" dla rolki bez napisów: usługa wypalania dokłada sam znaczek na
- * czysty master. Bez usługi znaczka nie da się położyć (HeyGen nie ma warstw)
- * — mówimy o tym w `last_error`, ale rolki nie blokujemy.
+ * Znaczek „AI" i/lub nakładki dynamiczne dla rolki bez napisów: usługa
+ * wypalania kładzie je na czysty master. Bez usługi nie da się ich położyć
+ * (HeyGen nie ma warstw) — mówimy o tym w `last_error`, ale rolki nie
+ * blokujemy.
  */
 export function planBadgeBurn(input: {
   aiBadge: boolean;
   burnerConfigured: boolean;
   videoUrl: string | null | undefined;
+  overlays?: DynamicOverlays | null;
 }): BadgeBurnPlan {
-  if (!input.aiBadge) return { action: "skip", reason: null };
+  const overlays = input.overlays ?? null;
+  if (!input.aiBadge && !overlays) return { action: "skip", reason: null };
   if (!input.burnerConfigured) {
+    const what =
+      input.aiBadge && overlays
+        ? "Znaczek AI i nakładki dynamiczne pominięte"
+        : input.aiBadge
+          ? "Znaczek AI pominięty"
+          : "Nakładki dynamiczne pominięte";
     return {
       action: "skip",
-      reason:
-        "Znaczek AI pominięty: brak usługi wypalania (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET).",
+      reason: `${what}: brak usługi wypalania (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET).`,
     };
   }
   if (!input.videoUrl) return { action: "skip", reason: null };
-  return { action: "badge", videoUrl: input.videoUrl };
+  return { action: "badge", videoUrl: input.videoUrl, aiBadge: input.aiBadge, overlays };
 }
 
 export type CaptionBurnState = "queued" | "processing" | "done" | "failed" | "missing";

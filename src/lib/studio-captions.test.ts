@@ -37,7 +37,34 @@ describe("planCaptionBurn", () => {
         videoUrl: CLEAN,
         srtUrl: SRT,
       }),
-    ).toEqual({ action: "burn", videoUrl: CLEAN, srtUrl: SRT, styleId: "reels", aiBadge: false });
+    ).toEqual({
+      action: "burn",
+      videoUrl: CLEAN,
+      srtUrl: SRT,
+      styleId: "reels",
+      aiBadge: false,
+      overlays: null,
+    });
+  });
+
+  it("nakładki dynamiczne jadą tym samym przebiegiem co napisy", () => {
+    const overlays = {
+      tag: "PRYWATNE POŻYCZKI\nPOD ZASTAW NIERUCHOMOŚCI",
+      tagHoldSeconds: 1.2,
+      headline: "Czym jest pożyczka prywatna?",
+      headlineStartSeconds: 0.8,
+      headlineEndSeconds: 6,
+    };
+    expect(
+      planCaptionBurn({
+        captions: true,
+        captionStyle: "reels",
+        burnerConfigured: true,
+        videoUrl: CLEAN,
+        srtUrl: SRT,
+        overlays,
+      }),
+    ).toMatchObject({ action: "burn", overlays });
   });
 
   it("znaczek AI jedzie tym samym przebiegiem co napisy", () => {
@@ -187,11 +214,32 @@ describe("resolveCaptionBurn", () => {
 });
 
 describe("planBadgeBurn", () => {
+  const OVERLAYS = {
+    tag: "PRYWATNE POŻYCZKI\nPOD ZASTAW NIERUCHOMOŚCI",
+    tagHoldSeconds: 1.2,
+    headline: "Czym jest pożyczka prywatna?",
+    headlineStartSeconds: 0.8,
+    headlineEndSeconds: 6,
+  };
+
   it("włączony znaczek i usługa → znaczek na pliku do publikacji", () => {
     expect(planBadgeBurn({ aiBadge: true, burnerConfigured: true, videoUrl: CLEAN })).toEqual({
       action: "badge",
       videoUrl: CLEAN,
+      aiBadge: true,
+      overlays: null,
     });
+  });
+
+  it("same nakładki dynamiczne wystarczą do przebiegu, nawet bez znaczka", () => {
+    expect(
+      planBadgeBurn({
+        aiBadge: false,
+        burnerConfigured: true,
+        videoUrl: CLEAN,
+        overlays: OVERLAYS,
+      }),
+    ).toEqual({ action: "badge", videoUrl: CLEAN, aiBadge: false, overlays: OVERLAYS });
   });
 
   it("wyłączony znaczek albo brak pliku — bez komunikatu", () => {
@@ -205,9 +253,25 @@ describe("planBadgeBurn", () => {
     });
   });
 
-  it("brak usługi wypalania mówi wprost, że znaczka nie będzie", () => {
+  it("brak usługi wypalania mówi wprost, czego nie będzie", () => {
     const plan = planBadgeBurn({ aiBadge: true, burnerConfigured: false, videoUrl: CLEAN });
     expect(plan.action).toBe("skip");
     expect((plan as { reason: string }).reason).toMatch(/Znaczek AI pominięty/);
+    const both = planBadgeBurn({
+      aiBadge: true,
+      burnerConfigured: false,
+      videoUrl: CLEAN,
+      overlays: OVERLAYS,
+    });
+    expect((both as { reason: string }).reason).toMatch(
+      /Znaczek AI i nakładki dynamiczne pominięte/,
+    );
+    const onlyOverlays = planBadgeBurn({
+      aiBadge: false,
+      burnerConfigured: false,
+      videoUrl: CLEAN,
+      overlays: OVERLAYS,
+    });
+    expect((onlyOverlays as { reason: string }).reason).toMatch(/Nakładki dynamiczne pominięte/);
   });
 });

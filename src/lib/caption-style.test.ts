@@ -7,6 +7,9 @@ import {
   aiBadgeEvents,
   buildAss,
   defaultCaptionStyle,
+  dynamicOverlayEvents,
+  extrasAss,
+  overlaysWithCueTiming,
   parseSubtitles,
   captionPreviewCss,
   captionStyleLabel,
@@ -16,6 +19,7 @@ import {
   parseCaptionStyleId,
   parseSrt,
   srtToAss,
+  type DynamicOverlays,
 } from "./caption-style";
 
 const SRT = [
@@ -232,6 +236,10 @@ describe("znaczek AI", () => {
     expect(events[0]).toMatch(/\\p1/);
     expect(events[0]).toMatch(/,9:59:59\.99,AiBadge,/);
     expect(events[1]).toMatch(/\}AI$/);
+    // Dyskretnie: mocno przezroczyste wypełnienie (30%), ramka i napis też.
+    expect(events[0]).toContain("\\1a&HB3&");
+    expect(events[0]).toContain("\\3a&H78&");
+    expect(events[1]).toContain("\\1a&H38&");
   });
 
   it("pigułka w prawym górnym rogu, poniżej paska aplikacji", () => {
@@ -255,6 +263,109 @@ describe("znaczek AI", () => {
 
   it("bez opcji nic się nie zmienia", () => {
     expect(srtToAss(SRT, "reels")).not.toContain("AiBadge");
+  });
+});
+
+describe("nakładki dynamiczne", () => {
+  const OVERLAYS: DynamicOverlays = {
+    tag: "PRYWATNE POŻYCZKI\nPOD ZASTAW NIERUCHOMOŚCI",
+    tagHoldSeconds: 1.2,
+    headline: "Czym jest pożyczka prywatna?",
+    headlineStartSeconds: 0.8,
+    headlineEndSeconds: 6,
+  };
+
+  it("znacznik w dwóch fazach: animacja zmniejszenia, potem mały u góry do końca", () => {
+    const [big, small] = dynamicOverlayEvents(OVERLAYS).filter((l) => l.includes(",OvTag,"));
+    expect(big).toMatch(/^Dialogue: 3,0:00:00\.00,0:00:01\.20,OvTag,/);
+    expect(big).toContain("\\move(360,400,360,150,800,1200)");
+    expect(big).toContain("\\t(800,1200,\\fscx42\\fscy42)");
+    expect(big).toContain("PRYWATNE POŻYCZKI\\NPOD ZASTAW NIERUCHOMOŚCI");
+    // Połysk złota: rozjaśnienie (gold-600) i powrót do gold-500.
+    expect(big).toContain("\\t(0,700,\\1c&H6FCEEF&)");
+    expect(big).toContain("\\t(700,1400,\\1c&H4ABEEA&)");
+    expect(small).toMatch(/^Dialogue: 3,0:00:01\.20,9:59:59\.99,OvTag,/);
+    expect(small).toContain("\\pos(360,150)\\fscx42\\fscy42");
+  });
+
+  it("pytanie na środku od startu do końca kwestii, z \\fad, błyskiem i łamaniem wierszy", () => {
+    const head = dynamicOverlayEvents(OVERLAYS).find((l) => l.includes(",OvHead,"))!;
+    expect(head).toMatch(/^Dialogue: 4,0:00:00\.80,0:00:06\.00,OvHead,/);
+    expect(head).toContain("\\pos(360,640)");
+    expect(head).toContain("\\fad(160,200)");
+    // Złoty błysk po pojawieniu się, potem czysta biel.
+    expect(head).toContain("\\t(850,1500,\\1c&HFFFFFF&)");
+    expect(head).toContain("Czym jest pożyczka\\Nprywatna?");
+  });
+
+  it("szata graficzna strony: złoto na granatowej plakietce i niebieska poświata", () => {
+    const events = dynamicOverlayEvents(OVERLAYS);
+    expect(events).toHaveLength(6);
+    const glows = events.filter((l) => l.includes(",OvGlow,"));
+    expect(glows).toHaveLength(3);
+    expect(glows.every((l) => l.startsWith("Dialogue: 2,"))).toBe(true);
+    // Poświata = niewidoczne wypełnienie + rozmyty obrys akcentu #4F8BF0.
+    expect(
+      glows.every(
+        (l) => l.includes("\\1a&HFF&") && l.includes("\\blur") && l.includes("\\3c&HF08B4F&"),
+      ),
+    ).toBe(true);
+  });
+
+  it("overlaysWithCueTiming: koniec pytania z kwestii SRT, w której pada", () => {
+    const cues = [
+      { start: 0, end: 2.8, text: "Prywatne pożyczki pod zastaw nieruchomości." },
+      { start: 2.8, end: 4.6, text: "Czym jest pożyczka prywatna?" },
+      { start: 4.6, end: 8, text: "To pożyczka udzielana poza typowym kredytem bankowym." },
+    ];
+    expect(overlaysWithCueTiming(OVERLAYS, cues).headlineEndSeconds).toBeCloseTo(4.85, 5);
+    // Pytanie podzielone między kwestie też się dopasowuje (podciąg słów).
+    const split = [
+      { start: 0, end: 3, text: "Prywatne pożyczki. Czym jest" },
+      { start: 3, end: 5, text: "pożyczka prywatna? To ważne." },
+    ];
+    expect(overlaysWithCueTiming(OVERLAYS, split).headlineEndSeconds).toBeCloseTo(5.25, 5);
+    // Bez dopasowania zostaje szacunek.
+    expect(
+      overlaysWithCueTiming(OVERLAYS, [{ start: 0, end: 2, text: "zupełnie inny tekst" }])
+        .headlineEndSeconds,
+    ).toBe(6);
+  });
+
+  it("srtToAss dokłada style OvTag/OvHead/OvGlow i zdarzenia nakładek do napisów", () => {
+    const ass = srtToAss(SRT, "reels", undefined, { aiBadge: true, overlays: OVERLAYS })!;
+    const styles = ass.split("\n").filter((l) => l.startsWith("Style:"));
+    expect(styles.map((s) => s.split(",")[0])).toEqual([
+      "Style: Cap",
+      "Style: OvTag",
+      "Style: OvHead",
+      "Style: OvGlow",
+      "Style: AiBadge",
+    ]);
+    // Plakietka znacznika: złoty tekst (#EABE4A), BorderStyle 3 (plakietka).
+    const tagStyle = styles.find((s) => s.startsWith("Style: OvTag"))!.split(",");
+    expect(tagStyle[3]).toBe("&H004ABEEA");
+    expect(tagStyle[15]).toBe("3");
+    expect(dialogues(ass).filter((l) => l.includes(",OvTag,"))).toHaveLength(2);
+    expect(dialogues(ass).filter((l) => l.includes(",OvHead,"))).toHaveLength(1);
+    expect(dialogues(ass).filter((l) => l.includes(",OvGlow,"))).toHaveLength(3);
+  });
+
+  it("extrasAss: same nakładki (bez znaczka), oba naraz i null, gdy nic", () => {
+    const only = extrasAss({ overlays: OVERLAYS })!;
+    expect(only).toContain("OvTag");
+    expect(only).not.toContain("AiBadge");
+    const both = extrasAss({ aiBadge: true, overlays: OVERLAYS })!;
+    expect(both).toContain("OvTag");
+    expect(both).toContain("AiBadge");
+    expect(extrasAss({})).toBeNull();
+  });
+
+  it("neutralizuje klamry i backslash w tekstach nakładek", () => {
+    const big = dynamicOverlayEvents({ ...OVERLAYS, tag: "A {x} \\ B" }).find((l) =>
+      l.includes(",OvTag,"),
+    )!;
+    expect(big).toContain("}A (x) / B");
   });
 });
 

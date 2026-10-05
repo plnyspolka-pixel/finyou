@@ -1658,7 +1658,8 @@ function StudioPage() {
                   <div className="space-y-2 rounded-md border bg-muted/40 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <Label className="text-xs">
-                        Elementy dynamiczne — ekran (lektor ich NIE czyta; do montażu)
+                        Elementy dynamiczne — Studio wypala je automatycznie w obrazie (znacznik
+                        kategorii, duże pytanie i znaczek „AI”)
                       </Label>
                       <Button
                         variant="outline"
