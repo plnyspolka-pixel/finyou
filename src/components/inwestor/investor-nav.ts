@@ -17,6 +17,7 @@ import {
   Target,
   BarChart3,
   Undo2,
+  PenLine,
 } from "lucide-react";
 import type { NavGroup, NavItem } from "@/components/layout/panel-shell";
 
@@ -47,6 +48,9 @@ const MAIN_ITEMS: NavItem[] = [
   // Jeden moduł dokumentów: agent umowy (silnik klauzul) + kreator
   // dokumentów DOCX (bez kategorii „Umowy" — umowy tylko z agenta).
   { to: "/inwestor/dokumenty", label: "Dokumenty i umowy", icon: FileText },
+  // Podpis dokumentowy: wysyłka umów klientom do e-podpisu (Didit + kod) i
+  // dokumenty do podpisu przez samego inwestora.
+  { to: "/inwestor/podpisy", label: "Podpis elektroniczny", icon: PenLine },
   { to: "/inwestor/windykacja", label: "Windykacja", icon: Gavel },
   { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
   { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
