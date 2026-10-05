@@ -35,6 +35,9 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 | Napisy własne — styl (SRT → ASS, presety)    | `src/lib/caption-style.ts` (+ testy `caption-style.test.ts`)                              |
 | Napisy własne — decyzje pipeline'u           | `src/lib/studio-captions.ts` (+ testy `studio-captions.test.ts`)                          |
 | Napisy własne — klient usługi wypalania      | `src/lib/caption-burner.server.ts`                                                        |
+| Napisy z tekstu scenariusza + czasów ElevenLabs | `src/lib/studio-subtitles.ts` (+ testy `studio-subtitles.test.ts`)                     |
+| Modele ElevenLabs lektora (lista, ustawienia głosu) | `src/lib/studio-tts-models.ts` (+ testy `studio-tts-models.test.ts`)               |
+| Ustawienia globalne Studia (model lektora)   | `src/lib/studio-settings.server.ts`                                                       |
 | Usługa FFmpeg (napisy + kompresja)           | `services/caption-burner/` (server.mjs, transcode-plan.mjs, Dockerfile, fly.toml, README) |
 | Kompresja przed publikacją — decyzje         | `src/lib/video-rendition.ts` (+ testy `video-rendition.test.ts`)                          |
 | Kompresja przed publikacją — usługa, Storage | `src/lib/video-rendition.server.ts`                                                       |
@@ -46,6 +49,7 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 | Migracja (tabele + bucket + cron)            | `supabase/migrations/20260803130000_studio_publikacji.sql`                                |
 | Migracja: bank b-rolli + domyślne awatary    | `supabase/migrations/20260927120000_studio_bank_broll_i_domyslne_awatary.sql`             |
 | Migracja: napisy własne                      | `supabase/migrations/20260928120000_studio_napisy_wlasne.sql`                             |
+| Migracja: model lektora, `studio_settings`   | `supabase/migrations/20261003190000_studio_lektor_model_napisy_z_elevenlabs.sql`           |
 | Migracja TikToka                             | `supabase/migrations/20260926120000_tiktok_content_posting.sql`                           |
 | Migracja: ustawienia posta twórcy            | `supabase/migrations/20260926140000_tiktok_ustawienia_publikacji_tworcy.sql`              |
 
@@ -64,9 +68,14 @@ failed`) i `tiktok_fail_reason`. **Oba tory filtrują się wzajemnie po
 - `tiktok_integration` — singleton z tokenami OAuth TikToka (dostęp wyłącznie
   `service_role`, jak `youtube_integration`).
 - `studio_video_jobs` — joby wideo HeyGen z promptu (statusy jak w Awatar FAQ:
-  `generating_audio → uploading → rendering → ready/failed`; przy własnym stylu
-  napisów między `rendering` a `ready` jest jeszcze `captioning` — wypalanie
-  w naszej usłudze).
+  `generating_audio → uploading → rendering → ready/failed`; przy napisach
+  między `rendering` a `ready` jest jeszcze `captioning` — wypalanie
+  w naszej usłudze; `failed` z powodem w `last_error`, gdy napisów nie dało
+  się wypalić — master i SRT zostają, „Ponów” wypala je bez nowego renderu).
+  Kolumna `tts_model_id` = model ElevenLabs lektora użyty przy jobie.
+- `studio_settings` — ustawienia globalne Studia (klucz → wartość); dziś
+  `tts_model_id` — model ElevenLabs lektora (panel: select „Silnik głosu”,
+  MCP: `update_studio_settings`).
 - `studio_images` — wygenerowane grafiki; pliki w publicznym buckecie
   `studio-media` (trwałe URL-e, które Meta może pobrać przy publikacji).
 - `studio_broll_assets` — **bank b-rolli**: przebitki (`kind = 'broll'`).
@@ -117,10 +126,10 @@ co poprawić.
 | `TIKTOK_REDIRECT_URI`             | Opcjonalny; domyślnie `https://financeyou.pl/api/tiktok/callback`                                            |
 | `HEYGEN_API_KEY`                  | Generowanie wideo awatara (już używany przez Awatar FAQ)                                                     |
 | `PEXELS_API_KEY`                  | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)                                             |
-| `HEYGEN_CAPTION_STYLE`            | Opcjonalny styl napisów HeyGen (domyślnie `default`; API zna tylko tę wartość)                               |
-| `CAPTION_BURNER_URL`              | Opcjonalny; adres usługi FFmpeg (własne style napisów + kompresja przed publikacją)                          |
-| `CAPTION_BURNER_SECRET`           | Sekret tej usługi (Bearer) — bez pary URL+sekret zostaje styl HeyGena i publikacja oryginalnych plików       |
-| `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na wynik usługi, zanim opublikujemy wersję HeyGena (domyślnie 45)                     |
+| `HEYGEN_CAPTION_STYLE`            | Opcjonalny styl napisów HeyGen dla ścieżek spoza Studia (Awatar FAQ); Studio napisów HeyGena nie zamawia     |
+| `CAPTION_BURNER_URL`              | Adres usługi FFmpeg (napisy rolek + kompresja przed publikacją) — bez niej rolki z napisami nie wychodzą      |
+| `CAPTION_BURNER_SECRET`           | Sekret tej usługi (Bearer) — bez pary URL+sekret zadania z napisami padają do ponowienia, publikacja bez kompresji |
+| `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na wynik usługi, zanim zadanie padnie do ponowienia (domyślnie 45)                    |
 | `VIDEO_RENDITION_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na kompresję wideo, zanim ponowimy / wyślemy oryginał (domyślnie 120)                 |
 | `STUDIO_AI_BADGE`                 | Opcjonalny; `0` / `off` wyłącza znaczek „AI" w rogu rolek (domyślnie włączony)                               |
 | `STUDIO_SAVE_TO_MATERIALS`        | Opcjonalny; `0` / `off` wyłącza zapis gotowych rolek do /admin/materialy (domyślnie włączony)                |
@@ -280,84 +289,86 @@ Zakładki panelu:
      znaczek (rozpoznanie po prefiksie promptu — bez zmiany schematu DB).
    - **Własny prompt** — scenariusz pisze AI, jak dotychczas.
 
+   **Lektor** — głos ElevenLabs (select „Głos lektora”, domyślnie Filip) i
+   **silnik głosu** (select „Silnik głosu (model ElevenLabs)”): `eleven_v4`
+   (najwyższa jakość, domyślny), `eleven_v4_turbo` (o połowę tańszy),
+   `eleven_v3`, `eleven_multilingual_v2` (dotychczasowy, najbardziej
+   przewidywalny), `eleven_flash_v2_5` (tani, do testów). Zmiana selecta
+   zapisuje się od razu jako ustawienie całego Studia (`studio_settings`,
+   klucz `tts_model_id`) — obowiązuje serię, crona i MCP; pojedyncze zadanie
+   może dostać inny model (`tts_model` w `create_studio_video_job`). Lista,
+   opisy i dopasowanie ustawień głosu do modelu (v3/v4 znają tylko trzy tryby
+   stabilności 0 / 0.5 / 1 i nie przyjmują `style` ani `use_speaker_boost`)
+   siedzą w `src/lib/studio-tts-models.ts`.
+
    **Napisy** — przełącznik „Napisy na wideo" przy wyborze głosu (domyślnie
-   włączony, bo rolki ogląda się bez dźwięku). Render idzie do HeyGen z polem
-   `caption: { file_format: "srt", style: … }` (v3 nie przyjmuje `caption:
-true` z API v2 — walidacja odrzuca boolean). Znaczenie pól jest różne
-   i to jest tu sedno:
-   - `file_format` sam → HeyGen oddaje **tylko plik SRT** obok wideo,
-   - `file_format` + `style` → napisy są **dodatkowo wypalane w obrazie**.
+   włączony, bo rolki ogląda się bez dźwięku) i **select „Styl napisów"**:
+   `Rolka — duże z obrysem`, `TikTok — wielkie litery, podświetlanie słów`,
+   `Ramka — biały na ciemnym pasku`, `Delikatne — mniejsze u dołu`. Presety
+   (rozmiar, kolory, obrys, pozycja, maks. znaków w wierszu, podświetlanie
+   słowa) siedzą w `src/lib/caption-style.ts`; zmiana wyglądu to zmiana w tym
+   pliku.
 
-   Wypalona wersja **nie nadpisuje `video_url`** — HeyGen zwraca ją jako
-   osobny plik w polu `captioned_video_url`, a `video_url` zostaje czystym
-   masterem. Dlatego przy odbiorze renderu bierzemy `captioned_video_url`
-   (gdy zamówiono napisy) i to on ląduje w `studio_video_jobs.video_url`,
-   czyli w tym, co idzie do publikacji na YouTube, FB i IG. Czysty master
-   zapisujemy obok w `video_url_clean` (przycisk „Bez napisów" w bibliotece).
-   Na IG/FB Reels to jedyna droga — te platformy nie przyjmują osobnej
-   ścieżki napisów.
+   **Skąd tekst i czasy napisów — i dlaczego NIE z HeyGena.** Wcześniej
+   napisy brały się z pliku SRT HeyGena, czyli z rozpoznawania mowy lektora:
+   to przekręcało nazwę firmy („fajnasiu", „finansu.pl", „Finanse.eu.pl") i
+   gubiło słowa, a wyglądu napisów HeyGena (`caption.style` przyjmuje tylko
+   `"default"`) nie dało się ustawić. Teraz lektor powstaje w ElevenLabs
+   wywołaniem `/with-timestamps`, które oddaje czas początku i końca KAŻDEGO
+   znaku. Z tych czasów i **tekstu scenariusza z panelu** budujemy własny plik
+   SRT (`src/lib/studio-subtitles.ts`: słowa → kwestie po zdaniach / przecinkach
+   / limicie 42 znaków / pauzach > 0,6 s), zapisujemy go w buckecie
+   `studio-media` (`subtitle_url`, przycisk „SRT” w bibliotece) i HeyGen
+   dostaje **gotowe audio bez zlecenia na napisy** (`caption` wyłączone).
+   Rolka ze scenami: jedno nagranie jest cięte na sceny w pauzach
+   (`studio-narration.ts`), HeyGen skleja sceny jedna za drugą, więc czasy
+   z nagrania są czasami gotowego filmu; przy syntezie per scena (zapas)
+   kwestie każdej sceny przesuwamy o długość poprzednich (`shiftCues`).
+   Poprawka nazwy firmy (`caption-brand.ts`) została jako zabezpieczenie dla
+   filmów dołączanych spoza Studia (`import_heygen_video_to_studio`), które
+   mają tekst tylko w SRT HeyGena — ten też idzie przez nasz renderer.
 
-   Gdy konto HeyGen nie ma napisów w planie, generacja **nie pada**:
-   schodzimy po drabinie `burned → sidecar → off` (odrzucony `style` nie kasuje
-   już napisów całkowicie — najpierw próbujemy samego pliku SRT). Jeśli wideo
-   jest gotowe, a wypalonej wersji jeszcze nie ma, job **zostaje w
-   `rendering`** przez karencję (`caption_wait_since`, 12 min ≈ jeszcze jeden
-   tick); po jej upływie publikujemy czysty plik, zapisujemy `captions = false`
-   i wpisujemy powód w `last_error`, zamiast po cichu wypuszczać rolkę bez
-   napisów. Biblioteka rozróżnia trzy stany: „napisy na wideo", „tylko plik
-   SRT", „bez napisów". Plik SRT nadal ląduje w `subtitle_url` (przycisk
-   „SRT"). Ustawienie obowiązuje też dla generowania wsadowego.
-
-   **Styl napisów — własne wypalanie.** HeyGen v3 przyjmuje w `caption.style`
-   **wyłącznie `"default"`** (sprawdzone na żywym API: walidacja odpowiada
-   „Input should be 'default'"), więc rozmiar, czcionka i pozycja napisów
-   HeyGena nie są do ustawienia — wychodzą małe, nisko, w szarym pasku.
-   Dlatego obok przełącznika jest **select „Styl napisów"**:
-   - `HeyGen (domyślne)` — jak dotąd,
-   - `Rolka — duże z obrysem`, `TikTok — wielkie litery, podświetlanie słów`,
-     `Ramka — biały na ciemnym pasku`, `Delikatne — mniejsze u dołu` —
-     **wypalane u nas**. Presety (rozmiar, kolory, obrys, pozycja, maks.
-     znaków w wierszu, podświetlanie słowa) siedzą w `src/lib/caption-style.ts`;
-     zmiana wyglądu to zmiana w tym pliku.
-
-   Jak to działa: backend chodzi na Cloudflare Workers, gdzie nie ma FFmpega,
-   więc obraz wypala mała usługa `services/caption-burner` (FFmpeg + libass,
-   jeden plik, bez zależności). Stanie na darmowym planie Render.com
+   Jak to działa dalej: backend chodzi na Cloudflare Workers, gdzie nie ma
+   FFmpega, więc obraz wypala mała usługa `services/caption-burner` (FFmpeg +
+   libass, jeden plik, bez zależności). Stanie na darmowym planie Render.com
    (`render.yaml` w repo — Blueprint), na Koyebie, na własnym komputerze
    z Cloudflare Tunnel albo na Fly.io z usypianiem za grosze — zadania
    zapisuje na dysku, więc uśpienie i wybudzenie nic nie gubi; patrz
-   `services/caption-burner/README.md`. Pipeline po
-   zakończeniu renderu HeyGena bierze **czysty master** (`video_url`) i **plik
-   SRT** (`caption_url`), z SRT buduje ASS w wybranym stylu (`srtToAss`:
-   parser SRT odporny na BOM/CRLF/tagi, cięcie kwestii do maks. 1–2 wierszy
-   po N znaków z czasem proporcjonalnym do liczby znaków, wyrównanie dwóch
-   wierszy, opcjonalne wielkie litery i podświetlanie słowa — czasy słów też
-   proporcjonalne, bo SRT nie zna czasów słów), wysyła zadanie do usługi
-   i przechodzi w status **`captioning`**. Kolejne odpytanie (panel co 15 s,
-   tick co 10 min) pobiera gotowy MP4, zapisuje go w buckecie `studio-media`
-   (**trwały link** — linki HeyGena wygasają po ~7 dniach) i dopiero wtedy
-   ustawia `ready` + auto-publikację. Czysty master zostaje w `video_url_clean`.
+   `services/caption-burner/README.md`. Pipeline po zakończeniu renderu
+   HeyGena bierze **czysty master** (`video_url` HeyGena → `video_url_clean`)
+   i **nasz SRT** (`subtitle_url`), z SRT buduje ASS w wybranym stylu
+   (`srtToAss`: cięcie kwestii do maks. 1–2 wierszy po N znaków, wyrównanie
+   dwóch wierszy, opcjonalne wielkie litery i podświetlanie słowa), wysyła
+   zadanie do usługi i przechodzi w status **`captioning`**. Kolejne
+   odpytanie (panel co 15 s, tick co 10 min) pobiera gotowy MP4, zapisuje go
+   w buckecie `studio-media` (**trwały link** — linki HeyGena wygasają po
+   ~7 dniach) i dopiero wtedy ustawia `ready` + auto-publikację.
 
-   Nic z tego nie blokuje generacji ani nie zostawia joba w zawieszeniu
+   **Nie ma wersji zapasowej z napisami HeyGena.** Decyzje
    (`planCaptionBurn` / `resolveCaptionBurn` w `studio-captions.ts`, testy):
-   brak sekretów usługi, brak SRT z HeyGena, błąd zlecenia → od razu napisy
-   HeyGena z powodem w `last_error`; błąd usługi albo zaginione zadanie (restart)
-   → jedno ponowienie, potem wersja HeyGena; brak wyniku po 45 min → wersja
-   HeyGena. Panel pokazuje styl w badge'u („napisy: Rolka — duże z obrysem")
-   i faktyczny stan, nie zamówiony. Kolumny: `caption_style`, `caption_burn_id`,
-   `caption_burn_started_at`, `caption_burn_attempts`.
+   brak sekretów usługi, brak SRT, brak mastera, błąd zlecenia → zadanie
+   **`failed`** z powodem w `last_error`; błąd usługi albo zaginione zadanie
+   (restart) → jedno ponowienie, potem `failed`; brak wyniku po 45 min →
+   `failed`. Czysty master, SRT i miniatura zostają przy zadaniu, więc
+   **„Ponów”** w bibliotece (i `retry_studio_job` w MCP) wypala napisy od razu,
+   bez nowego renderu i kredytów HeyGena; dopiero zadanie bez mastera wraca
+   do kolejki. Rolka bez napisów nie idzie do publikacji po cichu. Rolka
+   zamówiona **bez napisów** dostaje na czystym masterze sam znaczek „AI”, a
+   gdy i to się nie uda — wychodzi bez znaczka z adnotacją. Panel pokazuje
+   styl w badge'u („napisy: Rolka — duże z obrysem") i faktyczny stan, nie
+   zamówiony. Kolumny: `caption_style` (`heygen` tylko w starych wierszach),
+   `caption_burn_id`, `caption_burn_started_at`, `caption_burn_attempts`.
 
    **Zmiana napisów gotowego filmu** — w bibliotece przy gotowym wideo select
    „Zmień napisy…" (także `restyle_studio_job_captions` w MCP): czysty master
-   - SRT lecą do usługi w nowym stylu, poprzedni plik zostaje do czasu sukcesu
-     i wraca przy porażce. Nie publikuje ponownie. Działa dla filmów z ostatnich
-     ~7 dni (potem linki HeyGena wygasają); dla starszych trzeba wygenerować
-     rolkę od nowa.
+   - nasz SRT lecą do usługi w nowym stylu, poprzedni plik zostaje do czasu
+     sukcesu i wraca przy porażce. Nie publikuje ponownie. Działa dla filmów
+     z ostatnich ~7 dni (potem link do czystego mastera HeyGena wygasa); dla
+     starszych trzeba wygenerować rolkę od nowa.
 
-   Pozostałe ścieżki HeyGena zamawiają świadomie `captions: "sidecar"`
-   (nie wypalamy tego, czego nie publikujemy): FAQ awatara gra na stronie
-   z dźwiękiem, a pipeline YouTube robi materiały 5–8 min, gdzie wypalone
-   napisy przeszkadzają, a player YT ma własne.
+   Pozostałe ścieżki HeyGena (Awatar FAQ, pipeline YouTube) zamawiają
+   świadomie `captions: "sidecar"` — sam plik SRT obok wideo: FAQ awatara gra
+   na stronie z dźwiękiem, a materiały 5–8 min mają napisy w playerze YT.
 
    **Montaż rolki** — wybór obok napisów (domyślnie „pojedyncze ujęcie");
    pozostałe dwa tryby — „przebitki AI" i „struktura" (opisana niżej w sekcji

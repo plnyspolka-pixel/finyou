@@ -735,7 +735,7 @@
       {
         "name": "calculate_loan_installment",
         "title": "Calculate loan installment",
-        "description": "Kalkulator raty pożyczki Finance You (jeden silnik): Kwota Udzielona, prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT — potrącana z wypłaty), kwota na rękę, rata, balon, do spłaty i koszt całkowity. Oprocentowanie nie może przekraczać odsetek maksymalnych (art. 359 § 2¹ KC).",
+        "description": "Kalkulator raty pożyczki Finance You (jeden silnik): Kwota Udzielona, prowizja Finance You (5% Kwoty Udzielonej, min 5 000 zł, bez VAT — potrącana z wypłaty), kwota na rękę, rata, balon, do spłaty i koszt całkowity. Oprocentowanie nie może przekraczać odsetek maksymalnych (art. 359 § 2¹ KC).",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -5180,7 +5180,7 @@
       {
         "name": "calculate_repayment_schedule",
         "title": "Calculate repayment schedule",
-        "description": "Harmonogram spłat pożyczki w modelu Finance You (jeden silnik): odsetki od kapitału pozostającego do spłaty, pułap raty steruje kapitałem, nadwyżka trafia do ostatniej raty (balon), stała prowizja inwestora rozłożona równo w ratach. Prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT) jest potrącana z wypłaty i nie wchodzi do rat. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity + listę rat. Oprocentowanie ponad odsetki maksymalne (art. 359 § 2¹ KC) jest blokowane. Czysta matematyka, bez bazy.",
+        "description": "Harmonogram spłat pożyczki w modelu Finance You (jeden silnik): odsetki od kapitału pozostającego do spłaty, pułap raty steruje kapitałem, nadwyżka trafia do ostatniej raty (balon), stała prowizja inwestora rozłożona równo w ratach. Prowizja Finance You (5% Kwoty Udzielonej, min 5 000 zł, bez VAT) jest potrącana z wypłaty i nie wchodzi do rat. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity + listę rat. Oprocentowanie ponad odsetki maksymalne (art. 359 § 2¹ KC) jest blokowane. Czysta matematyka, bez bazy.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -5996,7 +5996,7 @@
       {
         "name": "create_loan_proposal",
         "title": "Create loan proposal (kreator)",
-        "description": "Tworzy propozycję pożyczki z kreatora w JEDNYM modelu matematycznym (silnik Finance You): odsetki od salda, pułap raty steruje kapitałem (reszta w ostatniej racie — balon), stała prowizja inwestora w ratach, Prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT) potrącana z wypłaty. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity. Oprocentowanie ponad odsetki maksymalne jest blokowane. Zapisuje harmonogram jako szkic. Tylko administrator/operator.",
+        "description": "Tworzy propozycję pożyczki z kreatora w JEDNYM modelu matematycznym (silnik Finance You): odsetki od salda, pułap raty steruje kapitałem (reszta w ostatniej racie — balon), stała prowizja inwestora w ratach, Prowizja Finance You (5% Kwoty Udzielonej, min 5 000 zł, bez VAT) potrącana z wypłaty. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity. Oprocentowanie ponad odsetki maksymalne jest blokowane. Zapisuje harmonogram jako szkic. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -16091,7 +16091,7 @@
       {
         "name": "heygen_status",
         "title": "HeyGen status",
-        "description": "Stan integracji HeyGen: klucz API, pozostałe kredyty, usługa wypalania napisów i znaczek „AI” w rogu rolek (`ai_badge`), liczba awatarów (moje / publiczne / ze zdjęcia), zestaw domyślnych awatarów z panelu Studia (rotacja) i domyślny głos (Filip), zadania Studia po statusach z ostatnim błędem, filmy Awatar FAQ. Tylko administrator/operator.",
+        "description": "Stan integracji HeyGen: klucz API, pozostałe kredyty, usługa wypalania napisów i znaczek „AI” w rogu rolek (`ai_badge`), model ElevenLabs lektora obowiązujący w Studiu (`tts_model`, zmienia `update_studio_settings`), liczba awatarów (moje / publiczne / ze zdjęcia), zestaw domyślnych awatarów z panelu Studia (rotacja) i domyślny głos (Filip), zadania Studia po statusach z ostatnim błędem, filmy Awatar FAQ. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -16679,7 +16679,7 @@
       {
         "name": "get_studio_job",
         "title": "Get studio video job",
-        "description": "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos, status (… rendering → captioning, gdy wypalamy własne napisy → ready), plan scen, wideo (czyste i z napisami), styl napisów, miniatura, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`), a przy gotowej rolce — wpis w bibliotece materiałów (`material`: id, kategoria). Tylko administrator/operator.",
+        "description": "Pełne dane zadania Studia: prompt, scenariusz, awatar, głos i model lektora (`tts_model_id`), status (… rendering → captioning, gdy wypalamy napisy → ready; failed z powodem, gdy napisów nie dało się wypalić — `retry_studio_job` wypala je wtedy bez nowego renderu), plan scen, wideo (czyste i z napisami), styl napisów, plik SRT z tekstu scenariusza, miniatura, auto-publikacja, błąd. Przy statusie rendering dokłada aktualny status z HeyGen (`live`), a przy gotowej rolce — wpis w bibliotece materiałów (`material`: id, kategoria). Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -16844,7 +16844,7 @@
       {
         "name": "create_studio_video_job",
         "title": "Create studio video job",
-        "description": "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy domyślnie jak w panelu: własny styl `reels` wypalany naszą usługą (renderer), gdy jest skonfigurowana; `caption_style` zmienia wygląd, a `heygen` (napisy HeyGena, bez kontroli rozmiaru i pozycji) tylko na wyraźną prośbę. Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+        "description": "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy ZAWSZE z naszego renderera: tekst to scenariusz, czasy z ElevenLabs, styl domyślnie `reels` (`caption_style` zmienia wygląd); HeyGen nie dostaje zlecenia na napisy, a bez usługi caption-burner zadanie z napisami pada do ponowienia. Głos: ElevenLabs, model z ustawień Studia (`tts_model` nadpisuje dla tej rolki). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -16893,6 +16893,17 @@
               "type": "string",
               "description": "Głos ElevenLabs; domyślnie Filip."
             },
+            "tts_model": {
+              "type": "string",
+              "enum": [
+                "eleven_v4",
+                "eleven_v4_turbo",
+                "eleven_v3",
+                "eleven_multilingual_v2",
+                "eleven_flash_v2_5"
+              ],
+              "description": "Model ElevenLabs lektora: eleven_v4 (Eleven v4 — najwyższa jakość (zalecany)); eleven_v4_turbo (Eleven v4 Turbo — ta sama generacja, szybciej i o połowę taniej); eleven_v3 (Eleven v3 — poprzednia generacja ekspresyjna); eleven_multilingual_v2 (Multilingual v2 — klasyczny, najbardziej przewidywalny); eleven_flash_v2_5 (Flash v2.5 — szybki i tani (do testów)). Pomiń pole, a zadanie weźmie ustawienie Studia (panel / `update_studio_settings`; domyślnie eleven_v4 — najwyższa jakość)."
+            },
             "captions": {
               "type": "boolean",
               "default": true
@@ -16900,13 +16911,12 @@
             "caption_style": {
               "type": "string",
               "enum": [
-                "heygen",
                 "reels",
                 "tiktok",
                 "box",
                 "minimal"
               ],
-              "description": "Styl napisów: własny wypalany naszą usługą (renderer caption-burner) — reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu) — albo heygen (napisy HeyGena, bez kontroli wyglądu). Pomiń pole, a będzie jak w panelu Studia: reels, gdy usługa jest skonfigurowana, inaczej heygen. `heygen` wybieraj tylko na wyraźną prośbę."
+              "description": "Styl napisów wypalanych naszą usługą (renderer caption-burner): reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Pomiń pole, a będzie jak w panelu Studia (reels). Napisów HeyGena Studio nie zamawia — tekst napisów to scenariusz, czasy z ElevenLabs."
             },
             "dynamic_scenes": {
               "type": "boolean",
@@ -16971,7 +16981,7 @@
       {
         "name": "update_studio_job",
         "title": "Update studio video job",
-        "description": "Zmienia zadanie Studia: scenariusz, awatar (i rotację a-rolli `avatar_ids`), głos, napisy (i ich styl), przebitki oraz strukturę rolki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
+        "description": "Zmienia zadanie Studia: scenariusz, awatar (i rotację a-rolli `avatar_ids`), głos i model lektora (`tts_model`), napisy (i ich styl), przebitki oraz strukturę rolki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -17004,19 +17014,29 @@
             "voice_id": {
               "type": "string"
             },
+            "tts_model": {
+              "type": "string",
+              "enum": [
+                "eleven_v4",
+                "eleven_v4_turbo",
+                "eleven_v3",
+                "eleven_multilingual_v2",
+                "eleven_flash_v2_5"
+              ],
+              "description": "Model ElevenLabs lektora: eleven_v4 (Eleven v4 — najwyższa jakość (zalecany)); eleven_v4_turbo (Eleven v4 Turbo — ta sama generacja, szybciej i o połowę taniej); eleven_v3 (Eleven v3 — poprzednia generacja ekspresyjna); eleven_multilingual_v2 (Multilingual v2 — klasyczny, najbardziej przewidywalny); eleven_flash_v2_5 (Flash v2.5 — szybki i tani (do testów)). Pomiń pole, a zadanie weźmie ustawienie Studia (panel / `update_studio_settings`; domyślnie eleven_v4 — najwyższa jakość)."
+            },
             "captions": {
               "type": "boolean"
             },
             "caption_style": {
               "type": "string",
               "enum": [
-                "heygen",
                 "reels",
                 "tiktok",
                 "box",
                 "minimal"
               ],
-              "description": "Styl napisów: własny wypalany naszą usługą (renderer caption-burner) — reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu) — albo heygen (napisy HeyGena, bez kontroli wyglądu). Pomiń pole, a będzie jak w panelu Studia: reels, gdy usługa jest skonfigurowana, inaczej heygen. `heygen` wybieraj tylko na wyraźną prośbę."
+              "description": "Styl napisów wypalanych naszą usługą (renderer caption-burner): reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Pomiń pole, a będzie jak w panelu Studia (reels). Napisów HeyGena Studio nie zamawia — tekst napisów to scenariusz, czasy z ElevenLabs."
             },
             "dynamic_scenes": {
               "type": "boolean"
@@ -17065,7 +17085,7 @@
       {
         "name": "restyle_studio_job_captions",
         "title": "Restyle captions of a ready studio video",
-        "description": "Wypala napisy GOTOWEGO filmu Studia na nowo w wybranym własnym stylu (reels / tiktok / box / minimal): czysty master + plik SRT z HeyGena idą do naszej usługi FFmpeg, film przechodzi do statusu captioning, a gotowy plik (trwały link w Storage) zastępuje video_url. Poprzednia wersja zostaje do czasu sukcesu; przy porażce wraca. Nie publikuje ponownie. Wymaga usługi CAPTION_BURNER_URL; linki HeyGena wygasają po ~7 dniach, więc działa dla świeżych filmów. Tylko administrator/operator.",
+        "description": "Wypala napisy GOTOWEGO filmu Studia na nowo w wybranym stylu (reels / tiktok / box / minimal): czysty master + nasz plik SRT (tekst scenariusza z czasami ElevenLabs) idą do naszej usługi FFmpeg, film przechodzi do statusu captioning, a gotowy plik (trwały link w Storage) zastępuje video_url. Poprzednia wersja zostaje do czasu sukcesu; przy porażce wraca. Nie publikuje ponownie. Wymaga usługi CAPTION_BURNER_URL; link do czystego mastera HeyGena wygasa po ~7 dniach, więc działa dla świeżych filmów. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -17101,7 +17121,7 @@
       {
         "name": "retry_studio_job",
         "title": "Retry failed studio job",
-        "description": "Wraca nieudane zadanie Studia (failed) do kolejki: czyści błąd i poprzedni render, tick lub `run_studio_video_tick` przetworzy je ponownie. Tylko administrator/operator.",
+        "description": "Ponawia nieudane zadanie Studia (failed). Gdy padło na napisach (jest czysty master i plik SRT), wypala je od razu — bez nowego renderu i kredytów HeyGen (status captioning). Inaczej wraca do kolejki: czyści błąd i poprzedni render, tick lub `run_studio_video_tick` przetworzy je ponownie. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -17118,6 +17138,39 @@
           },
           "required": [
             "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_studio_settings",
+        "title": "Update Studio settings",
+        "description": "Ustawienia Studia publikacji obowiązujące dla wszystkich rolek (panel, seria, cron, MCP). Dziś: `tts_model` — model ElevenLabs lektora (domyślnie eleven_v4, najwyższa jakość; `heygen_status` → `tts_model` pokazuje aktualny i listę). Pojedyncze zadanie może go nadpisać polem `tts_model` w `create_studio_video_job` / `update_studio_job`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tts_model": {
+              "type": "string",
+              "enum": [
+                "eleven_v4",
+                "eleven_v4_turbo",
+                "eleven_v3",
+                "eleven_multilingual_v2",
+                "eleven_flash_v2_5"
+              ],
+              "description": "Model ElevenLabs lektora: eleven_v4 (Eleven v4 — najwyższa jakość (zalecany)); eleven_v4_turbo (Eleven v4 Turbo — ta sama generacja, szybciej i o połowę taniej); eleven_v3 (Eleven v3 — poprzednia generacja ekspresyjna); eleven_multilingual_v2 (Multilingual v2 — klasyczny, najbardziej przewidywalny); eleven_flash_v2_5 (Flash v2.5 — szybki i tani (do testów)). Pomiń pole, a zadanie weźmie ustawienie Studia (panel / `update_studio_settings`; domyślnie eleven_v4 — najwyższa jakość)."
+            }
+          },
+          "required": [
+            "tts_model"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
@@ -17153,7 +17206,7 @@
       {
         "name": "import_heygen_video_to_studio",
         "title": "Import HeyGen video into Studio",
-        "description": "Dołącza do Studia film wyrenderowany w HeyGen poza Studiem (np. `generate_avatar_video`, `heygen_api_request`, panel HeyGena): zakłada zadanie Studia z tym `heygen_video_id` — film widać w panelu Studia, napisy dostaje z naszego renderera (styl jak w panelu, z pliku napisów HeyGena na czystym masterze; gdy się nie da — zostają napisy HeyGena), do tego znaczek AI, i trafia do biblioteki materiałów (/admin/materialy); dalej publikacja jak zwykle (`publish_studio_job`). Nie renderuje ponownie i nie zużywa kredytów HeyGen. Film już dołączony zwraca istniejące zadanie. Tylko administrator/operator.",
+        "description": "Dołącza do Studia film wyrenderowany w HeyGen poza Studiem (np. `generate_avatar_video`, `heygen_api_request`, panel HeyGena): zakłada zadanie Studia z tym `heygen_video_id` — film widać w panelu Studia, napisy dostaje z naszego renderera (styl jak w panelu) z pliku SRT HeyGena na czystym masterze (to jedyny tekst, jaki taki film ma; bez pliku SRT rolka wychodzi bez napisów), do tego znaczek AI, i trafia do biblioteki materiałów (/admin/materialy); dalej publikacja jak zwykle (`publish_studio_job`). Nie renderuje ponownie i nie zużywa kredytów HeyGen. Film już dołączony zwraca istniejące zadanie. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -17184,18 +17237,17 @@
             },
             "captions": {
               "type": "boolean",
-              "description": "Czy rolka ma mieć napisy; domyślnie wykrywane (HeyGen oddał plik napisów albo wersję z napisami = tak)."
+              "description": "Czy rolka ma mieć napisy wypalone naszym rendererem; domyślnie tak, gdy HeyGen oddał plik SRT (bez niego nie ma z czego ich zbudować)."
             },
             "caption_style": {
               "type": "string",
               "enum": [
-                "heygen",
                 "reels",
                 "tiktok",
                 "box",
                 "minimal"
               ],
-              "description": "Styl napisów: własny wypalany naszą usługą (renderer caption-burner) — reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu) — albo heygen (napisy HeyGena, bez kontroli wyglądu). Pomiń pole, a będzie jak w panelu Studia: reels, gdy usługa jest skonfigurowana, inaczej heygen. `heygen` wybieraj tylko na wyraźną prośbę."
+              "description": "Styl napisów wypalanych naszą usługą (renderer caption-burner): reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Pomiń pole, a będzie jak w panelu Studia (reels). Napisów HeyGena Studio nie zamawia — tekst napisów to scenariusz, czasy z ElevenLabs."
             },
             "material_audience": {
               "type": "string",
@@ -17276,7 +17328,7 @@
       {
         "name": "poll_studio_jobs",
         "title": "Poll rendering studio jobs",
-        "description": "Odpytuje HeyGen o zadania Studia w statusie rendering (i usługę napisów o zadania w captioning) i domyka gotowe (zapis linków, własne napisy, auto-publikacja jeśli ustawiona) albo nieudane. To, co robi tick co 10 min — bez czekania. Tylko administrator/operator.",
+        "description": "Odpytuje HeyGen o zadania Studia w statusie rendering (i usługę napisów o zadania w captioning) i domyka gotowe (zapis linków, napisy z naszego renderera, auto-publikacja jeśli ustawiona) albo nieudane. To, co robi tick co 10 min — bez czekania. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,

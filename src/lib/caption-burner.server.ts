@@ -1,10 +1,11 @@
 // Klient usługi FFmpeg (services/caption-burner) — jedyne miejsce, które zna
 // jej adres i sekret. Backend na Cloudflare Workers nie ma FFmpega, więc obraz
 // przetwarza osobna usługa. Dwa zastosowania:
-//   * napisy własne — wysyłamy adres czystego mastera HeyGena i gotowy plik
-//     ASS (styl liczy src/lib/caption-style.ts), gotowy MP4 kopiujemy do
-//     bucketu `studio-media` (trwały publiczny link — linki HeyGena wygasają
-//     po ~7 dniach, nasz nie);
+//   * napisy — wysyłamy adres czystego mastera HeyGena i gotowy plik ASS
+//     (z naszego SRT: tekst scenariusza + czasy ElevenLabs; styl liczy
+//     src/lib/caption-style.ts), gotowy MP4 kopiujemy do bucketu
+//     `studio-media` (trwały publiczny link — linki HeyGena wygasają po ~7
+//     dniach, nasz nie);
 //   * kompresja przed publikacją — zadanie `transcode` do profilu publikacji
 //     (src/lib/video-rendition*.ts); usługa sama wgrywa wynik na podpisany
 //     URL Storage, żeby bajty nie szły przez worker.
@@ -14,9 +15,9 @@
 //   CAPTION_BURNER_SECRET — ten sam, co w usłudze (Bearer)
 //   STUDIO_AI_BADGE       — opcjonalnie `0` / `off` wyłącza znaczek „AI" w rogu
 //                           rolek (domyślnie włączony)
-// Bez nich pipeline zostaje przy napisach HeyGena, a publikacja wysyła
-// oryginalne pliki (nic nie pada) — tylko bez znaczka „AI", bo HeyGen nie ma
-// warstw, na których dałoby się go położyć.
+// Bez nich rolka Z NAPISAMI nie wychodzi (zadanie pada z jasnym powodem, do
+// ponowienia po konfiguracji), rolka bez napisów wychodzi bez znaczka „AI",
+// a publikacja wysyła oryginalne pliki bez kompresji.
 
 import { aiBadgeAss, srtToAss, type CustomCaptionStyleId } from "./caption-style";
 import { fetchBytes, storeMedia, type StoredMedia } from "./media-storage.server";
@@ -85,10 +86,10 @@ async function errorOf(res: Response): Promise<string> {
 }
 
 /**
- * Zleca wypalenie: napisy własne (SRT HeyGena → ASS w wybranym stylu),
- * znaczek „AI" albo oba naraz — i wysyła zadanie. Bez `srtUrl` / `styleId`
- * wypala sam znaczek (wideo z napisami HeyGena albo bez napisów). Zwraca id
- * zadania w usłudze (zapisywane w `studio_video_jobs.caption_burn_id`).
+ * Zleca wypalenie: napisy (nasz SRT → ASS w wybranym stylu), znaczek „AI"
+ * albo oba naraz — i wysyła zadanie. Bez `srtUrl` / `styleId` wypala sam
+ * znaczek (rolka bez napisów). Zwraca id zadania w usłudze (zapisywane
+ * w `studio_video_jobs.caption_burn_id`).
  */
 export async function submitCaptionBurn(input: {
   videoUrl: string;
@@ -104,7 +105,7 @@ export async function submitCaptionBurn(input: {
       aiBadge: input.aiBadge === true,
     });
     if (!ass) {
-      throw new Error("Plik SRT z HeyGena nie zawiera żadnej kwestii — nie ma czego wypalić.");
+      throw new Error("Plik SRT nie zawiera żadnej kwestii — nie ma czego wypalić.");
     }
   } else if (input.aiBadge) {
     ass = aiBadgeAss();

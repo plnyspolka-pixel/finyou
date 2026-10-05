@@ -23,7 +23,10 @@ import {
   processStudioVideoQueueNow,
   pollStudioVideoJob,
   deleteStudioVideoJob,
+  retryStudioVideoJob,
   restyleStudioVideoCaptions,
+  getStudioTtsModel,
+  saveStudioTtsModel,
   generateStudioPrompts,
   listStudioImages,
   generateStudioImageFn,
@@ -52,6 +55,7 @@ import {
   isCustomCaptionStyle,
   type CaptionStyleId,
 } from "@/lib/caption-style";
+import { DEFAULT_TTS_MODEL_ID, TTS_MODEL_OPTIONS, type TtsModelId } from "@/lib/studio-tts-models";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL, describeScenePlan } from "@/lib/studio-scenes";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
 import { getTiktokIntegrationStatus, getTiktokCreatorInfo } from "@/lib/tiktok.functions";
@@ -254,6 +258,9 @@ function StudioPage() {
   const deleteImageFn = useServerFn(deleteStudioImage);
   const defaultAvatarsFn = useServerFn(listStudioDefaultAvatars);
   const saveDefaultAvatarsFn = useServerFn(saveStudioDefaultAvatars);
+  const ttsModelFn = useServerFn(getStudioTtsModel);
+  const saveTtsModelFn = useServerFn(saveStudioTtsModel);
+  const retryVideoFn = useServerFn(retryStudioVideoJob);
   const brollFn = useServerFn(listStudioBroll);
   const addBrollFn = useServerFn(addStudioBroll);
   const brollActiveFn = useServerFn(setStudioBrollActive);
@@ -302,6 +309,11 @@ function StudioPage() {
   const { data: defaultAvatars = [] } = useQuery({
     queryKey: ["studio-default-avatars"],
     queryFn: () => defaultAvatarsFn(),
+  });
+  // Model ElevenLabs lektora — ustawienie całego Studia (seria, cron i MCP też).
+  const { data: ttsModelSetting } = useQuery({
+    queryKey: ["studio-tts-model"],
+    queryFn: () => ttsModelFn(),
   });
   const { data: brollAssets = [], isLoading: brollLoading } = useQuery({
     queryKey: ["studio-broll"],
@@ -443,21 +455,24 @@ function StudioPage() {
   });
   const [avatarId, setAvatarId] = useState(HEYGEN_AVATARS[0].id);
   const [voiceId, setVoiceId] = useState(FILIP_VOICE_ID);
+  // Model lektora: select pokazuje ustawienie Studia i zapisuje je od razu
+  // przy zmianie (obowiązuje też serię, crona i MCP).
+  const [ttsModelId, setTtsModelId] = useState<TtsModelId>(DEFAULT_TTS_MODEL_ID);
+  const ttsModelLoaded = useRef(false);
+  useEffect(() => {
+    if (ttsModelSetting && !ttsModelLoaded.current) {
+      ttsModelLoaded.current = true;
+      setTtsModelId(ttsModelSetting.model_id);
+    }
+  }, [ttsModelSetting]);
   // Shorty i rolki ogląda się bez dźwięku — napisy domyślnie włączone.
   const [captionsOn, setCaptionsOn] = useState(true);
-  // Styl napisów: HeyGen (bez kontroli wyglądu) albo własny, wypalany naszą
-  // usługą FFmpeg. Gdy usługa jest skonfigurowana, domyślnie „rolka”.
-  const [captionStyle, setCaptionStyle] = useState<CaptionStyleId>("heygen");
+  // Styl napisów — zawsze własny, wypalany naszą usługą FFmpeg z tekstu
+  // scenariusza i czasów ElevenLabs (napisów HeyGena nie zamawiamy).
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyleId>(DEFAULT_CUSTOM_CAPTION_STYLE);
   const captionBurnerOn = !!status?.captionBurnerConfigured;
   // Znaczek „AI" w rogu rolki kładzie usługa wypalania (HeyGen nie ma warstw).
   const aiBadgeOn = status?.aiBadgeEnabled !== false;
-  const captionStyleDefaulted = useRef(false);
-  useEffect(() => {
-    if (captionBurnerOn && !captionStyleDefaulted.current) {
-      captionStyleDefaulted.current = true;
-      setCaptionStyle(DEFAULT_CUSTOM_CAPTION_STYLE);
-    }
-  }, [captionBurnerOn]);
   // Montaż rolki: pojedyncze ujęcie | przebitki wskazane przez AI | stała
   // struktura (ujęcie → przebitka → a-roll innego awatara).
   // Domyślnie struktura z przebitkami b-roll — tak wychodzą rolki z panelu,
@@ -757,6 +772,7 @@ function StudioPage() {
           script: fullScript,
           avatar_id: avatarId,
           voice_id: voiceId,
+          tts_model_id: ttsModelId,
           captions: captionsOn,
           caption_style: captionStyle,
           dynamic_scenes: dynamicScenesOn,
@@ -790,6 +806,32 @@ function StudioPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const saveTtsModelM = useMutation({
+    mutationFn: (model_id: TtsModelId) => saveTtsModelFn({ data: { model_id } }),
+    onSuccess: (r) => {
+      toast.success(
+        `Model lektora zapisany: ${
+          TTS_MODEL_OPTIONS.find((m) => m.id === r.model_id)?.label ?? r.model_id
+        } (obowiązuje też serię, crona i MCP)`,
+      );
+      qc.invalidateQueries({ queryKey: ["studio-tts-model"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const retryVideoM = useMutation({
+    mutationFn: (id: string) => retryVideoFn({ data: { id } }),
+    onSuccess: (r) => {
+      toast.success(
+        r.mode === "captions"
+          ? "Wypalam napisy na nowo na zachowanym masterze — bez nowego renderu w HeyGen"
+          : "Zadanie wróciło do kolejki — wyrenderuje się od nowa",
+      );
+      qc.invalidateQueries({ queryKey: ["studio-video-jobs"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const batchM = useMutation({
     mutationFn: () =>
       batchFn({
@@ -797,6 +839,7 @@ function StudioPage() {
           question_ids: [...selectedIds],
           avatar_id: avatarId,
           voice_id: voiceId,
+          tts_model_id: ttsModelId,
           captions: captionsOn,
           caption_style: captionStyle,
           dynamic_scenes: dynamicScenesOn,
@@ -1836,6 +1879,30 @@ function StudioPage() {
                       </option>
                     ))}
                   </select>
+                  <Label className="pt-1 text-xs text-muted-foreground">
+                    Silnik głosu (model ElevenLabs)
+                  </Label>
+                  <select
+                    className="w-full rounded-md border bg-background p-2 text-sm"
+                    value={ttsModelId}
+                    disabled={saveTtsModelM.isPending}
+                    title="Model, którym ElevenLabs nagrywa lektora — zmiana zapisuje się od razu jako ustawienie całego Studia"
+                    onChange={(e) => {
+                      const id = e.target.value as TtsModelId;
+                      setTtsModelId(id);
+                      saveTtsModelM.mutate(id);
+                    }}
+                  >
+                    {(ttsModelSetting?.options ?? TTS_MODEL_OPTIONS).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    {TTS_MODEL_OPTIONS.find((m) => m.id === ttsModelId)?.description} Wybór
+                    obowiązuje całe Studio (także serię, crona i MCP).
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
@@ -1856,24 +1923,24 @@ function StudioPage() {
                         onChange={(e) => setCaptionStyle(e.target.value as CaptionStyleId)}
                       >
                         {CAPTION_STYLE_OPTIONS.map((o) => (
-                          <option
-                            key={o.id}
-                            value={o.id}
-                            disabled={o.id !== "heygen" && !captionBurnerOn}
-                          >
+                          <option key={o.id} value={o.id}>
                             {o.label}
-                            {o.id !== "heygen" && !captionBurnerOn
-                              ? " — wymaga usługi napisów"
-                              : ""}
                           </option>
                         ))}
                       </select>
                       <CaptionStylePreview styleId={captionStyle} />
                       <p className="text-xs text-muted-foreground">
-                        {captionBurnerOn
-                          ? CAPTION_STYLE_OPTIONS.find((o) => o.id === captionStyle)?.description
-                          : "HeyGen nie pozwala ustawić rozmiaru, czcionki ani pozycji napisów. Własne style wypala usługa caption-burner — sekrety CAPTION_BURNER_URL i CAPTION_BURNER_SECRET (opis w docs/studio-publikacji.md)."}
+                        {CAPTION_STYLE_OPTIONS.find((o) => o.id === captionStyle)?.description}{" "}
+                        Tekst napisów to dokładnie scenariusz z panelu, czasy słów prosto z
+                        ElevenLabs — HeyGen nie dokłada własnych napisów.
                       </p>
+                      {!captionBurnerOn && (
+                        <p className="text-xs text-amber-600 dark:text-amber-500">
+                          Brak usługi napisów (sekrety CAPTION_BURNER_URL i CAPTION_BURNER_SECRET,
+                          opis w docs/studio-publikacji.md) — rolka z napisami zatrzyma się z błędem
+                          do ponowienia po konfiguracji.
+                        </p>
+                      )}
                       {aiBadgeOn && (
                         <p
                           className={
@@ -2101,6 +2168,12 @@ function StudioPage() {
                               {new Date(j.created_at).toLocaleString("pl-PL")}
                               {avatar ? ` • ${avatar.name}` : ""}
                               {voice ? ` • głos: ${voice.name}` : ""}
+                              {j.tts_model_id
+                                ? ` • model: ${
+                                    TTS_MODEL_OPTIONS.find((m) => m.id === j.tts_model_id)?.id ??
+                                    j.tts_model_id
+                                  }`
+                                : ""}
                               {j.auto_publish_platforms.length > 0 &&
                                 ` • auto: ${j.auto_publish_platforms
                                   .map((p) => AUTO_PLATFORM_SHORT[p] ?? p)
@@ -2174,15 +2247,30 @@ function StudioPage() {
                                 }}
                               >
                                 <option value="">Zmień napisy…</option>
-                                {CAPTION_STYLE_OPTIONS.filter(
-                                  (o) => o.id !== "heygen" && o.id !== j.caption_style,
-                                ).map((o) => (
-                                  <option key={o.id} value={o.id}>
-                                    {o.label}
-                                  </option>
-                                ))}
+                                {CAPTION_STYLE_OPTIONS.filter((o) => o.id !== j.caption_style).map(
+                                  (o) => (
+                                    <option key={o.id} value={o.id}>
+                                      {o.label}
+                                    </option>
+                                  ),
+                                )}
                               </select>
                             )}
+                          {j.status === "failed" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => retryVideoM.mutate(j.id)}
+                              disabled={retryVideoM.isPending}
+                              title={
+                                j.video_url_clean && j.subtitle_url && j.captions
+                                  ? "Wypal napisy na nowo na zachowanym masterze (bez renderu w HeyGen)"
+                                  : "Wróć do kolejki i wyrenderuj od nowa"
+                              }
+                            >
+                              <RefreshCw className="mr-1 h-4 w-4" /> Ponów
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"

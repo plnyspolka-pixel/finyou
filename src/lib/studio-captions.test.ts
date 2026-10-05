@@ -2,192 +2,145 @@ import { describe, it, expect } from "vitest";
 import {
   CAPTION_BURN_MAX_ATTEMPTS,
   CAPTION_BURN_TIMEOUT_MS,
-  CAPTION_GRACE_MS,
+  NO_BURNER_REASON,
+  NO_SRT_REASON,
   captionBadgeLabel,
-  isBadgeOnlyBurn,
   planBadgeBurn,
   planCaptionBurn,
   resolveCaptionBurn,
-  resolveCaptionedOutput,
-  type CaptionMode,
 } from "./studio-captions";
 
 const NOW = new Date("2026-08-18T12:00:00.000Z");
 const CLEAN = "https://files.heygen.ai/video/abc123.mp4";
-const BURNED = "https://files.heygen.ai/video/abc123_captioned.mp4";
-const SRT = "https://files.heygen.ai/srt/abc123.srt";
-
-const resolve = (
-  want: CaptionMode,
-  outputs: Parameters<typeof resolveCaptionedOutput>[0]["outputs"],
-  waitSince: string | null = null,
-  now: Date = NOW,
-) => resolveCaptionedOutput({ want, outputs, waitSince, now });
-
-describe("resolveCaptionedOutput", () => {
-  it("publikuje wersję z wypalonymi napisami i zachowuje czysty master", () => {
-    const r = resolve("burned", {
-      video_url: CLEAN,
-      captioned_video_url: BURNED,
-      subtitle_url: SRT,
-    });
-    expect(r.state).toBe("ready");
-    if (r.state !== "ready") return;
-    expect(r.videoUrl).toBe(BURNED);
-    expect(r.cleanVideoUrl).toBe(CLEAN);
-    expect(r.subtitleUrl).toBe(SRT);
-    expect(r.captionsBurned).toBe(true);
-    expect(r.note).toBeNull();
-  });
-
-  it("nie duplikuje mastera, gdy HeyGen zwrócił ten sam URL w obu polach", () => {
-    const r = resolve("burned", { video_url: BURNED, captioned_video_url: BURNED });
-    expect(r.state).toBe("ready");
-    if (r.state !== "ready") return;
-    expect(r.videoUrl).toBe(BURNED);
-    expect(r.cleanVideoUrl).toBeNull();
-  });
-
-  it("czeka, gdy wideo jest gotowe, a wypalonej wersji jeszcze nie ma", () => {
-    const r = resolve("burned", { video_url: CLEAN, subtitle_url: SRT });
-    expect(r).toEqual({ state: "waiting", waitSince: NOW.toISOString() });
-  });
-
-  it("czeka dalej w oknie karencji, nie przesuwając znacznika", () => {
-    const started = new Date(NOW.getTime() - 60_000).toISOString();
-    const r = resolve("burned", { video_url: CLEAN }, started);
-    expect(r).toEqual({ state: "waiting", waitSince: started });
-  });
-
-  it("po karencji publikuje czysty plik i mówi wprost, że jest bez napisów", () => {
-    const started = new Date(NOW.getTime() - CAPTION_GRACE_MS - 1_000).toISOString();
-    const r = resolve("burned", { video_url: CLEAN, subtitle_url: SRT }, started);
-    expect(r.state).toBe("ready");
-    if (r.state !== "ready") return;
-    expect(r.videoUrl).toBe(CLEAN);
-    expect(r.captionsBurned).toBe(false);
-    expect(r.subtitleUrl).toBe(SRT);
-    expect(r.note).toMatch(/bez napisów/);
-  });
-
-  it("traktuje uszkodzony znacznik czekania jak brak znacznika", () => {
-    const r = resolve("burned", { video_url: CLEAN }, "nie-data");
-    expect(r).toEqual({ state: "waiting", waitSince: NOW.toISOString() });
-  });
-
-  it("dla trybu sidecar nie czeka i publikuje czysty plik", () => {
-    const r = resolve("sidecar", { video_url: CLEAN, subtitle_url: SRT });
-    expect(r.state).toBe("ready");
-    if (r.state !== "ready") return;
-    expect(r.videoUrl).toBe(CLEAN);
-    expect(r.captionsBurned).toBe(false);
-    expect(r.subtitleUrl).toBe(SRT);
-    expect(r.cleanVideoUrl).toBeNull();
-  });
-
-  it("dla trybu off ignoruje nawet zwróconą wersję z napisami", () => {
-    const r = resolve("off", { video_url: CLEAN, captioned_video_url: BURNED });
-    expect(r.state).toBe("ready");
-    if (r.state !== "ready") return;
-    expect(r.videoUrl).toBe(CLEAN);
-    expect(r.captionsBurned).toBe(false);
-  });
-});
+const SRT = "https://cdn.financeyou.pl/studio-media/studio-napisy/abc123.srt";
 
 describe("captionBadgeLabel", () => {
-  it("rozróżnia napisy na wideo, sam plik SRT i brak napisów", () => {
-    expect(captionBadgeLabel({ captions: true, subtitle_url: SRT })).toBe("napisy na wideo");
+  it("rozróżnia napisy (ze stylem), sam plik SRT i brak napisów", () => {
+    expect(captionBadgeLabel({ captions: true, subtitle_url: SRT, caption_style: "reels" })).toBe(
+      "napisy: Rolka — duże z obrysem",
+    );
+    expect(captionBadgeLabel({ captions: true, subtitle_url: SRT, caption_style: "heygen" })).toBe(
+      "napisy: HeyGen (dawne)",
+    );
     expect(captionBadgeLabel({ captions: false, subtitle_url: SRT })).toBe("tylko plik SRT");
     expect(captionBadgeLabel({ captions: false, subtitle_url: null })).toBe("bez napisów");
   });
 });
 
 describe("planCaptionBurn", () => {
-  const outputs = { video_url: CLEAN, captioned_video_url: BURNED, subtitle_url: SRT };
-
-  it("wypala u siebie, gdy styl własny, usługa jest i HeyGen oddał SRT", () => {
+  it("wypala u siebie, gdy napisy włączone, usługa jest, master i SRT są", () => {
     expect(
-      planCaptionBurn({ captions: true, captionStyle: "reels", burnerConfigured: true, outputs }),
+      planCaptionBurn({
+        captions: true,
+        captionStyle: "reels",
+        burnerConfigured: true,
+        videoUrl: CLEAN,
+        srtUrl: SRT,
+      }),
     ).toEqual({ action: "burn", videoUrl: CLEAN, srtUrl: SRT, styleId: "reels", aiBadge: false });
   });
 
-  it("znaczek AI jedzie tym samym przebiegiem co napisy własne", () => {
+  it("znaczek AI jedzie tym samym przebiegiem co napisy", () => {
     expect(
       planCaptionBurn({
         captions: true,
         captionStyle: "tiktok",
         burnerConfigured: true,
-        outputs,
+        videoUrl: CLEAN,
+        srtUrl: SRT,
         aiBadge: true,
       }),
     ).toMatchObject({ action: "burn", styleId: "tiktok", aiBadge: true });
   });
 
-  it("styl heygen, wyłączone napisy albo nieznany styl = bez powodu do zgłaszania", () => {
+  it("nieznany albo stary styl (heygen) = styl domyślny, nie napisy HeyGena", () => {
     for (const captionStyle of ["heygen", undefined, null, "obcy"]) {
       expect(
-        planCaptionBurn({ captions: true, captionStyle, burnerConfigured: true, outputs }),
-      ).toEqual({ action: "heygen", reason: null });
+        planCaptionBurn({
+          captions: true,
+          captionStyle,
+          burnerConfigured: true,
+          videoUrl: CLEAN,
+          srtUrl: SRT,
+        }),
+      ).toMatchObject({ action: "burn", styleId: "reels" });
     }
-    expect(
-      planCaptionBurn({ captions: false, captionStyle: "reels", burnerConfigured: true, outputs }),
-    ).toEqual({ action: "heygen", reason: null });
   });
 
-  it("brak usługi i brak SRT tłumaczą się w powodzie", () => {
+  it("wyłączone napisy = nic do wypalenia (poza znaczkiem)", () => {
     expect(
-      planCaptionBurn({ captions: true, captionStyle: "box", burnerConfigured: false, outputs })
-        .action,
-    ).toBe("heygen");
-    const noSrt = planCaptionBurn({
+      planCaptionBurn({
+        captions: false,
+        captionStyle: "reels",
+        burnerConfigured: false,
+        videoUrl: CLEAN,
+        srtUrl: null,
+      }),
+    ).toEqual({ action: "skip" });
+  });
+
+  it("brak usługi, mastera albo SRT = porażka zadania z powodem, nigdy publikacja bez napisów", () => {
+    expect(
+      planCaptionBurn({
+        captions: true,
+        captionStyle: "box",
+        burnerConfigured: false,
+        videoUrl: CLEAN,
+        srtUrl: SRT,
+      }),
+    ).toEqual({ action: "fail", reason: NO_BURNER_REASON });
+    expect(
+      planCaptionBurn({
+        captions: true,
+        captionStyle: "box",
+        burnerConfigured: true,
+        videoUrl: CLEAN,
+        srtUrl: null,
+      }),
+    ).toEqual({ action: "fail", reason: NO_SRT_REASON });
+    const noMaster = planCaptionBurn({
       captions: true,
       captionStyle: "box",
       burnerConfigured: true,
-      outputs: { video_url: CLEAN },
+      videoUrl: "",
+      srtUrl: SRT,
     });
-    expect(noSrt).toMatchObject({ action: "heygen" });
-    expect((noSrt as { reason: string }).reason).toMatch(/SRT/);
+    expect(noMaster.action).toBe("fail");
   });
 });
 
 describe("resolveCaptionBurn", () => {
   const started = new Date(NOW.getTime() - 5 * 60_000).toISOString();
-  const heygen = { video_url: CLEAN, captioned_video_url: BURNED, subtitle_url: SRT };
   const base = { error: null, startedAt: started, attempts: 1, now: NOW };
 
   it("gotowe → zapis; w toku → czekamy", () => {
+    expect(resolveCaptionBurn({ ...base, status: "done", fallback: { previous: null } })).toEqual({
+      state: "store",
+    });
     expect(
-      resolveCaptionBurn({ ...base, status: "done", fallback: { previous: null, heygen } }),
-    ).toEqual({ state: "store" });
-    expect(
-      resolveCaptionBurn({ ...base, status: "processing", fallback: { previous: null, heygen } }),
+      resolveCaptionBurn({ ...base, status: "processing", fallback: { previous: null } }),
     ).toEqual({ state: "waiting" });
   });
 
-  it("po przekroczeniu czasu schodzi na wersję HeyGena z napisami", () => {
+  it("po przekroczeniu czasu zadanie pada z powodem — bez wersji HeyGena", () => {
     const old = new Date(NOW.getTime() - CAPTION_BURN_TIMEOUT_MS - 1000).toISOString();
     const r = resolveCaptionBurn({
       ...base,
       status: "queued",
       startedAt: old,
-      fallback: { previous: null, heygen },
+      fallback: { previous: null },
     });
-    expect(r).toMatchObject({
-      state: "fallback",
-      videoUrl: BURNED,
-      captionsBurned: true,
-      captionStyle: "heygen",
-    });
-    expect((r as { note: string }).note).toMatch(/min/);
+    expect(r.state).toBe("fail");
+    expect((r as { note: string }).note).toMatch(/^Napisy nieudane: .*min/);
   });
 
-  it("błąd i zaginione zadanie: najpierw ponowienie, potem wersja zapasowa", () => {
+  it("błąd i zaginione zadanie: najpierw ponowienie, potem porażka z komunikatem", () => {
     expect(
       resolveCaptionBurn({
         ...base,
         status: "missing",
         attempts: 1,
-        fallback: { previous: null, heygen },
+        fallback: { previous: null },
       }),
     ).toMatchObject({ state: "retry" });
     const r = resolveCaptionBurn({
@@ -195,11 +148,9 @@ describe("resolveCaptionBurn", () => {
       status: "failed",
       error: "ffmpeg zakończył się kodem 1",
       attempts: CAPTION_BURN_MAX_ATTEMPTS,
-      fallback: { previous: null, heygen: { video_url: CLEAN } },
+      fallback: { previous: null },
     });
-    expect(r).toMatchObject({ state: "fallback", videoUrl: CLEAN, captionsBurned: false });
-    expect((r as { note: string }).note).toMatch(/ffmpeg/);
-    expect((r as { note: string }).note).toMatch(/bez napisów/);
+    expect(r).toEqual({ state: "fail", note: "Napisy nieudane: ffmpeg zakończył się kodem 1" });
   });
 
   it("przy zmianie napisów gotowego wideo wraca poprzedni plik", () => {
@@ -210,7 +161,6 @@ describe("resolveCaptionBurn", () => {
       attempts: 5,
       fallback: {
         previous: { videoUrl: "https://cdn/prev.mp4", captions: true, captionStyle: "tiktok" },
-        heygen,
       },
     });
     expect(r).toMatchObject({
@@ -219,30 +169,33 @@ describe("resolveCaptionBurn", () => {
       captionsBurned: true,
       captionStyle: "tiktok",
     });
+    expect((r as { note: string }).note).toMatch(/zostaje poprzednia wersja/);
   });
-});
 
-describe("captionBadgeLabel — styl własny", () => {
-  it("pokazuje nazwę stylu, gdy napisy wypaliliśmy sami", () => {
-    expect(captionBadgeLabel({ captions: true, subtitle_url: SRT, caption_style: "reels" })).toBe(
-      "napisy: Rolka — duże z obrysem",
-    );
-    expect(captionBadgeLabel({ captions: true, subtitle_url: SRT, caption_style: "heygen" })).toBe(
-      "napisy na wideo",
-    );
+  it("znaczek AI ma własną etykietę porażki", () => {
+    const r = resolveCaptionBurn({
+      status: "failed",
+      error: "ffmpeg padł",
+      startedAt: NOW.toISOString(),
+      attempts: CAPTION_BURN_MAX_ATTEMPTS,
+      now: NOW,
+      fallback: { previous: null },
+      failureLabel: "Znaczek AI nieudany",
+    });
+    expect(r).toEqual({ state: "fail", note: "Znaczek AI nieudany: ffmpeg padł" });
   });
 });
 
 describe("planBadgeBurn", () => {
   it("włączony znaczek i usługa → znaczek na pliku do publikacji", () => {
-    expect(planBadgeBurn({ aiBadge: true, burnerConfigured: true, videoUrl: BURNED })).toEqual({
+    expect(planBadgeBurn({ aiBadge: true, burnerConfigured: true, videoUrl: CLEAN })).toEqual({
       action: "badge",
-      videoUrl: BURNED,
+      videoUrl: CLEAN,
     });
   });
 
   it("wyłączony znaczek albo brak pliku — bez komunikatu", () => {
-    expect(planBadgeBurn({ aiBadge: false, burnerConfigured: true, videoUrl: BURNED })).toEqual({
+    expect(planBadgeBurn({ aiBadge: false, burnerConfigured: true, videoUrl: CLEAN })).toEqual({
       action: "skip",
       reason: null,
     });
@@ -256,29 +209,5 @@ describe("planBadgeBurn", () => {
     const plan = planBadgeBurn({ aiBadge: true, burnerConfigured: false, videoUrl: CLEAN });
     expect(plan.action).toBe("skip");
     expect((plan as { reason: string }).reason).toMatch(/Znaczek AI pominięty/);
-  });
-});
-
-describe("isBadgeOnlyBurn", () => {
-  it("styl własny = napisy (+ znaczek); heygen / brak = sam znaczek", () => {
-    expect(isBadgeOnlyBurn("reels")).toBe(false);
-    expect(isBadgeOnlyBurn("heygen")).toBe(true);
-    expect(isBadgeOnlyBurn(null)).toBe(true);
-  });
-});
-
-describe("resolveCaptionBurn — etykieta porażki", () => {
-  it("znaczek AI ma własny komunikat, a publikacja schodzi na plik HeyGena", () => {
-    const r = resolveCaptionBurn({
-      status: "failed",
-      error: "ffmpeg padł",
-      startedAt: NOW.toISOString(),
-      attempts: CAPTION_BURN_MAX_ATTEMPTS,
-      now: NOW,
-      fallback: { previous: null, heygen: { video_url: CLEAN, captioned_video_url: BURNED } },
-      failureLabel: "Znaczek AI nieudany",
-    });
-    expect(r).toMatchObject({ state: "fallback", videoUrl: BURNED, captionsBurned: true });
-    expect((r as { note: string }).note).toMatch(/^Znaczek AI nieudany: ffmpeg padł/);
   });
 });

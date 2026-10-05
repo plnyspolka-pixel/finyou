@@ -10,6 +10,12 @@ import type { StudioPromptKind } from "./studio-ai.server";
 import type { StudioPlatform } from "./studio-platforms";
 import { isCustomCaptionStyle, parseCaptionStyleId } from "./caption-style";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL, type ScenePlanItem } from "./studio-scenes";
+import {
+  isTtsModelId,
+  TTS_MODEL_OPTIONS,
+  type TtsModelId,
+  type TtsModelInfo,
+} from "./studio-tts-models";
 
 async function assertAdmin(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -32,7 +38,7 @@ export type StudioStatus = {
   heygenConfigured: boolean;
   elevenlabsConfigured: boolean;
   aiConfigured: boolean;
-  /** Usługa wypalania napisów (własne style) — bez niej zostaje styl HeyGena. */
+  /** Usługa wypalania napisów — bez niej rolki z napisami nie wychodzą (zadania padają do ponowienia). */
   captionBurnerConfigured: boolean;
   /** Znaczek „AI" w rogu rolek (STUDIO_AI_BADGE); kładzie go usługa wypalania. */
   aiBadgeEnabled?: boolean;
@@ -284,8 +290,10 @@ export type StudioVideoJob = {
   /** Czy `video_url` ma napisy wypalone w obrazie. */
   captions: boolean;
   caption_wait_since: string | null;
-  /** 'heygen' = napisy HeyGena; inne = wypalone u nas (src/lib/caption-style.ts). */
+  /** Styl napisów wypalonych u nas (src/lib/caption-style.ts); 'heygen' tylko w starych wierszach. */
   caption_style: string;
+  /** Model ElevenLabs lektora (null = ustawienie Studia w chwili renderu). */
+  tts_model_id: string | null;
   /** Id zadania w usłudze wypalania — gdy status to 'captioning'. */
   caption_burn_id: string | null;
   caption_burn_started_at: string | null;
@@ -514,8 +522,10 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       script: string;
       avatar_id: string;
       voice_id?: string;
+      /** Model ElevenLabs lektora; pusty = ustawienie Studia. */
+      tts_model_id?: string;
       captions?: boolean;
-      /** Styl napisów: 'heygen' albo własny (reels | tiktok | box | minimal). */
+      /** Styl napisów (reels | tiktok | box | minimal) — wypalany naszą usługą. */
       caption_style?: string;
       dynamic_scenes?: boolean;
       reel_structure?: boolean;
@@ -536,6 +546,8 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { FILIP_VOICE_ID } = await import("./heygen-avatars");
     const voiceId = data.voice_id || FILIP_VOICE_ID;
+    const { resolveJobTtsModelId } = await import("./studio-settings.server");
+    const ttsModelId = await resolveJobTtsModelId(data.tts_model_id);
     const autoPub = await sanitizeAutoPublish(data);
     // Twarze rolki: prowadzący + partner z puli panelu (a gdy pusta — ze stałego
     // zestawu domyślnych), dobrany rotacyjnie po ostatnich rolkach.
@@ -554,6 +566,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         script: data.script.trim(),
         avatar_id: data.avatar_id,
         voice_id: voiceId,
+        tts_model_id: ttsModelId,
         status: "generating_audio",
         captions: data.captions !== false,
         caption_style: parseCaptionStyleId(data.caption_style),
@@ -583,10 +596,12 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         topic: data.prompt.trim(),
         avatarId: data.avatar_id,
         voiceId,
+        ttsModelId,
         captions: data.captions !== false,
         dynamicScenes: data.dynamic_scenes === true || reelStructure,
         reelStructure,
         avatarIds,
+        name: data.publish_title?.trim() || data.prompt.trim(),
       });
 
       await supabaseAdmin
@@ -594,8 +609,9 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         .update({
           heygen_video_id: rendered.videoId,
           status: "rendering",
-          captions: rendered.captionMode === "burned",
-          caption_wait_since: null,
+          // Nasz SRT (tekst scenariusza + czasy ElevenLabs) — wypalany po renderze.
+          subtitle_url: rendered.subtitleUrl,
+          tts_model_id: rendered.ttsModelId,
           scene_plan: rendered.scenePlan,
           last_error: rendered.note,
         })
@@ -620,6 +636,8 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       question_ids: number[];
       avatar_id: string;
       voice_id?: string;
+      /** Model ElevenLabs lektora; pusty = ustawienie Studia w chwili renderu. */
+      tts_model_id?: string;
       captions?: boolean;
       caption_style?: string;
       dynamic_scenes?: boolean;
@@ -671,6 +689,8 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
         script: "",
         avatar_id: data.avatar_id,
         voice_id: data.voice_id || FILIP_VOICE_ID,
+        // Bez nadpisania zostaje null — tick weźmie ustawienie Studia przy renderze.
+        tts_model_id: isTtsModelId(data.tts_model_id) ? data.tts_model_id : null,
         status: "queued",
         captions: data.captions !== false,
         caption_style: parseCaptionStyleId(data.caption_style),
@@ -788,7 +808,7 @@ export const restyleStudioVideoCaptions = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     if (!isCustomCaptionStyle(data.caption_style)) {
-      throw new Error("Wybierz własny styl napisów (nie HeyGen).");
+      throw new Error("Nieznany styl napisów.");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { restyleJobCaptions } = await import("./studio-video-queue.server");
@@ -801,6 +821,55 @@ export const restyleStudioVideoCaptions = createServerFn({ method: "POST" })
     if (!row) throw new Error("Nie znaleziono zadania.");
     await restyleJobCaptions(row as JobRow, data.caption_style);
     return { ok: true };
+  });
+
+/**
+ * Ponowienie nieudanego zadania: gdy padło na napisach (jest czysty master
+ * i nasz SRT), wypala je od razu bez nowego renderu w HeyGen; inaczej wraca
+ * do kolejki.
+ */
+export const retryStudioVideoJob = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { retryStudioJob } = await import("./studio-video-queue.server");
+    type JobRow = import("./studio-video-queue.server").StudioJobRow;
+    const { data: row } = await supabaseAdmin
+      .from("studio_video_jobs")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (!row) throw new Error("Nie znaleziono zadania.");
+    return retryStudioJob(row as JobRow);
+  });
+
+// ── Lektor: model ElevenLabs ────────────────────────────────────────────────
+
+export type StudioTtsModelSetting = {
+  /** Model obowiązujący w całym Studiu (panel, seria, cron, MCP). */
+  model_id: TtsModelId;
+  options: TtsModelInfo[];
+};
+
+export const getStudioTtsModel = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<StudioTtsModelSetting> => {
+    await assertAdmin(context.userId);
+    const { getStudioTtsModelId } = await import("./studio-settings.server");
+    return { model_id: await getStudioTtsModelId(), options: TTS_MODEL_OPTIONS };
+  });
+
+export const saveStudioTtsModel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { model_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    if (!isTtsModelId(data.model_id)) throw new Error("Nieznany model ElevenLabs.");
+    const { setStudioTtsModelId } = await import("./studio-settings.server");
+    await setStudioTtsModelId(data.model_id, context.userId);
+    return { ok: true, model_id: data.model_id };
   });
 
 export const deleteStudioVideoJob = createServerFn({ method: "POST" })
