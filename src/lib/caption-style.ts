@@ -622,6 +622,38 @@ export function aiBadgeEvents(
 // „blue glow" cieni na stronie. Czcionka zostaje Inter: obraz Dockera usługi
 // nie ma Montserrata, a Inter to najbliższy dostępny geometryczny sans.
 
+export type OverlayCardRow = {
+  /** Znak przed tekstem: "check" = złoty ptaszek, "dot" = złota kropka. */
+  icon?: "check" | "dot" | null;
+  text: string;
+  /** Wartość za tekstem, złota (np. kwota, procent). */
+  value?: string | null;
+};
+
+/**
+ * Karta informacyjna (checklista, tabelka, karta z liczbą): granatowy panel
+ * z nagłówkiem i wierszami odsłanianymi po kolei. Rozmiar panelu liczymy z
+ * długości wierszy (szacunek szerokości znaków Inter) — treść kart jest
+ * nasza i krótka, więc szacunek wystarcza.
+ */
+export type OverlayCard = {
+  /** Złoty nagłówek karty (podany tekst, zwykle wielkie litery). */
+  title?: string | null;
+  rows: OverlayCardRow[];
+  /** Start karty; gdy jest syncText i SRT, liczy go overlaysWithCueTiming. */
+  startSeconds: number;
+  /** Koniec karty; null = do końca filmu. */
+  endSeconds?: number | null;
+  /**
+   * Mówiony tekst, przy którym karta ma wejść. Gdy nie da się go znaleźć
+   * w SRT (np. zmieniony scenariusz), overlaysWithCueTiming USUWA kartę —
+   * lepiej bez karty niż karta nie na temat.
+   */
+  syncText?: string | null;
+  /** Środek karty jako ułamek wysokości kadru (domyślnie z layoutu). */
+  y?: number;
+};
+
 export type DynamicOverlays = {
   /** Znacznik kategorii; wiersze rozdziela "\n". */
   tag: string;
@@ -632,6 +664,8 @@ export type DynamicOverlays = {
   headlineStartSeconds: number;
   /** Koniec pytania; gdy jest SRT, liczy go overlaysWithCueTiming. */
   headlineEndSeconds: number;
+  /** Karty informacyjne (checklisty, tabelki) — opcjonalne. */
+  cards?: OverlayCard[];
 };
 
 /**
@@ -649,6 +683,8 @@ export const OVERLAY_BRAND = {
   goldLight: "#EFCE6F",
   /** Niebieska poświata jak cienie .fy-marketing (--accent). */
   glow: "#4F8BF0",
+  /** Krawędź kart jak --border strony (rgba(84,124,214,…)). */
+  border: "#547CD6",
 } as const;
 
 /** Układ nakładek w kadrze 720×1280 (ułamki wysokości — libass przeskaluje). */
@@ -671,6 +707,26 @@ export const DYNAMIC_OVERLAY_LAYOUT = {
   headlineMaxChars: 18,
   /** Rozmycie i zasięg poświaty (px); przy znaczniku wychodzi poza plakietkę. */
   glowSize: 8,
+} as const;
+
+/** Układ kart informacyjnych w kadrze 720×1280. */
+export const OVERLAY_CARD_LAYOUT = {
+  fontSize: 34,
+  titleFontSize: 25,
+  /** Rozstrzelenie liter nagłówka karty. */
+  titleSpacing: 3,
+  padding: 26,
+  rowHeight: 52,
+  titleHeight: 46,
+  cornerRadius: 18,
+  /** Szacunek szerokości znaku Inter bold jako ułamek fontSize. */
+  charWidth: 0.56,
+  /** Miejsce na ikonę (ptaszek/kropka) z odstępem. */
+  iconWidth: 44,
+  /** Środek karty (ułamek wysokości kadru) — między pytaniem a napisami. */
+  defaultY: 0.42,
+  /** Odstęp między odsłanianiem kolejnych wierszy (s). */
+  revealStagger: 0.45,
 } as const;
 
 /** Warstwy nakładek: nad napisami (0), pod znaczkiem „AI" (5/6). */
@@ -756,6 +812,18 @@ const overlayStyleLines = (): string[] => {
       0,
       0,
     ),
+    // Karty: tekst wierszy i rysunek panelu (kolory nadają tagi w zdarzeniu).
+    line(
+      "OvCard",
+      OVERLAY_CARD_LAYOUT.fontSize,
+      assColor("#FFFFFF"),
+      assColor(B.navyDeep),
+      assColor(B.navyDeep, 255),
+      0,
+      1,
+      0,
+      0,
+    ),
   ];
 };
 
@@ -763,6 +831,79 @@ const overlayText = (text: string, maxChars?: number): string => {
   const lines = maxChars ? layoutLines(text, maxChars) : text.split("\n");
   return lines.map((l) => escapeAss(l)).join("\\N");
 };
+
+const CARD_ICONS = { check: "✓", dot: "•" } as const;
+
+/**
+ * Zdarzenia jednej karty: poświata panelu, granatowy panel (rysunek ASS),
+ * złoty nagłówek i wiersze odsłaniane po kolei (każdy z \fad i lekkim
+ * uniesieniem \move — wejście jak karty na stronie).
+ */
+export function overlayCardEvents(
+  card: OverlayCard,
+  dims: AssDimensions = DEFAULT_ASS_DIMENSIONS,
+): string[] {
+  if (!card.rows.length) return [];
+  const C = OVERLAY_CARD_LAYOUT;
+  const B = OVERLAY_BRAND;
+  const hasIcons = card.rows.some((r) => r.icon);
+  const rowChars = (r: OverlayCardRow) => r.text.length + (r.value ? r.value.length + 2 : 0);
+  const maxChars = Math.max(
+    ...card.rows.map(rowChars),
+    card.title ? Math.round((card.title.length * C.titleFontSize) / C.fontSize) : 0,
+  );
+  const innerW = (hasIcons ? C.iconWidth : 0) + Math.ceil(maxChars * C.fontSize * C.charWidth);
+  const panelW = Math.min(Math.max(C.padding * 2 + innerW, 300), dims.width - 72);
+  const panelH = C.padding * 2 + (card.title ? C.titleHeight : 0) + card.rows.length * C.rowHeight;
+  const cy = Math.round(dims.height * (card.y ?? C.defaultY));
+  const panelX = Math.round((dims.width - panelW) / 2);
+  const panelY = Math.round(cy - panelH / 2);
+
+  const startCs = toCentis(card.startSeconds);
+  const endCs =
+    card.endSeconds == null ? BADGE_END_CS : Math.max(toCentis(card.endSeconds), startCs + 100);
+  const tStart = assTime(startCs);
+  const tEnd = assTime(endCs);
+  const gold = assBgr(B.gold);
+  const navyAlpha = hex2((1 - B.navyOpacity) * 255).toUpperCase();
+  const path = roundedRectPath(panelW, panelH, C.cornerRadius);
+  // Wejście: lekkie uniesienie + \fad, jak karty .fy-marketing.
+  const rise = (x: number, y: number, ms: number) => `\\move(${x},${y + 16},${x},${y},0,${ms})`;
+
+  const events: string[] = [
+    `Dialogue: ${OVERLAY_GLOW_LAYER},${tStart},${tEnd},OvGlow,,0,0,0,,` +
+      `{\\an7${rise(panelX, panelY, 260)}\\fad(200,0)\\p1\\1a&HFF&\\bord10\\blur14` +
+      `\\3c&H${assBgr(B.glow)}&\\3a&H68&}${path}{\\p0}`,
+    `Dialogue: ${OVERLAY_TAG_LAYER},${tStart},${tEnd},OvCard,,0,0,0,,` +
+      `{\\an7${rise(panelX, panelY, 260)}\\fad(200,0)\\p1\\1c&H${assBgr(B.navy)}&\\1a&H${navyAlpha}&` +
+      `\\3c&H${assBgr(B.border)}&\\3a&H90&\\bord1.5\\shad0}${path}{\\p0}`,
+  ];
+
+  let contentTop = panelY + C.padding;
+  if (card.title) {
+    const ty = Math.round(contentTop + C.titleHeight / 2);
+    events.push(
+      `Dialogue: ${OVERLAY_HEADLINE_LAYER},${tStart},${tEnd},OvCard,,0,0,0,,` +
+        `{\\an5${rise(Math.round(dims.width / 2), ty, 260)}\\fad(200,0)` +
+        `\\fs${C.titleFontSize}\\fsp${C.titleSpacing}\\1c&H${gold}&\\bord0\\shad0}${escapeAss(card.title)}`,
+    );
+    contentTop += C.titleHeight;
+  }
+
+  const textX = panelX + C.padding;
+  card.rows.forEach((row, i) => {
+    const ry = Math.round(contentTop + i * C.rowHeight + C.rowHeight / 2);
+    const rowStartCs = startCs + 25 + Math.round(i * C.revealStagger * 100);
+    const icon = row.icon ? `{\\1c&H${gold}&}${CARD_ICONS[row.icon]}\\h\\h{\\1c&HFFFFFF&}` : "";
+    const value = row.value ? `\\h\\h{\\1c&H${gold}&}${escapeAss(row.value)}` : "";
+    events.push(
+      `Dialogue: ${OVERLAY_HEADLINE_LAYER},${assTime(Math.min(rowStartCs, endCs))},${tEnd},OvCard,,0,0,0,,` +
+        `{\\an4${rise(textX, ry, 220)}\\fad(150,0)\\bord0\\shad0}${icon}${escapeAss(row.text)}${value}`,
+    );
+  });
+
+  return events;
+}
 
 /**
  * Zdarzenia nakładek: znacznik w dwóch fazach (duży na środku → animacja
@@ -821,6 +962,7 @@ export function dynamicOverlayEvents(
     `Dialogue: ${OVERLAY_TAG_LAYER},${tHold},${tEnd},OvTag,,0,0,0,,{\\an5${tagRest}}${tag}`,
     `Dialogue: ${OVERLAY_GLOW_LAYER},${tHeadStart},${tHeadEnd},OvGlow,,0,0,0,,{\\an5${headPos}\\fs${L.headlineFontSize}${glowOf(L.glowSize)}}${headText}`,
     `Dialogue: ${OVERLAY_HEADLINE_LAYER},${tHeadStart},${tHeadEnd},OvHead,,0,0,0,,{\\an5${headPos}${headShimmer}}${headText}`,
+    ...(ov.cards ?? []).flatMap((card) => overlayCardEvents(card, dims)),
   ];
 }
 
@@ -832,21 +974,44 @@ const normalizeWords = (text: string): string[] =>
     .filter(Boolean);
 
 /**
- * Dopasowuje koniec pytania do kwestii SRT, w której lektor je kończy
- * (słowa pytania jako podciąg słów kolejnych kwestii). Bez dopasowania
- * zostaje szacunek z `headlineEndSeconds`.
+ * Kiedy lektor wypowiada dany tekst: słowa tekstu jako podciąg słów
+ * kolejnych kwestii; start = początek kwestii z pierwszym słowem,
+ * koniec = koniec kwestii z ostatnim. `null` bez pełnego dopasowania.
  */
-export function overlaysWithCueTiming(ov: DynamicOverlays, cues: SrtCue[]): DynamicOverlays {
-  const target = normalizeWords(ov.headline);
-  if (!target.length) return ov;
+function spokenRange(cues: SrtCue[], text: string): { start: number; end: number } | null {
+  const target = normalizeWords(text);
+  if (!target.length) return null;
   let i = 0;
+  let start: number | null = null;
   for (const cue of cues) {
     for (const word of normalizeWords(cue.text)) {
-      if (word === target[i]) i++;
-      if (i === target.length) return { ...ov, headlineEndSeconds: cue.end + 0.25 };
+      if (word !== target[i]) continue;
+      if (i === 0) start = cue.start;
+      i++;
+      if (i === target.length) return { start: start!, end: cue.end };
     }
   }
-  return ov;
+  return null;
+}
+
+/**
+ * Dopasowuje czasy nakładek do kwestii SRT: koniec pytania do kwestii,
+ * w której lektor je kończy (bez dopasowania zostaje szacunek), a start
+ * każdej karty z `syncText` do kwestii, w której ten tekst się zaczyna —
+ * karta bez dopasowania WYPADA (scenariusz mógł zostać zmieniony w panelu).
+ */
+export function overlaysWithCueTiming(ov: DynamicOverlays, cues: SrtCue[]): DynamicOverlays {
+  const out: DynamicOverlays = { ...ov };
+  const head = spokenRange(cues, ov.headline);
+  if (head) out.headlineEndSeconds = head.end + 0.25;
+  if (ov.cards?.length) {
+    out.cards = ov.cards.flatMap((card) => {
+      if (!card.syncText) return [card];
+      const range = spokenRange(cues, card.syncText);
+      return range ? [{ ...card, startSeconds: range.start }] : [];
+    });
+  }
+  return out;
 }
 
 export type AssOptions = {
