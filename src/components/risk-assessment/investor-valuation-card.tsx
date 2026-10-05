@@ -26,6 +26,13 @@ import {
 import { ValuationLadderChart } from "./risk-charts";
 import { RiskDisclaimer } from "./risk-disclaimer";
 
+const TREND_LABEL: Record<string, string> = {
+  rosnacy: "rosnący",
+  stabilny: "stabilny",
+  spadkowy: "spadkowy",
+  nieznany: "nieznany (brak porównywalnych transakcji)",
+};
+
 function fmtPln(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return "—";
   return new Intl.NumberFormat("pl-PL", {
@@ -108,7 +115,7 @@ export function InvestorValuationCard({
             </div>
           </div>
           <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-muted-foreground">
-            <span>Trend rynku: {pv.marketTrend}</span>
+            <span>Trend rynku: {TREND_LABEL[pv.marketTrend] ?? pv.marketTrend}</span>
             {pv.suggestedLtvCapPercent != null && (
               <span>Pułap LTV (analiza): {pv.suggestedLtvCapPercent}%</span>
             )}
