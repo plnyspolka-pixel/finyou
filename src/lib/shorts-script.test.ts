@@ -45,12 +45,12 @@ describe("buildShortsOverlays", () => {
   });
 
   it("szacowany koniec pytania rośnie z długością tekstu i trzyma się widełek 4–10 s", () => {
-    const short = buildShortsOverlays(QUESTION).headlineEndSeconds;
+    const short = buildShortsOverlays(QUESTION).headlineEndSeconds!;
     const long = buildShortsOverlays({
       ...QUESTION,
       question:
         "Czy prywatnej pożyczki pod zastaw nieruchomości może udzielić zwykła osoba fizyczna bez działalności?",
-    }).headlineEndSeconds;
+    }).headlineEndSeconds!;
     expect(short).toBeGreaterThanOrEqual(4);
     expect(long).toBeGreaterThan(short);
     expect(long).toBeLessThanOrEqual(10);

@@ -291,13 +291,22 @@ Zakładki panelu:
      ręcznego. Wygląd nakładek odwzorowuje szatę graficzną strony (system
      „dark-glow navy+gold" z `src/styles.css`): złoty znacznik na granatowej
      plakietce, białe pytanie ze złotym błyskiem, pod oboma niebieska
-     poświata akcentu. Do tego **karta-checklista CTA** („Zanim zdecydujesz":
-     umowa / KW / saldo) — granatowy panel ze złotymi ptaszkami, wchodzi
-     dokładnie wtedy, gdy lektor mówi „Najpierw sprawdź…", a wiersze
-     odsłaniają się po kolei; gdy CTA zostanie zmienione w panelu i tekst
-     nie padnie w nagraniu, karta jest pomijana. Własne karty (tabelki,
-     karty z liczbą) rysuje `overlayCardEvents` w `src/lib/caption-style.ts`.
-     `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza.
+     poświata akcentu. Do tego **karty ekranowe** — tekst wprost na obrazie
+     awatara (bez plansz; czytelność daje granatowy obrys i poświata), złoty
+     nagłówek, wiersze ze złotym ptaszkiem/kropką i złotą wartością,
+     odsłaniane po kolei:
+     - **karta-checklista CTA** („Zanim zdecydujesz": umowa / KW / saldo)
+       w rolkach z paczki — wchodzi dokładnie wtedy, gdy lektor mówi
+       „Najpierw sprawdź…";
+     - **karty z treści scenariusza** dla KAŻDEJ rolki — AI
+       (`generateOverlayCards`, `src/lib/studio-ai.server.ts`) wyciąga z
+       tekstu lektora wyliczenia, kroki i liczby (maks. 2 karty, 1–4 wiersze)
+       razem z dosłownym mówionym fragmentem, przy którym karta ma wejść.
+     Czas każdej karty liczy się z kwestii SRT (ciągłe dopasowanie słów);
+     karta, której fragment nie pada w nagraniu, wypada, a karty nie nachodzą
+     na siebie (otwarta kończy się przed startem następnej). Rysuje je
+     `overlayCardEvents` w `src/lib/caption-style.ts` (`frame: "panel"`
+     dokłada granatową planszę). `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza.
      Tytuł i opis publikacji też pochodzą z paczki (teza + nota „materiał
      edukacyjny"). Pytania, dla których wideo już istnieje, mają zielony
      znaczek (rozpoznanie po prefiksie promptu — bez zmiany schematu DB).
