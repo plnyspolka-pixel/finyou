@@ -292,7 +292,7 @@ describe("nakładki dynamiczne", () => {
   it("pytanie na środku od startu do końca kwestii, z \\fad, błyskiem i łamaniem wierszy", () => {
     const head = dynamicOverlayEvents(OVERLAYS).find((l) => l.includes(",OvHead,"))!;
     expect(head).toMatch(/^Dialogue: 4,0:00:00\.80,0:00:06\.00,OvHead,/);
-    expect(head).toContain("\\pos(360,640)");
+    expect(head).toContain("\\pos(360,320)");
     expect(head).toContain("\\fad(160,200)");
     // Złoty błysk po pojawieniu się, potem czysta biel.
     expect(head).toContain("\\t(850,1500,\\1c&HFFFFFF&)");
@@ -384,6 +384,8 @@ describe("nakładki dynamiczne", () => {
     const glows = card.filter((l) => l.includes(",OvGlow,"));
     expect(glows).toHaveLength(4);
     expect(glows.every((l) => l.includes("\\blur") && l.includes("\\3c&HF08B4F&"))).toBe(true);
+    // Poświata wierszy w rozmiarze tekstu karty — inaczej „duchy" liter za tekstem.
+    expect(glows.slice(1).every((l) => l.includes("\\fs32"))).toBe(true);
     // Nagłówek złoty, rozstrzelony, z granatowym obrysem (czytelność bez tła).
     const title = card.find((l) => l.includes(",OvCard,") && l.includes("ZANIM"))!;
     expect(title).toContain("\\1c&H4ABEEA&");

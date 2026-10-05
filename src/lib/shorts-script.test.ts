@@ -11,19 +11,19 @@ const QUESTION: ShortsQuestion = {
 };
 
 describe("buildShortsOverlays", () => {
-  it("czasy ze specyfikacji paczki: klient 0,8/1,2 s, inwestor 1,0/1,5 s", () => {
+  it("czasy ze specyfikacji paczki: pytanie wchodzi po zjechaniu znacznika: klient 1,2 s, inwestor 1,5 s", () => {
     const klient = buildShortsOverlays(QUESTION);
     expect(klient).toMatchObject({
       tag: SHORTS_OVERLAY_TAGS.klient,
       tagHoldSeconds: 1.2,
       headline: QUESTION.question,
-      headlineStartSeconds: 0.8,
+      headlineStartSeconds: 1.2,
     });
     const inwestor = buildShortsOverlays({ ...QUESTION, category: "inwestor" });
     expect(inwestor).toMatchObject({
       tag: SHORTS_OVERLAY_TAGS.inwestor,
       tagHoldSeconds: 1.5,
-      headlineStartSeconds: 1.0,
+      headlineStartSeconds: 1.5,
     });
   });
 

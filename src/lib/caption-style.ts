@@ -659,7 +659,7 @@ export type OverlayCard = {
    * lepiej bez karty niż karta nie na temat.
    */
   syncText?: string | null;
-  /** Środek karty jako ułamek wysokości kadru (domyślnie z layoutu). */
+  /** Górna krawędź karty jako ułamek wysokości kadru (domyślnie z layoutu). */
   y?: number;
   /** "none" (domyślne) = wprost na obrazie; "panel" = granatowa plansza. */
   frame?: "none" | "panel";
@@ -719,8 +719,8 @@ export const DYNAMIC_OVERLAY_LAYOUT = {
   /** Skala małego znacznika w % (po animacji \t). */
   tagSmallScale: 42,
   headlineFontSize: 56,
-  /** Środek pytania (ułamek wysokości kadru). */
-  headlineY: 0.5,
+  /** Środek pytania — górny pas kadru, ponad twarzą awatara. */
+  headlineY: 0.25,
   /** Maks. znaków w wierszu pytania przy fontSize 56 w kadrze 720 px. */
   headlineMaxChars: 18,
   /** Rozmycie i zasięg poświaty (px); przy znaczniku wychodzi poza plakietkę. */
@@ -729,20 +729,24 @@ export const DYNAMIC_OVERLAY_LAYOUT = {
 
 /** Układ kart informacyjnych w kadrze 720×1280. */
 export const OVERLAY_CARD_LAYOUT = {
-  fontSize: 34,
-  titleFontSize: 25,
+  fontSize: 32,
+  titleFontSize: 24,
   /** Rozstrzelenie liter nagłówka karty. */
   titleSpacing: 3,
-  padding: 26,
-  rowHeight: 52,
-  titleHeight: 46,
+  padding: 22,
+  rowHeight: 44,
+  titleHeight: 40,
   cornerRadius: 18,
   /** Szacunek szerokości znaku Inter bold jako ułamek fontSize. */
   charWidth: 0.56,
   /** Miejsce na ikonę (ptaszek/kropka) z odstępem. */
   iconWidth: 44,
-  /** Środek karty (ułamek wysokości kadru) — między pytaniem a napisami. */
-  defaultY: 0.42,
+  /**
+   * Górna krawędź karty (ułamek wysokości kadru): górny pas kadru pod małym
+   * znacznikiem — ponad twarzą awatara (ujęcia 16:9 w pionie zaczynają się
+   * ok. 1/3 wysokości) i daleko od napisów u dołu.
+   */
+  defaultTop: 0.155,
   /** Odstęp między odsłanianiem kolejnych wierszy (s). */
   revealStagger: 0.45,
 } as const;
@@ -878,9 +882,8 @@ export function overlayCardEvents(
   const panelW = Math.min(Math.max(C.padding * 2 + innerW, 300), dims.width - 72);
   const contentH = (card.title ? C.titleHeight : 0) + card.rows.length * C.rowHeight;
   const panelH = C.padding * 2 + contentH;
-  const cy = Math.round(dims.height * (card.y ?? C.defaultY));
   const panelX = Math.round((dims.width - panelW) / 2);
-  const panelY = Math.round(cy - panelH / 2);
+  const panelY = Math.round(dims.height * (card.y ?? C.defaultTop));
 
   const startCs = toCentis(card.startSeconds);
   const endCs =
@@ -936,7 +939,7 @@ export function overlayCardEvents(
         ? Math.max(toCentis(row.startSeconds), startCs)
         : startCs + 25 + Math.round(i * C.revealStagger * 100);
     const tRowStart = assTime(Math.min(rowStartCs, endCs));
-    const rowTags = `{\\an4${rise(textX, ry, 220)}\\fad(150,0)`;
+    const rowTags = `{\\an4${rise(textX, ry, 220)}\\fad(150,0)\\fs${C.fontSize}`;
     const icon = row.icon ? `{\\1c&H${gold}&}${CARD_ICONS[row.icon]}\\h\\h{\\1c&HFFFFFF&}` : "";
     const value = row.value ? `\\h\\h{\\1c&H${gold}&}${escapeAss(row.value)}` : "";
     if (!panel) {
