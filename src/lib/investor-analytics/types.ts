@@ -177,13 +177,22 @@ export const ANALYTICS_STEP_STATUS_LABELS: Record<AnalyticsStepStatus, string> =
 };
 
 /**
+ * Minimalny kształt danych do wyliczenia stanu kroku — pozycja listy Analityki
+ * albo raport Projektu w „Moich zleceniach" (ten sam pipeline, te same karty).
+ */
+export type AnalyticsStepSource = {
+  results: AnalyticsResultFlags;
+  run: Pick<AnalyticsRun, "status" | "steps"> | null;
+};
+
+/**
  * Stan kroku dla widoku: wynik w bazie wygrywa (krok „gotowy" nawet bez
  * przebiegu — np. analiza zrobiona ręcznie przez zespół), potem stan z
  * przebiegu, a w trwającym przebiegu pierwszy nierozstrzygnięty krok jest
  * „w toku".
  */
 export function analyticsStepStatus(
-  item: AnalyticsListItem,
+  item: AnalyticsStepSource,
   key: AnalyticsStepKey,
 ): AnalyticsStepStatus {
   const has: Record<AnalyticsStepKey, boolean> = {
@@ -208,7 +217,7 @@ export function analyticsStepStatus(
   return "pending";
 }
 
-export function analyticsDoneCount(item: AnalyticsListItem): number {
+export function analyticsDoneCount(item: AnalyticsStepSource): number {
   return ANALYTICS_STEPS.filter((s) => analyticsStepStatus(item, s.key) === "done").length;
 }
 

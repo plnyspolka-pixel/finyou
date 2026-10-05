@@ -62,7 +62,13 @@ const STATUS_META: Record<FindingStatus, { label: string; cls: string; Icon: typ
   },
 };
 
-function StatusBadge({ status, large = false }: { status: FindingStatus; large?: boolean }) {
+export function KwStatusBadge({
+  status,
+  large = false,
+}: {
+  status: FindingStatus;
+  large?: boolean;
+}) {
   const m = STATUS_META[status];
   const Icon = m.Icon;
   return (
@@ -125,7 +131,7 @@ function FindingCard({ f, investorView = false }: { f: KwFinding; investorView?:
         <div className="flex items-start justify-between gap-2">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <StatusBadge status={f.status} />
+              <KwStatusBadge status={f.status} />
               <CardTitle className="text-base">{f.title}</CardTitle>
             </div>
             <CardDescription className="mt-1">{f.plainLanguageSummary}</CardDescription>
@@ -268,7 +274,7 @@ export function KwAnalysisReport({
                 {result.rulesetVersion}
               </CardDescription>
             </div>
-            <StatusBadge status={result.overallStatus} large />
+            <KwStatusBadge status={result.overallStatus} large />
           </div>
         </CardHeader>
         <CardContent>
@@ -380,7 +386,7 @@ export function KwAnalysisReport({
               <Card key={f.id}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
-                    <StatusBadge status={f.status} />
+                    <KwStatusBadge status={f.status} />
                     <CardTitle className="text-sm">{f.title}</CardTitle>
                   </div>
                 </CardHeader>

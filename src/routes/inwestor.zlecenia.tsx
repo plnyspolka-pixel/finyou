@@ -1,14 +1,30 @@
 // „Moje zlecenia" — Zlecenia inwestora i Projekty do nich: wnioski w kwocie
 // Zlecenia utworzone do 3 dni przed jego złożeniem, ze zdjęciami/dokumentami,
 // kwotą, potencjałem lokalizacyjnym i zamaskowaną KW. Raport analityczny
-// na żądanie (gotowy przebieg reużywany), a pod nim jeden przycisk:
-// „Pobierz dane kontaktowe i rezerwuj". Bez żadnego klikania po stronie admina.
+// na żądanie (gotowy przebieg reużywany) — te same karty kroków i komponenty,
+// co w module „Analityka"; przed rezerwacją bez danych identyfikujących
+// właściciela — a pod nim jeden przycisk: „Pobierz dane kontaktowe i rezerwuj".
+// Bez żadnego klikania po stronie admina.
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Clock, Eye, FileText, Loader2, MapPin, Phone, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  AlertTriangle,
+  BarChart3,
+  BookOpenCheck,
+  Clock,
+  Eye,
+  FileText,
+  Loader2,
+  Lock,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,18 +32,40 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { OrderCycleSection } from "@/components/inwestor/order-cycle";
 import {
+  accent,
+  CoOwnersStep,
+  KwStep,
+  StepCard,
+  StepEmpty,
+} from "@/components/inwestor/analytics-steps";
+import { KwAnalysisReport, KwStatusBadge } from "@/components/kw-analysis/kw-analysis-section";
+import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
+import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
+import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
+import {
   ProjectPhotoGallery,
   ProjectPhotoThumbs,
 } from "@/components/inwestor/project-photo-gallery";
 import { withdrawInvestorOrder } from "@/lib/investor-agreements/legal-pack.functions";
 import {
   getMyOrderProjects,
+  getOrderProjectReportDetail,
   orderProjectReport,
   reserveOrderProject,
   type OrderProject,
   type OrderProjectReport,
 } from "@/lib/investor-agreements/order-projects.functions";
-import { propertyTypeLabels } from "@/lib/labels";
+import {
+  ANALYTICS_STEPS,
+  analyticsDoneCount,
+  analyticsStepStatus,
+  type AnalyticsStepKey,
+  type AnalyticsStepSource,
+  type AnalyticsStepStatus,
+} from "@/lib/investor-analytics/types";
+import type { FindingStatus } from "@/lib/kw-analysis/types";
+import { saleabilityBandLabel } from "@/lib/risk-assessment/forced-sale";
+import { formatDateTime, propertyTypeLabels } from "@/lib/labels";
 
 export const Route = createFileRoute("/inwestor/zlecenia")({
   component: MyOrdersPage,
@@ -53,6 +91,11 @@ function errMsg(e: unknown): string {
 }
 
 const PROJECTS_KEY = ["order-projects"];
+const reportKey = (orderId: string, applicationId: string) => [
+  "order-project-report",
+  orderId,
+  applicationId,
+];
 
 function MyOrdersPage() {
   const qc = useQueryClient();
@@ -218,6 +261,7 @@ function ProjectCard({
             : "Raport gotowy.",
       );
       void qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+      void qc.invalidateQueries({ queryKey: reportKey(p.orderId, p.applicationId) });
     },
     onError: (e) => toast.error(errMsg(e)),
   });
@@ -234,6 +278,8 @@ function ProjectCard({
     onSuccess: (res) => {
       setReserved({ contact: res.contact, reservationExpiresAt: res.reservationExpiresAt });
       toast.success(`Projekt zarezerwowany na ${assignmentHours} h — dane kontaktowe odsłonięte.`);
+      // Po Ujawnieniu raport dostaje komplet: numer i treść KW, nazwiska, adres.
+      void qc.invalidateQueries({ queryKey: reportKey(p.orderId, p.applicationId) });
       onChanged();
     },
     onError: (e) => toast.error(errMsg(e)),
@@ -321,7 +367,7 @@ function ProjectCard({
             ) : null}
           </div>
           {showReport && (report.status === "done" || report.status === "running") ? (
-            <ReportView report={report} />
+            <ReportPanel orderId={p.orderId} applicationId={p.applicationId} report={report} />
           ) : null}
 
           {/* Pobierz dane kontaktowe i rezerwuj */}
@@ -443,83 +489,328 @@ function FilesRow({
   );
 }
 
-function ReportView({ report: r }: { report: OrderProjectReport }) {
-  const v = r.valuation;
-  return (
-    <div className="space-y-3 rounded-md border bg-background p-3 text-xs">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div>
-          <div className="font-medium">Potencjał lokalizacji</div>
-          <div>{r.locationScore != null ? `${Math.round(r.locationScore)}/100` : "w analizie"}</div>
-        </div>
-        <div>
-          <div className="font-medium">Analiza księgi wieczystej</div>
-          {r.kwAnalysis ? (
-            <div>
-              {r.kwAnalysis.overallStatus}
-              {r.kwAnalysis.unresolvedCount > 0
-                ? ` · ${r.kwAnalysis.unresolvedCount} kwestii do wyjaśnienia`
-                : " · bez zastrzeżeń"}
-            </div>
-          ) : (
-            <div className="text-muted-foreground">w przygotowaniu</div>
-          )}
-        </div>
-        <div>
-          <div className="font-medium">Właściciele w KW</div>
-          {r.owners ? (
-            <div>
-              {r.owners.totalInKw != null ? `${r.owners.totalInKw} os. · ` : ""}
-              {r.owners.summary ?? ""}
-            </div>
-          ) : (
-            <div className="text-muted-foreground">w przygotowaniu</div>
-          )}
-        </div>
+// ── Raport analityczny ──────────────────────────────────────────────────────
+// Te same karty kroków i komponenty, co w module „Analityka" (ten sam
+// pipeline: KW → właściciele → analiza KW → ryzyko i wartość). Treść pobierana
+// osobno, dopiero po rozwinięciu raportu; przed rezerwacją serwer wysyła
+// wersję bez danych identyfikujących właściciela.
+
+function stepSource(r: OrderProjectReport): AnalyticsStepSource {
+  return {
+    results: r.results,
+    run:
+      r.status === "none"
+        ? null
+        : {
+            status: r.status === "running" ? "running" : r.status === "error" ? "error" : "done",
+            steps: r.steps,
+          },
+  };
+}
+
+function ReportPanel({
+  orderId,
+  applicationId,
+  report,
+}: {
+  orderId: string;
+  applicationId: string;
+  report: OrderProjectReport;
+}) {
+  const detailFn = useServerFn(getOrderProjectReportDetail);
+  const q = useQuery({
+    queryKey: reportKey(orderId, applicationId),
+    queryFn: () => detailFn({ data: { orderId, applicationId } }),
+    // Ocenę ryzyka dokańcza cron — dopytujemy, dopóki przebieg trwa.
+    refetchInterval: (query) =>
+      (query.state.data?.report.status ?? report.status) === "running" ? 20_000 : false,
+  });
+
+  if (q.isError) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+        <AlertTriangle className="h-4 w-4" /> {errMsg(q.error)}
+        <Button size="sm" variant="outline" onClick={() => void q.refetch()}>
+          Spróbuj ponownie
+        </Button>
       </div>
-      {r.kwAnalysis && r.kwAnalysis.findings.length > 0 ? (
-        <ul className="list-disc space-y-0.5 pl-4">
-          {r.kwAnalysis.findings.slice(0, 6).map((f, i) => (
-            <li key={i}>
-              <span className="font-medium">{f.title}</span>
-              {f.investorMessage ? ` — ${f.investorMessage}` : ""}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {r.owners && r.owners.warnings.length > 0 ? (
-        <ul className="list-disc pl-4 text-amber-800">
-          {r.owners.warnings.map((w, i) => (
-            <li key={i}>{w}</li>
-          ))}
-        </ul>
-      ) : null}
-      <div>
-        <div className="font-medium">Wycena i ryzyko</div>
-        {v ? (
-          <div className="grid gap-x-4 gap-y-0.5 sm:grid-cols-2">
-            <span>
-              Wartość prognozowana: {PLN(v.predictedValue.lowPln)} – {PLN(v.predictedValue.highPln)}{" "}
-              (śr. {PLN(v.predictedValue.midPln)})
+    );
+  }
+  if (!q.data) {
+    return (
+      <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Wczytywanie raportu…
+      </div>
+    );
+  }
+
+  const d = q.data;
+  const r = d.report;
+  const src = stepSource(r);
+  const status = (k: AnalyticsStepKey): AnalyticsStepStatus => analyticsStepStatus(src, k);
+  const done = analyticsDoneCount(src);
+  const progress = Math.round((done / ANALYTICS_STEPS.length) * 100);
+  const gradient = ANALYTICS_STEPS.map(
+    (s, i) =>
+      `${accent(s.hue, 0.68, 0.17)} ${Math.round((i / (ANALYTICS_STEPS.length - 1)) * 100)}%`,
+  ).join(", ");
+  const sa = d.valuation?.saleability ?? null;
+  const pv = d.valuation?.predictedValue ?? null;
+
+  return (
+    <div className="space-y-4">
+      {/* Nagłówek raportu: postęp czterech kroków + kluczowe liczby */}
+      <div className="rounded-3xl border bg-card p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="flex items-center gap-2 text-lg font-black leading-tight">
+              <BarChart3 className="h-5 w-5" /> Raport analityczny
+            </h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {r.status === "running"
+                ? "Automat pracuje — kroki wykonują się po kolei, ten widok odświeża się sam."
+                : r.finishedAt
+                  ? `Przebieg zakończony ${formatDateTime(r.finishedAt)}.`
+                  : "Wyniki z analiz zespołu Finance You."}
+            </p>
+          </div>
+          {d.disclosed ? (
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/inwestor/analityka" search={{ app: applicationId }}>
+                <BarChart3 className="mr-2 h-4 w-4" /> Otwórz w Analityce
+              </Link>
+            </Button>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-[0.68rem] font-semibold text-muted-foreground">
+              <Lock className="h-3 w-3" /> dane właściciela po rezerwacji
             </span>
-            <span>Trend rynku: {v.predictedValue.marketTrend}</span>
-            <span>
-              Sugerowana maks. pożyczka: {PLN(v.predictedValue.suggestedMaxLoanAmountPln)}
-              {v.predictedValue.suggestedLtvCapPercent != null
-                ? ` (LTV do ${v.predictedValue.suggestedLtvCapPercent}%)`
-                : ""}
-            </span>
-            <span>
-              Szybka sprzedaż: {PLN(v.quickSale.expectedLowPln)} –{" "}
-              {PLN(v.quickSale.expectedHighPln)}
-            </span>
+          )}
+        </div>
+
+        <div className="mt-4 flex items-center gap-3">
+          <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full transition-[width] duration-500"
+              style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${gradient})` }}
+            />
+          </div>
+          <span className="text-sm font-black tabular-nums">
+            {done}/{ANALYTICS_STEPS.length}
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <ScoreTile
+            label="Potencjał lokalizacji"
+            value={r.locationScore != null ? Math.round(r.locationScore) : null}
+            hint="0–100 · próg automatu: 50"
+          />
+          <KwStatusTile
+            status={r.results.kwAnalysisStatus}
+            unresolved={d.kwAnalysis?.result.unresolvedFindingCount ?? null}
+          />
+          <ScoreTile
+            label="Łatwość sprzedaży"
+            value={sa?.available ? sa.score : null}
+            hint={
+              sa?.available
+                ? `${saleabilityBandLabel(sa.band)}${
+                    sa.estimatedDaysOnMarket != null ? ` · ~${sa.estimatedDaysOnMarket} dni` : ""
+                  }`
+                : "po analizie ryzyka"
+            }
+          />
+          <ValueTile
+            low={pv?.lowPln ?? null}
+            mid={pv?.midPln ?? null}
+            high={pv?.highPln ?? null}
+            ltvCap={pv?.suggestedLtvCapPercent ?? null}
+          />
+        </div>
+
+        {!d.disclosed && (
+          <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
+            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            Przed rezerwacją raport nie zawiera danych pozwalających zidentyfikować właściciela:
+            numer KW jest zamaskowany, a treść księgi, cytaty z niej, nazwiska i adres odsłaniamy po
+            Ujawnieniu — razem z danymi kontaktowymi klienta.
+          </p>
+        )}
+      </div>
+
+      {/* Krok 1 — KW */}
+      <StepCard meta={ANALYTICS_STEPS[0]} status={status("kw")} error={r.steps.kw?.error}>
+        {d.disclosed ? (
+          <KwStep kwNumber={d.kwNumber} doc={d.kwDocument} status={status("kw")} />
+        ) : (
+          <TeaserKwStep status={status("kw")} fetched={r.results.kwFetched} kwMasked={d.kwNumber} />
+        )}
+      </StepCard>
+
+      {/* Krok 2 — właściciele */}
+      <StepCard
+        meta={ANALYTICS_STEPS[1]}
+        status={status("coowners")}
+        error={r.steps.coowners?.error}
+      >
+        <CoOwnersStep co={d.coowners} status={status("coowners")} />
+      </StepCard>
+
+      {/* Krok 3 — analiza KW */}
+      <StepCard
+        meta={ANALYTICS_STEPS[2]}
+        status={status("kw_analysis")}
+        error={r.steps.kw_analysis?.error}
+        badge={
+          r.results.kwAnalysisStatus ? <KwStatusBadge status={r.results.kwAnalysisStatus} /> : null
+        }
+      >
+        {d.kwAnalysis ? (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Analiza z {formatDateTime(d.kwAnalysis.createdAt)}.
+            </p>
+            <KwAnalysisReport result={d.kwAnalysis.result} investorView />
           </div>
         ) : (
-          <div className="inline-flex items-center gap-1 text-muted-foreground">
-            {r.status === "running" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            ocena ryzyka w przygotowaniu (kilka minut)
-          </div>
+          <StepEmpty
+            status={status("kw_analysis")}
+            text="Raport analizy KW pojawi się po pobraniu księgi wieczystej i przejściu silnika reguł."
+          />
         )}
+      </StepCard>
+
+      {/* Krok 4 — ryzyko i wartość */}
+      <StepCard meta={ANALYTICS_STEPS[3]} status={status("risk")} error={r.steps.risk?.error}>
+        {d.valuation || d.collateral ? (
+          <div className="space-y-4">
+            <InvestorValuationCard applicationId={applicationId} summary={d.valuation} />
+            <InvestorSummaryCard applicationId={applicationId} result={d.collateral} />
+          </div>
+        ) : (
+          <StepEmpty
+            status={status("risk")}
+            text="Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po zakończeniu analizy ryzyka (kilka–kilkanaście minut)."
+          />
+        )}
+      </StepCard>
+
+      <RiskDisclaimer />
+    </div>
+  );
+}
+
+/** Krok 1 przed Ujawnieniem: potwierdzenie pobrania KW bez treści działów i pełnego numeru. */
+function TeaserKwStep({
+  status,
+  fetched,
+  kwMasked,
+}: {
+  status: AnalyticsStepStatus;
+  fetched: boolean;
+  kwMasked: string | null;
+}) {
+  if (!fetched) {
+    return (
+      <StepEmpty
+        status={status}
+        text="Treść księgi wieczystej jeszcze nie została pobrana — zrobi to pierwszy krok pipeline'u."
+      />
+    );
+  }
+  return (
+    <div className="space-y-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <BookOpenCheck className="h-4 w-4 text-emerald-600" />
+        <span>
+          Treść KW <span className="font-mono text-foreground">{kwMasked ?? "—"}</span> pobrana z
+          EKW i przeanalizowana w krokach 2–3.
+        </span>
+      </div>
+      <p className="flex items-start gap-2 rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
+        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        Pełny numer KW i treść działów I–IV (oznaczenie nieruchomości, własność, prawa i roszczenia,
+        hipoteki) odsłaniamy po rezerwacji Projektu.
+      </p>
+    </div>
+  );
+}
+
+function scoreTone(value: number | null): { bar: string; text: string } {
+  if (value == null) return { bar: "bg-muted-foreground/30", text: "text-muted-foreground" };
+  if (value >= 70) return { bar: "bg-emerald-500", text: "text-emerald-700" };
+  if (value >= 50) return { bar: "bg-amber-500", text: "text-amber-700" };
+  return { bar: "bg-rose-500", text: "text-rose-700" };
+}
+
+/** Kafelek 0–100 z paskiem w kolorze progu (zielony ≥ 70, bursztyn ≥ 50, róż poniżej). */
+function ScoreTile({ label, value, hint }: { label: string; value: number | null; hint: string }) {
+  const tone = scoreTone(value);
+  return (
+    <div className="rounded-2xl border bg-background p-3">
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className={cn("mt-0.5 text-xl font-black tabular-nums", tone.text)}>
+        {value != null ? value : "—"}
+        <span className="text-xs font-semibold text-muted-foreground">/100</span>
+      </div>
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+        <div
+          className={cn("h-full rounded-full", tone.bar)}
+          style={{ width: `${Math.max(0, Math.min(100, value ?? 0))}%` }}
+        />
+      </div>
+      <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>
+    </div>
+  );
+}
+
+function KwStatusTile({
+  status,
+  unresolved,
+}: {
+  status: FindingStatus | null;
+  unresolved: number | null;
+}) {
+  return (
+    <div className="rounded-2xl border bg-background p-3">
+      <div className="text-[11px] text-muted-foreground">Analiza księgi wieczystej</div>
+      <div className="mt-1">
+        {status ? (
+          <KwStatusBadge status={status} large />
+        ) : (
+          <span className="text-sm text-muted-foreground">w przygotowaniu</span>
+        )}
+      </div>
+      <div className="mt-1 text-[11px] text-muted-foreground">
+        {status
+          ? unresolved
+            ? `${unresolved} ${unresolved === 1 ? "kwestia" : "kwestii"} do wyjaśnienia`
+            : "bez nierozwiązanych alertów"
+          : "silnik reguł po pobraniu KW"}
+      </div>
+    </div>
+  );
+}
+
+function ValueTile({
+  low,
+  mid,
+  high,
+  ltvCap,
+}: {
+  low: number | null;
+  mid: number | null;
+  high: number | null;
+  ltvCap: number | null;
+}) {
+  return (
+    <div className="rounded-2xl border border-primary/40 bg-primary/5 p-3">
+      <div className="text-[11px] text-muted-foreground">Wartość prognozowana</div>
+      <div className="mt-0.5 text-xl font-black tabular-nums text-primary">{PLN(mid)}</div>
+      <div className="mt-1 text-[11px] text-muted-foreground">
+        {mid != null
+          ? `${PLN(low)} – ${PLN(high)}${ltvCap != null ? ` · LTV do ${ltvCap}%` : ""}`
+          : "po analizie ryzyka"}
       </div>
     </div>
   );

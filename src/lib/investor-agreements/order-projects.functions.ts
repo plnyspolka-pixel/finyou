@@ -12,6 +12,22 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
 import type { InvestorValuationSummary } from "@/lib/risk-assessment/risk-assessment.functions";
+import type { CoOwnersAnalysis } from "@/lib/coowners/types";
+import type { FindingStatus, KwAnalysisResult } from "@/lib/kw-analysis/types";
+import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
+import type {
+  AnalyticsCoOwners,
+  AnalyticsKwDocument,
+  AnalyticsResultFlags,
+  AnalyticsStepKey,
+  AnalyticsStepState,
+} from "@/lib/investor-analytics/types";
+import { compactKwNumber, formatKwNumber } from "@/lib/kw";
+import {
+  sanitizeCoOwnersForTeaser,
+  sanitizeCollateralForTeaser,
+  sanitizeKwAnalysisForTeaser,
+} from "./order-report-teaser";
 import {
   ACTIVE_MATCH_STATUSES,
   TEASER_VISIBLE_MATCH_STATUSES,
@@ -33,20 +49,38 @@ export interface OrderProjectFile {
   name: string;
 }
 
+/**
+ * Stan raportu analitycznego Projektu — lekki, w liście Projektów. Pełną
+ * treść (cztery kroki pipeline'u) pobiera osobno `getOrderProjectReportDetail`.
+ */
 export interface OrderProjectReport {
   status: "none" | "running" | "done" | "error";
   startedAt: string | null;
   finishedAt: string | null;
   error: string | null;
   locationScore: number | null;
-  kwAnalysis: {
-    createdAt: string | null;
-    overallStatus: string;
-    unresolvedCount: number;
-    findings: Array<{ title: string; status: string; category: string; investorMessage: string }>;
-  } | null;
-  owners: { totalInKw: number | null; summary: string | null; warnings: string[] } | null;
+  /** Stan kroków ostatniego przebiegu (jak w Analityce) — do kart kroków. */
+  steps: Partial<Record<AnalyticsStepKey, AnalyticsStepState>>;
+  /** Które wyniki już są w bazie (krok „gotowy" także bez przebiegu automatu). */
+  results: AnalyticsResultFlags;
+}
+
+/**
+ * Pełny raport analityczny Projektu — te same dane i komponenty, co w module
+ * „Analityka". Przed Ujawnieniem (rezerwacją) bez danych identyfikujących.
+ */
+export interface OrderProjectReportDetail {
+  report: OrderProjectReport;
+  /** true = po Ujawnieniu (rezerwacja / transakcja): komplet danych. */
+  disclosed: boolean;
+  /** Numer KW: pełny po Ujawnieniu, wcześniej zamaskowany. */
+  kwNumber: string | null;
+  /** Treść księgi (działy I–IV) — wyłącznie po Ujawnieniu. */
+  kwDocument: AnalyticsKwDocument | null;
+  coowners: AnalyticsCoOwners | null;
+  kwAnalysis: { result: KwAnalysisResult; createdAt: string } | null;
   valuation: InvestorValuationSummary | null;
+  collateral: PropertyAnalysisResult | null;
 }
 
 export interface OrderProjectContact {
@@ -183,50 +217,69 @@ async function loadProjectFiles(
   return { photos, files };
 }
 
-/** Raport analityczny Projektu: stan przebiegu + wyniki kroków pipeline'u. */
-async function loadProjectReport(
-  db: any,
-  appId: string,
-  locationScore: number | null,
-): Promise<OrderProjectReport> {
-  const [{ data: run }, { data: kwAn }, { data: coRow }, { data: raRow }] = await Promise.all([
+/** Stan raportu analitycznego Projektu: ostatni przebieg pipeline'u + które wyniki już są. */
+async function loadProjectReport(db: any, app: any): Promise<OrderProjectReport> {
+  const locationScore =
+    app.location_potential_score != null ? Number(app.location_potential_score) : null;
+  const compact = compactKwNumber(propertyOf(app)?.land_register_number ?? "");
+  const [
+    { data: run },
+    { data: kwAn },
+    { data: co },
+    { data: ra },
+    { data: coll },
+    { data: kwDoc },
+  ] = await Promise.all([
     loose(db)
       .from("analysis_pipeline_runs")
-      .select("id, status, error, started_at, finished_at")
-      .eq("loan_application_id", appId)
+      .select("id, status, error, started_at, finished_at, steps")
+      .eq("loan_application_id", app.id)
       .order("started_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
     loose(db)
       .from("kw_land_register_analyses")
-      .select("created_at, overall_status, unresolved_finding_count, result_json")
-      .eq("loan_application_id", appId)
+      .select("overall_status")
+      .eq("loan_application_id", app.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
     loose(db)
       .from("coowner_registry_checks")
-      .select("result_json, warnings")
-      .eq("application_id", appId)
+      .select("application_id")
+      .eq("application_id", app.id)
       .maybeSingle(),
     loose(db)
       .from("investment_risk_assessments")
-      .select("result_json")
-      .eq("application_id", appId)
+      .select("id")
+      .eq("application_id", app.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    loose(db)
+      .from("property_analyses")
+      .select("id")
+      .eq("application_id", app.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    compact
+      ? loose(db)
+          .from("kw_documents")
+          .select("status, fetched_at")
+          .eq("kw_number", compact)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
-  let valuation: InvestorValuationSummary | null = null;
-  const riskJson = raRow?.result_json as InvestmentRiskAssessment | undefined;
-  if (riskJson) {
-    const { buildInvestorValuationSummary } =
-      await import("@/lib/risk-assessment/risk-assessment.functions");
-    valuation = buildInvestorValuationSummary(riskJson);
-  }
-  const co = coRow?.result_json as any;
-  const hasResults = Boolean(kwAn?.result_json || co || valuation);
+  const results: AnalyticsResultFlags = {
+    kwFetched: Boolean(kwDoc && (kwDoc.status === "ready" || kwDoc.fetched_at)),
+    kwAnalysisStatus: (kwAn?.overall_status as FindingStatus | undefined) ?? null,
+    coowners: Boolean(co),
+    risk: Boolean(ra),
+    collateral: Boolean(coll),
+  };
+  const hasResults = Boolean(results.kwAnalysisStatus || results.coowners || results.risk);
   const status: OrderProjectReport["status"] = run
     ? run.status === "running"
       ? "running"
@@ -243,27 +296,8 @@ async function loadProjectReport(
     finishedAt: run?.finished_at ?? null,
     error: status === "error" ? (run?.error ?? null) : null,
     locationScore,
-    kwAnalysis: kwAn?.result_json
-      ? {
-          createdAt: kwAn.created_at ?? null,
-          overallStatus: String(kwAn.overall_status ?? "OK"),
-          unresolvedCount: Number(kwAn.unresolved_finding_count ?? 0),
-          findings: ((kwAn.result_json?.findings ?? []) as any[]).map((f) => ({
-            title: String(f.title ?? ""),
-            status: String(f.status ?? ""),
-            category: String(f.category ?? ""),
-            investorMessage: String(f.investorMessage ?? f.plainLanguageSummary ?? ""),
-          })),
-        }
-      : null,
-    owners: co
-      ? {
-          totalInKw: co.totalOwnersInKw ?? null,
-          summary: co.summary ?? null,
-          warnings: ((coRow?.warnings ?? co.warnings ?? []) as string[]).map(String),
-        }
-      : null,
-    valuation,
+    steps: (run?.steps ?? {}) as OrderProjectReport["steps"],
+    results,
   };
 }
 
@@ -323,7 +357,7 @@ async function buildProject(
   const disclosed = Boolean(match && DISCLOSED_STATUSES.includes(match.status));
   const [{ photos, files }, report, contact] = await Promise.all([
     loadProjectFiles(db, app.id, (p?.photos as string[] | null) ?? null),
-    loadProjectReport(db, app.id, locationScore),
+    loadProjectReport(db, app),
     disclosed ? loadContact(db, app.client_id ?? null) : Promise.resolve(null),
   ]);
   return {
@@ -481,7 +515,8 @@ async function eligibleApp(db: any, order: any, applicationId: string) {
     .eq("id", applicationId)
     .maybeSingle();
   if (!app || app.deleted_at) throw new Error("Nie znaleziono Projektu.");
-  if (!contactComplete(await loadContact(db, app.client_id ?? null))) {
+  const contact = await loadContact(db, app.client_id ?? null);
+  if (!contactComplete(contact)) {
     throw new Error("Projekt nie ma kompletu danych klienta (imię, nazwisko, telefon).");
   }
   const { data: match } = await loose(db)
@@ -496,7 +531,7 @@ async function eligibleApp(db: any, order: any, applicationId: string) {
   if (!match && !appFitsOrder(order, app)) {
     throw new Error("Ten Projekt nie mieści się w kwocie albo oknie czasowym Zlecenia.");
   }
-  return { app, match: match ?? null };
+  return { app, match: match ?? null, contact };
 }
 
 /**
@@ -514,8 +549,6 @@ export const orderProjectReport = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const order = await myAcceptedOrder(supabaseAdmin, userId, data.orderId);
     const { app } = await eligibleApp(supabaseAdmin, order, data.applicationId);
-    const locationScore =
-      app.location_potential_score != null ? Number(app.location_potential_score) : null;
 
     const { normalizeKwNumber } = await import("@/lib/kw-fetch.server");
     const kwNumber = normalizeKwNumber(String(propertyOf(app)?.land_register_number ?? ""));
@@ -555,7 +588,115 @@ export const orderProjectReport = createServerFn({ method: "POST" })
       });
       reused = false;
     }
-    return { report: await loadProjectReport(supabaseAdmin, app.id, locationScore), reused };
+    return { report: await loadProjectReport(supabaseAdmin, app), reused };
+  });
+
+/**
+ * Pełny raport analityczny Projektu — treść czterech kroków pipeline'u w tych
+ * samych kształtach, co w module „Analityka" (te same komponenty). Przed
+ * Ujawnieniem serwer usuwa dane identyfikujące (order-report-teaser): numer KW
+ * zamaskowany, bez treści księgi i cytatów z niej, nazwiska i adres zastąpione
+ * rolą. Po rezerwacji / transakcji — komplet.
+ */
+export const getOrderProjectReportDetail = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ orderId: z.string().uuid(), applicationId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<OrderProjectReportDetail> => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const order = await myAcceptedOrder(supabaseAdmin, userId, data.orderId);
+    const { app, match, contact } = await eligibleApp(supabaseAdmin, order, data.applicationId);
+    const disclosed = Boolean(match && DISCLOSED_STATUSES.includes(match.status));
+    const kwRaw = String(propertyOf(app)?.land_register_number ?? "").trim();
+    const compact = compactKwNumber(kwRaw);
+
+    const { loadKwDocumentView, reduceCoOwners } =
+      await import("@/lib/investor-analytics/analytics.functions");
+    const [report, kwDocument, { data: kwa }, { data: co }, { data: risk }, { data: coll }] =
+      await Promise.all([
+        loadProjectReport(supabaseAdmin, app),
+        disclosed ? loadKwDocumentView(loose(supabaseAdmin), compact) : Promise.resolve(null),
+        loose(supabaseAdmin)
+          .from("kw_land_register_analyses")
+          .select("result_json, created_at")
+          .eq("loan_application_id", app.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        loose(supabaseAdmin)
+          .from("coowner_registry_checks")
+          .select("result_json")
+          .eq("application_id", app.id)
+          .maybeSingle(),
+        loose(supabaseAdmin)
+          .from("investment_risk_assessments")
+          .select("result_json")
+          .eq("application_id", app.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        loose(supabaseAdmin)
+          .from("property_analyses")
+          .select("result_json")
+          .eq("application_id", app.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+    let valuation: InvestorValuationSummary | null = null;
+    const riskJson = risk?.result_json as InvestmentRiskAssessment | undefined;
+    if (riskJson) {
+      const { buildInvestorValuationSummary } =
+        await import("@/lib/risk-assessment/risk-assessment.functions");
+      valuation = buildInvestorValuationSummary(riskJson);
+    }
+    const coowners = reduceCoOwners((co?.result_json as CoOwnersAnalysis | null) ?? null);
+    const kwAnalysis = kwa?.result_json
+      ? { result: kwa.result_json as KwAnalysisResult, createdAt: String(kwa.created_at) }
+      : null;
+    const collateral = (coll?.result_json as PropertyAnalysisResult | undefined) ?? null;
+
+    if (disclosed) {
+      return {
+        report,
+        disclosed,
+        kwNumber: formatKwNumber(kwRaw) ?? (kwRaw || null),
+        kwDocument,
+        coowners,
+        kwAnalysis,
+        valuation,
+        collateral,
+      };
+    }
+
+    // Przed Ujawnieniem: nazwiska z działu II i dane klienta do zamaskowania.
+    const { maskKwRaw } = await import("@/lib/location-scoring/masking");
+    const names = [...(coowners?.owners.map((o) => o.fullName ?? "") ?? []), contact?.name ?? ""]
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0);
+    const maskedKw = kwRaw ? maskKwRaw(kwRaw) : null;
+    return {
+      report,
+      disclosed,
+      kwNumber: maskedKw,
+      kwDocument: null,
+      coowners: coowners ? sanitizeCoOwnersForTeaser(coowners, names) : null,
+      kwAnalysis: kwAnalysis
+        ? {
+            result: sanitizeKwAnalysisForTeaser(
+              kwAnalysis.result,
+              maskedKw ?? "(zamaskowany numer KW)",
+              names,
+            ),
+            createdAt: kwAnalysis.createdAt,
+          }
+        : null,
+      valuation,
+      collateral: collateral ? sanitizeCollateralForTeaser(collateral, names) : null,
+    };
   });
 
 /**
