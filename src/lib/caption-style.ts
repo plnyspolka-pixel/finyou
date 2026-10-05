@@ -628,6 +628,13 @@ export type OverlayCardRow = {
   text: string;
   /** Wartość za tekstem, złota (np. kwota, procent). */
   value?: string | null;
+  /**
+   * Mówiony fragment, przy którym wiersz ma się odsłonić (lista w rytmie
+   * lektora). Bez niego wiersze wchodzą po kolei co `revealStagger`.
+   */
+  syncText?: string | null;
+  /** Start wiersza (s, bezwzględny) — wylicza go overlaysWithCueTiming. */
+  startSeconds?: number | null;
 };
 
 /**
@@ -656,6 +663,8 @@ export type OverlayCard = {
   y?: number;
   /** "none" (domyślne) = wprost na obrazie; "panel" = granatowa plansza. */
   frame?: "none" | "panel";
+  /** Mówiony fragment, po którym karta ma zniknąć (zamiast czekać na następną). */
+  endSyncText?: string | null;
 };
 
 export type DynamicOverlays = {
@@ -668,6 +677,11 @@ export type DynamicOverlays = {
   headlineStartSeconds?: number;
   /** Koniec pytania; gdy jest SRT, liczy go overlaysWithCueTiming. */
   headlineEndSeconds?: number;
+  /**
+   * Mówiony tekst, po którym liczymy koniec pytania, gdy na ekranie jest
+   * co innego niż mówi lektor (np. krótki tytuł odcinka zamiast hooka).
+   */
+  headlineSyncText?: string | null;
   /** Karty informacyjne (checklisty, tabelki) — opcjonalne. */
   cards?: OverlayCard[];
 };
@@ -916,9 +930,12 @@ export function overlayCardEvents(
   const textX = panelX + C.padding;
   card.rows.forEach((row, i) => {
     const ry = Math.round(contentTop + i * C.rowHeight + C.rowHeight / 2);
-    const tRowStart = assTime(
-      Math.min(startCs + 25 + Math.round(i * C.revealStagger * 100), endCs),
-    );
+    // Wiersz z własnym czasem (z SRT) wchodzi wtedy; inaczej po kolei.
+    const rowStartCs =
+      row.startSeconds != null
+        ? Math.max(toCentis(row.startSeconds), startCs)
+        : startCs + 25 + Math.round(i * C.revealStagger * 100);
+    const tRowStart = assTime(Math.min(rowStartCs, endCs));
     const rowTags = `{\\an4${rise(textX, ry, 220)}\\fad(150,0)`;
     const icon = row.icon ? `{\\1c&H${gold}&}${CARD_ICONS[row.icon]}\\h\\h{\\1c&HFFFFFF&}` : "";
     const value = row.value ? `\\h\\h{\\1c&H${gold}&}${escapeAss(row.value)}` : "";
@@ -1050,13 +1067,23 @@ function spokenRange(cues: SrtCue[], text: string): { start: number; end: number
  */
 export function overlaysWithCueTiming(ov: DynamicOverlays, cues: SrtCue[]): DynamicOverlays {
   const out: DynamicOverlays = { ...ov };
-  const head = ov.headline ? spokenRange(cues, ov.headline) : null;
+  const headText = ov.headlineSyncText ?? ov.headline;
+  const head = headText ? spokenRange(cues, headText) : null;
   if (head) out.headlineEndSeconds = head.end + 0.25;
   if (ov.cards?.length) {
     const synced = ov.cards.flatMap((card) => {
-      if (!card.syncText) return [card];
+      // Wiersze z własnym fragmentem dostają start z SRT; bez dopasowania
+      // zostają w sekwencji (nie wypadają — tekst wiersza i tak jest na temat).
+      const rows = card.rows.map((row) => {
+        if (!row.syncText) return row;
+        const r = spokenRange(cues, row.syncText);
+        return r ? { ...row, startSeconds: r.start } : row;
+      });
+      const endRange = card.endSyncText ? spokenRange(cues, card.endSyncText) : null;
+      const endSeconds = endRange ? endRange.end + 0.3 : (card.endSeconds ?? null);
+      if (!card.syncText) return [{ ...card, rows, endSeconds }];
       const range = spokenRange(cues, card.syncText);
-      return range ? [{ ...card, startSeconds: range.start }] : [];
+      return range ? [{ ...card, rows, endSeconds, startSeconds: range.start }] : [];
     });
     // Karty nie nachodzą na siebie: otwarta karta (endSeconds null) kończy
     // się chwilę przed startem następnej; ostatnia zostaje do końca filmu.

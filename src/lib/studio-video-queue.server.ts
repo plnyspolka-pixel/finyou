@@ -119,6 +119,14 @@ async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
   const { isDynamicOverlaysEnabled } = await import("./caption-burner.server");
   if (!isDynamicOverlaysEnabled()) return null;
 
+  // Odcinek serii: nakładki i karty zdefiniowane ręcznie w shorts-series.ts
+  // (ze wskazówek montażowych autora) — AI nie dokłada swoich kart.
+  const { parseEpisodePromptTag, findShortsEpisode, buildEpisodeOverlays } =
+    await import("./shorts-series");
+  const episodeId = parseEpisodePromptTag(job.prompt);
+  const episode = episodeId != null ? findShortsEpisode(episodeId) : undefined;
+  if (episode) return buildEpisodeOverlays(episode);
+
   const questionId = parseShortsPromptTag(job.prompt);
   const q = questionId != null ? findShortsQuestion(questionId) : undefined;
   let base: DynamicOverlays | null = null;
@@ -198,8 +206,15 @@ async function processClaimedJob(job: JobRow): Promise<void> {
   if (!script) {
     const questionId = parseShortsPromptTag(job.prompt);
     const q = questionId != null ? findShortsQuestion(questionId) : undefined;
+    const { parseEpisodePromptTag, findShortsEpisode, buildEpisodeScript } =
+      await import("./shorts-series");
+    const episodeId = parseEpisodePromptTag(job.prompt);
+    const episode = episodeId != null ? findShortsEpisode(episodeId) : undefined;
     let gen: { script: string; title: string; description: string; hashtags: string[] };
-    if (q) {
+    if (episode) {
+      // Odcinek serii: scenariusz autorski 1:1 — bez AI.
+      gen = buildEpisodeScript(episode);
+    } else if (q) {
       // Pytanie z paczki 250: gotowy, sprawdzony scenariusz 1:1 z pliku — bez AI.
       const { buildShortsScript } = await import("./shorts-script");
       gen = buildShortsScript(q);

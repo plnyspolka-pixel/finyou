@@ -77,6 +77,12 @@ import {
   type ShortsCategory,
 } from "@/lib/shorts-question-bank";
 import { buildShortsScript, joinShortsScript, SHORTS_DYNAMIC_ELEMENTS } from "@/lib/shorts-script";
+import {
+  SHORTS_SERIES,
+  buildEpisodeScript,
+  episodePromptFor,
+  parseEpisodePromptTag,
+} from "@/lib/shorts-series";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -697,6 +703,32 @@ function StudioPage() {
       ? SHORTS_QUESTIONS.find((q) => q.id === selectedQuestionId)
       : undefined;
 
+  // Odcinek serii inwestorskiej (prompt "#SN · tytuł") — scenariusz autorski
+  // i elementy ekranowe zdefiniowane w shorts-series.ts.
+  const selectedEpisodeId = parseEpisodePromptTag(videoPrompt);
+  const selectedEpisode =
+    selectedEpisodeId != null ? SHORTS_SERIES.find((e) => e.id === selectedEpisodeId) : undefined;
+  const doneEpisodeIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const j of videoJobs) {
+      const id = parseEpisodePromptTag(j.prompt);
+      if (id != null && j.status !== "failed") ids.add(id);
+    }
+    return ids;
+  }, [videoJobs]);
+  const applyEpisode = (id: number) => {
+    const ep = SHORTS_SERIES.find((e) => e.id === id);
+    if (!ep) return;
+    const gen = buildEpisodeScript(ep);
+    setVideoPrompt(episodePromptFor(ep));
+    setScriptHook(gen.hook);
+    setScriptContent(gen.content);
+    setScriptCta(gen.cta);
+    if (!title) setTitle(gen.title);
+    if (!message) setMessage([gen.description, gen.hashtags.join(" ")].join("\n\n"));
+    toast.success(`Odcinek #S${ep.id} „${ep.title}" — scenariusz serii podstawiony`);
+  };
+
   // Pytania, dla których istnieje już job (żeby nie robić dubli).
   const doneQuestionIds = useMemo(() => {
     const ids = new Set<number>();
@@ -750,7 +782,11 @@ function StudioPage() {
   const genScriptM = useMutation({
     mutationFn: () =>
       genScriptFn({
-        data: { prompt: videoPrompt, question_id: selectedQuestionId ?? undefined },
+        data: {
+          prompt: videoPrompt,
+          question_id: selectedQuestionId ?? undefined,
+          episode_id: selectedEpisodeId ?? undefined,
+        },
       }),
     onSuccess: (r) => {
       // Pytanie z paczki: gotowe sekcje 1:1 z pliku; własny prompt: tekst AI
@@ -1513,6 +1549,57 @@ function StudioPage() {
 
           <Card>
             <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Video className="h-5 w-5" /> Seria inwestorska ({SHORTS_SERIES.length} odcinków)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="max-h-80 space-y-2 overflow-y-auto rounded-md border p-2">
+                {SHORTS_SERIES.map((ep) => (
+                  <div
+                    key={ep.id}
+                    className={`flex items-start justify-between gap-3 rounded-lg border p-3 ${
+                      selectedEpisodeId === ep.id ? "border-primary bg-primary/5" : ""
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">#S{ep.id}</Badge>
+                        <Badge>Inwestor</Badge>
+                        <Badge variant="outline">
+                          {ep.cards.length} {ep.cards.length === 1 ? "karta" : "karty"} ekranowe
+                        </Badge>
+                        {doneEpisodeIds.has(ep.id) && (
+                          <Badge variant="outline" className="gap-1 text-emerald-600">
+                            <CheckCircle2 className="h-3 w-3" /> wideo istnieje
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="break-words text-sm font-medium">„{ep.title}"</p>
+                      <p className="line-clamp-2 text-xs text-muted-foreground">{ep.hook}</p>
+                    </div>
+                    <Button
+                      variant={selectedEpisodeId === ep.id ? "default" : "outline"}
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => applyEpisode(ep.id)}
+                    >
+                      <Send className="mr-1 h-4 w-4" /> Użyj
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Autorskie scenariusze (hook → treść → wyjątek → praktyka → CTA) czytane 1:1, bez AI.
+                Elementy ekranowe odcinka (tytuł w hooku, karty: porównania, listy, rachunki) są
+                zdefiniowane ręcznie i wypalane w obrazie w rytmie lektora — AI nie dokłada do nich
+                własnych kart.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle className="flex items-center justify-between text-lg">
                 <span className="flex items-center gap-2">
                   <Send className="h-5 w-5" /> Auto-publikacja po wygenerowaniu
@@ -1679,6 +1766,27 @@ function StudioPage() {
                     <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
                       {SHORTS_DYNAMIC_ELEMENTS[selectedBankQuestion.category].map((el, i) => (
                         <li key={i}>{el}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {selectedEpisode && (
+                  <div className="space-y-2 rounded-md border bg-muted/40 p-3">
+                    <Label className="text-xs">
+                      Elementy ekranowe odcinka — wypalane automatycznie w rytmie lektora (znacznik
+                      kategorii, tytuł „{selectedEpisode.title}" w hooku, karty poniżej, znaczek
+                      „AI")
+                    </Label>
+                    <ul className="space-y-1 text-xs text-muted-foreground">
+                      {selectedEpisode.cards.map((card, i) => (
+                        <li key={i}>
+                          <span className="font-medium text-foreground">{card.title}</span>
+                          {" — "}
+                          {card.rows
+                            .map((r) => (r.value ? `${r.text}: ${r.value}` : r.text))
+                            .join(" · ")}
+                        </li>
                       ))}
                     </ul>
                   </div>
