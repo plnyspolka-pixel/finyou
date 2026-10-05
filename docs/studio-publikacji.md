@@ -310,6 +310,15 @@ Zakładki panelu:
      Tytuł i opis publikacji też pochodzą z paczki (teza + nota „materiał
      edukacyjny"). Pytania, dla których wideo już istnieje, mają zielony
      znaczek (rozpoznanie po prefiksie promptu — bez zmiany schematu DB).
+   - **Seria inwestorska (10 odcinków)** — autorskie scenariusze
+     (`src/lib/shorts-series.ts`, prompt z prefiksem `#SN · `): hook → treść
+     → wyjątek → praktyka → własne CTA, czytane 1:1 bez AI. Elementy
+     ekranowe każdego odcinka (tytuł w hooku, karty: porównania, listy,
+     rachunki, kolejność kroków) są zdefiniowane ręcznie w tym pliku ze
+     wskazówek montażowych autora i wypalane w rytmie lektora (fragmenty
+     `syncText` kart i wierszy to dosłowne cytaty ze scenariusza — test
+     `shorts-series.test.ts` pilnuje, że każdy pada w tekście). AI nie
+     dokłada do odcinków własnych kart.
    - **Własny prompt** — scenariusz pisze AI, jak dotychczas.
 
    **Lektor** — głos ElevenLabs (select „Głos lektora”, domyślnie Filip) i

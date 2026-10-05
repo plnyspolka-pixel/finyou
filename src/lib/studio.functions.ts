@@ -455,9 +455,15 @@ export const listStudioAvatars = createServerFn({ method: "GET" })
 // AI pisze scenariusz tylko dla własnych, wolnych promptów.
 export const generateStudioScript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { prompt: string; question_id?: number }) => d)
+  .inputValidator((d: { prompt: string; question_id?: number; episode_id?: number }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
+    if (data.episode_id != null) {
+      const { findShortsEpisode, buildEpisodeScript } = await import("./shorts-series");
+      const ep = findShortsEpisode(data.episode_id);
+      if (!ep) throw new Error(`Nie znaleziono odcinka #S${data.episode_id} w serii.`);
+      return buildEpisodeScript(ep);
+    }
     if (data.question_id != null) {
       const { findShortsQuestion } = await import("./shorts-question-bank");
       const q = findShortsQuestion(data.question_id);

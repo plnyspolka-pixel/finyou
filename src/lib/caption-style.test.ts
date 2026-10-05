@@ -495,6 +495,53 @@ describe("nakładki dynamiczne", () => {
     expect(synced.cards![2].endSeconds).toBeNull();
   });
 
+  it("wiersze z własnym syncText wchodzą w rytm lektora; endSyncText zamyka kartę", () => {
+    const cues = [
+      { start: 0, end: 3, text: "Pytanie pierwsze: ile warta jest nieruchomość?" },
+      { start: 3, end: 7, text: "Pytanie drugie: ile chcesz pożyczyć?" },
+      { start: 7, end: 11, text: "Pytanie trzecie: z czego spłacisz? To filtr wstępny." },
+    ];
+    const card = {
+      title: "3 PYTANIA",
+      rows: [
+        { icon: "dot" as const, text: "1. Ile warta?", syncText: "Pytanie pierwsze" },
+        { icon: "dot" as const, text: "2. Ile pożyczyć?", syncText: "Pytanie drugie" },
+        { icon: "dot" as const, text: "3. Z czego spłacisz?", syncText: "Pytanie trzecie" },
+        { icon: "dot" as const, text: "bez sync" },
+      ],
+      startSeconds: 1,
+      endSeconds: null,
+      syncText: "Pytanie pierwsze",
+      endSyncText: "To filtr wstępny",
+    };
+    const [synced] = overlaysWithCueTiming({ cards: [card] }, cues).cards!;
+    expect(synced.rows.map((r) => r.startSeconds ?? null)).toEqual([0, 3, 7, null]);
+    expect(synced.endSeconds).toBeCloseTo(11.3, 5);
+    // Render: wiersz z czasem startuje z SRT, wiersz bez — po kolei od startu karty.
+    const rows = dynamicOverlayEvents({ cards: [synced] }).filter(
+      (l) => l.includes(",OvCard,") && !l.includes("3 PYTANIA"),
+    );
+    expect(rows[1]).toContain(",0:00:03.00,0:00:11.30,");
+    expect(rows[2]).toContain(",0:00:07.00,0:00:11.30,");
+  });
+
+  it("headlineSyncText: koniec krótkiego tytułu liczony z mówionego hooka", () => {
+    const cues = [
+      { start: 0, end: 5.5, text: "Wiesz, że banki od 500 lat zarabiają na jednej rzeczy?" },
+      { start: 5.5, end: 9, text: "Bank nie buduje." },
+    ];
+    const synced = overlaysWithCueTiming(
+      {
+        headline: "Drukarka do pieniędzy",
+        headlineSyncText: "Wiesz, że banki od 500 lat zarabiają na jednej rzeczy?",
+        headlineStartSeconds: 1,
+        headlineEndSeconds: 4,
+      },
+      cues,
+    );
+    expect(synced.headlineEndSeconds).toBeCloseTo(5.75, 5);
+  });
+
   it("neutralizuje klamry i backslash w tekstach nakładek", () => {
     const big = dynamicOverlayEvents({ ...OVERLAYS, tag: "A {x} \\ B" }).find((l) =>
       l.includes(",OvTag,"),
