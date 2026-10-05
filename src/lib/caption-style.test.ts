@@ -10,6 +10,7 @@ import {
   dynamicOverlayEvents,
   extrasAss,
   overlaysWithCueTiming,
+  sanitizeOverlayCards,
   parseSubtitles,
   captionPreviewCss,
   captionStyleLabel,
@@ -374,26 +375,76 @@ describe("nakładki dynamiczne", () => {
     syncText: "Najpierw sprawdź umowę, KW i aktualne saldo.",
   };
 
-  it("karta: poświata + panel + nagłówek + wiersze odsłaniane po kolei", () => {
+  it("karta domyślnie BEZ planszy: tekst wprost na obrazie, obrys + poświata", () => {
     const events = dynamicOverlayEvents({ ...OVERLAYS, cards: [CARD] });
-    expect(events).toHaveLength(6 + 2 + 1 + 3);
+    // Nagłówek i 3 wiersze, każdy z własną poświatą — żadnego rysunku panelu.
+    expect(events).toHaveLength(6 + 2 + 6);
     const card = events.slice(6);
-    // Panel: rysunek ASS (\p1) z granatowym wypełnieniem i krawędzią strony.
-    expect(card[1]).toContain("\\p1");
-    expect(card[1]).toContain("\\1c&H38160D&");
-    expect(card[1]).toContain("\\3c&HD67C54&");
-    expect(card[1]).toMatch(/,0:00:20\.00,9:59:59\.99,OvCard,/);
-    // Nagłówek złoty, rozstrzelony.
-    expect(card[2]).toContain("\\1c&H4ABEEA&");
-    expect(card[2]).toContain("ZANIM ZDECYDUJESZ");
+    expect(card.every((l) => !l.includes("\\p1"))).toBe(true);
+    const glows = card.filter((l) => l.includes(",OvGlow,"));
+    expect(glows).toHaveLength(4);
+    expect(glows.every((l) => l.includes("\\blur") && l.includes("\\3c&HF08B4F&"))).toBe(true);
+    // Nagłówek złoty, rozstrzelony, z granatowym obrysem (czytelność bez tła).
+    const title = card.find((l) => l.includes(",OvCard,") && l.includes("ZANIM"))!;
+    expect(title).toContain("\\1c&H4ABEEA&");
+    expect(title).toContain("\\bord3\\shad2");
     // Wiersze: złoty ptaszek, biały tekst, starty rosną co revealStagger.
-    const rows = card.slice(3);
+    const rows = card.filter((l) => l.includes(",OvCard,") && !l.includes("ZANIM"));
     expect(rows[0]).toContain("}✓\\h\\h{\\1c&HFFFFFF&}Umowa pożyczki");
     expect(rows[0]).toContain(",0:00:20.25,");
     expect(rows[1]).toContain(",0:00:20.70,");
     expect(rows[2]).toContain(",0:00:21.15,");
     // Wartość po prawej — złota.
     expect(rows[2]).toContain("Aktualne saldo\\h\\h{\\1c&H4ABEEA&}LTV 60%");
+  });
+
+  it('frame: "panel" dokłada granatową planszę z krawędzią strony', () => {
+    const events = dynamicOverlayEvents({
+      ...OVERLAYS,
+      cards: [{ ...CARD, frame: "panel" as const }],
+    });
+    expect(events).toHaveLength(6 + 2 + 1 + 3);
+    const card = events.slice(6);
+    expect(card[1]).toContain("\\p1");
+    expect(card[1]).toContain("\\1c&H38160D&");
+    expect(card[1]).toContain("\\3c&HD67C54&");
+    expect(card[1]).toMatch(/,0:00:20\.00,9:59:59\.99,OvCard,/);
+    // Na planszy tekst leży bez obrysu.
+    expect(card[3]).toContain("\\bord0\\shad0");
+  });
+
+  it("karty bez znacznika i pytania (rolka z własnego promptu) — same karty", () => {
+    const events = dynamicOverlayEvents({ cards: [CARD] });
+    expect(events).toHaveLength(8);
+    expect(events.every((l) => !l.includes(",OvTag,") && !l.includes(",OvHead,"))).toBe(true);
+  });
+
+  it("sanitizeOverlayCards: przycina, wymaga sync i wierszy, max 2 karty", () => {
+    const cards = sanitizeOverlayCards([
+      {
+        title: "x".repeat(60),
+        sync: "pożyczka prywatna podlega prawu cywilnemu",
+        rows: [
+          { icon: "check", text: "  Prawo cywilne  " },
+          { icon: "zle", text: "y".repeat(60), value: "z".repeat(40) },
+          { text: "" },
+        ],
+      },
+      { sync: "za krótko", rows: [{ text: "a" }] },
+      { sync: "fragment mówiony numer dwa", rows: [{ icon: "dot", text: "Drugi" }] },
+      { sync: "fragment mówiony numer trzy", rows: [{ icon: "dot", text: "Trzeci" }] },
+      "śmieć",
+    ]);
+    expect(cards).toHaveLength(2);
+    expect(cards[0].title).toHaveLength(28);
+    expect(cards[0].rows).toHaveLength(2);
+    expect(cards[0].rows[0]).toEqual({ icon: "check", text: "Prawo cywilne", value: null });
+    expect(cards[0].rows[1].icon).toBe("dot");
+    expect(cards[0].rows[1].text).toHaveLength(30);
+    expect(cards[0].rows[1].value).toHaveLength(12);
+    expect(cards[0].syncText).toBe("pożyczka prywatna podlega prawu cywilnemu");
+    expect(cards[1].rows[0].text).toBe("Drugi");
+    expect(sanitizeOverlayCards(null)).toEqual([]);
   });
 
   it("overlaysWithCueTiming: start karty z kwestii CTA, bez dopasowania karta wypada", () => {
@@ -415,6 +466,33 @@ describe("nakładki dynamiczne", () => {
       { start: 0, end: 5, text: "Cokolwiek." },
     ]);
     expect(manual.cards![0].startSeconds).toBe(20);
+  });
+
+  it("karty nie nachodzą na siebie: otwarta kończy się przed startem następnej", () => {
+    const cues = [
+      { start: 0, end: 6, text: "Po pierwsze sprawdź hipotekę w księdze wieczystej." },
+      { start: 6, end: 14, text: "Po drugie policz koszty razem z odsetkami." },
+      { start: 14, end: 20, text: "Najpierw sprawdź umowę, KW i aktualne saldo." },
+    ];
+    const first = {
+      rows: [{ icon: "dot" as const, text: "Hipoteka w KW" }],
+      startSeconds: 5,
+      endSeconds: null,
+      syncText: "Po pierwsze sprawdź hipotekę",
+    };
+    const second = {
+      rows: [{ icon: "dot" as const, text: "Koszty z odsetkami" }],
+      startSeconds: 10,
+      endSeconds: null,
+      syncText: "Po drugie policz koszty",
+    };
+    const synced = overlaysWithCueTiming({ ...OVERLAYS, cards: [second, CARD, first] }, cues);
+    const starts = synced.cards!.map((c) => c.startSeconds);
+    expect(starts).toEqual([0, 6, 14]);
+    expect(synced.cards![0].endSeconds).toBeCloseTo(5.7, 5);
+    expect(synced.cards![1].endSeconds).toBeCloseTo(13.7, 5);
+    // Ostatnia karta (CTA) zostaje otwarta do końca filmu.
+    expect(synced.cards![2].endSeconds).toBeNull();
   });
 
   it("neutralizuje klamry i backslash w tekstach nakładek", () => {

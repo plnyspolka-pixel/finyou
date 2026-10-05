@@ -105,19 +105,41 @@ function fallbackTitle(job: JobRow): string {
 }
 
 /**
- * Nakładki dynamiczne joba (znacznik kategorii + duże pytanie, wypalane
- * w obrazie). Tylko rolki z paczki 250 pytań — pytanie rozpoznajemy po tagu
- * "#N · " w prompcie, więc nic nie trzeba trzymać w bazie i zmiana napisów
- * gotowej rolki wypala te same nakładki. `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza.
+ * Nakładki dynamiczne joba, wypalane w obrazie:
+ *   * rolki z paczki 250 pytań (tag "#N · " w prompcie) — znacznik
+ *     kategorii, duże pytanie i checklista CTA (deterministycznie,
+ *     bez bazy — zmiana napisów gotowej rolki wypala te same nakładki);
+ *   * KAŻDA rolka ze scenariuszem — karty ekranowe wyciągnięte przez AI
+ *     z tekstu lektora (generateOverlayCards). AI tu tylko streszcza
+ *     w wiersze to, co lektor mówi; czas i tak pilnuje SRT, a karta bez
+ *     pokrycia w nagraniu wypada. Porażka AI nie blokuje nakładek.
+ * `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza całość.
  */
 async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
   const { isDynamicOverlaysEnabled } = await import("./caption-burner.server");
   if (!isDynamicOverlaysEnabled()) return null;
+
   const questionId = parseShortsPromptTag(job.prompt);
   const q = questionId != null ? findShortsQuestion(questionId) : undefined;
-  if (!q) return null;
-  const { buildShortsOverlays } = await import("./shorts-script");
-  return buildShortsOverlays(q);
+  let base: DynamicOverlays | null = null;
+  if (q) {
+    const { buildShortsOverlays } = await import("./shorts-script");
+    base = buildShortsOverlays(q);
+  }
+
+  const script = job.script?.trim();
+  if (script) {
+    try {
+      const { generateOverlayCards } = await import("./studio-ai.server");
+      const aiCards = await generateOverlayCards(script);
+      if (aiCards.length) {
+        base = base ? { ...base, cards: [...aiCards, ...(base.cards ?? [])] } : { cards: aiCards };
+      }
+    } catch (e) {
+      console.warn(`[Studio] karty ekranowe z AI nieudane (${job.id}): ${errMsg(e)}`);
+    }
+  }
+  return base;
 }
 
 // Przetwarza do `limit` jobów 'queued': scenariusz → TTS → HeyGen → rendering.

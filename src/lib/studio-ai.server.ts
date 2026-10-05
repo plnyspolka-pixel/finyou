@@ -5,6 +5,7 @@
 //     (gateway zwraca data-URL base64; Meta/YouTube potrzebują trwałego https).
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { sanitizeOverlayCards, type OverlayCard } from "./caption-style";
 import { MIN_SCENES_FOR_BROLL, type SceneDecision } from "./studio-scenes";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -67,6 +68,29 @@ Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","descri
 // Scenariusze dla pytań z paczki 250 NIE przechodzą przez AI — składa je
 // deterministycznie buildShortsScript (src/lib/shorts-script.ts) z gotowej,
 // sprawdzonej treści pliku źródłowego.
+
+// Karty ekranowe (tabelki/checklisty nakładane na obraz) z TEKSTU scenariusza:
+// AI nie pisze treści od siebie — wyciąga z tekstu lektora wyliczenia, kroki
+// i liczby, które da się pokazać jako 1-4 krótkie wiersze, oraz dokładny
+// mówiony fragment ("sync"), przy którym karta ma wejść. Czas liczy potem
+// overlaysWithCueTiming z SRT; karta, której sync nie pada w nagraniu,
+// wypada. Walidacja (sanitizeOverlayCards) jest czysta i testowana osobno.
+export async function generateOverlayCards(script: string): Promise<OverlayCard[]> {
+  const parsed = await chatJson(
+    `Planujesz TEKSTY EKRANOWE krótkiego pionowego wideo firmy finansowej (napisy-nakładki na obrazie mówiącego lektora). ${BRAND_CONTEXT}
+Dostajesz dokładny tekst mówiony przez lektora. Wybierz co najwyżej 2 miejsca, w których na ekranie warto pokazać kartę: wyliczenie, kroki, warunki albo liczby, które lektor wymienia.
+
+ZASADY:
+- Treść kart WYŁĄCZNIE z tekstu lektora — niczego nie dopisuj i nie interpretuj.
+- Karta: opcjonalny "title" (WIELKIMI LITERAMI, do 24 znaków), 1-4 wiersze; wiersz: "text" do 26 znaków (skrót tego, co mówi lektor), opcjonalnie "value" (liczba/kwota/procent z tekstu, do 10 znaków), "icon": "check" (warunek/krok spełniony) albo "dot" (punkt wyliczenia).
+- "sync" to DOSŁOWNY, ciągły fragment tekstu lektora (5-12 słów, skopiowany znak w znak), w którym zaczyna on mówić o treści karty.
+- Gdy tekst nie zawiera nic, co sensownie układa się w kartę — zwróć pustą listę. Brak karty jest lepszy niż karta na siłę.
+
+Zwracaj WYŁĄCZNIE JSON: {"cards":[{"title":"...","rows":[{"icon":"dot","text":"...","value":"..."}],"sync":"..."}]}`,
+    script,
+  );
+  return sanitizeOverlayCards(parsed.cards);
+}
 
 // Plan scen: AI NIE dostaje scenariusza do przepisania — dostaje gotowe,
 // ponumerowane segmenty (podzielone deterministycznie po zdaniach) i decyduje
