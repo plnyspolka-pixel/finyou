@@ -491,7 +491,7 @@ export function buildEpisodeOverlays(ep: ShortsEpisode): DynamicOverlays {
     tagHoldSeconds: 1.5,
     headline: ep.title,
     headlineSyncText: ep.hook,
-    headlineStartSeconds: 1.0,
+    headlineStartSeconds: 1.5,
     headlineEndSeconds: Math.min(Math.max(hookEnd, 4), 10),
     cards: ep.cards.map((card, i) => ({
       ...card,

@@ -34,17 +34,18 @@ export const SHORTS_DYNAMIC_ELEMENTS: Record<ShortsQuestion["category"], string[
 // Teksty znacznika kategorii na ekranie (dwa wiersze — jak w specyfikacji).
 export const SHORTS_OVERLAY_TAGS: Record<ShortsQuestion["category"], string> = {
   klient: "PRYWATNE POŻYCZKI\nPOD ZASTAW NIERUCHOMOŚCI",
-  inwestor: "INWESTOWANIE W PRYWATNE POŻYCZKI\nPOD ZASTAW NIERUCHOMOŚCI",
+  inwestor: "INWESTOWANIE\nW PRYWATNE POŻYCZKI\nPOD ZASTAW NIERUCHOMOŚCI",
 };
 
-// Czasy ze specyfikacji paczki: znacznik duży do 1,2 s (inwestor 1,5 s),
-// pytanie od ok. 0,8 s (inwestor 1,0 s).
+// Czasy ze specyfikacji paczki: znacznik duży do 1,2 s (inwestor 1,5 s);
+// pytanie wchodzi, gdy znacznik skończy zjeżdżać do góry (spec mówi „od ok.
+// 0,8 s" — ale w kadrze oba elementy mijałyby się wtedy w animacji).
 const SHORTS_OVERLAY_TIMINGS: Record<
   ShortsQuestion["category"],
   { tagHoldSeconds: number; headlineStartSeconds: number }
 > = {
-  klient: { tagHoldSeconds: 1.2, headlineStartSeconds: 0.8 },
-  inwestor: { tagHoldSeconds: 1.5, headlineStartSeconds: 1.0 },
+  klient: { tagHoldSeconds: 1.2, headlineStartSeconds: 1.2 },
+  inwestor: { tagHoldSeconds: 1.5, headlineStartSeconds: 1.5 },
 };
 
 // Karta-checklista do stałego CTA: wchodzi, gdy lektor mówi „Najpierw
