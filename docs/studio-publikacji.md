@@ -14,40 +14,43 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 
 ## Architektura
 
-| Element                                      | Plik                                                                                      |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Publikacja Meta (Graph API)                  | `src/lib/studio-publishing.server.ts`                                                     |
-| Publikacja TikTok (Content Posting API)      | `src/lib/tiktok.server.ts`                                                                |
-| TikTok — czysta logika chunków/tytułu        | `src/lib/tiktok-upload.ts` (+ testy `tiktok-upload.test.ts`)                              |
-| TikTok — server functions panelu             | `src/lib/tiktok.functions.ts`                                                             |
-| TikTok — ekran publikacji (zgodny z audytem) | `src/components/admin/tiktok-post-options-fields.tsx`                                     |
-| TikTok — scenariusz nagrania do audytu       | `docs/tiktok-audyt-nagranie.md`                                                           |
-| TikTok — OAuth (start + callback)            | `src/routes/api/tiktok/auth.ts`, `src/routes/api/tiktok/callback.ts`                      |
-| Klasyfikacja błędów Meta + backoff           | `src/lib/meta-graph-errors.ts` (+ testy `meta-graph-errors.test.ts`)                      |
-| Helpery AI (scenariusz, prompty, grafiki)    | `src/lib/studio-ai.server.ts`                                                             |
-| Bank b-rolli (import, dobór, seed)           | `src/lib/studio-broll.server.ts`                                                          |
-| Bank b-rolli — czysta logika doboru          | `src/lib/studio-broll-match.ts` (+ testy `studio-broll-match.test.ts`)                    |
-| Domyślne awatary (rotacja a-rolli)           | `src/lib/studio-avatars.server.ts`                                                        |
-| Server functions                             | `src/lib/studio.functions.ts`                                                             |
-| Kolejki — wspólne wstawianie wpisów          | `src/lib/studio-enqueue.server.ts`, `src/lib/studio-platforms.ts`                         |
-| „Publikuj" przy materiale (Materiały)        | `src/lib/marketing-material-publish*.ts` (logika, kopia publiczna, server functions)      |
-| Dialog „Publikuj" (Materiały)                | `src/components/admin/material-publish-dialog.tsx`                                        |
-| Napisy własne — styl (SRT → ASS, presety)    | `src/lib/caption-style.ts` (+ testy `caption-style.test.ts`)                              |
-| Napisy własne — decyzje pipeline'u           | `src/lib/studio-captions.ts` (+ testy `studio-captions.test.ts`)                          |
-| Napisy własne — klient usługi wypalania      | `src/lib/caption-burner.server.ts`                                                        |
-| Usługa FFmpeg (napisy + kompresja)           | `services/caption-burner/` (server.mjs, transcode-plan.mjs, Dockerfile, fly.toml, README) |
-| Kompresja przed publikacją — decyzje         | `src/lib/video-rendition.ts` (+ testy `video-rendition.test.ts`)                          |
-| Kompresja przed publikacją — usługa, Storage | `src/lib/video-rendition.server.ts`                                                       |
-| Migracja: kompresja (video_renditions)       | `supabase/migrations/20260929120000_video_renditions.sql`                                 |
-| Baza 250 pytań do shortów (generowana)       | `src/lib/shorts-question-bank.ts`                                                         |
-| Źródło bazy pytań + generator                | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts`  |
-| Cron tick Meta                               | `src/routes/api/public/hooks/social-publish-tick.ts`                                      |
-| Panel admina                                 | `src/routes/admin.studio-publikacji.tsx`                                                  |
-| Migracja (tabele + bucket + cron)            | `supabase/migrations/20260803130000_studio_publikacji.sql`                                |
-| Migracja: bank b-rolli + domyślne awatary    | `supabase/migrations/20260927120000_studio_bank_broll_i_domyslne_awatary.sql`             |
-| Migracja: napisy własne                      | `supabase/migrations/20260928120000_studio_napisy_wlasne.sql`                             |
-| Migracja TikToka                             | `supabase/migrations/20260926120000_tiktok_content_posting.sql`                           |
-| Migracja: ustawienia posta twórcy            | `supabase/migrations/20260926140000_tiktok_ustawienia_publikacji_tworcy.sql`              |
+| Element                                       | Plik                                                                                      |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Publikacja Meta (Graph API)                   | `src/lib/studio-publishing.server.ts`                                                     |
+| Publikacja TikTok (Content Posting API)       | `src/lib/tiktok.server.ts`                                                                |
+| TikTok — czysta logika chunków/tytułu         | `src/lib/tiktok-upload.ts` (+ testy `tiktok-upload.test.ts`)                              |
+| TikTok — server functions panelu              | `src/lib/tiktok.functions.ts`                                                             |
+| TikTok — ekran publikacji (zgodny z audytem)  | `src/components/admin/tiktok-post-options-fields.tsx`                                     |
+| TikTok — scenariusz nagrania do audytu        | `docs/tiktok-audyt-nagranie.md`                                                           |
+| TikTok — OAuth (start + callback)             | `src/routes/api/tiktok/auth.ts`, `src/routes/api/tiktok/callback.ts`                      |
+| Klasyfikacja błędów Meta + backoff            | `src/lib/meta-graph-errors.ts` (+ testy `meta-graph-errors.test.ts`)                      |
+| Helpery AI (scenariusz, prompty, grafiki)     | `src/lib/studio-ai.server.ts`                                                             |
+| Bank b-rolli (import, dobór, seed)            | `src/lib/studio-broll.server.ts`                                                          |
+| Bank b-rolli — czysta logika doboru           | `src/lib/studio-broll-match.ts` (+ testy `studio-broll-match.test.ts`)                    |
+| Domyślne awatary (rotacja a-rolli)            | `src/lib/studio-avatars.server.ts`                                                        |
+| Server functions                              | `src/lib/studio.functions.ts`                                                             |
+| Kolejki — wspólne wstawianie wpisów           | `src/lib/studio-enqueue.server.ts`, `src/lib/studio-platforms.ts`                         |
+| Opisy per platforma — reguły, limity, szkice  | `src/lib/platform-copy.ts` (+ testy `platform-copy.test.ts`)                              |
+| Opisy per platforma — karty w formularzach    | `src/components/admin/platform-copy-fields.tsx`                                           |
+| Migracja: opisy per platforma (zadania wideo) | `supabase/migrations/20261003120000_studio_opisy_per_platforma.sql`                       |
+| „Publikuj" przy materiale (Materiały)         | `src/lib/marketing-material-publish*.ts` (logika, kopia publiczna, server functions)      |
+| Dialog „Publikuj" (Materiały)                 | `src/components/admin/material-publish-dialog.tsx`                                        |
+| Napisy własne — styl (SRT → ASS, presety)     | `src/lib/caption-style.ts` (+ testy `caption-style.test.ts`)                              |
+| Napisy własne — decyzje pipeline'u            | `src/lib/studio-captions.ts` (+ testy `studio-captions.test.ts`)                          |
+| Napisy własne — klient usługi wypalania       | `src/lib/caption-burner.server.ts`                                                        |
+| Usługa FFmpeg (napisy + kompresja)            | `services/caption-burner/` (server.mjs, transcode-plan.mjs, Dockerfile, fly.toml, README) |
+| Kompresja przed publikacją — decyzje          | `src/lib/video-rendition.ts` (+ testy `video-rendition.test.ts`)                          |
+| Kompresja przed publikacją — usługa, Storage  | `src/lib/video-rendition.server.ts`                                                       |
+| Migracja: kompresja (video_renditions)        | `supabase/migrations/20260929120000_video_renditions.sql`                                 |
+| Baza 250 pytań do shortów (generowana)        | `src/lib/shorts-question-bank.ts`                                                         |
+| Źródło bazy pytań + generator                 | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts`  |
+| Cron tick Meta                                | `src/routes/api/public/hooks/social-publish-tick.ts`                                      |
+| Panel admina                                  | `src/routes/admin.studio-publikacji.tsx`                                                  |
+| Migracja (tabele + bucket + cron)             | `supabase/migrations/20260803130000_studio_publikacji.sql`                                |
+| Migracja: bank b-rolli + domyślne awatary     | `supabase/migrations/20260927120000_studio_bank_broll_i_domyslne_awatary.sql`             |
+| Migracja: napisy własne                       | `supabase/migrations/20260928120000_studio_napisy_wlasne.sql`                             |
+| Migracja TikToka                              | `supabase/migrations/20260926120000_tiktok_content_posting.sql`                           |
+| Migracja: ustawienia posta twórcy             | `supabase/migrations/20260926140000_tiktok_ustawienia_publikacji_tworcy.sql`              |
 
 Tabele:
 
@@ -136,8 +139,63 @@ w [Graph API Explorer](https://developers.facebook.com/tools/explorer/)
 zwraca **bezterminowy** token strony). `META_IG_USER_ID` znajdziesz przez
 `GET /{page-id}?fields=instagram_business_account`.
 
+## Opisy per platforma — jedna platforma, jeden opis
+
+Każda platforma publikuje inne pola i ma inne limity, więc formularze (Studio
+→ „Publikacja", auto-publikacja w „Wideo AI", dialog „Publikuj" przy
+materiale) mają **osobną kartę opisu dla każdej zaznaczonej platformy**.
+Wspólny tytuł i treść nad kartami to tylko **punkt wyjścia**: karta platformy
+bez własnej edycji odbija go na żywo, złożony pod jej wymagania
+(`composeCopyForPlatform`), a karta, w którą ktoś wpisał tekst, trzyma swój
+tekst 1:1 („Z opisu wspólnego" przywraca szkic, „Rozpisz opis wspólny na
+wszystkie" robi to dla wszystkich kart). Do kolejki trafia **to, co stoi
+w kartach** — każdy wiersz `social_publish_queue` / `youtube_publish_queue` ma
+własny tytuł i treść, więc nic więcej nie trzeba było dokładać do schematu.
+
+| Platforma         | Pola                                        | Limit                                                                                                                              |
+| ----------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| YouTube Short     | tytuł **(wymagany)** + opis                 | tytuł 92 zn. (tor dokleja „ #Shorts” do 100), opis 5000 **bajtów UTF-8**, bez `<` `>`; > 60 hashtagów = YouTube ignoruje wszystkie |
+| Instagram Reels   | podpis (caption)                            | 2200 zn., 30 hashtagów, 20 @wzmianek                                                                                               |
+| Facebook Reels    | opis                                        | 2200 zn. (przyjęty limit jak dla Reels IG), 30 hashtagów                                                                           |
+| TikTok            | **jedno pole** — podpis (`post_info.title`) | 150 zn. razem z hashtagami i @wzmiankami (`TITLE_MAX` w `tiktok-upload.ts`)                                                        |
+| Post na Facebooku | treść + tytuł (tylko gdy post z wideo)      | treść 63 206 zn., tytuł wideo 255 zn.                                                                                              |
+| Post na X         | treść **(wymagana)**                        | 280 zn. **ważonych** (link = 23, emoji / CJK = 2), chyba że konto Premium (`X_POST_MAX_CHARS`)                                     |
+
+Reguły, liczniki i walidacja siedzą w jednym czystym module
+`src/lib/platform-copy.ts` (wspólnym dla klienta i serwera):
+
+- `platformCopyIssues` / `platformCopyError` — ta sama walidacja pod polem
+  (czerwony licznik, komunikat) i na serwerze (`studio-enqueue.server.ts`
+  odrzuca wpis z nazwą platformy i pola, np. „Post na X — Treść posta: 290 /
+  280 znaków — za długie o 10.”). Tekst wpisany wprost dla platformy **nigdy nie
+  jest cicho przycinany**.
+- `composeCopyForPlatform` — szkic ze wspólnego tytułu/treści: YouTube i post FB
+  biorą tytuł + treść, rolki sam podpis (gdy treści brak — tytuł), TikTok tytuł
+  - hashtagi z treści (ile się zmieści), X treść (albo tytuł) przycięte jak
+    w torze X. Szkic zawsze mieści się w limitach.
+- `fitCopyToPlatform` — dopasowanie do limitów (znaki zabronione, nadmiarowe
+  hashtagi, przycięcie na granicy słowa z „…”) dla tekstu, który **nie przeszedł
+  przez formularz**: auto-publikacja po renderze, serie z bazy pytań, MCP bez
+  `platform_copy`. Automat nie ma komu zgłosić „za długie”, więc dopasowuje.
+
+**Auto-publikacja po renderze.** Karta „Auto-publikacja po wygenerowaniu” ma
+te same karty per platforma w trybie opcjonalnym: co wpiszesz, idzie na daną
+platformę 1:1 (kolumna `studio_video_jobs.publish_copy`, jsonb
+`{platforma: {title?, message?}}`), a **puste pola uzupełnia AI** razem ze
+scenariuszem (`publish_title` / `publish_description`) — po renderze
+`maybeAutoPublishJob` składa z nich szkic dopasowany do każdej platformy.
+Auto-publikacja obejmuje teraz także **X** (wcześniej panel pokazywał X, ale
+serwer po cichu go odrzucał).
+
+**MCP.** `queue_social_publication` i `publish_marketing_material` przyjmują
+`platform_copy`, `create_studio_video_job` / `update_studio_job` /
+`publish_studio_job` — `publish_copy` (ten sam kształt). Bez nich wspólne
+`title` / `message` są dopasowywane do limitów każdej platformy.
+
 ## Ograniczenia platform
 
+- **Teksty** (tytuł, opis, podpis): osobne pole i limit dla każdej platformy —
+  sekcja „Opisy per platforma” wyżej.
 - **Reels (FB/IG)**: MP4, pion 9:16, zalecane 1080×1920; IG Reels 3 s – 15 min.
   Meta pobiera plik z podanego URL — musi być publiczny (bucket
   `studio-media` albo inne trwałe źródło; URL-e HeyGen wygasają!).
@@ -260,10 +318,13 @@ mówi, czy ma `ffprobe`. Stan konkretnego pliku: tabela `video_renditions`
 
 Zakładki panelu:
 
-1. **Publikacja** — zaznacz platformy, podaj tytuł/treść, wybierz wideo
-   (możesz podstawić wygenerowane w Studio lub Awatar FAQ) albo grafikę,
-   ustaw termin → „Dodaj do kolejki publikacji". „Publikuj teraz" wysyła
-   od ręki; błędy ponawiają się do 3 razy.
+1. **Publikacja** — zaznacz platformy, podaj wspólny tytuł/treść, a potem
+   dopracuj **opis każdej platformy w jej karcie** (licznik w jednostce
+   platformy, limit hashtagów, podpowiedź o wymaganiach — sekcja „Opisy per
+   platforma"), wybierz wideo (możesz podstawić wygenerowane w Studio lub
+   Awatar FAQ) albo grafikę, ustaw termin → „Dodaj do kolejki publikacji".
+   Przycisk blokuje się, dopóki któryś opis przekracza limit platformy.
+   „Publikuj teraz" wysyła od ręki; błędy ponawiają się do 3 razy.
 2. **Wideo AI (HeyGen)** — dwie drogi do promptu:
    - **Baza pytań do shortów (250)** — pytania z pliku „Pożyczki prywatne —
      250 pytań do shortów" z filtrami (kategoria klient/inwestor, sekcja,
@@ -459,6 +520,10 @@ który otwiera dialog z:
   opis AI) oraz przyciskiem **„Wygeneruj opis AI"** (`generateMaterialDescription`);
   checkbox „Zapisz tytuł i opis także w materiale" (domyślnie włączony)
   utrwala tekst w `marketing_materials`, żeby następna publikacja go podstawiła;
+- **kartą opisu dla każdej zaznaczonej platformy** (te same karty co w Studiu
+  — sekcja „Opisy per platforma"): wspólny tytuł/treść to punkt wyjścia,
+  publikuje się to, co stoi w kartach; w materiale zapisuje się tylko tekst
+  wspólny;
 - terminem, widocznością YouTube i ekranem publikacji TikToka (ten sam
   komponent co w Studiu — wymogi audytu);
 - trzema akcjami: **„Zapisz tylko opis"**, **„Dodaj do kolejki"** (cron co

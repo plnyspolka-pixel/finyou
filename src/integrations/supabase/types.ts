@@ -11839,6 +11839,7 @@ export type Database = {
             | Database["public"]["Enums"]["marketing_audience"]
             | null
           prompt: string
+          publish_copy: Json | null
           publish_description: string
           publish_privacy: string
           publish_title: string
@@ -11879,6 +11880,7 @@ export type Database = {
             | Database["public"]["Enums"]["marketing_audience"]
             | null
           prompt: string
+          publish_copy?: Json | null
           publish_description?: string
           publish_privacy?: string
           publish_title?: string
@@ -11919,6 +11921,7 @@ export type Database = {
             | Database["public"]["Enums"]["marketing_audience"]
             | null
           prompt?: string
+          publish_copy?: Json | null
           publish_description?: string
           publish_privacy?: string
           publish_title?: string

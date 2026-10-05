@@ -34,6 +34,7 @@ import {
   AUDIENCE_ENUM,
   PLATFORM_ENUM,
   PRIVACY_ENUM,
+  platformCopySchema,
   processQueuedNow,
   publishedUrl,
   tiktokPostOptionsSchema,
@@ -230,6 +231,7 @@ export const publishMarketingMaterial = defineTool({
     platforms: z.array(PLATFORM_ENUM).min(1),
     title: z.string().max(200).optional().describe("Domyślnie tytuł materiału."),
     message: z.string().max(5000).optional().describe("Domyślnie opis materiału (albo opis AI)."),
+    platform_copy: platformCopySchema,
     scheduled_at: z
       .string()
       .optional()
@@ -272,6 +274,7 @@ export const publishMarketingMaterial = defineTool({
         platforms: a.platforms,
         title: title || m.title,
         message,
+        platform_copy: a.platform_copy,
         video_url: m.media_type === "video" ? mediaUrl : undefined,
         image_url: m.media_type === "image" ? mediaUrl : undefined,
         privacy_status: a.privacy_status,

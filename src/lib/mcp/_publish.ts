@@ -39,6 +39,36 @@ export const tiktokPostOptionsSchema = z
   .optional()
   .describe("Wymagane, gdy platforms zawiera tiktok.");
 
+/**
+ * Opisy per platforma (jedna platforma — jeden opis). Pole podane tu idzie na
+ * daną platformę 1:1 i musi mieścić się w jej limicie (za długie = błąd);
+ * platforma bez wpisu dostaje wspólne title / message dopasowane do limitów.
+ * Reguły: src/lib/platform-copy.ts.
+ */
+const platformCopyEntry = z
+  .object({
+    title: z.string().max(1000).optional(),
+    message: z.string().max(70_000).optional(),
+  })
+  .optional();
+export const platformCopySchema = z
+  .object({
+    youtube: platformCopyEntry.describe("Tytuł do 92 znaków (dopisujemy #Shorts), opis do 5000 B."),
+    instagram_reels: platformCopyEntry.describe(
+      "Tylko `message`: podpis do 2200 zn., 30 hashtagów.",
+    ),
+    facebook_reels: platformCopyEntry.describe("Tylko `message`: opis do 2200 zn."),
+    tiktok: platformCopyEntry.describe("Tylko `title`: podpis do 150 zn. razem z hashtagami."),
+    facebook_post: platformCopyEntry.describe(
+      "`message` do 63 206 zn.; `title` tylko dla wideo (255).",
+    ),
+    x: platformCopyEntry.describe("Tylko `message`: 280 zn. ważonych (link = 23)."),
+  })
+  .optional()
+  .describe(
+    "Opisy per platforma: {platforma: {title?, message?}}. Wpis idzie na tę platformę 1:1 (za długi = błąd); platforma bez wpisu dostaje wspólne title/message dopasowane do jej limitów.",
+  );
+
 export type PublishOutcome = {
   id: string;
   platform: StudioPlatform;

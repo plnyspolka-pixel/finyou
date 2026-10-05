@@ -20,6 +20,7 @@ import {
 import {
   PLATFORM_ENUM,
   PRIVACY_ENUM,
+  platformCopySchema,
   processQueuedNow,
   publishedUrl,
   tiktokPostOptionsSchema,
@@ -317,7 +318,7 @@ export const queueSocialPublication = defineTool({
   name: "queue_social_publication",
   title: "Queue publication (YouTube / Facebook / Instagram / TikTok / X)",
   description:
-    "Dodaje wpis do kolejki automatycznej publikacji na jednej lub kilku platformach naraz: youtube (Short), instagram_reels, facebook_reels, tiktok, facebook_post, x. Tick (co 10 min) opublikuje o `scheduled_at` (puste = najbliższy przebieg) bez dalszego udziału człowieka; `publish_now=true` publikuje od razu i zwraca wynik per platforma. To realna publikacja na profilach firmy. Wideo: MP4 pod trwałym https (Reels / Shorts / TikTok pion 9:16, do 100 MB) — URL-e HeyGen wygasają, materiał z biblioteki publikuj przez `publish_marketing_material`. Grafikę (`image_url`) niosą tylko facebook_post i x. YouTube wymaga tytułu; TikTok — połączonego konta i `tiktok_post_options` z prywatnością wybraną przez użytkownika (opcje: `get_tiktok_creator_info`); X — połączonego konta, treść ponad limit jest przycinana. Tylko administrator/operator.",
+    "Dodaje wpis do kolejki automatycznej publikacji na jednej lub kilku platformach naraz: youtube (Short), instagram_reels, facebook_reels, tiktok, facebook_post, x. Tick (co 10 min) opublikuje o `scheduled_at` (puste = najbliższy przebieg) bez dalszego udziału człowieka; `publish_now=true` publikuje od razu i zwraca wynik per platforma. To realna publikacja na profilach firmy. Wideo: MP4 pod trwałym https (Reels / Shorts / TikTok pion 9:16, do 100 MB) — URL-e HeyGen wygasają, materiał z biblioteki publikuj przez `publish_marketing_material`. Grafikę (`image_url`) niosą tylko facebook_post i x. YouTube wymaga tytułu; TikTok — połączonego konta i `tiktok_post_options` z prywatnością wybraną przez użytkownika (opcje: `get_tiktok_creator_info`); X — połączonego konta. Wspólne `title`/`message` są dopasowywane do limitów każdej platformy (przycięcie); `platform_copy` daje osobny opis per platforma, publikowany 1:1 (za długi = błąd). Tylko administrator/operator.",
   inputSchema: {
     platforms: z
       .array(PLATFORM_ENUM)
@@ -325,8 +326,17 @@ export const queueSocialPublication = defineTool({
       .optional()
       .describe("Platformy (co najmniej jedna) — albo pojedyncza `platform`."),
     platform: PLATFORM_ENUM.optional().describe("Pojedyncza platforma (skrót dla platforms)."),
-    title: z.string().max(200).default("").describe("Tytuł (YouTube, wideo na FB, TikTok)."),
-    message: z.string().max(5000).default("").describe("Treść / opis / caption."),
+    title: z
+      .string()
+      .max(200)
+      .default("")
+      .describe("Tytuł wspólny (YouTube, wideo na FB, TikTok)."),
+    message: z
+      .string()
+      .max(5000)
+      .default("")
+      .describe("Treść / opis / caption — wspólny punkt wyjścia."),
+    platform_copy: platformCopySchema,
     image_url: z.string().url().optional().describe("Grafika (facebook_post, x)."),
     video_url: z
       .string()
@@ -355,6 +365,7 @@ export const queueSocialPublication = defineTool({
         platforms,
         title: a.title,
         message: a.message,
+        platform_copy: a.platform_copy,
         video_url: a.video_url,
         image_url: a.image_url,
         privacy_status: a.privacy_status,

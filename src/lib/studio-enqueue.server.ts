@@ -1,17 +1,34 @@
 // Wspólne wstawianie do kolejek publikacji — jedno miejsce dla Studia
-// publikacji (formularz ręczny) i panelu materiałów marketingowych
-// („Publikuj" przy wgranym pliku). Walidacja i reguły per platforma są tu,
-// żeby oba wejścia odrzucały dokładnie te same braki.
+// publikacji (formularz ręczny), panelu materiałów marketingowych
+// („Publikuj" przy wgranym pliku) i narzędzi MCP. Walidacja i reguły per
+// platforma są tu, żeby każde wejście odrzucało dokładnie te same braki.
 //
 // YouTube trafia do youtube_publish_queue (tick co 10 min), Meta / TikTok / X
 // dzielą social_publish_queue (różni je kolumna `platform`).
+//
+// Opisy: jedna platforma — jeden opis. `platform_copy[p]` to tekst wpisany
+// wprost dla platformy p (karta w formularzu / pole MCP) — idzie do kolejki
+// 1:1 i musi mieścić się w jej limitach, inaczej błąd. Platforma bez wpisu
+// dostaje szkic złożony ze wspólnego `title` / `message` i dopasowany do jej
+// wymagań (composeCopyForPlatform) — reguły w src/lib/platform-copy.ts.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import type { StudioPlatform } from "./studio-platforms";
+import { PLATFORM_LABELS, type StudioPlatform } from "./studio-platforms";
+import {
+  parsePlatformCopyMap,
+  platformCopyError,
+  resolvePlatformCopy,
+  type CopyLimits,
+  type PlatformCopy,
+  type PlatformCopyMap,
+} from "./platform-copy";
 
 export type EnqueuePublicationInput = {
   platforms: StudioPlatform[];
+  /** Opis wspólny — punkt wyjścia dla platform bez własnego wpisu w `platform_copy`. */
   title?: string;
   message?: string;
+  /** Opisy per platforma (tytuł i/lub treść) — wygrywają nad wspólnymi. */
+  platform_copy?: PlatformCopyMap;
   video_url?: string;
   image_url?: string;
   privacy_status?: "public" | "unlisted" | "private";
@@ -30,14 +47,42 @@ export type EnqueuePublicationResult = {
   youtube: { id: string }[];
 };
 
+/** Limity zależne od konta — limit posta X (Premium podnosi go sekretem). */
+export async function publishCopyLimits(): Promise<CopyLimits> {
+  const { getXEnv } = await import("./x.server");
+  return { xTextMax: getXEnv().postLimit };
+}
+
+/**
+ * Opisy do kolejek dla zaznaczonych platform: wpis per platforma waliduje się
+ * ściśle (za długi = błąd z nazwą platformy i pola), reszta dostaje szkic
+ * ze wspólnego tytułu / treści. Eksport do testów i auto-publikacji.
+ */
+export function resolvePublicationCopies(
+  platforms: readonly StudioPlatform[],
+  base: Partial<PlatformCopy>,
+  overrides: PlatformCopyMap,
+  limits: CopyLimits,
+): Map<StudioPlatform, PlatformCopy> {
+  const copies = new Map<StudioPlatform, PlatformCopy>();
+  for (const p of platforms) {
+    const override = overrides[p];
+    const copy = resolvePlatformCopy(p, base, override, limits);
+    if (override) {
+      const err = platformCopyError(p, copy, limits);
+      if (err) throw new Error(`${PLATFORM_LABELS[p]} — ${err}`);
+    }
+    copies.set(p, copy);
+  }
+  return copies;
+}
+
 export async function enqueuePublication(
   data: EnqueuePublicationInput,
 ): Promise<EnqueuePublicationResult> {
   if (!data.platforms.length) throw new Error("Wybierz co najmniej jedną platformę.");
   const videoUrl = data.video_url?.trim() || null;
   const imageUrl = data.image_url?.trim() || null;
-  const title = data.title?.trim() ?? "";
-  const message = data.message?.trim() ?? "";
   for (const url of [videoUrl, imageUrl]) {
     if (url && !/^https:\/\//.test(url))
       throw new Error("URL mediów musi zaczynać się od https://");
@@ -47,12 +92,21 @@ export async function enqueuePublication(
   if (needsVideo.length && !videoUrl) {
     throw new Error("Publikacja wideo (YouTube/Reels/TikTok) wymaga URL pliku MP4.");
   }
-  if (data.platforms.includes("youtube") && !title) {
+
+  const copies = resolvePublicationCopies(
+    data.platforms,
+    { title: data.title ?? "", message: data.message ?? "" },
+    parsePlatformCopyMap(data.platform_copy),
+    await publishCopyLimits(),
+  );
+  const copyOf = (p: StudioPlatform): PlatformCopy => copies.get(p) ?? { title: "", message: "" };
+
+  if (data.platforms.includes("youtube") && !copyOf("youtube").title) {
     throw new Error("YouTube wymaga tytułu.");
   }
-  // TikTok publikuje `post_info.title` — bez niego init API zwraca błąd.
-  if (data.platforms.includes("tiktok") && !title && !message) {
-    throw new Error("TikTok wymaga tytułu (lub treści, która go zastąpi).");
+  // TikTok publikuje `post_info.title` (podpis) — bez niego init API zwraca błąd.
+  if (data.platforms.includes("tiktok") && !copyOf("tiktok").title) {
+    throw new Error("TikTok wymaga podpisu (tytułu lub treści, która go zastąpi).");
   }
   // Prywatności ani oznaczeń komercyjnych NIE ustalamy za twórcę — walidacja
   // wymusza, że przyszły z ekranu publikacji.
@@ -61,11 +115,16 @@ export async function enqueuePublication(
     const { parseTiktokPostOptions } = await import("./tiktok-upload");
     tiktokOptions = parseTiktokPostOptions(data.tiktok_post_options);
   }
-  if (data.platforms.includes("facebook_post") && !message && !imageUrl && !videoUrl) {
+  if (
+    data.platforms.includes("facebook_post") &&
+    !copyOf("facebook_post").message &&
+    !imageUrl &&
+    !videoUrl
+  ) {
     throw new Error("Post na Facebooku wymaga treści lub mediów.");
   }
   // X wymaga tekstu zawsze — sam materiał bez treści to na X pusty post.
-  if (data.platforms.includes("x") && !message && !title) {
+  if (data.platforms.includes("x") && !copyOf("x").message) {
     throw new Error("Post na X wymaga treści (lub tytułu, który ją zastąpi).");
   }
 
@@ -77,11 +136,12 @@ export async function enqueuePublication(
   };
 
   if (data.platforms.includes("youtube")) {
+    const yt = copyOf("youtube");
     const { data: row, error } = await supabaseAdmin
       .from("youtube_publish_queue")
       .insert({
-        title,
-        description: message,
+        title: yt.title,
+        description: yt.message,
         source_video_url: videoUrl!,
         privacy_status: data.privacy_status ?? "public",
         scheduled_at: scheduledAt,
@@ -98,17 +158,20 @@ export async function enqueuePublication(
     (p): p is Exclude<StudioPlatform, "youtube"> => p !== "youtube",
   );
   if (queuePlatforms.length) {
-    const rows = queuePlatforms.map((platform) => ({
-      platform,
-      title,
-      message,
-      video_url: videoUrl,
-      // Grafikę niosą tylko platformy, które ją publikują: post FB i X.
-      image_url: platform === "facebook_post" || platform === "x" ? imageUrl : null,
-      scheduled_at: scheduledAt,
-      created_by: data.userId,
-      ...(platform === "tiktok" ? { tiktok_post_options: tiktokOptions as never } : {}),
-    }));
+    const rows = queuePlatforms.map((platform) => {
+      const copy = copyOf(platform);
+      return {
+        platform,
+        title: copy.title,
+        message: copy.message,
+        video_url: videoUrl,
+        // Grafikę niosą tylko platformy, które ją publikują: post FB i X.
+        image_url: platform === "facebook_post" || platform === "x" ? imageUrl : null,
+        scheduled_at: scheduledAt,
+        created_by: data.userId,
+        ...(platform === "tiktok" ? { tiktok_post_options: tiktokOptions as never } : {}),
+      };
+    });
     const { data: inserted, error } = await supabaseAdmin
       .from("social_publish_queue")
       .insert(rows)
