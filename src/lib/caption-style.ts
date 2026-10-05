@@ -521,7 +521,8 @@ export const AI_BADGE: AiBadgeSpec = {
   marginTop: 140,
   fontSize: 22,
   fill: "#000000",
-  fillOpacity: 0.45,
+  // Dyskretnie: mocno przezroczysta pigułka — ma być czytelna, nie krzyczeć.
+  fillOpacity: 0.3,
   border: "#FFFFFF",
   borderWidth: 1.5,
   textColor: "#FFFFFF",
@@ -589,11 +590,11 @@ export function aiBadgeEvents(
   const end = assTime(BADGE_END_CS);
   const shape =
     `{\\an7\\pos(${x},${y})\\p1\\1c&H${assBgr(spec.fill)}&\\1a&H${fillAlpha}&` +
-    `\\3c&H${assBgr(spec.border)}&\\3a&H40&\\bord${spec.borderWidth}\\shad0}` +
+    `\\3c&H${assBgr(spec.border)}&\\3a&H78&\\bord${spec.borderWidth}\\shad0}` +
     `${roundedRectPath(spec.width, spec.height, spec.radius)}{\\p0}`;
   const label =
     `{\\an5\\pos(${cx},${cy})\\fnInter\\fs${spec.fontSize}\\b1\\fsp1` +
-    `\\1c&H${assBgr(spec.textColor)}&\\bord0\\shad0}${escapeAss(spec.text)}`;
+    `\\1c&H${assBgr(spec.textColor)}&\\1a&H38&\\bord0\\shad0}${escapeAss(spec.text)}`;
   return [
     `Dialogue: ${BADGE_LAYER},${assTime(0)},${end},AiBadge,,0,0,0,,${shape}`,
     `Dialogue: ${BADGE_LAYER + 1},${assTime(0)},${end},AiBadge,,0,0,0,,${label}`,
@@ -611,6 +612,15 @@ export function aiBadgeEvents(
 //     pytanie pada (overlaysWithCueTiming).
 // Ta sama droga co znaczek „AI": zdarzenia w pliku ASS, usługa wypalania
 // bez żadnych zmian. Wymiary w pikselach kadru 720×1280.
+//
+// WYGLĄD: szata graficzna strony (system „dark-glow navy+gold" ze
+// src/styles.css, sekcja .fy-marketing): znacznik to złoty tekst na
+// granatowej plakietce (BorderStyle 3 — libass dopasowuje plakietkę do
+// tekstu, więc skaluje się z animacją), pytanie — biel z granatowym obrysem
+// i złotym błyskiem po pojawieniu się (\t po \1c). Pod oboma leży miękka
+// niebieska poświata (rozmyty obrys \bord+\blur w kolorze akcentu) — jak
+// „blue glow" cieni na stronie. Czcionka zostaje Inter: obraz Dockera usługi
+// nie ma Montserrata, a Inter to najbliższy dostępny geometryczny sans.
 
 export type DynamicOverlays = {
   /** Znacznik kategorii; wiersze rozdziela "\n". */
@@ -624,9 +634,30 @@ export type DynamicOverlays = {
   headlineEndSeconds: number;
 };
 
+/**
+ * Kolory nakładek — tokeny systemu „dark-glow navy+gold" (src/styles.css,
+ * .fy-marketing); wartości oklch przeliczone na hex.
+ */
+export const OVERLAY_BRAND = {
+  /** Wypełnienie plakietki znacznika (--popover). */
+  navy: "#0D1638",
+  navyOpacity: 0.82,
+  /** Obrys i cień pytania — granat tła strony (--background). */
+  navyDeep: "#070B22",
+  /** Złoto brandu: tekst znacznika i błysk pytania (--gold-500 / --gold-600). */
+  gold: "#EABE4A",
+  goldLight: "#EFCE6F",
+  /** Niebieska poświata jak cienie .fy-marketing (--accent). */
+  glow: "#4F8BF0",
+} as const;
+
 /** Układ nakładek w kadrze 720×1280 (ułamki wysokości — libass przeskaluje). */
 export const DYNAMIC_OVERLAY_LAYOUT = {
   tagFontSize: 40,
+  /** Wewnętrzny margines plakietki znacznika (Outline przy BorderStyle 3). */
+  tagPadding: 10,
+  /** Rozstrzelenie liter znacznika (jak --tracking-wide strony). */
+  tagSpacing: 2,
   /** Środek dużego znacznika (ułamek wysokości kadru). */
   tagBigY: 0.3125,
   /** Środek małego znacznika u góry — poniżej paska aplikacji (~110 px). */
@@ -638,32 +669,47 @@ export const DYNAMIC_OVERLAY_LAYOUT = {
   headlineY: 0.5,
   /** Maks. znaków w wierszu pytania przy fontSize 56 w kadrze 720 px. */
   headlineMaxChars: 18,
+  /** Rozmycie i zasięg poświaty (px); przy znaczniku wychodzi poza plakietkę. */
+  glowSize: 8,
 } as const;
 
 /** Warstwy nakładek: nad napisami (0), pod znaczkiem „AI" (5/6). */
+const OVERLAY_GLOW_LAYER = 2;
 const OVERLAY_TAG_LAYER = 3;
 const OVERLAY_HEADLINE_LAYER = 4;
 
 const overlayStyleLines = (): string[] => {
-  const common = (name: string, fontSize: number, outline: number, shadow: number) =>
+  const L = DYNAMIC_OVERLAY_LAYOUT;
+  const B = OVERLAY_BRAND;
+  const line = (
+    name: string,
+    fontSize: number,
+    primary: string,
+    outline: string,
+    back: string,
+    spacing: number,
+    borderStyle: 1 | 3,
+    outlineWidth: number,
+    shadow: number,
+  ) =>
     [
       name,
       "Inter",
       fontSize,
-      assColor("#FFFFFF"),
-      assColor("#FFFFFF"),
-      assColor("#000000"),
-      assColor("#000000", 128),
+      primary,
+      primary,
+      outline,
+      back,
       -1,
       0,
       0,
       0,
       100,
       100,
+      spacing,
       0,
-      0,
-      1,
-      outline,
+      borderStyle,
+      outlineWidth,
       shadow,
       5,
       40,
@@ -671,9 +717,45 @@ const overlayStyleLines = (): string[] => {
       0,
       1,
     ].join(",");
+  const navyFill = assColor(B.navy, (1 - B.navyOpacity) * 255);
   return [
-    common("OvTag", DYNAMIC_OVERLAY_LAYOUT.tagFontSize, 3, 0),
-    common("OvHead", DYNAMIC_OVERLAY_LAYOUT.headlineFontSize, 4, 1),
+    // Złoty tekst na granatowej plakietce; Outline = wewnętrzny margines.
+    line(
+      "OvTag",
+      L.tagFontSize,
+      assColor(B.gold),
+      navyFill,
+      navyFill,
+      L.tagSpacing,
+      3,
+      L.tagPadding,
+      0,
+    ),
+    // Białe pytanie z granatowym obrysem i miękkim cieniem.
+    line(
+      "OvHead",
+      L.headlineFontSize,
+      assColor("#FFFFFF"),
+      assColor(B.navyDeep),
+      assColor(B.navyDeep, 128),
+      0,
+      1,
+      4,
+      2,
+    ),
+    // Poświata: sam rozmyty obrys akcentu (\bord/\blur w zdarzeniu),
+    // wypełnienie wygaszane tagiem \1a&HFF&.
+    line(
+      "OvGlow",
+      L.tagFontSize,
+      assColor("#FFFFFF"),
+      assColor(B.glow),
+      assColor(B.glow, 255),
+      0,
+      1,
+      0,
+      0,
+    ),
   ];
 };
 
@@ -685,40 +767,60 @@ const overlayText = (text: string, maxChars?: number): string => {
 /**
  * Zdarzenia nakładek: znacznik w dwóch fazach (duży na środku → animacja
  * zmniejszenia do góry → mały do końca filmu) i pytanie na środku z \fad.
+ * Każdy element ma pod sobą warstwę poświaty (OvGlow), a złoto „połyskuje":
+ * po pojawieniu się przechodzi \t-em w jaśniejszy odcień i wraca.
  */
 export function dynamicOverlayEvents(
   ov: DynamicOverlays,
   dims: AssDimensions = DEFAULT_ASS_DIMENSIONS,
 ): string[] {
   const L = DYNAMIC_OVERLAY_LAYOUT;
+  const B = OVERLAY_BRAND;
   const cx = Math.round(dims.width / 2);
   const bigY = Math.round(dims.height * L.tagBigY);
   const smallY = Math.round(dims.height * L.tagSmallY);
   const headY = Math.round(dims.height * L.headlineY);
   const toMs = (sec: number) => Math.max(0, Math.round(sec * 1000));
+  const gold = assBgr(B.gold);
+  const goldLight = assBgr(B.goldLight);
 
   // Zmniejszenie rusza, gdy pojawia się pytanie, i kończy z końcem fazy dużej.
   const shrinkFromMs = toMs(Math.min(ov.headlineStartSeconds, ov.tagHoldSeconds));
   const shrinkToMs = toMs(ov.tagHoldSeconds);
   const holdCs = toCentis(ov.tagHoldSeconds);
   const tag = overlayText(ov.tag);
-  const tagBig =
-    `{\\an5\\move(${cx},${bigY},${cx},${smallY},${shrinkFromMs},${shrinkToMs})` +
+  const tagAnim =
+    `\\move(${cx},${bigY},${cx},${smallY},${shrinkFromMs},${shrinkToMs})` +
     `\\t(${shrinkFromMs},${shrinkToMs},\\fscx${L.tagSmallScale}\\fscy${L.tagSmallScale})` +
-    `\\fad(120,0)}${tag}`;
-  const tagSmall = `{\\an5\\pos(${cx},${smallY})\\fscx${L.tagSmallScale}\\fscy${L.tagSmallScale}}${tag}`;
+    `\\fad(120,0)`;
+  const tagRest = `\\pos(${cx},${smallY})\\fscx${L.tagSmallScale}\\fscy${L.tagSmallScale}`;
+  // Połysk złota: rozjaśnienie i powrót tuż po pojawieniu się znacznika.
+  const tagShimmer = `\\t(0,700,\\1c&H${goldLight}&)\\t(700,1400,\\1c&H${gold}&)`;
+  // Poświata: niewidoczne wypełnienie + rozmyty obrys akcentu; przy
+  // plakietce obrys musi wyjść poza jej margines, żeby halo było widać.
+  const glowOf = (bord: number) =>
+    `\\1a&HFF&\\bord${bord}\\blur${L.glowSize + 4}\\3c&H${assBgr(B.glow)}&\\3a&H60&`;
+  const tagGlow = glowOf(L.tagPadding + L.glowSize) + `\\fsp${L.tagSpacing}`;
 
   const headStartCs = toCentis(ov.headlineStartSeconds);
   const headEndCs = Math.max(toCentis(ov.headlineEndSeconds), headStartCs + 100);
-  const head = `{\\an5\\pos(${cx},${headY})\\fad(160,200)}${overlayText(
-    ov.headline,
-    L.headlineMaxChars,
-  )}`;
+  const headText = overlayText(ov.headline, L.headlineMaxChars);
+  const headPos = `\\pos(${cx},${headY})\\fad(160,200)`;
+  // Złoty błysk po pojawieniu się pytania, potem czysta biel.
+  const headShimmer = `\\t(250,850,\\1c&H${goldLight}&)\\t(850,1500,\\1c&HFFFFFF&)`;
 
+  const t0 = assTime(0);
+  const tHold = assTime(holdCs);
+  const tEnd = assTime(BADGE_END_CS);
+  const tHeadStart = assTime(headStartCs);
+  const tHeadEnd = assTime(headEndCs);
   return [
-    `Dialogue: ${OVERLAY_TAG_LAYER},${assTime(0)},${assTime(holdCs)},OvTag,,0,0,0,,${tagBig}`,
-    `Dialogue: ${OVERLAY_TAG_LAYER},${assTime(holdCs)},${assTime(BADGE_END_CS)},OvTag,,0,0,0,,${tagSmall}`,
-    `Dialogue: ${OVERLAY_HEADLINE_LAYER},${assTime(headStartCs)},${assTime(headEndCs)},OvHead,,0,0,0,,${head}`,
+    `Dialogue: ${OVERLAY_GLOW_LAYER},${t0},${tHold},OvGlow,,0,0,0,,{\\an5${tagAnim}${tagGlow}}${tag}`,
+    `Dialogue: ${OVERLAY_TAG_LAYER},${t0},${tHold},OvTag,,0,0,0,,{\\an5${tagAnim}${tagShimmer}}${tag}`,
+    `Dialogue: ${OVERLAY_GLOW_LAYER},${tHold},${tEnd},OvGlow,,0,0,0,,{\\an5${tagRest}${tagGlow}}${tag}`,
+    `Dialogue: ${OVERLAY_TAG_LAYER},${tHold},${tEnd},OvTag,,0,0,0,,{\\an5${tagRest}}${tag}`,
+    `Dialogue: ${OVERLAY_GLOW_LAYER},${tHeadStart},${tHeadEnd},OvGlow,,0,0,0,,{\\an5${headPos}\\fs${L.headlineFontSize}${glowOf(L.glowSize)}}${headText}`,
+    `Dialogue: ${OVERLAY_HEADLINE_LAYER},${tHeadStart},${tHeadEnd},OvHead,,0,0,0,,{\\an5${headPos}${headShimmer}}${headText}`,
   ];
 }
 

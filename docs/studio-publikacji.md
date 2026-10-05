@@ -288,7 +288,10 @@ Zakładki panelu:
      wypalaniu napisów (zdarzenia w tym samym pliku ASS —
      `src/lib/caption-style.ts`, nakładki z `buildShortsOverlays` w
      `src/lib/shorts-script.ts`); przycisk „Kopiuj" zostaje do montażu
-     ręcznego. `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza.
+     ręcznego. Wygląd nakładek odwzorowuje szatę graficzną strony (system
+     „dark-glow navy+gold" z `src/styles.css`): złoty znacznik na granatowej
+     plakietce, białe pytanie ze złotym błyskiem, pod oboma niebieska
+     poświata akcentu. `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza.
      Tytuł i opis publikacji też pochodzą z paczki (teza + nota „materiał
      edukacyjny"). Pytania, dla których wideo już istnieje, mają zielony
      znaczek (rozpoznanie po prefiksie promptu — bez zmiany schematu DB).
