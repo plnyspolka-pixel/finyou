@@ -132,6 +132,7 @@ co poprawić.
 | `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na wynik usługi, zanim zadanie padnie do ponowienia (domyślnie 45)                    |
 | `VIDEO_RENDITION_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na kompresję wideo, zanim ponowimy / wyślemy oryginał (domyślnie 120)                 |
 | `STUDIO_AI_BADGE`                 | Opcjonalny; `0` / `off` wyłącza znaczek „AI" w rogu rolek (domyślnie włączony)                               |
+| `STUDIO_DYNAMIC_OVERLAYS`         | Opcjonalny; `0` / `off` wyłącza wypalane nakładki dynamiczne rolek z paczki 250 pytań (domyślnie włączone)   |
 | `STUDIO_SAVE_TO_MATERIALS`        | Opcjonalny; `0` / `off` wyłącza zapis gotowych rolek do /admin/materialy (domyślnie włączony)                |
 | `STUDIO_MATERIALS_AUDIENCE`       | Opcjonalny; domyślna kategoria rolek w materiałach: `klient` / `inwestor` / `posrednik` (domyślnie `klient`) |
 | `ELEVENLABS_API_KEY`              | Lektor TTS (już używany)                                                                                     |
@@ -281,9 +282,13 @@ Zakładki panelu:
      rozbity w panelu na edytowalne sekcje: **hook** (znacznik kategorii +
      pytanie), **treść** (teza) i **CTA**; lektor czyta ich sklejkę. AI
      niczego nie przepisuje (`src/lib/shorts-script.ts`). Obok scenariusza
-     panel pokazuje **elementy dynamiczne** (instrukcje ekranowe do
-     montażu, lektor ich nie czyta): ikonka „AI" 0–3 s, znacznik kategorii
-     na starcie, duże pytanie od ~0,8/1,0 s — z przyciskiem „Kopiuj".
+     panel pokazuje **elementy dynamiczne** (ekranowe, lektor ich nie
+     czyta): znacznik kategorii na starcie, duże pytanie od ~0,8/1,0 s,
+     znaczek „AI". Studio **wypala je automatycznie w obrazie** przy
+     wypalaniu napisów (zdarzenia w tym samym pliku ASS —
+     `src/lib/caption-style.ts`, nakładki z `buildShortsOverlays` w
+     `src/lib/shorts-script.ts`); przycisk „Kopiuj" zostaje do montażu
+     ręcznego. `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza.
      Tytuł i opis publikacji też pochodzą z paczki (teza + nota „materiał
      edukacyjny"). Pytania, dla których wideo już istnieje, mają zielony
      znaczek (rozpoznanie po prefiksie promptu — bez zmiany schematu DB).
@@ -400,12 +405,13 @@ Zakładki panelu:
    **Czego API HeyGena NIE potrafi** (sprawdzone w specyfikacji v3, żeby nie
    szukać tego drugi raz):
    - **nakładek na awatara** — sceny są pełnoekranowe i sklejane, nie ma
-     warstw. Ikonka „AI" w rogu, znacznik kategorii i duże pytanie na środku
-     z paczki 250 pytań zostają więc **instrukcją montażową** (przycisk
-     „Kopiuj"), a nie czymś, co API wyrenderuje. Jedyny tekst, jaki HeyGen
-     nakłada na obraz, to wypalane napisy. Pole `watermark` (grafika w rogu)
-     istnieje, ale jest płatną opcją tylko dla kont Enterprise i obowiązuje
-     dla całego wideo, nie od 0 do 3 s.
+     warstw. Znaczek „AI" w rogu, znacznik kategorii i duże pytanie na środku
+     z paczki 250 pytań wypala więc **nasza usługa napisów** (zdarzenia ASS
+     w `src/lib/caption-style.ts` — ta sama droga co znaczek „AI";
+     `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza), a nie HeyGen. Jedyny tekst, jaki
+     HeyGen nakłada na obraz, to wypalane napisy. Pole `watermark` (grafika
+     w rogu) istnieje, ale jest płatną opcją tylko dla kont Enterprise
+     i obowiązuje dla całego wideo, nie od 0 do 3 s.
    - **klipów wideo z narracją** — scena `video` przyjmuje klip, ale nie
      przyjmuje audio i nie ma przycinania (`playback` to dziś tylko głośność
      i wyciszenie). Wstawiona w środek rolki ucięłaby lektora i zrobiła ciszę

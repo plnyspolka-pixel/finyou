@@ -600,9 +600,158 @@ export function aiBadgeEvents(
   ];
 }
 
+// ── Nakładki dynamiczne ─────────────────────────────────────────────────────
+//
+// Elementy ekranowe rolki z paczki 250 pytań (SHORTS_DYNAMIC_ELEMENTS w
+// shorts-script.ts), wypalane w obrazie zamiast być instrukcją montażową:
+//   * znacznik kategorii — duży na środku od 0 s, potem zmniejsza się
+//     (\move + \t ze skalą) i zostaje mały u góry kadru do końca filmu;
+//   * DUŻE pytanie na środku — dokładnie to, co mówi lektor; pojawia się,
+//     gdy znacznik rusza do góry, i znika z końcem kwestii SRT, w której
+//     pytanie pada (overlaysWithCueTiming).
+// Ta sama droga co znaczek „AI": zdarzenia w pliku ASS, usługa wypalania
+// bez żadnych zmian. Wymiary w pikselach kadru 720×1280.
+
+export type DynamicOverlays = {
+  /** Znacznik kategorii; wiersze rozdziela "\n". */
+  tag: string;
+  /** Do tej sekundy znacznik jest duży na środku; potem mały u góry. */
+  tagHoldSeconds: number;
+  /** Pytanie rolki — dokładnie tekst mówiony przez lektora. */
+  headline: string;
+  headlineStartSeconds: number;
+  /** Koniec pytania; gdy jest SRT, liczy go overlaysWithCueTiming. */
+  headlineEndSeconds: number;
+};
+
+/** Układ nakładek w kadrze 720×1280 (ułamki wysokości — libass przeskaluje). */
+export const DYNAMIC_OVERLAY_LAYOUT = {
+  tagFontSize: 40,
+  /** Środek dużego znacznika (ułamek wysokości kadru). */
+  tagBigY: 0.3125,
+  /** Środek małego znacznika u góry — poniżej paska aplikacji (~110 px). */
+  tagSmallY: 0.117,
+  /** Skala małego znacznika w % (po animacji \t). */
+  tagSmallScale: 42,
+  headlineFontSize: 56,
+  /** Środek pytania (ułamek wysokości kadru). */
+  headlineY: 0.5,
+  /** Maks. znaków w wierszu pytania przy fontSize 56 w kadrze 720 px. */
+  headlineMaxChars: 18,
+} as const;
+
+/** Warstwy nakładek: nad napisami (0), pod znaczkiem „AI" (5/6). */
+const OVERLAY_TAG_LAYER = 3;
+const OVERLAY_HEADLINE_LAYER = 4;
+
+const overlayStyleLines = (): string[] => {
+  const common = (name: string, fontSize: number, outline: number, shadow: number) =>
+    [
+      name,
+      "Inter",
+      fontSize,
+      assColor("#FFFFFF"),
+      assColor("#FFFFFF"),
+      assColor("#000000"),
+      assColor("#000000", 128),
+      -1,
+      0,
+      0,
+      0,
+      100,
+      100,
+      0,
+      0,
+      1,
+      outline,
+      shadow,
+      5,
+      40,
+      40,
+      0,
+      1,
+    ].join(",");
+  return [
+    common("OvTag", DYNAMIC_OVERLAY_LAYOUT.tagFontSize, 3, 0),
+    common("OvHead", DYNAMIC_OVERLAY_LAYOUT.headlineFontSize, 4, 1),
+  ];
+};
+
+const overlayText = (text: string, maxChars?: number): string => {
+  const lines = maxChars ? layoutLines(text, maxChars) : text.split("\n");
+  return lines.map((l) => escapeAss(l)).join("\\N");
+};
+
+/**
+ * Zdarzenia nakładek: znacznik w dwóch fazach (duży na środku → animacja
+ * zmniejszenia do góry → mały do końca filmu) i pytanie na środku z \fad.
+ */
+export function dynamicOverlayEvents(
+  ov: DynamicOverlays,
+  dims: AssDimensions = DEFAULT_ASS_DIMENSIONS,
+): string[] {
+  const L = DYNAMIC_OVERLAY_LAYOUT;
+  const cx = Math.round(dims.width / 2);
+  const bigY = Math.round(dims.height * L.tagBigY);
+  const smallY = Math.round(dims.height * L.tagSmallY);
+  const headY = Math.round(dims.height * L.headlineY);
+  const toMs = (sec: number) => Math.max(0, Math.round(sec * 1000));
+
+  // Zmniejszenie rusza, gdy pojawia się pytanie, i kończy z końcem fazy dużej.
+  const shrinkFromMs = toMs(Math.min(ov.headlineStartSeconds, ov.tagHoldSeconds));
+  const shrinkToMs = toMs(ov.tagHoldSeconds);
+  const holdCs = toCentis(ov.tagHoldSeconds);
+  const tag = overlayText(ov.tag);
+  const tagBig =
+    `{\\an5\\move(${cx},${bigY},${cx},${smallY},${shrinkFromMs},${shrinkToMs})` +
+    `\\t(${shrinkFromMs},${shrinkToMs},\\fscx${L.tagSmallScale}\\fscy${L.tagSmallScale})` +
+    `\\fad(120,0)}${tag}`;
+  const tagSmall = `{\\an5\\pos(${cx},${smallY})\\fscx${L.tagSmallScale}\\fscy${L.tagSmallScale}}${tag}`;
+
+  const headStartCs = toCentis(ov.headlineStartSeconds);
+  const headEndCs = Math.max(toCentis(ov.headlineEndSeconds), headStartCs + 100);
+  const head = `{\\an5\\pos(${cx},${headY})\\fad(160,200)}${overlayText(
+    ov.headline,
+    L.headlineMaxChars,
+  )}`;
+
+  return [
+    `Dialogue: ${OVERLAY_TAG_LAYER},${assTime(0)},${assTime(holdCs)},OvTag,,0,0,0,,${tagBig}`,
+    `Dialogue: ${OVERLAY_TAG_LAYER},${assTime(holdCs)},${assTime(BADGE_END_CS)},OvTag,,0,0,0,,${tagSmall}`,
+    `Dialogue: ${OVERLAY_HEADLINE_LAYER},${assTime(headStartCs)},${assTime(headEndCs)},OvHead,,0,0,0,,${head}`,
+  ];
+}
+
+const normalizeWords = (text: string): string[] =>
+  text
+    .toLocaleLowerCase("pl-PL")
+    .split(/\s+/)
+    .map((w) => w.replace(/[^\p{L}\p{N}]/gu, ""))
+    .filter(Boolean);
+
+/**
+ * Dopasowuje koniec pytania do kwestii SRT, w której lektor je kończy
+ * (słowa pytania jako podciąg słów kolejnych kwestii). Bez dopasowania
+ * zostaje szacunek z `headlineEndSeconds`.
+ */
+export function overlaysWithCueTiming(ov: DynamicOverlays, cues: SrtCue[]): DynamicOverlays {
+  const target = normalizeWords(ov.headline);
+  if (!target.length) return ov;
+  let i = 0;
+  for (const cue of cues) {
+    for (const word of normalizeWords(cue.text)) {
+      if (word === target[i]) i++;
+      if (i === target.length) return { ...ov, headlineEndSeconds: cue.end + 0.25 };
+    }
+  }
+  return ov;
+}
+
 export type AssOptions = {
   /** Dorysuj znaczek „AI" w rogu (przez cały film). */
   aiBadge?: boolean;
+  /** Wypal nakładki dynamiczne (znacznik kategorii + duże pytanie). */
+  overlays?: DynamicOverlays | null;
 };
 
 function assDocument(opts: {
@@ -633,23 +782,45 @@ function assDocument(opts: {
 }
 
 /**
- * Plik ASS z samym znaczkiem „AI" — do rolki bez napisów; usługa wypalania
- * dokłada wtedy tylko znaczek.
+ * Plik ASS bez napisów — sam znaczek „AI", same nakładki dynamiczne albo
+ * oba naraz (rolka zamówiona bez napisów). `null`, gdy nie ma czego wypalać.
  */
-export function aiBadgeAss(dims: AssDimensions = DEFAULT_ASS_DIMENSIONS): string {
+export function extrasAss(
+  opts: { aiBadge?: boolean; overlays?: DynamicOverlays | null },
+  dims: AssDimensions = DEFAULT_ASS_DIMENSIONS,
+): string | null {
+  const styles: string[] = [];
+  const events: string[] = [];
+  if (opts.overlays) {
+    styles.push(...overlayStyleLines());
+    events.push(...dynamicOverlayEvents(opts.overlays, dims));
+  }
+  if (opts.aiBadge) {
+    styles.push(badgeStyleLine(AI_BADGE));
+    events.push(...aiBadgeEvents(dims));
+  }
+  if (!events.length) return null;
   return assDocument({
-    comment: "Finance You — znaczek AI",
+    comment: `Finance You — ${[opts.overlays ? "nakładki dynamiczne" : null, opts.aiBadge ? "znaczek AI" : null].filter(Boolean).join(" + ")}`,
     dims,
-    styles: [badgeStyleLine(AI_BADGE)],
-    events: aiBadgeEvents(dims),
+    styles,
+    events,
   });
 }
 
 /**
+ * Plik ASS z samym znaczkiem „AI" — do rolki bez napisów; usługa wypalania
+ * dokłada wtedy tylko znaczek.
+ */
+export function aiBadgeAss(dims: AssDimensions = DEFAULT_ASS_DIMENSIONS): string {
+  return extrasAss({ aiBadge: true }, dims)!;
+}
+
+/**
  * Buduje plik ASS: nagłówek z kadrem, styl `Cap` i zdarzenia (plus znaczek
- * „AI", gdy `aiBadge`). Kwestie powinny być już pocięte (`chunkCues`) —
- * `WrapStyle: 2` wyłącza łamanie po stronie libass, żeby wiersze wyglądały
- * dokładnie tak, jak je policzyliśmy.
+ * „AI" i nakładki dynamiczne, gdy zamówione). Kwestie powinny być już pocięte
+ * (`chunkCues`) — `WrapStyle: 2` wyłącza łamanie po stronie libass, żeby
+ * wiersze wyglądały dokładnie tak, jak je policzyliśmy.
  */
 export function buildAss(
   cues: SrtCue[],
@@ -672,11 +843,24 @@ export function buildAss(
       .join("\\N");
     events.push(dialogue(toCentis(cue.start), toCentis(cue.end), text));
   }
+  const styles = [styleLine(style)];
+  if (opts.overlays) {
+    styles.push(...overlayStyleLines());
+    events.push(...dynamicOverlayEvents(opts.overlays, dims));
+  }
+  if (opts.aiBadge) {
+    styles.push(badgeStyleLine(AI_BADGE));
+    events.push(...aiBadgeEvents(dims));
+  }
+  const extras = [
+    opts.overlays ? "nakładki dynamiczne" : null,
+    opts.aiBadge ? "znaczek AI" : null,
+  ].filter(Boolean);
   return assDocument({
-    comment: `Finance You — napisy własne (styl: ${style.id})${opts.aiBadge ? " + znaczek AI" : ""}`,
+    comment: `Finance You — napisy własne (styl: ${style.id})${extras.length ? ` + ${extras.join(" + ")}` : ""}`,
     dims,
-    styles: opts.aiBadge ? [styleLine(style), badgeStyleLine(AI_BADGE)] : [styleLine(style)],
-    events: opts.aiBadge ? [...events, ...aiBadgeEvents(dims)] : events,
+    styles,
+    events,
   });
 }
 
@@ -694,12 +878,15 @@ export function srtToAss(
   // Zabezpieczenie dla SRT spoza Studia (import filmu z HeyGena): nazwa firmy
   // z rozpoznawania mowy bywa przekręcona („fajnasiu") — poprawiamy ją, zanim
   // cokolwiek trafi na obraz. Dla SRT z tekstu scenariusza to przejście puste.
-  const cues = chunkCues(fixBrandInCues(parseSubtitles(srt)), {
+  const parsed = fixBrandInCues(parseSubtitles(srt));
+  const cues = chunkCues(parsed, {
     maxChars: style.maxChars,
     maxLines: style.maxLines,
   });
   if (!cues.length) return null;
-  return buildAss(cues, style, dims, opts);
+  // Koniec dużego pytania dopasowujemy do kwestii, w której lektor je kończy.
+  const overlays = opts.overlays ? overlaysWithCueTiming(opts.overlays, parsed) : opts.overlays;
+  return buildAss(cues, style, dims, { ...opts, overlays });
 }
 
 // ── Podgląd w panelu ────────────────────────────────────────────────────────

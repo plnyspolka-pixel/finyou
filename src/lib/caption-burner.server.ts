@@ -15,11 +15,21 @@
 //   CAPTION_BURNER_SECRET — ten sam, co w usłudze (Bearer)
 //   STUDIO_AI_BADGE       — opcjonalnie `0` / `off` wyłącza znaczek „AI" w rogu
 //                           rolek (domyślnie włączony)
+//   STUDIO_DYNAMIC_OVERLAYS — opcjonalnie `0` / `off` wyłącza wypalane nakładki
+//                           dynamiczne rolek z paczki 250 pytań (znacznik
+//                           kategorii + duże pytanie; domyślnie włączone)
 // Bez nich rolka Z NAPISAMI nie wychodzi (zadanie pada z jasnym powodem, do
 // ponowienia po konfiguracji), rolka bez napisów wychodzi bez znaczka „AI",
 // a publikacja wysyła oryginalne pliki bez kompresji.
 
-import { aiBadgeAss, srtToAss, type CustomCaptionStyleId } from "./caption-style";
+import {
+  extrasAss,
+  overlaysWithCueTiming,
+  parseSubtitles,
+  srtToAss,
+  type CustomCaptionStyleId,
+  type DynamicOverlays,
+} from "./caption-style";
 import { fetchBytes, storeMedia, type StoredMedia } from "./media-storage.server";
 
 export type CaptionBurnerEnv = { configured: boolean; url: string; secret: string };
@@ -38,6 +48,16 @@ export const isCaptionBurnerConfigured = (): boolean => getCaptionBurnerEnv().co
  */
 export function isAiBadgeEnabled(): boolean {
   const v = (process.env.STUDIO_AI_BADGE ?? "").trim().toLowerCase();
+  return !["0", "false", "off", "no", "nie"].includes(v);
+}
+
+/**
+ * Czy rolki z paczki 250 pytań dostają wypalane nakładki dynamiczne
+ * (znacznik kategorii + duże pytanie). Domyślnie tak;
+ * `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza.
+ */
+export function isDynamicOverlaysEnabled(): boolean {
+  const v = (process.env.STUDIO_DYNAMIC_OVERLAYS ?? "").trim().toLowerCase();
   return !["0", "false", "off", "no", "nie"].includes(v);
 }
 
@@ -86,9 +106,11 @@ async function errorOf(res: Response): Promise<string> {
 }
 
 /**
- * Zleca wypalenie: napisy (nasz SRT → ASS w wybranym stylu), znaczek „AI"
- * albo oba naraz — i wysyła zadanie. Bez `srtUrl` / `styleId` wypala sam
- * znaczek (rolka bez napisów). Zwraca id zadania w usłudze (zapisywane
+ * Zleca wypalenie: napisy (nasz SRT → ASS w wybranym stylu), znaczek „AI",
+ * nakładki dynamiczne — w dowolnym zestawie, jednym przebiegiem FFmpega.
+ * Bez `srtUrl` / `styleId` wypala tylko znaczek i/lub nakładki (rolka bez
+ * napisów); nakładki i tak dopasowują koniec pytania do czasów SRT, gdy
+ * `srtUrl` jest podany. Zwraca id zadania w usłudze (zapisywane
  * w `studio_video_jobs.caption_burn_id`).
  */
 export async function submitCaptionBurn(input: {
@@ -96,6 +118,7 @@ export async function submitCaptionBurn(input: {
   srtUrl?: string | null;
   styleId?: CustomCaptionStyleId | null;
   aiBadge?: boolean;
+  overlays?: DynamicOverlays | null;
   name?: string;
 }): Promise<string> {
   let ass: string | null;
@@ -103,12 +126,28 @@ export async function submitCaptionBurn(input: {
     const srt = await fetchBytes(input.srtUrl, MAX_SRT_BYTES);
     ass = srtToAss(new TextDecoder().decode(srt.bytes), input.styleId, undefined, {
       aiBadge: input.aiBadge === true,
+      overlays: input.overlays ?? null,
     });
     if (!ass) {
       throw new Error("Plik SRT nie zawiera żadnej kwestii — nie ma czego wypalić.");
     }
-  } else if (input.aiBadge) {
-    ass = aiBadgeAss();
+  } else if (input.aiBadge || input.overlays) {
+    let overlays = input.overlays ?? null;
+    if (overlays && input.srtUrl) {
+      // Rolka bez napisów też ma nasz SRT — bierzemy z niego koniec pytania;
+      // gdy pliku nie da się pobrać, zostaje szacunek z tempa lektora.
+      try {
+        const srt = await fetchBytes(input.srtUrl, MAX_SRT_BYTES);
+        overlays = overlaysWithCueTiming(
+          overlays,
+          parseSubtitles(new TextDecoder().decode(srt.bytes)),
+        );
+      } catch {
+        // szacunek wystarczy
+      }
+    }
+    ass = extrasAss({ aiBadge: input.aiBadge === true, overlays });
+    if (!ass) throw new Error("Nie ma czego wypalić: brak napisów, znaczka AI i nakładek.");
   } else {
     throw new Error("Nie ma czego wypalić: brak napisów i znaczka AI.");
   }

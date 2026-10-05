@@ -7,6 +7,9 @@ import {
   aiBadgeEvents,
   buildAss,
   defaultCaptionStyle,
+  dynamicOverlayEvents,
+  extrasAss,
+  overlaysWithCueTiming,
   parseSubtitles,
   captionPreviewCss,
   captionStyleLabel,
@@ -16,6 +19,7 @@ import {
   parseCaptionStyleId,
   parseSrt,
   srtToAss,
+  type DynamicOverlays,
 } from "./caption-style";
 
 const SRT = [
@@ -255,6 +259,82 @@ describe("znaczek AI", () => {
 
   it("bez opcji nic się nie zmienia", () => {
     expect(srtToAss(SRT, "reels")).not.toContain("AiBadge");
+  });
+});
+
+describe("nakładki dynamiczne", () => {
+  const OVERLAYS: DynamicOverlays = {
+    tag: "PRYWATNE POŻYCZKI\nPOD ZASTAW NIERUCHOMOŚCI",
+    tagHoldSeconds: 1.2,
+    headline: "Czym jest pożyczka prywatna?",
+    headlineStartSeconds: 0.8,
+    headlineEndSeconds: 6,
+  };
+
+  it("znacznik w dwóch fazach: animacja zmniejszenia, potem mały u góry do końca", () => {
+    const [big, small, head] = dynamicOverlayEvents(OVERLAYS);
+    expect(big).toMatch(/^Dialogue: 3,0:00:00\.00,0:00:01\.20,OvTag,/);
+    expect(big).toContain("\\move(360,400,360,150,800,1200)");
+    expect(big).toContain("\\t(800,1200,\\fscx42\\fscy42)");
+    expect(big).toContain("PRYWATNE POŻYCZKI\\NPOD ZASTAW NIERUCHOMOŚCI");
+    expect(small).toMatch(/^Dialogue: 3,0:00:01\.20,9:59:59\.99,OvTag,/);
+    expect(small).toContain("\\pos(360,150)\\fscx42\\fscy42");
+  });
+
+  it("pytanie na środku od startu do końca kwestii, z \\fad i łamaniem wierszy", () => {
+    const head = dynamicOverlayEvents(OVERLAYS)[2];
+    expect(head).toMatch(/^Dialogue: 4,0:00:00\.80,0:00:06\.00,OvHead,/);
+    expect(head).toContain("\\pos(360,640)");
+    expect(head).toContain("\\fad(160,200)");
+    expect(head).toContain("Czym jest pożyczka\\Nprywatna?");
+  });
+
+  it("overlaysWithCueTiming: koniec pytania z kwestii SRT, w której pada", () => {
+    const cues = [
+      { start: 0, end: 2.8, text: "Prywatne pożyczki pod zastaw nieruchomości." },
+      { start: 2.8, end: 4.6, text: "Czym jest pożyczka prywatna?" },
+      { start: 4.6, end: 8, text: "To pożyczka udzielana poza typowym kredytem bankowym." },
+    ];
+    expect(overlaysWithCueTiming(OVERLAYS, cues).headlineEndSeconds).toBeCloseTo(4.85, 5);
+    // Pytanie podzielone między kwestie też się dopasowuje (podciąg słów).
+    const split = [
+      { start: 0, end: 3, text: "Prywatne pożyczki. Czym jest" },
+      { start: 3, end: 5, text: "pożyczka prywatna? To ważne." },
+    ];
+    expect(overlaysWithCueTiming(OVERLAYS, split).headlineEndSeconds).toBeCloseTo(5.25, 5);
+    // Bez dopasowania zostaje szacunek.
+    expect(
+      overlaysWithCueTiming(OVERLAYS, [{ start: 0, end: 2, text: "zupełnie inny tekst" }])
+        .headlineEndSeconds,
+    ).toBe(6);
+  });
+
+  it("srtToAss dokłada style OvTag/OvHead i zdarzenia nakładek do napisów", () => {
+    const ass = srtToAss(SRT, "reels", undefined, { aiBadge: true, overlays: OVERLAYS })!;
+    const styles = ass.split("\n").filter((l) => l.startsWith("Style:"));
+    expect(styles.map((s) => s.split(",")[0])).toEqual([
+      "Style: Cap",
+      "Style: OvTag",
+      "Style: OvHead",
+      "Style: AiBadge",
+    ]);
+    expect(dialogues(ass).filter((l) => l.includes(",OvTag,"))).toHaveLength(2);
+    expect(dialogues(ass).filter((l) => l.includes(",OvHead,"))).toHaveLength(1);
+  });
+
+  it("extrasAss: same nakładki (bez znaczka), oba naraz i null, gdy nic", () => {
+    const only = extrasAss({ overlays: OVERLAYS })!;
+    expect(only).toContain("OvTag");
+    expect(only).not.toContain("AiBadge");
+    const both = extrasAss({ aiBadge: true, overlays: OVERLAYS })!;
+    expect(both).toContain("OvTag");
+    expect(both).toContain("AiBadge");
+    expect(extrasAss({})).toBeNull();
+  });
+
+  it("neutralizuje klamry i backslash w tekstach nakładek", () => {
+    const [big] = dynamicOverlayEvents({ ...OVERLAYS, tag: "A {x} \\ B" });
+    expect(big).toContain("}A (x) / B");
   });
 });
 

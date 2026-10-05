@@ -35,7 +35,7 @@ import {
   type CaptionBurnState,
   type HeygenCaptionOutputs,
 } from "./studio-captions";
-import type { CustomCaptionStyleId } from "./caption-style";
+import type { CustomCaptionStyleId, DynamicOverlays } from "./caption-style";
 import { AVATARS_PER_REEL } from "./studio-scenes";
 
 export type StudioJobRow = {
@@ -102,6 +102,22 @@ const joinNotes = (...notes: Array<string | null | undefined>) =>
 function fallbackTitle(job: JobRow): string {
   if (job.publish_title.trim()) return job.publish_title.trim();
   return job.prompt.replace(/^#\d{1,3} · /, "").slice(0, 92);
+}
+
+/**
+ * Nakładki dynamiczne joba (znacznik kategorii + duże pytanie, wypalane
+ * w obrazie). Tylko rolki z paczki 250 pytań — pytanie rozpoznajemy po tagu
+ * "#N · " w prompcie, więc nic nie trzeba trzymać w bazie i zmiana napisów
+ * gotowej rolki wypala te same nakładki. `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza.
+ */
+async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
+  const { isDynamicOverlaysEnabled } = await import("./caption-burner.server");
+  if (!isDynamicOverlaysEnabled()) return null;
+  const questionId = parseShortsPromptTag(job.prompt);
+  const q = questionId != null ? findShortsQuestion(questionId) : undefined;
+  if (!q) return null;
+  const { buildShortsOverlays } = await import("./shorts-script");
+  return buildShortsOverlays(q);
 }
 
 // Przetwarza do `limit` jobów 'queued': scenariusz → TTS → HeyGen → rendering.
@@ -289,6 +305,7 @@ async function submitBurn(
     srtUrl: plan.srtUrl,
     styleId: plan.styleId,
     aiBadge: plan.aiBadge,
+    overlays: plan.overlays,
     name: fallbackTitle(job),
   });
   await supabaseAdmin
@@ -308,9 +325,9 @@ async function submitBurn(
 }
 
 /**
- * Sam znaczek „AI" na czystym masterze rolki zamówionej BEZ napisów. Job
- * przechodzi w 'captioning' jak przy napisach; przy domykaniu rozpoznajemy
- * ten rodzaj po `captions = false`.
+ * Znaczek „AI" i/lub nakładki dynamiczne na czystym masterze rolki zamówionej
+ * BEZ napisów. Job przechodzi w 'captioning' jak przy napisach; przy domykaniu
+ * rozpoznajemy ten rodzaj po `captions = false`.
  */
 async function submitBadgeBurn(
   job: JobRow,
@@ -320,12 +337,17 @@ async function submitBadgeBurn(
     subtitleUrl: string | null;
     thumbnailUrl: string | null;
     lastError: string | null;
+    aiBadge: boolean;
+    overlays: DynamicOverlays | null;
   },
 ): Promise<void> {
   const { submitCaptionBurn } = await import("./caption-burner.server");
   const burnId = await submitCaptionBurn({
     videoUrl: src.videoUrl,
-    aiBadge: true,
+    // SRT podajemy dla czasów nakładek (koniec dużego pytania) — napisów nie wypalamy.
+    srtUrl: src.overlays ? src.subtitleUrl : null,
+    aiBadge: src.aiBadge,
+    overlays: src.overlays,
     name: fallbackTitle(job),
   });
   await supabaseAdmin
@@ -398,6 +420,7 @@ export async function settleHeygenCompletion(
   const { isCaptionBurnerConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
   const burnerConfigured = isCaptionBurnerConfigured();
   const aiBadge = isAiBadgeEnabled();
+  const overlays = await overlaysForJob(job);
   const videoUrl = status.video_url ?? "";
   const thumbnailUrl = status.thumbnail_url ?? null;
   // Nasz SRT z renderu; film dołączony spoza Studia może mieć tylko plik SRT
@@ -411,6 +434,7 @@ export async function settleHeygenCompletion(
     videoUrl,
     srtUrl,
     aiBadge,
+    overlays,
   });
   if (plan.action === "burn") {
     try {
@@ -434,10 +458,11 @@ export async function settleHeygenCompletion(
     });
   }
 
-  // Rolka bez napisów: sam znaczek „AI" na czystym masterze, zanim pójdzie
-  // do publikacji; bez usługi — publikacja bez znaczka z adnotacją.
+  // Rolka bez napisów: znaczek „AI" i/lub nakładki dynamiczne na czystym
+  // masterze, zanim pójdzie do publikacji; bez usługi — publikacja bez nich
+  // z adnotacją.
   let badgeNote: string | null = null;
-  const badge = planBadgeBurn({ aiBadge, burnerConfigured, videoUrl });
+  const badge = planBadgeBurn({ aiBadge, burnerConfigured, videoUrl, overlays });
   if (badge.action === "badge") {
     try {
       await submitBadgeBurn(job, {
@@ -445,6 +470,8 @@ export async function settleHeygenCompletion(
         subtitleUrl: srtUrl,
         thumbnailUrl,
         lastError: job.last_error,
+        aiBadge: badge.aiBadge,
+        overlays: badge.overlays,
       });
       return { state: "captioning" };
     } catch (e) {
@@ -542,6 +569,8 @@ async function finishCaptionBurn(
           subtitleUrl: job.subtitle_url,
           thumbnailUrl: job.thumbnail_url,
           lastError: job.last_error,
+          aiBadge: burner.isAiBadgeEnabled(),
+          overlays: await overlaysForJob(job),
         });
         return { state: "captioning" };
       } catch (e) {
@@ -561,6 +590,7 @@ async function finishCaptionBurn(
       videoUrl: job.video_url_clean,
       srtUrl: job.subtitle_url,
       aiBadge: burner.isAiBadgeEnabled(),
+      overlays: await overlaysForJob(job),
     });
     if (plan.action === "burn") {
       try {
@@ -638,6 +668,7 @@ export async function restyleJobCaptions(
     videoUrl: clean,
     srtUrl: job.subtitle_url,
     aiBadge: isAiBadgeEnabled(),
+    overlays: await overlaysForJob(job),
   });
   if (plan.action !== "burn")
     throw new Error(plan.action === "fail" ? plan.reason : "Nie można zlecić napisów.");
@@ -665,6 +696,7 @@ export async function retryStudioJob(job: JobRow): Promise<{ mode: "captions" | 
       videoUrl: job.video_url_clean,
       srtUrl: job.subtitle_url,
       aiBadge: burner.isAiBadgeEnabled(),
+      overlays: await overlaysForJob(job),
     });
     if (plan.action === "burn") {
       try {
