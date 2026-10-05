@@ -5,7 +5,7 @@
 // Lektor czyta sklejkę hook+treść+CTA; elementy dynamiczne to instrukcje
 // ekranowe do montażu (lektor ich NIE czyta). Wszystko edytowalne w panelu.
 
-import type { DynamicOverlays } from "./caption-style";
+import type { DynamicOverlays, OverlayCard } from "./caption-style";
 import { SHORTS_OPENERS, type ShortsQuestion } from "./shorts-question-bank";
 
 export const SHORTS_CTA = "Masz konkretną sytuację? Najpierw sprawdź umowę, KW i aktualne saldo.";
@@ -47,22 +47,41 @@ const SHORTS_OVERLAY_TIMINGS: Record<
   inwestor: { tagHoldSeconds: 1.5, headlineStartSeconds: 1.0 },
 };
 
+// Karta-checklista do stałego CTA: wchodzi, gdy lektor mówi „Najpierw
+// sprawdź…", wiersze odsłaniają się po kolei. syncText = fragment CTA;
+// gdy ktoś zmieni CTA w panelu i tekst nie padnie w nagraniu,
+// overlaysWithCueTiming usunie kartę zamiast pokazać ją nie na temat.
+const SHORTS_CTA_CARD: Omit<OverlayCard, "startSeconds"> = {
+  title: "ZANIM ZDECYDUJESZ",
+  rows: [
+    { icon: "check", text: "Umowa pożyczki" },
+    { icon: "check", text: "Księga wieczysta (KW)" },
+    { icon: "check", text: "Aktualne saldo" },
+  ],
+  endSeconds: null,
+  syncText: "Najpierw sprawdź umowę, KW i aktualne saldo.",
+};
+
 /**
  * Nakładki dynamiczne rolki z paczki (wypalane w obrazie przez usługę
- * napisów — caption-style.ts). Koniec pytania to tu tylko szacunek z tempa
- * lektora; przy wypalaniu dopasowuje go do kwestii SRT overlaysWithCueTiming.
+ * napisów — caption-style.ts): znacznik kategorii, duże pytanie i karta-
+ * checklista CTA. Czasy to tu tylko szacunki z tempa lektora (~14 znaków/s);
+ * przy wypalaniu dopasowuje je do kwestii SRT overlaysWithCueTiming.
  */
 export function buildShortsOverlays(q: ShortsQuestion): DynamicOverlays {
   const t = SHORTS_OVERLAY_TIMINGS[q.category];
   const opener = SHORTS_OPENERS[q.category];
-  // ~14 znaków/s czytania: otwarcie + pytanie, z małym zapasem.
   const estimate = t.headlineStartSeconds + (opener.length + q.question.length) / 14 + 0.5;
+  // Szacunek startu CTA: po otwarciu, pytaniu i tezie.
+  const ctaEstimate =
+    t.headlineStartSeconds + (opener.length + q.question.length + q.thesis.length) / 14 + 1;
   return {
     tag: SHORTS_OVERLAY_TAGS[q.category],
     tagHoldSeconds: t.tagHoldSeconds,
     headline: q.question,
     headlineStartSeconds: t.headlineStartSeconds,
     headlineEndSeconds: Math.min(Math.max(estimate, 4), 10),
+    cards: [{ ...SHORTS_CTA_CARD, startSeconds: Math.max(ctaEstimate, 8) }],
   };
 }
 

@@ -27,6 +27,23 @@ describe("buildShortsOverlays", () => {
     });
   });
 
+  it("dokłada kartę-checklistę CTA zsynchronizowaną z mówionym zakończeniem", () => {
+    const { cards } = buildShortsOverlays(QUESTION);
+    expect(cards).toHaveLength(1);
+    const card = cards![0];
+    expect(card.title).toBe("ZANIM ZDECYDUJESZ");
+    expect(card.rows.map((r) => r.text)).toEqual([
+      "Umowa pożyczki",
+      "Księga wieczysta (KW)",
+      "Aktualne saldo",
+    ]);
+    expect(card.rows.every((r) => r.icon === "check")).toBe(true);
+    // syncText = fragment stałego CTA — przy wypalaniu start bierze się z SRT.
+    expect(card.syncText).toBe("Najpierw sprawdź umowę, KW i aktualne saldo.");
+    expect(card.endSeconds).toBeNull();
+    expect(card.startSeconds).toBeGreaterThanOrEqual(8);
+  });
+
   it("szacowany koniec pytania rośnie z długością tekstu i trzyma się widełek 4–10 s", () => {
     const short = buildShortsOverlays(QUESTION).headlineEndSeconds;
     const long = buildShortsOverlays({

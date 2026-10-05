@@ -340,6 +340,7 @@ describe("nakładki dynamiczne", () => {
       "Style: OvTag",
       "Style: OvHead",
       "Style: OvGlow",
+      "Style: OvCard",
       "Style: AiBadge",
     ]);
     // Plakietka znacznika: złoty tekst (#EABE4A), BorderStyle 3 (plakietka).
@@ -359,6 +360,61 @@ describe("nakładki dynamiczne", () => {
     expect(both).toContain("OvTag");
     expect(both).toContain("AiBadge");
     expect(extrasAss({})).toBeNull();
+  });
+
+  const CARD = {
+    title: "ZANIM ZDECYDUJESZ",
+    rows: [
+      { icon: "check" as const, text: "Umowa pożyczki" },
+      { icon: "check" as const, text: "Księga wieczysta (KW)" },
+      { icon: "check" as const, text: "Aktualne saldo", value: "LTV 60%" },
+    ],
+    startSeconds: 20,
+    endSeconds: null,
+    syncText: "Najpierw sprawdź umowę, KW i aktualne saldo.",
+  };
+
+  it("karta: poświata + panel + nagłówek + wiersze odsłaniane po kolei", () => {
+    const events = dynamicOverlayEvents({ ...OVERLAYS, cards: [CARD] });
+    expect(events).toHaveLength(6 + 2 + 1 + 3);
+    const card = events.slice(6);
+    // Panel: rysunek ASS (\p1) z granatowym wypełnieniem i krawędzią strony.
+    expect(card[1]).toContain("\\p1");
+    expect(card[1]).toContain("\\1c&H38160D&");
+    expect(card[1]).toContain("\\3c&HD67C54&");
+    expect(card[1]).toMatch(/,0:00:20\.00,9:59:59\.99,OvCard,/);
+    // Nagłówek złoty, rozstrzelony.
+    expect(card[2]).toContain("\\1c&H4ABEEA&");
+    expect(card[2]).toContain("ZANIM ZDECYDUJESZ");
+    // Wiersze: złoty ptaszek, biały tekst, starty rosną co revealStagger.
+    const rows = card.slice(3);
+    expect(rows[0]).toContain("}✓\\h\\h{\\1c&HFFFFFF&}Umowa pożyczki");
+    expect(rows[0]).toContain(",0:00:20.25,");
+    expect(rows[1]).toContain(",0:00:20.70,");
+    expect(rows[2]).toContain(",0:00:21.15,");
+    // Wartość po prawej — złota.
+    expect(rows[2]).toContain("Aktualne saldo\\h\\h{\\1c&H4ABEEA&}LTV 60%");
+  });
+
+  it("overlaysWithCueTiming: start karty z kwestii CTA, bez dopasowania karta wypada", () => {
+    const cues = [
+      { start: 0, end: 4, text: "Czym jest pożyczka prywatna? To pożyczka udzielana" },
+      { start: 4, end: 19.4, text: "poza typowym kredytem bankowym. Masz konkretną sytuację?" },
+      { start: 19.4, end: 23, text: "Najpierw sprawdź umowę, KW i aktualne saldo." },
+    ];
+    const synced = overlaysWithCueTiming({ ...OVERLAYS, cards: [CARD] }, cues);
+    expect(synced.cards).toHaveLength(1);
+    expect(synced.cards![0].startSeconds).toBe(19.4);
+    // CTA zmienione w panelu → tekst nie pada → karta znika, reszta zostaje.
+    const dropped = overlaysWithCueTiming({ ...OVERLAYS, cards: [CARD] }, [
+      { start: 0, end: 5, text: "Zupełnie inne zakończenie rolki." },
+    ]);
+    expect(dropped.cards).toHaveLength(0);
+    // Karta bez syncText przechodzi bez zmian.
+    const manual = overlaysWithCueTiming({ ...OVERLAYS, cards: [{ ...CARD, syncText: null }] }, [
+      { start: 0, end: 5, text: "Cokolwiek." },
+    ]);
+    expect(manual.cards![0].startSeconds).toBe(20);
   });
 
   it("neutralizuje klamry i backslash w tekstach nakładek", () => {

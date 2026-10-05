@@ -291,7 +291,13 @@ Zakładki panelu:
      ręcznego. Wygląd nakładek odwzorowuje szatę graficzną strony (system
      „dark-glow navy+gold" z `src/styles.css`): złoty znacznik na granatowej
      plakietce, białe pytanie ze złotym błyskiem, pod oboma niebieska
-     poświata akcentu. `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza.
+     poświata akcentu. Do tego **karta-checklista CTA** („Zanim zdecydujesz":
+     umowa / KW / saldo) — granatowy panel ze złotymi ptaszkami, wchodzi
+     dokładnie wtedy, gdy lektor mówi „Najpierw sprawdź…", a wiersze
+     odsłaniają się po kolei; gdy CTA zostanie zmienione w panelu i tekst
+     nie padnie w nagraniu, karta jest pomijana. Własne karty (tabelki,
+     karty z liczbą) rysuje `overlayCardEvents` w `src/lib/caption-style.ts`.
+     `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza.
      Tytuł i opis publikacji też pochodzą z paczki (teza + nota „materiał
      edukacyjny"). Pytania, dla których wideo już istnieje, mają zielony
      znaczek (rozpoznanie po prefiksie promptu — bez zmiany schematu DB).
