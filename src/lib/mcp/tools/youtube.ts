@@ -317,12 +317,21 @@ export const queueYoutubePublication = defineTool({
       const s = await requireTeamAdmin(ctx);
       if (!/^https:\/\//.test(a.source_video_url))
         return fail("URL wideo musi zaczynać się od https://");
+      // Strażnik treści: pusty opis / zakazane frazy blokują wpis; disclaimer,
+      // przycięcie i tagi (gdy nie podano własnych) uzupełniane automatycznie.
+      const { checkPublicationContent } = await import("@/lib/publication-guardrails");
+      const guard = checkPublicationContent({
+        platform: "youtube",
+        title: a.title,
+        message: a.description,
+      });
+      if (!guard.ok) return fail(guard.errors.join(" "));
       const { data, error } = await s
         .from("youtube_publish_queue")
         .insert({
-          title: a.title.trim(),
-          description: a.description,
-          tags: a.tags ?? [],
+          title: guard.title,
+          description: guard.message,
+          tags: a.tags?.length ? a.tags : guard.tags,
           source_video_url: a.source_video_url.trim(),
           privacy_status: a.privacy_status,
           scheduled_at: isoDate(a.scheduled_at, "scheduled_at") ?? new Date().toISOString(),
@@ -331,7 +340,7 @@ export const queueYoutubePublication = defineTool({
         .select("id, title, status, scheduled_at, privacy_status")
         .single();
       if (error) throw new Error(`youtube_publish_queue: ${error.message}`);
-      return ok({ ok: true, queued: data });
+      return ok({ ok: true, queued: data, guardrail_notes: guard.notes });
     }),
 });
 

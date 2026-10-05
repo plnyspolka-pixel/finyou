@@ -121,10 +121,20 @@ export const addYoutubeQueueItem = createServerFn({ method: "POST" })
     if (!/^https:\/\//.test(data.source_video_url)) {
       throw new Error("URL wideo musi zaczynać się od https://");
     }
+    // Strażnik treści: pusty opis / zakazane frazy blokują wpis; disclaimer,
+    // przycięcie i tagi uzupełniane automatycznie.
+    const { checkPublicationContent } = await import("@/lib/publication-guardrails");
+    const guard = checkPublicationContent({
+      platform: "youtube",
+      title: data.title,
+      message: data.description,
+    });
+    if (!guard.ok) throw new Error(guard.errors.join(" "));
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("youtube_publish_queue").insert({
-      title: data.title.trim(),
-      description: data.description?.trim() ?? "",
+      title: guard.title,
+      description: guard.message,
+      tags: guard.tags,
       source_video_url: data.source_video_url.trim(),
       privacy_status: data.privacy_status ?? "public",
       scheduled_at: data.scheduled_at ?? new Date().toISOString(),

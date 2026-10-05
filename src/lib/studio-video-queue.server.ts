@@ -768,16 +768,27 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
   const now = new Date().toISOString();
   const errors: string[] = [];
 
+  // Strażnik treści: auto-publikacja działa bez człowieka, więc platformy
+  // z twardym naruszeniem (pusty opis, zakazane frazy) są pomijane z wpisem
+  // w last_error — lepiej nie opublikować, niż opublikować z błędem audytu.
+  const { checkPublicationContent } = await import("./publication-guardrails");
+
   if (job.auto_publish_platforms.includes("youtube")) {
-    const { error } = await supabaseAdmin.from("youtube_publish_queue").insert({
-      title,
-      description: message,
-      source_video_url: job.video_url,
-      privacy_status: job.publish_privacy || "public",
-      scheduled_at: now,
-      created_by: job.created_by,
-    });
-    if (error) errors.push(`youtube: ${error.message}`);
+    const guard = checkPublicationContent({ platform: "youtube", title, message });
+    if (!guard.ok) {
+      errors.push(`youtube (kontrola publikacji): ${guard.errors.join(" ")}`);
+    } else {
+      const { error } = await supabaseAdmin.from("youtube_publish_queue").insert({
+        title: guard.title,
+        description: guard.message,
+        tags: guard.tags,
+        source_video_url: job.video_url,
+        privacy_status: job.publish_privacy || "public",
+        scheduled_at: now,
+        created_by: job.created_by,
+      });
+      if (error) errors.push(`youtube: ${error.message}`);
+    }
   }
 
   // Meta i TikTok dzielą kolejkę social_publish_queue (różnią się `platform`).
@@ -785,11 +796,17 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
     (p): p is "facebook_post" | "facebook_reels" | "instagram_reels" | "tiktok" => p !== "youtube",
   );
   if (queuePlatforms.length) {
-    const { error } = await supabaseAdmin.from("social_publish_queue").insert(
-      queuePlatforms.map((platform) => ({
+    const rows: Array<Record<string, unknown>> = [];
+    for (const platform of queuePlatforms) {
+      const guard = checkPublicationContent({ platform, title, message });
+      if (!guard.ok) {
+        errors.push(`${platform} (kontrola publikacji): ${guard.errors.join(" ")}`);
+        continue;
+      }
+      rows.push({
         platform,
-        title,
-        message,
+        title: guard.title,
+        message: guard.message,
         video_url: job.video_url,
         image_url: null,
         scheduled_at: now,
@@ -797,9 +814,12 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
         // Wybory twórcy z formularza zadania jadą do kolejki — tick publikuje
         // dokładnie je, bez dobierania prywatności za niego.
         ...(platform === "tiktok" ? { tiktok_post_options: job.tiktok_post_options as never } : {}),
-      })),
-    );
-    if (error) errors.push(`social: ${error.message}`);
+      });
+    }
+    if (rows.length) {
+      const { error } = await supabaseAdmin.from("social_publish_queue").insert(rows as never);
+      if (error) errors.push(`social: ${error.message}`);
+    }
   }
 
   if (errors.length) {

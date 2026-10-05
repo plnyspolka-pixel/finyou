@@ -237,12 +237,25 @@ export async function enqueueYoutubeUpload(
   if (item.status !== "rendered" || !item.video_url) {
     return { ok: false, error: "Wpis nie ma gotowego wideo (status rendered)" };
   }
+  // Strażnik treści: pusty opis / zakazane frazy zatrzymują wpis w pipeline
+  // (last_error), zamiast wypuścić go na kanał z brakami.
+  const { checkPublicationContent } = await import("@/lib/publication-guardrails");
+  const guard = checkPublicationContent({
+    platform: "youtube",
+    title: item.yt_title ?? "Finance You",
+    message: item.yt_description ?? "",
+  });
+  if (!guard.ok) {
+    const msg = `Kontrola publikacji: ${guard.errors.join(" ")}`;
+    await db.from("video_pipeline").update({ last_error: msg }).eq("id", pipelineId);
+    return { ok: false, error: msg };
+  }
   const { data: queued, error } = await db
     .from("youtube_publish_queue")
     .insert({
-      title: item.yt_title ?? "Finance You",
-      description: item.yt_description ?? "",
-      tags: item.yt_tags ?? [],
+      title: guard.title,
+      description: guard.message,
+      tags: (item.yt_tags as string[] | null)?.length ? item.yt_tags : guard.tags,
       source_video_url: item.video_url,
       privacy_status: process.env.VIDEO_PIPELINE_YT_PRIVACY ?? "public",
       scheduled_at: new Date().toISOString(),

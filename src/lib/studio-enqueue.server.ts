@@ -6,6 +6,7 @@
 // YouTube trafia do youtube_publish_queue (tick co 10 min), Meta / TikTok / X
 // dzielą social_publish_queue (różni je kolumna `platform`).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { checkPublicationForPlatforms } from "./publication-guardrails";
 import type { StudioPlatform } from "./studio-platforms";
 
 export type EnqueuePublicationInput = {
@@ -28,6 +29,8 @@ export type EnqueuePublicationResult = {
   social: { id: string; platform: StudioPlatform }[];
   /** Wpisy w youtube_publish_queue. */
   youtube: { id: string }[];
+  /** Automatyczne poprawki strażnika treści (disclaimer, przycięcia, tagi). */
+  guardrail_notes?: string[];
 };
 
 export async function enqueuePublication(
@@ -69,19 +72,31 @@ export async function enqueuePublication(
     throw new Error("Post na X wymaga treści (lub tytułu, który ją zastąpi).");
   }
 
+  // Strażnik treści: blokuje puste opisy i zakazane frazy, sam poprawia
+  // resztę (limit znaków na granicy zdania, disclaimer inwestycyjny,
+  // „link w bio" poza IG/TikTokiem, tagi YouTube). Treść do kolejki idzie
+  // per platforma — każda dostaje swoją wersję.
+  const guard = checkPublicationForPlatforms(data.platforms, title, message);
+  if (!guard.ok) {
+    throw new Error(`Treść zatrzymana przez kontrolę publikacji:\n${guard.errors.join("\n")}`);
+  }
+
   const scheduledAt = data.scheduled_at ?? new Date().toISOString();
   const result: EnqueuePublicationResult = {
     queued: data.platforms.length,
     social: [],
     youtube: [],
+    guardrail_notes: guard.notes,
   };
 
   if (data.platforms.includes("youtube")) {
+    const yt = guard.byPlatform.get("youtube")!;
     const { data: row, error } = await supabaseAdmin
       .from("youtube_publish_queue")
       .insert({
-        title,
-        description: message,
+        title: yt.title,
+        description: yt.message,
+        tags: yt.tags,
         source_video_url: videoUrl!,
         privacy_status: data.privacy_status ?? "public",
         scheduled_at: scheduledAt,
@@ -100,8 +115,8 @@ export async function enqueuePublication(
   if (queuePlatforms.length) {
     const rows = queuePlatforms.map((platform) => ({
       platform,
-      title,
-      message,
+      title: guard.byPlatform.get(platform)?.title ?? title,
+      message: guard.byPlatform.get(platform)?.message ?? message,
       video_url: videoUrl,
       // Grafikę niosą tylko platformy, które ją publikują: post FB i X.
       image_url: platform === "facebook_post" || platform === "x" ? imageUrl : null,
