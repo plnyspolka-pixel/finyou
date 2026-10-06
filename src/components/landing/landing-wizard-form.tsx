@@ -30,7 +30,7 @@ import { submitLandingLoanApplication } from "@/lib/landing-application.function
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 
-import { defaultAnnualRate, type SecurityType } from "@/lib/loan-math";
+import { defaultAnnualRate, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
 
 const FANCY_INPUT_CLASS =
   "h-12 rounded-xl border-2 border-white/30 bg-white/10 text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40";
@@ -57,13 +57,25 @@ function readAsDataUrl(file: File): Promise<string> {
 
 type StepId = 1 | 2 | 3;
 
-export function LandingWizardForm() {
+/** Wariant okrojony (podstrony produktów /pozyczka-*): zabezpieczenie jest
+ *  wybrane z góry, a klient może się przełączyć tylko na `alternatives`. */
+export type LandingWizardPreset = {
+  securityType: SecurityType;
+  alternatives?: SecurityType[];
+  purposeLabel?: string;
+  source?: string;
+};
+
+const DEFAULT_PURPOSE_LABEL =
+  "Finansowanie przeznaczam na cel związany z działalnością gospodarczą (nie na cele konsumpcyjne ani prywatne potrzeby mieszkaniowe).";
+
+export function LandingWizardForm({ preset }: { preset?: LandingWizardPreset } = {}) {
   const submitFn = useServerFn(submitLandingLoanApplication);
   const navigate = useNavigate();
 
   const [step, setStep] = useState<StepId>(1);
-  const [secType, setSecType] = useState<SecurityType>("mieszkanie");
-  const [typeSelected, setTypeSelected] = useState(false);
+  const [secType, setSecType] = useState<SecurityType>(preset?.securityType ?? "mieszkanie");
+  const [typeSelected, setTypeSelected] = useState(Boolean(preset));
   const [city, setCity] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [kwNumber, setKwNumber] = useState("");
@@ -240,7 +252,7 @@ export function LandingWizardForm() {
             return parts.length > 0 ? parts.join(" | ") : null;
           })(),
           photos: photoPayload,
-          source: "landing_wizard",
+          source: preset?.source ?? "landing_wizard",
           assigned_operator_id: null,
         },
       });
@@ -290,13 +302,21 @@ export function LandingWizardForm() {
                 Krok 1 · Nieruchomość
               </span>
             </div>
-            <SecurityTypePicker
-              value={typeSelected ? secType : null}
-              onChange={(t) => {
-                setSecType(t);
-                setTypeSelected(true);
-              }}
-            />
+            {preset ? (
+              <PresetSecurity
+                value={secType}
+                options={[preset.securityType, ...(preset.alternatives ?? [])]}
+                onChange={setSecType}
+              />
+            ) : (
+              <SecurityTypePicker
+                value={typeSelected ? secType : null}
+                onChange={(t) => {
+                  setSecType(t);
+                  setTypeSelected(true);
+                }}
+              />
+            )}
             <div className="space-y-2 pt-2">
               <Label
                 htmlFor="lw-city"
@@ -654,10 +674,7 @@ export function LandingWizardForm() {
                   onCheckedChange={(v) => setBusinessPurpose(v === true)}
                   className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
                 />
-                <span>
-                  Finansowanie przeznaczam na cel związany z działalnością gospodarczą (nie na cele
-                  konsumpcyjne ani prywatne potrzeby mieszkaniowe). *
-                </span>
+                <span>{preset?.purposeLabel ?? DEFAULT_PURPOSE_LABEL} *</span>
               </label>
             </div>
           </div>
@@ -706,6 +723,51 @@ export function LandingWizardForm() {
           </Button>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Zabezpieczenie wybrane z góry — bez pełnego pickera; przy kilku opcjach
+ *  pokazuje kompaktowe przełączniki. */
+function PresetSecurity({
+  value,
+  options,
+  onChange,
+}: {
+  value: SecurityType;
+  options: SecurityType[];
+  onChange: (t: SecurityType) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3 rounded-xl border-2 border-white/40 bg-white/10 p-3 backdrop-blur-sm">
+        <Check className="h-5 w-5 shrink-0 text-emerald-300" />
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-white/70">
+            Zabezpieczenie
+          </div>
+          <div className="truncate text-sm font-bold text-white">{securityTypeLabels[value]}</div>
+        </div>
+      </div>
+      {options.length > 1 && (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Rodzaj zabezpieczenia">
+          {options.map((t) => (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={t === value}
+              onClick={() => onChange(t)}
+              className={
+                t === value
+                  ? "rounded-full border border-white bg-white px-3 py-1 text-xs font-bold text-slate-900"
+                  : "rounded-full border border-white/40 bg-white/10 px-3 py-1 text-xs font-semibold text-white hover:bg-white/20"
+              }
+            >
+              {securityTypeLabels[t]}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

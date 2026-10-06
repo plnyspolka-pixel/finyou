@@ -31,6 +31,13 @@ import { Route as OperatorRejestracjaRouteImport } from './routes/operator-rejes
 import { Route as PolitykaCookiesRouteImport } from './routes/polityka-cookies'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
+import { Route as PozyczkaDlaNowychFirmRouteImport } from './routes/pozyczka-dla-nowych-firm'
+import { Route as PozyczkaDlaRolnikowRouteImport } from './routes/pozyczka-dla-rolnikow'
+import { Route as PozyczkaPodZastawDomuRouteImport } from './routes/pozyczka-pod-zastaw-domu'
+import { Route as PozyczkaPodZastawDzialkiRouteImport } from './routes/pozyczka-pod-zastaw-dzialki'
+import { Route as PozyczkaPodZastawLokaluUzytkowegoRouteImport } from './routes/pozyczka-pod-zastaw-lokalu-uzytkowego'
+import { Route as PozyczkaPodZastawMieszkaniaRouteImport } from './routes/pozyczka-pod-zastaw-mieszkania'
+import { Route as PozyczkaPodZastawZiemiRolnejRouteImport } from './routes/pozyczka-pod-zastaw-ziemi-rolnej'
 import { Route as RaportLokalizacjeRouteImport } from './routes/raport-lokalizacje'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as RegulaminInwestoraRouteImport } from './routes/regulamin-inwestora'
@@ -405,6 +412,45 @@ const PosrednikRoute = PosrednikRouteImport.update({
   path: '/posrednik',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PozyczkaDlaNowychFirmRoute = PozyczkaDlaNowychFirmRouteImport.update({
+  id: '/pozyczka-dla-nowych-firm',
+  path: '/pozyczka-dla-nowych-firm',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PozyczkaDlaRolnikowRoute = PozyczkaDlaRolnikowRouteImport.update({
+  id: '/pozyczka-dla-rolnikow',
+  path: '/pozyczka-dla-rolnikow',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PozyczkaPodZastawDomuRoute = PozyczkaPodZastawDomuRouteImport.update({
+  id: '/pozyczka-pod-zastaw-domu',
+  path: '/pozyczka-pod-zastaw-domu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PozyczkaPodZastawDzialkiRoute =
+  PozyczkaPodZastawDzialkiRouteImport.update({
+    id: '/pozyczka-pod-zastaw-dzialki',
+    path: '/pozyczka-pod-zastaw-dzialki',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const PozyczkaPodZastawLokaluUzytkowegoRoute =
+  PozyczkaPodZastawLokaluUzytkowegoRouteImport.update({
+    id: '/pozyczka-pod-zastaw-lokalu-uzytkowego',
+    path: '/pozyczka-pod-zastaw-lokalu-uzytkowego',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const PozyczkaPodZastawMieszkaniaRoute =
+  PozyczkaPodZastawMieszkaniaRouteImport.update({
+    id: '/pozyczka-pod-zastaw-mieszkania',
+    path: '/pozyczka-pod-zastaw-mieszkania',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const PozyczkaPodZastawZiemiRolnejRoute =
+  PozyczkaPodZastawZiemiRolnejRouteImport.update({
+    id: '/pozyczka-pod-zastaw-ziemi-rolnej',
+    path: '/pozyczka-pod-zastaw-ziemi-rolnej',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const RaportLokalizacjeRoute = RaportLokalizacjeRouteImport.update({
   id: '/raport-lokalizacje',
   path: '/raport-lokalizacje',
@@ -1819,6 +1865,13 @@ export interface FileRoutesByFullPath {
   '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
+  '/pozyczka-dla-nowych-firm': typeof PozyczkaDlaNowychFirmRoute
+  '/pozyczka-dla-rolnikow': typeof PozyczkaDlaRolnikowRoute
+  '/pozyczka-pod-zastaw-domu': typeof PozyczkaPodZastawDomuRoute
+  '/pozyczka-pod-zastaw-dzialki': typeof PozyczkaPodZastawDzialkiRoute
+  '/pozyczka-pod-zastaw-lokalu-uzytkowego': typeof PozyczkaPodZastawLokaluUzytkowegoRoute
+  '/pozyczka-pod-zastaw-mieszkania': typeof PozyczkaPodZastawMieszkaniaRoute
+  '/pozyczka-pod-zastaw-ziemi-rolnej': typeof PozyczkaPodZastawZiemiRolnejRoute
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
@@ -2101,6 +2154,13 @@ export interface FileRoutesByTo {
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
+  '/pozyczka-dla-nowych-firm': typeof PozyczkaDlaNowychFirmRoute
+  '/pozyczka-dla-rolnikow': typeof PozyczkaDlaRolnikowRoute
+  '/pozyczka-pod-zastaw-domu': typeof PozyczkaPodZastawDomuRoute
+  '/pozyczka-pod-zastaw-dzialki': typeof PozyczkaPodZastawDzialkiRoute
+  '/pozyczka-pod-zastaw-lokalu-uzytkowego': typeof PozyczkaPodZastawLokaluUzytkowegoRoute
+  '/pozyczka-pod-zastaw-mieszkania': typeof PozyczkaPodZastawMieszkaniaRoute
+  '/pozyczka-pod-zastaw-ziemi-rolnej': typeof PozyczkaPodZastawZiemiRolnejRoute
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
@@ -2384,6 +2444,13 @@ export interface FileRoutesById {
   '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
+  '/pozyczka-dla-nowych-firm': typeof PozyczkaDlaNowychFirmRoute
+  '/pozyczka-dla-rolnikow': typeof PozyczkaDlaRolnikowRoute
+  '/pozyczka-pod-zastaw-domu': typeof PozyczkaPodZastawDomuRoute
+  '/pozyczka-pod-zastaw-dzialki': typeof PozyczkaPodZastawDzialkiRoute
+  '/pozyczka-pod-zastaw-lokalu-uzytkowego': typeof PozyczkaPodZastawLokaluUzytkowegoRoute
+  '/pozyczka-pod-zastaw-mieszkania': typeof PozyczkaPodZastawMieszkaniaRoute
+  '/pozyczka-pod-zastaw-ziemi-rolnej': typeof PozyczkaPodZastawZiemiRolnejRoute
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
@@ -2673,6 +2740,13 @@ export interface FileRouteTypes {
     | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/posrednik'
+    | '/pozyczka-dla-nowych-firm'
+    | '/pozyczka-dla-rolnikow'
+    | '/pozyczka-pod-zastaw-domu'
+    | '/pozyczka-pod-zastaw-dzialki'
+    | '/pozyczka-pod-zastaw-lokalu-uzytkowego'
+    | '/pozyczka-pod-zastaw-mieszkania'
+    | '/pozyczka-pod-zastaw-ziemi-rolnej'
     | '/raport-lokalizacje'
     | '/regulamin'
     | '/regulamin-inwestora'
@@ -2955,6 +3029,13 @@ export interface FileRouteTypes {
     | '/operator-rejestracja'
     | '/polityka-cookies'
     | '/polityka-prywatnosci'
+    | '/pozyczka-dla-nowych-firm'
+    | '/pozyczka-dla-rolnikow'
+    | '/pozyczka-pod-zastaw-domu'
+    | '/pozyczka-pod-zastaw-dzialki'
+    | '/pozyczka-pod-zastaw-lokalu-uzytkowego'
+    | '/pozyczka-pod-zastaw-mieszkania'
+    | '/pozyczka-pod-zastaw-ziemi-rolnej'
     | '/raport-lokalizacje'
     | '/regulamin'
     | '/regulamin-inwestora'
@@ -3237,6 +3318,13 @@ export interface FileRouteTypes {
     | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/posrednik'
+    | '/pozyczka-dla-nowych-firm'
+    | '/pozyczka-dla-rolnikow'
+    | '/pozyczka-pod-zastaw-domu'
+    | '/pozyczka-pod-zastaw-dzialki'
+    | '/pozyczka-pod-zastaw-lokalu-uzytkowego'
+    | '/pozyczka-pod-zastaw-mieszkania'
+    | '/pozyczka-pod-zastaw-ziemi-rolnej'
     | '/raport-lokalizacje'
     | '/regulamin'
     | '/regulamin-inwestora'
@@ -3525,6 +3613,13 @@ export interface RootRouteChildren {
   PolitykaCookiesRoute: typeof PolitykaCookiesRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
+  PozyczkaDlaNowychFirmRoute: typeof PozyczkaDlaNowychFirmRoute
+  PozyczkaDlaRolnikowRoute: typeof PozyczkaDlaRolnikowRoute
+  PozyczkaPodZastawDomuRoute: typeof PozyczkaPodZastawDomuRoute
+  PozyczkaPodZastawDzialkiRoute: typeof PozyczkaPodZastawDzialkiRoute
+  PozyczkaPodZastawLokaluUzytkowegoRoute: typeof PozyczkaPodZastawLokaluUzytkowegoRoute
+  PozyczkaPodZastawMieszkaniaRoute: typeof PozyczkaPodZastawMieszkaniaRoute
+  PozyczkaPodZastawZiemiRolnejRoute: typeof PozyczkaPodZastawZiemiRolnejRoute
   RaportLokalizacjeRoute: typeof RaportLokalizacjeRoute
   RegulaminRoute: typeof RegulaminRoute
   RegulaminInwestoraRoute: typeof RegulaminInwestoraRoute
@@ -3783,6 +3878,55 @@ declare module '@tanstack/react-router' {
       path: '/posrednik'
       fullPath: '/posrednik'
       preLoaderRoute: typeof PosrednikRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pozyczka-dla-nowych-firm': {
+      id: '/pozyczka-dla-nowych-firm'
+      path: '/pozyczka-dla-nowych-firm'
+      fullPath: '/pozyczka-dla-nowych-firm'
+      preLoaderRoute: typeof PozyczkaDlaNowychFirmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pozyczka-dla-rolnikow': {
+      id: '/pozyczka-dla-rolnikow'
+      path: '/pozyczka-dla-rolnikow'
+      fullPath: '/pozyczka-dla-rolnikow'
+      preLoaderRoute: typeof PozyczkaDlaRolnikowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pozyczka-pod-zastaw-domu': {
+      id: '/pozyczka-pod-zastaw-domu'
+      path: '/pozyczka-pod-zastaw-domu'
+      fullPath: '/pozyczka-pod-zastaw-domu'
+      preLoaderRoute: typeof PozyczkaPodZastawDomuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pozyczka-pod-zastaw-dzialki': {
+      id: '/pozyczka-pod-zastaw-dzialki'
+      path: '/pozyczka-pod-zastaw-dzialki'
+      fullPath: '/pozyczka-pod-zastaw-dzialki'
+      preLoaderRoute: typeof PozyczkaPodZastawDzialkiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pozyczka-pod-zastaw-lokalu-uzytkowego': {
+      id: '/pozyczka-pod-zastaw-lokalu-uzytkowego'
+      path: '/pozyczka-pod-zastaw-lokalu-uzytkowego'
+      fullPath: '/pozyczka-pod-zastaw-lokalu-uzytkowego'
+      preLoaderRoute: typeof PozyczkaPodZastawLokaluUzytkowegoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pozyczka-pod-zastaw-mieszkania': {
+      id: '/pozyczka-pod-zastaw-mieszkania'
+      path: '/pozyczka-pod-zastaw-mieszkania'
+      fullPath: '/pozyczka-pod-zastaw-mieszkania'
+      preLoaderRoute: typeof PozyczkaPodZastawMieszkaniaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pozyczka-pod-zastaw-ziemi-rolnej': {
+      id: '/pozyczka-pod-zastaw-ziemi-rolnej'
+      path: '/pozyczka-pod-zastaw-ziemi-rolnej'
+      fullPath: '/pozyczka-pod-zastaw-ziemi-rolnej'
+      preLoaderRoute: typeof PozyczkaPodZastawZiemiRolnejRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/raport-lokalizacje': {
@@ -6104,6 +6248,14 @@ const rootRouteChildren: RootRouteChildren = {
   PolitykaCookiesRoute: PolitykaCookiesRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
+  PozyczkaDlaNowychFirmRoute: PozyczkaDlaNowychFirmRoute,
+  PozyczkaDlaRolnikowRoute: PozyczkaDlaRolnikowRoute,
+  PozyczkaPodZastawDomuRoute: PozyczkaPodZastawDomuRoute,
+  PozyczkaPodZastawDzialkiRoute: PozyczkaPodZastawDzialkiRoute,
+  PozyczkaPodZastawLokaluUzytkowegoRoute:
+    PozyczkaPodZastawLokaluUzytkowegoRoute,
+  PozyczkaPodZastawMieszkaniaRoute: PozyczkaPodZastawMieszkaniaRoute,
+  PozyczkaPodZastawZiemiRolnejRoute: PozyczkaPodZastawZiemiRolnejRoute,
   RaportLokalizacjeRoute: RaportLokalizacjeRoute,
   RegulaminRoute: RegulaminRoute,
   RegulaminInwestoraRoute: RegulaminInwestoraRoute,

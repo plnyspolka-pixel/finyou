@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { buildSitemapXml, type SitemapEntry } from "@/lib/seo/sitemap-core";
+import { LOAN_PRODUCTS } from "@/lib/loan-products";
 
 const BASE_URL = "https://financeyou.pl";
 
@@ -20,6 +21,15 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/oferty", lastmod: today, changefreq: "daily", priority: "0.9" },
           { path: "/blog", lastmod: today, changefreq: "daily", priority: "0.7" },
           { path: "/pozyczki", lastmod: today, changefreq: "weekly", priority: "0.8" },
+          // Podstrony produktów (menu „Klient”) — lib/loan-products.ts
+          ...LOAN_PRODUCTS.map(
+            (p): SitemapEntry => ({
+              path: `/${p.slug}`,
+              lastmod: today,
+              changefreq: "monthly",
+              priority: "0.9",
+            }),
+          ),
           { path: "/kalkulator-ltv", changefreq: "monthly", priority: "0.7" },
           { path: "/raport-lokalizacje", lastmod: today, changefreq: "monthly", priority: "0.7" },
           { path: "/logowanie", changefreq: "yearly", priority: "0.3" },

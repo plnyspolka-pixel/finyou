@@ -14,6 +14,7 @@ import {
 import { MktBadge } from "@/components/marketing/primitives";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
+import { LOAN_PRODUCTS } from "@/lib/loan-products";
 
 const APPLY = "/rejestracja?role=klient";
 
@@ -221,6 +222,50 @@ function ClientLanding() {
   return (
     <MarketingShell page="klient" sticky={{ label: "Złóż bezpłatny wniosek", href: APPLY }}>
       <Hero />
+
+      <Section id="rodzaje-pozyczek">
+        <SectionHead
+          eyebrow="Rodzaje pożyczek"
+          title="Wybierz pożyczkę dopasowaną do Twojej nieruchomości"
+          sub="Każda podstrona ma gotowy wniosek z wybranym zabezpieczeniem i opis procedury od wniosku przez notariusza do wypłaty."
+        />
+        <div
+          style={{
+            marginTop: "2rem",
+            display: "grid",
+            gap: "0.8rem",
+            gridTemplateColumns: "repeat(auto-fill, minmax(16rem, 1fr))",
+          }}
+        >
+          {LOAN_PRODUCTS.map((p) => (
+            <a
+              key={p.slug}
+              href={`/${p.slug}`}
+              style={{
+                display: "block",
+                padding: "1.1rem 1.2rem",
+                borderRadius: "var(--radius-xl)",
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                color: "var(--foreground)",
+                textDecoration: "none",
+              }}
+            >
+              <div style={{ fontWeight: 700, fontSize: "0.98rem" }}>{p.menuLabel} →</div>
+              <div
+                style={{
+                  marginTop: "0.35rem",
+                  fontSize: "0.82rem",
+                  lineHeight: 1.5,
+                  color: "var(--muted-foreground)",
+                }}
+              >
+                {p.h1Accent.charAt(0).toUpperCase() + p.h1Accent.slice(1)}
+              </div>
+            </a>
+          ))}
+        </div>
+      </Section>
 
       <Section>
         <SectionHead eyebrow="Dla kogo" title="Sprawdź, czy to rozwiązanie dla Ciebie" />
