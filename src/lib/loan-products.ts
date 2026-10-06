@@ -38,32 +38,32 @@ export type LoanProduct = {
 export function procedureSteps(docsHint: string): LoanProductStep[] {
   return [
     {
-      t: "Wniosek online",
-      d: `Wypełniasz krótki wniosek (ok. 5 minut): miejscowość, zdjęcia, numer księgi wieczystej i dane kontaktowe. ${docsHint} Zgłoszenie jest bezpłatne i bez zobowiązań.`,
+      t: "Wniosek online w 5 minut",
+      d: `Bez wizyt w oddziale i stosu zaświadczeń — podajesz miejscowość, numer księgi wieczystej, dodajesz zdjęcia i dane kontaktowe. ${docsHint} Zgłoszenie jest bezpłatne i do niczego nie zobowiązuje.`,
     },
     {
-      t: "Weryfikacja księgi wieczystej i nieruchomości",
-      d: "Sprawdzamy dział II (właściciel) i dział IV (hipoteki) księgi wieczystej, szacujemy wartość nieruchomości na podstawie danych rynkowych i liczymy LTV — relację kwoty pożyczki do wartości zabezpieczenia.",
+      t: "Analizę bierzemy na siebie",
+      d: "Sami sprawdzamy księgę wieczystą, szacujemy wartość nieruchomości na podstawie danych rynkowych i przygotowujemy sprawę tak, aby inwestor mógł szybko podjąć decyzję. Ty nie musisz niczego dosyłać, dopóki o to nie poprosimy.",
     },
     {
-      t: "Propozycje od inwestorów",
-      d: "Uporządkowana sprawa trafia do prywatnych inwestorów i partnerów finansowych. Wstępną decyzję zwykle przekazujemy w ciągu 24 godzin od kompletu danych. Otrzymujesz propozycję: kwota, okres, oprocentowanie i harmonogram.",
+      t: "Decyzja zwykle w 24 godziny",
+      d: "Twoja sprawa trafia jednocześnie do wielu prywatnych inwestorów i partnerów finansowych. Zamiast chodzić od banku do banku, dostajesz propozycje w jednym miejscu — z kwotą, okresem i harmonogramem spłaty.",
     },
     {
-      t: "Akceptacja warunków i dokumenty",
-      d: "Akceptujesz wybraną propozycję w panelu klienta. Zbieramy dokumenty firmy i nieruchomości, a projekt umowy dostajesz do przeczytania przed wizytą u notariusza.",
+      t: "Wybierasz najlepszą propozycję",
+      d: "Akceptujesz propozycję w panelu klienta, a my kompletujemy dokumenty. Projekt umowy otrzymujesz wcześniej, więc na spotkanie u notariusza przychodzisz bez niespodzianek.",
     },
     {
-      t: "Umowa u notariusza",
-      d: "Rezerwujemy termin w kancelarii notarialnej — najczęściej w Twojej okolicy. Podpisujesz umowę pożyczki, oświadczenie o ustanowieniu hipoteki na rzecz pożyczkodawcy oraz oświadczenie o poddaniu się egzekucji (art. 777 KPC). Koszty notarialne i sądowe pokrywa pożyczkobiorca zgodnie z taksą.",
+      t: "Podpis u notariusza — w Twojej okolicy",
+      d: "Organizujemy termin w kancelarii notarialnej blisko Ciebie. Notariusz odczytuje umowę i ustanawia hipotekę — to najbezpieczniejsza forma dla obu stron, a całe spotkanie trwa zwykle około godziny.",
     },
     {
-      t: "Wniosek o wpis hipoteki",
-      d: "Notariusz elektronicznie składa w sądzie wniosek o wpis hipoteki do działu IV księgi wieczystej. Wzmianka o wniosku pojawia się w księdze zwykle w ciągu 1–2 dni roboczych.",
+      t: "Hipoteka zgłoszona od ręki",
+      d: "Notariusz od razu, elektronicznie składa wniosek o wpis hipoteki do księgi wieczystej. Nie musisz chodzić do sądu ani wypełniać formularzy — wzmianka pojawia się w księdze zwykle w 1–2 dni robocze.",
     },
     {
-      t: "Wypłata pożyczki",
-      d: "Po spełnieniu warunków z umowy (zwykle podpis aktu i wzmianka w KW) inwestor przelewa środki na Twój rachunek.",
+      t: "Pieniądze na Twoim koncie",
+      d: "Środki trafiają przelewem na rachunek wskazany w umowie — zwykle w ciągu kilku dni od podpisania aktu. Od wniosku do wypłaty mija często mniej niż dwa tygodnie.",
     },
   ];
 }
@@ -71,23 +71,23 @@ export function procedureSteps(docsHint: string): LoanProductStep[] {
 const B2B_FAQ: LoanProductFaq[] = [
   {
     q: "Ile kosztuje złożenie wniosku?",
-    a: "Nic. Wniosek jest bezpłatny i niezobowiązujący.",
+    a: "Nic. Wniosek jest bezpłatny i niezobowiązujący — sprawdzasz swoje możliwości bez ryzyka.",
   },
   {
     q: "Ile trwa cały proces — od wniosku do wypłaty?",
-    a: "Wstępna decyzja zwykle zapada w 24 godziny od kompletu danych. Cały proces — weryfikacja, akceptacja warunków, notariusz i wypłata — przy sprawnej kompletacji dokumentów trwa najczęściej od kilku dni do dwóch tygodni.",
+    a: "Wstępna decyzja zwykle zapada w 24 godziny od kompletu danych. Cały proces — od wniosku, przez notariusza, do wypłaty — trwa najczęściej od kilku dni do dwóch tygodni. To znacznie szybciej niż w banku.",
   },
   {
     q: "Dlaczego umowa jest podpisywana u notariusza?",
-    a: "Ustanowienie hipoteki wymaga oświadczenia w formie aktu notarialnego. Notariusz sprawdza tożsamość stron i stan prawny nieruchomości, odczytuje umowę i od razu składa elektronicznie wniosek o wpis hipoteki do księgi wieczystej. To chroni obie strony transakcji.",
+    a: "Bo to najbezpieczniejsza forma dla Ciebie i dla inwestora. Notariusz czuwa nad prawidłowością umowy, odczytuje ją przed podpisem i od razu elektronicznie zgłasza hipotekę do księgi wieczystej — Ty nie musisz niczego załatwiać w sądzie.",
   },
   {
-    q: "Na jaki cel mogę przeznaczyć pożyczkę?",
-    a: "Wyłącznie na cel związany z działalnością gospodarczą (B2B) — np. kapitał obrotowy, inwestycję, zakup maszyn, spłatę zobowiązań firmy. Nie finansujemy celów konsumpcyjnych ani prywatnych potrzeb mieszkaniowych.",
+    q: "Na co mogę przeznaczyć pożyczkę?",
+    a: "Na dowolny cel związany z Twoją firmą: kapitał obrotowy, zakup maszyn lub towaru, inwestycję, rozwój, spłatę zobowiązań firmy czy finansowanie pomostowe.",
   },
   {
-    q: "Czy Finance You gwarantuje udzielenie pożyczki?",
-    a: "Nie. Finance You porządkuje sprawę i przedstawia ją inwestorom oraz partnerom finansowym — decyzja o finansowaniu należy do nich.",
+    q: "Czy bank musiał mi wcześniej odmówić?",
+    a: "Nie. Z naszej oferty korzystają zarówno firmy po odmowie banku, jak i te, które po prostu cenią szybkość i prostą procedurę.",
   },
 ];
 
@@ -144,7 +144,7 @@ export const LOAN_PRODUCTS: LoanProduct[] = [
     group: "zastaw",
     metaTitle: "Pożyczka pod zastaw domu dla firm — do 1 mln zł | Finance You",
     metaDescription:
-      "Pożyczka pod zastaw domu jednorodzinnego, bliźniaka lub domu w budowie — dla przedsiębiorców. Decyzja zwykle w 24 h, umowa i hipoteka u notariusza.",
+      "Pożyczka pod zastaw domu jednorodzinnego, bliźniaka lub domu w budowie — dla przedsiębiorców. Decyzja zwykle w 24 h, podpis u notariusza w Twojej okolicy.",
     h1: "Pożyczka pod zastaw domu",
     h1Accent: "szybko i bez bankowej biurokracji",
     lead: "Dom to zabezpieczenie o wysokiej wartości, które pozwala sięgnąć po większe kwoty. Wniosek ma już wybrany typ nieruchomości — podajesz miejscowość, zdjęcia i numer księgi wieczystej.",

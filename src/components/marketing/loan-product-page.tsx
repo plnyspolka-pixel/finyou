@@ -117,9 +117,10 @@ export function LoanProductPage({ slug }: { slug: string }) {
               }}
             >
               {[
-                "Do 1 000 000 zł, okres do 72 miesięcy",
-                "Wstępna decyzja zwykle w 24 godziny",
-                "Umowa i hipoteka u notariusza — bezpiecznie dla obu stron",
+                "Do 1 000 000 zł na rozwój Twojej firmy",
+                "Decyzja zwykle w 24 godziny — bez bankowej biurokracji",
+                "Liczy się nieruchomość, nie scoring BIK",
+                "Wypłata nawet w kilka dni od podpisu u notariusza",
               ].map((t) => (
                 <li key={t} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                   <span aria-hidden style={{ color: "#6ee7b7", fontWeight: 800 }}>
@@ -356,8 +357,7 @@ export function LoanProductPage({ slug }: { slug: string }) {
         <ComplianceNote style={{ marginTop: "1.5rem" }}>
           Materiał ma charakter informacyjny i nie stanowi oferty w rozumieniu art. 66 Kodeksu
           cywilnego. Finansowanie wyłącznie na cel związany z działalnością gospodarczą lub rolniczą
-          (B2B). Koszty notarialne i sądowe ponosi pożyczkobiorca. Finance You nie gwarantuje
-          udzielenia finansowania — decyzja należy do inwestorów.
+          (B2B). Finance You nie gwarantuje udzielenia finansowania — decyzja należy do inwestorów.
         </ComplianceNote>
       </div>
     </MarketingShell>
