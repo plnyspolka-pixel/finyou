@@ -218,7 +218,6 @@ OTP, dane bankowe partnerów) nie są zwracane.
 | ---------------------------------------------- | ----------------------------------------------------------------------- |
 | `list_collection_cases`, `get_collection_case` | Sprawy windykacyjne, pełna sprawa z pożyczką, dłużnikiem i zdarzeniami. |
 | `list_wind_loans`                              | Pożyczki w module windykacji.                                           |
-| `list_debt_collection_cases`                   | Starszy moduł spraw.                                                    |
 
 **Marketing i treści**
 

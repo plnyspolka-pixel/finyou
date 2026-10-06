@@ -3923,45 +3923,6 @@
         "outputSchema": null
       },
       {
-        "name": "list_debt_collection_cases",
-        "title": "List debt collection cases (legacy)",
-        "description": "Starszy moduł spraw windykacyjnych (kalkulator kosztów działań): dłużnik, umowa, kapitał, stopy odsetek, status. Widoczność wg RLS.",
-        "annotations": {
-          "readOnlyHint": true,
-          "idempotentHint": true,
-          "openWorldHint": false
-        },
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "status": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Status sprawy."
-            },
-            "investor_user_id": {
-              "type": "string",
-              "format": "uuid",
-              "description": "Tylko sprawy tego inwestora."
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "description": "Ile wierszy (domyślnie 20, maks. 100)."
-            },
-            "offset": {
-              "type": "integer",
-              "minimum": 0,
-              "description": "Przesunięcie do stronicowania (domyślnie 0)."
-            }
-          },
-          "additionalProperties": false,
-          "$schema": "http://json-schema.org/draft-07/schema#"
-        },
-        "outputSchema": null
-      },
-      {
         "name": "list_seo_articles",
         "title": "List SEO articles (all statuses)",
         "description": "Artykuły bloga we wszystkich stanach (szkice, zaplanowane, opublikowane) z audience, słowem kluczowym, długością i terminami. Publiczne treści daje `search_blog` / `get_blog_article`. Tylko administrator/operator.",

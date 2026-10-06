@@ -4,7 +4,7 @@
  * nie nadają rolom anonimowym dostępu do nowych danych.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const SUPA = join(process.cwd(), "supabase", "migrations");
@@ -26,6 +26,7 @@ const PAIRS: Array<[string, string]> = [
   ["20261006120000_social_autoodpowiedzi_raport.sql", "0026_social_autoodpowiedzi_raport.sql"],
   ["20261006140000_pr_modul_na_produkcje.sql", "0027_pr_modul_na_produkcje.sql"],
   ["20261006150000_zaangazowanie_dzienny_digest.sql", "0028_zaangazowanie_dzienny_digest.sql"],
+  ["20261006160000_produkcja_brakujace_obiekty.sql", "0029_produkcja_brakujace_obiekty.sql"],
 ];
 
 describe("migracje 2026-09-29", () => {
@@ -201,5 +202,60 @@ describe("migracja 20261006150000 — digest zaangażowania", () => {
     expect(sql).toMatch(/cron\.schedule\('engagement-digest-tick', '30 5 \* \* \*'/);
     expect(sql).toContain("/api/public/hooks/engagement-digest-tick");
     expect(sql).toContain("timeout_milliseconds := 300000");
+  });
+});
+
+describe("migracja 20261006160000 — brakujące obiekty produkcji", () => {
+  const sql = readFileSync(join(SUPA, "20261006160000_produkcja_brakujace_obiekty.sql"), "utf8");
+
+  it.each([
+    "rcn_transactions",
+    "comms_suppressions",
+    "seo_location_pages",
+    "seo_location_report_entries",
+    "video_pipeline",
+  ])("%s: tworzona idempotentnie, z RLS i bez pełnych grantów dla anon", (table) => {
+    expect(sql).toContain(`create table if not exists public.${table} (`);
+    expect(sql).toContain(`alter table public.${table} enable row level security`);
+    expect(sql).toContain(`revoke all on public.${table} from public, anon`);
+    expect(sql).not.toMatch(
+      new RegExp(`grant (all|insert|update|delete)[^;]*on public\\.${table} to [^;]*anon`),
+    );
+  });
+
+  it("anon czyta tylko publiczne strony SEO (opublikowane) i ranking", () => {
+    const anonGrants = [...sql.matchAll(/grant [^;]* to [^;]*anon[^;]*;/g)].map((m) => m[0]);
+    expect(anonGrants).toEqual([
+      "grant select on public.seo_location_pages to anon, authenticated;",
+      "grant select on public.seo_location_report_entries to anon, authenticated;",
+    ]);
+    expect(sql).toContain("using (status = 'published')");
+  });
+
+  it("CHECK suppressed_emails zachowuje 'internal' z produkcji", () => {
+    expect(sql).toMatch(/reason in \([^)]*'internal'[^)]*'bot_detected'[^)]*\)/s);
+  });
+
+  it("nie odtwarza obiektów celowo zastąpionych nowszymi migracjami", () => {
+    expect(sql).not.toMatch(/function public\.investor_has_full_access/);
+    expect(sql).not.toMatch(/function public\.investor_module_access_active/);
+    expect(sql).not.toMatch(/create table[^;]*debt_collection/);
+  });
+
+  it("joby pg_cron dla istniejących endpointów, ze strażnikiem i limitem czasu", () => {
+    for (const [job, schedule] of [
+      ["seo-location-publish-tick", "0 6 * * 1"],
+      ["video-pipeline-tick", "30 * * * *"],
+      ["affiliate-events-tick", "*/15 * * * *"],
+      ["kw-easymkw-poll", "*/2 * * * *"],
+    ]) {
+      expect(sql).toContain(`array['${job}', '${schedule}']`);
+      expect(existsSync(join(process.cwd(), "src/routes/api/public/hooks", `${job}.ts`))).toBe(
+        true,
+      );
+    }
+    expect(sql).toContain("timeout_milliseconds := 60000");
+    expect(sql).toContain("extname = 'pg_cron'");
+    expect(sql).not.toMatch(/^\s*create extension/im);
   });
 });

@@ -89,19 +89,4 @@ export const listWindLoans = defineListTool({
   ],
 });
 
-export const listDebtCollectionCases = defineListTool({
-  name: "list_debt_collection_cases",
-  title: "List debt collection cases (legacy)",
-  description:
-    "Starszy moduł spraw windykacyjnych (kalkulator kosztów działań): dłużnik, umowa, kapitał, stopy odsetek, status. Widoczność wg RLS.",
-  table: "debt_collection_cases",
-  columns:
-    "id, investor_user_id, status, debtor_name, contract_number, principal_amount, payout_date, contractual_annual_rate, penalty_annual_rate, max_statutory_rate, notes, created_at, updated_at",
-  resultKey: "cases",
-  filters: {
-    status: text("status", "Status sprawy."),
-    investor_user_id: uuid("investor_user_id", "Tylko sprawy tego inwestora."),
-  },
-});
-
-export const collectionsExtraTools = [getCollectionCase, listWindLoans, listDebtCollectionCases];
+export const collectionsExtraTools = [getCollectionCase, listWindLoans];
