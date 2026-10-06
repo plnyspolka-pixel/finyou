@@ -4,7 +4,7 @@ import { sendResendEmail } from "@/lib/resend-send.server";
 import { formatGroszPln, formatWarsawDate, type AccessAudience } from "./core";
 import { resolveAppBaseUrl } from "./urls.server";
 import {
-  REGULAMIN_ABONAMENTU_VERSION,
+  isRegulaminAbonamentuVersion,
   regulaminAbonamentuInwestora,
 } from "@/lib/legal/regulamin-abonamentu";
 
@@ -15,22 +15,22 @@ export type PaymentConsentsSnapshot = {
   acceptedAt?: string;
 };
 
-/** Potwierdzenie na trwałym nośniku (§ 6 ust. 2 Regulaminu abonamentu v2):
+/** Potwierdzenie na trwałym nośniku (§ 6 ust. 2 Regulaminu abonamentu v2+):
  *  zgoda na natychmiastowe dostarczenie treści cyfrowych + pełny tekst
- *  Regulaminu. Tylko dla zakupu abonamentu inwestora według wersji v2. */
+ *  Regulaminu w wersji zaakceptowanej przy płatności. */
 function abonamentConfirmationBlock(consents: PaymentConsentsSnapshot | null | undefined): string {
-  if (consents?.termsVersion !== REGULAMIN_ABONAMENTU_VERSION || !consents.digitalServiceConsent)
-    return "";
+  const version = consents?.termsVersion;
+  if (!isRegulaminAbonamentuVersion(version) || !consents?.digitalServiceConsent) return "";
   const when = consents.acceptedAt ? formatWarsawDate(consents.acceptedAt, true) : "";
   return `
 
 Potwierdzenie zawarcia umowy o Abonament (sprzedawca: Fundacja Krzewienia Edukacji Finansowej im. Pieczaka):
-- zaakceptowałeś Regulamin abonamentu inwestora (${REGULAMIN_ABONAMENTU_VERSION})${when ? ` — ${when} (czas polski)` : ""};
+- zaakceptowałeś Regulamin abonamentu inwestora (${version})${when ? ` — ${when} (czas polski)` : ""};
 - zażądałeś rozpoczęcia dostarczania szkolenia (treści cyfrowych) bezpośrednio po opłaceniu, przed upływem terminu do odstąpienia od umowy, i przyjąłeś do wiadomości, że tracisz w ten sposób prawo odstąpienia od umowy (art. 38 ust. 1 pkt 13 ustawy o prawach konsumenta).
 
 Treść Regulaminu:
 
-${regulaminAbonamentuInwestora()}`;
+${regulaminAbonamentuInwestora(version)}`;
 }
 
 function panelPath(audience: AccessAudience): string {
@@ -181,7 +181,7 @@ export async function sendAccessExpiredEmail(opts: {
 
 Twój abonament inwestora wygasł. Nowe Zlecenia i moduły panelu (Projekty, dokumenty, analizy, czat, windykacja, AML, Akademia) są wstrzymane do czasu opłacenia kolejnego okresu.
 
-Twoje dane i dokumenty pozostają bezpiecznie zapisane, a obowiązki z Umowy ramowej (poufność, zabezpieczenie prowizji klienta, okres ochronny) obowiązują nadal. Dostęp odzyskasz natychmiast po opłaceniu kolejnego okresu — 1 500 zł za 30 dni albo 7 000 zł za 365 dni: ${base}${renewPath}
+Twoje dane i dokumenty pozostają bezpiecznie zapisane, a obowiązki z Umowy ramowej (poufność, zabezpieczenie prowizji klienta, okres ochronny) obowiązują nadal. Dostęp odzyskasz natychmiast po opłaceniu kolejnego okresu — 7 000 zł za rok (365 dni): ${base}${renewPath}
 
 Pozdrawiamy,
 Zespół Finance You`

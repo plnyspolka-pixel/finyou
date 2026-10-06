@@ -2,10 +2,10 @@
 // marketingowej, bramek serwerowych i testów.
 //
 // Model (od 30 września 2026 r. — cennik abonamentowy):
-//  • Inwestor płaci ABONAMENT za dostęp do systemu: 1 500 zł miesięcznie albo
-//    7 000 zł za rok (rabat za płatność roczną liczony niżej). Płatność
-//    jednorazowa za wybrany okres przez Tpay (przelew, BLIK) — bez podpinania
-//    karty kredytowej i bez automatycznego odnawiania. Nie ma Pakietu PRO,
+//  • Inwestor płaci ABONAMENT za dostęp do systemu: 7 000 zł za rok (365 dni).
+//    Abonament miesięczny wycofany ze sprzedaży (decyzja właściciela
+//    2026-10-06). Płatność jednorazowa przez Tpay (przelew, BLIK) — bez
+//    podpinania karty kredytowej i bez automatycznego odnawiania. Nie ma Pakietu PRO,
 //    Opłaty Sukcesu ani opłaty za pojedynczy Projekt.
 //  • Klient nadal płaci Prowizję od Pożyczkobiorcy (5% Kwoty
 //    Udzielonej, min 5 000 zł, bez VAT), potrącaną z wypłaty —
@@ -13,10 +13,9 @@
 //  • Podstawa płatności: Regulamin Abonamentu Inwestora
 //    (lib/legal/regulamin-abonamentu.ts; sprzedawca: Fundacja Krzewienia
 //    Edukacji Finansowej im. Pieczaka, bez VAT). Umowa ramowa v7 § 7 odsyła
-//    do niego i nie przewiduje wynagrodzenia Finance You (kwoty w
-//    src/lib/legal/pakiet-v7.ts, ABONAMENT_UMOWA). Sprzedaż: produkty
-//    SUBSCRIPTION_OPTIONS[*].productCode w access_products (migracja
-//    20260930140000), createAccessCheckout — abonament jest pierwszą bramką panelu, a akceptacja
+//    do niego i nie przewiduje wynagrodzenia Finance You. Sprzedaż: produkt
+//    SUBSCRIPTION_OPTIONS[*].productCode w access_products (migracje
+//    20260930140000 i 20261006190000), createAccessCheckout — abonament jest pierwszą bramką panelu, a akceptacja
 //    pakietu umów otwiera moduł ofert (decyzja właściciela 2026-09-30).
 //    Dostęp: SQL investor_has_full_access (RLS), requireInvestorPro,
 //    submitInvestorOrder i InvestorSubscriptionGate w panelu.
@@ -98,22 +97,10 @@ export function needsUnlockPayment(_tier: InvestorTier): boolean {
 
 // ── Abonament: cennik (jedno źródło prawdy dla strony, panelu i botów) ──────
 
-/** Okres rozliczenia — przełącznik w cenniku. */
-export type BillingPeriod = "miesiecznie" | "rocznie";
+/** Okres rozliczenia — jedyny sprzedawany wariant to rok. */
+export type BillingPeriod = "rocznie";
 
-export const SUBSCRIPTION_MONTHLY_PLN = 1_500;
 export const SUBSCRIPTION_YEARLY_PLN = 7_000;
-/** Koszt roku przy płatności co miesiąc (12 × cena miesięczna). */
-export const SUBSCRIPTION_YEAR_AT_MONTHLY_PLN = SUBSCRIPTION_MONTHLY_PLN * 12;
-/** Oszczędność przy płatności rocznej względem 12 płatności miesięcznych. */
-export const SUBSCRIPTION_YEARLY_SAVINGS_PLN =
-  SUBSCRIPTION_YEAR_AT_MONTHLY_PLN - SUBSCRIPTION_YEARLY_PLN;
-/** Rabat za płatność roczną w %, zaokrąglony W DÓŁ — nigdy nie zawyżamy. */
-export const SUBSCRIPTION_YEARLY_DISCOUNT_PCT = Math.floor(
-  (SUBSCRIPTION_YEARLY_SAVINGS_PLN / SUBSCRIPTION_YEAR_AT_MONTHLY_PLN) * 100,
-);
-/** Miesięczna równowartość abonamentu rocznego, do pełnej złotówki (w tekstach „ok."). */
-export const SUBSCRIPTION_YEARLY_PER_MONTH_PLN = Math.round(SUBSCRIPTION_YEARLY_PLN / 12);
 
 /** „7000" → „7 000 zł" (spacja nierozdzielająca; pl-PL nie grupuje liczb 4-cyfrowych). */
 export function plnLabel(pln: number): string {
@@ -122,7 +109,6 @@ export function plnLabel(pln: number): string {
 
 export interface SubscriptionOption {
   period: BillingPeriod;
-  /** Etykieta przełącznika. */
   label: string;
   pricePln: number;
   priceLabel: string;
@@ -131,21 +117,11 @@ export interface SubscriptionOption {
   days: number;
   /** Kod produktu w katalogu access_products (cena i liczba dni po stronie serwera). */
   productCode: string;
-  /** Zdanie pod ceną: rabat albo zachęta do płatności rocznej. */
+  /** Zdanie pod ceną. */
   hint: string;
 }
 
 export const SUBSCRIPTION_OPTIONS: Record<BillingPeriod, SubscriptionOption> = {
-  miesiecznie: {
-    period: "miesiecznie",
-    label: "Miesięcznie",
-    pricePln: SUBSCRIPTION_MONTHLY_PLN,
-    priceLabel: plnLabel(SUBSCRIPTION_MONTHLY_PLN),
-    periodLabel: "/ miesiąc",
-    days: 30,
-    productCode: "investor_access_30d",
-    hint: `Płacisz za kolejny miesiąc, kiedy chcesz — bez zobowiązania na dłużej. Rok w tym trybie to ${plnLabel(SUBSCRIPTION_YEAR_AT_MONTHLY_PLN)}; przy płatności rocznej oszczędzasz ${plnLabel(SUBSCRIPTION_YEARLY_SAVINGS_PLN)} (${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% rabatu).`,
-  },
   rocznie: {
     period: "rocznie",
     label: "Rocznie",
@@ -154,16 +130,19 @@ export const SUBSCRIPTION_OPTIONS: Record<BillingPeriod, SubscriptionOption> = {
     periodLabel: "/ rok",
     days: 365,
     productCode: "investor_access_365d",
-    hint: `To ok. ${plnLabel(SUBSCRIPTION_YEARLY_PER_MONTH_PLN)} miesięcznie. Oszczędzasz ${plnLabel(SUBSCRIPTION_YEARLY_SAVINGS_PLN)} względem płatności co miesiąc (${plnLabel(SUBSCRIPTION_YEAR_AT_MONTHLY_PLN)}) — ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% rabatu.`,
+    hint: "Rok pełnego dostępu (365 dni) za jedną płatność — bez automatycznego przedłużenia na kolejny okres.",
   },
 };
 
+/** Jedyny sprzedawany wariant abonamentu. */
+export const SUBSCRIPTION_OPTION = SUBSCRIPTION_OPTIONS.rocznie;
+
 /** Jedno zdanie o cenie — do opisów, FAQ, meta i promptów botów. */
-export const SUBSCRIPTION_PRICE_SENTENCE = `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok — przy płatności rocznej ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej (oszczędzasz ${plnLabel(SUBSCRIPTION_YEARLY_SAVINGS_PLN)})`;
+export const SUBSCRIPTION_PRICE_SENTENCE = `${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok (365 dni dostępu)`;
 
 /** Jak się płaci — to samo zdanie wszędzie. */
 export const SUBSCRIPTION_PAYMENT_SENTENCE =
-  "Płacisz jednorazowo za wybrany okres przez Tpay — przelewem albo BLIK-iem, bez konieczności podpinania karty kredytowej i bez automatycznego odnawiania.";
+  "Płacisz jednorazowo za rok z góry przez Tpay — przelewem albo BLIK-iem, bez konieczności podpinania karty kredytowej i bez automatycznego odnawiania.";
 
 export interface TierPresentation {
   tier: InvestorTier;
@@ -189,8 +168,8 @@ export interface BenefitBullet {
 export const ACCESS_PRESENTATION: TierPresentation = {
   tier: "podstawowy",
   name: "Abonament inwestora",
-  priceLabel: `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} / mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} / rok`,
-  periodLabel: `rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej · bez karty kredytowej`,
+  priceLabel: `${plnLabel(SUBSCRIPTION_YEARLY_PLN)} / rok`,
+  periodLabel: "365 dni dostępu · bez karty kredytowej",
   tagline:
     "Jeden abonament otwiera wszystkie narzędzia: składasz Zlecenie, a my szukamy dla Ciebie Projektów. Cały zarobek z odsetek i Twojej prowizji zostaje u Ciebie — nie oddajesz części zysku i nie płacisz za Projekty, bo Prowizję od Pożyczkobiorcy płaci Klient, potrącaną z wypłaty.",
   bullets: [

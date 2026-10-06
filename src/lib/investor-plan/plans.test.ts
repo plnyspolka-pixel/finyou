@@ -1,5 +1,5 @@
 /**
- * Zakres dostępu inwestora: jeden abonament (miesięczny albo roczny z rabatem),
+ * Zakres dostępu inwestora: jeden abonament — wyłącznie roczny (365 dni),
  * brak PRO / opłaty sukcesu / wykupu okazji.
  */
 import { describe, it, expect } from "vitest";
@@ -7,14 +7,11 @@ import {
   ACCESS_PRESENTATION,
   ALL_FEATURES,
   FEATURE_LABELS,
-  SUBSCRIPTION_MONTHLY_PLN,
+  SUBSCRIPTION_OPTION,
   SUBSCRIPTION_OPTIONS,
   SUBSCRIPTION_PAYMENT_SENTENCE,
   SUBSCRIPTION_PRICE_SENTENCE,
-  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
-  SUBSCRIPTION_YEARLY_PER_MONTH_PLN,
   SUBSCRIPTION_YEARLY_PLN,
-  SUBSCRIPTION_YEARLY_SAVINGS_PLN,
   SUCCESS_FEE_BPS,
   TIER_FEATURES,
   TIER_PRESENTATION,
@@ -51,7 +48,7 @@ describe("dostęp inwestora — bez opłat jednostkowych", () => {
   it("prezentacja: abonament, bez PRO, bez cen jednostkowych, cecha → zaleta → korzyść", () => {
     const p = ACCESS_PRESENTATION;
     expect(p.name).toBe("Abonament inwestora");
-    expect(p.priceLabel).toBe("1\u00a0500\u00a0zł / mies. albo 7\u00a0000\u00a0zł / rok");
+    expect(p.priceLabel).toBe("7\u00a0000\u00a0zł / rok");
     const text = [
       p.name,
       p.tagline,
@@ -75,19 +72,23 @@ describe("dostęp inwestora — bez opłat jednostkowych", () => {
 });
 
 describe("abonament inwestora — cennik", () => {
-  it("1 500 zł miesięcznie albo 7 000 zł za rok", () => {
-    expect(SUBSCRIPTION_MONTHLY_PLN).toBe(1_500);
+  it("wyłącznie 7 000 zł za rok — bez opcji miesięcznej", () => {
     expect(SUBSCRIPTION_YEARLY_PLN).toBe(7_000);
-    expect(SUBSCRIPTION_OPTIONS.miesiecznie).toMatchObject({ pricePln: 1_500, days: 30 });
-    expect(SUBSCRIPTION_OPTIONS.rocznie).toMatchObject({ pricePln: 7_000, days: 365 });
-  });
-
-  it("rabat roczny: 11 000 zł oszczędności = 61 % (zaokrąglone w dół), ok. 583 zł / mies.", () => {
-    expect(SUBSCRIPTION_YEARLY_SAVINGS_PLN).toBe(11_000);
-    expect(SUBSCRIPTION_YEARLY_DISCOUNT_PCT).toBe(61);
-    expect(SUBSCRIPTION_YEARLY_PER_MONTH_PLN).toBe(583);
-    expect(SUBSCRIPTION_PRICE_SENTENCE).toContain("61% taniej");
-    expect(SUBSCRIPTION_OPTIONS.rocznie.hint).toContain("11\u00a0000\u00a0zł");
+    expect(Object.keys(SUBSCRIPTION_OPTIONS)).toEqual(["rocznie"]);
+    expect(SUBSCRIPTION_OPTION).toMatchObject({
+      pricePln: 7_000,
+      days: 365,
+      productCode: "investor_access_365d",
+    });
+    const text = [
+      SUBSCRIPTION_PRICE_SENTENCE,
+      SUBSCRIPTION_PAYMENT_SENTENCE,
+      SUBSCRIPTION_OPTION.hint,
+      ACCESS_PRESENTATION.priceLabel,
+      ACCESS_PRESENTATION.periodLabel,
+      ACCESS_PRESENTATION.note,
+    ].join("\n");
+    expect(text).not.toMatch(/1\s?500|30 dni|miesięcznie|\/ ?mies|rabat|taniej/);
   });
 
   it("płatność bez karty kredytowej i bez automatycznego odnawiania", () => {

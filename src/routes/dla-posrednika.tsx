@@ -29,14 +29,11 @@ async function loadBrokerProducts(): Promise<AccessProduct[]> {
 }
 
 const PRICING_FEATURES: Record<number, string[]> = {
-  30: [
+  365: [
     "Bez limitu liczby ofert",
     "Leady Finance You i pełny CRM",
     "Skrzynka, kampanie i automatyzacje",
     "Akademia Pośrednika i program partnerski",
-  ],
-  365: [
-    "Wszystko z pakietu 30-dniowego",
     "Pełny rok bez przerw w dostępie",
     "Priorytetowe wsparcie",
   ],
@@ -460,8 +457,8 @@ function BrokerLanding() {
               <PricingCard
                 eyebrow="Program Pośrednika Finance You"
                 title="Pełny dostęp pośrednika"
-                price="499 zł"
-                period="/ 30 dni"
+                price="2 999 zł"
+                period="/ 365 dni"
                 cta="Załóż konto partnera"
                 href={JOIN}
                 features={[
@@ -472,7 +469,7 @@ function BrokerLanding() {
                   "Wzory dokumentów i procedury",
                   "Transparentny model prowizyjny",
                 ]}
-                note="Ceny brutto. Dostęp roczny: 2 999 zł / 365 dni. Konto darmowe: do 5 ofert. Warunki określa umowa partnerska."
+                note="Ceny brutto. Dostęp wyłącznie roczny. Konto darmowe: do 5 ofert. Warunki określa umowa partnerska."
               />
             }
           />

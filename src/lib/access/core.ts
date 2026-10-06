@@ -53,6 +53,15 @@ export function isLegacyPlanId(code: string): boolean {
   return (LEGACY_PLAN_IDS as readonly string[]).includes(code);
 }
 
+/** Pakiety 30-dniowe wycofane ze sprzedaży (decyzja właściciela 2026-10-06) —
+ *  sprzedajemy wyłącznie dostęp roczny. Webhook nadal rozlicza transakcje
+ *  rozpoczęte wcześniej, ale nowej płatności nie da się założyć. */
+export const RETIRED_PRODUCT_CODES = ["investor_access_30d", "broker_access_30d"] as const;
+
+export function isRetiredProductCode(code: string): boolean {
+  return (RETIRED_PRODUCT_CODES as readonly string[]).includes(code);
+}
+
 /** Kwota w groszach → tekst "999 zł" / "5 999 zł" (brutto, PLN). */
 export function formatGroszPln(amountGrosz: number): string {
   const zl = Math.floor(amountGrosz / 100);
@@ -133,11 +142,6 @@ export function formatWarsawDate(d: Date | string | null | undefined, withTime =
     dateStyle: "medium",
     ...(withTime ? { timeStyle: "short" } : {}),
   }).format(date);
-}
-
-/** Oszczędność pakietu rocznego względem 12 zakupów miesięcznych (w groszach). */
-export function yearlySavingsGrosz(monthlyGrosz: number, yearlyGrosz: number): number {
-  return Math.max(0, monthlyGrosz * 12 - yearlyGrosz);
 }
 
 export interface BuyerInputFields {

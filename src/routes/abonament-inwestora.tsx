@@ -1,8 +1,8 @@
 // Publiczny zakup abonamentu inwestora — cel przycisku „Załóż konto
-// inwestora". Klient wybiera okres, podaje dane nabywcy i płaci w Tpay;
+// inwestora". Abonament jest wyłącznie roczny; klient podaje dane nabywcy i płaci w Tpay;
 // konto inwestora zakłada webhook Tpay z tych danych po zaksięgowaniu wpłaty
 // i wysyła na podany e-mail link do logowania.
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -10,19 +10,13 @@ import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { SiteHeader, SiteFooter } from "@/components/marketing/shell";
 import { MktBadge } from "@/components/marketing/primitives";
-import { PeriodSlider } from "@/components/marketing/investor-pricing";
 import { TpayAccessCheckoutForm } from "@/components/access/TpayAccessCheckoutForm";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import { getGuestPaymentStatus } from "@/lib/access/guest-checkout.functions";
 import { formatWarsawDate, type AccessProduct } from "@/lib/access/core";
-import {
-  SUBSCRIPTION_OPTIONS,
-  SUBSCRIPTION_PAYMENT_SENTENCE,
-  type BillingPeriod,
-} from "@/lib/investor-plan/plans";
+import { SUBSCRIPTION_OPTION, SUBSCRIPTION_PAYMENT_SENTENCE } from "@/lib/investor-plan/plans";
 
 const searchSchema = z.object({
-  okres: z.enum(["miesiecznie", "rocznie"]).optional().catch(undefined),
   tpay: z.enum(["success", "error"]).optional().catch(undefined),
   payment: z.string().uuid().optional().catch(undefined),
 });
@@ -39,8 +33,8 @@ async function loadInvestorProducts(): Promise<AccessProduct[]> {
 // Awaryjny produkt, gdy katalog nie odpowiedział — tylko do wyświetlenia
 // formularza. Płatność gościa wysyła wyłącznie okres, a cenę i liczbę dni
 // serwer bierze z access_products (createGuestInvestorCheckout).
-function fallbackProduct(period: BillingPeriod): AccessProduct {
-  const o = SUBSCRIPTION_OPTIONS[period];
+function fallbackProduct(): AccessProduct {
+  const o = SUBSCRIPTION_OPTION;
   return {
     id: o.productCode,
     code: o.productCode,
@@ -77,18 +71,10 @@ export const Route = createFileRoute("/abonament-inwestora")({
 function InvestorCheckoutPage() {
   const search = Route.useSearch();
   const { products } = Route.useLoaderData();
-  const navigate = useNavigate({ from: "/abonament-inwestora" });
-  const [period, setPeriod] = useState<BillingPeriod>(search.okres ?? "rocznie");
   const product =
-    (products as AccessProduct[]).find(
-      (p) => p.code === SUBSCRIPTION_OPTIONS[period].productCode,
-    ) ?? fallbackProduct(period);
+    (products as AccessProduct[]).find((p) => p.code === SUBSCRIPTION_OPTION.productCode) ??
+    fallbackProduct();
   const returned = Boolean(search.tpay && search.payment);
-
-  const changePeriod = (p: BillingPeriod) => {
-    setPeriod(p);
-    void navigate({ search: { okres: p }, replace: true });
-  };
 
   return (
     <div className="fy-marketing">
@@ -125,14 +111,10 @@ function InvestorCheckoutPage() {
               marginInline: "auto",
             }}
           >
-            Wybierz okres abonamentu i zapłać przez Tpay. Konto inwestora założymy automatycznie na
-            podstawie danych płatności — link do logowania wyślemy na podany e-mail.
+            Opłać roczny abonament ({SUBSCRIPTION_OPTION.priceLabel} za 365 dni) przez Tpay. Konto
+            inwestora założymy automatycznie na podstawie danych płatności — link do logowania
+            wyślemy na podany e-mail.
           </p>
-          {!returned && (
-            <div style={{ marginTop: "1.2rem" }}>
-              <PeriodSlider value={period} onChange={changePeriod} />
-            </div>
-          )}
         </div>
       </section>
 
@@ -152,7 +134,11 @@ function InvestorCheckoutPage() {
             ) : (
               <>
                 <p className="text-xs text-muted-foreground">{SUBSCRIPTION_PAYMENT_SENTENCE}</p>
-                <TpayAccessCheckoutForm key={product.code} product={product} guestPeriod={period} />
+                <TpayAccessCheckoutForm
+                  key={product.code}
+                  product={product}
+                  guestPeriod="rocznie"
+                />
               </>
             )}
             <p className="text-center text-sm text-muted-foreground">

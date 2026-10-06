@@ -21,12 +21,9 @@ import {
   SUBSCRIPTION_OPTIONS,
   SUBSCRIPTION_PAYMENT_SENTENCE,
   SUBSCRIPTION_PRICE_SENTENCE,
-  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
-  SUBSCRIPTION_YEARLY_PER_MONTH_PLN,
-  plnLabel,
 } from "@/lib/investor-plan/plans";
 
-// Moduł „Dostęp i płatności": stan abonamentu, zakup (30 albo 365 dni —
+// Moduł „Dostęp i płatności": stan abonamentu, zakup (wyłącznie 365 dni —
 // jednorazowa płatność Tpay, bez karty kredytowej i bez automatycznego
 // odnowienia) oraz historia płatności z fakturami. Ceny z katalogu
 // access_products (serwer) — te same co w lib/investor-plan/plans.ts.
@@ -39,14 +36,10 @@ const SUBSCRIPTION_CODES = new Set<string>(
 );
 
 const FEATURES: Record<number, string[]> = {
-  30: [
+  365: [
     "Zlecenia i Projekty dopasowane do Zlecenia",
     "Raporty, analityka i generator umowy",
     "Akademia, kalkulator compliance, AML i windykacja AI",
-  ],
-  365: [
-    "Wszystko z abonamentu 30-dniowego",
-    `Rok dostępu za ok. ${plnLabel(SUBSCRIPTION_YEARLY_PER_MONTH_PLN)} miesięcznie — ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej`,
     "Bez przerw w dostępie przez 365 dni",
   ],
 };
@@ -88,7 +81,7 @@ function InwestorAbonament() {
     queryFn: () => pipelineFn(),
   });
 
-  // Wyłącznie abonament 30 / 365 dni — nawet gdyby katalog miał inne aktywne
+  // Wyłącznie abonament roczny (365 dni) — nawet gdyby katalog miał inne aktywne
   // pozycje inwestora, nie trafiają do sprzedaży.
   const products: AccessProduct[] = (productsQ.data ?? []).filter((p) =>
     SUBSCRIPTION_CODES.has(p.code),

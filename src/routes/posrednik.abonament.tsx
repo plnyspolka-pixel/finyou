@@ -31,14 +31,11 @@ export const Route = createFileRoute("/posrednik/abonament")({
 });
 
 const FEATURES: Record<number, string[]> = {
-  30: [
+  365: [
     "Bez limitu liczby ofert",
     "Leady Finance You i pełny CRM",
     "Skrzynka, kampanie i automatyzacje",
     "Akademia Pośrednika i program partnerski",
-  ],
-  365: [
-    "Wszystko z pakietu 30-dniowego",
     "Pełny rok bez przerw w dostępie",
     "Priorytetowe wsparcie",
   ],
@@ -87,7 +84,7 @@ function PosrednikAbonament() {
       <FancyPageHeader
         eyebrow="Konto"
         title="Pakiet pośrednika"
-        subtitle="Darmowe konto bez terminu ważności albo pełny dostęp na 30 lub 365 dni. Płatność jednorazowa, bez automatycznych odnowień."
+        subtitle="Darmowe konto bez terminu ważności albo pełny dostęp na rok (365 dni). Płatność jednorazowa, bez automatycznych odnowień."
       />
 
       {tpay && payment && (

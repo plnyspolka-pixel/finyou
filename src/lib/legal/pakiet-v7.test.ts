@@ -6,7 +6,6 @@
  */
 import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { SUBSCRIPTION_MONTHLY_PLN, SUBSCRIPTION_YEARLY_PLN } from "@/lib/investor-plan/plans";
 import {
   ABONAMENT_UMOWA,
   FORBIDDEN_IN_V7,
@@ -54,9 +53,6 @@ describe("umowa ramowa v7", () => {
     expect(v7).toContain("Opłata Inwestora za Projekt: brak");
     expect(v7).not.toMatch(/Finance You pobiera od Inwestora wyłącznie/);
     expect(v7).not.toMatch(/jedyne wynagrodzenie Finance You/);
-    // Kwoty w umowie = cennik na stronie i w panelu.
-    expect(SUBSCRIPTION_MONTHLY_PLN).toBe(1_500);
-    expect(SUBSCRIPTION_YEARLY_PLN).toBe(7_000);
     // Konsument: zwrot Opłaty Abonamentowej przy odstąpieniu — w Regulaminie Abonamentu.
     expect(v7).toContain(
       "Odstąpienie od Umowy nie obejmuje Abonamentu — odstąpienie od umowy o Abonament i zwrot Opłaty Abonamentowej określa Regulamin Abonamentu Inwestora.",

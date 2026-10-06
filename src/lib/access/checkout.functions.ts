@@ -9,7 +9,13 @@ import { SUBSCRIPTION_OPTIONS } from "@/lib/investor-plan/plans";
 import { REGULAMIN_ABONAMENTU_VERSION } from "@/lib/legal/regulamin-abonamentu";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { isLegacyPlanId, validateBuyer, type AccessAudience, type BuyerType } from "./core";
+import {
+  isLegacyPlanId,
+  isRetiredProductCode,
+  validateBuyer,
+  type AccessAudience,
+  type BuyerType,
+} from "./core";
 import { decideInFlightUnlockPayment, PENDING_UNLOCK_STALE_MINUTES } from "./pending-unlock";
 import { TubapayCheckoutFields, validateTubapayCheckout } from "./tubapay-checkout";
 
@@ -99,7 +105,7 @@ async function resolveInFlightUnlockPayments(db: any, matchId: string): Promise<
   return null;
 }
 
-/** Jedyne produkty inwestora w sprzedaży — abonament 30 i 365 dni. */
+/** Jedyny produkt inwestora w sprzedaży — abonament roczny (365 dni). */
 const INVESTOR_SUBSCRIPTION_CODES = new Set<string>(
   Object.values(SUBSCRIPTION_OPTIONS).map((o) => o.productCode),
 );
@@ -112,15 +118,16 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
     try {
       if (
         isLegacyPlanId(data.productCode) ||
+        isRetiredProductCode(data.productCode) ||
         (data.productCode.startsWith("investor_") &&
           !INVESTOR_SUBSCRIPTION_CODES.has(data.productCode))
       ) {
-        // Inwestor kupuje wyłącznie abonament (30 albo 365 dni — Umowa ramowa v7
-        // § 7). Pakiet PRO, odblokowanie pojedynczej okazji i stare plany nie
-        // są już w sprzedaży.
+        // Sprzedajemy wyłącznie dostęp roczny (365 dni). Pakiety 30-dniowe,
+        // Pakiet PRO, odblokowanie pojedynczej okazji i stare plany nie są
+        // już w sprzedaży.
         return {
           error:
-            "Ten pakiet nie jest już dostępny w sprzedaży. Inwestor wybiera abonament na 30 albo 365 dni; pośrednik — pakiet 30 lub 365 dni.",
+            "Ten pakiet nie jest już dostępny w sprzedaży. Dostęp kupuje się wyłącznie na rok (365 dni).",
         };
       }
 

@@ -4,7 +4,7 @@
 // podanych w tym formularzu (patrz guest-investor.server.ts).
 //
 // Cena i produkt pochodzą wyłącznie z katalogu access_products; klient
-// przesyła tylko okres abonamentu, dane nabywcy i zgody.
+// przesyła tylko okres abonamentu (wyłącznie roczny), dane nabywcy i zgody.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { SUBSCRIPTION_OPTIONS } from "@/lib/investor-plan/plans";
@@ -19,7 +19,7 @@ export const GUEST_CHECKOUT_PATH = "/abonament-inwestora";
 const GUEST_ATTEMPTS_PER_HOUR = 5;
 
 const GuestCheckoutSchema = z.object({
-  period: z.enum(["miesiecznie", "rocznie"]),
+  period: z.literal("rocznie"),
   buyerType: z.enum(["person", "company"]),
   buyerName: z.string().trim().min(1).max(300),
   buyerEmail: z.string().trim().email().max(255),

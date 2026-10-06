@@ -3,7 +3,7 @@
 //
 // Od 2026-09 (Umowa ramowa v7) nie ma pakietu PRO, opłaty sukcesu ani
 // odblokowań pojedynczych okazji; od 2026-09-30 Inwestor płaci wyłącznie
-// Opłatę Abonamentową (1 500 zł / 30 dni albo 7 000 zł / 365 dni).
+// Opłatę Abonamentową (7 000 zł / 365 dni; od 2026-10-06 tylko roczny).
 // `investorTier` zwraca jeden poziom, `assertInvestorPro` sprawdza aktywny
 // abonament; `confirmZal6` nie nalicza niczego inwestorowi.
 import { createServerFn } from "@tanstack/react-start";

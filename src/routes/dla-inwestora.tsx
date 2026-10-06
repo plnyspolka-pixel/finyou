@@ -17,10 +17,8 @@ import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
 import {
-  SUBSCRIPTION_MONTHLY_PLN,
   SUBSCRIPTION_PAYMENT_SENTENCE,
   SUBSCRIPTION_PRICE_SENTENCE,
-  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
   SUBSCRIPTION_YEARLY_PLN,
   plnLabel,
 } from "@/lib/investor-plan/plans";
@@ -170,7 +168,7 @@ export const Route = createFileRoute("/dla-inwestora")({
       },
       {
         name: "description",
-        content: `Klub Inwestorów Hipotecznych Finance You: abonament ${plnLabel(SUBSCRIPTION_MONTHLY_PLN)}/mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)}/rok (rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej), bez karty kredytowej. Finansujesz projekty firm zabezpieczone hipoteką (LTV do 60%), oprocentowanie do wysokości odsetek maksymalnych.`,
+        content: `Klub Inwestorów Hipotecznych Finance You: abonament ${plnLabel(SUBSCRIPTION_YEARLY_PLN)}/rok, bez karty kredytowej. Finansujesz projekty firm zabezpieczone hipoteką (LTV do 60%), oprocentowanie do wysokości odsetek maksymalnych.`,
       },
       { property: "og:title", content: "Dla inwestorów — Finance You" },
       {
@@ -201,7 +199,7 @@ const BENEFITS: FeatureItemData[] = [
   {
     icon: "loan",
     t: "Stały abonament zamiast prowizji od zysku",
-    d: `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok (${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej) — bez opłat za Projekt, opłaty sukcesu i podpinania karty kredytowej. Prowizję Finance You płaci klient.`,
+    d: `${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok — bez opłat za Projekt, opłaty sukcesu i podpinania karty kredytowej. Prowizję Finance You płaci klient.`,
   },
   {
     icon: "access",
@@ -486,8 +484,8 @@ const FAQ_ALL: FAQItem[] = [
 ];
 
 // Duży złoty przycisk „Dołącz do klubu” — jedyny CTA w hero, prowadzi do
-// cennika (#cennik): inwestor najpierw poznaje warunki (abonament miesięczny
-// albo roczny), potem zakłada konto. W one-pagerze to zwykła kotwica
+// cennika (#cennik): inwestor najpierw poznaje warunki (abonament roczny),
+// potem zakłada konto. W one-pagerze to zwykła kotwica
 // sekcji; w układzie zakładek przewijanie do zakładki obsługuje InvestorTabs
 // (także gdy hash już jest ustawiony na #cennik).
 function JoinClubButton() {
@@ -928,7 +926,7 @@ function CennikSection({ products }: { products: AccessProduct[] }) {
         center
         eyebrow="Cennik"
         title="Jeden abonament, pełny dostęp"
-        sub={`${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok — przesuń suwak i zobacz, ile oszczędzasz przy płatności rocznej (${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% rabatu). Bez konieczności podpinania karty kredytowej.`}
+        sub={`${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok (365 dni) — jedna płatność, bez konieczności podpinania karty kredytowej.`}
       />
       <div style={{ marginTop: "2.5rem" }}>
         <InvestorPricing products={products} />

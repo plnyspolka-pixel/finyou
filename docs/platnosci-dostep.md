@@ -5,22 +5,25 @@ odnowień, punktów i opłat za pojedynczą ofertę/lead.
 
 ## Katalog produktów (`access_products`)
 
-| Kod | Odbiorca | Cena brutto | Dni | Rodzaj |
-| --- | --- | --- | --- | --- |
-| `broker_access_30d` | pośrednik | 499 zł (`49900` gr) | 30 | `access` |
-| `broker_access_365d` | pośrednik | 2 999 zł (`299900` gr) | 365 | `access` |
-| `investor_access_30d` | inwestor | 1 500 zł (`150000` gr) | 30 | `access` |
-| `investor_access_365d` | inwestor | 7 000 zł (`700000` gr) | 365 | `access` |
-| `investor_pro_180d`, `investor_okazja_unlock` | inwestor | — | — | **nieaktywne** (historia) |
+| Kod                                           | Odbiorca  | Cena brutto            | Dni | Rodzaj                                  |
+| --------------------------------------------- | --------- | ---------------------- | --- | --------------------------------------- |
+| `broker_access_365d`                          | pośrednik | 2 999 zł (`299900` gr) | 365 | `access`                                |
+| `investor_access_365d`                        | inwestor  | 7 000 zł (`700000` gr) | 365 | `access`                                |
+| `broker_access_30d`, `investor_access_30d`    | —         | —                      | 30  | **nieaktywne** od 2026-10-06 (historia) |
+| `investor_pro_180d`, `investor_okazja_unlock` | inwestor  | —                      | —   | **nieaktywne** (historia)               |
 
-**Inwestor — abonament 1 500 zł / mies. albo 7 000 zł / rok (61 % rabatu
-przy płatności rocznej)**, opublikowany od 30 września 2026 r.
+Dostęp sprzedajemy **wyłącznie na rok**. Pakiety 30-dniowe wyłącza migracja
+`20261006190000_wycofanie_pakietow_30d.sql` (lustro drizzle `0028`), a kod
+blokuje je niezależnie (`RETIRED_PRODUCT_CODES` w `src/lib/access/core.ts`).
+
+**Inwestor — abonament 7 000 zł / rok**, opublikowany od 30 września 2026 r.
+(wariant 30 dni wycofany 6 października 2026 r.)
 (`docs/cennik-inwestora.md`, ceny w `src/lib/investor-plan/plans.ts`,
 podstawa: Regulamin Abonamentu Inwestora akceptowany przy płatności;
 sprzedawca i wystawca faktur: Fundacja Krzewienia Edukacji Finansowej
 im. Pieczaka, bez VAT). Katalog: migracja
 `20260930140000_abonament_inwestora.sql`. `createAccessCheckout` przyjmuje
-z kodów `investor_*` tylko abonament 30 / 365 dni; umów o dostęp do Klientów
+z kodów `investor_*` tylko abonament 365 dni; umów o dostęp do Klientów
 nie wymaga (akceptowane później, otwierają moduł ofert).
 
 Konto darmowe pośrednika (`broker_free`) nie jest produktem — wynika z roli
@@ -70,8 +73,8 @@ transakcji rozpoczętych przed wdrożeniem.
    (`assertInvestorFullAccess`, `assertBrokerPremium`, `assertBrokerOrStaff`).
 3. **RLS/Storage** — migracja `20260719106000_investor_paywall_rls.sql`
    wpina `investor_has_full_access` we wszystkie polityki danych
-   inwestycyjnych (loan_applications, properties, documents, kw_*, analizy,
-   oceny ryzyka, investor_offers, dystrybucje, czat, wind_*, generated_documents,
+   inwestycyjnych (loan*applications, properties, documents, kw*_, analizy,
+   oceny ryzyka, investor*offers, dystrybucje, czat, wind*_, generated_documents,
    Akademia, bucket `pliki-klienta` i `training-videos`).
    Partner zewnętrzny z historyczną rolą `operator` NIE dostaje bypassu
    personelu (`is_internal_staff` wyklucza aktywnych partnerów).
@@ -125,12 +128,12 @@ formularzu tylko wtedy, gdy TubaPay zwróci ofertę rat dla ceny produktu
 Kontrakt API odtworzony z oficjalnej wtyczki WooCommerce `tubapay-v2`
 (`src/lib/tubapay.server.ts`):
 
-| Krok | Endpoint |
-| --- | --- |
-| Token | `POST /api/v1/partner/auth/token` (`PARTNER_CLIENT_CREDENTIALS`) |
-| Oferta rat | `POST /api/v1/external/transaction/create-offer` |
-| Umowa + link | `POST /api/v1/external/transaction/create` → `transactionLink` |
-| Webhook | `POST` JSON na `order.callbackUrl`, `TRANSACTION_STATUS_CHANGED` |
+| Krok         | Endpoint                                                         |
+| ------------ | ---------------------------------------------------------------- |
+| Token        | `POST /api/v1/partner/auth/token` (`PARTNER_CLIENT_CREDENTIALS`) |
+| Oferta rat   | `POST /api/v1/external/transaction/create-offer`                 |
+| Umowa + link | `POST /api/v1/external/transaction/create` → `transactionLink`   |
+| Webhook      | `POST` JSON na `order.callbackUrl`, `TRANSACTION_STATUS_CHANGED` |
 
 Przepływ:
 

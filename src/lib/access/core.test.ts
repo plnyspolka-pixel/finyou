@@ -9,7 +9,7 @@ import {
   isValidPostalCode,
   plnToGrosz,
   validateBuyer,
-  yearlySavingsGrosz,
+  isRetiredProductCode,
 } from "./core";
 
 describe("cennik (grosze ↔ prezentacja)", () => {
@@ -29,11 +29,6 @@ describe("cennik (grosze ↔ prezentacja)", () => {
     // klasyczna pułapka zmiennoprzecinkowa
     expect(plnToGrosz(0.1 + 0.2)).toBe(30);
   });
-
-  it("liczy oszczędność pakietu rocznego względem 12 zakupów miesięcznych", () => {
-    expect(yearlySavingsGrosz(99900, 599900)).toBe(99900 * 12 - 599900);
-    expect(yearlySavingsGrosz(49900, 299900)).toBe(49900 * 12 - 299900);
-  });
 });
 
 describe("stare plany", () => {
@@ -43,6 +38,13 @@ describe("stare plany", () => {
     expect(isLegacyPlanId("investor_access_1y")).toBe(true);
     expect(isLegacyPlanId("investor_access_30d")).toBe(false);
     expect(isLegacyPlanId("broker_access_365d")).toBe(false);
+  });
+
+  it("pakiety 30-dniowe są wycofane ze sprzedaży, roczne zostają", () => {
+    expect(isRetiredProductCode("investor_access_30d")).toBe(true);
+    expect(isRetiredProductCode("broker_access_30d")).toBe(true);
+    expect(isRetiredProductCode("investor_access_365d")).toBe(false);
+    expect(isRetiredProductCode("broker_access_365d")).toBe(false);
   });
 });
 

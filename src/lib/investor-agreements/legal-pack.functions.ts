@@ -500,7 +500,7 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
     const { investorHasFullAccess } = await import("@/lib/access/guards.server");
     if (!(await investorHasFullAccess(userId))) {
       throw new Error(
-        "Zlecenie wymaga aktywnego abonamentu inwestora — wykup go w zakładce Dostęp i płatności (1 500 zł / 30 dni albo 7 000 zł / 365 dni).",
+        "Zlecenie wymaga aktywnego abonamentu inwestora — wykup go w zakładce Dostęp i płatności (7 000 zł / 365 dni).",
       );
     }
 

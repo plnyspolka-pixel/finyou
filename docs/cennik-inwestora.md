@@ -1,6 +1,8 @@
-# Cennik inwestora: abonament miesięczny albo roczny, jeden pipeline onboardingu
+# Cennik inwestora: abonament roczny, jeden pipeline onboardingu
 
-Stan od 30 września 2026 r. Zastępuje model „usługa nieodpłatna" z 29 września
+Stan od 6 października 2026 r. (abonament miesięczny wycofany ze sprzedaży;
+od 30 września do 6 października 2026 r. był też wariant 30 dni za 1 500 zł).
+Zastępuje model „usługa nieodpłatna" z 29 września
 2026 r. (Umowa ramowa v7), cennik Podstawowy/PRO z 21 września 2026 r. oraz
 wcześniejsze produkty czasowe.
 
@@ -8,14 +10,15 @@ wcześniejsze produkty czasowe.
 
 **Inwestor płaci abonament za dostęp do systemu:**
 
-| Okres       | Cena     | Dni | Kod produktu (`access_products`) |
-| ----------- | -------- | --- | -------------------------------- |
-| miesięcznie | 1 500 zł | 30  | `investor_access_30d`            |
-| rocznie     | 7 000 zł | 365 | `investor_access_365d`           |
+| Okres   | Cena     | Dni | Kod produktu (`access_products`) |
+| ------- | -------- | --- | -------------------------------- |
+| rocznie | 7 000 zł | 365 | `investor_access_365d`           |
 
-Rok płacony co miesiąc to 18 000 zł, więc płatność roczna oszczędza 11 000 zł —
-**61 % rabatu** (zaokrąglone w dół), ok. 583 zł miesięcznie. Płatność
-jednorazowa za wybrany okres przez Tpay (przelew, BLIK) — **bez konieczności
+Innego okresu nie ma. `investor_access_30d` (1 500 zł / 30 dni) jest
+nieaktywny (migracja `20261006190000_wycofanie_pakietow_30d.sql`, lustro
+drizzle `0028`) i zablokowany w kodzie (`RETIRED_PRODUCT_CODES` w
+`src/lib/access/core.ts`) — webhook rozlicza jedynie transakcje rozpoczęte
+wcześniej. Płatność jednorazowa za rok przez Tpay (przelew, BLIK) — **bez konieczności
 podpinania karty kredytowej** i bez automatycznego odnawiania. Ceny prezentujemy
 jako brutto. Nie ma Pakietu PRO, Opłaty Sukcesu ani opłaty za pojedynczy Projekt.
 
@@ -26,10 +29,10 @@ rachunek Finance You, resztę Klientowi (Zał. 6 do Umowy ramowej — dwie czę�
 przelewu). Przykład: 100 000 zł → 5 000 zł do Finance You, 95 000 zł dla
 Klienta. Matematyka: `src/lib/contract-engine/fees.ts`.
 
-Ceny, rabat i zdania o płatności liczy jedno miejsce —
-`src/lib/investor-plan/plans.ts` (`SUBSCRIPTION_*`, `SUBSCRIPTION_OPTIONS`,
+Cenę i zdania o płatności liczy jedno miejsce —
+`src/lib/investor-plan/plans.ts` (`SUBSCRIPTION_YEARLY_PLN`, `SUBSCRIPTION_OPTION`,
 `SUBSCRIPTION_PRICE_SENTENCE`, `SUBSCRIPTION_PAYMENT_SENTENCE`). Strona
-`/dla-inwestora` (cennik z suwakiem Miesięcznie / Rocznie, FAQ, meta),
+`/dla-inwestora` (cennik, FAQ, meta), checkout `/abonament-inwestora`,
 panel `/inwestor/abonament` i baner w `/inwestor/umowy` czytają stamtąd.
 
 ## Pobieranie abonamentu — włączone
@@ -54,12 +57,12 @@ o znaczniku `when` późniejszym niż ostatnio wgrany — nowy wpis musi mieć
 `when` większy od poprzedniego (pilnuje tego test lustra migracji).
 
 - **Katalog**: migracja `20260930140000_abonament_inwestora.sql` (lustro
-  drizzle `0023`) aktywuje `investor_access_30d` (150 000 gr, 30 dni) i
+  drizzle `0023`) aktywowała `investor_access_30d` (150 000 gr, 30 dni) i
   `investor_access_365d` (700 000 gr, 365 dni); PRO i odblokowanie okazji
-  zostają nieaktywne. Przed migracją nie było żadnej płatności inwestora,
-  więc kody można było zachować.
-- **Zakup**: `/inwestor/abonament` — karty 30 / 365 dni i formularz Tpay.
-  `createAccessCheckout` przyjmuje z kodów `investor_*` tylko te dwa; inwestor
+  zostają nieaktywne. Migracja `20261006190000_wycofanie_pakietow_30d.sql`
+  (lustro `0028`) wyłącza `investor_access_30d` i `broker_access_30d`.
+- **Zakup**: `/inwestor/abonament` — karta 365 dni i formularz Tpay.
+  `createAccessCheckout` przyjmuje z kodów `investor_*` tylko `investor_access_365d`; inwestor
   akceptuje przy płatności Regulamin Abonamentu Inwestora (bez wcześniejszej
   akceptacji umów).
 - **Kolejność panelu**: abonament (pierwsza bramka) → akceptacja Umowy
@@ -117,9 +120,10 @@ Migracja `20260929155000_etap5_pakiet_inwestor_v7.sql` (patrz
 `docs/legal/paczka-inwestor-v7/`): usunięte Pakiety, Cennik, Opłata Sukcesu,
 Opłata za Udostępnienie Okazji i Zał. 8; § 2/§ 7 — Finance You nie pobiera od
 Inwestora wynagrodzenia, a dostęp do systemu wymaga **Abonamentu** kupowanego
-od Fundacji na podstawie Regulaminu Abonamentu Inwestora (1 500,00 zł brutto
-za 30 dni albo 7 000,00 zł brutto za 365 dni; zmiany z 2026-09-30, przed
-pierwszą akceptacją); Prowizja od Pożyczkobiorcy 5 % Kwoty
+od Fundacji na podstawie Regulaminu Abonamentu Inwestora (w treści v7:
+„obecnie 1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni” —
+brzmienie zamrożone, bo v7 została zaakceptowana 2026-10-01; od Regulaminu v3
+z 2026-10-06 sprzedawany jest wyłącznie okres 365 dni); Prowizja od Pożyczkobiorcy 5 % Kwoty
 Udzielonej, min 5 000 zł, bez VAT, potrącana z wypłaty; § 5 — maks. 5
 przyjętych Zleceń, wygaśnięcie po 5 odrzuceniach, rezerwacja 24 h + 12 h,
 maks. 2 przedłużone naraz; Kara Obejściowa 5 % Sumy Hipotecznej i pięcioletni

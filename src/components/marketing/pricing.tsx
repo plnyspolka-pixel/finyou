@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { formatGroszPln, yearlySavingsGrosz, type AccessProduct } from "@/lib/access/core";
+import { formatGroszPln, isRetiredProductCode, type AccessProduct } from "@/lib/access/core";
 import { MktButton } from "./primitives";
 import { BrandIcon } from "./brand-icon";
 
@@ -29,7 +29,6 @@ const PANEL: Record<Props["audience"], string> = {
 
 function periodLabel(days: number): string {
   if (days === 365) return "/ rok (365 dni)";
-  if (days === 30) return "/ 30 dni";
   return `/ ${days} dni`;
 }
 
@@ -41,18 +40,16 @@ export function MarketingPricing({
   fallback,
 }: Props) {
   // Produkty „unlock" (zakup jednej okazji) nie są pakietem czasowym i nie
-  // trafiają do cennika na stronie.
+  // trafiają do cennika na stronie; pakiety 30-dniowe są wycofane ze sprzedaży.
   const active = (products ?? [])
-    .filter((p) => p.active && p.kind !== "unlock" && p.duration_days != null)
+    .filter(
+      (p) =>
+        p.active && p.kind !== "unlock" && p.duration_days != null && !isRetiredProductCode(p.code),
+    )
     .sort((a, b) => a.sort_order - b.sort_order);
   if (active.length === 0) {
     return <>{fallback ?? null}</>;
   }
-
-  const monthly = active.find((p) => p.duration_days === 30);
-  const yearly = active.find((p) => p.duration_days === 365);
-  const savings =
-    monthly && yearly ? yearlySavingsGrosz(monthly.amount_grosz, yearly.amount_grosz) : 0;
 
   return (
     <div
@@ -66,7 +63,7 @@ export function MarketingPricing({
       className={active.length > 1 ? "fy-compare" : undefined}
     >
       {active.map((p) => {
-        const best = p.duration_days === 365 && savings > 0;
+        const best = p.duration_days === 365;
         const days = p.duration_days as number;
         const feats = featuresByDuration?.[days] ?? [];
         return (
@@ -111,7 +108,7 @@ export function MarketingPricing({
                 >
                   {p.label}
                 </div>
-                {best && (
+                {best && active.length > 1 && (
                   <span
                     style={{
                       flexShrink: 0,
@@ -135,18 +132,6 @@ export function MarketingPricing({
                 </span>
                 <span style={{ fontSize: "0.85rem", opacity: 0.8 }}>{periodLabel(days)}</span>
               </div>
-              {best && savings > 0 && (
-                <div
-                  style={{
-                    marginTop: "0.4rem",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    opacity: 0.9,
-                  }}
-                >
-                  Oszczędzasz {formatGroszPln(savings)} względem 12× pakietu 30-dniowego
-                </div>
-              )}
             </div>
             <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", flex: 1 }}>
               {feats.length > 0 && (

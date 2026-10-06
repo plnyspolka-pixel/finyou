@@ -1,15 +1,11 @@
-// Cennik inwestora na stronie publicznej: JEDEN abonament z przełącznikiem
-// okresu (suwak Miesięcznie / Rocznie). Ceny, rabat i zdania o płatności
-// pochodzą z lib/investor-plan/plans.ts (jedno źródło prawdy dla strony,
-// panelu i botów). Prowizję od Pożyczkobiorcy płaci klient.
-import { useState } from "react";
+// Cennik inwestora na stronie publicznej: JEDEN abonament roczny. Cena i
+// zdania o płatności pochodzą z lib/investor-plan/plans.ts (jedno źródło
+// prawdy dla strony, panelu i botów). Prowizję od Pożyczkobiorcy płaci klient.
 import type { AccessProduct } from "@/lib/access/core";
 import {
   ACCESS_PRESENTATION,
-  SUBSCRIPTION_OPTIONS,
+  SUBSCRIPTION_OPTION,
   SUBSCRIPTION_PAYMENT_SENTENCE,
-  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
-  type BillingPeriod,
 } from "@/lib/investor-plan/plans";
 import { FUNDACJA, REGULAMIN_ABONAMENTU_PATH } from "@/lib/legal/regulamin-abonamentu";
 import { MktButton } from "./primitives";
@@ -18,110 +14,10 @@ import { BrandIcon } from "./brand-icon";
 // Przycisk prowadzi do płatności Tpay; konto inwestora powstaje z danych
 // płatności po jej zaksięgowaniu (lib/access/guest-checkout.functions.ts).
 const CHECKOUT = "/abonament-inwestora";
-const PERIODS: BillingPeriod[] = ["miesiecznie", "rocznie"];
-
-// Suwak okresu: pigułka z przesuwanym „kciukiem". Semantyka radiogroup —
-// strzałki w lewo/prawo przełączają okres jak w natywnych radio.
-export function PeriodSlider({
-  value,
-  onChange,
-}: {
-  value: BillingPeriod;
-  onChange: (p: BillingPeriod) => void;
-}) {
-  const idx = PERIODS.indexOf(value);
-  return (
-    <div
-      role="radiogroup"
-      aria-label="Okres rozliczenia abonamentu"
-      onKeyDown={(e) => {
-        if (e.key === "ArrowRight" || e.key === "ArrowDown") onChange("rocznie");
-        if (e.key === "ArrowLeft" || e.key === "ArrowUp") onChange("miesiecznie");
-      }}
-      style={{
-        position: "relative",
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        width: "100%",
-        maxWidth: "22rem",
-        margin: "0 auto",
-        padding: 4,
-        borderRadius: 999,
-        background: "rgba(255,255,255,0.14)",
-        border: "1px solid rgba(255,255,255,0.28)",
-      }}
-    >
-      <span
-        aria-hidden
-        style={{
-          position: "absolute",
-          top: 4,
-          bottom: 4,
-          left: 4,
-          width: "calc(50% - 4px)",
-          borderRadius: 999,
-          background: "linear-gradient(95deg,#f0c667,#f6dc9c)",
-          boxShadow: "0 8px 24px -10px rgba(240,198,103,0.7)",
-          transform: `translateX(${idx * 100}%)`,
-          transition: "transform .25s var(--ease-out, ease)",
-        }}
-      />
-      {PERIODS.map((p) => {
-        const active = p === value;
-        return (
-          <button
-            key={p}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            tabIndex={active ? 0 : -1}
-            onClick={() => onChange(p)}
-            style={{
-              position: "relative",
-              zIndex: 1,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              padding: "0.55rem 0.5rem",
-              border: 0,
-              borderRadius: 999,
-              background: "transparent",
-              cursor: "pointer",
-              fontSize: "0.88rem",
-              fontWeight: 800,
-              color: active ? "#101430" : "rgba(255,255,255,.9)",
-              transition: "color .2s ease",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {SUBSCRIPTION_OPTIONS[p].label}
-            {p === "rocznie" && (
-              <span
-                style={{
-                  borderRadius: 999,
-                  padding: "0.05rem 0.45rem",
-                  fontSize: "0.7rem",
-                  fontWeight: 900,
-                  background: active ? "#101430" : "oklch(0.82 0.14 88)",
-                  color: active ? "#f6dc9c" : "#1a1400",
-                }}
-              >
-                −{SUBSCRIPTION_YEARLY_DISCOUNT_PCT}%
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 export function InvestorPricing(_props: { products?: AccessProduct[] }) {
   const t = ACCESS_PRESENTATION;
-  // Domyślnie roczny — od razu widać rabat.
-  const [period, setPeriod] = useState<BillingPeriod>("rocznie");
-  const opt = SUBSCRIPTION_OPTIONS[period];
+  const opt = SUBSCRIPTION_OPTION;
   return (
     <div
       className="fy-compare"
@@ -159,12 +55,7 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
             {t.name}
           </div>
 
-          <div style={{ marginTop: "1rem" }}>
-            <PeriodSlider value={period} onChange={setPeriod} />
-          </div>
-
           <div
-            aria-live="polite"
             style={{
               marginTop: "1.1rem",
               display: "flex",
@@ -249,11 +140,7 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
             </a>
             .
           </p>
-          <MktButton
-            variant="cta"
-            href={`${CHECKOUT}?okres=${period}`}
-            style={{ width: "100%", marginTop: "1rem" }}
-          >
+          <MktButton variant="cta" href={CHECKOUT} style={{ width: "100%", marginTop: "1rem" }}>
             Załóż konto inwestora
           </MktButton>
         </div>

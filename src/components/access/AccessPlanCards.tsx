@@ -1,10 +1,9 @@
-// Karty pakietów dostępu (30/365 dni) — wspólne dla inwestora i pośrednika.
-// Ceny pochodzą z katalogu serwera (access_products); UI niczego nie wylicza
-// poza prezentacją oszczędności pakietu rocznego.
+// Karty pakietów dostępu — wspólne dla inwestora i pośrednika. W sprzedaży
+// jest wyłącznie dostęp roczny (365 dni); ceny pochodzą z katalogu serwera
+// (access_products).
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { formatGroszPln, yearlySavingsGrosz, type AccessProduct } from "@/lib/access/core";
+import { formatGroszPln, isRetiredProductCode, type AccessProduct } from "@/lib/access/core";
 
 interface Props {
   products: AccessProduct[];
@@ -19,17 +18,15 @@ export function AccessPlanCards({
   onSelect,
   featuresByDuration,
 }: Props) {
-  const monthly = products.find((p) => p.duration_days === 30);
-  const yearly = products.find((p) => p.duration_days === 365);
-  const savings =
-    monthly && yearly ? yearlySavingsGrosz(monthly.amount_grosz, yearly.amount_grosz) : 0;
-
   // Produkty „unlock" (zakup jednej okazji) kupuje się z poziomu okazji,
-  // nie z cennika — tutaj pokazujemy wyłącznie pakiety czasowe.
-  const timed = products.filter((p) => p.kind !== "unlock" && p.duration_days != null);
+  // nie z cennika — tutaj pokazujemy wyłącznie pakiety czasowe, bez
+  // wycofanych pakietów 30-dniowych.
+  const timed = products.filter(
+    (p) => p.kind !== "unlock" && p.duration_days != null && !isRetiredProductCode(p.code),
+  );
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className={timed.length > 1 ? "grid gap-4 md:grid-cols-2" : "mx-auto grid max-w-md gap-4"}>
       {timed.map((p) => {
         const days = p.duration_days as number;
         const isYearly = days === 365;
@@ -37,18 +34,12 @@ export function AccessPlanCards({
           <Card key={p.code} className={isYearly ? "border-primary shadow-lg" : ""}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                Pełny dostęp – {days} dni
-                {isYearly && <Badge>Najlepsza oferta</Badge>}
+                {isYearly ? "Pełny dostęp – rok (365 dni)" : `Pełny dostęp – ${days} dni`}
               </CardTitle>
               <div className="text-3xl font-bold">{formatGroszPln(p.amount_grosz)} brutto</div>
               <div className="text-xs text-muted-foreground">
                 Płatność jednorazowa · dokładnie {days} dni dostępu
               </div>
-              {isYearly && savings > 0 && (
-                <div className="text-xs font-medium text-emerald-700">
-                  Oszczędzasz {formatGroszPln(savings)} względem 12 zakupów miesięcznych
-                </div>
-              )}
             </CardHeader>
             <CardContent className="space-y-3">
               {featuresByDuration?.[days] && (
