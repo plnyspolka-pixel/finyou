@@ -134,7 +134,7 @@ co poprawić.
 | `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na wynik usługi, zanim zadanie padnie do ponowienia (domyślnie 45)                    |
 | `VIDEO_RENDITION_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na kompresję wideo, zanim ponowimy / wyślemy oryginał (domyślnie 120)                 |
 | `STUDIO_AI_BADGE`                 | Opcjonalny; `0` / `off` wyłącza znaczek „AI" w rogu rolek (domyślnie włączony)                               |
-| `STUDIO_DYNAMIC_OVERLAYS`         | Opcjonalny; `0` / `off` wyłącza wypalane nakładki dynamiczne rolek z paczki 250 pytań (domyślnie włączone)   |
+| `STUDIO_DYNAMIC_OVERLAYS`         | Opcjonalny; `0` / `off` wyłącza nakładki dynamiczne rolek: znacznik, pytanie i elementy ekranowe dobierane przez AI z katalogu (karta, licznik, porównanie, kroki, cytat, CTA, pieczątka, słupki — `src/lib/overlay-elements.ts`; pełny zestaw tylko w renderze Remotion) |
 | `STUDIO_SAVE_TO_MATERIALS`        | Opcjonalny; `0` / `off` wyłącza zapis gotowych rolek do /admin/materialy (domyślnie włączony)                |
 | `STUDIO_MATERIALS_AUDIENCE`       | Opcjonalny; domyślna kategoria rolek w materiałach: `klient` / `inwestor` / `posrednik` (domyślnie `klient`) |
 | `ELEVENLABS_API_KEY`              | Lektor TTS (już używany)                                                                                     |

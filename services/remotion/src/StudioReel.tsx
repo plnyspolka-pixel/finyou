@@ -21,48 +21,35 @@
 // na granacie; tekst zawsze na przyciemnieniu (scrim), nigdy „gołym" obrazie.
 
 import { useMemo } from "react";
-import {
-  AbsoluteFill,
-  OffthreadVideo,
-  interpolate,
-  spring,
-  staticFile,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
-import { loadFont } from "@remotion/fonts";
+import { AbsoluteFill, OffthreadVideo, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import {
   AI_BADGE,
   DEFAULT_ASS_DIMENSIONS,
-  DYNAMIC_OVERLAY_LAYOUT,
-  OVERLAY_BRAND,
-  OVERLAY_CARD_LAYOUT,
   layoutLines,
   type CaptionStyle,
   type DynamicOverlays,
   type OverlayCard,
   type SrtCue,
 } from "../../../src/lib/caption-style";
-
-// Inter (zmienna, 100–900) z public/fonts — ta sama czcionka, co w obrazie
-// usługi caption-burner; dołączona do bundle'a, żeby render nie zależał od
-// Google Fonts. Zakresy znaków jak w Google Fonts (latin + latin-ext = polskie
-// ogonki). Remotion czeka na obietnice czcionek przed zrzutem klatki.
-const INTER_RANGES = {
-  latin:
-    "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD",
-  "latin-ext":
-    "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF",
-} as const;
-for (const [subset, unicodeRange] of Object.entries(INTER_RANGES)) {
-  void loadFont({
-    family: "Inter",
-    url: staticFile(`fonts/Inter-${subset}.woff2`),
-    weight: "100 900",
-    unicodeRange,
-  });
-}
-const FONT_STACK = `Inter, "DejaVu Sans", Arial, sans-serif`;
+import { Element, elementsActive } from "./Elements";
+import {
+  B,
+  C,
+  FONT_STACK,
+  L,
+  countUpText,
+  ease,
+  glassPanel,
+  onImageText,
+  onPanelText,
+  pop,
+  ramp,
+  rgba,
+  shimmerStyle,
+  stroke,
+  textGlow,
+  type Clock,
+} from "./ui";
 
 export type TimedWord = { text: string; start: number; end: number };
 
@@ -86,58 +73,6 @@ export const studioReelDefaults: StudioReelProps = {
   overlays: null,
   words: [],
 };
-
-// ── Pomocnicze ──────────────────────────────────────────────────────────────
-
-const B = OVERLAY_BRAND;
-const L = DYNAMIC_OVERLAY_LAYOUT;
-const C = OVERLAY_CARD_LAYOUT;
-
-const rgba = (hex: string, alpha: number): string => {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  const rgb = m ? m[1] : "000000";
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(rgb.slice(i, i + 2), 16));
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
-
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
-/** Przejście liniowe `from → to` w sekundach, jak \fad / \t w ASS. */
-const ramp = (t: number, from: number, to: number) =>
-  to <= from ? (t >= to ? 1 : 0) : clamp01((t - from) / (to - from));
-
-/** Obrys tekstu jak Outline w ASS: kreska o podwójnej szerokości pod wypełnieniem. */
-const stroke = (width: number, color: string): React.CSSProperties =>
-  width > 0
-    ? { WebkitTextStroke: `${width * 2}px ${color}`, paintOrder: "stroke fill" }
-    : {};
-
-type Clock = { t: number; fps: number; s: number; width: number; height: number };
-
-/** Sprężyste wejście od `startSec` (0 → 1 z lekkim przestrzeleniem). */
-const pop = (c: Clock, startSec: number, config = { damping: 14, stiffness: 160, mass: 0.6 }) =>
-  spring({ frame: Math.max(0, (c.t - startSec) * c.fps), fps: c.fps, config });
-/** Wejście bez przestrzelenia (dla rozmycia i przezroczystości). */
-const ease = (c: Clock, startSec: number, config = { damping: 200, stiffness: 120 }) =>
-  spring({ frame: Math.max(0, (c.t - startSec) * c.fps), fps: c.fps, config });
-
-/**
- * Połysk złota: jasny pas gradientu przesuwany po tekście jedną falą
- * (`-150% → 250%`) w ciągu `durSec` od `startSec`. Działa na warstwie
- * z `background-clip: text`, więc tekst pod spodem nie może mieć obrysu —
- * obrys rysuje osobna warstwa pod nią (patrz Headline).
- */
-function shimmerStyle(c: Clock, startSec: number, durSec: number, base: string, light: string): React.CSSProperties {
-  const p = ramp(c.t, startSec, startSec + durSec);
-  const x = interpolate(p, [0, 1], [-150, 250]);
-  return {
-    backgroundImage: `linear-gradient(100deg, ${base} 0%, ${base} 35%, ${light} 50%, ${base} 65%, ${base} 100%)`,
-    backgroundSize: "300% 100%",
-    backgroundPosition: `${x}% 0`,
-    WebkitBackgroundClip: "text",
-    backgroundClip: "text",
-    color: "transparent",
-  };
-}
 
 // ── Czasy słów ──────────────────────────────────────────────────────────────
 
@@ -358,10 +293,6 @@ const AiBadge: React.FC<{ s: number }> = ({ s }) => {
 
 // ── Nakładki dynamiczne ─────────────────────────────────────────────────────
 
-/** Niebieska poświata pod tekstem (odpowiednik warstwy OvGlow: \bord + \blur). */
-const textGlow = (px: number) =>
-  `0 0 ${px}px ${rgba(B.glow, 0.55)}, 0 0 ${px * 2.2}px ${rgba(B.glow, 0.28)}`;
-
 /**
  * Znacznik kategorii: szklana pigułka z obracającą się złoto-niebieską
  * obwódką, duża na środku, potem sprężyście zmniejsza się do góry kadru.
@@ -504,36 +435,6 @@ const Headline: React.FC<{ ov: DynamicOverlays; c: Clock }> = ({ ov, c }) => {
   );
 };
 
-/** Liczba na początku wartości (np. „60% LTV" → 60) — do licznika w kartach. */
-function splitValue(value: string): { prefix: string; num: number | null; suffix: string; decimals: number } {
-  const m = /^(\D*?)(\d(?:[\d\s]*\d)?(?:[.,]\d+)?)(.*)$/.exec(value);
-  if (!m) return { prefix: value, num: null, suffix: "", decimals: 0 };
-  const raw = m[2].replace(/\s/g, "");
-  const decimals = (raw.split(/[.,]/)[1] ?? "").length;
-  return { prefix: m[1], num: Number(raw.replace(",", ".")), suffix: m[3], decimals };
-}
-
-function formatNumber(n: number, decimals: number): string {
-  const fixed = n.toFixed(decimals).replace(".", ",");
-  const [int, frac] = fixed.split(",");
-  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return frac ? `${grouped},${frac}` : grouped;
-}
-
-/** Wartość w wierszu karty: liczba „nabija się" od zera przez 0,7 s. */
-const CountUp: React.FC<{ value: string; from: number; c: Clock }> = ({ value, from, c }) => {
-  const { prefix, num, suffix, decimals } = splitValue(value);
-  if (num == null) return <>{value}</>;
-  const p = ease(c, from, { damping: 30, stiffness: 60 });
-  return (
-    <>
-      {prefix}
-      {formatNumber(num * p, decimals)}
-      {suffix}
-    </>
-  );
-};
-
 const CARD_ICONS = { check: "✓", dot: "•" } as const;
 
 /**
@@ -568,12 +469,7 @@ const Card: React.FC<{ card: OverlayCard; c: Clock }> = ({ card, c }) => {
   const enter = pop(c, start, { damping: 16, stiffness: 120, mass: 0.8 });
   const fade = ramp(t, start, start + 0.18);
   const outFade = Number.isFinite(end) ? 1 - ramp(t, end - 0.2, end) : 1;
-  const textEdge: React.CSSProperties = panel
-    ? { textShadow: `0 ${1 * s}px ${2 * s}px rgba(0,0,0,0.35)` }
-    : {
-        ...stroke(3 * s, B.navyDeep),
-        textShadow: `0 ${2 * s}px ${8 * s}px ${rgba(B.navyDeep, 0.7)}, ${textGlow(10 * s)}`,
-      };
+  const textEdge: React.CSSProperties = panel ? onPanelText(s) : onImageText(s);
 
   return (
     <div
@@ -590,16 +486,7 @@ const Card: React.FC<{ card: OverlayCard; c: Clock }> = ({ card, c }) => {
     >
       {panel && (
         <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: C.cornerRadius * s,
-            background: `linear-gradient(160deg, ${rgba(B.navy, 0.66)}, ${rgba(B.navyDeep, 0.58)})`,
-            backdropFilter: `blur(${18 * s}px) saturate(1.4)`,
-            WebkitBackdropFilter: `blur(${18 * s}px) saturate(1.4)`,
-            border: `${1 * s}px solid rgba(255,255,255,0.14)`,
-            boxShadow: `inset 0 ${1 * s}px 0 rgba(255,255,255,0.18), 0 ${22 * s}px ${50 * s}px rgba(0,0,0,0.38), 0 0 ${28 * s}px ${rgba(B.glow, 0.22)}`,
-          }}
+          style={{ position: "absolute", inset: 0, ...glassPanel(s) }}
         />
       )}
       {card.title && (
@@ -704,7 +591,7 @@ const Card: React.FC<{ card: OverlayCard; c: Clock }> = ({ card, c }) => {
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
-                <CountUp value={row.value} from={rowStart + 0.05} c={c} />
+                {countUpText(c, row.value, rowStart + 0.05)}
               </span>
             )}
           </div>
@@ -728,7 +615,7 @@ function overlaysActive(ov: DynamicOverlays | null, t: number): number {
     const end = card.endSeconds == null ? Infinity : card.endSeconds;
     a = Math.max(a, Math.min(ramp(t, card.startSeconds - 0.3, card.startSeconds), 1 - ramp(t, end - 0.3, end)));
   }
-  return a;
+  return Math.max(a, elementsActive(ov.elements, t));
 }
 
 // ── Kompozycja ──────────────────────────────────────────────────────────────
@@ -777,6 +664,9 @@ export const StudioReel: React.FC<StudioReelProps> = ({
           <Headline ov={overlays} c={c} />
           {(overlays.cards ?? []).map((card, i) => (
             <Card key={i} card={card} c={c} />
+          ))}
+          {(overlays.elements ?? []).map((el, i) => (
+            <Element key={i} el={el} c={c} />
           ))}
         </>
       )}

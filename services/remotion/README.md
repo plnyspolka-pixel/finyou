@@ -69,6 +69,30 @@ wymiary presetów są w pikselach kadru 720×1280 i skalują się do rozdzielczo
 mastera. Czcionka Inter leży w `public/fonts` (OFL), więc render nie zależy od
 Google Fonts.
 
+### Katalog elementów ekranowych (`src/Elements.tsx`)
+
+Które elementy i kiedy — wybiera planer AI Studia z tekstu lektora
+(`generateOverlayElements` w `src/lib/studio-ai.server.ts`; katalog i walidacja
+w `src/lib/overlay-elements.ts`). Każdy ma `syncText` — dosłowny fragment
+mówiony, przy którym wchodzi; czas liczy `overlaysWithCueTiming` z SRT,
+element bez dopasowania wypada, a elementy górnego pasa nie nachodzą na
+siebie (maks. 4 na rolkę, licząc karty).
+
+| Element      | Kiedy pasuje                                        | Wygląd                                                         |
+| ------------ | --------------------------------------------------- | -------------------------------------------------------------- |
+| `card`       | wyliczenie / warunki 2-4 punktów                    | szklana karta, wiersze z lewej, złote ikony, liczniki wartości |
+| `stat`       | jedna mocna liczba, kwota, procent                  | duża złota liczba nabijana od zera + podpis                    |
+| `compare`    | dwie opcje (bank vs my, przed vs po)                | dwie kolumny, nasza złota                                      |
+| `steps`      | proces w kolejności (2-4 kroki)                     | numerowane kółka zapalające się po kolei                       |
+| `quote`      | jedno zdanie-klucz                                  | kursywa z cudzysłowem i złotą kreską, słowa z rozmycia         |
+| `cta`        | wezwanie do działania na końcu                      | pulsująca złota pigułka + podpis                               |
+| `sticker`    | hasło-pieczątka z 1-2 słów                          | złota ramka pod kątem, wbija się z góry                        |
+| `bars`       | 2-4 porównywalne liczby                             | poziome słupki, najlepszy złoty, liczniki                      |
+| `lowerThird` | kto mówi (imię + rola)                              | belka ze złotą kreską pod twarzą, nad napisami                 |
+
+Dawny silnik ASS (caption-burner) zna tylko `card` — pozostałe elementy
+renderuje wyłącznie Remotion.
+
 Ruch: napisy słowo po słowie (sprężyste wejście, mówione słowo jaśniejsze
 z poświatą, styl `tiktok` w kolorze podświetlenia), pytanie jako kinetyczna
 typografia (słowa z rozmycia, złoty połysk, linia pod spodem), znacznik

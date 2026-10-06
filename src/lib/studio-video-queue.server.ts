@@ -138,13 +138,17 @@ async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
   const script = job.script?.trim();
   if (script) {
     try {
-      const { generateOverlayCards } = await import("./studio-ai.server");
-      const aiCards = await generateOverlayCards(script);
-      if (aiCards.length) {
-        base = base ? { ...base, cards: [...aiCards, ...(base.cards ?? [])] } : { cards: aiCards };
+      const { generateOverlayElements } = await import("./studio-ai.server");
+      const plan = await generateOverlayElements(script);
+      if (plan.cards.length || plan.elements.length) {
+        base = {
+          ...(base ?? {}),
+          cards: [...plan.cards, ...(base?.cards ?? [])],
+          elements: [...plan.elements, ...(base?.elements ?? [])],
+        };
       }
     } catch (e) {
-      console.warn(`[Studio] karty ekranowe z AI nieudane (${job.id}): ${errMsg(e)}`);
+      console.warn(`[Studio] elementy ekranowe z AI nieudane (${job.id}): ${errMsg(e)}`);
     }
   }
   return base;
