@@ -138,13 +138,17 @@ async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
   const script = job.script?.trim();
   if (script) {
     try {
-      const { generateOverlayCards } = await import("./studio-ai.server");
-      const aiCards = await generateOverlayCards(script);
-      if (aiCards.length) {
-        base = base ? { ...base, cards: [...aiCards, ...(base.cards ?? [])] } : { cards: aiCards };
+      const { generateOverlayElements } = await import("./studio-ai.server");
+      const plan = await generateOverlayElements(script);
+      if (plan.cards.length || plan.elements.length) {
+        base = {
+          ...(base ?? {}),
+          cards: [...plan.cards, ...(base?.cards ?? [])],
+          elements: [...plan.elements, ...(base?.elements ?? [])],
+        };
       }
     } catch (e) {
-      console.warn(`[Studio] karty ekranowe z AI nieudane (${job.id}): ${errMsg(e)}`);
+      console.warn(`[Studio] elementy ekranowe z AI nieudane (${job.id}): ${errMsg(e)}`);
     }
   }
   return base;
@@ -454,8 +458,8 @@ export async function settleHeygenCompletion(
   job: JobRow,
   status: HeygenRenderStatus,
 ): Promise<SettleOutcome> {
-  const { isCaptionBurnerConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
-  const burnerConfigured = isCaptionBurnerConfigured();
+  const { isCaptionEngineConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
+  const burnerConfigured = isCaptionEngineConfigured();
   const aiBadge = isAiBadgeEnabled();
   const overlays = await overlaysForJob(job);
   const videoUrl = status.video_url ?? "";
@@ -597,7 +601,7 @@ async function finishCaptionBurn(
   }
 
   if (resolution.state === "retry" && badgeOnly) {
-    const source = burner.isCaptionBurnerConfigured() ? job.video_url_clean : null;
+    const source = burner.isCaptionEngineConfigured() ? job.video_url_clean : null;
     if (source) {
       try {
         console.warn(`[Studio] ponawiam znaczek AI (${job.id}): ${resolution.reason}`);
@@ -623,7 +627,7 @@ async function finishCaptionBurn(
     const plan = planCaptionBurn({
       captions: true,
       captionStyle: job.caption_style,
-      burnerConfigured: burner.isCaptionBurnerConfigured(),
+      burnerConfigured: burner.isCaptionEngineConfigured(),
       videoUrl: job.video_url_clean,
       srtUrl: job.subtitle_url,
       aiBadge: burner.isAiBadgeEnabled(),
@@ -686,10 +690,11 @@ export async function restyleJobCaptions(
   styleId: CustomCaptionStyleId,
 ): Promise<void> {
   if (job.status !== "ready") throw new Error("Napisy można zmienić tylko dla gotowego wideo.");
-  const { isCaptionBurnerConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
-  if (!isCaptionBurnerConfigured()) {
+  const { isCaptionEngineConfigured, isAiBadgeEnabled, NO_CAPTION_ENGINE_HINT } =
+    await import("./caption-burner.server");
+  if (!isCaptionEngineConfigured()) {
     throw new Error(
-      "Usługa wypalania napisów nie jest skonfigurowana (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET).",
+      `Usługa wypalania napisów nie jest skonfigurowana (${NO_CAPTION_ENGINE_HINT}).`,
     );
   }
   const clean = job.video_url_clean ?? (!job.captions ? job.video_url : null);
@@ -724,7 +729,7 @@ export async function retryStudioJob(job: JobRow): Promise<{ mode: "captions" | 
     job.captions &&
     job.video_url_clean &&
     job.subtitle_url &&
-    burner.isCaptionBurnerConfigured()
+    burner.isCaptionEngineConfigured()
   ) {
     const plan = planCaptionBurn({
       captions: true,

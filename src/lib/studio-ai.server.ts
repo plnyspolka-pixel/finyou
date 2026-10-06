@@ -6,6 +6,12 @@
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sanitizeOverlayCards, type OverlayCard } from "./caption-style";
+import {
+  MAX_OVERLAY_ITEMS,
+  OVERLAY_ELEMENT_CATALOG,
+  sanitizeOverlayElements,
+  type OverlayElement,
+} from "./overlay-elements";
 import { MIN_SCENES_FOR_BROLL, type SceneDecision } from "./studio-scenes";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -69,27 +75,54 @@ Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","descri
 // deterministycznie buildShortsScript (src/lib/shorts-script.ts) z gotowej,
 // sprawdzonej treści pliku źródłowego.
 
-// Karty ekranowe (tabelki/checklisty nakładane na obraz) z TEKSTU scenariusza:
-// AI nie pisze treści od siebie — wyciąga z tekstu lektora wyliczenia, kroki
-// i liczby, które da się pokazać jako 1-4 krótkie wiersze, oraz dokładny
-// mówiony fragment ("sync"), przy którym karta ma wejść. Czas liczy potem
-// overlaysWithCueTiming z SRT; karta, której sync nie pada w nagraniu,
-// wypada. Walidacja (sanitizeOverlayCards) jest czysta i testowana osobno.
-export async function generateOverlayCards(script: string): Promise<OverlayCard[]> {
+// Elementy ekranowe (karty, liczniki, porównania, kroki, cytaty, CTA,
+// pieczątki, słupki) z TEKSTU scenariusza: AI nie pisze treści od siebie —
+// wybiera z katalogu (src/lib/overlay-elements.ts) komponent pasujący do
+// tego, co lektor mówi, i wyciąga z tekstu wiersze/liczby oraz dokładny
+// mówiony fragment ("sync"), przy którym element ma wejść. Czas liczy potem
+// overlaysWithCueTiming z SRT; element, którego sync nie pada w nagraniu,
+// wypada. Walidacja (sanitizeOverlayCards / sanitizeOverlayElements) jest
+// czysta i testowana osobno.
+export type OverlayPlan = { cards: OverlayCard[]; elements: OverlayElement[] };
+
+export async function generateOverlayElements(script: string): Promise<OverlayPlan> {
+  const catalog = OVERLAY_ELEMENT_CATALOG.map(
+    (c) => `- ${c.kind}: ${c.when}. Kształt: ${c.shape}`,
+  ).join("\n");
   const parsed = await chatJson(
-    `Planujesz TEKSTY EKRANOWE krótkiego pionowego wideo firmy finansowej (napisy-nakładki na obrazie mówiącego lektora). ${BRAND_CONTEXT}
-Dostajesz dokładny tekst mówiony przez lektora. Wybierz co najwyżej 2 miejsca, w których na ekranie warto pokazać kartę: wyliczenie, kroki, warunki albo liczby, które lektor wymienia.
+    `Jesteś montażystą ELEMENTÓW EKRANOWYCH krótkiego pionowego wideo firmy finansowej (grafiki nakładane na obraz mówiącego lektora, w górnym pasie kadru nad twarzą). ${BRAND_CONTEXT}
+Dostajesz dokładny tekst mówiony przez lektora. Wybierz od 0 do ${MAX_OVERLAY_ITEMS} miejsc, w których na ekranie warto pokazać element, i dla każdego dobierz komponent z katalogu, który NAJLEPIEJ pasuje do tego, co lektor w tym momencie mówi.
+
+KATALOG (kiedy pasuje → kształt JSON):
+${catalog}
 
 ZASADY:
-- Treść kart WYŁĄCZNIE z tekstu lektora — niczego nie dopisuj i nie interpretuj.
-- Karta: opcjonalny "title" (WIELKIMI LITERAMI, do 24 znaków), 1-4 wiersze; wiersz: "text" do 26 znaków (skrót tego, co mówi lektor), opcjonalnie "value" (liczba/kwota/procent z tekstu, do 10 znaków), "icon": "check" (warunek/krok spełniony) albo "dot" (punkt wyliczenia).
-- "sync" to DOSŁOWNY, ciągły fragment tekstu lektora (5-12 słów, skopiowany znak w znak), w którym zaczyna on mówić o treści karty.
-- Gdy tekst nie zawiera nic, co sensownie układa się w kartę — zwróć pustą listę. Brak karty jest lepszy niż karta na siłę.
+- Treść WYŁĄCZNIE z tekstu lektora — niczego nie dopisuj, nie interpretuj, nie wymyślaj liczb.
+- Każdy element ma "sync": DOSŁOWNY, ciągły fragment tekstu lektora (5-12 słów, skopiowany znak w znak), w którym lektor zaczyna mówić o treści elementu. Elementy mają różne "sync" i są w kolejności mówienia.
+- Jeden element na jedną myśl; nie powtarzaj tej samej treści w dwóch komponentach. Nie używaj dwa razy tego samego komponentu, chyba że to "card".
+- Liczba → "stat" (gdy jedna) albo "bars" (gdy 2-4 porównywalne). Zestawienie dwóch opcji → "compare". Kolejność działań → "steps". Wyliczenie warunków → "card". Hasło z naciskiem → "sticker". "cta" tylko przy ostatnim zdaniu z wezwaniem do działania i tylko jeden. "quote" rzadko — gdy jedno zdanie jest sednem odcinka.
+- Elementów ma być MAŁO: zwykle 2-3. Gdy tekst nie zawiera nic, co sensownie układa się w element — zwróć pustą listę. Brak elementu jest lepszy niż element na siłę.
 
-Zwracaj WYŁĄCZNIE JSON: {"cards":[{"title":"...","rows":[{"icon":"dot","text":"...","value":"..."}],"sync":"..."}]}`,
+Zwracaj WYŁĄCZNIE JSON: {"elements":[ ...obiekty w kształtach z katalogu... ]}`,
     script,
   );
-  return sanitizeOverlayCards(parsed.cards);
+  const list = Array.isArray(parsed.elements) ? parsed.elements : [];
+  const cards = sanitizeOverlayCards(
+    list.filter(
+      (e) => typeof e === "object" && e !== null && (e as { kind?: unknown }).kind === "card",
+    ),
+  );
+  const elements = sanitizeOverlayElements(
+    list.filter(
+      (e) => typeof e === "object" && e !== null && (e as { kind?: unknown }).kind !== "card",
+    ),
+  ).slice(0, Math.max(0, MAX_OVERLAY_ITEMS - cards.length));
+  return { cards, elements };
+}
+
+/** Zgodność wstecz: same karty (np. dla silnika ASS, który elementów nie zna). */
+export async function generateOverlayCards(script: string): Promise<OverlayCard[]> {
+  return (await generateOverlayElements(script)).cards;
 }
 
 // Plan scen: AI NIE dostaje scenariusza do przepisania — dostaje gotowe,

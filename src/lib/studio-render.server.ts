@@ -45,7 +45,14 @@ import {
   narrationCutTimes,
   splitMp3AtTimes,
 } from "./studio-narration";
-import { cuesFromAlignment, cuesToSrt, shiftCues } from "./studio-subtitles";
+import {
+  cuesFromAlignment,
+  cuesToSrt,
+  shiftCues,
+  shiftWords,
+  wordsFromAlignment,
+  type TimedWord,
+} from "./studio-subtitles";
 import { DEFAULT_TTS_MODEL_ID, parseTtsModelId, type TtsModelId } from "./studio-tts-models";
 
 export type StudioRenderResult = {
@@ -87,6 +94,8 @@ type Narration = {
   pieces: Array<ArrayBuffer | Uint8Array<ArrayBuffer>>;
   /** Kwestie napisów na osi czasu gotowego filmu. */
   cues: SrtCue[];
+  /** Słowa z czasami (ta sama oś) — napisy słowo po słowie w renderze Remotion. */
+  words: TimedWord[];
   note: string | null;
 };
 
@@ -118,11 +127,12 @@ async function narrateAsOne(
     voiceSettings: NARRATION_VOICE_SETTINGS,
   });
   const cues = cuesFromAlignment(alignment);
+  const words = wordsFromAlignment(alignment);
   if (segments.length === 1)
-    return { pieces: [audio as Uint8Array<ArrayBuffer>], cues, note: null };
+    return { pieces: [audio as Uint8Array<ArrayBuffer>], cues, words, note: null };
   const pieces = splitMp3AtTimes(audio, narrationCutTimes(segments, alignment));
   if (pieces.length !== segments.length) throw new Error("Lektor: liczba kawałków ≠ liczba scen.");
-  return { pieces, cues, note: null };
+  return { pieces, cues, words, note: null };
 }
 
 /**
@@ -138,6 +148,7 @@ async function narratePerScene(
   const { ttsElevenLabsWithTimestamps } = await import("./avatar-faq.server");
   const pieces: Uint8Array<ArrayBuffer>[] = [];
   const cues: SrtCue[] = [];
+  const words: TimedWord[] = [];
   let offset = 0;
   for (const [i, text] of segments.entries()) {
     const { audio, alignment } = await ttsElevenLabsWithTimestamps({
@@ -150,11 +161,13 @@ async function narratePerScene(
     });
     pieces.push(audio as Uint8Array<ArrayBuffer>);
     cues.push(...shiftCues(cuesFromAlignment(alignment), offset));
+    words.push(...shiftWords(wordsFromAlignment(alignment), offset));
     offset += mp3DurationSeconds(audio);
   }
   return {
     pieces,
     cues,
+    words,
     note: "Lektor syntezowany per scena (jednym ciągiem się nie udało).",
   };
 }
@@ -175,11 +188,15 @@ async function narrate(
 
 /**
  * Plik SRT z kwestii → bucket `studio-media` (trwały publiczny link; usługa
- * wypalania pobiera go po renderze HeyGena, także z innego ticka).
+ * wypalania pobiera go po renderze HeyGena, także z innego ticka). Obok,
+ * pod tą samą nazwą z końcówką `.words.json`, zapisujemy czasy słów — render
+ * Remotion pokazuje napisy słowo po słowie w rytmie lektora
+ * (src/lib/remotion-render.server.ts, `wordsUrlFor`). Brak tego pliku nie
+ * psuje niczego: wtedy czasy słów liczymy proporcjonalnie z kwestii.
  */
-async function storeSubtitles(cues: SrtCue[], name: string): Promise<string> {
+async function storeSubtitles(cues: SrtCue[], words: TimedWord[], name: string): Promise<string> {
   if (!cues.length) throw new Error("Napisy: ElevenLabs nie oddał czasów ani jednego słowa.");
-  const { storeMedia } = await import("./media-storage.server");
+  const { storeMedia, uploadEnsuringBucket } = await import("./media-storage.server");
   const stored = await storeMedia(new TextEncoder().encode(cuesToSrt(cues)), {
     contentType: "text/plain; charset=utf-8",
     visibility: "public",
@@ -187,6 +204,20 @@ async function storeSubtitles(cues: SrtCue[], name: string): Promise<string> {
     name,
     ext: "srt",
   });
+  if (words.length) {
+    try {
+      await uploadEnsuringBucket(
+        stored.bucket,
+        stored.path.replace(/\.srt$/, ".words.json"),
+        new TextEncoder().encode(JSON.stringify({ words })),
+        "application/json",
+      );
+    } catch (e) {
+      console.warn(
+        `[Studio] czasy słów nie zapisane (napisy pójdą z kwestii): ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
   return stored.url;
 }
 
@@ -203,7 +234,10 @@ async function narrateWithSubtitles(
   const narration = await narrate(args, modelId, segments);
   const name = (args.name ?? args.topic).trim() || "rolka";
   try {
-    return { ...narration, subtitleUrl: await storeSubtitles(narration.cues, name) };
+    return {
+      ...narration,
+      subtitleUrl: await storeSubtitles(narration.cues, narration.words, name),
+    };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (args.captions) throw new Error(`Napisy z czasów ElevenLabs nie powstały: ${msg}`);

@@ -1,5 +1,10 @@
 # caption-burner — FFmpeg dla Studia publikacji (napisy + kompresja)
 
+> **Od 10.2026 napisy rolek renderuje Remotion Lambda** (`services/remotion`),
+> gdy w aplikacji są sekrety `REMOTION_RENDER_URL` / `REMOTION_RENDER_SECRET`.
+> Ta usługa zostaje do **kompresji przed publikacją** (zadanie `transcode`,
+> którego Remotion nie robi) i jako zapasowy silnik napisów bez Remotion.
+
 Mikrousługa FFmpeg + libass o dwóch zadaniach:
 
 1. **Napisy** — bierze **czysty master z HeyGena** i **gotowy plik ASS** (styl

@@ -1,20 +1,35 @@
-# remotion — render wideo na AWS Lambda (Remotion Lambda)
+# remotion — render rolek Studia na AWS Lambda (Remotion Lambda)
 
 Osobny projekt (własne `package.json`, npm) z kompozycjami Remotion i skryptami
-do wdrożenia i renderowania na AWS Lambda.
+do wdrożenia i renderowania na AWS Lambda. Zastępuje usługę FFmpeg na Renderze
+w roli **silnika napisów**: napisy, znaczek „AI" i nakładki dynamiczne rolek
+są tu komponentami React (`src/StudioReel.tsx`), a nie plikiem ASS.
 
 ## Co stoi na AWS (region `eu-central-1`)
 
-`npm run lambda:deploy` zakłada / aktualizuje: funkcję Lambda
-`remotion-render-<wersja>-…`, bucket S3 `remotionlambda-eucentral1-…`
-(strona w `sites/finyou/`, wyniki w `renders/`) oraz grupę logów CloudWatch
-(retencja 14 dni). Funkcja korzysta z roli IAM `remotion-lambda-role`
-(polityka inline z `npx remotion lambda policies role`). Aktualne nazwy:
-`npx remotion lambda functions ls` i `npx remotion lambda sites ls`.
+`npm run lambda:deploy` zakłada / aktualizuje:
+
+- funkcję Lambda `remotion-render-<wersja>-…` (render klatek, 2 GB RAM),
+- bucket S3 `remotionlambda-eucentral1-…` (strona w `sites/finyou/`, wyniki
+  w `renders/`, reguły wygasania — render zlecony z `deleteAfter: "1-day"`
+  znika sam),
+- grupę logów CloudWatch (retencja 14 dni),
+- **gateway** `finyou-remotion-gateway` (`gateway.mjs`) z adresem Function
+  URL — mała Lambda, przez którą backend Finance You zleca rendery i odbiera
+  wynik. Chodzi na tej samej roli IAM `remotion-lambda-role`, co funkcja
+  renderująca.
+
+Skrypt na końcu drukuje `REMOTION_RENDER_URL` i `REMOTION_RENDER_SECRET` —
+wpisz je w sekretach Finance You (Lovable → ustawienia → sekrety). Od tej
+chwili Studio wysyła napisy na Remotion; usługa caption-burner zostaje
+do kompresji przed publikacją (i jako zapas napisów, gdy Remotion nie jest
+skonfigurowany). Szczegóły przełącznika: `src/lib/caption-burner.server.ts`
+i `src/lib/remotion-render.server.ts` w aplikacji.
 
 Nazwa funkcji zawiera wersję Remotion — po podbiciu `remotion`/`@remotion/*`
 trzeba ponownie uruchomić `npm run lambda:deploy` (powstanie nowa funkcja,
-starą można usunąć: `npx remotion lambda functions rmall`).
+starą można usunąć: `npx remotion lambda functions rmall`; gateway dostanie
+nową nazwę w zmiennych środowiskowych).
 
 ## Użycie
 
@@ -25,16 +40,106 @@ aws login --remote --region eu-central-1 --profile finyou   # jeśli sesja wygas
 eval "$(aws configure export-credentials --profile finyou --format env)"
 
 npm run studio                 # podgląd kompozycji lokalnie
-npm run lambda:deploy          # funkcja + bucket + strona (idempotentne)
+npm run lambda:deploy          # funkcja + bucket + strona + gateway (idempotentne)
 npm run lambda:render          # render HelloFinanceYou na Lambdzie
-node render.mjs HelloFinanceYou '{"title":"Pożyczka","subtitle":"w 24 h"}'
+node render.mjs StudioReel @props.json   # render rolki z pliku z propsami
 ```
 
 `render.mjs` wypisuje ścieżkę S3 wyniku, podpisany link (1 h) i szacowany koszt.
 
-## Limity
+Po wdrożeniu sprawdź gateway: `curl https://<url>/health` (bez tokenu) oraz
+w aplikacji `heygen_status` → `remotion_render`.
 
-Konto ma limit **10 równoległych wywołań Lambdy**. Render dzieli film na
-kawałki po `framesPerLambda` klatek (+1 wywołanie orkiestrujące), więc dłuższe
-filmy przy obecnym limicie trzeba renderować z większym `framesPerLambda`
-albo podnieść limit w Service Quotas (Lambda → Concurrent executions).
+## Kompozycja `StudioReel`
+
+Wejście (`inputProps`, buduje je `buildStudioReelInput` w aplikacji):
+
+| Pole       | Znaczenie                                                                 |
+| ---------- | ------------------------------------------------------------------------- |
+| `videoUrl` | https do czystego mastera (HeyGen / bucket `studio-media`)                |
+| `cues`     | kwestie SRT **już pocięte pod styl** (`chunkCues`); `[]` = bez napisów    |
+| `style`    | preset z `CUSTOM_CAPTION_STYLES` (`src/lib/caption-style.ts`) albo `null` |
+| `aiBadge`  | znaczek „AI" w prawym górnym rogu                                         |
+| `overlays` | nakładki dynamiczne z czasami już dopasowanymi do SRT                     |
+| `words`    | czasy słów z ElevenLabs (plik `.words.json` obok SRT); `[]` = proporcjonalnie |
+
+Długość i kadr kompozycja czyta z samego pliku (`calculateMetadata`,
+mediabunny — nagłówki MP4 zakresami HTTP, bez dekodowania). Wszystkie
+wymiary presetów są w pikselach kadru 720×1280 i skalują się do rozdzielczości
+mastera. Czcionka Inter leży w `public/fonts` (OFL), więc render nie zależy od
+Google Fonts.
+
+### Katalog elementów ekranowych (`src/Elements.tsx`)
+
+Które elementy i kiedy — wybiera planer AI Studia z tekstu lektora
+(`generateOverlayElements` w `src/lib/studio-ai.server.ts`; katalog i walidacja
+w `src/lib/overlay-elements.ts`). Każdy ma `syncText` — dosłowny fragment
+mówiony, przy którym wchodzi; czas liczy `overlaysWithCueTiming` z SRT,
+element bez dopasowania wypada, a elementy górnego pasa nie nachodzą na
+siebie (maks. 4 na rolkę, licząc karty).
+
+| Element      | Kiedy pasuje                                        | Wygląd                                                         |
+| ------------ | --------------------------------------------------- | -------------------------------------------------------------- |
+| `card`       | wyliczenie / warunki 2-4 punktów                    | szklana karta, wiersze z lewej, złote ikony, liczniki wartości |
+| `stat`       | jedna mocna liczba, kwota, procent                  | duża złota liczba nabijana od zera + podpis                    |
+| `compare`    | dwie opcje (bank vs my, przed vs po)                | dwie kolumny, nasza złota                                      |
+| `steps`      | proces w kolejności (2-4 kroki)                     | numerowane kółka zapalające się po kolei                       |
+| `quote`      | jedno zdanie-klucz                                  | kursywa z cudzysłowem i złotą kreską, słowa z rozmycia         |
+| `cta`        | wezwanie do działania na końcu                      | pulsująca złota pigułka + podpis                               |
+| `sticker`    | hasło-pieczątka z 1-2 słów                          | złota ramka pod kątem, wbija się z góry                        |
+| `bars`       | 2-4 porównywalne liczby                             | poziome słupki, najlepszy złoty, liczniki                      |
+| `lowerThird` | kto mówi (imię + rola)                              | belka ze złotą kreską pod twarzą, nad napisami                 |
+
+Dawny silnik ASS (caption-burner) zna tylko `card` — pozostałe elementy
+renderuje wyłącznie Remotion.
+
+Ruch: napisy słowo po słowie (sprężyste wejście, mówione słowo jaśniejsze
+z poświatą, styl `tiktok` w kolorze podświetlenia), pytanie jako kinetyczna
+typografia (słowa z rozmycia, złoty połysk, linia pod spodem), znacznik
+w szklanej pigułce z obracającą się złoto-niebieską obwódką, karty na
+szkle z wjeżdżającymi wierszami i licznikami wartości, do tego winieta
+i przyciemnienia pod tekstem. Wszystko liczone z numeru klatki — żadnych
+animacji „na czas" (Framer Motion, CSS transitions), bo Lambda renderuje
+film w kawałkach na różnych maszynach.
+
+Stałe wyglądu (kolory brandu, układ nakładek, znaczek) kompozycja importuje
+wprost z `../../../src/lib/caption-style.ts` — jedno źródło prawdy dla
+podglądu w panelu, ASS (caption-burner) i Remotion.
+
+### Test lokalny
+
+```bash
+ffmpeg -f lavfi -i testsrc2=size=720x1280:rate=25 -f lavfi -i sine=frequency=440 \
+  -t 8 -pix_fmt yuv420p -c:v libx264 -c:a aac out/in.mp4
+# props.json: { "videoUrl": "http://127.0.0.1:8099/in.mp4", "cues": [...], "style": {...}, "aiBadge": true, "overlays": {...} }
+npx remotion render StudioReel out/test.mp4 --props=out/props.json
+```
+
+Serwer plików musi obsługiwać nagłówek `Range` (python `http.server` nie
+obsługuje). Chromium bez kodeka H.264 (np. z Playwrighta) renderuje poprawnie —
+klatki wideo wyciąga kompozytor Remotion, nie przeglądarka.
+
+## Gateway — API
+
+Każde wywołanie poza `/health` wymaga `Authorization: Bearer <REMOTION_RENDER_SECRET>`.
+
+| Metoda   | Ścieżka          | Co robi                                                                      |
+| -------- | ---------------- | ---------------------------------------------------------------------------- |
+| `GET`    | `/health`        | `{ ok, engine: "remotion", function, site, bucket, concurrency }`            |
+| `POST`   | `/jobs`          | `{ video_url, cues, style, ai_badge, overlays, name }` → `202 { id }`        |
+| `GET`    | `/jobs/:id`      | `{ status: queued\|processing\|done\|failed, error, progress, bytes, cost }` |
+| `GET`    | `/jobs/:id/file` | `{ url, bytes }` — podpisany link S3 (1 h); `409`, gdy render trwa           |
+| `DELETE` | `/jobs/:id`      | kasuje pliki renderu w S3                                                    |
+
+## Koszty i limity
+
+- Render rolki 60 s (720×1280, 30 kl./s) to ok. 0,01–0,02 $ (Lambda + S3);
+  gateway i odpytywanie stanu — ułamki centa. `GET /jobs/:id` zwraca szacunek
+  Remotion w polu `cost`, a kolejka Studia zapisuje go w `note`.
+- Konto ma limit **10 równoległych wywołań Lambdy**. Gateway renderuje
+  z `concurrency = 8` (REMOTION_CONCURRENCY): 1 Lambda orkiestrująca + 8
+  renderujących. Więcej równoległych rolek naraz = kolejka po stronie
+  Studia (tick co 10 min i tak zleca po kilka). Wyższy limit: Service Quotas →
+  Lambda → Concurrent executions.
+- Licencja Remotion: darmowa dla osób prywatnych i firm do 3 osób; większa
+  firma potrzebuje licencji (plan „Automators" przy renderach na Lambdzie).

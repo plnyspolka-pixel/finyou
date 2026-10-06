@@ -2045,9 +2045,10 @@ function StudioPage() {
                       </p>
                       {!captionBurnerOn && (
                         <p className="text-xs text-amber-600 dark:text-amber-500">
-                          Brak usługi napisów (sekrety CAPTION_BURNER_URL i CAPTION_BURNER_SECRET,
-                          opis w docs/studio-publikacji.md) — rolka z napisami zatrzyma się z błędem
-                          do ponowienia po konfiguracji.
+                          Brak silnika napisów (sekrety REMOTION_RENDER_URL i REMOTION_RENDER_SECRET
+                          albo CAPTION_BURNER_URL i CAPTION_BURNER_SECRET, opis w
+                          docs/studio-publikacji.md) — rolka z napisami zatrzyma się z błędem do
+                          ponowienia po konfiguracji.
                         </p>
                       )}
                       {aiBadgeOn && (
@@ -2059,8 +2060,8 @@ function StudioPage() {
                           }
                         >
                           {captionBurnerOn
-                            ? "Każda rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner razem z napisami)."
-                            : "Znaczek „AI” w rogu wymaga usługi caption-burner — bez niej rolki wyjdą bez znaczka."}
+                            ? "Każda rolka dostaje w prawym górnym rogu mały znaczek „AI” (renderowany razem z napisami)."
+                            : "Znaczek „AI” w rogu wymaga silnika napisów (Remotion albo caption-burner) — bez niego rolki wyjdą bez znaczka."}
                         </p>
                       )}
                     </>

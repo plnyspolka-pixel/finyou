@@ -127,12 +127,14 @@ co poprawić.
 | `HEYGEN_API_KEY`                  | Generowanie wideo awatara (już używany przez Awatar FAQ)                                                     |
 | `PEXELS_API_KEY`                  | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)                                             |
 | `HEYGEN_CAPTION_STYLE`            | Opcjonalny styl napisów HeyGen dla ścieżek spoza Studia (Awatar FAQ); Studio napisów HeyGena nie zamawia     |
-| `CAPTION_BURNER_URL`              | Adres usługi FFmpeg (napisy rolek + kompresja przed publikacją) — bez niej rolki z napisami nie wychodzą      |
-| `CAPTION_BURNER_SECRET`           | Sekret tej usługi (Bearer) — bez pary URL+sekret zadania z napisami padają do ponowienia, publikacja bez kompresji |
+| `REMOTION_RENDER_URL`             | Adres gatewaya Remotion Lambda (napisy, znaczek „AI", nakładki rolek na AWS) — drukuje go `npm run lambda:deploy` w `services/remotion`; ma pierwszeństwo przed usługą FFmpeg |
+| `REMOTION_RENDER_SECRET`          | Sekret tego gatewaya (Bearer)                                                                                |
+| `CAPTION_BURNER_URL`              | Adres usługi FFmpeg (kompresja przed publikacją; napisy, gdy nie ma Remotion) — bez niej i bez Remotion rolki z napisami nie wychodzą |
+| `CAPTION_BURNER_SECRET`           | Sekret tej usługi (Bearer) — bez pary URL+sekret publikacja idzie bez kompresji                             |
 | `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na wynik usługi, zanim zadanie padnie do ponowienia (domyślnie 45)                    |
 | `VIDEO_RENDITION_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na kompresję wideo, zanim ponowimy / wyślemy oryginał (domyślnie 120)                 |
 | `STUDIO_AI_BADGE`                 | Opcjonalny; `0` / `off` wyłącza znaczek „AI" w rogu rolek (domyślnie włączony)                               |
-| `STUDIO_DYNAMIC_OVERLAYS`         | Opcjonalny; `0` / `off` wyłącza wypalane nakładki dynamiczne rolek z paczki 250 pytań (domyślnie włączone)   |
+| `STUDIO_DYNAMIC_OVERLAYS`         | Opcjonalny; `0` / `off` wyłącza nakładki dynamiczne rolek: znacznik, pytanie i elementy ekranowe dobierane przez AI z katalogu (karta, licznik, porównanie, kroki, cytat, CTA, pieczątka, słupki — `src/lib/overlay-elements.ts`; pełny zestaw tylko w renderze Remotion) |
 | `STUDIO_SAVE_TO_MATERIALS`        | Opcjonalny; `0` / `off` wyłącza zapis gotowych rolek do /admin/materialy (domyślnie włączony)                |
 | `STUDIO_MATERIALS_AUDIENCE`       | Opcjonalny; domyślna kategoria rolek w materiałach: `klient` / `inwestor` / `posrednik` (domyślnie `klient`) |
 | `ELEVENLABS_API_KEY`              | Lektor TTS (już używany)                                                                                     |

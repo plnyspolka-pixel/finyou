@@ -120,6 +120,15 @@ export function shiftCues(cues: SrtCue[], offsetSeconds: number): SrtCue[] {
   }));
 }
 
+/** Jak `shiftCues`, dla słów. */
+export function shiftWords(words: TimedWord[], offsetSeconds: number): TimedWord[] {
+  return words.map((w) => ({
+    ...w,
+    start: round3(w.start + offsetSeconds),
+    end: round3(w.end + offsetSeconds),
+  }));
+}
+
 const round3 = (v: number) => Math.round(v * 1000) / 1000;
 const pad = (n: number, w: number) => String(n).padStart(w, "0");
 

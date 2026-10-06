@@ -5,18 +5,23 @@
   "scripts": {
     "studio": "remotion studio",
     "render:local": "remotion render HelloFinanceYou out/hello.mp4",
+    "render:reel": "remotion render StudioReel out/reel.mp4 --props=out/props.json",
     "lambda:deploy": "node deploy.mjs",
     "lambda:render": "node render.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.533",
+    "@remotion/fonts": "4.0.533",
     "@remotion/lambda": "4.0.533",
+    "mediabunny": "1.56.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "remotion": "4.0.533"
   },
   "devDependencies": {
+    "@aws-sdk/client-lambda": "3.986.0",
     "@types/react": "19.1.8",
+    "adm-zip": "0.6.1",
     "typescript": "5.8.3"
   }
 }

@@ -1,4 +1,6 @@
-# Render.com — DARMOWY hosting usługi wypalania napisów (Blueprint).
+# Render.com — DARMOWY hosting usługi FFmpeg (Blueprint): kompresja przed
+# publikacją i zapasowy silnik napisów (napisy rolek renderuje Remotion Lambda,
+# gdy ustawione są REMOTION_RENDER_URL / REMOTION_RENDER_SECRET — services/remotion).
 # Render → New → Blueprint → wskaż to repo → Apply. Plan „free": usługa usypia
 # po 15 min bez ruchu i budzi się ok. minutę przy pierwszym zapytaniu — klient
 # w src/lib/caption-burner.server.ts czeka na to (limit 120 s), a przerwane

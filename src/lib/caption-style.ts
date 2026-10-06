@@ -15,6 +15,11 @@
 // libass skaluje je proporcjonalnie, gdy plik ma inną rozdzielczość.
 
 import { fixBrandInCues } from "./caption-brand";
+import {
+  scheduleCardsAndElements,
+  syncOverlayElements,
+  type OverlayElement,
+} from "./overlay-elements";
 
 export type SrtCue = {
   /** Sekundy od początku filmu. */
@@ -684,6 +689,12 @@ export type DynamicOverlays = {
   headlineSyncText?: string | null;
   /** Karty informacyjne (checklisty, tabelki) — opcjonalne. */
   cards?: OverlayCard[];
+  /**
+   * Pozostałe elementy katalogu (licznik, porównanie, kroki, cytat, CTA,
+   * pieczątka, słupki, belka) — rysuje je tylko render Remotion
+   * (src/lib/overlay-elements.ts); ASS je pomija.
+   */
+  elements?: OverlayElement[];
 };
 
 /**
@@ -1046,7 +1057,7 @@ const normalizeWords = (text: string): string[] =>
  * złych kwestiach). Start = początek kwestii z pierwszym słowem, koniec =
  * koniec kwestii z ostatnim. `null` bez pełnego dopasowania.
  */
-function spokenRange(cues: SrtCue[], text: string): { start: number; end: number } | null {
+export function spokenRange(cues: SrtCue[], text: string): { start: number; end: number } | null {
   const target = normalizeWords(text);
   if (!target.length) return null;
   const words: { word: string; cue: SrtCue }[] = [];
@@ -1073,29 +1084,27 @@ export function overlaysWithCueTiming(ov: DynamicOverlays, cues: SrtCue[]): Dyna
   const headText = ov.headlineSyncText ?? ov.headline;
   const head = headText ? spokenRange(cues, headText) : null;
   if (head) out.headlineEndSeconds = head.end + 0.25;
-  if (ov.cards?.length) {
-    const synced = ov.cards.flatMap((card) => {
-      // Wiersze z własnym fragmentem dostają start z SRT; bez dopasowania
-      // zostają w sekwencji (nie wypadają — tekst wiersza i tak jest na temat).
-      const rows = card.rows.map((row) => {
-        if (!row.syncText) return row;
-        const r = spokenRange(cues, row.syncText);
-        return r ? { ...row, startSeconds: r.start } : row;
-      });
-      const endRange = card.endSyncText ? spokenRange(cues, card.endSyncText) : null;
-      const endSeconds = endRange ? endRange.end + 0.3 : (card.endSeconds ?? null);
-      if (!card.syncText) return [{ ...card, rows, endSeconds }];
-      const range = spokenRange(cues, card.syncText);
-      return range ? [{ ...card, rows, endSeconds, startSeconds: range.start }] : [];
+  const cards = (ov.cards ?? []).flatMap((card) => {
+    // Wiersze z własnym fragmentem dostają start z SRT; bez dopasowania
+    // zostają w sekwencji (nie wypadają — tekst wiersza i tak jest na temat).
+    const rows = card.rows.map((row) => {
+      if (!row.syncText) return row;
+      const r = spokenRange(cues, row.syncText);
+      return r ? { ...row, startSeconds: r.start } : row;
     });
-    // Karty nie nachodzą na siebie: otwarta karta (endSeconds null) kończy
-    // się chwilę przed startem następnej; ostatnia zostaje do końca filmu.
-    synced.sort((a, b) => a.startSeconds - b.startSeconds);
-    out.cards = synced.map((card, i) => {
-      const next = synced[i + 1];
-      if (card.endSeconds != null || !next) return card;
-      return { ...card, endSeconds: Math.max(next.startSeconds - 0.3, card.startSeconds + 2) };
-    });
+    const endRange = card.endSyncText ? spokenRange(cues, card.endSyncText) : null;
+    const endSeconds = endRange ? endRange.end + 0.3 : (card.endSeconds ?? null);
+    if (!card.syncText) return [{ ...card, rows, endSeconds }];
+    const range = spokenRange(cues, card.syncText);
+    return range ? [{ ...card, rows, endSeconds, startSeconds: range.start }] : [];
+  });
+  const elements = syncOverlayElements(ov.elements ?? [], cues, spokenRange);
+  // Karty i elementy nie nachodzą na siebie: otwarty wpis kończy się chwilę
+  // przed startem następnego; ostatni zostaje do końca filmu.
+  if (ov.cards?.length || ov.elements?.length) {
+    const scheduled = scheduleCardsAndElements(cards, elements);
+    if (ov.cards?.length) out.cards = scheduled.cards;
+    if (ov.elements?.length) out.elements = scheduled.elements;
   }
   return out;
 }
