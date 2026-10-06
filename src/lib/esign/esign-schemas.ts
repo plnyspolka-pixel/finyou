@@ -14,9 +14,11 @@ export const CompanySchema = z.object({
 });
 
 export const SignerInput = z.object({
-  kind: z.enum(["zewnetrzny", "inwestor", "ja"]).default("zewnetrzny"),
+  kind: z.enum(["zewnetrzny", "inwestor", "ja", "klient"]).default("zewnetrzny"),
   /** Dla kind=inwestor: konto inwestora z systemu. */
   userId: z.string().uuid().optional().nullable(),
+  /** Dla kind=klient: klient pożyczkowy z systemu (clients.id). */
+  clientId: z.string().uuid().optional().nullable(),
   fullName: z.string().trim().max(160).optional().nullable(),
   email: z.string().trim().email().max(255).optional().nullable(),
   phone: z.string().trim().max(30).optional().nullable(),
@@ -27,17 +29,27 @@ export const SignerInput = z.object({
   orderNo: z.number().int().min(1).max(50).optional(),
 });
 
-export const CreateInput = z.object({
-  title: z.string().trim().min(3).max(200),
-  message: z.string().trim().max(2000).optional().nullable(),
-  signingMode: z.enum(["rownolegle", "kolejno"]).default("rownolegle"),
-  expiresInDays: z.number().int().min(1).max(90).default(TOKEN_TTL_DAYS),
-  fileName: z.string().trim().min(1).max(200),
-  fileBase64: z.string().min(16),
-  context: z.record(z.string(), z.unknown()).optional(),
-  signers: z.array(SignerInput).min(1).max(10),
-  sendNow: z.boolean().default(true),
-});
+export const CreateInput = z
+  .object({
+    title: z.string().trim().min(3).max(200),
+    message: z.string().trim().max(2000).optional().nullable(),
+    signingMode: z.enum(["rownolegle", "kolejno"]).default("rownolegle"),
+    expiresInDays: z.number().int().min(1).max(90).default(TOKEN_TTL_DAYS),
+    /** Źródło A: wgrany plik PDF. */
+    fileName: z.string().trim().min(1).max(200).optional().nullable(),
+    fileBase64: z.string().min(16).optional().nullable(),
+    /** Źródło B: wygenerowana umowa z kreatora (generated_documents.id; DOCX → PDF). */
+    generatedDocumentId: z.string().uuid().optional().nullable(),
+    /** Powiązania koperty z klientem pożyczkowym i wnioskiem. */
+    clientId: z.string().uuid().optional().nullable(),
+    loanApplicationId: z.string().uuid().optional().nullable(),
+    context: z.record(z.string(), z.unknown()).optional(),
+    signers: z.array(SignerInput).min(1).max(10),
+    sendNow: z.boolean().default(true),
+  })
+  .refine((v) => Boolean(v.fileBase64) || Boolean(v.generatedDocumentId), {
+    message: "Wgraj plik PDF albo wskaż wygenerowaną umowę.",
+  });
 
 export type CreateEnvelopeInput = z.infer<typeof CreateInput>;
 
@@ -47,6 +59,18 @@ export const TokenInput = z.object({ token: z.string().min(20).max(128) });
 export const searchSignerCandidatesInput = z.object({ q: z.string().trim().min(2).max(120) });
 
 export const createEnvelopeInput = CreateInput;
+
+/** Klient pożyczkowy z systemu: po frazie albo po id (prefill z karty wniosku). */
+export const searchSignerClientsInput = z.object({
+  q: z.string().trim().max(120).optional(),
+  clientId: z.string().uuid().optional(),
+});
+
+/** Wygenerowane umowy klienta / wniosku — do wysyłki bez wgrywania pliku. */
+export const listClientDocumentsInput = z.object({
+  clientId: z.string().uuid().optional(),
+  loanApplicationId: z.string().uuid().optional(),
+});
 
 export const sendEnvelopeInput = z.object({ envelopeId: z.string().uuid() });
 

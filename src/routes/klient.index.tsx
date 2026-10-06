@@ -40,6 +40,7 @@ import { NumberTicker } from "@/components/ui/number-ticker";
 import { SinglePageApplicationForm } from "@/components/landing/single-page-application-form";
 import { MissingInfoVoiceAgent } from "@/components/client/missing-info-voice-agent";
 import { ClientStatusCard } from "@/components/client/ClientStatusCard";
+import { ClientEsignBanner } from "@/components/esign/client-esign-panel";
 import { evaluateApplicationCore, missingLabels } from "@/lib/application-completeness";
 
 import { toast } from "sonner";
@@ -477,6 +478,8 @@ function KlientDashboard() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {/* Dokumenty do e-podpisu (umowa od Finance You / inwestora) — tylko gdy coś czeka. */}
+      <ClientEsignBanner />
       {loanRow?.id && <ClientStatusCard />}
       {loanRow?.id && <MissingInfoVoiceAgent />}
       {!loanRow?.id && (

@@ -68,6 +68,9 @@ export interface EnvelopeRow {
   completed_at: string | null;
   expires_at: string;
   context: JsonObject;
+  client_id: string | null;
+  loan_application_id: string | null;
+  generated_document_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -82,7 +85,9 @@ export interface SignerRow {
   phone: string | null;
   user_id: string | null;
   investor_id: string | null;
-  signer_kind: "zewnetrzny" | "inwestor" | "personel";
+  /** Klient pożyczkowy z systemu (clients.id) — podpisujący typu 'klient'. */
+  client_id: string | null;
+  signer_kind: "zewnetrzny" | "inwestor" | "personel" | "klient";
   capacity_mode: "osoba" | "firma" | "wybor";
   company: SignedCapacity["company"];
   signed_capacity: SignedCapacity | null;

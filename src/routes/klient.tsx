@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LayoutDashboard, User, Bell, Handshake } from "lucide-react";
+import { LayoutDashboard, User, Bell, Handshake, PenLine } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 import { ConsentGate } from "@/components/consent/consent-gate";
 
@@ -12,6 +12,7 @@ const groups: NavGroup[] = [
     items: [
       { to: "/klient", label: "Twoja oferta", icon: LayoutDashboard, exact: true },
       { to: "/klient/propozycje", label: "Propozycje umowy pożyczki", icon: Handshake },
+      { to: "/klient/podpisy", label: "Dokumenty do podpisu", icon: PenLine },
       { to: "/klient/profil", label: "Profil", icon: User },
       { to: "/klient/powiadomienia", label: "Powiadomienia", icon: Bell },
     ],

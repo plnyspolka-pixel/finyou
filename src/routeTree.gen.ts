@@ -129,6 +129,7 @@ import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windyk
 import { Route as InwestorZleceniaRouteImport } from './routes/inwestor.zlecenia'
 import { Route as KartaTokenRouteImport } from './routes/karta.$token'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
+import { Route as KlientPodpisyRouteImport } from './routes/klient.podpisy'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
@@ -893,6 +894,11 @@ const KartaTokenRoute = KartaTokenRouteImport.update({
 const KlientIndexRoute = KlientIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => KlientRoute,
+} as any)
+const KlientPodpisyRoute = KlientPodpisyRouteImport.update({
+  id: '/podpisy',
+  path: '/podpisy',
   getParentRoute: () => KlientRoute,
 } as any)
 const KlientPowiadomieniaRoute = KlientPowiadomieniaRouteImport.update({
@@ -1881,6 +1887,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/karta/$token': typeof KartaTokenRoute
+  '/klient/podpisy': typeof KlientPodpisyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -2155,6 +2162,7 @@ export interface FileRoutesByTo {
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/karta/$token': typeof KartaTokenRoute
+  '/klient/podpisy': typeof KlientPodpisyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -2436,6 +2444,7 @@ export interface FileRoutesById {
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/karta/$token': typeof KartaTokenRoute
+  '/klient/podpisy': typeof KlientPodpisyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -2720,6 +2729,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja'
     | '/inwestor/zlecenia'
     | '/karta/$token'
+    | '/klient/podpisy'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -2994,6 +3004,7 @@ export interface FileRouteTypes {
     | '/inwestor/wiadomosci'
     | '/inwestor/zlecenia'
     | '/karta/$token'
+    | '/klient/podpisy'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -3274,6 +3285,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja'
     | '/inwestor/zlecenia'
     | '/karta/$token'
+    | '/klient/podpisy'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -4404,6 +4416,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/klient/'
       preLoaderRoute: typeof KlientIndexRouteImport
+      parentRoute: typeof KlientRoute
+    }
+    '/klient/podpisy': {
+      id: '/klient/podpisy'
+      path: '/podpisy'
+      fullPath: '/klient/podpisy'
+      preLoaderRoute: typeof KlientPodpisyRouteImport
       parentRoute: typeof KlientRoute
     }
     '/klient/powiadomienia': {
@@ -5847,6 +5866,7 @@ const InwestorRouteWithChildren = InwestorRoute._addFileChildren(
 )
 
 interface KlientRouteChildren {
+  KlientPodpisyRoute: typeof KlientPodpisyRoute
   KlientPowiadomieniaRoute: typeof KlientPowiadomieniaRoute
   KlientProfilRoute: typeof KlientProfilRoute
   KlientPropozycjeRoute: typeof KlientPropozycjeRoute
@@ -5854,6 +5874,7 @@ interface KlientRouteChildren {
 }
 
 const KlientRouteChildren: KlientRouteChildren = {
+  KlientPodpisyRoute: KlientPodpisyRoute,
   KlientPowiadomieniaRoute: KlientPowiadomieniaRoute,
   KlientProfilRoute: KlientProfilRoute,
   KlientPropozycjeRoute: KlientPropozycjeRoute,

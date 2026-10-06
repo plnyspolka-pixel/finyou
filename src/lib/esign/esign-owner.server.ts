@@ -10,6 +10,8 @@ import type { z } from "zod";
 import {
   searchSignerCandidatesInput,
   createEnvelopeInput,
+  searchSignerClientsInput,
+  listClientDocumentsInput,
   sendEnvelopeInput,
   resendSignerLinkInput,
   openMySigningLinkInput,
@@ -48,11 +50,13 @@ import {
   signerUrl,
   uploadBytes,
   base64ToBytes,
+  downloadBytes,
   verifyUrl,
   type AuthCtx,
   type EnvelopeRow,
   type SignerRow,
 } from "./esign.server";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 type OwnerRole = "admin" | "operator" | "inwestor";
 
@@ -151,6 +155,92 @@ async function requireManaged(supabase: any, userId: string, envelopeId: string)
   return { role, env };
 }
 
+/** Spółka / JDG klienta pożyczkowego — do podpisu „w imieniu”. */
+export function clientCompany(c: any): SignerCompany | null {
+  if (!c) return null;
+  if (!c.company_name && !c.nip) return null;
+  const address = [c.street, [c.postal_code, c.city].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
+  return {
+    name: c.company_name || `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(),
+    nip: c.nip ?? null,
+    krs: c.krs ?? null,
+    regon: c.regon ?? null,
+    legalForm: c.krs ? null : "jednoosobowa działalność gospodarcza",
+    address: address || null,
+    role: c.krs ? null : "właściciel",
+  };
+}
+
+async function investorIdOf(userId: string): Promise<string | null> {
+  const { data } = await db().from("investors").select("id").eq("user_id", userId).maybeSingle();
+  return data?.id ?? null;
+}
+
+/**
+ * Klienci, których dana rola może wskazać jako podpisujących: personel — wszyscy
+ * (null = bez ograniczeń); inwestor — klienci z wniosków, na które złożył ofertę,
+ * oraz klienci z jego wcześniejszych kopert.
+ */
+async function allowedClientIds(role: OwnerRole, userId: string): Promise<string[] | null> {
+  if (role !== "inwestor") return null;
+  const ids = new Set<string>();
+  const invId = await investorIdOf(userId);
+  if (invId) {
+    const { data: offers } = await db()
+      .from("investor_offers")
+      .select("loan_application_id")
+      .eq("investor_id", invId)
+      .limit(500);
+    const appIds = [
+      ...new Set((offers ?? []).map((o: any) => o.loan_application_id).filter(Boolean)),
+    ];
+    if (appIds.length) {
+      const { data: apps } = await db()
+        .from("loan_applications")
+        .select("client_id")
+        .in("id", appIds);
+      for (const a of apps ?? []) if (a.client_id) ids.add(a.client_id);
+    }
+  }
+  const { data: envs } = await db()
+    .from("esign_envelopes")
+    .select("client_id")
+    .eq("created_by", userId)
+    .not("client_id", "is", null)
+    .limit(500);
+  for (const e of envs ?? []) if (e.client_id) ids.add(e.client_id);
+  return [...ids];
+}
+
+const CLIENT_COLUMNS =
+  "id, user_id, first_name, last_name, email, phone, company_name, nip, krs, regon, street, city, postal_code";
+
+/** Identyfikatory klientów (clients) powiązanych z kontem użytkownika. */
+async function myClientIds(userId: string): Promise<string[]> {
+  const { data } = await db().from("clients").select("id").eq("user_id", userId);
+  return (data ?? []).map((c: any) => c.id as string);
+}
+
+/** Czy wiersz podpisującego należy do użytkownika (konto, klient albo e-mail konta). */
+function isMySigner(
+  s: SignerRow,
+  userId: string,
+  myClients: string[],
+  email: string | null,
+): boolean {
+  if (s.user_id === userId) return true;
+  if (s.client_id && myClients.includes(s.client_id)) return true;
+  if (!s.user_id && email && s.email.toLowerCase() === email.toLowerCase()) return true;
+  return false;
+}
+
+function claimsEmail(context: AuthCtx): string | null {
+  const e = context.claims?.email;
+  return typeof e === "string" && e.includes("@") ? e.toLowerCase() : null;
+}
+
 function publicSignerRow(s: SignerRow) {
   // Bez hashy tokenu/kodu — tylko to, co nadawca ma prawo widzieć.
   const { token_hash: _t, otp_hash: _o, ...rest } = s;
@@ -212,6 +302,259 @@ export async function searchSignerCandidatesImpl(
 
 // ── tworzenie koperty ──────────────────────────────────────────────────────
 
+/** Wyszukiwarka klientów pożyczkowych (personel: wszyscy; inwestor: swoi). */
+export async function searchSignerClientsImpl(
+  data: z.infer<typeof searchSignerClientsInput>,
+  context: AuthCtx,
+) {
+  const role = await resolveOwnerRole(context.supabase as any, context.userId);
+  const allowed = await allowedClientIds(role, context.userId);
+  let q = db().from("clients").select(CLIENT_COLUMNS).limit(10);
+  if (data.clientId) {
+    q = q.eq("id", data.clientId);
+  } else {
+    const term = (data.q ?? "").replace(/[%,()]/g, " ").trim();
+    if (term.length < 2) return { candidates: [] };
+    q = q.or(
+      `first_name.ilike.%${term}%,last_name.ilike.%${term}%,company_name.ilike.%${term}%,email.ilike.%${term}%,nip.ilike.%${term}%,phone.ilike.%${term}%`,
+    );
+  }
+  if (allowed) {
+    if (allowed.length === 0) return { candidates: [] };
+    q = q.in("id", allowed);
+  }
+  const { data: rows } = await q;
+  const ids = (rows ?? []).map((c: any) => c.id);
+  const { data: apps } = ids.length
+    ? await db()
+        .from("loan_applications")
+        .select("id, client_id, loan_amount, status, created_at")
+        .in("client_id", ids)
+        .order("created_at", { ascending: false })
+        .limit(60)
+    : { data: [] };
+  return {
+    candidates: (rows ?? []).map((c: any) => ({
+      clientId: c.id as string,
+      userId: (c.user_id as string | null) ?? null,
+      fullName: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(),
+      email: (c.email as string | null) ?? null,
+      phone: (c.phone as string | null) ?? null,
+      company: clientCompany(c),
+      applications: (apps ?? [])
+        .filter((a: any) => a.client_id === c.id)
+        .map((a: any) => ({
+          id: a.id as string,
+          loanAmount: (a.loan_amount as number | null) ?? null,
+          status: a.status as string,
+          createdAt: a.created_at as string,
+        })),
+    })),
+  };
+}
+
+/**
+ * Wygenerowane umowy (kreator / agent) dla klienta albo wniosku. Widoczność
+ * rozstrzyga RLS tabeli generated_documents (personel: wszystkie; inwestor:
+ * własne) — zapytanie idzie klientem użytkownika, nie service role.
+ */
+export async function listClientDocumentsImpl(
+  data: z.infer<typeof listClientDocumentsInput>,
+  context: AuthCtx,
+) {
+  await resolveOwnerRole(context.supabase as any, context.userId);
+  let appIds: string[] = [];
+  if (data.loanApplicationId) appIds = [data.loanApplicationId];
+  else if (data.clientId) {
+    const { data: apps } = await db()
+      .from("loan_applications")
+      .select("id")
+      .eq("client_id", data.clientId);
+    appIds = (apps ?? []).map((a: any) => a.id);
+  }
+  if (appIds.length === 0) return { documents: [] };
+  const { data: rows } = await context.supabase
+    .from("generated_documents")
+    .select(
+      "id, template_name, template_slug, loan_application_id, docx_path, pdf_path, created_at",
+    )
+    .in("loan_application_id", appIds)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  return {
+    documents: ((rows ?? []) as any[])
+      .filter((r) => r.docx_path || r.pdf_path)
+      .map((r) => ({
+        id: r.id as string,
+        templateName: (r.template_name as string | null) ?? "Dokument",
+        templateSlug: (r.template_slug as string | null) ?? null,
+        loanApplicationId: (r.loan_application_id as string | null) ?? null,
+        format: r.pdf_path ? "pdf" : "docx",
+        createdAt: r.created_at as string,
+      })),
+  };
+}
+
+/**
+ * Źródło koperty z wygenerowanej umowy: gotowy PDF albo DOCX przetłumaczony na
+ * PDF tą samą „drukarką”, co pakiet prawny (tekst z document.xml → bloki →
+ * pdf-lib). Dostęp do wiersza sprawdza RLS (klient użytkownika).
+ */
+async function sourceFromGeneratedDocument(
+  generatedDocumentId: string,
+  context: AuthCtx,
+): Promise<{
+  bytes: Uint8Array;
+  fileName: string;
+  title: string | null;
+  loanApplicationId: string | null;
+}> {
+  const { data: doc } = await context.supabase
+    .from("generated_documents")
+    .select("id, template_name, docx_path, pdf_path, loan_application_id")
+    .eq("id", generatedDocumentId)
+    .maybeSingle();
+  if (!doc) throw new Error("Nie znaleziono wygenerowanego dokumentu albo brak do niego dostępu.");
+  const base = (p: string) => p.split("/").pop() ?? "dokument";
+  if (doc.pdf_path) {
+    return {
+      bytes: await downloadBytes(doc.pdf_path, CLIENT_FILES_BUCKET),
+      fileName: base(doc.pdf_path),
+      title: doc.template_name ?? null,
+      loanApplicationId: doc.loan_application_id ?? null,
+    };
+  }
+  if (!doc.docx_path) throw new Error("Wygenerowany dokument nie ma pliku.");
+  const docx = await downloadBytes(doc.docx_path, CLIENT_FILES_BUCKET);
+  const { tekstZDocx } = await import("@/lib/contract-engine/umowa-docx");
+  const text = await tekstZDocx(docx);
+  if (!text.trim()) throw new Error("Nie udało się odczytać treści umowy z pliku DOCX.");
+  const { pdfZTekstu } = await import("@/lib/legal/pdf-z-tekstu");
+  const bytes = await pdfZTekstu({
+    contentText: text,
+    title: doc.template_name ?? "Umowa",
+    version: "do podpisu",
+    sha256: await sha256Hex(text),
+  });
+  return {
+    bytes,
+    fileName: base(doc.docx_path).replace(/\.docx$/i, "") + ".pdf",
+    title: doc.template_name ?? null,
+    loanApplicationId: doc.loan_application_id ?? null,
+  };
+}
+
+/**
+ * Dokumenty zalogowanego KLIENTA pożyczkowego: do podpisu i podpisane.
+ * Dopasowanie po koncie, po clients.user_id (client_id) albo po adresie
+ * e-mail konta — taki wiersz jest przejmowany (user_id = konto), dzięki czemu
+ * działa „Otwórz i podpisz” z panelu bez linku z e-maila.
+ */
+export async function listMyClientDocumentsImpl(context: AuthCtx) {
+  const { userId } = context;
+  const myClients = await myClientIds(userId);
+  const email = claimsEmail(context);
+  const cols =
+    "id, envelope_id, status, signed_at, role_label, user_id, client_id, email, signer_kind, created_at";
+  const found = new Map<string, any>();
+  const { data: byUser } = await db()
+    .from("esign_signers")
+    .select(cols)
+    .eq("user_id", userId)
+    .limit(100);
+  for (const r of byUser ?? []) found.set(r.id, r);
+  if (myClients.length) {
+    const { data: byClient } = await db()
+      .from("esign_signers")
+      .select(cols)
+      .in("client_id", myClients)
+      .limit(100);
+    for (const r of byClient ?? []) found.set(r.id, r);
+  }
+  if (email) {
+    const { data: byEmail } = await db()
+      .from("esign_signers")
+      .select(cols)
+      .is("user_id", null)
+      .eq("email", email)
+      .limit(100);
+    for (const r of byEmail ?? []) found.set(r.id, r);
+  }
+  // Przejęcie wierszy bez konta.
+  const toClaim = [...found.values()].filter((r) => !r.user_id).map((r) => r.id);
+  if (toClaim.length) {
+    await db().from("esign_signers").update({ user_id: userId }).in("id", toClaim);
+  }
+  const envIds = [...new Set([...found.values()].map((r) => r.envelope_id))];
+  const { data: envs } = envIds.length
+    ? await db()
+        .from("esign_envelopes")
+        .select(
+          "id, public_id, title, status, sender_name, sender_email, expires_at, completed_at, created_at, final_path, final_sha256, verify_code, page_count",
+        )
+        .in("id", envIds)
+    : { data: [] };
+  const items = [...found.values()]
+    .map((signer) => {
+      const e = (envs ?? []).find((x: any) => x.id === signer.envelope_id);
+      if (!e) return null;
+      return {
+        signerId: signer.id as string,
+        signerStatus: signer.status as string,
+        signedAt: (signer.signed_at as string | null) ?? null,
+        roleLabel: (signer.role_label as string | null) ?? null,
+        envelope: {
+          id: e.id as string,
+          publicId: e.public_id as string,
+          title: e.title as string,
+          status: e.status as string,
+          senderName: (e.sender_name as string | null) ?? null,
+          expiresAt: e.expires_at as string,
+          completedAt: (e.completed_at as string | null) ?? null,
+          createdAt: e.created_at as string,
+          pageCount: e.page_count as number,
+          finalAvailable: Boolean(e.final_path),
+          finalSha256: (e.final_sha256 as string | null) ?? null,
+          verifyUrl: verifyUrl(e.verify_code as string),
+        },
+      };
+    })
+    .filter(Boolean) as Array<{
+    signerId: string;
+    signerStatus: string;
+    signedAt: string | null;
+    roleLabel: string | null;
+    envelope: {
+      id: string;
+      publicId: string;
+      title: string;
+      status: string;
+      senderName: string | null;
+      expiresAt: string;
+      completedAt: string | null;
+      createdAt: string;
+      pageCount: number;
+      finalAvailable: boolean;
+      finalSha256: string | null;
+      verifyUrl: string;
+    };
+  }>;
+  items.sort((a, b) => (a.envelope.createdAt < b.envelope.createdAt ? 1 : -1));
+  return {
+    toSign: items.filter(
+      (i) =>
+        i.envelope.status === "wyslana" && !["podpisany", "odrzucony"].includes(i.signerStatus),
+    ),
+    signed: items.filter((i) => i.signerStatus === "podpisany"),
+    other: items.filter(
+      (i) =>
+        !(
+          i.envelope.status === "wyslana" && !["podpisany", "odrzucony"].includes(i.signerStatus)
+        ) && i.signerStatus !== "podpisany",
+    ),
+  };
+}
+
 async function uniqueVerifyCode(): Promise<string> {
   for (let i = 0; i < 5; i++) {
     const code = randomVerifyCode();
@@ -264,8 +607,23 @@ export async function createEnvelopeImpl(
   const role = await resolveOwnerRole(context.supabase as any, userId);
   const sender = await senderIdentity(role, userId, context.claims);
 
+  // Źródło: wgrany PDF albo wygenerowana umowa (DOCX → PDF).
+  let bytes: Uint8Array;
+  let fileName = data.fileName ?? "dokument.pdf";
+  let generatedDocumentId: string | null = null;
+  let loanApplicationId: string | null = data.loanApplicationId ?? null;
+  if (data.generatedDocumentId) {
+    const src = await sourceFromGeneratedDocument(data.generatedDocumentId, context);
+    bytes = src.bytes;
+    fileName = src.fileName;
+    generatedDocumentId = data.generatedDocumentId;
+    loanApplicationId = loanApplicationId ?? src.loanApplicationId;
+  } else if (data.fileBase64) {
+    bytes = base64ToBytes(data.fileBase64);
+  } else {
+    throw new Error("Wgraj plik PDF albo wskaż wygenerowaną umowę.");
+  }
   // Plik: PDF, limit rozmiaru, bez szyfrowania.
-  const bytes = base64ToBytes(data.fileBase64);
   if (bytes.byteLength > MAX_PDF_BYTES) throw new Error("Plik PDF jest za duży (limit 15 MB).");
   const head = new TextDecoder("latin1").decode(bytes.subarray(0, 5));
   if (!head.startsWith("%PDF")) throw new Error("Do podpisu przyjmujemy wyłącznie pliki PDF.");
@@ -289,6 +647,7 @@ export async function createEnvelopeImpl(
     let phone = s.phone?.trim() || null;
     let user_id: string | null = null;
     let investor_id: string | null = null;
+    let client_id: string | null = null;
     let signer_kind: SignerRow["signer_kind"] = "zewnetrzny";
     let capacity_mode: SignerRow["capacity_mode"] = s.capacityMode;
     let company: SignerCompany | null = s.capacityMode === "firma" ? (s.company ?? null) : null;
@@ -318,6 +677,25 @@ export async function createEnvelopeImpl(
         throw new Error("Nie znaleziono profilu inwestora dla wskazanego konta.");
       }
       user_id = uid;
+    } else if (s.kind === "klient") {
+      if (!s.clientId) throw new Error(`Wskaż klienta z systemu dla podpisującego nr ${i + 1}.`);
+      const allowed = await allowedClientIds(role, userId);
+      if (allowed && !allowed.includes(s.clientId)) {
+        throw new Error("Brak dostępu do tego klienta (nie ma wniosku z Twoją ofertą).");
+      }
+      const { data: c } = await db()
+        .from("clients")
+        .select(CLIENT_COLUMNS)
+        .eq("id", s.clientId)
+        .maybeSingle();
+      if (!c) throw new Error("Nie znaleziono klienta pożyczkowego.");
+      client_id = c.id;
+      user_id = c.user_id ?? null;
+      signer_kind = "klient";
+      fullName = fullName || `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim();
+      email = email || (c.email ?? "").toLowerCase();
+      phone = phone ?? c.phone ?? null;
+      if (capacity_mode === "firma" && !company) company = clientCompany(c);
     }
     if (!fullName || fullName.length < 3)
       throw new Error(`Podaj imię i nazwisko podpisującego nr ${i + 1}.`);
@@ -341,6 +719,7 @@ export async function createEnvelopeImpl(
         phone,
         user_id,
         investor_id,
+        client_id,
         signer_kind,
         capacity_mode,
         company,
@@ -368,12 +747,18 @@ export async function createEnvelopeImpl(
       sender_name: sender.name,
       sender_email: sender.email,
       source_path: sourcePath,
-      source_filename: data.fileName.replace(/[^\w.\- ()ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, "_").slice(0, 200),
+      source_filename: fileName.replace(/[^\w.\- ()ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, "_").slice(0, 200),
       source_sha256: sourceSha,
       source_bytes: bytes.byteLength,
       page_count: info.pages,
       expires_at: expiresAt,
       context: data.context ?? {},
+      client_id:
+        data.clientId ??
+        (resolved.find((r) => r.row.client_id)?.row.client_id as string | null) ??
+        null,
+      loan_application_id: loanApplicationId,
+      generated_document_id: generatedDocumentId,
     })
     .select("*")
     .single();
@@ -502,15 +887,18 @@ export async function openMySigningLinkImpl(
     .from("esign_signers")
     .select("*")
     .eq("id", data.signerId)
-    .eq("user_id", context.userId)
     .maybeSingle();
   if (!signer) throw new Error("Nie znaleziono dokumentu do podpisu.");
+  const myClients = await myClientIds(context.userId);
+  if (!isMySigner(signer as SignerRow, context.userId, myClients, claimsEmail(context))) {
+    throw new Error("Nie znaleziono dokumentu do podpisu.");
+  }
   const env = await loadEnvelope(signer.envelope_id);
   if (!env) throw new Error("Nie znaleziono koperty.");
   const token = randomToken();
   await db()
     .from("esign_signers")
-    .update({ token_hash: await hashToken(token) })
+    .update({ token_hash: await hashToken(token), user_id: signer.user_id ?? context.userId })
     .eq("id", signer.id);
   return { url: signerUrl(token), token };
 }
@@ -588,7 +976,9 @@ export async function getEnvelopeDetailsImpl(
   let env = await loadEnvelope(data.envelopeId);
   if (!env) throw new Error("Nie znaleziono koperty.");
   const signers = await loadSigners(env.id);
-  const isSigner = signers.some((s) => s.user_id === context.userId);
+  const myClients = await myClientIds(context.userId);
+  const myEmail = claimsEmail(context);
+  const isSigner = signers.some((s) => isMySigner(s, context.userId, myClients, myEmail));
   if (!canManage(env, role, context.userId) && !isSigner)
     throw new Error("Brak uprawnień do tej koperty.");
   env = await expireIfNeeded(env);
@@ -598,7 +988,7 @@ export async function getEnvelopeDetailsImpl(
     signers: signers.map(publicSignerRow),
     events,
     canManage: canManage(env, role, context.userId),
-    mySignerId: signers.find((s) => s.user_id === context.userId)?.id ?? null,
+    mySignerId: signers.find((s) => isMySigner(s, context.userId, myClients, myEmail))?.id ?? null,
   };
 }
 
@@ -611,7 +1001,9 @@ export async function getEnvelopeFileUrlImpl(
   const env = await loadEnvelope(data.envelopeId);
   if (!env) throw new Error("Nie znaleziono koperty.");
   const signers = await loadSigners(env.id);
-  const isSigner = signers.some((s) => s.user_id === context.userId);
+  const myClients = await myClientIds(context.userId);
+  const myEmail = claimsEmail(context);
+  const isSigner = signers.some((s) => isMySigner(s, context.userId, myClients, myEmail));
   if (!canManage(env, role, context.userId) && !isSigner) throw new Error("Brak uprawnień.");
   const path = data.which === "podpisany" ? env.final_path : env.source_path;
   if (!path) throw new Error("Plik nie jest jeszcze dostępny.");

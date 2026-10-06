@@ -248,10 +248,22 @@ function InwestorWniosek() {
         }
         subtitle={p ? [p.city, p.voivodeship].filter(Boolean).join(", ") || undefined : undefined}
         actions={
-          <Badge className="bg-white/15 text-white border-white/20 backdrop-blur">
-            <Eye className="mr-1 h-3 w-3" />
-            {app.view_count ?? 0} odsłon
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className="bg-white/15 text-white border-white/20 backdrop-blur">
+              <Eye className="mr-1 h-3 w-3" />
+              {app.view_count ?? 0} odsłon
+            </Badge>
+            {/* Umowa do e-podpisu klienta (forma dokumentowa, Didit + kod). */}
+            <Button
+              asChild
+              size="sm"
+              className="bg-white text-[oklch(0.28_0.12_265)] hover:bg-white/90"
+            >
+              <a href={`/inwestor/podpisy?nowa=1&klient=${app.client_id}&wniosek=${id}`}>
+                Wyślij umowę do e-podpisu
+              </a>
+            </Button>
+          </div>
         }
       />
 

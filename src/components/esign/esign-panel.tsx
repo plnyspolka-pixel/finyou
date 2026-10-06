@@ -68,6 +68,8 @@ import {
   resendSignerLink,
   resolveIdentityMismatch,
   searchSignerCandidates,
+  searchSignerClients,
+  listClientDocuments,
   sendEnvelope,
   type CreateEnvelopeInput,
 } from "@/lib/esign/esign-owner.functions";
@@ -138,7 +140,8 @@ export function EsignPanel({ eyebrow, basePath }: { eyebrow: string; basePath: s
     void qc.invalidateQueries({ queryKey: ["esign-list"] });
     void qc.invalidateQueries({ queryKey: ["esign-details"] });
   };
-  const [createOpen, setCreateOpen] = useState(false);
+  const [initial] = useState(() => readEsignPrefill());
+  const [createOpen, setCreateOpen] = useState(initial.open);
   const [selected, setSelected] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("koperta");
@@ -251,6 +254,7 @@ export function EsignPanel({ eyebrow, basePath }: { eyebrow: string; basePath: s
         open={createOpen}
         onOpenChange={setCreateOpen}
         ctx={ctx.data}
+        prefill={initial.prefill}
         onCreated={(id) => {
           refresh();
           setSelected(id);
@@ -335,8 +339,11 @@ function ToSignSection({ list, onRefresh }: { list: any; onRefresh: () => void }
 // ── kreator koperty ────────────────────────────────────────────────────────
 
 type SignerForm = {
-  kind: "zewnetrzny" | "inwestor" | "ja";
+  kind: "zewnetrzny" | "inwestor" | "ja" | "klient";
   userId: string | null;
+  /** Klient pożyczkowy z systemu (clients.id). */
+  clientId: string | null;
+  applications: Array<{ id: string; loanAmount: number | null; status: string }>;
   fullName: string;
   email: string;
   phone: string;
@@ -349,6 +356,8 @@ type SignerForm = {
 const emptySigner = (): SignerForm => ({
   kind: "zewnetrzny",
   userId: null,
+  clientId: null,
+  applications: [],
   fullName: "",
   email: "",
   phone: "",
@@ -367,56 +376,140 @@ function readFileBase64(file: File): Promise<string> {
   });
 }
 
+/** Prefill kreatora z adresu: ?nowa=1&klient=<clients.id>&wniosek=<loan_applications.id>. */
+export type EsignPrefill = { clientId: string | null; loanApplicationId: string | null } | null;
+
+export function readEsignPrefill(): { open: boolean; prefill: EsignPrefill } {
+  if (typeof window === "undefined") return { open: false, prefill: null };
+  const sp = new URLSearchParams(window.location.search);
+  const clientId = sp.get("klient");
+  const loanApplicationId = sp.get("wniosek");
+  const open = sp.get("nowa") === "1" || Boolean(clientId) || Boolean(loanApplicationId);
+  return { open, prefill: clientId || loanApplicationId ? { clientId, loanApplicationId } : null };
+}
+
 function CreateEnvelopeDialog({
   open,
   onOpenChange,
   ctx,
   onCreated,
+  prefill,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   ctx: any;
   onCreated: (id: string) => void;
+  prefill?: EsignPrefill;
 }) {
   const create = useServerFn(createEnvelope);
+  const searchClients = useServerFn(searchSignerClients);
+  const listDocs = useServerFn(listClientDocuments);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [mode, setMode] = useState<"rownolegle" | "kolejno">("rownolegle");
   const [days, setDays] = useState("30");
   const [file, setFile] = useState<File | null>(null);
+  const [source, setSource] = useState<"plik" | "umowa">("plik");
+  const [generatedDocumentId, setGeneratedDocumentId] = useState<string | null>(null);
   const [signers, setSigners] = useState<SignerForm[]>([emptySigner()]);
   const fileRef = useRef<HTMLInputElement>(null);
   const isInvestor = ctx?.role === "inwestor";
 
+  // Prefill z karty wniosku / klienta: pierwszy podpisujący = klient z systemu.
+  const prefilledRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = prefill ? `${prefill.clientId}:${prefill.loanApplicationId}` : null;
+    if (!open || !prefill?.clientId || prefilledRef.current === key) return;
+    prefilledRef.current = key;
+    void searchClients({ data: { clientId: prefill.clientId } })
+      .then((r) => {
+        const c = r.candidates[0];
+        if (!c) return;
+        setSigners((arr) => {
+          const first: SignerForm = {
+            ...emptySigner(),
+            kind: "klient",
+            clientId: c.clientId,
+            userId: c.userId,
+            fullName: c.fullName,
+            email: c.email ?? "",
+            phone: c.phone ?? "",
+            roleLabel: "Pożyczkobiorca",
+            capacityMode: c.company ? "firma" : "osoba",
+            company: {
+              name: c.company?.name ?? "",
+              nip: c.company?.nip ?? "",
+              krs: c.company?.krs ?? "",
+              role: c.company?.role ?? "",
+            },
+            pickedCompany: c.company,
+            applications: c.applications,
+          };
+          return [first, ...arr.slice(1)];
+        });
+      })
+      .catch((e) => toast.error(errMsg(e)));
+  }, [open, prefill, searchClients]);
+
+  const docsClientId =
+    signers.find((x) => x.kind === "klient" && x.clientId)?.clientId ?? prefill?.clientId ?? null;
+  const docsAppId = prefill?.loanApplicationId ?? null;
+  const docsQuery = useQuery({
+    queryKey: ["esign-client-docs-list", docsClientId, docsAppId],
+    enabled: open && Boolean(docsClientId || docsAppId),
+    queryFn: () =>
+      listDocs({
+        data: { clientId: docsClientId ?? undefined, loanApplicationId: docsAppId ?? undefined },
+      }),
+  });
+  const docs = docsQuery.data?.documents ?? [];
+  useEffect(() => {
+    // Z karty wniosku: domyślnie ostatnia wygenerowana umowa.
+    if (prefill?.loanApplicationId && docs.length && !generatedDocumentId) {
+      setSource("umowa");
+      setGeneratedDocumentId(docs[0].id);
+      setTitle((t) => t || docs[0].templateName);
+    }
+  }, [docs, prefill?.loanApplicationId, generatedDocumentId]);
+
   const mut = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error("Wgraj plik PDF.");
-      if (
-        file.type &&
-        file.type !== "application/pdf" &&
-        !file.name.toLowerCase().endsWith(".pdf")
-      ) {
-        throw new Error("Do podpisu przyjmujemy wyłącznie pliki PDF.");
+      if (source === "umowa") {
+        if (!generatedDocumentId) throw new Error("Wybierz wygenerowaną umowę.");
+      } else {
+        if (!file) throw new Error("Wgraj plik PDF.");
+        if (
+          file.type &&
+          file.type !== "application/pdf" &&
+          !file.name.toLowerCase().endsWith(".pdf")
+        ) {
+          throw new Error("Do podpisu przyjmujemy wyłącznie pliki PDF.");
+        }
+        if (file.size > 15 * 1024 * 1024) throw new Error("Plik jest za duży (limit 15 MB).");
       }
-      if (file.size > 15 * 1024 * 1024) throw new Error("Plik jest za duży (limit 15 MB).");
+      const clientSigner = signers.find((x) => x.kind === "klient" && x.clientId);
       const payload: CreateEnvelopeInput = {
         title,
         message: message || null,
         signingMode: mode,
         expiresInDays: Number(days),
-        fileName: file.name,
-        fileBase64: await readFileBase64(file),
+        fileName: source === "plik" && file ? file.name : undefined,
+        fileBase64: source === "plik" && file ? await readFileBase64(file) : undefined,
+        generatedDocumentId: source === "umowa" ? generatedDocumentId : undefined,
+        clientId: clientSigner?.clientId ?? prefill?.clientId ?? undefined,
+        loanApplicationId: prefill?.loanApplicationId ?? undefined,
         sendNow: true,
         signers: signers.map((s, i) => ({
           kind: s.kind,
           userId: s.kind === "inwestor" ? s.userId : null,
+          clientId: s.kind === "klient" ? s.clientId : null,
           fullName: s.fullName || null,
           email: s.email || null,
           phone: s.phone || null,
           roleLabel: s.roleLabel || null,
-          capacityMode: s.kind === "zewnetrzny" ? s.capacityMode : "osoba",
+          capacityMode: s.kind === "zewnetrzny" || s.kind === "klient" ? s.capacityMode : "osoba",
           company:
-            s.kind === "zewnetrzny" && s.capacityMode === "firma"
+            (s.kind === "zewnetrzny" || s.kind === "klient") && s.capacityMode === "firma"
               ? {
                   name: s.company.name,
                   nip: s.company.nip || null,
@@ -441,6 +534,8 @@ function CreateEnvelopeDialog({
       setTitle("");
       setMessage("");
       setFile(null);
+      setSource("plik");
+      setGeneratedDocumentId(null);
       setSigners([emptySigner()]);
       onCreated(r.id);
     },
@@ -467,7 +562,7 @@ function CreateEnvelopeDialog({
         <DialogHeader>
           <DialogTitle>Nowy dokument do podpisu</DialogTitle>
           <DialogDescription>
-            Wgraj gotowy PDF (np. umowę z kreatora zapisaną jako PDF) i wskaż, kto ma podpisać.
+            Wgraj gotowy PDF albo wybierz umowę wygenerowaną w kreatorze i wskaż, kto ma podpisać.
             Każdy podpisujący dostanie osobisty link e-mailem.
           </DialogDescription>
         </DialogHeader>
@@ -482,29 +577,82 @@ function CreateEnvelopeDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label>Plik PDF</Label>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="application/pdf,.pdf"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
-                <FileText className="mr-2 h-4 w-4" /> {file ? "Zmień plik" : "Wybierz PDF"}
-              </Button>
-              {file ? (
-                <span className="text-sm text-muted-foreground">
-                  {file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB
-                </span>
-              ) : (
-                <span className="text-xs text-muted-foreground">
-                  Maks. 15 MB, bez hasła. Treść nie jest modyfikowana — dodajemy znaczniki w
-                  marginesach.
-                </span>
-              )}
-            </div>
+            <Label>Dokument</Label>
+            {docs.length > 0 ? (
+              <RadioGroup
+                value={source}
+                onValueChange={(v) => setSource(v as "plik" | "umowa")}
+                className="flex flex-wrap gap-4"
+              >
+                <label className="flex items-center gap-2 text-sm">
+                  <RadioGroupItem value="umowa" /> wygenerowana umowa klienta
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <RadioGroupItem value="plik" /> wgraj plik PDF
+                </label>
+              </RadioGroup>
+            ) : null}
+            {source === "umowa" && docs.length > 0 ? (
+              <div className="divide-y rounded-md border">
+                {docs.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => {
+                      setGeneratedDocumentId(d.id);
+                      setTitle((t) => t || d.templateName);
+                    }}
+                    className={
+                      "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted/40 " +
+                      (generatedDocumentId === d.id ? "bg-[oklch(0.97_0.02_265)]" : "")
+                    }
+                  >
+                    <span className="flex items-center gap-2">
+                      {generatedDocumentId === d.id ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      ) : (
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      {d.templateName}
+                      <span className="text-xs uppercase text-muted-foreground">{d.format}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatSignedAt(d.createdAt).split(" (")[0]}
+                    </span>
+                  </button>
+                ))}
+                <p className="px-3 py-2 text-xs text-muted-foreground">
+                  Umowę DOCX zamieniamy na PDF tą samą drukarką, co pakiet dokumentów inwestora
+                  (treść bez zmian, układ uproszczony). Podgląd zobaczysz w szczegółach koperty
+                  przed podpisem stron.
+                </p>
+              </div>
+            ) : (
+              <>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  className="hidden"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
+                    <FileText className="mr-2 h-4 w-4" /> {file ? "Zmień plik" : "Wybierz PDF"}
+                  </Button>
+                  {file ? (
+                    <span className="text-sm text-muted-foreground">
+                      {file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Maks. 15 MB, bez hasła. Treść nie jest modyfikowana — dodajemy znaczniki w
+                      marginesach.
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="grid gap-2">
@@ -576,6 +724,7 @@ function CreateEnvelopeDialog({
                           ? "Klient / druga strona (bez konta)"
                           : "Osoba spoza systemu (klient)"}
                       </SelectItem>
+                      <SelectItem value="klient">Klient pożyczkowy (z systemu)</SelectItem>
                       {!isInvestor ? (
                         <SelectItem value="inwestor">Inwestor z systemu (konto)</SelectItem>
                       ) : null}
@@ -618,6 +767,10 @@ function CreateEnvelopeDialog({
                   <InvestorPicker value={s} onPick={(p) => update(i, p)} />
                 ) : null}
 
+                {s.kind === "klient" ? (
+                  <ClientPicker value={s} onPick={(p) => update(i, p)} />
+                ) : null}
+
                 {s.kind === "ja" ? (
                   <div className="text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
@@ -634,7 +787,9 @@ function CreateEnvelopeDialog({
                   </div>
                 ) : null}
 
-                {s.kind === "zewnetrzny" || (s.kind === "inwestor" && s.userId) ? (
+                {s.kind === "zewnetrzny" ||
+                (s.kind === "inwestor" && s.userId) ||
+                (s.kind === "klient" && s.clientId) ? (
                   <div className="grid gap-2 sm:grid-cols-3">
                     <Input
                       placeholder="Imię i nazwisko (jak w dokumencie tożsamości)"
@@ -655,7 +810,7 @@ function CreateEnvelopeDialog({
                   </div>
                 ) : null}
 
-                {s.kind === "zewnetrzny" ? (
+                {s.kind === "zewnetrzny" || (s.kind === "klient" && s.clientId) ? (
                   <div className="space-y-2">
                     <RadioGroup
                       value={s.capacityMode}
@@ -725,6 +880,109 @@ function CreateEnvelopeDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ClientPicker({
+  value,
+  onPick,
+}: {
+  value: SignerForm;
+  onPick: (p: Partial<SignerForm>) => void;
+}) {
+  const search = useServerFn(searchSignerClients);
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const mut = useMutation({
+    mutationFn: () => search({ data: { q } }),
+    onSuccess: (r) => {
+      setResults(r.candidates);
+      if (!r.candidates.length) toast.info("Brak klientów pasujących do frazy.");
+    },
+    onError: (e) => toast.error(errMsg(e)),
+  });
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Input
+          placeholder="Szukaj klienta: nazwisko, firma, e-mail, telefon, NIP"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && q.trim().length >= 2 && mut.mutate()}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => mut.mutate()}
+          disabled={q.trim().length < 2 || mut.isPending}
+        >
+          {mut.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Search className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+      {value.clientId ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Klient: {value.fullName}
+          {value.userId ? (
+            <span className="text-xs text-muted-foreground">
+              · ma konto — zobaczy dokument w panelu klienta
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              · bez konta — podpisze z linku w e-mailu
+            </span>
+          )}
+          {value.applications.length ? (
+            <span className="text-xs text-muted-foreground">
+              · wnioski: {value.applications.length}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      {results.length ? (
+        <div className="divide-y rounded-md border">
+          {results.map((c) => (
+            <button
+              key={c.clientId}
+              type="button"
+              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted/40"
+              onClick={() => {
+                onPick({
+                  clientId: c.clientId,
+                  userId: c.userId,
+                  fullName: c.fullName ?? "",
+                  email: c.email ?? "",
+                  phone: c.phone ?? "",
+                  roleLabel: value.roleLabel || "Pożyczkobiorca",
+                  capacityMode: c.company ? "firma" : "osoba",
+                  company: {
+                    name: c.company?.name ?? "",
+                    nip: c.company?.nip ?? "",
+                    krs: c.company?.krs ?? "",
+                    role: c.company?.role ?? "",
+                  },
+                  pickedCompany: c.company,
+                  applications: c.applications,
+                });
+                setResults([]);
+              }}
+            >
+              <span>
+                {c.fullName || "—"}{" "}
+                <span className="text-muted-foreground">· {c.email ?? "brak e-maila"}</span>
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {c.company ? c.company.name : "osoba fizyczna"}
+                {c.applications.length ? ` · wnioski: ${c.applications.length}` : ""}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

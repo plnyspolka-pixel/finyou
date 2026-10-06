@@ -15,6 +15,8 @@ import {
   getEnvelopeFileUrlInput,
   cancelEnvelopeInput,
   resolveIdentityMismatchInput,
+  searchSignerClientsInput,
+  listClientDocumentsInput,
 } from "./esign-schemas";
 
 export const getEsignOwnerContext = createServerFn({ method: "GET" })
@@ -91,6 +93,29 @@ export const resolveIdentityMismatch = createServerFn({ method: "POST" })
   .inputValidator((d) => resolveIdentityMismatchInput.parse(d))
   .handler(async ({ data, context }) =>
     (await import("./esign-owner.server")).resolveIdentityMismatchImpl(data, context),
+  );
+
+/** Klient pożyczkowy z systemu (podpisujący) — personel: wszyscy; inwestor: swoi. */
+export const searchSignerClients = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => searchSignerClientsInput.parse(d))
+  .handler(async ({ data, context }) =>
+    (await import("./esign-owner.server")).searchSignerClientsImpl(data, context),
+  );
+
+/** Wygenerowane umowy klienta / wniosku do wysyłki bez wgrywania pliku. */
+export const listClientDocuments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => listClientDocumentsInput.parse(d))
+  .handler(async ({ data, context }) =>
+    (await import("./esign-owner.server")).listClientDocumentsImpl(data, context),
+  );
+
+/** Panel klienta: dokumenty do podpisu i podpisane zalogowanego klienta. */
+export const listMyClientDocuments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) =>
+    (await import("./esign-owner.server")).listMyClientDocumentsImpl(context),
   );
 
 export type { CreateEnvelopeInput } from "./esign-schemas";

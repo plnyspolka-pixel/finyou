@@ -11,7 +11,8 @@ podpisał), a na końcu **Kartę podpisów** z pełnym śladem audytowym. Plik t
 e-mailem do wszystkich stron (trwały nośnik), a jego autentyczność można
 sprawdzić publicznie pod `/weryfikacja/<kod>`.
 
-Panele: `/admin/podpisy`, `/operator/podpisy`, `/inwestor/podpisy`.
+Panele nadawcy: `/admin/podpisy`, `/operator/podpisy`, `/inwestor/podpisy`.
+Panel klienta pożyczkowego: `/klient/podpisy` (dokumenty do podpisu i podpisane).
 Strona podpisującego: `/podpis/<token>` (bez logowania).
 
 ## 1. Podstawa prawna i jak moduł ją realizuje
@@ -103,6 +104,39 @@ końcowego jest naturalnym następnym krokiem — punkt zaczepienia:
 Odmowa podpisu zamyka kopertę (status „odrzucona”) i powiadamia nadawcę.
 Anulowanie przez nadawcę unieważnia linki. Po terminie koperta wygasa.
 
+## 3a. Klient pożyczkowy — wysyłka umowy i panel klienta
+
+**Wysyłka do klienta.** W kreatorze koperty podpisujący typu *Klient
+pożyczkowy (z systemu)*: wyszukiwarka po nazwisku, firmie, e-mailu, telefonie
+albo NIP (personel widzi wszystkich klientów; inwestor — klientów z wniosków,
+na które złożył ofertę, oraz z własnych wcześniejszych kopert). Po wybraniu
+klienta dane (imię i nazwisko, e-mail, telefon, firma/NIP) wypełniają się
+same; nadawca decyduje, czy klient podpisuje we własnym imieniu, czy w
+imieniu firmy (prefill z `clients.company_name`/`nip`/`krs`). Przyciski
+„Wyślij (umowę) do e-podpisu” na karcie wniosku (`/admin/wnioski/<id>`,
+`/inwestor/wniosek/<id>`) otwierają kreator z klientem i wnioskiem
+(`?nowa=1&klient=<clients.id>&wniosek=<loan_applications.id>`).
+
+**Źródło dokumentu.** Oprócz wgrania PDF można wskazać **wygenerowaną umowę**
+z kreatora/agenta (`generated_documents`; widoczność wg RLS: personel —
+wszystkie, inwestor — własne). Umowa DOCX jest zamieniana na PDF tą samą
+drukarką, co pakiet dokumentów inwestora (`tekstZDocx` → `pdfZTekstu`): treść
+bez zmian, układ uproszczony; w stopce PDF skrót SHA-256 tekstu. Z karty
+wniosku domyślnie podpowiadana jest ostatnia wygenerowana umowa.
+
+**Panel klienta.** `/klient/podpisy` pokazuje dokumenty do podpisu („Otwórz i
+podpisz” — nowy osobisty link, bez szukania e-maila), podpisane (pobranie PDF
+z Kartą podpisów, link weryfikacji) oraz zamknięte bez podpisu; na pulpicie
+`/klient` pojawia się baner, gdy coś czeka. Dopasowanie dokumentów do konta:
+po `esign_signers.user_id`, po `client_id` (`clients.user_id` = konto) albo po
+adresie e-mail konta — taki wiersz jest przejmowany (`user_id` = konto).
+Klient bez konta podpisuje wyłącznie z linku w e-mailu. Klient przechodzi
+weryfikację Didit przy każdej kopercie (brak reużycia tożsamości — zgodnie z
+założeniem „podpis po weryfikacji Didit”).
+
+Koperta zapamiętuje powiązania: `esign_envelopes.client_id`,
+`loan_application_id`, `generated_document_id` (migracja 0027).
+
 ## 4. Plik końcowy (co widać na każdej stronie)
 
 - Strony oryginału są **osadzone w całości** (tekst pozostaje zaznaczalny),
@@ -129,8 +163,8 @@ w razie zmian w wyglądzie uruchom test i obejrzyj wynik (`pdftoppm`).
 
 ## 5. Dane
 
-Migracja `drizzle/migrations/0026_podpis_dokumentowy.sql`
-(kopia `supabase/migrations/20261005120000_podpis_dokumentowy.sql`):
+Migracje `drizzle/migrations/0026_podpis_dokumentowy.sql` i
+`0027_podpis_klient_pozyczkowy.sql` (kopie w `supabase/migrations/`):
 
 - `esign_envelopes` — koperta: `public_id` (`FY-SIGN-000001`, generowane z
   sekwencji), `verify_code` (10 znaków, alfabet bez O/0/I/1), status
@@ -170,6 +204,7 @@ RLS: odczyt dla nadawcy, podpisującego z kontem i personelu; zapis wyłącznie
 | Strona podpisującego | `src/components/esign/signing-page.tsx`, `src/routes/podpis.$token.tsx` |
 | Strona weryfikacji | `src/components/esign/verification-page.tsx`, `src/routes/weryfikacja.$code.tsx` |
 | Panel nadawcy | `src/components/esign/esign-panel.tsx`, `src/routes/{admin,operator,inwestor}.podpisy.tsx` |
+| Panel klienta pożyczkowego (+ baner na pulpicie) | `src/components/esign/client-esign-panel.tsx`, `src/routes/klient.podpisy.tsx` |
 
 Konwencja: pliki `*.functions.ts` są importowane przez komponenty, więc nie
 mogą statycznie importować kodu serwerowego (Didit używa `node:crypto`,
@@ -211,8 +246,9 @@ Inwestor z zatwierdzonym KYC z pipeline'u nie generuje nowej sesji.
 
 ## 9. Do zrobienia po wdrożeniu (Ty)
 
-1. Zastosuj migrację `0026_podpis_dokumentowy.sql` (bucket `podpisy`
-   tworzy się w migracji; `uploadEnsuringBucket` dotworzy go w razie braku).
+1. Zastosuj migracje `0026_podpis_dokumentowy.sql` i
+   `0027_podpis_klient_pozyczkowy.sql` (bucket `podpisy` tworzy się w
+   migracji; `uploadEnsuringBucket` dotworzy go w razie braku).
 2. Upewnij się, że sekrety Didit/Resend/Twilio są ustawione na produkcji.
 3. Wyślij testową kopertę do siebie: sprawdź e-mail, Didit, kod, podpisany
    PDF i stronę weryfikacji.
