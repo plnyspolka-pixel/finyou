@@ -182,8 +182,13 @@ export async function analyzePropertyCollateral(
     }
 
     // Normalizacja Warszawy (alias dzielnic/gmin) — wymusza city = Warszawa, county = m.st. Warszawa.
-    const addrLower = `${input.address ?? ""} ${input.city ?? ""}`.toLowerCase();
-    if (/warszaw/i.test(addrLower)) {
+    // Dopasowanie po MIEJSCOWOŚCI, nie po fragmencie adresu: ulica „Warszawska"
+    // (np. w Słupsku) nie może zamieniać nieruchomości na warszawską. Gdy brak
+    // miejscowości, szukamy samodzielnego słowa „Warszawa" w adresie.
+    const isWarsaw = input.city
+      ? /^\s*(m\.?\s*st\.?\s*)?warszaw/i.test(input.city)
+      : /(^|[\s,])warszawa([\s,]|$)/i.test(input.address ?? "");
+    if (isWarsaw) {
       input.city = "Warszawa";
       input.county = "m.st. Warszawa";
       input.voivodeship = input.voivodeship || "mazowieckie";
