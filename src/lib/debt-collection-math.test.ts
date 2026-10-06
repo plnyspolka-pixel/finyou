@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { calculateDebt, maxDelayInterestRate } from "./debt-collection-math";
+import {
+  DEFAULT_MAX_DELAY_RATE,
+  calculateDebt,
+  currentMaxDelayRate,
+  maxDelayInterestRate,
+} from "./debt-collection-math";
+import { maxDelayRate } from "./contract-engine/fees";
 
 // Struktura: kwota na rękę 100 000 + prowizja Finance You 10 000 (część
 // oprocentowana = 110 000) + prowizja inwestora 20 000 (bez odsetek).
@@ -18,6 +24,33 @@ const base = {
 describe("maxDelayInterestRate", () => {
   it("liczy 2×(NBP+5,5)", () => {
     expect(maxDelayInterestRate(5.75)).toBe(22.5);
+  });
+
+  it("stała DEFAULT_MAX_DELAY_RATE zostaje (zgodność wsteczna)", () => {
+    expect(DEFAULT_MAX_DELAY_RATE).toBe(22.5);
+  });
+});
+
+describe("currentMaxDelayRate — odsetki maksymalne za opóźnienie z tabeli RPP", () => {
+  it("stopa obowiązująca w danym dniu (RRRR-MM-DD)", () => {
+    expect(currentMaxDelayRate("2026-10-06")).toBe(18.5);
+    expect(currentMaxDelayRate("2026-03-05")).toBe(18.5);
+    expect(currentMaxDelayRate("2026-03-04")).toBe(19);
+    expect(currentMaxDelayRate("2025-06-01")).toBe(21.5);
+    expect(currentMaxDelayRate("2024-01-01")).toBe(22.5);
+  });
+
+  it("data z godziną i obiekt Date — dzień kalendarzowy w Polsce", () => {
+    expect(currentMaxDelayRate("2026-03-05T08:00:00Z")).toBe(18.5);
+    // 23:30 UTC 4 marca = 00:30 5 marca w Warszawie — obowiązuje już nowa stopa.
+    expect(currentMaxDelayRate(new Date("2026-03-04T23:30:00Z"))).toBe(18.5);
+    expect(currentMaxDelayRate(new Date("2026-03-04T12:00:00Z"))).toBe(19);
+  });
+
+  it("bez argumentu — dziś; wartości z contract-engine/fees.ts", () => {
+    expect(currentMaxDelayRate()).toBe(currentMaxDelayRate(new Date()));
+    expect(currentMaxDelayRate("nie-data")).toBe(currentMaxDelayRate());
+    expect(currentMaxDelayRate("2025-10-09")).toBe(maxDelayRate("2025-10-09"));
   });
 });
 

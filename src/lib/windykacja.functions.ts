@@ -3,6 +3,24 @@ import { z } from "zod";
 import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
 import { buildWindDocument, type DocContext } from "@/lib/windykacja-documents";
 import { normalizeWindFeeTable, windFeeForAction, type WindFeeTable } from "@/lib/windykacja-fees";
+import { defaultDelayRate } from "@/lib/windykacja-debt";
+import {
+  generateHarmonogram,
+  normalizeHarmonogram,
+  parseDataISO,
+  parseKwota,
+  type WindRata,
+} from "@/lib/windykacja-harmonogram";
+import {
+  daysSinceDue,
+  formatRachunekSplaty,
+  harmonogramFromInput,
+  opisHarmonogramu,
+  warsawToday,
+  windRecalcPlan,
+  type WindRecalcPlan,
+} from "@/lib/windykacja-recalc";
+import { recalcWindCaseDetailed, type WindRecalcOutcome } from "@/lib/windykacja-recalc.server";
 import type {
   WindPath,
   WindEventType,
@@ -10,8 +28,9 @@ import type {
   WindDocumentType,
 } from "@/lib/windykacja-procedure";
 
-// Nowe tabele (wind_*) nie są jeszcze w wygenerowanych typach Database —
-// używamy luźnego dostępu do klienta. Typy publiczne zadeklarowane poniżej.
+// Tabele wind_* są w wygenerowanych typach Database, ale typy nie nadążają
+// za migracjami (np. wind_events.oplata) — używamy luźnego dostępu do
+// klienta. Typy publiczne zadeklarowane poniżej.
 type LooseDb = { from: (t: string) => any };
 const loose = (c: unknown) => c as LooseDb;
 
@@ -62,6 +81,13 @@ export type WindLoan = {
   kwota_doplat: number;
   /** Tabela opłat za czynności windykacyjne z umowy (podstawa naliczania w rejestrze). */
   oplaty_windykacyjne: WindFeeTable | null;
+  /**
+   * Harmonogram rat z umowy (Zał. 1). Jest → zaległość, opóźnienie i odsetki
+   * liczone z rat; brak (null) → model z jednym terminem spłaty.
+   */
+  harmonogram: WindRata[] | null;
+  /** Nazwa pożyczkodawcy z umowy — agent AI dzwoni „w imieniu" tej strony. */
+  pozyczkodawca: string | null;
 };
 
 export type WindPriority = "niski" | "sredni" | "wysoki" | "krytyczny";
@@ -126,7 +152,15 @@ export type WindDocument = {
 export type WindCaseEnriched = WindCase & { loan: WindLoan; borrower: WindBorrower };
 
 const LOAN_COLS =
-  "id, borrower_id, numer_umowy, data_umowy, kwota_pozyczki, kwota_calkowita, prowizja, termin_splaty, numer_kw, kwota_hipoteki, akt_notarialny_777, kwota_777, rachunek_splaty, oprocentowanie_roczne, stopa_odsetek_max, status, saldo_pozostale, data_ostatniej_wplaty, data_wypowiedzenia, kwota_doplat, oplaty_windykacyjne";
+  "id, borrower_id, numer_umowy, data_umowy, kwota_pozyczki, kwota_calkowita, prowizja, termin_splaty, numer_kw, kwota_hipoteki, akt_notarialny_777, kwota_777, rachunek_splaty, oprocentowanie_roczne, stopa_odsetek_max, status, saldo_pozostale, data_ostatniej_wplaty, data_wypowiedzenia, kwota_doplat, oplaty_windykacyjne, harmonogram, pozyczkodawca";
+
+/** Harmonogram z bazy (JSONB) w postaci znormalizowanej — typ WindLoan.harmonogram. */
+function withHarmonogram<T extends { harmonogram?: unknown }>(
+  loan: T | null | undefined,
+): T | null {
+  if (!loan) return null;
+  return { ...loan, harmonogram: normalizeHarmonogram(loan.harmonogram) };
+}
 
 /** Schemat tabeli opłat z umowy (wejście z formularza / odczytu umowy). */
 const feeTableSchema = z
@@ -172,15 +206,15 @@ const EVENT_COLS =
 const DOC_COLS =
   "id, case_id, event_id, typ, tytul, tresc, plik_url, status, potwierdzenie_nadania_url, data_nadania, potwierdzenie_odbioru_url, data_odbioru, created_at";
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
+/** Dzisiejsza data w Polsce (Europe/Warsaw), RRRR-MM-DD. */
+const todayISO = () => warsawToday();
 const emptyToNull = (v: unknown) => (v === "" ? null : v);
-
-function daysOverdue(termin?: string | null): number {
-  if (!termin) return 0;
-  const due = new Date(`${termin}T00:00:00Z`).getTime();
-  const now = Date.now();
-  return Math.max(0, Math.floor((now - due) / 86_400_000));
-}
+const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+/** Południe UTC danego dnia — data zdarzenia nie zależy od strefy serwera. */
+const noonUTC = (iso: string) => `${iso.slice(0, 10)}T12:00:00.000Z`;
+const zl = (n: number) =>
+  `${round2(n).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`;
+const dataPL = (iso: string) => iso.slice(0, 10).split("-").reverse().join(".");
 
 // ── Dashboard: sprawy + zdarzenia (lite) ─────────────────────────────
 export const listWindDashboard = createServerFn({ method: "GET" })
@@ -195,9 +229,9 @@ export const listWindDashboard = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    const list = (cases ?? []) as Array<
-      WindCase & { loan: (WindLoan & { borrower: WindBorrower }) | null }
-    >;
+    const list = (
+      (cases ?? []) as Array<WindCase & { loan: (WindLoan & { borrower: WindBorrower }) | null }>
+    ).map((c) => ({ ...c, loan: withHarmonogram(c.loan) }));
     const caseIds = list.map((c) => c.id);
 
     // Zdarzenia z kwotą wpłaty i opłatą — panel liczy z nich zadłużenie z
@@ -256,7 +290,7 @@ export const getWindCase = createServerFn({ method: "POST" })
         .order("created_at", { ascending: false }),
     ]);
 
-    const loan = (c.loan ?? null) as (WindLoan & { borrower: WindBorrower }) | null;
+    const loan = withHarmonogram(c.loan as (WindLoan & { borrower: WindBorrower }) | null);
     return {
       case: c as WindCase,
       loan,
@@ -266,9 +300,191 @@ export const getWindCase = createServerFn({ method: "POST" })
     };
   });
 
+// ── Walidacja pól (formularz nowej sprawy, edycja na karcie sprawy) ──
+const isBlank = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "");
+const toNumberInput = (v: unknown) =>
+  isBlank(v) ? null : typeof v === "number" ? v : (parseKwota(v) ?? Number.NaN);
+
+/** Kwota z liczby albo tekstu („7 868,48"); pusta → null. */
+const kwotaInput = z.preprocess(
+  toNumberInput,
+  z
+    .number({ invalid_type_error: "nieprawidłowa kwota" })
+    .finite("nieprawidłowa kwota")
+    .min(0, "kwota nie może być ujemna")
+    .nullable(),
+);
+/** Kwota w kolumnie NOT NULL — pusta = 0. */
+const kwotaWymagana = kwotaInput.transform((v) => round2(v ?? 0));
+
+/** Stopa w % rocznie (0–100); pusta → null. */
+const stopaInput = z.preprocess(
+  toNumberInput,
+  z
+    .number({ invalid_type_error: "nieprawidłowa stopa" })
+    .min(0, "stopa nie może być ujemna")
+    .max(100, "stopa ponad 100% rocznie — sprawdź wartość")
+    .nullable(),
+);
+
+/** Data RRRR-MM-DD (także DD.MM.RRRR); pusta → null. */
+const dataInput = z.preprocess(
+  (v) => (isBlank(v) ? null : v),
+  z
+    .string({ invalid_type_error: "nieprawidłowa data" })
+    .nullable()
+    .transform((v, ctx) => {
+      if (v == null) return null;
+      const iso = parseDataISO(v);
+      if (!iso) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "nieprawidłowa data (RRRR-MM-DD)" });
+        return z.NEVER;
+      }
+      return iso;
+    }),
+);
+
+/** Tekst (przycięty); pusty → null. */
+const tekstInput = (max: number) =>
+  z.preprocess(
+    (v) => (typeof v === "string" ? v.trim() || null : (v ?? null)),
+    z
+      .string({ invalid_type_error: "nieprawidłowa wartość" })
+      .max(max, `najwyżej ${max} znaków`)
+      .nullable(),
+  );
+
+/** Rachunek do spłaty: NRB (26 cyfr) albo IBAN PL → zapis grupowy. */
+const rachunekInput = tekstInput(64).transform((v, ctx) => {
+  if (v == null) return null;
+  const f = formatRachunekSplaty(v);
+  if (!f) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "podaj 26 cyfr numeru rachunku (NRB) albo IBAN PL",
+    });
+    return z.NEVER;
+  }
+  return f;
+});
+
+/**
+ * Harmonogram rat: undefined = bez zmian, null / [] = brak harmonogramu
+ * (model z jednym terminem spłaty). Błędny wiersz → błąd z numerem raty.
+ */
+const harmonogramInput = z
+  .array(z.unknown(), { invalid_type_error: "harmonogram musi być listą rat" })
+  .max(600, "najwyżej 600 rat")
+  .nullable()
+  .optional()
+  .transform((rows, ctx) => {
+    if (rows == null) return rows;
+    const { harmonogram, bledy } = harmonogramFromInput(rows);
+    for (const message of bledy.slice(0, 5)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    }
+    if (bledy.length > 5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `…oraz ${bledy.length - 5} innych błędów w harmonogramie.`,
+      });
+    }
+    return harmonogram;
+  });
+
+/** Nazwy pól w komunikatach i w zdarzeniu „Zmieniono dane pożyczki". */
+const POLE: Record<string, string> = {
+  numer_umowy: "Numer umowy",
+  data_umowy: "Data umowy",
+  kwota_pozyczki: "Kwota wypłacona (na rękę)",
+  kwota_calkowita: "Kwota do zwrotu bez odsetek",
+  prowizja: "Prowizja Finance You",
+  termin_splaty: "Termin spłaty",
+  numer_kw: "Numer KW",
+  kwota_hipoteki: "Kwota hipoteki",
+  akt_notarialny_777: "Akt notarialny (art. 777 k.p.c.)",
+  kwota_777: "Kwota z aktu 777",
+  rachunek_splaty: "Rachunek do spłaty",
+  oprocentowanie_roczne: "Oprocentowanie roczne",
+  stopa_odsetek_max: "Stopa odsetek za opóźnienie",
+  kwota_doplat: "Dopłaty",
+  oplaty_windykacyjne: "Opłaty windykacyjne",
+  harmonogram: "Harmonogram rat",
+  pozyczkodawca: "Pożyczkodawca",
+  imie_nazwisko: "Dłużnik",
+  typ: "Typ dłużnika",
+  pesel: "PESEL",
+  nip: "NIP",
+  dowod_osobisty: "Dowód osobisty",
+  adres_zamieszkania: "Adres zamieszkania",
+  adres_do_doreczen: "Adres do doręczeń",
+  email: "E-mail",
+  telefon: "Telefon",
+  email_zgoda_doreczenia: "Zgoda na doręczenia e-mail",
+  notatki: "Notatki",
+  sciezka: "Ścieżka",
+  etap: "Etap",
+  priorytet: "Priorytet",
+  osoba_prowadzaca: "Osoba prowadząca",
+  kwota_zalegla: "Kwota zaległa",
+  opoznienie_dni: "Dni opóźnienia",
+  wynik: "Wynik",
+  data_zamkniecia: "Data zamknięcia",
+  kwota: "kwota",
+  data: "data",
+};
+
+/** Walidacja z czytelnym komunikatem po polsku zamiast surowego ZodError. */
+function parseInput<S extends z.ZodTypeAny>(schema: S, d: unknown): z.output<S> {
+  const r = schema.safeParse(d);
+  if (r.success) return r.data;
+  const msgs = r.error.issues.map((i) => {
+    if (i.code === z.ZodIssueCode.unrecognized_keys) {
+      return `Tych pól nie można zmienić tutaj: ${i.keys.join(", ")}.`;
+    }
+    const msg = /[.!?]$/.test(i.message) ? i.message : `${i.message}.`;
+    const key = [...i.path].reverse().find((p): p is string => typeof p === "string");
+    // Błędy harmonogramu mają już numer raty.
+    if (!key || key === "harmonogram") return msg;
+    const wplata = i.path[0] === "wplaty" && typeof i.path[1] === "number" ? i.path[1] + 1 : null;
+    if (wplata != null) return `Wpłata ${wplata} — ${POLE[key] ?? key}: ${msg}`;
+    return `${POLE[key] ?? key}: ${msg}`;
+  });
+  throw new Error([...new Set(msgs)].join(" "));
+}
+
+/** Porównanie wartości pola przed i po edycji (obiekty — bez względu na kolejność kluczy). */
+function sameValue(a: unknown, b: unknown): boolean {
+  const stable = (v: unknown) =>
+    JSON.stringify(v ?? null, (_k, x: unknown) =>
+      x && typeof x === "object" && !Array.isArray(x)
+        ? Object.fromEntries(Object.entries(x).sort(([p], [q]) => p.localeCompare(q)))
+        : x,
+    );
+  return stable(a) === stable(b);
+}
+
+async function readLoan(db: LooseDb, id: string): Promise<WindLoan> {
+  const { data, error } = await db.from("wind_loans").select(LOAN_COLS).eq("id", id).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Pożyczka nie znaleziona");
+  return withHarmonogram(data as WindLoan) as WindLoan;
+}
+
+/** Otwarte sprawy pożyczki (bez daty zamknięcia). */
+async function openCaseIds(db: LooseDb, loanId: string): Promise<string[]> {
+  const { data, error } = await db
+    .from("wind_collection_cases")
+    .select("id")
+    .eq("loan_id", loanId)
+    .is("data_zamkniecia", null);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Array<{ id: string }>).map((c) => c.id);
+}
+
 // ── Utworzenie sprawy (borrower + loan + case + zdarzenie systemowe) ──
 const createSchema = z.object({
-  imie_nazwisko: z.string().min(1, "Podaj dłużnika"),
+  imie_nazwisko: z.string().trim().min(1, "podaj imię i nazwisko albo nazwę dłużnika"),
   typ: z.enum(["osoba_fizyczna", "firma"]).default("osoba_fizyczna"),
   pesel: z.string().optional().nullable(),
   nip: z.string().optional().nullable(),
@@ -278,21 +494,33 @@ const createSchema = z.object({
   telefon: z.string().optional().nullable(),
   email_zgoda_doreczenia: z.boolean().default(false),
   numer_umowy: z.string().optional().nullable(),
-  data_umowy: z.string().optional().nullable(),
-  kwota_pozyczki: z.coerce.number().default(0),
-  kwota_calkowita: z.coerce.number().default(0),
-  prowizja: z.coerce.number().default(0),
-  termin_splaty: z.string().optional().nullable(),
+  data_umowy: dataInput,
+  /** Kwota wypłacona na rękę. */
+  kwota_pozyczki: kwotaWymagana,
+  /** Kwota pożyczki + prowizja pożyczkodawcy, BEZ odsetek umownych. */
+  kwota_calkowita: kwotaWymagana,
+  /** Prowizja Finance You potrącona z wypłaty. */
+  prowizja: kwotaWymagana,
+  termin_splaty: dataInput,
   numer_kw: z.string().optional().nullable(),
-  kwota_hipoteki: z.coerce.number().optional().nullable(),
-  akt_notarialny_777: z.string().optional().nullable(),
-  kwota_777: z.coerce.number().optional().nullable(),
-  rachunek_splaty: z.string().optional().nullable(),
-  oprocentowanie_roczne: z.coerce.number().default(0),
-  stopa_odsetek_max: z.coerce.number().default(0),
+  kwota_hipoteki: kwotaInput,
+  akt_notarialny_777: tekstInput(300),
+  kwota_777: kwotaInput,
+  rachunek_splaty: rachunekInput,
+  oprocentowanie_roczne: stopaInput.transform((v) => v ?? 0),
+  /** Stopa odsetek za opóźnienie z umowy; 0 / brak = odsetki maksymalne za opóźnienie z dnia umowy. */
+  stopa_odsetek_max: stopaInput,
   /** Tabela opłat za czynności windykacyjne z umowy (odczyt AI / korekta). */
   oplaty_windykacyjne: feeTableSchema,
-  kwota_zalegla: z.coerce.number().default(0),
+  /** Harmonogram rat (Zał. 1) — z odczytu umowy, generatora albo wpisany ręcznie. */
+  harmonogram: harmonogramInput,
+  /** Nazwa pożyczkodawcy z umowy. */
+  pozyczkodawca: tekstInput(200),
+  /**
+   * Kwota zaległa po wpłatach — tylko dla pożyczki bez harmonogramu
+   * (0 = całe saldo). Z harmonogramem liczona z rat, wartość ignorowana.
+   */
+  kwota_zalegla: kwotaWymagana,
   sciezka: z.enum(["miekka", "standardowa", "twarda", "karna"]).default("miekka"),
   etap: z.string().default("kontakt_wstepny"),
   priorytet: z.enum(["niski", "sredni", "wysoki", "krytyczny"]).default("sredni"),
@@ -303,8 +531,10 @@ const createSchema = z.object({
   wplaty: z
     .array(
       z.object({
-        kwota: z.coerce.number().positive(),
-        data: z.string().min(1),
+        kwota: kwotaInput
+          .refine((v) => v != null && v > 0, "kwota wpłaty musi być większa od 0")
+          .transform((v) => round2(v ?? 0)),
+        data: dataInput.refine((v) => v != null, "podaj datę wpłaty").transform((v) => v ?? ""),
         zalacznik_url: z.string().optional().nullable(),
       }),
     )
@@ -313,9 +543,66 @@ const createSchema = z.object({
 
 export const createWindCase = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
-  .inputValidator((d: Record<string, unknown>) => createSchema.parse(d))
+  .inputValidator((d: Record<string, unknown>) => parseInput(createSchema, d))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
+    const autor = context.claims?.email ?? null;
+    const asOf = todayISO();
+
+    const wplaty = [...(data.wplaty ?? [])].sort((a, b) => a.data.localeCompare(b.data));
+    const harmonogram = data.harmonogram ?? null;
+    // Stopa odsetek za opóźnienie: z umowy, a gdy nie podano — odsetki
+    // maksymalne za opóźnienie z dnia zawarcia umowy (WIN_01).
+    const stopa =
+      data.stopa_odsetek_max != null && data.stopa_odsetek_max > 0
+        ? data.stopa_odsetek_max
+        : defaultDelayRate(data.data_umowy);
+    // Termin spłaty = termin ostatniej raty, gdy podano tylko harmonogram.
+    const terminSplaty =
+      data.termin_splaty ?? harmonogram?.[harmonogram.length - 1]?.termin ?? null;
+
+    // Pożyczka z harmonogramem: kwota zaległa = niezapłacone raty wymagalne
+    // na dziś (po zaliczeniu wpłat z potwierdzeń), opóźnienie od najstarszej
+    // zaległej raty, saldo = zaległe raty + raty przyszłe.
+    const plan: WindRecalcPlan | null = harmonogram
+      ? windRecalcPlan({
+          loan: {
+            kwota_pozyczki: data.kwota_pozyczki,
+            kwota_calkowita: data.kwota_calkowita,
+            prowizja: data.prowizja,
+            data_umowy: data.data_umowy,
+            termin_splaty: terminSplaty,
+            oprocentowanie_roczne: data.oprocentowanie_roczne,
+            stopa_odsetek_max: stopa,
+            status: "w_zwloce",
+            harmonogram,
+          },
+          events: wplaty.map((w) => ({
+            typ: "wplata",
+            data_zdarzenia: noonUTC(w.data),
+            metadata: { kwota: w.kwota },
+          })),
+          asOf,
+        })
+      : null;
+
+    let saldo: number;
+    let kwotaZalegla: number;
+    let opoznienie: number;
+    if (plan) {
+      saldo = plan.loanPatch.saldo_pozostale;
+      kwotaZalegla = plan.casePatch.kwota_zalegla;
+      opoznienie = plan.casePatch.opoznienie_dni;
+    } else {
+      // Model jednoterminowy: saldo = kwota do zwrotu minus wpłaty z
+      // potwierdzeń przelewów. Ręcznie podana kwota zaległa jest podstawą
+      // odsetek za opóźnienie sprawy, ale NIE nadpisuje salda pożyczki.
+      const naleznoscBazowa = data.kwota_calkowita || data.kwota_pozyczki;
+      const sumaWplat = wplaty.reduce((s, w) => s + w.kwota, 0);
+      saldo = round2(Math.max(0, naleznoscBazowa - sumaWplat));
+      kwotaZalegla = data.kwota_zalegla || saldo;
+      opoznienie = daysSinceDue(terminSplaty, asOf);
+    }
 
     const { data: borrower, error: bErr } = await db
       .from("wind_borrowers")
@@ -334,32 +621,27 @@ export const createWindCase = createServerFn({ method: "POST" })
       .single();
     if (bErr) throw new Error(bErr.message);
 
-    // Należność wyliczana automatycznie: kwota do zwrotu minus suma wpłat
-    // z potwierdzeń przelewów. Ręcznie podana kwota zaległa ma pierwszeństwo.
-    const wplaty = [...(data.wplaty ?? [])].sort((a, b) => a.data.localeCompare(b.data));
-    const sumaWplat = wplaty.reduce((s, w) => s + w.kwota, 0);
-    const naleznoscBazowa = data.kwota_calkowita || data.kwota_pozyczki;
-    const saldoPoWplatach = Math.max(0, naleznoscBazowa - sumaWplat);
-    const saldo = data.kwota_zalegla || saldoPoWplatach || naleznoscBazowa;
     const { data: loan, error: lErr } = await db
       .from("wind_loans")
       .insert({
         borrower_id: borrower.id,
         numer_umowy: emptyToNull(data.numer_umowy),
-        data_umowy: emptyToNull(data.data_umowy),
+        data_umowy: data.data_umowy,
         kwota_pozyczki: data.kwota_pozyczki,
         kwota_calkowita: data.kwota_calkowita,
         prowizja: data.prowizja,
-        termin_splaty: emptyToNull(data.termin_splaty),
+        termin_splaty: terminSplaty,
         numer_kw: emptyToNull(data.numer_kw),
-        kwota_hipoteki: data.kwota_hipoteki ?? null,
-        akt_notarialny_777: emptyToNull(data.akt_notarialny_777),
-        kwota_777: data.kwota_777 ?? null,
-        rachunek_splaty: emptyToNull(data.rachunek_splaty),
+        kwota_hipoteki: data.kwota_hipoteki,
+        akt_notarialny_777: data.akt_notarialny_777,
+        kwota_777: data.kwota_777,
+        rachunek_splaty: data.rachunek_splaty,
         oprocentowanie_roczne: data.oprocentowanie_roczne,
-        stopa_odsetek_max: data.stopa_odsetek_max,
+        stopa_odsetek_max: stopa,
         oplaty_windykacyjne: normalizeWindFeeTable(data.oplaty_windykacyjne) ?? null,
-        status: "w_zwloce",
+        harmonogram,
+        pozyczkodawca: data.pozyczkodawca,
+        status: plan?.loanPatch.status ?? "w_zwloce",
         saldo_pozostale: saldo,
         data_ostatniej_wplaty: wplaty.length ? wplaty[wplaty.length - 1].data : null,
       })
@@ -373,9 +655,9 @@ export const createWindCase = createServerFn({ method: "POST" })
         loan_id: loan.id,
         sciezka: data.sciezka,
         etap: data.etap,
-        opoznienie_dni: daysOverdue(data.termin_splaty),
-        kwota_zalegla: data.kwota_zalegla || saldo,
-        data_otwarcia: todayISO(),
+        opoznienie_dni: opoznienie,
+        kwota_zalegla: kwotaZalegla,
+        data_otwarcia: asOf,
         priorytet: data.priorytet,
         osoba_prowadzaca: emptyToNull(data.osoba_prowadzaca),
       })
@@ -388,8 +670,15 @@ export const createWindCase = createServerFn({ method: "POST" })
       typ: "zmiana_etapu",
       kategoria: "systemowe",
       tytul: "Sprawa windykacyjna otwarta",
-      tresc: `Ścieżka: ${data.sciezka}, etap: ${data.etap}.`,
-      autor: context.claims?.email ?? null,
+      tresc: [
+        `Ścieżka: ${data.sciezka}, etap: ${data.etap}.`,
+        plan
+          ? `Harmonogram: ${opisHarmonogramu(harmonogram)}. Zaległe raty na ${dataPL(asOf)}: ${zl(kwotaZalegla)}, opóźnienie ${opoznienie} dni.`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      autor,
     });
 
     // Skan umowy pożyczki — dowód w aktach sprawy.
@@ -401,70 +690,269 @@ export const createWindCase = createServerFn({ method: "POST" })
         tytul: "Umowa pożyczki — skan w aktach",
         tresc: "Umowa wgrana przy zakładaniu sprawy; dane sprawy odczytane z umowy.",
         zalacznik_url: data.umowa_url,
-        autor: context.claims?.email ?? null,
+        autor,
       });
     }
 
     // Wpłaty otrzymane dotychczas (z potwierdzeń przelewów) — pełna historia
-    // do wyliczenia odsetek (art. 451 k.c.: koszty → odsetki → kapitał).
-    for (const w of wplaty) {
-      await db.from("wind_events").insert({
-        case_id: kase.id,
-        typ: "wplata",
-        kategoria: "manualne",
-        tytul: "Odnotowano wpłatę",
-        tresc: "Wpłata z potwierdzenia przelewu (przy zakładaniu sprawy).",
-        data_zdarzenia: new Date(`${w.data}T12:00:00`).toISOString(),
-        zalacznik_url: emptyToNull(w.zalacznik_url),
-        metadata: { kwota: w.kwota, sposob: "przelew (potwierdzenie)" },
-        autor: context.claims?.email ?? null,
-      });
+    // do wyliczenia zaległości i odsetek. Jeden insert: zapisują się wszystkie
+    // albo żadna.
+    let ostrzezenie: string | null = null;
+    if (wplaty.length) {
+      const { error: wErr } = await db.from("wind_events").insert(
+        wplaty.map((w) => ({
+          case_id: kase.id,
+          typ: "wplata",
+          kategoria: "manualne",
+          tytul: "Odnotowano wpłatę",
+          tresc: "Wpłata z potwierdzenia przelewu (przy zakładaniu sprawy).",
+          data_zdarzenia: noonUTC(w.data),
+          zalacznik_url: emptyToNull(w.zalacznik_url),
+          metadata: { kwota: w.kwota, sposob: "przelew (potwierdzenie)" },
+          autor,
+        })),
+      );
+      if (wErr) {
+        console.error("[windykacja] zapis wpłat przy zakładaniu sprawy:", wErr.message);
+        ostrzezenie = `Sprawa założona, ale nie zapisano wpłat (${wErr.message}) — dodaj je na karcie sprawy.`;
+        // Migawka sprawy zgodna z tym, co faktycznie jest w aktach.
+        if (plan) {
+          try {
+            const r = await recalcWindCaseDetailed(db, kase.id as string, { asOf });
+            if (r) kwotaZalegla = r.casePatch.kwota_zalegla;
+          } catch (e) {
+            console.error("[windykacja] przeliczenie sprawy:", (e as Error).message);
+          }
+        }
+      }
     }
 
-    return { caseId: kase.id as string, kwota_zalegla: data.kwota_zalegla || saldo };
+    return { caseId: kase.id as string, kwota_zalegla: kwotaZalegla, ostrzezenie };
   });
 
-// ── Edycja: borrower / loan / case ───────────────────────────────────
+// ── Edycja: borrower / loan / case (tylko pola z listy) ──────────────
+const borrowerPatchSchema = z
+  .object({
+    imie_nazwisko: z.preprocess(
+      (v) => (typeof v === "string" ? v.trim() : v),
+      z
+        .string()
+        .min(1, "podaj imię i nazwisko albo nazwę dłużnika")
+        .max(300, "najwyżej 300 znaków"),
+    ),
+    typ: z.enum(["osoba_fizyczna", "firma"]),
+    pesel: z.preprocess(
+      (v) => (isBlank(v) ? null : typeof v === "string" ? v.replace(/\s/g, "") : v),
+      z
+        .string()
+        .regex(/^\d{11}$/, "PESEL ma 11 cyfr")
+        .nullable(),
+    ),
+    nip: z.preprocess(
+      (v) =>
+        isBlank(v) ? null : typeof v === "string" ? v.replace(/[\s-]/g, "").replace(/^PL/i, "") : v,
+      z
+        .string()
+        .regex(/^\d{10}$/, "NIP ma 10 cyfr")
+        .nullable(),
+    ),
+    dowod_osobisty: tekstInput(30),
+    adres_zamieszkania: tekstInput(500),
+    adres_do_doreczen: tekstInput(500),
+    email: z.preprocess(
+      (v) => (typeof v === "string" ? v.trim() || null : (v ?? null)),
+      z.string().email("nieprawidłowy adres e-mail").max(254).nullable(),
+    ),
+    telefon: tekstInput(30),
+    email_zgoda_doreczenia: z.boolean(),
+    notatki: tekstInput(5000),
+  })
+  .partial()
+  .strict();
+
 export const updateWindBorrower = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
   .inputValidator((d: { id: string; patch: Record<string, unknown> }) =>
-    z.object({ id: z.string().uuid(), patch: z.record(z.string(), z.unknown()) }).parse(d),
+    parseInput(z.object({ id: z.string().uuid(), patch: borrowerPatchSchema }), d),
   )
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
-    const patch: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(data.patch)) patch[k] = emptyToNull(v);
-    const { error } = await db.from("wind_borrowers").update(patch).eq("id", data.id);
+    const patch = Object.fromEntries(Object.entries(data.patch).filter(([, v]) => v !== undefined));
+    const { data: rows, error } = Object.keys(patch).length
+      ? await db.from("wind_borrowers").update(patch).eq("id", data.id).select(BORROWER_COLS)
+      : await db.from("wind_borrowers").select(BORROWER_COLS).eq("id", data.id);
     if (error) throw new Error(error.message);
-    return { ok: true };
+    const borrower = (rows ?? [])[0] as WindBorrower | undefined;
+    if (!borrower) throw new Error("Dłużnik nie znaleziony albo brak uprawnień do edycji");
+    return { ok: true as const, borrower };
   });
+
+/**
+ * Pola pożyczki, które można zmienić z karty sprawy. Status, saldo
+ * i wypowiedzenie mają osobne funkcje (wpłata, wypowiedzenie umowy).
+ */
+const loanPatchSchema = z
+  .object({
+    numer_umowy: tekstInput(100),
+    data_umowy: dataInput,
+    kwota_pozyczki: kwotaWymagana,
+    kwota_calkowita: kwotaWymagana,
+    prowizja: kwotaWymagana,
+    termin_splaty: dataInput,
+    numer_kw: tekstInput(60),
+    kwota_hipoteki: kwotaInput,
+    akt_notarialny_777: tekstInput(300),
+    kwota_777: kwotaInput,
+    rachunek_splaty: rachunekInput,
+    oprocentowanie_roczne: stopaInput.transform((v) => v ?? 0),
+    /** Pusta / 0 = odsetki maksymalne za opóźnienie z dnia umowy. */
+    stopa_odsetek_max: stopaInput,
+    kwota_doplat: kwotaWymagana,
+    oplaty_windykacyjne: feeTableSchema,
+    harmonogram: harmonogramInput,
+    pozyczkodawca: tekstInput(200),
+  })
+  .partial()
+  .strict();
 
 export const updateWindLoan = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
-  .inputValidator((d: { id: string; patch: Record<string, unknown> }) =>
-    z.object({ id: z.string().uuid(), patch: z.record(z.string(), z.unknown()) }).parse(d),
+  .inputValidator((d: { id: string; caseId?: string | null; patch: Record<string, unknown> }) =>
+    parseInput(
+      z.object({
+        id: z.string().uuid(),
+        /** Sprawa, której migawkę przeliczyć (i w której aktach zapisać zmianę). */
+        caseId: z.string().uuid().nullable().optional(),
+        patch: loanPatchSchema,
+      }),
+      d,
+    ),
   )
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
-    const patch: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(data.patch)) patch[k] = emptyToNull(v);
-    const { error } = await db.from("wind_loans").update(patch).eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    const { id, caseId } = data;
+
+    if (caseId) {
+      const { data: kase, error } = await db
+        .from("wind_collection_cases")
+        .select("loan_id")
+        .eq("id", caseId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!kase || kase.loan_id !== id) throw new Error("Sprawa nie dotyczy tej pożyczki");
+    }
+
+    const before = await readLoan(db, id);
+    const patch: Record<string, unknown> = Object.fromEntries(
+      Object.entries(data.patch).filter(([, v]) => v !== undefined),
+    );
+    if ("oplaty_windykacyjne" in patch) {
+      patch.oplaty_windykacyjne = normalizeWindFeeTable(patch.oplaty_windykacyjne) ?? null;
+    }
+    // Pusta stopa odsetek za opóźnienie = odsetki maksymalne z dnia umowy.
+    if ("stopa_odsetek_max" in patch && !(Number(patch.stopa_odsetek_max) > 0)) {
+      const dataUmowy =
+        "data_umowy" in patch ? (patch.data_umowy as string | null) : before.data_umowy;
+      patch.stopa_odsetek_max = defaultDelayRate(dataUmowy);
+    }
+    // Zapisujemy tylko pola, które faktycznie się zmieniły.
+    const changed = Object.keys(patch).filter(
+      (k) => !sameValue((before as Record<string, unknown>)[k], patch[k]),
+    );
+    if (changed.length) {
+      const update = Object.fromEntries(changed.map((k) => [k, patch[k]]));
+      const { data: rows, error } = await db
+        .from("wind_loans")
+        .update(update)
+        .eq("id", id)
+        .select("id");
+      if (error) throw new Error(error.message);
+      if (!rows?.length) throw new Error("Pożyczka nie znaleziona albo brak uprawnień do edycji");
+    }
+
+    let loan = changed.length ? await readLoan(db, id) : before;
+
+    // Pożyczka z harmonogramem: przeliczamy migawkę sprawy — wskazanej albo
+    // wszystkich otwartych spraw tej pożyczki (kwota zaległa, opóźnienie,
+    // saldo i status pożyczki).
+    let recalc: WindRecalcOutcome | null = null;
+    let recalcError: Error | null = null;
+    if (loan.harmonogram) {
+      try {
+        const ids = caseId ? [caseId] : await openCaseIds(db, id);
+        for (const cid of ids) {
+          const r = await recalcWindCaseDetailed(db, cid);
+          if (cid === caseId) recalc = r;
+        }
+        if (ids.length) loan = await readLoan(db, id);
+      } catch (e) {
+        // Zmiana jest już zapisana — najpierw ślad w aktach, potem błąd.
+        recalcError = e as Error;
+      }
+    }
+
+    // Ślad w aktach sprawy: co zmieniono w danych pożyczki.
+    if (caseId && changed.length) {
+      const linie = [`Zmienione pola: ${changed.map((k) => POLE[k] ?? k).join(", ")}.`];
+      if (changed.includes("harmonogram")) {
+        linie.push(`Harmonogram: ${opisHarmonogramu(loan.harmonogram)}.`);
+      }
+      if (recalc) {
+        linie.push(
+          `Zaległe raty na ${dataPL(recalc.asOf)}: ${zl(recalc.casePatch.kwota_zalegla)}, opóźnienie ${recalc.casePatch.opoznienie_dni} dni.`,
+        );
+      }
+      const { error: evErr } = await db.from("wind_events").insert({
+        case_id: caseId,
+        typ: "notatka",
+        kategoria: "systemowe",
+        tytul: "Zmieniono dane pożyczki",
+        tresc: linie.join("\n"),
+        autor: context.claims?.email ?? null,
+      });
+      if (evErr) console.error("[windykacja] zdarzenie edycji pożyczki:", evErr.message);
+    }
+    if (recalcError) {
+      throw new Error(
+        `Dane pożyczki zapisane, ale nie udało się przeliczyć zaległości: ${recalcError.message}`,
+      );
+    }
+
+    return { ok: true as const, loan };
   });
+
+const casePatchSchema = z
+  .object({
+    sciezka: z.enum(["miekka", "standardowa", "twarda", "karna"]),
+    etap: z.string().trim().min(1, "podaj etap").max(100),
+    priorytet: z.enum(["niski", "sredni", "wysoki", "krytyczny"]),
+    osoba_prowadzaca: tekstInput(200),
+    kwota_zalegla: kwotaWymagana,
+    opoznienie_dni: z.coerce.number().int().min(0).max(36_500),
+    wynik: z.preprocess(
+      (v) => (isBlank(v) ? null : v),
+      z.enum(["splacona", "ugoda", "egzekucja_w_toku", "umorzona", "przekazana_karna"]).nullable(),
+    ),
+    data_zamkniecia: dataInput,
+  })
+  .partial()
+  .strict();
 
 export const updateWindCase = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
   .inputValidator((d: { id: string; patch: Record<string, unknown> }) =>
-    z.object({ id: z.string().uuid(), patch: z.record(z.string(), z.unknown()) }).parse(d),
+    parseInput(z.object({ id: z.string().uuid(), patch: casePatchSchema }), d),
   )
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
-    const patch: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(data.patch)) patch[k] = emptyToNull(v);
-    const { error } = await db.from("wind_collection_cases").update(patch).eq("id", data.id);
+    const patch = Object.fromEntries(Object.entries(data.patch).filter(([, v]) => v !== undefined));
+    const { data: rows, error } = Object.keys(patch).length
+      ? await db.from("wind_collection_cases").update(patch).eq("id", data.id).select(CASE_COLS)
+      : await db.from("wind_collection_cases").select(CASE_COLS).eq("id", data.id);
     if (error) throw new Error(error.message);
-    return { ok: true };
+    const kase = (rows ?? [])[0] as WindCase | undefined;
+    if (!kase) throw new Error("Sprawa nie znaleziona albo brak uprawnień do edycji");
+    return { ok: true as const, case: kase };
   });
 
 // ── Zmiana etapu / ścieżki (zapisuje zdarzenie) ──────────────────────
@@ -523,7 +1011,7 @@ export const setWindTermination = createServerFn({ method: "POST" })
     const db = loose(context.supabase);
     const { data: loan } = await db
       .from("wind_loans")
-      .select("status")
+      .select("status, harmonogram")
       .eq("id", data.loanId)
       .maybeSingle();
 
@@ -540,6 +1028,16 @@ export const setWindTermination = createServerFn({ method: "POST" })
 
     const { error } = await db.from("wind_loans").update(patch).eq("id", data.loanId);
     if (error) throw new Error(error.message);
+
+    // Pożyczka z harmonogramem: po wypowiedzeniu wymagalne są wszystkie raty
+    // (po cofnięciu — znów tylko zapadłe) — przeliczamy migawkę sprawy.
+    if (normalizeHarmonogram(loan?.harmonogram)) {
+      try {
+        await recalcWindCaseDetailed(db, data.caseId);
+      } catch (e) {
+        console.error("[windykacja] przeliczenie sprawy po wypowiedzeniu:", (e as Error).message);
+      }
+    }
 
     const { data: ev, error: eErr } = await db
       .from("wind_events")
@@ -730,18 +1228,38 @@ export const addWindDelivery = createServerFn({ method: "POST" })
 export const addWindWplata = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) =>
-    z
-      .object({
+    parseInput(
+      z.object({
         caseId: z.string().uuid(),
         loanId: z.string().uuid(),
-        kwota: z.coerce.number().positive(),
-        data: z.string().min(1),
+        kwota: kwotaInput
+          .refine((v) => v != null && v > 0, "kwota wpłaty musi być większa od 0")
+          .transform((v) => round2(v ?? 0)),
+        data: dataInput.refine((v) => v != null, "podaj datę wpłaty").transform((v) => v ?? ""),
         sposob: z.string().optional().nullable(),
-      })
-      .parse(d),
+      }),
+      d,
+    ),
   )
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
+
+    // Wpłata musi dotyczyć pożyczki tej sprawy.
+    const { data: kase, error: kErr } = await db
+      .from("wind_collection_cases")
+      .select("loan_id, kwota_zalegla")
+      .eq("id", data.caseId)
+      .maybeSingle();
+    if (kErr) throw new Error(kErr.message);
+    if (!kase) throw new Error("Sprawa nie znaleziona");
+    if (kase.loan_id !== data.loanId) throw new Error("Wpłata nie dotyczy pożyczki tej sprawy");
+    const { data: loan, error: lErr } = await db
+      .from("wind_loans")
+      .select("saldo_pozostale, status, data_ostatniej_wplaty, harmonogram")
+      .eq("id", data.loanId)
+      .maybeSingle();
+    if (lErr) throw new Error(lErr.message);
+    if (!loan) throw new Error("Pożyczka nie znaleziona");
 
     const { data: ev, error } = await db
       .from("wind_events")
@@ -751,7 +1269,7 @@ export const addWindWplata = createServerFn({ method: "POST" })
         kategoria: "manualne",
         tytul: "Odnotowano wpłatę",
         tresc: data.sposob ? `Sposób: ${data.sposob}` : null,
-        data_zdarzenia: new Date(`${data.data}T12:00:00`).toISOString(),
+        data_zdarzenia: noonUTC(data.data),
         metadata: { kwota: data.kwota, sposob: data.sposob ?? null },
         autor: context.claims?.email ?? null,
       })
@@ -759,25 +1277,47 @@ export const addWindWplata = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    // Aktualizacja salda pożyczki i kwoty zaległej sprawy.
-    const { data: loan } = await db
-      .from("wind_loans")
-      .select("saldo_pozostale, status")
-      .eq("id", data.loanId)
-      .maybeSingle();
-    const { data: kase } = await db
-      .from("wind_collection_cases")
-      .select("kwota_zalegla")
-      .eq("id", data.caseId)
-      .maybeSingle();
-    const newSaldo = Math.max(0, Number(loan?.saldo_pozostale ?? 0) - data.kwota);
-    const newZalegla = Math.max(0, Number(kase?.kwota_zalegla ?? 0) - data.kwota);
+    // Data ostatniej wpłaty — najpóźniejsza (wpłata wpisana wstecz jej nie cofa).
+    const ostatnia =
+      loan.data_ostatniej_wplaty && String(loan.data_ostatniej_wplaty) > data.data
+        ? String(loan.data_ostatniej_wplaty).slice(0, 10)
+        : data.data;
+
+    // Pożyczka z harmonogramem: wpłata rozliczana na raty wg umowy (koszty →
+    // odsetki za opóźnienie → raty od najstarszej) — kwotę zaległą, opóźnienie
+    // i saldo przeliczamy z rat, a nie odejmujemy całej wpłaty.
+    if (normalizeHarmonogram(loan.harmonogram)) {
+      await db.from("wind_loans").update({ data_ostatniej_wplaty: ostatnia }).eq("id", data.loanId);
+      try {
+        const r = await recalcWindCaseDetailed(db, data.caseId);
+        if (r) {
+          return {
+            event: ev as WindEvent,
+            saldo_pozostale: r.loanPatch.saldo_pozostale,
+            kwota_zalegla: r.casePatch.kwota_zalegla,
+          };
+        }
+      } catch (e) {
+        // Wpłata jest już w aktach (karta sprawy liczy zaległość na bieżąco
+        // ze zdarzeń) — nie zgłaszamy błędu, żeby nie wpisano jej drugi raz.
+        console.error("[windykacja] przeliczenie sprawy po wpłacie:", (e as Error).message);
+      }
+      return {
+        event: ev as WindEvent,
+        saldo_pozostale: Number(loan.saldo_pozostale ?? 0),
+        kwota_zalegla: Number(kase.kwota_zalegla ?? 0),
+      };
+    }
+
+    // Model jednoterminowy: wpłata pomniejsza saldo pożyczki i kwotę zaległą.
+    const newSaldo = round2(Math.max(0, Number(loan.saldo_pozostale ?? 0) - data.kwota));
+    const newZalegla = round2(Math.max(0, Number(kase.kwota_zalegla ?? 0) - data.kwota));
     await db
       .from("wind_loans")
       .update({
         saldo_pozostale: newSaldo,
-        data_ostatniej_wplaty: data.data,
-        status: newSaldo <= 0 ? "splacona" : loan?.status,
+        data_ostatniej_wplaty: ostatnia,
+        status: newSaldo <= 0 ? "splacona" : loan.status,
       })
       .eq("id", data.loanId);
     await db
@@ -847,6 +1387,18 @@ export const generateWindDocument = createServerFn({ method: "POST" })
     const loan = c.loan as (WindLoan & { borrower: WindBorrower }) | null;
     const b = loan?.borrower;
 
+    // Pożyczka z harmonogramem: kwoty w piśmie z rat wymagalnych na dziś,
+    // a nie z ostatniego zapisu (od niego mogły zapaść kolejne raty).
+    let kwotaZalegla = Number(c.kwota_zalegla ?? 0);
+    let saldoPozostale = Number(loan?.saldo_pozostale ?? 0);
+    if (normalizeHarmonogram(loan?.harmonogram)) {
+      const r = await recalcWindCaseDetailed(db, data.caseId);
+      if (r) {
+        kwotaZalegla = r.casePatch.kwota_zalegla;
+        saldoPozostale = r.loanPatch.saldo_pozostale;
+      }
+    }
+
     const ctx: DocContext = {
       dluznik: b?.imie_nazwisko ?? "…",
       adres: b?.adres_do_doreczen || b?.adres_zamieszkania || "…",
@@ -854,8 +1406,8 @@ export const generateWindDocument = createServerFn({ method: "POST" })
       nip: b?.nip,
       numer_umowy: loan?.numer_umowy,
       data_umowy: loan?.data_umowy,
-      kwota_zalegla: Number(c.kwota_zalegla ?? 0),
-      saldo_pozostale: Number(loan?.saldo_pozostale ?? 0),
+      kwota_zalegla: kwotaZalegla,
+      saldo_pozostale: saldoPozostale,
       numer_kw: loan?.numer_kw,
       akt_777: loan?.akt_notarialny_777,
       rachunek: loan?.rachunek_splaty,
@@ -1056,8 +1608,15 @@ export const seedWindDemo = createServerFn({ method: "POST" })
       saldo: number;
       wypowiedzenie_daysAgo?: number;
       doplaty?: number;
+      pozyczkodawca?: string;
+      /** Harmonogram rat — sprawa liczona z rat (kwota zaległa, opóźnienie, saldo). */
+      harmonogram?: WindRata[];
+      /** Wpłaty (zdarzenia „wplata" z kwotą). */
+      wplaty?: Array<{ data: string; kwota: number }>;
       events: Array<Partial<WindEvent> & { typ: WindEventType; tytul: string }>;
     }) {
+      const dataUmowy = dateOnly(args.data_umowy_daysAgo);
+      const harmonogram = args.harmonogram?.length ? args.harmonogram : null;
       const { data: borrower } = await db
         .from("wind_borrowers")
         .insert({
@@ -1078,23 +1637,29 @@ export const seedWindDemo = createServerFn({ method: "POST" })
         .insert({
           borrower_id: borrower.id,
           numer_umowy: args.numer_umowy,
-          data_umowy: dateOnly(args.data_umowy_daysAgo),
+          data_umowy: dataUmowy,
           kwota_pozyczki: args.kwota,
           kwota_calkowita: args.total,
           prowizja: Math.round(args.kwota * 0.1),
-          termin_splaty: dateOnly(args.termin_daysAgo),
+          // Z harmonogramem: termin spłaty = termin ostatniej raty.
+          termin_splaty: harmonogram
+            ? harmonogram[harmonogram.length - 1].termin
+            : dateOnly(args.termin_daysAgo),
           numer_kw: args.kw ?? null,
           kwota_hipoteki: args.kw ? Math.round(args.total * 1.5) : null,
           akt_notarialny_777: args.akt ?? null,
           kwota_777: args.akt ? Math.round(args.total * 1.5) : null,
           rachunek_splaty: "PL00 1010 0000 0000 0000 0000 0000",
           oprocentowanie_roczne: 0,
-          stopa_odsetek_max: 24.5,
+          // Odsetki maksymalne za opóźnienie z dnia umowy (WIN_01).
+          stopa_odsetek_max: defaultDelayRate(dataUmowy),
           status: args.status,
           saldo_pozostale: args.saldo,
           data_wypowiedzenia:
             args.wypowiedzenie_daysAgo != null ? dateOnly(args.wypowiedzenie_daysAgo) : null,
           kwota_doplat: args.doplaty ?? 0,
+          harmonogram,
+          pozyczkodawca: args.pozyczkodawca ?? null,
         })
         .select("id")
         .single();
@@ -1126,10 +1691,39 @@ export const seedWindDemo = createServerFn({ method: "POST" })
           autor: author,
         });
       }
+      if (args.wplaty?.length) {
+        await db.from("wind_events").insert(
+          args.wplaty.map((w) => ({
+            case_id: kase.id,
+            typ: "wplata",
+            kategoria: "manualne",
+            tytul: "Odnotowano wpłatę",
+            tresc: "Sposób: przelew",
+            data_zdarzenia: noonUTC(w.data),
+            metadata: { kwota: w.kwota, sposob: "przelew" },
+            autor: author,
+          })),
+        );
+      }
+      // Sprawa z harmonogramem — kwota zaległa, opóźnienie i saldo z rat.
+      if (harmonogram) await recalcWindCaseDetailed(db, kase.id as string);
       return kase.id as string;
     }
 
-    // 1) Ścieżka miękka — opóźnienie 8 dni, po kontakcie telefonicznym
+    // Harmonogram demonstracyjny: 24 raty po 4 000 zł (= kwota do zwrotu
+    // 96 000 zł, umowa bez odsetek umownych). Sześć pierwszych zapłaconych
+    // w terminie, siódma — sprzed ok. 8 dni — zaległa.
+    const [zy, zm, zd] = dateOnly(8).split("-").map(Number);
+    const m0 = zy * 12 + (zm - 1) - 6;
+    const pad2 = (n: number) => String(n).padStart(2, "0");
+    const harmonogramDemo = generateHarmonogram({
+      pierwszaRata: `${Math.floor(m0 / 12)}-${pad2((m0 % 12) + 1)}-${pad2(Math.min(zd, 28))}`,
+      liczbaRat: 24,
+      kwotaRaty: 4000,
+    });
+
+    // 1) Ścieżka miękka — harmonogram rat, jedna rata zaległa (ok. 8 dni),
+    //    po kontakcie telefonicznym
     await makeCase({
       name: "Jan Kowalski",
       pesel: "85010112345",
@@ -1149,7 +1743,10 @@ export const seedWindDemo = createServerFn({ method: "POST" })
       priorytet: "sredni",
       status: "w_zwloce",
       zalegla: 4000,
-      saldo: 96000,
+      saldo: 72000,
+      pozyczkodawca: "Finance You sp. z o.o.",
+      harmonogram: harmonogramDemo,
+      wplaty: harmonogramDemo.slice(0, 6).map((r) => ({ data: r.termin, kwota: r.kwota })),
       events: [
         {
           typ: "sms",

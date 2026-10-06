@@ -12954,6 +12954,7 @@ export type Database = {
           data_ostatniej_wplaty: string | null
           data_umowy: string | null
           data_wypowiedzenia: string | null
+          harmonogram: Json | null
           id: string
           investor_user_id: string
           kwota_777: number | null
@@ -12965,6 +12966,7 @@ export type Database = {
           numer_umowy: string | null
           oplaty_windykacyjne: Json | null
           oprocentowanie_roczne: number
+          pozyczkodawca: string | null
           prowizja: number
           rachunek_splaty: string | null
           saldo_pozostale: number
@@ -12980,6 +12982,7 @@ export type Database = {
           data_ostatniej_wplaty?: string | null
           data_umowy?: string | null
           data_wypowiedzenia?: string | null
+          harmonogram?: Json | null
           id?: string
           investor_user_id?: string
           kwota_777?: number | null
@@ -12991,6 +12994,7 @@ export type Database = {
           numer_umowy?: string | null
           oplaty_windykacyjne?: Json | null
           oprocentowanie_roczne?: number
+          pozyczkodawca?: string | null
           prowizja?: number
           rachunek_splaty?: string | null
           saldo_pozostale?: number
@@ -13006,6 +13010,7 @@ export type Database = {
           data_ostatniej_wplaty?: string | null
           data_umowy?: string | null
           data_wypowiedzenia?: string | null
+          harmonogram?: Json | null
           id?: string
           investor_user_id?: string
           kwota_777?: number | null
@@ -13017,6 +13022,7 @@ export type Database = {
           numer_umowy?: string | null
           oplaty_windykacyjne?: Json | null
           oprocentowanie_roczne?: number
+          pozyczkodawca?: string | null
           prowizja?: number
           rachunek_splaty?: string | null
           saldo_pozostale?: number
