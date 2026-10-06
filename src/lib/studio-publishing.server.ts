@@ -294,7 +294,12 @@ export type QueueRow = {
   updated_at: string;
 };
 
-async function markPublished(id: string, externalId: string, attempts: number) {
+async function markPublished(
+  id: string,
+  externalId: string,
+  attempts: number,
+  platform?: QueueRow["platform"],
+) {
   await supabaseAdmin
     .from("social_publish_queue")
     .update({
@@ -305,6 +310,12 @@ async function markPublished(id: string, externalId: string, attempts: number) {
       attempt_count: attempts,
     })
     .eq("id", id);
+  // Pierwszy komentarz z linkiem śledzącym pod świeżą publikacją — bonus,
+  // który nigdy nie psuje publikacji (moduł łyka własne błędy).
+  if (platform) {
+    const { postFirstComment } = await import("./publish-first-comment.server");
+    await postFirstComment(platform, externalId);
+  }
 }
 
 async function markFailed(item: QueueRow, msg: string, opts?: { noRetry?: boolean }) {
@@ -402,12 +413,12 @@ export async function processSocialQueueItem(
   try {
     if (item.platform === "facebook_post") {
       const postId = await publishFacebookPost(item);
-      await markPublished(id, postId, item.attempt_count + 1);
+      await markPublished(id, postId, item.attempt_count + 1, item.platform);
       return { ok: true, externalId: postId };
     }
     if (item.platform === "facebook_reels") {
       const videoId = await publishFacebookReel(item);
-      await markPublished(id, videoId, item.attempt_count + 1);
+      await markPublished(id, videoId, item.attempt_count + 1, item.platform);
       return { ok: true, externalId: videoId };
     }
 
@@ -422,7 +433,7 @@ export async function processSocialQueueItem(
     if (item.ig_creation_id) {
       const result = await checkAndPublishInstagram(item);
       if (result.done && result.mediaId) {
-        await markPublished(id, result.mediaId, item.attempt_count);
+        await markPublished(id, result.mediaId, item.attempt_count, item.platform);
         return { ok: true, externalId: result.mediaId };
       }
       await supabaseAdmin
@@ -499,7 +510,7 @@ async function processInstagramProcessingItems(
     try {
       const result = await checkAndPublishInstagram(item);
       if (result.done && result.mediaId) {
-        await markPublished(item.id, result.mediaId, item.attempt_count);
+        await markPublished(item.id, result.mediaId, item.attempt_count, item.platform);
         published += 1;
       } else {
         // Wciąż się transkoduje; po przekroczeniu limitu czasu uznaj błąd.

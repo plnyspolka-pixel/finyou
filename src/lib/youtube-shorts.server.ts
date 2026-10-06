@@ -369,6 +369,10 @@ export async function processQueueItem(
         attempt_count: item.attempt_count + 1,
       })
       .eq("id", id);
+    // Pierwszy komentarz z linkiem śledzącym pod świeżym Shortem — bonus,
+    // który nigdy nie psuje publikacji (moduł łyka własne błędy).
+    const { postFirstComment } = await import("./publish-first-comment.server");
+    await postFirstComment("youtube", videoId);
     return { ok: true, videoId };
   } catch (err) {
     const { VideoPreparingError } = await import("./video-rendition.server");

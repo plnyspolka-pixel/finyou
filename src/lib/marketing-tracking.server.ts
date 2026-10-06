@@ -35,7 +35,9 @@ export type TrackingCampaignInput = {
 
 export async function createTrackingCampaign(
   client: SupabaseClient,
-  userId: string,
+  // null = kampania założona przez proces serwerowy (np. auto-komentarz
+  // po publikacji), nie przez konkretnego użytkownika panelu.
+  userId: string | null,
   data: TrackingCampaignInput,
 ): Promise<TrackingCampaignRow> {
   const baseSlug = slugifyCampaign(data.name) || "kampania";
