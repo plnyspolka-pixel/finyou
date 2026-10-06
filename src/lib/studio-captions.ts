@@ -84,7 +84,7 @@ export type CaptionBurnPlan =
   | { action: "fail"; reason: string };
 
 export const NO_BURNER_REASON =
-  "Napisy nie zostały wypalone: brak usługi wypalania (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET). Skonfiguruj usługę i ponów zadanie.";
+  "Napisy nie zostały wypalone: brak silnika napisów (REMOTION_RENDER_URL / REMOTION_RENDER_SECRET albo CAPTION_BURNER_URL / CAPTION_BURNER_SECRET). Skonfiguruj go i ponów zadanie.";
 export const NO_SRT_REASON =
   "Napisy nie zostały wypalone: brak pliku SRT (tekst scenariusza z czasami ElevenLabs). Ponów zadanie, żeby nagrać lektora od nowa.";
 export const NO_MASTER_REASON =
@@ -152,7 +152,7 @@ export function planBadgeBurn(input: {
           : "Nakładki dynamiczne pominięte";
     return {
       action: "skip",
-      reason: `${what}: brak usługi wypalania (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET).`,
+      reason: `${what}: brak silnika napisów (REMOTION_RENDER_URL albo CAPTION_BURNER_URL).`,
     };
   }
   if (!input.videoUrl) return { action: "skip", reason: null };

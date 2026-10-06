@@ -1,5 +1,6 @@
-// Renderuje kompozycję na Lambdzie i czeka na wynik.
-// Użycie: node render.mjs [compositionId] ['{"title":"..."}']
+// Renderuje kompozycję na Lambdzie i czeka na wynik (test z konsoli).
+// Użycie: node render.mjs [compositionId] ['{"title":"..."}' | @props.json]
+import { readFileSync } from "node:fs";
 import {
   getFunctions,
   getRenderProgress,
@@ -11,7 +12,12 @@ import {
 const region = process.env.REMOTION_REGION ?? "eu-central-1";
 const siteName = process.env.REMOTION_SITE_NAME ?? "finyou";
 const composition = process.argv[2] ?? "HelloFinanceYou";
-const inputProps = process.argv[3] ? JSON.parse(process.argv[3]) : {};
+const rawProps = process.argv[3] ?? "";
+const inputProps = !rawProps
+  ? {}
+  : rawProps.startsWith("@")
+    ? JSON.parse(readFileSync(rawProps.slice(1), "utf8"))
+    : JSON.parse(rawProps);
 
 const [fn] = await getFunctions({ region, compatibleOnly: true });
 if (!fn) throw new Error("Brak funkcji Remotion — uruchom najpierw `npm run lambda:deploy`.");
@@ -27,7 +33,8 @@ const { renderId, bucketName } = await renderMediaOnLambda({
   inputProps,
   codec: "h264",
   privacy: "private",
-  framesPerLambda: 50,
+  // Limit konta: 10 równoległych Lambd (1 orkiestrująca + 8 renderujących).
+  concurrency: Number(process.env.REMOTION_CONCURRENCY ?? 8),
 });
 console.log(`Render ${renderId} wystartował…`);
 

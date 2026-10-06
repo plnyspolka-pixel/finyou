@@ -114,7 +114,7 @@ export function channelReadiness(status: {
     add(
       status.captionBurnerConfigured,
       "caption_burner",
-      "Usługa FFmpeg (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET) — bez niej rolki Studia z napisami nie wychodzą (zadania padają do ponowienia), a wideo idzie na platformy bez kompresji do profilu publikacji (ryzyko błędu „Plik za duży”).",
+      "Silnik napisów rolek: Remotion Lambda (REMOTION_RENDER_URL / REMOTION_RENDER_SECRET) albo usługa FFmpeg (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET) — bez niego rolki Studia z napisami nie wychodzą (zadania padają do ponowienia). Kompresję przed publikacją robi tylko usługa FFmpeg — bez niej wideo idzie na platformy bez kompresji (ryzyko błędu „Plik za duży”).",
     );
   }
   return { ready, missing };

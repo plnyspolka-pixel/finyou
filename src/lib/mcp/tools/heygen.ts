@@ -162,12 +162,16 @@ export const heygenStatus = defineTool({
         elevenlabs_configured: Boolean(process.env.ELEVENLABS_API_KEY),
         ai_configured: Boolean(process.env.LOVABLE_API_KEY),
         // Własne style napisów (rozmiar, pozycja) — usługa FFmpeg poza HeyGenem.
+        caption_engine: burner.captionEngineLabel(),
+        remotion_render: await (
+          await import("@/lib/remotion-render.server")
+        ).checkRemotionRenderHealth(),
         caption_burner: burner.isCaptionBurnerConfigured()
           ? await burner.checkCaptionBurnerHealth()
           : { ok: false, ffmpeg: null, error: "nie skonfigurowana (CAPTION_BURNER_URL)" },
         default_caption_style: DEFAULT_CUSTOM_CAPTION_STYLE,
         captions_note:
-          "Napisy rolek Studia powstają z tekstu scenariusza i czasów znaków ElevenLabs i wypala je usługa caption-burner — HeyGen nie dostaje zlecenia na napisy. Bez usługi rolka z napisami nie wychodzi (zadanie pada do ponowienia).",
+          "Napisy rolek Studia powstają z tekstu scenariusza i czasów znaków ElevenLabs i renderuje je Remotion Lambda (REMOTION_RENDER_URL) albo — gdy Remotion nie jest skonfigurowany — usługa caption-burner; HeyGen nie dostaje zlecenia na napisy. Bez silnika napisów rolka z napisami nie wychodzi (zadanie pada do ponowienia). Kompresję przed publikacją robi tylko caption-burner.",
         tts_model: await (async () => {
           const { getStudioTtsModelId } = await import("@/lib/studio-settings.server");
           const id = await getStudioTtsModelId();
@@ -185,8 +189,8 @@ export const heygenStatus = defineTool({
         })(),
         ai_badge: {
           enabled: burner.isAiBadgeEnabled(),
-          active: burner.isAiBadgeEnabled() && burner.isCaptionBurnerConfigured(),
-          note: "Znaczek „AI” w prawym górnym rogu każdej rolki Studia — wypala go usługa caption-burner (HeyGen nie ma warstw). Bez usługi rolki wychodzą bez znaczka, z adnotacją w last_error; STUDIO_AI_BADGE=0 wyłącza.",
+          active: burner.isAiBadgeEnabled() && burner.isCaptionEngineConfigured(),
+          note: "Znaczek „AI” w prawym górnym rogu każdej rolki Studia — renderuje go silnik napisów (Remotion albo caption-burner; HeyGen nie ma warstw). Bez silnika rolki wychodzą bez znaczka, z adnotacją w last_error; STUDIO_AI_BADGE=0 wyłącza.",
         },
         default_avatar: { id: d.avatarId, name: d.avatarName, source: d.avatarSource },
         studio_default_avatars: {
@@ -1135,7 +1139,11 @@ export const retryStudioJob = defineTool({
       }
       return ok({
         ok: true,
-        job: { id: job.id, publish_title: job.publish_title, status: mode === "captions" ? "captioning" : "queued" },
+        job: {
+          id: job.id,
+          publish_title: job.publish_title,
+          status: mode === "captions" ? "captioning" : "queued",
+        },
         mode,
         note:
           mode === "captions"

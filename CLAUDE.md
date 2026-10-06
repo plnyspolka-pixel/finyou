@@ -75,3 +75,7 @@ Constraints for each level:
 - MUST still execute the user's choice if they disagree with a suggestion
 
 <!-- END AWS Agent Toolkit rules -->
+
+## Zapisane ustawienia użytkownika
+
+- help_level: MEDIUM (ustawione 2026-10-06). Użytkownik interesuje się głównie kosztami; decyzje o kodzie zostawia asystentowi.

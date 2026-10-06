@@ -21,7 +21,21 @@
 // Bez nich rolka Z NAPISAMI nie wychodzi (zadanie pada z jasnym powodem, do
 // ponowienia po konfiguracji), rolka bez napisów wychodzi bez znaczka „AI",
 // a publikacja wysyła oryginalne pliki bez kompresji.
+//
+// RENDER NA REMOTION LAMBDA: gdy ustawione są REMOTION_RENDER_URL /
+// REMOTION_RENDER_SECRET (src/lib/remotion-render.server.ts), napisy, znaczek
+// i nakładki renderuje Remotion na AWS — ten moduł tylko przekazuje zlecenie
+// (id zadania dostaje prefiks `remotion:`, po którym rozpoznajemy je przy
+// odpytywaniu i pobieraniu wyniku). Kompresja zawsze zostaje w caption-burner.
 
+import {
+  discardRemotionJob,
+  fetchRemotionResult,
+  getRemotionJobStatus,
+  isRemotionJobId,
+  isRemotionRenderConfigured,
+  submitRemotionCaptionRender,
+} from "./remotion-render.server";
 import {
   extrasAss,
   overlaysWithCueTiming,
@@ -40,7 +54,26 @@ export function getCaptionBurnerEnv(): CaptionBurnerEnv {
   return { configured: Boolean(url && secret), url, secret };
 }
 
+/** Usługa FFmpeg (napisy, gdy nie ma Remotion; kompresja zawsze). */
 export const isCaptionBurnerConfigured = (): boolean => getCaptionBurnerEnv().configured;
+
+/**
+ * Czy jest czym wypalać napisy, znaczek „AI" i nakładki: Remotion Lambda
+ * albo usługa FFmpeg. Tego pytają kolejka Studia i panel; kompresja przed
+ * publikacją pyta o samą usługę FFmpeg (`isCaptionBurnerConfigured`).
+ */
+export const isCaptionEngineConfigured = (): boolean =>
+  isRemotionRenderConfigured() || isCaptionBurnerConfigured();
+
+/** Etykieta silnika napisów do statusów i komunikatów. */
+export function captionEngineLabel(): "remotion" | "caption-burner" | null {
+  if (isRemotionRenderConfigured()) return "remotion";
+  if (isCaptionBurnerConfigured()) return "caption-burner";
+  return null;
+}
+
+export const NO_CAPTION_ENGINE_HINT =
+  "REMOTION_RENDER_URL / REMOTION_RENDER_SECRET albo CAPTION_BURNER_URL / CAPTION_BURNER_SECRET";
 
 /**
  * Czy rolki Studia dostają znaczek „AI" w rogu. Domyślnie tak — to
@@ -121,6 +154,8 @@ export async function submitCaptionBurn(input: {
   overlays?: DynamicOverlays | null;
   name?: string;
 }): Promise<string> {
+  // Remotion ma pierwszeństwo — usługa FFmpeg zostaje jako zapas i do kompresji.
+  if (isRemotionRenderConfigured()) return submitRemotionCaptionRender(input);
   let ass: string | null;
   if (input.srtUrl && input.styleId) {
     const srt = await fetchBytes(input.srtUrl, MAX_SRT_BYTES);
@@ -183,6 +218,18 @@ export type BurnerJobStatus = {
 
 /** `missing` = usługa nie zna zadania (np. restart) — klient decyduje, czy ponowić. */
 export async function getBurnerJobStatus(id: string): Promise<BurnerJobStatus> {
+  if (isRemotionJobId(id)) {
+    const r = await getRemotionJobStatus(id);
+    return {
+      status: r.status,
+      error: r.error,
+      unchanged: false,
+      uploaded: false,
+      upload_error: null,
+      bytes: r.bytes,
+      note: r.cost ? `koszt renderu Remotion: ${r.cost}` : null,
+    };
+  }
   const res = await burnerFetch(`/jobs/${encodeURIComponent(id)}`, { timeoutMs: 90_000 });
   if (res.status === 404) {
     return {
@@ -272,17 +319,23 @@ export async function fetchBurnerFile(id: string, maxBytes: number): Promise<Arr
 
 /** Pobiera gotowy MP4 z usługi i zapisuje go w publicznym buckecie `studio-media`. */
 export async function storeCaptionBurnResult(id: string, name: string): Promise<StoredMedia> {
-  const res = await burnerFetch(`/jobs/${encodeURIComponent(id)}/file`, {
-    headers: { accept: "video/mp4" },
-    timeoutMs: 5 * 60_000,
-  });
-  if (!res.ok) throw new Error(`caption-burner: ${await errorOf(res)}`);
-  const declared = Number(res.headers.get("content-length") ?? 0);
-  if (declared > MAX_RESULT_BYTES) throw new Error(`caption-burner: plik za duży (${declared} B).`);
-  const bytes = await res.arrayBuffer();
-  if (!bytes.byteLength) throw new Error("caption-burner: pusty plik wynikowy.");
-  if (bytes.byteLength > MAX_RESULT_BYTES) {
-    throw new Error(`caption-burner: plik za duży (${bytes.byteLength} B).`);
+  let bytes: ArrayBuffer;
+  if (isRemotionJobId(id)) {
+    bytes = await fetchRemotionResult(id, MAX_RESULT_BYTES);
+  } else {
+    const res = await burnerFetch(`/jobs/${encodeURIComponent(id)}/file`, {
+      headers: { accept: "video/mp4" },
+      timeoutMs: 5 * 60_000,
+    });
+    if (!res.ok) throw new Error(`caption-burner: ${await errorOf(res)}`);
+    const declared = Number(res.headers.get("content-length") ?? 0);
+    if (declared > MAX_RESULT_BYTES)
+      throw new Error(`caption-burner: plik za duży (${declared} B).`);
+    bytes = await res.arrayBuffer();
+    if (!bytes.byteLength) throw new Error("caption-burner: pusty plik wynikowy.");
+    if (bytes.byteLength > MAX_RESULT_BYTES) {
+      throw new Error(`caption-burner: plik za duży (${bytes.byteLength} B).`);
+    }
   }
   return storeMedia(bytes, {
     contentType: "video/mp4",
@@ -295,6 +348,7 @@ export async function storeCaptionBurnResult(id: string, name: string): Promise<
 
 /** Sprzątanie w usłudze — nie może psuć przebiegu (usługa i tak ma TTL zadań). */
 export async function discardBurnerJob(id: string): Promise<void> {
+  if (isRemotionJobId(id)) return discardRemotionJob(id);
   try {
     await burnerFetch(`/jobs/${encodeURIComponent(id)}`, { method: "DELETE" });
   } catch {
