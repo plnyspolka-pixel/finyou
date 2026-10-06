@@ -35,6 +35,10 @@ function report(over: Partial<WeeklyReportData> = {}): WeeklyReportData {
     published: { ok: true, data: [] },
     clicks: { ok: true, data: { total: 0, previousTotal: 0, campaigns: [] } },
     replies: { ok: true, data: { counts: {}, escalated: [] } },
+    backlinks: {
+      ok: true,
+      data: { live: 0, liveDofollow: 0, newlyLive: [], newlyLost: [], lastCheckedAt: null },
+    },
     ...over,
   };
 }
@@ -172,5 +176,59 @@ describe("buildWeeklyReportEmail", () => {
     // YouTube bez danych o obserwujących → „brak danych" w tabeli obserwujących.
     expect(mail.text).toContain("YouTube: brak danych");
     expect(mail.text).toContain("Instagram: 800 (+50)");
+  });
+});
+
+describe("sekcja Backlinki", () => {
+  const backlinks: WeeklyReportData["backlinks"] = {
+    ok: true,
+    data: {
+      live: 12,
+      liveDofollow: 9,
+      newlyLive: [
+        { url: "https://forum.example.pl/watek/1", domain: "forum.example.pl", dofollow: false },
+      ],
+      newlyLost: [
+        {
+          url: "https://blog.example.pl/wpis",
+          domain: "blog.example.pl",
+          dofollow: true,
+          error: null,
+        },
+      ],
+      lastCheckedAt: "2026-10-04T04:00:10Z",
+    },
+  };
+
+  it("mail: liczba aktywnych, nowe i utracone z adresami", () => {
+    const mail = buildWeeklyReportEmail(report({ backlinks }), []);
+    for (const out of [mail.text, mail.html]) {
+      expect(out).toContain("Aktywne (live): 12, w tym dofollow: 9");
+      expect(out).toContain("nowe w tym tygodniu: 1");
+      expect(out).toContain("utracone: 1");
+      expect(out).toContain("https://forum.example.pl/watek/1");
+      expect(out).toContain("https://blog.example.pl/wpis");
+      expect(out).toContain("ostatnie sprawdzenie: 2026-10-04");
+    }
+    expect(mail.html).toContain('<a href="https://blog.example.pl/wpis">');
+  });
+
+  it("wnioski: utracone i nowe backlinki", () => {
+    const t = computeTakeaways(report({ backlinks }));
+    expect(
+      t.some((x) => x.startsWith("Utracone backlinki w tym tygodniu: 1 (blog.example.pl)")),
+    ).toBe(true);
+    expect(t).toContain("Nowe aktywne backlinki: 1 (łącznie aktywnych: 12).");
+  });
+
+  it("brak danych nie wywraca raportu; brak sprawdzeń jest opisany", () => {
+    const err = buildWeeklyReportEmail(
+      report({ backlinks: { ok: false, error: "ai_backlinks: brak tabeli" } }),
+      [],
+    );
+    expect(err.html).toContain("ai_backlinks: brak tabeli");
+    expect(err.text).toContain("BACKLINKI\nbrak danych");
+    const fresh = buildWeeklyReportEmail(report(), []);
+    expect(fresh.text).toContain("monitoring jeszcze nie sprawdzał stron");
   });
 });

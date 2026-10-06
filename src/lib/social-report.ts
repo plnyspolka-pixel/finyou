@@ -3,6 +3,7 @@
 // social-weekly-report.server.ts. Każda sekcja może przyjść jako „brak
 // danych" — awaria jednej platformy nie wywraca całego raportu.
 
+import type { BacklinkStats } from "./backlinks-monitor";
 import {
   SOCIAL_PLATFORM_LABELS,
   escapeHtml,
@@ -61,6 +62,8 @@ export type WeeklyReportData = {
   published: Section<PublishedItem[]>;
   clicks: Section<ClickStats>;
   replies: Section<ReplyStats>;
+  /** Monitoring backlinków (ai_backlinks, sprawdzane w niedziele). */
+  backlinks: Section<BacklinkStats>;
 };
 
 const PUBLISH_PLATFORM_LABELS: Record<string, string> = {
@@ -181,6 +184,23 @@ export function computeTakeaways(data: WeeklyReportData): string[] {
     } else if (previousTotal != null && total !== previousTotal) {
       out.push(
         `Kliknięcia w linki z social media: ${fmt(total)} (tydzień wcześniej ${fmt(previousTotal)}).`,
+      );
+    }
+  }
+
+  if (data.backlinks.ok) {
+    const b = data.backlinks.data;
+    if (b.newlyLost.length) {
+      out.push(
+        `Utracone backlinki w tym tygodniu: ${b.newlyLost.length} (${b.newlyLost
+          .slice(0, 3)
+          .map((l) => l.domain)
+          .join(", ")}${b.newlyLost.length > 3 ? "…" : ""}) — sprawdź, czy da się je odzyskać.`,
+      );
+    }
+    if (b.newlyLive.length) {
+      out.push(
+        `Nowe aktywne backlinki: ${b.newlyLive.length} (łącznie aktywnych: ${fmt(b.live)}).`,
       );
     }
   }
@@ -350,8 +370,49 @@ export function buildWeeklyReportEmail(
     }
   }
 
+  // Backlinki
+  html.push(`<h3 style="margin:18px 0 6px">Backlinki</h3>`);
+  text.push("");
+  text.push("BACKLINKI");
+  if (!data.backlinks.ok) {
+    html.push(sectionError(data.backlinks.error));
+    text.push(NO_DATA);
+  } else {
+    const b = data.backlinks.data;
+    const checked = b.lastCheckedAt
+      ? `ostatnie sprawdzenie: ${dateLabel(b.lastCheckedAt)}`
+      : "monitoring jeszcze nie sprawdzał stron";
+    const summary = `Aktywne (live): ${fmt(b.live)}, w tym dofollow: ${fmt(b.liveDofollow)} · nowe w tym tygodniu: ${fmt(b.newlyLive.length)} · utracone: ${fmt(b.newlyLost.length)} (${checked}).`;
+    html.push(`<p>${escapeHtml(summary)}</p>`);
+    text.push(summary);
+    const list = (
+      title: string,
+      links: Array<{ url: string; dofollow: boolean; error?: string | null }>,
+    ) => {
+      if (!links.length) return;
+      html.push(`<p style="margin:10px 0 4px"><strong>${escapeHtml(title)}</strong></p><ul>`);
+      text.push(`${title}:`);
+      for (const l of links.slice(0, 20)) {
+        const note = [l.dofollow ? "dofollow" : "nofollow", l.error ?? ""]
+          .filter(Boolean)
+          .join(" · ");
+        html.push(
+          `<li><a href="${escapeHtml(l.url)}">${escapeHtml(l.url.slice(0, 120))}</a> <span style="color:#64748b;font-size:12px">(${escapeHtml(note)})</span></li>`,
+        );
+        text.push(`• ${l.url} (${note})`);
+      }
+      if (links.length > 20) {
+        html.push(`<li>… i ${links.length - 20} więcej</li>`);
+        text.push(`… i ${links.length - 20} więcej`);
+      }
+      html.push(`</ul>`);
+    };
+    list("Nowe aktywne", b.newlyLive);
+    list("Utracone", b.newlyLost);
+  }
+
   html.push(
-    `<p style="color:#94a3b8;font-size:12px;margin-top:24px">Raport generowany automatycznie w poniedziałki. Dane: API Meta i YouTube, kolejki publikacji, kampanie śledzące, rejestr social_comment_replies.</p></div>`,
+    `<p style="color:#94a3b8;font-size:12px;margin-top:24px">Raport generowany automatycznie w poniedziałki. Dane: API Meta i YouTube, kolejki publikacji, kampanie śledzące, rejestr social_comment_replies, monitoring backlinków (ai_backlinks, niedziele).</p></div>`,
   );
   return { subject, text: text.join("\n"), html: html.join("\n") };
 }

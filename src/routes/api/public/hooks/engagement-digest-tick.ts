@@ -1,7 +1,10 @@
 // Poranny digest zaangażowania i link buildingu: źródła (YouTube, Instagram,
-// fora / Google Alerts, Digital PR, outreach, katalogi firm) → ~10 gotowych
-// akcji w JEDNYM mailu („Otwórz → skopiuj → wklej → Zrobione"). Nic nie jest
-// publikowane automatycznie. Szczegóły: src/lib/engagement/digest.server.ts.
+// fora — Google Programmable Search (GOOGLE_CSE_KEY + GOOGLE_CSE_CX) i feedy
+// RSS, Digital PR, outreach, katalogi firm) → ~10 gotowych akcji w JEDNYM
+// mailu („Otwórz → skopiuj → wklej → Zrobione"). Nic nie jest publikowane
+// automatycznie. Na początku przebiegu: automatyczne „Zrobione" (komentarz
+// naszego kanału YouTube, link do financeyou.pl w wątku forum), w poniedziałki
+// autodiscovery feedów RSS. Szczegóły: src/lib/engagement/digest.server.ts.
 // Adresat: DAILY_DIGEST_EMAIL → TEAM_NOTIFY_EMAIL → kontakt@financeyou.pl.
 // Wyłącznik: ENGAGEMENT_DIGEST=off. Drugi mail w ciągu 20 h tylko z
 // `?force=1` i prywatnym CRON_SECRET.

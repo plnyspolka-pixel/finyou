@@ -211,6 +211,13 @@
       "when": 1791286688230,
       "tag": "0029_produkcja_brakujace_obiekty",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791286689230,
+      "tag": "0030_monitoring_backlinkow",
+      "breakpoints": true
     }
   ]
 }

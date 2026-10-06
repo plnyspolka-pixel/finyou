@@ -3,6 +3,9 @@
 // 06:00 UTC, migracja 20261006120000). Adresat: SOCIAL_REPORT_EMAIL,
 // potem TEAM_NOTIFY_EMAIL, na końcu kontakt@financeyou.pl.
 //
+// Sekcja „Backlinki": stan ai_backlinks po niedzielnym backlinks-check-tick
+// (aktywne, nowe live i utracone w ostatnich 7 dniach — status_changed_at).
+//
 // Każda sekcja jest odporna na awarię: błąd API jednej platformy albo
 // zapytania do bazy daje w mailu „brak danych", a nie wywraca raportu.
 // Po wysyłce zapisujemy obserwujących do social_stats_snapshots (baza
@@ -10,6 +13,11 @@
 // drugi raport w ciągu 6 dni wychodzi tylko z `force` (prywatny sekret).
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import {
+  summarizeBacklinks,
+  type BacklinkReportRow,
+  type BacklinkStats,
+} from "./backlinks-monitor";
 import { teamAlertEmail, type ReplyAction, type SocialPlatform } from "./social-auto-reply";
 import {
   buildWeeklyReportEmail,
@@ -280,6 +288,41 @@ async function loadReplies(start: Date): Promise<ReplyStats> {
   return { counts, escalated };
 }
 
+// ── Backlinki ───────────────────────────────────────────────────────────────
+
+/**
+ * Stan ai_backlinks: wszystkie 'live' + zmiany statusu (live / lost)
+ * z ostatnich 7 dni — status_changed_at ustawia trigger w bazie,
+ * a statusy aktualizuje niedzielny backlinks-check-tick.
+ */
+async function loadBacklinks(start: Date, end: Date): Promise<BacklinkStats> {
+  const cols =
+    "source_url, source_domain, status, dofollow, status_changed_at, last_checked_at, last_error";
+  const [live, changed, checked] = await Promise.all([
+    supabaseAdmin.from("ai_backlinks").select(cols).eq("status", "live").limit(5000),
+    supabaseAdmin
+      .from("ai_backlinks")
+      .select(cols)
+      .eq("status", "lost")
+      .gte("status_changed_at", start.toISOString())
+      .limit(500),
+    supabaseAdmin
+      .from("ai_backlinks")
+      .select("last_checked_at")
+      .not("last_checked_at", "is", null)
+      .order("last_checked_at", { ascending: false })
+      .limit(1),
+  ]);
+  if (live.error) throw new Error(`ai_backlinks: ${live.error.message}`);
+  if (changed.error) throw new Error(`ai_backlinks: ${changed.error.message}`);
+  const rows = [...(live.data ?? []), ...(changed.data ?? [])] as BacklinkReportRow[];
+  const stats = summarizeBacklinks(rows, start, end);
+  // Ostatnie sprawdzenie także z wierszy 'lost' / 'pending' spoza powyższych list.
+  const last = checked.data?.[0]?.last_checked_at ?? null;
+  if (last && (!stats.lastCheckedAt || last > stats.lastCheckedAt)) stats.lastCheckedAt = last;
+  return stats;
+}
+
 // ── Raport ──────────────────────────────────────────────────────────────────
 
 const PLATFORMS: SocialPlatform[] = ["facebook", "instagram", "youtube"];
@@ -329,10 +372,11 @@ export async function runSocialWeeklyReport(
     }
   }
 
-  const [published, clicks, replies] = await Promise.all([
+  const [published, clicks, replies, backlinks] = await Promise.all([
     section(() => loadPublished(start)),
     section(() => loadClicks(start, now)),
     section(() => loadReplies(start)),
+    section(() => loadBacklinks(start, now)),
   ]);
 
   const data: WeeklyReportData = {
@@ -342,6 +386,7 @@ export async function runSocialWeeklyReport(
     published,
     clicks,
     replies,
+    backlinks,
   };
   const takeaways = computeTakeaways(data);
   const mail = buildWeeklyReportEmail(data, takeaways);
@@ -380,6 +425,13 @@ export async function runSocialWeeklyReport(
       published: published.ok ? published.data.length : `brak danych: ${published.error}`,
       clicks: clicks.ok ? clicks.data.total : `brak danych: ${clicks.error}`,
       replies: replies.ok ? replies.data.counts : `brak danych: ${replies.error}`,
+      backlinks: backlinks.ok
+        ? {
+            live: backlinks.data.live,
+            newly_live: backlinks.data.newlyLive.length,
+            newly_lost: backlinks.data.newlyLost.length,
+          }
+        : `brak danych: ${backlinks.error}`,
     },
     snapshot_error: snapErr?.message ?? null,
   };

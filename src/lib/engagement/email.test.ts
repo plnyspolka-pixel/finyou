@@ -86,6 +86,24 @@ describe("mail digestu", () => {
     expect(mail.text).toContain("YouTube: 1 nowych");
   });
 
+  it("stopka: wykryte automatycznie i wyszukiwarka niedostępna z podpowiedzią", () => {
+    const m = buildDigestEmail({
+      date: NOW,
+      cards: [card({})],
+      stats: { done7: 3, skipped7: 0, autoDetected: 2 },
+      sources: [
+        { key: "websearch", state: "unavailable", added: 0, note: "Ustaw GOOGLE_CSE_KEY" },
+        { key: "forum", state: "ok", added: 1 },
+      ],
+    });
+    for (const out of [m.html, m.text]) {
+      expect(out).toContain("Ostatnie 7 dni: zrobione 3, pominięte 0. Wykryte automatycznie: 2.");
+      expect(out).toContain("Fora (wyszukiwarka Google): niedostępne — Ustaw GOOGLE_CSE_KEY");
+      expect(out).toContain("Fora (RSS): 1 nowych");
+    }
+    expect(mail.html).not.toContain("Wykryte automatycznie");
+  });
+
   it("bez sekretu — bez linków oznaczania", () => {
     const m = buildDigestEmail({
       date: NOW,

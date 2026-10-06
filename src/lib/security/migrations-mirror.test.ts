@@ -27,6 +27,7 @@ const PAIRS: Array<[string, string]> = [
   ["20261006140000_pr_modul_na_produkcje.sql", "0027_pr_modul_na_produkcje.sql"],
   ["20261006150000_zaangazowanie_dzienny_digest.sql", "0028_zaangazowanie_dzienny_digest.sql"],
   ["20261006160000_produkcja_brakujace_obiekty.sql", "0029_produkcja_brakujace_obiekty.sql"],
+  ["20261006170000_monitoring_backlinkow.sql", "0030_monitoring_backlinkow.sql"],
 ];
 
 describe("migracje 2026-09-29", () => {
@@ -257,5 +258,37 @@ describe("migracja 20261006160000 — brakujące obiekty produkcji", () => {
     expect(sql).toContain("timeout_milliseconds := 60000");
     expect(sql).toContain("extname = 'pg_cron'");
     expect(sql).not.toMatch(/^\s*create extension/im);
+  });
+});
+
+describe("migracja 20261006170000 — monitoring backlinków", () => {
+  const sql = readFileSync(join(SUPA, "20261006170000_monitoring_backlinkow.sql"), "utf8");
+
+  it("kolumny status_changed_at i last_error, idempotentnie i ze strażnikiem tabeli", () => {
+    expect(sql).toContain(
+      "alter table public.ai_backlinks add column if not exists status_changed_at timestamptz",
+    );
+    expect(sql).toContain(
+      "alter table public.ai_backlinks add column if not exists last_error text",
+    );
+    expect(sql).toContain("to_regclass('public.ai_backlinks') is null");
+    expect(sql).toContain("drop trigger if exists trg_ai_backlinks_status_changed");
+    expect(sql).toMatch(/elsif new\.status is distinct from old\.status then/);
+  });
+
+  it("nie zmienia uprawnień tabeli ani nie nadaje nic anon", () => {
+    expect(sql).not.toMatch(/\bgrant\b/i);
+    expect(sql).not.toMatch(/disable row level security/i);
+  });
+
+  it("job w niedziele 04:00 UTC z limitem czasu 120 s i strażnikiem pg_cron/pg_net", () => {
+    expect(sql).toMatch(/cron\.schedule\('backlinks-check-tick', '0 4 \* \* 0'/);
+    expect(sql).toContain("/api/public/hooks/backlinks-check-tick");
+    expect(sql).toContain("timeout_milliseconds := 120000");
+    expect(sql).toContain("extname = 'pg_cron'");
+    expect(sql).not.toMatch(/^\s*create extension/im);
+    expect(
+      existsSync(join(process.cwd(), "src/routes/api/public/hooks/backlinks-check-tick.ts")),
+    ).toBe(true);
   });
 });

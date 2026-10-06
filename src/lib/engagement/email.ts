@@ -17,7 +17,14 @@ export type DigestCard = EngagementItem & {
   skipUrl: string | null;
 };
 
-export type SourceKey = "youtube" | "instagram" | "forum" | "pr" | "outreach" | "directory";
+export type SourceKey =
+  | "youtube"
+  | "instagram"
+  | "websearch"
+  | "forum"
+  | "pr"
+  | "outreach"
+  | "directory";
 
 export type SourceStatus = {
   key: SourceKey;
@@ -30,14 +37,20 @@ export type SourceStatus = {
 export type DigestEmailData = {
   date: Date;
   cards: DigestCard[];
-  stats: { done7: number; skipped7: number };
+  stats: {
+    done7: number;
+    skipped7: number;
+    /** Ile pozycji ten przebieg sam oznaczył jako zrobione (undefined = wykrywanie nie działało). */
+    autoDetected?: number;
+  };
   sources: SourceStatus[];
 };
 
 export const SOURCE_LABELS: Record<SourceKey, string> = {
   youtube: "YouTube",
   instagram: "Instagram",
-  forum: "Fora / Google Alerts",
+  websearch: "Fora (wyszukiwarka Google)",
+  forum: "Fora (RSS)",
   pr: "Digital PR",
   outreach: "Outreach",
   directory: "Katalogi firm",
@@ -189,7 +202,9 @@ export function buildDigestEmail(data: DigestEmailData): {
         .map((s) => escapeHtml(sourceLine(s)))
         .join("<br>")}</p>`
     : "";
-  const statsLine = `Ostatnie 7 dni: zrobione ${data.stats.done7}, pominięte ${data.stats.skipped7}.`;
+  const statsLine =
+    `Ostatnie 7 dni: zrobione ${data.stats.done7}, pominięte ${data.stats.skipped7}.` +
+    (data.stats.autoDetected != null ? ` Wykryte automatycznie: ${data.stats.autoDetected}.` : "");
 
   const html = `<div style="background:#f1f5f9;padding:20px 0">
 <div style="max-width:640px;margin:0 auto;padding:0 12px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#0f172a">

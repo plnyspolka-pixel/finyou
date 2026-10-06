@@ -8,8 +8,11 @@
 //   * Instagram: ig_hashtag_search + recent_media (≤ 3 hashtagi dziennie;
 //     limit Instagrama: 30 unikalnych na 7 dni). Brak uprawnienia = sekcja
 //     „niedostępna" z podpowiedzią w mailu.
-//   * Fora: feedy RSS/Atom z tabeli engagement_feeds (Google Alerts, fora)
-//     → szkic odpowiedzi eksperta, link tylko śledzący (kampania „forum").
+//   * Fora: Google Programmable Search (4 rotowane zapytania dziennie,
+//     GOOGLE_CSE_KEY + GOOGLE_CSE_CX; bez nich „niedostępne") oraz feedy
+//     RSS/Atom z tabeli engagement_feeds (fora, blogi, stare Google Alerts;
+//     w poniedziałki autodiscovery dopisuje nowe feedy) → wspólny tor:
+//     szkic odpowiedzi eksperta, link tylko śledzący (kampania „forum").
 //   * PR: nowe okazje z pr_opportunities (szkic z pr/draft.server.ts).
 //   * Outreach: 1 cel dziennie z ai_outreach_targets (wiadomość z
 //     generatora outreach), cel → 'queued'.
@@ -25,8 +28,24 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json } from "@/integrations/supabase/types";
 import { parseRssItems } from "../pr/core";
 import {
+  FEEDS_PER_PAGE,
+  FEED_DISCOVERY_PAGES,
+  extractFeedLinks,
+  isFeedDiscoveryDay,
+} from "./feed-discovery";
+import {
+  WEB_SEARCH_QUERIES,
+  WEB_SEARCH_QUERIES_PER_DAY,
+  WEB_SEARCH_UNAVAILABLE_HINT,
+  buildWebSearchUrl,
+  parseWebSearchItems,
+  webSearchConfig,
+  webSearchErrorMessage,
+} from "./web-search";
+import {
   DIGEST_LIMITS,
   DIRECTORIES,
+  FORUM_DEFAULT_KEYWORDS,
   INSTAGRAM_HASHTAGS,
   INSTAGRAM_HASHTAGS_PER_DAY,
   INSTAGRAM_MIN_LIKES,
@@ -53,6 +72,7 @@ import {
   matchesKeywords,
   nextDirectory,
   rotatingPick,
+  type EngagementExtra,
   type EngagementFeed,
   type EngagementKind,
   type ForumThread,
@@ -379,68 +399,23 @@ export async function collectInstagram(ctx: CollectorContext): Promise<SourceSta
   };
 }
 
-// ── Fora (RSS / Atom) ───────────────────────────────────────────────────────
+// ── Fora (RSS / Atom i wyszukiwarka) ────────────────────────────────────────
 
 const MAX_FORUM_CANDIDATES = 40;
 
-export async function collectForums(ctx: CollectorContext): Promise<SourceStatus> {
-  const need = needFor(ctx, "forum_reply");
-  if (!need) return { key: "forum", state: "skipped", added: 0, note: BACKLOG_NOTE };
-  const { data: feedRows, error } = await supabaseAdmin
-    .from("engagement_feeds")
-    .select("id, url, label, keywords")
-    .eq("active", true)
-    .limit(50);
-  if (error) throw new Error(`engagement_feeds: ${error.message}`);
-  const feeds = (feedRows ?? []) as EngagementFeed[];
-  if (!feeds.length) {
-    return {
-      key: "forum",
-      state: "skipped",
-      added: 0,
-      note: "brak feedów — dodaj adresy RSS (np. Google Alerts → „Dostarczaj do: kanał RSS”) w tabeli engagement_feeds",
-    };
-  }
+type ForumCandidate = ForumThread & { publishedAt: string | null; extra: EngagementExtra };
 
-  const threads = new Map<string, ForumThread & { feedId: string; publishedAt: string | null }>();
-  const errors: string[] = [];
-  for (const feed of feeds) {
-    let lastError: string | null = null;
-    try {
-      const res = await fetch(feed.url, {
-        headers: { "User-Agent": "FinanceYou-Engagement/1.0 (+https://financeyou.pl)" },
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const fallback = feed.label || hostOf(feed.url) || "RSS";
-      const keywords = feedKeywords(feed);
-      const alerts = isGoogleAlertsFeed(feed.url);
-      for (const item of parseRssItems(await res.text(), fallback).slice(0, 50)) {
-        if (!matchesKeywords(item, keywords)) continue;
-        if (!isRecentThread(item.publishedAt, ctx.now)) continue;
-        const key = dedupeKeyFor("forum_reply", item.url);
-        if (threads.has(key)) continue;
-        threads.set(key, {
-          url: item.url,
-          title: item.title,
-          snippet: item.snippet,
-          // Google Alerts nie podaje źródła — nazwą jest host wątku.
-          source: alerts ? hostOf(item.url) || fallback : item.source,
-          feedId: feed.id,
-          publishedAt: item.publishedAt,
-        });
-      }
-    } catch (e) {
-      lastError = errMsg(e).slice(0, 500);
-      errors.push(`${feed.label || hostOf(feed.url)}: ${lastError}`);
-    }
-    await supabaseAdmin
-      .from("engagement_feeds")
-      .update({ last_fetched_at: ctx.now.toISOString(), last_error: lastError })
-      .eq("id", feed.id);
-  }
-  if (!threads.size && errors.length === feeds.length) throw new Error(errors.join("; "));
-
+/**
+ * Wspólny tor wątków z RSS i z wyszukiwarki: deduplikacja z rejestrem,
+ * szkic AI + twarde reguły, zapis. Zapisane pozycje powiększają zaległości
+ * w `ctx`, żeby kolejne źródło forów dorabiało już tylko brakujące.
+ */
+async function draftForumAnswers(
+  ctx: CollectorContext,
+  threads: Map<string, ForumCandidate>,
+  need: number,
+): Promise<number> {
+  if (!threads.size || need <= 0) return 0;
   const known = await existingKeys([...threads.keys()]);
   const candidates = [...threads.entries()]
     .filter(([key]) => !known.has(key))
@@ -449,14 +424,7 @@ export async function collectForums(ctx: CollectorContext): Promise<SourceStatus
         new Date(b.publishedAt ?? 0).getTime() - new Date(a.publishedAt ?? 0).getTime(),
     )
     .slice(0, MAX_FORUM_CANDIDATES);
-  if (!candidates.length) {
-    return {
-      key: "forum",
-      state: "ok",
-      added: 0,
-      ...(errors.length ? { note: errors.join("; ") } : {}),
-    };
-  }
+  if (!candidates.length) return 0;
 
   const { ensureTrackingLink } = await import("../publish-first-comment.server");
   const link = await ensureTrackingLink({
@@ -489,15 +457,190 @@ export async function collectForums(ctx: CollectorContext): Promise<SourceStatus
       title: t.title,
       snippet: t.snippet || null,
       suggested_text: draft.text,
-      extra: { page_url: t.url, feed_id: t.feedId },
+      extra: { page_url: t.url, ...t.extra },
       dedupe_key: key,
     });
   }
+  const added = await insertItems(items);
+  ctx.backlog.forum_reply = (ctx.backlog.forum_reply ?? 0) + added;
+  return added;
+}
+
+export async function collectForums(ctx: CollectorContext): Promise<SourceStatus> {
+  const need = needFor(ctx, "forum_reply");
+  if (!need) return { key: "forum", state: "skipped", added: 0, note: BACKLOG_NOTE };
+  const { data: feedRows, error } = await supabaseAdmin
+    .from("engagement_feeds")
+    .select("id, url, label, keywords")
+    .eq("active", true)
+    .limit(50);
+  if (error) throw new Error(`engagement_feeds: ${error.message}`);
+  const feeds = (feedRows ?? []) as EngagementFeed[];
+  if (!feeds.length) {
+    return {
+      key: "forum",
+      state: "skipped",
+      added: 0,
+      note: "brak feedów — dodaj adresy RSS w tabeli engagement_feeds (w poniedziałki digest sam szuka feedów forów z listy FEED_DISCOVERY_PAGES)",
+    };
+  }
+
+  const threads = new Map<string, ForumCandidate>();
+  const errors: string[] = [];
+  for (const feed of feeds) {
+    let lastError: string | null = null;
+    try {
+      const res = await fetch(feed.url, {
+        headers: { "User-Agent": "FinanceYou-Engagement/1.0 (+https://financeyou.pl)" },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const fallback = feed.label || hostOf(feed.url) || "RSS";
+      const keywords = feedKeywords(feed);
+      const alerts = isGoogleAlertsFeed(feed.url);
+      for (const item of parseRssItems(await res.text(), fallback).slice(0, 50)) {
+        if (!matchesKeywords(item, keywords)) continue;
+        if (!isRecentThread(item.publishedAt, ctx.now)) continue;
+        const key = dedupeKeyFor("forum_reply", item.url);
+        if (threads.has(key)) continue;
+        threads.set(key, {
+          url: item.url,
+          title: item.title,
+          snippet: item.snippet,
+          // Google Alerts nie podaje źródła — nazwą jest host wątku.
+          source: alerts ? hostOf(item.url) || fallback : item.source,
+          publishedAt: item.publishedAt,
+          extra: { feed_id: feed.id },
+        });
+      }
+    } catch (e) {
+      lastError = errMsg(e).slice(0, 500);
+      errors.push(`${feed.label || hostOf(feed.url)}: ${lastError}`);
+    }
+    await supabaseAdmin
+      .from("engagement_feeds")
+      .update({ last_fetched_at: ctx.now.toISOString(), last_error: lastError })
+      .eq("id", feed.id);
+  }
+  if (!threads.size && errors.length === feeds.length) throw new Error(errors.join("; "));
+
   return {
     key: "forum",
     state: "ok",
-    added: await insertItems(items),
+    added: await draftForumAnswers(ctx, threads, need),
     ...(errors.length ? { note: errors.join("; ") } : {}),
+  };
+}
+
+/**
+ * Wątki z Google Programmable Search (zamiast Google Alerts): 4 rotowane
+ * zapytania dziennie (słowo kluczowe × serwis), wyniki z 7 dni. Bez
+ * GOOGLE_CSE_KEY / GOOGLE_CSE_CX — „niedostępne" z podpowiedzią w mailu.
+ */
+export async function collectWebSearch(ctx: CollectorContext): Promise<SourceStatus> {
+  const cfg = webSearchConfig(process.env);
+  if (!cfg) {
+    return { key: "websearch", state: "unavailable", added: 0, note: WEB_SEARCH_UNAVAILABLE_HINT };
+  }
+  const need = needFor(ctx, "forum_reply");
+  if (!need) return { key: "websearch", state: "skipped", added: 0, note: BACKLOG_NOTE };
+
+  const queries = rotatingPick(WEB_SEARCH_QUERIES, WEB_SEARCH_QUERIES_PER_DAY, dayIndex(ctx.now));
+  const threads = new Map<string, ForumCandidate>();
+  const errors: string[] = [];
+  for (const q of queries) {
+    try {
+      const res = await fetch(buildWebSearchUrl(cfg, q), {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      const json: unknown = await res.json().catch(() => null);
+      if (!res.ok) {
+        errors.push(webSearchErrorMessage(res.status, json));
+        // Limit dzienny / zły klucz — kolejne zapytania skończą się tak samo.
+        if (res.status === 429 || res.status === 403 || res.status === 400) break;
+        continue;
+      }
+      for (const hit of parseWebSearchItems(json)) {
+        if (!isRecentThread(hit.publishedAt, ctx.now)) continue;
+        const key = dedupeKeyFor("forum_reply", hit.url);
+        if (threads.has(key)) continue;
+        threads.set(key, {
+          url: hit.url,
+          title: hit.title,
+          snippet: hit.snippet,
+          source: hit.source,
+          publishedAt: hit.publishedAt,
+          extra: { search_query: q },
+        });
+      }
+    } catch (e) {
+      // Bez adresu zapytania w komunikacie — zawiera klucz API.
+      errors.push(
+        `„${q}": ${errMsg(e)
+          .replace(/key=[^&\s]+/g, "key=…")
+          .slice(0, 160)}`,
+      );
+    }
+  }
+  if (!threads.size && errors.length) throw new Error(errors.join("; "));
+
+  return {
+    key: "websearch",
+    state: "ok",
+    added: await draftForumAnswers(ctx, threads, need),
+    note: [`zapytania: ${queries.join(" | ")}`, ...errors].join("; "),
+  };
+}
+
+/**
+ * Autodiscovery feedów: w poniedziałki pobiera strony z FEED_DISCOVERY_PAGES,
+ * szuka <link rel="alternate" type="application/rss+xml|atom+xml"> i dopisuje
+ * nowe feedy do engagement_feeds (aktywne, domyślne słowa kluczowe).
+ * Istniejących wierszy nie rusza (wyłączony ręcznie feed zostaje wyłączony).
+ * Błąd sieci pojedynczej strony jest pomijany.
+ */
+export async function discoverForumFeeds(
+  now: Date,
+  opts: { force?: boolean } = {},
+): Promise<Record<string, unknown>> {
+  if (!opts.force && !isFeedDiscoveryDay(now)) return { ran: false };
+  const { fetchPage, mapWithLimit } = await import("../page-fetch.server");
+  const failed: string[] = [];
+  const found = await mapWithLimit(FEED_DISCOVERY_PAGES, 4, async (page) => {
+    const r = await fetchPage(page, { timeoutMs: 8_000 });
+    if (r.kind !== "ok") {
+      failed.push(
+        `${hostOf(page)}: ${r.kind === "network_error" ? r.message.slice(0, 80) : r.kind === "http_error" ? `HTTP ${r.status}` : "nie HTML"}`,
+      );
+      return [];
+    }
+    return extractFeedLinks(r.html, r.url)
+      .slice(0, FEEDS_PER_PAGE)
+      .map((f) => ({ ...f, page }));
+  });
+  const feeds = [...new Map(found.flat().map((f) => [f.url, f])).values()];
+  if (!feeds.length) return { ran: true, pages: FEED_DISCOVERY_PAGES.length, added: 0, failed };
+
+  const { data, error } = await supabaseAdmin
+    .from("engagement_feeds")
+    .upsert(
+      feeds.map((f) => ({
+        url: f.url,
+        label: `auto: ${(f.title ?? hostOf(f.page)).slice(0, 80)}`,
+        keywords: [...FORUM_DEFAULT_KEYWORDS],
+        active: true,
+      })),
+      { onConflict: "url", ignoreDuplicates: true },
+    )
+    .select("url");
+  if (error) return { ran: true, error: `engagement_feeds: ${error.message}`, failed };
+  return {
+    ran: true,
+    pages: FEED_DISCOVERY_PAGES.length,
+    found: feeds.length,
+    added: (data ?? []).map((r) => r.url),
+    failed,
   };
 }
 
@@ -609,6 +752,7 @@ export const COLLECTORS: Array<
   ["pr", collectPr],
   ["outreach", collectOutreach],
   ["directory", collectDirectories],
+  ["websearch", collectWebSearch],
   ["forum", collectForums],
   ["youtube", collectYoutube],
   ["instagram", collectInstagram],

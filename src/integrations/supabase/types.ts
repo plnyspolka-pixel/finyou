@@ -1528,12 +1528,14 @@ export type Database = {
           first_seen_at: string
           id: string
           last_checked_at: string | null
+          last_error: string | null
           link_type: string
           notes: string | null
           outreach_target_id: string | null
           source_domain: string
           source_url: string
           status: string
+          status_changed_at: string | null
           target_url: string
           updated_at: string
         }
@@ -1546,12 +1548,14 @@ export type Database = {
           first_seen_at?: string
           id?: string
           last_checked_at?: string | null
+          last_error?: string | null
           link_type?: string
           notes?: string | null
           outreach_target_id?: string | null
           source_domain: string
           source_url: string
           status?: string
+          status_changed_at?: string | null
           target_url: string
           updated_at?: string
         }
@@ -1564,12 +1568,14 @@ export type Database = {
           first_seen_at?: string
           id?: string
           last_checked_at?: string | null
+          last_error?: string | null
           link_type?: string
           notes?: string | null
           outreach_target_id?: string | null
           source_domain?: string
           source_url?: string
           status?: string
+          status_changed_at?: string | null
           target_url?: string
           updated_at?: string
         }
