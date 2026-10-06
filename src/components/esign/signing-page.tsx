@@ -57,6 +57,7 @@ import {
   type SignedCapacity,
   type StatementKey,
 } from "@/lib/esign/esign-core";
+import { FyMark } from "./fy-mark";
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : "Wystąpił błąd";
@@ -67,14 +68,6 @@ function base64ToBlob(b64: string, type: string): Blob {
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new Blob([bytes], { type });
-}
-
-function FyMark() {
-  return (
-    <span className="grid h-9 w-9 place-items-center rounded-lg bg-[oklch(0.28_0.12_265)] text-sm font-black tracking-tight text-white shadow">
-      FY
-    </span>
-  );
 }
 
 export function SigningPage({ token }: { token: string }) {
