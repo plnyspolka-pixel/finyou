@@ -413,7 +413,7 @@ export async function runSocialAutoReplyTick(): Promise<SocialAutoReplyTickResul
         break;
       }
       result.decided += 1;
-      const decision = finalizeDecision(parseReplyDecision(raw));
+      const decision = finalizeDecision(parseReplyDecision(raw, link));
 
       if (decision.action === "skip") {
         const claimed = await claimDecision(c, {

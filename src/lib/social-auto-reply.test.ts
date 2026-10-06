@@ -102,6 +102,19 @@ describe("parseReplyDecision", () => {
     expect(parseReplyDecision({ action: "escalate", reason: "skarga" }).reply).toBe("");
   });
 
+  it("redirect → stała odpowiedź z linkiem, niezależnie od tekstu modelu", () => {
+    const r = parseReplyDecision(
+      { action: "redirect", reply: "Oprocentowanie to 12%!", reason: "pyta o warunki" },
+      "https://financeyou.pl/r/abc",
+    );
+    expect(r.action).toBe("reply");
+    expect(r.reply).toContain("https://financeyou.pl/r/abc");
+    expect(r.reply).not.toContain("12%");
+    expect(r.reason).toContain("pyta o warunki");
+    // Formułka przechodzi twarde reguły — nie zamieni się w eskalację.
+    expect(finalizeDecision(r).action).toBe("reply");
+  });
+
   it("śmieci i nieznana akcja → eskalacja", () => {
     expect(parseReplyDecision(null).action).toBe("escalate");
     expect(parseReplyDecision("reply").action).toBe("escalate");
