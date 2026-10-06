@@ -42,6 +42,17 @@ function cellsAfter(html: string, labelRegex: RegExp, count: number): string[] {
   return cells;
 }
 
+/** Wartość komórki danych stojącej bezpośrednio po komórce-etykiecie. */
+function labeledCell(html: string, label: string): string | null {
+  const m = new RegExp(
+    `<td[^>]*>\\s*${label}\\s*</td>\\s*<td[^>]*class="cs(?:B?)Dane"[^>]*>([\\s\\S]*?)</td>`,
+    "i",
+  ).exec(html);
+  if (!m) return null;
+  const v = stripTags(m[1]);
+  return v && !/^[-—\s]*$/.test(v) && !/^BRAK\b/i.test(v) ? v : null;
+}
+
 // Wartości w EKW pisane są wersalikami — sekwencja słów CAPS (z myślnikami).
 const CAPS_WORD = "[A-ZĄĆĘŁŃÓŚŹŻ][A-ZĄĆĘŁŃÓŚŹŻ-]+";
 const CAPS_SEQ = `${CAPS_WORD}(?:[ -]${CAPS_WORD})*`;
@@ -109,6 +120,15 @@ export function parseKwAddress(dzial1o: string | null | undefined): KwAddress {
       parts[3] ?? null,
     ];
   }
+
+  // 1b) Układ etykieta → wartość w jednym wierszu (OCR / CMD):
+  //     <td class="csTytul">Powiat</td><td class="csDane">M. SŁUPSK</td>
+  //     Łapie też wartości z kropkami („M. SŁUPSK", „SŁUPSK M."), których nie
+  //     obejmuje fallback CAPS z kroku 2.
+  voivodeship ||= labeledCell(dzial1o, "Wojew[óo]dztwo");
+  powiat ||= labeledCell(dzial1o, "Powiat");
+  gmina ||= labeledCell(dzial1o, "Gmina");
+  city ||= labeledCell(dzial1o, "Miejscowo[śs][ćc]");
 
   // "Numer lokalu" (ostatnia z trzech etykiet w wierszu) — kolejne 3 komórki to Ulica, Nr bud., Nr lok.
   const addrCells = cellsAfter(dzial1o, /Numer lokalu/i, 3);
