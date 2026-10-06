@@ -72,7 +72,7 @@ export function parseKwota(v: unknown): number | null {
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
   if (v == null) return null;
   const s = String(v)
-    .replace(/[\s ]/g, "")
+    .replace(/[\s\u00a0]/g, "")
     .replace(/zł|pln/gi, "");
   if (!s) return null;
   // „1.234,56" → 1234.56; „1234,56" → 1234.56; „1234.56" → 1234.56
