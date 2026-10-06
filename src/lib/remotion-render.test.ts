@@ -3,6 +3,8 @@ import {
   buildStudioReelInput,
   REMOTION_JOB_PREFIX,
   isRemotionJobId,
+  parseTimedWords,
+  wordsUrlFor,
 } from "./remotion-render.server";
 
 const SRT = `1
@@ -84,5 +86,28 @@ describe("isRemotionJobId", () => {
   it("rozpoznaje prefiks", () => {
     expect(isRemotionJobId(`${REMOTION_JOB_PREFIX}abc123`)).toBe(true);
     expect(isRemotionJobId("abc123")).toBe(false);
+  });
+});
+
+describe("wordsUrlFor / parseTimedWords", () => {
+  it("zamienia .srt na .words.json, także z query", () => {
+    expect(wordsUrlFor("https://x/a/b-1234.srt")).toBe("https://x/a/b-1234.words.json");
+    expect(wordsUrlFor("https://x/a/b.srt?token=1")).toBe("https://x/a/b.words.json?token=1");
+    expect(wordsUrlFor("https://x/a/b.vtt")).toBeNull();
+  });
+  it("filtruje i sortuje słowa", () => {
+    expect(
+      parseTimedWords({
+        words: [
+          { text: "b", start: 1, end: 1.5 },
+          { text: "a", start: 0.2, end: 0.1 },
+          { text: 1 },
+        ],
+      }),
+    ).toEqual([
+      { text: "a", start: 0.2, end: 0.2 },
+      { text: "b", start: 1, end: 1.5 },
+    ]);
+    expect(parseTimedWords(null)).toEqual([]);
   });
 });

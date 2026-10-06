@@ -8,20 +8,29 @@
 // `height / 1280` do rzeczywistej rozdzielczości wideo.
 //
 // Wejście (inputProps) przygotowuje backend (src/lib/remotion-render.server.ts):
-// kwestie SRT już pocięte pod styl (chunkCues) i nakładki z czasami
-// dopasowanymi do SRT (overlaysWithCueTiming) — kompozycja niczego nie liczy
-// z tekstu, tylko rysuje.
+// kwestie SRT już pocięte pod styl (chunkCues), nakładki z czasami
+// dopasowanymi do SRT (overlaysWithCueTiming) i — gdy są — czasy słów
+// z ElevenLabs (`words`). Kompozycja niczego nie liczy z tekstu, tylko rysuje.
+//
+// RUCH: wszystko wynika z numeru klatki (`useCurrentFrame`), nigdy z zegara —
+// Lambda renderuje film w kawałkach na różnych maszynach, więc animacja
+// „na czas" rozjechałaby się między kawałkami. Wejścia to `spring()`
+// (lekki overshoot), połysk złota to gradient przesuwany po klatkach.
+//
+// ZASADA WYGLĄDU: mało elementów, dużo powietrza, konsekwentne złoto brandu
+// na granacie; tekst zawsze na przyciemnieniu (scrim), nigdy „gołym" obrazie.
 
 import { useMemo } from "react";
 import {
   AbsoluteFill,
   OffthreadVideo,
   interpolate,
+  spring,
+  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
 import { loadFont } from "@remotion/fonts";
-import { staticFile } from "remotion";
 import {
   AI_BADGE,
   DEFAULT_ASS_DIMENSIONS,
@@ -55,6 +64,8 @@ for (const [subset, unicodeRange] of Object.entries(INTER_RANGES)) {
 }
 const FONT_STACK = `Inter, "DejaVu Sans", Arial, sans-serif`;
 
+export type TimedWord = { text: string; start: number; end: number };
+
 export type StudioReelProps = {
   /** Adres https czystego mastera (HeyGen / bucket studio-media). */
   videoUrl: string;
@@ -63,6 +74,8 @@ export type StudioReelProps = {
   style: CaptionStyle | null;
   aiBadge: boolean;
   overlays: DynamicOverlays | null;
+  /** Czasy słów z ElevenLabs; `[]` = czasy słów liczone proporcjonalnie do liter. */
+  words: TimedWord[];
 };
 
 export const studioReelDefaults: StudioReelProps = {
@@ -71,7 +84,14 @@ export const studioReelDefaults: StudioReelProps = {
   style: null,
   aiBadge: true,
   overlays: null,
+  words: [],
 };
+
+// ── Pomocnicze ──────────────────────────────────────────────────────────────
+
+const B = OVERLAY_BRAND;
+const L = DYNAMIC_OVERLAY_LAYOUT;
+const C = OVERLAY_CARD_LAYOUT;
 
 const rgba = (hex: string, alpha: number): string => {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
@@ -80,78 +100,162 @@ const rgba = (hex: string, alpha: number): string => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+/** Przejście liniowe `from → to` w sekundach, jak \fad / \t w ASS. */
+const ramp = (t: number, from: number, to: number) =>
+  to <= from ? (t >= to ? 1 : 0) : clamp01((t - from) / (to - from));
+
 /** Obrys tekstu jak Outline w ASS: kreska o podwójnej szerokości pod wypełnieniem. */
 const stroke = (width: number, color: string): React.CSSProperties =>
   width > 0
     ? { WebkitTextStroke: `${width * 2}px ${color}`, paintOrder: "stroke fill" }
     : {};
 
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
-/** Przejście liniowe `from → to` w sekundach, jak \fad / \t w ASS. */
-const ramp = (t: number, from: number, to: number) =>
-  to <= from ? (t >= to ? 1 : 0) : clamp01((t - from) / (to - from));
-/** Miękkie wejście (lekkie uniesienie + fade), jak karty .fy-marketing. */
-const easeOut = (p: number) => 1 - (1 - p) * (1 - p);
+type Clock = { t: number; fps: number; s: number; width: number; height: number };
+
+/** Sprężyste wejście od `startSec` (0 → 1 z lekkim przestrzeleniem). */
+const pop = (c: Clock, startSec: number, config = { damping: 14, stiffness: 160, mass: 0.6 }) =>
+  spring({ frame: Math.max(0, (c.t - startSec) * c.fps), fps: c.fps, config });
+/** Wejście bez przestrzelenia (dla rozmycia i przezroczystości). */
+const ease = (c: Clock, startSec: number, config = { damping: 200, stiffness: 120 }) =>
+  spring({ frame: Math.max(0, (c.t - startSec) * c.fps), fps: c.fps, config });
+
+/**
+ * Połysk złota: jasny pas gradientu przesuwany po tekście jedną falą
+ * (`-150% → 250%`) w ciągu `durSec` od `startSec`. Działa na warstwie
+ * z `background-clip: text`, więc tekst pod spodem nie może mieć obrysu —
+ * obrys rysuje osobna warstwa pod nią (patrz Headline).
+ */
+function shimmerStyle(c: Clock, startSec: number, durSec: number, base: string, light: string): React.CSSProperties {
+  const p = ramp(c.t, startSec, startSec + durSec);
+  const x = interpolate(p, [0, 1], [-150, 250]);
+  return {
+    backgroundImage: `linear-gradient(100deg, ${base} 0%, ${base} 35%, ${light} 50%, ${base} 65%, ${base} 100%)`,
+    backgroundSize: "300% 100%",
+    backgroundPosition: `${x}% 0`,
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    color: "transparent",
+  };
+}
+
+// ── Czasy słów ──────────────────────────────────────────────────────────────
+
+type CueWords = { cue: SrtCue; lines: TimedWord[][] };
+
+/**
+ * Słowa kwestii z czasami. Gdy liczba słów we wszystkich kwestiach zgadza się
+ * z listą słów ElevenLabs (ten sam tekst scenariusza), bierzemy czasy
+ * prawdziwe; inaczej — proporcjonalnie do liczby liter (jak highlightedEvents
+ * w ASS). Zwraca słowa pogrupowane w wiersze kwestii.
+ */
+function timeCueWords(cues: SrtCue[], timed: TimedWord[]): CueWords[] {
+  const perCue = cues.map((cue) => cue.text.split("\n").map((l) => l.split(" ").filter(Boolean)));
+  const total = perCue.reduce((n, lines) => n + lines.reduce((m, l) => m + l.length, 0), 0);
+  const exact = timed.length === total && total > 0;
+  let k = 0;
+  return cues.map((cue, ci) => {
+    const lines = perCue[ci];
+    const flat = lines.flat();
+    const weights = flat.map((w) => Math.max(1, w.replace(/[^\p{L}\p{N}]/gu, "").length));
+    const sum = weights.reduce((a, b) => a + b, 0);
+    const span = cue.end - cue.start;
+    let acc = 0;
+    let idx = 0;
+    const out: TimedWord[][] = lines.map((ws) =>
+      ws.map((text) => {
+        let start: number;
+        let end: number;
+        if (exact) {
+          const tw = timed[k++];
+          // Czas słowa nie może wyjść poza kwestię (cięcie chunkCues), ale
+          // pierwsze słowo rusza razem z kwestią — bez „dziury" na starcie.
+          start = idx === 0 ? cue.start : Math.min(Math.max(tw.start, cue.start), cue.end);
+          end = Math.min(Math.max(tw.end, start + 0.05), cue.end);
+        } else {
+          start = cue.start + (span * acc) / sum;
+          acc += weights[idx];
+          end = cue.start + (span * acc) / sum;
+        }
+        idx++;
+        return { text, start, end };
+      }),
+    );
+    return { cue, lines: out };
+  });
+}
+
+// ── Przyciemnienia i winieta ────────────────────────────────────────────────
+
+/**
+ * Warstwa „kinowa": stała winieta na brzegach, przyciemnienie u dołu pod
+ * napisami i u góry pod nakładkami (to drugie tylko, gdy coś tam jest).
+ * Daje czytelność tekstu na jasnych ujęciach i spójny, droższy obraz.
+ */
+const Cinematic: React.FC<{ topScrim: number; bottomScrim: number }> = ({ topScrim, bottomScrim }) => (
+  <>
+    <AbsoluteFill
+      style={{
+        background:
+          "radial-gradient(ellipse 80% 70% at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.38) 100%)",
+      }}
+    />
+    <AbsoluteFill
+      style={{
+        opacity: topScrim,
+        background: `linear-gradient(to bottom, ${rgba(B.navyDeep, 0.62)} 0%, ${rgba(B.navyDeep, 0.25)} 28%, rgba(0,0,0,0) 48%)`,
+      }}
+    />
+    <AbsoluteFill
+      style={{
+        opacity: bottomScrim,
+        background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.18) 30%, rgba(0,0,0,0) 46%)",
+      }}
+    />
+  </>
+);
 
 // ── Napisy ──────────────────────────────────────────────────────────────────
 
 /**
- * Czasy słów proporcjonalnie do liczby liter (jak highlightedEvents w ASS);
- * zwraca indeks aktualnie mówionego słowa w spłaszczonej liście słów kwestii.
+ * Napisy słowo po słowie. Każde słowo wchodzi sprężyście w swoim czasie
+ * (style z podświetlaniem) albo cała kwestia wchodzi naraz z lekkim
+ * rozstrzeleniem (pozostałe style). Mówione słowo jest jaśniejsze i ma
+ * miękką poświatę; słowa, które dopiero padną, są przygaszone. Styl „box"
+ * dostaje szklaną plakietkę zamiast płaskiej ramki.
  */
-function spokenWordIndex(cue: SrtCue, words: string[], t: number): number {
-  if (words.length <= 1) return 0;
-  const weights = words.map((w) => Math.max(1, w.replace(/[^\p{L}\p{N}]/gu, "").length));
-  const total = weights.reduce((a, b) => a + b, 0);
-  const span = cue.end - cue.start;
-  let acc = 0;
-  for (let i = 0; i < words.length - 1; i++) {
-    acc += weights[i];
-    if (t < cue.start + (span * acc) / total) return i;
-  }
-  return words.length - 1;
-}
+const Captions: React.FC<{ cues: CueWords[]; style: CaptionStyle; c: Clock }> = ({ cues, style, c }) => {
+  const item = cues.find(({ cue }) => c.t >= cue.start && c.t < cue.end);
+  if (!item) return null;
+  const { cue, lines } = item;
+  const s = c.s;
+  const wordPop = Boolean(style.highlight);
+  const fontSize = style.fontSize * s;
+  const glass = Boolean(style.box);
 
-const Captions: React.FC<{ cues: SrtCue[]; style: CaptionStyle; s: number; t: number }> = ({
-  cues,
-  style,
-  s,
-  t,
-}) => {
-  const cue = cues.find((c) => t >= c.start && t < c.end);
-  if (!cue) return null;
-  const text = style.uppercase ? cue.text.toLocaleUpperCase("pl-PL") : cue.text;
-  const lines = text.split("\n").map((l) => l.split(" ").filter(Boolean));
-  const flat = lines.flat();
-  const current = style.highlight ? spokenWordIndex(cue, flat, t) : -1;
-
-  const base: React.CSSProperties = {
+  const textBase: React.CSSProperties = {
     fontFamily: FONT_STACK,
     fontWeight: style.bold ? 800 : 500,
-    fontSize: style.fontSize * s,
-    lineHeight: 1.15,
-    color: style.color,
+    fontSize,
+    lineHeight: 1.18,
+    letterSpacing: -0.01 * fontSize,
     textAlign: "center",
     whiteSpace: "pre",
   };
-  const edge: React.CSSProperties = style.box
-    ? {
-        background: rgba(style.box.color, style.box.opacity),
-        padding: `${style.outline * 0.5 * s}px ${style.outline * s}px`,
-        borderRadius: 4 * s,
-      }
+  const edge: React.CSSProperties = glass
+    ? {}
     : {
         ...stroke(style.outline * s, style.outlineColor),
-        textShadow: style.shadow
-          ? `${style.shadow * s}px ${style.shadow * s}px 0 rgba(0,0,0,0.5)`
-          : undefined,
+        textShadow: `0 ${Math.max(2, style.shadow + 2) * s}px ${8 * s}px rgba(0,0,0,0.45)`,
       };
   const position: React.CSSProperties =
     style.placement === "center"
       ? { top: 0, bottom: 0, justifyContent: "center" }
       : { bottom: style.marginBottom * s, justifyContent: "flex-end" };
 
-  let k = 0;
+  // Wejście kwestii: z dołu, miękko; przy word-pop każde słowo osobno.
+  const cueIn = ease(c, cue.start, { damping: 24, stiffness: 180 });
+
   return (
     <div
       style={{
@@ -161,19 +265,55 @@ const Captions: React.FC<{ cues: SrtCue[]; style: CaptionStyle; s: number; t: nu
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: style.box ? 4 * s : 0,
+        gap: glass ? 6 * s : 0,
         ...position,
+        opacity: wordPop ? 1 : cueIn,
+        transform: wordPop ? undefined : `translateY(${(1 - cueIn) * 14 * s}px)`,
       }}
     >
-      {lines.map((words, li) => (
-        <div key={li} style={{ ...base, ...edge }}>
-          {words.map((w, wi) => {
-            const idx = k++;
-            const hl = idx === current && style.highlight;
+      {lines.map((ws, li) => (
+        <div
+          key={li}
+          style={{
+            ...textBase,
+            ...edge,
+            ...(glass
+              ? {
+                  background: rgba(style.box!.color, Math.min(0.72, style.box!.opacity)),
+                  backdropFilter: `blur(${14 * s}px) saturate(1.3)`,
+                  WebkitBackdropFilter: `blur(${14 * s}px) saturate(1.3)`,
+                  border: `${1 * s}px solid rgba(255,255,255,0.14)`,
+                  boxShadow: `inset 0 ${1 * s}px 0 rgba(255,255,255,0.12), 0 ${12 * s}px ${30 * s}px rgba(0,0,0,0.35)`,
+                  padding: `${style.outline * 0.45 * s}px ${style.outline * 1.1 * s}px`,
+                  borderRadius: 12 * s,
+                }
+              : {}),
+          }}
+        >
+          {ws.map((w, wi) => {
+            const said = c.t >= w.end;
+            const current = c.t >= w.start && c.t < w.end;
+            const enter = wordPop ? pop(c, w.start) : 1;
+            const visible = wordPop ? c.t >= w.start : true;
+            const text = style.uppercase ? w.text.toLocaleUpperCase("pl-PL") : w.text;
+            const color = current && style.highlight ? style.highlight : style.color;
             return (
-              <span key={wi} style={hl ? { color: style.highlight! } : undefined}>
+              <span key={wi} style={{ display: "inline-block", whiteSpace: "pre" }}>
                 {wi > 0 ? " " : ""}
-                {w}
+                <span
+                  style={{
+                    display: "inline-block",
+                    color,
+                    opacity: !visible ? 0 : current || said ? 1 : 0.62,
+                    transform: `scale(${wordPop ? 0.7 + 0.3 * enter : 1}) translateY(${current ? -0.03 * fontSize : 0}px)`,
+                    transformOrigin: "50% 80%",
+                    textShadow: current
+                      ? `0 0 ${0.35 * fontSize}px ${rgba(style.highlight ?? "#FFFFFF", 0.55)}`
+                      : undefined,
+                  }}
+                >
+                  {text}
+                </span>
               </span>
             );
           })}
@@ -186,73 +326,58 @@ const Captions: React.FC<{ cues: SrtCue[]; style: CaptionStyle; s: number; t: nu
 // ── Znaczek „AI" ────────────────────────────────────────────────────────────
 
 const AiBadge: React.FC<{ s: number }> = ({ s }) => {
-  const B = AI_BADGE;
+  const A = AI_BADGE;
   return (
     <div
       style={{
         position: "absolute",
-        top: B.marginTop * s,
-        right: B.marginRight * s,
-        width: B.width * s,
-        height: B.height * s,
-        borderRadius: B.radius * s,
-        background: rgba(B.fill, B.fillOpacity),
-        border: `${B.borderWidth * s}px solid ${rgba(B.border, 0.53)}`,
+        top: A.marginTop * s,
+        right: A.marginRight * s,
+        width: A.width * s,
+        height: A.height * s,
+        borderRadius: A.radius * s,
+        background: rgba(A.fill, A.fillOpacity),
+        backdropFilter: `blur(${10 * s}px)`,
+        WebkitBackdropFilter: `blur(${10 * s}px)`,
+        border: `${A.borderWidth * s}px solid ${rgba(A.border, 0.45)}`,
         boxSizing: "border-box",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontFamily: FONT_STACK,
         fontWeight: 800,
-        fontSize: B.fontSize * s,
-        letterSpacing: 1 * s,
-        color: rgba(B.textColor, 0.78),
+        fontSize: A.fontSize * s,
+        letterSpacing: 1.5 * s,
+        color: rgba(A.textColor, 0.82),
       }}
     >
-      {B.text}
+      {A.text}
     </div>
   );
 };
 
 // ── Nakładki dynamiczne ─────────────────────────────────────────────────────
 
-const L = DYNAMIC_OVERLAY_LAYOUT;
-const C = OVERLAY_CARD_LAYOUT;
-const B = OVERLAY_BRAND;
-
 /** Niebieska poświata pod tekstem (odpowiednik warstwy OvGlow: \bord + \blur). */
-const textGlow = (px: number) => `0 0 ${px}px ${rgba(B.glow, 0.62)}, 0 0 ${px * 2}px ${rgba(B.glow, 0.35)}`;
+const textGlow = (px: number) =>
+  `0 0 ${px}px ${rgba(B.glow, 0.55)}, 0 0 ${px * 2.2}px ${rgba(B.glow, 0.28)}`;
 
-/** Połysk złota po pojawieniu się elementu: `from → light → from` (sekundy od startu). */
-function shimmer(age: number, from: string, light: string, a: number, b: number, c: number): string {
-  if (age < a) return from;
-  if (age < b) return mixColor(from, light, (age - a) / (b - a));
-  if (age < c) return mixColor(light, from, (age - b) / (c - b));
-  return from;
-}
-function mixColor(x: string, y: string, p: number): string {
-  const px = clamp01(p);
-  const ch = (h: string, i: number) => parseInt(h.replace("#", "").slice(i, i + 2), 16);
-  const mix = (i: number) => Math.round(ch(x, i) * (1 - px) + ch(y, i) * px);
-  return `rgb(${mix(0)}, ${mix(2)}, ${mix(4)})`;
-}
-
-const Tag: React.FC<{ ov: DynamicOverlays; s: number; t: number; width: number; height: number }> = ({
-  ov,
-  s,
-  t,
-  width,
-  height,
-}) => {
+/**
+ * Znacznik kategorii: szklana pigułka z obracającą się złoto-niebieską
+ * obwódką, duża na środku, potem sprężyście zmniejsza się do góry kadru.
+ */
+const Tag: React.FC<{ ov: DynamicOverlays; c: Clock }> = ({ ov, c }) => {
   if (!ov.tag) return null;
+  const { s, t, width, height } = c;
   const hold = ov.tagHoldSeconds ?? 1.2;
   const shrinkFrom = Math.min(ov.headlineStartSeconds ?? hold, hold);
-  const p = ramp(t, shrinkFrom, hold);
+  const p = ease(c, shrinkFrom, { damping: 18, stiffness: 90 });
   const y = interpolate(p, [0, 1], [height * L.tagBigY, height * L.tagSmallY]);
-  const scale = interpolate(p, [0, 1], [1, L.tagSmallScale / 100]);
+  const scale = interpolate(p, [0, 1], [1, L.tagSmallScale / 100]) * (0.85 + 0.15 * pop(c, 0));
   const opacity = ramp(t, 0, 0.12);
-  const color = shimmer(t, B.gold, B.goldLight, 0, 0.7, 1.4);
-  const glowPx = (L.tagPadding + L.glowSize + 4) * s;
+  const angle = (c.t * 90) % 360;
+  const border = 1.6 * s;
+  const fontSize = L.tagFontSize * s;
   return (
     <div
       style={{
@@ -261,82 +386,171 @@ const Tag: React.FC<{ ov: DynamicOverlays; s: number; t: number; width: number; 
         top: y,
         transform: `translate(-50%, -50%) scale(${scale})`,
         opacity,
-        fontFamily: FONT_STACK,
-        fontWeight: 800,
-        fontSize: L.tagFontSize * s,
-        lineHeight: 1.2,
-        letterSpacing: L.tagSpacing * s,
-        textAlign: "center",
-        whiteSpace: "pre",
-        color,
-        background: rgba(B.navy, B.navyOpacity),
-        padding: `${L.tagPadding * s}px ${L.tagPadding * 1.4 * s}px`,
-        borderRadius: 6 * s,
-        boxShadow: `0 0 ${glowPx}px ${rgba(B.glow, 0.45)}, 0 0 ${glowPx * 2}px ${rgba(B.glow, 0.25)}`,
+        padding: border,
+        borderRadius: 999,
+        background: `conic-gradient(from ${angle}deg, ${B.gold}, ${rgba(B.gold, 0.15)} 30%, ${B.glow} 50%, ${rgba(B.gold, 0.15)} 70%, ${B.gold})`,
+        boxShadow: `0 0 ${24 * s}px ${rgba(B.glow, 0.4)}, 0 ${10 * s}px ${30 * s}px rgba(0,0,0,0.35)`,
       }}
     >
-      {ov.tag}
+      <div
+        style={{
+          padding: `${L.tagPadding * 0.9 * s}px ${L.tagPadding * 2.2 * s}px`,
+          borderRadius: 999,
+          background: rgba(B.navy, 0.86),
+          backdropFilter: `blur(${12 * s}px)`,
+          WebkitBackdropFilter: `blur(${12 * s}px)`,
+          fontFamily: FONT_STACK,
+          fontWeight: 800,
+          fontSize,
+          lineHeight: 1.2,
+          letterSpacing: L.tagSpacing * 1.6 * s,
+          textTransform: "uppercase",
+          textAlign: "center",
+          whiteSpace: "pre",
+          ...shimmerStyle(c, 0.15, 1.3, B.gold, "#FFF4CC"),
+        }}
+      >
+        {ov.tag}
+      </div>
     </div>
   );
 };
 
-const Headline: React.FC<{ ov: DynamicOverlays; s: number; t: number; width: number; height: number }> = ({
-  ov,
-  s,
-  t,
-  width,
-  height,
-}) => {
+/**
+ * Pytanie rolki — kinetyczna typografia: słowa wchodzą po kolei z rozmycia
+ * i lekkiego uniesienia, potem po tekście przechodzi złoty połysk, a pod
+ * spodem rysuje się cienka złota linia. Dwie warstwy: obrys + cień pod
+ * spodem, gradient na wierzchu (gradient w tekście nie znosi obrysu).
+ */
+const Headline: React.FC<{ ov: DynamicOverlays; c: Clock }> = ({ ov, c }) => {
   if (!ov.headline) return null;
+  const { s, t, width, height } = c;
   const start = ov.headlineStartSeconds ?? 0.8;
   const end = Math.max(ov.headlineEndSeconds ?? 6, start + 1);
-  if (t < start || t >= end) return null;
-  const opacity = Math.min(ramp(t, start, start + 0.16), 1 - ramp(t, end - 0.2, end));
-  const age = t - start;
-  const color = shimmer(age, "#FFFFFF", B.goldLight, 0.25, 0.85, 1.5);
+  if (t < start - 0.05 || t >= end) return null;
+  const out = ramp(t, end - 0.22, end);
   const lines = layoutLines(ov.headline, L.headlineMaxChars);
+  const fontSize = L.headlineFontSize * s;
+  const base: React.CSSProperties = {
+    fontFamily: FONT_STACK,
+    fontWeight: 800,
+    fontSize,
+    lineHeight: 1.12,
+    letterSpacing: -0.015 * fontSize,
+    textAlign: "center",
+    whiteSpace: "pre",
+  };
+  let k = 0;
+  const renderLines = (layer: "back" | "front") =>
+    lines.map((line, li) => (
+      <div key={li} style={{ display: "block" }}>
+        {line.split(" ").map((w, wi) => {
+          const i = k++;
+          const at = start + i * 0.055;
+          const e = ease(c, at, { damping: 20, stiffness: 140 });
+          const blur = (1 - e) * 14 * s;
+          return (
+            <span key={wi} style={{ display: "inline-block", whiteSpace: "pre" }}>
+              {wi > 0 ? " " : ""}
+              <span
+                style={{
+                  display: "inline-block",
+                  opacity: e,
+                  filter: blur > 0.3 ? `blur(${blur}px)` : undefined,
+                  transform: `translateY(${(1 - e) * 0.45 * fontSize}px) scale(${0.94 + 0.06 * e})`,
+                  ...(layer === "back"
+                    ? { color: B.navyDeep, ...stroke(4 * s, B.navyDeep), textShadow: `0 ${3 * s}px ${10 * s}px ${rgba(B.navyDeep, 0.6)}, ${textGlow(L.glowSize * 2 * s)}` }
+                    : shimmerStyle(c, start + 0.5, 1.1, "#FFFFFF", B.goldLight)),
+                }}
+              >
+                {w}
+              </span>
+            </span>
+          );
+        })}
+      </div>
+    ));
+  const wordCount = lines.reduce((n, l) => n + l.split(" ").length, 0);
+  const ruleIn = ease(c, start + wordCount * 0.055 + 0.1, { damping: 22, stiffness: 110 });
+  const wrap: React.CSSProperties = {
+    position: "absolute",
+    left: 40 * s,
+    width: width - 80 * s,
+    top: height * L.headlineY,
+    transform: "translateY(-50%)",
+    opacity: 1 - out,
+    filter: out > 0 ? `blur(${out * 8 * s}px)` : undefined,
+  };
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: 40 * s,
-        right: 40 * s,
-        top: height * L.headlineY,
-        transform: "translateY(-50%)",
-        opacity,
-        fontFamily: FONT_STACK,
-        fontWeight: 800,
-        fontSize: L.headlineFontSize * s,
-        lineHeight: 1.15,
-        textAlign: "center",
-        whiteSpace: "pre",
-        color,
-        ...stroke(4 * s, B.navyDeep),
-        textShadow: `${2 * s}px ${2 * s}px 0 ${rgba(B.navyDeep, 0.5)}, ${textGlow(L.glowSize * 2 * s)}`,
-        width: width - 80 * s,
-      }}
-    >
-      {lines.join("\n")}
-    </div>
+    <>
+      <div style={{ ...wrap, ...base }}>{renderLines("back")}</div>
+      <div style={{ ...wrap, ...base }}>
+        {(() => {
+          k = 0;
+          return renderLines("front");
+        })()}
+        <div
+          style={{
+            margin: `${0.35 * fontSize}px auto 0`,
+            width: `${ruleIn * 38}%`,
+            height: 3 * s,
+            borderRadius: 2 * s,
+            background: `linear-gradient(90deg, ${rgba(B.gold, 0)}, ${B.gold} 30%, ${B.gold} 70%, ${rgba(B.gold, 0)})`,
+            boxShadow: `0 0 ${10 * s}px ${rgba(B.gold, 0.6)}`,
+          }}
+        />
+      </div>
+    </>
+  );
+};
+
+/** Liczba na początku wartości (np. „60% LTV" → 60) — do licznika w kartach. */
+function splitValue(value: string): { prefix: string; num: number | null; suffix: string; decimals: number } {
+  const m = /^(\D*?)(\d(?:[\d\s]*\d)?(?:[.,]\d+)?)(.*)$/.exec(value);
+  if (!m) return { prefix: value, num: null, suffix: "", decimals: 0 };
+  const raw = m[2].replace(/\s/g, "");
+  const decimals = (raw.split(/[.,]/)[1] ?? "").length;
+  return { prefix: m[1], num: Number(raw.replace(",", ".")), suffix: m[3], decimals };
+}
+
+function formatNumber(n: number, decimals: number): string {
+  const fixed = n.toFixed(decimals).replace(".", ",");
+  const [int, frac] = fixed.split(",");
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return frac ? `${grouped},${frac}` : grouped;
+}
+
+/** Wartość w wierszu karty: liczba „nabija się" od zera przez 0,7 s. */
+const CountUp: React.FC<{ value: string; from: number; c: Clock }> = ({ value, from, c }) => {
+  const { prefix, num, suffix, decimals } = splitValue(value);
+  if (num == null) return <>{value}</>;
+  const p = ease(c, from, { damping: 30, stiffness: 60 });
+  return (
+    <>
+      {prefix}
+      {formatNumber(num * p, decimals)}
+      {suffix}
+    </>
   );
 };
 
 const CARD_ICONS = { check: "✓", dot: "•" } as const;
 
-const Card: React.FC<{ card: OverlayCard; s: number; t: number; width: number; height: number }> = ({
-  card,
-  s,
-  t,
-  width,
-  height,
-}) => {
+/**
+ * Karta informacyjna. Domyślnie tekst leży wprost na obrazie (granatowy
+ * obrys + poświata); `frame: "panel"` daje szklaną planszę: rozmyte tło,
+ * jasna krawędź u góry, miękki cień. Wiersze wjeżdżają z lewej z lekkim
+ * przestrzeleniem, ikona „ptaszka" to złote kółko, wartości liczbowe
+ * nabijają się od zera.
+ */
+const Card: React.FC<{ card: OverlayCard; c: Clock }> = ({ card, c }) => {
   if (!card.rows.length) return null;
+  const { s, t, width, height } = c;
   const start = card.startSeconds;
   const end = card.endSeconds == null ? Infinity : Math.max(card.endSeconds, start + 1);
   if (t < start || t >= end) return null;
   const panel = card.frame === "panel";
   const hasIcons = card.rows.some((r) => r.icon);
-  // Szerokość jak w ASS: szacunek szerokości znaków Inter — kadr 720 px.
   const rowChars = (r: OverlayCard["rows"][number]) =>
     r.text.length + (r.value ? r.value.length + 2 : 0);
   const maxChars = Math.max(
@@ -344,34 +558,47 @@ const Card: React.FC<{ card: OverlayCard; s: number; t: number; width: number; h
     card.title ? Math.round((card.title.length * C.titleFontSize) / C.fontSize) : 0,
   );
   const innerW = (hasIcons ? C.iconWidth : 0) + Math.ceil(maxChars * C.fontSize * C.charWidth);
-  const panelW = Math.min(Math.max(C.padding * 2 + innerW, 300), DEFAULT_ASS_DIMENSIONS.width - 72) * s;
-  const contentH = ((card.title ? C.titleHeight : 0) + card.rows.length * C.rowHeight) * s;
-  const panelH = C.padding * 2 * s + contentH;
+  const panelW =
+    Math.min(Math.max(C.padding * 2 + innerW, 300), DEFAULT_ASS_DIMENSIONS.width - 72) * s;
+  const titleH = card.title ? C.titleHeight * s : 0;
+  const panelH = C.padding * 2 * s + titleH + card.rows.length * C.rowHeight * s;
   const panelX = (width - panelW) / 2;
   const panelY = height * (card.y ?? C.defaultTop);
 
-  const enter = easeOut(ramp(t, start, start + 0.26));
-  const rise = (p: number) => `translateY(${(1 - p) * 16 * s}px)`;
+  const enter = pop(c, start, { damping: 16, stiffness: 120, mass: 0.8 });
+  const fade = ramp(t, start, start + 0.18);
+  const outFade = Number.isFinite(end) ? 1 - ramp(t, end - 0.2, end) : 1;
   const textEdge: React.CSSProperties = panel
-    ? {}
+    ? { textShadow: `0 ${1 * s}px ${2 * s}px rgba(0,0,0,0.35)` }
     : {
         ...stroke(3 * s, B.navyDeep),
-        textShadow: `${2 * s}px ${2 * s}px 0 ${rgba(B.navyDeep, 0.5)}, ${textGlow(10 * s)}`,
+        textShadow: `0 ${2 * s}px ${8 * s}px ${rgba(B.navyDeep, 0.7)}, ${textGlow(10 * s)}`,
       };
 
   return (
-    <div style={{ position: "absolute", left: panelX, top: panelY, width: panelW, height: panelH }}>
+    <div
+      style={{
+        position: "absolute",
+        left: panelX,
+        top: panelY,
+        width: panelW,
+        height: panelH,
+        opacity: fade * outFade,
+        transform: `translateY(${(1 - enter) * 22 * s}px) scale(${0.96 + 0.04 * enter})`,
+        transformOrigin: "50% 0%",
+      }}
+    >
       {panel && (
         <div
           style={{
             position: "absolute",
             inset: 0,
-            opacity: ramp(t, start, start + 0.2),
-            transform: rise(enter),
-            background: rgba(B.navy, B.navyOpacity),
-            border: `${1.5 * s}px solid ${rgba(B.border, 0.44)}`,
             borderRadius: C.cornerRadius * s,
-            boxShadow: `0 0 ${14 * s}px ${rgba(B.glow, 0.4)}, 0 0 ${28 * s}px ${rgba(B.glow, 0.2)}`,
+            background: `linear-gradient(160deg, ${rgba(B.navy, 0.66)}, ${rgba(B.navyDeep, 0.58)})`,
+            backdropFilter: `blur(${18 * s}px) saturate(1.4)`,
+            WebkitBackdropFilter: `blur(${18 * s}px) saturate(1.4)`,
+            border: `${1 * s}px solid rgba(255,255,255,0.14)`,
+            boxShadow: `inset 0 ${1 * s}px 0 rgba(255,255,255,0.18), 0 ${22 * s}px ${50 * s}px rgba(0,0,0,0.38), 0 0 ${28 * s}px ${rgba(B.glow, 0.22)}`,
           }}
         />
       )}
@@ -382,22 +609,24 @@ const Card: React.FC<{ card: OverlayCard; s: number; t: number; width: number; h
             left: 0,
             right: 0,
             top: C.padding * s,
-            height: C.titleHeight * s,
+            height: titleH,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            opacity: ramp(t, start, start + 0.2),
-            transform: rise(enter),
+            gap: 10 * s,
             fontFamily: FONT_STACK,
             fontWeight: 800,
             fontSize: C.titleFontSize * s,
-            letterSpacing: C.titleSpacing * s,
+            letterSpacing: C.titleSpacing * 1.3 * s,
+            textTransform: "uppercase",
             color: B.gold,
             whiteSpace: "pre",
             ...textEdge,
           }}
         >
+          <span style={{ width: 18 * s * enter, height: 2 * s, background: rgba(B.gold, 0.8), borderRadius: 1 }} />
           {card.title}
+          <span style={{ width: 18 * s * enter, height: 2 * s, background: rgba(B.gold, 0.8), borderRadius: 1 }} />
         </div>
       )}
       {card.rows.map((row, i) => {
@@ -406,8 +635,8 @@ const Card: React.FC<{ card: OverlayCard; s: number; t: number; width: number; h
             ? Math.max(row.startSeconds, start)
             : start + 0.25 + i * C.revealStagger;
         if (t < rowStart) return null;
-        const p = easeOut(ramp(t, rowStart, rowStart + 0.22));
-        const top = (C.padding + (card.title ? C.titleHeight : 0) + i * C.rowHeight) * s;
+        const p = pop(c, rowStart, { damping: 15, stiffness: 150, mass: 0.7 });
+        const top = C.padding * s + titleH + i * C.rowHeight * s;
         return (
           <div
             key={i}
@@ -419,23 +648,65 @@ const Card: React.FC<{ card: OverlayCard; s: number; t: number; width: number; h
               height: C.rowHeight * s,
               display: "flex",
               alignItems: "center",
-              opacity: ramp(t, rowStart, rowStart + 0.15),
-              transform: rise(p),
+              opacity: ramp(t, rowStart, rowStart + 0.14),
+              transform: `translateX(${(1 - p) * -18 * s}px)`,
               fontFamily: FONT_STACK,
-              fontWeight: 800,
+              fontWeight: 700,
               fontSize: C.fontSize * s,
+              letterSpacing: -0.01 * C.fontSize * s,
               color: "#FFFFFF",
               whiteSpace: "pre",
               ...textEdge,
             }}
           >
             {row.icon && (
-              <span style={{ color: B.gold, width: C.iconWidth * s, display: "inline-block" }}>
-                {CARD_ICONS[row.icon]}
+              <span
+                style={{
+                  width: C.iconWidth * s,
+                  display: "inline-flex",
+                  alignItems: "center",
+                }}
+              >
+                <span
+                  style={{
+                    width: 0.78 * C.fontSize * s,
+                    height: 0.78 * C.fontSize * s,
+                    borderRadius: 999,
+                    background:
+                      row.icon === "check"
+                        ? `linear-gradient(145deg, ${B.goldLight}, ${B.gold})`
+                        : rgba(B.gold, 0.22),
+                    border: row.icon === "dot" ? `${1.5 * s}px solid ${rgba(B.gold, 0.9)}` : undefined,
+                    boxShadow: `0 0 ${10 * s}px ${rgba(B.gold, 0.45)}`,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transform: `scale(${0.4 + 0.6 * p})`,
+                    color: B.navyDeep,
+                    fontSize: 0.5 * C.fontSize * s,
+                    fontWeight: 900,
+                    WebkitTextStroke: "0",
+                    textShadow: "none",
+                  }}
+                >
+                  {row.icon === "check" ? CARD_ICONS.check : ""}
+                </span>
               </span>
             )}
             <span>{row.text}</span>
-            {row.value && <span style={{ color: B.gold, marginLeft: 0.6 * C.fontSize * s }}>{row.value}</span>}
+            {row.value && (
+              <span
+                style={{
+                  marginLeft: "auto",
+                  paddingLeft: 0.6 * C.fontSize * s,
+                  color: B.gold,
+                  fontWeight: 800,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                <CountUp value={row.value} from={rowStart + 0.05} c={c} />
+              </span>
+            )}
           </div>
         );
       })}
@@ -443,34 +714,72 @@ const Card: React.FC<{ card: OverlayCard; s: number; t: number; width: number; h
   );
 };
 
-const Overlays: React.FC<{ ov: DynamicOverlays; s: number; t: number; width: number; height: number }> = (
-  props,
-) => (
-  <>
-    <Tag {...props} />
-    <Headline {...props} />
-    {(props.ov.cards ?? []).map((card, i) => (
-      <Card key={i} card={card} s={props.s} t={props.t} width={props.width} height={props.height} />
-    ))}
-  </>
-);
+/** Czy w tej sekundzie coś jest w górnym pasie (znacznik / pytanie / karta) — do przyciemnienia. */
+function overlaysActive(ov: DynamicOverlays | null, t: number): number {
+  if (!ov) return 0;
+  let a = 0;
+  if (ov.tag) a = Math.max(a, 0.6);
+  if (ov.headline) {
+    const start = ov.headlineStartSeconds ?? 0.8;
+    const end = Math.max(ov.headlineEndSeconds ?? 6, start + 1);
+    a = Math.max(a, Math.min(ramp(t, start - 0.3, start), 1 - ramp(t, end - 0.3, end)));
+  }
+  for (const card of ov.cards ?? []) {
+    const end = card.endSeconds == null ? Infinity : card.endSeconds;
+    a = Math.max(a, Math.min(ramp(t, card.startSeconds - 0.3, card.startSeconds), 1 - ramp(t, end - 0.3, end)));
+  }
+  return a;
+}
 
 // ── Kompozycja ──────────────────────────────────────────────────────────────
 
-export const StudioReel: React.FC<StudioReelProps> = ({ videoUrl, cues, style, aiBadge, overlays }) => {
+export const StudioReel: React.FC<StudioReelProps> = ({
+  videoUrl,
+  cues,
+  style,
+  aiBadge,
+  overlays,
+  words,
+}) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const t = frame / fps;
   const s = height / DEFAULT_ASS_DIMENSIONS.height;
-  const sortedCues = useMemo(() => [...cues].sort((a, b) => a.start - b.start), [cues]);
+  const c: Clock = { t, fps, s, width, height };
+  const timedCues = useMemo(
+    () => timeCueWords([...cues].sort((a, b) => a.start - b.start), words ?? []),
+    [cues, words],
+  );
+  const captionsOn = Boolean(style && timedCues.length);
+  // Delikatne „osiadanie" kadru na starcie — ruch w pierwszej sekundzie,
+  // gdy awatar jeszcze stoi; zero czarnych klatek (hook rolki to pierwsze 0,5 s).
+  const settle = interpolate(ease(c, 0, { damping: 40, stiffness: 40 }), [0, 1], [1.045, 1]);
 
   return (
     <AbsoluteFill style={{ background: "#000" }}>
       {videoUrl ? (
-        <OffthreadVideo src={videoUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <OffthreadVideo
+          src={videoUrl}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            transform: `scale(${settle})`,
+            transformOrigin: "50% 40%",
+          }}
+        />
       ) : null}
-      {style && sortedCues.length > 0 && <Captions cues={sortedCues} style={style} s={s} t={t} />}
-      {overlays && <Overlays ov={overlays} s={s} t={t} width={width} height={height} />}
+      <Cinematic topScrim={overlaysActive(overlays, t)} bottomScrim={captionsOn ? 0.85 : 0} />
+      {captionsOn && <Captions cues={timedCues} style={style!} c={c} />}
+      {overlays && (
+        <>
+          <Tag ov={overlays} c={c} />
+          <Headline ov={overlays} c={c} />
+          {(overlays.cards ?? []).map((card, i) => (
+            <Card key={i} card={card} c={c} />
+          ))}
+        </>
+      )}
       {aiBadge && <AiBadge s={s} />}
     </AbsoluteFill>
   );

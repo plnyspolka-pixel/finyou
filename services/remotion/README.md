@@ -61,12 +61,22 @@ Wejście (`inputProps`, buduje je `buildStudioReelInput` w aplikacji):
 | `style`    | preset z `CUSTOM_CAPTION_STYLES` (`src/lib/caption-style.ts`) albo `null` |
 | `aiBadge`  | znaczek „AI" w prawym górnym rogu                                         |
 | `overlays` | nakładki dynamiczne z czasami już dopasowanymi do SRT                     |
+| `words`    | czasy słów z ElevenLabs (plik `.words.json` obok SRT); `[]` = proporcjonalnie |
 
 Długość i kadr kompozycja czyta z samego pliku (`calculateMetadata`,
 mediabunny — nagłówki MP4 zakresami HTTP, bez dekodowania). Wszystkie
 wymiary presetów są w pikselach kadru 720×1280 i skalują się do rozdzielczości
 mastera. Czcionka Inter leży w `public/fonts` (OFL), więc render nie zależy od
 Google Fonts.
+
+Ruch: napisy słowo po słowie (sprężyste wejście, mówione słowo jaśniejsze
+z poświatą, styl `tiktok` w kolorze podświetlenia), pytanie jako kinetyczna
+typografia (słowa z rozmycia, złoty połysk, linia pod spodem), znacznik
+w szklanej pigułce z obracającą się złoto-niebieską obwódką, karty na
+szkle z wjeżdżającymi wierszami i licznikami wartości, do tego winieta
+i przyciemnienia pod tekstem. Wszystko liczone z numeru klatki — żadnych
+animacji „na czas" (Framer Motion, CSS transitions), bo Lambda renderuje
+film w kawałkach na różnych maszynach.
 
 Stałe wyglądu (kolory brandu, układ nakładek, znaczek) kompozycja importuje
 wprost z `../../../src/lib/caption-style.ts` — jedno źródło prawdy dla

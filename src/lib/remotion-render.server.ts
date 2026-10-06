@@ -29,6 +29,7 @@ import {
 } from "./caption-style";
 import { fixBrandInCues } from "./caption-brand";
 import { fetchBytes } from "./media-storage.server";
+import type { TimedWord } from "./studio-subtitles";
 
 export type RemotionRenderEnv = { configured: boolean; url: string; secret: string };
 
@@ -95,7 +96,31 @@ export type StudioReelInput = {
   style: CaptionStyle | null;
   aiBadge: boolean;
   overlays: DynamicOverlays | null;
+  /** Czasy słów z ElevenLabs (plik `.words.json` obok SRT); `[]` = licz proporcjonalnie. */
+  words: TimedWord[];
 };
+
+/** Adres pliku z czasami słów zapisanego obok SRT (studio-render.server.ts, storeSubtitles). */
+export function wordsUrlFor(srtUrl: string): string | null {
+  return /\.srt(\?|$)/i.test(srtUrl) ? srtUrl.replace(/\.srt(?=\?|$)/i, ".words.json") : null;
+}
+
+/** Słowa z pliku `.words.json` — tylko poprawne wpisy, posortowane. */
+export function parseTimedWords(raw: unknown): TimedWord[] {
+  const list = (raw as { words?: unknown })?.words;
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter(
+      (w): w is TimedWord =>
+        typeof w === "object" &&
+        w !== null &&
+        typeof (w as TimedWord).text === "string" &&
+        Number.isFinite((w as TimedWord).start) &&
+        Number.isFinite((w as TimedWord).end),
+    )
+    .map((w) => ({ text: w.text, start: w.start, end: Math.max(w.end, w.start) }))
+    .sort((a, b) => a.start - b.start);
+}
 
 /**
  * Buduje wejście kompozycji z SRT i zamówienia — czysta logika (testowalna).
@@ -108,6 +133,7 @@ export function buildStudioReelInput(input: {
   styleId: CustomCaptionStyleId | null;
   aiBadge: boolean;
   overlays: DynamicOverlays | null;
+  words?: TimedWord[];
 }): StudioReelInput | null {
   const parsed = input.srt ? fixBrandInCues(parseSubtitles(input.srt)) : [];
   const style = input.styleId ? CUSTOM_CAPTION_STYLES[input.styleId] : null;
@@ -120,7 +146,14 @@ export function buildStudioReelInput(input: {
       ? overlaysWithCueTiming(input.overlays, parsed)
       : input.overlays;
   if (!style && !input.aiBadge && !overlays) return null;
-  return { videoUrl: input.videoUrl, cues, style, aiBadge: input.aiBadge, overlays };
+  return {
+    videoUrl: input.videoUrl,
+    cues,
+    style,
+    aiBadge: input.aiBadge,
+    overlays,
+    words: style ? (input.words ?? []) : [],
+  };
 }
 
 /**
@@ -137,6 +170,7 @@ export async function submitRemotionCaptionRender(input: {
   name?: string;
 }): Promise<string> {
   let srt: string | null = null;
+  let words: TimedWord[] = [];
   if (input.srtUrl) {
     try {
       const bytes = await fetchBytes(input.srtUrl, MAX_SRT_BYTES);
@@ -145,6 +179,17 @@ export async function submitRemotionCaptionRender(input: {
       // Napisy zamówione → SRT jest konieczny; dla samych nakładek wystarczy szacunek czasu.
       if (input.styleId) throw e;
     }
+    // Czasy słów są bonusem (starsze rolki ich nie mają) — bez nich kompozycja
+    // liczy słowa proporcjonalnie do liter, jak dawniej ASS.
+    const wordsUrl = input.styleId ? wordsUrlFor(input.srtUrl) : null;
+    if (wordsUrl) {
+      try {
+        const bytes = await fetchBytes(wordsUrl, MAX_SRT_BYTES);
+        words = parseTimedWords(JSON.parse(new TextDecoder().decode(bytes.bytes)));
+      } catch {
+        // brak pliku albo zły JSON — zostaje szacunek
+      }
+    }
   }
   const reel = buildStudioReelInput({
     videoUrl: input.videoUrl,
@@ -152,6 +197,7 @@ export async function submitRemotionCaptionRender(input: {
     styleId: input.styleId ?? null,
     aiBadge: input.aiBadge === true,
     overlays: input.overlays ?? null,
+    words,
   });
   if (!reel) {
     throw new Error(
@@ -169,6 +215,7 @@ export async function submitRemotionCaptionRender(input: {
       style: reel.style,
       ai_badge: reel.aiBadge,
       overlays: reel.overlays,
+      words: reel.words,
       name: input.name ?? "studio",
     }),
     timeoutMs: 60_000,

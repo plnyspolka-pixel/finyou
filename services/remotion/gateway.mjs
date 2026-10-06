@@ -7,7 +7,7 @@
 // różnicy.
 //
 //   GET    /health          → { ok, engine: "remotion", function, site, bucket }
-//   POST   /jobs            → { video_url, cues, style, ai_badge, overlays, name }
+//   POST   /jobs            → { video_url, cues, style, ai_badge, overlays, words?, name }
 //                             → 202 { id, kind: "caption", status: "queued" }
 //   GET    /jobs/:id        → { id, status: queued|processing|done|failed, error,
 //                               progress, bytes, cost }
@@ -123,6 +123,11 @@ async function startRender(body) {
   if (style && !cues.length) throw new HttpError(400, "styl napisów bez kwestii");
   const overlays = body.overlays && typeof body.overlays === "object" ? body.overlays : null;
   const aiBadge = body.ai_badge === true;
+  const words = Array.isArray(body.words)
+    ? body.words
+        .filter((w) => w && typeof w.text === "string" && Number.isFinite(w.start) && Number.isFinite(w.end))
+        .slice(0, MAX_CUES * 4)
+    : [];
   if (!style && !aiBadge && !overlays) {
     throw new HttpError(400, "nie ma czego renderować: brak napisów, znaczka AI i nakładek");
   }
@@ -132,7 +137,7 @@ async function startRender(body) {
     serveUrl: SERVE_URL,
     forceBucketName: BUCKET,
     composition: COMPOSITION,
-    inputProps: { videoUrl, cues, style, aiBadge, overlays },
+    inputProps: { videoUrl, cues, style, aiBadge, overlays, words },
     codec: "h264",
     privacy: "private",
     concurrency: CONCURRENCY,
