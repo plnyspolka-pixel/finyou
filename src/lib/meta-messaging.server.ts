@@ -224,6 +224,47 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     return;
   }
 
+  // 2.7) LEAD MAGNET — tryb „e-mail w wiadomości” (bez linku, np. Instagram
+  //      z zablokowanymi linkami): ktoś skomentował post z hasłem, poprosiliśmy
+  //      o e-mail w wiadomości prywatnej i teraz go odpisuje. Adres → zapis na
+  //      listę + mail z materiałem; bez adresu — jedno przypomnienie.
+  if (userText) {
+    try {
+      const lm = await import("@/lib/lead-magnets/lead-magnets.server");
+      const out = await lm.handleDirectMessageForLeadMagnet({
+        platform: platform === "instagram" ? "instagram" : "facebook",
+        senderId,
+        text: userText,
+        leadId,
+      });
+      if (out.handled) {
+        if (out.reply) {
+          await logLeadCommunication({
+            leadId,
+            channel: "messenger",
+            direction: "outbound",
+            content: out.reply,
+            metadata: {
+              platform,
+              sender_id: senderId,
+              kind:
+                out.status === "reminded"
+                  ? "lead_magnet_email_reminder"
+                  : "lead_magnet_email_saved",
+              lead_magnet: out.magnet?.slug ?? null,
+              email: out.email ?? null,
+            },
+            status: out.reply_ok ? "sent" : "error",
+            errorMessage: out.reply_ok ? null : (out.error ?? null),
+          });
+        }
+        return;
+      }
+    } catch (e) {
+      console.error("[messenger] lead magnet dm error", e);
+    }
+  }
+
   // 3) Odpowiedź agenta
   const agent = await runAgentTurn({
     leadId,
@@ -386,7 +427,8 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
               post_id: postId,
               lead_magnet: out.magnet?.slug ?? null,
               reply_status: out.reply_status,
-              link: out.link,
+              mode: out.mode ?? null,
+              link: out.link ?? null,
             },
             status: "sent",
           });

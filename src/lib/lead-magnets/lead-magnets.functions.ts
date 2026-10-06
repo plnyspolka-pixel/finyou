@@ -260,7 +260,7 @@ export const submitLeadMagnetSignup = createServerFn({ method: "POST" })
       null;
     const ua = getRequestHeader("user-agent") || null;
     const { registerLeadMagnetSignup } = await import("./lead-magnets.server");
-    return await registerLeadMagnetSignup({
+    const { signup_id: _signupId, ...result } = await registerLeadMagnetSignup({
       slug: data.slug,
       email: data.email,
       first_name: data.first_name ?? null,
@@ -269,6 +269,7 @@ export const submitLeadMagnetSignup = createServerFn({ method: "POST" })
       ip,
       userAgent: ua,
     });
+    return result;
   });
 
 export const LEAD_MAGNET_PLATFORM_OPTIONS = LEAD_MAGNET_PLATFORMS;

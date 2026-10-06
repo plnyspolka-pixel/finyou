@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
+  DEFAULT_TEMPLATES,
   consentTextFor,
+  dmConsentTextFor,
   downloadUrl,
+  extractEmail,
   firstNameOf,
   hasKeyword,
   isFreshComment,
@@ -15,6 +18,7 @@ import {
   renderTemplate,
   subscriberTagsFor,
   suggestedCaption,
+  usesEmailInDm,
   type LinkedPost,
   type MatchableMagnet,
 } from "./core";
@@ -243,5 +247,54 @@ describe("tick YouTube — świeżość komentarzy", () => {
     expect(isFreshComment("2026-10-06T13:00:00Z", "2026-10-06T12:00:00Z")).toBe(true);
     expect(isFreshComment(null, "2026-10-06T12:00:00Z")).toBe(false);
     expect(isFreshComment("2026-10-06T13:00:00Z", null)).toBe(true);
+  });
+});
+
+describe("tryb „e-mail w wiadomości” (bez linku)", () => {
+  it("extractEmail wyciąga pierwszy adres i normalizuje wielkość liter", () => {
+    expect(extractEmail("mój mail to Jan.Kowalski@Gmail.com.")).toBe("jan.kowalski@gmail.com");
+    expect(extractEmail("anna+lm@firma.com.pl, dzięki!")).toBe("anna+lm@firma.com.pl");
+    expect(extractEmail("napiszcie na: ewa_nowak@o2.pl")).toBe("ewa_nowak@o2.pl");
+    expect(extractEmail("poproszę materiał")).toBeNull();
+    expect(extractEmail("jan@localhost")).toBeNull();
+    expect(extractEmail("jan..x@gmail.com")).toBeNull();
+    expect(extractEmail(null)).toBeNull();
+  });
+
+  it("usesEmailInDm: tylko wskazane platformy, YouTube nigdy", () => {
+    expect(usesEmailInDm("instagram", ["instagram"])).toBe(true);
+    expect(usesEmailInDm("facebook", ["instagram"])).toBe(false);
+    expect(usesEmailInDm("facebook", ["facebook", "instagram"])).toBe(true);
+    expect(usesEmailInDm("youtube", ["facebook", "instagram", "youtube"])).toBe(false);
+    expect(usesEmailInDm("instagram", null)).toBe(false);
+  });
+
+  it("domyślne szablony trybu bez linku nie zawierają {link}", () => {
+    for (const t of [
+      DEFAULT_TEMPLATES.reply_ask_email,
+      DEFAULT_TEMPLATES.reply_email_received,
+      DEFAULT_TEMPLATES.reply_ask_email_public,
+      DEFAULT_TEMPLATES.reply_email_missing,
+    ]) {
+      expect(t).not.toContain("{link}");
+      expect(t).not.toMatch(/https?:\/\//);
+    }
+  });
+
+  it("potwierdzenie podstawia e-mail i radzi sobie bez imienia", () => {
+    expect(
+      renderTemplate(DEFAULT_TEMPLATES.reply_email_received, {
+        imie: null,
+        tytul: "Przewodnik",
+        link: "",
+        email: "jan@gmail.com",
+      }),
+    ).toBe(
+      "Dziękujemy! „Przewodnik” wysłaliśmy na jan@gmail.com. Jeśli go nie widzisz, zajrzyj do folderu Oferty albo Spam.",
+    );
+  });
+
+  it("zgoda z wiadomości prywatnej mówi, gdzie padł adres", () => {
+    expect(dmConsentTextFor("klient", "instagram")).toContain("wiadomości prywatnej na Instagram");
   });
 });

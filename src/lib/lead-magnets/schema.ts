@@ -1,7 +1,12 @@
 // Schemat lead magnetu (zod) — wspólny dla server functions panelu
 // (lead-magnets.functions.ts) i narzędzi MCP (create/update_lead_magnet).
 import { z } from "zod";
-import { DEFAULT_TEMPLATES, LEAD_MAGNET_AUDIENCES, LEAD_MAGNET_PLATFORMS } from "./core";
+import {
+  DEFAULT_TEMPLATES,
+  EMAIL_IN_DM_PLATFORMS,
+  LEAD_MAGNET_AUDIENCES,
+  LEAD_MAGNET_PLATFORMS,
+} from "./core";
 
 const optionalUrl = z.string().url().max(1000).optional().or(z.literal(""));
 
@@ -48,6 +53,14 @@ export const leadMagnetBaseSchema = z.object({
   reply_public_template: z.string().min(1).max(1000).default(DEFAULT_TEMPLATES.reply_public),
   reply_private_template: z.string().min(1).max(1900).default(DEFAULT_TEMPLATES.reply_private),
   reply_fallback_template: z.string().min(1).max(1000).default(DEFAULT_TEMPLATES.reply_fallback),
+  /** Platformy, na których automat prosi o e-mail w wiadomości zamiast wysyłać link. */
+  email_in_dm_platforms: z.array(z.enum(EMAIL_IN_DM_PLATFORMS)).max(2).default(["instagram"]),
+  reply_ask_email_template: z.string().min(1).max(990).default(DEFAULT_TEMPLATES.reply_ask_email),
+  reply_email_received_template: z
+    .string()
+    .min(1)
+    .max(990)
+    .default(DEFAULT_TEMPLATES.reply_email_received),
   published: z.boolean().default(false),
   /** Powiązane posty — zapis zastępuje całą listę. */
   posts: z.array(leadMagnetPostSchema).max(30).default([]),

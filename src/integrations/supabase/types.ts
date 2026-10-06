@@ -8287,9 +8287,11 @@ export type Database = {
       lead_magnet_triggers: {
         Row: {
           author_id: string | null
+          awaiting_email: boolean
           author_name: string | null
           comment_text: string | null
           created_at: string
+          email_reminded_at: string | null
           external_comment_id: string | null
           external_post_id: string | null
           id: string
@@ -8300,12 +8302,15 @@ export type Database = {
           platform: string
           reply_error: string | null
           reply_status: string
+          signup_id: string | null
         }
         Insert: {
           author_id?: string | null
+          awaiting_email?: boolean
           author_name?: string | null
           comment_text?: string | null
           created_at?: string
+          email_reminded_at?: string | null
           external_comment_id?: string | null
           external_post_id?: string | null
           id?: string
@@ -8316,12 +8321,15 @@ export type Database = {
           platform: string
           reply_error?: string | null
           reply_status?: string
+          signup_id?: string | null
         }
         Update: {
           author_id?: string | null
+          awaiting_email?: boolean
           author_name?: string | null
           comment_text?: string | null
           created_at?: string
+          email_reminded_at?: string | null
           external_comment_id?: string | null
           external_post_id?: string | null
           id?: string
@@ -8332,8 +8340,16 @@ export type Database = {
           platform?: string
           reply_error?: string | null
           reply_status?: string
+          signup_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "lead_magnet_triggers_signup_id_fkey"
+            columns: ["signup_id"]
+            isOneToOne: false
+            referencedRelation: "lead_magnet_signups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lead_magnet_triggers_lead_magnet_id_fkey"
             columns: ["lead_magnet_id"]
@@ -8354,6 +8370,7 @@ export type Database = {
           cta_text: string
           download_count: number
           email_body: string
+          email_in_dm_platforms: string[]
           email_subject: string
           file_name: string | null
           file_path: string | null
@@ -8367,6 +8384,8 @@ export type Database = {
           mime_type: string | null
           og_image_url: string | null
           published: boolean
+          reply_ask_email_template: string
+          reply_email_received_template: string
           reply_fallback_template: string
           reply_private_template: string
           reply_public_template: string
@@ -8391,6 +8410,7 @@ export type Database = {
           cta_text?: string
           download_count?: number
           email_body?: string
+          email_in_dm_platforms?: string[]
           email_subject?: string
           file_name?: string | null
           file_path?: string | null
@@ -8404,6 +8424,8 @@ export type Database = {
           mime_type?: string | null
           og_image_url?: string | null
           published?: boolean
+          reply_ask_email_template?: string
+          reply_email_received_template?: string
           reply_fallback_template?: string
           reply_private_template?: string
           reply_public_template?: string
@@ -8428,6 +8450,7 @@ export type Database = {
           cta_text?: string
           download_count?: number
           email_body?: string
+          email_in_dm_platforms?: string[]
           email_subject?: string
           file_name?: string | null
           file_path?: string | null
@@ -8441,6 +8464,8 @@ export type Database = {
           mime_type?: string | null
           og_image_url?: string | null
           published?: boolean
+          reply_ask_email_template?: string
+          reply_email_received_template?: string
           reply_fallback_template?: string
           reply_private_template?: string
           reply_public_template?: string

@@ -5,8 +5,11 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
 import { sendResendEmail } from "@/lib/resend-send.server";
 import {
+  DEFAULT_TEMPLATES,
   consentTextFor,
+  dmConsentTextFor,
   downloadUrl,
+  extractEmail,
   firstNameOf,
   isFreshComment,
   isValidDownloadToken,
@@ -15,6 +18,7 @@ import {
   newDownloadToken,
   renderTemplate,
   subscriberTagsFor,
+  usesEmailInDm,
   type LeadMagnetAudience,
   type LeadMagnetPlatform,
   type LinkedPost,
@@ -78,10 +82,13 @@ export type RegisterSignupInput = {
   ref?: string | null;
   ip?: string | null;
   userAgent?: string | null;
+  /** Własna treść zgody (np. e-mail podany w wiadomości prywatnej). */
+  consentText?: string | null;
 };
 
 export type RegisterSignupResult = {
   ok: true;
+  signup_id: string;
   thank_you_message: string;
   /** Link do pliku od razu na stronie (gdy lead magnet ma instant_download). */
   download_url: string | null;
@@ -111,6 +118,7 @@ export async function registerLeadMagnetSignup(
   const firstName = (input.first_name ?? "").trim().slice(0, 80) || null;
   const audience = magnet.audience as LeadMagnetAudience;
   const utm = input.utm ?? null;
+  const consentText = input.consentText?.trim() || consentTextFor(audience);
   const source =
     utm?.source && /^(facebook|instagram|youtube)$/.test(utm.source) ? utm.source : "page";
 
@@ -144,7 +152,7 @@ export async function registerLeadMagnetSignup(
         source_ref: input.ref ?? null,
         utm: utm ?? null,
         consent: true,
-        consent_text: consentTextFor(audience),
+        consent_text: consentText,
         subscriber_id: subscriberId,
         ip_address: input.ip ?? null,
         user_agent: input.userAgent ?? null,
@@ -160,7 +168,7 @@ export async function registerLeadMagnetSignup(
         email,
         first_name: firstName,
         consent: true,
-        consent_text: consentTextFor(audience),
+        consent_text: consentText,
         source,
         source_ref: input.ref ?? null,
         utm: utm ?? null,
@@ -213,6 +221,7 @@ export async function registerLeadMagnetSignup(
 
   return {
     ok: true,
+    signup_id: signupId,
     thank_you_message: magnet.thank_you_message,
     download_url: magnet.instant_download ? link : null,
     email_sent: sent.ok,
@@ -388,6 +397,8 @@ export type SocialCommentOutcome = {
   magnet: { id: string; slug: string; title: string } | null;
   via?: "linked_post" | "keyword" | "linked_post_no_keyword" | "none";
   reply_status?: ReplyStatus;
+  /** `link` — odpowiedź z linkiem; `email_in_dm` — prośba o e-mail w wiadomości (bez linku). */
+  mode?: "link" | "email_in_dm";
   link?: string;
   /** Teksty, które faktycznie poszły (do dziennika komunikacji). */
   sent?: { private?: string; public?: string };
@@ -405,13 +416,15 @@ type MatchRow = Pick<
   | "reply_public_template"
   | "reply_private_template"
   | "reply_fallback_template"
+  | "email_in_dm_platforms"
+  | "reply_ask_email_template"
 >;
 
 async function loadMatchables(): Promise<{ magnets: MatchRow[]; posts: LinkedPost[] }> {
   const { data: magnets } = await supabaseAdmin
     .from("lead_magnets")
     .select(
-      "id, slug, title, published, trigger_keywords, match_any_post, reply_public_template, reply_private_template, reply_fallback_template",
+      "id, slug, title, published, trigger_keywords, match_any_post, reply_public_template, reply_private_template, reply_fallback_template, email_in_dm_platforms, reply_ask_email_template",
     )
     .eq("published", true)
     .order("created_at", { ascending: true });
@@ -553,23 +566,56 @@ export async function handleSocialCommentForLeadMagnet(
   }
 
   const magnet = magnets.find((m) => m.id === match.magnet.id)!;
-  const link = leadMagnetUrl(magnet.slug, { platform: ev.platform, ref: ev.commentId });
+  const emailMode = usesEmailInDm(ev.platform, magnet.email_in_dm_platforms);
+  const link = emailMode
+    ? ""
+    : leadMagnetUrl(magnet.slug, { platform: ev.platform, ref: ev.commentId });
   const vars = { imie: firstNameOf(ev.authorName), tytul: magnet.title, link };
-  const privateText = renderTemplate(magnet.reply_private_template, vars);
   const publicAck = renderTemplate(magnet.reply_public_template, vars);
-  const fallbackText = renderTemplate(magnet.reply_fallback_template, vars);
 
   let status: ReplyStatus = "failed";
   let error: string | undefined;
+  let awaitingEmail = false;
   const sent: { private?: string; public?: string } = {};
 
-  if (ev.platform === "youtube") {
+  if (emailMode) {
+    // Bez linku (np. Instagram z zablokowanymi linkami): w wiadomości prywatnej
+    // prosimy o adres e-mail; odpowiedź obsłuży handleDirectMessageForLeadMagnet.
+    const askText = renderTemplate(magnet.reply_ask_email_template, vars);
+    const askPublic = renderTemplate(DEFAULT_TEMPLATES.reply_ask_email_public, vars);
+    const priv = await sendPrivate(ev.platform, ev.commentId, askText);
+    if (priv.ok) {
+      sent.private = askText;
+      awaitingEmail = true;
+      const pub = await sendPublic(ev.platform, ev.commentId, publicAck);
+      if (pub.ok) sent.public = publicAck;
+      else error = pub.error;
+      status = pub.ok ? "sent_both" : "sent_private";
+    } else {
+      // Wiadomość prywatna nie przeszła — publicznie prosimy o napisanie do nas.
+      const pub = await sendPublic(ev.platform, ev.commentId, askPublic);
+      if (pub.ok) {
+        status = "sent_public";
+        sent.public = askPublic;
+        awaitingEmail = true;
+        error = priv.error ? `DM: ${priv.error}` : undefined;
+      } else {
+        status = "failed";
+        error = [priv.error && `DM: ${priv.error}`, pub.error && `publicznie: ${pub.error}`]
+          .filter(Boolean)
+          .join("; ");
+      }
+    }
+  } else if (ev.platform === "youtube") {
+    const fallbackText = renderTemplate(magnet.reply_fallback_template, vars);
     const pub = await sendPublic("youtube", ev.commentId, fallbackText);
     if (pub.ok) {
       status = "sent_public";
       sent.public = fallbackText;
     } else error = pub.error;
   } else {
+    const privateText = renderTemplate(magnet.reply_private_template, vars);
+    const fallbackText = renderTemplate(magnet.reply_fallback_template, vars);
     const priv = await sendPrivate(ev.platform, ev.commentId, privateText);
     if (priv.ok) {
       sent.private = privateText;
@@ -599,6 +645,7 @@ export async function handleSocialCommentForLeadMagnet(
     matched: true,
     reply_status: status,
     reply_error: error ?? null,
+    awaiting_email: awaitingEmail,
   });
 
   return {
@@ -607,9 +654,200 @@ export async function handleSocialCommentForLeadMagnet(
     magnet: { id: magnet.id, slug: magnet.slug, title: magnet.title },
     via: match.via,
     reply_status: status,
-    link,
+    mode: emailMode ? "email_in_dm" : "link",
+    link: link || undefined,
     sent,
     error,
+  };
+}
+
+// ── Tryb „e-mail w wiadomości”: odpowiedź z adresem ──────────────────────────
+
+/** Ile dni po komentarzu czekamy na e-mail w wiadomości (Private Reply działa 7 dni). */
+const AWAITING_EMAIL_DAYS = 7;
+
+export type DirectMessageOutcome = {
+  /** true = wiadomość obsłużył lead magnet (webhook pomija agenta AI). */
+  handled: boolean;
+  status?: "email_saved" | "reminded" | "send_failed";
+  email?: string;
+  magnet?: { id: string; slug: string; title: string };
+  /** Tekst, który poszedł do rozmówcy (do dziennika komunikacji). */
+  reply?: string;
+  reply_ok?: boolean;
+  error?: string;
+};
+
+type PendingTrigger = {
+  id: string;
+  lead_magnet_id: string;
+  author_name: string | null;
+  external_comment_id: string | null;
+  email_reminded_at: string | null;
+};
+
+/** Ostatni komentarz tej osoby, po którym czekamy na e-mail — po id, a awaryjnie po nazwie. */
+async function findPendingTrigger(
+  platform: "facebook" | "instagram",
+  senderId: string,
+): Promise<PendingTrigger | null> {
+  const since = new Date(Date.now() - AWAITING_EMAIL_DAYS * 86_400_000).toISOString();
+  const cols = "id, lead_magnet_id, author_name, external_comment_id, email_reminded_at";
+  const { data: byId } = await supabaseAdmin
+    .from("lead_magnet_triggers")
+    .select(cols)
+    .eq("platform", platform)
+    .eq("author_id", senderId)
+    .eq("awaiting_email", true)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (byId) return byId;
+
+  // Nikt na tej platformie nie czeka na e-mail — bez zapytania do Meta o profil
+  // (ta funkcja działa przy każdej przychodzącej wiadomości).
+  const { count } = await supabaseAdmin
+    .from("lead_magnet_triggers")
+    .select("id", { count: "exact", head: true })
+    .eq("platform", platform)
+    .eq("awaiting_email", true)
+    .gte("created_at", since);
+  if (!count) return null;
+
+  // Id autora komentarza i id rozmówcy w wiadomościach nie zawsze są takie same
+  // (zależnie od API Meta) — wtedy dopasowujemy po imieniu i nazwisku (FB)
+  // albo po nazwie użytkownika (IG) z profilu rozmówcy.
+  let name: string | null = null;
+  try {
+    const api = await import("@/lib/meta-api.server");
+    if (platform === "instagram") {
+      const p = await api.graphRequest(senderId, { query: { fields: "username" }, token: "ig" });
+      name = p?.username ? `@${p.username}` : null;
+    } else {
+      const p = await api.graphRequest(senderId, {
+        query: { fields: "first_name,last_name" },
+        token: "page",
+      });
+      name = [p?.first_name, p?.last_name].filter(Boolean).join(" ").trim() || null;
+    }
+  } catch (e) {
+    console.warn("[lead-magnet] profile lookup for pending email failed", e);
+  }
+  if (!name) return null;
+  const { data: byName } = await supabaseAdmin
+    .from("lead_magnet_triggers")
+    .select(cols)
+    .eq("platform", platform)
+    .ilike("author_name", name)
+    .eq("awaiting_email", true)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return byName ?? null;
+}
+
+/**
+ * Wiadomość prywatna od osoby, która skomentowała post lead magnetu w trybie
+ * „e-mail w wiadomości”: adres → zapis na listę (jak z formularza; zgoda z
+ * informacją z naszej prośby) + mail z materiałem + potwierdzenie bez linku.
+ * Bez adresu — jedno przypomnienie, potem rozmowę przejmuje agent AI.
+ */
+export async function handleDirectMessageForLeadMagnet(ev: {
+  platform: "facebook" | "instagram";
+  senderId: string;
+  text: string;
+  leadId?: string | null;
+}): Promise<DirectMessageOutcome> {
+  const pending = await findPendingTrigger(ev.platform, ev.senderId);
+  if (!pending) return { handled: false };
+
+  const { data: magnet } = await supabaseAdmin
+    .from("lead_magnets")
+    .select("id, slug, title, published, audience, reply_email_received_template")
+    .eq("id", pending.lead_magnet_id)
+    .maybeSingle();
+  if (!magnet || !magnet.published) {
+    await supabaseAdmin
+      .from("lead_magnet_triggers")
+      .update({ awaiting_email: false })
+      .eq("id", pending.id);
+    return { handled: false };
+  }
+  const info = { id: magnet.id, slug: magnet.slug, title: magnet.title };
+  const greeting = firstNameOf(pending.author_name);
+  const metaPlatform = ev.platform === "instagram" ? "instagram" : "messenger";
+  const { sendMetaMessage } = await import("@/lib/meta-send.server");
+
+  const email = extractEmail(ev.text);
+  if (!email) {
+    if (pending.email_reminded_at) return { handled: false, magnet: info };
+    const reminder = DEFAULT_TEMPLATES.reply_email_missing;
+    const send = await sendMetaMessage({
+      recipientId: ev.senderId,
+      text: reminder,
+      platform: metaPlatform,
+    });
+    await supabaseAdmin
+      .from("lead_magnet_triggers")
+      .update({ email_reminded_at: new Date().toISOString() })
+      .eq("id", pending.id);
+    return {
+      handled: true,
+      status: "reminded",
+      magnet: info,
+      reply: reminder,
+      reply_ok: send.ok,
+      error: send.ok ? undefined : send.error,
+    };
+  }
+
+  let signupId: string;
+  try {
+    const res = await registerLeadMagnetSignup({
+      slug: magnet.slug,
+      email,
+      // Login z Instagrama („@jan.k”) nie jest imieniem — nie zapisujemy go jako imię.
+      first_name: greeting && !greeting.startsWith("@") ? greeting : null,
+      utm: { source: ev.platform, medium: "dm", campaign: `lm-${magnet.slug}` },
+      ref: pending.external_comment_id,
+      consentText: dmConsentTextFor(magnet.audience as LeadMagnetAudience, ev.platform),
+    });
+    signupId = res.signup_id;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[lead-magnet] dm signup failed", e);
+    return { handled: false, magnet: info, email, error: msg };
+  }
+
+  await supabaseAdmin
+    .from("lead_magnet_triggers")
+    .update({ awaiting_email: false, signup_id: signupId })
+    .eq("id", pending.id);
+  if (ev.leadId) {
+    await supabaseAdmin.from("leads").update({ email }).eq("id", ev.leadId).is("email", null);
+  }
+
+  const reply = renderTemplate(magnet.reply_email_received_template, {
+    imie: greeting,
+    tytul: magnet.title,
+    link: "",
+    email,
+  });
+  const send = await sendMetaMessage({
+    recipientId: ev.senderId,
+    text: reply,
+    platform: metaPlatform,
+  });
+  return {
+    handled: true,
+    status: send.ok ? "email_saved" : "send_failed",
+    email,
+    magnet: info,
+    reply,
+    reply_ok: send.ok,
+    error: send.ok ? undefined : send.error,
   };
 }
 

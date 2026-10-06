@@ -22,11 +22,13 @@ automatyczna odpowiedź z linkiem → e-mail na stronie → plik.
 3. **Komentarz → link.**
    - Facebook: webhook `feed` (ten sam, który obsługuje komentarze dla bota)
      → wiadomość prywatna do autora komentarza (Private Reply) z linkiem +
-     publiczne potwierdzenie „wysłaliśmy Ci link w wiadomości”. Gdy DM się nie
+     publiczne potwierdzenie „napisaliśmy do Ciebie w wiadomości”. Gdy DM się nie
      uda — link publicznie pod komentarzem. Komentarz obsłużony przez lead
      magnet **nie** idzie do agenta AI.
    - Instagram: webhook `comments` → Private Reply (`/{ig-user-id}/messages`
-     z `recipient.comment_id`) + publiczna odpowiedź; fallback publicznie.
+     z `recipient.comment_id`) + publiczna odpowiedź. Konto na Instagramie ma
+     zablokowane linki (ograniczenie z 29.09.2026), więc domyślnie działa tu
+     **tryb bez linku** (niżej).
    - YouTube: brak webhooków i DM → tick `/api/public/hooks/lead-magnet-tick`
      (pg_cron co 10 minut, także przycisk „Sprawdź komentarze YouTube” i
      narzędzie MCP) czyta wątki pod powiązanymi filmami i odpowiada publicznie
@@ -50,6 +52,32 @@ automatyczna odpowiedź z linkiem → e-mail na stronie → plik.
 5. **Pobranie.** `/pobierz-plik/<token>` → podpisany link do pliku w Storage
    (15 minut) albo zewnętrzny adres + licznik pobrań. Plik nie jest publiczny,
    więc nikt nie udostępni go dalej bez zapisu.
+
+### Tryb bez linku: e-mail w wiadomości prywatnej
+
+Na platformach z listy `email_in_dm_platforms` (domyślnie `instagram`; w
+panelu: „Automat social” → „Bez linku”) automat nie wysyła żadnego adresu:
+
+1. Komentarz z hasłem → wiadomość prywatna z prośbą o e-mail
+   (`reply_ask_email_template`; informuje, że podanie adresu = zapis na
+   newsletter) + publiczne potwierdzenie bez linku. Gdy wiadomość prywatna nie
+   przejdzie — publicznie: „napisz do nas wiadomość ze swoim e-mailem”.
+   W dzienniku komentarzy wpis ma `awaiting_email = true` („czeka na e-mail”).
+2. Osoba odpisuje adresem → webhook wiadomości (`messages`), przed agentem AI:
+   `handleDirectMessageForLeadMagnet` dopasowuje ją do komentarza (po id
+   autora, awaryjnie po imieniu i nazwisku z FB albo loginie z IG; do 7 dni),
+   wyciąga adres (`extractEmail`) i robi ten sam zapis co formularz
+   (subskrybent z tagami, `lead_magnet_signups` ze źródłem `instagram`, UTM
+   `medium=dm`, zgoda z dopiskiem o wiadomości prywatnej, mail z plikiem).
+   Odpowiedź `reply_email_received_template` ({imie}, {tytul}, {email}) też jest
+   bez linku. Wpis w dzienniku dostaje `signup_id` („e-mail zebrany”), a lead w
+   CRM — adres e-mail, jeśli go nie miał.
+3. Wiadomość bez adresu → jedno przypomnienie („odpisz samym adresem”), każda
+   kolejna idzie już do agenta AI.
+
+Link do pliku jest tylko w mailu — poza Instagramem. Facebook zostaje
+domyślnie przy linku (linki przechodzą), ale można go przełączyć tak samo.
+YouTube nie ma wiadomości prywatnych, więc zawsze dostaje link.
 
 Każdy komentarz obsługujemy raz (unikalny indeks `platform + id komentarza`).
 Ochrona przed pętlami bot-bot na Facebooku działa jak dla agenta
@@ -78,6 +106,7 @@ lead_magnet`, `source_id = id lead magnetu`, UTM-y z linku.
 | Private Reply Instagram                          | `src/lib/meta-comments.server.ts` (`sendIgPrivateReplyToComment`)                       |
 | Narzędzia MCP                                    | `src/lib/mcp/tools/lead-magnets.ts`                                                     |
 | Migracja (tabele, RLS, bucket, liczniki, cron)   | `supabase/migrations/20261006150000_lead_magnety.sql`                                   |
+| Migracja: tryb „e-mail w wiadomości”             | `supabase/migrations/20261006170000_lead_magnety_email_w_wiadomosci.sql`                |
 
 Tabele: `lead_magnets` (treść, plik, mail, hasła, szablony, liczniki),
 `lead_magnet_posts` (powiązane posty; jeden post → jeden lead magnet),

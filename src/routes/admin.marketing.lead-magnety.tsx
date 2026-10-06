@@ -20,12 +20,14 @@ import {
 import {
   AUDIENCE_LABELS,
   DEFAULT_TEMPLATES,
+  EMAIL_IN_DM_PLATFORMS,
   LEAD_MAGNET_AUDIENCES,
   LEAD_MAGNET_PLATFORMS,
   PLATFORM_LABELS,
   leadMagnetUrl,
   parseKeywords,
   suggestedCaption,
+  type EmailInDmPlatform,
   type LeadMagnetAudience,
   type LeadMagnetPlatform,
 } from "@/lib/lead-magnets/core";
@@ -94,6 +96,9 @@ type Magnet = {
   reply_public_template: string;
   reply_private_template: string;
   reply_fallback_template: string;
+  email_in_dm_platforms: string[];
+  reply_ask_email_template: string;
+  reply_email_received_template: string;
   published: boolean;
   view_count: number;
   signup_count: number;
@@ -147,6 +152,9 @@ type FormState = {
   reply_public_template: string;
   reply_private_template: string;
   reply_fallback_template: string;
+  email_in_dm_platforms: string[];
+  reply_ask_email_template: string;
+  reply_email_received_template: string;
   published: boolean;
   posts: PostForm[];
 };
@@ -178,6 +186,9 @@ const emptyForm = (): FormState => ({
   reply_public_template: DEFAULT_TEMPLATES.reply_public,
   reply_private_template: DEFAULT_TEMPLATES.reply_private,
   reply_fallback_template: DEFAULT_TEMPLATES.reply_fallback,
+  email_in_dm_platforms: ["instagram"],
+  reply_ask_email_template: DEFAULT_TEMPLATES.reply_ask_email,
+  reply_email_received_template: DEFAULT_TEMPLATES.reply_email_received,
   published: false,
   posts: [],
 });
@@ -210,6 +221,10 @@ const formFromMagnet = (m: Magnet, posts: Post[]): FormState => ({
   reply_public_template: m.reply_public_template,
   reply_private_template: m.reply_private_template,
   reply_fallback_template: m.reply_fallback_template,
+  email_in_dm_platforms: m.email_in_dm_platforms ?? ["instagram"],
+  reply_ask_email_template: m.reply_ask_email_template ?? DEFAULT_TEMPLATES.reply_ask_email,
+  reply_email_received_template:
+    m.reply_email_received_template ?? DEFAULT_TEMPLATES.reply_email_received,
   published: m.published,
   posts: posts
     .filter((p) => p.lead_magnet_id === m.id)
@@ -256,6 +271,13 @@ function toInput(form: FormState): LeadMagnetInput {
     reply_private_template: form.reply_private_template.trim() || DEFAULT_TEMPLATES.reply_private,
     reply_fallback_template:
       form.reply_fallback_template.trim() || DEFAULT_TEMPLATES.reply_fallback,
+    email_in_dm_platforms: form.email_in_dm_platforms.filter((p): p is EmailInDmPlatform =>
+      (EMAIL_IN_DM_PLATFORMS as readonly string[]).includes(p),
+    ),
+    reply_ask_email_template:
+      form.reply_ask_email_template.trim() || DEFAULT_TEMPLATES.reply_ask_email,
+    reply_email_received_template:
+      form.reply_email_received_template.trim() || DEFAULT_TEMPLATES.reply_email_received,
     published: form.published,
     posts: form.posts
       .filter((p) => p.external_post_id.trim())
@@ -921,7 +943,7 @@ function EditorDialog({
               </div>
             </div>
             <div>
-              <Label>Wiadomość prywatna z linkiem (Facebook / Instagram)</Label>
+              <Label>Wiadomość prywatna z linkiem (tryb z linkiem)</Label>
               <Textarea
                 value={form.reply_private_template}
                 onChange={(e) => set("reply_private_template", e.target.value)}
@@ -945,6 +967,57 @@ function EditorDialog({
                   rows={3}
                 />
               </div>
+            </div>
+            <div className="space-y-3 rounded-lg border p-3">
+              <div>
+                <Label>Bez linku: proś o e-mail w wiadomości prywatnej</Label>
+                <p className="text-xs text-muted-foreground">
+                  Na zaznaczonych platformach automat nie wysyła linku. W wiadomości prywatnej prosi
+                  o adres e-mail, a gdy ktoś go odpisze, zapisuje go na listę i wysyła materiał
+                  mailem. Dla kont z zablokowanymi linkami (Instagram). YouTube zawsze dostaje link.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-6">
+                {EMAIL_IN_DM_PLATFORMS.map((pl) => (
+                  <label key={pl} className="flex items-center gap-2 text-sm">
+                    <Switch
+                      checked={form.email_in_dm_platforms.includes(pl)}
+                      onCheckedChange={(v) =>
+                        set(
+                          "email_in_dm_platforms",
+                          v
+                            ? [...new Set([...form.email_in_dm_platforms, pl])]
+                            : form.email_in_dm_platforms.filter((x) => x !== pl),
+                        )
+                      }
+                    />
+                    {PLATFORM_LABELS[pl]}
+                  </label>
+                ))}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Prośba o e-mail (wiadomość prywatna)</Label>
+                  <Textarea
+                    value={form.reply_ask_email_template}
+                    onChange={(e) => set("reply_ask_email_template", e.target.value)}
+                    rows={4}
+                  />
+                </div>
+                <div>
+                  <Label>Potwierdzenie po otrzymaniu e-maila</Label>
+                  <Textarea
+                    value={form.reply_email_received_template}
+                    onChange={(e) => set("reply_email_received_template", e.target.value)}
+                    rows={4}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Zmienne: {"{imie}"}, {"{tytul}"}, {"{email}"}. Nie wstawiaj tu adresów stron —
+                zablokowane konto i tak by ich nie wysłało. Prośba informuje o zapisie na newsletter
+                (to jest zgoda), więc zostaw to zdanie.
+              </p>
             </div>
             <p className="text-xs text-muted-foreground">
               Zmienne: {"{imie}"}, {"{tytul}"}, {"{link}"}. Polubienia bez komentarza Meta nie
@@ -1189,7 +1262,7 @@ function SignupsDialog({ magnet, onClose }: { magnet: Magnet; onClose: () => voi
 const REPLY_LABELS: Record<string, string> = {
   sent_both: "DM + komentarz",
   sent_private: "DM",
-  sent_public: "komentarz z linkiem",
+  sent_public: "publicznie pod komentarzem",
   failed: "błąd",
   skipped: "bez hasła",
   not_possible: "polubienie",
@@ -1210,6 +1283,8 @@ function TriggersDialog({ magnet, onClose }: { magnet: Magnet; onClose: () => vo
     matched: boolean;
     reply_status: string;
     reply_error: string | null;
+    awaiting_email: boolean;
+    signup_id: string | null;
     created_at: string;
   }>;
 
@@ -1261,6 +1336,11 @@ function TriggersDialog({ magnet, onClose }: { magnet: Magnet; onClose: () => vo
                       >
                         {REPLY_LABELS[r.reply_status] ?? r.reply_status}
                       </span>
+                      {r.signup_id ? (
+                        <div className="text-emerald-600">e-mail zebrany</div>
+                      ) : r.awaiting_email ? (
+                        <div className="text-amber-600">czeka na e-mail</div>
+                      ) : null}
                     </td>
                   </tr>
                 ))}

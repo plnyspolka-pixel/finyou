@@ -97,7 +97,7 @@ export const createLeadMagnet = defineTool({
   name: "create_lead_magnet",
   title: "Create lead magnet",
   description:
-    "Tworzy lead magnet (ten sam schemat co panel): slug, tytuł, `audience` (klient / inwestor), nagłówki, `benefits` (co jest w środku), CTA, okładka, plik (`file_path` w buckecie lead-magnets — wgrany w panelu) albo `file_url`, mail z linkiem ({imie}, {tytul}, {link}, {strona}), hasła `trigger_keywords` (np. PRZEWODNIK), `match_any_post`, szablony odpowiedzi ({imie}, {tytul}, {link}), `posts` (powiązane posty FB / IG / YouTube), `published`. Treść z briefu podpowie `generate_lead_magnet_copy`. Strona: /pobierz/<slug>. Tylko administrator/operator.",
+    "Tworzy lead magnet (ten sam schemat co panel): slug, tytuł, `audience` (klient / inwestor), nagłówki, `benefits` (co jest w środku), CTA, okładka, plik (`file_path` w buckecie lead-magnets — wgrany w panelu) albo `file_url`, mail z linkiem ({imie}, {tytul}, {link}, {strona}), hasła `trigger_keywords` (np. PRZEWODNIK), `match_any_post`, szablony odpowiedzi ({imie}, {tytul}, {link}), `email_in_dm_platforms` (facebook / instagram — tam zamiast linku automat prosi w wiadomości prywatnej o e-mail; domyślnie instagram, bo konto ma zablokowane linki) z szablonami `reply_ask_email_template` i `reply_email_received_template` ({imie}, {tytul}, {email}), `posts` (powiązane posty FB / IG / YouTube), `published`. Treść z briefu podpowie `generate_lead_magnet_copy`. Strona: /pobierz/<slug>. Tylko administrator/operator.",
   inputSchema: createBody.shape,
   annotations: WRITE,
   handler: (a, ctx: ToolContext) =>
@@ -288,10 +288,10 @@ export const listLeadMagnetTriggers = defineListTool({
   name: "list_lead_magnet_triggers",
   title: "List lead magnet comment triggers",
   description:
-    "Dziennik automatu social: komentarze (i polubienia) pod postami lead magnetów — kto, co napisał, czy pasowało hasło i co poszło w odpowiedzi (sent_both = DM + komentarz, sent_private, sent_public = link publicznie, failed, skipped = bez hasła, not_possible = polubienie). Tylko administrator/operator.",
+    "Dziennik automatu social: komentarze (i polubienia) pod postami lead magnetów — kto, co napisał, czy pasowało hasło i co poszło w odpowiedzi (sent_both = DM + komentarz, sent_private, sent_public = link publicznie, failed, skipped = bez hasła, not_possible = polubienie); w trybie bez linku `awaiting_email` = czekamy na e-mail w wiadomości, `signup_id` = e-mail zebrany. Tylko administrator/operator.",
   table: "lead_magnet_triggers",
   columns:
-    "id, lead_magnet_id, platform, kind, external_post_id, external_comment_id, author_name, comment_text, matched, reply_status, reply_error, created_at",
+    "id, lead_magnet_id, platform, kind, external_post_id, external_comment_id, author_name, comment_text, matched, reply_status, reply_error, awaiting_email, signup_id, created_at",
   resultKey: "triggers",
   access: "team",
   order: { column: "created_at", ascending: false },

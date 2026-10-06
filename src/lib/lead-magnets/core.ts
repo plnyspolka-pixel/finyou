@@ -27,7 +27,7 @@ export const AUDIENCE_LABELS: Record<LeadMagnetAudience, string> = {
 export const LEAD_MAGNET_TAG = "lead-magnet";
 
 export const DEFAULT_TEMPLATES = {
-  reply_public: "Cześć {imie}! Wysłaliśmy Ci link w wiadomości prywatnej 👋",
+  reply_public: "Cześć {imie}! Napisaliśmy do Ciebie w wiadomości prywatnej 👋",
   reply_private:
     "Cześć {imie}! Oto link do materiału „{tytul}”: {link}\nWpisz tam swój e-mail, a plik od razu wyląduje w Twojej skrzynce.",
   reply_fallback: "Cześć {imie}! Link do materiału „{tytul}”: {link}",
@@ -36,7 +36,53 @@ export const DEFAULT_TEMPLATES = {
     "Cześć {imie}!\n\nDziękujemy za zainteresowanie. Twój materiał „{tytul}” czeka tutaj:\n{link}\n\nJeśli ktoś z Twoich znajomych też chce go dostać, podeślij mu stronę {strona}.\n\nPozdrawiamy,\nzespół Finance You",
   thank_you: "Dziękujemy! Link do materiału wysłaliśmy też na Twój e-mail.",
   cta: "Wyślij mi materiał",
+  // Tryb „e-mail w wiadomości” (bez linku) — np. Instagram z zablokowanymi linkami.
+  reply_ask_email:
+    "Cześć {imie}! Chętnie wyślemy Ci „{tytul}”. Odpisz tutaj swoim adresem e-mail, a materiał przyjdzie na skrzynkę w ciągu minuty.\nPodając e-mail, zapisujesz się na newsletter Finance You — wypiszesz się jednym kliknięciem w stopce maila.",
+  reply_email_received:
+    "Dziękujemy {imie}! „{tytul}” wysłaliśmy na {email}. Jeśli go nie widzisz, zajrzyj do folderu Oferty albo Spam.",
+  /** Gdy prośba w wiadomości prywatnej nie przejdzie — publicznie, bez linku. */
+  reply_ask_email_public:
+    "Cześć {imie}! Napisz do nas wiadomość prywatną ze swoim adresem e-mail, a wyślemy Ci „{tytul}”.",
+  /** Ktoś czeka na materiał, ale odpisał bez adresu — jedno przypomnienie. */
+  reply_email_missing:
+    "Nie widzę adresu e-mail w wiadomości 🙂 Odpisz samym adresem e-mail, a od razu wyślemy materiał.",
 } as const;
+
+/** Platformy, na których można zbierać e-mail w wiadomości prywatnej. */
+export const EMAIL_IN_DM_PLATFORMS = ["facebook", "instagram"] as const;
+export type EmailInDmPlatform = (typeof EMAIL_IN_DM_PLATFORMS)[number];
+
+/** Czy na tej platformie automat prosi o e-mail w wiadomości zamiast wysyłać link. */
+export function usesEmailInDm(
+  platform: LeadMagnetPlatform,
+  emailInDmPlatforms: readonly string[] | null | undefined,
+): boolean {
+  if (platform === "youtube") return false; // YouTube nie ma wiadomości prywatnych
+  return (emailInDmPlatforms ?? []).includes(platform);
+}
+
+/** Zgoda zapisywana przy e-mailu podanym w wiadomości prywatnej. */
+export function dmConsentTextFor(
+  audience: LeadMagnetAudience,
+  platform: LeadMagnetPlatform,
+): string {
+  return `${consentTextFor(audience)} (Adres podany w wiadomości prywatnej na ${PLATFORM_LABELS[platform]} po informacji o zapisie na newsletter.)`;
+}
+
+/**
+ * Pierwszy adres e-mail w wiadomości („mój mail to Jan.Kowalski@Gmail.com.”
+ * → „jan.kowalski@gmail.com”). Bez adresu albo z adresem bez kropki w domenie → null.
+ */
+export function extractEmail(text: string | null | undefined): string | null {
+  const m = String(text ?? "").match(
+    /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,24}/,
+  );
+  if (!m) return null;
+  const email = m[0].replace(/^[._%+-]+/, "").toLowerCase();
+  if (email.length > 255 || email.includes("..")) return null;
+  return email;
+}
 
 /** Treść zgody pokazywana pod formularzem (zapisywana przy każdym zapisie). */
 export function consentTextFor(audience: LeadMagnetAudience): string {
@@ -187,10 +233,11 @@ export type TemplateVars = {
   tytul: string;
   link: string;
   strona?: string;
+  email?: string | null;
 };
 
 /**
- * Podstawia {imie}, {tytul}, {link}, {strona}. Bez imienia znika także spacja
+ * Podstawia {imie}, {tytul}, {link}, {strona}, {email}. Bez imienia znika także spacja
  * przed {imie}, więc „Cześć {imie}!” daje „Cześć!”.
  */
 export function renderTemplate(template: string, vars: TemplateVars): string {
@@ -201,7 +248,8 @@ export function renderTemplate(template: string, vars: TemplateVars): string {
   out = out
     .replace(/\{tytul\}/g, vars.tytul)
     .replace(/\{link\}/g, vars.link)
-    .replace(/\{strona\}/g, vars.strona ?? SITE_URL);
+    .replace(/\{strona\}/g, vars.strona ?? SITE_URL)
+    .replace(/\{email\}/g, vars.email ?? "");
   return out.trim();
 }
 
@@ -231,8 +279,8 @@ export function suggestedCaption(opts: {
   const jak =
     opts.platform === "youtube"
       ? `Napisz w komentarzu „${kw}” — odpowiemy pod komentarzem linkiem do pobrania.`
-      : `Polub ten post i napisz w komentarzu „${kw}” — wyślemy Ci link w wiadomości prywatnej.`;
-  return `🎁 Przygotowaliśmy bezpłatny materiał „${opts.title}” — ${dla}.\n\n${jak}\n\nMateriał jest darmowy; na stronie zostawiasz tylko e-mail, na który wysyłamy plik.`;
+      : `Polub ten post i napisz w komentarzu „${kw}” — napiszemy do Ciebie w wiadomości prywatnej.`;
+  return `🎁 Przygotowaliśmy bezpłatny materiał „${opts.title}” — ${dla}.\n\n${jak}\n\nMateriał jest darmowy — potrzebujemy tylko adresu e-mail, na który go wyślemy.`;
 }
 
 /**

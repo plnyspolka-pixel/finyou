@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS public.lead_magnets (
   match_any_post boolean NOT NULL DEFAULT false,
   -- Szablony odpowiedzi: {imie}, {tytul}, {link}.
   reply_public_template text NOT NULL
-    DEFAULT 'Cześć {imie}! Wysłaliśmy Ci link w wiadomości prywatnej 👋',
+    DEFAULT 'Cześć {imie}! Napisaliśmy do Ciebie w wiadomości prywatnej 👋',
   reply_private_template text NOT NULL
     DEFAULT E'Cześć {imie}! Oto link do materiału „{tytul}”: {link}\nWpisz tam swój e-mail, a plik od razu wyląduje w Twojej skrzynce.',
   -- Publiczna odpowiedź z linkiem: YouTube (brak DM) i gdy wiadomość prywatna się nie uda.
