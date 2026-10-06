@@ -26,6 +26,7 @@ import {
   Bot,
   FileCheck,
   FileSignature,
+  Gift,
   Image as ImageIcon,
   Network,
   Coins,
@@ -687,6 +688,14 @@ export const adminSections: AdminSection[] = [
             icon: ImageIcon,
             description: "Biblioteka grafik i materiałów marketingowych.",
             synonyms: ["materialy", "grafiki", "kreacje"],
+          },
+          {
+            to: "/admin/marketing/lead-magnety",
+            label: "Lead magnety",
+            icon: Gift,
+            description:
+              "Materiał za e-mail (klient / inwestor) i automat: komentarz z hasłem pod postem → link.",
+            synonyms: ["lead magnet", "leadmagnet", "pobierz", "komentarz", "zapis na liste"],
           },
         ],
       },

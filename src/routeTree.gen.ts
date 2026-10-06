@@ -149,6 +149,8 @@ import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
 import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka'
 import { Route as OperatorTablicaRouteImport } from './routes/operator.tablica'
 import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
+import { Route as PobierzPlikTokenRouteImport } from './routes/pobierz-plik.$token'
+import { Route as PobierzSlugRouteImport } from './routes/pobierz.$slug'
 import { Route as PodpisTokenRouteImport } from './routes/podpis.$token'
 import { Route as PosrednicyIndexRouteImport } from './routes/posrednicy.index'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
@@ -190,6 +192,7 @@ import { Route as AdminKsiegowoscRejestrOfRouteImport } from './routes/admin.ksi
 import { Route as AdminMarketingIndexRouteImport } from './routes/admin.marketing.index'
 import { Route as AdminMarketingEmailRouteImport } from './routes/admin.marketing.email'
 import { Route as AdminMarketingLandingRouteImport } from './routes/admin.marketing.landing'
+import { Route as AdminMarketingLeadMagnetyRouteImport } from './routes/admin.marketing.lead-magnety'
 import { Route as AdminMarketingSocialRouteImport } from './routes/admin.marketing.social'
 import { Route as AdminMarketingTrackingRouteImport } from './routes/admin.marketing.tracking'
 import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin.program-posrednikow.index'
@@ -260,6 +263,7 @@ import { Route as ApiPublicHooksFollowUpPlanTickRouteImport } from './routes/api
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
 import { Route as ApiPublicHooksInstitutionMailTickRouteImport } from './routes/api/public/hooks/institution-mail-tick'
 import { Route as ApiPublicHooksKwEasymkwPollRouteImport } from './routes/api/public/hooks/kw-easymkw-poll'
+import { Route as ApiPublicHooksLeadMagnetTickRouteImport } from './routes/api/public/hooks/lead-magnet-tick'
 import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/api/public/hooks/loan-reminder-emails'
 import { Route as ApiPublicHooksLoanReminderEmailsTickRouteImport } from './routes/api/public/hooks/loan-reminder-emails-tick'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
@@ -997,6 +1001,16 @@ const OperatorWniosekRoute = OperatorWniosekRouteImport.update({
   path: '/wniosek',
   getParentRoute: () => OperatorRoute,
 } as any)
+const PobierzPlikTokenRoute = PobierzPlikTokenRouteImport.update({
+  id: '/pobierz-plik/$token',
+  path: '/pobierz-plik/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PobierzSlugRoute = PobierzSlugRouteImport.update({
+  id: '/pobierz/$slug',
+  path: '/pobierz/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PodpisTokenRoute = PodpisTokenRouteImport.update({
   id: '/podpis/$token',
   path: '/podpis/$token',
@@ -1207,6 +1221,12 @@ const AdminMarketingLandingRoute = AdminMarketingLandingRouteImport.update({
   path: '/marketing/landing',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMarketingLeadMagnetyRoute =
+  AdminMarketingLeadMagnetyRouteImport.update({
+    id: '/marketing/lead-magnety',
+    path: '/marketing/lead-magnety',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminMarketingSocialRoute = AdminMarketingSocialRouteImport.update({
   id: '/marketing/social',
   path: '/marketing/social',
@@ -1592,6 +1612,12 @@ const ApiPublicHooksKwEasymkwPollRoute =
     path: '/api/public/hooks/kw-easymkw-poll',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksLeadMagnetTickRoute =
+  ApiPublicHooksLeadMagnetTickRouteImport.update({
+    id: '/api/public/hooks/lead-magnet-tick',
+    path: '/api/public/hooks/lead-magnet-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksLoanReminderEmailsRoute =
   ApiPublicHooksLoanReminderEmailsRouteImport.update({
     id: '/api/public/hooks/loan-reminder-emails',
@@ -1906,6 +1932,8 @@ export interface FileRoutesByFullPath {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
+  '/pobierz/$slug': typeof PobierzSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
@@ -1949,6 +1977,7 @@ export interface FileRoutesByFullPath {
   '/admin/ksiegowosc/rejestr-of': typeof AdminKsiegowoscRejestrOfRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
+  '/admin/marketing/lead-magnety': typeof AdminMarketingLeadMagnetyRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/program-posrednikow/partnerzy': typeof AdminProgramPosrednikowPartnerzyRoute
@@ -2022,6 +2051,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
+  '/api/public/hooks/lead-magnet-tick': typeof ApiPublicHooksLeadMagnetTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -2180,6 +2210,8 @@ export interface FileRoutesByTo {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
+  '/pobierz/$slug': typeof PobierzSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
@@ -2222,6 +2254,7 @@ export interface FileRoutesByTo {
   '/admin/ksiegowosc/rejestr-of': typeof AdminKsiegowoscRejestrOfRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
+  '/admin/marketing/lead-magnety': typeof AdminMarketingLeadMagnetyRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/program-posrednikow/partnerzy': typeof AdminProgramPosrednikowPartnerzyRoute
@@ -2295,6 +2328,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
+  '/api/public/hooks/lead-magnet-tick': typeof ApiPublicHooksLeadMagnetTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -2463,6 +2497,8 @@ export interface FileRoutesById {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
+  '/pobierz/$slug': typeof PobierzSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
@@ -2506,6 +2542,7 @@ export interface FileRoutesById {
   '/admin/ksiegowosc/rejestr-of': typeof AdminKsiegowoscRejestrOfRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
+  '/admin/marketing/lead-magnety': typeof AdminMarketingLeadMagnetyRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/program-posrednikow/partnerzy': typeof AdminProgramPosrednikowPartnerzyRoute
@@ -2579,6 +2616,7 @@ export interface FileRoutesById {
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
+  '/api/public/hooks/lead-magnet-tick': typeof ApiPublicHooksLeadMagnetTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -2748,6 +2786,8 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/pobierz-plik/$token'
+    | '/pobierz/$slug'
     | '/podpis/$token'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
@@ -2791,6 +2831,7 @@ export interface FileRouteTypes {
     | '/admin/ksiegowosc/rejestr-of'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
+    | '/admin/marketing/lead-magnety'
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/program-posrednikow/partnerzy'
@@ -2864,6 +2905,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/kw-easymkw-poll'
+    | '/api/public/hooks/lead-magnet-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -3022,6 +3064,8 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/pobierz-plik/$token'
+    | '/pobierz/$slug'
     | '/podpis/$token'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
@@ -3064,6 +3108,7 @@ export interface FileRouteTypes {
     | '/admin/ksiegowosc/rejestr-of'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
+    | '/admin/marketing/lead-magnety'
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/program-posrednikow/partnerzy'
@@ -3137,6 +3182,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/kw-easymkw-poll'
+    | '/api/public/hooks/lead-magnet-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -3304,6 +3350,8 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/pobierz-plik/$token'
+    | '/pobierz/$slug'
     | '/podpis/$token'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
@@ -3347,6 +3395,7 @@ export interface FileRouteTypes {
     | '/admin/ksiegowosc/rejestr-of'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
+    | '/admin/marketing/lead-magnety'
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/program-posrednikow/partnerzy'
@@ -3420,6 +3469,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/kw-easymkw-poll'
+    | '/api/public/hooks/lead-magnet-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -3494,6 +3544,8 @@ export interface RootRouteChildren {
   FakturaIdRoute: typeof FakturaIdRoute
   KartaTokenRoute: typeof KartaTokenRoute
   LSlugRoute: typeof LSlugRoute
+  PobierzPlikTokenRoute: typeof PobierzPlikTokenRoute
+  PobierzSlugRoute: typeof PobierzSlugRoute
   PodpisTokenRoute: typeof PodpisTokenRoute
   PosrednicyRejestracjaRoute: typeof PosrednicyRejestracjaRoute
   PozyczkiSlugRoute: typeof PozyczkiSlugRoute
@@ -3546,6 +3598,7 @@ export interface RootRouteChildren {
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
   ApiPublicHooksInstitutionMailTickRoute: typeof ApiPublicHooksInstitutionMailTickRoute
   ApiPublicHooksKwEasymkwPollRoute: typeof ApiPublicHooksKwEasymkwPollRoute
+  ApiPublicHooksLeadMagnetTickRoute: typeof ApiPublicHooksLeadMagnetTickRoute
   ApiPublicHooksLoanReminderEmailsRoute: typeof ApiPublicHooksLoanReminderEmailsRoute
   ApiPublicHooksLoanReminderEmailsTickRoute: typeof ApiPublicHooksLoanReminderEmailsTickRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
@@ -4558,6 +4611,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorWniosekRouteImport
       parentRoute: typeof OperatorRoute
     }
+    '/pobierz-plik/$token': {
+      id: '/pobierz-plik/$token'
+      path: '/pobierz-plik/$token'
+      fullPath: '/pobierz-plik/$token'
+      preLoaderRoute: typeof PobierzPlikTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pobierz/$slug': {
+      id: '/pobierz/$slug'
+      path: '/pobierz/$slug'
+      fullPath: '/pobierz/$slug'
+      preLoaderRoute: typeof PobierzSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/podpis/$token': {
       id: '/podpis/$token'
       path: '/podpis/$token'
@@ -4843,6 +4910,13 @@ declare module '@tanstack/react-router' {
       path: '/marketing/landing'
       fullPath: '/admin/marketing/landing'
       preLoaderRoute: typeof AdminMarketingLandingRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/marketing/lead-magnety': {
+      id: '/admin/marketing/lead-magnety'
+      path: '/marketing/lead-magnety'
+      fullPath: '/admin/marketing/lead-magnety'
+      preLoaderRoute: typeof AdminMarketingLeadMagnetyRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/marketing/social': {
@@ -5335,6 +5409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksKwEasymkwPollRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/lead-magnet-tick': {
+      id: '/api/public/hooks/lead-magnet-tick'
+      path: '/api/public/hooks/lead-magnet-tick'
+      fullPath: '/api/public/hooks/lead-magnet-tick'
+      preLoaderRoute: typeof ApiPublicHooksLeadMagnetTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/loan-reminder-emails': {
       id: '/api/public/hooks/loan-reminder-emails'
       path: '/api/public/hooks/loan-reminder-emails'
@@ -5641,6 +5722,7 @@ interface AdminRouteChildren {
   AdminKsiegowoscRejestrOfRoute: typeof AdminKsiegowoscRejestrOfRoute
   AdminMarketingEmailRoute: typeof AdminMarketingEmailRoute
   AdminMarketingLandingRoute: typeof AdminMarketingLandingRoute
+  AdminMarketingLeadMagnetyRoute: typeof AdminMarketingLeadMagnetyRoute
   AdminMarketingSocialRoute: typeof AdminMarketingSocialRoute
   AdminMarketingTrackingRoute: typeof AdminMarketingTrackingRoute
   AdminProgramPosrednikowPartnerzyRoute: typeof AdminProgramPosrednikowPartnerzyRoute
@@ -5726,6 +5808,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminKsiegowoscRejestrOfRoute: AdminKsiegowoscRejestrOfRoute,
   AdminMarketingEmailRoute: AdminMarketingEmailRoute,
   AdminMarketingLandingRoute: AdminMarketingLandingRoute,
+  AdminMarketingLeadMagnetyRoute: AdminMarketingLeadMagnetyRoute,
   AdminMarketingSocialRoute: AdminMarketingSocialRoute,
   AdminMarketingTrackingRoute: AdminMarketingTrackingRoute,
   AdminProgramPosrednikowPartnerzyRoute: AdminProgramPosrednikowPartnerzyRoute,
@@ -6041,6 +6124,8 @@ const rootRouteChildren: RootRouteChildren = {
   FakturaIdRoute: FakturaIdRoute,
   KartaTokenRoute: KartaTokenRoute,
   LSlugRoute: LSlugRoute,
+  PobierzPlikTokenRoute: PobierzPlikTokenRoute,
+  PobierzSlugRoute: PobierzSlugRoute,
   PodpisTokenRoute: PodpisTokenRoute,
   PosrednicyRejestracjaRoute: PosrednicyRejestracjaRoute,
   PozyczkiSlugRoute: PozyczkiSlugRoute,
@@ -6098,6 +6183,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksInstitutionMailTickRoute:
     ApiPublicHooksInstitutionMailTickRoute,
   ApiPublicHooksKwEasymkwPollRoute: ApiPublicHooksKwEasymkwPollRoute,
+  ApiPublicHooksLeadMagnetTickRoute: ApiPublicHooksLeadMagnetTickRoute,
   ApiPublicHooksLoanReminderEmailsRoute: ApiPublicHooksLoanReminderEmailsRoute,
   ApiPublicHooksLoanReminderEmailsTickRoute:
     ApiPublicHooksLoanReminderEmailsTickRoute,

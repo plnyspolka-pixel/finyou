@@ -129,6 +129,8 @@ export async function handleMetaMessagingBody(body: any): Promise<void> {
       try {
         if (change.field === "feed") {
           await handleFeedChange(change.value, pageId);
+        } else if (change.field === "comments" && platform === "instagram") {
+          await handleInstagramCommentChange(change.value, pageId);
         }
       } catch (e) {
         console.error("[meta-messaging] feed change error", e);
@@ -222,6 +224,47 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     return;
   }
 
+  // 2.7) LEAD MAGNET — tryb „e-mail w wiadomości” (bez linku, np. Instagram
+  //      z zablokowanymi linkami): ktoś skomentował post z hasłem, poprosiliśmy
+  //      o e-mail w wiadomości prywatnej i teraz go odpisuje. Adres → zapis na
+  //      listę + mail z materiałem; bez adresu — jedno przypomnienie.
+  if (userText) {
+    try {
+      const lm = await import("@/lib/lead-magnets/lead-magnets.server");
+      const out = await lm.handleDirectMessageForLeadMagnet({
+        platform: platform === "instagram" ? "instagram" : "facebook",
+        senderId,
+        text: userText,
+        leadId,
+      });
+      if (out.handled) {
+        if (out.reply) {
+          await logLeadCommunication({
+            leadId,
+            channel: "messenger",
+            direction: "outbound",
+            content: out.reply,
+            metadata: {
+              platform,
+              sender_id: senderId,
+              kind:
+                out.status === "reminded"
+                  ? "lead_magnet_email_reminder"
+                  : "lead_magnet_email_saved",
+              lead_magnet: out.magnet?.slug ?? null,
+              email: out.email ?? null,
+            },
+            status: out.reply_ok ? "sent" : "error",
+            errorMessage: out.reply_ok ? null : (out.error ?? null),
+          });
+        }
+        return;
+      }
+    } catch (e) {
+      console.error("[messenger] lead magnet dm error", e);
+    }
+  }
+
   // 3) Odpowiedź agenta
   const agent = await runAgentTurn({
     leadId,
@@ -270,6 +313,23 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
 // Obsługa komentarzy pod postami fanpage'a (event: changes[].field === "feed").
 export async function handleFeedChange(value: any, pageId: string | undefined) {
   if (!value) return;
+  // Polubienie posta powiązanego z lead magnetem: Meta nie pozwala napisać do
+  // osoby, która tylko zareagowała — zapisujemy wyłącznie do statystyk.
+  if (value.item === "reaction" && value.verb === "add") {
+    try {
+      const lm = await import("@/lib/lead-magnets/lead-magnets.server");
+      await lm.handleSocialReactionForLeadMagnet({
+        platform: "facebook",
+        postId: value.post_id,
+        authorId: value.from?.id ?? null,
+        authorName: value.from?.name ?? null,
+        reactionType: value.reaction_type ?? null,
+      });
+    } catch (e) {
+      console.error("[fb-reaction] lead magnet error", e);
+    }
+    return;
+  }
   if (value.item !== "comment" || value.verb !== "add") return;
 
   const commentId: string | undefined = value.comment_id;
@@ -334,6 +394,70 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
     return;
   }
 
+  // LEAD MAGNET — komentarz z hasłem pod powiązanym postem (albo hasło
+  // globalne) dostaje link do /pobierz/<slug> zamiast rozmowy z agentem.
+  try {
+    const lm = await import("@/lib/lead-magnets/lead-magnets.server");
+    const out = await lm.handleSocialCommentForLeadMagnet({
+      platform: "facebook",
+      postId,
+      commentId,
+      authorId: fromId,
+      authorName: fromName ?? null,
+      text,
+      leadId,
+    });
+    if (out.handled) {
+      if (!out.duplicate) {
+        const entries: Array<["private" | "public", string | undefined]> = [
+          ["private", out.sent?.private],
+          ["public", out.sent?.public],
+        ];
+        for (const [kind, content] of entries) {
+          if (!content) continue;
+          await logLeadCommunication({
+            leadId,
+            channel: "messenger",
+            direction: "outbound",
+            content,
+            metadata: {
+              platform: "messenger",
+              kind: kind === "private" ? "lead_magnet_private_reply" : "lead_magnet_comment_reply",
+              comment_id: commentId,
+              post_id: postId,
+              lead_magnet: out.magnet?.slug ?? null,
+              reply_status: out.reply_status,
+              mode: out.mode ?? null,
+              link: out.link ?? null,
+            },
+            status: "sent",
+          });
+        }
+        if (out.reply_status === "failed") {
+          await logLeadCommunication({
+            leadId,
+            channel: "messenger",
+            direction: "outbound",
+            content: `[lead magnet ${out.magnet?.slug ?? ""}] nie udało się wysłać linku`,
+            metadata: {
+              platform: "messenger",
+              kind: "lead_magnet_reply",
+              comment_id: commentId,
+              post_id: postId,
+              lead_magnet: out.magnet?.slug ?? null,
+              reply_status: out.reply_status,
+            },
+            status: "error",
+            errorMessage: out.error ?? null,
+          });
+        }
+      }
+      return;
+    }
+  } catch (e) {
+    console.error("[fb-comment] lead magnet error", e);
+  }
+
   const agent = await runAgentTurn({
     leadId,
     channel: "messenger",
@@ -384,4 +508,34 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
     errorMessage: pm.ok ? null : pm.error,
     agentId: process.env.ELEVENLABS_TEXT_AGENT_ID ?? null,
   });
+}
+
+// Komentarze pod mediami Instagrama (object: "instagram", changes[].field ===
+// "comments"). Instagram nie ma tu rozmowy z agentem — obsługujemy wyłącznie
+// lead magnety: komentarz z hasłem pod powiązanym postem dostaje link
+// (wiadomość prywatna + publiczne potwierdzenie albo link publicznie).
+export async function handleInstagramCommentChange(value: any, igAccountId: string | undefined) {
+  const commentId: string | undefined = value?.id;
+  const fromId: string | undefined = value?.from?.id;
+  const username: string | undefined = value?.from?.username;
+  const text = String(value?.text ?? "").trim();
+  if (!commentId || !fromId || !text) return;
+  // Własne komentarze (także nasze odpowiedzi) pomijamy.
+  if (igAccountId && fromId === igAccountId) return;
+  if (process.env.META_IG_USER_ID && fromId === process.env.META_IG_USER_ID) return;
+
+  const lm = await import("@/lib/lead-magnets/lead-magnets.server");
+  const out = await lm.handleSocialCommentForLeadMagnet({
+    platform: "instagram",
+    postId: value?.media?.id ?? null,
+    commentId,
+    authorId: fromId,
+    authorName: username ? `@${username}` : null,
+    text,
+  });
+  if (out.handled && !out.duplicate) {
+    console.log(
+      `[ig-comment] lead magnet ${out.magnet?.slug ?? "?"}: ${out.reply_status}${out.error ? ` (${out.error})` : ""}`,
+    );
+  }
 }

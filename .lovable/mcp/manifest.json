@@ -10144,6 +10144,876 @@
         "outputSchema": null
       },
       {
+        "name": "list_lead_magnets",
+        "title": "List lead magnets",
+        "description": "Lead magnety (materiał do pobrania za e-mail — osobno dla klienta pożyczkowego i inwestora) z licznikami: odsłony strony /pobierz/<slug>, zapisy, pobrania, komentarze z hasłem. Pełną treść i powiązane posty daje `get_lead_magnet`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w tytule, slugu lub nagłówku."
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor"
+              ],
+              "description": "Grupa: klient albo inwestor."
+            },
+            "published": {
+              "type": "boolean",
+              "description": "Tylko opublikowane (true) albo szkice (false)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_lead_magnet",
+        "title": "Get lead magnet",
+        "description": "Pełna treść lead magnetu (po id albo slugu): strona (nagłówki, korzyści, CTA, okładka), plik, mail, hasła i szablony odpowiedzi, powiązane posty, liczniki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_magnet_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "slug": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_lead_magnet",
+        "title": "Create lead magnet",
+        "description": "Tworzy lead magnet (ten sam schemat co panel): slug, tytuł, `audience` (klient / inwestor), nagłówki, `benefits` (co jest w środku), CTA, okładka, plik (`file_path` w buckecie lead-magnets — wgrany w panelu) albo `file_url`, mail z linkiem ({imie}, {tytul}, {link}, {strona}), hasła `trigger_keywords` (np. PRZEWODNIK), `match_any_post`, szablony odpowiedzi ({imie}, {tytul}, {link}), `email_in_dm_platforms` (facebook / instagram — tam zamiast linku automat prosi w wiadomości prywatnej o e-mail; domyślnie instagram, bo konto ma zablokowane linki) z szablonami `reply_ask_email_template` i `reply_email_received_template` ({imie}, {tytul}, {email}), `posts` (powiązane posty FB / IG / YouTube), `published`. Treść z briefu podpowie `generate_lead_magnet_copy`. Strona: /pobierz/<slug>. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "slug": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "pattern": "^[a-z0-9-]+$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor"
+              ]
+            },
+            "headline": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "subheadline": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "benefits": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 12,
+              "default": []
+            },
+            "cta_text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80,
+              "default": "Wyślij mi materiał"
+            },
+            "cover_image_url": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri",
+                      "maxLength": 1000
+                    }
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": ""
+                }
+              ]
+            },
+            "og_image_url": {
+              "$ref": "#/properties/cover_image_url"
+            },
+            "meta_description": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "file_path": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 400
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "file_url": {
+              "$ref": "#/properties/cover_image_url"
+            },
+            "file_name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "file_size": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "mime_type": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "thank_you_message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500,
+              "default": "Dziękujemy! Link do materiału wysłaliśmy też na Twój e-mail."
+            },
+            "instant_download": {
+              "type": "boolean",
+              "default": true
+            },
+            "email_subject": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "default": "Twój materiał od Finance You: {tytul}"
+            },
+            "email_body": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 5000,
+              "default": "Cześć {imie}!\n\nDziękujemy za zainteresowanie. Twój materiał „{tytul}” czeka tutaj:\n{link}\n\nJeśli ktoś z Twoich znajomych też chce go dostać, podeślij mu stronę {strona}.\n\nPozdrawiamy,\nzespół Finance You"
+            },
+            "subscriber_tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              },
+              "maxItems": 10,
+              "default": []
+            },
+            "create_crm_lead": {
+              "type": "boolean",
+              "default": false
+            },
+            "trigger_keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              },
+              "maxItems": 20,
+              "default": []
+            },
+            "match_any_post": {
+              "type": "boolean",
+              "default": false
+            },
+            "reply_public_template": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000,
+              "default": "Cześć {imie}! Napisaliśmy do Ciebie w wiadomości prywatnej 👋"
+            },
+            "reply_private_template": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1900,
+              "default": "Cześć {imie}! Oto link do materiału „{tytul}”: {link}\nWpisz tam swój e-mail, a plik od razu wyląduje w Twojej skrzynce."
+            },
+            "reply_fallback_template": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000,
+              "default": "Cześć {imie}! Link do materiału „{tytul}”: {link}"
+            },
+            "email_in_dm_platforms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "facebook",
+                  "instagram"
+                ]
+              },
+              "maxItems": 2,
+              "default": [
+                "instagram"
+              ]
+            },
+            "reply_ask_email_template": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 990,
+              "default": "Cześć {imie}! Chętnie wyślemy Ci „{tytul}”. Odpisz tutaj swoim adresem e-mail, a materiał przyjdzie na skrzynkę w ciągu minuty.\nPodając e-mail, zapisujesz się na newsletter Finance You — wypiszesz się jednym kliknięciem w stopce maila."
+            },
+            "reply_email_received_template": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 990,
+              "default": "Dziękujemy {imie}! „{tytul}” wysłaliśmy na {email}. Jeśli go nie widzisz, zajrzyj do folderu Oferty albo Spam."
+            },
+            "published": {
+              "type": "boolean",
+              "default": false
+            },
+            "posts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "platform": {
+                    "type": "string",
+                    "enum": [
+                      "facebook",
+                      "instagram",
+                      "youtube"
+                    ]
+                  },
+                  "external_post_id": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 120
+                  },
+                  "label": {
+                    "type": "string",
+                    "maxLength": 160
+                  },
+                  "post_url": {
+                    "$ref": "#/properties/cover_image_url"
+                  }
+                },
+                "required": [
+                  "platform",
+                  "external_post_id"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 30,
+              "default": []
+            }
+          },
+          "required": [
+            "slug",
+            "title",
+            "audience",
+            "headline"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_lead_magnet",
+        "title": "Update lead magnet",
+        "description": "Edytuje dowolne pola lead magnetu (te same co przy tworzeniu, bez `posts` — do postów służą `link_lead_magnet_post` / `unlink_lead_magnet_post`) i/lub publikuje / zdejmuje (`published`). Publikacja wymaga pliku albo adresu materiału. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_magnet_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "slug": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "pattern": "^[a-z0-9-]+$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor"
+              ]
+            },
+            "headline": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "subheadline": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "benefits": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 12,
+              "default": []
+            },
+            "cta_text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80,
+              "default": "Wyślij mi materiał"
+            },
+            "cover_image_url": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri",
+                      "maxLength": 1000
+                    }
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": ""
+                }
+              ]
+            },
+            "og_image_url": {
+              "$ref": "#/properties/cover_image_url"
+            },
+            "meta_description": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "file_path": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 400
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "file_url": {
+              "$ref": "#/properties/cover_image_url"
+            },
+            "file_name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "file_size": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "mime_type": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "thank_you_message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500,
+              "default": "Dziękujemy! Link do materiału wysłaliśmy też na Twój e-mail."
+            },
+            "instant_download": {
+              "type": "boolean",
+              "default": true
+            },
+            "email_subject": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "default": "Twój materiał od Finance You: {tytul}"
+            },
+            "email_body": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 5000,
+              "default": "Cześć {imie}!\n\nDziękujemy za zainteresowanie. Twój materiał „{tytul}” czeka tutaj:\n{link}\n\nJeśli ktoś z Twoich znajomych też chce go dostać, podeślij mu stronę {strona}.\n\nPozdrawiamy,\nzespół Finance You"
+            },
+            "subscriber_tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              },
+              "maxItems": 10,
+              "default": []
+            },
+            "create_crm_lead": {
+              "type": "boolean",
+              "default": false
+            },
+            "trigger_keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              },
+              "maxItems": 20,
+              "default": []
+            },
+            "match_any_post": {
+              "type": "boolean",
+              "default": false
+            },
+            "reply_public_template": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000,
+              "default": "Cześć {imie}! Napisaliśmy do Ciebie w wiadomości prywatnej 👋"
+            },
+            "reply_private_template": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1900,
+              "default": "Cześć {imie}! Oto link do materiału „{tytul}”: {link}\nWpisz tam swój e-mail, a plik od razu wyląduje w Twojej skrzynce."
+            },
+            "reply_fallback_template": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000,
+              "default": "Cześć {imie}! Link do materiału „{tytul}”: {link}"
+            },
+            "email_in_dm_platforms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "facebook",
+                  "instagram"
+                ]
+              },
+              "maxItems": 2,
+              "default": [
+                "instagram"
+              ]
+            },
+            "reply_ask_email_template": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 990,
+              "default": "Cześć {imie}! Chętnie wyślemy Ci „{tytul}”. Odpisz tutaj swoim adresem e-mail, a materiał przyjdzie na skrzynkę w ciągu minuty.\nPodając e-mail, zapisujesz się na newsletter Finance You — wypiszesz się jednym kliknięciem w stopce maila."
+            },
+            "reply_email_received_template": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 990,
+              "default": "Dziękujemy {imie}! „{tytul}” wysłaliśmy na {email}. Jeśli go nie widzisz, zajrzyj do folderu Oferty albo Spam."
+            },
+            "published": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "lead_magnet_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_lead_magnet",
+        "title": "Delete lead magnet",
+        "description": "Usuwa lead magnet razem z zapisami, dziennikiem komentarzy i powiązaniami postów (plik w Storage zostaje — usuń go `supabase_storage`, jeśli trzeba). Nieodwracalne. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_magnet_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "lead_magnet_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "link_lead_magnet_post",
+        "title": "Link social post to lead magnet",
+        "description": "Powiązuje post z lead magnetem: komentarz pod tym postem z hasłem (albo każdy, gdy lead magnet nie ma haseł) dostaje link do /pobierz/<slug>. `external_post_id`: Facebook — id posta strony (np. 1234_5678, z `list_facebook_posts` albo `external_post_id` kolejki publikacji), Instagram — id mediów (`list_instagram_media`), YouTube — id filmu. Jeden post może promować tylko jeden lead magnet. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_magnet_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "platform": {
+              "type": "string",
+              "enum": [
+                "facebook",
+                "instagram",
+                "youtube"
+              ]
+            },
+            "external_post_id": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 120
+            },
+            "label": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "post_url": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "type": "string",
+                      "format": "uri",
+                      "maxLength": 1000
+                    }
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": ""
+                }
+              ]
+            }
+          },
+          "required": [
+            "lead_magnet_id",
+            "platform",
+            "external_post_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "unlink_lead_magnet_post",
+        "title": "Unlink social post from lead magnet",
+        "description": "Odłącza post od lead magnetu (po id powiązania albo platforma + id posta). Komentarze pod nim przestają dostawać link. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "post_link_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "platform": {
+              "type": "string",
+              "enum": [
+                "facebook",
+                "instagram",
+                "youtube"
+              ]
+            },
+            "external_post_id": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_lead_magnet_signups",
+        "title": "List lead magnet signups",
+        "description": "Zapisy na lead magnety (e-mail za materiał): kto, kiedy, skąd (page / facebook / instagram / youtube), ile razy pobrał, czy mail z linkiem doszedł. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_magnet_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko zapisy tego lead magnetu."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza w e-mailu lub imieniu."
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "page",
+                "facebook",
+                "instagram",
+                "youtube"
+              ],
+              "description": "Źródło: strona, komentarz FB / IG / YouTube."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_lead_magnet_triggers",
+        "title": "List lead magnet comment triggers",
+        "description": "Dziennik automatu social: komentarze (i polubienia) pod postami lead magnetów — kto, co napisał, czy pasowało hasło i co poszło w odpowiedzi (sent_both = DM + komentarz, sent_private, sent_public = link publicznie, failed, skipped = bez hasła, not_possible = polubienie); w trybie bez linku `awaiting_email` = czekamy na e-mail w wiadomości, `signup_id` = e-mail zebrany. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_magnet_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tylko ten lead magnet."
+            },
+            "platform": {
+              "type": "string",
+              "enum": [
+                "facebook",
+                "instagram",
+                "youtube"
+              ],
+              "description": "Kanał: facebook / instagram / youtube."
+            },
+            "matched": {
+              "type": "boolean",
+              "description": "Tylko dopasowane (true) albo pominięte (false)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Ile wierszy (domyślnie 20, maks. 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Przesunięcie do stronicowania (domyślnie 0)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "check_lead_magnet_youtube_comments",
+        "title": "Check YouTube comments for lead magnets now",
+        "description": "Uruchamia od razu to, co tick robi co 10 minut: czyta nowe komentarze pod filmami YouTube powiązanymi z opublikowanymi lead magnetami i odpowiada linkiem na te z hasłem (realna publikacja odpowiedzi). Facebook i Instagram obsługuje webhook na bieżąco. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_lead_magnet_copy",
+        "title": "Generate lead magnet copy from brief",
+        "description": "Z briefu (co jest w materiale, dla kogo) generuje tytuł, nagłówek, podnagłówek, listę korzyści, CTA, meta opis, hasła do komentarza i treść posta social. Nic nie zapisuje — wynik przekaż do `create_lead_magnet` / `update_lead_magnet`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brief": {
+              "type": "string",
+              "minLength": 10,
+              "maxLength": 4000
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "klient",
+                "inwestor"
+              ]
+            },
+            "platform": {
+              "type": "string",
+              "enum": [
+                "facebook",
+                "instagram",
+                "youtube"
+              ],
+              "default": "facebook"
+            }
+          },
+          "required": [
+            "brief",
+            "audience"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
         "name": "plan_seo_topics",
         "title": "Plan SEO blog topics (AI)",
         "description": "AI planuje `count` (3–20) tematów blogowych pod hasło / obszar `seed` (tytuł, słowo kluczowe, frazy dodatkowe, intencja, trudność, priorytet) i dodaje je do kolejki tematów SEO. Autopilot pisze z kolejki; jeden temat od ręki: `generate_seo_article`. Zużywa kredyty AI. Tylko administrator/operator.",

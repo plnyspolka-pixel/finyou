@@ -8159,6 +8159,329 @@ export type Database = {
           },
         ]
       }
+      lead_magnet_posts: {
+        Row: {
+          external_post_id: string
+          id: string
+          label: string | null
+          lead_magnet_id: string
+          linked_at: string
+          platform: string
+          post_url: string | null
+        }
+        Insert: {
+          external_post_id: string
+          id?: string
+          label?: string | null
+          lead_magnet_id: string
+          linked_at?: string
+          platform: string
+          post_url?: string | null
+        }
+        Update: {
+          external_post_id?: string
+          id?: string
+          label?: string | null
+          lead_magnet_id?: string
+          linked_at?: string
+          platform?: string
+          post_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_magnet_posts_lead_magnet_id_fkey"
+            columns: ["lead_magnet_id"]
+            isOneToOne: false
+            referencedRelation: "lead_magnets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_magnet_signups: {
+        Row: {
+          consent: boolean
+          consent_text: string | null
+          created_at: string
+          download_count: number
+          download_token: string
+          email: string
+          email_error: string | null
+          email_sent_at: string | null
+          first_downloaded_at: string | null
+          first_name: string | null
+          id: string
+          ip_address: string | null
+          last_downloaded_at: string | null
+          lead_id: string | null
+          lead_magnet_id: string
+          source: string | null
+          source_ref: string | null
+          subscriber_id: string | null
+          updated_at: string
+          user_agent: string | null
+          utm: Json | null
+        }
+        Insert: {
+          consent?: boolean
+          consent_text?: string | null
+          created_at?: string
+          download_count?: number
+          download_token: string
+          email: string
+          email_error?: string | null
+          email_sent_at?: string | null
+          first_downloaded_at?: string | null
+          first_name?: string | null
+          id?: string
+          ip_address?: string | null
+          last_downloaded_at?: string | null
+          lead_id?: string | null
+          lead_magnet_id: string
+          source?: string | null
+          source_ref?: string | null
+          subscriber_id?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          utm?: Json | null
+        }
+        Update: {
+          consent?: boolean
+          consent_text?: string | null
+          created_at?: string
+          download_count?: number
+          download_token?: string
+          email?: string
+          email_error?: string | null
+          email_sent_at?: string | null
+          first_downloaded_at?: string | null
+          first_name?: string | null
+          id?: string
+          ip_address?: string | null
+          last_downloaded_at?: string | null
+          lead_id?: string | null
+          lead_magnet_id?: string
+          source?: string | null
+          source_ref?: string | null
+          subscriber_id?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          utm?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_magnet_signups_lead_magnet_id_fkey"
+            columns: ["lead_magnet_id"]
+            isOneToOne: false
+            referencedRelation: "lead_magnets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_magnet_signups_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "email_subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_magnet_triggers: {
+        Row: {
+          author_id: string | null
+          awaiting_email: boolean
+          author_name: string | null
+          comment_text: string | null
+          created_at: string
+          email_reminded_at: string | null
+          external_comment_id: string | null
+          external_post_id: string | null
+          id: string
+          kind: string
+          lead_id: string | null
+          lead_magnet_id: string
+          matched: boolean
+          platform: string
+          reply_error: string | null
+          reply_status: string
+          signup_id: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          awaiting_email?: boolean
+          author_name?: string | null
+          comment_text?: string | null
+          created_at?: string
+          email_reminded_at?: string | null
+          external_comment_id?: string | null
+          external_post_id?: string | null
+          id?: string
+          kind?: string
+          lead_id?: string | null
+          lead_magnet_id: string
+          matched?: boolean
+          platform: string
+          reply_error?: string | null
+          reply_status?: string
+          signup_id?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          awaiting_email?: boolean
+          author_name?: string | null
+          comment_text?: string | null
+          created_at?: string
+          email_reminded_at?: string | null
+          external_comment_id?: string | null
+          external_post_id?: string | null
+          id?: string
+          kind?: string
+          lead_id?: string | null
+          lead_magnet_id?: string
+          matched?: boolean
+          platform?: string
+          reply_error?: string | null
+          reply_status?: string
+          signup_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_magnet_triggers_signup_id_fkey"
+            columns: ["signup_id"]
+            isOneToOne: false
+            referencedRelation: "lead_magnet_signups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_magnet_triggers_lead_magnet_id_fkey"
+            columns: ["lead_magnet_id"]
+            isOneToOne: false
+            referencedRelation: "lead_magnets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_magnets: {
+        Row: {
+          audience: string
+          benefits: string[]
+          cover_image_url: string | null
+          create_crm_lead: boolean
+          created_at: string
+          created_by: string | null
+          cta_text: string
+          download_count: number
+          email_body: string
+          email_in_dm_platforms: string[]
+          email_subject: string
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          file_url: string | null
+          headline: string
+          id: string
+          instant_download: boolean
+          match_any_post: boolean
+          meta_description: string | null
+          mime_type: string | null
+          og_image_url: string | null
+          published: boolean
+          reply_ask_email_template: string
+          reply_email_received_template: string
+          reply_fallback_template: string
+          reply_private_template: string
+          reply_public_template: string
+          signup_count: number
+          slug: string
+          subheadline: string | null
+          subscriber_tags: string[]
+          thank_you_message: string
+          title: string
+          trigger_count: number
+          trigger_keywords: string[]
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          audience: string
+          benefits?: string[]
+          cover_image_url?: string | null
+          create_crm_lead?: boolean
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string
+          download_count?: number
+          email_body?: string
+          email_in_dm_platforms?: string[]
+          email_subject?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          headline: string
+          id?: string
+          instant_download?: boolean
+          match_any_post?: boolean
+          meta_description?: string | null
+          mime_type?: string | null
+          og_image_url?: string | null
+          published?: boolean
+          reply_ask_email_template?: string
+          reply_email_received_template?: string
+          reply_fallback_template?: string
+          reply_private_template?: string
+          reply_public_template?: string
+          signup_count?: number
+          slug: string
+          subheadline?: string | null
+          subscriber_tags?: string[]
+          thank_you_message?: string
+          title: string
+          trigger_count?: number
+          trigger_keywords?: string[]
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          audience?: string
+          benefits?: string[]
+          cover_image_url?: string | null
+          create_crm_lead?: boolean
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string
+          download_count?: number
+          email_body?: string
+          email_in_dm_platforms?: string[]
+          email_subject?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          headline?: string
+          id?: string
+          instant_download?: boolean
+          match_any_post?: boolean
+          meta_description?: string | null
+          mime_type?: string | null
+          og_image_url?: string | null
+          published?: boolean
+          reply_ask_email_template?: string
+          reply_email_received_template?: string
+          reply_fallback_template?: string
+          reply_private_template?: string
+          reply_public_template?: string
+          signup_count?: number
+          slug?: string
+          subheadline?: string | null
+          subscriber_tags?: string[]
+          thank_you_message?: string
+          title?: string
+          trigger_count?: number
+          trigger_keywords?: string[]
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           application_data: Json
@@ -13106,6 +13429,7 @@ export type Database = {
       }
       kw_clear_quota_block: { Args: never; Returns: Json }
       kw_reset_order_attempts: { Args: { _kw: string }; Returns: Json }
+      lead_magnet_increment_views: { Args: { p_id: string }; Returns: undefined }
       list_public_loan_proposals: {
         Args: never
         Returns: {
