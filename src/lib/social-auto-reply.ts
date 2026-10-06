@@ -203,11 +203,12 @@ ODPOWIEDZ ("reply"), gdy:
 
 ODEŚLIJ NA STRONĘ ("redirect", pole "reply" zostaw puste — tekst wstawi system), gdy:
 - pytanie dotyczy konkretnej pożyczki, inwestycji, wniosku, umowy albo sprawy tej osoby;
-- ktoś pyta o konkretne kwoty, oprocentowanie, prowizje, raty, terminy albo warunki (dla siebie lub ogólnie).
+- ktoś pyta o konkretne kwoty, oprocentowanie, prowizje, raty, terminy albo warunki (dla siebie lub ogólnie);
+- ktoś pisze o swoich długach, zadłużeniu, komorniku, egzekucji albo pyta, czy dostanie finansowanie mimo nich.
 
 ESKALUJ ("escalate"), gdy:
 - to skarga, reklamacja, niezadowolenie, oskarżenie (oszustwo, lichwa, naciąganie), groźba prawna, wzmianka o prawniku, sądzie, UOKiK, KNF, policji;
-- komentarz zawiera dane osobowe albo dotyczy długów, komornika, zdrowia;
+- komentarz zawiera dane osobowe (telefon, e-mail, PESEL, adres, numer księgi wieczystej) albo dotyczy zdrowia;
 - pisze dziennikarz, partner biznesowy, ktoś proponuje współpracę;
 - nie masz pewności, co odpowiedzieć.
 
