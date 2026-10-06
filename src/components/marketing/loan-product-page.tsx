@@ -200,7 +200,7 @@ export function LoanProductPage({ slug }: { slug: string }) {
           <SectionHead
             eyebrow="Procedura"
             title="Od wniosku przez notariusza do wypłaty"
-            sub="Siedem kroków — każdy etap widzisz w panelu klienta."
+            sub="Pięć kroków — każdy etap widzisz w panelu klienta."
           />
           <ol style={{ margin: "2rem 0 0", padding: 0, listStyle: "none", display: "grid" }}>
             {steps.map((s, i) => (

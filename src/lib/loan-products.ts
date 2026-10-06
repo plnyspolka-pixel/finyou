@@ -42,10 +42,6 @@ export function procedureSteps(docsHint: string): LoanProductStep[] {
       d: `Bez wizyt w oddziale i stosu zaświadczeń — podajesz miejscowość, numer księgi wieczystej, dodajesz zdjęcia i dane kontaktowe. ${docsHint} Zgłoszenie jest bezpłatne i do niczego nie zobowiązuje.`,
     },
     {
-      t: "Analizę bierzemy na siebie",
-      d: "Sami sprawdzamy księgę wieczystą, szacujemy wartość nieruchomości na podstawie danych rynkowych i przygotowujemy sprawę tak, aby inwestor mógł szybko podjąć decyzję. Ty nie musisz niczego dosyłać, dopóki o to nie poprosimy.",
-    },
-    {
       t: "Decyzja zwykle w 24 godziny",
       d: "Twoja sprawa trafia jednocześnie do wielu prywatnych inwestorów i partnerów finansowych. Zamiast chodzić od banku do banku, dostajesz propozycje w jednym miejscu — z kwotą, okresem i harmonogramem spłaty.",
     },
@@ -58,12 +54,8 @@ export function procedureSteps(docsHint: string): LoanProductStep[] {
       d: "Organizujemy termin w kancelarii notarialnej blisko Ciebie. Notariusz odczytuje umowę i ustanawia hipotekę — to najbezpieczniejsza forma dla obu stron, a całe spotkanie trwa zwykle około godziny.",
     },
     {
-      t: "Hipoteka zgłoszona od ręki",
-      d: "Notariusz od razu, elektronicznie składa wniosek o wpis hipoteki do księgi wieczystej. Nie musisz chodzić do sądu ani wypełniać formularzy — wzmianka pojawia się w księdze zwykle w 1–2 dni robocze.",
-    },
-    {
-      t: "Pieniądze na Twoim koncie",
-      d: "Środki trafiają przelewem na rachunek wskazany w umowie — zwykle w ciągu kilku dni od podpisania aktu. Od wniosku do wypłaty mija często mniej niż dwa tygodnie.",
+      t: "Pieniądze na Twoim koncie nawet w 2–3 dni od złożenia wniosku",
+      d: "Środki trafiają przelewem na rachunek wskazany w umowie.",
     },
   ];
 }
