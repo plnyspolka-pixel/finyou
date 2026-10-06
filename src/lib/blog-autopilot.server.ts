@@ -1,4 +1,4 @@
-// Codzienny bot blogowy: zbiera świeże newsy finansowe (Google News RSS — darmowe,
+// Cotygodniowy bot blogowy: zbiera świeże newsy finansowe (Google News RSS — darmowe,
 // bez klucza), Lovable AI Gateway układa z nich briefing i pisze artykuł SEO,
 // dobiera okładkę i publikuje z linkami wewnętrznymi (do innych artykułów na blogu)
 // i zewnętrznymi (źródłami z RSS).
@@ -314,7 +314,7 @@ async function writeArticleFromNews(
       ? "Napisz dogłębny PRZEGLĄD INWESTYCYJNY porównujący klasy aktywów. Tytuł musi być porównawczy (np. zawierać 'vs', 'porównanie', 'ranking', 'co się bardziej opłaca')."
       : kind === "legal_market_monitor"
         ? "Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia', datę tygodnia, 'Co zmieniło się w prawie i na rynku nieruchomości') — bez clickbaitu."
-        : `Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
+        : `Napisz cotygodniowy post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
 
   const userMsg = `${briefLabel}
 ${brief.summary}
@@ -395,9 +395,10 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
 }> {
   if (!process.env.LOVABLE_API_KEY) return { ok: false, reason: "LOVABLE_API_KEY missing" };
 
-  // Nie publikuj 2 razy tego samego dnia (chyba że force=1)
+  // Automat publikuje raz w tygodniu — nie publikuj, jeśli ostatni wpis był
+  // w ciągu ostatnich ~6 dni (chyba że force=1)
   if (!opts.force) {
-    const since = new Date(Date.now() - 20 * 3600 * 1000).toISOString();
+    const since = new Date(Date.now() - 6 * 24 * 3600 * 1000).toISOString();
     const { data: recent } = await supabaseAdmin
       .from("ai_seo_articles")
       .select("id")
@@ -405,7 +406,7 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       .gte("published_at", since)
       .limit(1);
     if (recent && recent.length > 0) {
-      return { ok: true, reason: "already published today" };
+      return { ok: true, reason: "already published this week" };
     }
   }
 
