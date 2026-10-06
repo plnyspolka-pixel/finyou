@@ -223,21 +223,57 @@ export async function createHeygenVideoFromAudio(opts: {
    * dźwięku, a IG/FB Reels nie przyjmują osobnej ścieżki napisów.
    */
   captions?: CaptionMode;
-}): Promise<HeygenVideoResult> {
+  /** Domyślnie 720p (dotychczasowe filmy FAQ / landing); Studio podaje 1080p. */
+  resolution?: "720p" | "1080p";
+  /**
+   * `cover` wypełnia kadr 9:16 także poziomym lookiem (przycina boki) — bez
+   * pasów; pominięte = wybór HeyGena.
+   */
+  fit?: "cover" | "contain";
+  /** `avatar_v` = najwyższa wierność (gdy look obsługuje); pominięte = Avatar IV. */
+  engine?: "avatar_v" | null;
+}): Promise<HeygenVideoResult & { engineFallback: string | null }> {
   // Uwaga: API v3 przyjmuje wyłącznie type 'avatar' / 'image' /
   // 'cinematic_avatar' / 'studio' — awatary "foto" (talking photo) też idą
   // jako 'avatar' z avatar_id (tak działała dotychczasowa sztywna lista).
-  return sendVideoCreate(
-    {
-      type: "avatar",
-      avatar_id: opts.avatarId,
-      audio_asset_id: opts.audioAssetId,
-      aspect_ratio: "9:16",
-      resolution: "720p",
-      background: { type: "color", value: "#101728" },
-    },
-    opts.captions ?? "burned",
+  const base: Record<string, unknown> = {
+    type: "avatar",
+    avatar_id: opts.avatarId,
+    audio_asset_id: opts.audioAssetId,
+    aspect_ratio: "9:16",
+    resolution: opts.resolution ?? "720p",
+    background: { type: "color", value: "#101728" },
+    ...(opts.fit ? { fit: opts.fit } : {}),
+  };
+  return withEngineFallback(opts.engine ?? null, (engine) =>
+    sendVideoCreate(
+      engine ? { ...base, engine: { type: engine } } : base,
+      opts.captions ?? "burned",
+    ),
   );
+}
+
+/**
+ * Avatar V bywa niedostępny dla konkretnego looka (brak referencji, zgoda
+ * digital twina) — wtedy HeyGen odrzuca zlecenie. Zamiast tracić rolkę
+ * ponawiamy raz na domyślnym silniku i zostawiamy ślad w `engineFallback`.
+ */
+export async function withEngineFallback<T>(
+  engine: "avatar_v" | null,
+  send: (engine: "avatar_v" | null) => Promise<T>,
+): Promise<T & { engineFallback: string | null }> {
+  if (!engine) return { ...(await send(null)), engineFallback: null };
+  try {
+    return { ...(await send(engine)), engineFallback: null };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/engine|avatar_v|reference|consent|not supported|unsupported/i.test(msg)) throw e;
+    console.warn(`[HeyGen] Avatar V odrzucony — ponawiam na domyślnym silniku: ${msg}`);
+    return {
+      ...(await send(null)),
+      engineFallback: `Avatar V odrzucony przez HeyGen (${msg.slice(0, 200)}) — render na Avatar IV.`,
+    };
+  }
 }
 
 // Biblioteka stocku HeyGena (`GET /v3/assets/search`) — obrazy i ikony, BEZ
@@ -286,10 +322,17 @@ export async function searchHeygenStockImages(
 export async function createHeygenStudioVideo(opts: {
   scenes: HeygenStudioScene[];
   captions?: CaptionMode;
+  /** Domyślnie 720p; Studio podaje rozdzielczość z ustawień jakości (1080p). */
+  resolution?: "720p" | "1080p";
 }): Promise<HeygenVideoResult> {
   if (!opts.scenes.length) throw new Error("HeyGen studio: pusta lista scen");
   return sendVideoCreate(
-    { type: "studio", aspect_ratio: "9:16", resolution: "720p", scenes: opts.scenes },
+    {
+      type: "studio",
+      aspect_ratio: "9:16",
+      resolution: opts.resolution ?? "720p",
+      scenes: opts.scenes,
+    },
     opts.captions ?? "burned",
   );
 }

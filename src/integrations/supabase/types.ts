@@ -12188,6 +12188,7 @@ export type Database = {
           publish_title: string
           reel_structure: boolean
           render_engine: string
+          render_meta: Json | null
           resolution: string
           scene_plan: Json | null
           script: string
@@ -12229,6 +12230,7 @@ export type Database = {
           publish_title?: string
           reel_structure?: boolean
           render_engine?: string
+          render_meta?: Json | null
           resolution?: string
           scene_plan?: Json | null
           script: string
@@ -12270,6 +12272,7 @@ export type Database = {
           publish_title?: string
           reel_structure?: boolean
           render_engine?: string
+          render_meta?: Json | null
           resolution?: string
           scene_plan?: Json | null
           script?: string

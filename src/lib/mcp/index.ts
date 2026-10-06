@@ -62,6 +62,7 @@ import { twilioTools } from "./tools/twilio";
 import { metaTools } from "./tools/meta";
 import { youtubeTools } from "./tools/youtube";
 import { heygenTools } from "./tools/heygen";
+import { studioQualityTools } from "./tools/studio-quality";
 import { googleTools } from "./tools/google";
 import { supabaseTools } from "./tools/supabase";
 import { storageRepairTools } from "./tools/storage-repair";
@@ -141,6 +142,7 @@ export default defineMcp({
     ...metaTools,
     ...youtubeTools,
     ...heygenTools,
+    ...studioQualityTools,
     ...googleTools,
     ...supabaseTools,
     ...storageRepairTools,

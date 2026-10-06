@@ -28,3 +28,7 @@ services:
       # kodowania i tak jest pilnowany po stronie Finance You (2 h).
       - key: TRANSCODE_TIMEOUT_SECONDS
         value: "5400"
+      # Rolki Studia idą w 1080p (2,25× pikseli względem 720p) — wypalanie
+      # napisów na 0,1 vCPU potrzebuje więcej niż domyślne 20 min.
+      - key: FFMPEG_TIMEOUT_SECONDS
+        value: "3600"

@@ -266,4 +266,17 @@ describe("buildStudioScenes — awatar per scena", () => {
     });
     expect(scenes[0]).toMatchObject({ type: "avatar_video", input: { avatar_id: "B" } });
   });
+
+  it("Avatar V tylko dla awatarów z mapy silników", () => {
+    const plan = planReelStructure(["Hook.", "Treść.", "Więcej treści.", "CTA."], {
+      avatarIds: ["A", "B"],
+    });
+    const scenes = buildStudioScenes(
+      plan.map((item, i) => ({ item, audioAssetId: `a${i}`, imageUrl: null })),
+      { avatarId: "zapas", engines: { A: "avatar_v", B: null } },
+    );
+    expect(scenes[0]).toMatchObject({ input: { avatar_id: "A", engine: { type: "avatar_v" } } });
+    const b = scenes.find((sc) => sc.type === "avatar_video" && sc.input.avatar_id === "B");
+    expect(b && "input" in b ? b.input.engine : "brak").toBeUndefined();
+  });
 });

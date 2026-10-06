@@ -47,6 +47,13 @@ import {
 } from "./studio-narration";
 import { cuesFromAlignment, cuesToSrt, shiftCues } from "./studio-subtitles";
 import { DEFAULT_TTS_MODEL_ID, parseTtsModelId, type TtsModelId } from "./studio-tts-models";
+import {
+  letterboxBlockMessage,
+  letterboxedAvatars,
+  type AvatarQuality,
+  type RenderMeta,
+  type StudioQualitySettings,
+} from "./studio-quality";
 
 export type StudioRenderResult = {
   videoId: string;
@@ -58,6 +65,8 @@ export type StudioRenderResult = {
   ttsModelId: TtsModelId;
   /** Dlaczego urozmaicenie nie doszło do skutku (do pokazania w panelu). */
   note: string | null;
+  /** Czym i jak powstał obraz — zapisywane w `studio_video_jobs.render_meta`. */
+  renderMeta: RenderMeta;
 };
 
 type RenderArgs = {
@@ -76,7 +85,80 @@ type RenderArgs = {
   avatarIds?: string[];
   /** Czytelna nazwa do pliku SRT w Storage (tytuł publikacji / temat). */
   name?: string;
+  /** Świadome dopuszczenie poziomych looków w sklejce scen (pasy w kadrze). */
+  allowLetterbox?: boolean;
+  /** Ustawienia jakości; brak = z `studio_settings` (rozdzielczość, silnik, polityka). */
+  quality?: StudioQualitySettings;
 };
+
+type Ctx = {
+  modelId: TtsModelId;
+  quality: StudioQualitySettings;
+};
+
+function buildMeta(
+  args: RenderArgs,
+  ctx: Ctx,
+  m: {
+    videoType: "studio" | "avatar";
+    avatars: AvatarQuality[];
+    brollScenes: number;
+    engineFallback: string | null;
+  },
+): RenderMeta {
+  const warnings: string[] = [];
+  if (m.videoType === "studio") {
+    for (const a of letterboxedAvatars(m.avatars)) {
+      warnings.push(`Pasy w kadrze: ${a.name ?? a.id} — ${a.verdict}.`);
+    }
+  } else if (m.avatars[0]?.orientation === "landscape") {
+    warnings.push(
+      `Pojedyncze ujęcie z poziomego looka (${m.avatars[0].name ?? m.avatars[0].id}) — kadr wypełniony (cover), boki przycięte.`,
+    );
+  }
+  for (const a of m.avatars) {
+    if (a.orientation === "unknown") warnings.push(`Nieznana orientacja: ${a.name ?? a.id}.`);
+  }
+  if (m.engineFallback) warnings.push(m.engineFallback);
+  if (ctx.quality.resolution !== "1080p")
+    warnings.push(`Rozdzielczość ${ctx.quality.resolution} (nie 1080p).`);
+  return {
+    version: 1,
+    rendered_at: new Date().toISOString(),
+    compositor: m.videoType === "studio" ? "heygen_studio_v3" : "heygen_avatar_v3",
+    remotion: false,
+    tts: { provider: "elevenlabs", model: ctx.modelId },
+    heygen: {
+      video_type: m.videoType,
+      aspect_ratio: "9:16",
+      resolution: ctx.quality.resolution,
+      fit: m.videoType === "studio" ? "contain" : "cover",
+      engine_fallback: m.engineFallback,
+    },
+    avatars: m.engineFallback ? m.avatars.map((a) => ({ ...a, engine: null })) : m.avatars,
+    broll_scenes: m.brollScenes,
+    settings: ctx.quality,
+    allow_letterbox: args.allowLetterbox === true,
+    warnings,
+  };
+}
+
+/**
+ * Zapis metryki renderu przy zadaniu — osobnym, niekrytycznym update'em:
+ * brak kolumny (migracja jeszcze nie weszła) nie może zgubić `heygen_video_id`.
+ */
+export async function saveRenderMeta(jobId: string, meta: RenderMeta): Promise<void> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("studio_video_jobs")
+      .update({ render_meta: meta as never })
+      .eq("id", jobId);
+    if (error) console.warn(`[Studio] render_meta (${jobId}): ${error.message}`);
+  } catch (e) {
+    console.warn(`[Studio] render_meta (${jobId}): ${e instanceof Error ? e.message : e}`);
+  }
+}
 
 const AVATAR_BACKGROUND = "#101728";
 /** HeyGen nie dostaje zlecenia na napisy — wypalamy je sami z własnego SRT. */
@@ -212,26 +294,40 @@ async function narrateWithSubtitles(
   }
 }
 
-/** Pojedyncze ujęcie: jeden lektor, jeden render awatara. */
+/**
+ * Pojedyncze ujęcie: jeden lektor, jeden render awatara. `fit: cover` —
+ * kadr 9:16 zawsze pełny, także z poziomego looka (przycięte boki, bez pasów).
+ */
 async function renderSingleShot(
   args: RenderArgs,
-  modelId: TtsModelId,
+  ctx: Ctx,
   note: string | null,
 ): Promise<StudioRenderResult> {
   const { uploadAudioToHeygen, createHeygenVideoFromAudio } = await import("./avatar-faq.server");
-  const narration = await narrateWithSubtitles(args, modelId, [args.script]);
+  const { assessAvatars } = await import("./studio-quality.server");
+  const [lead] = await assessAvatars([args.avatarId], ctx.quality);
+  const narration = await narrateWithSubtitles(args, ctx.modelId, [args.script]);
   const assetId = await uploadAudioToHeygen(narration.pieces[0]);
   const created = await createHeygenVideoFromAudio({
     avatarId: args.avatarId,
     audioAssetId: assetId,
     captions: HEYGEN_CAPTIONS,
+    resolution: ctx.quality.resolution,
+    fit: "cover",
+    engine: lead?.engine ?? null,
   });
   return {
     videoId: created.videoId,
     scenePlan: null,
     subtitleUrl: narration.subtitleUrl,
-    ttsModelId: modelId,
-    note: [note, narration.note].filter(Boolean).join(" ") || null,
+    ttsModelId: ctx.modelId,
+    note: [note, narration.note, created.engineFallback].filter(Boolean).join(" ") || null,
+    renderMeta: buildMeta(args, ctx, {
+      videoType: "avatar",
+      avatars: lead ? [lead] : [],
+      brollScenes: 0,
+      engineFallback: created.engineFallback,
+    }),
   };
 }
 
@@ -264,29 +360,36 @@ async function planByAi(args: RenderArgs, segments: string[]): Promise<ScenePlan
 
 export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderResult> {
   const modelId = parseTtsModelId(args.ttsModelId, DEFAULT_TTS_MODEL_ID);
+  const { getStudioQualitySettings, assessAvatars } = await import("./studio-quality.server");
+  const ctx: Ctx = { modelId, quality: args.quality ?? (await getStudioQualitySettings()) };
   const structured = args.reelStructure === true;
-  if (!args.dynamicScenes && !structured) return renderSingleShot(args, modelId, null);
+  if (!args.dynamicScenes && !structured) return renderSingleShot(args, ctx, null);
 
   const segments = splitScriptIntoSegments(args.script);
   if (segments.length < MIN_SCENES_FOR_BROLL) {
-    return renderSingleShot(
-      args,
-      modelId,
-      "Urozmaicenie pominięte: scenariusz za krótki na cięcia.",
-    );
+    return renderSingleShot(args, ctx, "Urozmaicenie pominięte: scenariusz za krótki na cięcia.");
   }
+
+  // Sklejka scen nie przycina awatara — poziomy look = pasy w kadrze 9:16.
+  // Sprawdzamy, ZANIM pójdą kredyty ElevenLabs i HeyGen.
+  const avatars = await assessAvatars(avatarRotation(args), ctx.quality);
+  const letterboxed = letterboxedAvatars(avatars);
+  if (letterboxed.length && ctx.quality.landscapePolicy === "block" && !args.allowLetterbox) {
+    throw new Error(letterboxBlockMessage(letterboxed));
+  }
+  const engines = Object.fromEntries(avatars.map((a) => [a.id, a.engine]));
 
   let plan: ScenePlanItem[];
   try {
     plan = structured ? await planStructured(args, segments) : await planByAi(args, segments);
   } catch (e) {
     console.warn(`[Studio] planowanie scen nieudane: ${e instanceof Error ? e.message : e}`);
-    return renderSingleShot(args, modelId, "Urozmaicenie pominięte: planer scen nie odpowiedział.");
+    return renderSingleShot(args, ctx, "Urozmaicenie pominięte: planer scen nie odpowiedział.");
   }
   if (!planHasBroll(plan)) {
     return renderSingleShot(
       args,
-      modelId,
+      ctx,
       "Urozmaicenie pominięte: AI nie wskazało sensownych ilustracji.",
     );
   }
@@ -318,7 +421,7 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
   if (!images.some(Boolean)) {
     return renderSingleShot(
       args,
-      modelId,
+      ctx,
       "Urozmaicenie pominięte: brak materiałów w banku b-rolli i w stocku.",
     );
   }
@@ -337,12 +440,22 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
     });
   }
 
-  const scenes = buildStudioScenes(resolved, {
-    avatarId: args.avatarId,
-    backgroundColor: AVATAR_BACKGROUND,
-  });
+  const { withEngineFallback } = await import("./avatar-faq.server");
   try {
-    const created = await createHeygenStudioVideo({ scenes, captions: HEYGEN_CAPTIONS });
+    // Avatar V per look; gdy HeyGen go odrzuci — cała sklejka raz jeszcze na
+    // domyślnym silniku, zamiast schodzić na pojedyncze ujęcie.
+    const wantsV = Object.values(engines).some(Boolean) ? ("avatar_v" as const) : null;
+    const created = await withEngineFallback(wantsV, (engine) =>
+      createHeygenStudioVideo({
+        scenes: buildStudioScenes(resolved, {
+          avatarId: args.avatarId,
+          backgroundColor: AVATAR_BACKGROUND,
+          engines: engine ? engines : undefined,
+        }),
+        captions: HEYGEN_CAPTIONS,
+        resolution: ctx.quality.resolution,
+      }),
+    );
     // Zużycie odnotowujemy dopiero, gdy render faktycznie ruszył — inaczej
     // nieudana próba przesuwałaby rotację banku.
     await markBrollUsed([...usedAssets]).catch((e) =>
@@ -356,16 +469,25 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
           ? { kind: "avatar", text: item.text, query: null, avatarId: item.avatarId ?? null }
           : item,
     );
+    const used = new Set(
+      effective.filter((i) => i.kind === "avatar").map((i) => i.avatarId || args.avatarId),
+    );
     return {
       videoId: created.videoId,
       scenePlan: effective,
       subtitleUrl: narration.subtitleUrl,
       ttsModelId: modelId,
-      note: narration.note,
+      note: [narration.note, created.engineFallback].filter(Boolean).join(" ") || null,
+      renderMeta: buildMeta(args, ctx, {
+        videoType: "studio",
+        avatars: avatars.filter((a) => used.has(a.id)),
+        brollScenes: effective.filter((i) => i.kind !== "avatar").length,
+        engineFallback: created.engineFallback,
+      }),
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.warn(`[Studio] render wieloscenowy nieudany, schodzę na jedno ujęcie: ${msg}`);
-    return renderSingleShot(args, modelId, `Urozmaicenie pominięte: render scen odrzucony.`);
+    return renderSingleShot(args, ctx, `Urozmaicenie pominięte: render scen odrzucony.`);
   }
 }

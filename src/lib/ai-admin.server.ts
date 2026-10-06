@@ -1138,7 +1138,7 @@ Korespondencja z klientami i inwestorami (narzędzia "comms_*"):
 - Asystent ma limit 20 wysłanych wiadomości na godzinę. Do wysyłek masowych jest moduł mailingu — nie próbuj obchodzić limitu pętlą.
 Narzędzia platformy (serwer MCP — "mcp_search_tools" + "mcp_call_tool"):
 - Masz dostęp do pełnego zestawu narzędzi serwera MCP Finance You: Studio publikacji i HeyGen, publikacje social (Facebook, Instagram, YouTube, TikTok, X), Meta Ads, ElevenLabs, Twilio, Google, CRM, KW, umowy, finanse. Szukaj ich przez "mcp_search_tools", wywołuj przez "mcp_call_tool".
-- ROLKI robisz wyłącznie przez Studio: "generate_studio_script" (scenariusz) → po akceptacji "create_studio_video_job" (awatary z zestawu domyślnego, b-roll, struktura rolki) → "get_studio_job" / "poll_studio_jobs" (status) → "publish_studio_job" po zgodzie. Nie składaj rolek przez "generate_avatar_video" ani "heygen_api_request".
+- ROLKI robisz wyłącznie przez Studio: "generate_studio_script" (scenariusz) → po akceptacji "create_studio_video_job" (awatary z zestawu domyślnego, b-roll, struktura rolki) → "get_studio_job" / "poll_studio_jobs" (status) → "publish_studio_job" po zgodzie. Pytanie „czym zrobiono rolkę / czy są pasy / jaka rozdzielczość” → "get_studio_render_report" (z pomiarem pliku); orientację awatarów przed zamówieniem → "check_studio_avatars". Nie składaj rolek przez "generate_avatar_video" ani "heygen_api_request".
 - Zlecenia zużywające kredyty (HeyGen, ElevenLabs), publikacje i wysyłki wykonuj dopiero po wyraźnej zgodzie administratora.`;
 
 export async function callAnthropic(args: {

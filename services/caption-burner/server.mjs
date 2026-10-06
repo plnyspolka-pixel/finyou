@@ -48,6 +48,7 @@ import {
   planEncode,
   summarizeProbe,
 } from "./transcode-plan.mjs";
+import { BANDS, parseSignalstats, sampleTimes, summarizeFrameCheck } from "./frame-check.mjs";
 
 const env = (key, fallback) => {
   const v = process.env[key];
@@ -389,6 +390,57 @@ function compactSummary(s) {
 }
 
 /**
+ * Pasy brzegowe jednej klatki (chwila `t`): jeden przebieg FFmpega, cztery
+ * wycinki z `signalstats` zapisane do plików w katalogu zadania.
+ */
+async function bandsAt(job, t) {
+  const names = Object.keys(BANDS);
+  const labels = names.map((_, i) => `b${i}`);
+  const graph = [
+    `[0:v]split=${names.length}${labels.map((l) => `[${l}]`).join("")}`,
+    ...names.map(
+      (name, i) =>
+        `[${labels[i]}]${BANDS[name]},signalstats,metadata=mode=print:file=band-${name}.txt[o${i}]`,
+    ),
+  ].join(";");
+  const args = ["-y", "-hide_banner", "-loglevel", "error", "-ss", String(t), "-i", "in.mp4"];
+  args.push("-filter_complex", graph);
+  names.forEach((_, i) => args.push("-map", `[o${i}]`, "-frames:v", "1", "-f", "null", "-"));
+  const bands = {};
+  try {
+    await runFfmpeg(args, job.dir, 120_000);
+    for (const name of names) {
+      const file = path.join(job.dir, `band-${name}.txt`);
+      bands[name] = parseSignalstats(await readFile(file, "utf8").catch(() => ""));
+      await rm(file, { force: true }).catch(() => {});
+    }
+  } catch (e) {
+    console.warn(`[${job.id}] kontrola kadru w ${t}s: ${e.message}`);
+  }
+  return { t, bands };
+}
+
+/** Pomiar gotowego filmu: ffprobe (wymiary, kodeki, bitrate) + kontrola pasów w kadrze. */
+async function probeVideo(job) {
+  const summary = summarizeProbe(await ffprobe(path.join(job.dir, "in.mp4")));
+  const samples = [];
+  for (const t of sampleTimes(summary.duration, job.samples ?? 8)) {
+    samples.push(await bandsAt(job, t));
+  }
+  job.output = {
+    ...compactSummary(summary),
+    bit_rate_kbps: summary.bit_rate ? Math.round(summary.bit_rate / 1000) : null,
+    pix_fmt: summary.video?.pix_fmt ?? null,
+    profile: summary.video?.profile ?? null,
+    audio_channels: summary.audio?.channels ?? null,
+    audio_sample_rate: summary.audio?.sample_rate ?? null,
+    frame_check: summarizeFrameCheck(samples),
+  };
+  job.bytes = summary.size;
+  job.note = "pomiar pliku (ffprobe + kontrola pasów)";
+}
+
+/**
  * Kompresja do profilu: probe → (zgodny? koniec) → kodowanie z budżetem
  * bitrate → gdy nadal za duży, druga próba z bitrate skorygowanym o nadwyżkę
  * → probe wyniku → upload na podpisany URL (gdy podany).
@@ -460,6 +512,7 @@ async function processJob(job) {
   try {
     job.input_bytes = await download(job.video_url, input);
     if (job.kind === "transcode") await transcodeToProfile(job);
+    else if (job.kind === "probe") await probeVideo(job);
     else await burnCaptions(job);
     job.status = "done";
   } catch (e) {
@@ -533,6 +586,8 @@ async function route(req, res) {
       ffmpeg: await ffmpegVersion(),
       ffprobe: await ffprobeAvailable(),
       transcode: true,
+      // Pomiar pliku (zadanie `probe`) — klient sprawdza tę flagę, zanim zleci.
+      probe: true,
       jobs: counts,
     });
     return;
@@ -543,8 +598,14 @@ async function route(req, res) {
   if (req.method === "POST" && parts.length === 1 && parts[0] === "jobs") {
     const body = await readJson(req, MAX_ASS_BYTES + 64 * 1024);
     const video_url = validateVideoUrl(body.video_url);
-    // Rodzaj zadania rozpoznajemy po treści: `ass` = napisy, inaczej kompresja.
-    const kind = body.ass !== undefined || body.kind === "caption" ? "caption" : "transcode";
+    // Rodzaj zadania rozpoznajemy po treści: `ass` = napisy, `probe` = pomiar,
+    // inaczej kompresja.
+    const kind =
+      body.ass !== undefined || body.kind === "caption"
+        ? "caption"
+        : body.kind === "probe"
+          ? "probe"
+          : "transcode";
     const id = randomUUID();
     const dir = path.join(WORK_DIR, id);
     const job = {
@@ -560,6 +621,9 @@ async function route(req, res) {
       const ass = validateAss(body.ass);
       await mkdir(dir, { recursive: true });
       await writeFile(path.join(dir, "subs.ass"), ass, "utf8");
+    } else if (kind === "probe") {
+      job.samples = Math.max(1, Math.min(24, Number(body.samples) || 8));
+      await mkdir(dir, { recursive: true });
     } else {
       job.target = parseTarget(body.target);
       job.upload_url = body.upload_url ? validateHttpsUrl(body.upload_url, "upload_url") : null;

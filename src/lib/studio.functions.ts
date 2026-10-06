@@ -622,6 +622,8 @@ export const startStudioVideo = createServerFn({ method: "POST" })
           last_error: rendered.note,
         })
         .eq("id", job.id);
+      const { saveRenderMeta } = await import("./studio-render.server");
+      await saveRenderMeta(job.id, rendered.renderMeta);
       return { ok: true, id: job.id as string };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

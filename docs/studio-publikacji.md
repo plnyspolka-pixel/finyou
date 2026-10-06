@@ -652,6 +652,37 @@ więc takie zadanie nie utknie w „rendering".
 Uwaga: materiały widzą wszyscy zalogowani, a kategoria to zakładka w portalu
 pośrednika — gotowa rolka jest tam od razu, zanim ktoś ją opublikuje.
 
+## Jakość obrazu rolki (1080p, Avatar V, bez pasów)
+
+**Kto składa rolkę.** Obraz składa HeyGen (API v3): sklejka scen `type: "studio"`
+(awatary + grafiki b-roll) albo pojedyncze ujęcie `type: "avatar"`. Lektor to
+ElevenLabs, napisy / znaczek „AI” / nakładki wypala usługa caption-burner
+(FFmpeg + libass). **Remotion nie bierze udziału** — `services/remotion` ma tylko
+testową kompozycję. Kolumna `studio_video_jobs.render_engine` (np. „auto”) nie jest
+używana przez kod; parametry renderu zapisuje `render_meta`.
+
+**Skąd pasy.** HeyGen w sklejce scen nie przycina sceny do kadru 9:16 — wpasowuje ją
+w całości i dopełnia tłem (#101728). Look nagrany poziomo (np. 1920×1080) daje więc
+granatowe pasy u góry i u dołu. Scena `avatar_video` nie ma pola `fit`; ma je tylko
+pojedyncze ujęcie, które zamawiamy z `fit: "cover"` (kadr zawsze pełny).
+
+**Ustawienia** (`studio_settings`, MCP `update_studio_settings`):
+
+| Klucz               | Domyślnie | Znaczenie                                                                                                                                                                           |
+| ------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `video_resolution`  | `1080p`   | Rozdzielczość renderu HeyGen (awatar natywnie do 1080p).                                                                                                                            |
+| `avatar_engine`     | `best`    | Avatar V tam, gdzie look go obsługuje (`supported_api_engines`); gdy HeyGen odrzuci — jedna powtórka na Avatar IV, ślad w `render_meta`.                                            |
+| `landscape_avatars` | `block`   | Rolka ze scenami z poziomym lookiem nie rusza — błąd z listą awatarów **przed** zużyciem kredytów ElevenLabs/HeyGen. `allow` = render z pasami; per zadanie `allow_letterbox=true`. |
+
+Orientację looków sprawdza `check_studio_avatars` (pionowe zamienniki z konta), gotową
+rolkę — `get_studio_render_report` i `inspect_video_file` (pomiar FFmpeg: wymiary,
+bitrate, pasy w kadrze; kontrola na czystym masterze, bo napisy i znaczek przy
+krawędzi mogłyby zamaskować pas).
+
+1080p to 2,25× więcej pikseli przy wypalaniu napisów — na darmowym planie Render
+(0,1 vCPU) limit FFmpega podniesiony do 60 min (`FFMPEG_TIMEOUT_SECONDS` w
+`render.yaml`).
+
 ## Znaczek „AI" w rogu rolki
 
 Każda rolka Studia dostaje w prawym górnym rogu mały znaczek **„AI"**

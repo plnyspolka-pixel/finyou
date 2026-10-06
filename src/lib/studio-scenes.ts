@@ -226,6 +226,8 @@ export type HeygenStudioScene =
         avatar_id: string;
         audio_asset_id: string;
         background?: { type: "color"; color: string };
+        /** Avatar V dla looków, które go obsługują; brak = domyślny silnik HeyGena. */
+        engine?: { type: "avatar_v" };
       };
     }
   | { type: "image"; source: { type: "url"; url: string }; audio_asset_id: string };
@@ -236,7 +238,12 @@ export type HeygenStudioScene =
  */
 export function buildStudioScenes(
   resolved: ResolvedScene[],
-  opts: { avatarId: string; backgroundColor?: string },
+  opts: {
+    avatarId: string;
+    backgroundColor?: string;
+    /** Silnik per awatar (id → `avatar_v`); awatara spoza mapy renderuje domyślny silnik. */
+    engines?: Record<string, "avatar_v" | null>;
+  },
 ): HeygenStudioScene[] {
   return resolved.map(({ item, audioAssetId, imageUrl }) => {
     if (item.kind !== "avatar" && imageUrl) {
@@ -246,17 +253,20 @@ export function buildStudioScenes(
         audio_asset_id: audioAssetId,
       };
     }
+    // Scena niesie własnego awatara (rotacja a-rolli); `opts.avatarId`
+    // to zapasowy mówca, gdy plan nie wskazał nikogo.
+    const avatarId = item.avatarId || opts.avatarId;
+    const engine = opts.engines?.[avatarId] ?? null;
     return {
       type: "avatar_video" as const,
       input: {
         type: "avatar" as const,
-        // Scena niesie własnego awatara (rotacja a-rolli); `opts.avatarId`
-        // to zapasowy mówca, gdy plan nie wskazał nikogo.
-        avatar_id: item.avatarId || opts.avatarId,
+        avatar_id: avatarId,
         audio_asset_id: audioAssetId,
         ...(opts.backgroundColor
           ? { background: { type: "color" as const, color: opts.backgroundColor } }
           : {}),
+        ...(engine ? { engine: { type: engine } } : {}),
       },
     };
   });

@@ -321,3 +321,92 @@ export async function checkCaptionBurnerHealth(): Promise<{
     return { ok: false, ffmpeg: null, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/** Wynik pomiaru pliku (zadanie `probe` usługi): ffprobe + kontrola pasów w kadrze. */
+export type VideoProbeResult = {
+  bytes: number | null;
+  duration: number | null;
+  width: number | null;
+  height: number | null;
+  fps: number | null;
+  video_codec: string | null;
+  audio_codec: string | null;
+  container: string | null;
+  bit_rate_kbps: number | null;
+  pix_fmt: string | null;
+  profile: string | null;
+  audio_channels: number | null;
+  audio_sample_rate: number | null;
+  frame_check: {
+    samples: number;
+    letterbox_at: number[];
+    pillarbox_at: number[];
+    bars_ratio: number | null;
+    has_bars: boolean;
+    verdict: string;
+  } | null;
+};
+
+/** Czy wdrożona usługa zna zadanie `probe` (starsza wersja potraktowałaby je jak kompresję). */
+export async function burnerSupportsProbe(): Promise<boolean> {
+  try {
+    const res = await burnerFetch("/health", { timeoutMs: 90_000 });
+    if (!res.ok) return false;
+    const json = (await res.json().catch(() => null)) as { probe?: boolean } | null;
+    return json?.probe === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Zleca pomiar pliku wideo (wymiary, kodeki, bitrate, pasy w kadrze). Zwraca id zadania. */
+export async function submitVideoProbe(input: {
+  videoUrl: string;
+  samples?: number;
+  name?: string;
+}): Promise<string> {
+  if (!(await burnerSupportsProbe())) {
+    throw new Error(
+      "Usługa caption-burner nie ma jeszcze pomiaru plików — wdróż nową wersję (services/caption-burner, Render: Manual Deploy).",
+    );
+  }
+  const res = await burnerFetch("/jobs", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      kind: "probe",
+      video_url: input.videoUrl,
+      samples: input.samples ?? 8,
+      name: input.name ?? "pomiar",
+    }),
+    timeoutMs: 120_000,
+  });
+  if (!res.ok) throw new Error(`caption-burner: ${await errorOf(res)}`);
+  const json = (await res.json().catch(() => null)) as { id?: string } | null;
+  if (!json?.id) throw new Error("caption-burner: odpowiedź bez id zadania.");
+  return json.id;
+}
+
+/** Stan pomiaru; `result` jest, gdy `status = done`. */
+export async function getVideoProbe(id: string): Promise<{
+  status: CaptionBurnState;
+  error: string | null;
+  result: VideoProbeResult | null;
+}> {
+  const res = await burnerFetch(`/jobs/${encodeURIComponent(id)}`, { timeoutMs: 90_000 });
+  if (res.status === 404) {
+    return { status: "missing", error: "usługa nie zna tego pomiaru (restart?)", result: null };
+  }
+  if (!res.ok) throw new Error(`caption-burner: ${await errorOf(res)}`);
+  const json = (await res.json().catch(() => null)) as {
+    status?: string;
+    error?: string | null;
+    output?: VideoProbeResult | null;
+  } | null;
+  const status = KNOWN_STATES.find((s) => s === json?.status) ?? "failed";
+  return {
+    status,
+    error: json?.error ?? null,
+    result: status === "done" ? (json?.output ?? null) : null,
+  };
+}

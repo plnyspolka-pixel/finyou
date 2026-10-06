@@ -36,6 +36,13 @@ import {
   ttsModelLabel,
 } from "@/lib/studio-tts-models";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL } from "@/lib/studio-scenes";
+import {
+  AVATAR_ENGINE_PREFS,
+  LANDSCAPE_POLICIES,
+  VIDEO_RESOLUTIONS,
+  letterboxBlockMessage,
+  letterboxedAvatars,
+} from "@/lib/studio-quality";
 import type { StudioDefaultAvatar } from "@/lib/studio-avatars.server";
 
 const ADMIN_ONLY = ["administrator"] as const;
@@ -181,6 +188,18 @@ export const heygenStatus = defineTool({
               cost_factor: m.costFactor,
             })),
             note: "Model lektora dla całego Studia; `create_studio_video_job` może go nadpisać polem `tts_model`, a `update_studio_settings` zmienia ustawienie na stałe.",
+          };
+        })(),
+        quality: await (async () => {
+          const { getStudioQualitySettings } = await import("@/lib/studio-quality.server");
+          const q = await getStudioQualitySettings();
+          return {
+            video_resolution: q.resolution,
+            avatar_engine: q.avatarEngine,
+            landscape_avatars: q.landscapePolicy,
+            compositor:
+              "HeyGen API v3 (sklejka scen `studio` albo pojedyncze ujęcie `avatar` z `fit: cover`); napisy — caption-burner (FFmpeg). Remotion nie jest używany w rolkach.",
+            note: "Zmienia `update_studio_settings`. Orientację awatarów sprawdza `check_studio_avatars`, gotową rolkę — `get_studio_render_report` / `inspect_video_file`.",
           };
         })(),
         ai_badge: {
@@ -876,6 +895,12 @@ export const createStudioVideoJob = defineTool({
     publish_description: z.string().max(5000).optional(),
     material_audience: MATERIAL_AUDIENCE.optional(),
     start_now: z.boolean().default(false),
+    allow_letterbox: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Świadoma zgoda na pasy: rolka ze scenami b-roll rusza mimo POZIOMEGO looka awatara (HeyGen wpasuje go w kadr 9:16 z pasami u góry i u dołu). Domyślnie false — zadanie z poziomym lookiem nie powstaje, a wynik podaje winne awatary i pionowe zamienniki (`check_studio_avatars`).",
+      ),
   },
   annotations: WRITE,
   handler: (a, ctx: ToolContext) =>
@@ -923,6 +948,41 @@ export const createStudioVideoJob = defineTool({
       const avatarIds = given.length
         ? [...new Set([leadAvatar, ...given])]
         : await defaultReelRotation(leadAvatar, a.avatars_per_reel);
+      // Kontrola jakości PRZED założeniem zadania: w sklejce scen HeyGen nie
+      // przycina awatara — poziomy look = pasy. Nic jeszcze nie kosztowało.
+      const multiScene = a.reel_structure || a.dynamic_scenes;
+      const q = await import("@/lib/studio-quality.server");
+      const quality = await q.getStudioQualitySettings();
+      const assessed = await q.assessAvatars(multiScene ? avatarIds : [leadAvatar], quality);
+      const letterboxed = multiScene ? letterboxedAvatars(assessed) : [];
+      if (letterboxed.length && quality.landscapePolicy === "block" && !a.allow_letterbox) {
+        let alternatives: unknown = undefined;
+        try {
+          alternatives = (await q.listPortraitLooks({ limit: 10 })).map((l) => ({
+            id: l.id,
+            name: l.name,
+            size: l.width && l.height ? `${l.width}×${l.height}` : null,
+          }));
+        } catch {
+          // zamienniki to dodatek — brak nie zmienia odmowy
+        }
+        return fail(
+          JSON.stringify(
+            {
+              error: letterboxBlockMessage(letterboxed),
+              avatars: assessed.map((x) => ({
+                id: x.id,
+                name: x.name,
+                verdict: x.verdict,
+              })),
+              portrait_alternatives: alternatives,
+              no_job_created: true,
+            },
+            null,
+            2,
+          ),
+        );
+      }
       const row = {
         prompt,
         script,
@@ -941,6 +1001,24 @@ export const createStudioVideoJob = defineTool({
         publish_description: description,
         created_by: actorId(ctx),
       };
+      const qualityPreview = {
+        settings: {
+          video_resolution: quality.resolution,
+          avatar_engine: quality.avatarEngine,
+          landscape_avatars: quality.landscapePolicy,
+        },
+        avatars: assessed.map((x) => ({
+          id: x.id,
+          name: x.name,
+          verdict: x.verdict,
+          engine: x.engine ?? "avatar_iv (domyślny)",
+        })),
+        letterbox_allowed: letterboxed.length > 0,
+        compositor: multiScene
+          ? "HeyGen studio v3 (sklejka scen)"
+          : "HeyGen avatar v3 (fit: cover)",
+        remotion: false,
+      };
       const job = await insertOne(
         s,
         "studio_video_jobs",
@@ -949,11 +1027,20 @@ export const createStudioVideoJob = defineTool({
       );
       const { setJobMaterialAudience } = await import("@/lib/studio-materials.server");
       await setJobMaterialAudience(job.id, a.material_audience);
+      if (a.allow_letterbox) {
+        // Zgoda na pasy musi przeżyć do renderu z kolejki (tick czyta ją z joba).
+        const { error } = await s
+          .from("studio_video_jobs")
+          .update({ render_meta: { requested: { allow_letterbox: true } } as never })
+          .eq("id", job.id);
+        if (error) console.warn(`[Studio] zgoda na pasy (${job.id}): ${error.message}`);
+      }
       if (!a.start_now) {
         return ok({
           ok: true,
           job,
-          note: "Zadanie w kolejce — tick Studia (co 10 min) napisze scenariusz, nagra głos i zleci render; `run_studio_video_tick` przyspiesza.",
+          quality: qualityPreview,
+          note: "Zadanie w kolejce — tick Studia (co 10 min) napisze scenariusz, nagra głos i zleci render; `run_studio_video_tick` przyspiesza. Po renderze `get_studio_render_report` pokaże czym i jak powstała rolka (z pomiarem pliku).",
         });
       }
       try {
@@ -970,6 +1057,8 @@ export const createStudioVideoJob = defineTool({
           reelStructure: row.reel_structure,
           avatarIds,
           name: title || prompt,
+          allowLetterbox: a.allow_letterbox,
+          quality,
         });
         const updated = await updateOne(
           s,
@@ -986,10 +1075,13 @@ export const createStudioVideoJob = defineTool({
           },
           "id, status, heygen_video_id, publish_title, avatar_id, avatar_ids, reel_structure, tts_model_id, auto_publish_platforms, last_error",
         );
+        const { saveRenderMeta } = await import("@/lib/studio-render.server");
+        await saveRenderMeta(job.id, rendered.renderMeta);
         return ok({
           ok: true,
           job: updated,
-          note: "Render trwa kilka minut — `get_studio_job` pokaże postęp, `poll_studio_jobs` domyka gotowe.",
+          render: rendered.renderMeta,
+          note: "Render trwa kilka minut — `get_studio_job` pokaże postęp, `poll_studio_jobs` domyka gotowe, `get_studio_render_report` pokaże czym i jak powstała rolka (z pomiarem pliku).",
         });
       } catch (e) {
         await s
@@ -1150,20 +1242,45 @@ export const updateStudioSettings = defineTool({
   name: "update_studio_settings",
   title: "Update Studio settings",
   description:
-    "Ustawienia Studia publikacji obowiązujące dla wszystkich rolek (panel, seria, cron, MCP). Dziś: `tts_model` — model ElevenLabs lektora (domyślnie eleven_v4, najwyższa jakość; `heygen_status` → `tts_model` pokazuje aktualny i listę). Pojedyncze zadanie może go nadpisać polem `tts_model` w `create_studio_video_job` / `update_studio_job`. Tylko administrator/operator.",
+    "Ustawienia Studia publikacji obowiązujące dla wszystkich rolek (panel, seria, cron, MCP). `tts_model` — model ElevenLabs lektora (domyślnie eleven_v4, najwyższa jakość; zadanie może go nadpisać). Jakość obrazu: `video_resolution` (1080p domyślnie — najwyższa natywna rozdzielczość awatarów HeyGen; 720p tańsze/szybsze), `avatar_engine` (`best` = Avatar V tam, gdzie look go obsługuje, inaczej Avatar IV; `avatar_iv` = zawsze domyślny silnik), `landscape_avatars` (`block` = rolka ze scenami b-roll nie rusza z poziomym lookiem, bo HeyGen dałby pasy u góry i u dołu — błąd przed zużyciem kredytów; `allow` = rusza z pasami). Podaj dowolne z pól. Stan: `heygen_status` → `quality`, `check_studio_avatars`. Tylko administrator/operator.",
   inputSchema: {
-    tts_model: TTS_MODEL,
+    tts_model: TTS_MODEL.optional(),
+    video_resolution: z.enum(VIDEO_RESOLUTIONS).optional(),
+    avatar_engine: z.enum(AVATAR_ENGINE_PREFS).optional(),
+    landscape_avatars: z.enum(LANDSCAPE_POLICIES).optional(),
   },
   annotations: WRITE_IDEMPOTENT,
   handler: (a, ctx: ToolContext) =>
     handle(async () => {
       await requireTeamAdmin(ctx);
-      const { setStudioTtsModelId } = await import("@/lib/studio-settings.server");
-      await setStudioTtsModelId(a.tts_model, actorId(ctx));
+      if (!a.tts_model && !a.video_resolution && !a.avatar_engine && !a.landscape_avatars) {
+        return fail(
+          "Podaj co najmniej jedno: `tts_model`, `video_resolution`, `avatar_engine`, `landscape_avatars`.",
+        );
+      }
+      const { setStudioTtsModelId, getStudioTtsModelId } =
+        await import("@/lib/studio-settings.server");
+      if (a.tts_model) await setStudioTtsModelId(a.tts_model, actorId(ctx));
+      const { setStudioQualitySettings } = await import("@/lib/studio-quality.server");
+      const quality = await setStudioQualitySettings(
+        {
+          resolution: a.video_resolution,
+          avatarEngine: a.avatar_engine,
+          landscapePolicy: a.landscape_avatars,
+        },
+        actorId(ctx),
+      );
+      const tts = await getStudioTtsModelId();
       return ok({
         ok: true,
-        settings: { tts_model: a.tts_model, label: ttsModelLabel(a.tts_model) },
-        note: "Obowiązuje od następnego renderu — zadania już w kolejce bez własnego `tts_model` też go wezmą.",
+        settings: {
+          tts_model: tts,
+          label: ttsModelLabel(tts),
+          video_resolution: quality.resolution,
+          avatar_engine: quality.avatarEngine,
+          landscape_avatars: quality.landscapePolicy,
+        },
+        note: "Obowiązuje od następnego renderu — zadania już w kolejce też go wezmą (model lektora: o ile zadanie nie ma własnego `tts_model`).",
         actor: actorId(ctx),
       });
     }),

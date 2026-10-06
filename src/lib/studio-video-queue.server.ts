@@ -37,6 +37,7 @@ import {
 } from "./studio-captions";
 import type { CustomCaptionStyleId, DynamicOverlays } from "./caption-style";
 import { AVATARS_PER_REEL } from "./studio-scenes";
+import { jobAllowsLetterbox } from "./studio-quality";
 
 export type StudioJobRow = {
   id: string;
@@ -71,6 +72,8 @@ export type StudioJobRow = {
   material_audience?: string | null;
   /** Model ElevenLabs lektora (NULL = ustawienie Studia w chwili renderu). */
   tts_model_id?: string | null;
+  /** Metryka renderu (studio-quality.ts → RenderMeta) i zgody z zakładania zadania. */
+  render_meta?: unknown;
 };
 
 type JobRow = StudioJobRow;
@@ -264,6 +267,7 @@ async function processClaimedJob(job: JobRow): Promise<void> {
     reelStructure: job.reel_structure === true,
     avatarIds,
     name: publishTitle || job.prompt,
+    allowLetterbox: jobAllowsLetterbox(job.render_meta),
   });
   await supabaseAdmin
     .from("studio_video_jobs")
@@ -277,6 +281,8 @@ async function processClaimedJob(job: JobRow): Promise<void> {
       last_error: rendered.note,
     })
     .eq("id", job.id);
+  const { saveRenderMeta } = await import("./studio-render.server");
+  await saveRenderMeta(job.id, rendered.renderMeta);
 }
 
 // ── Domykanie renderu i napisów ─────────────────────────────────────────────
