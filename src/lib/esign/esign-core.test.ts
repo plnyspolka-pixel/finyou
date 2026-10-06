@@ -148,6 +148,13 @@ describe("łańcuch hashy", () => {
       payload: e2.payload,
     });
     expect(await verifyEventChain([e1, e2])).toBe(-1);
+    // Baza (PostgREST) oddaje timestamptz jako „+00:00” i bez „.000” — łańcuch nadal spójny.
+    expect(
+      await verifyEventChain([
+        { ...e1, created_at: "2026-10-05T10:00:00+00:00" },
+        { ...e2, created_at: "2026-10-05T10:01:00.000+00:00" },
+      ]),
+    ).toBe(-1);
     expect(await verifyEventChain([{ ...e1, payload: { a: 2 } }, e2])).toBe(0);
     expect(await verifyEventChain([e1, { ...e2, prev_hash: "zle" }])).toBe(1);
   });

@@ -300,6 +300,16 @@ export interface EventHashInput {
 }
 
 /** Hash zdarzenia dziennika: wiąże je z poprzednim (łańcuch). */
+/**
+ * Czas zdarzenia w jednej postaci (ISO 8601 UTC, ms). Zapisujemy
+ * `toISOString()` („…123Z”), a baza oddaje tę samą chwilę jako „…123+00:00”
+ * — bez normalizacji weryfikacja łańcucha zgłaszałaby fałszywą przerwę.
+ */
+export function normalizeEventTime(value: string): string {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toISOString();
+}
+
 export function eventHash(input: EventHashInput): Promise<string> {
   return sha256Hex(
     [
@@ -307,7 +317,7 @@ export function eventHash(input: EventHashInput): Promise<string> {
       input.envelopeId,
       input.signerId ?? "",
       input.eventType,
-      input.createdAt,
+      normalizeEventTime(input.createdAt),
       canonicalJson(input.payload ?? {}),
     ].join("|"),
   );
