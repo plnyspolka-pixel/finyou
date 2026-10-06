@@ -38,7 +38,7 @@ export const CreateInput = z
     /** Źródło A: wgrany plik PDF. */
     fileName: z.string().trim().min(1).max(200).optional().nullable(),
     fileBase64: z.string().min(16).optional().nullable(),
-    /** Źródło B: wygenerowana umowa w PDF (generated_documents.id z pdf_path). Tylko PDF. */
+    /** Źródło B: wygenerowana umowa (generated_documents.id; PDF albo DOCX → PDF). */
     generatedDocumentId: z.string().uuid().optional().nullable(),
     /** Powiązania koperty z klientem pożyczkowym i wnioskiem. */
     clientId: z.string().uuid().optional().nullable(),

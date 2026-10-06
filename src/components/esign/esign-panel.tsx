@@ -153,7 +153,7 @@ export function EsignPanel({ eyebrow, basePath }: { eyebrow: string; basePath: s
     <div className="space-y-6">
       <FancyPageHeader
         eyebrow={eyebrow}
-        title="Podpis elektroniczny"
+        title="E-podpis"
         subtitle="Podpisywanie dokumentów w formie dokumentowej (art. 77² KC): podpisujący potwierdza tożsamość przez Didit, wpisuje kod jednorazowy i podpisuje bez zakładania konta. Podpisany PDF ma znacznik na każdej stronie i Kartę podpisów ze śladem audytowym."
         actions={
           <Button
@@ -563,7 +563,7 @@ function CreateEnvelopeDialog({
         <DialogHeader>
           <DialogTitle>Nowy dokument do podpisu</DialogTitle>
           <DialogDescription>
-            Podpisujemy wyłącznie pliki PDF. Wgraj PDF albo wybierz umowę zapisaną w PDF i wskaż,
+            Wgraj PDF albo wybierz umowę wygenerowaną w kreatorze (DOCX zamienimy na PDF) i wskaż,
             kto ma podpisać — może to być dowolna osoba, także bez konta w systemie. Każdy
             podpisujący dostanie osobisty link e-mailem.
           </DialogDescription>
@@ -616,7 +616,7 @@ function CreateEnvelopeDialog({
                         <FileText className="h-4 w-4 text-muted-foreground" />
                       )}
                       {d.templateName}
-                      <span className="text-xs uppercase text-muted-foreground">pdf</span>
+                      <span className="text-xs uppercase text-muted-foreground">{d.format}</span>
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {formatSignedAt(d.createdAt).split(" (")[0]}
@@ -624,8 +624,9 @@ function CreateEnvelopeDialog({
                   </button>
                 ))}
                 <p className="px-3 py-2 text-xs text-muted-foreground">
-                  Lista zawiera tylko umowy zapisane w PDF. Podpisujemy wyłącznie pliki PDF — umowę
-                  w DOCX zapisz jako PDF i wgraj jako plik.
+                  Podpisujemy zawsze plik PDF. Umowę w DOCX zamieniamy na PDF tą samą drukarką, co
+                  pakiet dokumentów inwestora (treść bez zmian, układ uproszczony) — jeśli zależy Ci
+                  na układzie 1:1, wgraj PDF zapisany z Worda.
                 </p>
               </div>
             ) : (

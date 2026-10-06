@@ -42,15 +42,15 @@ const MAIN_ITEMS: NavItem[] = [
   ORDER_PIPELINE_ITEM,
   { to: "/inwestor/zlecenia", label: "Moje zlecenia", icon: ClipboardList },
   { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
+  // E-podpis (forma dokumentowa): wysyłka umów do podpisu dowolnym osobom
+  // (Didit + kod jednorazowy) i dokumenty do podpisu przez samego inwestora.
+  { to: "/inwestor/podpisy", label: "E-podpis", icon: PenLine },
   // Pipeline analityczny (KW → właściciele → analiza KW → ryzyko) — ten
   // sam, którym posługuje się zespół Finance You — dla Projektów inwestora.
   { to: "/inwestor/analityka", label: "Analityka", icon: BarChart3 },
   // Jeden moduł dokumentów: agent umowy (silnik klauzul) + kreator
   // dokumentów DOCX (bez kategorii „Umowy" — umowy tylko z agenta).
   { to: "/inwestor/dokumenty", label: "Dokumenty i umowy", icon: FileText },
-  // Podpis dokumentowy: wysyłka umów klientom do e-podpisu (Didit + kod) i
-  // dokumenty do podpisu przez samego inwestora.
-  { to: "/inwestor/podpisy", label: "Podpis elektroniczny", icon: PenLine },
   { to: "/inwestor/windykacja", label: "Windykacja", icon: Gavel },
   { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
   { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },

@@ -11,7 +11,8 @@ podpisał), a na końcu **Kartę podpisów** z pełnym śladem audytowym. Plik t
 e-mailem do wszystkich stron (trwały nośnik), a jego autentyczność można
 sprawdzić publicznie pod `/weryfikacja/<kod>`.
 
-Panele nadawcy: `/admin/podpisy`, `/operator/podpisy`, `/inwestor/podpisy`.
+Panele nadawcy: `/admin/podpisy`, `/operator/podpisy`, `/inwestor/podpisy`
+(w menu inwestora pozycja **„E-podpis”**, zaraz po „Moje oferty”).
 Panel klienta pożyczkowego: `/klient/podpisy` (dokumenty do podpisu i podpisane).
 Strona podpisującego: `/podpis/<token>` (bez logowania).
 
@@ -130,13 +131,14 @@ imieniu firmy (prefill z `clients.company_name`/`nip`/`krs`). Przyciski
 `/inwestor/wniosek/<id>`) otwierają kreator z klientem i wnioskiem
 (`?nowa=1&klient=<clients.id>&wniosek=<loan_applications.id>`).
 
-**Źródło dokumentu — wyłącznie PDF.** Podpisujemy tylko pliki PDF: wgrany
-plik albo umowę z kreatora/agenta, która ma wersję PDF
-(`generated_documents.pdf_path`; widoczność wg RLS: personel — wszystkie,
-inwestor — własne). Dokumentów DOCX nie konwertujemy i nie podpisujemy —
-podpis obejmuje dokładnie ten plik, który widzi podpisujący. Umowę w DOCX
-trzeba zapisać jako PDF i wgrać. Z karty wniosku domyślnie podpowiadana jest
-ostatnia umowa w PDF.
+**Źródło dokumentu.** Podpisywany jest zawsze plik PDF: wgrany plik albo
+umowa z kreatora/agenta (`generated_documents`; widoczność wg RLS: personel —
+wszystkie, inwestor — własne). Gotowy PDF (`pdf_path`) idzie bez zmian; umowa
+w DOCX jest zamieniana na PDF tą samą drukarką, co pakiet dokumentów inwestora
+(`tekstZDocx` → `pdfZTekstu`): treść bez zmian, układ uproszczony (tabele
+spłaszczone do wierszy), w stopce SHA-256 tekstu. Gdy liczy się układ 1:1 —
+lepiej wgrać PDF zapisany z Worda. Z karty wniosku domyślnie podpowiadana jest
+ostatnia wygenerowana umowa.
 
 **Panel klienta.** `/klient/podpisy` pokazuje dokumenty do podpisu („Otwórz i
 podpisz” — nowy osobisty link, bez szukania e-maila), podpisane (pobranie PDF

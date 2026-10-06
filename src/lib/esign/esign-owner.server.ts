@@ -355,7 +355,7 @@ export async function searchSignerClientsImpl(
 }
 
 /**
- * Wygenerowane umowy w PDF (kreator / agent) dla klienta albo wniosku. Widoczność
+ * Wygenerowane umowy (kreator / agent) dla klienta albo wniosku. Widoczność
  * rozstrzyga RLS tabeli generated_documents (personel: wszystkie; inwestor:
  * własne) — zapytanie idzie klientem użytkownika, nie service role.
  */
@@ -376,29 +376,31 @@ export async function listClientDocumentsImpl(
   if (appIds.length === 0) return { documents: [] };
   const { data: rows } = await context.supabase
     .from("generated_documents")
-    .select("id, template_name, template_slug, loan_application_id, pdf_path, created_at")
+    .select(
+      "id, template_name, template_slug, loan_application_id, docx_path, pdf_path, created_at",
+    )
     .in("loan_application_id", appIds)
-    .not("pdf_path", "is", null)
     .order("created_at", { ascending: false })
     .limit(30);
   return {
     documents: ((rows ?? []) as any[])
-      .filter((r) => r.pdf_path)
+      .filter((r) => r.docx_path || r.pdf_path)
       .map((r) => ({
         id: r.id as string,
         templateName: (r.template_name as string | null) ?? "Dokument",
         templateSlug: (r.template_slug as string | null) ?? null,
         loanApplicationId: (r.loan_application_id as string | null) ?? null,
+        format: (r.pdf_path ? "pdf" : "docx") as "pdf" | "docx",
         createdAt: r.created_at as string,
       })),
   };
 }
 
 /**
- * Źródło koperty z wygenerowanej umowy — WYŁĄCZNIE gotowy plik PDF
- * (generated_documents.pdf_path). Dokumentów DOCX nie podpisujemy: podpis
- * dokumentowy obejmuje dokładnie ten plik PDF, który zobaczy podpisujący.
- * Dostęp do wiersza sprawdza RLS (klient użytkownika).
+ * Źródło koperty z wygenerowanej umowy: gotowy PDF (pdf_path) albo DOCX
+ * zamieniony na PDF tą samą „drukarką”, co pakiet prawny (tekst z
+ * document.xml → bloki → pdf-lib). Podpisywany jest zawsze plik PDF — ten sam,
+ * który widzi podpisujący. Dostęp do wiersza sprawdza RLS (klient użytkownika).
  */
 async function sourceFromGeneratedDocument(
   generatedDocumentId: string,
@@ -411,18 +413,34 @@ async function sourceFromGeneratedDocument(
 }> {
   const { data: doc } = await context.supabase
     .from("generated_documents")
-    .select("id, template_name, pdf_path, loan_application_id")
+    .select("id, template_name, docx_path, pdf_path, loan_application_id")
     .eq("id", generatedDocumentId)
     .maybeSingle();
   if (!doc) throw new Error("Nie znaleziono wygenerowanego dokumentu albo brak do niego dostępu.");
-  if (!doc.pdf_path) {
-    throw new Error(
-      "Ten dokument nie ma wersji PDF. Podpisujemy wyłącznie pliki PDF — zapisz umowę jako PDF i wgraj plik.",
-    );
+  const base = (p: string) => p.split("/").pop() ?? "dokument";
+  if (doc.pdf_path) {
+    return {
+      bytes: await downloadBytes(doc.pdf_path, CLIENT_FILES_BUCKET),
+      fileName: base(doc.pdf_path),
+      title: doc.template_name ?? null,
+      loanApplicationId: doc.loan_application_id ?? null,
+    };
   }
+  if (!doc.docx_path) throw new Error("Wygenerowany dokument nie ma pliku.");
+  const docx = await downloadBytes(doc.docx_path, CLIENT_FILES_BUCKET);
+  const { tekstZDocx } = await import("@/lib/contract-engine/umowa-docx");
+  const text = await tekstZDocx(docx);
+  if (!text.trim()) throw new Error("Nie udało się odczytać treści umowy z pliku DOCX.");
+  const { pdfZTekstu } = await import("@/lib/legal/pdf-z-tekstu");
+  const bytes = await pdfZTekstu({
+    contentText: text,
+    title: doc.template_name ?? "Umowa",
+    version: "do podpisu",
+    sha256: await sha256Hex(text),
+  });
   return {
-    bytes: await downloadBytes(doc.pdf_path, CLIENT_FILES_BUCKET),
-    fileName: doc.pdf_path.split("/").pop() ?? "dokument.pdf",
+    bytes,
+    fileName: base(doc.docx_path).replace(/\.docx$/i, "") + ".pdf",
     title: doc.template_name ?? null,
     loanApplicationId: doc.loan_application_id ?? null,
   };
@@ -591,7 +609,7 @@ export async function createEnvelopeImpl(
   const role = await resolveOwnerRole(context.supabase as any, userId);
   const sender = await senderIdentity(role, userId, context.claims);
 
-  // Źródło: wgrany PDF albo wygenerowana umowa w PDF (DOCX nie podpisujemy).
+  // Źródło: wgrany PDF albo wygenerowana umowa (PDF; DOCX zamieniany na PDF).
   let bytes: Uint8Array;
   let fileName = data.fileName ?? "dokument.pdf";
   let generatedDocumentId: string | null = null;
@@ -605,7 +623,7 @@ export async function createEnvelopeImpl(
   } else if (data.fileBase64) {
     bytes = base64ToBytes(data.fileBase64);
   } else {
-    throw new Error("Wgraj plik PDF albo wskaż wygenerowaną umowę w PDF.");
+    throw new Error("Wgraj plik PDF albo wskaż wygenerowaną umowę.");
   }
   // Plik: PDF, limit rozmiaru, bez szyfrowania.
   if (bytes.byteLength > MAX_PDF_BYTES) throw new Error("Plik PDF jest za duży (limit 15 MB).");
