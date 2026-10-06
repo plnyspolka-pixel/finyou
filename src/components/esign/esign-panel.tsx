@@ -80,6 +80,7 @@ import {
   ENVELOPE_STATUS_LABELS,
   eventLabel,
   formatSignedAt,
+  pagesLabel,
   SIGNER_STATUS_LABELS,
   type EnvelopeStatus,
   type SignerCompany,
@@ -1215,7 +1216,7 @@ function EnvelopeDetailsSheet({
             <div className="grid gap-1 rounded-lg border bg-muted/30 p-3 text-xs">
               <div>
                 <span className="text-muted-foreground">Plik: </span>
-                {env.source_filename} · {env.page_count} stron ·{" "}
+                {env.source_filename} · {pagesLabel(env.page_count)} ·{" "}
                 {(env.source_bytes / 1024).toFixed(0)} KB
               </div>
               <div className="break-all">

@@ -505,3 +505,16 @@ export function describeIdentity(identity: IdentitySnapshot | null): string {
   const when = identity.decidedAt ? `; decyzja ${formatSignedAtShort(identity.decidedAt)}` : "";
   return `Didit — ${checks}; ${doc}${identity.dateOfBirth ? `; ur. ${identity.dateOfBirth}` : ""}; sesja ${identity.sessionId}${when}${src}`;
 }
+
+/** „1 strona”, „2 strony”, „5 stron”, „22 strony” — polska odmiana liczebnika. */
+export function pagesLabel(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  const word =
+    n === 1
+      ? "strona"
+      : mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)
+        ? "strony"
+        : "stron";
+  return `${n} ${word}`;
+}

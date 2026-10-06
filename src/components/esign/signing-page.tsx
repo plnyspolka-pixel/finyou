@@ -51,6 +51,7 @@ import {
 import {
   capacityLabel,
   formatSignedAt,
+  pagesLabel,
   requiredStatements,
   SIGNER_STATUS_LABELS,
   type SignedCapacity,
@@ -178,7 +179,7 @@ function Header({ data }: { data: SigningSession }) {
           <h1 className="text-xl font-bold leading-tight md:text-2xl">{e.title}</h1>
           <p className="text-sm text-muted-foreground">
             ID {e.publicId} · nadawca: {e.senderName ?? e.senderEmail ?? "Finance You"} ·{" "}
-            {e.pageCount} {e.pageCount === 1 ? "strona" : e.pageCount < 5 ? "strony" : "stron"}
+            {pagesLabel(e.pageCount)}
           </p>
         </div>
       </div>

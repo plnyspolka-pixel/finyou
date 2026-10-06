@@ -13,6 +13,7 @@ import {
   bytesToHex,
   ENVELOPE_STATUS_LABELS,
   formatSignedAt,
+  pagesLabel,
   type EnvelopeStatus,
 } from "@/lib/esign/esign-core";
 
@@ -95,7 +96,7 @@ export function VerificationPage({ code }: { code: string }) {
                   </Badge>
                 </div>
                 <CardDescription>
-                  {q.data.pageCount} stron dokumentu źródłowego · wysłano{" "}
+                  {pagesLabel(q.data.pageCount)} dokumentu źródłowego · wysłano{" "}
                   {formatSignedAt(q.data.sentAt).split(" (")[0]}
                   {q.data.completedAt
                     ? ` · zamknięto ${formatSignedAt(q.data.completedAt).split(" (")[0]}`
