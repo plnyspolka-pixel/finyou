@@ -56,6 +56,11 @@ describe("harmonogram", () => {
     expect(parseKwota("1.234,56 zł")).toBe(1234.56);
     expect(parseKwota("7868.48")).toBe(7868.48);
     expect(parseKwota("abc")).toBeNull();
+    expect(parseKwota("1,000.00")).toBe(1000);
+    expect(parseKwota("80,000.00")).toBe(80000);
+    expect(parseKwota("1,250,000")).toBe(1250000);
+    expect(parseKwota("1.234.567")).toBe(1234567);
+    expect(parseKwota("1234,56")).toBe(1234.56);
     expect(parseDataISO("5.3.2026")).toBe("2026-03-05");
     expect(parseDataISO("2026-02-30")).toBeNull();
   });
@@ -195,21 +200,83 @@ describe("zaległość z harmonogramu", () => {
     expect(z.nadplata).toBe(50);
   });
 
-  it("wypowiedzenie przyspiesza raty przyszłe bez przyszłych odsetek umownych", () => {
+  it("wypowiedzenie przyspiesza raty przyszłe (WYP_02: 7 dni) bez odsetek za okres po wypowiedzeniu", () => {
+    const harmonogram = [
+      { nr: 1, termin: "2026-03-02", kwota: 1100, odsetki: 100 },
+      { nr: 2, termin: "2026-04-02", kwota: 1080, odsetki: 80 },
+      { nr: 3, termin: "2026-05-04", kwota: 1060, odsetki: 60 },
+    ];
     const z = computeZaleglosc({
-      harmonogram: [
-        { nr: 1, termin: "2026-03-02", kwota: 1100, odsetki: 100 },
-        { nr: 2, termin: "2026-04-02", kwota: 1080, odsetki: 80 },
-        { nr: 3, termin: "2026-05-04", kwota: 1060, odsetki: 60 },
-      ],
+      harmonogram,
+      payments: [],
+      asOf: "2026-03-31",
+      dataWypowiedzenia: "2026-03-16",
+      stopaMaksymalna: () => 0,
+    });
+    expect(z.liczbaRatWymagalnych).toBe(3);
+    // Rata 1 w całości; rata 2 z odsetkami za 14 z 31 dni (36,13); rata 3 bez odsetek.
+    expect(z.zaleglosc).toBe(1100 + 1036.13 + 1000);
+    expect(z.raty[2].terminSkuteczny).toBe("2026-03-23");
+    // W ciągu 7 dni od wypowiedzenia raty przyszłe nie są jeszcze zaległe.
+    const wTerminie = computeZaleglosc({
+      harmonogram,
       payments: [],
       asOf: "2026-03-20",
       dataWypowiedzenia: "2026-03-16",
       stopaMaksymalna: () => 0,
     });
-    expect(z.liczbaRatWymagalnych).toBe(3);
-    // Rata 1 w całości (termin minął), raty 2–3 bez części odsetkowej.
-    expect(z.zaleglosc).toBe(1100 + 1000 + 1000);
-    expect(z.raty[2].terminSkuteczny).toBe("2026-03-16");
+    expect(wTerminie.zaleglosc).toBe(1100);
+    expect(wTerminie.ratyPrzyszleBezOdsetek).toBe(2000);
+  });
+
+  it("wypowiedzenie z datą z przyszłości nie przyspiesza rat", () => {
+    const z = computeZaleglosc({
+      harmonogram: [
+        { nr: 1, termin: "2026-03-02", kwota: 1100, odsetki: 100 },
+        { nr: 2, termin: "2026-04-02", kwota: 1080, odsetki: 80 },
+      ],
+      payments: [],
+      asOf: "2026-03-20",
+      dataWypowiedzenia: "2026-04-10",
+      stopaMaksymalna: () => 0,
+    });
+    expect(z.zaleglosc).toBe(1100);
+    expect(z.pozostaleRatyPrzyszle).toBe(1080);
+    expect(z.ratyPrzyszleBezOdsetek).toBe(1000);
+  });
+
+  it("wpłata dokładnie komunikowanej kwoty zamyka zaległość co do grosza", () => {
+    const harmonogram = [
+      { nr: 1, termin: "2026-03-10", kwota: 1000 },
+      { nr: 2, termin: "2026-03-11", kwota: 1000 },
+      { nr: 3, termin: "2026-12-10", kwota: 1000 },
+    ];
+    const czesc = { paid_on: "2026-03-20", amount: 107.37 };
+    const przed = computeZaleglosc({
+      harmonogram,
+      payments: [czesc],
+      asOf: "2026-04-07",
+      stopaUmowna: 18.5,
+    });
+    const po = computeZaleglosc({
+      harmonogram,
+      payments: [czesc, { paid_on: "2026-04-07", amount: przed.doZaplatyTeraz }],
+      asOf: "2026-06-07",
+      stopaUmowna: 18.5,
+    });
+    expect(po.zaleglosc).toBe(0);
+    expect(po.dniOpoznienia).toBe(0);
+    expect(po.doZaplatyTeraz).toBe(0);
+  });
+
+  it("zdarzenie z datą sprzed 60 lat nie przerywa liczenia", () => {
+    const z = computeZaleglosc({
+      harmonogram: RATY,
+      payments: [...WPLATY, { paid_on: "1950-01-01", amount: 1 }],
+      asOf: "2026-10-06",
+      stopaUmowna: 18.5,
+    });
+    expect(z.najstarszaZalegla).toBe("2026-08-10");
+    expect(z.odsetkiZaOpoznienie).toBeGreaterThan(200);
   });
 });

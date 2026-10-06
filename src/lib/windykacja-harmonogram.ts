@@ -80,8 +80,20 @@ export function parseKwota(v: unknown): number | null {
     .replace(/\s/g, "")
     .replace(/zł|pln/gi, "");
   if (!s) return null;
-  // „1.234,56" → 1234.56; „1234,56" → 1234.56; „1234.56" → 1234.56
-  const normalized = s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s;
+  // Separator dziesiętny = ostatni z „," i „." (gdy są oba): „1.234,56" i
+  // „1,234.56" → 1234.56. Sam przecinek: „1234,56" → 1234.56, ale
+  // „1,250,000" (kilka grup) → tysiące. Sama kropka: „1234.56" → 1234.56,
+  // „1.234.567" (kilka grup) → tysiące.
+  let normalized = s;
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+  if (lastComma >= 0 && lastDot >= 0) {
+    normalized = lastComma > lastDot ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+  } else if (lastComma >= 0) {
+    normalized = /^-?\d{1,3}(,\d{3}){2,}$/.test(s) ? s.replace(/,/g, "") : s.replace(",", ".");
+  } else if (lastDot >= 0 && /^-?\d{1,3}(\.\d{3}){2,}$/.test(s)) {
+    normalized = s.replace(/\./g, "");
+  }
   const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
 }
@@ -250,6 +262,12 @@ export interface ZalegloscWynik {
   dniOpoznienia: number;
   /** Raty jeszcze niewymagalne (pozostało do zapłaty w przyszłości). */
   pozostaleRatyPrzyszle: number;
+  /**
+   * Raty przyszłe bez odsetek umownych za okres przyszły (gdy harmonogram
+   * je wyszczególnia) — tyle trzeba by spłacić dziś przy spłacie całości
+   * (KWO_04: odsetki tylko za okres faktycznego korzystania z kapitału).
+   */
+  ratyPrzyszleBezOdsetek: number;
   /** Najbliższa niewymagalna rata (termin). */
   najblizszaRata: string | null;
   /** Wpłaty ponad wszystkie raty i należności. */
@@ -294,21 +312,36 @@ export function computeZaleglosc(input: ZalegloscInput): ZalegloscWynik {
   const asOf = parseDataISO(input.asOf) ?? isoDay(new Date());
   const rateCap = input.stopaMaksymalna ?? ((iso: string) => maxDelayRate(iso));
   const contractRate = Number(input.stopaUmowna) > 0 ? Number(input.stopaUmowna) : null;
+  // Wypowiedzenie liczy się dopiero od dnia, w którym doszło do skutku
+  // (data z przyszłości = jeszcze go nie ma). Całość jest płatna w 7 dni od
+  // doręczenia wypowiedzenia (WYP_02) — od tego terminu biegną odsetki.
   const termination = input.dataWypowiedzenia ? parseDataISO(input.dataWypowiedzenia) : null;
+  const wypowiedzenie = termination && termination <= asOf ? termination : null;
+  const terminPoWypowiedzeniu = wypowiedzenie ? effectiveDueDate(addDays(wypowiedzenie, 7)) : null;
 
-  const raty: RataSym[] = [...(normalizeHarmonogram(input.harmonogram) ?? [])].map((r) => {
+  const wiersze = normalizeHarmonogram(input.harmonogram) ?? [];
+  const raty: RataSym[] = wiersze.map((r, idx) => {
     const skuteczny = effectiveDueDate(r.termin);
     const odsetki = Number(r.odsetki) || 0;
     const prowizja = Number(r.prowizja) || 0;
     // Wypowiedzenie: raty o terminie późniejszym stają się wymagalne
-    // w dniu wypowiedzenia, bez odsetek umownych za okres przyszły.
-    const przyspieszona = termination != null && skuteczny > termination;
-    const remI = przyspieszona ? 0 : odsetki;
+    // w terminie z WYP_02, bez odsetek umownych za okres po wypowiedzeniu.
+    // Rata, w której okresie nastąpiło wypowiedzenie, zachowuje odsetki
+    // umowne proporcjonalnie do dni do wypowiedzenia.
+    const przyspieszona =
+      wypowiedzenie != null && terminPoWypowiedzeniu != null && skuteczny > terminPoWypowiedzeniu;
+    let remI = odsetki;
+    if (przyspieszona && wypowiedzenie) {
+      const poprzedni = idx > 0 ? wiersze[idx - 1].termin : addDays(r.termin, -30);
+      const okres = Math.max(1, daysBetween(poprzedni, r.termin));
+      const naliczone = Math.max(0, Math.min(okres, daysBetween(poprzedni, wypowiedzenie)));
+      remI = round2((odsetki * naliczone) / okres);
+    }
     const remP = prowizja;
     const remK = Math.max(0, r.kwota - odsetki - prowizja);
     return {
       ...r,
-      terminSkuteczny: przyspieszona ? (termination as string) : skuteczny,
+      terminSkuteczny: przyspieszona ? (terminPoWypowiedzeniu as string) : skuteczny,
       kwotaWymagana: round2(remP + remI + remK),
       remP,
       remI,
@@ -317,12 +350,20 @@ export function computeZaleglosc(input: ZalegloscInput): ZalegloscWynik {
     };
   });
 
+  // Zabezpieczenie zakresu symulacji (maks. 60 lat wstecz): zdarzenie
+  // z błędną, bardzo dawną datą liczymy od pierwszego dnia symulacji,
+  // zamiast przerywać liczenie przed dniem `asOf`.
+  const minDay = addDays(asOf, -366 * 60);
+  const clampDay = (d: string) => (d < minDay ? minDay : d);
+  for (const r of raty) r.terminSkuteczny = clampDay(r.terminSkuteczny);
   const payments = (input.payments ?? [])
-    .map((p) => ({ day: parseDataISO(p.paid_on), amount: Number(p.amount) || 0 }))
-    .filter((p): p is { day: string; amount: number } => !!p.day && p.amount > 0);
+    .map((p) => ({ day: parseDataISO(p.paid_on), amount: round2(Number(p.amount) || 0) }))
+    .filter((p): p is { day: string; amount: number } => !!p.day && p.amount > 0)
+    .map((p) => ({ ...p, day: clampDay(p.day) }));
   const fees = (input.fees ?? [])
-    .map((f) => ({ day: parseDataISO(f.action_date), fee: Number(f.fee) || 0 }))
-    .filter((f): f is { day: string; fee: number } => !!f.day && f.fee > 0);
+    .map((f) => ({ day: parseDataISO(f.action_date), fee: round2(Number(f.fee) || 0) }))
+    .filter((f): f is { day: string; fee: number } => !!f.day && f.fee > 0)
+    .map((f) => ({ ...f, day: clampDay(f.day) }));
 
   const byDay = <T extends { day: string }>(list: T[], val: (x: T) => number) => {
     const m = new Map<string, number>();
@@ -343,7 +384,7 @@ export function computeZaleglosc(input: ZalegloscInput): ZalegloscWynik {
   let nadplata = 0;
 
   if (starts.length > 0 && starts[0] <= asOf) {
-    const total = Math.min(daysBetween(starts[0], asOf), 366 * 60);
+    const total = daysBetween(starts[0], asOf);
     for (let i = 0; i <= total; i++) {
       const day = addDays(starts[0], i);
 
@@ -366,23 +407,27 @@ export function computeZaleglosc(input: ZalegloscInput): ZalegloscWynik {
       costsBal += feeByDay.get(day) ?? 0;
 
       // 3. Wpłaty z tego dnia — kolejność z umowy (WIN_04).
-      let pay = payByDay.get(day) ?? 0;
+      let pay = round2(payByDay.get(day) ?? 0);
       if (pay > 0) {
+        // Rozliczamy w pełnych groszach: wpłata dokładnie komunikowanej kwoty
+        // (zaokrąglonej) nie może zostawić ułamka grosza jako „zaległej raty".
+        delayBal = round2(delayBal);
+        costsBal = round2(costsBal);
         const wymagalne = raty.filter((r) => r.terminSkuteczny <= day);
         const przyszle = raty.filter((r) => r.terminSkuteczny > day);
         const take = (r: RataSym, part: "remP" | "remI" | "remK") => {
-          const x = Math.min(pay, r[part]);
-          r[part] -= x;
+          const x = round2(Math.min(pay, r[part]));
+          r[part] = round2(r[part] - x);
           naRaty += x;
-          pay -= x;
+          pay = round2(pay - x);
         };
         for (const r of wymagalne) take(r, "remP");
         const toCosts = Math.min(pay, costsBal);
-        costsBal -= toCosts;
-        pay -= toCosts;
+        costsBal = round2(costsBal - toCosts);
+        pay = round2(pay - toCosts);
         const toDelay = Math.min(pay, delayBal);
-        delayBal -= toDelay;
-        pay -= toDelay;
+        delayBal = round2(delayBal - toDelay);
+        pay = round2(pay - toDelay);
         for (const r of wymagalne) take(r, "remI");
         for (const r of wymagalne) take(r, "remK");
         // Nadwyżka — na raty przyszłe, od najbliższej.
@@ -435,6 +480,11 @@ export function computeZaleglosc(input: ZalegloscInput): ZalegloscWynik {
     najstarszaZalegla: najstarsza?.termin ?? null,
     dniOpoznienia: najstarsza ? najstarsza.dniOpoznienia : 0,
     pozostaleRatyPrzyszle: round2(przyszle.reduce((s, r) => s + r.pozostalo, 0)),
+    ratyPrzyszleBezOdsetek: round2(
+      raty
+        .filter((r) => r.terminSkuteczny > asOf)
+        .reduce((s, r) => s + Math.max(0, r.remP) + Math.max(0, r.remK), 0),
+    ),
     najblizszaRata: przyszle[0]?.termin ?? null,
     nadplata: round2(nadplata),
   };

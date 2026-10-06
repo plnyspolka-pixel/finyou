@@ -260,20 +260,36 @@ describe("placeWindCollectionCall — kwota i opóźnienie z harmonogramu rat", 
     expect(vars().imie_inwestora).toBe("Anna Nowak");
   });
 
-  it("egzekucja komornicza bez daty wypowiedzenia — całe zadłużenie, jak mówi agent", async () => {
+  it("egzekucja komornicza bez wypowiedzenia — zaległość, nie całe saldo; ton ostatniego wezwania", async () => {
     state.kase.loan = baseLoan({ status: "windykacja_komornicza" });
     const r = await call();
+    // Komornik z aktu 777 może egzekwować same zaległe raty — umowa nie jest
+    // wypowiedziana, więc agent nie mówi o wypowiedzeniu ani o całym saldzie.
+    expect(r.kwota).toBe(11956.69);
+    expect(vars().umowa_wypowiedziana).toBe("nie");
+    expect(vars().etap).toBe("ostatnie_wezwanie");
+  });
+
+  it("wypowiedzenie z datą z przyszłości — jeszcze nie ma wypowiedzenia", async () => {
+    state.kase.loan = baseLoan({ data_wypowiedzenia: "2026-10-20" });
+    const r = await call();
+    expect(r.kwota).toBe(11956.69);
+    expect(vars().umowa_wypowiedziana).toBe("nie");
+  });
+
+  it("wypowiedzenie skuteczne — całe zadłużenie", async () => {
+    state.kase.loan = baseLoan({ data_wypowiedzenia: "2026-09-20" });
+    const r = await call();
     const expected = windDebtSnapshot({
-      loan: { ...baseLoan(), status: "wypowiedziana" },
+      loan: baseLoan({ data_wypowiedzenia: "2026-09-20" }),
       kwotaZalegla: 0,
       events: state.events as never,
       asOf: "2026-10-06",
     });
     expect(expected.wypowiedziana).toBe(true);
     expect(r.kwota).toBe(expected.doZaplatyTeraz);
-    expect(r.kwota).toBeGreaterThan(80_000);
+    expect(r.kwota).toBeGreaterThan(60_000);
     expect(vars().umowa_wypowiedziana).toBe("tak");
-    expect(vars().etap).toBe("ostatnie_wezwanie");
     expect(state.inserted[0].tresc).toMatch(/całe zadłużenie po wypowiedzeniu/);
   });
 

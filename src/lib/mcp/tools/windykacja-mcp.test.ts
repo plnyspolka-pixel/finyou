@@ -599,10 +599,9 @@ describe("update_wind_loan", () => {
     expect(db.tables.wind_loans[0].kwota_777).toBeNull();
   });
 
-  it("status podany wprost wygrywa z automatem przeliczenia (z ostrzeżeniem)", async () => {
-    const d = okData(await run(updateWindLoan, { loan_id: LOAN, status: "splacona" }));
+  it("status podany wprost zostaje — przeliczenie nie cofa „spłaconej”", async () => {
+    okData(await run(updateWindLoan, { loan_id: LOAN, status: "splacona" }));
     expect(db.tables.wind_loans[0].status).toBe("splacona");
-    expect(d.ostrzezenia.join(" ")).toMatch(/ustawiony zgodnie z poleceniem/);
   });
 
   it("operator: zapis dozwolony (RLS), rachunek w odpowiedzi ukryty", async () => {

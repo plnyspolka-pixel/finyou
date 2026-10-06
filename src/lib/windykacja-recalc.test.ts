@@ -99,13 +99,13 @@ describe("windRecalcPlan — migawka sprawy z harmonogramu", () => {
     expect(again!.loanPatch.status).toBeUndefined();
   });
 
-  it("'spłacona' z należnością (np. po korekcie harmonogramu) wraca do 'w zwłoce'", () => {
+  it("'spłacona' ustawiona świadomie nie jest cofana przez przeliczenie", () => {
     const plan = windRecalcPlan({
       loan: { ...loan, status: "splacona" },
       events,
       asOf: "2026-10-06",
     });
-    expect(plan!.loanPatch.status).toBe("w_zwloce");
+    expect(plan!.loanPatch.status).toBeUndefined();
   });
 
   it("wypowiedziana: status zostaje, wszystkie raty wymagalne", () => {

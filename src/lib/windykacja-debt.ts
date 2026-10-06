@@ -71,18 +71,27 @@ export interface WindDebtSnapshot {
   debt: DebtCalcResult | null;
 }
 
+/** Dzisiejsza data w Polsce (RRRR-MM-DD). */
+function warsawTodayISO(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 /**
- * Czy cała należność jest wymagalna: wypowiedzenie albo sprawa już na
- * etapie egzekucji komorniczej / karnym (tak samo jak w agencie AI —
- * windLoanTerminated w windykacja-agent-prompt.ts).
+ * Czy umowa jest skutecznie wypowiedziana na dzień `asOf`: data
+ * wypowiedzenia już minęła (data z przyszłości = wypowiedzenia jeszcze
+ * nie ma) albo status „wypowiedziana" bez daty. Egzekucja komornicza
+ * albo zawiadomienie karne same w sobie nie są wypowiedzeniem — komornik
+ * może egzekwować z aktu 777 tylko zaległe raty (ścieżka standardowa).
  */
-export function windLoanIsTerminated(loan: WindDebtLoan): boolean {
-  return (
-    Boolean(loan.data_wypowiedzenia) ||
-    ["wypowiedziana", "windykacja_komornicza", "windykacja_karna"].includes(
-      String(loan.status ?? ""),
-    )
-  );
+export function windLoanIsTerminated(loan: WindDebtLoan, asOf: string = warsawTodayISO()): boolean {
+  const data = (loan.data_wypowiedzenia ?? "").slice(0, 10);
+  if (data) return data <= asOf.slice(0, 10);
+  return loan.status === "wypowiedziana";
 }
 
 /** Wpłaty i opłaty windykacyjne z osi zdarzeń sprawy. */
@@ -121,7 +130,8 @@ export function windDebtSnapshot(input: {
   asOf: string;
 }): WindDebtSnapshot {
   const { loan, asOf } = input;
-  const terminated = windLoanIsTerminated(loan);
+  const terminated = windLoanIsTerminated(loan, asOf);
+  const doplaty = Math.max(0, Number(loan.kwota_doplat || 0));
   const { payments, fees } = windPaymentsAndFees(input.events);
   const harmonogram = normalizeHarmonogram(loan.harmonogram);
 
@@ -134,14 +144,18 @@ export function windDebtSnapshot(input: {
       stopaUmowna: Number(loan.stopa_odsetek_max) || null,
       dataWypowiedzenia: terminated ? (loan.data_wypowiedzenia ?? asOf) : null,
     });
+    // Całe zadłużenie: raty przyszłe bez odsetek umownych za okres przyszły
+    // (przy spłacie całości odsetki należą się tylko za faktyczny okres —
+    // KWO_04) oraz dopłaty umowne. Po wypowiedzeniu całość jest do zapłaty.
+    const calosc = round2(raty.doZaplatyTeraz + raty.ratyPrzyszleBezOdsetek + doplaty);
     return {
       zrodlo: "harmonogram",
       wypowiedziana: terminated,
       zaleglosc: raty.zaleglosc,
       odsetkiZaOpoznienie: raty.odsetkiZaOpoznienie,
       koszty: raty.koszty,
-      doZaplatyTeraz: raty.doZaplatyTeraz,
-      calosc: round2(raty.doZaplatyTeraz + raty.pozostaleRatyPrzyszle),
+      doZaplatyTeraz: terminated ? calosc : raty.doZaplatyTeraz,
+      calosc,
       dniOpoznienia: raty.dniOpoznienia,
       najstarszaZalegla: raty.najstarszaZalegla,
       najblizszaRata: raty.najblizszaRata,
@@ -162,29 +176,41 @@ export function windDebtSnapshot(input: {
     // § 2¹ k.c.) — stara domyślna stopa 22,5% nie przejdzie ponad limit.
     maxStatutoryRate: maxDelayRate(asOf),
     terminated,
-    terminationDate: loan.data_wypowiedzenia,
+    terminationDate: terminated ? (loan.data_wypowiedzenia ?? asOf) : null,
     overdueInstallmentsAmount: Number(input.kwotaZalegla || 0),
     surcharges: Number(loan.kwota_doplat || 0),
     payments,
     actionFees: fees,
     asOf,
   });
-  // Przed wypowiedzeniem wymagalna jest zaległość (kwota zaległa sprawy,
-  // nie więcej niż saldo), a nie całe saldo pożyczki.
-  const zaleglosc = terminated
+  const maKwoty = bearing + investorCommission > 0;
+  // Całość jest wymagalna po wypowiedzeniu. Termin spłaty w modelu
+  // jednoterminowym bywa wpisywany jako termin najstarszej zaległej raty,
+  // więc jego upływ sam nie oznacza wymagalności całej pożyczki.
+  const calosciWymagalna = maKwoty && terminated;
+  // Inaczej — zaległość sprawy. Kwota zaległa jest już pomniejszona o wpłaty
+  // (przy zakładaniu sprawy i przy każdej wpłacie), więc odsetki za opóźnienie
+  // i koszty bierzemy narastająco, bez ponownego odejmowania tych samych wpłat.
+  const kwotaZalegla = Math.max(0, Number(input.kwotaZalegla || 0));
+  const zaleglosc = calosciWymagalna
     ? debt.principalOutstanding + debt.investorCommissionOutstanding + debt.contractualInterest
-    : Math.min(Number(input.kwotaZalegla || 0), debt.totalDue);
-  const doZaplatyTeraz = terminated
+    : maKwoty
+      ? Math.min(kwotaZalegla, debt.totalDue)
+      : kwotaZalegla;
+  const doZaplatyBrutto = zaleglosc + debt.delayInterestAccrued + debt.totalFeesCharged;
+  const doZaplatyTeraz = calosciWymagalna
     ? debt.totalDue
-    : Math.min(debt.totalDue, zaleglosc + debt.delayInterest + debt.costsOutstanding);
+    : maKwoty
+      ? Math.min(debt.totalDue, doZaplatyBrutto)
+      : doZaplatyBrutto;
   return {
     zrodlo: "termin",
     wypowiedziana: terminated,
     zaleglosc: round2(zaleglosc),
-    odsetkiZaOpoznienie: debt.delayInterest,
-    koszty: debt.costsOutstanding,
+    odsetkiZaOpoznienie: calosciWymagalna ? debt.delayInterest : debt.delayInterestAccrued,
+    koszty: calosciWymagalna ? debt.costsOutstanding : debt.totalFeesCharged,
     doZaplatyTeraz: round2(doZaplatyTeraz),
-    calosc: debt.totalDue,
+    calosc: maKwoty ? debt.totalDue : round2(doZaplatyTeraz),
     dniOpoznienia: debt.daysOverdue,
     najstarszaZalegla: loan.termin_splaty ?? null,
     najblizszaRata: null,

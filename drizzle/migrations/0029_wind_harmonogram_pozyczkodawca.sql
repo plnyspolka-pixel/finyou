@@ -25,3 +25,47 @@ COMMENT ON COLUMN public.wind_loans.harmonogram IS
 
 COMMENT ON COLUMN public.wind_loans.pozyczkodawca IS
   'Nazwa pożyczkodawcy z umowy (strona udzielająca pożyczki); agent windykacyjny AI dzwoni w jego imieniu.';
+
+-- Zdarzenia i dokumenty sprawy należą do właściciela SPRAWY, nie do osoby,
+-- która je dodała. Dotąd investor_user_id brał DEFAULT auth.uid(), więc
+-- wpłata albo telefon dodane przez zespół (panel, MCP) były niewidoczne dla
+-- inwestora (RLS) — a zaległość z harmonogramu liczona u inwestora pomijała
+-- taką wpłatę. Wyzwalacz ustawia właściciela z wind_collection_cases; RLS
+-- (WITH CHECK) sprawdza wiersz po wyzwalaczu, więc inwestor nadal nie doda
+-- zdarzenia do cudzej sprawy, a zespół (is_internal_staff) — tak.
+CREATE OR REPLACE FUNCTION public.wind_owner_from_case()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  SELECT c.investor_user_id INTO NEW.investor_user_id
+  FROM public.wind_collection_cases c
+  WHERE c.id = NEW.case_id;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.wind_owner_from_case() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS trg_wind_events_owner ON public.wind_events;
+CREATE TRIGGER trg_wind_events_owner
+  BEFORE INSERT ON public.wind_events
+  FOR EACH ROW EXECUTE FUNCTION public.wind_owner_from_case();
+
+DROP TRIGGER IF EXISTS trg_wind_documents_owner ON public.wind_documents;
+CREATE TRIGGER trg_wind_documents_owner
+  BEFORE INSERT ON public.wind_documents
+  FOR EACH ROW EXECUTE FUNCTION public.wind_owner_from_case();
+
+-- Wpisy dodane wcześniej przez zespół do cudzych spraw — przypisz właścicielowi sprawy.
+UPDATE public.wind_events e
+SET investor_user_id = c.investor_user_id
+FROM public.wind_collection_cases c
+WHERE e.case_id = c.id AND e.investor_user_id IS DISTINCT FROM c.investor_user_id;
+
+UPDATE public.wind_documents d
+SET investor_user_id = c.investor_user_id
+FROM public.wind_collection_cases c
+WHERE d.case_id = c.id AND d.investor_user_id IS DISTINCT FROM c.investor_user_id;

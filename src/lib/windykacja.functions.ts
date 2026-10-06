@@ -208,6 +208,7 @@ const DOC_COLS =
 
 /** Dzisiejsza data w Polsce (Europe/Warsaw), RRRR-MM-DD. */
 const todayISO = () => warsawToday();
+
 const emptyToNull = (v: unknown) => (v === "" ? null : v);
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 /** Południe UTC danego dnia — data zdarzenia nie zależy od strefy serwera. */
@@ -236,7 +237,7 @@ export const listWindDashboard = createServerFn({ method: "GET" })
 
     // Zdarzenia z kwotą wpłaty i opłatą — panel liczy z nich zadłużenie z
     // odsetkami karnymi dla każdej sprawy (ten sam silnik co karta sprawy).
-    let events: Pick<
+    const events: Pick<
       WindEvent,
       | "case_id"
       | "typ"
@@ -247,15 +248,27 @@ export const listWindDashboard = createServerFn({ method: "GET" })
       | "metadata"
       | "oplata"
     >[] = [];
-    if (caseIds.length) {
-      const { data: ev } = await db
-        .from("wind_events")
-        .select(
-          "case_id, typ, tytul, data_zdarzenia, data_doreczenia, status_doreczenia, metadata, oplata",
-        )
-        .in("case_id", caseIds)
-        .order("data_zdarzenia", { ascending: false });
-      events = (ev ?? []) as typeof events;
+    // Stronicowanie: PostgREST zwraca maks. 1000 wierszy — bez tego przy
+    // większej liczbie zdarzeń część wpłat znikała z wyliczenia zaległości.
+    // Błąd odczytu przerywa (zaległość z niepełnych wpłat byłaby zawyżona).
+    const PAGE = 1000;
+    for (let i = 0; i < caseIds.length; i += 100) {
+      const chunk = caseIds.slice(i, i + 100);
+      for (let from = 0; ; from += PAGE) {
+        const { data: ev, error: evErr } = await db
+          .from("wind_events")
+          .select(
+            "id, case_id, typ, tytul, data_zdarzenia, data_doreczenia, status_doreczenia, metadata, oplata",
+          )
+          .in("case_id", chunk)
+          .order("data_zdarzenia", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (evErr) throw new Error(evErr.message);
+        const rows = (ev ?? []) as typeof events;
+        events.push(...rows);
+        if (rows.length < PAGE) break;
+      }
     }
 
     return { cases: list, events };
@@ -343,6 +356,14 @@ const dataInput = z.preprocess(
       return iso;
     }),
 );
+/**
+ * Data wpłaty: wymagana i nie z przyszłości — wpłata z datą przyszłą byłaby
+ * pomijana w wyliczeniu do tego dnia, a zdarzeń nie można poprawić.
+ */
+const dataWplatyInput = dataInput
+  .refine((v) => v != null, "podaj datę wpłaty")
+  .refine((v) => v == null || v <= todayISO(), "data wpłaty nie może być z przyszłości")
+  .transform((v) => v ?? "");
 
 /** Tekst (przycięty); pusty → null. */
 const tekstInput = (max: number) =>
@@ -534,7 +555,7 @@ const createSchema = z.object({
         kwota: kwotaInput
           .refine((v) => v != null && v > 0, "kwota wpłaty musi być większa od 0")
           .transform((v) => round2(v ?? 0)),
-        data: dataInput.refine((v) => v != null, "podaj datę wpłaty").transform((v) => v ?? ""),
+        data: dataWplatyInput,
         zalacznik_url: z.string().optional().nullable(),
       }),
     )
@@ -723,6 +744,19 @@ export const createWindCase = createServerFn({ method: "POST" })
           } catch (e) {
             console.error("[windykacja] przeliczenie sprawy:", (e as Error).message);
           }
+        } else {
+          // Model jednoterminowy: saldo (i wyliczona kwota zaległa) były już
+          // pomniejszone o te wpłaty — cofamy to, żeby ponowne dodanie wpłat
+          // na karcie sprawy nie odjęło ich drugi raz.
+          const naleznosc = round2(data.kwota_calkowita || data.kwota_pozyczki);
+          await db.from("wind_loans").update({ saldo_pozostale: naleznosc }).eq("id", loan.id);
+          if (!data.kwota_zalegla) {
+            kwotaZalegla = naleznosc;
+            await db
+              .from("wind_collection_cases")
+              .update({ kwota_zalegla: naleznosc })
+              .eq("id", kase.id);
+          }
         }
       }
     }
@@ -888,6 +922,45 @@ export const updateWindLoan = createServerFn({ method: "POST" })
       } catch (e) {
         // Zmiana jest już zapisana — najpierw ślad w aktach, potem błąd.
         recalcError = e as Error;
+      }
+    }
+
+    // Pożyczka bez harmonogramu (także po jego usunięciu): saldo jak przy
+    // zakładaniu sprawy — kwota do zwrotu minus suma wpłat. Inaczej pisma
+    // korzystałyby z salda sprzed zmiany kwot.
+    if (
+      !loan.harmonogram &&
+      changed.some((k) => ["kwota_calkowita", "kwota_pozyczki", "harmonogram"].includes(k))
+    ) {
+      try {
+        const { data: sprawy, error: sErr } = await db
+          .from("wind_collection_cases")
+          .select("id")
+          .eq("loan_id", id);
+        if (sErr) throw new Error(sErr.message);
+        const ids = ((sprawy ?? []) as Array<{ id: string }>).map((c) => c.id);
+        let wplaty = 0;
+        if (ids.length) {
+          const { data: ev, error: wErr } = await db
+            .from("wind_events")
+            .select("metadata")
+            .in("case_id", ids)
+            .eq("typ", "wplata");
+          if (wErr) throw new Error(wErr.message);
+          for (const e of (ev ?? []) as Array<{ metadata: { kwota?: unknown } | null }>) {
+            wplaty += Number(e.metadata?.kwota ?? 0) || 0;
+          }
+        }
+        const baza = Number(loan.kwota_calkowita) || Number(loan.kwota_pozyczki) || 0;
+        const saldo = round2(Math.max(0, baza - wplaty));
+        const { error: uErr } = await db
+          .from("wind_loans")
+          .update({ saldo_pozostale: saldo })
+          .eq("id", id);
+        if (uErr) throw new Error(uErr.message);
+        loan = { ...loan, saldo_pozostale: saldo };
+      } catch (e) {
+        recalcError = recalcError ?? (e as Error);
       }
     }
 
@@ -1235,7 +1308,7 @@ export const addWindWplata = createServerFn({ method: "POST" })
         kwota: kwotaInput
           .refine((v) => v != null && v > 0, "kwota wpłaty musi być większa od 0")
           .transform((v) => round2(v ?? 0)),
-        data: dataInput.refine((v) => v != null, "podaj datę wpłaty").transform((v) => v ?? ""),
+        data: dataWplatyInput,
         sposob: z.string().optional().nullable(),
       }),
       d,

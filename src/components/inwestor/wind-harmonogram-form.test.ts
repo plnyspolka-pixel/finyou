@@ -277,7 +277,7 @@ describe("edycja pożyczki — patch tylko ze zmienionych pól", () => {
     const form = {
       ...loanToEditForm(LOAN),
       pozyczkodawca: "  Finance You sp. z o.o. ",
-      rachunek_splaty: "12 1020 1026 0000 0402 0353 2127",
+      rachunek_splaty: "56 1090 2590 0000 0001 5708 1371",
       akt_notarialny_777: "Rep. A nr 1234/2026",
       kwota_777: "135 000,00",
       kwota_hipoteki: "135000",
@@ -287,7 +287,7 @@ describe("edycja pożyczki — patch tylko ze zmienionych pól", () => {
     expect(bledy).toEqual([]);
     expect(patch).toEqual({
       pozyczkodawca: "Finance You sp. z o.o.",
-      rachunek_splaty: "12 1020 1026 0000 0402 0353 2127",
+      rachunek_splaty: "56 1090 2590 0000 0001 5708 1371",
       akt_notarialny_777: "Rep. A nr 1234/2026",
       kwota_777: 135000,
       kwota_hipoteki: 135000,

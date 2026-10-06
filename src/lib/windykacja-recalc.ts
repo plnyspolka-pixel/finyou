@@ -73,12 +73,14 @@ export function windRecalcPlan(input: {
   const snapshot = windDebtSnapshot(input);
   if (snapshot.zrodlo !== "harmonogram" || !snapshot.raty) return null;
   const loanPatch: WindRecalcPlan["loanPatch"] = {
-    saldo_pozostale: round2(snapshot.zaleglosc + snapshot.raty.pozostaleRatyPrzyszle),
+    // Saldo = zaległe raty + raty przyszłe bez odsetek umownych za okres
+    // przyszły — z tej kwoty korzystają pisma (np. wypowiedzenie).
+    saldo_pozostale: round2(snapshot.zaleglosc + snapshot.raty.ratyPrzyszleBezOdsetek),
   };
-  if (snapshot.calosc <= 0.01) {
-    if (input.loan.status !== "splacona") loanPatch.status = "splacona";
-  } else if (input.loan.status === "splacona") {
-    loanPatch.status = "w_zwloce";
+  // Status „spłacona" ustawiamy automatycznie, ale go nie cofamy — mógł
+  // zostać ustawiony świadomie (np. ugoda, umorzenie reszty).
+  if (snapshot.calosc <= 0.01 && input.loan.status !== "splacona") {
+    loanPatch.status = "splacona";
   }
   return {
     snapshot,
@@ -99,8 +101,19 @@ export function formatRachunekSplaty(raw: string): string | null {
   const m = /^(PL)?(\d{26})$/.exec(s);
   if (!m) return null;
   const d = m[2];
+  // Cyfry kontrolne NRB (jak IBAN PL, mod 97): pomyłka w jednej cyfrze
+  // nie może trafić do pism ani do rozmowy agenta AI.
+  if (!nrbChecksumOk(d)) return null;
   const groups = d.slice(2).match(/.{4}/g) ?? [];
   return `${m[1] ?? ""}${d.slice(0, 2)} ${groups.join(" ")}`;
+}
+
+/** Suma kontrolna NRB: (BBAN + „PL" jako 2521 + cyfry kontrolne) mod 97 = 1. */
+function nrbChecksumOk(nrb26: string): boolean {
+  const digits = `${nrb26.slice(2)}2521${nrb26.slice(0, 2)}`;
+  let rest = 0;
+  for (const ch of digits) rest = (rest * 10 + Number(ch)) % 97;
+  return rest === 1;
 }
 
 const isBlank = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "");

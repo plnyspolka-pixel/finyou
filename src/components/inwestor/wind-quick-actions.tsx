@@ -71,7 +71,7 @@ export function buildWindSmsText(
   }
   return (
     `Przypomnienie: do zapłaty z umowy ${nr} jest teraz ${formatZl(amountDueNow)} ` +
-    `(zaległe raty z odsetkami za opóźnienie). Prosimy o pilną spłatę. Brak wpłaty oznacza ` +
+    `(zaległe raty z odsetkami za opóźnienie i kosztami). Prosimy o pilną spłatę. Brak wpłaty oznacza ` +
     `dalsze czynności windykacyjne i koszty. Finance You`
   );
 }
@@ -153,7 +153,14 @@ export function WindQuickContactDialog({
         onDone(ev);
       } else {
         const res = await doBotCall({
-          data: { caseId, telefon: phone.trim(), kwota: Number(amount) || 0, oplata },
+          // Kwota niezmieniona = 0: serwer liczy „do zapłaty teraz" sam (na
+          // dzień rozmowy) i zapisuje jej rozbicie w aktach; zmieniona — ręczna.
+          data: {
+            caseId,
+            telefon: phone.trim(),
+            kwota: amount.trim() === String(dueNow) ? 0 : Number(amount.replace(",", ".")) || 0,
+            oplata,
+          },
         });
         if (res.ok) {
           toast.success(

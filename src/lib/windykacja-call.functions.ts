@@ -12,7 +12,6 @@ import {
   WIND_AGENT_PROMPT,
   buildWindCallVariables,
   warsawISODate,
-  windLoanTerminated,
   type WindPreviousPromise,
 } from "@/lib/windykacja-agent-prompt";
 import { windDebtSnapshot, type WindDebtEvent, type WindDebtLoan } from "@/lib/windykacja-debt";
@@ -323,16 +322,13 @@ export const placeWindCollectionCall = createServerFn({ method: "POST" })
     const events = (history ?? []) as WindDebtEvent[];
 
     // Stan zadłużenia na dziś (Europe/Warsaw) — ten sam silnik co karta
-    // sprawy. Egzekucja komornicza albo karna oznacza umowę wypowiedzianą
-    // (tak mówi o niej agent), więc liczymy wtedy całe zadłużenie.
+    // sprawy i to samo rozumienie wypowiedzenia co agent (windLoanTerminated
+    // = windLoanIsTerminated): po wypowiedzeniu całe zadłużenie, przed nim
+    // „do zapłaty teraz".
     const now = new Date();
     const today = warsawISODate(now);
-    const terminated = windLoanTerminated({
-      status_pozyczki: loan.status,
-      data_wypowiedzenia: loan.data_wypowiedzenia,
-    });
     const snapshot = windDebtSnapshot({
-      loan: terminated ? { ...loan, status: "wypowiedziana" } : loan,
+      loan,
       kwotaZalegla: Number(kase.kwota_zalegla ?? 0),
       events,
       asOf: today,
