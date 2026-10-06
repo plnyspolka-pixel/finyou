@@ -20,6 +20,8 @@ import { analyzeFloodRisk } from "./flood-risk.server";
 import { portalValuation, portalValuationToRcnStats } from "./portal-valuation.server";
 import { calculateCollateralScore, classifyLtv } from "./scoring";
 import { buildAnalysisResult, generateOfferText } from "./offer-text";
+import { parseKwAddress, type KwAddress } from "@/lib/kw-address-core";
+import { normalizeKwNumber } from "@/lib/kw-fetch.server";
 
 const Input = z.object({ applicationId: z.string().uuid() });
 
@@ -45,7 +47,28 @@ export interface CollateralAnalysisOpts {
     floorPietro?: number | null;
     landUse?: string | null;
     fromKw?: boolean;
+    /** Położenie z działu I-O KW — dane urzędowe, wygrywają z adresem z wniosku. */
+    location?: KwAddress | null;
   };
+}
+
+/** Położenie nieruchomości z zapisanej treści KW (dział I-O); null, gdy brak treści. */
+async function loadKwLocation(kwNumber: string | null | undefined): Promise<KwAddress | null> {
+  const kw = kwNumber ? normalizeKwNumber(kwNumber) : null;
+  if (!kw) return null;
+  const { data: row } = await supabaseAdmin
+    .from("kw_documents")
+    .select("dzial_1o")
+    .eq("kw_number", kw)
+    .maybeSingle();
+  if (!row?.dzial_1o) return null;
+  const addr = parseKwAddress(row.dzial_1o);
+  return addr.city ? addr : null;
+}
+
+/** „M. SŁUPSK" / „m.st. Warszawa" / „powiat słupski" → nazwa powiatu bez prefiksu. */
+function normalizeCounty(powiat: string): string {
+  return powiat.replace(/^\s*(powiat|m\.?\s*st\.?|m\.)\s*/i, "").trim();
 }
 
 export async function runPropertyCollateralAnalysisCore(
@@ -89,6 +112,13 @@ export async function runPropertyCollateralAnalysisCore(
         name: d.file_name,
       })),
     };
+
+    // Lokalizacja z KW: gdy wołający jej nie podał (ręczne uruchomienie, nowy
+    // wniosek z landingu), czytamy dział I-O z zapisanej treści księgi.
+    if (!opts.kw?.location && input.kwNumber) {
+      const location = await loadKwLocation(input.kwNumber).catch(() => null);
+      if (location) opts = { ...opts, kw: { ...opts.kw, location } };
+    }
 
     return analyzePropertyCollateral(input, opts, {
       property,
@@ -134,6 +164,24 @@ export async function analyzePropertyCollateral(
     }
 
     const warnings: string[] = [];
+
+    // Lokalizacja z działu I-O KW ma pierwszeństwo przed adresem z wniosku —
+    // wycena, geokodowanie i ocena lokalizacji mają dotyczyć nieruchomości
+    // wskazanej w księdze, a nie tego, co wpisał lead.
+    const kwLoc = kw?.location;
+    if (kwLoc?.city) {
+      const norm = (v: string | null | undefined) => (v ?? "").trim().toLowerCase();
+      if (input.city && norm(input.city) !== norm(kwLoc.city)) {
+        warnings.push(
+          `Rozbieżność lokalizacji: wniosek podaje „${input.city}", a dział I-O KW „${kwLoc.city}" — wycenę i lokalizację oparto na danych z KW.`,
+        );
+      }
+      input.city = kwLoc.city;
+      if (kwLoc.fullAddress) input.address = kwLoc.fullAddress;
+      if (kwLoc.voivodeship) input.voivodeship = kwLoc.voivodeship;
+      if (kwLoc.powiat) input.county = normalizeCounty(kwLoc.powiat);
+      input.locationFromKw = true;
+    }
     const sourcesUsed: DataSourceUsage[] = [];
 
     // 1) Ekstrakcja dokumentów
@@ -182,8 +230,15 @@ export async function analyzePropertyCollateral(
     }
 
     // Normalizacja Warszawy (alias dzielnic/gmin) — wymusza city = Warszawa, county = m.st. Warszawa.
-    const addrLower = `${input.address ?? ""} ${input.city ?? ""}`.toLowerCase();
-    if (/warszaw/i.test(addrLower)) {
+    // Dopasowanie po MIEJSCOWOŚCI, nie po fragmencie adresu: ulica „Warszawska"
+    // (np. w Słupsku) nie może zamieniać nieruchomości na warszawską. Gdy brak
+    // miejscowości, szukamy samodzielnego słowa „Warszawa" w adresie.
+    // Powiat z KW porównujemy dokładnie: „warszawski zachodni" to nie Warszawa.
+    const isWarsaw = input.city
+      ? /^\s*(m\.?\s*st\.?\s*)?warszaw/i.test(input.city) ||
+        (input.locationFromKw === true && /^warszawa$/i.test(input.county ?? ""))
+      : /(^|[\s,])warszawa([\s,]|$)/i.test(input.address ?? "");
+    if (isWarsaw) {
       input.city = "Warszawa";
       input.county = "m.st. Warszawa";
       input.voivodeship = input.voivodeship || "mazowieckie";

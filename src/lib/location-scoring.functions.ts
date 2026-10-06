@@ -21,6 +21,7 @@ import {
   maskKwNumber,
   calibrateSerialSignal,
   runBacktest,
+  pinCandidatesToKwLocation,
   MODEL_VERSION,
   type AreaMetrics,
   type LocationCandidate,
@@ -33,6 +34,8 @@ import {
   type EvalPair,
   type SerialObs,
 } from "@/lib/location-scoring";
+import { parseKwAddress } from "@/lib/kw-address-core";
+import { compactKwNumber } from "@/lib/kw";
 
 // ── Auto-kalibracja sygnału repertoryjnego dla grupy prefiks×rodzaj (spec §11) ─
 // Po każdej nowej obserwacji przeliczamy zakresy numerów i flagę validated_offline
@@ -125,6 +128,24 @@ async function resolveDataVersion(db: SupabaseClient): Promise<string | null> {
     .limit(1)
     .maybeSingle();
   return (data?.data_version as string | undefined) ?? null;
+}
+
+// ── Położenie z działu I-O zapisanej treści KW ──────────────────────────────
+async function loadKwLocationHint(
+  db: SupabaseClient,
+  normalizedKw: string,
+): Promise<{ gmina: string | null; city: string | null; powiat: string | null } | null> {
+  const kw = compactKwNumber(normalizedKw);
+  if (!kw) return null;
+  const { data } = await db
+    .from("kw_documents")
+    .select("dzial_1o")
+    .eq("kw_number", kw)
+    .maybeSingle();
+  if (!data?.dzial_1o) return null;
+  const a = parseKwAddress(data.dzial_1o as string);
+  if (!a.gmina && !a.city) return null;
+  return { gmina: a.gmina ?? null, city: a.city ?? null, powiat: a.powiat ?? null };
 }
 
 // ── Mapowanie wydziału KW dla prefiksu (najpewniejsze mapowanie) ─────────────
@@ -436,10 +457,17 @@ export async function scoreApplicationCore(
   const dataVersion = (await resolveDataVersion(db)) ?? "n/a";
 
   let candidates: LocationCandidate[] = [];
+  let pinnedTo: string[] | null = null;
   let observations: ObservationAggregate | null = null;
   let serialSignal = buildSerialSignal(null, config.serialSignalMinSample);
   if (parsed.formatValid && dataVersion !== "n/a") {
     candidates = await loadCandidates(db, parsed.prefix, propertyType, dataVersion);
+    // Treść KW (dział I-O) podaje urzędowe położenie — gdy jest pobrana,
+    // zawężamy rozkład z całego okręgu wydziału do gminy z księgi.
+    const kwLoc = await loadKwLocationHint(db, parsed.normalized).catch(() => null);
+    const pin = pinCandidatesToKwLocation(candidates, kwLoc);
+    candidates = pin.candidates;
+    pinnedTo = pin.pinnedTo;
     observations = await loadObservations(db, parsed.prefix, propertyType);
     // Sygnał repertoryjny jest kalibrowany per prefiks×rodzaj — bez rodzaju pomijamy.
     if (propertyType !== "any" && Number.isFinite(parsed.serialNumber)) {
@@ -465,6 +493,15 @@ export async function scoreApplicationCore(
 
   const result = scoreLocation(ctx, { dataVersion });
   result.applicationId = input.applicationId ?? "";
+  if (pinnedTo && result.explanation) {
+    result.explanation.reasons.unshift(
+      `Położenie z działu I-O księgi wieczystej: gmina ${pinnedTo.join(" / ")} — rozkład zawężony do tej gminy (zamiast całego okręgu wydziału ${parsed.prefix}).`,
+    );
+  } else if (result.explanation && candidates.length > 0) {
+    result.explanation.limitations.push(
+      "Brak pobranej treści KW (dział I-O) albo gminy z księgi nie ma w danych referencyjnych — wynik szacowany z prefiksu wydziału KW.",
+    );
+  }
 
   const contextParams = {
     config,
@@ -473,6 +510,7 @@ export async function scoreApplicationCore(
     observationSample: observations?.sampleCount ?? 0,
     serialApplied: serialSignal?.applied ?? false,
     courtMapped: Boolean(court),
+    kwLocationPinnedTo: pinnedTo,
   };
 
   let analysisId: string | null = null;

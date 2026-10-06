@@ -45,6 +45,8 @@ export interface PropertyAnalysisInput {
   landUse?: string | null;
   /** Parametry i lokalizacja pochodzą z księgi wieczystej (wpływa na framing wyceny). */
   parametersFromKw?: boolean;
+  /** Adres/miejscowość/powiat przyjęte z działu I-O KW (nie z wniosku). */
+  locationFromKw?: boolean;
   soilClass?: string | null;
   declaredPropertyValuePln?: number | null;
   requestedLoanAmountPln?: number | null;
