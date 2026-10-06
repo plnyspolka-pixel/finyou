@@ -268,7 +268,9 @@ import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes
 import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/hooks/seed-blog'
 import { Route as ApiPublicHooksSeoLocationPublishTickRouteImport } from './routes/api/public/hooks/seo-location-publish-tick'
 import { Route as ApiPublicHooksSeoLocationSeedRouteImport } from './routes/api/public/hooks/seo-location-seed'
+import { Route as ApiPublicHooksSocialCommentsTickRouteImport } from './routes/api/public/hooks/social-comments-tick'
 import { Route as ApiPublicHooksSocialPublishTickRouteImport } from './routes/api/public/hooks/social-publish-tick'
+import { Route as ApiPublicHooksSocialWeeklyReportRouteImport } from './routes/api/public/hooks/social-weekly-report'
 import { Route as ApiPublicHooksStatusEmailTickRouteImport } from './routes/api/public/hooks/status-email-tick'
 import { Route as ApiPublicHooksSyncAccountingRouteImport } from './routes/api/public/hooks/sync-accounting'
 import { Route as ApiPublicHooksVideoPipelineTickRouteImport } from './routes/api/public/hooks/video-pipeline-tick'
@@ -1639,10 +1641,22 @@ const ApiPublicHooksSeoLocationSeedRoute =
     path: '/api/public/hooks/seo-location-seed',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSocialCommentsTickRoute =
+  ApiPublicHooksSocialCommentsTickRouteImport.update({
+    id: '/api/public/hooks/social-comments-tick',
+    path: '/api/public/hooks/social-comments-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSocialPublishTickRoute =
   ApiPublicHooksSocialPublishTickRouteImport.update({
     id: '/api/public/hooks/social-publish-tick',
     path: '/api/public/hooks/social-publish-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksSocialWeeklyReportRoute =
+  ApiPublicHooksSocialWeeklyReportRouteImport.update({
+    id: '/api/public/hooks/social-weekly-report',
+    path: '/api/public/hooks/social-weekly-report',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksStatusEmailTickRoute =
@@ -1994,7 +2008,9 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
+  '/api/public/hooks/social-comments-tick': typeof ApiPublicHooksSocialCommentsTickRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
+  '/api/public/hooks/social-weekly-report': typeof ApiPublicHooksSocialWeeklyReportRoute
   '/api/public/hooks/status-email-tick': typeof ApiPublicHooksStatusEmailTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
@@ -2261,7 +2277,9 @@ export interface FileRoutesByTo {
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
+  '/api/public/hooks/social-comments-tick': typeof ApiPublicHooksSocialCommentsTickRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
+  '/api/public/hooks/social-weekly-report': typeof ApiPublicHooksSocialWeeklyReportRoute
   '/api/public/hooks/status-email-tick': typeof ApiPublicHooksStatusEmailTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
@@ -2539,7 +2557,9 @@ export interface FileRoutesById {
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
+  '/api/public/hooks/social-comments-tick': typeof ApiPublicHooksSocialCommentsTickRoute
   '/api/public/hooks/social-publish-tick': typeof ApiPublicHooksSocialPublishTickRoute
+  '/api/public/hooks/social-weekly-report': typeof ApiPublicHooksSocialWeeklyReportRoute
   '/api/public/hooks/status-email-tick': typeof ApiPublicHooksStatusEmailTickRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/video-pipeline-tick': typeof ApiPublicHooksVideoPipelineTickRoute
@@ -2818,7 +2838,9 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
+    | '/api/public/hooks/social-comments-tick'
     | '/api/public/hooks/social-publish-tick'
+    | '/api/public/hooks/social-weekly-report'
     | '/api/public/hooks/status-email-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
@@ -3085,7 +3107,9 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
+    | '/api/public/hooks/social-comments-tick'
     | '/api/public/hooks/social-publish-tick'
+    | '/api/public/hooks/social-weekly-report'
     | '/api/public/hooks/status-email-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
@@ -3362,7 +3386,9 @@ export interface FileRouteTypes {
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
+    | '/api/public/hooks/social-comments-tick'
     | '/api/public/hooks/social-publish-tick'
+    | '/api/public/hooks/social-weekly-report'
     | '/api/public/hooks/status-email-tick'
     | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/video-pipeline-tick'
@@ -3486,7 +3512,9 @@ export interface RootRouteChildren {
   ApiPublicHooksSeedBlogRoute: typeof ApiPublicHooksSeedBlogRoute
   ApiPublicHooksSeoLocationPublishTickRoute: typeof ApiPublicHooksSeoLocationPublishTickRoute
   ApiPublicHooksSeoLocationSeedRoute: typeof ApiPublicHooksSeoLocationSeedRoute
+  ApiPublicHooksSocialCommentsTickRoute: typeof ApiPublicHooksSocialCommentsTickRoute
   ApiPublicHooksSocialPublishTickRoute: typeof ApiPublicHooksSocialPublishTickRoute
+  ApiPublicHooksSocialWeeklyReportRoute: typeof ApiPublicHooksSocialWeeklyReportRoute
   ApiPublicHooksStatusEmailTickRoute: typeof ApiPublicHooksStatusEmailTickRoute
   ApiPublicHooksSyncAccountingRoute: typeof ApiPublicHooksSyncAccountingRoute
   ApiPublicHooksVideoPipelineTickRoute: typeof ApiPublicHooksVideoPipelineTickRoute
@@ -5317,11 +5345,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSeoLocationSeedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/social-comments-tick': {
+      id: '/api/public/hooks/social-comments-tick'
+      path: '/api/public/hooks/social-comments-tick'
+      fullPath: '/api/public/hooks/social-comments-tick'
+      preLoaderRoute: typeof ApiPublicHooksSocialCommentsTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/social-publish-tick': {
       id: '/api/public/hooks/social-publish-tick'
       path: '/api/public/hooks/social-publish-tick'
       fullPath: '/api/public/hooks/social-publish-tick'
       preLoaderRoute: typeof ApiPublicHooksSocialPublishTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/social-weekly-report': {
+      id: '/api/public/hooks/social-weekly-report'
+      path: '/api/public/hooks/social-weekly-report'
+      fullPath: '/api/public/hooks/social-weekly-report'
+      preLoaderRoute: typeof ApiPublicHooksSocialWeeklyReportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/status-email-tick': {
@@ -5993,7 +6035,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksSeoLocationPublishTickRoute:
     ApiPublicHooksSeoLocationPublishTickRoute,
   ApiPublicHooksSeoLocationSeedRoute: ApiPublicHooksSeoLocationSeedRoute,
+  ApiPublicHooksSocialCommentsTickRoute: ApiPublicHooksSocialCommentsTickRoute,
   ApiPublicHooksSocialPublishTickRoute: ApiPublicHooksSocialPublishTickRoute,
+  ApiPublicHooksSocialWeeklyReportRoute: ApiPublicHooksSocialWeeklyReportRoute,
   ApiPublicHooksStatusEmailTickRoute: ApiPublicHooksStatusEmailTickRoute,
   ApiPublicHooksSyncAccountingRoute: ApiPublicHooksSyncAccountingRoute,
   ApiPublicHooksVideoPipelineTickRoute: ApiPublicHooksVideoPipelineTickRoute,

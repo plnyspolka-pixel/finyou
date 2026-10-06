@@ -183,6 +183,13 @@
       "when": 1790881000000,
       "tag": "0025_zlecenie_tylko_kwota_max",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791280313923,
+      "tag": "0026_social_autoodpowiedzi_raport",
+      "breakpoints": true
     }
   ]
 }

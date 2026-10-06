@@ -11524,6 +11524,51 @@ export type Database = {
         }
         Relationships: []
       }
+      social_comment_replies: {
+        Row: {
+          action: string
+          author_name: string | null
+          comment_id: string
+          comment_text: string | null
+          created_at: string
+          id: string
+          object_id: string | null
+          permalink: string | null
+          platform: string
+          reason: string | null
+          reply_id: string | null
+          reply_text: string | null
+        }
+        Insert: {
+          action: string
+          author_name?: string | null
+          comment_id: string
+          comment_text?: string | null
+          created_at?: string
+          id?: string
+          object_id?: string | null
+          permalink?: string | null
+          platform: string
+          reason?: string | null
+          reply_id?: string | null
+          reply_text?: string | null
+        }
+        Update: {
+          action?: string
+          author_name?: string | null
+          comment_id?: string
+          comment_text?: string | null
+          created_at?: string
+          id?: string
+          object_id?: string | null
+          permalink?: string | null
+          platform?: string
+          reason?: string | null
+          reply_id?: string | null
+          reply_text?: string | null
+        }
+        Relationships: []
+      }
       social_posts: {
         Row: {
           ai_model: string | null
@@ -11659,6 +11704,30 @@ export type Database = {
           x_media_at?: string | null
           x_media_id?: string | null
           x_media_status?: string | null
+        }
+        Relationships: []
+      }
+      social_stats_snapshots: {
+        Row: {
+          captured_at: string
+          followers: number | null
+          id: string
+          metrics: Json
+          platform: string
+        }
+        Insert: {
+          captured_at?: string
+          followers?: number | null
+          id?: string
+          metrics?: Json
+          platform: string
+        }
+        Update: {
+          captured_at?: string
+          followers?: number | null
+          id?: string
+          metrics?: Json
+          platform?: string
         }
         Relationships: []
       }

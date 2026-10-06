@@ -23,6 +23,7 @@ const PAIRS: Array<[string, string]> = [
   ["20260930101000_cookie_consent_log.sql", "0021_cookie_consent_log.sql"],
   ["20260930140000_abonament_inwestora.sql", "0023_abonament_inwestora.sql"],
   ["20260930190000_prowizja_od_pozyczkobiorcy.sql", "0024_prowizja_od_pozyczkobiorcy.sql"],
+  ["20261006120000_social_autoodpowiedzi_raport.sql", "0026_social_autoodpowiedzi_raport.sql"],
 ];
 
 describe("migracje 2026-09-29", () => {
@@ -88,5 +89,38 @@ describe("migracje 2026-09-29", () => {
     const guards = sql.match(/position\('ZASADY OPŁAT I B2B' in system_prompt\) = 0/g) ?? [];
     expect(appends.length).toBe(2);
     expect(guards.length).toBe(appends.length);
+  });
+});
+
+describe("migracja 20261006120000 — autoodpowiedzi i raport social", () => {
+  const sql = readFileSync(join(SUPA, "20261006120000_social_autoodpowiedzi_raport.sql"), "utf8");
+
+  it.each(["social_comment_replies", "social_stats_snapshots"])(
+    "%s: RLS, brak anon, zapis tylko serwisowo, odczyt administrator/operator",
+    (table) => {
+      expect(sql).toContain(`alter table public.${table} enable row level security`);
+      expect(sql).toContain(`revoke all on public.${table} from public, anon`);
+      expect(sql).toContain(`grant all on public.${table} to service_role`);
+      expect(sql).not.toMatch(new RegExp(`grant [^;]*on public\\.${table} to [^;]*anon`));
+      expect(sql).not.toMatch(
+        new RegExp(`grant [^;]*(insert|update|delete)[^;]*on public\\.${table} to authenticated`),
+      );
+      const policy = sql.slice(sql.indexOf(`create policy "${table}_staff_read"`));
+      expect(policy.slice(0, policy.indexOf(";"))).toMatch(
+        /for select\s+to authenticated\s+using \(\s+public\.has_role\(auth\.uid\(\), 'administrator'::public\.app_role\)\s+or public\.has_role\(auth\.uid\(\), 'operator'::public\.app_role\)/,
+      );
+    },
+  );
+
+  it("unikalne (platform, comment_id) — blokada przed podwójną odpowiedzią", () => {
+    expect(sql).toMatch(/unique \(platform, comment_id\)/);
+  });
+
+  it("joby pg_cron: tick co 15 min i raport w poniedziałki 06:00 UTC, z limitem czasu", () => {
+    expect(sql).toMatch(/cron\.schedule\('social-comments-tick', '\*\/15 \* \* \* \*'/);
+    expect(sql).toMatch(/cron\.schedule\('social-weekly-report', '0 6 \* \* 1'/);
+    expect(sql).toContain("/api/public/hooks/social-comments-tick");
+    expect(sql).toContain("/api/public/hooks/social-weekly-report");
+    expect(sql.match(/timeout_milliseconds := 60000/g)).toHaveLength(2);
   });
 });
