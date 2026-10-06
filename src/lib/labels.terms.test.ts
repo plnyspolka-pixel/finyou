@@ -6,6 +6,8 @@ import { TERMS } from "./labels";
 // Strony i komponenty inwestora nie używają starych nazw ani cennika.
 const UI_FILES = [
   "src/routes/dla-inwestora.tsx",
+  "src/routes/dla-inwestora_.$modul.tsx",
+  "src/components/marketing/investor-modules.ts",
   "src/routes/inwestor.tsx",
   "src/routes/inwestor.umowy.tsx",
   "src/routes/inwestor.analityka.tsx",
