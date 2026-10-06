@@ -14,10 +14,12 @@
 //     (WIN_01: dwukrotność odsetek ustawowych za opóźnienie), ale w każdym
 //     dniu nie wyższe niż odsetki maksymalne za opóźnienie obowiązujące
 //     w tym dniu (tabela MAX_INTEREST_TABLE w contract-engine/fees.ts);
-//   • zaliczanie wpłat (WIN_04 / art. 451 k.c.): najpierw koszty
-//     windykacyjne, potem odsetki za opóźnienie, potem raty od najstarszej
-//     (rata zawiera prowizję, odsetki umowne i kapitał w proporcjach
-//     z harmonogramu — kolejność wewnątrz raty nie zmienia jej salda);
+//   • odsetki za opóźnienie liczymy od części raty BEZ odsetek umownych
+//     (art. 482 k.c. — zakaz anatocyzmu), gdy harmonogram podaje rozbicie
+//     raty; bez rozbicia — od całej niezapłaconej raty;
+//   • zaliczanie wpłat wg umowy (WIN_04): prowizja z rat wymagalnych →
+//     koszty windykacyjne → odsetki za opóźnienie → odsetki umowne → kapitał
+//     (w każdej grupie od najstarszej raty); nadwyżka idzie na raty przyszłe;
 //   • wypowiedzenie umowy przyspiesza wymagalność rat przyszłych (bez
 //     przyszłych odsetek umownych, gdy harmonogram je wyszczególnia).
 // ════════════════════════════════════════════════════════════════════
@@ -31,8 +33,10 @@ export interface WindRata {
   termin: string;
   /** Kwota raty łącznie. */
   kwota: number;
-  /** Część odsetkowa raty (gdy harmonogram ją podaje) — po wypowiedzeniu nienależna za przyszłość. */
+  /** Część odsetkowa raty (odsetki umowne), gdy harmonogram ją podaje. */
   odsetki?: number | null;
+  /** Część prowizyjna raty, gdy harmonogram ją podaje. */
+  prowizja?: number | null;
 }
 
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -71,8 +75,9 @@ function validIso(iso: string): string | null {
 export function parseKwota(v: unknown): number | null {
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
   if (v == null) return null;
+  // \s obejmuje też twardą spację (separator tysięcy w pl-PL).
   const s = String(v)
-    .replace(/[\s\u00a0]/g, "")
+    .replace(/\s/g, "")
     .replace(/zł|pln/gi, "");
   if (!s) return null;
   // „1.234,56" → 1234.56; „1234,56" → 1234.56; „1234.56" → 1234.56
@@ -84,7 +89,8 @@ export function parseKwota(v: unknown): number | null {
 /**
  * Normalizuje harmonogram z dowolnego źródła (OCR, formularz, baza):
  * odrzuca wiersze bez poprawnej daty lub dodatniej kwoty, sortuje po
- * terminie i numeruje od 1. Brak wierszy → null.
+ * terminie i numeruje od 1. Rozbicie raty (odsetki, prowizja) zostaje
+ * tylko wtedy, gdy mieści się w kwocie raty. Brak wierszy → null.
  */
 export function normalizeHarmonogram(raw: unknown): WindRata[] | null {
   if (!Array.isArray(raw)) return null;
@@ -96,11 +102,16 @@ export function normalizeHarmonogram(raw: unknown): WindRata[] | null {
     const kwota = parseKwota(o.kwota ?? o.rata ?? o.rata_razem);
     if (!termin || kwota == null || kwota <= 0) continue;
     const odsetki = parseKwota(o.odsetki);
+    const prowizja = parseKwota(o.prowizja);
+    const ods = odsetki != null && odsetki >= 0 ? round2(odsetki) : null;
+    const prow = prowizja != null && prowizja >= 0 ? round2(prowizja) : null;
+    const rozbicieOk = (ods ?? 0) + (prow ?? 0) <= kwota + EPS;
     rows.push({
       nr: 0,
       termin,
       kwota: round2(kwota),
-      ...(odsetki != null && odsetki >= 0 ? { odsetki: round2(odsetki) } : {}),
+      ...(rozbicieOk && ods != null ? { odsetki: ods } : {}),
+      ...(rozbicieOk && prow != null ? { prowizja: prow } : {}),
     });
   }
   if (rows.length === 0) return null;
@@ -262,6 +273,18 @@ export interface ZalegloscInput {
   dataWypowiedzenia?: string | null;
 }
 
+/** Rata w trakcie symulacji: niezapłacone części (prowizja, odsetki umowne, kapitał). */
+interface RataSym extends WindRata {
+  terminSkuteczny: string;
+  kwotaWymagana: number;
+  remP: number;
+  remI: number;
+  remK: number;
+  odsetkiZaOpoznienie: number;
+}
+
+const pozostaloRaty = (r: RataSym) => r.remP + r.remI + r.remK;
+
 /**
  * Stan zaległości na dzień `asOf`: symulacja dzień po dniu od pierwszego
  * terminu (albo pierwszej wpłaty) — naliczanie odsetek za opóźnienie od
@@ -273,20 +296,24 @@ export function computeZaleglosc(input: ZalegloscInput): ZalegloscWynik {
   const contractRate = Number(input.stopaUmowna) > 0 ? Number(input.stopaUmowna) : null;
   const termination = input.dataWypowiedzenia ? parseDataISO(input.dataWypowiedzenia) : null;
 
-  const raty = [...(normalizeHarmonogram(input.harmonogram) ?? [])].map((r) => {
+  const raty: RataSym[] = [...(normalizeHarmonogram(input.harmonogram) ?? [])].map((r) => {
     const skuteczny = effectiveDueDate(r.termin);
+    const odsetki = Number(r.odsetki) || 0;
+    const prowizja = Number(r.prowizja) || 0;
     // Wypowiedzenie: raty o terminie późniejszym stają się wymagalne
     // w dniu wypowiedzenia, bez odsetek umownych za okres przyszły.
     const przyspieszona = termination != null && skuteczny > termination;
-    const kwotaWymagana = przyspieszona
-      ? round2(Math.max(0, r.kwota - (Number(r.odsetki) || 0)))
-      : r.kwota;
+    const remI = przyspieszona ? 0 : odsetki;
+    const remP = prowizja;
+    const remK = Math.max(0, r.kwota - odsetki - prowizja);
     return {
       ...r,
       terminSkuteczny: przyspieszona ? (termination as string) : skuteczny,
-      kwotaWymagana,
-      pozostalo: kwotaWymagana,
-      odsetki: 0,
+      kwotaWymagana: round2(remP + remI + remK),
+      remP,
+      remI,
+      remK,
+      odsetkiZaOpoznienie: 0,
     };
   });
 
@@ -320,14 +347,16 @@ export function computeZaleglosc(input: ZalegloscInput): ZalegloscWynik {
     for (let i = 0; i <= total; i++) {
       const day = addDays(starts[0], i);
 
-      // 1. Odsetki za opóźnienie za ten dzień — od rat po skutecznym terminie.
+      // 1. Odsetki za opóźnienie za ten dzień — od rat po skutecznym terminie,
+      //    od części bez odsetek umownych (art. 482 k.c.).
       const cap = rateCap(day);
       const rate = contractRate != null ? Math.min(contractRate, cap) : cap;
       if (rate > 0) {
         for (const r of raty) {
-          if (r.pozostalo > EPS && day > r.terminSkuteczny) {
-            const inc = (r.pozostalo * rate) / 100 / 365;
-            r.odsetki += inc;
+          const base = r.remP + r.remK;
+          if (base > EPS && day > r.terminSkuteczny) {
+            const inc = (base * rate) / 100 / 365;
+            r.odsetkiZaOpoznienie += inc;
             delayBal += inc;
           }
         }
@@ -336,21 +365,31 @@ export function computeZaleglosc(input: ZalegloscInput): ZalegloscWynik {
       // 2. Koszty czynności windykacyjnych z tego dnia.
       costsBal += feeByDay.get(day) ?? 0;
 
-      // 3. Wpłaty z tego dnia: koszty → odsetki za opóźnienie → raty od najstarszej.
+      // 3. Wpłaty z tego dnia — kolejność z umowy (WIN_04).
       let pay = payByDay.get(day) ?? 0;
       if (pay > 0) {
+        const wymagalne = raty.filter((r) => r.terminSkuteczny <= day);
+        const przyszle = raty.filter((r) => r.terminSkuteczny > day);
+        const take = (r: RataSym, part: "remP" | "remI" | "remK") => {
+          const x = Math.min(pay, r[part]);
+          r[part] -= x;
+          naRaty += x;
+          pay -= x;
+        };
+        for (const r of wymagalne) take(r, "remP");
         const toCosts = Math.min(pay, costsBal);
         costsBal -= toCosts;
         pay -= toCosts;
         const toDelay = Math.min(pay, delayBal);
         delayBal -= toDelay;
         pay -= toDelay;
-        for (const r of raty) {
-          if (pay <= EPS) break;
-          const x = Math.min(pay, r.pozostalo);
-          r.pozostalo -= x;
-          naRaty += x;
-          pay -= x;
+        for (const r of wymagalne) take(r, "remI");
+        for (const r of wymagalne) take(r, "remK");
+        // Nadwyżka — na raty przyszłe, od najbliższej.
+        for (const r of przyszle) {
+          take(r, "remP");
+          take(r, "remI");
+          take(r, "remK");
         }
         if (pay > EPS) nadplata += pay;
       }
@@ -359,7 +398,7 @@ export function computeZaleglosc(input: ZalegloscInput): ZalegloscWynik {
 
   const stan: RataStan[] = raty.map((r) => {
     const wymagalna = r.terminSkuteczny <= asOf;
-    const pozostalo = round2(Math.max(0, r.pozostalo));
+    const pozostalo = round2(Math.max(0, pozostaloRaty(r)));
     return {
       nr: r.nr,
       termin: r.termin,
@@ -371,7 +410,7 @@ export function computeZaleglosc(input: ZalegloscInput): ZalegloscWynik {
       wymagalna,
       dniOpoznienia:
         wymagalna && pozostalo > 0 ? Math.max(0, daysBetween(r.terminSkuteczny, asOf)) : 0,
-      odsetkiNaliczone: round2(r.odsetki),
+      odsetkiNaliczone: round2(r.odsetkiZaOpoznienie),
     };
   });
 

@@ -107,6 +107,43 @@ describe("zaległość z harmonogramu", () => {
     expect(z.nadplata).toBe(0);
   });
 
+  it("z rozbiciem raty: bez odsetek od odsetek umownych (art. 482 k.c.) i wpłata wg WIN_04", () => {
+    // Raty 1–3 z Zał. 1 silnika umów (kapitał / odsetki / prowizja).
+    const zRozbiciem = RATY.map((r, i) =>
+      i === 1
+        ? { ...r, odsetki: 891.33, prowizja: 666.67 }
+        : i === 2
+          ? { ...r, odsetki: 815.07, prowizja: 666.67 }
+          : r,
+    );
+    const z = computeZaleglosc({
+      harmonogram: zRozbiciem,
+      payments: WPLATY,
+      asOf: "2026-10-06",
+      stopaUmowna: 18.5,
+    });
+    // Rata 2: 4 000 → prowizja 666,67, odsetki za opóźnienie 7,07 (2 dni od
+    // prowizji + kapitału), odsetki umowne 891,33, kapitał 2 434,93.
+    expect(z.raty[1].pozostalo).toBe(3875.55);
+    expect(z.zaleglosc).toBe(11744.03);
+    // 108,04 (reszta kapitału raty 2, 55 dni) + 92,95 (rata 3 bez odsetek umownych, 26 dni)
+    expect(z.odsetkiZaOpoznienie).toBe(200.99);
+    expect(z.doZaplatyTeraz).toBe(11945.02);
+  });
+
+  it("wpłata najpierw na prowizję z rat wymagalnych, dopiero potem na koszty (WIN_04)", () => {
+    const z = computeZaleglosc({
+      harmonogram: [{ nr: 1, termin: "2026-03-02", kwota: 1000, odsetki: 200, prowizja: 100 }],
+      payments: [{ paid_on: "2026-03-02", amount: 120 }],
+      fees: [{ action_date: "2026-03-02", fee: 50 }],
+      asOf: "2026-03-02",
+      stopaMaksymalna: () => 0,
+    });
+    expect(z.koszty).toBe(30);
+    expect(z.zaleglosc).toBe(900);
+    expect(z.doZaplatyTeraz).toBe(930);
+  });
+
   it("stopa z umowy wyższa od maksymalnej jest obcinana do odsetek maksymalnych dnia", () => {
     const zawyzona = computeZaleglosc({
       harmonogram: RATY,
