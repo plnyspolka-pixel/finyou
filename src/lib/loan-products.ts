@@ -51,7 +51,7 @@ export function procedureSteps(docsHint: string): LoanProductStep[] {
     },
     {
       t: "Akceptacja warunków i dokumenty",
-      d: "Akceptujesz wybraną propozycję w panelu klienta. Weryfikujemy tożsamość (KYC), zbieramy dokumenty firmy i nieruchomości, a projekt umowy dostajesz do przeczytania przed wizytą u notariusza.",
+      d: "Akceptujesz wybraną propozycję w panelu klienta. Zbieramy dokumenty firmy i nieruchomości, a projekt umowy dostajesz do przeczytania przed wizytą u notariusza.",
     },
     {
       t: "Umowa u notariusza",
@@ -63,7 +63,7 @@ export function procedureSteps(docsHint: string): LoanProductStep[] {
     },
     {
       t: "Wypłata pożyczki",
-      d: "Po spełnieniu warunków z umowy (zwykle podpis aktu i wzmianka w KW) inwestor przelewa środki na Twój rachunek. Prowizja Finance You (5% kwoty, min. 5 000 zł) jest potrącana z wypłaty — nie płacisz nic z góry.",
+      d: "Po spełnieniu warunków z umowy (zwykle podpis aktu i wzmianka w KW) inwestor przelewa środki na Twój rachunek.",
     },
   ];
 }
@@ -71,7 +71,7 @@ export function procedureSteps(docsHint: string): LoanProductStep[] {
 const B2B_FAQ: LoanProductFaq[] = [
   {
     q: "Ile kosztuje złożenie wniosku?",
-    a: "Nic. Wniosek jest bezpłatny i niezobowiązujący. Jedyną opłatą dla Finance You jest prowizja 5% kwoty udzielonej pożyczki (nie mniej niż 5 000 zł, bez VAT), potrącana z wypłaty — dopiero po podpisaniu umowy.",
+    a: "Nic. Wniosek jest bezpłatny i niezobowiązujący.",
   },
   {
     q: "Ile trwa cały proces — od wniosku do wypłaty?",
@@ -144,7 +144,7 @@ export const LOAN_PRODUCTS: LoanProduct[] = [
     group: "zastaw",
     metaTitle: "Pożyczka pod zastaw domu dla firm — do 1 mln zł | Finance You",
     metaDescription:
-      "Pożyczka pod zastaw domu jednorodzinnego, bliźniaka lub domu w budowie — dla przedsiębiorców. Decyzja zwykle w 24 h, umowa u notariusza, prowizja potrącana z wypłaty.",
+      "Pożyczka pod zastaw domu jednorodzinnego, bliźniaka lub domu w budowie — dla przedsiębiorców. Decyzja zwykle w 24 h, umowa i hipoteka u notariusza.",
     h1: "Pożyczka pod zastaw domu",
     h1Accent: "szybko i bez bankowej biurokracji",
     lead: "Dom to zabezpieczenie o wysokiej wartości, które pozwala sięgnąć po większe kwoty. Wniosek ma już wybrany typ nieruchomości — podajesz miejscowość, zdjęcia i numer księgi wieczystej.",

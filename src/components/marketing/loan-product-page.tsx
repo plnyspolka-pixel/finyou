@@ -120,7 +120,6 @@ export function LoanProductPage({ slug }: { slug: string }) {
                 "Do 1 000 000 zł, okres do 72 miesięcy",
                 "Wstępna decyzja zwykle w 24 godziny",
                 "Umowa i hipoteka u notariusza — bezpiecznie dla obu stron",
-                "Prowizja potrącana z wypłaty — nic nie płacisz z góry",
               ].map((t) => (
                 <li key={t} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                   <span aria-hidden style={{ color: "#6ee7b7", fontWeight: 800 }}>
@@ -357,9 +356,8 @@ export function LoanProductPage({ slug }: { slug: string }) {
         <ComplianceNote style={{ marginTop: "1.5rem" }}>
           Materiał ma charakter informacyjny i nie stanowi oferty w rozumieniu art. 66 Kodeksu
           cywilnego. Finansowanie wyłącznie na cel związany z działalnością gospodarczą lub rolniczą
-          (B2B); jedyna opłata dla Finance You to prowizja 5% kwoty pożyczki (nie mniej niż 5 000
-          zł, bez VAT), potrącana z wypłaty. Koszty notarialne i sądowe ponosi pożyczkobiorca.
-          Finance You nie gwarantuje udzielenia finansowania — decyzja należy do inwestorów.
+          (B2B). Koszty notarialne i sądowe ponosi pożyczkobiorca. Finance You nie gwarantuje
+          udzielenia finansowania — decyzja należy do inwestorów.
         </ComplianceNote>
       </div>
     </MarketingShell>
