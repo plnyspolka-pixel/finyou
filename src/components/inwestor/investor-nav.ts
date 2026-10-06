@@ -17,6 +17,7 @@ import {
   Target,
   BarChart3,
   Undo2,
+  PenLine,
 } from "lucide-react";
 import type { NavGroup, NavItem } from "@/components/layout/panel-shell";
 
@@ -41,6 +42,9 @@ const MAIN_ITEMS: NavItem[] = [
   ORDER_PIPELINE_ITEM,
   { to: "/inwestor/zlecenia", label: "Moje zlecenia", icon: ClipboardList },
   { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
+  // E-podpis (forma dokumentowa): wysyłka umów do podpisu dowolnym osobom
+  // (Didit + kod jednorazowy) i dokumenty do podpisu przez samego inwestora.
+  { to: "/inwestor/podpisy", label: "E-podpis", icon: PenLine },
   // Pipeline analityczny (KW → właściciele → analiza KW → ryzyko) — ten
   // sam, którym posługuje się zespół Finance You — dla Projektów inwestora.
   { to: "/inwestor/analityka", label: "Analityka", icon: BarChart3 },

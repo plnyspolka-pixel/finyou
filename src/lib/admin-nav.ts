@@ -41,6 +41,7 @@ import {
   Megaphone,
   Landmark,
   Download,
+  PenLine,
 } from "lucide-react";
 
 /**
@@ -275,6 +276,22 @@ export const adminSections: AdminSection[] = [
         icon: FileSignature,
         description: "Tworzenie dokumentów B2B: umowy, oświadczenia, załączniki.",
         synonyms: ["dokumenty", "b2b", "szablony"],
+      },
+      {
+        to: "/admin/podpisy",
+        label: "Podpis elektroniczny",
+        icon: PenLine,
+        description:
+          "Podpisywanie dokumentów w formie dokumentowej (art. 77² KC): tożsamość przez Didit, kod jednorazowy, znacznik na każdej stronie i Karta podpisów.",
+        synonyms: [
+          "podpis",
+          "e-podpis",
+          "epodpis",
+          "autenti",
+          "forma dokumentowa",
+          "koperta",
+          "podpisz dokument",
+        ],
       },
       {
         to: "/admin/kw",

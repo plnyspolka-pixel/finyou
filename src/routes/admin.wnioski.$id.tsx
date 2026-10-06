@@ -368,8 +368,14 @@ export function WniosekDetail({
         <TabsContent value="dane" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle>Dane klienta</CardTitle>
+                {/* Umowa do e-podpisu klienta (forma dokumentowa, Didit + kod). */}
+                <Button asChild size="sm" variant="outline">
+                  <a href={`/admin/podpisy?nowa=1&klient=${app.client_id}&wniosek=${app.id}`}>
+                    Wyślij do e-podpisu
+                  </a>
+                </Button>
               </CardHeader>
               <CardContent className="text-sm space-y-1">
                 {c ? (

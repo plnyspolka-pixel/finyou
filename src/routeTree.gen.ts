@@ -79,6 +79,7 @@ import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminOperatorzyRouteImport } from './routes/admin.operatorzy'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
 import { Route as AdminPlatnosciDostepRouteImport } from './routes/admin.platnosci-dostep'
+import { Route as AdminPodpisyRouteImport } from './routes/admin.podpisy'
 import { Route as AdminPosrednicyRouteImport } from './routes/admin.posrednicy'
 import { Route as AdminPotencjalLokalizacyjnyRouteImport } from './routes/admin.potencjal-lokalizacyjny'
 import { Route as AdminPrMediaRouteImport } from './routes/admin.pr-media'
@@ -118,6 +119,7 @@ import { Route as InwestorKreatorUmowyRouteImport } from './routes/inwestor.krea
 import { Route as InwestorOdstapienieRouteImport } from './routes/inwestor.odstapienie'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorPlatnosciRouteImport } from './routes/inwestor.platnosci'
+import { Route as InwestorPodpisyRouteImport } from './routes/inwestor.podpisy'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorProjektyRouteImport } from './routes/inwestor.projekty'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
@@ -127,6 +129,7 @@ import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windyk
 import { Route as InwestorZleceniaRouteImport } from './routes/inwestor.zlecenia'
 import { Route as KartaTokenRouteImport } from './routes/karta.$token'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
+import { Route as KlientPodpisyRouteImport } from './routes/klient.podpisy'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
@@ -140,11 +143,13 @@ import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
 import { Route as OperatorMessengerRouteImport } from './routes/operator.messenger'
 import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-leady'
 import { Route as OperatorOfertyRouteImport } from './routes/operator.oferty'
+import { Route as OperatorPodpisyRouteImport } from './routes/operator.podpisy'
 import { Route as OperatorPowiadomieniaRouteImport } from './routes/operator.powiadomienia'
 import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
 import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka'
 import { Route as OperatorTablicaRouteImport } from './routes/operator.tablica'
 import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
+import { Route as PodpisTokenRouteImport } from './routes/podpis.$token'
 import { Route as PosrednicyIndexRouteImport } from './routes/posrednicy.index'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
 import { Route as PosrednikIndexRouteImport } from './routes/posrednik.index'
@@ -167,6 +172,7 @@ import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as SCodeRouteImport } from './routes/s.$code'
+import { Route as WeryfikacjaCodeRouteImport } from './routes/weryfikacja.$code'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -637,6 +643,11 @@ const AdminPlatnosciDostepRoute = AdminPlatnosciDostepRouteImport.update({
   path: '/platnosci-dostep',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPodpisyRoute = AdminPodpisyRouteImport.update({
+  id: '/podpisy',
+  path: '/podpisy',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPosrednicyRoute = AdminPosrednicyRouteImport.update({
   id: '/posrednicy',
   path: '/posrednicy',
@@ -835,6 +846,11 @@ const InwestorPlatnosciRoute = InwestorPlatnosciRouteImport.update({
   path: '/platnosci',
   getParentRoute: () => InwestorRoute,
 } as any)
+const InwestorPodpisyRoute = InwestorPodpisyRouteImport.update({
+  id: '/podpisy',
+  path: '/podpisy',
+  getParentRoute: () => InwestorRoute,
+} as any)
 const InwestorProfilRoute = InwestorProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
@@ -878,6 +894,11 @@ const KartaTokenRoute = KartaTokenRouteImport.update({
 const KlientIndexRoute = KlientIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => KlientRoute,
+} as any)
+const KlientPodpisyRoute = KlientPodpisyRouteImport.update({
+  id: '/podpisy',
+  path: '/podpisy',
   getParentRoute: () => KlientRoute,
 } as any)
 const KlientPowiadomieniaRoute = KlientPowiadomieniaRouteImport.update({
@@ -946,6 +967,11 @@ const OperatorOfertyRoute = OperatorOfertyRouteImport.update({
   path: '/oferty',
   getParentRoute: () => OperatorRoute,
 } as any)
+const OperatorPodpisyRoute = OperatorPodpisyRouteImport.update({
+  id: '/podpisy',
+  path: '/podpisy',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const OperatorPowiadomieniaRoute = OperatorPowiadomieniaRouteImport.update({
   id: '/powiadomienia',
   path: '/powiadomienia',
@@ -970,6 +996,11 @@ const OperatorWniosekRoute = OperatorWniosekRouteImport.update({
   id: '/wniosek',
   path: '/wniosek',
   getParentRoute: () => OperatorRoute,
+} as any)
+const PodpisTokenRoute = PodpisTokenRouteImport.update({
+  id: '/podpis/$token',
+  path: '/podpis/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PosrednicyIndexRoute = PosrednicyIndexRouteImport.update({
   id: '/posrednicy/',
@@ -1079,6 +1110,11 @@ const RCodeRoute = RCodeRouteImport.update({
 const SCodeRoute = SCodeRouteImport.update({
   id: '/s/$code',
   path: '/s/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WeryfikacjaCodeRoute = WeryfikacjaCodeRouteImport.update({
+  id: '/weryfikacja/$code',
+  path: '/weryfikacja/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WniosekTokenRoute = WniosekTokenRouteImport.update({
@@ -1804,6 +1840,7 @@ export interface FileRoutesByFullPath {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/podpisy': typeof AdminPodpisyRoute
   '/admin/posrednicy': typeof AdminPosrednicyRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/pr-media': typeof AdminPrMediaRoute
@@ -1841,6 +1878,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
+  '/inwestor/podpisy': typeof InwestorPodpisyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/projekty': typeof InwestorProjektyRouteWithChildren
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
@@ -1849,6 +1887,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/karta/$token': typeof KartaTokenRoute
+  '/klient/podpisy': typeof KlientPodpisyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -1861,11 +1900,13 @@ export interface FileRoutesByFullPath {
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/oferty': typeof OperatorOfertyRoute
+  '/operator/podpisy': typeof OperatorPodpisyRoute
   '/operator/powiadomienia': typeof OperatorPowiadomieniaRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/podpis/$token': typeof PodpisTokenRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
@@ -1884,6 +1925,7 @@ export interface FileRoutesByFullPath {
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -2076,6 +2118,7 @@ export interface FileRoutesByTo {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/podpisy': typeof AdminPodpisyRoute
   '/admin/posrednicy': typeof AdminPosrednicyRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/pr-media': typeof AdminPrMediaRoute
@@ -2112,12 +2155,14 @@ export interface FileRoutesByTo {
   '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
+  '/inwestor/podpisy': typeof InwestorPodpisyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/umowy': typeof InwestorUmowyRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/karta/$token': typeof KartaTokenRoute
+  '/klient/podpisy': typeof KlientPodpisyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -2129,11 +2174,13 @@ export interface FileRoutesByTo {
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/oferty': typeof OperatorOfertyRoute
+  '/operator/podpisy': typeof OperatorPodpisyRoute
   '/operator/powiadomienia': typeof OperatorPowiadomieniaRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/podpis/$token': typeof PodpisTokenRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -2151,6 +2198,7 @@ export interface FileRoutesByTo {
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
   '/blog': typeof BlogIndexRoute
@@ -2349,6 +2397,7 @@ export interface FileRoutesById {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/podpisy': typeof AdminPodpisyRoute
   '/admin/posrednicy': typeof AdminPosrednicyRoute
   '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/pr-media': typeof AdminPrMediaRoute
@@ -2386,6 +2435,7 @@ export interface FileRoutesById {
   '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
+  '/inwestor/podpisy': typeof InwestorPodpisyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/projekty': typeof InwestorProjektyRouteWithChildren
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
@@ -2394,6 +2444,7 @@ export interface FileRoutesById {
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/inwestor/zlecenia': typeof InwestorZleceniaRoute
   '/karta/$token': typeof KartaTokenRoute
+  '/klient/podpisy': typeof KlientPodpisyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
@@ -2406,11 +2457,13 @@ export interface FileRoutesById {
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/oferty': typeof OperatorOfertyRoute
+  '/operator/podpisy': typeof OperatorPodpisyRoute
   '/operator/powiadomienia': typeof OperatorPowiadomieniaRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/podpis/$token': typeof PodpisTokenRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
@@ -2429,6 +2482,7 @@ export interface FileRoutesById {
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -2628,6 +2682,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/podpisy'
     | '/admin/posrednicy'
     | '/admin/potencjal-lokalizacyjny'
     | '/admin/pr-media'
@@ -2665,6 +2720,7 @@ export interface FileRouteTypes {
     | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
+    | '/inwestor/podpisy'
     | '/inwestor/profil'
     | '/inwestor/projekty'
     | '/inwestor/szkolenia'
@@ -2673,6 +2729,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja'
     | '/inwestor/zlecenia'
     | '/karta/$token'
+    | '/klient/podpisy'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -2685,11 +2742,13 @@ export interface FileRouteTypes {
     | '/operator/messenger'
     | '/operator/moje-leady'
     | '/operator/oferty'
+    | '/operator/podpisy'
     | '/operator/powiadomienia'
     | '/operator/profil'
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/podpis/$token'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
     | '/posrednik/leady'
@@ -2708,6 +2767,7 @@ export interface FileRouteTypes {
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/weryfikacja/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
@@ -2900,6 +2960,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/podpisy'
     | '/admin/posrednicy'
     | '/admin/potencjal-lokalizacyjny'
     | '/admin/pr-media'
@@ -2936,12 +2997,14 @@ export interface FileRouteTypes {
     | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
+    | '/inwestor/podpisy'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/umowy'
     | '/inwestor/wiadomosci'
     | '/inwestor/zlecenia'
     | '/karta/$token'
+    | '/klient/podpisy'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -2953,11 +3016,13 @@ export interface FileRouteTypes {
     | '/operator/messenger'
     | '/operator/moje-leady'
     | '/operator/oferty'
+    | '/operator/podpisy'
     | '/operator/powiadomienia'
     | '/operator/profil'
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/podpis/$token'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
     | '/posrednik/marketing'
@@ -2975,6 +3040,7 @@ export interface FileRouteTypes {
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/weryfikacja/$code'
     | '/wniosek/$token'
     | '/admin'
     | '/blog'
@@ -3172,6 +3238,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/podpisy'
     | '/admin/posrednicy'
     | '/admin/potencjal-lokalizacyjny'
     | '/admin/pr-media'
@@ -3209,6 +3276,7 @@ export interface FileRouteTypes {
     | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
+    | '/inwestor/podpisy'
     | '/inwestor/profil'
     | '/inwestor/projekty'
     | '/inwestor/szkolenia'
@@ -3217,6 +3285,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja'
     | '/inwestor/zlecenia'
     | '/karta/$token'
+    | '/klient/podpisy'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
@@ -3229,11 +3298,13 @@ export interface FileRouteTypes {
     | '/operator/messenger'
     | '/operator/moje-leady'
     | '/operator/oferty'
+    | '/operator/podpisy'
     | '/operator/powiadomienia'
     | '/operator/profil'
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/podpis/$token'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
     | '/posrednik/leady'
@@ -3252,6 +3323,7 @@ export interface FileRouteTypes {
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/weryfikacja/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
@@ -3422,11 +3494,13 @@ export interface RootRouteChildren {
   FakturaIdRoute: typeof FakturaIdRoute
   KartaTokenRoute: typeof KartaTokenRoute
   LSlugRoute: typeof LSlugRoute
+  PodpisTokenRoute: typeof PodpisTokenRoute
   PosrednicyRejestracjaRoute: typeof PosrednicyRejestracjaRoute
   PozyczkiSlugRoute: typeof PozyczkiSlugRoute
   PropozycjeIdRoute: typeof PropozycjeIdRoute
   RCodeRoute: typeof RCodeRoute
   SCodeRoute: typeof SCodeRoute
+  WeryfikacjaCodeRoute: typeof WeryfikacjaCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
   PosrednicyIndexRoute: typeof PosrednicyIndexRoute
@@ -3994,6 +4068,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPlatnosciDostepRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/podpisy': {
+      id: '/admin/podpisy'
+      path: '/podpisy'
+      fullPath: '/admin/podpisy'
+      preLoaderRoute: typeof AdminPodpisyRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/posrednicy': {
       id: '/admin/posrednicy'
       path: '/posrednicy'
@@ -4267,6 +4348,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorPlatnosciRouteImport
       parentRoute: typeof InwestorRoute
     }
+    '/inwestor/podpisy': {
+      id: '/inwestor/podpisy'
+      path: '/podpisy'
+      fullPath: '/inwestor/podpisy'
+      preLoaderRoute: typeof InwestorPodpisyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
     '/inwestor/profil': {
       id: '/inwestor/profil'
       path: '/profil'
@@ -4328,6 +4416,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/klient/'
       preLoaderRoute: typeof KlientIndexRouteImport
+      parentRoute: typeof KlientRoute
+    }
+    '/klient/podpisy': {
+      id: '/klient/podpisy'
+      path: '/podpisy'
+      fullPath: '/klient/podpisy'
+      preLoaderRoute: typeof KlientPodpisyRouteImport
       parentRoute: typeof KlientRoute
     }
     '/klient/powiadomienia': {
@@ -4421,6 +4516,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorOfertyRouteImport
       parentRoute: typeof OperatorRoute
     }
+    '/operator/podpisy': {
+      id: '/operator/podpisy'
+      path: '/podpisy'
+      fullPath: '/operator/podpisy'
+      preLoaderRoute: typeof OperatorPodpisyRouteImport
+      parentRoute: typeof OperatorRoute
+    }
     '/operator/powiadomienia': {
       id: '/operator/powiadomienia'
       path: '/powiadomienia'
@@ -4455,6 +4557,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/operator/wniosek'
       preLoaderRoute: typeof OperatorWniosekRouteImport
       parentRoute: typeof OperatorRoute
+    }
+    '/podpis/$token': {
+      id: '/podpis/$token'
+      path: '/podpis/$token'
+      fullPath: '/podpis/$token'
+      preLoaderRoute: typeof PodpisTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/posrednicy/': {
       id: '/posrednicy/'
@@ -4608,6 +4717,13 @@ declare module '@tanstack/react-router' {
       path: '/s/$code'
       fullPath: '/s/$code'
       preLoaderRoute: typeof SCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/weryfikacja/$code': {
+      id: '/weryfikacja/$code'
+      path: '/weryfikacja/$code'
+      fullPath: '/weryfikacja/$code'
+      preLoaderRoute: typeof WeryfikacjaCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/wniosek/$token': {
@@ -5494,6 +5610,7 @@ interface AdminRouteChildren {
   AdminOperatorzyRoute: typeof AdminOperatorzyRoute
   AdminPixeleRoute: typeof AdminPixeleRoute
   AdminPlatnosciDostepRoute: typeof AdminPlatnosciDostepRoute
+  AdminPodpisyRoute: typeof AdminPodpisyRoute
   AdminPosrednicyRoute: typeof AdminPosrednicyRoute
   AdminPotencjalLokalizacyjnyRoute: typeof AdminPotencjalLokalizacyjnyRoute
   AdminPrMediaRoute: typeof AdminPrMediaRoute
@@ -5578,6 +5695,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminOperatorzyRoute: AdminOperatorzyRoute,
   AdminPixeleRoute: AdminPixeleRoute,
   AdminPlatnosciDostepRoute: AdminPlatnosciDostepRoute,
+  AdminPodpisyRoute: AdminPodpisyRoute,
   AdminPosrednicyRoute: AdminPosrednicyRoute,
   AdminPotencjalLokalizacyjnyRoute: AdminPotencjalLokalizacyjnyRoute,
   AdminPrMediaRoute: AdminPrMediaRoute,
@@ -5706,6 +5824,7 @@ interface InwestorRouteChildren {
   InwestorOdstapienieRoute: typeof InwestorOdstapienieRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
   InwestorPlatnosciRoute: typeof InwestorPlatnosciRoute
+  InwestorPodpisyRoute: typeof InwestorPodpisyRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorProjektyRoute: typeof InwestorProjektyRouteWithChildren
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
@@ -5729,6 +5848,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorOdstapienieRoute: InwestorOdstapienieRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,
   InwestorPlatnosciRoute: InwestorPlatnosciRoute,
+  InwestorPodpisyRoute: InwestorPodpisyRoute,
   InwestorProfilRoute: InwestorProfilRoute,
   InwestorProjektyRoute: InwestorProjektyRouteWithChildren,
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
@@ -5746,6 +5866,7 @@ const InwestorRouteWithChildren = InwestorRoute._addFileChildren(
 )
 
 interface KlientRouteChildren {
+  KlientPodpisyRoute: typeof KlientPodpisyRoute
   KlientPowiadomieniaRoute: typeof KlientPowiadomieniaRoute
   KlientProfilRoute: typeof KlientProfilRoute
   KlientPropozycjeRoute: typeof KlientPropozycjeRoute
@@ -5753,6 +5874,7 @@ interface KlientRouteChildren {
 }
 
 const KlientRouteChildren: KlientRouteChildren = {
+  KlientPodpisyRoute: KlientPodpisyRoute,
   KlientPowiadomieniaRoute: KlientPowiadomieniaRoute,
   KlientProfilRoute: KlientProfilRoute,
   KlientPropozycjeRoute: KlientPropozycjeRoute,
@@ -5785,6 +5907,7 @@ interface OperatorRouteChildren {
   OperatorMessengerRoute: typeof OperatorMessengerRoute
   OperatorMojeLeadyRoute: typeof OperatorMojeLeadyRoute
   OperatorOfertyRoute: typeof OperatorOfertyRoute
+  OperatorPodpisyRoute: typeof OperatorPodpisyRoute
   OperatorPowiadomieniaRoute: typeof OperatorPowiadomieniaRoute
   OperatorProfilRoute: typeof OperatorProfilRoute
   OperatorSkrzynkaRoute: typeof OperatorSkrzynkaRoute
@@ -5804,6 +5927,7 @@ const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorMessengerRoute: OperatorMessengerRoute,
   OperatorMojeLeadyRoute: OperatorMojeLeadyRoute,
   OperatorOfertyRoute: OperatorOfertyRoute,
+  OperatorPodpisyRoute: OperatorPodpisyRoute,
   OperatorPowiadomieniaRoute: OperatorPowiadomieniaRoute,
   OperatorProfilRoute: OperatorProfilRoute,
   OperatorSkrzynkaRoute: OperatorSkrzynkaRoute,
@@ -5917,11 +6041,13 @@ const rootRouteChildren: RootRouteChildren = {
   FakturaIdRoute: FakturaIdRoute,
   KartaTokenRoute: KartaTokenRoute,
   LSlugRoute: LSlugRoute,
+  PodpisTokenRoute: PodpisTokenRoute,
   PosrednicyRejestracjaRoute: PosrednicyRejestracjaRoute,
   PozyczkiSlugRoute: PozyczkiSlugRoute,
   PropozycjeIdRoute: PropozycjeIdRoute,
   RCodeRoute: RCodeRoute,
   SCodeRoute: SCodeRoute,
+  WeryfikacjaCodeRoute: WeryfikacjaCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
   PosrednicyIndexRoute: PosrednicyIndexRoute,
