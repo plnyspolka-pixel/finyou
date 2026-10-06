@@ -15,6 +15,8 @@ export default tseslint.config(
       // i tak nadpisałaby zmiany (typy Supabase to ~8,7 tys. „błędów" prettiera).
       "src/integrations/supabase/types.ts",
       "src/routeTree.gen.ts",
+      // Osobny projekt z własnymi zależnościami (npm install w services/remotion).
+      "services/remotion",
     ],
   },
   {
