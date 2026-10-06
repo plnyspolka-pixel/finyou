@@ -5,6 +5,7 @@ import {
   deriveEnvelopeStatus,
   eventHash,
   formatSignedAt,
+  pagesLabel,
   maskDocumentNumber,
   maskEmail,
   maskPhone,
@@ -157,6 +158,23 @@ describe("łańcuch hashy", () => {
     ).toBe(-1);
     expect(await verifyEventChain([{ ...e1, payload: { a: 2 } }, e2])).toBe(0);
     expect(await verifyEventChain([e1, { ...e2, prev_hash: "zle" }])).toBe(1);
+  });
+});
+
+describe("pagesLabel", () => {
+  it("odmienia liczbę stron po polsku", () => {
+    expect([1, 2, 4, 5, 11, 12, 14, 22, 25, 112].map(pagesLabel)).toEqual([
+      "1 strona",
+      "2 strony",
+      "4 strony",
+      "5 stron",
+      "11 stron",
+      "12 stron",
+      "14 stron",
+      "22 strony",
+      "25 stron",
+      "112 stron",
+    ]);
   });
 });
 

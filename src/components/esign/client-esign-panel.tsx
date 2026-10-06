@@ -25,6 +25,7 @@ import {
 import {
   ENVELOPE_STATUS_LABELS,
   formatSignedAt,
+  pagesLabel,
   type EnvelopeStatus,
 } from "@/lib/esign/esign-core";
 
@@ -150,7 +151,7 @@ export function ClientEsignPanel() {
                       <Clock className="h-3 w-3" /> do{" "}
                       {formatSignedAt(d.envelope.expiresAt).split(" (")[0]}
                     </span>
-                    <span>{d.envelope.pageCount} stron</span>
+                    <span>{pagesLabel(d.envelope.pageCount)}</span>
                   </div>
                 </div>
                 <Button onClick={() => open.mutate(d.signerId)} disabled={open.isPending}>
