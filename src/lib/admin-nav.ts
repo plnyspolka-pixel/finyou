@@ -392,7 +392,7 @@ export const adminSections: AdminSection[] = [
         label: "Umowy inwestorów",
         icon: FileCheck,
         description:
-          "Pakiet FY-LEGAL-2026-09-29 (v7): dokumenty z hashami, aktywacja po przeglądzie kancelarii, dziennik akceptacji i decyzje o Zleceniach.",
+          "Pakiet FY-LEGAL-2026-09-29 (umowa ramowa v8): dokumenty z hashami, aktywacja po przeglądzie kancelarii, dziennik akceptacji i decyzje o Zleceniach.",
         synonyms: ["umowy", "nda", "zlecenia", "pakiet prawny", "akceptacje"],
       },
       {

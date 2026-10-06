@@ -29,9 +29,8 @@
 
 export const PACKAGE_ID_V7 = "FY-LEGAL-2026-09-29";
 /** Kwoty Opłaty Abonamentowej w treści umowy v7 (zaakceptowanej 2026-10-01) —
- *  brzmienie zamrożone. Umowa odsyła („obecnie …") do Regulaminu Abonamentu,
- *  który od v3 (2026-10-06) przewiduje wyłącznie okres 365 dni; zmiana tekstu
- *  umowy wymaga nowej wersji i ponownej akceptacji. */
+ *  brzmienie zamrożone. Od 2026-10-06 obowiązuje umowa v8 z Abonamentem
+ *  wyłącznie rocznym (src/lib/legal/umowa-v8.ts, ABONAMENT_UMOWA_V8). */
 export const ABONAMENT_UMOWA = "1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni";
 /** Sprzedawca Abonamentu (i wystawca faktur za niego) — decyzja właściciela 2026-09-30. */
 export const SPRZEDAWCA_ABONAMENTU =

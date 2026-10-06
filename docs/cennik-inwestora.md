@@ -120,10 +120,14 @@ Migracja `20260929155000_etap5_pakiet_inwestor_v7.sql` (patrz
 `docs/legal/paczka-inwestor-v7/`): usunięte Pakiety, Cennik, Opłata Sukcesu,
 Opłata za Udostępnienie Okazji i Zał. 8; § 2/§ 7 — Finance You nie pobiera od
 Inwestora wynagrodzenia, a dostęp do systemu wymaga **Abonamentu** kupowanego
-od Fundacji na podstawie Regulaminu Abonamentu Inwestora (w treści v7:
-„obecnie 1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni” —
-brzmienie zamrożone, bo v7 została zaakceptowana 2026-10-01; od Regulaminu v3
-z 2026-10-06 sprzedawany jest wyłącznie okres 365 dni); Prowizja od Pożyczkobiorcy 5 % Kwoty
+od Fundacji na podstawie Regulaminu Abonamentu Inwestora. Od 6 października
+2026 r. obowiązuje **umowa ramowa v8** (`src/lib/legal/umowa-v8.ts`,
+`docs/legal/paczka-inwestor-v8/`, migracja `20261006191000_umowa_ramowa_v8.sql`,
+lustro drizzle `0029`): „obecnie 7 000,00 zł brutto za 365 dni”, Okres
+Abonamentowy 365 dni. v7 była zaakceptowana (2026-10-01), więc to nowa wersja —
+Inwestor akceptuje v8 w panelu. Uwaga: v7 w bazie produkcyjnej ma Prowizję 7%
+(zmiana 7% → 5% trafiła do już wgranej migracji `20260930190000`); v8 wprowadza
+na produkcji 5%; Prowizja od Pożyczkobiorcy 5 % Kwoty
 Udzielonej, min 5 000 zł, bez VAT, potrącana z wypłaty; § 5 — maks. 5
 przyjętych Zleceń, wygaśnięcie po 5 odrzuceniach, rezerwacja 24 h + 12 h,
 maks. 2 przedłużone naraz; Kara Obejściowa 5 % Sumy Hipotecznej i pięcioletni
