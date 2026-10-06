@@ -106,7 +106,8 @@ export const createSeoArticleDraft = defineTool({
           word_count: words,
           reading_minutes: Math.max(1, Math.round(words / 200)),
           status: "draft",
-          source: "mcp",
+          // CHECK ai_seo_articles_source_check dopuszcza tylko 'manual' i 'ai_autopilot'.
+          source: "manual",
           created_by: actorId(ctx),
         },
         "id, title, slug, status, audience, word_count, created_at",
