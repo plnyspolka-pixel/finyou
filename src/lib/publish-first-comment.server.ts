@@ -44,19 +44,26 @@ export function buildFirstComment(platform: CommentPlatform, url: string): strin
   return `👉 Szczegóły i bezpłatny kontakt: ${url}`;
 }
 
-// Cache per proces — kampania per platforma powstaje raz i jest reużywana.
+// Cache per proces — kampania powstaje raz i jest reużywana.
 const linkCache = new Map<string, string>();
 
 /**
- * Krótki link śledzący dla auto-komentarza danej platformy: istniejąca
- * kampania po slugu albo nowa (target financeyou.pl + UTM platformy).
+ * Krótki link śledzący `financeyou.pl/r/<kod>` dla stałej kampanii
+ * serwerowej: istniejąca kampania po slugu nazwy albo nowa (target
+ * financeyou.pl + podane UTM). Wspólne dla auto-komentarzy i digestu
+ * zaangażowania (odpowiedzi na forach).
  */
-export async function ensureFirstCommentLink(platform: CommentPlatform): Promise<string> {
-  const source = UTM_SOURCE[platform];
-  const cached = linkCache.get(source);
+export async function ensureTrackingLink(campaign: {
+  name: string;
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
+  notes: string;
+}): Promise<string> {
+  const slug = slugifyCampaign(campaign.name);
+  const cached = linkCache.get(slug);
   if (cached) return cached;
 
-  const slug = slugifyCampaign(campaignName(platform));
   const { data: existing } = await supabaseAdmin
     .from("marketing_campaigns")
     .select("short_code")
@@ -65,18 +72,29 @@ export async function ensureFirstCommentLink(platform: CommentPlatform): Promise
   let shortCode = existing?.short_code;
   if (!shortCode) {
     const row = await createTrackingCampaign(supabaseAdmin, null, {
-      name: campaignName(platform),
+      name: campaign.name,
       target_url: SITE,
-      utm_source: source,
-      utm_medium: "social",
-      utm_campaign: "auto_komentarz",
-      notes: "Link w automatycznym pierwszym komentarzu pod publikacjami.",
+      utm_source: campaign.utmSource,
+      utm_medium: campaign.utmMedium,
+      utm_campaign: campaign.utmCampaign,
+      notes: campaign.notes,
     });
     shortCode = row.short_code;
   }
   const url = `${SITE}/r/${shortCode}`;
-  linkCache.set(source, url);
+  linkCache.set(slug, url);
   return url;
+}
+
+/** Link śledzący auto-komentarza danej platformy (kampania per utm_source). */
+export async function ensureFirstCommentLink(platform: CommentPlatform): Promise<string> {
+  return ensureTrackingLink({
+    name: campaignName(platform),
+    utmSource: UTM_SOURCE[platform],
+    utmMedium: "social",
+    utmCampaign: "auto_komentarz",
+    notes: "Link w automatycznym pierwszym komentarzu pod publikacjami.",
+  });
 }
 
 async function postMetaComment(objectId: string, message: string): Promise<void> {

@@ -242,6 +242,7 @@ import { Route as PosrednikWnioskiIdRouteImport } from './routes/posrednik.wnios
 import { Route as ApiPublicEmailClickRouteImport } from './routes/api/public/email/click'
 import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
 import { Route as ApiPublicEmailUnsubscribeRouteImport } from './routes/api/public/email/unsubscribe'
+import { Route as ApiPublicEngagementMarkRouteImport } from './routes/api/public/engagement/mark'
 import { Route as ApiPublicHooksAccessExpiryTickRouteImport } from './routes/api/public/hooks/access-expiry-tick'
 import { Route as ApiPublicHooksAffiliateEventsTickRouteImport } from './routes/api/public/hooks/affiliate-events-tick'
 import { Route as ApiPublicHooksAnalysisPipelineTickRouteImport } from './routes/api/public/hooks/analysis-pipeline-tick'
@@ -250,6 +251,7 @@ import { Route as ApiPublicHooksAutoDistributionTickRouteImport } from './routes
 import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
+import { Route as ApiPublicHooksEngagementDigestTickRouteImport } from './routes/api/public/hooks/engagement-digest-tick'
 import { Route as ApiPublicHooksFollowUpPlanTickRouteImport } from './routes/api/public/hooks/follow-up-plan-tick'
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
 import { Route as ApiPublicHooksInstitutionMailTickRouteImport } from './routes/api/public/hooks/institution-mail-tick'
@@ -1486,6 +1488,11 @@ const ApiPublicEmailUnsubscribeRoute =
     path: '/api/public/email/unsubscribe',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicEngagementMarkRoute = ApiPublicEngagementMarkRouteImport.update({
+  id: '/api/public/engagement/mark',
+  path: '/api/public/engagement/mark',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksAccessExpiryTickRoute =
   ApiPublicHooksAccessExpiryTickRouteImport.update({
     id: '/api/public/hooks/access-expiry-tick',
@@ -1532,6 +1539,12 @@ const ApiPublicHooksElevenlabsConversationInitRoute =
   ApiPublicHooksElevenlabsConversationInitRouteImport.update({
     id: '/api/public/hooks/elevenlabs-conversation-init',
     path: '/api/public/hooks/elevenlabs-conversation-init',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksEngagementDigestTickRoute =
+  ApiPublicHooksEngagementDigestTickRouteImport.update({
+    id: '/api/public/hooks/engagement-digest-tick',
+    path: '/api/public/hooks/engagement-digest-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksFollowUpPlanTickRoute =
@@ -1982,6 +1995,7 @@ export interface FileRoutesByFullPath {
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
+  '/api/public/engagement/mark': typeof ApiPublicEngagementMarkRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
@@ -1990,6 +2004,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
+  '/api/public/hooks/engagement-digest-tick': typeof ApiPublicHooksEngagementDigestTickRoute
   '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
@@ -2251,6 +2266,7 @@ export interface FileRoutesByTo {
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
+  '/api/public/engagement/mark': typeof ApiPublicEngagementMarkRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
@@ -2259,6 +2275,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
+  '/api/public/hooks/engagement-digest-tick': typeof ApiPublicHooksEngagementDigestTickRoute
   '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
@@ -2531,6 +2548,7 @@ export interface FileRoutesById {
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
+  '/api/public/engagement/mark': typeof ApiPublicEngagementMarkRoute
   '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
@@ -2539,6 +2557,7 @@ export interface FileRoutesById {
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
+  '/api/public/hooks/engagement-digest-tick': typeof ApiPublicHooksEngagementDigestTickRoute
   '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
@@ -2812,6 +2831,7 @@ export interface FileRouteTypes {
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/email/unsubscribe'
+    | '/api/public/engagement/mark'
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/analysis-pipeline-tick'
@@ -2820,6 +2840,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
+    | '/api/public/hooks/engagement-digest-tick'
     | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
@@ -3081,6 +3102,7 @@ export interface FileRouteTypes {
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/email/unsubscribe'
+    | '/api/public/engagement/mark'
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/analysis-pipeline-tick'
@@ -3089,6 +3111,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
+    | '/api/public/hooks/engagement-digest-tick'
     | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
@@ -3360,6 +3383,7 @@ export interface FileRouteTypes {
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/email/unsubscribe'
+    | '/api/public/engagement/mark'
     | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/analysis-pipeline-tick'
@@ -3368,6 +3392,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
+    | '/api/public/hooks/engagement-digest-tick'
     | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/institution-mail-tick'
@@ -3486,6 +3511,7 @@ export interface RootRouteChildren {
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
   ApiPublicEmailUnsubscribeRoute: typeof ApiPublicEmailUnsubscribeRoute
+  ApiPublicEngagementMarkRoute: typeof ApiPublicEngagementMarkRoute
   ApiPublicHooksAccessExpiryTickRoute: typeof ApiPublicHooksAccessExpiryTickRoute
   ApiPublicHooksAffiliateEventsTickRoute: typeof ApiPublicHooksAffiliateEventsTickRoute
   ApiPublicHooksAnalysisPipelineTickRoute: typeof ApiPublicHooksAnalysisPipelineTickRoute
@@ -3494,6 +3520,7 @@ export interface RootRouteChildren {
   ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
+  ApiPublicHooksEngagementDigestTickRoute: typeof ApiPublicHooksEngagementDigestTickRoute
   ApiPublicHooksFollowUpPlanTickRoute: typeof ApiPublicHooksFollowUpPlanTickRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
   ApiPublicHooksInstitutionMailTickRoute: typeof ApiPublicHooksInstitutionMailTickRoute
@@ -5163,6 +5190,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicEmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/engagement/mark': {
+      id: '/api/public/engagement/mark'
+      path: '/api/public/engagement/mark'
+      fullPath: '/api/public/engagement/mark'
+      preLoaderRoute: typeof ApiPublicEngagementMarkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/access-expiry-tick': {
       id: '/api/public/hooks/access-expiry-tick'
       path: '/api/public/hooks/access-expiry-tick'
@@ -5217,6 +5251,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/elevenlabs-conversation-init'
       fullPath: '/api/public/hooks/elevenlabs-conversation-init'
       preLoaderRoute: typeof ApiPublicHooksElevenlabsConversationInitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/engagement-digest-tick': {
+      id: '/api/public/hooks/engagement-digest-tick'
+      path: '/api/public/hooks/engagement-digest-tick'
+      fullPath: '/api/public/hooks/engagement-digest-tick'
+      preLoaderRoute: typeof ApiPublicHooksEngagementDigestTickRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/follow-up-plan-tick': {
@@ -5997,6 +6038,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
   ApiPublicEmailUnsubscribeRoute: ApiPublicEmailUnsubscribeRoute,
+  ApiPublicEngagementMarkRoute: ApiPublicEngagementMarkRoute,
   ApiPublicHooksAccessExpiryTickRoute: ApiPublicHooksAccessExpiryTickRoute,
   ApiPublicHooksAffiliateEventsTickRoute:
     ApiPublicHooksAffiliateEventsTickRoute,
@@ -6009,6 +6051,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:
     ApiPublicHooksElevenlabsConversationInitRoute,
+  ApiPublicHooksEngagementDigestTickRoute:
+    ApiPublicHooksEngagementDigestTickRoute,
   ApiPublicHooksFollowUpPlanTickRoute: ApiPublicHooksFollowUpPlanTickRoute,
   ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
   ApiPublicHooksInstitutionMailTickRoute:

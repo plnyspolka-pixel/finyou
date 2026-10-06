@@ -5170,6 +5170,90 @@ export type Database = {
         }
         Relationships: []
       }
+      engagement_feeds: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          keywords: string[]
+          label: string | null
+          last_error: string | null
+          last_fetched_at: string | null
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          label?: string | null
+          last_error?: string | null
+          last_fetched_at?: string | null
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          label?: string | null
+          last_error?: string | null
+          last_fetched_at?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
+      engagement_opportunities: {
+        Row: {
+          created_at: string
+          dedupe_key: string
+          done_at: string | null
+          extra: Json
+          id: string
+          kind: string
+          sent_at: string | null
+          skipped_at: string | null
+          snippet: string | null
+          source: string | null
+          status: string
+          suggested_text: string | null
+          title: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          dedupe_key: string
+          done_at?: string | null
+          extra?: Json
+          id?: string
+          kind: string
+          sent_at?: string | null
+          skipped_at?: string | null
+          snippet?: string | null
+          source?: string | null
+          status?: string
+          suggested_text?: string | null
+          title?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          dedupe_key?: string
+          done_at?: string | null
+          extra?: Json
+          id?: string
+          kind?: string
+          sent_at?: string | null
+          skipped_at?: string | null
+          snippet?: string | null
+          source?: string | null
+          status?: string
+          suggested_text?: string | null
+          title?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
       external_api_logs: {
         Row: {
           created_at: string

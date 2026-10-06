@@ -147,15 +147,21 @@ function isOwnLink(url: string): boolean {
 }
 
 /**
- * Twarde reguły dla treści, która ma pójść publicznie. Zwraca listę
- * problemów — pusta lista = odpowiedź może wyjść.
+ * Twarde reguły dla treści, która ma pójść publicznie (odpowiedź na
+ * komentarz, komentarz pod cudzym filmem, wpis na forum). Zwraca listę
+ * problemów — pusta lista = tekst może wyjść. `links`: `own` — wolno
+ * linkować tylko financeyou.pl, `none` — żadnych linków (komentarze pod
+ * cudzymi materiałami: link wygląda jak spam).
  */
-export function vetReply(reply: string): string[] {
+export function vetPublicText(
+  raw: string,
+  opts: { maxChars: number; links: "own" | "none" },
+): string[] {
   const problems: string[] = [];
-  const text = reply.trim();
+  const text = raw.trim();
   if (!text) return ["Pusta odpowiedź."];
-  if (text.length > MAX_REPLY_CHARS) {
-    problems.push(`Odpowiedź za długa (${text.length} > ${MAX_REPLY_CHARS} zn.).`);
+  if (text.length > opts.maxChars) {
+    problems.push(`Odpowiedź za długa (${text.length} > ${opts.maxChars} zn.).`);
   }
   for (const label of findBannedClaims(text)) {
     problems.push(`Zakazana fraza ${label}.`);
@@ -163,12 +169,21 @@ export function vetReply(reply: string): string[] {
   if (GUARANTEE_RE.test(text)) problems.push("Słowo „gwarancja/gwarantowany” w odpowiedzi.");
   if (PERSONAL_DATA_RE.test(text)) problems.push("Prośba o dane osobowe w publicznej odpowiedzi.");
   for (const m of text.matchAll(URL_RE)) {
+    if (opts.links === "none") {
+      problems.push(`Link w tekście, który ma być bez linków: ${m[0]}.`);
+      break;
+    }
     if (!isOwnLink(m[0])) {
       problems.push(`Obcy link w odpowiedzi: ${m[0]}.`);
       break;
     }
   }
   return problems;
+}
+
+/** Reguły publicznej odpowiedzi na komentarz pod naszym materiałem. */
+export function vetReply(reply: string): string[] {
+  return vetPublicText(reply, { maxChars: MAX_REPLY_CHARS, links: "own" });
 }
 
 /**
@@ -254,7 +269,7 @@ export function isYoutubeQuotaError(message: string): boolean {
  */
 export function teamAlertEmail(
   env: Record<string, string | undefined>,
-  specificVar: "SOCIAL_ALERT_EMAIL" | "SOCIAL_REPORT_EMAIL",
+  specificVar: "SOCIAL_ALERT_EMAIL" | "SOCIAL_REPORT_EMAIL" | "DAILY_DIGEST_EMAIL",
 ): string {
   return env[specificVar]?.trim() || env.TEAM_NOTIFY_EMAIL?.trim() || "kontakt@financeyou.pl";
 }

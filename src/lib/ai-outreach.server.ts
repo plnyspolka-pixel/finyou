@@ -174,7 +174,8 @@ export async function discoverOutreachTargets(
 
 export async function generateOutreachMessage(
   supabase: SupabaseClient<Database>,
-  userId: string,
+  // null = szkic przygotowany przez proces serwerowy (digest zaangażowania).
+  userId: string | null,
   data: GenerateOutreachMessageInput,
 ) {
   const apiKey = process.env.LOVABLE_API_KEY;

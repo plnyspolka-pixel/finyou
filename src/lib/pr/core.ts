@@ -42,6 +42,23 @@ function firstMatch(block: string, tag: string): string | null {
 }
 
 /**
+ * Linki z Google Alerts prowadzą przez przekierowanie
+ * `https://www.google.com/url?…&url=<docelowy>&…` — zwracamy adres docelowy
+ * (inaczej każda okazja miałaby ten sam host i psułaby deduplikację).
+ */
+export function unwrapGoogleRedirect(url: string): string {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (!/^google\.[a-z.]+$/.test(host) || u.pathname !== "/url") return url;
+    const target = u.searchParams.get("url") ?? u.searchParams.get("q") ?? "";
+    return /^https?:\/\//.test(target) ? target : url;
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Minimalistyczny parser RSS 2.0 / Atom — wystarczający dla Google News RSS
  * i typowych feedów wydawców. Bez zewnętrznych zależności (działa w Workerze).
  */
@@ -57,7 +74,7 @@ export function parseRssItems(xml: string, fallbackSource: string): RssItem[] {
       const href = block.match(/<link[^>]*href=["']([^"']+)["']/i);
       url = href ? decodeEntities(href[1]) : "";
     }
-    url = url.trim();
+    url = unwrapGoogleRedirect(url.trim());
     if (!title || !/^https?:\/\//.test(url)) continue;
 
     const pub =
@@ -73,7 +90,12 @@ export function parseRssItems(xml: string, fallbackSource: string): RssItem[] {
     const sourceTag = firstMatch(block, "source");
     const source = sourceTag ? stripTags(decodeEntities(sourceTag)) : fallbackSource;
 
-    const desc = firstMatch(block, "description") ?? firstMatch(block, "summary") ?? "";
+    // Google Alerts (Atom) trzyma lead w <content type="html">.
+    const desc =
+      firstMatch(block, "description") ??
+      firstMatch(block, "summary") ??
+      firstMatch(block, "content") ??
+      "";
     const snippet = stripTags(decodeEntities(desc)).slice(0, 500);
 
     items.push({ title, url, source: source || fallbackSource, publishedAt, snippet });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dedupeKey, matchedPhrases, parseRssItems } from "./core";
+import { dedupeKey, matchedPhrases, parseRssItems, unwrapGoogleRedirect } from "./core";
 
 const RSS = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel>
@@ -42,6 +42,37 @@ describe("parseRssItems", () => {
     expect(items).toHaveLength(1);
     expect(items[0].url).toBe("https://serwis.pl/rynek-q3/");
     expect(items[0].source).toBe("serwis.pl");
+  });
+
+  it("parsuje feed Google Alerts: link przez przekierowanie Google, lead w <content>", () => {
+    const xml = `<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+<title>Alert Google – pożyczka pod zastaw</title>
+<entry>
+  <id>tag:google.com,2013:googlealerts/feed:123</id>
+  <title type="html">Czy warto brać &lt;b&gt;pożyczkę pod zastaw&lt;/b&gt; mieszkania?</title>
+  <link href="https://www.google.com/url?rct=j&amp;sa=t&amp;url=https://forum.przyklad.pl/watek/123&amp;ct=ga&amp;cd=CAIyGg&amp;usg=AOvVaw"/>
+  <published>2026-10-05T08:00:00Z</published>
+  <updated>2026-10-05T08:00:00Z</updated>
+  <content type="html">Mam komornika i pytanie o &lt;b&gt;pożyczkę&lt;/b&gt; hipoteczną…</content>
+</entry>
+</feed>`;
+    const items = parseRssItems(xml, "Google Alerts");
+    expect(items).toHaveLength(1);
+    expect(items[0].url).toBe("https://forum.przyklad.pl/watek/123");
+    expect(items[0].title).toBe("Czy warto brać pożyczkę pod zastaw mieszkania?");
+    expect(items[0].snippet).toBe("Mam komornika i pytanie o pożyczkę hipoteczną…");
+    expect(items[0].publishedAt).toBe("2026-10-05T08:00:00.000Z");
+  });
+
+  it("unwrapGoogleRedirect zostawia zwykłe adresy bez zmian", () => {
+    expect(unwrapGoogleRedirect("https://p.pl/a?url=https://x.pl")).toBe(
+      "https://p.pl/a?url=https://x.pl",
+    );
+    expect(unwrapGoogleRedirect("https://www.google.com/search?q=x")).toBe(
+      "https://www.google.com/search?q=x",
+    );
+    expect(unwrapGoogleRedirect("nie-url")).toBe("nie-url");
   });
 
   it("odrzuca wpisy bez tytułu lub URL", () => {

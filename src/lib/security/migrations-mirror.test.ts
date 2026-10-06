@@ -24,6 +24,8 @@ const PAIRS: Array<[string, string]> = [
   ["20260930140000_abonament_inwestora.sql", "0023_abonament_inwestora.sql"],
   ["20260930190000_prowizja_od_pozyczkobiorcy.sql", "0024_prowizja_od_pozyczkobiorcy.sql"],
   ["20261006120000_social_autoodpowiedzi_raport.sql", "0026_social_autoodpowiedzi_raport.sql"],
+  ["20261006140000_pr_modul_na_produkcje.sql", "0027_pr_modul_na_produkcje.sql"],
+  ["20261006150000_zaangazowanie_dzienny_digest.sql", "0028_zaangazowanie_dzienny_digest.sql"],
 ];
 
 describe("migracje 2026-09-29", () => {
@@ -122,5 +124,82 @@ describe("migracja 20261006120000 — autoodpowiedzi i raport social", () => {
     expect(sql).toContain("/api/public/hooks/social-comments-tick");
     expect(sql).toContain("/api/public/hooks/social-weekly-report");
     expect(sql.match(/timeout_milliseconds := 60000/g)).toHaveLength(2);
+  });
+});
+
+/** Tabela tylko dla kadry: RLS, brak anon, zapis wyłącznie service_role, odczyt administrator/operator. */
+function expectStaffReadOnly(sql: string, table: string) {
+  expect(sql).toContain(`alter table public.${table} enable row level security`);
+  expect(sql).toContain(`revoke all on public.${table} from public, anon`);
+  expect(sql).toContain(`grant all on public.${table} to service_role`);
+  expect(sql).not.toMatch(new RegExp(`grant [^;]*on public\\.${table} to [^;]*anon`));
+  expect(sql).not.toMatch(
+    new RegExp(`grant [^;]*(insert|update|delete|all)[^;]*on public\\.${table} to authenticated`),
+  );
+  const policy = sql.slice(sql.indexOf(`create policy "${table}_staff_read"`));
+  expect(policy.slice(0, policy.indexOf(";"))).toMatch(
+    /for select\s+to authenticated\s+using \(\s+public\.has_role\(auth\.uid\(\), 'administrator'::public\.app_role\)\s+or public\.has_role\(auth\.uid\(\), 'operator'::public\.app_role\)/,
+  );
+}
+
+describe("migracja 20261006140000 — moduł Digital PR na produkcji", () => {
+  const sql = readFileSync(join(SUPA, "20261006140000_pr_modul_na_produkcje.sql"), "utf8");
+
+  it("stara migracja 20260803160000 nie ma lustra drizzle — dlatego tabel nie było na produkcji", () => {
+    const journal = JSON.parse(readFileSync(join(DRIZZLE, "meta", "_journal.json"), "utf8"));
+    const tags: string[] = journal.entries.map((e: { tag: string }) => e.tag);
+    expect(tags.some((t) => t.includes("pr_module"))).toBe(false);
+    expect(tags).toContain("0027_pr_modul_na_produkcje");
+  });
+
+  it.each(["pr_opportunities", "pr_outreach_log"])("%s: idempotentnie, tylko kadra", (table) => {
+    expect(sql).toContain(`create table if not exists public.${table}`);
+    expectStaffReadOnly(sql, table);
+  });
+
+  it("schemat zgodny z kodem panelu i monitora (kolumny, statusy, unikalny dedupe_hash)", () => {
+    for (const col of [
+      "dedupe_hash text not null unique",
+      "matched_phrases text[]",
+      "draft_subject text",
+      "draft_body text",
+      "draft_generated_at timestamptz",
+      "recipient_email text",
+      "resend_id text",
+    ]) {
+      expect(sql).toContain(col);
+    }
+    expect(sql).toContain("check (status in ('new', 'drafted', 'approved', 'sent', 'rejected'))");
+    expect(sql).toContain("drop trigger if exists trg_pr_opportunities_touch_updated_at");
+  });
+
+  it("job pr-monitor-tick co 6 h, z limitem czasu i strażnikiem pg_cron/pg_net", () => {
+    expect(sql).toMatch(/cron\.schedule\('pr-monitor-tick', '0 \*\/6 \* \* \*'/);
+    expect(sql).toContain("/api/public/hooks/pr-monitor-tick");
+    expect(sql).toContain("timeout_milliseconds := 60000");
+    expect(sql).toContain("extname = 'pg_cron'");
+    expect(sql).not.toMatch(/^\s*create extension/im);
+  });
+});
+
+describe("migracja 20261006150000 — digest zaangażowania", () => {
+  const sql = readFileSync(join(SUPA, "20261006150000_zaangazowanie_dzienny_digest.sql"), "utf8");
+
+  it.each(["engagement_opportunities", "engagement_feeds"])("%s: tylko kadra", (table) =>
+    expectStaffReadOnly(sql, table),
+  );
+
+  it("unikalny dedupe_key i statusy new / sent / done / skipped", () => {
+    expect(sql).toContain("constraint engagement_opportunities_dedupe_key_key unique (dedupe_key)");
+    expect(sql).toContain("check (status in ('new', 'sent', 'done', 'skipped'))");
+    expect(sql).toContain(
+      "check (kind in ('youtube_comment', 'instagram_comment', 'forum_reply', 'pr_pitch', 'outreach_pitch', 'directory_listing'))",
+    );
+  });
+
+  it("job codziennie 05:30 UTC z limitem czasu 300 s", () => {
+    expect(sql).toMatch(/cron\.schedule\('engagement-digest-tick', '30 5 \* \* \*'/);
+    expect(sql).toContain("/api/public/hooks/engagement-digest-tick");
+    expect(sql).toContain("timeout_milliseconds := 300000");
   });
 });
