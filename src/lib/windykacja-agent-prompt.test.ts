@@ -124,6 +124,26 @@ describe("etap rozmowy i termin", () => {
     const zTerminem = input({ loan: { ...input().loan!, termin_splaty: "2026-09-01" } });
     expect(currentDelayDays(zTerminem, "2026-10-06")).toBe(35);
   });
+
+  it("opóźnienie z harmonogramu rat ma pierwszeństwo przed terminem spłaty i otwarciem sprawy", () => {
+    // Termin spłaty = ostatnia rata (w przyszłości), sprawa otwarta z 5 dniami
+    // opóźnienia — a najstarsza niezapłacona rata jest sprzed 57 dni.
+    const raty = input({
+      loan: { ...input().loan!, termin_splaty: "2027-06-10" },
+      dniOpoznienia: 57,
+    });
+    expect(currentDelayDays(raty, "2026-10-06")).toBe(57);
+    // Wszystkie raty zapłacone: 0 dni, choć sprawa była otwarta z opóźnieniem.
+    expect(currentDelayDays(input({ dniOpoznienia: 0 }), "2026-10-06")).toBe(0);
+    // Ułamek i wartość ujemna z zewnątrz — pełne dni, nie mniej niż 0.
+    expect(currentDelayDays(input({ dniOpoznienia: 12.6 }), "2026-10-06")).toBe(13);
+    expect(currentDelayDays(input({ dniOpoznienia: -3 }), "2026-10-06")).toBe(0);
+  });
+
+  it("bez opóźnienia z harmonogramu (null) — szacunek jak dotąd", () => {
+    expect(currentDelayDays(input({ dniOpoznienia: null }), "2026-10-06")).toBe(10);
+    expect(currentDelayDays(input({ dniOpoznienia: undefined }), "2026-10-06")).toBe(10);
+  });
 });
 
 describe("zmienne rozmowy", () => {
@@ -193,6 +213,24 @@ describe("zmienne rozmowy", () => {
   it("kwota słownie do mowy", () => {
     expect(kwotaDoMowy(1000)).toBe("tysiąc złotych");
     expect(kwotaDoMowy(2500.4)).toBe("dwa tysiące pięćset złotych");
+  });
+
+  it("opóźnienie z harmonogramu trafia do zmiennych i wyznacza etap rozmowy", () => {
+    // 57 dni od najstarszej zaległej raty → ponad 14 dni = monit (ścieżka miękka).
+    const monit = buildWindCallVariables(input({ dniOpoznienia: 57 }));
+    expect(monit.dni_opoznienia).toBe("57");
+    expect(monit.etap).toBe("monit");
+    expect(monit.termin_maksymalny).toBe("poniedziałek, 12 października 2026");
+    // Raty zapłacone na bieżąco (0 dni) — „brak" i przypomnienie, mimo że
+    // przy otwarciu sprawy wpisano opóźnienie.
+    const bezOpoznienia = buildWindCallVariables(
+      input({
+        dniOpoznienia: 0,
+        kase: { sciezka: "miekka", opoznienie_dni: 30, data_otwarcia: "2026-09-01" },
+      }),
+    );
+    expect(bezOpoznienia.dni_opoznienia).toBe(WIND_NO_DATA);
+    expect(bezOpoznienia.etap).toBe("przypomnienie");
   });
 
   it("wypowiedziana umowa → ostatnie wezwanie z krótkim terminem", () => {

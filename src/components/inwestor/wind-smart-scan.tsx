@@ -219,7 +219,8 @@ export function ContractScanField({
         Ciebie
       </div>
       <p className="mt-0.5 text-xs text-muted-foreground">
-        Zrób zdjęcie lub wgraj umowę pożyczki (PDF/zdjęcie). Odczytamy dłużnika, kwoty i terminy.
+        Zrób zdjęcie lub wgraj umowę pożyczki (PDF/zdjęcie). Odczytamy dłużnika, kwoty, terminy i
+        harmonogram rat (Załącznik nr 1 — najlepiej cała umowa w PDF).
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <Button type="button" size="sm" disabled={busy} onClick={() => camRef.current?.click()}>
@@ -287,6 +288,11 @@ export type PaymentScan = {
   kwota: string; // edytowalne (string dla inputa)
   data: string; // ISO yyyy-mm-dd
   rozpoznano: boolean;
+  /**
+   * Czy datę wpłaty odczytano z potwierdzenia. Gdy nie — w polu jest dzisiejsza
+   * data do sprawdzenia (od daty wpłaty zależy rozliczenie rat i odsetek).
+   */
+  dataRozpoznana?: boolean;
 };
 
 /**
@@ -334,6 +340,7 @@ export function PaymentScansField({
           kwota,
           data: data || new Date().toISOString().slice(0, 10),
           rozpoznano,
+          dataRozpoznana: Boolean(data),
         });
       }
     } finally {
@@ -346,7 +353,14 @@ export function PaymentScansField({
   };
 
   const update = (key: string, patch: Partial<Pick<PaymentScan, "kwota" | "data">>) =>
-    onChange(payments.map((p) => (p.key === key ? { ...p, ...patch } : p)));
+    onChange(
+      payments.map((p) =>
+        p.key === key
+          ? // Data wpisana ręcznie = sprawdzona przez użytkownika.
+            { ...p, ...patch, ...(patch.data !== undefined ? { dataRozpoznana: true } : {}) }
+          : p,
+      ),
+    );
   const remove = (key: string) => onChange(payments.filter((p) => p.key !== key));
 
   const suma = payments.reduce((s, p) => s + (Number(p.kwota) || 0), 0);
@@ -435,6 +449,12 @@ export function PaymentScansField({
               {!p.rozpoznano && (
                 <span className="flex items-center gap-1 text-[11px] text-amber-600">
                   <AlertTriangle className="h-3 w-3" /> wpisz kwotę ręcznie
+                </span>
+              )}
+              {p.dataRozpoznana === false && (
+                <span className="flex items-center gap-1 text-[11px] text-amber-600">
+                  <AlertTriangle className="h-3 w-3" /> nie odczytano daty — sprawdź (wstawiono
+                  dzisiejszą)
                 </span>
               )}
             </div>

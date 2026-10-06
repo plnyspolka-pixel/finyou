@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatPLN } from "@/lib/labels";
 import { windLoanIsTerminated } from "@/lib/windykacja-debt";
-import { formatZl } from "@/components/inwestor/wind-harmonogram";
+import { formatZl } from "@/components/inwestor/wind-harmonogram-form";
 import {
   performWindContact,
   type WindBorrower,

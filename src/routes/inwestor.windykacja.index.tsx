@@ -36,16 +36,11 @@ import {
   recommendedPathForDelay,
   type WindPath,
   type WindEventLite,
-  type WindCaseLite,
 } from "@/lib/windykacja-procedure";
-import {
-  windDebtSnapshot,
-  defaultDelayRate,
-  type WindDebtSnapshot,
-} from "@/lib/windykacja-debt";
-import { computeZaleglosc, parseKwota } from "@/lib/windykacja-harmonogram";
+import { windDebtSnapshot, defaultDelayRate, type WindDebtSnapshot } from "@/lib/windykacja-debt";
+import { computeZaleglosc, parseDataISO, parseKwota } from "@/lib/windykacja-harmonogram";
 import { daysSinceDue, formatRachunekSplaty, warsawToday } from "@/lib/windykacja-recalc";
-import { maxDelayRate } from "@/lib/contract-engine/fees";
+import type { WindContractData } from "@/lib/windykacja-ocr.functions";
 import {
   WIND_FEE_DEFAULTS,
   WIND_FEE_LABELS,
@@ -76,19 +71,23 @@ import {
   PaymentScansField,
   type PaymentScan,
 } from "@/components/inwestor/wind-smart-scan";
+import { HarmonogramEditor } from "@/components/inwestor/wind-harmonogram";
 import {
   EMPTY_GENERATOR,
-  HarmonogramEditor,
   formToHarmonogram,
   formatDataPL,
+  formatStopa,
   formatZl,
   generatorFromHarmonogram,
   generatorFromParams,
   harmonogramToForm,
   hasRaty,
+  kwotaDoPola,
+  liveCaseLite,
+  rozliczenieWplat,
   type GeneratorForm,
   type RataForm,
-} from "@/components/inwestor/wind-harmonogram";
+} from "@/components/inwestor/wind-harmonogram-form";
 import { formatPLN, formatDate } from "@/lib/labels";
 import {
   Gavel,
@@ -105,6 +104,7 @@ import {
   Lightbulb,
   FileText,
   ScanLine,
+  CalendarDays,
 } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/windykacja/")({
@@ -143,20 +143,6 @@ const todayISO = () => warsawToday();
 function caseSnapshot(c: CaseRow, events: DashEvent[], asOf: string): WindDebtSnapshot | null {
   if (!c.loan) return null;
   return windDebtSnapshot({ loan: c.loan, kwotaZalegla: c.kwota_zalegla, events, asOf });
-}
-
-/**
- * Sprawa do podpowiedzi procedury z bieżącymi wartościami: opóźnienie
- * liczone na dziś (nie zapisane przy zakładaniu sprawy) i kwota do zapłaty
- * teraz (zaległe raty + odsetki za opóźnienie + koszty).
- */
-function liveCaseLite(c: CaseRow, snap: WindDebtSnapshot | null): WindCaseLite {
-  return {
-    sciezka: c.sciezka,
-    etap: c.etap,
-    opoznienie_dni: snap ? snap.dniOpoznienia : c.opoznienie_dni,
-    kwota_zalegla: snap ? snap.doZaplatyTeraz : c.kwota_zalegla,
-  };
 }
 
 function WindykacjaDashboard() {
@@ -289,7 +275,7 @@ function WindykacjaDashboard() {
       <FancyPageHeader
         eyebrow="Windykacja"
         title="Panel windykacji"
-        subtitle="Dodaj umowę i potwierdzenia wpłat — system obliczy odsetki karne, zaproponuje dalsze działania i poprowadzi rejestr czynności windykacyjnych z opłatami naliczanymi zgodnie z umową."
+        subtitle="Dodaj umowę i potwierdzenia wpłat — system obliczy zaległe raty i odsetki za opóźnienie, zaproponuje dalsze działania i poprowadzi rejestr czynności windykacyjnych z opłatami naliczanymi zgodnie z umową."
         actions={
           <Button
             variant="secondary"
@@ -616,6 +602,79 @@ const EMPTY_FEES: FeeForm = {
   zrodlo: null,
 };
 
+type WindPriorityForm = "niski" | "sredni" | "wysoki" | "krytyczny";
+
+/** Formularz nowej sprawy — wszystkie pola jako tekst (kwoty także „7 868,48"). */
+type IntakeForm = {
+  imie_nazwisko: string;
+  typ: "osoba_fizyczna" | "firma";
+  pesel: string;
+  nip: string;
+  email: string;
+  telefon: string;
+  adres_zamieszkania: string;
+  pozyczkodawca: string;
+  numer_umowy: string;
+  data_umowy: string;
+  kwota_pozyczki: string;
+  kwota_calkowita: string;
+  prowizja: string;
+  termin_splaty: string;
+  kwota_zalegla: string;
+  numer_kw: string;
+  kwota_hipoteki: string;
+  akt_notarialny_777: string;
+  kwota_777: string;
+  rachunek_splaty: string;
+  oprocentowanie_roczne: string;
+  /** Wpisana stopa — używana, gdy źródło stopy ≠ „domyslna". */
+  stopa_odsetek_max: string;
+  /** Ścieżka wybrana ręcznie — używana, gdy użytkownik zmienił sugerowaną. */
+  sciezka: WindPath;
+  priorytet: WindPriorityForm;
+};
+
+const EMPTY_INTAKE: IntakeForm = {
+  imie_nazwisko: "",
+  typ: "osoba_fizyczna",
+  pesel: "",
+  nip: "",
+  email: "",
+  telefon: "",
+  adres_zamieszkania: "",
+  pozyczkodawca: "",
+  numer_umowy: "",
+  data_umowy: "",
+  kwota_pozyczki: "",
+  kwota_calkowita: "",
+  prowizja: "",
+  termin_splaty: "",
+  kwota_zalegla: "",
+  numer_kw: "",
+  kwota_hipoteki: "",
+  akt_notarialny_777: "",
+  kwota_777: "",
+  rachunek_splaty: "",
+  oprocentowanie_roczne: "",
+  stopa_odsetek_max: "",
+  sciezka: "miekka",
+  priorytet: "sredni",
+};
+
+/** Skąd stopa odsetek za opóźnienie: maksymalne z dnia umowy, z umowy (OCR) albo wpisana. */
+type StopaZrodlo = "domyslna" | "umowa" | "recznie";
+
+/** Pierwszy etap ścieżki (formularz zakłada sprawę na początku ścieżki). */
+function firstStage(sciezka: WindPath): string {
+  return sciezka === "miekka"
+    ? "kontakt_wstepny"
+    : sciezka === "standardowa"
+      ? "wezwanie"
+      : sciezka === "twarda"
+        ? "wypowiedzenie"
+        : "ocena_przeslanek";
+}
+
 function NewCaseIntake({
   onCreated,
   createCase,
@@ -629,35 +688,74 @@ function NewCaseIntake({
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [payments, setPayments] = useState<PaymentScan[]>([]);
   const [fees, setFees] = useState<FeeForm>(EMPTY_FEES);
-  const [f, setF] = useState({
-    imie_nazwisko: "",
-    typ: "osoba_fizyczna" as "osoba_fizyczna" | "firma",
-    pesel: "",
-    email: "",
-    telefon: "",
-    adres_zamieszkania: "",
-    numer_umowy: "",
-    data_umowy: "",
-    kwota_pozyczki: "",
-    kwota_calkowita: "",
-    prowizja: "",
-    termin_splaty: "",
-    kwota_zalegla: "",
-    numer_kw: "",
-    oprocentowanie_roczne: "",
-    stopa_odsetek_max: String(DEFAULT_MAX_DELAY_RATE),
-    sciezka: "miekka" as WindPath,
-    priorytet: "sredni" as "niski" | "sredni" | "wysoki" | "krytyczny",
-  });
-  const upd = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
+  const [f, setF] = useState<IntakeForm>(EMPTY_INTAKE);
+  const [stopaZrodlo, setStopaZrodlo] = useState<StopaZrodlo>("domyslna");
+  const [sciezkaManual, setSciezkaManual] = useState(false);
+  const [raty, setRaty] = useState<RataForm[]>([]);
+  const [generator, setGenerator] = useState<GeneratorForm>(EMPTY_GENERATOR);
+  const [ratyZOcr, setRatyZOcr] = useState<"tabela" | "parametry" | null>(null);
+  const [ocrUwagi, setOcrUwagi] = useState<string[]>([]);
+  const upd = <K extends keyof IntakeForm>(k: K, v: IntakeForm[K]) =>
+    setF((p) => ({ ...p, [k]: v }));
   const updFee = (k: WindFeeKind, v: string) =>
     setFees((p) => ({ ...p, [k]: v, zrodlo: p.zrodlo ?? "recznie" }));
 
-  // Automatyczne wyliczenie należności: kwota do zwrotu − suma wpłat.
-  const sumaWplat = payments.reduce((s, p) => s + (Number(p.kwota) || 0), 0);
-  const naleznoscBazowa = Number(f.kwota_calkowita) || Number(f.kwota_pozyczki) || 0;
-  const wyliczonaZaleglosc = Math.max(0, naleznoscBazowa - sumaWplat);
-  const hasContract = Boolean(contractFile) || Boolean(f.imie_nazwisko.trim());
+  const today = todayISO();
+
+  // Stopa odsetek za opóźnienie: domyślnie odsetki maksymalne za opóźnienie
+  // z dnia zawarcia umowy (WIN_01) — przeliczana przy zmianie daty umowy,
+  // dopóki użytkownik nie wpisze własnej (albo nie odczytano jej z umowy).
+  const stopaMaks = defaultDelayRate(parseDataISO(f.data_umowy));
+  const stopaTxt = stopaZrodlo === "domyslna" ? kwotaDoPola(stopaMaks) : f.stopa_odsetek_max;
+  const stopaWpisana = parseKwota(stopaTxt);
+  // Jak serwer: 0 / puste = odsetki maksymalne z dnia umowy.
+  const stopaEfektywna = stopaWpisana != null && stopaWpisana > 0 ? stopaWpisana : stopaMaks;
+
+  // Wpłaty z potwierdzeń (te same, które pójdą do serwera).
+  const wplatyLive = useMemo(
+    () =>
+      payments
+        .map((p) => ({ paid_on: parseDataISO(p.data) ?? "", amount: parseKwota(p.kwota) ?? 0 }))
+        .filter((p) => p.paid_on && p.amount > 0),
+    [payments],
+  );
+  const sumaWplat = wplatyLive.reduce((s, p) => s + p.amount, 0);
+
+  // Harmonogram rat → zaległość na dziś tym samym silnikiem co serwer
+  // (computeZaleglosc): niezapłacone raty wymagalne po zaliczeniu wpłat.
+  const { harmonogram, bledy: bledyRat } = useMemo(() => formToHarmonogram(raty), [raty]);
+  const maRaty = hasRaty(raty);
+  const wynik = useMemo(
+    () =>
+      harmonogram
+        ? computeZaleglosc({
+            harmonogram,
+            payments: wplatyLive,
+            asOf: today,
+            stopaUmowna: stopaEfektywna,
+          })
+        : null,
+    [harmonogram, wplatyLive, today, stopaEfektywna],
+  );
+
+  // Rozliczenie wpłat do dziś: część pokryła odsetki za opóźnienie / koszty
+  // albo raty przyszłe — pokazujemy to, żeby rachunek zgadzał się co do grosza.
+  const rozl = wynik ? rozliczenieWplat(wynik, wplatyLive) : null;
+
+  // Model jednoterminowy (bez harmonogramu): kwota do zwrotu − wpłaty.
+  const naleznoscBazowa = parseKwota(f.kwota_calkowita) || parseKwota(f.kwota_pozyczki) || 0;
+  const saldoPoWplatach = Math.max(0, naleznoscBazowa - sumaWplat);
+
+  // Ścieżka: sugerowana z opóźnienia (z rat albo od terminu spłaty), dopóki
+  // użytkownik nie wybierze innej.
+  const dni = wynik ? wynik.dniOpoznienia : daysSinceDue(parseDataISO(f.termin_splaty), today);
+  const sugerowana = recommendedPathForDelay(dni);
+  const sciezka: WindPath = sciezkaManual ? f.sciezka : sugerowana;
+
+  const rachunekBledny =
+    f.rachunek_splaty.trim() !== "" && formatRachunekSplaty(f.rachunek_splaty) == null;
+  const ostatniaRata = harmonogram?.[harmonogram.length - 1]?.termin ?? null;
+  const hasContract = Boolean(contractFile) || Boolean(f.imie_nazwisko.trim()) || maRaty;
 
   const feeTablePayload = () => {
     const num = (s: string) => (s.trim() === "" ? null : Math.max(0, Number(s) || 0));
@@ -692,24 +790,85 @@ function NewCaseIntake({
     setPayments([]);
     setFees(EMPTY_FEES);
     setShowDetails(false);
+    setF((p) => ({ ...EMPTY_INTAKE, priorytet: p.priorytet }));
+    setStopaZrodlo("domyslna");
+    setSciezkaManual(false);
+    setRaty([]);
+    setGenerator(EMPTY_GENERATOR);
+    setRatyZOcr(null);
+    setOcrUwagi([]);
+  };
+
+  // Odczyt umowy (OCR) → formularz. Pola, których umowa nie podaje, zostają.
+  const applyContract = (d: WindContractData) => {
+    const uwagi = [...(d.ostrzezenia ?? [])];
+    // Odsetki za opóźnienie: liczba z umowy, nie wyżej niż maksymalne z dnia
+    // umowy; „dwukrotność odsetek ustawowych" (null) → maksymalne.
+    let stopaUmowy: string | null = null;
+    if (d.odsetki_za_opoznienie != null && d.odsetki_za_opoznienie > 0) {
+      const maks = defaultDelayRate(d.data_umowy ?? parseDataISO(f.data_umowy));
+      const stopa = Math.min(d.odsetki_za_opoznienie, maks);
+      if (d.odsetki_za_opoznienie > maks + 0.001) {
+        uwagi.push(
+          `Odsetki za opóźnienie z umowy (${formatStopa(d.odsetki_za_opoznienie)}%) przekraczają odsetki maksymalne z dnia umowy — przyjęto ${formatStopa(maks)}%.`,
+        );
+      }
+      stopaUmowy = kwotaDoPola(stopa);
+    }
+    const kw = (n: number | null | undefined, prev: string) => (n != null ? kwotaDoPola(n) : prev);
     setF((p) => ({
       ...p,
-      imie_nazwisko: "",
-      pesel: "",
-      email: "",
-      telefon: "",
-      adres_zamieszkania: "",
-      numer_umowy: "",
-      data_umowy: "",
-      kwota_pozyczki: "",
-      kwota_calkowita: "",
-      prowizja: "",
-      termin_splaty: "",
-      kwota_zalegla: "",
-      numer_kw: "",
-      oprocentowanie_roczne: "",
-      stopa_odsetek_max: String(DEFAULT_MAX_DELAY_RATE),
+      imie_nazwisko: d.imie_nazwisko ?? p.imie_nazwisko,
+      typ: d.typ ?? p.typ,
+      pesel: d.pesel ?? p.pesel,
+      nip: d.nip ?? p.nip,
+      email: d.email ?? p.email,
+      telefon: d.telefon ?? p.telefon,
+      adres_zamieszkania: d.adres ?? p.adres_zamieszkania,
+      pozyczkodawca: d.pozyczkodawca ?? p.pozyczkodawca,
+      numer_umowy: d.numer_umowy ?? p.numer_umowy,
+      data_umowy: d.data_umowy ?? p.data_umowy,
+      kwota_pozyczki: kw(d.kwota_pozyczki, p.kwota_pozyczki),
+      kwota_calkowita: kw(d.kwota_calkowita, p.kwota_calkowita),
+      prowizja: kw(d.prowizja, p.prowizja),
+      termin_splaty: d.termin_splaty ?? p.termin_splaty,
+      numer_kw: d.numer_kw ?? p.numer_kw,
+      kwota_hipoteki: kw(d.kwota_hipoteki, p.kwota_hipoteki),
+      akt_notarialny_777: d.akt_notarialny_777 ?? p.akt_notarialny_777,
+      kwota_777: kw(d.kwota_777, p.kwota_777),
+      rachunek_splaty: d.rachunek_splaty ?? p.rachunek_splaty,
+      oprocentowanie_roczne: kw(d.oprocentowanie_roczne, p.oprocentowanie_roczne),
+      stopa_odsetek_max: stopaUmowy ?? p.stopa_odsetek_max,
     }));
+    if (stopaUmowy != null) setStopaZrodlo("umowa");
+    else setStopaZrodlo((z) => (z === "recznie" ? z : "domyslna"));
+
+    // Harmonogram rat (Zał. 1) — z tabeli w umowie albo z parametrów.
+    const maParametry = d.data_pierwszej_raty != null || d.liczba_rat != null;
+    if (d.harmonogram && d.harmonogram.length > 0) {
+      setRaty(harmonogramToForm(d.harmonogram));
+      setRatyZOcr(d.harmonogram_zrodlo ?? "tabela");
+      setGenerator(maParametry ? generatorFromParams(d) : generatorFromHarmonogram(d.harmonogram));
+    } else {
+      if (maParametry) setGenerator(generatorFromParams(d));
+      uwagi.push(
+        "W umowie nie odczytano harmonogramu rat — wygeneruj raty z parametrów umowy albo przepisz Załącznik nr 1.",
+      );
+    }
+    setOcrUwagi(uwagi);
+
+    // Tabela opłat windykacyjnych z umowy — podstawa naliczania w rejestrze.
+    const t = d.oplaty_windykacyjne;
+    if (t) {
+      setFees({
+        sms: t.sms != null ? String(t.sms) : "",
+        email: t.email != null ? String(t.email) : "",
+        telefon: t.telefon != null ? String(t.telefon) : "",
+        pismo: t.pismo != null ? String(t.pismo) : "",
+        brak_oplat: Boolean(t.brak_oplat),
+        zrodlo: "umowa",
+      });
+    }
   };
 
   const submit = async () => {
@@ -718,56 +877,80 @@ function NewCaseIntake({
       toast.error("Podaj dłużnika (dodaj umowę albo wpisz dane ręcznie)");
       return;
     }
+    if (bledyRat.length) {
+      toast.error(`Popraw harmonogram rat: ${bledyRat[0]}`);
+      return;
+    }
+    if (rachunekBledny) {
+      setShowDetails(true);
+      toast.error("Rachunek do spłaty: podaj 26 cyfr numeru rachunku (NRB) albo IBAN PL.");
+      return;
+    }
+    // Wpłaty z kwotą > 0 muszą mieć datę — od niej zależy rozliczenie rat
+    // i odsetek za opóźnienie.
+    const doWyslania = payments
+      .map((p) => ({ p, kwota: parseKwota(p.kwota) ?? 0, data: parseDataISO(p.data) }))
+      .filter((w) => w.kwota > 0);
+    if (doWyslania.some((w) => !w.data)) {
+      toast.error("Podaj datę każdej wpłaty (z potwierdzenia przelewu).");
+      return;
+    }
     setBusy(true);
     try {
       // 1) Skan umowy + potwierdzenia przelewów → Storage (dowody w aktach).
       const umowaUrl = contractFile ? await uploadToStorage(contractFile, "umowa") : null;
       const wplaty: Array<{ kwota: number; data: string; zalacznik_url?: string | null }> = [];
-      for (const p of payments) {
-        const kwota = Number(p.kwota) || 0;
-        if (kwota <= 0) continue;
-        const url = await uploadToStorage(p.file, "wplata");
-        wplaty.push({ kwota, data: p.data, zalacznik_url: url });
+      for (const w of doWyslania) {
+        const url = await uploadToStorage(w.p.file, "wplata");
+        wplaty.push({ kwota: w.kwota, data: w.data as string, zalacznik_url: url });
       }
 
-      // 2) Utworzenie sprawy — system sam liczy należność z umowy i wpłat,
-      //    a opłaty windykacyjne nalicza wg tabeli z umowy.
+      // 2) Utworzenie sprawy — serwer liczy zaległość z harmonogramu i wpłat
+      //    (albo z kwoty do zwrotu w modelu jednoterminowym), a opłaty
+      //    windykacyjne nalicza wg tabeli z umowy. Kwoty wysyłamy jako tekst
+      //    — serwer czyta też zapis „7 868,48" i zwraca błąd z nazwą pola.
       const res = await createCase({
         data: {
-          imie_nazwisko: f.imie_nazwisko,
+          imie_nazwisko: f.imie_nazwisko.trim(),
           typ: f.typ,
-          pesel: f.pesel,
-          email: f.email,
-          telefon: f.telefon,
-          adres_zamieszkania: f.adres_zamieszkania,
-          adres_do_doreczen: f.adres_zamieszkania,
+          pesel: f.pesel.trim() || null,
+          nip: f.nip.trim() || null,
+          email: f.email.trim() || null,
+          telefon: f.telefon.trim() || null,
+          adres_zamieszkania: f.adres_zamieszkania.trim() || null,
+          adres_do_doreczen: f.adres_zamieszkania.trim() || null,
           email_zgoda_doreczenia: false,
-          numer_umowy: f.numer_umowy,
+          pozyczkodawca: f.pozyczkodawca,
+          numer_umowy: f.numer_umowy.trim() || null,
           data_umowy: f.data_umowy,
-          kwota_pozyczki: Number(f.kwota_pozyczki) || 0,
-          kwota_calkowita: Number(f.kwota_calkowita) || 0,
-          prowizja: Number(f.prowizja) || 0,
+          kwota_pozyczki: f.kwota_pozyczki,
+          kwota_calkowita: f.kwota_calkowita,
+          prowizja: f.prowizja,
           termin_splaty: f.termin_splaty,
-          numer_kw: f.numer_kw,
-          oprocentowanie_roczne: Number(f.oprocentowanie_roczne) || 0,
-          stopa_odsetek_max: Number(f.stopa_odsetek_max) || DEFAULT_MAX_DELAY_RATE,
+          numer_kw: f.numer_kw.trim() || null,
+          kwota_hipoteki: f.kwota_hipoteki,
+          akt_notarialny_777: f.akt_notarialny_777,
+          kwota_777: f.kwota_777,
+          rachunek_splaty: f.rachunek_splaty,
+          oprocentowanie_roczne: f.oprocentowanie_roczne,
+          stopa_odsetek_max: stopaTxt,
           oplaty_windykacyjne: feeTablePayload(),
-          kwota_zalegla: Number(f.kwota_zalegla) || 0,
-          sciezka: f.sciezka,
-          etap:
-            f.sciezka === "miekka"
-              ? "kontakt_wstepny"
-              : f.sciezka === "standardowa"
-                ? "wezwanie"
-                : f.sciezka === "twarda"
-                  ? "wypowiedzenie"
-                  : "ocena_przeslanek",
+          harmonogram: harmonogram ?? null,
+          // Z harmonogramem kwota zaległa liczona z rat (serwer ignoruje pole).
+          kwota_zalegla: harmonogram ? 0 : f.kwota_zalegla,
+          sciezka,
+          etap: firstStage(sciezka),
           priorytet: f.priorytet,
           umowa_url: umowaUrl,
           wplaty,
         },
       });
-      toast.success("Utworzono sprawę — należność i odsetki karne wyliczone z umowy i wpłat");
+      if (res.ostrzezenie) toast.warning(res.ostrzezenie);
+      toast.success(
+        harmonogram
+          ? `Utworzono sprawę — zaległe raty na dziś: ${formatZl(res.kwota_zalegla)}`
+          : "Utworzono sprawę — należność wyliczona z umowy i wpłat",
+      );
       reset();
       onCreated(res.caseId);
     } catch (e) {
@@ -783,6 +966,12 @@ function NewCaseIntake({
       return `${WIND_FEE_LABELS[k].split(" (")[0].toLowerCase()} ${formatPLN(info.fee)}`;
     })
     .join(" · ");
+  const feeNote = (
+    <>
+      Opłaty wg umowy: {feePreview}
+      {fees.zrodlo === "umowa" ? " (odczytane z umowy)" : " (domyślne — możesz poprawić)"}.
+    </>
+  );
 
   return (
     <Card className="border-primary/40">
@@ -791,10 +980,10 @@ function NewCaseIntake({
           <Plus className="h-4 w-4 text-primary" /> Nowa sprawa windykacyjna
         </CardTitle>
         <CardDescription>
-          Dodaj umowę i potwierdzenia wpłat. Na tej podstawie system obliczy odsetki karne
-          (maksymalne za opóźnienie, art. 481 § 2¹ k.c.), pozostałą należność i zaproponuje dalsze
-          działania — a każdy telefon windykacyjny AI i SMS dopisze do rejestru czynności z opłatą
-          zgodnie z umową.
+          Dodaj umowę i potwierdzenia wpłat. Na tej podstawie system obliczy zaległe raty, odsetki
+          za opóźnienie (nie wyższe niż maksymalne, art. 481 § 2¹ k.c.) i kwotę do zapłaty teraz,
+          zaproponuje ścieżkę i dalsze działania — a każdy telefon windykacyjny AI i SMS dopisze do
+          rejestru czynności z opłatą zgodnie z umową.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -807,50 +996,7 @@ function NewCaseIntake({
               </span>
               <FileText className="h-4 w-4 text-primary" /> Dodaj umowę
             </div>
-            <ContractScanField
-              onFile={setContractFile}
-              onExtract={(d) => {
-                setF((p) => ({
-                  ...p,
-                  imie_nazwisko: d.imie_nazwisko ?? p.imie_nazwisko,
-                  typ: d.typ ?? p.typ,
-                  pesel: d.pesel ?? d.nip ?? p.pesel,
-                  email: d.email ?? p.email,
-                  telefon: d.telefon ?? p.telefon,
-                  adres_zamieszkania: d.adres ?? p.adres_zamieszkania,
-                  numer_umowy: d.numer_umowy ?? p.numer_umowy,
-                  data_umowy: d.data_umowy ?? p.data_umowy,
-                  kwota_pozyczki:
-                    d.kwota_pozyczki != null ? String(d.kwota_pozyczki) : p.kwota_pozyczki,
-                  kwota_calkowita:
-                    d.kwota_calkowita != null ? String(d.kwota_calkowita) : p.kwota_calkowita,
-                  prowizja: d.prowizja != null ? String(d.prowizja) : p.prowizja,
-                  termin_splaty: d.termin_splaty ?? p.termin_splaty,
-                  numer_kw: d.numer_kw ?? p.numer_kw,
-                  oprocentowanie_roczne:
-                    d.oprocentowanie_roczne != null
-                      ? String(d.oprocentowanie_roczne)
-                      : p.oprocentowanie_roczne,
-                  // Odsetki za opóźnienie wg umowy, nie wyżej niż maksymalne.
-                  stopa_odsetek_max:
-                    d.odsetki_za_opoznienie != null
-                      ? String(Math.min(d.odsetki_za_opoznienie, DEFAULT_MAX_DELAY_RATE))
-                      : p.stopa_odsetek_max,
-                }));
-                // Tabela opłat windykacyjnych z umowy — podstawa naliczania w rejestrze.
-                const t = d.oplaty_windykacyjne;
-                if (t) {
-                  setFees({
-                    sms: t.sms != null ? String(t.sms) : "",
-                    email: t.email != null ? String(t.email) : "",
-                    telefon: t.telefon != null ? String(t.telefon) : "",
-                    pismo: t.pismo != null ? String(t.pismo) : "",
-                    brak_oplat: Boolean(t.brak_oplat),
-                    zrodlo: "umowa",
-                  });
-                }
-              }}
-            />
+            <ContractScanField onFile={setContractFile} onExtract={applyContract} />
           </div>
 
           {/* KROK 2: DODAJ POTWIERDZENIA WPŁAT */}
@@ -865,42 +1011,145 @@ function NewCaseIntake({
           </div>
         </div>
 
+        {/* Uwagi z odczytu umowy — do sprawdzenia przez inwestora. */}
+        {ocrUwagi.length > 0 && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
+            <div className="flex items-center gap-1.5 font-medium">
+              <AlertTriangle className="h-3.5 w-3.5" /> Sprawdź dane odczytane z umowy
+            </div>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              {ocrUwagi.map((u) => (
+                <li key={u}>{u}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* KROK 3: HARMONOGRAM RAT — podstawa wyliczenia zaległości. */}
+        <div className="space-y-2 rounded-lg border p-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+              3
+            </span>
+            <CalendarDays className="h-4 w-4 text-primary" /> Harmonogram rat (Załącznik nr 1 do
+            umowy)
+            {ratyZOcr && maRaty ? (
+              <Badge variant="secondary" className="font-normal">
+                {ratyZOcr === "tabela"
+                  ? "odczytany z umowy"
+                  : "wygenerowany z parametrów umowy — sprawdź"}
+              </Badge>
+            ) : null}
+          </div>
+          <HarmonogramEditor
+            rows={raty}
+            onChange={setRaty}
+            generator={generator}
+            onGeneratorChange={setGenerator}
+            hint="Zaległość to suma rat, których termin minął, a które nie zostały zapłacone (po zaliczeniu wpłat) — nie całe saldo pożyczki. Opóźnienie liczymy od najstarszej niezapłaconej raty."
+          />
+        </div>
+
         {/* Co policzy system */}
         <div className="flex items-start gap-2 rounded-md border border-dashed p-3 text-xs text-muted-foreground">
           <Calculator className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
           <span>
-            Na podstawie umowy i wpłat system obliczy odsetki karne (maksymalne za opóźnienie — art.
-            481 § 2¹ k.c.) oraz pozostałą należność (wpłaty zaliczane wg art. 451 k.c.: koszty →
-            odsetki → kapitał) i zaproponuje dalsze działania zgodnie z procedurą windykacyjną.
-            Opłaty za czynności (SMS, telefon, wezwanie) nalicza według tabeli opłat z umowy.
+            Z harmonogramu i wpłat system obliczy zaległe raty, odsetki za opóźnienie od każdej
+            zaległej raty (stopa z umowy, w każdym dniu nie wyższa niż odsetki maksymalne — art. 481
+            § 2¹ k.c.) i kwotę do zapłaty teraz. Wpłaty zalicza wg umowy (WIN_04): prowizja z rat
+            wymagalnych → koszty windykacyjne → odsetki za opóźnienie → odsetki umowne → kapitał (od
+            najstarszej raty). Opłaty za czynności (SMS, telefon, wezwanie) nalicza według tabeli
+            opłat z umowy.
           </span>
         </div>
 
-        {/* Automatyczne wyliczenie należności. */}
-        {naleznoscBazowa > 0 && (
+        {/* Wyliczenie na żywo — zaległość z harmonogramu albo model jednoterminowy. */}
+        {wynik ? (
           <div className="rounded-lg border bg-muted/40 p-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Kwota do zwrotu (z umowy)</span>
-              <span className="tabular-nums">{formatPLN(naleznoscBazowa)}</span>
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Zaległość z harmonogramu na {formatDataPL(wynik.asOf)}
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">
-                Wpłaty klienta ({payments.filter((p) => Number(p.kwota) > 0).length})
-              </span>
-              <span className="tabular-nums">− {formatPLN(sumaWplat)}</span>
-            </div>
-            <div className="mt-1 flex items-center justify-between border-t pt-1 font-semibold">
-              <span>Wyliczona należność (bez odsetek)</span>
-              <span className="tabular-nums">{formatPLN(wyliczonaZaleglosc)}</span>
-            </div>
+            <IntakeRow
+              label={`Raty wymagalne do dziś (${wynik.liczbaRatWymagalnych} z ${wynik.raty.length})`}
+              value={formatZl(wynik.sumaWymagalna)}
+            />
+            {rozl && (
+              <>
+                <IntakeRow
+                  label={`Wpłaty klienta do dziś (${rozl.liczba})`}
+                  value={`− ${formatZl(rozl.suma)}`}
+                />
+                {(rozl.naOdsetkiIKoszty > 0 || rozl.naRatyPrzyszle > 0 || rozl.nadplata > 0) && (
+                  <p className="text-right text-[11px] text-muted-foreground">
+                    {[
+                      rozl.naOdsetkiIKoszty > 0
+                        ? `w tym na odsetki za opóźnienie i koszty ${formatZl(rozl.naOdsetkiIKoszty)}`
+                        : null,
+                      rozl.naRatyPrzyszle > 0
+                        ? `na raty przyszłe ${formatZl(rozl.naRatyPrzyszle)}`
+                        : null,
+                      rozl.nadplata > 0 ? `nadpłata ${formatZl(rozl.nadplata)}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+              </>
+            )}
+            <IntakeRow label="Zaległe raty (kwota zaległa)" value={formatZl(wynik.zaleglosc)} />
+            <IntakeRow
+              label={`Odsetki za opóźnienie (${formatStopa(stopaEfektywna)}% rocznie, nie więcej niż maks.)`}
+              value={formatZl(wynik.odsetkiZaOpoznienie)}
+            />
+            <IntakeRow
+              label="Do zapłaty teraz"
+              value={formatZl(wynik.doZaplatyTeraz)}
+              strong
+              border
+            />
+            <IntakeRow
+              label={`Raty przyszłe (niewymagalne)${
+                wynik.najblizszaRata ? ` — najbliższa ${formatDataPL(wynik.najblizszaRata)}` : ""
+              }`}
+              value={formatZl(wynik.pozostaleRatyPrzyszle)}
+            />
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Odsetki karne (maks. {Number(f.stopa_odsetek_max) || DEFAULT_MAX_DELAY_RATE}% rocznie)
-              system doliczy automatycznie w karcie sprawy, na podstawie dat z umowy i wpłat. Opłaty
-              wg umowy: {feePreview}
-              {fees.zrodlo === "umowa" ? " (odczytane z umowy)" : " (domyślne — możesz poprawić)"}.
+              {wynik.najstarszaZalegla ? (
+                <>
+                  Opóźnienie: <span className={delayColorClass(dni)}>{dni} dni</span> — od
+                  najstarszej zaległej raty ({formatDataPL(wynik.najstarszaZalegla)}). Sugerowana
+                  ścieżka: {PATH_LABELS[sugerowana]}.{" "}
+                </>
+              ) : (
+                <>Brak zaległych rat na dziś — sugerowana ścieżka: {PATH_LABELS[sugerowana]}. </>
+              )}
+              {feeNote}
             </p>
           </div>
-        )}
+        ) : !maRaty && naleznoscBazowa > 0 ? (
+          <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+            <IntakeRow label="Kwota do zwrotu (z umowy)" value={formatZl(naleznoscBazowa)} />
+            <IntakeRow
+              label={`Wpłaty klienta (${wplatyLive.length})`}
+              value={`− ${formatZl(sumaWplat)}`}
+            />
+            <IntakeRow
+              label="Pozostała należność (bez odsetek)"
+              value={formatZl(saldoPoWplatach)}
+              strong
+              border
+            />
+            <p className="mt-1 flex items-start gap-1 text-[11px] text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0" />
+              Dodaj harmonogram rat, aby liczyć zaległość z rat. Bez harmonogramu odsetki za
+              opóźnienie liczone są od kwoty zaległej sprawy, dopiero po terminie spłaty.
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Odsetki za opóźnienie ({formatStopa(stopaEfektywna)}% rocznie) system doliczy w karcie
+              sprawy. {feeNote}
+            </p>
+          </div>
+        ) : null}
 
         <Button
           type="button"
@@ -918,19 +1167,32 @@ function NewCaseIntake({
           <Fld label="Dłużnik / firma" className="sm:col-span-2">
             <Input value={f.imie_nazwisko} onChange={(e) => upd("imie_nazwisko", e.target.value)} />
           </Fld>
-          <Fld label="Typ">
-            <Select value={f.typ} onValueChange={(v) => upd("typ", v)}>
+          <Fld
+            label="Typ"
+            hint="Jednoosobowa działalność (PESEL + NIP) to osoba fizyczna; „firma” — spółki i osoby prawne."
+          >
+            <Select
+              value={f.typ}
+              onValueChange={(v) => upd("typ", v as "osoba_fizyczna" | "firma")}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="osoba_fizyczna">Osoba fizyczna</SelectItem>
-                <SelectItem value="firma">Firma</SelectItem>
+                <SelectItem value="osoba_fizyczna">Osoba fizyczna (także JDG)</SelectItem>
+                <SelectItem value="firma">Firma (spółka, osoba prawna)</SelectItem>
               </SelectContent>
             </Select>
           </Fld>
-          <Fld label="PESEL / NIP">
-            <Input value={f.pesel} onChange={(e) => upd("pesel", e.target.value)} />
+          <Fld label="PESEL">
+            <Input
+              inputMode="numeric"
+              value={f.pesel}
+              onChange={(e) => upd("pesel", e.target.value)}
+            />
+          </Fld>
+          <Fld label="NIP">
+            <Input inputMode="numeric" value={f.nip} onChange={(e) => upd("nip", e.target.value)} />
           </Fld>
           <Fld label="E-mail">
             <Input value={f.email} onChange={(e) => upd("email", e.target.value)} />
@@ -944,6 +1206,17 @@ function NewCaseIntake({
               onChange={(e) => upd("adres_zamieszkania", e.target.value)}
             />
           </Fld>
+          <Fld
+            label="Pożyczkodawca (z umowy)"
+            className="sm:col-span-2"
+            hint="Strona udzielająca pożyczki — agent AI dzwoni w jej imieniu."
+          >
+            <Input
+              value={f.pozyczkodawca}
+              placeholder="np. Finance You sp. z o.o."
+              onChange={(e) => upd("pozyczkodawca", e.target.value)}
+            />
+          </Fld>
           <Fld label="Numer umowy">
             <Input value={f.numer_umowy} onChange={(e) => upd("numer_umowy", e.target.value)} />
           </Fld>
@@ -954,28 +1227,39 @@ function NewCaseIntake({
               onChange={(e) => upd("data_umowy", e.target.value)}
             />
           </Fld>
-          <Fld label="Kwota pożyczki (zł)">
+          <Fld label="Kwota wypłacona (na rękę) (zł)">
             <Input
-              type="number"
+              inputMode="decimal"
               value={f.kwota_pozyczki}
               onChange={(e) => upd("kwota_pozyczki", e.target.value)}
             />
           </Fld>
-          <Fld label="Kwota całkowita do zwrotu (zł)">
+          <Fld label="Prowizja Finance You (potrącona z wypłaty) (zł)">
             <Input
-              type="number"
-              value={f.kwota_calkowita}
-              onChange={(e) => upd("kwota_calkowita", e.target.value)}
-            />
-          </Fld>
-          <Fld label="Prowizja Finance You (zł)">
-            <Input
-              type="number"
+              inputMode="decimal"
               value={f.prowizja}
               onChange={(e) => upd("prowizja", e.target.value)}
             />
           </Fld>
-          <Fld label="Termin spłaty">
+          <Fld
+            label="Kwota do zwrotu bez odsetek (kwota pożyczki + prowizja pożyczkodawcy) (zł)"
+            className="sm:col-span-2"
+            hint="Bez odsetek umownych — nie wpisuj tu sumy rat."
+          >
+            <Input
+              inputMode="decimal"
+              value={f.kwota_calkowita}
+              onChange={(e) => upd("kwota_calkowita", e.target.value)}
+            />
+          </Fld>
+          <Fld
+            label="Termin spłaty (ostatnia rata)"
+            hint={
+              ostatniaRata
+                ? `Puste = termin ostatniej raty z harmonogramu (${formatDataPL(ostatniaRata)}).`
+                : undefined
+            }
+          >
             <Input
               type="date"
               value={f.termin_splaty}
@@ -984,33 +1268,147 @@ function NewCaseIntake({
           </Fld>
           <Fld label="Oprocentowanie kapitałowe (% rocznie)">
             <Input
-              type="number"
-              step="0.1"
+              inputMode="decimal"
               value={f.oprocentowanie_roczne}
               onChange={(e) => upd("oprocentowanie_roczne", e.target.value)}
             />
           </Fld>
-          <Fld label="Odsetki za opóźnienie wg umowy (% rocznie, nie więcej niż maks.)">
+          <Fld
+            label="Odsetki za opóźnienie wg umowy (% rocznie)"
+            className="sm:col-span-2"
+            hint={
+              <>
+                {stopaZrodlo === "domyslna"
+                  ? `Odsetki maksymalne za opóźnienie z dnia umowy (${formatStopa(stopaMaks)}%) — zmień, jeśli umowa przewiduje niższe.`
+                  : stopaZrodlo === "umowa"
+                    ? "Odczytane z umowy."
+                    : `Wpisane ręcznie. Puste = odsetki maksymalne z dnia umowy (${formatStopa(stopaMaks)}%).`}{" "}
+                W każdym dniu kalkulator stosuje nie więcej niż odsetki maksymalne za opóźnienie z
+                tego dnia.
+                {stopaZrodlo !== "domyslna" ? (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      className="text-primary hover:underline"
+                      onClick={() => setStopaZrodlo("domyslna")}
+                    >
+                      Przywróć maksymalne
+                    </button>
+                  </>
+                ) : null}
+              </>
+            }
+          >
             <Input
-              type="number"
-              step="0.1"
-              value={f.stopa_odsetek_max}
-              onChange={(e) => upd("stopa_odsetek_max", e.target.value)}
+              inputMode="decimal"
+              value={stopaTxt}
+              onChange={(e) => {
+                upd("stopa_odsetek_max", e.target.value);
+                setStopaZrodlo("recznie");
+              }}
             />
           </Fld>
-          <Fld label="Kwota zaległa (zł) — puste = wyliczona automatycznie">
+          <Fld
+            label="Kwota zaległa (po wpłatach) (zł)"
+            className="sm:col-span-2"
+            hint={
+              harmonogram
+                ? "Liczona z harmonogramu rat (raty po terminie minus wpłaty) — pole nieaktywne."
+                : `Podstawa odsetek za opóźnienie w modelu bez harmonogramu. Wpisz kwotę już po odjęciu wpłat; puste = cała pozostała należność${
+                    saldoPoWplatach > 0 ? ` (${formatZl(saldoPoWplatach)})` : ""
+                  }.`
+            }
+          >
             <Input
-              type="number"
-              value={f.kwota_zalegla}
-              placeholder={wyliczonaZaleglosc > 0 ? String(wyliczonaZaleglosc) : ""}
+              inputMode="decimal"
+              disabled={Boolean(harmonogram)}
+              value={harmonogram ? "" : f.kwota_zalegla}
+              placeholder={
+                harmonogram
+                  ? wynik
+                    ? kwotaDoPola(wynik.zaleglosc)
+                    : ""
+                  : saldoPoWplatach > 0
+                    ? kwotaDoPola(saldoPoWplatach)
+                    : ""
+              }
               onChange={(e) => upd("kwota_zalegla", e.target.value)}
+            />
+          </Fld>
+          <Fld
+            label="Rachunek do spłaty (NRB)"
+            className="sm:col-span-2"
+            hint={
+              rachunekBledny ? (
+                <span className="text-red-600">
+                  Podaj 26 cyfr numeru rachunku (NRB) albo IBAN PL.
+                </span>
+              ) : undefined
+            }
+          >
+            <Input
+              value={f.rachunek_splaty}
+              placeholder="NN NNNN NNNN NNNN NNNN NNNN NNNN"
+              onChange={(e) => upd("rachunek_splaty", e.target.value)}
+              onBlur={() => {
+                const r = formatRachunekSplaty(f.rachunek_splaty);
+                if (r) upd("rachunek_splaty", r);
+              }}
             />
           </Fld>
           <Fld label="Numer KW">
             <Input value={f.numer_kw} onChange={(e) => upd("numer_kw", e.target.value)} />
           </Fld>
-          <Fld label="Ścieżka">
-            <Select value={f.sciezka} onValueChange={(v) => upd("sciezka", v)}>
+          <Fld label="Kwota hipoteki (zł)">
+            <Input
+              inputMode="decimal"
+              value={f.kwota_hipoteki}
+              onChange={(e) => upd("kwota_hipoteki", e.target.value)}
+            />
+          </Fld>
+          <Fld
+            label="Akt notarialny — poddanie się egzekucji (art. 777 k.p.c.)"
+            hint="Np. Rep. A nr 1234/2026, notariusz …"
+          >
+            <Input
+              value={f.akt_notarialny_777}
+              onChange={(e) => upd("akt_notarialny_777", e.target.value)}
+            />
+          </Fld>
+          <Fld label="Kwota z aktu 777 (zł)">
+            <Input
+              inputMode="decimal"
+              value={f.kwota_777}
+              onChange={(e) => upd("kwota_777", e.target.value)}
+            />
+          </Fld>
+          <Fld
+            label="Ścieżka"
+            hint={
+              sciezkaManual && f.sciezka !== sugerowana ? (
+                <>
+                  Sugerowana przy opóźnieniu {dni} dni: {PATH_LABELS[sugerowana]}.{" "}
+                  <button
+                    type="button"
+                    className="text-primary hover:underline"
+                    onClick={() => setSciezkaManual(false)}
+                  >
+                    Przywróć sugerowaną
+                  </button>
+                </>
+              ) : (
+                `Dobrana do opóźnienia (${dni} dni) — możesz zmienić.`
+              )
+            }
+          >
+            <Select
+              value={sciezka}
+              onValueChange={(v) => {
+                upd("sciezka", v as WindPath);
+                setSciezkaManual(true);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -1018,13 +1416,17 @@ function NewCaseIntake({
                 {(Object.keys(PATH_LABELS) as WindPath[]).map((p) => (
                   <SelectItem key={p} value={p}>
                     {PATH_LABELS[p]}
+                    {p === sugerowana ? " (sugerowana)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </Fld>
           <Fld label="Priorytet">
-            <Select value={f.priorytet} onValueChange={(v) => upd("priorytet", v)}>
+            <Select
+              value={f.priorytet}
+              onValueChange={(v) => upd("priorytet", v as WindPriorityForm)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -1104,19 +1506,47 @@ function NewCaseIntake({
   );
 }
 
+/** Wiersz wyliczenia w formularzu nowej sprawy. */
+function IntakeRow({
+  label,
+  value,
+  strong,
+  border,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  border?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-3 ${strong ? "font-semibold" : ""} ${
+        border ? "mt-1 border-t pt-1" : ""
+      }`}
+    >
+      <span className={strong ? "" : "text-muted-foreground"}>{label}</span>
+      <span className="tabular-nums whitespace-nowrap">{value}</span>
+    </div>
+  );
+}
+
 function Fld({
   label,
   children,
   className,
+  hint,
 }: {
   label: string;
   children: React.ReactNode;
   className?: string;
+  /** Podpowiedź pod polem. */
+  hint?: React.ReactNode;
 }) {
   return (
     <div className={`space-y-1 ${className ?? ""}`}>
       <Label className="text-xs">{label}</Label>
       {children}
+      {hint ? <p className="text-[11px] text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }

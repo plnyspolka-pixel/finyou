@@ -71,8 +71,18 @@ export interface WindDebtSnapshot {
   debt: DebtCalcResult | null;
 }
 
+/**
+ * Czy cała należność jest wymagalna: wypowiedzenie albo sprawa już na
+ * etapie egzekucji komorniczej / karnym (tak samo jak w agencie AI —
+ * windLoanTerminated w windykacja-agent-prompt.ts).
+ */
 export function windLoanIsTerminated(loan: WindDebtLoan): boolean {
-  return Boolean(loan.data_wypowiedzenia) || loan.status === "wypowiedziana";
+  return (
+    Boolean(loan.data_wypowiedzenia) ||
+    ["wypowiedziana", "windykacja_komornicza", "windykacja_karna"].includes(
+      String(loan.status ?? ""),
+    )
+  );
 }
 
 /** Wpłaty i opłaty windykacyjne z osi zdarzeń sprawy. */
@@ -148,7 +158,9 @@ export function windDebtSnapshot(input: {
     dueDate: loan.termin_splaty,
     contractualAnnualRate: Number(loan.oprocentowanie_roczne || 0),
     penaltyAnnualRate: Number(loan.stopa_odsetek_max || 0),
-    maxStatutoryRate: Number(loan.stopa_odsetek_max || 0),
+    // Limit: odsetki maksymalne za opóźnienie z dnia wyliczenia (art. 481
+    // § 2¹ k.c.) — stara domyślna stopa 22,5% nie przejdzie ponad limit.
+    maxStatutoryRate: maxDelayRate(asOf),
     terminated,
     terminationDate: loan.data_wypowiedzenia,
     overdueInstallmentsAmount: Number(input.kwotaZalegla || 0),

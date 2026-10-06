@@ -514,6 +514,12 @@ export interface WindCallVariablesInput {
     data_otwarcia?: string | null;
   };
   kwota: number;
+  /**
+   * Opóźnienie na dziś wyliczone z harmonogramu rat (windDebtSnapshot —
+   * dni od najstarszej niezapłaconej raty). Podane (także 0) ma
+   * pierwszeństwo przed szacunkiem z terminu spłaty i otwarcia sprawy.
+   */
+  dniOpoznienia?: number | null;
   previousPromise?: WindPreviousPromise | null;
   paymentsAfterISO?: string[];
 }
@@ -523,8 +529,15 @@ const orBrak = (v: string | null | undefined): string => {
   return s ? s : WIND_NO_DATA;
 };
 
-/** Opóźnienie w dniach na dziś: z terminu spłaty albo z wpisu przy otwarciu sprawy. */
+/**
+ * Opóźnienie w dniach na dziś. Z harmonogramu rat (`dniOpoznienia`), gdy
+ * podane; inaczej szacunek z terminu spłaty albo z wpisu przy otwarciu
+ * sprawy (model z jednym terminem).
+ */
 export function currentDelayDays(input: WindCallVariablesInput, todayISO: string): number {
+  if (input.dniOpoznienia != null && Number.isFinite(Number(input.dniOpoznienia))) {
+    return Math.max(0, Math.round(Number(input.dniOpoznienia)));
+  }
   const fromDue = input.loan?.termin_splaty
     ? daysBetweenISO(input.loan.termin_splaty.slice(0, 10), todayISO)
     : 0;

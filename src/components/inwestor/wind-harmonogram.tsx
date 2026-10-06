@@ -5,205 +5,31 @@
 // Edytor trzyma raty jako tekst (kwoty można wkleić z umowy: „7 868,48"),
 // a waliduje je ta sama funkcja co serwer (harmonogramFromInput) — błędny
 // wiersz widać przed zapisem, z numerem raty. Generator tworzy raty
-// miesięczne z parametrów umowy (generateHarmonogram).
+// miesięczne z parametrów umowy (generateHarmonogram). Czyste funkcje
+// formularza: wind-harmonogram-form.ts.
 // ════════════════════════════════════════════════════════════════════
 import { useId, useState } from "react";
 import { Plus, Trash2, Wand2, AlertTriangle } from "lucide-react";
-import {
-  generateHarmonogram,
-  parseDataISO,
-  parseKwota,
-  type RataStan,
-  type WindRata,
-} from "@/lib/windykacja-harmonogram";
-import { harmonogramFromInput, opisHarmonogramu } from "@/lib/windykacja-recalc";
+import type { RataStan } from "@/lib/windykacja-harmonogram";
+import { opisHarmonogramu } from "@/lib/windykacja-recalc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-
-const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
-
-/** Kwota z groszami („11 956,69 zł") — kwoty sprawy komunikowane dłużnikowi i w aktach. */
-export function formatZl(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(Number(n))) return "—";
-  return new Intl.NumberFormat("pl-PL", {
-    style: "currency",
-    currency: "PLN",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(round2(n));
-}
-
-/** Data RRRR-MM-DD → „DD.MM.RRRR" (bez przeliczania stref czasowych). */
-export function formatDataPL(iso: string | null | undefined): string {
-  const d = parseDataISO(iso);
-  return d ? d.split("-").reverse().join(".") : "—";
-}
-
-// ── Model formularza ─────────────────────────────────────────────────
-
-/** Wiersz edytora: wszystko jako tekst wpisany przez użytkownika. */
-export interface RataForm {
-  key: string;
-  /** RRRR-MM-DD (input type=date). */
-  termin: string;
-  kwota: string;
-  /** Część odsetkowa raty (opcjonalnie). */
-  odsetki: string;
-  /** Część prowizyjna raty (opcjonalnie). */
-  prowizja: string;
-}
-
-/** Parametry generatora harmonogramu (z umowy). */
-export interface GeneratorForm {
-  pierwszaRata: string;
-  liczbaRat: string;
-  kwotaRaty: string;
-  /** Inna kwota ostatniej raty (np. wyrównanie, rata balonowa); puste = jak pozostałe. */
-  kwotaOstatniejRaty: string;
-}
-
-export const EMPTY_GENERATOR: GeneratorForm = {
-  pierwszaRata: "",
-  liczbaRat: "",
-  kwotaRaty: "",
-  kwotaOstatniejRaty: "",
-};
-
-let keySeq = 0;
-const newKey = () => `rata_${Date.now().toString(36)}_${(keySeq++).toString(36)}`;
-
-/** Kwota do pola tekstowego: „7868,48" (przecinek dziesiętny, bez separatora tysięcy). */
-export function kwotaDoPola(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(Number(n))) return "";
-  return String(round2(n)).replace(".", ",");
-}
-
-/** Harmonogram (z bazy / odczytu umowy) → wiersze edytora. */
-export function harmonogramToForm(h: WindRata[] | null | undefined): RataForm[] {
-  return (h ?? []).map((r) => ({
-    key: newKey(),
-    termin: r.termin,
-    kwota: kwotaDoPola(r.kwota),
-    odsetki: kwotaDoPola(r.odsetki),
-    prowizja: kwotaDoPola(r.prowizja),
-  }));
-}
-
-const isEmptyRow = (r: RataForm) =>
-  !r.termin.trim() && !r.kwota.trim() && !r.odsetki.trim() && !r.prowizja.trim();
-
-/** Czy w edytorze jest choć jedna (niepusta) rata — wtedy zaległość liczymy z rat. */
-export function hasRaty(rows: RataForm[]): boolean {
-  return rows.some((r) => !isEmptyRow(r));
-}
-
-/**
- * Wiersze edytora → harmonogram do zapisu (ta sama walidacja co na
- * serwerze). Błędy z numerem wiersza; brak rat → harmonogram null.
- */
-export function formToHarmonogram(rows: RataForm[]): {
-  harmonogram: WindRata[] | null;
-  bledy: string[];
-} {
-  return harmonogramFromInput(
-    rows.map((r) => ({
-      termin: r.termin,
-      kwota: r.kwota,
-      odsetki: r.odsetki,
-      prowizja: r.prowizja,
-    })),
-  );
-}
-
-/** Najczęstsza kwota raty (bez ostatniej) — kwota „typowej" raty do generatora. */
-function typowaKwota(h: WindRata[]): number {
-  const pool = h.length > 1 ? h.slice(0, -1) : h;
-  const count = new Map<number, number>();
-  for (const r of pool) count.set(r.kwota, (count.get(r.kwota) ?? 0) + 1);
-  let best = pool[0].kwota;
-  let bestN = 0;
-  for (const [k, n] of count) {
-    if (n > bestN) {
-      best = k;
-      bestN = n;
-    }
-  }
-  return best;
-}
-
-/** Parametry generatora odtworzone z istniejącego harmonogramu. */
-export function generatorFromHarmonogram(h: WindRata[] | null | undefined): GeneratorForm {
-  if (!h || h.length === 0) return EMPTY_GENERATOR;
-  const kwota = typowaKwota(h);
-  const ostatnia = h[h.length - 1].kwota;
-  return {
-    pierwszaRata: h[0].termin,
-    liczbaRat: String(h.length),
-    kwotaRaty: kwotaDoPola(kwota),
-    kwotaOstatniejRaty: h.length > 1 && Math.abs(ostatnia - kwota) > 0.005 ? kwotaDoPola(ostatnia) : "",
-  };
-}
-
-/** Parametry generatora z odczytu umowy (pola mogą być puste). */
-export function generatorFromParams(p: {
-  data_pierwszej_raty?: string | null;
-  liczba_rat?: number | null;
-  kwota_raty?: number | null;
-  kwota_ostatniej_raty?: number | null;
-}): GeneratorForm {
-  return {
-    pierwszaRata: parseDataISO(p.data_pierwszej_raty) ?? "",
-    liczbaRat: p.liczba_rat != null && p.liczba_rat > 0 ? String(Math.floor(p.liczba_rat)) : "",
-    kwotaRaty: kwotaDoPola(p.kwota_raty),
-    kwotaOstatniejRaty: kwotaDoPola(p.kwota_ostatniej_raty),
-  };
-}
-
-/** Raty z generatora albo komunikat, czego brakuje. */
-export function generateFromForm(g: GeneratorForm): { raty: WindRata[]; blad: string | null } {
-  const pierwsza = parseDataISO(g.pierwszaRata);
-  const liczba = Number(g.liczbaRat);
-  const kwota = parseKwota(g.kwotaRaty);
-  const ostatnia = g.kwotaOstatniejRaty.trim() ? parseKwota(g.kwotaOstatniejRaty) : null;
-  if (!pierwsza) return { raty: [], blad: "Podaj termin pierwszej raty." };
-  if (!Number.isInteger(liczba) || liczba < 1 || liczba > 600) {
-    return { raty: [], blad: "Liczba rat: liczba całkowita od 1 do 600." };
-  }
-  if (kwota == null || kwota <= 0) return { raty: [], blad: "Podaj kwotę raty większą od 0." };
-  if (g.kwotaOstatniejRaty.trim() && (ostatnia == null || ostatnia <= 0)) {
-    return { raty: [], blad: "Kwota ostatniej raty musi być większa od 0 (albo zostaw puste)." };
-  }
-  return {
-    raty: generateHarmonogram({
-      pierwszaRata: pierwsza,
-      liczbaRat: liczba,
-      kwotaRaty: kwota,
-      kwotaOstatniejRaty: ostatnia,
-    }),
-    blad: null,
-  };
-}
-
-/** Kolejna rata do dopisania ręcznie: miesiąc po ostatniej, ta sama kwota. */
-export function nextRataForm(rows: RataForm[]): RataForm {
-  const last = [...rows].reverse().find((r) => parseDataISO(r.termin));
-  const termin = last
-    ? (generateHarmonogram({
-        pierwszaRata: last.termin,
-        liczbaRat: 2,
-        kwotaRaty: 1,
-      })[1]?.termin ?? "")
-    : "";
-  return {
-    key: newKey(),
-    termin,
-    kwota: last?.kwota ?? "",
-    odsetki: "",
-    prowizja: "",
-  };
-}
+import {
+  RATA_STATUS_LABEL,
+  formToHarmonogram,
+  formatDataPL,
+  formatZl,
+  generateFromForm,
+  harmonogramToForm,
+  hasRaty,
+  nextRataForm,
+  rataStatus,
+  type GeneratorForm,
+  type RataForm,
+  type RataStatus,
+} from "@/components/inwestor/wind-harmonogram-form";
 
 // ── Edytor harmonogramu ──────────────────────────────────────────────
 
@@ -464,19 +290,6 @@ export function HarmonogramEditor({
 
 // ── Stan rat na dziś (karta sprawy) ──────────────────────────────────
 
-export type RataStatus = "zaplacona" | "zalegla" | "przyszla";
-
-export function rataStatus(r: Pick<RataStan, "wymagalna" | "pozostalo">): RataStatus {
-  if (r.pozostalo <= 0) return "zaplacona";
-  return r.wymagalna ? "zalegla" : "przyszla";
-}
-
-const STATUS_LABEL: Record<RataStatus, string> = {
-  zaplacona: "zapłacona",
-  zalegla: "zaległa",
-  przyszla: "przyszła",
-};
-
 const STATUS_BADGE: Record<RataStatus, string> = {
   zaplacona:
     "border-green-300 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200",
@@ -546,7 +359,7 @@ export function RatyStanTable({ raty }: { raty: RataStan[] }) {
                   <span
                     className={`inline-flex whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${STATUS_BADGE[s]}`}
                   >
-                    {STATUS_LABEL[s]}
+                    {RATA_STATUS_LABEL[s]}
                     {czesc ? " (część)" : ""}
                   </span>
                 </td>
