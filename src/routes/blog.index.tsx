@@ -9,7 +9,7 @@ import { BlogCover } from "@/components/blog/BlogCover";
 const BLOG_URL = "https://financeyou.pl/blog";
 const BLOG_TITLE = "Blog Finance You — pożyczki pod zastaw nieruchomości i inwestowanie";
 const BLOG_DESCRIPTION =
-  "Porady, analizy rynkowe i przewodniki o pożyczkach pod zabezpieczenie nieruchomości oraz o inwestowaniu w pożyczki hipoteczne. Aktualizacja codzienna.";
+  "Porady, analizy rynkowe i przewodniki o pożyczkach pod zabezpieczenie nieruchomości oraz o inwestowaniu w pożyczki hipoteczne. Nowy artykuł co tydzień.";
 
 type ArticleRow = {
   id: string;
