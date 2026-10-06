@@ -145,6 +145,29 @@ function toActivity(
   const active = firms.filter((f) => f.status === "aktywny");
   const chosen = active[0] ?? firms.find((f) => f.status === "zawieszony") ?? firms[0];
   const status = active.length ? "aktywny" : chosen.status;
+  // Dopasowanie "low" (samo imię i nazwisko, bez NIP i bez zgodności miasta) nie
+  // potwierdza tożsamości — wpis może należeć do innej osoby o tym samym nazwisku.
+  // Pokazujemy go jako kandydata do weryfikacji, ale nie traktujemy właściciela jako
+  // przedsiębiorcy (brak premii w scoringu i wpisu w mocnych stronach).
+  const unverified = confidence === "low" && active.length > 0;
+  if (unverified) {
+    return {
+      available: true,
+      queried,
+      isEntrepreneur: false,
+      status: "nieznany",
+      matchConfidence: confidence,
+      activeCount: active.length,
+      company: {
+        name: chosen.name,
+        nip: chosen.nip,
+        regon: chosen.regon,
+        startDate: chosen.startDate,
+        pkdMain: chosen.pkdMain,
+      },
+      note: `Znaleziono ${active.length} aktywn${active.length === 1 ? "y wpis" : "e wpisy"} w CEIDG pasując${active.length === 1 ? "y" : "e"} tylko po imieniu i nazwisku (bez NIP i zgodności miasta) — tożsamość niepotwierdzona, nie uwzględniono w ocenie ryzyka. Zweryfikuj NIP/adres z klientem.`,
+    };
+  }
   return {
     available: true,
     queried,

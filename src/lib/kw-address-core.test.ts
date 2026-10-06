@@ -50,3 +50,14 @@ describe("parseKwAddress — dział I-O KW", () => {
     expect(parseKwAddress("").fullAddress).toBeNull();
   });
 });
+
+describe("parseKwAddress — układ etykieta→wartość (OCR)", () => {
+  it("odczytuje powiat z kropką (M. SŁUPSK) i ulicę zawierającą „Warszawskich”", () => {
+    const html = `<table class="kw-ocr"><tr><td class="csTytul">Województwo</td><td class="csDane">POMORSKIE</td></tr><tr><td class="csTytul">Powiat</td><td class="csDane">M. SŁUPSK</td></tr><tr><td class="csTytul">Gmina</td><td class="csDane">SŁUPSK M.</td></tr><tr><td class="csTytul">Miejscowość</td><td class="csDane">SŁUPSK</td></tr><tr><td class="csTytul">Ulica</td><td class="csTytul">Numer budynku</td><td class="csTytul">Numer lokalu</td></tr><tr><td class="csBDane">POWSTAŃCÓW WARSZAWSKICH</td><td class="csBDane">1</td><td class="csBDane">7</td></tr></table>`;
+    const a = parseKwAddress(html);
+    expect(a.voivodeship).toBe("Pomorskie");
+    expect(a.powiat).toBe("M. Słupsk");
+    expect(a.city).toBe("Słupsk");
+    expect(a.fullAddress).toBe("Powstańców Warszawskich 1/7, Słupsk");
+  });
+});

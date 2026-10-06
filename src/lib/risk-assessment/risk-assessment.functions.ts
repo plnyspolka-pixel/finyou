@@ -284,7 +284,14 @@ export async function assessInvestmentRisk(
   // wniosku (np. lead podał miasto powiatowe zamiast wsi) wygrywa miejscowość
   // z KW; dane wniosku są tylko uzupełnieniem, gdy KW nie podaje adresu.
   const kwAddr = kwLegal.address;
-  const effAddress = property?.address || kwAddr?.fullAddress || null;
+  // Gdy KW podaje miejscowość, cały adres (ulica, numer, województwo) bierzemy
+  // z KW — inaczej ulica z wniosku mogłaby trafić do miejscowości z księgi.
+  const kwHasLocation = Boolean(kwAddr?.city);
+  const effAddress =
+    (kwHasLocation ? kwAddr?.fullAddress : null) ||
+    property?.address ||
+    kwAddr?.fullAddress ||
+    null;
   const normCity = (s: string) => s.trim().toLowerCase();
   let effCity = property?.city || kwAddr?.city || null;
   if (kwAddr?.city && property?.city && normCity(property.city) !== normCity(kwAddr.city)) {
@@ -293,7 +300,11 @@ export async function assessInvestmentRisk(
       `Rozbieżność lokalizacji: wniosek podaje „${property.city}", a dział I-O KW „${kwAddr.city}" — analizę rynku i lokalizacji oparto na miejscowości z KW.`,
     );
   }
-  const effVoivodeship = property?.voivodeship || kwAddr?.voivodeship || null;
+  const effVoivodeship =
+    (kwHasLocation ? kwAddr?.voivodeship : null) ||
+    property?.voivodeship ||
+    kwAddr?.voivodeship ||
+    null;
 
   // Parametry nieruchomości z działu I-O KW (oznaczenie) — źródło do wyceny.
   const kwParams = kwLegal.propertyParams;
@@ -336,6 +347,7 @@ export async function assessInvestmentRisk(
       floorPietro: kwFloorPietro,
       landUse: kwParams.landUse ?? kwParams.kind ?? null,
       fromKw: kwLegal.available,
+      location: kwAddr?.city ? kwAddr : null,
     },
   };
 

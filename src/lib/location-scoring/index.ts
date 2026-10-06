@@ -26,6 +26,11 @@ export { buildSerialSignal, type RawRangeStat } from "./serial-signal";
 export { buildExplanation } from "./explanation";
 export { maskKwNumber, maskKwRaw } from "./masking";
 export {
+  pinCandidatesToKwLocation,
+  type KwLocationHint,
+  type KwLocationPin,
+} from "./kw-location-pin";
+export {
   scoreLocation,
   decide,
   invalidKwResult,
