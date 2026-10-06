@@ -71,23 +71,23 @@ export function procedureSteps(docsHint: string): LoanProductStep[] {
 const B2B_FAQ: LoanProductFaq[] = [
   {
     q: "Ile kosztuje złożenie wniosku?",
-    a: "Nic. Wniosek jest bezpłatny i niezobowiązujący — sprawdzasz swoje możliwości bez ryzyka.",
+    a: "Nic. Wniosek jest bezpłatny i niezobowiązujący.",
   },
   {
     q: "Ile trwa cały proces — od wniosku do wypłaty?",
-    a: "Wstępna decyzja zwykle zapada w 24 godziny od kompletu danych. Cały proces — od wniosku, przez notariusza, do wypłaty — trwa najczęściej od kilku dni do dwóch tygodni. To znacznie szybciej niż w banku.",
+    a: "Wstępna decyzja zwykle zapada w 24 godziny od kompletu danych. Cały proces — weryfikacja, akceptacja warunków, notariusz i wypłata — przy sprawnej kompletacji dokumentów trwa najczęściej od kilku dni do dwóch tygodni.",
   },
   {
     q: "Dlaczego umowa jest podpisywana u notariusza?",
-    a: "Bo to najbezpieczniejsza forma dla Ciebie i dla inwestora. Notariusz czuwa nad prawidłowością umowy, odczytuje ją przed podpisem i od razu elektronicznie zgłasza hipotekę do księgi wieczystej — Ty nie musisz niczego załatwiać w sądzie.",
+    a: "Ustanowienie hipoteki wymaga oświadczenia w formie aktu notarialnego. Notariusz sprawdza tożsamość stron i stan prawny nieruchomości, odczytuje umowę i od razu składa elektronicznie wniosek o wpis hipoteki do księgi wieczystej. To chroni obie strony transakcji.",
   },
   {
-    q: "Na co mogę przeznaczyć pożyczkę?",
-    a: "Na dowolny cel związany z Twoją firmą: kapitał obrotowy, zakup maszyn lub towaru, inwestycję, rozwój, spłatę zobowiązań firmy czy finansowanie pomostowe.",
+    q: "Na jaki cel mogę przeznaczyć pożyczkę?",
+    a: "Wyłącznie na cel związany z działalnością gospodarczą (B2B) — np. kapitał obrotowy, inwestycję, zakup maszyn, spłatę zobowiązań firmy. Nie finansujemy celów konsumpcyjnych ani prywatnych potrzeb mieszkaniowych.",
   },
   {
-    q: "Czy bank musiał mi wcześniej odmówić?",
-    a: "Nie. Z naszej oferty korzystają zarówno firmy po odmowie banku, jak i te, które po prostu cenią szybkość i prostą procedurę.",
+    q: "Czy Finance You gwarantuje udzielenie pożyczki?",
+    a: "Nie. Finance You porządkuje sprawę i przedstawia ją inwestorom oraz partnerom finansowym — decyzja o finansowaniu należy do nich.",
   },
 ];
 
