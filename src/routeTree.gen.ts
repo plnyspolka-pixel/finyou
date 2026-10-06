@@ -102,6 +102,7 @@ import { Route as AdminZespolAktywnoscRouteImport } from './routes/admin.zespol-
 import { Route as AdminZgodyRouteImport } from './routes/admin.zgody'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as DlaInwestoraModulRouteImport } from './routes/dla-inwestora_.$modul'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as EmbedBlogRouteImport } from './routes/embed.blog'
 import { Route as EmbedFakturyRouteImport } from './routes/embed.faktury'
@@ -762,6 +763,11 @@ const BlogIndexRoute = BlogIndexRouteImport.update({
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/blog/$slug',
   path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DlaInwestoraModulRoute = DlaInwestoraModulRouteImport.update({
+  id: '/dla-inwestora_/$modul',
+  path: '/dla-inwestora/$modul',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
@@ -1888,6 +1894,7 @@ export interface FileRoutesByFullPath {
   '/admin/zespol-aktywnosc': typeof AdminZespolAktywnoscRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/dla-inwestora/$modul': typeof DlaInwestoraModulRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
   '/embed/faktury': typeof EmbedFakturyRoute
@@ -2170,6 +2177,7 @@ export interface FileRoutesByTo {
   '/admin/zespol-aktywnosc': typeof AdminZespolAktywnoscRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/dla-inwestora/$modul': typeof DlaInwestoraModulRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
   '/embed/faktury': typeof EmbedFakturyRoute
@@ -2453,6 +2461,7 @@ export interface FileRoutesById {
   '/admin/zespol-aktywnosc': typeof AdminZespolAktywnoscRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/dla-inwestora_/$modul': typeof DlaInwestoraModulRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
   '/embed/faktury': typeof EmbedFakturyRoute
@@ -2742,6 +2751,7 @@ export interface FileRouteTypes {
     | '/admin/zespol-aktywnosc'
     | '/admin/zgody'
     | '/blog/$slug'
+    | '/dla-inwestora/$modul'
     | '/email/unsubscribe'
     | '/embed/blog'
     | '/embed/faktury'
@@ -3024,6 +3034,7 @@ export interface FileRouteTypes {
     | '/admin/zespol-aktywnosc'
     | '/admin/zgody'
     | '/blog/$slug'
+    | '/dla-inwestora/$modul'
     | '/email/unsubscribe'
     | '/embed/blog'
     | '/embed/faktury'
@@ -3306,6 +3317,7 @@ export interface FileRouteTypes {
     | '/admin/zespol-aktywnosc'
     | '/admin/zgody'
     | '/blog/$slug'
+    | '/dla-inwestora_/$modul'
     | '/email/unsubscribe'
     | '/embed/blog'
     | '/embed/faktury'
@@ -3536,6 +3548,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  DlaInwestoraModulRoute: typeof DlaInwestoraModulRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   EmbedBlogRoute: typeof EmbedBlogRoute
   EmbedFakturyRoute: typeof EmbedFakturyRoute
@@ -4280,6 +4293,13 @@ declare module '@tanstack/react-router' {
       path: '/blog/$slug'
       fullPath: '/blog/$slug'
       preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dla-inwestora_/$modul': {
+      id: '/dla-inwestora_/$modul'
+      path: '/dla-inwestora/$modul'
+      fullPath: '/dla-inwestora/$modul'
+      preLoaderRoute: typeof DlaInwestoraModulRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
@@ -6116,6 +6136,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   BlogSlugRoute: BlogSlugRoute,
+  DlaInwestoraModulRoute: DlaInwestoraModulRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   EmbedBlogRoute: EmbedBlogRoute,
   EmbedFakturyRoute: EmbedFakturyRoute,

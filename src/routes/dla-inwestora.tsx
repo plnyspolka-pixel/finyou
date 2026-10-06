@@ -27,6 +27,8 @@ import {
 import { ChatWidget } from "@/components/landing/chat-widget";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { ExampleProjectsSection } from "@/components/landing/example-projects-section";
+import { ModuleCards } from "@/components/marketing/investor-module-ui";
+import { INVESTOR_MODULES } from "@/components/marketing/investor-modules";
 import { faqPageLd } from "@/lib/seo/company";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import type { AccessProduct } from "@/lib/access/core";
@@ -53,7 +55,8 @@ const SHOW: Record<
   | "system"
   | "akademia"
   | "ochrona"
-  | "windykacja",
+  | "windykacja"
+  | "moduly",
   boolean
 > = {
   zakladki: false, // pasek zakładek zamiast sekcji jedna pod drugą
@@ -64,6 +67,7 @@ const SHOW: Record<
   akademia: false, // pokaz slajdów Akademii inwestora
   ochrona: false, // pokaz slajdów „7 warstw ochrony"
   windykacja: false, // pokaz slajdów windykacji AI
+  moduly: true, // karty modułów prowadzące do podstron /dla-inwestora/<moduł>
 };
 
 // Filmy w hero. Pierwszy (nasza prezentacja ze Storage) po prawej w rzędzie 1, drugi piętro niżej po
@@ -921,6 +925,24 @@ function WindykacjaSection() {
   );
 }
 
+// Karty modułów — każda prowadzi do podstrony z opisem cecha → zaleta → korzyść
+// (/dla-inwestora/<moduł>; te same pozycje są w sub-menu "Inwestor").
+function ModulesSection() {
+  return (
+    <Section id="moduly" tint>
+      <SectionHead
+        center
+        eyebrow="Moduły klubu"
+        title="Pięć modułów w jednym abonamencie"
+        sub="Analiza zabezpieczenia, windykacja, AML, dokumenty i sieć sprzedaży. Wybierz moduł i zobacz, co dokładnie dostajesz."
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <ModuleCards modules={INVESTOR_MODULES} cols={3} />
+      </div>
+    </Section>
+  );
+}
+
 function CennikSection({ products }: { products: AccessProduct[] }) {
   return (
     <Section id="cennik" tint>
@@ -1079,6 +1101,8 @@ function InvestorLanding() {
           <FeatureGrid items={BENEFITS} icon3d />
         </div>
       </Section>
+
+      {SHOW.moduly && <ModulesSection />}
 
       {!SHOW.zakladki && (
         <>

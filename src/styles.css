@@ -475,6 +475,8 @@
 }
 .fy-nav-drop-panel a:last-child { border-radius: 0 0 10px 10px; }
 .fy-nav-drop-panel a:hover { color: var(--accent); background: rgba(20, 30, 66, 0.97); }
+/* granica między podstronami modułów a kotwicami landingu (Co zyskujesz, Cennik) */
+.fy-nav-drop-panel a.fy-nav-drop-sep { border-top: 1px solid rgba(84, 124, 214, 0.55); }
 
 /* ——— stopka: ikony social mediów (okrągłe przyciski w kolumnie marki) ——— */
 .fy-marketing .fy-social a {
@@ -497,6 +499,53 @@
 @media (prefers-reduced-motion: reduce) {
   .fy-marketing .fy-social a:hover,
   .fy-marketing .fy-social a:focus-visible { transform: none; }
+}
+
+/* ——— podstrony modułów inwestora (/dla-inwestora/<moduł>) ———
+   Cecha → zaleta → korzyść: trzy komórki w rzędzie ze strzałkami w odstępach;
+   na tablecie i telefonie jedna pod drugą, strzałki w dół. */
+.fy-fab-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem 1.7rem;
+  margin: 1rem 0 0;
+}
+.fy-fab-cell { position: relative; }
+.fy-fab-cell + .fy-fab-cell::before {
+  content: "→";
+  position: absolute;
+  left: -1.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 800;
+  color: rgba(240, 198, 103, 0.75);
+}
+/* Karty modułów: niepełny ostatni rząd wyśrodkowany; liczba kolumn z --fy-cols. */
+.fy-module-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; }
+.fy-module-cards > * {
+  flex: 0 1 calc((100% - (var(--fy-cols, 3) - 1) * 1rem) / var(--fy-cols, 3));
+  min-width: 0;
+}
+.fy-module-card {
+  transition: transform var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+.fy-module-card:hover,
+.fy-module-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(240, 198, 103, 0.55) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fy-module-card:hover, .fy-module-card:focus-visible { transform: none; }
+}
+@media (max-width: 900px) {
+  .fy-fab-grid { grid-template-columns: 1fr; gap: 1.7rem; }
+  .fy-fab-cell + .fy-fab-cell::before { content: "↓"; left: 50%; top: -1.45rem; transform: translateX(-50%); }
+  .fy-module-cards { --fy-cols: 2 !important; }
+}
+@media (max-width: 560px) {
+  .fy-module-cards { --fy-cols: 1 !important; }
 }
 
 /* anchors (#akademia, #cennik…) must not hide under the sticky header */

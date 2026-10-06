@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { buildSitemapXml, type SitemapEntry } from "@/lib/seo/sitemap-core";
+import { INVESTOR_MODULES, investorModulePath } from "@/components/marketing/investor-modules";
 
 const BASE_URL = "https://financeyou.pl";
 
@@ -16,6 +17,14 @@ export const Route = createFileRoute("/sitemap.xml")({
           // /posrednik to panele wymagające logowania — nie trafiają do sitemapy.
           { path: "/dla-klienta", lastmod: today, changefreq: "weekly", priority: "0.9" },
           { path: "/dla-inwestora", lastmod: today, changefreq: "weekly", priority: "0.9" },
+          // Podstrony modułów Klubu Inwestorów (/dla-inwestora/<moduł>).
+          ...INVESTOR_MODULES.map(
+            (m): SitemapEntry => ({
+              path: investorModulePath(m.slug),
+              changefreq: "monthly",
+              priority: "0.8",
+            }),
+          ),
           { path: "/dla-posrednika", lastmod: today, changefreq: "weekly", priority: "0.8" },
           { path: "/oferty", lastmod: today, changefreq: "daily", priority: "0.9" },
           { path: "/blog", lastmod: today, changefreq: "daily", priority: "0.7" },
