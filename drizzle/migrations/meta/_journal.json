@@ -197,6 +197,13 @@
       "when": 1791277200000,
       "tag": "0027_podpis_klient_pozyczkowy",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791280800000,
+      "tag": "0028_windykacja_telefon_agent",
+      "breakpoints": true
     }
   ]
 }

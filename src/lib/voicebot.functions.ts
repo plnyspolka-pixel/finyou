@@ -242,6 +242,9 @@ async function maybeSendSms(
   trigger: "before_call" | "after_call" | "on_failure",
   ctx: { phone: string; source: string; firstName?: string | null },
 ) {
+  // Szablon SMS-a zapowiada telefon Ani w sprawie wniosku — pożyczkobiorca
+  // z windykacji nie może go dostać (inna sprawa, inny agent, inny ton).
+  if (ctx.source === "windykacja") return;
   const settings = await loadSettings();
   if (!settings?.sms_enabled) return;
   if ((settings.sms_trigger ?? "off") !== trigger) return;
@@ -341,6 +344,15 @@ export async function placeOutboundCallInternal(opts: {
   const window = getCallingWindow();
   if (!window.allowed && opts.source !== "test") {
     const nextIso = window.nextAllowedAt.toISOString();
+    // Telefon windykacyjny nie trafia do kolejki: cron dzwoniłby domyślnym
+    // agentem (Ania, wnioski) i bez zmiennych sprawy. Inwestor zleca go
+    // ponownie w godzinach dzwonienia.
+    if (opts.source === "windykacja") {
+      return {
+        ok: false,
+        error: `Poza godzinami dzwonienia (8:00–22:00, bez niedziel) — telefon nie został wykonany. Najbliższy dozwolony termin: ${fmtWarsaw(nextIso)}.`,
+      };
+    }
     await s.from("call_queue").insert({
       phone_normalized: phone,
       client_id: opts.clientId ?? null,
