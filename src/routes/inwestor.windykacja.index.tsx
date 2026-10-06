@@ -1,10 +1,12 @@
 // PANEL WINDYKACJI — jeden prosty przepływ:
-//   1. „Dodaj umowę" (zdjęcie/PDF → system odczytuje dłużnika, kwoty, terminy
-//      i tabelę opłat windykacyjnych z umowy),
+//   1. „Dodaj umowę" (zdjęcie/PDF → system odczytuje dłużnika, kwoty, terminy,
+//      harmonogram rat i tabelę opłat windykacyjnych z umowy),
 //   2. „Dodaj potwierdzenia wpłat" (system odczytuje kwoty i daty),
-//   → na tej podstawie system oblicza odsetki karne (maksymalne za
-//     opóźnienie, art. 481 § 2¹ k.c.), pozostałą należność i proponuje
-//     dalsze działania.
+//   → na tej podstawie system oblicza zaległość z rat, odsetki za opóźnienie
+//     (nie wyższe niż maksymalne, art. 481 § 2¹ k.c.) i proponuje ścieżkę
+//     oraz dalsze działania.
+// Kwoty spraw: „do zapłaty teraz" (zaległe raty + odsetki za opóźnienie +
+// koszty) i „całe zadłużenie" (także raty przyszłe) — windDebtSnapshot.
 // Przy każdej sprawie dwa przyciski: „Telefon windykacyjny AI" i „Wyślij SMS".
 // Kliknięcie wykonuje czynność ORAZ dopisuje ją do rejestru czynności
 // windykacyjnych sprawy z opłatą naliczoną zgodnie z umową.
@@ -31,15 +33,19 @@ import {
   delayColorClass,
   suggestNextAction,
   needsActionToday,
+  recommendedPathForDelay,
   type WindPath,
   type WindEventLite,
+  type WindCaseLite,
 } from "@/lib/windykacja-procedure";
 import {
-  calculateDebt,
-  splitInvestorPrincipal,
-  DEFAULT_MAX_DELAY_RATE,
-  type DebtCalcResult,
-} from "@/lib/debt-collection-math";
+  windDebtSnapshot,
+  defaultDelayRate,
+  type WindDebtSnapshot,
+} from "@/lib/windykacja-debt";
+import { computeZaleglosc, parseKwota } from "@/lib/windykacja-harmonogram";
+import { daysSinceDue, formatRachunekSplaty, warsawToday } from "@/lib/windykacja-recalc";
+import { maxDelayRate } from "@/lib/contract-engine/fees";
 import {
   WIND_FEE_DEFAULTS,
   WIND_FEE_LABELS,
@@ -70,6 +76,19 @@ import {
   PaymentScansField,
   type PaymentScan,
 } from "@/components/inwestor/wind-smart-scan";
+import {
+  EMPTY_GENERATOR,
+  HarmonogramEditor,
+  formToHarmonogram,
+  formatDataPL,
+  formatZl,
+  generatorFromHarmonogram,
+  generatorFromParams,
+  harmonogramToForm,
+  hasRaty,
+  type GeneratorForm,
+  type RataForm,
+} from "@/components/inwestor/wind-harmonogram";
 import { formatPLN, formatDate } from "@/lib/labels";
 import {
   Gavel,
@@ -113,39 +132,31 @@ const PRIORITY_BADGE: Record<string, string> = {
 };
 
 const nowISO = () => new Date().toISOString();
-const todayISO = () => new Date().toISOString().slice(0, 10);
+/** Dzisiejsza data w Polsce — ta sama, na którą serwer przelicza sprawy. */
+const todayISO = () => warsawToday();
 
-/** Ten sam silnik co karta sprawy: zadłużenie na dziś z odsetkami karnymi i kosztami. */
-function computeCaseDebt(c: CaseRow, events: DashEvent[]): DebtCalcResult | null {
-  const loan = c.loan;
-  if (!loan) return null;
-  const payments = events
-    .filter((e) => e.typ === "wplata")
-    .map((e) => ({
-      paid_on: e.data_zdarzenia.slice(0, 10),
-      amount: Number((e.metadata as { kwota?: number } | null)?.kwota ?? 0),
-    }));
-  const actionFees = events
-    .filter((e) => Number(e.oplata) > 0)
-    .map((e) => ({ action_date: e.data_zdarzenia.slice(0, 10), fee: Number(e.oplata) }));
-  const terminated = Boolean(loan.data_wypowiedzenia) || loan.status === "wypowiedziana";
-  const { bearing, investorCommission } = splitInvestorPrincipal(loan);
-  return calculateDebt({
-    principalAmount: bearing,
-    interestExemptPrincipal: investorCommission,
-    payoutDate: loan.data_umowy,
-    dueDate: loan.termin_splaty,
-    contractualAnnualRate: Number(loan.oprocentowanie_roczne || 0),
-    penaltyAnnualRate: Number(loan.stopa_odsetek_max || 0),
-    maxStatutoryRate: Number(loan.stopa_odsetek_max || 0),
-    terminated,
-    terminationDate: loan.data_wypowiedzenia,
-    overdueInstallmentsAmount: Number(c.kwota_zalegla || 0),
-    surcharges: Number(loan.kwota_doplat || 0),
-    payments,
-    actionFees,
-    asOf: todayISO(),
-  });
+/**
+ * Ten sam silnik co karta sprawy, raport, SMS i telefon AI: zaległość
+ * z harmonogramu rat (albo model z jednym terminem spłaty), odsetki za
+ * opóźnienie i koszty na dziś.
+ */
+function caseSnapshot(c: CaseRow, events: DashEvent[], asOf: string): WindDebtSnapshot | null {
+  if (!c.loan) return null;
+  return windDebtSnapshot({ loan: c.loan, kwotaZalegla: c.kwota_zalegla, events, asOf });
+}
+
+/**
+ * Sprawa do podpowiedzi procedury z bieżącymi wartościami: opóźnienie
+ * liczone na dziś (nie zapisane przy zakładaniu sprawy) i kwota do zapłaty
+ * teraz (zaległe raty + odsetki za opóźnienie + koszty).
+ */
+function liveCaseLite(c: CaseRow, snap: WindDebtSnapshot | null): WindCaseLite {
+  return {
+    sciezka: c.sciezka,
+    etap: c.etap,
+    opoznienie_dni: snap ? snap.dniOpoznienia : c.opoznienie_dni,
+    kwota_zalegla: snap ? snap.doZaplatyTeraz : c.kwota_zalegla,
+  };
 }
 
 function WindykacjaDashboard() {
@@ -159,9 +170,12 @@ function WindykacjaDashboard() {
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [pathFilter, setPathFilter] = useState<string>("all");
-  const [quick, setQuick] = useState<{ kind: WindQuickKind; row: CaseRow; debt: number } | null>(
-    null,
-  );
+  const [quick, setQuick] = useState<{
+    kind: WindQuickKind;
+    row: CaseRow;
+    amountDueNow: number;
+    wholeDebt: number | null;
+  } | null>(null);
   const intakeRef = useRef<HTMLDivElement>(null);
 
   const reload = useCallback(async () => {
@@ -184,9 +198,10 @@ function WindykacjaDashboard() {
     void reload();
   }, [reload]);
 
-  const debtByCase = useMemo(() => {
-    const m: Record<string, DebtCalcResult | null> = {};
-    for (const c of cases) m[c.id] = computeCaseDebt(c, eventsByCase[c.id] ?? []);
+  const snapByCase = useMemo(() => {
+    const asOf = todayISO();
+    const m: Record<string, WindDebtSnapshot | null> = {};
+    for (const c of cases) m[c.id] = caseSnapshot(c, eventsByCase[c.id] ?? [], asOf);
     return m;
   }, [cases, eventsByCase]);
 
@@ -203,43 +218,44 @@ function WindykacjaDashboard() {
 
   const metrics = useMemo(() => {
     const active = cases.filter((c) => !c.data_zamkniecia);
-    const total = active.reduce(
-      (s, c) => s + Number(debtByCase[c.id]?.totalDue ?? c.kwota_zalegla ?? 0),
+    const dueNow = active.reduce(
+      (s, c) => s + Number(snapByCase[c.id]?.doZaplatyTeraz ?? c.kwota_zalegla ?? 0),
       0,
     );
-    const penalty = active.reduce((s, c) => s + Number(debtByCase[c.id]?.delayInterest ?? 0), 0);
+    const whole = active.reduce(
+      (s, c) => s + Number(snapByCase[c.id]?.calosc ?? c.kwota_zalegla ?? 0),
+      0,
+    );
+    const penalty = active.reduce(
+      (s, c) => s + Number(snapByCase[c.id]?.odsetkiZaOpoznienie ?? 0),
+      0,
+    );
     const today = active.filter((c) =>
-      needsActionToday(
-        {
-          sciezka: c.sciezka,
-          etap: c.etap,
-          opoznienie_dni: c.opoznienie_dni,
-          kwota_zalegla: c.kwota_zalegla,
-        },
-        liteEvents(c.id),
-        nowISO(),
-      ),
+      needsActionToday(liveCaseLite(c, snapByCase[c.id] ?? null), liteEvents(c.id), nowISO()),
     );
     const critical = active.filter((c) => c.priorytet === "krytyczny");
     return {
       activeCount: active.length,
-      total,
+      dueNow,
+      whole,
       penalty,
       todayCount: today.length,
       criticalCount: critical.length,
       today,
     };
-  }, [cases, debtByCase, liteEvents]);
+  }, [cases, snapByCase, liteEvents]);
 
   const filtered = useMemo(() => {
     const list = pathFilter === "all" ? cases : cases.filter((c) => c.sciezka === pathFilter);
+    // Opóźnienie na dziś (z rat), nie zapisane przy zakładaniu sprawy.
+    const dni = (c: CaseRow) => snapByCase[c.id]?.dniOpoznienia ?? c.opoznienie_dni;
     return [...list].sort((a, b) => {
       const pr = ["krytyczny", "wysoki", "sredni", "niski"];
       const d = pr.indexOf(a.priorytet) - pr.indexOf(b.priorytet);
       if (d !== 0) return d;
-      return b.opoznienie_dni - a.opoznienie_dni;
+      return dni(b) - dni(a);
     });
-  }, [cases, pathFilter]);
+  }, [cases, pathFilter, snapByCase]);
 
   const onSeed = async () => {
     setSeeding(true);
@@ -259,7 +275,13 @@ function WindykacjaDashboard() {
       toast.error("Sprawa nie ma danych dłużnika");
       return;
     }
-    setQuick({ kind, row, debt: debtByCase[row.id]?.totalDue ?? Number(row.kwota_zalegla || 0) });
+    const snap = snapByCase[row.id] ?? null;
+    setQuick({
+      kind,
+      row,
+      amountDueNow: snap?.doZaplatyTeraz ?? Number(row.kwota_zalegla || 0),
+      wholeDebt: snap?.calosc ?? null,
+    });
   };
 
   return (
@@ -296,11 +318,15 @@ function WindykacjaDashboard() {
         <Metric icon={FolderOpen} label="Sprawy w toku" value={String(metrics.activeCount)} />
         <Metric
           icon={Wallet}
-          label="Zadłużenie z odsetkami karnymi"
-          value={formatPLN(metrics.total)}
-          sub={
-            metrics.penalty > 0 ? `w tym odsetki karne ${formatPLN(metrics.penalty)}` : undefined
-          }
+          label="Do zapłaty teraz"
+          value={formatPLN(metrics.dueNow)}
+          sub={[
+            `całe zadłużenie ${formatPLN(metrics.whole)}`,
+            metrics.penalty > 0 ? `odsetki za opóźnienie ${formatPLN(metrics.penalty)}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          title="Do zapłaty teraz: zaległe raty + odsetki za opóźnienie + koszty windykacyjne (po wypowiedzeniu — całe zadłużenie). Całe zadłużenie obejmuje także raty przyszłe."
         />
         <Metric
           icon={AlertTriangle}
@@ -348,12 +374,7 @@ function WindykacjaDashboard() {
               <CardContent className="space-y-2">
                 {metrics.today.map((c) => {
                   const s = suggestNextAction(
-                    {
-                      sciezka: c.sciezka,
-                      etap: c.etap,
-                      opoznienie_dni: c.opoznienie_dni,
-                      kwota_zalegla: c.kwota_zalegla,
-                    },
+                    liveCaseLite(c, snapByCase[c.id] ?? null),
                     liteEvents(c.id),
                     nowISO(),
                   );
@@ -403,7 +424,7 @@ function WindykacjaDashboard() {
                   c={c}
                   events={eventsByCase[c.id] ?? []}
                   lite={liteEvents(c.id)}
-                  debt={debtByCase[c.id] ?? null}
+                  snap={snapByCase[c.id] ?? null}
                   onQuick={(kind) => openQuick(kind, c)}
                 />
               ))}
@@ -419,7 +440,8 @@ function WindykacjaDashboard() {
           caseId={quick.row.id}
           loan={quick.row.loan}
           borrower={quick.row.loan.borrower}
-          debtTotal={quick.debt}
+          amountDueNow={quick.amountDueNow}
+          wholeDebt={quick.wholeDebt}
           onClose={() => setQuick(null)}
           onDone={() => {
             setQuick(null);
@@ -436,26 +458,19 @@ function CaseListRow({
   c,
   events,
   lite,
-  debt,
+  snap,
   onQuick,
 }: {
   c: CaseRow;
   events: DashEvent[];
   lite: WindEventLite[];
-  debt: DebtCalcResult | null;
+  snap: WindDebtSnapshot | null;
   onQuick: (kind: WindQuickKind) => void;
 }) {
   const last = events[0];
-  const suggestion = suggestNextAction(
-    {
-      sciezka: c.sciezka,
-      etap: c.etap,
-      opoznienie_dni: c.opoznienie_dni,
-      kwota_zalegla: c.kwota_zalegla,
-    },
-    lite,
-    nowISO(),
-  );
+  const suggestion = suggestNextAction(liveCaseLite(c, snap), lite, nowISO());
+  const dni = snap ? snap.dniOpoznienia : c.opoznienie_dni;
+  const dueNow = snap ? snap.doZaplatyTeraz : Number(c.kwota_zalegla || 0);
   const registerCount = events.filter(
     (e) =>
       [
@@ -487,15 +502,28 @@ function CaseListRow({
           </div>
         </div>
         <div>
-          <div className="text-lg font-bold tabular-nums">
-            {formatPLN(debt?.totalDue ?? c.kwota_zalegla)}
-          </div>
-          <div className={`text-xs font-medium ${delayColorClass(c.opoznienie_dni)}`}>
-            opóźnienie {c.opoznienie_dni} dni
-            {debt && debt.delayInterest > 0
-              ? ` · odsetki karne ${formatPLN(debt.delayInterest)}`
+          <div className="text-lg font-bold tabular-nums">{formatZl(dueNow)}</div>
+          <div className="text-[11px] text-muted-foreground">
+            {snap?.wypowiedziana ? "do zapłaty teraz (umowa wypowiedziana)" : "do zapłaty teraz"}
+            {snap && snap.calosc > dueNow + 0.005
+              ? ` · całe zadłużenie ${formatZl(snap.calosc)}`
               : ""}
           </div>
+          <div className={`text-xs font-medium ${delayColorClass(dni)}`}>
+            opóźnienie {dni} dni
+            {snap && snap.odsetkiZaOpoznienie > 0
+              ? ` · odsetki za opóźnienie ${formatZl(snap.odsetkiZaOpoznienie)}`
+              : ""}
+          </div>
+          {snap?.zrodlo === "harmonogram" && (
+            <div className="text-[11px] text-muted-foreground">
+              {snap.najstarszaZalegla
+                ? `najstarsza zaległa rata: ${formatDataPL(snap.najstarszaZalegla)}`
+                : snap.najblizszaRata
+                  ? `następna rata: ${formatDataPL(snap.najblizszaRata)}`
+                  : "wszystkie raty wymagalne"}
+            </div>
+          )}
         </div>
         <div className="flex flex-col gap-1 items-start">
           <Badge className={PATH_BADGE[c.sciezka]}>{PATH_LABELS[c.sciezka]}</Badge>
@@ -546,17 +574,19 @@ function Metric({
   value,
   sub,
   accent,
+  title,
 }: {
   icon: typeof Wallet;
   label: string;
   value: string;
   sub?: string;
   accent?: "amber" | "red";
+  title?: string;
 }) {
   const color =
     accent === "amber" ? "text-amber-600" : accent === "red" ? "text-red-600" : "text-primary";
   return (
-    <Card>
+    <Card title={title}>
       <CardContent className="pt-5 flex items-center gap-3">
         <div className={`grid h-10 w-10 place-items-center rounded-lg bg-muted ${color}`}>
           <Icon className="h-5 w-5" />
