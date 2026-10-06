@@ -5,6 +5,7 @@ import {
   checkPublicationForPlatforms,
   deriveYoutubeTags,
   extractHashtags,
+  findBannedClaims,
   smartTrim,
 } from "./publication-guardrails";
 
@@ -14,7 +15,8 @@ describe("smartTrim", () => {
   });
 
   it("tnie na granicy zdania, gdy to nie kosztuje większości tekstu", () => {
-    const text = "Pierwsze zdanie jest dość długie. Drugie zdanie też coś niesie. Trzecie już nie wejdzie w limit.";
+    const text =
+      "Pierwsze zdanie jest dość długie. Drugie zdanie też coś niesie. Trzecie już nie wejdzie w limit.";
     const out = smartTrim(text, 70);
     expect(out).toBe("Pierwsze zdanie jest dość długie. Drugie zdanie też coś niesie.");
   });
@@ -24,7 +26,9 @@ describe("smartTrim", () => {
     expect(out.endsWith("…")).toBe(true);
     expect(out.length).toBeLessThanOrEqual(30);
     // Fragment przed wielokropkiem to pełne słowa z oryginału.
-    expect("jedno bardzo długie słowotwórstwo bez kropek w ogóle nigdzie".startsWith(out.slice(0, -1))).toBe(true);
+    expect(
+      "jedno bardzo długie słowotwórstwo bez kropek w ogóle nigdzie".startsWith(out.slice(0, -1)),
+    ).toBe(true);
     expect(out.slice(0, -1).endsWith(" ")).toBe(false);
   });
 });
@@ -192,5 +196,23 @@ describe("checkPublicationForPlatforms", () => {
     expect(ok).toBe(true);
     expect(byPlatform.get("facebook_post")!.message).toContain("financeyou.pl");
     expect(byPlatform.get("instagram_reels")!.message).toContain("link w bio");
+  });
+});
+
+describe("findBannedClaims", () => {
+  it("czysty tekst — pusta lista", () => {
+    expect(findBannedClaims("Dziękujemy za komentarz! Szczegóły na financeyou.pl")).toEqual([]);
+  });
+
+  it("wyłapuje obietnice zysku bez ryzyka niezależnie od odmiany i wielkości liter", () => {
+    expect(findBannedClaims("To GWARANTOWANY zysk dla każdego")).toHaveLength(1);
+    expect(findBannedClaims("Inwestycja bez ryzyka")).toEqual(["„bez ryzyka”"]);
+    expect(findBannedClaims("bezpieczna lokata kapitału")).toHaveLength(1);
+    expect(findBannedClaims("zwrot pewny jak w banku")).toHaveLength(1);
+  });
+
+  it("zwraca wszystkie trafienia, nie tylko pierwsze", () => {
+    const found = findBannedClaims("Pewny zysk, zero ryzyka i 100% bezpieczne.");
+    expect(found.length).toBe(3);
   });
 });

@@ -86,8 +86,25 @@ export async function enqueuePublication(
     queued: data.platforms.length,
     social: [],
     youtube: [],
-    guardrail_notes: guard.notes,
+    guardrail_notes: [...guard.notes],
   };
+
+  // Rozstaw tematów: podobny tytuł na tym samym kanale w oknie ±20 h
+  // (zaplanowany albo już opublikowany) przesuwa termin o kolejne doby.
+  // Każda platforma liczy swój termin — kanały są od siebie niezależne.
+  const { spreadPublicationSlot } = await import("./publication-schedule.server");
+  const slotFor = new Map<StudioPlatform, string>();
+  for (const platform of data.platforms) {
+    const g = guard.byPlatform.get(platform);
+    const slot = await spreadPublicationSlot({
+      platform,
+      title: g?.title ?? title,
+      message: g?.message ?? message,
+      target: scheduledAt,
+    });
+    slotFor.set(platform, slot.scheduledAt);
+    if (slot.note) result.guardrail_notes!.push(slot.note);
+  }
 
   if (data.platforms.includes("youtube")) {
     const yt = guard.byPlatform.get("youtube")!;
@@ -99,7 +116,7 @@ export async function enqueuePublication(
         tags: yt.tags,
         source_video_url: videoUrl!,
         privacy_status: data.privacy_status ?? "public",
-        scheduled_at: scheduledAt,
+        scheduled_at: slotFor.get("youtube") ?? scheduledAt,
         created_by: data.userId,
       })
       .select("id")
@@ -120,7 +137,7 @@ export async function enqueuePublication(
       video_url: videoUrl,
       // Grafikę niosą tylko platformy, które ją publikują: post FB i X.
       image_url: platform === "facebook_post" || platform === "x" ? imageUrl : null,
-      scheduled_at: scheduledAt,
+      scheduled_at: slotFor.get(platform) ?? scheduledAt,
       created_by: data.userId,
       ...(platform === "tiktok" ? { tiktok_post_options: tiktokOptions as never } : {}),
     }));

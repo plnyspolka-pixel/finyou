@@ -299,7 +299,7 @@ export const queueYoutubePublication = defineTool({
   name: "queue_youtube_publication",
   title: "Queue a Short for publication",
   description:
-    "Dodaje film (MP4 pod adresem https, do 100 MB, pion 9:16) do kolejki publikacji Shorts: tytuł (dostaje #Shorts), opis, tagi, prywatność, termin. Tick opublikuje go o zadanej porze bez dalszego udziału człowieka. Tylko administrator/operator.",
+    "Dodaje film (MP4 pod adresem https, do 100 MB, pion 9:16) do kolejki publikacji Shorts: tytuł (dostaje #Shorts), opis, tagi, prywatność, termin. Tick opublikuje go o zadanej porze bez dalszego udziału człowieka. Gdy w oknie ±20 h jest już Short o podobnym tytule, termin przesuwa się o kolejne doby (maks. 7) — patrz `guardrail_notes`. Tylko administrator/operator.",
   inputSchema: {
     title: z.string().min(1).max(100),
     source_video_url: z.string().url(),
@@ -326,6 +326,14 @@ export const queueYoutubePublication = defineTool({
         message: a.description,
       });
       if (!guard.ok) return fail(guard.errors.join(" "));
+      // Rozstaw tematów: podobny Short w oknie ±20 h przesuwa termin o doby.
+      const { spreadPublicationSlot } = await import("@/lib/publication-schedule.server");
+      const slot = await spreadPublicationSlot({
+        platform: "youtube",
+        title: guard.title,
+        message: guard.message,
+        target: isoDate(a.scheduled_at, "scheduled_at") ?? new Date().toISOString(),
+      });
       const { data, error } = await s
         .from("youtube_publish_queue")
         .insert({
@@ -334,13 +342,17 @@ export const queueYoutubePublication = defineTool({
           tags: a.tags?.length ? a.tags : guard.tags,
           source_video_url: a.source_video_url.trim(),
           privacy_status: a.privacy_status,
-          scheduled_at: isoDate(a.scheduled_at, "scheduled_at") ?? new Date().toISOString(),
+          scheduled_at: slot.scheduledAt,
           created_by: actorId(ctx),
         })
         .select("id, title, status, scheduled_at, privacy_status")
         .single();
       if (error) throw new Error(`youtube_publish_queue: ${error.message}`);
-      return ok({ ok: true, queued: data, guardrail_notes: guard.notes });
+      return ok({
+        ok: true,
+        queued: data,
+        guardrail_notes: slot.note ? [...guard.notes, slot.note] : guard.notes,
+      });
     }),
 });
 

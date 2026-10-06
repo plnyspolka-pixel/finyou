@@ -37,6 +37,7 @@ import {
 } from "./studio-captions";
 import type { CustomCaptionStyleId } from "./caption-style";
 import { AVATARS_PER_REEL } from "./studio-scenes";
+import type { StudioPlatform } from "./studio-platforms";
 
 export type StudioJobRow = {
   id: string;
@@ -772,6 +773,15 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
   // z twardym naruszeniem (pusty opis, zakazane frazy) są pomijane z wpisem
   // w last_error — lepiej nie opublikować, niż opublikować z błędem audytu.
   const { checkPublicationContent } = await import("./publication-guardrails");
+  // Rozstaw tematów: podobny materiał na tym samym kanale w oknie ±20 h
+  // przesuwa termin o kolejne doby (maks. 7). Przesunięcia lądują w logu —
+  // job nie ma pola na notki, a last_error zostaje dla błędów.
+  const { spreadPublicationSlot } = await import("./publication-schedule.server");
+  const slotFor = async (platform: StudioPlatform, t: string, m: string) => {
+    const slot = await spreadPublicationSlot({ platform, title: t, message: m, target: now });
+    if (slot.note) console.info(`[studio-auto-publish] job ${job.id}: ${slot.note}`);
+    return slot.scheduledAt;
+  };
 
   if (job.auto_publish_platforms.includes("youtube")) {
     const guard = checkPublicationContent({ platform: "youtube", title, message });
@@ -784,7 +794,7 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
         tags: guard.tags,
         source_video_url: job.video_url,
         privacy_status: job.publish_privacy || "public",
-        scheduled_at: now,
+        scheduled_at: await slotFor("youtube", guard.title, guard.message),
         created_by: job.created_by,
       });
       if (error) errors.push(`youtube: ${error.message}`);
@@ -809,7 +819,7 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
         message: guard.message,
         video_url: job.video_url,
         image_url: null,
-        scheduled_at: now,
+        scheduled_at: await slotFor(platform, guard.title, guard.message),
         created_by: job.created_by,
         // Wybory twórcy z formularza zadania jadą do kolejki — tick publikuje
         // dokładnie je, bez dobierania prywatności za niego.

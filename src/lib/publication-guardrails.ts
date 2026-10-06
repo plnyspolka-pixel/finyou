@@ -64,6 +64,20 @@ const BANNED_CLAIMS: Array<{ re: RegExp; label: string }> = [
   { re: /100\s*%\s*bezpieczn\w*/iu, label: "„100% bezpieczne”" },
 ];
 
+/**
+ * Zakazane obietnice zysku bez ryzyka znalezione w tekście (etykiety fraz).
+ * Pusta tablica = tekst czysty. Ten sam zestaw reguł co przy kolejkowaniu
+ * publikacji — używa go też autoodpowiedź na komentarze, zanim cokolwiek
+ * pójdzie publicznie.
+ */
+export function findBannedClaims(text: string): string[] {
+  const found: string[] = [];
+  for (const { re, label } of BANNED_CLAIMS) {
+    if (re.test(text)) found.push(label);
+  }
+  return found;
+}
+
 // Treść inwestycyjna (promocja inwestowania, nie pożyczki dla klientów) —
 // wymaga disclaimera o ryzyku.
 const INVESTMENT_THEME_RE =
@@ -199,14 +213,12 @@ export function checkPublicationContent(input: GuardrailInput): GuardrailResult 
   }
 
   // Zakazane obietnice — blokada; treść ma wrócić do poprawki u źródła.
-  for (const { re, label } of BANNED_CLAIMS) {
-    if (re.test(`${title}\n${message}`)) {
-      errors.push(
-        `Niedozwolona fraza ${label} — przy treściach inwestycyjnych nie obiecujemy ` +
-          `zysku bez ryzyka. Przeredaguj treść (np. opisz mechanizm zabezpieczenia ` +
-          `zamiast obiecywać wynik).`,
-      );
-    }
+  for (const label of findBannedClaims(`${title}\n${message}`)) {
+    errors.push(
+      `Niedozwolona fraza ${label} — przy treściach inwestycyjnych nie obiecujemy ` +
+        `zysku bez ryzyka. Przeredaguj treść (np. opisz mechanizm zabezpieczenia ` +
+        `zamiast obiecywać wynik).`,
+    );
   }
 
   // Treść inwestycyjna bez disclaimera — dopisz standardowy.
@@ -265,7 +277,12 @@ export function checkPublicationForPlatforms(
   platforms: StudioPlatform[],
   title: string | null | undefined,
   message: string | null | undefined,
-): { ok: boolean; errors: string[]; notes: string[]; byPlatform: Map<StudioPlatform, GuardrailResult> } {
+): {
+  ok: boolean;
+  errors: string[];
+  notes: string[];
+  byPlatform: Map<StudioPlatform, GuardrailResult>;
+} {
   const byPlatform = new Map<StudioPlatform, GuardrailResult>();
   const errors: string[] = [];
   const notes: string[] = [];
