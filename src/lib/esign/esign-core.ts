@@ -472,6 +472,7 @@ export const EVENT_LABELS: Record<string, string> = {
   anulowana: "Koperta anulowana przez nadawcę",
   wygasla: "Koperta wygasła",
   ponowne_zaproszenie: "Zaproszenie wysłane ponownie",
+  link_skopiowany: "Nadawca wygenerował link do przekazania ręcznie",
   pobranie_podpisanego: "Pobrano podpisany dokument",
 };
 

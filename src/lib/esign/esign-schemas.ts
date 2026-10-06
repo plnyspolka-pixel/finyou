@@ -38,7 +38,7 @@ export const CreateInput = z
     /** Źródło A: wgrany plik PDF. */
     fileName: z.string().trim().min(1).max(200).optional().nullable(),
     fileBase64: z.string().min(16).optional().nullable(),
-    /** Źródło B: wygenerowana umowa z kreatora (generated_documents.id; DOCX → PDF). */
+    /** Źródło B: wygenerowana umowa w PDF (generated_documents.id z pdf_path). Tylko PDF. */
     generatedDocumentId: z.string().uuid().optional().nullable(),
     /** Powiązania koperty z klientem pożyczkowym i wnioskiem. */
     clientId: z.string().uuid().optional().nullable(),
@@ -75,6 +75,8 @@ export const listClientDocumentsInput = z.object({
 export const sendEnvelopeInput = z.object({ envelopeId: z.string().uuid() });
 
 export const resendSignerLinkInput = z.object({ signerId: z.string().uuid() });
+
+export const copySignerLinkInput = z.object({ signerId: z.string().uuid() });
 
 export const openMySigningLinkInput = z.object({ signerId: z.string().uuid() });
 

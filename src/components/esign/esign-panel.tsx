@@ -67,6 +67,7 @@ import {
   openMySigningLink,
   resendSignerLink,
   resolveIdentityMismatch,
+  copySignerLink,
   searchSignerCandidates,
   searchSignerClients,
   listClientDocuments,
@@ -562,8 +563,9 @@ function CreateEnvelopeDialog({
         <DialogHeader>
           <DialogTitle>Nowy dokument do podpisu</DialogTitle>
           <DialogDescription>
-            Wgraj gotowy PDF albo wybierz umowę wygenerowaną w kreatorze i wskaż, kto ma podpisać.
-            Każdy podpisujący dostanie osobisty link e-mailem.
+            Podpisujemy wyłącznie pliki PDF. Wgraj PDF albo wybierz umowę zapisaną w PDF i wskaż,
+            kto ma podpisać — może to być dowolna osoba, także bez konta w systemie. Każdy
+            podpisujący dostanie osobisty link e-mailem.
           </DialogDescription>
         </DialogHeader>
 
@@ -614,7 +616,7 @@ function CreateEnvelopeDialog({
                         <FileText className="h-4 w-4 text-muted-foreground" />
                       )}
                       {d.templateName}
-                      <span className="text-xs uppercase text-muted-foreground">{d.format}</span>
+                      <span className="text-xs uppercase text-muted-foreground">pdf</span>
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {formatSignedAt(d.createdAt).split(" (")[0]}
@@ -622,9 +624,8 @@ function CreateEnvelopeDialog({
                   </button>
                 ))}
                 <p className="px-3 py-2 text-xs text-muted-foreground">
-                  Umowę DOCX zamieniamy na PDF tą samą drukarką, co pakiet dokumentów inwestora
-                  (treść bez zmian, układ uproszczony). Podgląd zobaczysz w szczegółach koperty
-                  przed podpisem stron.
+                  Lista zawiera tylko umowy zapisane w PDF. Podpisujemy wyłącznie pliki PDF — umowę
+                  w DOCX zapisz jako PDF i wgraj jako plik.
                 </p>
               </div>
             ) : (
@@ -720,9 +721,7 @@ function CreateEnvelopeDialog({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="zewnetrzny">
-                        {isInvestor
-                          ? "Klient / druga strona (bez konta)"
-                          : "Osoba spoza systemu (klient)"}
+                        Dowolna osoba (bez konta w systemie)
                       </SelectItem>
                       <SelectItem value="klient">Klient pożyczkowy (z systemu)</SelectItem>
                       {!isInvestor ? (
@@ -765,6 +764,14 @@ function CreateEnvelopeDialog({
 
                 {s.kind === "inwestor" ? (
                   <InvestorPicker value={s} onPick={(p) => update(i, p)} />
+                ) : null}
+
+                {s.kind === "zewnetrzny" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Każda osoba, także bez konta w Finance You: wystarczą imię i nazwisko (jak w
+                    dokumencie tożsamości) oraz e-mail. Podpisze z osobistego linku po weryfikacji
+                    Didit i kodzie jednorazowym; link możesz też skopiować i przekazać SMS-em.
+                  </p>
                 ) : null}
 
                 {s.kind === "klient" ? (
@@ -1102,6 +1109,7 @@ function EnvelopeDetailsSheet({
   const send = useServerFn(sendEnvelope);
   const cancel = useServerFn(cancelEnvelope);
   const resend = useServerFn(resendSignerLink);
+  const copyLink = useServerFn(copySignerLink);
   const resolve = useServerFn(resolveIdentityMismatch);
   const openLink = useServerFn(openMySigningLink);
   const [correctName, setCorrectName] = useState<Record<string, string>>({});
@@ -1351,6 +1359,37 @@ function EnvelopeDetailsSheet({
                         }
                       >
                         <Send className="mr-1 h-3.5 w-3.5" /> Wyślij link ponownie
+                      </Button>
+                    ) : null}
+                    {d.canManage &&
+                    env.status === "wyslana" &&
+                    !["podpisany", "odrzucony"].includes(s.status) ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              "Wygenerować nowy link do podpisu? Poprzedni link tej osoby przestanie działać. Link jest osobisty — przekaż go tylko tej osobie.",
+                            )
+                          )
+                            return;
+                          void copyLink({ data: { signerId: s.id } })
+                            .then(async (r) => {
+                              try {
+                                await navigator.clipboard.writeText(r.url);
+                                toast.success(
+                                  "Link skopiowany — przekaż go tej osobie (np. SMS-em).",
+                                );
+                              } catch {
+                                window.prompt("Skopiuj link do podpisu:", r.url);
+                              }
+                              void q.refetch();
+                            })
+                            .catch((e) => toast.error(errMsg(e)));
+                        }}
+                      >
+                        <Copy className="mr-1 h-3.5 w-3.5" /> Kopiuj link do podpisu
                       </Button>
                     ) : null}
                     {d.mySignerId === s.id &&

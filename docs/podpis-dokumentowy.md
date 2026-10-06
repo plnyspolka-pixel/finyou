@@ -104,7 +104,20 @@ końcowego jest naturalnym następnym krokiem — punkt zaczepienia:
 Odmowa podpisu zamyka kopertę (status „odrzucona”) i powiadamia nadawcę.
 Anulowanie przez nadawcę unieważnia linki. Po terminie koperta wygasa.
 
-## 3a. Klient pożyczkowy — wysyłka umowy i panel klienta
+## 3a. Dowolna osoba bez konta
+
+Domyślny rodzaj podpisującego to **„Dowolna osoba (bez konta w systemie)”**:
+wystarczą imię i nazwisko (jak w dokumencie tożsamości) i e-mail, opcjonalnie
+telefon (kod SMS) oraz firma, w imieniu której podpisuje. Osoba nie zakłada
+konta — dostaje osobisty link e-mailem, a nadawca może też w szczegółach
+koperty użyć **„Kopiuj link do podpisu”** i przekazać link SMS-em albo
+komunikatorem (generowany jest nowy token, poprzedni przestaje działać;
+zdarzenie `link_skopiowany` trafia do Historii dokumentu). Wymogi
+identyfikacji są takie same jak dla wszystkich: Didit + kod jednorazowy.
+E-mail pozostaje obowiązkowy, bo na niego doręczamy podpisany plik (trwały
+nośnik).
+
+## 3b. Klient pożyczkowy — wysyłka umowy i panel klienta
 
 **Wysyłka do klienta.** W kreatorze koperty podpisujący typu *Klient
 pożyczkowy (z systemu)*: wyszukiwarka po nazwisku, firmie, e-mailu, telefonie
@@ -117,12 +130,13 @@ imieniu firmy (prefill z `clients.company_name`/`nip`/`krs`). Przyciski
 `/inwestor/wniosek/<id>`) otwierają kreator z klientem i wnioskiem
 (`?nowa=1&klient=<clients.id>&wniosek=<loan_applications.id>`).
 
-**Źródło dokumentu.** Oprócz wgrania PDF można wskazać **wygenerowaną umowę**
-z kreatora/agenta (`generated_documents`; widoczność wg RLS: personel —
-wszystkie, inwestor — własne). Umowa DOCX jest zamieniana na PDF tą samą
-drukarką, co pakiet dokumentów inwestora (`tekstZDocx` → `pdfZTekstu`): treść
-bez zmian, układ uproszczony; w stopce PDF skrót SHA-256 tekstu. Z karty
-wniosku domyślnie podpowiadana jest ostatnia wygenerowana umowa.
+**Źródło dokumentu — wyłącznie PDF.** Podpisujemy tylko pliki PDF: wgrany
+plik albo umowę z kreatora/agenta, która ma wersję PDF
+(`generated_documents.pdf_path`; widoczność wg RLS: personel — wszystkie,
+inwestor — własne). Dokumentów DOCX nie konwertujemy i nie podpisujemy —
+podpis obejmuje dokładnie ten plik, który widzi podpisujący. Umowę w DOCX
+trzeba zapisać jako PDF i wgrać. Z karty wniosku domyślnie podpowiadana jest
+ostatnia umowa w PDF.
 
 **Panel klienta.** `/klient/podpisy` pokazuje dokumenty do podpisu („Otwórz i
 podpisz” — nowy osobisty link, bez szukania e-maila), podpisane (pobranie PDF

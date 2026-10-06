@@ -9,6 +9,7 @@ import {
   createEnvelopeInput,
   sendEnvelopeInput,
   resendSignerLinkInput,
+  copySignerLinkInput,
   openMySigningLinkInput,
   listMyEnvelopesInput,
   getEnvelopeDetailsInput,
@@ -93,6 +94,14 @@ export const resolveIdentityMismatch = createServerFn({ method: "POST" })
   .inputValidator((d) => resolveIdentityMismatchInput.parse(d))
   .handler(async ({ data, context }) =>
     (await import("./esign-owner.server")).resolveIdentityMismatchImpl(data, context),
+  );
+
+/** Link do podpisu do przekazania ręcznie (SMS, komunikator) — także dla osób bez konta. */
+export const copySignerLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => copySignerLinkInput.parse(d))
+  .handler(async ({ data, context }) =>
+    (await import("./esign-owner.server")).copySignerLinkImpl(data, context),
   );
 
 /** Klient pożyczkowy z systemu (podpisujący) — personel: wszyscy; inwestor: swoi. */
