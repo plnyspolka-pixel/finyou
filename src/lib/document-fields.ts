@@ -753,7 +753,30 @@ export function extractOrderedFields(text: string): DocField[] {
     prevEnd = end;
   }
   TOKEN_RE.lastIndex = 0;
+  disambiguateLabels(fields);
   return fields;
+}
+
+/**
+ * Kilka różnych pól z tą samą etykietą (np. „[Nazwa spółki], KRS [KRS], NIP [NIP]"
+ * w jednej komórce tabeli) — dopisujemy nazwę pola, żeby dało się je rozróżnić.
+ */
+function disambiguateLabels(fields: DocField[]): void {
+  const keysByLabel = new Map<string, Set<string>>();
+  for (const f of fields) {
+    const keys = keysByLabel.get(f.label) ?? new Set<string>();
+    keys.add(f.key);
+    keysByLabel.set(f.label, keys);
+  }
+  for (const f of fields) {
+    if ((keysByLabel.get(f.label)?.size ?? 0) < 2) continue;
+    const label = f.label.toLowerCase();
+    const key = f.key.toLowerCase();
+    if (label.includes(key)) continue;
+    f.label = key.includes(label)
+      ? upperFirstPl(f.key)
+      : `${f.label} — ${upperFirstPl(f.key)}`.slice(0, 120);
+  }
 }
 
 /** Grupuje pola zachowując kolejność występowania w dokumencie. */
