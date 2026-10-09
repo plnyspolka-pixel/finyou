@@ -670,7 +670,7 @@
       {
         "name": "list_collection_cases",
         "title": "List collection (windykacja) cases",
-        "description": "Sprawy windykacyjne — filtry: status, limit. Widoczność wg RLS.",
+        "description": "Sprawy windykacyjne z pożyczką (numer umowy, pożyczkodawca, status, skrót harmonogramu rat), dłużnikiem i `zadluzenie` na dziś liczonym jak na karcie sprawy: doZaplatyTeraz (zaległe raty + odsetki za opóźnienie + koszty; po wypowiedzeniu całe zadłużenie), zaleglosc, odsetkiZaOpoznienie, koszty, calosc (z ratami przyszłymi), dniOpoznienia, najstarszaZalegla, zrodlo (harmonogram / termin). kwota_zalegla i opoznienie_dni w sprawie to zapisana migawka. Filtry: status (otwarte, zamkniete albo wynik: splacona, ugoda, egzekucja_w_toku, umorzona, przekazana_karna), limit. Widoczność wg RLS.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -680,7 +680,8 @@
           "type": "object",
           "properties": {
             "status": {
-              "type": "string"
+              "type": "string",
+              "description": "otwarte | zamkniete | wynik zamknięcia (splacona, ugoda, egzekucja_w_toku, umorzona, przekazana_karna)."
             },
             "limit": {
               "type": "integer",
@@ -3861,7 +3862,7 @@
       {
         "name": "get_collection_case",
         "title": "Get collection case",
-        "description": "Sprawa windykacyjna w całości: etap, ścieżka, priorytet, zaległość i opóźnienie, pożyczka (umowa, kwoty, saldo, terminy), dłużnik (bez PESEL i numeru dowodu) oraz chronologia zdarzeń z doręczeniami. Inwestor widzi swoje (RLS), zespół — wszystkie.",
+        "description": "Sprawa windykacyjna w całości: etap, ścieżka, priorytet, pożyczka (umowa, pożyczkodawca, kwoty, saldo, terminy, harmonogram rat, zabezpieczenia: KW, hipoteka, akt 777, rachunek do spłaty), dłużnik (bez PESEL i numeru dowodu) i chronologia zdarzeń z doręczeniami. `zadluzenie` = wyliczenie na dziś jak na karcie sprawy: doZaplatyTeraz (zaległe raty + odsetki za opóźnienie + koszty; po wypowiedzeniu całe zadłużenie), zaleglosc, odsetkiZaOpoznienie, koszty, calosc (z ratami przyszłymi), dniOpoznienia, najstarszaZalegla, zrodlo (harmonogram / termin) i stan każdej raty. kwota_zalegla i opoznienie_dni w sprawie to zapisana migawka. Rachunek do spłaty widzi właściciel i administrator. Inwestor widzi swoje (RLS), zespół — wszystkie.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -3886,7 +3887,7 @@
       {
         "name": "list_wind_loans",
         "title": "List investor loans (collections module)",
-        "description": "Pożyczki w module windykacji: numer umowy, kwoty, saldo, oprocentowanie, status (aktywna, w zwłoce, wypowiedziana, spłacona…), terminy, KW — z danymi pożyczkobiorcy (bez PESEL). Inwestor widzi swoje (RLS), zespół — wszystkie.",
+        "description": "Pożyczki w module windykacji: numer umowy, pożyczkodawca, kwoty (kwota_pozyczki = wypłacona na rękę, prowizja = prowizja Finance You potrącona z wypłaty, kwota_calkowita = kwota pożyczki + prowizja pożyczkodawcy bez odsetek umownych), saldo, oprocentowanie, stopa odsetek za opóźnienie, status (aktywna, w zwłoce, wypowiedziana, spłacona…), terminy, zabezpieczenia (KW, hipoteka, akt 777), skrót harmonogramu rat (pełny — get_collection_case) i `zadluzenie` na dziś z bieżącej sprawy (doZaplatyTeraz, zaleglosc, odsetkiZaOpoznienie, koszty, calosc, dniOpoznienia, najstarszaZalegla, zrodlo) — z danymi pożyczkobiorcy (bez PESEL). Rachunek do spłaty widzi właściciel i administrator. Inwestor widzi swoje (RLS), zespół — wszystkie.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -6991,7 +6992,7 @@
       {
         "name": "add_collection_event",
         "title": "Add collection case event",
-        "description": "Dopisuje zdarzenie do chronologii sprawy windykacyjnej (telefon, SMS, e-mail, pismo nadane/doręczone/awizo/zwrot, wpłata, notatka, czynność sądowa) z datą i treścią. Nie wysyła niczego — to zapis w aktach. Inwestor — swoje sprawy (RLS), zespół — wszystkie.",
+        "description": "Dopisuje zdarzenie do chronologii sprawy windykacyjnej (telefon, SMS, e-mail, pismo nadane/doręczone/awizo/zwrot, wpłata, notatka, czynność sądowa) z datą i treścią. Nie wysyła niczego — to zapis w aktach. Wpłata (typ = wplata) wymaga kwoty i rozlicza się jak wpłata wpisana w panelu: pożyczka z harmonogramem rat — zaległość, opóźnienie i saldo przeliczane z rat (kolejność zaliczania z umowy); bez harmonogramu — wpłata pomniejsza saldo pożyczki i kwotę zaległą sprawy. Inwestor — swoje sprawy (RLS), zespół — wszystkie.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -7033,11 +7034,22 @@
             },
             "data_zdarzenia": {
               "type": "string",
-              "description": "ISO 8601; domyślnie teraz."
+              "description": "ISO 8601; domyślnie teraz. Przy wpłacie: dzień wpłaty (RRRR-MM-DD), domyślnie dziś."
             },
             "zalacznik_url": {
               "type": "string",
               "format": "uri"
+            },
+            "kwota": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000000000,
+              "description": "Kwota wpłaty w zł — wymagana dla typ = wplata (i tylko wtedy dozwolona)."
+            },
+            "sposob": {
+              "type": "string",
+              "maxLength": 120,
+              "description": "Sposób wpłaty, np. przelew, gotówka — tylko dla typ = wplata."
             }
           },
           "required": [
@@ -7053,7 +7065,7 @@
       {
         "name": "update_wind_loan",
         "title": "Update loan (collections module)",
-        "description": "Aktualizuje pożyczkę w module windykacji: status (aktywna, w_zwloce, wypowiedziana, windykacja_komornicza, splacona, windykacja_karna), saldo pozostałe, data ostatniej wpłaty, termin spłaty, data wypowiedzenia. Inwestor — swoje (RLS), zespół — wszystkie.",
+        "description": "Aktualizuje pożyczkę w module windykacji — te same pola i zasady co edycja na karcie sprawy: numer i data umowy, pożyczkodawca, kwota wypłacona na rękę (kwota_pozyczki), prowizja Finance You potrącona z wypłaty (prowizja), kwota pożyczki + prowizja pożyczkodawcy bez odsetek umownych (kwota_calkowita), oprocentowanie, stopa odsetek za opóźnienie (pusta = odsetki maksymalne z dnia umowy), dopłaty, tabela opłat windykacyjnych, termin spłaty, harmonogram rat (pełna lista; null usuwa), zabezpieczenia (numer KW, kwota hipoteki, akt 777 i kwota z aktu), rachunek do spłaty (NRB / IBAN PL) oraz status, data ostatniej wpłaty, data wypowiedzenia i saldo (saldo tylko bez harmonogramu). Pożyczka z harmonogramem: po zmianie zaległość, opóźnienie, saldo i status otwartych spraw są przeliczane z rat; zmiana trafia do akt otwartych spraw. Inwestor — swoje (RLS), zespół — wszystkie.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -7080,25 +7092,300 @@
             },
             "saldo_pozostale": {
               "type": "number",
-              "minimum": 0
+              "minimum": 0,
+              "description": "Tylko pożyczka bez harmonogramu rat — z harmonogramem saldo liczone jest z rat i wpłat."
             },
             "data_ostatniej_wplaty": {
               "type": [
                 "string",
                 "null"
-              ]
+              ],
+              "description": "RRRR-MM-DD."
             },
             "termin_splaty": {
               "type": [
                 "string",
                 "null"
-              ]
+              ],
+              "description": "RRRR-MM-DD; przy harmonogramie — termin ostatniej raty."
             },
             "data_wypowiedzenia": {
               "type": [
                 "string",
                 "null"
+              ],
+              "description": "RRRR-MM-DD."
+            },
+            "numer_umowy": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
               ]
+            },
+            "data_umowy": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "RRRR-MM-DD."
+            },
+            "kwota_pozyczki": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Kwota wypłacona na rękę (zł)."
+            },
+            "kwota_calkowita": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Kwota pożyczki + prowizja pożyczkodawcy, BEZ odsetek umownych (zł)."
+            },
+            "prowizja": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Prowizja Finance You potrącona z wypłaty (zł) — nie prowizja pożyczkodawcy."
+            },
+            "numer_kw": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 60
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "kwota_hipoteki": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "akt_notarialny_777": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 300
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Akt z poddaniem się egzekucji (art. 777 k.p.c.), np. „Rep. A nr 1234/2026, notariusz …”."
+            },
+            "kwota_777": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rachunek_splaty": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rachunek do spłaty: NRB (26 cyfr) albo IBAN PL — zapisywany w grupach cyfr."
+            },
+            "oprocentowanie_roczne": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "% rocznie."
+            },
+            "stopa_odsetek_max": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stopa odsetek za opóźnienie z umowy (% rocznie). null / 0 = odsetki maksymalne za opóźnienie z dnia umowy."
+            },
+            "kwota_doplat": {
+              "type": "number",
+              "minimum": 0
+            },
+            "oplaty_windykacyjne": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "sms": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "email": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "telefon": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "pismo": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "brak_oplat": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "zrodlo": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "umowa",
+                            "recznie"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Tabela opłat za czynności windykacyjne z umowy (zł)."
+            },
+            "harmonogram": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "termin": {
+                        "type": "string",
+                        "maxLength": 40,
+                        "description": "Termin płatności raty (RRRR-MM-DD)."
+                      },
+                      "kwota": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "maxLength": 40
+                          }
+                        ],
+                        "description": "Kwota raty łącznie (zł)."
+                      },
+                      "odsetki": {
+                        "anyOf": [
+                          {
+                            "anyOf": [
+                              {
+                                "$ref": "#/properties/harmonogram/anyOf/0/items/properties/kwota/anyOf/0"
+                              },
+                              {
+                                "$ref": "#/properties/harmonogram/anyOf/0/items/properties/kwota/anyOf/1"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Część odsetkowa raty, jeśli umowa ją podaje."
+                      },
+                      "prowizja": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/properties/harmonogram/anyOf/0/items/properties/odsetki/anyOf/0"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Część prowizyjna raty, jeśli umowa ją podaje."
+                      }
+                    },
+                    "required": [
+                      "termin",
+                      "kwota"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "maxItems": 600
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Pełny harmonogram rat (Zał. 1 do umowy) — zastępuje dotychczasowy; null = usuń harmonogram (model z jednym terminem spłaty). Po zmianie zaległość, opóźnienie i saldo otwartych spraw są przeliczane z rat."
+            },
+            "pozyczkodawca": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Nazwa pożyczkodawcy z umowy — w jego imieniu dzwoni agent AI."
             }
           },
           "required": [
