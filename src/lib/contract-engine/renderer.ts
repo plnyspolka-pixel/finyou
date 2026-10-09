@@ -420,16 +420,6 @@ function zalaczniki(d: any, f: Record<string, any>): { nr: number; tytul: string
   nr += 1;
   z.push({ nr, tytul: "Tabela opłat windykacyjnych" });
   nr += 1;
-  if (f.ma_prowizje_fy) {
-    // Zał. 6 do Umowy ramowej Finance You — dyspozycja Pożyczkobiorcy
-    // (Prowizja od Pożyczkobiorcy potrącana z wypłaty: część do FY, reszta do Klienta).
-    z.push({
-      nr,
-      tytul:
-        "Dyspozycja wypłaty i klauzula Prowizji od Pożyczkobiorcy (Zał. nr 6 do Umowy ramowej Finance You)",
-    });
-    nr += 1;
-  }
   if (f.wymaga_zgody_malzonka) {
     z.push({ nr, tytul: "Zgoda małżonka na ustanowienie hipoteki" });
     nr += 1;

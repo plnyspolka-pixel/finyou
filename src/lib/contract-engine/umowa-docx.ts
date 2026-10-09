@@ -7,8 +7,6 @@
  *   3. Załącznik nr 1 — Harmonogram spłat (tabela rat + podsumowanie sum)
  *   4. Załącznik nr 2 — Protokół z negocjacji indywidualnych
  *   5. Załącznik nr 3 — Tabela opłat windykacyjnych
- *   6. Załącznik nr 4 — Dyspozycja wypłaty i klauzula Prowizji od Pożyczkobiorcy
- *      Finance You (tylko gdy umowa przewiduje prowizję FY potrącaną z wypłaty)
  *
  * Zasada: dokument zawiera WYŁĄCZNIE treść wiążącą — bez ostrzeżeń, uwag,
  * komentarzy, notatek dla operatora ani znaków wodnych. Treść umowy pochodzi
@@ -21,7 +19,6 @@
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { COMPANY_DATA } from "@/lib/company";
 import type { Dokument } from "./renderer";
 import { tekstOdeslania } from "./renderer";
 import {
@@ -560,7 +557,7 @@ function protokolBloki(d: any, doc: Dokument): Blok[] {
       pierwszy("KWO_02_prowizja_nie_potracana", "KWO_02c_prowizja_nie_potracana_balon"),
     ],
     [
-      "Prowizja od Pożyczkobiorcy potrącana z wypłaty (5% Kwoty Udzielonej, min 5 000 zł, bez VAT)",
+      "Prowizja od Pożyczkobiorcy na rzecz Finance You potrącana z Kwoty Pożyczki (5% Kwoty Pożyczki, min 5 000 zł, bez VAT)",
       odes("KWO_03e_prowizja_finance_you"),
     ],
     [
@@ -644,81 +641,6 @@ function protokolBloki(d: any, doc: Dokument): Blok[] {
   return out;
 }
 
-// ── 6. Załącznik nr 4 — dyspozycja wypłaty (Zał. 6 do Umowy ramowej FY) ──
-
-function dyspozycjaBloki(d: any, doc: Dokument): Blok[] {
-  const f = doc.fakty;
-  const w = d.warunki;
-  const kwotaUdzielona = parseKwota(w.kwota_pozyczki?.cyframi);
-  const prowFY = parseKwota(w.prowizja_finance_you?.kwota?.cyframi);
-  const naReke =
-    Number.isNaN(kwotaUdzielona) || Number.isNaN(prowFY) ? NaN : kwotaUdzielona - prowFY;
-  const wid = [3200, SZER_STRONY - 3200];
-  const wiersz = (a: string, b: string) => ({ komorki: [{ tekst: a, bold: true }, { tekst: b }] });
-  const pozyczkobiorca = listaPozyczkobiorcow(d);
-  return [
-    ...naglowekZalacznika(
-      4,
-      "DYSPOZYCJA WYPŁATY I KLAUZULA PROWIZJI OD POŻYCZKOBIORCY FINANCE YOU (ZAŁ. NR 6 DO UMOWY RAMOWEJ FINANCE YOU)",
-      d,
-    ),
-    { t: "naglowek", tekst: "1. PARAMETRY WYPŁATY" },
-    {
-      t: "tabela",
-      szerokosci: wid,
-      wiersze: [
-        wiersz("Kwota Udzielona (Kwota Pożyczki):", `${w.kwota_pozyczki?.cyframi ?? "—"} zł`),
-        wiersz(
-          "Prowizja od Pożyczkobiorcy (5% Kwoty Udzielonej, min 5 000,00 zł, bez VAT):",
-          `${w.prowizja_finance_you?.kwota?.cyframi ?? "—"} zł`,
-        ),
-        wiersz(
-          `Rachunek ${COMPANY_DATA.legalName} (KRS ${COMPANY_DATA.krs}):`,
-          f.rachunek_fy || "—",
-        ),
-        wiersz(
-          "Kwota wypłacana Pożyczkobiorcy („na rękę”):",
-          Number.isNaN(naReke) ? "—" : `${formatKwotaPL(naReke)} zł`,
-        ),
-        wiersz("Rachunek Pożyczkobiorcy:", w.rachunki?.wyplata ?? "—"),
-      ],
-    },
-    {
-      t: "naglowek",
-      tekst: "2. DYSPOZYCJA, PRZYJĘCIE OBOWIĄZKU I ŚWIADCZENIE NA RZECZ FINANCE YOU",
-    },
-    lista(
-      `${f.pb} ${f.pb_potwierdza}, że na podstawie odrębnej umowy z Finance You sp. z o.o. ${f.pb_zobowiazany_jest} do zapłaty Prowizji od Pożyczkobiorcy wskazanej powyżej, i poleca Pożyczkodawcy, aby część należnej ${f.pb_dop} wypłaty Kwoty Pożyczki w kwocie Prowizji od Pożyczkobiorcy przekazał bezpośrednio na rachunek Finance You, a pozostałą część wypłacił na rachunek ${f.pb_dop} wskazany powyżej.`,
-    ),
-    lista(
-      "Pożyczkodawca przyjmuje tę dyspozycję i zobowiązuje się przekazać Prowizję od Pożyczkobiorcy na rachunek Finance You nie później niż równocześnie z wypłatą pozostałej części Kwoty Pożyczki. Jeżeli wypłata następuje w transzach, cała Prowizja od Pożyczkobiorcy jest przekazywana przy pierwszej transzy, chyba że Finance You uprzednio zatwierdzi inny harmonogram w formie dokumentowej.",
-    ),
-    lista(
-      "Strony zastrzegają spełnienie opisanego świadczenia na rzecz Finance You jako osoby trzeciej (art. 393 k.c.). Finance You może żądać bezpośrednio od Pożyczkodawcy wykonania tego postanowienia; po oświadczeniu Finance You o skorzystaniu z zastrzeżenia postanowienie nie może zostać odwołane ani zmienione bez zgody Finance You.",
-    ),
-    lista(
-      `Przelew Prowizji od Pożyczkobiorcy na rachunek Finance You stanowi wypłatę odpowiedniej części Kwoty Pożyczki ${f.pb_cel} oraz równoczesne spełnienie zobowiązania prowizyjnego ${f.pb_dop} wobec Finance You. Nie stanowi prowizji, opłaty ani kosztu ponoszonego przez Pożyczkodawcę na rzecz Finance You; nie wchodzi do rat i nie jest oprocentowany.`,
-    ),
-    lista(
-      "Pożyczkodawca nie jest uprawniony do wypłaty Pożyczkobiorcy ani osobie przez niego wskazanej żadnej części Kwoty Pożyczki wcześniej niż równocześnie ze zleceniem przelewu Prowizji od Pożyczkobiorcy na rachunek Finance You. Zmiana kwoty, rachunku lub terminu wymaga potwierdzenia Finance You w formie dokumentowej.",
-    ),
-    lista(
-      "Finance You oświadcza, że chce skorzystać z powyższego zastrzeżenia świadczenia na jej rzecz i przyjmuje uprawnienie do bezpośredniego żądania zapłaty wskazanej Prowizji od Pożyczkobiorcy.",
-    ),
-    {
-      t: "podpisy",
-      osoby: [
-        ...pozyczkobiorca.map((p) => ({ rola: "POŻYCZKOBIORCA", nazwa: p })),
-        { rola: "POŻYCZKODAWCA (INWESTOR)", nazwa: krotkieOznaczenie(d.pozyczkodawca) },
-        {
-          rola: "FINANCE YOU SP. Z O.O.",
-          nazwa: "Finance You spółka z ograniczoną odpowiedzialnością",
-        },
-      ],
-    },
-  ];
-}
-
 // ── 5. Załącznik nr 3 — tabela opłat windykacyjnych ───────────
 
 function oplatyBloki(d: any, doc: Dokument, oplaty: readonly OplataWindykacyjna[]): Blok[] {
@@ -764,7 +686,6 @@ export function zbudujBloki(umowa: any, doc: Dokument, opts: KompletOpcje = {}):
     harmonogramBloki(umowa),
     protokolBloki(umowa, doc),
     oplatyBloki(umowa, doc, opts.oplaty ?? OPLATY_WINDYKACYJNE_DOMYSLNE),
-    ...(doc.fakty?.ma_prowizje_fy ? [dyspozycjaBloki(umowa, doc)] : []),
   ];
   const out: Blok[] = [];
   czesci.forEach((c, i) => {

@@ -1,6 +1,6 @@
 {
   "$comment": "Biblioteka klauzul. Każda klauzula ma warunek włączenia (wyrażenie nad danymi) i szablon tekstu. Renderer iteruje po sekcjach w kolejności 'order'.",
-  "wersja": "1.7",
+  "wersja": "1.8",
   "sekcje": {
     "PRZEDMIOT": {
       "tytul": "PRZEDMIOT UMOWY",
@@ -88,7 +88,7 @@
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 25,
       "warunek": "ma_prowizje_fy",
-      "tekst": "{{pb}} {{pb_potwierdza}}, że na podstawie odrębnej umowy z Finance You spółką z ograniczoną odpowiedzialnością z siedzibą w Warszawie (KRS 0000635207) {{pb_zobowiazany_jest}} do zapłaty Prowizji od Pożyczkobiorcy w wysokości {{warunki.prowizja_finance_you.kwota.slownie}} ({{warunki.prowizja_finance_you.kwota.cyframi}} zł), stanowiącej 5% Kwoty Pożyczki (Kwoty Udzielonej), nie mniej niż 5 000,00 zł, bez VAT. Zgodnie z dyspozycją {{pb_dop}} stanowiącą Załącznik nr 4 do Umowy, Prowizja od Pożyczkobiorcy jest potrącana z wypłaty: Pożyczkodawca przekazuje ją bezpośrednio na rachunek Finance You nie później niż równocześnie z wypłatą pozostałej części Kwoty Pożyczki {{pb_cel}}. Przelew Prowizji od Pożyczkobiorcy na rachunek Finance You stanowi wypłatę odpowiedniej części Kwoty Pożyczki {{pb_cel}} i spełnienie zobowiązania prowizyjnego {{pb_dop}} wobec Finance You; nie jest prowizją, opłatą ani kosztem Pożyczkodawcy. Prowizja od Pożyczkobiorcy nie wchodzi do rat i nie jest oprocentowana."
+      "tekst": "{{pb}} {{pb_potwierdza}}, że na podstawie odrębnej umowy z Finance You spółką z ograniczoną odpowiedzialnością z siedzibą w Warszawie (KRS 0000635207) {{pb_zobowiazany_jest}} do zapłaty Prowizji od Pożyczkobiorcy w wysokości {{warunki.prowizja_finance_you.kwota.slownie}} ({{warunki.prowizja_finance_you.kwota.cyframi}} zł), stanowiącej 5% Kwoty Pożyczki, nie mniej niż 5 000,00 zł, bez VAT. {{pb}} poleca Pożyczkodawcy, a Pożyczkodawca zobowiązuje się, przekazać część Kwoty Pożyczki w wysokości Prowizji od Pożyczkobiorcy bezpośrednio na rachunek Finance You nr {{rachunek_fy}}, nie później niż równocześnie z wypłatą pozostałej części Kwoty Pożyczki {{pb_cel}}; przed zleceniem tego przelewu Pożyczkodawca nie wypłaci {{pb_cel}} żadnej części Kwoty Pożyczki. Przelew na rachunek Finance You stanowi wypłatę odpowiedniej części Kwoty Pożyczki {{pb_cel}} i spełnienie zobowiązania {{pb_dop}} wobec Finance You; nie jest prowizją, opłatą ani kosztem Pożyczkodawcy. Kwota Pożyczki w całości, w tym część przekazana na rachunek Finance You, stanowi kapitał pożyczki, który podlega oprocentowaniu zgodnie z {{ref:KWO_04_oprocentowanie}} i spłacie zgodnie z Załącznikiem nr 1. Strony zastrzegają przekazanie Prowizji od Pożyczkobiorcy na rzecz Finance You jako osoby trzeciej (art. 393 k.c.); po oświadczeniu Finance You o skorzystaniu z zastrzeżenia nie może ono zostać odwołane ani zmienione bez jej zgody."
     },
     {
       "id": "KWO_03_wyplata_pelna",
@@ -117,7 +117,7 @@
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 30,
       "warunek": "ma_prowizje_fy and not ma_splaty_wierzycieli and not ma_warunki_zawieszajace",
-      "tekst": "Pożyczkodawca wypłaci Kwotę Pożyczki, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), w dwóch częściach, zgodnie z dyspozycją {{pb_dop}} stanowiącą Załącznik nr 4 do Umowy, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}, w następujący sposób:",
+      "tekst": "Pożyczkodawca wypłaci Kwotę Pożyczki, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), w dwóch częściach, zgodnie z {{ref:KWO_03e_prowizja_finance_you}}, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}, w następujący sposób:",
       "podpunkty_dynamiczne": "wyplata_transze"
     },
     {
@@ -125,7 +125,7 @@
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 30,
       "warunek": "ma_prowizje_fy and not ma_splaty_wierzycieli and ma_warunki_zawieszajace",
-      "tekst": "Pożyczkodawca wypłaci Kwotę Pożyczki, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), w dwóch częściach, zgodnie z dyspozycją {{pb_dop}} stanowiącą Załącznik nr 4 do Umowy, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}, i spełnienia warunków, o których mowa w {{ref:WZA_00_wprowadzenie}}, w następujący sposób:",
+      "tekst": "Pożyczkodawca wypłaci Kwotę Pożyczki, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), w dwóch częściach, zgodnie z {{ref:KWO_03e_prowizja_finance_you}}, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}, i spełnienia warunków, o których mowa w {{ref:WZA_00_wprowadzenie}}, w następujący sposób:",
       "podpunkty_dynamiczne": "wyplata_transze"
     },
     {

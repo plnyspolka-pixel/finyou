@@ -326,8 +326,9 @@ const warunki = z
       })
       .strict(),
     // Prowizja od Pożyczkobiorcy (5% Kwoty Udzielonej, min 5 000 zł,
-    // bez VAT) — POTRĄCANA z wypłaty zgodnie z dyspozycją Pożyczkobiorcy
-    // (Załącznik nr 4 do Umowy = Zał. 6 do Umowy ramowej FY). Brak = umowa
+    // bez VAT) — POTRĄCANA z Kwoty Pożyczki przy wypłacie i opisana wprost
+    // w § 2 umowy (KWO_03e; bez osobnego załącznika). Kwota Pożyczki w całości,
+    // także ta część, jest oprocentowana. Tylko gdy Pożyczkodawcą nie jest FY. Brak = umowa
     // bez pośrednictwa Finance You (pełna wypłata na rachunek Pożyczkobiorcy).
     prowizja_finance_you: z.object({ kwota: kwotaSchema }).strict().nullable().optional(),
     oprocentowanie: z.string().regex(/^\d{1,2},\d$/),

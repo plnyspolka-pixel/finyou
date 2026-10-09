@@ -137,3 +137,39 @@ describe("zmiany z 10.2026: cel, PEP, negocjacje, wejście w życie, wcześniejs
     expect(t).toContain("lecz przed upływem 2 lat od dnia zawarcia Umowy — o 20%");
   });
 });
+
+describe("prowizja Finance You w umowie (bez Załącznika nr 4)", () => {
+  const zInwestorem = () => {
+    const u = baza();
+    u.pozyczkodawca = {
+      typ: "osoba_fizyczna",
+      imie_nazwisko: "Jan Inwestor",
+      pesel: "70010112345",
+      adres: "ul. Testowa 1, 00-001 Warszawa",
+    };
+    u.warunki.rachunki.splata = "11 1111 1111 1111 1111 1111 1111";
+    return u;
+  };
+
+  it("pożyczkodawca-inwestor: prowizja FY opisana w § 2, oprocentowana, bez Zał. nr 4", () => {
+    const r = przetworzSzkic(zInwestorem());
+    expect(r.problemy.filter((p) => p.poziom === "BLAD")).toEqual([]);
+    const t = tekstKompletu(r.umowa);
+    expect(t).toContain("do zapłaty Prowizji od Pożyczkobiorcy w wysokości");
+    expect(t).toMatch(
+      /Kwota Pożyczki w całości, w tym część przekazana na rachunek Finance You, stanowi kapitał pożyczki, który podlega oprocentowaniu zgodnie z § 2 ust\. \d+/,
+    );
+    expect(t).toContain("(art. 393 k.c.)");
+    expect(t).not.toMatch(/Załącznik(?:iem)? nr 4|ZAŁĄCZNIK NR 4|DYSPOZYCJA WYPŁATY/);
+    expect(t).not.toMatch(/nie jest oprocentowana/);
+    // odsetki liczone od pełnej Kwoty Pożyczki (50 000 zł), nie od kwoty na rękę
+    expect(r.umowa.warunki.harmonogram.raty[0].odsetki).toBe("604,17");
+  });
+
+  it("pożyczkodawca Finance You: brak klauzuli o prowizji FY nawet przy podanym polu", () => {
+    const u = baza();
+    u.warunki.prowizja_finance_you = { kwota: { cyframi: "5 000,00", slownie: "" } };
+    const t = tekstKompletu(przetworzSzkic(u).umowa);
+    expect(t).not.toContain("Prowizji od Pożyczkobiorcy");
+  });
+});

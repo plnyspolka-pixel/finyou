@@ -178,7 +178,11 @@ Po wniosku słupskim (KW SL1S/00061444/8) — bez ręcznych korekt operatora:
 - **Jeden model prowizji inwestora (biblioteka 1.7)** — wyłącznie w ratach;
   wariant „potrącana z wypłaty” (`KWO_02b`) usunięty, a umowa nie wspomina
   o potrącaniu prowizji inwestora (KWO_02/02c, KWO_03/03c, WIN_04a, Zał. 1).
-  Prowizja Finance You (Zał. 4) nadal jest potrącana z wypłaty.
+- **Bez Załącznika nr 4 (biblioteka 1.8)** — Prowizja od Pożyczkobiorcy na
+  rzecz Finance You (5%, min 5 000 zł) jest potrącana z Kwoty Pożyczki
+  i opisana wprost w § 2 (`KWO_03e`: polecenie przelewu, art. 393 k.c.);
+  Kwota Pożyczki w całości — także ta część — jest oprocentowana dla
+  Pożyczkodawcy. Tylko gdy Pożyczkodawcą nie jest Finance You.
 - **Wersje dokumentu** — `get_generated_document_file` (base64) i
   `upload_generated_document_version` (wersja, autor, powód, SHA-256, diff
   względem wersji silnika).

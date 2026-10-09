@@ -7,6 +7,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { jestFinanceYou } from "./finance-you";
 
 const CONSONANT_END = /[bcdfghjklmnprstwzżźćń]$/;
 
@@ -706,10 +707,11 @@ export function zbudujFakty(d: any): Record<string, any> {
   f.ma_prowizje_w_racie_koncowej = prowBalon > 0;
   f.prowizja_ratalna_cyframi = formatKwotyPL(Math.max(0, prowRazem - prowBalon));
 
-  // Prowizja od Pożyczkobiorcy — potrącana z wypłaty (Zał. 4 do Umowy
-  // = Zał. 6 do Umowy ramowej FY): pierwsza transza na rachunek FY.
+  // Prowizja od Pożyczkobiorcy — potrącana z Kwoty Pożyczki przy wypłacie
+  // (opisana wprost w § 2, KWO_03e): pierwsza transza na rachunek FY. Tylko
+  // gdy Pożyczkodawcą NIE jest Finance You.
   const prowFY = d.warunki?.prowizja_finance_you?.kwota?.cyframi;
-  f.ma_prowizje_fy = !!prowFY && prowFY !== "0,00";
+  f.ma_prowizje_fy = !!prowFY && prowFY !== "0,00" && !jestFinanceYou(d.pozyczkodawca);
   f.prowizja_fy_cyframi = prowFY ?? "0,00";
   f.rachunek_fy = d.warunki?.rachunki?.finance_you ?? "";
 
@@ -718,9 +720,8 @@ export function zbudujFakty(d: any): Record<string, any> {
     transze.push({
       kwota: prowFY,
       opis:
-        `na rachunek Finance You sp. z o.o. nr ${f.rachunek_fy || "wskazany w Załączniku nr 4"}, ` +
-        `tytułem Prowizji od Pożyczkobiorcy potrącanej z wypłaty zgodnie z dyspozycją ` +
-        `${f.pb_dop} (Załącznik nr 4); przelew ten stanowi wypłatę odpowiedniej części Kwoty Pożyczki ${f.pb_cel}`,
+        `na rachunek Finance You sp. z o.o. nr ${f.rachunek_fy}, ` +
+        `tytułem Prowizji od Pożyczkobiorcy; przelew ten stanowi wypłatę odpowiedniej części Kwoty Pożyczki ${f.pb_cel}`,
     });
   }
   if (f.ma_splaty_wierzycieli) {
