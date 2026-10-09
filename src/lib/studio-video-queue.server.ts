@@ -154,21 +154,37 @@ async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
 // Zwraca liczbę przetworzonych i pozostałych w kolejce.
 export async function processStudioVideoQueue(
   limit: number,
-): Promise<{ processed: number; failed: number; remaining: number }> {
+): Promise<{ processed: number; failed: number; remaining: number; deferred: string | null }> {
   let processed = 0;
   let failed = 0;
+  // Bramka caption-burnera: sprawdzana raz na przebieg, dopiero gdy w kolejce
+  // coś jest. Gdy usługa nie odpowiada, joby zostają 'queued' (bez zużycia
+  // kredytów HeyGen) i ruszą w kolejnym ticku.
+  let deferred: string | null = null;
+  let burnerChecked = false;
 
   for (let i = 0; i < limit; i++) {
     // Claim najstarszego joba z kolejki — warunek status='queued' w UPDATE
     // chroni przed podwójnym przetworzeniem (tick vs otwarty panel).
     const { data: queued } = await supabaseAdmin
       .from("studio_video_jobs")
-      .select("id")
+      .select("id, captions")
       .eq("status", "queued")
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
     if (!queued) break;
+
+    if (!burnerChecked) {
+      burnerChecked = true;
+      const { captionBurnerPreflight } = await import("./caption-burner.server");
+      const gate = await captionBurnerPreflight({ captions: queued.captions !== false });
+      if (!gate.ok) {
+        deferred = gate.reason;
+        console.warn(`[Studio] kolejka wstrzymana: ${gate.reason}`);
+        break;
+      }
+    }
 
     const { data: claimed } = await supabaseAdmin
       .from("studio_video_jobs")
@@ -195,7 +211,7 @@ export async function processStudioVideoQueue(
     .from("studio_video_jobs")
     .select("id", { count: "exact", head: true })
     .eq("status", "queued");
-  return { processed, failed, remaining: count ?? 0 };
+  return { processed, failed, remaining: count ?? 0, deferred };
 }
 
 async function processClaimedJob(job: JobRow): Promise<void> {
@@ -893,6 +909,8 @@ export async function runStudioVideoTick(): Promise<{
   processed: number;
   failed: number;
   remaining: number;
+  /** Kolejka wstrzymana — powód (caption-burner nie odpowiada); null = szła. */
+  deferred: string | null;
   completed: number;
   autoPublished: number;
 }> {

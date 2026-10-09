@@ -827,7 +827,7 @@ export const createStudioVideoJob = defineTool({
   name: "create_studio_video_job",
   title: "Create studio video job",
   description:
-    "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy ZAWSZE z naszego renderera: tekst to scenariusz, czasy z ElevenLabs, styl domyślnie `reels` (`caption_style` zmienia wygląd); HeyGen nie dostaje zlecenia na napisy, a bez usługi caption-burner zadanie z napisami pada do ponowienia. Głos: ElevenLabs, model z ustawień Studia (`tts_model` nadpisuje dla tej rolki). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+    "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy ZAWSZE z naszego renderera: tekst to scenariusz, czasy z ElevenLabs, styl domyślnie `reels` (`caption_style` zmienia wygląd); HeyGen nie dostaje zlecenia na napisy, a bez usługi caption-burner zadanie z napisami pada do ponowienia. Głos: ElevenLabs, model z ustawień Studia (`tts_model` nadpisuje dla tej rolki). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. Przed zleceniem renderu sprawdzamy usługę caption-burner: gdy nie odpowiada, render w HeyGen nie rusza (kredyty zostają), zadanie czeka w kolejce, a odpowiedź ma pole `deferred` z powodem. Tick wstrzymuje kolejkę tak samo. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
   inputSchema: {
     prompt: z.string().min(3).max(2000).optional().describe("Temat / brief odcinka."),
     script: z.string().max(5000).optional().describe("Gotowy tekst lektora; pusty = AI."),
@@ -906,7 +906,14 @@ export const createStudioVideoJob = defineTool({
         }
       }
       if (!prompt) return fail("Podaj `prompt` albo `question_id`.");
-      if (!script && a.start_now) {
+      // Bramka caption-burnera przed HeyGenem: gdy usługa nie odpowiada,
+      // `start_now` nie zleca renderu (kredyty zostają), zadanie idzie do
+      // kolejki, a tick Studia ruszy je, gdy usługa wróci.
+      const { captionBurnerPreflight, CAPTION_BURNER_GUARD_NOTE } =
+        await import("@/lib/caption-burner.server");
+      const gate = a.start_now ? await captionBurnerPreflight({ captions: a.captions }) : null;
+      const startNow = a.start_now && gate?.ok !== false;
+      if (!script && startNow) {
         const { generateVideoScript } = await import("@/lib/studio-ai.server");
         const gen = await generateVideoScript(prompt);
         script = gen.script;
@@ -930,7 +937,8 @@ export const createStudioVideoJob = defineTool({
         avatar_ids: avatarIds,
         voice_id: a.voice_id ?? d.voiceId,
         tts_model_id: ttsModelId,
-        status: a.start_now ? "generating_audio" : "queued",
+        status: startNow ? "generating_audio" : "queued",
+        ...(gate && !gate.ok ? { last_error: `${gate.reason}. ${CAPTION_BURNER_GUARD_NOTE}` } : {}),
         captions: a.captions,
         caption_style: captionStyle,
         dynamic_scenes: a.dynamic_scenes || a.reel_structure,
@@ -949,7 +957,15 @@ export const createStudioVideoJob = defineTool({
       );
       const { setJobMaterialAudience } = await import("@/lib/studio-materials.server");
       await setJobMaterialAudience(job.id, a.material_audience);
-      if (!a.start_now) {
+      if (gate && !gate.ok) {
+        return ok({
+          ok: true,
+          job,
+          deferred: gate.reason,
+          note: CAPTION_BURNER_GUARD_NOTE,
+        });
+      }
+      if (!startNow) {
         return ok({
           ok: true,
           job,
@@ -1135,7 +1151,11 @@ export const retryStudioJob = defineTool({
       }
       return ok({
         ok: true,
-        job: { id: job.id, publish_title: job.publish_title, status: mode === "captions" ? "captioning" : "queued" },
+        job: {
+          id: job.id,
+          publish_title: job.publish_title,
+          status: mode === "captions" ? "captioning" : "queued",
+        },
         mode,
         note:
           mode === "captions"

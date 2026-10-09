@@ -304,6 +304,45 @@ export async function discardBurnerJob(id: string): Promise<void> {
 
 export const discardCaptionBurn = discardBurnerJob;
 
+/**
+ * Bramka przed renderem HeyGena: czy rolka da się po renderze dokończyć
+ * (napisy, znaczek „AI", nakładki). Render kosztuje kredyty HeyGen, a bez
+ * działającej usługi skończyłby się błędem na napisach albo rolką bez znaczka
+ * — więc sprawdzamy `/health` PRZED zleceniem. Usługa na Fly budzi się przy
+ * pierwszym zapytaniu, stąd dłuższy limit niż w statusie integracji.
+ * Usługa nieskonfigurowana blokuje tylko rolkę z napisami (bez napisów
+ * wychodzi bez znaczka — tak jak dotąd).
+ */
+export async function captionBurnerPreflight(input: {
+  captions: boolean;
+}): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const env = getCaptionBurnerEnv();
+  if (!env.configured) {
+    return input.captions
+      ? {
+          ok: false,
+          reason:
+            "usługa caption-burner nie jest skonfigurowana (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET) — rolka z napisami nie zostałaby dokończona",
+        }
+      : { ok: true };
+  }
+  if (!input.captions && !isAiBadgeEnabled() && !isDynamicOverlaysEnabled()) return { ok: true };
+  try {
+    const res = await burnerFetch("/health", { timeoutMs: 45_000 });
+    if (res.ok) return { ok: true };
+    return { ok: false, reason: `caption-burner nie działa: ${await errorOf(res)}` };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      ok: false,
+      reason: `caption-burner nie odpowiada (${msg.replace(/^caption-burner: /, "")})`,
+    };
+  }
+}
+
+export const CAPTION_BURNER_GUARD_NOTE =
+  "Render w HeyGen nie został zlecony (kredyty nie zużyte) — zadanie czeka w kolejce i ruszy przy pierwszym ticku Studia, gdy usługa znów odpowie.";
+
 /** Do statusu integracji: czy usługa odpowiada i ma FFmpega. */
 export async function checkCaptionBurnerHealth(): Promise<{
   ok: boolean;

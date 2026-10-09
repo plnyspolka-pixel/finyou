@@ -565,6 +565,13 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     });
     const reelStructure = data.reel_structure === true;
 
+    // Bramka: bez działającego caption-burnera render HeyGena zużyłby kredyty,
+    // a rolka nie dostałaby napisów ani znaczka „AI" — zadanie idzie wtedy do
+    // kolejki i ruszy w ticku, gdy usługa wróci.
+    const { captionBurnerPreflight, CAPTION_BURNER_GUARD_NOTE } =
+      await import("./caption-burner.server");
+    const gate = await captionBurnerPreflight({ captions: data.captions !== false });
+
     const { data: job, error: insErr } = await supabaseAdmin
       .from("studio_video_jobs")
       .insert({
@@ -573,7 +580,8 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         avatar_id: data.avatar_id,
         voice_id: voiceId,
         tts_model_id: ttsModelId,
-        status: "generating_audio",
+        status: gate.ok ? "generating_audio" : "queued",
+        last_error: gate.ok ? null : `${gate.reason}. ${CAPTION_BURNER_GUARD_NOTE}`,
         captions: data.captions !== false,
         caption_style: parseCaptionStyleId(data.caption_style),
         dynamic_scenes: data.dynamic_scenes === true || reelStructure,
@@ -589,6 +597,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (insErr) throw new Error(insErr.message);
+    if (!gate.ok) return { ok: true, id: job.id as string, deferred: gate.reason };
 
     try {
       await supabaseAdmin
@@ -622,7 +631,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
           last_error: rendered.note,
         })
         .eq("id", job.id);
-      return { ok: true, id: job.id as string };
+      return { ok: true, id: job.id as string, deferred: null as string | null };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       await supabaseAdmin

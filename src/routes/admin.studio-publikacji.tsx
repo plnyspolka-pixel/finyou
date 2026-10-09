@@ -365,7 +365,8 @@ function StudioPage() {
         for (let i = 0; i < 30 && !cancelled; i++) {
           const r = await processQueueFn();
           qc.invalidateQueries({ queryKey: ["studio-video-jobs"] });
-          if (!r.remaining) break;
+          // Kolejka wstrzymana (caption-burner nie odpowiada) — dokończy tick.
+          if (!r.remaining || r.deferred) break;
         }
       } catch {
         // Błąd pojedynczego joba jest zapisany w jego last_error.
@@ -822,7 +823,14 @@ function StudioPage() {
           tiktok_post_options: autoTtSelected ? autoTtOptions : undefined,
         },
       }),
-    onSuccess: () => {
+    onSuccess: (r) => {
+      if (r.deferred) {
+        toast.warning(
+          `Render wstrzymany, kredyty HeyGen nie zużyte: ${r.deferred}. Zadanie czeka w kolejce i ruszy, gdy usługa wróci.`,
+        );
+        qc.invalidateQueries({ queryKey: ["studio-video-jobs"] });
+        return;
+      }
       toast.success(
         effectiveAutoPlatforms.length
           ? "Generacja uruchomiona — po wyrenderowaniu wideo trafi do publikacji"
