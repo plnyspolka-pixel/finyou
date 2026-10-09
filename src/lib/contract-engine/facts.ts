@@ -354,6 +354,7 @@ export function zbudujFakty(d: any): Record<string, any> {
   f.pb_oswiadcza = wielu ? "oświadczają" : "oświadcza";
   f.pb_zobowiazuje = wielu ? "zobowiązują się" : "zobowiązuje się";
   f.pb_potwierdza = wielu ? "potwierdzają" : "potwierdza";
+  f.pb_poleca = wielu ? "polecają" : "poleca";
   f.pb_otrzymal = g("otrzymali", "otrzymała", "otrzymał");
   f.pb_mial = g("mieli", "miała", "miał");
   f.pb_rozumie = wielu ? "rozumieją" : "rozumie";
@@ -719,9 +720,7 @@ export function zbudujFakty(d: any): Record<string, any> {
   if (f.ma_prowizje_fy) {
     transze.push({
       kwota: prowFY,
-      opis:
-        `na rachunek Finance You sp. z o.o. nr ${f.rachunek_fy}, ` +
-        `tytułem Prowizji od Pożyczkobiorcy; przelew ten stanowi wypłatę odpowiedniej części Kwoty Pożyczki ${f.pb_cel}`,
+      opis: `na rachunek Finance You sp. z o.o. nr ${f.rachunek_fy}, tytułem Prowizji od Pożyczkobiorcy`,
     });
   }
   if (f.ma_splaty_wierzycieli) {

@@ -151,16 +151,14 @@ describe("prowizja Finance You w umowie (bez Załącznika nr 4)", () => {
     return u;
   };
 
-  it("pożyczkodawca-inwestor: prowizja FY opisana w § 2, oprocentowana, bez Zał. nr 4", () => {
+  it("pożyczkodawca-inwestor: sama dyspozycja przelewu prowizji FY w § 2, bez Zał. nr 4", () => {
     const r = przetworzSzkic(zInwestorem());
     expect(r.problemy.filter((p) => p.poziom === "BLAD")).toEqual([]);
     const t = tekstKompletu(r.umowa);
-    expect(t).toContain("do zapłaty Prowizji od Pożyczkobiorcy w wysokości");
     expect(t).toMatch(
-      /Kwota Pożyczki w całości, w tym część przekazana na rachunek Finance You, stanowi kapitał pożyczki, który podlega oprocentowaniu zgodnie z § 2 ust\. \d+/,
+      /Pożyczkobiorca poleca Pożyczkodawcy przekazanie z Kwoty Pożyczki kwoty pięć tysięcy złotych 00\/100 \(5 000,00 zł\), stanowiącej Prowizję od Pożyczkobiorcy należną Finance You sp\. z o\.o\. \(5% Kwoty Pożyczki, nie mniej niż 5 000,00 zł, bez VAT\), na rachunek Finance You sp\. z o\.o\. nr [\d ]+\./,
     );
-    expect(t).toContain("(art. 393 k.c.)");
-    expect(t).not.toMatch(/Załącznik(?:iem)? nr 4|ZAŁĄCZNIK NR 4|DYSPOZYCJA WYPŁATY/);
+    expect(t).not.toMatch(/Załącznik(?:iem)? nr 4|ZAŁĄCZNIK NR 4|DYSPOZYCJA WYPŁATY|art\. 393/);
     expect(t).not.toMatch(/nie jest oprocentowana/);
     // odsetki liczone od pełnej Kwoty Pożyczki (50 000 zł), nie od kwoty na rękę
     expect(r.umowa.warunki.harmonogram.raty[0].odsetki).toBe("604,17");

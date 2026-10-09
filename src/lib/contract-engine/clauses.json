@@ -1,6 +1,6 @@
 {
   "$comment": "Biblioteka klauzul. Każda klauzula ma warunek włączenia (wyrażenie nad danymi) i szablon tekstu. Renderer iteruje po sekcjach w kolejności 'order'.",
-  "wersja": "1.8",
+  "wersja": "1.9",
   "sekcje": {
     "PRZEDMIOT": {
       "tytul": "PRZEDMIOT UMOWY",
@@ -88,7 +88,7 @@
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 25,
       "warunek": "ma_prowizje_fy",
-      "tekst": "{{pb}} {{pb_potwierdza}}, że na podstawie odrębnej umowy z Finance You spółką z ograniczoną odpowiedzialnością z siedzibą w Warszawie (KRS 0000635207) {{pb_zobowiazany_jest}} do zapłaty Prowizji od Pożyczkobiorcy w wysokości {{warunki.prowizja_finance_you.kwota.slownie}} ({{warunki.prowizja_finance_you.kwota.cyframi}} zł), stanowiącej 5% Kwoty Pożyczki, nie mniej niż 5 000,00 zł, bez VAT. {{pb}} poleca Pożyczkodawcy, a Pożyczkodawca zobowiązuje się, przekazać część Kwoty Pożyczki w wysokości Prowizji od Pożyczkobiorcy bezpośrednio na rachunek Finance You nr {{rachunek_fy}}, nie później niż równocześnie z wypłatą pozostałej części Kwoty Pożyczki {{pb_cel}}; przed zleceniem tego przelewu Pożyczkodawca nie wypłaci {{pb_cel}} żadnej części Kwoty Pożyczki. Przelew na rachunek Finance You stanowi wypłatę odpowiedniej części Kwoty Pożyczki {{pb_cel}} i spełnienie zobowiązania {{pb_dop}} wobec Finance You; nie jest prowizją, opłatą ani kosztem Pożyczkodawcy. Kwota Pożyczki w całości, w tym część przekazana na rachunek Finance You, stanowi kapitał pożyczki, który podlega oprocentowaniu zgodnie z {{ref:KWO_04_oprocentowanie}} i spłacie zgodnie z Załącznikiem nr 1. Strony zastrzegają przekazanie Prowizji od Pożyczkobiorcy na rzecz Finance You jako osoby trzeciej (art. 393 k.c.); po oświadczeniu Finance You o skorzystaniu z zastrzeżenia nie może ono zostać odwołane ani zmienione bez jej zgody."
+      "tekst": "{{pb}} {{pb_poleca}} Pożyczkodawcy przekazanie z Kwoty Pożyczki kwoty {{warunki.prowizja_finance_you.kwota.slownie}} ({{warunki.prowizja_finance_you.kwota.cyframi}} zł), stanowiącej Prowizję od Pożyczkobiorcy należną Finance You sp. z o.o. (5% Kwoty Pożyczki, nie mniej niż 5 000,00 zł, bez VAT), na rachunek Finance You sp. z o.o. nr {{rachunek_fy}}."
     },
     {
       "id": "KWO_03_wyplata_pelna",
