@@ -1,6 +1,8 @@
 // Kompresja wideo przed publikacją — strona serwerowa: tabela
-// `video_renditions`, usługa FFmpeg (services/caption-burner, zadanie
-// `transcode`) i bucket `studio-media`. Decyzje (co zrobić z wierszem po
+// `video_renditions`, kodowanie FFmpegiem na AWS Lambda
+// (services/video-transcoder; bez jej sekretów — jak dawniej usługa
+// caption-burner, zadanie `transcode`, wybór w src/lib/video-transcoder.server.ts)
+// i bucket `studio-media`. Decyzje (co zrobić z wierszem po
 // odczycie / po odpytaniu usługi) siedzą w src/lib/video-rendition.ts.
 //
 // Dwa wejścia:
@@ -38,8 +40,12 @@ import {
 } from "./video-rendition";
 
 const PUBLIC_BUCKET = "studio-media";
-/** Ile zadań zlecamy w jednym ticku (usługa i tak koduje jedno naraz). */
-const MAX_SUBMITS_PER_TICK = 2;
+/**
+ * Ile zadań zlecamy w jednym ticku: caption-burner koduje jedno naraz, Lambda
+ * równolegle (limit konta to 10 wywołań naraz, dzielony z Remotion).
+ */
+const MAX_SUBMITS_PER_TICK_BURNER = 2;
+const MAX_SUBMITS_PER_TICK_AWS = 4;
 /** Ile zadań w toku odpytujemy w jednym ticku. */
 const MAX_POLLS_PER_TICK = 5;
 /** Ile adresów z kolejek zakładamy w jednym ticku. */
@@ -176,8 +182,8 @@ async function submitRendition(
     if (signed.data?.signedUrl) uploadUrl = signed.data.signedUrl;
     else console.warn(`[renditions] brak podpisanego adresu uploadu: ${signed.error?.message}`);
 
-    const { submitTranscode } = await import("./caption-burner.server");
-    const jobId = await submitTranscode({
+    const { submitTranscodeJob } = await import("./video-transcoder.server");
+    const jobId = await submitTranscodeJob({
       videoUrl: row.source_url,
       uploadUrl,
       target: VIDEO_RENDITION_TARGET,
@@ -252,9 +258,9 @@ async function storeRendition(
     if (size) return { output_url: url, output_bytes: size };
     console.warn(`[renditions] usługa zgłosiła upload, ale pliku nie ma (${row.id}) — pobieram`);
   }
-  const { fetchBurnerFile } = await import("./caption-burner.server");
+  const { fetchTranscodeFile } = await import("./video-transcoder.server");
   const { uploadEnsuringBucket } = await import("./media-storage.server");
-  const bytes = await fetchBurnerFile(
+  const bytes = await fetchTranscodeFile(
     row.job_id!,
     VIDEO_RENDITION_TARGET.max_bytes + RESULT_SLACK_BYTES,
   );
@@ -277,8 +283,8 @@ async function settleRendition(row: VideoRenditionRow): Promise<SettleOutcome> {
   let probe: RenditionJobProbe | null = null;
   if (row.status === "processing" && row.job_id) {
     try {
-      const burner = await import("./caption-burner.server");
-      probe = await burner.getBurnerJobStatus(row.job_id);
+      const transcoder = await import("./video-transcoder.server");
+      probe = await transcoder.getTranscodeJobStatus(row.job_id);
     } catch (e) {
       // Usługa nie odpowiada (uśpiony kontener, sieć) — czekamy do limitu.
       console.warn(`[renditions] usługa nie odpowiada (${row.id}): ${errMsg(e)}`);
@@ -320,8 +326,8 @@ async function settleRendition(row: VideoRenditionRow): Promise<SettleOutcome> {
         .eq("status", "processing")
         .select("id");
       if (done?.length && row.job_id) {
-        const burner = await import("./caption-burner.server");
-        await burner.discardBurnerJob(row.job_id);
+        const transcoder = await import("./video-transcoder.server");
+        await transcoder.discardTranscodeJob(row.job_id);
       }
       return { state: "ready", url: stored.output_url ?? row.source_url };
     } catch (e) {
@@ -353,8 +359,8 @@ async function giveUp(row: VideoRenditionRow, reason: string): Promise<SettleOut
       .eq("id", row.id);
   }
   if (row.job_id) {
-    const burner = await import("./caption-burner.server");
-    await burner.discardBurnerJob(row.job_id);
+    const transcoder = await import("./video-transcoder.server");
+    await transcoder.discardTranscodeJob(row.job_id);
   }
   console.warn(`[renditions] ${renditionGiveUpNote(reason)} (${row.source_url})`);
   return { state: "original", url: row.source_url, reason };
@@ -367,8 +373,8 @@ async function giveUp(row: VideoRenditionRow, reason: string): Promise<SettleOut
  * kompresja trwa (albo została właśnie zlecona). Bez usługi — oryginał.
  */
 export async function ensurePublishableVideo(sourceUrl: string): Promise<string> {
-  const { isCaptionBurnerConfigured } = await import("./caption-burner.server");
-  if (!isCaptionBurnerConfigured() || !isRenditionCandidateUrl(sourceUrl)) return sourceUrl;
+  const { isTranscodeConfigured } = await import("./video-transcoder.server");
+  if (!isRenditionCandidateUrl(sourceUrl) || !(await isTranscodeConfigured())) return sourceUrl;
 
   let row: VideoRenditionRow | null;
   try {
@@ -416,15 +422,19 @@ async function queuedVideoUrls(): Promise<string[]> {
  */
 export async function runVideoRenditionTick(): Promise<{
   configured: boolean;
+  /** Gdzie idą nowe zlecenia: AWS Lambda albo (bez jej sekretów) caption-burner. */
+  engine: "aws-lambda" | "caption-burner" | null;
   discovered: number;
   submitted: number;
   ready: number;
   failed: number;
   errors: string[];
 }> {
-  const { isCaptionBurnerConfigured } = await import("./caption-burner.server");
+  const { transcodeEngine } = await import("./video-transcoder.server");
+  const engine = await transcodeEngine();
   const result = {
-    configured: isCaptionBurnerConfigured(),
+    configured: engine !== null,
+    engine,
     discovered: 0,
     submitted: 0,
     ready: 0,
@@ -482,13 +492,13 @@ export async function runVideoRenditionTick(): Promise<{
     result.errors.push(`domykanie: ${errMsg(e)}`);
   }
 
-  // 3. Nowe zlecenia (usługa koduje jedno naraz — nie zalewamy jej kolejki).
+  // 3. Nowe zlecenia (caption-burner koduje jedno naraz — nie zalewamy jego kolejki).
   try {
     const { data: rows, error } = await table()
       .select("*")
       .eq("status", "pending")
       .order("created_at", { ascending: true })
-      .limit(MAX_SUBMITS_PER_TICK);
+      .limit(engine === "aws-lambda" ? MAX_SUBMITS_PER_TICK_AWS : MAX_SUBMITS_PER_TICK_BURNER);
     if (error) throw new Error(error.message);
     for (const row of (rows ?? []) as VideoRenditionRow[]) {
       try {

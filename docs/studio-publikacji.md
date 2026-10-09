@@ -197,9 +197,14 @@ materiałów bywają nagrane telefonem (MOV, HEVC, 4K, 60 kl./s, po kilkaset MB)
 — publikacja kończyła się „Plik za duży" albo odrzuceniem po stronie
 platformy (X i Reels nie przyjmują HEVC/MOV), i to dopiero w chwili wysyłki.
 
-**Rozwiązanie.** Jeden **profil publikacji**, do którego usługa FFmpeg
-(`services/caption-burner`, zadanie `transcode`) sprowadza każde wideo PRZED
-wysyłką na jakąkolwiek platformę:
+**Rozwiązanie.** Jeden **profil publikacji**, do którego FFmpeg sprowadza
+każde wideo PRZED wysyłką na jakąkolwiek platformę. Koduje **AWS Lambda**
+(`services/video-transcoder`, region projektu, ~2 vCPU, preset `medium`) —
+gdy są sekrety `VIDEO_TRANSCODER_URL` / `VIDEO_TRANSCODER_SECRET`; bez nich
+jak dawniej usługa `services/caption-burner` (zadanie `transcode`, Render
+0,1 vCPU). Wybór siedzi w `src/lib/video-transcoder.server.ts`; zadania AWS
+mają id `aws-…`, więc zadania zlecone przed przełączeniem domyka
+caption-burner. Stan: MCP `heygen_status` → `publish_compression`.
 
 | Parametr        | Wartość                                            | Dlaczego                                                                                                      |
 | --------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |

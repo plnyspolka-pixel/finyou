@@ -173,6 +173,15 @@ export const heygenStatus = defineTool({
           ? await burner.checkCaptionBurnerHealth()
           : { ok: false, ffmpeg: null, error: "nie skonfigurowana (CAPTION_BURNER_URL)" },
         default_caption_style: DEFAULT_CUSTOM_CAPTION_STYLE,
+        // Kompresja przed publikacją: AWS Lambda (gdy skonfigurowana), inaczej caption-burner.
+        publish_compression: await (async () => {
+          const t = await import("@/lib/video-transcoder.server");
+          return {
+            engine: await t.transcodeEngine(),
+            aws_lambda: await t.checkAwsTranscoderHealth(),
+            note: "Nowe zlecenia kompresji idą na AWS Lambda, gdy są sekrety VIDEO_TRANSCODER_URL / _SECRET (services/video-transcoder/deploy.sh); zadania sprzed przełączenia domyka caption-burner.",
+          };
+        })(),
         captions_note:
           "Napisy rolek Studia powstają z tekstu scenariusza i czasów znaków ElevenLabs i wypala je usługa caption-burner — HeyGen nie dostaje zlecenia na napisy. Bez usługi rolka z napisami nie wychodzi (zadanie pada do ponowienia).",
         tts_model: await (async () => {
