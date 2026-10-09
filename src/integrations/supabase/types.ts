@@ -146,6 +146,8 @@ export type Database = {
           consents: Json
           created_at: string
           currency: string
+          discount_code: string | null
+          discount_pct: number | null
           expected_amount_grosz: number
           failure_reason: string | null
           granted_from: string | null
@@ -153,6 +155,7 @@ export type Database = {
           id: string
           invoice_error: string | null
           invoice_id: string | null
+          list_amount_grosz: number | null
           needs_review: boolean
           paid_amount_grosz: number | null
           processed_at: string | null
@@ -178,6 +181,8 @@ export type Database = {
           consents?: Json
           created_at?: string
           currency?: string
+          discount_code?: string | null
+          discount_pct?: number | null
           expected_amount_grosz: number
           failure_reason?: string | null
           granted_from?: string | null
@@ -185,6 +190,7 @@ export type Database = {
           id?: string
           invoice_error?: string | null
           invoice_id?: string | null
+          list_amount_grosz?: number | null
           needs_review?: boolean
           paid_amount_grosz?: number | null
           processed_at?: string | null
@@ -210,6 +216,8 @@ export type Database = {
           consents?: Json
           created_at?: string
           currency?: string
+          discount_code?: string | null
+          discount_pct?: number | null
           expected_amount_grosz?: number
           failure_reason?: string | null
           granted_from?: string | null
@@ -217,6 +225,7 @@ export type Database = {
           id?: string
           invoice_error?: string | null
           invoice_id?: string | null
+          list_amount_grosz?: number | null
           needs_review?: boolean
           paid_amount_grosz?: number | null
           processed_at?: string | null
@@ -5170,6 +5179,305 @@ export type Database = {
         }
         Relationships: []
       }
+      esign_envelopes: {
+        Row: {
+          client_id: string | null
+          completed_at: string | null
+          context: Json
+          created_at: string
+          created_by: string
+          expires_at: string
+          final_bytes: number | null
+          final_path: string | null
+          final_sha256: string | null
+          generated_document_id: string | null
+          id: string
+          loan_application_id: string | null
+          message: string | null
+          owner_role: string
+          page_count: number
+          public_id: string | null
+          sender_email: string | null
+          sender_name: string | null
+          sent_at: string | null
+          seq: number
+          signing_mode: string
+          source_bucket: string
+          source_bytes: number
+          source_filename: string
+          source_path: string
+          source_sha256: string
+          status: string
+          title: string
+          updated_at: string
+          verify_code: string
+        }
+        Insert: {
+          client_id?: string | null
+          completed_at?: string | null
+          context?: Json
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          final_bytes?: number | null
+          final_path?: string | null
+          final_sha256?: string | null
+          generated_document_id?: string | null
+          id?: string
+          loan_application_id?: string | null
+          message?: string | null
+          owner_role: string
+          page_count: number
+          public_id?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          sent_at?: string | null
+          seq?: number
+          signing_mode?: string
+          source_bucket?: string
+          source_bytes: number
+          source_filename: string
+          source_path: string
+          source_sha256: string
+          status?: string
+          title: string
+          updated_at?: string
+          verify_code: string
+        }
+        Update: {
+          client_id?: string | null
+          completed_at?: string | null
+          context?: Json
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          final_bytes?: number | null
+          final_path?: string | null
+          final_sha256?: string | null
+          generated_document_id?: string | null
+          id?: string
+          loan_application_id?: string | null
+          message?: string | null
+          owner_role?: string
+          page_count?: number
+          public_id?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          sent_at?: string | null
+          seq?: number
+          signing_mode?: string
+          source_bucket?: string
+          source_bytes?: number
+          source_filename?: string
+          source_path?: string
+          source_sha256?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          verify_code?: string
+        }
+        Relationships: []
+      }
+      esign_events: {
+        Row: {
+          actor_kind: string
+          actor_user_id: string | null
+          created_at: string
+          envelope_id: string
+          event_type: string
+          hash: string
+          id: number
+          ip: string | null
+          payload: Json
+          prev_hash: string | null
+          signer_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          actor_kind: string
+          actor_user_id?: string | null
+          created_at?: string
+          envelope_id: string
+          event_type: string
+          hash: string
+          id?: never
+          ip?: string | null
+          payload?: Json
+          prev_hash?: string | null
+          signer_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          actor_kind?: string
+          actor_user_id?: string | null
+          created_at?: string
+          envelope_id?: string
+          event_type?: string
+          hash?: string
+          id?: never
+          ip?: string | null
+          payload?: Json
+          prev_hash?: string | null
+          signer_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "esign_events_envelope_id_fkey"
+            columns: ["envelope_id"]
+            isOneToOne: false
+            referencedRelation: "esign_envelopes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "esign_events_signer_id_fkey"
+            columns: ["signer_id"]
+            isOneToOne: false
+            referencedRelation: "esign_signers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      esign_signers: {
+        Row: {
+          capacity_mode: string
+          client_id: string | null
+          company: Json | null
+          created_at: string
+          didit_session_id: string | null
+          didit_status: string | null
+          email: string
+          envelope_id: string
+          first_viewed_at: string | null
+          full_name: string
+          id: string
+          identity: Json | null
+          identity_mismatch_note: string | null
+          identity_source: string | null
+          identity_verified_at: string | null
+          investor_id: string | null
+          invited_at: string | null
+          last_viewed_at: string | null
+          order_no: number
+          otp_attempts: number
+          otp_channel: string | null
+          otp_expires_at: string | null
+          otp_hash: string | null
+          otp_sent_at: string | null
+          otp_target: string | null
+          phone: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          role_label: string | null
+          signature_hash: string | null
+          signature_ip: string | null
+          signature_user_agent: string | null
+          signed_at: string | null
+          signed_capacity: Json | null
+          signer_kind: string
+          statements: Json | null
+          status: string
+          token_expires_at: string | null
+          token_hash: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          capacity_mode?: string
+          client_id?: string | null
+          company?: Json | null
+          created_at?: string
+          didit_session_id?: string | null
+          didit_status?: string | null
+          email: string
+          envelope_id: string
+          first_viewed_at?: string | null
+          full_name: string
+          id?: string
+          identity?: Json | null
+          identity_mismatch_note?: string | null
+          identity_source?: string | null
+          identity_verified_at?: string | null
+          investor_id?: string | null
+          invited_at?: string | null
+          last_viewed_at?: string | null
+          order_no?: number
+          otp_attempts?: number
+          otp_channel?: string | null
+          otp_expires_at?: string | null
+          otp_hash?: string | null
+          otp_sent_at?: string | null
+          otp_target?: string | null
+          phone?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          role_label?: string | null
+          signature_hash?: string | null
+          signature_ip?: string | null
+          signature_user_agent?: string | null
+          signed_at?: string | null
+          signed_capacity?: Json | null
+          signer_kind?: string
+          statements?: Json | null
+          status?: string
+          token_expires_at?: string | null
+          token_hash: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          capacity_mode?: string
+          client_id?: string | null
+          company?: Json | null
+          created_at?: string
+          didit_session_id?: string | null
+          didit_status?: string | null
+          email?: string
+          envelope_id?: string
+          first_viewed_at?: string | null
+          full_name?: string
+          id?: string
+          identity?: Json | null
+          identity_mismatch_note?: string | null
+          identity_source?: string | null
+          identity_verified_at?: string | null
+          investor_id?: string | null
+          invited_at?: string | null
+          last_viewed_at?: string | null
+          order_no?: number
+          otp_attempts?: number
+          otp_channel?: string | null
+          otp_expires_at?: string | null
+          otp_hash?: string | null
+          otp_sent_at?: string | null
+          otp_target?: string | null
+          phone?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          role_label?: string | null
+          signature_hash?: string | null
+          signature_ip?: string | null
+          signature_user_agent?: string | null
+          signed_at?: string | null
+          signed_capacity?: Json | null
+          signer_kind?: string
+          statements?: Json | null
+          status?: string
+          token_expires_at?: string | null
+          token_hash?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "esign_signers_envelope_id_fkey"
+            columns: ["envelope_id"]
+            isOneToOne: false
+            referencedRelation: "esign_envelopes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       external_api_logs: {
         Row: {
           created_at: string
@@ -8287,8 +8595,8 @@ export type Database = {
       lead_magnet_triggers: {
         Row: {
           author_id: string | null
-          awaiting_email: boolean
           author_name: string | null
+          awaiting_email: boolean
           comment_text: string | null
           created_at: string
           email_reminded_at: string | null
@@ -8306,8 +8614,8 @@ export type Database = {
         }
         Insert: {
           author_id?: string | null
-          awaiting_email?: boolean
           author_name?: string | null
+          awaiting_email?: boolean
           comment_text?: string | null
           created_at?: string
           email_reminded_at?: string | null
@@ -8325,8 +8633,8 @@ export type Database = {
         }
         Update: {
           author_id?: string | null
-          awaiting_email?: boolean
           author_name?: string | null
+          awaiting_email?: boolean
           comment_text?: string | null
           created_at?: string
           email_reminded_at?: string | null
@@ -8344,17 +8652,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "lead_magnet_triggers_signup_id_fkey"
-            columns: ["signup_id"]
-            isOneToOne: false
-            referencedRelation: "lead_magnet_signups"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "lead_magnet_triggers_lead_magnet_id_fkey"
             columns: ["lead_magnet_id"]
             isOneToOne: false
             referencedRelation: "lead_magnets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_magnet_triggers_signup_id_fkey"
+            columns: ["signup_id"]
+            isOneToOne: false
+            referencedRelation: "lead_magnet_signups"
             referencedColumns: ["id"]
           },
         ]
@@ -12665,6 +12973,7 @@ export type Database = {
           sms_template: string | null
           sms_trigger: string
           updated_at: string
+          windykacja_agent_id: string | null
         }
         Insert: {
           agent_id?: string | null
@@ -12688,6 +12997,7 @@ export type Database = {
           sms_template?: string | null
           sms_trigger?: string
           updated_at?: string
+          windykacja_agent_id?: string | null
         }
         Update: {
           agent_id?: string | null
@@ -12711,6 +13021,7 @@ export type Database = {
           sms_template?: string | null
           sms_trigger?: string
           updated_at?: string
+          windykacja_agent_id?: string | null
         }
         Relationships: []
       }
@@ -12831,10 +13142,14 @@ export type Database = {
         Row: {
           case_id: string
           created_at: string
+          data_nadania: string | null
+          data_odbioru: string | null
           event_id: string | null
           id: string
           investor_user_id: string
           plik_url: string | null
+          potwierdzenie_nadania_url: string | null
+          potwierdzenie_odbioru_url: string | null
           status: Database["public"]["Enums"]["wind_document_status"]
           tresc: string | null
           typ: Database["public"]["Enums"]["wind_document_type"]
@@ -12843,10 +13158,14 @@ export type Database = {
         Insert: {
           case_id: string
           created_at?: string
+          data_nadania?: string | null
+          data_odbioru?: string | null
           event_id?: string | null
           id?: string
           investor_user_id?: string
           plik_url?: string | null
+          potwierdzenie_nadania_url?: string | null
+          potwierdzenie_odbioru_url?: string | null
           status?: Database["public"]["Enums"]["wind_document_status"]
           tresc?: string | null
           typ: Database["public"]["Enums"]["wind_document_type"]
@@ -12855,10 +13174,14 @@ export type Database = {
         Update: {
           case_id?: string
           created_at?: string
+          data_nadania?: string | null
+          data_odbioru?: string | null
           event_id?: string | null
           id?: string
           investor_user_id?: string
           plik_url?: string | null
+          potwierdzenie_nadania_url?: string | null
+          potwierdzenie_odbioru_url?: string | null
           status?: Database["public"]["Enums"]["wind_document_status"]
           tresc?: string | null
           typ?: Database["public"]["Enums"]["wind_document_type"]
@@ -12892,6 +13215,7 @@ export type Database = {
           investor_user_id: string
           kategoria: Database["public"]["Enums"]["wind_event_category"]
           metadata: Json
+          oplata: number
           status_doreczenia:
             | Database["public"]["Enums"]["wind_delivery_status"]
             | null
@@ -12910,6 +13234,7 @@ export type Database = {
           investor_user_id?: string
           kategoria?: Database["public"]["Enums"]["wind_event_category"]
           metadata?: Json
+          oplata?: number
           status_doreczenia?:
             | Database["public"]["Enums"]["wind_delivery_status"]
             | null
@@ -12928,6 +13253,7 @@ export type Database = {
           investor_user_id?: string
           kategoria?: Database["public"]["Enums"]["wind_event_category"]
           metadata?: Json
+          oplata?: number
           status_doreczenia?:
             | Database["public"]["Enums"]["wind_delivery_status"]
             | null
@@ -13435,7 +13761,10 @@ export type Database = {
       }
       kw_clear_quota_block: { Args: never; Returns: Json }
       kw_reset_order_attempts: { Args: { _kw: string }; Returns: Json }
-      lead_magnet_increment_views: { Args: { p_id: string }; Returns: undefined }
+      lead_magnet_increment_views: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
       list_public_loan_proposals: {
         Args: never
         Returns: {
