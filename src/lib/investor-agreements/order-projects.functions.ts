@@ -907,5 +907,14 @@ export const submitOrderProjectOffer = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
+    // Powiadomienie autora wniosku (mail, Messenger, krótki telefon) — best-effort.
+    if (data.status === "zlozona") {
+      try {
+        const { notifyInvestorOfferSubmitted } = await import("@/lib/investor-offer-notify.server");
+        await notifyInvestorOfferSubmitted(offer.id as string);
+      } catch (e) {
+        console.error("[order-projects] offer notify failed:", e);
+      }
+    }
     return { ok: true, offerId: offer.id as string };
   });
