@@ -340,13 +340,25 @@ export function SinglePageApplicationForm({
 
   useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.url)), [photos]);
 
-  const contactValid = useMemo(() => {
-    const fn = firstName.trim();
-    const ln = lastName.trim();
-    const ph = phone.trim().replace(/\D/g, "");
+  // Konkretny komunikat zamiast ogólnego „uzupełnij wszystko” — operatorzy szukali
+  // błędu w imieniu, gdy w rzeczywistości e-mail nie miał kropki w domenie.
+  const contactError = useMemo(() => {
+    const missing: string[] = [];
+    if (!firstName.trim()) missing.push("imię");
+    if (!lastName.trim()) missing.push("nazwisko");
+    if (!phone.trim()) missing.push("telefon");
+    if (!email.trim()) missing.push("e-mail");
+    if (missing.length) return `Uzupełnij: ${missing.join(", ")}.`;
+    if (phone.replace(/\D/g, "").length < 9) {
+      return "Numer telefonu jest za krótki — podaj co najmniej 9 cyfr.";
+    }
     const em = email.trim();
-    return Boolean(fn && ln && ph.length >= 9 && /.+@.+\..+/.test(em));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+      return `Adres e-mail „${em}” jest niepoprawny — sprawdź, czy zawiera „@” i kropkę w domenie (np. imie@gmail.com).`;
+    }
+    return null;
   }, [firstName, lastName, phone, email]);
+  const contactValid = contactError === null;
 
   const fireLead = () => {
     if (leadFiredRef.current || !contactValid) return;
@@ -465,8 +477,8 @@ export function SinglePageApplicationForm({
     }
 
     if (!skipContact) {
-      if (!contactValid) {
-        toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
+      if (contactError) {
+        toast.error(contactError);
         return;
       }
       if (!isBroker && (!consentPrivacy || !consentTerms)) {
