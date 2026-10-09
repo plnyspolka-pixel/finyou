@@ -35,6 +35,9 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 | Napisy własne — styl (SRT → ASS, presety)    | `src/lib/caption-style.ts` (+ testy `caption-style.test.ts`)                              |
 | Napisy własne — decyzje pipeline'u           | `src/lib/studio-captions.ts` (+ testy `studio-captions.test.ts`)                          |
 | Napisy własne — klient usługi wypalania      | `src/lib/caption-burner.server.ts`                                                        |
+| Silnik wykończenia (caption-burner / Remotion) | `src/lib/studio-render-engine.ts`, `src/lib/remotion-render.server.ts`                  |
+| Plan rolki dla Remotion (napisy, znaczek, nakładki) | `src/lib/studio-reel-plan.ts` (+ testy `studio-reel-plan.test.ts`)                 |
+| Kompozycja Remotion `StudioReel`             | `services/remotion/src/StudioReel.tsx` (README w `services/remotion/`)                    |
 | Napisy z tekstu scenariusza + czasów ElevenLabs | `src/lib/studio-subtitles.ts` (+ testy `studio-subtitles.test.ts`)                     |
 | Modele ElevenLabs lektora (lista, ustawienia głosu) | `src/lib/studio-tts-models.ts` (+ testy `studio-tts-models.test.ts`)               |
 | Ustawienia globalne Studia (model lektora)   | `src/lib/studio-settings.server.ts`                                                       |
@@ -129,6 +132,13 @@ co poprawić.
 | `HEYGEN_CAPTION_STYLE`            | Opcjonalny styl napisów HeyGen dla ścieżek spoza Studia (Awatar FAQ); Studio napisów HeyGena nie zamawia     |
 | `CAPTION_BURNER_URL`              | Adres usługi FFmpeg (napisy rolek + kompresja przed publikacją) — bez niej rolki z napisami nie wychodzą      |
 | `CAPTION_BURNER_SECRET`           | Sekret tej usługi (Bearer) — bez pary URL+sekret zadania z napisami padają do ponowienia, publikacja bez kompresji |
+| `STUDIO_RENDER_ENGINE`            | Opcjonalny; silnik dla zadań z `render_engine = auto`: `remotion` albo (domyślnie) caption-burner             |
+| `REMOTION_AWS_ACCESS_KEY_ID`      | Klucz IAM do Remotion Lambda (silnik `remotion`; polityka z `npx remotion lambda policies user`)             |
+| `REMOTION_AWS_SECRET_ACCESS_KEY`  | Sekret tego klucza                                                                                           |
+| `REMOTION_FUNCTION_NAME`          | Nazwa funkcji z `npm run lambda:deploy` (services/remotion)                                                  |
+| `REMOTION_SERVE_URL`              | Serve URL strony z `npm run lambda:deploy`                                                                   |
+| `REMOTION_REGION`                 | Opcjonalny; domyślnie `eu-central-1`                                                                         |
+| `REMOTION_FRAMES_PER_LAMBDA`      | Opcjonalny; klatek na jedno wywołanie (domyślnie 300 — mieści 60 s rolki w limicie 10 wywołań)               |
 | `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na wynik usługi, zanim zadanie padnie do ponowienia (domyślnie 45)                    |
 | `VIDEO_RENDITION_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na kompresję wideo, zanim ponowimy / wyślemy oryginał (domyślnie 120)                 |
 | `STUDIO_AI_BADGE`                 | Opcjonalny; `0` / `off` wyłącza znaczek „AI" w rogu rolek (domyślnie włączony)                               |
@@ -390,6 +400,28 @@ Zakładki panelu:
    styl w badge'u („napisy: Rolka — duże z obrysem") i faktyczny stan, nie
    zamówiony. Kolumny: `caption_style` (`heygen` tylko w starych wierszach),
    `caption_burn_id`, `caption_burn_started_at`, `caption_burn_attempts`.
+
+   **Silnik wykończenia** (`studio_video_jobs.render_engine`): `caption_burner`
+   (opisany wyżej FFmpeg + ASS) albo `remotion` — kompozycja `StudioReel` na
+   AWS Lambda (`services/remotion`). Wybór per zadanie: select „Wykończenie”
+   w panelu, `render_engine` w `create_studio_video_job` / `update_studio_job`;
+   `auto` (domyślne) = `STUDIO_RENDER_ENGINE`, bez niego caption-burner.
+   Inne stare wartości kolumny (np. `avatar_iv`) liczą się jak `auto`.
+   HeyGen i ElevenLabs działają tak samo — silnik dotyczy tylko etapu po
+   renderze. Remotion rysuje ten sam wygląd co ASS: plan (porcje napisów,
+   podświetlanie słów, czasy nakładek, geometria kart) liczy
+   `studio-reel-plan.ts` z tych samych funkcji co `srtToAss`, kompozycja tylko
+   go rysuje. Id renderu trafia do `caption_burn_id` z prefiksem
+   `remotion:<bucket>:<renderId>`, więc statusy, limit czasu, ponowienia
+   i „Zmień napisy…” działają bez zmian; wynik z S3 kopiujemy do
+   `studio-media` i sprzątamy render w S3.
+
+   **Bramka przed HeyGenem.** Zanim zlecimy render (panel, kolejka/tick,
+   `create_studio_video_job` z `start_now`), sprawdzamy silnik: caption-burner
+   — `GET /health` (limit 45 s, Fly budzi maszynę), Remotion — komplet
+   sekretów. Gdy silnik nie działa, kredyty HeyGena nie są zużywane: zadanie
+   zostaje w `queued` z powodem w `last_error` i rusza w pierwszym ticku, gdy
+   silnik wróci (odpowiedź MCP i ticka ma pole `deferred`).
 
    **Zmiana napisów gotowego filmu** — w bibliotece przy gotowym wideo select
    „Zmień napisy…" (także `restyle_studio_job_captions` w MCP): czysty master

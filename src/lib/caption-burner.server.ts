@@ -31,6 +31,7 @@ import {
   type DynamicOverlays,
 } from "./caption-style";
 import { fetchBytes, storeMedia, type StoredMedia } from "./media-storage.server";
+import { parseRemotionJobId, resolveRenderEngine } from "./studio-render-engine";
 
 export type CaptionBurnerEnv = { configured: boolean; url: string; secret: string };
 
@@ -41,6 +42,18 @@ export function getCaptionBurnerEnv(): CaptionBurnerEnv {
 }
 
 export const isCaptionBurnerConfigured = (): boolean => getCaptionBurnerEnv().configured;
+
+const remotion = () => import("./remotion-render.server");
+
+/**
+ * Czy silnik wykończenia rolki jest skonfigurowany: `remotion` — sekrety
+ * Remotion Lambda, każdy inny (`auto`, `caption_burner`) — caption-burner.
+ */
+export async function isFinisherConfigured(engine: unknown): Promise<boolean> {
+  return resolveRenderEngine(engine) === "remotion"
+    ? (await remotion()).isRemotionConfigured()
+    : isCaptionBurnerConfigured();
+}
 
 /**
  * Czy rolki Studia dostają znaczek „AI" w rogu. Domyślnie tak — to
@@ -120,7 +133,12 @@ export async function submitCaptionBurn(input: {
   aiBadge?: boolean;
   overlays?: DynamicOverlays | null;
   name?: string;
+  /** Silnik wykończenia (`studio_video_jobs.render_engine`); brak = `auto`. */
+  engine?: unknown;
 }): Promise<string> {
+  if (resolveRenderEngine(input.engine) === "remotion") {
+    return (await remotion()).submitRemotionReel(input);
+  }
   let ass: string | null;
   if (input.srtUrl && input.styleId) {
     const srt = await fetchBytes(input.srtUrl, MAX_SRT_BYTES);
@@ -220,6 +238,10 @@ export async function getBurnerJobStatus(id: string): Promise<BurnerJobStatus> {
 export async function getCaptionBurnStatus(
   id: string,
 ): Promise<{ status: CaptionBurnState; error: string | null }> {
+  if (parseRemotionJobId(id)) {
+    const r = await (await remotion()).getRemotionRenderStatus(id);
+    return { status: r.status, error: r.error };
+  }
   const { status, error } = await getBurnerJobStatus(id);
   return { status, error };
 }
@@ -272,6 +294,7 @@ export async function fetchBurnerFile(id: string, maxBytes: number): Promise<Arr
 
 /** Pobiera gotowy MP4 z usługi i zapisuje go w publicznym buckecie `studio-media`. */
 export async function storeCaptionBurnResult(id: string, name: string): Promise<StoredMedia> {
+  if (parseRemotionJobId(id)) return (await remotion()).storeRemotionResult(id, name);
   const res = await burnerFetch(`/jobs/${encodeURIComponent(id)}/file`, {
     headers: { accept: "video/mp4" },
     timeoutMs: 5 * 60_000,
@@ -295,6 +318,10 @@ export async function storeCaptionBurnResult(id: string, name: string): Promise<
 
 /** Sprzątanie w usłudze — nie może psuć przebiegu (usługa i tak ma TTL zadań). */
 export async function discardBurnerJob(id: string): Promise<void> {
+  if (parseRemotionJobId(id)) {
+    await (await remotion()).discardRemotionRender(id);
+    return;
+  }
   try {
     await burnerFetch(`/jobs/${encodeURIComponent(id)}`, { method: "DELETE" });
   } catch {
@@ -303,6 +330,56 @@ export async function discardBurnerJob(id: string): Promise<void> {
 }
 
 export const discardCaptionBurn = discardBurnerJob;
+
+/**
+ * Bramka przed renderem HeyGena: czy rolka da się po renderze dokończyć
+ * (napisy, znaczek „AI", nakładki). Render kosztuje kredyty HeyGen, a bez
+ * działającej usługi skończyłby się błędem na napisach albo rolką bez znaczka
+ * — więc sprawdzamy `/health` PRZED zleceniem. Usługa na Fly budzi się przy
+ * pierwszym zapytaniu, stąd dłuższy limit niż w statusie integracji.
+ * Usługa nieskonfigurowana blokuje tylko rolkę z napisami (bez napisów
+ * wychodzi bez znaczka — tak jak dotąd).
+ */
+export async function captionBurnerPreflight(input: {
+  captions: boolean;
+  /** Silnik wykończenia; `remotion` sprawdza konfigurację Lambdy, nie usługę. */
+  engine?: unknown;
+}): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (resolveRenderEngine(input.engine) === "remotion") {
+    const r = (await remotion()).getRemotionEnv();
+    return r.configured
+      ? { ok: true }
+      : {
+          ok: false,
+          reason: `Remotion Lambda nie jest skonfigurowany (brak: ${r.missing.join(", ")})`,
+        };
+  }
+  const env = getCaptionBurnerEnv();
+  if (!env.configured) {
+    return input.captions
+      ? {
+          ok: false,
+          reason:
+            "usługa caption-burner nie jest skonfigurowana (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET) — rolka z napisami nie zostałaby dokończona",
+        }
+      : { ok: true };
+  }
+  if (!input.captions && !isAiBadgeEnabled() && !isDynamicOverlaysEnabled()) return { ok: true };
+  try {
+    const res = await burnerFetch("/health", { timeoutMs: 45_000 });
+    if (res.ok) return { ok: true };
+    return { ok: false, reason: `caption-burner nie działa: ${await errorOf(res)}` };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      ok: false,
+      reason: `caption-burner nie odpowiada (${msg.replace(/^caption-burner: /, "")})`,
+    };
+  }
+}
+
+export const CAPTION_BURNER_GUARD_NOTE =
+  "Render w HeyGen nie został zlecony (kredyty nie zużyte) — zadanie czeka w kolejce i ruszy przy pierwszym ticku Studia, gdy usługa znów odpowie.";
 
 /** Do statusu integracji: czy usługa odpowiada i ma FFmpega. */
 export async function checkCaptionBurnerHealth(): Promise<{

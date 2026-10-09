@@ -71,6 +71,8 @@ export type StudioJobRow = {
   material_audience?: string | null;
   /** Model ElevenLabs lektora (NULL = ustawienie Studia w chwili renderu). */
   tts_model_id?: string | null;
+  /** Silnik wykończenia (studio-render-engine.ts); brak / `auto` = ustawienie Studia. */
+  render_engine?: string | null;
 };
 
 type JobRow = StudioJobRow;
@@ -154,21 +156,40 @@ async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
 // Zwraca liczbę przetworzonych i pozostałych w kolejce.
 export async function processStudioVideoQueue(
   limit: number,
-): Promise<{ processed: number; failed: number; remaining: number }> {
+): Promise<{ processed: number; failed: number; remaining: number; deferred: string | null }> {
   let processed = 0;
   let failed = 0;
+  // Bramka caption-burnera: sprawdzana raz na przebieg, dopiero gdy w kolejce
+  // coś jest. Gdy usługa nie odpowiada, joby zostają 'queued' (bez zużycia
+  // kredytów HeyGen) i ruszą w kolejnym ticku.
+  let deferred: string | null = null;
+  let burnerChecked = false;
 
   for (let i = 0; i < limit; i++) {
     // Claim najstarszego joba z kolejki — warunek status='queued' w UPDATE
     // chroni przed podwójnym przetworzeniem (tick vs otwarty panel).
     const { data: queued } = await supabaseAdmin
       .from("studio_video_jobs")
-      .select("id")
+      .select("id, captions, render_engine")
       .eq("status", "queued")
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
     if (!queued) break;
+
+    if (!burnerChecked) {
+      burnerChecked = true;
+      const { captionBurnerPreflight } = await import("./caption-burner.server");
+      const gate = await captionBurnerPreflight({
+        captions: queued.captions !== false,
+        engine: queued.render_engine,
+      });
+      if (!gate.ok) {
+        deferred = gate.reason;
+        console.warn(`[Studio] kolejka wstrzymana: ${gate.reason}`);
+        break;
+      }
+    }
 
     const { data: claimed } = await supabaseAdmin
       .from("studio_video_jobs")
@@ -195,7 +216,7 @@ export async function processStudioVideoQueue(
     .from("studio_video_jobs")
     .select("id", { count: "exact", head: true })
     .eq("status", "queued");
-  return { processed, failed, remaining: count ?? 0 };
+  return { processed, failed, remaining: count ?? 0, deferred };
 }
 
 async function processClaimedJob(job: JobRow): Promise<void> {
@@ -344,6 +365,7 @@ async function submitBurn(
     aiBadge: plan.aiBadge,
     overlays: plan.overlays,
     name: fallbackTitle(job),
+    engine: job.render_engine,
   });
   await supabaseAdmin
     .from("studio_video_jobs")
@@ -386,6 +408,7 @@ async function submitBadgeBurn(
     aiBadge: src.aiBadge,
     overlays: src.overlays,
     name: fallbackTitle(job),
+    engine: job.render_engine,
   });
   await supabaseAdmin
     .from("studio_video_jobs")
@@ -454,8 +477,8 @@ export async function settleHeygenCompletion(
   job: JobRow,
   status: HeygenRenderStatus,
 ): Promise<SettleOutcome> {
-  const { isCaptionBurnerConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
-  const burnerConfigured = isCaptionBurnerConfigured();
+  const { isFinisherConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
+  const burnerConfigured = await isFinisherConfigured(job.render_engine);
   const aiBadge = isAiBadgeEnabled();
   const overlays = await overlaysForJob(job);
   const videoUrl = status.video_url ?? "";
@@ -597,7 +620,9 @@ async function finishCaptionBurn(
   }
 
   if (resolution.state === "retry" && badgeOnly) {
-    const source = burner.isCaptionBurnerConfigured() ? job.video_url_clean : null;
+    const source = (await burner.isFinisherConfigured(job.render_engine))
+      ? job.video_url_clean
+      : null;
     if (source) {
       try {
         console.warn(`[Studio] ponawiam znaczek AI (${job.id}): ${resolution.reason}`);
@@ -623,7 +648,7 @@ async function finishCaptionBurn(
     const plan = planCaptionBurn({
       captions: true,
       captionStyle: job.caption_style,
-      burnerConfigured: burner.isCaptionBurnerConfigured(),
+      burnerConfigured: await burner.isFinisherConfigured(job.render_engine),
       videoUrl: job.video_url_clean,
       srtUrl: job.subtitle_url,
       aiBadge: burner.isAiBadgeEnabled(),
@@ -686,10 +711,13 @@ export async function restyleJobCaptions(
   styleId: CustomCaptionStyleId,
 ): Promise<void> {
   if (job.status !== "ready") throw new Error("Napisy można zmienić tylko dla gotowego wideo.");
-  const { isCaptionBurnerConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
-  if (!isCaptionBurnerConfigured()) {
+  const { isFinisherConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
+  if (!(await isFinisherConfigured(job.render_engine))) {
+    const { resolveRenderEngine } = await import("./studio-render-engine");
     throw new Error(
-      "Usługa wypalania napisów nie jest skonfigurowana (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET).",
+      resolveRenderEngine(job.render_engine) === "remotion"
+        ? "Remotion Lambda nie jest skonfigurowany (REMOTION_* w sekretach środowiska)."
+        : "Usługa wypalania napisów nie jest skonfigurowana (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET).",
     );
   }
   const clean = job.video_url_clean ?? (!job.captions ? job.video_url : null);
@@ -724,7 +752,7 @@ export async function retryStudioJob(job: JobRow): Promise<{ mode: "captions" | 
     job.captions &&
     job.video_url_clean &&
     job.subtitle_url &&
-    burner.isCaptionBurnerConfigured()
+    (await burner.isFinisherConfigured(job.render_engine))
   ) {
     const plan = planCaptionBurn({
       captions: true,
@@ -893,6 +921,8 @@ export async function runStudioVideoTick(): Promise<{
   processed: number;
   failed: number;
   remaining: number;
+  /** Kolejka wstrzymana — powód (caption-burner nie odpowiada); null = szła. */
+  deferred: string | null;
   completed: number;
   autoPublished: number;
 }> {

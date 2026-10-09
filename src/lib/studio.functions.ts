@@ -9,6 +9,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { StudioPromptKind } from "./studio-ai.server";
 import type { StudioPlatform } from "./studio-platforms";
 import { isCustomCaptionStyle, parseCaptionStyleId } from "./caption-style";
+import { parseRenderEngine } from "./studio-render-engine";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL, type ScenePlanItem } from "./studio-scenes";
 import {
   isTtsModelId,
@@ -42,6 +43,10 @@ export type StudioStatus = {
   captionBurnerConfigured: boolean;
   /** Znaczek „AI" w rogu rolek (STUDIO_AI_BADGE); kładzie go usługa wypalania. */
   aiBadgeEnabled?: boolean;
+  /** Remotion Lambda ma sekrety REMOTION_* (silnik wykończenia `remotion`). */
+  remotionConfigured?: boolean;
+  /** Silnik, który dostaje zadanie z `render_engine = auto`. */
+  defaultRenderEngine?: "caption_burner" | "remotion";
 };
 
 export const getStudioStatus = createServerFn({ method: "GET" })
@@ -544,6 +549,8 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       tiktok_post_options?: unknown;
       publish_title?: string;
       publish_description?: string;
+      /** Silnik wykończenia rolki (studio-render-engine.ts); brak = `auto`. */
+      render_engine?: string;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -565,6 +572,17 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     });
     const reelStructure = data.reel_structure === true;
 
+    // Bramka: bez działającego caption-burnera render HeyGena zużyłby kredyty,
+    // a rolka nie dostałaby napisów ani znaczka „AI" — zadanie idzie wtedy do
+    // kolejki i ruszy w ticku, gdy usługa wróci.
+    const { captionBurnerPreflight, CAPTION_BURNER_GUARD_NOTE } =
+      await import("./caption-burner.server");
+    const renderEngine = parseRenderEngine(data.render_engine);
+    const gate = await captionBurnerPreflight({
+      captions: data.captions !== false,
+      engine: renderEngine,
+    });
+
     const { data: job, error: insErr } = await supabaseAdmin
       .from("studio_video_jobs")
       .insert({
@@ -573,9 +591,11 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         avatar_id: data.avatar_id,
         voice_id: voiceId,
         tts_model_id: ttsModelId,
-        status: "generating_audio",
+        status: gate.ok ? "generating_audio" : "queued",
+        last_error: gate.ok ? null : `${gate.reason}. ${CAPTION_BURNER_GUARD_NOTE}`,
         captions: data.captions !== false,
         caption_style: parseCaptionStyleId(data.caption_style),
+        render_engine: renderEngine,
         dynamic_scenes: data.dynamic_scenes === true || reelStructure,
         reel_structure: reelStructure,
         avatar_ids: avatarIds,
@@ -589,6 +609,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (insErr) throw new Error(insErr.message);
+    if (!gate.ok) return { ok: true, id: job.id as string, deferred: gate.reason };
 
     try {
       await supabaseAdmin
@@ -622,7 +643,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
           last_error: rendered.note,
         })
         .eq("id", job.id);
-      return { ok: true, id: job.id as string };
+      return { ok: true, id: job.id as string, deferred: null as string | null };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       await supabaseAdmin
@@ -646,6 +667,8 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       tts_model_id?: string;
       captions?: boolean;
       caption_style?: string;
+      /** Silnik wykończenia rolki (studio-render-engine.ts); brak = `auto`. */
+      render_engine?: string;
       dynamic_scenes?: boolean;
       reel_structure?: boolean;
       /** Pula twarzy z panelu (prowadzący + zestaw domyślnych). */
@@ -700,6 +723,7 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
         status: "queued",
         captions: data.captions !== false,
         caption_style: parseCaptionStyleId(data.caption_style),
+        render_engine: parseRenderEngine(data.render_engine),
         dynamic_scenes: data.dynamic_scenes === true || reelStructure,
         reel_structure: reelStructure,
         // Uzupełniane niżej — każda rolka serii dostaje kolejnego partnera.
