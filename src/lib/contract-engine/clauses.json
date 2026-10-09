@@ -1,6 +1,6 @@
 {
   "$comment": "Biblioteka klauzul. Każda klauzula ma warunek włączenia (wyrażenie nad danymi) i szablon tekstu. Renderer iteruje po sekcjach w kolejności 'order'.",
-  "wersja": "1.9",
+  "wersja": "1.10",
   "sekcje": {
     "PRZEDMIOT": {
       "tytul": "PRZEDMIOT UMOWY",
@@ -88,7 +88,7 @@
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 25,
       "warunek": "ma_prowizje_fy",
-      "tekst": "{{pb}} {{pb_poleca}} Pożyczkodawcy przekazanie z Kwoty Pożyczki kwoty {{warunki.prowizja_finance_you.kwota.slownie}} ({{warunki.prowizja_finance_you.kwota.cyframi}} zł), stanowiącej Prowizję od Pożyczkobiorcy należną Finance You sp. z o.o. (5% Kwoty Pożyczki, nie mniej niż 5 000,00 zł, bez VAT), na rachunek Finance You sp. z o.o. nr {{rachunek_fy}}."
+      "tekst": "{{pb}} {{pb_poleca}} Pożyczkodawcy przekazanie z Kwoty Pożyczki kwoty {{warunki.prowizja_finance_you.kwota.slownie}} ({{warunki.prowizja_finance_you.kwota.cyframi}} zł), stanowiącej Prowizję od Pożyczkobiorcy należną Finance You sp. z o.o., na rachunek Finance You sp. z o.o. nr {{rachunek_fy}}."
     },
     {
       "id": "KWO_03_wyplata_pelna",

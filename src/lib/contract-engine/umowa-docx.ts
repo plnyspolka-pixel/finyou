@@ -557,7 +557,7 @@ function protokolBloki(d: any, doc: Dokument): Blok[] {
       pierwszy("KWO_02_prowizja_nie_potracana", "KWO_02c_prowizja_nie_potracana_balon"),
     ],
     [
-      "Prowizja od Pożyczkobiorcy na rzecz Finance You potrącana z Kwoty Pożyczki (5% Kwoty Pożyczki, min 5 000 zł, bez VAT)",
+      "Prowizja od Pożyczkobiorcy na rzecz Finance You potrącana z Kwoty Pożyczki",
       odes("KWO_03e_prowizja_finance_you"),
     ],
     [
