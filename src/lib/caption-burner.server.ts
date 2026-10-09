@@ -31,6 +31,7 @@ import {
   type DynamicOverlays,
 } from "./caption-style";
 import { fetchBytes, storeMedia, type StoredMedia } from "./media-storage.server";
+import { parseRemotionJobId, resolveRenderEngine } from "./studio-render-engine";
 
 export type CaptionBurnerEnv = { configured: boolean; url: string; secret: string };
 
@@ -41,6 +42,18 @@ export function getCaptionBurnerEnv(): CaptionBurnerEnv {
 }
 
 export const isCaptionBurnerConfigured = (): boolean => getCaptionBurnerEnv().configured;
+
+const remotion = () => import("./remotion-render.server");
+
+/**
+ * Czy silnik wykończenia rolki jest skonfigurowany: `remotion` — sekrety
+ * Remotion Lambda, każdy inny (`auto`, `caption_burner`) — caption-burner.
+ */
+export async function isFinisherConfigured(engine: unknown): Promise<boolean> {
+  return resolveRenderEngine(engine) === "remotion"
+    ? (await remotion()).isRemotionConfigured()
+    : isCaptionBurnerConfigured();
+}
 
 /**
  * Czy rolki Studia dostają znaczek „AI" w rogu. Domyślnie tak — to
@@ -120,7 +133,12 @@ export async function submitCaptionBurn(input: {
   aiBadge?: boolean;
   overlays?: DynamicOverlays | null;
   name?: string;
+  /** Silnik wykończenia (`studio_video_jobs.render_engine`); brak = `auto`. */
+  engine?: unknown;
 }): Promise<string> {
+  if (resolveRenderEngine(input.engine) === "remotion") {
+    return (await remotion()).submitRemotionReel(input);
+  }
   let ass: string | null;
   if (input.srtUrl && input.styleId) {
     const srt = await fetchBytes(input.srtUrl, MAX_SRT_BYTES);
@@ -220,6 +238,10 @@ export async function getBurnerJobStatus(id: string): Promise<BurnerJobStatus> {
 export async function getCaptionBurnStatus(
   id: string,
 ): Promise<{ status: CaptionBurnState; error: string | null }> {
+  if (parseRemotionJobId(id)) {
+    const r = await (await remotion()).getRemotionRenderStatus(id);
+    return { status: r.status, error: r.error };
+  }
   const { status, error } = await getBurnerJobStatus(id);
   return { status, error };
 }
@@ -272,6 +294,7 @@ export async function fetchBurnerFile(id: string, maxBytes: number): Promise<Arr
 
 /** Pobiera gotowy MP4 z usługi i zapisuje go w publicznym buckecie `studio-media`. */
 export async function storeCaptionBurnResult(id: string, name: string): Promise<StoredMedia> {
+  if (parseRemotionJobId(id)) return (await remotion()).storeRemotionResult(id, name);
   const res = await burnerFetch(`/jobs/${encodeURIComponent(id)}/file`, {
     headers: { accept: "video/mp4" },
     timeoutMs: 5 * 60_000,
@@ -295,6 +318,10 @@ export async function storeCaptionBurnResult(id: string, name: string): Promise<
 
 /** Sprzątanie w usłudze — nie może psuć przebiegu (usługa i tak ma TTL zadań). */
 export async function discardBurnerJob(id: string): Promise<void> {
+  if (parseRemotionJobId(id)) {
+    await (await remotion()).discardRemotionRender(id);
+    return;
+  }
   try {
     await burnerFetch(`/jobs/${encodeURIComponent(id)}`, { method: "DELETE" });
   } catch {
@@ -315,7 +342,18 @@ export const discardCaptionBurn = discardBurnerJob;
  */
 export async function captionBurnerPreflight(input: {
   captions: boolean;
+  /** Silnik wykończenia; `remotion` sprawdza konfigurację Lambdy, nie usługę. */
+  engine?: unknown;
 }): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (resolveRenderEngine(input.engine) === "remotion") {
+    const r = (await remotion()).getRemotionEnv();
+    return r.configured
+      ? { ok: true }
+      : {
+          ok: false,
+          reason: `Remotion Lambda nie jest skonfigurowany (brak: ${r.missing.join(", ")})`,
+        };
+  }
   const env = getCaptionBurnerEnv();
   if (!env.configured) {
     return input.captions

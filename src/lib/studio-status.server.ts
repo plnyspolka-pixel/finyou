@@ -40,5 +40,7 @@ export async function collectStudioStatus(): Promise<StudioStatus> {
     aiConfigured: !!process.env.LOVABLE_API_KEY,
     captionBurnerConfigured: (await import("./caption-burner.server")).isCaptionBurnerConfigured(),
     aiBadgeEnabled: (await import("./caption-burner.server")).isAiBadgeEnabled(),
+    remotionConfigured: (await import("./remotion-render.server")).isRemotionConfigured(),
+    defaultRenderEngine: (await import("./studio-render-engine")).resolveRenderEngine("auto"),
   };
 }

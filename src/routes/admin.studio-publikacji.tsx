@@ -55,6 +55,11 @@ import {
   isCustomCaptionStyle,
   type CaptionStyleId,
 } from "@/lib/caption-style";
+import {
+  RENDER_ENGINES,
+  RENDER_ENGINE_LABELS,
+  type RenderEngine,
+} from "@/lib/studio-render-engine";
 import { DEFAULT_TTS_MODEL_ID, TTS_MODEL_OPTIONS, type TtsModelId } from "@/lib/studio-tts-models";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL, describeScenePlan } from "@/lib/studio-scenes";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
@@ -478,6 +483,13 @@ function StudioPage() {
   // scenariusza i czasów ElevenLabs (napisów HeyGena nie zamawiamy).
   const [captionStyle, setCaptionStyle] = useState<CaptionStyleId>(DEFAULT_CUSTOM_CAPTION_STYLE);
   const captionBurnerOn = !!status?.captionBurnerConfigured;
+  // Silnik wykończenia rolki (napisy, znaczek, nakładki): caption-burner albo
+  // Remotion na AWS Lambda; `auto` = ustawienie Studia.
+  const [renderEngine, setRenderEngine] = useState<RenderEngine>("auto");
+  const remotionOn = !!status?.remotionConfigured;
+  const effectiveEngine =
+    renderEngine === "auto" ? (status?.defaultRenderEngine ?? "caption_burner") : renderEngine;
+  const finisherOn = effectiveEngine === "remotion" ? remotionOn : captionBurnerOn;
   // Znaczek „AI" w rogu rolki kładzie usługa wypalania (HeyGen nie ma warstw).
   const aiBadgeOn = status?.aiBadgeEnabled !== false;
   // Montaż rolki: pojedyncze ujęcie | przebitki wskazane przez AI | stała
@@ -812,6 +824,7 @@ function StudioPage() {
           tts_model_id: ttsModelId,
           captions: captionsOn,
           caption_style: captionStyle,
+          render_engine: renderEngine,
           dynamic_scenes: dynamicScenesOn,
           reel_structure: reelStructureOn,
           avatar_ids: avatarRotation,
@@ -886,6 +899,7 @@ function StudioPage() {
           tts_model_id: ttsModelId,
           captions: captionsOn,
           caption_style: captionStyle,
+          render_engine: renderEngine,
           dynamic_scenes: dynamicScenesOn,
           reel_structure: reelStructureOn,
           avatar_ids: avatarRotation,
@@ -2051,28 +2065,45 @@ function StudioPage() {
                         Tekst napisów to dokładnie scenariusz z panelu, czasy słów prosto z
                         ElevenLabs — HeyGen nie dokłada własnych napisów.
                       </p>
-                      {!captionBurnerOn && (
+                      {!finisherOn && (
                         <p className="text-xs text-amber-600 dark:text-amber-500">
-                          Brak usługi napisów (sekrety CAPTION_BURNER_URL i CAPTION_BURNER_SECRET,
-                          opis w docs/studio-publikacji.md) — rolka z napisami zatrzyma się z błędem
-                          do ponowienia po konfiguracji.
+                          {effectiveEngine === "remotion"
+                            ? "Remotion Lambda nie jest skonfigurowany (sekrety REMOTION_*, opis w services/remotion/README.md) — render HeyGena nie ruszy, zadanie poczeka w kolejce."
+                            : "Brak usługi napisów (sekrety CAPTION_BURNER_URL i CAPTION_BURNER_SECRET, opis w docs/studio-publikacji.md) — rolka z napisami zatrzyma się z błędem do ponowienia po konfiguracji."}
                         </p>
                       )}
                       {aiBadgeOn && (
                         <p
                           className={
-                            captionBurnerOn
+                            finisherOn
                               ? "text-xs text-muted-foreground"
                               : "text-xs text-amber-600 dark:text-amber-500"
                           }
                         >
-                          {captionBurnerOn
-                            ? "Każda rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner razem z napisami)."
-                            : "Znaczek „AI” w rogu wymaga usługi caption-burner — bez niej rolki wyjdą bez znaczka."}
+                          {finisherOn
+                            ? "Każda rolka dostaje w prawym górnym rogu mały znaczek „AI” (kładzie go silnik wykończenia razem z napisami)."
+                            : "Znaczek „AI” w rogu wymaga silnika wykończenia — bez niego rolki wyjdą bez znaczka."}
                         </p>
                       )}
                     </>
                   )}
+                  <select
+                    className="h-10 w-full rounded-md border bg-background p-2 text-sm"
+                    value={renderEngine}
+                    title="Silnik wykończenia rolki"
+                    onChange={(e) => setRenderEngine(e.target.value as RenderEngine)}
+                  >
+                    {RENDER_ENGINES.map((id) => (
+                      <option key={id} value={id}>
+                        Wykończenie: {RENDER_ENGINE_LABELS[id]}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Czym kładziemy napisy, znaczek „AI” i nakładki na film z HeyGena. Remotion
+                    renderuje na AWS Lambda
+                    {remotionOn ? "" : " (jeszcze nieskonfigurowany)"}.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">

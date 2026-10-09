@@ -36,6 +36,7 @@ import {
   ttsModelLabel,
 } from "@/lib/studio-tts-models";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL } from "@/lib/studio-scenes";
+import { RENDER_ENGINES } from "@/lib/studio-render-engine";
 import type { StudioDefaultAvatar } from "@/lib/studio-avatars.server";
 
 const ADMIN_ONLY = ["administrator"] as const;
@@ -165,6 +166,21 @@ export const heygenStatus = defineTool({
         caption_burner: burner.isCaptionBurnerConfigured()
           ? await burner.checkCaptionBurnerHealth()
           : { ok: false, ffmpeg: null, error: "nie skonfigurowana (CAPTION_BURNER_URL)" },
+        render_engine: await (async () => {
+          const { resolveRenderEngine } = await import("@/lib/studio-render-engine");
+          const { getRemotionEnv } = await import("@/lib/remotion-render.server");
+          const r = getRemotionEnv();
+          return {
+            default: resolveRenderEngine("auto"),
+            remotion: {
+              configured: r.configured,
+              missing: r.missing,
+              region: r.region,
+              function_name: r.functionName || null,
+            },
+            note: "Silnik wykończenia rolki (napisy, znaczek „AI”, nakładki) po renderze HeyGena: `caption_burner` (FFmpeg) albo `remotion` (StudioReel na AWS Lambda). Wybór per zadanie polem `render_engine` w `create_studio_video_job` / `update_studio_job`; `auto` = STUDIO_RENDER_ENGINE (domyślnie caption-burner).",
+          };
+        })(),
         default_caption_style: DEFAULT_CUSTOM_CAPTION_STYLE,
         captions_note:
           "Napisy rolek Studia powstają z tekstu scenariusza i czasów znaków ElevenLabs i wypala je usługa caption-burner — HeyGen nie dostaje zlecenia na napisy. Bez usługi rolka z napisami nie wychodzi (zadanie pada do ponowienia).",
@@ -823,6 +839,12 @@ export const generateStudioImage = defineTool({
     }),
 });
 
+const RENDER_ENGINE = z
+  .enum(RENDER_ENGINES)
+  .describe(
+    "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`, domyślnie caption-burner). HeyGen i ElevenLabs działają tak samo przy obu.",
+  );
+
 export const createStudioVideoJob = defineTool({
   name: "create_studio_video_job",
   title: "Create studio video job",
@@ -875,6 +897,7 @@ export const createStudioVideoJob = defineTool({
     publish_title: z.string().max(100).optional(),
     publish_description: z.string().max(5000).optional(),
     material_audience: MATERIAL_AUDIENCE.optional(),
+    render_engine: RENDER_ENGINE.default("auto"),
     start_now: z.boolean().default(false),
   },
   annotations: WRITE,
@@ -911,7 +934,9 @@ export const createStudioVideoJob = defineTool({
       // kolejki, a tick Studia ruszy je, gdy usługa wróci.
       const { captionBurnerPreflight, CAPTION_BURNER_GUARD_NOTE } =
         await import("@/lib/caption-burner.server");
-      const gate = a.start_now ? await captionBurnerPreflight({ captions: a.captions }) : null;
+      const gate = a.start_now
+        ? await captionBurnerPreflight({ captions: a.captions, engine: a.render_engine })
+        : null;
       const startNow = a.start_now && gate?.ok !== false;
       if (!script && startNow) {
         const { generateVideoScript } = await import("@/lib/studio-ai.server");
@@ -941,6 +966,7 @@ export const createStudioVideoJob = defineTool({
         ...(gate && !gate.ok ? { last_error: `${gate.reason}. ${CAPTION_BURNER_GUARD_NOTE}` } : {}),
         captions: a.captions,
         caption_style: captionStyle,
+        render_engine: a.render_engine,
         dynamic_scenes: a.dynamic_scenes || a.reel_structure,
         reel_structure: a.reel_structure,
         auto_publish_platforms: a.auto_publish_platforms,
@@ -953,7 +979,7 @@ export const createStudioVideoJob = defineTool({
         s,
         "studio_video_jobs",
         row,
-        "id, status, prompt, publish_title, avatar_id, avatar_ids, reel_structure, dynamic_scenes, caption_style, tts_model_id, auto_publish_platforms",
+        "id, status, prompt, publish_title, avatar_id, avatar_ids, reel_structure, dynamic_scenes, caption_style, render_engine, tts_model_id, auto_publish_platforms",
       );
       const { setJobMaterialAudience } = await import("@/lib/studio-materials.server");
       await setJobMaterialAudience(job.id, a.material_audience);
@@ -1021,7 +1047,7 @@ export const updateStudioJob = defineTool({
   name: "update_studio_job",
   title: "Update studio video job",
   description:
-    "Zmienia zadanie Studia: scenariusz, awatar (i rotację a-rolli `avatar_ids`), głos i model lektora (`tts_model`), napisy (i ich styl), przebitki oraz strukturę rolki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
+    "Zmienia zadanie Studia: scenariusz, awatar (i rotację a-rolli `avatar_ids`), głos i model lektora (`tts_model`), napisy (i ich styl), przebitki oraz strukturę rolki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. `render_engine` (caption-burner / Remotion) można zmienić w każdym statusie poza `captioning` (wykończenie w toku) — silnik czyta się przy domykaniu renderu, więc działa też dla zadania w `rendering`, a dla `failed` / `ready` przy ponowieniu i zmianie napisów. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
   inputSchema: {
     id: z.string().uuid(),
     script: z.string().max(5000).optional(),
@@ -1041,6 +1067,7 @@ export const updateStudioJob = defineTool({
     publish_description: z.string().max(5000).optional(),
     publish_privacy: z.enum(PRIVACY).optional(),
     auto_publish_platforms: z.array(z.enum(PLATFORMS)).optional(),
+    render_engine: RENDER_ENGINE.optional(),
   },
   annotations: WRITE_IDEMPOTENT,
   handler: (a, ctx: ToolContext) =>
@@ -1078,14 +1105,20 @@ export const updateStudioJob = defineTool({
           "Film już trafił do kolejek publikacji — zmień wpisy w `list_youtube_queue` / kolejce social.",
         );
       }
-      const patch = { ...renderPatch, ...publishPatch };
+      const enginePatch = patchOf(a, ["render_engine"]);
+      if (Object.keys(enginePatch).length && job.status === "captioning") {
+        return fail(
+          "Wykończenie rolki jest w toku (captioning) — zmień silnik po jego zakończeniu albo niepowodzeniu.",
+        );
+      }
+      const patch = { ...renderPatch, ...publishPatch, ...enginePatch };
       if (!Object.keys(patch).length) return fail("Brak pól do zmiany.");
       const updated = await updateOne(
         s,
         "studio_video_jobs",
         a.id,
         patch,
-        "id, status, publish_title, publish_privacy, auto_publish_platforms, captions, caption_style, dynamic_scenes, reel_structure, avatar_id, avatar_ids, voice_id, tts_model_id",
+        "id, status, publish_title, publish_privacy, auto_publish_platforms, captions, caption_style, render_engine, dynamic_scenes, reel_structure, avatar_id, avatar_ids, voice_id, tts_model_id",
       );
       return ok({ ok: true, job: updated, actor: actorId(ctx) });
     }),
