@@ -58,11 +58,23 @@ na Claude API, baza na własnym Supabase (Frankfurt), hosting na własnym koncie
 6. Crony odtworzone z nowym adresem aplikacji, retencja logów `cron.job_run_details` ~3 dni.
 7. Najpierw próbna kopia; finalna kopia i przełączenie w oknie serwisowym.
 
-## Sekrety (tylko w ustawieniach środowiska sesji, nigdy w czacie ani w repo)
+## Dostęp sesji do nowego projektu (tylko „Network secrets”, nigdy w czacie, repo ani zmiennych)
 
-- `NEW_SUPABASE_DB_URL` — Connection string, Session pooler, z hasłem
-- `NEW_SUPABASE_URL` — Project URL
-- `NEW_SUPABASE_SERVICE_ROLE_KEY` — klucz `service_role`
+Ograniczenia środowiska Claude Code (sprawdzone 2026-10-09): kontener wychodzi do sieci
+wyłącznie przez proxy HTTPS — połączenia Postgres (port 5432) z kontenera NIE działają,
+więc `psql`/`pg_dump` do nowej bazy odpadają. Zmienne środowiskowe są czytelne dla sesji,
+a network secrets proxy dokleja do nagłówków HTTP bez ujawniania wartości. Dlatego:
+
+1. **Supabase Management API** — host `api.supabase.com`, Bearer, wartość: Personal Access
+   Token z supabase.com/dashboard/account/tokens. Służy do wykonywania SQL na nowej bazie
+   (`POST /v1/projects/{ref}/database/query`). Usunąć token po migracji.
+2. **Nowy projekt — klucz serwisowy** — host `<ref>.supabase.co`, nagłówki `apikey` (bez
+   prefiksu) i `Authorization` (prefiks `Bearer`), wartość: legacy `service_role` JWT.
+   Służy do kopiowania Storage.
+
+Hasło bazy `postgres` nie jest potrzebne: do transferu `postgres_fdw` (stara baza → nowa)
+tworzę przez Management API tymczasową rolę `migrator` z losowym hasłem i usuwam ją po
+migracji. Hasło tej roli przechodzi przez Lovable, ale rola znika po przeniesieniu danych.
 
 ## Do sprawdzenia w kodzie (osobno)
 
