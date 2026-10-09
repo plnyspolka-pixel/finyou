@@ -20,6 +20,7 @@ import {
   Lock,
   MapPin,
   Phone,
+  Send,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -352,6 +353,13 @@ function ProjectCard({
                 Zamów raport analityczny
               </Button>
             )}
+            {/* Złóż ofertę — formularz z kalkulatorem w pełnym widoku Projektu */}
+            <Button asChild size="sm" variant="outline">
+              <Link to="/inwestor/wniosek/$id" params={{ id: p.applicationId }}>
+                <Send className="mr-2 h-4 w-4" />
+                Złóż ofertę
+              </Link>
+            </Button>
             {report.status === "running" ? (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> raport w przygotowaniu
