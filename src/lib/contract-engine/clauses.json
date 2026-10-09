@@ -1,6 +1,6 @@
 {
   "$comment": "Biblioteka klauzul. Każda klauzula ma warunek włączenia (wyrażenie nad danymi) i szablon tekstu. Renderer iteruje po sekcjach w kolejności 'order'.",
-  "wersja": "1.5",
+  "wersja": "1.6",
   "sekcje": {
     "PRZEDMIOT": {
       "tytul": "PRZEDMIOT UMOWY",
@@ -74,14 +74,14 @@
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 20,
       "warunek": "warunki.prowizja.model == 'nie_potracana_raty' and not ma_prowizje_w_racie_koncowej",
-      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla {{pb_dop}}, odracza jej zapłatę i rozkłada ją na raty miesięczne zgodnie z Załącznikiem nr 1. Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji. W razie wcześniejszej spłaty prowizja nie podlega obniżeniu, a jej niezapłacona część staje się płatna wraz ze spłacanym kapitałem."
+      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla {{pb_dop}}, odracza jej zapłatę i rozkłada ją na raty miesięczne zgodnie z Załącznikiem nr 1. Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji. W razie wcześniejszej spłaty całości pożyczki przed upływem 1 roku od dnia zawarcia Umowy prowizja ulega obniżeniu o 30%, a w razie takiej spłaty po upływie 1 roku, lecz przed upływem 2 lat od dnia zawarcia Umowy — o 20%; przy spłacie po upływie 2 lat od dnia zawarcia Umowy prowizja nie podlega obniżeniu. Obniżenie pomniejsza niezapłaconą część prowizji, która w pozostałej wysokości staje się płatna wraz ze spłacanym kapitałem."
     },
     {
       "id": "KWO_02c_prowizja_nie_potracana_balon",
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 20,
       "warunek": "warunki.prowizja.model == 'nie_potracana_raty' and ma_prowizje_w_racie_koncowej",
-      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla {{pb_dop}}, odracza jej zapłatę i rozkłada ją na raty zgodnie z Załącznikiem nr 1, w tym: {{prowizja_ratalna_cyframi}} zł w {{warunki.harmonogram.liczba_rat}} ratach miesięcznych oraz {{warunki.prowizja.w_racie_koncowej.cyframi}} zł płatne wraz z ratą końcową (balonową). Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji. W razie wcześniejszej spłaty prowizja nie podlega obniżeniu, a jej niezapłacona część staje się płatna wraz ze spłacanym kapitałem."
+      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla {{pb_dop}}, odracza jej zapłatę i rozkłada ją na raty zgodnie z Załącznikiem nr 1, w tym: {{prowizja_ratalna_cyframi}} zł w {{warunki.harmonogram.liczba_rat}} ratach miesięcznych oraz {{warunki.prowizja.w_racie_koncowej.cyframi}} zł płatne wraz z ratą końcową (balonową). Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji. W razie wcześniejszej spłaty całości pożyczki przed upływem 1 roku od dnia zawarcia Umowy prowizja ulega obniżeniu o 30%, a w razie takiej spłaty po upływie 1 roku, lecz przed upływem 2 lat od dnia zawarcia Umowy — o 20%; przy spłacie po upływie 2 lat od dnia zawarcia Umowy prowizja nie podlega obniżeniu. Obniżenie pomniejsza niezapłaconą część prowizji, która w pozostałej wysokości staje się płatna wraz ze spłacanym kapitałem."
     },
     {
       "id": "KWO_02b_prowizja_potracana",
@@ -161,7 +161,7 @@
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 56,
       "warunek": true,
-      "tekst": "oryginału Umowy wraz z załącznikami, {{pb_podpis_poswiadczony}};",
+      "tekst": "oryginału Umowy wraz z załącznikami;",
       "poziom": "podpunkt"
     },
     {

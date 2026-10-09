@@ -13,7 +13,7 @@ porecziciel?: jak strona + zakres_odpowiedzialnosci? ("rzeczowa"|"rzeczowa_i_oso
 
 warunki: {
   kwota_pozyczki {cyframi} (Kwota Udzielona), prowizja { kwota {cyframi} — STAŁA łączna prowizja inwestora rozłożona w ratach, model? ("nie_potracana_raty" domyślnie | "potracana_z_wyplaty"), w_racie_koncowej? {cyframi} — część prowizji (zawarta w kwota) płatna wraz z ratą końcową (balonową); reszta równo na wszystkie raty }, prowizja_finance_you? { kwota {cyframi} } (Prowizja od Pożyczkobiorcy: 5% Kwoty Udzielonej, min 5 000 zł, bez VAT — potrącana z wypłaty: inwestor przelewa ją na rachunek FY, resztę Pożyczkobiorcy; gdy Pożyczkodawcą jest inny podmiot niż Finance You i pole pominięto, system sam je wylicza; null = umowa bez prowizji FY),
-  oprocentowanie (string, JEDNO miejsce po przecinku, np. "15,5"), cel (min. 5 znaków), zakaz_celu_nieruchomosciowego? (bool; domyślnie true — § 1 ust. 3 zakazuje przeznaczenia pożyczki na zakup, remont lub spłatę zobowiązań dotyczących nieruchomości; domyślnie false, gdy pożyczka spłaca wierzycieli hipotecznych),
+  oprocentowanie (string, JEDNO miejsce po przecinku, np. "15,5"), cel (min. 5 znaków; domyślnie „Finansowanie bieżącej działalności gospodarczej”), zakaz_celu_nieruchomosciowego? (bool; domyślnie true — § 1 ust. 3 zakazuje przeznaczenia pożyczki na zakup, remont lub spłatę zobowiązań dotyczących nieruchomości; domyślnie false, gdy pożyczka spłaca wierzycieli hipotecznych),
   harmonogram { liczba_rat (1–360), typ ("balonowy"|"rowne_raty"|"malejace"), data_pierwszej_raty "DD.MM.RRRR", dzien_miesiaca (1–28), kwota_raty? {cyframi} (przy typie balonowym = pułap raty miesięcznej — WYMAGANA do policzenia rat), amortyzacja_kapitalu? ("nadwyzka_raty" domyślnie — nadwyżka pułapu spłaca kapitał | "w_balonie" — cały kapitał w racie końcowej) },
   rachunki { wyplata (nr rachunku pożyczkobiorcy), splata (nr rachunku pożyczkodawcy; gdy pożyczkodawcą jest Finance You i pole jest puste, system wstawi jedyny rachunek Finance You), finance_you (NIE podawaj — system zawsze wpisuje jedyny rachunek Finance You, gdy jest prowizja FY) }
 }
@@ -22,6 +22,6 @@ nieruchomosci[≥1]: { nr_kw (np. "LU1I/00123456/7"), sad (np. "Sąd Rejonowy Lu
 
 zabezpieczenia: { egzekucja_777 { kwota {cyframi}, poddaje_sie: ["pozyczkobiorca"|"porecziciel"|"wlasciciel_osoba_trzecia"], data_graniczna "DD.MM.RRRR", termin_wezwania_dni? (np. 7) }, charakter_hipoteki? ("laczna"|"odrebna") }
 
-wniosek?: { pep? (bool: false = wnioskodawca nie jest PEP, true = jest), aml_ocena_ryzyka? ("niskie"|"srednie"|"wysokie"), aml_powyzej_15000_eur? (bool) } — pola wniosku o pożyczkę; nieustalone zostają do zaznaczenia przy podpisie.
+wniosek?: { pep? (bool; wniosek zawiera zawsze oświadczenie „nie jestem PEP” bez pól wyboru — true blokuje generację), aml_ocena_ryzyka? ("niskie"|"srednie"|"wysokie"), aml_powyzej_15000_eur? (bool) } — pola wniosku o pożyczkę; nieustalone pola AML zostają do zaznaczenia przy podpisie.
 
-protokol_negocjacji?: { data_od? "DD.MM.RRRR", data_do? "DD.MM.RRRR" (domyślnie data umowy), posrednik? { imie_nazwisko, telefon? }, formy? ["telefonicznie"|"elektronicznie"|"posrednik"|"osobiscie"] (domyślnie z telefonu/e-maila pożyczkobiorcy i pośrednika) } — Załącznik nr 2.`;
+protokol_negocjacji?: { data_od? "DD.MM.RRRR" (domyślnie dzień przyjęcia wniosku do systemu), data_do? "DD.MM.RRRR" (domyślnie data umowy), posrednik? { imie_nazwisko, telefon? }, formy? ["telefonicznie"|"elektronicznie"|"posrednik"|"osobiscie"] (domyślnie z telefonu/e-maila pożyczkobiorcy i pośrednika) } — Załącznik nr 2.`;

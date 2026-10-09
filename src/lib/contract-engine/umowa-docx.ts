@@ -202,11 +202,8 @@ function formyWniosku(l: any[]) {
     reguluje: wielu ? "regulujemy" : "reguluję",
     wobec: wielu ? "wobec nas" : "wobec mnie",
     pepNie: wielu
-      ? "Żaden z nas nie jest osobą zajmującą eksponowane stanowisko polityczne (PEP) ani osobą z nią powiązaną."
-      : "Nie jestem osobą zajmującą eksponowane stanowisko polityczne (PEP), ani osobą z nią powiązaną.",
-    pepTak: wielu
-      ? "Co najmniej jeden z nas jest osobą PEP lub osobą powiązaną z PEP."
-      : "Jestem osobą PEP lub osobą powiązaną z PEP.",
+      ? "Oświadczamy, że żaden z nas nie jest osobą zajmującą eksponowane stanowisko polityczne (PEP) ani osobą z nią powiązaną."
+      : "Oświadczam, że nie jestem osobą zajmującą eksponowane stanowisko polityczne (PEP) ani osobą z nią powiązaną.",
     jestem: wielu ? "jesteśmy" : "jestem",
     swiadomy: g("świadomi", "świadoma", "świadomy"),
     zapoznalem: g("zapoznaliśmy się", "zapoznałam się", "zapoznałem się"),
@@ -241,7 +238,6 @@ function wniosekBloki(d: any): Blok[] {
   if (e777)
     zabTxt += ` oraz oświadczenie o poddaniu się egzekucji (art. 777 § 1 pkt 5 k.p.c.) do ${zl(e777.kwota?.cyframi)}`;
 
-  const pep = w.pep;
   const ocena = w.aml_ocena_ryzyka;
   const prog = w.aml_powyzej_15000_eur;
 
@@ -308,11 +304,10 @@ function wniosekBloki(d: any): Blok[] {
           ),
         ]
       : []),
+    // Samo oświadczenie, bez pól wyboru (decyzja z 10.2026): wniosek osoby
+    // PEP nie jest generowany z silnika — walidator blokuje wniosek.pep = true.
     { t: "naglowek", tekst: "V. OŚWIADCZENIE PEP" },
-    akapit(`${CHECK(pep === false)} ${F.pepNie}`, { wciecie: "lista" }),
-    akapit(`${CHECK(pep === true)} ${F.pepTak}`, {
-      wciecie: "lista",
-    }),
+    akapit(F.pepNie),
     { t: "naglowek", tekst: "VI. AML – DO WYPEŁNIENIA PRZEZ POŻYCZKODAWCĘ" },
     akapit([
       r("Ocena ryzyka:  "),

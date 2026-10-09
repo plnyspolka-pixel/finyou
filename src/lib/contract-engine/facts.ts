@@ -395,9 +395,6 @@ export function zbudujFakty(d: any): Record<string, any> {
   f.pb_spelnia = wielu ? "spełniają" : "spełnia";
   f.pb_zlozy = wielu ? "złożą" : "złoży";
   f.pb_dopusci = wielu ? "dopuszczą" : "dopuści";
-  f.pb_podpis_poswiadczony = wielu
-    ? "z podpisami Pożyczkobiorców poświadczonymi notarialnie"
-    : "z podpisem Pożyczkobiorcy poświadczonym notarialnie";
   // Oświadczenie o aktywnym wykonywaniu działalności (CEIDG) — pożyczkobiorca
   // będący osobą fizyczną przedsiębiorcą (nie rolnikiem prowadzącym gospodarstwo).
   f.ma_pb_ceidg = poz.some(

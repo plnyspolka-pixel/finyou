@@ -424,6 +424,14 @@ export function walidujReguly(d: any): Problem[] {
       );
   }
 
+  // R34: wniosek zawiera wyłącznie oświadczenie „nie jestem PEP” (bez pól
+  // wyboru) — wniosku osoby PEP silnik nie składa.
+  if (d.wniosek?.pep === true)
+    blad(
+      "wniosek.pep",
+      "Wnioskodawca jest osobą PEP — wniosek z silnika zawiera wyłącznie oświadczenie, że wnioskodawca nie jest PEP; przygotuj wniosek indywidualnie",
+    );
+
   // R29: oprocentowanie umowne ≤ odsetki maksymalne kapitałowe (art. 359 § 2¹ KC)
   // — twarda blokada; szczegółowe błędy silnika (pułap raty) dolicza
   // `problemySilnika` w umowa-agent-core.

@@ -793,13 +793,13 @@ describe("E. Determinizm", () => {
 
 // ══ J. Zmiany szablonu generatora (spec) ══
 describe("J. Zmiany szablonu generatora", () => {
-  it("J1 klauzula prowizji: przy wcześniejszej spłacie prowizja nie podlega obniżeniu (biblioteka 1.3)", () => {
+  it("J1 klauzula prowizji: wcześniejsza spłata w 1. roku −30%, w 2. roku −20% (biblioteka 1.6)", () => {
     const p1 = plaski(S1);
     expect(p1.includes("Prowizja nie jest potrącana")).toBe(true);
     expect(p1.includes("wymagalna w całości w dniu zawarcia Umowy")).toBe(true);
     expect(
       p1.includes(
-        "W razie wcześniejszej spłaty prowizja nie podlega obniżeniu, a jej niezapłacona część staje się płatna wraz ze spłacanym kapitałem.",
+        "W razie wcześniejszej spłaty całości pożyczki przed upływem 1 roku od dnia zawarcia Umowy prowizja ulega obniżeniu o 30%, a w razie takiej spłaty po upływie 1 roku, lecz przed upływem 2 lat od dnia zawarcia Umowy — o 20%; przy spłacie po upływie 2 lat od dnia zawarcia Umowy prowizja nie podlega obniżeniu.",
       ),
     ).toBe(true);
   });

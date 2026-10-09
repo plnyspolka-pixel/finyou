@@ -25,7 +25,7 @@ import { waliduj } from "./validator";
 import { autonaprawHarmonogram, walidujHarmonogram, type KorektaGroszowa } from "./schedule";
 import { generujKomplet, tekstKompletu, type KompletWynik } from "./komplet";
 import { normalizujNumeryKw, uzupelnijSlownie } from "./umowa-agent-core";
-import { problemyKosztowe, uzupelnijDomyslne } from "./uzupelnienia";
+import { problemyKosztowe, uzupelnijDomyslne, ustawPoczatekNegocjacji } from "./uzupelnienia";
 import { nieruchomosciZKw } from "./kw-nieruchomosci.server";
 import type { Problem } from "./validator";
 import { zapiszUmoweDocx } from "./umowa-storage.server";
@@ -106,6 +106,14 @@ async function zbudujIzweryfikuj(supabase: any, profile: ClientProfile, input: U
   };
   const umowa = buildUmowaData(profile, calc, opts);
 
+  // Zał. nr 2: okres negocjacji od dnia przyjęcia wniosku do systemu.
+  const { dataPrzyjeciaWniosku, wniosekProfilu } =
+    await import("@/lib/clients/kartoteka-umowy.server");
+  const korektyNegocjacji = ustawPoczatekNegocjacji(
+    umowa,
+    await dataPrzyjeciaWniosku(supabase, await wniosekProfilu(supabase, profile.id)),
+  );
+
   // Auto-uzupełnianie z KW (jak `kw_numbers` w MCP): sąd, opis lokalu z działu
   // I-O, właściciele i PESEL z działu II, obciążenia z działów III/IV. Brak
   // treści w cache nie blokuje — nieruchomość zostaje ze szkicu profilu.
@@ -150,6 +158,7 @@ async function zbudujIzweryfikuj(supabase: any, profile: ClientProfile, input: U
   const domyslne = uzupelnijDomyslne(umowa);
   uzupelnijSlownie(umowa);
   const autokorekty: KorektaGroszowa[] = [
+    ...korektyNegocjacji,
     ...kwAutokorekty,
     ...domyslne.autokorekty,
     ...autonaprawHarmonogram(umowa.warunki),

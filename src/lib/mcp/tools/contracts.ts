@@ -72,17 +72,20 @@ async function zbudujSzkic(
     umowa?: Record<string, unknown>;
     patch?: Record<string, unknown>;
     kw_numbers?: string[];
+    loan_application_id?: string;
   },
 ) {
   const { scalPatch, przetworzSzkic } = await import("@/lib/contract-engine/umowa-agent-core");
   const problemyStartowe: Problem[] = [];
   const kartotekaKorekty: { sciezka: string; komunikat: string }[] = [];
   let szkic: any = {};
+  let wniosekId: string | null = args.loan_application_id ?? null;
 
   if (args.profile_id) {
     const { buildUmowaData, profileToCalcPayload } =
       await import("@/lib/contract-engine/profile-to-umowa");
     const { profile, sourceApplicationId } = await loadProfile(s, args.profile_id);
+    wniosekId ??= sourceApplicationId;
     const calc = (args.calc as any) ?? profileToCalcPayload(profile);
     if (calc) {
       szkic = buildUmowaData(profile, calc);
@@ -112,6 +115,15 @@ async function zbudujSzkic(
     szkic.nieruchomosci = r.nieruchomosci;
     kwOstrzezenia = r.ostrzezenia;
     kwAutokorekty = r.autokorekty;
+  }
+
+  // Zał. nr 2: okres negocjacji od dnia przyjęcia wniosku do systemu.
+  if (wniosekId) {
+    const { dataPrzyjeciaWniosku } = await import("@/lib/clients/kartoteka-umowy.server");
+    const { ustawPoczatekNegocjacji } = await import("@/lib/contract-engine/uzupelnienia");
+    kartotekaKorekty.push(
+      ...ustawPoczatekNegocjacji(szkic, await dataPrzyjeciaWniosku(s, wniosekId)),
+    );
   }
 
   const przetworzony = przetworzSzkic(szkic);
@@ -183,6 +195,13 @@ export const draftContract = defineTool({
       .optional()
       .describe("Numery KW zabezpieczenia — nieruchomości z treści KW w cache."),
     excluded_clauses: excludedClausesSchema,
+    loan_application_id: z
+      .string()
+      .uuid()
+      .optional()
+      .describe(
+        "Id wniosku (loan_applications) — okres negocjacji w Zał. nr 2 liczony od dnia przyjęcia wniosku (domyślnie wniosek z profilu).",
+      ),
     preview: z
       .boolean()
       .default(true)

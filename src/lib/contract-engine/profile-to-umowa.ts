@@ -25,6 +25,7 @@ import { buildEngineSchedule } from "./loan-schedule";
 import { fyCommission } from "./fees";
 import { FINANCE_YOU } from "./finance-you";
 import { amountToWordsPLN } from "../amount-to-words-pl";
+import { DOMYSLNY_CEL_POZYCZKI } from "./uzupelnienia";
 
 // ── konwersje pomocnicze ───────────────────────────────────────
 
@@ -210,7 +211,10 @@ function budujWarunki(profile: ClientProfile, payload: LoanCalcPayload): any {
     prowizja: czysc({ kwota: kwota(prowizjaInwestora), model: "nie_potracana_raty" }),
     prowizja_finance_you: prowizjaFY > 0 ? { kwota: kwota(prowizjaFY) } : undefined,
     oprocentowanie: oprocentowanie(payload.annualRate),
-    cel: profile.borrowerData?.loanPurpose || "",
+    // Cel z formularza klienta bywa opisem prywatnym („remont”, „spłata
+    // kredytu”) — do wniosku i umowy zawsze stała formuła; inny cel tylko
+    // jawnie przez łatkę (warunki.cel).
+    cel: DOMYSLNY_CEL_POZYCZKI,
     harmonogram: czysc({
       liczba_rat: sched.length || Number(payload.months) || 0,
       typ: balon > 0 ? "balonowy" : "rowne_raty",

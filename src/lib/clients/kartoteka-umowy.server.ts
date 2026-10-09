@@ -45,3 +45,31 @@ function zapisCeidgDlaNip(snapshot: unknown, nip: unknown): CeidgActivity | null
     ? sn.activity
     : null;
 }
+
+/** Dzień przyjęcia wniosku do systemu (loan_applications.created_at, ISO). */
+export async function dataPrzyjeciaWniosku(
+  s: SupabaseClient,
+  applicationId: string | null | undefined,
+): Promise<string | null> {
+  if (!applicationId) return null;
+  const { data } = await (s as any)
+    .from("loan_applications")
+    .select("created_at")
+    .eq("id", applicationId)
+    .maybeSingle();
+  return data?.created_at ?? null;
+}
+
+/** Wniosek, z którego powstał profil klienta (client_profiles.source_application_id). */
+export async function wniosekProfilu(
+  s: SupabaseClient,
+  profileId: string | null | undefined,
+): Promise<string | null> {
+  if (!profileId) return null;
+  const { data } = await (s as any)
+    .from("client_profiles")
+    .select("source_application_id")
+    .eq("id", profileId)
+    .maybeSingle();
+  return data?.source_application_id ?? null;
+}

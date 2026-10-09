@@ -145,7 +145,7 @@ describe("przypadek końcowy zlecenia (a)", () => {
     expect(k1.sha256).toBe(k2.sha256);
     expect(Buffer.from(k1.bytes).equals(Buffer.from(k2.bytes))).toBe(true);
     expect(k1.wersjaBiblioteki).toBe(WERSJA_BIBLIOTEKI);
-    expect(WERSJA_BIBLIOTEKI).toBe("1.5");
+    expect(WERSJA_BIBLIOTEKI).toBe("1.6");
   });
 
   it("plik .docx ma komplet części pakietu (document, styles, relacje)", async () => {
@@ -254,7 +254,7 @@ describe("biblioteka 1.4 — przypadek końcowy (a): JDG kobieta, hipoteka na ko
   it("§ 2 ust. 2 — prowizja przy wcześniejszej spłacie; ust. 3 odsyła do ust. 6", async () => {
     const { tekst } = await komplet(przypadekA());
     expect(tekst).toContain(
-      "W razie wcześniejszej spłaty prowizja nie podlega obniżeniu, a jej niezapłacona część staje się płatna wraz ze spłacanym kapitałem.",
+      "W razie wcześniejszej spłaty całości pożyczki przed upływem 1 roku od dnia zawarcia Umowy prowizja ulega obniżeniu o 30%, a w razie takiej spłaty po upływie 1 roku, lecz przed upływem 2 lat od dnia zawarcia Umowy — o 20%; przy spłacie po upływie 2 lat od dnia zawarcia Umowy prowizja nie podlega obniżeniu.",
     );
     expect(tekst).toContain(
       "w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w § 2 ust. 6.",
@@ -267,9 +267,7 @@ describe("biblioteka 1.4 — przypadek końcowy (a): JDG kobieta, hipoteka na ko
     expect(tekst).toContain(
       "6. Umowa jest ważna z chwilą jej podpisania, a wchodzi w życie z dniem przekazania Pożyczkodawcy łącznie:",
     );
-    expect(tekst).toContain(
-      "a) oryginału Umowy wraz z załącznikami, z podpisem Pożyczkobiorcy poświadczonym notarialnie;",
-    );
+    expect(tekst).toContain("a) oryginału Umowy wraz z załącznikami;");
     expect(tekst).toContain(
       "b) wypisów aktów notarialnych obejmujących żądanie wpisu hipoteki, o której mowa w § 3 ust. 1 (wraz z żądaniem wpisu roszczenia o przeniesienie hipoteki na opróżnione miejsce hipoteczne), oraz oświadczenie o poddaniu się egzekucji w trybie art. 777 § 1 pkt 5 k.p.c., o którym mowa w § 3 ust. 4;",
     );

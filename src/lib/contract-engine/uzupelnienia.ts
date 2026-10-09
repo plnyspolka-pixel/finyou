@@ -16,6 +16,7 @@ import { ostrzezeniaKosztowe } from "./cost-warnings";
 import { sadZKodu, KW_COURT_CODES_SOURCE } from "../kw-court-codes";
 
 export const DOMYSLNY_TERMIN_WEZWANIA_DNI = 7;
+export const DOMYSLNY_CEL_POZYCZKI = "Finansowanie bieżącej działalności gospodarczej";
 export const LATA_DO_DATY_GRANICZNEJ_777 = 10;
 
 // ── miejscowość: mianownik → miejscownik ────────────────────────────
@@ -156,6 +157,19 @@ export function uzupelnijDomyslne(umowa: any): {
         komunikat: `Sprawdź, czy „${mies}” jest w miejscowniku („zawarta w …”) — nazwy nie ma w słowniku odmiany.`,
       });
     }
+  }
+
+  // Cel pożyczki — domyślnie finansowanie bieżącej działalności (wniosek i § 1).
+  if (
+    umowa.warunki &&
+    typeof umowa.warunki === "object" &&
+    !String(umowa.warunki.cel ?? "").trim()
+  ) {
+    umowa.warunki.cel = DOMYSLNY_CEL_POZYCZKI;
+    autokorekty.push({
+      sciezka: "warunki.cel",
+      komunikat: `Cel pożyczki: domyślnie „${DOMYSLNY_CEL_POZYCZKI}”.`,
+    });
   }
 
   // Sąd z kodu wydziału KW, gdy brak (słownik kw_court_codes).
@@ -305,4 +319,36 @@ export function dopiszUjawnieniaZKw(
     });
   }
   return out;
+}
+
+/** "2026-10-01T…" → "01.10.2026"; nieprawidłowa data → null. */
+function isoNaDatePl(iso: string | null | undefined): string | null {
+  const t = Date.parse(String(iso ?? ""));
+  if (!Number.isFinite(t)) return null;
+  // Data w strefie Europe/Warsaw — dzień przyjęcia wniosku, jak widzi go operator.
+  const [y, m, d] = new Date(t)
+    .toLocaleDateString("sv-SE", { timeZone: "Europe/Warsaw" })
+    .split("-");
+  return `${d}.${m}.${y}`;
+}
+
+/**
+ * Protokół z negocjacji (Zał. nr 2): okres negocjacji liczony od dnia
+ * przyjęcia wniosku do systemu (`loan_applications.created_at`). Podana
+ * ręcznie `data_od` nie jest nadpisywana. Mutuje `umowa`.
+ */
+export function ustawPoczatekNegocjacji(
+  umowa: any,
+  wniosekPrzyjetyIso: string | null | undefined,
+): KorektaGroszowa[] {
+  const dataOd = isoNaDatePl(wniosekPrzyjetyIso);
+  if (!umowa || !dataOd) return [];
+  if (umowa.protokol_negocjacji?.data_od) return [];
+  umowa.protokol_negocjacji = { ...(umowa.protokol_negocjacji ?? {}), data_od: dataOd };
+  return [
+    {
+      sciezka: "protokol_negocjacji.data_od",
+      komunikat: `Negocjacje liczone od dnia przyjęcia wniosku do systemu: ${dataOd}.`,
+    },
+  ];
 }
