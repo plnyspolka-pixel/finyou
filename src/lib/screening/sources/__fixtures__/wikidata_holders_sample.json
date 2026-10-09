@@ -1,0 +1,1520 @@
+{
+  "head" : {
+    "vars" : [ "person", "namePl", "nameEn", "birth", "prec", "pos", "posLabel", "start", "end", "cits", "aliases" ]
+  },
+  "results" : {
+    "bindings" : [ {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55758"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Aleksander Kwaśniewski"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Aleksander Kwaśniewski"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1954-11-15T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1054799"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Prezydent Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1995-12-23T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2005-12-23T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : ""
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55838"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Stanisław Ostrowski"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Stanisław Ostrowski"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1892-10-29T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1054799"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Prezydent Rzeczypospolitej Polskiej"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : ""
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55838"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Stanisław Ostrowski"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Stanisław Ostrowski"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1892-01-01T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "9"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1054799"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Prezydent Rzeczypospolitej Polskiej"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : ""
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q17704749"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Karol Nawrocki"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Karol Nawrocki"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1983-03-03T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1054799"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Prezydent Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2025-08-06T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : ""
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q159603"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Władysław Gomułka"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Władysław Gomułka"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1905-02-06T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1054799"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Prezydent Rzeczypospolitej Polskiej"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : ""
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : ""
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q9151911"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Andrzej Duda"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Andrzej Duda"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1972-05-16T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1054799"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Prezydent Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2015-08-06T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2025-08-06T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "PAD"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q9382661"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Włodzimierz Korab-Karpowicz"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Włodzimierz Julian Korab-Karpowicz"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1953-01-01T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "9"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1054799"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Prezydent Rzeczypospolitej Polskiej"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Włodzimierz Julian Korab-Karpowicz"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q42939"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Bronisław Komorowski"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Bronisław Komorowski"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1952-06-04T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1054799"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Prezydent Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2010-08-06T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2015-08-06T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Bronisław Maria Komorowski|Bronisław Maria Komorowski"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2757"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Lech Kaczyński"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Lech Kaczyński"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1949-06-18T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1054799"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Prezydent Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2005-12-23T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2010-04-10T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Lech Aleksander Kaczyński|Lech Alexander Kaczyński"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1748055"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Mariusz Błaszczak"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1969-09-19T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2022-06-22T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2023-06-21T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : ""
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q984160"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Tomasz Siemoniak"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Tomasz Siemoniak"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1967-07-02T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2014-09-22T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2015-11-16T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : ""
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q432110"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Henryk Kowalczyk"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Henryk Kowalczyk"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1956-07-15T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2021-10-26T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2023-06-21T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : ""
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q360362"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Andrzej Lepper"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Andrzej Lepper"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1954-06-13T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2006-05-05T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2006-09-22T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : ""
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q7941334"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Longin Cegielski"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Longin Cegielski"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1920-03-12T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : ""
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2332266"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Mieczysław Jagielski"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Mieczysław Jagielski"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1924-01-12T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : ""
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q898174"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Jacek Rostowski"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Jacek Rostowski"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1951-04-30T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2013-02-25T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2013-11-27T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL|GB"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Jan Vincent-Rostowski|Jan Vincent Rostowski|Jan Antony Vincent-Rostowski|Jan Vincent-Rostowski|Jan Rostowski|Jan Antony Vincent-Rostowski|Jan Rostowski"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q459196"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Elżbieta Bieńkowska"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Elżbieta Bieńkowska"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1964-02-04T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2013-11-27T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2014-09-22T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Elżbieta Ewa Bieńkowska"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q362851"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Grzegorz Schetyna"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Grzegorz Schetyna"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1963-02-18T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2007-11-16T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2009-10-13T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Grzegorz Juliusz Schetyna|Grzegorz Juliusz Schetyna"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q11720492"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Janusz Steinhoff"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Janusz Steinhoff"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1946-09-24T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Janusz Wojciech Steinhoff"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q11817487"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Piotr Gliński"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Piotr Gliński"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1954-04-20T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2015-11-16T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2023-06-21T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Piotr Tadeusz Gliński"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q11771436"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Mateusz Morawiecki"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Mateusz Morawiecki"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1968-06-20T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2016-09-28T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2017-12-11T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Mateusz Jakub Morawiecki|Mateusz Jakub Morawiecki"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q11715561"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Jacek Sasin"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Jacek Sasin"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1969-11-06T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2019-06-04T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2023-06-21T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Jacek Robert Sasin|Jacek Robert Sasin"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55938"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Zyta Gilowska"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Zyta Gilowska"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1949-07-07T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2007-09-10T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2007-11-16T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Zyta Janina Gilowska|Zyta Janina Gilowska"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55938"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Zyta Gilowska"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Zyta Gilowska"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1949-07-07T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2006-01-07T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2006-06-24T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Zyta Janina Gilowska|Zyta Janina Gilowska"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55938"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Zyta Gilowska"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Zyta Gilowska"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1949-07-07T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2006-09-22T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2007-09-07T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Zyta Janina Gilowska|Zyta Janina Gilowska"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q222905"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Jarosław Gowin"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Jarosław Gowin"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1961-12-04T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2015-11-16T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2021-08-10T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Jarosław Adam Gowin|Jarosław Adam Gowin"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55941"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Przemysław Gosiewski"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Przemysław Gosiewski"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1964-05-12T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Przemysław Edgar Gosiewski|Przemysław Edgar Gosiewski"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55937"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Roman Giertych"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1971-02-27T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2006-05-05T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2007-08-13T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Roman Jacek Giertych|Roman Bertowski"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55933"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Ludwik Dorn"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Ludwik Dorn"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1954-06-05T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2005-10-31T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2007-04-27T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Ludwik Stanisław Dorn|Ludwik Stanisław Dorn"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55932"
+      },
+      "namePl" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Leszek Balcerowicz"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Leszek Balcerowicz"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1947-01-19T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1997-10-31T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2000-06-08T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Leszek Henryk Balcerowicz"
+      }
+    }, {
+      "person" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55917"
+      },
+      "nameEn" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Jarosław Kaczyński"
+      },
+      "birth" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1949-06-18T00:00:00Z"
+      },
+      "prec" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#integer",
+        "type" : "literal",
+        "value" : "11"
+      },
+      "pos" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q15051532"
+      },
+      "posLabel" : {
+        "xml:lang" : "pl",
+        "type" : "literal",
+        "value" : "Wiceprezes Rady Ministrów Rzeczypospolitej Polskiej"
+      },
+      "start" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2020-10-06T00:00:00Z"
+      },
+      "end" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2022-06-21T00:00:00Z"
+      },
+      "cits" : {
+        "type" : "literal",
+        "value" : "PL"
+      },
+      "aliases" : {
+        "type" : "literal",
+        "value" : "Jaroslaw Kaczynski"
+      }
+    } ]
+  }
+}

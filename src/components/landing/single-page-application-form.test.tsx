@@ -81,6 +81,12 @@ function acceptConsents() {
   fireEvent.click(screen.getByRole("checkbox", { name: /kontakt marketingowy/i }));
   // Bramka B2B: oświadczenie o celu gospodarczym jest wymagane.
   fireEvent.click(screen.getByRole("checkbox", { name: /działalnością gospodarczą/i }));
+  signPepDeclaration();
+}
+
+// Oświadczenie PEP: domyślne odpowiedzi „Nie” + klauzula odpowiedzialności karnej.
+function signPepDeclaration() {
+  fireEvent.click(screen.getByRole("checkbox", { name: /odpowiedzialności karnej/i }));
 }
 
 function submitForm() {
@@ -170,6 +176,12 @@ describe("SinglePageApplicationForm – Meta pixel events", () => {
       land_register_number: "WA1M/00123456/3",
     });
     expect((payload.data.photos as unknown[]).length).toBe(1);
+    expect(payload.data.pep_declaration).toMatchObject({
+      is_pep: false,
+      is_family_member: false,
+      is_close_associate: false,
+      criminal_liability_acknowledged: true,
+    });
 
     await waitFor(() => expect(crCalls()).toHaveLength(1));
     const crCall = crCalls()[0]!;
@@ -211,6 +223,9 @@ describe("SinglePageApplicationForm – Meta pixel events", () => {
     expect(screen.getByRole("checkbox", { name: /politykę prywatności/i })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: /regulamin serwisu/i })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: /działalnością gospodarczą/i })).toBeChecked();
+    // Klauzulę odpowiedzialności karnej klient potwierdza ponownie przy każdej wysyłce.
+    expect(screen.getByRole("checkbox", { name: /odpowiedzialności karnej/i })).not.toBeChecked();
+    signPepDeclaration();
 
     await submitForm();
     await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1));

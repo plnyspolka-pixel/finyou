@@ -13,6 +13,7 @@
 // umowy jest widoczna niezależnie od stanu pipeline'u; kolejność dotyczy
 // wyłącznie podpisu (egzekwuje ją serwer w acceptLegalDocument).
 import { useState } from "react";
+import { MyPepDeclarationCard } from "@/components/screening/my-pep-declaration-card";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -177,6 +178,7 @@ function PipelinePage() {
       </PipelineStepCard>
 
       <PipelineStepCard step={step("screening")}>
+        <MyPepDeclarationCard audience="investor" embedded />
         <SanctionsScreeningStep
           screening={pipe.screening}
           kycApproved={pipe.input.kycStatus === "approved"}

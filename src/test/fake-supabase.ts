@@ -45,18 +45,24 @@ class Query {
   private payload: Row | Row[] | null = null;
   private upsertConflict: string[] | null = null;
   private wantRows = false;
+  private rangeFrom: number | null = null;
+  private rangeTo: number | null = null;
+  private countMode = false;
+  private headOnly = false;
 
   constructor(
     private db: FakeDbImpl,
     private table: string,
   ) {}
 
-  select(_cols?: string) {
+  select(_cols?: string, opts?: { count?: "exact"; head?: boolean }) {
     if (this.mode === "insert" || this.mode === "upsert" || this.mode === "update") {
       this.wantRows = true;
       return this;
     }
     this.mode = "select";
+    this.countMode = !!opts?.count;
+    this.headOnly = !!opts?.head;
     return this;
   }
   insert(payload: Row | Row[]) {
@@ -93,7 +99,8 @@ class Query {
     return this;
   }
   is(col: string, val: any) {
-    this.filters.push((r) => r[col] === val);
+    // PostgREST `is.null` — brak wartości w wierszu in-memory traktujemy jak NULL.
+    this.filters.push((r) => (val === null ? r[col] == null : r[col] === val));
     return this;
   }
   not(col: string, op: string, val: any) {
@@ -107,6 +114,23 @@ class Query {
   }
   lte(col: string, val: any) {
     this.filters.push((r) => String(r[col]) <= String(val));
+    return this;
+  }
+  lt(col: string, val: any) {
+    this.filters.push((r) => r[col] != null && r[col] < val);
+    return this;
+  }
+  gt(col: string, val: any) {
+    this.filters.push((r) => r[col] != null && r[col] > val);
+    return this;
+  }
+  contains(col: string, vals: any[]) {
+    this.filters.push((r) => Array.isArray(r[col]) && vals.every((v) => r[col].includes(v)));
+    return this;
+  }
+  range(from: number, to: number) {
+    this.rangeFrom = from;
+    this.rangeTo = to;
     return this;
   }
   order(col: string, opts?: { ascending?: boolean }) {
@@ -127,6 +151,8 @@ class Query {
       );
     }
     if (this.limitN != null) rows = rows.slice(0, this.limitN);
+    if (this.rangeFrom != null)
+      rows = rows.slice(this.rangeFrom, (this.rangeTo ?? rows.length) + 1);
     return rows;
   }
 
@@ -146,7 +172,10 @@ class Query {
     tables[this.table] = tables[this.table] ?? [];
 
     if (this.mode === "select") {
-      return { data: this.rows(), error: null };
+      const rows = this.rows();
+      if (this.countMode)
+        return { data: this.headOnly ? null : rows, error: null, count: rows.length } as any;
+      return { data: rows, error: null };
     }
     if (this.mode === "insert" || this.mode === "upsert") {
       const list = Array.isArray(this.payload) ? this.payload : [this.payload!];
@@ -162,7 +191,14 @@ class Query {
             continue;
           }
         }
-        const row: Row = { id: fakeUuid(), created_at: this.db.now().toISOString(), ...item };
+        const row: Row = {
+          id: fakeUuid(),
+          created_at: this.db.now().toISOString(),
+          ...(typeof this.db.defaults[this.table] === "function"
+            ? (this.db.defaults[this.table] as () => Row)()
+            : (this.db.defaults[this.table] ?? {})),
+          ...item,
+        };
         const violation = this.uniqueViolation(row);
         if (violation) return { data: null, error: { message: violation, code: "23505" } };
         const hook = this.db.insertHooks[this.table];
@@ -241,7 +277,12 @@ class FakeDbImpl implements FakeDb {
   } as any;
   userEmails: Record<string, string> = {};
 
+  rpcHandlers: Record<string, (params: Record<string, any>) => any> = {};
+  /** Wartości domyślne kolumn (odpowiednik DEFAULT w SQL) dla nowych wierszy tabeli. */
+  defaults: Record<string, Row | (() => Row)> = {};
+
   async rpc(name: string, params: Record<string, any> = {}): Promise<{ data: any; error: any }> {
+    if (this.rpcHandlers[name]) return { data: this.rpcHandlers[name](params), error: null };
     if (name === "process_access_payment_paid") {
       return { data: this.processAccessPaymentPaid(params), error: null };
     }

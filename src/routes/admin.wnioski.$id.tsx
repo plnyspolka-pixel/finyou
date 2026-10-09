@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { ScreeningStrip } from "@/components/screening/screening-strip";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -316,6 +317,11 @@ export function WniosekDetail({
           <p className="text-sm text-muted-foreground">
             ID: {app.id} · Utworzono: {formatDateTime(app.created_at)}
           </p>
+          {app.client_id && (
+            <div className="mt-2">
+              <ScreeningStrip kind="client" id={app.client_id} />
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{loanStatusLabels[app.status] ?? app.status}</Badge>
