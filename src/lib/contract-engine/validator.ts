@@ -14,7 +14,8 @@
 import { umowaSchema } from "./schema";
 import { maxRateMessage, rateExceedsMax } from "./fees";
 
-export type Poziom = "BLAD" | "OSTRZEZENIE";
+/** INFORMACJA — podpowiedź dla operatora (np. sugerowana kwota), nigdy nie blokuje. */
+export type Poziom = "BLAD" | "OSTRZEZENIE" | "INFORMACJA";
 
 export interface Problem {
   poziom: Poziom;
@@ -403,6 +404,23 @@ export function walidujReguly(d: any): Problem[] {
       blad(
         "warunki.harmonogram.raty",
         `Zadeklarowano ${h.liczba_rat} rat, a tabela zawiera ${h.raty.length}`,
+      );
+  }
+
+  // R33: część prowizji płatna z ratą końcową — tylko przy prowizji w ratach
+  // i nie większa niż łączna prowizja inwestora.
+  const prowBalon = naLiczbeBezp(d.warunki?.prowizja?.w_racie_koncowej?.cyframi);
+  if (prowBalon !== null && prowBalon > 0) {
+    if ((d.warunki?.prowizja?.model ?? "nie_potracana_raty") !== "nie_potracana_raty")
+      blad(
+        "warunki.prowizja.w_racie_koncowej",
+        "Część prowizji płatna z ratą końcową wymaga modelu prowizji 'nie_potracana_raty'",
+      );
+    const prowRazem = naLiczbeBezp(d.warunki?.prowizja?.kwota?.cyframi);
+    if (prowRazem !== null && prowBalon > prowRazem + 1e-9)
+      blad(
+        "warunki.prowizja.w_racie_koncowej",
+        "Część prowizji płatna z ratą końcową przekracza łączną kwotę prowizji",
       );
   }
 

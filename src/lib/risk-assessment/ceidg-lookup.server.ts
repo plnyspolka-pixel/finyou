@@ -164,6 +164,9 @@ function toActivity(
         regon: chosen.regon,
         startDate: chosen.startDate,
         pkdMain: chosen.pkdMain,
+        ownerFirstName: chosen.ownerFirst,
+        ownerLastName: chosen.ownerLast,
+        city: chosen.city,
       },
       note: `Znaleziono ${active.length} aktywn${active.length === 1 ? "y wpis" : "e wpisy"} w CEIDG pasując${active.length === 1 ? "y" : "e"} tylko po imieniu i nazwisku (bez NIP i zgodności miasta) — tożsamość niepotwierdzona, nie uwzględniono w ocenie ryzyka. Zweryfikuj NIP/adres z klientem.`,
     };
@@ -181,6 +184,9 @@ function toActivity(
       regon: chosen.regon,
       startDate: chosen.startDate,
       pkdMain: chosen.pkdMain,
+      ownerFirstName: chosen.ownerFirst,
+      ownerLastName: chosen.ownerLast,
+      city: chosen.city,
     },
     note: active.length
       ? `Aktywna działalność w CEIDG${chosen.startDate ? ` (od ${chosen.startDate})` : ""}.`
@@ -262,4 +268,27 @@ export async function lookupCeidgActivity(args: {
   }
 
   return emptyCeidg("Brak NIP oraz imienia/nazwiska — nie odpytano CEIDG.", "none");
+}
+
+/** Wynik CEIDG zapamiętany przy kliencie (clients.ceidg_snapshot). */
+export interface CeidgSnapshot {
+  nip: string;
+  checkedAt: string;
+  activity: CeidgActivity;
+}
+
+/** Ważność zapamiętanego wyniku — w ramach jednego przebiegu analizy i dnia pracy operatora. */
+export const CEIDG_SNAPSHOT_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Zapamiętany wynik CEIDG, jeśli dotyczy tego samego NIP i jest świeży. */
+export function freshCeidgSnapshot(
+  snapshot: unknown,
+  nip: string | null | undefined,
+  now = Date.now(),
+): CeidgActivity | null {
+  const sn = snapshot as CeidgSnapshot | null;
+  const n = digits(nip);
+  if (!sn?.activity || !sn.checkedAt || n.length !== 10 || digits(sn.nip) !== n) return null;
+  const age = now - Date.parse(sn.checkedAt);
+  return Number.isFinite(age) && age >= 0 && age < CEIDG_SNAPSHOT_TTL_MS ? sn.activity : null;
 }

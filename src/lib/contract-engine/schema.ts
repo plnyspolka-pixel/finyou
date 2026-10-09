@@ -122,6 +122,16 @@ const osobaFizycznaBase = {
   // Płeć — do rodzaju gramatycznego („zawarł/zawarła”). Gdy brak, silnik
   // wyprowadza ją z PESEL (z poprawną cyfrą kontrolną), a w ostateczności z imienia.
   plec: z.enum(["K", "M"]).nullable().optional(),
+  // Data rozpoczęcia działalności z CEIDG (DD.MM.RRRR) — tylko do ostrzeżeń
+  // o kosztach (JDG założona < 30 dni przed umową); nie trafia do treści.
+  data_rozpoczecia_dzialalnosci: dataPl.nullable().optional(),
+  // Imię i nazwisko, pod którym strona jest ujawniona w dziale II KW, gdy
+  // różni się od aktualnego (zmiana nazwiska, ten sam PESEL). Komparycja
+  // i § 5 dopisują: „ujawniona w dziale II księgi wieczystej nr … jako …”.
+  ujawnienie_w_kw: z
+    .array(z.object({ nr_kw: z.string().min(5), imie_nazwisko: z.string().min(3) }).strict())
+    .nullable()
+    .optional(),
 };
 
 export const osobaFizyczna = z.object(osobaFizycznaBase).strict();
@@ -293,6 +303,10 @@ const harmonogram = z
     kwota_raty: kwotaSchema.nullable().optional(),
     kwota_raty_koncowej: kwotaSchema.nullable().optional(),
     raty: z.array(rataSchema).optional(),
+    // Kapitał w ratach regularnych: "nadwyzka_raty" (domyślnie) — nadwyżka
+    // pułapu kwota_raty ponad odsetki i prowizję spłaca kapitał; "w_balonie"
+    // — cały kapitał w racie końcowej.
+    amortyzacja_kapitalu: z.enum(["nadwyzka_raty", "w_balonie"]).nullable().optional(),
   })
   .strict();
 
@@ -303,6 +317,10 @@ const warunki = z
       .object({
         kwota: kwotaSchema,
         model: z.enum(["nie_potracana_raty", "potracana_z_wyplaty"]).optional(),
+        // Część prowizji (zawarta w `kwota`) płatna wraz z ratą końcową
+        // (balonową); reszta rozkłada się równo na wszystkie raty. Tylko
+        // przy modelu "nie_potracana_raty".
+        w_racie_koncowej: kwotaSchema.nullable().optional(),
       })
       .strict(),
     // Prowizja od Pożyczkobiorcy (5% Kwoty Udzielonej, min 5 000 zł,

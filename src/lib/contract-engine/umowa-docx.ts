@@ -91,6 +91,9 @@ function odmienLiczbe(n: number, jeden: string, kilka: string, wiele: string): s
 }
 /** „1 rata”, „2 raty”, „5 rat”, „22 raty”, „12 rat”. */
 export const ratyLiczba = (n: number) => odmienLiczbe(n, "rata", "raty", "rat");
+/** Miejscownik: „36 ratach miesięcznych” / „1 racie miesięcznej”. */
+const ratachMiesiecznych = (n: number) =>
+  n === 1 ? "1 racie miesięcznej" : `${n} ratach miesięcznych`;
 const miesiaceLiczba = (n: number) => odmienLiczbe(n, "miesiąc", "miesiące", "miesięcy");
 const zl = (cyframi: string | null | undefined) => `${cyframi ?? ""} zł`;
 
@@ -405,6 +408,7 @@ function harmonogramBloki(d: any): Blok[] {
   const potracana = w.prowizja?.model === "potracana_z_wyplaty";
   const K = parseKwota(w.kwota_pozyczki.cyframi);
   const P = parseKwota(w.prowizja.kwota.cyframi);
+  const prowBalon = potracana ? 0 : parseKwota(w.prowizja?.w_racie_koncowej?.cyframi) || 0;
   const wid = [2800, 6838];
   const wiersz = (a: string, b: string) => ({
     komorki: [{ tekst: a, bold: true }, { tekst: b }] as Komorka[],
@@ -433,7 +437,11 @@ function harmonogramBloki(d: any): Blok[] {
           "Prowizja jednorazowa:",
           potracana
             ? `${zl(w.prowizja.kwota.cyframi)} (potrącona z Kwoty Pożyczki przy wypłacie)`
-            : `${zl(w.prowizja.kwota.cyframi)} (płatna w ratach zgodnie z tabelą rat)`,
+            : prowBalon > 0
+              ? `${zl(w.prowizja.kwota.cyframi)} (płatna w ratach zgodnie z tabelą rat, w tym ` +
+                `${zl(formatKwotaPL(round2(P - prowBalon)))} w ${ratachMiesiecznych(raty.length || Number(h.liczba_rat) || 0)} ` +
+                `oraz ${zl(w.prowizja.w_racie_koncowej.cyframi)} płatne wraz z ratą końcową (balonową))`
+              : `${zl(w.prowizja.kwota.cyframi)} (płatna w ratach zgodnie z tabelą rat)`,
         ),
         wiersz(
           "Oprocentowanie umowne:",
@@ -617,7 +625,12 @@ function protokolBloki(d: any, doc: Dokument): Blok[] {
           "Negocjacje trwały:",
           `${pn.data_od ?? d.meta.data_umowy} – ${pn.data_do ?? d.meta.data_umowy}`,
         ),
-        wiersz("Uzgodniona prowizja finalna:", zl(d.warunki.prowizja.kwota.cyframi)),
+        wiersz(
+          "Uzgodniona prowizja finalna:",
+          (parseKwota(d.warunki.prowizja?.w_racie_koncowej?.cyframi) || 0) > 0
+            ? `${zl(d.warunki.prowizja.kwota.cyframi)} (w tym ${zl(d.warunki.prowizja.w_racie_koncowej.cyframi)} płatne z ratą końcową)`
+            : zl(d.warunki.prowizja.kwota.cyframi),
+        ),
         wiersz("Uzgodnione oprocentowanie finalne:", `${d.warunki.oprocentowanie} %`),
         wiersz("Uzgodniony okres pożyczki:", okres),
       ],

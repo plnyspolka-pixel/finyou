@@ -243,7 +243,7 @@ export const updateClient = defineTool({
   name: "update_client",
   title: "Update client",
   description:
-    "Edycja klienta: dane kontaktowe i firmowe, adres, przypisany opiekun, blokady kontaktu (nie dzwonić / nie mailować / nie SMS-ować z powodem), dopisanie notatki. Zmienia tylko podane pola. Tylko administrator/operator.",
+    "Edycja klienta: dane kontaktowe i firmowe, adres, przypisany opiekun, blokady kontaktu (nie dzwonić / nie mailować / nie SMS-ować z powodem), dopisanie notatki. Dane identyfikacyjne do umowy zapisuj w dedykowanych polach, nie w notatce: `pesel`, `id_document` (nr dowodu — szyfrowany), `payout_account` (rachunek do wypłaty — szyfrowany); draft_contract z profile_id pobiera je automatycznie. Po podaniu `nip` system pobiera CEIDG i zwraca `ceidg_porownanie` (imię/nazwisko/miasto z CEIDG vs kartoteka); `sync_from_ceidg=true` od razu przyjmuje nazwisko z CEIDG (poprzednie trafia do previous_names). Zmienia tylko podane pola. Tylko administrator/operator.",
   inputSchema: {
     client_id: z.string().uuid(),
     first_name: z.string().max(120).optional(),
@@ -261,11 +261,35 @@ export const updateClient = defineTool({
     do_not_email: z.boolean().optional(),
     do_not_sms: z.boolean().optional(),
     notes_append: z.string().max(4000).optional(),
+    pesel: z
+      .string()
+      .regex(/^\d{11}$/)
+      .optional()
+      .describe("PESEL klienta (11 cyfr) — dedykowane pole, nie notatka."),
+    id_document: z
+      .string()
+      .min(5)
+      .max(80)
+      .optional()
+      .describe(
+        "Dokument tożsamości, np. „dowód osobisty nr ABC123456” — zapisywany zaszyfrowany.",
+      ),
+    payout_account: z
+      .string()
+      .min(10)
+      .max(40)
+      .optional()
+      .describe("Rachunek do wypłaty pożyczki — zapisywany zaszyfrowany."),
+    sync_from_ceidg: z
+      .boolean()
+      .optional()
+      .describe("Po sprawdzeniu CEIDG (po NIP) przyjmij nazwisko z CEIDG, gdy imię się zgadza."),
   },
   annotations: WRITE_IDEMPOTENT,
   handler: (a, ctx: ToolContext) =>
     handle(async () => {
       const s = await requireTeamAdmin(ctx);
+      const { encryptSensitive } = await import("@/lib/affiliate/crypto");
       const patch = patchOf(a, [
         "first_name",
         "last_name",
@@ -281,7 +305,11 @@ export const updateClient = defineTool({
         "do_not_call_reason",
         "do_not_email",
         "do_not_sms",
+        "pesel",
       ]);
+      if (a.id_document !== undefined) patch.id_document_enc = encryptSensitive(a.id_document);
+      if (a.payout_account !== undefined)
+        patch.payout_account_enc = encryptSensitive(a.payout_account.replace(/\s+/g, " ").trim());
       if (a.phone !== undefined) patch.phone_raw = a.phone;
       if (a.do_not_call !== undefined) {
         patch.do_not_call_at = a.do_not_call ? new Date().toISOString() : null;
@@ -292,15 +320,40 @@ export const updateClient = defineTool({
         if (!cur) return fail("Nie znaleziono klienta.");
         patch.notes = appendNote(cur.notes, ctx, a.notes_append);
       }
-      if (Object.keys(patch).length === 0) return fail("Brak pól do zmiany.");
-      const row = await updateOne(
-        s,
-        "clients",
-        a.client_id,
-        patch,
-        "id, first_name, last_name, email, phone, company_name, city, assigned_user_id, do_not_call, do_not_email, do_not_sms, notes, updated_at",
-      );
-      return ok({ ok: true, client: row });
+      if (Object.keys(patch).length === 0 && !a.sync_from_ceidg) return fail("Brak pól do zmiany.");
+      const kolumny =
+        "id, first_name, last_name, email, phone, company_name, city, assigned_user_id, do_not_call, do_not_email, do_not_sms, notes, previous_names, updated_at";
+      let row =
+        Object.keys(patch).length > 0
+          ? await updateOne(s, "clients", a.client_id, patch, kolumny)
+          : null;
+      // Dodanie/zmiana NIP (albo jawna prośba): CEIDG po NIP i porównanie
+      // imienia, nazwiska i adresu z kartoteką (pkt 9 / pkt 3).
+      let ceidgPorownanie: unknown = undefined;
+      if (a.nip !== undefined || a.sync_from_ceidg) {
+        const { synchronizujTozsamoscZCeidg } = await import("@/lib/clients/identity-sync.server");
+        const sync = await synchronizujTozsamoscZCeidg(s, a.client_id, {
+          force: a.nip !== undefined,
+          zastosuj: a.sync_from_ceidg === true,
+          actorId: actorId(ctx),
+        });
+        ceidgPorownanie = {
+          ceidg_status: sync.ceidg?.status ?? null,
+          ceidg_firma: sync.ceidg?.company?.name ?? null,
+          propozycje: sync.porownanie.propozycje,
+          zastosowano: sync.zmianaNazwiska,
+          uwagi: sync.notes,
+        };
+        if (sync.zmianaNazwiska)
+          row = await oneOf(s.from("clients").select(kolumny).eq("id", a.client_id), "clients");
+      }
+      return ok({
+        ok: true,
+        client: row,
+        ...(a.id_document !== undefined ? { id_document_zapisany: true } : {}),
+        ...(a.payout_account !== undefined ? { payout_account_zapisany: true } : {}),
+        ...(ceidgPorownanie !== undefined ? { ceidg_porownanie: ceidgPorownanie } : {}),
+      });
     }),
 });
 

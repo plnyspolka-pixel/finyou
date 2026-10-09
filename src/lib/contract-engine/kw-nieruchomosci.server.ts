@@ -31,14 +31,22 @@ export async function nieruchomosciZKw(
   kwNumbers: string[],
   umowa: any,
   opcje: NieruchomosciZKwOpcje = { wymagajTresci: true },
-): Promise<{ nieruchomosci: any[]; ostrzezenia: string[]; pominiete: string[] }> {
+): Promise<{
+  nieruchomosci: any[];
+  ostrzezenia: string[];
+  pominiete: string[];
+  /** Pola uzupełnione automatycznie (np. sąd ze słownika kodów wydziałów) — informacja dla operatora. */
+  autokorekty: { sciezka: string; komunikat: string }[];
+}> {
   const { decodeMaybeBase64 } = await import("@/lib/kw-fetch.server");
   const { kwDocumentToExtraction } = await import("@/lib/kw-extraction");
   const { mapujKwDoNieruchomosci } = await import("@/lib/contract-engine/kw-mapper");
   const { scalPatch } = await import("@/lib/contract-engine/umowa-agent-core");
+  const { dopiszUjawnieniaZKw } = await import("@/lib/contract-engine/uzupelnienia");
   const out: any[] = [];
   const ostrzezenia: string[] = [];
   const pominiete: string[] = [];
+  const autokorekty: { sciezka: string; komunikat: string }[] = [];
   const istniejace: any[] = Array.isArray(umowa?.nieruchomosci) ? umowa.nieruchomosci : [];
 
   for (const [i, raw] of kwNumbers.entries()) {
@@ -94,8 +102,20 @@ export async function nieruchomosciZKw(
       }
     }
 
-    // Sąd prowadzący księgę: z okładki, a gdy jej brak — z innej księgi tego
-    // samego wydziału (ten sam prefiks, np. KR1P) w cache kw_documents.
+    // Sąd prowadzący księgę: z okładki; gdy jej brak — ze słownika kodów
+    // wydziałów KW (kw_court_codes, Dz.U. 2019 poz. 2222), a dla kodu spoza
+    // wykazu — z innej księgi tego samego wydziału w cache kw_documents.
+    if (!ekstrakcja.sadRejonowy) {
+      const { sadZKodu, KW_COURT_CODES_SOURCE } = await import("@/lib/kw-court-codes");
+      const sad = sadZKodu(label);
+      if (sad) {
+        ekstrakcja.sadRejonowy = sad;
+        autokorekty.push({
+          sciezka: `nieruchomosci[${i}].sad`,
+          komunikat: `${label}: sąd uzupełniony ze słownika kodów wydziałów KW (kod ${label.slice(0, 4)} → ${sad}; źródło: ${KW_COURT_CODES_SOURCE}) — treść KW nie podawała sądu.`,
+        });
+      }
+    }
     if (!ekstrakcja.sadRejonowy) {
       const { data: inne } = await s
         .from("kw_documents")
@@ -112,10 +132,26 @@ export async function nieruchomosciZKw(
         }).sadRejonowy;
         if (sad) {
           ekstrakcja.sadRejonowy = sad;
+          autokorekty.push({
+            sciezka: `nieruchomosci[${i}].sad`,
+            komunikat: `${label}: sąd przyjęty z innej księgi tego samego wydziału w cache (${d.kw_number}) — kodu nie ma w słowniku.`,
+          });
           break;
         }
       }
     }
+
+    // Zmiana nazwiska (ten sam PESEL): adnotacja „ujawniona w dziale II … jako …”.
+    autokorekty.push(
+      ...dopiszUjawnieniaZKw(
+        umowa,
+        label,
+        (ekstrakcja.dzial2?.wlasciciele ?? []).map((o) => ({
+          imie_nazwisko: [o.imiePierwsze, o.imieDrugie, o.nazwisko].filter(Boolean).join(" "),
+          pesel: o.pesel ?? null,
+        })),
+      ),
+    );
 
     const mapped = mapujKwDoNieruchomosci(ekstrakcja, {
       id: `N${i + 1}`,
@@ -133,5 +169,5 @@ export async function nieruchomosciZKw(
     const wczesniej = istniejace.find((n) => compactKwNumber(n?.nr_kw) === compact);
     out.push(wczesniej ? scalPatch(mapped.nieruchomosc, wczesniej) : mapped.nieruchomosc);
   }
-  return { nieruchomosci: out, ostrzezenia, pominiete };
+  return { nieruchomosci: out, ostrzezenia, pominiete, autokorekty };
 }

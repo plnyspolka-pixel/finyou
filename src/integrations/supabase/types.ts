@@ -4109,6 +4109,12 @@ export type Database = {
           street: string | null
           updated_at: string
           user_id: string | null
+          ceidg_checked_at: string | null
+          ceidg_snapshot: Json | null
+          id_document_enc: string | null
+          name_history: Json
+          payout_account_enc: string | null
+          previous_names: string[]
         }
         Insert: {
           address?: string | null
@@ -4165,6 +4171,12 @@ export type Database = {
           street?: string | null
           updated_at?: string
           user_id?: string | null
+          ceidg_checked_at?: string | null
+          ceidg_snapshot?: Json | null
+          id_document_enc?: string | null
+          name_history?: Json
+          payout_account_enc?: string | null
+          previous_names?: string[]
         }
         Update: {
           address?: string | null
@@ -4221,6 +4233,12 @@ export type Database = {
           street?: string | null
           updated_at?: string
           user_id?: string | null
+          ceidg_checked_at?: string | null
+          ceidg_snapshot?: Json | null
+          id_document_enc?: string | null
+          name_history?: Json
+          payout_account_enc?: string | null
+          previous_names?: string[]
         }
         Relationships: []
       }
@@ -5401,6 +5419,10 @@ export type Database = {
           template_name: string | null
           template_slug: string | null
           updated_at: string
+          content_sha256: string | null
+          parent_document_id: string | null
+          version: number
+          version_reason: string | null
         }
         Insert: {
           commission_added_to_costs?: boolean | null
@@ -5419,6 +5441,10 @@ export type Database = {
           template_name?: string | null
           template_slug?: string | null
           updated_at?: string
+          content_sha256?: string | null
+          parent_document_id?: string | null
+          version?: number
+          version_reason?: string | null
         }
         Update: {
           commission_added_to_costs?: boolean | null
@@ -5437,6 +5463,10 @@ export type Database = {
           template_name?: string | null
           template_slug?: string | null
           updated_at?: string
+          content_sha256?: string | null
+          parent_document_id?: string | null
+          version?: number
+          version_reason?: string | null
         }
         Relationships: [
           {
@@ -11244,6 +11274,11 @@ export type Database = {
           street: string | null
           updated_at: string
           voivodeship: string | null
+          building_number: string | null
+          field_sources: Json
+          kw_sync: Json | null
+          unit_number: string | null
+          usage: string | null
         }
         Insert: {
           additional_land_register_numbers?: string[]
@@ -11265,6 +11300,11 @@ export type Database = {
           street?: string | null
           updated_at?: string
           voivodeship?: string | null
+          building_number?: string | null
+          field_sources?: Json
+          kw_sync?: Json | null
+          unit_number?: string | null
+          usage?: string | null
         }
         Update: {
           additional_land_register_numbers?: string[]
@@ -11286,6 +11326,11 @@ export type Database = {
           street?: string | null
           updated_at?: string
           voivodeship?: string | null
+          building_number?: string | null
+          field_sources?: Json
+          kw_sync?: Json | null
+          unit_number?: string | null
+          usage?: string | null
         }
         Relationships: [
           {

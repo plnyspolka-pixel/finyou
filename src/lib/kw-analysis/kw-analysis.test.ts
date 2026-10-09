@@ -417,7 +417,7 @@ describe("Scenariusz 17 — kilku współwłaścicieli", () => {
 });
 
 describe("Scenariusz 19/20 — rozbieżność nazwisko/PESEL", () => {
-  it("to samo PESEL, inne nazwisko => WSTRZYMANE, ta sama osoba", () => {
+  it("to samo PESEL, inne nazwisko => WARUNKOWE (warunek wypłaty, nie umowy), ta sama osoba", () => {
     const res = runKwAnalysis(
       baseInput({
         borrower: party("BORROWER", { lastName: "NOWAK-KOWALSKA", pesel: PESEL_A }),
@@ -427,9 +427,16 @@ describe("Scenariusz 19/20 — rozbieżność nazwisko/PESEL", () => {
       }),
       sections(baseExtraction()),
     );
-    const f = res.findings.filter((x) => x.ruleId === "R-IDENTITY" && x.status === "WSTRZYMANE");
+    const f = res.findings.filter(
+      (x) => x.ruleId === "R-IDENTITY" && x.status === "WARUNKOWO_DOPUSZCZALNE",
+    );
     expect(f.length).toBeGreaterThan(0);
-    expect(f[0].plainLanguageSummary).toContain("prawdopodobnie");
+    expect(f[0].plainLanguageSummary).toContain("ta sama osoba");
+    expect(f[0].agreementCondition).toBeNull();
+    expect(f[0].payoutCondition).toMatch(/akt małżeństwa.*sprostowanie Działu II/is);
+    expect(res.findings.some((x) => x.ruleId === "R-IDENTITY" && x.status === "WSTRZYMANE")).toBe(
+      false,
+    );
   });
 
   it("to samo nazwisko, inny PESEL ⇒ STOP (poważna rozbieżność)", () => {

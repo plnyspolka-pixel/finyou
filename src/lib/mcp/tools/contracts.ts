@@ -18,7 +18,9 @@ const ZASADY_DANYCH = [
   "Nie nadawaj identyfikatorów nieruchomości (id) — nada je system.",
   'Domyślne praktyki Finance You: prowizja inwestora model "nie_potracana_raty" (w ratach), Prowizja Finance You potrącana z wypłaty; hipoteka i kwota z art. 777 zwykle 2× łącznej kwoty do spłaty — zawsze potwierdź je z użytkownikiem.',
   "Łatka (patch) to deep-merge: obiekty są scalane, tablice podmieniane w całości (podając tablicę, podaj ją kompletną), null usuwa wartość.",
-  "Silnik nie ocenia ryzyka prawnego ani parametrów (limity prowizji, odsetki maksymalne, terminy) — problemy walidatora to wyłącznie braki i niespójności konstrukcyjne. Dokument zawiera tylko treść wiążącą.",
+  "Błędy walidatora (problemy.bledy) to wyłącznie braki i niespójności konstrukcyjne. Ryzyko kosztowe (łączna prowizja ponad min(10% + 10% × lata, 45%) kwoty netto, koszt pozaodsetkowy i całkowity w skali roku, ryzyko art. 359 § 2² i art. 388 k.c., JDG założona < 30 dni przed umową) silnik pokazuje w problemy.ostrzezenia — nigdy nie blokuje; decyzja należy do zarządu. Dokument zawiera tylko treść wiążącą.",
+  "Wartości domyślne (odnotowane w autokorekty): zabezpieczenia.egzekucja_777.termin_wezwania_dni = 7; data_graniczna = data umowy + 10 lat; gdy podano tylko kwotę hipoteki albo tylko kwotę z art. 777 — ta sama dla obu; meta.miejscowosc można podać w mianowniku („Lublin”) — system odmieni; brak sądu — ze słownika kodów wydziałów KW.",
+  'Prowizja częściowo w racie balonowej: warunki.prowizja.w_racie_koncowej {cyframi} (część łącznej prowizji płatna z ratą końcową; reszta równo w ratach); warunki.harmonogram.amortyzacja_kapitalu ("nadwyzka_raty" | "w_balonie"). Gotowe pola zwraca calculate_repayment_schedule w draft_contract_patch.',
   "Numery KW podawaj w dowolnym zapisie — system dopełnia numer zerami do 8 cyfr (KR1P/610770/2 → KR1P/00610770/2) i sprawdza cyfrę kontrolną; błędna cyfra blokuje umowę.",
   "Harmonogram balonowy: podaj warunki.harmonogram.kwota_raty (pułap raty) — silnik liczy raty z odsetek od salda i STAŁEJ prowizji inwestora (warunki.prowizja.kwota) rozłożonej równo; nadwyżka kapitału trafia do ostatniej raty. Oprocentowanie nie może przekraczać odsetek maksymalnych (art. 359 § 2¹ KC — dziś 14,5 %); Prowizja Finance You (5% Kwoty Udzielonej, min 5 000 zł, bez VAT) jest potrącana z wypłaty (warunki.prowizja_finance_you — przy Pożyczkodawcy innym niż Finance You system wylicza ją sam, jeśli pole pominięto; rachunki.finance_you system wpisuje zawsze automatycznie: Finance You ma jeden rachunek), a klauzula wypłaty i Załącznik nr 4 rozbijają przelew na część do FY i część do Pożyczkobiorcy.",
 ];
@@ -31,12 +33,23 @@ const excludedClausesSchema = z
 // ── pomocnicze ───────────────────────────────────────────────────────────────
 
 async function loadProfile(s: SupabaseClient, profileId: string) {
-  const row = await oneOf<{ id: string; data: object; updated_at: string }>(
-    s.from("client_profiles").select("id, data, updated_at").eq("id", profileId),
+  const row = await oneOf<{
+    id: string;
+    data: object;
+    updated_at: string;
+    source_application_id: string | null;
+  }>(
+    s
+      .from("client_profiles")
+      .select("id, data, updated_at, source_application_id")
+      .eq("id", profileId),
     "client_profiles",
   );
   if (!row) throw new Error("Profil klienta nie znaleziony (albo brak dostępu).");
-  return { ...(row.data as object), id: row.id, updatedAt: row.updated_at } as ClientProfile;
+  return {
+    profile: { ...(row.data as object), id: row.id, updatedAt: row.updated_at } as ClientProfile,
+    sourceApplicationId: row.source_application_id,
+  };
 }
 
 type Problem = { poziom: string; sciezka: string; komunikat: string };
@@ -63,15 +76,22 @@ async function zbudujSzkic(
 ) {
   const { scalPatch, przetworzSzkic } = await import("@/lib/contract-engine/umowa-agent-core");
   const problemyStartowe: Problem[] = [];
+  const kartotekaKorekty: { sciezka: string; komunikat: string }[] = [];
   let szkic: any = {};
 
   if (args.profile_id) {
     const { buildUmowaData, profileToCalcPayload } =
       await import("@/lib/contract-engine/profile-to-umowa");
-    const profile = await loadProfile(s, args.profile_id);
+    const { profile, sourceApplicationId } = await loadProfile(s, args.profile_id);
     const calc = (args.calc as any) ?? profileToCalcPayload(profile);
     if (calc) {
       szkic = buildUmowaData(profile, calc);
+      // PESEL, dokument tożsamości, rachunek do wypłaty i nazwisko z CEIDG —
+      // z dedykowanych pól kartoteki klienta (pkt 3 i 9).
+      const { kartotekaKlientaProfilu } = await import("@/lib/clients/kartoteka-umowy.server");
+      const { scalKartotekeDoUmowy } = await import("@/lib/clients/kartoteka-umowy");
+      const kartoteka = await kartotekaKlientaProfilu(s, sourceApplicationId);
+      if (kartoteka) kartotekaKorekty.push(...scalKartotekeDoUmowy(szkic, kartoteka));
     } else {
       problemyStartowe.push({
         poziom: "OSTRZEZENIE",
@@ -85,14 +105,18 @@ async function zbudujSzkic(
   if (args.patch) szkic = scalPatch(szkic, structuredClone(args.patch));
 
   let kwOstrzezenia: string[] = [];
+  let kwAutokorekty: { sciezka: string; komunikat: string }[] = [];
   if (args.kw_numbers?.length) {
     const { nieruchomosciZKw } = await import("@/lib/contract-engine/kw-nieruchomosci.server");
     const r = await nieruchomosciZKw(s, args.kw_numbers, szkic);
     szkic.nieruchomosci = r.nieruchomosci;
     kwOstrzezenia = r.ostrzezenia;
+    kwAutokorekty = r.autokorekty;
   }
 
-  const { umowa, problemy, autokorekty } = przetworzSzkic(szkic);
+  const przetworzony = przetworzSzkic(szkic);
+  const { umowa, problemy } = przetworzony;
+  const autokorekty = [...kartotekaKorekty, ...kwAutokorekty, ...przetworzony.autokorekty];
   const wszystkie = [...problemyStartowe, ...(problemy as Problem[])];
   return {
     umowa,
@@ -335,9 +359,210 @@ export const getGeneratedDocumentText = defineTool({
     }),
 });
 
+const MAKS_PLIK_B = 5 * 1024 * 1024;
+
+type GenDocRow = {
+  id: string;
+  template_name: string | null;
+  template_slug: string | null;
+  docx_path: string | null;
+  form_data: any;
+  loan_application_id: string | null;
+  lead_id: string | null;
+  parent_document_id: string | null;
+  version: number | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+const GEN_DOC_SELECT =
+  "id, template_name, template_slug, docx_path, form_data, loan_application_id, lead_id, parent_document_id, version, created_at, created_by";
+
+async function pobierzDocx(s: SupabaseClient, path: string): Promise<Uint8Array> {
+  const { CLIENT_FILES_BUCKET } = await import("@/lib/storage-buckets");
+  const { data: blob, error } = await s.storage.from(CLIENT_FILES_BUCKET).download(path);
+  if (error || !blob)
+    throw new Error(`Nie udało się pobrać pliku: ${error?.message ?? "brak pliku"}`);
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+async function sha256Bajtow(b: Uint8Array): Promise<string> {
+  const h = await globalThis.crypto.subtle.digest("SHA-256", b as unknown as ArrayBuffer);
+  return Array.from(new Uint8Array(h))
+    .map((x) => x.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+export const getGeneratedDocumentFile = defineTool({
+  name: "get_generated_document_file",
+  title: "Get generated document file (.docx, base64)",
+  description:
+    "Plik .docx z rejestru `generated_documents` jako base64 (do ~5 MB) — bez podpisanego linku do Storage, który bywa nieosiągalny z sandboxa asystenta. Zwraca też SHA-256 pliku i tekstu (audyt), numer wersji i id dokumentu bazowego. Ręcznie poprawioną wersję zapisuj z powrotem przez `upload_generated_document_version` (nie jako osobny plik poza rejestrem).",
+  inputSchema: {
+    id: z.string().uuid().describe("Id dokumentu (generated_documents.id)."),
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: ({ id }, ctx: ToolContext) =>
+    handle(async () => {
+      const s = requireUser(ctx);
+      const row = await oneOf<GenDocRow>(
+        (s as any).from("generated_documents").select(GEN_DOC_SELECT).eq("id", id),
+        "generated_documents",
+      );
+      if (!row) return fail("Dokument nie znaleziony (albo brak dostępu).");
+      if (!row.docx_path) return fail("Dokument nie ma pliku .docx.");
+      const bajty = await pobierzDocx(s, row.docx_path);
+      if (bajty.length > MAKS_PLIK_B)
+        return fail(
+          `Plik ma ${bajty.length} B — powyżej limitu ${MAKS_PLIK_B} B dla przesyłu przez MCP.`,
+        );
+      const { tekstZDocx } = await import("@/lib/contract-engine/umowa-docx");
+      const { sha256Hex } = await import("@/lib/contract-engine/komplet");
+      const { DOCX_MIME } = await import("@/lib/contract-engine/umowa-storage.server");
+      const tekst = await tekstZDocx(bajty);
+      return ok({
+        id: row.id,
+        file_name: row.docx_path.split("/").pop(),
+        mime_type: DOCX_MIME,
+        size_bytes: bajty.length,
+        version: row.version ?? 1,
+        parent_document_id: row.parent_document_id,
+        sha256_pliku: await sha256Bajtow(bajty),
+        sha256_tekstu: await sha256Hex(tekst),
+        audyt: row.form_data?.audyt ?? null,
+        file_base64: Buffer.from(bajty).toString("base64"),
+      });
+    }),
+});
+
+export const uploadGeneratedDocumentVersion = defineTool({
+  name: "upload_generated_document_version",
+  title: "Upload manually corrected document version",
+  description:
+    "Zapisuje ręcznie poprawioną wersję dokumentu z rejestru (np. kompletu umowy) jako NOWĄ WERSJĘ tego samego dokumentu: plik .docx (base64, do ~5 MB) trafia do Storage, w `generated_documents` powstaje wiersz z `parent_document_id` (dokument bazowy), kolejnym numerem `version`, autorem, powodem i SHA-256 tekstu, a w audycie — wpis `contract_version_uploaded`. Wynik zawiera różnicę tekstu względem wersji z silnika (linie dodane/usunięte) — ta sama trafia do panelu dokumentu. Wersja silnika pozostaje nienaruszona.",
+  inputSchema: {
+    parent_id: z
+      .string()
+      .uuid()
+      .describe("Id dokumentu, którego wersję zapisujesz (bazowego albo dowolnej jego wersji)."),
+    file_base64: z.string().min(100).describe("Plik .docx zakodowany base64."),
+    reason: z.string().min(5).max(1000).describe("Powód ręcznej poprawki (trafia do audytu)."),
+  },
+  annotations: WRITE,
+  handler: ({ parent_id, file_base64, reason }, ctx: ToolContext) =>
+    handle(async () => {
+      const s = requireUser(ctx);
+      const userId = actorId(ctx);
+      const rodzic = await oneOf<GenDocRow>(
+        (s as any).from("generated_documents").select(GEN_DOC_SELECT).eq("id", parent_id),
+        "generated_documents",
+      );
+      if (!rodzic) return fail("Dokument nie znaleziony (albo brak dostępu).");
+      const rootId = rodzic.parent_document_id ?? rodzic.id;
+      const root =
+        rootId === rodzic.id
+          ? rodzic
+          : await oneOf<GenDocRow>(
+              (s as any).from("generated_documents").select(GEN_DOC_SELECT).eq("id", rootId),
+              "generated_documents",
+            );
+      if (!root?.docx_path) return fail("Dokument bazowy nie ma pliku .docx.");
+
+      const bajty = new Uint8Array(Buffer.from(file_base64.replace(/\s+/g, ""), "base64"));
+      if (bajty.length > MAKS_PLIK_B) return fail(`Plik przekracza limit ${MAKS_PLIK_B} B.`);
+      const { tekstZDocx } = await import("@/lib/contract-engine/umowa-docx");
+      let tekst: string;
+      try {
+        tekst = await tekstZDocx(bajty);
+      } catch {
+        return fail("To nie jest poprawny plik .docx (brak word/document.xml).");
+      }
+      const { sha256Hex } = await import("@/lib/contract-engine/komplet");
+      const { diffTekstu } = await import("@/lib/contract-engine/diff-tekstu");
+      const sha256 = await sha256Hex(tekst);
+      const tekstSilnika = await tekstZDocx(await pobierzDocx(s, root.docx_path));
+      const diff = diffTekstu(tekstSilnika, tekst);
+
+      const { data: wersje, error: wErr } = await (s as any)
+        .from("generated_documents")
+        .select("version")
+        .or(`id.eq.${rootId},parent_document_id.eq.${rootId}`);
+      if (wErr) throw new Error(`generated_documents: ${wErr.message}`);
+      const wersja = Math.max(1, ...(wersje ?? []).map((w: any) => Number(w.version) || 1)) + 1;
+
+      const { CLIENT_FILES_BUCKET } = await import("@/lib/storage-buckets");
+      const { DOCX_MIME } = await import("@/lib/contract-engine/umowa-storage.server");
+      const bazowaNazwa = (root.docx_path.split("/").pop() ?? "dokument.docx").replace(
+        /\.docx$/i,
+        "",
+      );
+      const ts = new Date().toISOString().replace(/[:.]/g, "-");
+      const docxPath = `generated/${userId}/${ts}_${bazowaNazwa.slice(0, 50)}_v${wersja}.docx`;
+      const { error: upErr } = await s.storage
+        .from(CLIENT_FILES_BUCKET)
+        .upload(docxPath, new Blob([bajty], { type: DOCX_MIME }), { upsert: false });
+      if (upErr) throw new Error(`Upload DOCX: ${upErr.message}`);
+
+      const audyt = {
+        sha256,
+        zrodlo: "reczna_poprawka",
+        autor: userId,
+        powod: reason,
+        wersja,
+        wersja_bazowa_id: rootId,
+        sha256_wersji_silnika: root.form_data?.audyt?.sha256 ?? null,
+      };
+      const { data: row, error: insErr } = await (s as any)
+        .from("generated_documents")
+        .insert({
+          template_name: root.template_name,
+          template_slug: root.template_slug,
+          loan_application_id: root.loan_application_id,
+          lead_id: root.lead_id,
+          parent_document_id: rootId,
+          version: wersja,
+          version_reason: reason,
+          content_sha256: sha256,
+          form_data: { audyt, diff_wzgledem_silnika: diff },
+          docx_path: docxPath,
+          file_size_bytes: bajty.length,
+          created_by: userId,
+        })
+        .select("id")
+        .single();
+      if (insErr || !row) {
+        await s.storage
+          .from(CLIENT_FILES_BUCKET)
+          .remove([docxPath])
+          .catch(() => undefined);
+        throw new Error(`Zapis w rejestrze dokumentów: ${insErr?.message ?? "brak wiersza"}`);
+      }
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error: audErr } = await supabaseAdmin.from("audit_logs").insert({
+        user_id: userId,
+        action: "contract_version_uploaded",
+        object_type: "generated_document",
+        object_id: row.id,
+        previous_value: { document_id: rootId, sha256: audyt.sha256_wersji_silnika },
+        new_value: { ...audyt, docx_path: docxPath, dodane: diff.dodane, usuniete: diff.usuniete },
+      });
+      if (audErr) throw new Error(`Zapis audytu wersji: ${audErr.message}`);
+      return ok({
+        saved: true,
+        generated_document_id: row.id,
+        parent_document_id: rootId,
+        version: wersja,
+        sha256,
+        diff_wzgledem_silnika: diff,
+      });
+    }),
+});
+
 export const contractTools = [
   getContractSchema,
   draftContract,
   generateContractDocx,
   getGeneratedDocumentText,
+  getGeneratedDocumentFile,
+  uploadGeneratedDocumentVersion,
 ];

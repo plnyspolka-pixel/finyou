@@ -23,6 +23,7 @@ import { buildEngineSchedule, type EngineSchedule } from "./loan-schedule";
 import { validateKwNumber } from "../kw";
 import { FINANCE_YOU, jestFinanceYou } from "./finance-you";
 import { fyCommission } from "./fees";
+import { problemyKosztowe, uzupelnijDomyslne } from "./uzupelnienia";
 
 // ── scalanie łatki danych ────────────────────────────────────────────
 /** Deep-merge łatki AI na szkic: obiekty scalane, tablice podmieniane, null czyści. */
@@ -120,6 +121,7 @@ export function policzHarmonogramSilnikiem(umowa: any): EngineSchedule | null {
   const kwota = parseKwota(w.kwota_pozyczki?.cyframi);
   const prowizja = parseKwota(w.prowizja?.kwota?.cyframi);
   const prowizjaFY = parseKwota(w.prowizja_finance_you?.kwota?.cyframi);
+  const wRacieKoncowej = parseKwota(w.prowizja?.w_racie_koncowej?.cyframi);
   const oprocentowanie = parseKwota(w.oprocentowanie);
   const liczbaRat = Number(h.liczba_rat);
   const pierwsza = String(h.data_pierwszej_raty ?? "");
@@ -152,6 +154,8 @@ export function policzHarmonogramSilnikiem(umowa: any): EngineSchedule | null {
     kwotaPozyczki: kwota,
     prowizja: prow,
     prowizjaFY: Number.isNaN(prowizjaFY) ? 0 : prowizjaFY,
+    prowizjaWRacieKoncowej: Number.isNaN(wRacieKoncowej) ? 0 : wRacieKoncowej,
+    amortyzacjaKapitalu: h.amortyzacja_kapitalu === "w_balonie" ? "w_balonie" : "nadwyzka_raty",
     annualRatePercent: oprocentowanie,
     months: liczbaRat,
     maxMonthlyPayment: cap,
@@ -258,8 +262,14 @@ export function przetworzSzkic(umowa: any): {
   uzupelnijRachunekSplaty(umowa);
   uzupelnijRozliczenieFinanceYou(umowa);
   uzupelnijHarmonogram(umowa);
+  // Wartości domyślne (pkt 7): termin wezwania 777, data graniczna, kwota
+  // hipoteki ↔ 777, miejscownik miejscowości, sąd z kodu wydziału KW.
+  const domyslne = uzupelnijDomyslne(umowa);
   uzupelnijSlownie(umowa);
-  const autokorekty = umowa?.warunki ? autonaprawHarmonogram(umowa.warunki) : [];
+  const autokorekty = [
+    ...domyslne.autokorekty,
+    ...(umowa?.warunki ? autonaprawHarmonogram(umowa.warunki) : []),
+  ];
   let problemy: Problem[] = [];
   try {
     problemy = [
@@ -267,6 +277,9 @@ export function przetworzSzkic(umowa: any): {
       ...waliduj(umowa),
       ...walidujHarmonogram(umowa?.warunki ?? {}),
       ...problemySilnika(umowa),
+      ...domyslne.problemy,
+      // Ostrzeżenia kosztowe (pkt 6) — zawsze OSTRZEZENIE, nigdy nie blokują.
+      ...problemyKosztowe(umowa),
     ];
   } catch (e: any) {
     problemy = [

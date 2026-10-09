@@ -12,6 +12,7 @@ import {
   parseMortgages,
   parseKwPropertyParams,
   parseEncumbrances,
+  jestBrakWpisu,
 } from "./risk-assessment/kw-parse-core";
 import { parseKwAddress } from "./kw-address-core";
 import type { KwExtraction, KwExtractionHipoteka, KwExtractionOwner } from "./kw-render";
@@ -35,9 +36,14 @@ function norm(s: string): string {
 }
 
 function matchSad(text: string): string | null {
-  const m = text.match(
-    /prowadzonej\s+przez\s+(S[ĄA]D\s+REJONOWY[^,.;]*?)(?=,|\.|;|\s+[IVX]+\s+WYDZIA|\s+WYDZIA|$)/i,
-  );
+  const m =
+    text.match(
+      /prowadzonej\s+przez\s+(S[ĄA]D\s+REJONOWY[^,.;]*?)(?=,|\.|;|\s+[IVX]+\s+WYDZIA|\s+WYDZIA|$)/i,
+    ) ??
+    // Okładka odtworzona z EasyMKW/OCR (kw-render): wiersz „Sąd rejonowy | <nazwa>".
+    text.match(
+      /S[ąa]d\s+rejonowy\s+(S[ĄAąa]D\s+REJONOWY[^,.;]*?)(?=,|\.|;|\s+[IVX]+\s+WYDZIA|\s+WYDZIA|\s+[ŹZ]r[óo]d[łl]o\s+tre|\s+Data\s+importu|\s+Dzia[łl]y\s+nieobj|$)/i,
+    );
   return m ? m[1].replace(/\s+/g, " ").trim() : null;
 }
 
@@ -118,8 +124,21 @@ export function kwDocumentToExtraction(doc: KwDocumentSections): KwExtraction {
   const dzialki = extractDzialki(doc.dzial_1o).map((numer) => ({ numer }));
 
   // --- dział III (prawa/roszczenia/ograniczenia) ---
+  // Ta sama normalizacja „BRAK WPISU" co w dziale IV (jestBrakWpisu): treść
+  // „Wpisy | BRAK WPISU" to pusty dział, nie wpis rodzaju „Wpisy BRAK WPISU".
   const enc = parseEncumbrances(doc.dzial_3);
-  const wpisy = enc.encumbrances.map((t) => ({ rodzaj: t, tresc: t }));
+  const wpisy = jestBrakWpisu(doc.dzial_3)
+    ? []
+    : enc.encumbrances.filter((t) => !jestBrakWpisu(t)).map((t) => ({ rodzaj: t, tresc: t }));
+
+  // --- dział I-Sp (prawa związane z własnością) ---
+  const tekst1sp = stripHtml(doc.dzial_1s);
+  const dzial1sp =
+    doc.dzial_1s == null
+      ? null
+      : jestBrakWpisu(tekst1sp)
+        ? { brakWpisu: true, wpisy: [] }
+        : { brakWpisu: false, wpisy: [tekst1sp] };
 
   // --- dział IV (hipoteki) ---
   const hipoteki: KwExtractionHipoteka[] = parseMortgages(doc.dzial_4).map((m) => ({
@@ -147,7 +166,8 @@ export function kwDocumentToExtraction(doc: KwDocumentSections): KwExtraction {
             : null,
       dzialki: dzialki.length ? dzialki : null,
     },
-    dzial2: { wlasciciele },
+    dzial1sp,
+    dzial2: { brakWpisu: wlasciciele.length === 0 && jestBrakWpisu(doc.dzial_2), wlasciciele },
     dzial3: { brakWpisu: wpisy.length === 0, wpisy },
     dzial4: { brakWpisu: hipoteki.length === 0, hipoteki },
   };

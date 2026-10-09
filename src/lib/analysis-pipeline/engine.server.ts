@@ -367,21 +367,48 @@ async function advanceRun(
         ]);
         let primaryClientName: string | null = null;
         let primaryClientNip: string | null = (app as any)?.nip ?? null;
+        let primaryClientPesel: string | null = null;
+        let primaryClientCeidg: import("@/lib/risk-assessment/types").CeidgActivity | null = null;
         if (app?.client_id) {
+          // Dane przedsiębiorcy z CEIDG (po NIP) przed analizą KW: nazwisko
+          // klienta = nazwisko z CEIDG, więc R-IDENTITY porówna je z działem II
+          // (zmiana nazwiska przy tym samym PESEL = warunek wypłaty).
+          try {
+            const { synchronizujTozsamoscZCeidg } =
+              await import("@/lib/clients/identity-sync.server");
+            const sync = await synchronizujTozsamoscZCeidg(supabaseAdmin as any, app.client_id);
+            primaryClientCeidg = sync.ceidg;
+          } catch (e: any) {
+            console.error("[analysis-pipeline] CEIDG sync", run.id, e?.message);
+          }
+          // Puste pola nieruchomości z działu I-O KW (adres, powierzchnia…).
+          try {
+            const { uzupelnijNieruchomoscZKw } = await import("@/lib/properties/kw-fill.server");
+            await uzupelnijNieruchomoscZKw(
+              supabaseAdmin as any,
+              run.loan_application_id,
+              run.kw_number,
+            );
+          } catch (e: any) {
+            console.error("[analysis-pipeline] property fill from KW", run.id, e?.message);
+          }
           const { data: c } = await supabaseAdmin
             .from("clients")
-            .select("first_name, last_name, nip")
+            .select("first_name, last_name, nip, pesel")
             .eq("id", app.client_id)
             .maybeSingle();
           primaryClientName =
             [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim() || null;
           primaryClientNip = c?.nip || primaryClientNip;
+          primaryClientPesel = c?.pesel ?? null;
         }
         const { analyzeCoOwners } = await import("@/lib/coowners/analyze.server");
         const coResult = await analyzeCoOwners({
           kwNumber: run.kw_number,
           primaryClientName,
           primaryClientNip,
+          primaryClientPesel,
+          primaryClientCeidg,
           city: prop?.city ?? null,
           voivodeship: prop?.voivodeship ?? null,
         });
