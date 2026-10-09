@@ -779,6 +779,52 @@ function disambiguateLabels(fields: DocField[]): void {
   }
 }
 
+// Semantyki, w których ten sam klucz w różnych miejscach zwykle oznacza różne
+// wartości (np. kilka dat, kwot, wyborów) — tych pól nie scalamy.
+const NON_MERGEABLE_SEMANTICS: FieldSemantic[] = [
+  "amount",
+  "amountWords",
+  "date",
+  "months",
+  "interest",
+  "number",
+  "choice",
+  "instruction",
+];
+
+/**
+ * Powtórzenia tego samego pola (ten sam klucz, np. dwa razy „[Nazwa spółki]") —
+ * mapa id powtórzenia → id pierwszego wystąpienia. Formularz pokazuje tylko
+ * pierwsze, a przy generowaniu wartość trafia do wszystkich.
+ *
+ * Tylko dla wzorów, które na to pozwalają (patrz `mergesRepeatedFields`): w starszych
+ * wzorach ten sam klucz bywa użyty dla różnych stron (np. [ADRES] powoda i pozwanego).
+ */
+export function duplicateFieldMap(fields: DocField[]): Record<string, string> {
+  const primary = new Map<string, string>();
+  const map: Record<string, string> = {};
+  for (const f of fields) {
+    if (NON_MERGEABLE_SEMANTICS.includes(f.semantic)) continue;
+    const first = primary.get(f.key);
+    if (first) map[f.id] = first;
+    else primary.set(f.key, f.id);
+  }
+  return map;
+}
+
+/** Uzupełnia wartości powtórzeń wartością pierwszego wystąpienia. */
+export function expandDuplicateValues(
+  values: Record<string, string>,
+  dupMap: Record<string, string>,
+): Record<string, string> {
+  const out = { ...values };
+  for (const [dupId, primaryId] of Object.entries(dupMap)) {
+    const v = values[primaryId];
+    if (v != null) out[dupId] = v;
+  }
+  return out;
+}
+
 /** Grupuje pola zachowując kolejność występowania w dokumencie. */
 export function groupFields(fields: DocField[]): FieldGroup[] {
   const map = new Map<string, FieldGroup>();

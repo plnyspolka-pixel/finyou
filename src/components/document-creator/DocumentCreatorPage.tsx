@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateTime } from "@/lib/labels";
 import { extractLoanCalcPayload, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
 import { buildCalcFieldValues } from "@/lib/loan-calc-fill";
+import { mergesRepeatedFields } from "@/lib/document-templates/merge-fields";
 import { readCalcHandoff, clearCalcHandoff, onCalcHandoffChange } from "@/lib/loan-calc-handoff";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
@@ -19,6 +20,8 @@ import { krsCompanyLookup, type KrsLookupResult } from "@/lib/krs.functions";
 import {
   extractOrderedFields,
   groupFields,
+  duplicateFieldMap,
+  expandDuplicateValues,
   companyValueForField,
   calculatorValueForField,
   previewSegments,
@@ -208,7 +211,15 @@ export function DocumentCreatorPage({
     () => (previewText ? extractOrderedFields(previewText) : []),
     [previewText],
   );
-  const groups = useMemo<FieldGroup[]>(() => groupFields(fields), [fields]);
+  // Powtórzenia tego samego pola (np. dwa razy „[Nazwa spółki]") — w formularzu raz,
+  // wartość trafia do wszystkich wystąpień.
+  const dupMap = useMemo(
+    () => (mergesRepeatedFields(selected?.slug) ? duplicateFieldMap(fields) : {}),
+    [fields, selected?.slug],
+  );
+  const formFields = useMemo(() => fields.filter((f) => !dupMap[f.id]), [fields, dupMap]);
+  const groups = useMemo<FieldGroup[]>(() => groupFields(formFields), [formFields]);
+  const docValues = useMemo(() => expandDuplicateValues(values, dupMap), [values, dupMap]);
   // Kalkulator pokazujemy WYŁĄCZNIE przy Umowie pożyczki.
   const showCalculator = useMemo(() => isLoanAgreement(selected), [selected]);
 
@@ -517,7 +528,7 @@ export function DocumentCreatorPage({
       const res = await _generate({
         data: {
           templateId: selected.id,
-          values,
+          values: docValues,
           commissionAmount: showCalculator && commission > 0 ? commission : null,
           commissionAddedToCosts: false,
           schedule: importedSchedule ?? undefined,
@@ -544,12 +555,12 @@ export function DocumentCreatorPage({
   };
 
   const filledCount = useMemo(
-    () => fields.filter((f) => (values[f.id] ?? "").trim().length > 0).length,
-    [fields, values],
+    () => formFields.filter((f) => (values[f.id] ?? "").trim().length > 0).length,
+    [formFields, values],
   );
   const fillableCount = useMemo(
-    () => fields.filter((f) => f.semantic !== "instruction").length,
-    [fields],
+    () => formFields.filter((f) => f.semantic !== "instruction").length,
+    [formFields],
   );
 
   return (
@@ -932,7 +943,7 @@ export function DocumentCreatorPage({
                     <div className="max-h-[480px] overflow-y-auto rounded-md border bg-muted/30 p-4">
                       <PreviewRenderer
                         text={previewText}
-                        values={previewMode === "filled" ? values : null}
+                        values={previewMode === "filled" ? docValues : null}
                       />
                     </div>
                   ) : previewError ? (
