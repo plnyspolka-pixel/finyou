@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ScreeningStrip } from "@/components/screening/screening-strip";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -119,6 +120,7 @@ function InwestorDetail() {
           ({investorTypeLabels[inv.investor_type]})
         </span>
       </h1>
+      <ScreeningStrip kind="investor" id={id} />
       <Card>
         <CardHeader>
           <CardTitle>Dane</CardTitle>

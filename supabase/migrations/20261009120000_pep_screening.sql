@@ -134,6 +134,8 @@ CREATE TABLE IF NOT EXISTS public.pep_reference_persons (
 );
 CREATE INDEX IF NOT EXISTS pep_reference_persons_norm_trgm
   ON public.pep_reference_persons USING gin (normalized_name extensions.gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS pep_reference_persons_positions_gin
+  ON public.pep_reference_persons USING gin (positions jsonb_path_ops);
 
 -- ---------------------------------------------------------------------
 -- 5. Warstwa referencyjna — listy sankcyjne
@@ -322,6 +324,7 @@ CREATE TABLE IF NOT EXISTS public.screening_cases (
   decided_at timestamptz,
   attachments jsonb NOT NULL DEFAULT '[]'::jsonb,
   application_hold boolean NOT NULL DEFAULT false,
+  declaration_id uuid REFERENCES public.pep_declarations(id),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT screening_cases_decision_needs_justification
@@ -401,6 +404,26 @@ END $fn$;
 DROP TRIGGER IF EXISTS screening_audit_chain_trg ON public.screening_audit_log;
 CREATE TRIGGER screening_audit_chain_trg BEFORE INSERT ON public.screening_audit_log
   FOR EACH ROW EXECUTE FUNCTION public.screening_audit_chain();
+
+-- Weryfikacja łańcucha: przelicza skróty tym samym wzorem co trigger.
+CREATE OR REPLACE FUNCTION public.screening_audit_verify()
+RETURNS TABLE (checked bigint, broken_ids bigint[])
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $fn$
+DECLARE r record; prev text := NULL; n bigint := 0; bad bigint[] := '{}'; h text;
+BEGIN
+  FOR r IN SELECT * FROM public.screening_audit_log ORDER BY id LOOP
+    n := n + 1;
+    h := encode(sha256(convert_to(
+      coalesce(prev,'') || '|' || r.created_at::text || '|' || r.event_type || '|' || r.entity_type || '|' ||
+      coalesce(r.entity_id,'') || '|' || coalesce(r.subject_id::text,'') || '|' ||
+      coalesce(r.actor_id::text,'') || '|' || r.details::text, 'UTF8')), 'hex');
+    IF r.prev_hash IS DISTINCT FROM prev OR r.row_hash IS DISTINCT FROM h THEN bad := bad || r.id; END IF;
+    prev := r.row_hash;
+  END LOOP;
+  RETURN QUERY SELECT n, bad;
+END $fn$;
+REVOKE ALL ON FUNCTION public.screening_audit_verify() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.screening_audit_verify() TO service_role;
 
 CREATE OR REPLACE FUNCTION public.screening_immutable()
 RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $fn$
@@ -496,6 +519,23 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, extensions AS $fn
 $fn$;
 REVOKE ALL ON FUNCTION public.screening_find_candidates(text[], text[], text[], real, int) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.screening_find_candidates(text[], text[], text[], real, int) TO service_role;
+
+-- Raport pokrycia: pozycje katalogu → liczba osób w warstwie referencyjnej.
+CREATE OR REPLACE FUNCTION public.screening_coverage()
+RETURNS TABLE (code text, persons bigint, current_persons bigint, last_fetched_at timestamptz, sources text[])
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $fn$
+  SELECT c.code,
+         count(p.id),
+         count(p.id) FILTER (WHERE p.is_current),
+         max(p.fetched_at),
+         coalesce(array_agg(DISTINCT p.source) FILTER (WHERE p.source IS NOT NULL), '{}')
+  FROM public.pep_position_catalog c
+  LEFT JOIN public.pep_reference_persons p
+    ON p.positions @> jsonb_build_array(jsonb_build_object('catalogCode', c.code))
+  GROUP BY c.code;
+$fn$;
+REVOKE ALL ON FUNCTION public.screening_coverage() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.screening_coverage() TO service_role;
 
 -- ---------------------------------------------------------------------
 -- 13. Triggery kolejki: utworzenie / zmiana klienta lub inwestora

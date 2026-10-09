@@ -86,6 +86,7 @@ import { Route as AdminPrMediaRouteImport } from './routes/admin.pr-media'
 import { Route as AdminProjektyRouteImport } from './routes/admin.projekty'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
+import { Route as AdminScreeningRouteImport } from './routes/admin.screening'
 import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminSprzedazRouteImport } from './routes/admin.sprzedaz'
 import { Route as AdminStudioPublikacjiRouteImport } from './routes/admin.studio-publikacji'
@@ -203,6 +204,7 @@ import { Route as AdminProgramPosrednikowStrukturaRouteImport } from './routes/a
 import { Route as AdminProgramPosrednikowUstawieniaRouteImport } from './routes/admin.program-posrednikow.ustawienia'
 import { Route as AdminProgramPosrednikowWyplatyRouteImport } from './routes/admin.program-posrednikow.wyplaty'
 import { Route as AdminProgramPosrednikowZdarzeniaRouteImport } from './routes/admin.program-posrednikow.zdarzenia'
+import { Route as AdminScreeningSprawaCaseIdRouteImport } from './routes/admin.screening-sprawa.$caseId'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as ApiPublicAgentConfigRouteImport } from './routes/api/public/agent-config'
 import { Route as ApiPublicAgentToolsRouteImport } from './routes/api/public/agent-tools'
@@ -248,6 +250,7 @@ import { Route as PosrednikLeadyIndexRouteImport } from './routes/posrednik.lead
 import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
 import { Route as PosrednikWnioskiIndexRouteImport } from './routes/posrednik.wnioski.index'
 import { Route as PosrednikWnioskiIdRouteImport } from './routes/posrednik.wnioski.$id'
+import { Route as AdminScreeningPodmiotKindIdRouteImport } from './routes/admin.screening-podmiot.$kind.$id'
 import { Route as ApiPublicEmailClickRouteImport } from './routes/api/public/email/click'
 import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
 import { Route as ApiPublicEmailUnsubscribeRouteImport } from './routes/api/public/email/unsubscribe'
@@ -275,6 +278,10 @@ import { Route as ApiPublicHooksPrMonitorTickRouteImport } from './routes/api/pu
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
 import { Route as ApiPublicHooksProjectAssignmentsTickRouteImport } from './routes/api/public/hooks/project-assignments-tick'
 import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes/api/public/hooks/saturday-sms-reminders'
+import { Route as ApiPublicHooksScreeningHealthRouteImport } from './routes/api/public/hooks/screening-health'
+import { Route as ApiPublicHooksScreeningImportRouteImport } from './routes/api/public/hooks/screening-import'
+import { Route as ApiPublicHooksScreeningQueueTickRouteImport } from './routes/api/public/hooks/screening-queue-tick'
+import { Route as ApiPublicHooksScreeningRescreenRouteImport } from './routes/api/public/hooks/screening-rescreen'
 import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/hooks/seed-blog'
 import { Route as ApiPublicHooksSeoLocationPublishTickRouteImport } from './routes/api/public/hooks/seo-location-publish-tick'
 import { Route as ApiPublicHooksSeoLocationSeedRouteImport } from './routes/api/public/hooks/seo-location-seed'
@@ -681,6 +688,11 @@ const AdminPrzypomnieniaRoute = AdminPrzypomnieniaRouteImport.update({
 const AdminRoleRoute = AdminRoleRouteImport.update({
   id: '/role',
   path: '/role',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminScreeningRoute = AdminScreeningRouteImport.update({
+  id: '/screening',
+  path: '/screening',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminSkrzynkaRoute = AdminSkrzynkaRouteImport.update({
@@ -1285,6 +1297,12 @@ const AdminProgramPosrednikowZdarzeniaRoute =
     path: '/program-posrednikow/zdarzenia',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminScreeningSprawaCaseIdRoute =
+  AdminScreeningSprawaCaseIdRouteImport.update({
+    id: '/screening-sprawa/$caseId',
+    path: '/screening-sprawa/$caseId',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   id: '/wnioski/$id',
   path: '/wnioski/$id',
@@ -1524,6 +1542,12 @@ const PosrednikWnioskiIdRoute = PosrednikWnioskiIdRouteImport.update({
   path: '/wnioski/$id',
   getParentRoute: () => PosrednikRoute,
 } as any)
+const AdminScreeningPodmiotKindIdRoute =
+  AdminScreeningPodmiotKindIdRouteImport.update({
+    id: '/screening-podmiot/$kind/$id',
+    path: '/screening-podmiot/$kind/$id',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const ApiPublicEmailClickRoute = ApiPublicEmailClickRouteImport.update({
   id: '/api/public/email/click',
   path: '/api/public/email/click',
@@ -1682,6 +1706,30 @@ const ApiPublicHooksSaturdaySmsRemindersRoute =
   ApiPublicHooksSaturdaySmsRemindersRouteImport.update({
     id: '/api/public/hooks/saturday-sms-reminders',
     path: '/api/public/hooks/saturday-sms-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksScreeningHealthRoute =
+  ApiPublicHooksScreeningHealthRouteImport.update({
+    id: '/api/public/hooks/screening-health',
+    path: '/api/public/hooks/screening-health',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksScreeningImportRoute =
+  ApiPublicHooksScreeningImportRouteImport.update({
+    id: '/api/public/hooks/screening-import',
+    path: '/api/public/hooks/screening-import',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksScreeningQueueTickRoute =
+  ApiPublicHooksScreeningQueueTickRouteImport.update({
+    id: '/api/public/hooks/screening-queue-tick',
+    path: '/api/public/hooks/screening-queue-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksScreeningRescreenRoute =
+  ApiPublicHooksScreeningRescreenRouteImport.update({
+    id: '/api/public/hooks/screening-rescreen',
+    path: '/api/public/hooks/screening-rescreen',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksSeedBlogRoute = ApiPublicHooksSeedBlogRouteImport.update({
@@ -1873,6 +1921,7 @@ export interface FileRoutesByFullPath {
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/screening': typeof AdminScreeningRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
   '/admin/sprzedaz': typeof AdminSprzedazRoute
   '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
@@ -1987,6 +2036,7 @@ export interface FileRoutesByFullPath {
   '/admin/program-posrednikow/ustawienia': typeof AdminProgramPosrednikowUstawieniaRoute
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
+  '/admin/screening-sprawa/$caseId': typeof AdminScreeningSprawaCaseIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
@@ -2036,6 +2086,7 @@ export interface FileRoutesByFullPath {
   '/operator/wnioski/': typeof OperatorWnioskiIndexRoute
   '/posrednik/leady/': typeof PosrednikLeadyIndexRoute
   '/posrednik/wnioski/': typeof PosrednikWnioskiIndexRoute
+  '/admin/screening-podmiot/$kind/$id': typeof AdminScreeningPodmiotKindIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
@@ -2063,6 +2114,10 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
+  '/api/public/hooks/screening-health': typeof ApiPublicHooksScreeningHealthRoute
+  '/api/public/hooks/screening-import': typeof ApiPublicHooksScreeningImportRoute
+  '/api/public/hooks/screening-queue-tick': typeof ApiPublicHooksScreeningQueueTickRoute
+  '/api/public/hooks/screening-rescreen': typeof ApiPublicHooksScreeningRescreenRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
@@ -2155,6 +2210,7 @@ export interface FileRoutesByTo {
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/screening': typeof AdminScreeningRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
   '/admin/sprzedaz': typeof AdminSprzedazRoute
   '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
@@ -2264,6 +2320,7 @@ export interface FileRoutesByTo {
   '/admin/program-posrednikow/ustawienia': typeof AdminProgramPosrednikowUstawieniaRoute
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
+  '/admin/screening-sprawa/$caseId': typeof AdminScreeningSprawaCaseIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
@@ -2313,6 +2370,7 @@ export interface FileRoutesByTo {
   '/operator/wnioski': typeof OperatorWnioskiIndexRoute
   '/posrednik/leady': typeof PosrednikLeadyIndexRoute
   '/posrednik/wnioski': typeof PosrednikWnioskiIndexRoute
+  '/admin/screening-podmiot/$kind/$id': typeof AdminScreeningPodmiotKindIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
@@ -2340,6 +2398,10 @@ export interface FileRoutesByTo {
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
+  '/api/public/hooks/screening-health': typeof ApiPublicHooksScreeningHealthRoute
+  '/api/public/hooks/screening-import': typeof ApiPublicHooksScreeningImportRoute
+  '/api/public/hooks/screening-queue-tick': typeof ApiPublicHooksScreeningQueueTickRoute
+  '/api/public/hooks/screening-rescreen': typeof ApiPublicHooksScreeningRescreenRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
@@ -2438,6 +2500,7 @@ export interface FileRoutesById {
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/screening': typeof AdminScreeningRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
   '/admin/sprzedaz': typeof AdminSprzedazRoute
   '/admin/studio-publikacji': typeof AdminStudioPublikacjiRoute
@@ -2552,6 +2615,7 @@ export interface FileRoutesById {
   '/admin/program-posrednikow/ustawienia': typeof AdminProgramPosrednikowUstawieniaRoute
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
+  '/admin/screening-sprawa/$caseId': typeof AdminScreeningSprawaCaseIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
@@ -2601,6 +2665,7 @@ export interface FileRoutesById {
   '/operator/wnioski/': typeof OperatorWnioskiIndexRoute
   '/posrednik/leady/': typeof PosrednikLeadyIndexRoute
   '/posrednik/wnioski/': typeof PosrednikWnioskiIndexRoute
+  '/admin/screening-podmiot/$kind/$id': typeof AdminScreeningPodmiotKindIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/email/unsubscribe': typeof ApiPublicEmailUnsubscribeRoute
@@ -2628,6 +2693,10 @@ export interface FileRoutesById {
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
+  '/api/public/hooks/screening-health': typeof ApiPublicHooksScreeningHealthRoute
+  '/api/public/hooks/screening-import': typeof ApiPublicHooksScreeningImportRoute
+  '/api/public/hooks/screening-queue-tick': typeof ApiPublicHooksScreeningQueueTickRoute
+  '/api/public/hooks/screening-rescreen': typeof ApiPublicHooksScreeningRescreenRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/seo-location-publish-tick': typeof ApiPublicHooksSeoLocationPublishTickRoute
   '/api/public/hooks/seo-location-seed': typeof ApiPublicHooksSeoLocationSeedRoute
@@ -2727,6 +2796,7 @@ export interface FileRouteTypes {
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
+    | '/admin/screening'
     | '/admin/skrzynka'
     | '/admin/sprzedaz'
     | '/admin/studio-publikacji'
@@ -2841,6 +2911,7 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/ustawienia'
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
+    | '/admin/screening-sprawa/$caseId'
     | '/admin/wnioski/$id'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
@@ -2890,6 +2961,7 @@ export interface FileRouteTypes {
     | '/operator/wnioski/'
     | '/posrednik/leady/'
     | '/posrednik/wnioski/'
+    | '/admin/screening-podmiot/$kind/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/email/unsubscribe'
@@ -2917,6 +2989,10 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
+    | '/api/public/hooks/screening-health'
+    | '/api/public/hooks/screening-import'
+    | '/api/public/hooks/screening-queue-tick'
+    | '/api/public/hooks/screening-rescreen'
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
@@ -3009,6 +3085,7 @@ export interface FileRouteTypes {
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
+    | '/admin/screening'
     | '/admin/skrzynka'
     | '/admin/sprzedaz'
     | '/admin/studio-publikacji'
@@ -3118,6 +3195,7 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/ustawienia'
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
+    | '/admin/screening-sprawa/$caseId'
     | '/admin/wnioski/$id'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
@@ -3167,6 +3245,7 @@ export interface FileRouteTypes {
     | '/operator/wnioski'
     | '/posrednik/leady'
     | '/posrednik/wnioski'
+    | '/admin/screening-podmiot/$kind/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/email/unsubscribe'
@@ -3194,6 +3273,10 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
+    | '/api/public/hooks/screening-health'
+    | '/api/public/hooks/screening-import'
+    | '/api/public/hooks/screening-queue-tick'
+    | '/api/public/hooks/screening-rescreen'
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
@@ -3291,6 +3374,7 @@ export interface FileRouteTypes {
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
+    | '/admin/screening'
     | '/admin/skrzynka'
     | '/admin/sprzedaz'
     | '/admin/studio-publikacji'
@@ -3405,6 +3489,7 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/ustawienia'
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
+    | '/admin/screening-sprawa/$caseId'
     | '/admin/wnioski/$id'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
@@ -3454,6 +3539,7 @@ export interface FileRouteTypes {
     | '/operator/wnioski/'
     | '/posrednik/leady/'
     | '/posrednik/wnioski/'
+    | '/admin/screening-podmiot/$kind/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/email/unsubscribe'
@@ -3481,6 +3567,10 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
+    | '/api/public/hooks/screening-health'
+    | '/api/public/hooks/screening-import'
+    | '/api/public/hooks/screening-queue-tick'
+    | '/api/public/hooks/screening-rescreen'
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/seo-location-publish-tick'
     | '/api/public/hooks/seo-location-seed'
@@ -3610,6 +3700,10 @@ export interface RootRouteChildren {
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
   ApiPublicHooksProjectAssignmentsTickRoute: typeof ApiPublicHooksProjectAssignmentsTickRoute
   ApiPublicHooksSaturdaySmsRemindersRoute: typeof ApiPublicHooksSaturdaySmsRemindersRoute
+  ApiPublicHooksScreeningHealthRoute: typeof ApiPublicHooksScreeningHealthRoute
+  ApiPublicHooksScreeningImportRoute: typeof ApiPublicHooksScreeningImportRoute
+  ApiPublicHooksScreeningQueueTickRoute: typeof ApiPublicHooksScreeningQueueTickRoute
+  ApiPublicHooksScreeningRescreenRoute: typeof ApiPublicHooksScreeningRescreenRoute
   ApiPublicHooksSeedBlogRoute: typeof ApiPublicHooksSeedBlogRoute
   ApiPublicHooksSeoLocationPublishTickRoute: typeof ApiPublicHooksSeoLocationPublishTickRoute
   ApiPublicHooksSeoLocationSeedRoute: typeof ApiPublicHooksSeoLocationSeedRoute
@@ -4168,6 +4262,13 @@ declare module '@tanstack/react-router' {
       path: '/role'
       fullPath: '/admin/role'
       preLoaderRoute: typeof AdminRoleRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/screening': {
+      id: '/admin/screening'
+      path: '/screening'
+      fullPath: '/admin/screening'
+      preLoaderRoute: typeof AdminScreeningRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/skrzynka': {
@@ -4989,6 +5090,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProgramPosrednikowZdarzeniaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/screening-sprawa/$caseId': {
+      id: '/admin/screening-sprawa/$caseId'
+      path: '/screening-sprawa/$caseId'
+      fullPath: '/admin/screening-sprawa/$caseId'
+      preLoaderRoute: typeof AdminScreeningSprawaCaseIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/wnioski/$id': {
       id: '/admin/wnioski/$id'
       path: '/wnioski/$id'
@@ -5304,6 +5412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosrednikWnioskiIdRouteImport
       parentRoute: typeof PosrednikRoute
     }
+    '/admin/screening-podmiot/$kind/$id': {
+      id: '/admin/screening-podmiot/$kind/$id'
+      path: '/screening-podmiot/$kind/$id'
+      fullPath: '/admin/screening-podmiot/$kind/$id'
+      preLoaderRoute: typeof AdminScreeningPodmiotKindIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/public/email/click': {
       id: '/api/public/email/click'
       path: '/api/public/email/click'
@@ -5491,6 +5606,34 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/saturday-sms-reminders'
       fullPath: '/api/public/hooks/saturday-sms-reminders'
       preLoaderRoute: typeof ApiPublicHooksSaturdaySmsRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/screening-health': {
+      id: '/api/public/hooks/screening-health'
+      path: '/api/public/hooks/screening-health'
+      fullPath: '/api/public/hooks/screening-health'
+      preLoaderRoute: typeof ApiPublicHooksScreeningHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/screening-import': {
+      id: '/api/public/hooks/screening-import'
+      path: '/api/public/hooks/screening-import'
+      fullPath: '/api/public/hooks/screening-import'
+      preLoaderRoute: typeof ApiPublicHooksScreeningImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/screening-queue-tick': {
+      id: '/api/public/hooks/screening-queue-tick'
+      path: '/api/public/hooks/screening-queue-tick'
+      fullPath: '/api/public/hooks/screening-queue-tick'
+      preLoaderRoute: typeof ApiPublicHooksScreeningQueueTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/screening-rescreen': {
+      id: '/api/public/hooks/screening-rescreen'
+      path: '/api/public/hooks/screening-rescreen'
+      fullPath: '/api/public/hooks/screening-rescreen'
+      preLoaderRoute: typeof ApiPublicHooksScreeningRescreenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/seed-blog': {
@@ -5698,6 +5841,7 @@ interface AdminRouteChildren {
   AdminProjektyRoute: typeof AdminProjektyRoute
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
+  AdminScreeningRoute: typeof AdminScreeningRoute
   AdminSkrzynkaRoute: typeof AdminSkrzynkaRoute
   AdminSprzedazRoute: typeof AdminSprzedazRoute
   AdminStudioPublikacjiRoute: typeof AdminStudioPublikacjiRoute
@@ -5732,11 +5876,13 @@ interface AdminRouteChildren {
   AdminProgramPosrednikowUstawieniaRoute: typeof AdminProgramPosrednikowUstawieniaRoute
   AdminProgramPosrednikowWyplatyRoute: typeof AdminProgramPosrednikowWyplatyRoute
   AdminProgramPosrednikowZdarzeniaRoute: typeof AdminProgramPosrednikowZdarzeniaRoute
+  AdminScreeningSprawaCaseIdRoute: typeof AdminScreeningSprawaCaseIdRoute
   AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
   AdminAutoDystrybucjaIndexRoute: typeof AdminAutoDystrybucjaIndexRoute
   AdminKsiegowoscIndexRoute: typeof AdminKsiegowoscIndexRoute
   AdminMarketingIndexRoute: typeof AdminMarketingIndexRoute
   AdminProgramPosrednikowIndexRoute: typeof AdminProgramPosrednikowIndexRoute
+  AdminScreeningPodmiotKindIdRoute: typeof AdminScreeningPodmiotKindIdRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -5784,6 +5930,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminProjektyRoute: AdminProjektyRoute,
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
+  AdminScreeningRoute: AdminScreeningRoute,
   AdminSkrzynkaRoute: AdminSkrzynkaRoute,
   AdminSprzedazRoute: AdminSprzedazRoute,
   AdminStudioPublikacjiRoute: AdminStudioPublikacjiRoute,
@@ -5820,11 +5967,13 @@ const AdminRouteChildren: AdminRouteChildren = {
     AdminProgramPosrednikowUstawieniaRoute,
   AdminProgramPosrednikowWyplatyRoute: AdminProgramPosrednikowWyplatyRoute,
   AdminProgramPosrednikowZdarzeniaRoute: AdminProgramPosrednikowZdarzeniaRoute,
+  AdminScreeningSprawaCaseIdRoute: AdminScreeningSprawaCaseIdRoute,
   AdminWnioskiIdRoute: AdminWnioskiIdRoute,
   AdminAutoDystrybucjaIndexRoute: AdminAutoDystrybucjaIndexRoute,
   AdminKsiegowoscIndexRoute: AdminKsiegowoscIndexRoute,
   AdminMarketingIndexRoute: AdminMarketingIndexRoute,
   AdminProgramPosrednikowIndexRoute: AdminProgramPosrednikowIndexRoute,
+  AdminScreeningPodmiotKindIdRoute: AdminScreeningPodmiotKindIdRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -6201,6 +6350,10 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksProjectAssignmentsTickRoute,
   ApiPublicHooksSaturdaySmsRemindersRoute:
     ApiPublicHooksSaturdaySmsRemindersRoute,
+  ApiPublicHooksScreeningHealthRoute: ApiPublicHooksScreeningHealthRoute,
+  ApiPublicHooksScreeningImportRoute: ApiPublicHooksScreeningImportRoute,
+  ApiPublicHooksScreeningQueueTickRoute: ApiPublicHooksScreeningQueueTickRoute,
+  ApiPublicHooksScreeningRescreenRoute: ApiPublicHooksScreeningRescreenRoute,
   ApiPublicHooksSeedBlogRoute: ApiPublicHooksSeedBlogRoute,
   ApiPublicHooksSeoLocationPublishTickRoute:
     ApiPublicHooksSeoLocationPublishTickRoute,

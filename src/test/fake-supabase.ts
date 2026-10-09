@@ -99,7 +99,8 @@ class Query {
     return this;
   }
   is(col: string, val: any) {
-    this.filters.push((r) => r[col] === val);
+    // PostgREST `is.null` — brak wartości w wierszu in-memory traktujemy jak NULL.
+    this.filters.push((r) => (val === null ? r[col] == null : r[col] === val));
     return this;
   }
   not(col: string, op: string, val: any) {
@@ -190,7 +191,14 @@ class Query {
             continue;
           }
         }
-        const row: Row = { id: fakeUuid(), created_at: this.db.now().toISOString(), ...item };
+        const row: Row = {
+          id: fakeUuid(),
+          created_at: this.db.now().toISOString(),
+          ...(typeof this.db.defaults[this.table] === "function"
+            ? (this.db.defaults[this.table] as () => Row)()
+            : (this.db.defaults[this.table] ?? {})),
+          ...item,
+        };
         const violation = this.uniqueViolation(row);
         if (violation) return { data: null, error: { message: violation, code: "23505" } };
         const hook = this.db.insertHooks[this.table];
@@ -270,6 +278,8 @@ class FakeDbImpl implements FakeDb {
   userEmails: Record<string, string> = {};
 
   rpcHandlers: Record<string, (params: Record<string, any>) => any> = {};
+  /** Wartości domyślne kolumn (odpowiednik DEFAULT w SQL) dla nowych wierszy tabeli. */
+  defaults: Record<string, Row | (() => Row)> = {};
 
   async rpc(name: string, params: Record<string, any> = {}): Promise<{ data: any; error: any }> {
     if (this.rpcHandlers[name]) return { data: this.rpcHandlers[name](params), error: null };

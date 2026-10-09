@@ -194,7 +194,13 @@ export const adminSections: AdminSection[] = [
     hubPath: "/admin/sprzedaz",
     accent: "gold",
     description: "Klienci, wnioski i narzędzia przygotowania pożyczki.",
-    extraPrefixes: ["/admin/wnioski", "/admin/przypomnienia", "/admin/dokumenty"],
+    extraPrefixes: [
+      "/admin/wnioski",
+      "/admin/przypomnienia",
+      "/admin/dokumenty",
+      "/admin/screening-sprawa",
+      "/admin/screening-podmiot",
+    ],
     items: [
       {
         to: "/admin/tablica",
@@ -210,6 +216,14 @@ export const adminSections: AdminSection[] = [
         icon: Users,
         description: "Baza klientów pożyczkowych z leadami i przypomnieniami.",
         synonyms: ["leady", "przypomnienia", "crm", "kontakty"],
+      },
+      {
+        to: "/admin/screening",
+        label: "Screening PEP i sankcji",
+        icon: ShieldCheck,
+        description:
+          "Kolejka spraw AML: trafienia PEP i list sankcyjnych, oświadczenia, decyzje, źródła.",
+        synonyms: ["pep", "sankcje", "aml", "compliance", "giif", "screening", "lista sankcyjna"],
       },
       {
         to: "/admin/wnioski-niekompletne",
