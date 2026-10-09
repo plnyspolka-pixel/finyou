@@ -30,6 +30,8 @@
 // i zmiany reżimu odsetkowego po wymagalności/wypowiedzeniu.
 // ════════════════════════════════════════════════════════════════════
 
+import { maxDelayRate } from "@/lib/contract-engine/fees";
+
 /**
  * Odsetki maksymalne za opóźnienie (art. 481 §2¹ KC):
  * 2 × (stopa referencyjna NBP + 5,5 p.p.).
@@ -41,11 +43,48 @@ export function maxDelayInterestRate(nbpReferenceRatePercent: number): number {
 /**
  * Domyślna stopa referencyjna NBP używana jako podpowiedź przy zakładaniu
  * sprawy. Inwestor może ją nadpisać własną, aktualną wartością.
+ *
+ * @deprecated Stała z października 2023 r. (ref. 5,75 %) — nieaktualna od
+ * 2025-05-08. Aktualne stopy są w tabeli MAX_INTEREST_TABLE
+ * (contract-engine/fees.ts); używaj `currentMaxDelayRate(data)`.
  */
 export const DEFAULT_NBP_REFERENCE_RATE = 5.75;
 
-/** Domyślne odsetki maksymalne za opóźnienie wynikające z podpowiedzi NBP. */
+/**
+ * Domyślne odsetki maksymalne za opóźnienie wynikające z podpowiedzi NBP.
+ *
+ * @deprecated Zawsze 22,5 % (stan z 2023-10-05), niezależnie od daty —
+ * zawyża odsetki dla dni po 2025-05-08. Używaj `currentMaxDelayRate(data)`
+ * albo `defaultDelayRate(data_umowy)` z windykacja-debt.ts.
+ */
 export const DEFAULT_MAX_DELAY_RATE = maxDelayInterestRate(DEFAULT_NBP_REFERENCE_RATE);
+
+/**
+ * Odsetki maksymalne za opóźnienie (art. 481 § 2¹ KC, % rocznie) obowiązujące
+ * w danym dniu — z tabeli stóp RPP (contract-engine/fees.ts). Bez argumentu:
+ * dziś. Datę przekazujemy jako RRRR-MM-DD, bo fees.ts czyta obiekt Date
+ * w czasie lokalnym.
+ */
+export function currentMaxDelayRate(date?: string | Date): number {
+  return maxDelayRate(toIsoDay(date ?? new Date()));
+}
+
+function toIsoDay(date: string | Date): string {
+  if (typeof date === "string") {
+    const s = date.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? toIsoDay(new Date()) : toIsoDay(d);
+  }
+  if (isNaN(date.getTime())) return toIsoDay(new Date());
+  // Dzień kalendarzowy w Polsce (Europe/Warsaw), a nie w strefie serwera.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
 
 export function round2(n: number): number {
   return Math.round((Number(n) || 0) * 100) / 100;

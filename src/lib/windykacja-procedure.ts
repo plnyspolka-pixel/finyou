@@ -170,7 +170,7 @@ export function suggestNextAction(
   // Wpłata domyka sprawę niezależnie od etapu.
   if (c.kwota_zalegla <= 0) {
     return {
-      text: "Zaległość uregulowana — zamknij sprawę z wynikiem „spłacona”.",
+      text: "Zaległość uregulowana. Jeśli pożyczka jest spłacona w całości — zamknij sprawę z wynikiem „spłacona”; jeśli zostały raty przyszłe — zamknij sprawę windykacyjną albo monitoruj kolejne terminy.",
       hint: "zamknij",
     };
   }

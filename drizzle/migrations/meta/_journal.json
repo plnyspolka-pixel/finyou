@@ -204,6 +204,13 @@
       "when": 1791280800000,
       "tag": "0028_windykacja_telefon_agent",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791284400000,
+      "tag": "0029_wind_harmonogram_pozyczkodawca",
+      "breakpoints": true
     }
   ]
 }

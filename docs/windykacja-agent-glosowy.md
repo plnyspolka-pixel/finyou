@@ -94,24 +94,50 @@ kolejnych krokach pożyczkodawcy.
 
 ## Zmienne rozmowy
 
-| Zmienna                                        | Skąd                                                          | Uwagi                                                                                                                                             |
-| ---------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `adresat`                                      | pożyczkobiorca                                                | „pan Jan Kowalski” / „pani …” / „firma …” — tylko do pierwszej wiadomości                                                                         |
-| `imie_inwestora`                               | profil inwestora                                              | w czyim imieniu dzwoni agent                                                                                                                      |
-| `imie_dluznika`, `typ_dluznika`, `forma`       | `wind_borrowers`                                              | forma „Pan/Pani” z PESEL (suma kontrolna), w ostateczności z imienia                                                                              |
-| `numer_umowy`, `data_umowy`                    | `wind_loans`                                                  |                                                                                                                                                   |
-| `kwota_zaleglosci`, `kwota_zaleglosci_slownie` | kwota z formularza albo `kwota_zalegla` sprawy                | słownie bez groszy — do mowy                                                                                                                      |
-| `dni_opoznienia`                               | termin spłaty / opóźnienie przy otwarciu + dni od otwarcia    | liczone na dziś                                                                                                                                   |
-| `etap`                                         | ścieżka, opóźnienie, wypowiedzenie                            | `przypomnienie` (≤ 14 dni, ścieżka miękka), `monit` (> 14 dni lub ścieżka standardowa), `ostatnie_wezwanie` (wypowiedzenie, ścieżka twarda/karna) |
-| `termin_maksymalny`                            | dziś + 7 / 5 / 3 dni wg etapu                                 | weekend przesuwa na poniedziałek                                                                                                                  |
-| `umowa_wypowiedziana`, `hipoteka`, `akt_777`   | `wind_loans`                                                  | „brak” = nie wspominać                                                                                                                            |
-| `rachunek_splaty`                              | `wind_loans.rachunek_splaty`                                  | dyktowany tylko na prośbę                                                                                                                         |
-| `oplaty_windykacyjne`                          | tabela opłat z umowy                                          | bez domyślnych podpowiedzi — tylko kwoty z umowy                                                                                                  |
-| `dzisiaj`                                      | data w Warszawie                                              | z dniem tygodnia                                                                                                                                  |
-| `poprzednia_deklaracja`                        | ostatni telefon z `metadata.deklarowana_data` + wpłaty po nim | „niedotrzymana” / „termin jeszcze trwa” / „wpłata była, zaległość nadal jest”                                                                     |
+| Zmienna                                        | Skąd                                                                                                                                 | Uwagi                                                                                                                                             |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `adresat`                                      | pożyczkobiorca                                                                                                                       | „pan Jan Kowalski” / „pani …” / „firma …” — tylko do pierwszej wiadomości                                                                         |
+| `imie_inwestora`                               | `wind_loans.pozyczkodawca` (nazwa pożyczkodawcy z umowy), a gdy pusta — profil właściciela sprawy                                    | w czyim imieniu dzwoni agent; nie osoba z zespołu, która zleca telefon                                                                            |
+| `imie_dluznika`, `typ_dluznika`, `forma`       | `wind_borrowers`                                                                                                                     | forma „Pan/Pani” z PESEL (suma kontrolna), w ostateczności z imienia                                                                              |
+| `numer_umowy`, `data_umowy`                    | `wind_loans`                                                                                                                         |                                                                                                                                                   |
+| `kwota_zaleglosci`, `kwota_zaleglosci_slownie` | kwota z formularza albo „do zapłaty teraz” z `windDebtSnapshot`                                                                      | słownie bez groszy — do mowy; po wypowiedzeniu umowy całe zadłużenie                                                                              |
+| `dni_opoznienia`                               | harmonogram rat: dni od najstarszej niezapłaconej raty; bez harmonogramu: termin spłaty / opóźnienie przy otwarciu + dni od otwarcia | liczone na dziś                                                                                                                                   |
+| `etap`                                         | ścieżka, opóźnienie, wypowiedzenie                                                                                                   | `przypomnienie` (≤ 14 dni, ścieżka miękka), `monit` (> 14 dni lub ścieżka standardowa), `ostatnie_wezwanie` (wypowiedzenie, ścieżka twarda/karna) |
+| `termin_maksymalny`                            | dziś + 7 / 5 / 3 dni wg etapu                                                                                                        | weekend przesuwa na poniedziałek                                                                                                                  |
+| `umowa_wypowiedziana`, `hipoteka`, `akt_777`   | `wind_loans`                                                                                                                         | „brak” = nie wspominać                                                                                                                            |
+| `rachunek_splaty`                              | `wind_loans.rachunek_splaty`                                                                                                         | dyktowany tylko na prośbę                                                                                                                         |
+| `oplaty_windykacyjne`                          | tabela opłat z umowy                                                                                                                 | bez domyślnych podpowiedzi — tylko kwoty z umowy                                                                                                  |
+| `dzisiaj`                                      | data w Warszawie                                                                                                                     | z dniem tygodnia                                                                                                                                  |
+| `poprzednia_deklaracja`                        | ostatni telefon z `metadata.deklarowana_data` + wpłaty po nim                                                                        | „niedotrzymana” / „termin jeszcze trwa” / „wpłata była, zaległość nadal jest”                                                                     |
 
 Każda zmienna ma wartość domyślną (`dynamic_variable_placeholders`), a „brak”
 każe agentowi pominąć daną informację.
+
+## Kwota i opóźnienie z harmonogramu
+
+Telefon liczy kwotę i opóźnienie tym samym silnikiem co karta sprawy
+(`windDebtSnapshot` z `windykacja-debt.ts`, stan na dziś w Polsce), ze
+wszystkich zdarzeń sprawy (wpłaty z `metadata.kwota`, opłaty z `oplata`).
+
+- **Kwota** — gdy inwestor nie wpisze własnej, agent mówi o kwocie „do zapłaty
+  teraz”: zaległe raty + odsetki za opóźnienie + koszty windykacyjne. Raty
+  przyszłe nie są wymagalne, więc agent ich nie żąda. Po wypowiedzeniu umowy
+  (data wypowiedzenia albo status wypowiedziana, egzekucja komornicza lub karna)
+  kwota obejmuje całe zadłużenie — zgodnie z tym, co agent mówi o wypowiedzeniu.
+- **Opóźnienie** (`dni_opoznienia`, a od niego etap rozmowy) — przy pożyczce
+  z harmonogramem: dni od skutecznego terminu (art. 115 k.c.) najstarszej
+  niezapłaconej raty, nie od ostatniej raty ani od otwarcia sprawy. Bez
+  harmonogramu — jak dotąd: z terminu spłaty albo z opóźnienia przy otwarciu
+  sprawy powiększonego o dni od otwarcia.
+- **Nic do zapłaty** — gdy według rat (albo kwoty zaległej sprawy) na dziś nie
+  ma nic wymagalnego, telefon nie jest wykonywany; inwestor może podać kwotę
+  ręcznie, jeśli wie o zaległości spoza akt.
+- **W imieniu kogo** — nazwa pożyczkodawcy z umowy (`wind_loans.pozyczkodawca`,
+  odczyt umowy albo edycja na karcie sprawy); bez niej — imię i nazwisko
+  właściciela sprawy.
+- W aktach zdarzenie „telefon” ma skład kwoty (zaległe raty, odsetki, koszty,
+  dzień wyliczenia) w treści i w `metadata.zadluzenie`; `metadata.kwota_zrodlo`
+  mówi, czy kwota była wyliczona, czy wpisana ręcznie.
 
 ## Wynik rozmowy w aktach i opłata za telefon
 

@@ -351,29 +351,41 @@ export const WIND_AGENT_EVALUATION = {
 
 /**
  * Etap rozmowy ze ścieżki sprawy i statusu pożyczki. Wypowiedziana umowa,
- * ścieżka twarda albo karna = ostatnie wezwanie; ścieżka standardowa albo
- * opóźnienie ponad 14 dni (próg wypowiedzenia we wzorcu umowy) = monit.
+ * egzekucja komornicza / sprawa karna, ścieżka twarda albo karna = ostatnie
+ * wezwanie; ścieżka standardowa albo opóźnienie ponad 14 dni (próg
+ * wypowiedzenia we wzorcu umowy) = monit.
  */
 export function windCallStage(input: {
   sciezka?: string | null;
   opoznienie_dni?: number | null;
   status_pozyczki?: string | null;
   data_wypowiedzenia?: string | null;
+  asOf?: string;
 }): WindCallStage {
   if (windLoanTerminated(input)) return "ostatnie_wezwanie";
+  if (["windykacja_komornicza", "windykacja_karna"].includes(String(input.status_pozyczki ?? "")))
+    return "ostatnie_wezwanie";
   if (input.sciezka === "twarda" || input.sciezka === "karna") return "ostatnie_wezwanie";
   if (input.sciezka === "standardowa" || Number(input.opoznienie_dni ?? 0) > 14) return "monit";
   return "przypomnienie";
 }
 
+/**
+ * Czy umowa jest skutecznie wypowiedziana (agent mówi wtedy „umowa została
+ * wypowiedziana"): data wypowiedzenia już minęła albo status „wypowiedziana"
+ * bez daty. Data z przyszłości = wypowiedzenia jeszcze nie ma. Egzekucja
+ * komornicza lub karna nie jest wypowiedzeniem (komornik może egzekwować
+ * z aktu 777 same zaległe raty) — tak samo jak windLoanIsTerminated
+ * w windykacja-debt.ts.
+ */
 export function windLoanTerminated(input: {
   status_pozyczki?: string | null;
   data_wypowiedzenia?: string | null;
+  asOf?: string;
 }): boolean {
-  if (input.data_wypowiedzenia) return true;
-  return ["wypowiedziana", "windykacja_komornicza", "windykacja_karna"].includes(
-    String(input.status_pozyczki ?? ""),
-  );
+  const data = (input.data_wypowiedzenia ?? "").slice(0, 10);
+  if (data) return data <= (input.asOf ?? warsawISODate(new Date())).slice(0, 10);
+  return input.status_pozyczki === "wypowiedziana";
 }
 
 /** Dzisiejsza data w Warszawie jako RRRR-MM-DD. */
@@ -514,6 +526,12 @@ export interface WindCallVariablesInput {
     data_otwarcia?: string | null;
   };
   kwota: number;
+  /**
+   * Opóźnienie na dziś wyliczone z harmonogramu rat (windDebtSnapshot —
+   * dni od najstarszej niezapłaconej raty). Podane (także 0) ma
+   * pierwszeństwo przed szacunkiem z terminu spłaty i otwarcia sprawy.
+   */
+  dniOpoznienia?: number | null;
   previousPromise?: WindPreviousPromise | null;
   paymentsAfterISO?: string[];
 }
@@ -523,8 +541,15 @@ const orBrak = (v: string | null | undefined): string => {
   return s ? s : WIND_NO_DATA;
 };
 
-/** Opóźnienie w dniach na dziś: z terminu spłaty albo z wpisu przy otwarciu sprawy. */
+/**
+ * Opóźnienie w dniach na dziś. Z harmonogramu rat (`dniOpoznienia`), gdy
+ * podane; inaczej szacunek z terminu spłaty albo z wpisu przy otwarciu
+ * sprawy (model z jednym terminem).
+ */
 export function currentDelayDays(input: WindCallVariablesInput, todayISO: string): number {
+  if (input.dniOpoznienia != null && Number.isFinite(Number(input.dniOpoznienia))) {
+    return Math.max(0, Math.round(Number(input.dniOpoznienia)));
+  }
   const fromDue = input.loan?.termin_splaty
     ? daysBetweenISO(input.loan.termin_splaty.slice(0, 10), todayISO)
     : 0;
@@ -548,12 +573,14 @@ export function buildWindCallVariables(
   const terminated = windLoanTerminated({
     status_pozyczki: input.loan?.status,
     data_wypowiedzenia: input.loan?.data_wypowiedzenia,
+    asOf: today,
   });
   const stage = windCallStage({
     sciezka: input.kase.sciezka,
     opoznienie_dni: delay,
     status_pozyczki: input.loan?.status,
     data_wypowiedzenia: input.loan?.data_wypowiedzenia,
+    asOf: today,
   });
 
   const name = (input.borrower?.imie_nazwisko ?? "").trim();

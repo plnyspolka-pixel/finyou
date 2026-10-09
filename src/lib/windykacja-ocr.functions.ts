@@ -1,6 +1,24 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
+import {
+  dodatniaKwota,
+  emptyWindContract,
+  ocrData,
+  parseOcrJsonText,
+  parseWindContractJson,
+  type WindContractData,
+  type WindOcrReason,
+} from "@/lib/windykacja-ocr-parse";
+
+// Typy odczytu umowy żyją w module parsującym (czyste funkcje, testy);
+// formularz importuje je stąd.
+export type {
+  WindContractData,
+  WindContractFees,
+  WindHarmonogramZrodlo,
+  WindOcrReason,
+} from "@/lib/windykacja-ocr-parse";
 
 // ════════════════════════════════════════════════════════════════════
 // AUTOMATYCZNE ODCZYTYWANIE PISM WINDYKACYJNYCH ZE ZDJĘCIA.
@@ -26,7 +44,7 @@ export type WindOcrDocType =
   | "inne"; // nierozpoznane
 
 export interface WindOcrResult {
-  reason: "ok" | "unsupported" | "rate_limited" | "ai_quota" | "ai_error" | "no_key";
+  reason: WindOcrReason;
   documentType: WindOcrDocType;
   /** Krótki, zrozumiały tytuł rozpoznanego pisma. */
   tytul: string;
@@ -73,33 +91,6 @@ Zasady rozpoznawania:
 - Potwierdzenie przelewu/wpłaty → "wplata" (wyciągnij kwotę i datę).
 - Wezwanie do zapłaty → "wezwanie". Umowa pożyczki → "umowa".
 Jeśli czegoś nie ma — użyj null. Zwróć wyłącznie JSON.`;
-
-function toIsoDate(v: unknown): string | null {
-  if (typeof v !== "string") return null;
-  const s = v.trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  // dd.mm.yyyy albo dd-mm-yyyy → yyyy-mm-dd
-  const m = s.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})$/);
-  if (m) {
-    const [, d, mo, y] = m;
-    return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
-  }
-  return null;
-}
-
-function toNumber(v: unknown): number | null {
-  if (typeof v === "number" && isFinite(v)) return v;
-  if (typeof v === "string") {
-    const n = Number(
-      v
-        .replace(/[^\d,.-]/g, "")
-        .replace(/\s/g, "")
-        .replace(",", "."),
-    );
-    return isFinite(n) && n > 0 ? n : null;
-  }
-  return null;
-}
 
 function coerceType(v: unknown): WindOcrDocType {
   return DOC_TYPES.includes(v as WindOcrDocType) ? (v as WindOcrDocType) : "inne";
@@ -167,19 +158,19 @@ export const analyzeWindDocument = createServerFn({ method: "POST" })
       return empty("ai_error");
     }
 
+    const parsed = parseOcrJsonText(text);
+    if (!parsed) return empty("ai_error");
     try {
-      const cleaned = text.replace(/^```json\s*|\s*```$/g, "").trim();
-      const parsed = JSON.parse(cleaned) as Record<string, unknown>;
       return {
         reason: "ok",
         documentType: coerceType(parsed.documentType),
         tytul: typeof parsed.tytul === "string" ? parsed.tytul.slice(0, 200) : "",
-        dataISO: toIsoDate(parsed.dataISO),
+        dataISO: ocrData(parsed.dataISO),
         numer_nadania:
           typeof parsed.numer_nadania === "string" && parsed.numer_nadania.trim()
             ? parsed.numer_nadania.trim().slice(0, 60)
             : null,
-        kwota: toNumber(parsed.kwota),
+        kwota: dodatniaKwota(parsed.kwota),
         status_doreczenia: ["doreczone", "awizowane", "termin_uplynal", "zwrot"].includes(
           String(parsed.status_doreczenia),
         )
@@ -199,62 +190,37 @@ export const analyzeWindDocument = createServerFn({ method: "POST" })
 // pożyczki, żeby nie trzeba było niczego przepisywać ręcznie.
 // ════════════════════════════════════════════════════════════════════
 
-/**
- * Tabela opłat za czynności windykacyjne odczytana z umowy (zł). Brak
- * kwoty = umowa nie określa opłaty; `brak_oplat` = umowa nie przewiduje
- * żadnych opłat windykacyjnych.
- */
-export interface WindContractFees {
-  sms: number | null;
-  email: number | null;
-  telefon: number | null;
-  pismo: number | null;
-  brak_oplat: boolean;
-}
-
-export interface WindContractData {
-  reason: WindOcrResult["reason"];
-  imie_nazwisko: string | null;
-  typ: "osoba_fizyczna" | "firma" | null;
-  pesel: string | null;
-  nip: string | null;
-  email: string | null;
-  telefon: string | null;
-  adres: string | null;
-  numer_umowy: string | null;
-  data_umowy: string | null; // ISO yyyy-mm-dd
-  kwota_pozyczki: number | null; // kwota na rękę / wypłacona
-  kwota_calkowita: number | null; // całkowita kwota do zwrotu
-  prowizja: number | null;
-  termin_splaty: string | null; // ISO yyyy-mm-dd
-  numer_kw: string | null;
-  /** Oprocentowanie roczne kapitałowe (%), gdy umowa je podaje. */
-  oprocentowanie_roczne: number | null;
-  /** Odsetki za opóźnienie wg umowy (% rocznie), gdy umowa je podaje. */
-  odsetki_za_opoznienie: number | null;
-  /** Opłaty za czynności windykacyjne wg umowy — podstawa naliczania w rejestrze. */
-  oplaty_windykacyjne: WindContractFees | null;
-  podsumowanie: string;
-}
-
-const CONTRACT_USER_PROMPT = `To jest umowa pożyczki. Wyodrębnij dane i zwróć WYŁĄCZNIE JSON:
+const CONTRACT_USER_PROMPT = `To jest umowa pożyczki (z załącznikami, m.in. Załącznik nr 1 — Harmonogram spłat). Wyodrębnij dane i zwróć WYŁĄCZNIE JSON:
 {
-  "imie_nazwisko": imię i nazwisko pożyczkobiorcy/dłużnika albo nazwa firmy,
-  "typ": "osoba_fizyczna" lub "firma",
+  "pozyczkodawca": nazwa pożyczkodawcy — strony UDZIELAJĄCEJ pożyczki: imię i nazwisko osoby albo pełna nazwa firmy z formą prawną (np. „Finance You sp. z o.o.”), albo null,
+  "imie_nazwisko": pożyczkobiorca (dłużnik): imię i nazwisko osoby fizycznej — także prowadzącej działalność gospodarczą, wtedy BEZ nazwy firmy — albo pełna nazwa spółki / osoby prawnej,
+  "typ": "osoba_fizyczna" (osoba fizyczna, także prowadząca jednoosobową działalność gospodarczą — ma PESEL i NIP) albo "firma" (WYŁĄCZNIE spółka lub inna osoba prawna: sp. z o.o., S.A., spółka jawna / komandytowa, fundacja, spółdzielnia),
   "pesel": PESEL pożyczkobiorcy (11 cyfr) albo null,
-  "nip": NIP (dla firmy) albo null,
+  "nip": NIP pożyczkobiorcy (10 cyfr; także NIP przedsiębiorcy będącego osobą fizyczną) albo null,
   "email": e-mail pożyczkobiorcy albo null,
   "telefon": telefon pożyczkobiorcy albo null,
   "adres": adres zamieszkania / siedziby pożyczkobiorcy albo null,
   "numer_umowy": numer umowy albo null,
   "data_umowy": data zawarcia umowy w formacie yyyy-mm-dd albo null,
-  "kwota_pozyczki": kwota wypłacona/na rękę jako liczba albo null,
-  "kwota_calkowita": całkowita kwota do zwrotu jako liczba albo null,
-  "prowizja": prowizja jako liczba albo null,
-  "termin_splaty": ostateczny termin spłaty w formacie yyyy-mm-dd albo null,
+  "kwota_pozyczki_umowy": Kwota Pożyczki określona w umowie („zwana dalej Kwotą Pożyczki”) jako liczba albo null,
+  "prowizja": WYŁĄCZNIE prowizja Finance You (Prowizja od Pożyczkobiorcy) potrącana z wypłaty Kwoty Pożyczki — NIE prowizja pożyczkodawcy; gdy umowa jej nie przewiduje — null,
+  "kwota_pozyczki": kwota wypłacona na rękę = Kwota Pożyczki minus prowizja Finance You potrącana z wypłaty (gdy takiej prowizji nie ma — Kwota Pożyczki) albo null,
+  "prowizja_pozyczkodawcy": prowizja pożyczkodawcy za udzielenie pożyczki jako liczba albo null,
+  "prowizja_pozyczkodawcy_potracana": true, gdy prowizja pożyczkodawcy jest potrącana z Kwoty Pożyczki przy wypłacie; false, gdy nie jest potrącana (płatna w ratach wg harmonogramu); null, gdy brak prowizji albo nie wiadomo,
+  "kwota_calkowita": kwota do zwrotu BEZ odsetek umownych = Kwota Pożyczki + prowizja pożyczkodawcy (gdy prowizja jest potrącana z wypłaty — sama Kwota Pożyczki); NIE wpisuj sumy rat z odsetkami ani łącznej kwoty do zapłaty; albo null,
+  "oprocentowanie_roczne": oprocentowanie umowne (kapitałowe) w % rocznie jako liczba albo null,
+  "odsetki_za_opoznienie": stopa odsetek za opóźnienie w % rocznie TYLKO wtedy, gdy umowa podaje ją wprost jako liczbę procent; gdy umowa mówi o „dwukrotności odsetek ustawowych za opóźnienie” albo o odsetkach maksymalnych za opóźnienie bez liczby — null,
+  "termin_splaty": termin płatności OSTATNIEJ raty w formacie yyyy-mm-dd albo null,
+  "harmonogram": WSZYSTKIE raty z tabeli Załącznika nr 1 (Harmonogram spłat), w kolejności, zwięźle: [{"termin":"yyyy-mm-dd","kwota":rata łącznie,"odsetki":część odsetkowa raty albo null,"prowizja":część prowizyjna raty albo null}] — bez wiersza sumy; gdy w dokumencie nie ma tabeli rat — null,
+  "liczba_rat": liczba rat albo null,
+  "kwota_raty": kwota (typowej) raty albo null,
+  "kwota_ostatniej_raty": kwota ostatniej raty, gdy jest inna niż pozostałe (np. rata końcowa / balonowa), albo null,
+  "data_pierwszej_raty": termin pierwszej raty w formacie yyyy-mm-dd albo null,
+  "rachunek_splaty": numer rachunku bankowego do spłaty rat (26 cyfr, ewentualnie z prefiksem PL) albo null,
   "numer_kw": numer księgi wieczystej (format AA1A/00000000/0) albo null,
-  "oprocentowanie_roczne": oprocentowanie kapitałowe w % rocznie jako liczba albo null,
-  "odsetki_za_opoznienie": odsetki za opóźnienie w % rocznie jako liczba (np. odsetki maksymalne za opóźnienie) albo null,
+  "kwota_hipoteki": kwota hipoteki umownej („do kwoty … zł”) jako liczba albo null,
+  "akt_notarialny_777": opis aktu notarialnego z oświadczeniem o poddaniu się egzekucji (art. 777 § 1 pkt 5 k.p.c.): numer repertorium, data, notariusz, kancelaria — np. „Rep. A nr …/…, notariusz …, Kancelaria Notarialna w …”; gdy umowa nie podaje numeru repertorium — krótki opis postanowienia (np. „oświadczenie o poddaniu się egzekucji w trybie art. 777 § 1 pkt 5 k.p.c.”); gdy brak — null,
+  "kwota_777": kwota, do której pożyczkobiorca poddał się egzekucji (art. 777), jako liczba albo null,
   "oplaty_windykacyjne": {
     "sms": opłata w zł za wysłanie SMS-a/monitu SMS albo null,
     "email": opłata w zł za monit e-mail albo null,
@@ -264,51 +230,12 @@ const CONTRACT_USER_PROMPT = `To jest umowa pożyczki. Wyodrębnij dane i zwró�
   },
   "podsumowanie": jedno zdanie po polsku podsumowujące umowę
 }
-Pożyczkodawcą jest firma (np. Finance You) — NIE wpisuj jej jako pożyczkobiorcy. Kwoty bez waluty i spacji. Opłaty windykacyjne bierz z tabeli opłat / paragrafu o kosztach windykacji; nie wymyślaj ich — jeśli umowa ich nie podaje, wpisz null. Jeśli czegoś nie ma — null. Zwróć wyłącznie JSON.`;
-
-function str(v: unknown, max = 200): string | null {
-  return typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
-}
-
-function emptyContract(reason: WindOcrResult["reason"]): WindContractData {
-  return {
-    reason,
-    imie_nazwisko: null,
-    typ: null,
-    pesel: null,
-    nip: null,
-    email: null,
-    telefon: null,
-    adres: null,
-    numer_umowy: null,
-    data_umowy: null,
-    kwota_pozyczki: null,
-    kwota_calkowita: null,
-    prowizja: null,
-    termin_splaty: null,
-    numer_kw: null,
-    oprocentowanie_roczne: null,
-    odsetki_za_opoznienie: null,
-    oplaty_windykacyjne: null,
-    podsumowanie: "",
-  };
-}
-
-/** Tabela opłat z odpowiedzi modelu → WindContractFees (null, gdy nic nie odczytano). */
-function parseContractFees(v: unknown): WindContractFees | null {
-  if (!v || typeof v !== "object") return null;
-  const o = v as Record<string, unknown>;
-  const fees: WindContractFees = {
-    sms: toNumber(o.sms),
-    email: toNumber(o.email),
-    telefon: toNumber(o.telefon),
-    pismo: toNumber(o.pismo),
-    brak_oplat: o.brak_oplat === true,
-  };
-  const any =
-    fees.brak_oplat || [fees.sms, fees.email, fees.telefon, fees.pismo].some((x) => x != null);
-  return any ? fees : null;
-}
+Zasady:
+- Pożyczkodawcą może być osoba fizyczna (inwestor) albo firma — nazwę weź z komparycji umowy. Pożyczkobiorca to strona, która otrzymuje pożyczkę i ją spłaca; nie myl stron. Finance You sp. z o.o. pobierająca Prowizję od Pożyczkobiorcy nie jest pożyczkobiorcą.
+- Kwoty jako liczby w złotych (kropka dziesiętna, bez spacji i waluty). Daty w formacie yyyy-mm-dd.
+- Harmonogram: przepisz każdy wiersz tabeli rat (także gdy tabela zajmuje kilka stron) — nie skracaj i nie pomijaj rat.
+- Opłaty windykacyjne bierz z tabeli opłat / paragrafu o kosztach windykacji; nie wymyślaj ich.
+- Niczego nie zgaduj — jeśli czegoś nie ma w dokumencie, wpisz null. Zwróć wyłącznie JSON.`;
 
 export const analyzeWindContract = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
@@ -323,11 +250,11 @@ export const analyzeWindContract = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<WindContractData> => {
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) return emptyContract("no_key");
+    if (!apiKey) return emptyWindContract("no_key");
 
     const isPdf = data.mimeType === "application/pdf" || /\.pdf$/i.test(data.fileName ?? "");
     const isImage = data.mimeType.startsWith("image/");
-    if (!isPdf && !isImage) return emptyContract("unsupported");
+    if (!isPdf && !isImage) return emptyWindContract("unsupported");
 
     const userContent: unknown[] = [{ type: "text", text: CONTRACT_USER_PROMPT }];
     if (isImage) userContent.push({ type: "image_url", image_url: { url: data.dataUrl } });
@@ -350,48 +277,22 @@ export const analyzeWindContract = createServerFn({ method: "POST" })
           ],
         }),
       });
-      if (resp.status === 429) return emptyContract("rate_limited");
-      if (resp.status === 402) return emptyContract("ai_quota");
-      if (!resp.ok) return emptyContract("ai_error");
+      if (resp.status === 429) return emptyWindContract("rate_limited");
+      if (resp.status === 402) return emptyWindContract("ai_quota");
+      if (!resp.ok) return emptyWindContract("ai_error");
       const json = await resp.json();
       text = json?.choices?.[0]?.message?.content ?? "";
     } catch {
-      return emptyContract("ai_error");
+      return emptyWindContract("ai_error");
     }
 
+    // Normalizacja kwot, dat, PESEL/NIP, rachunku i harmonogramu —
+    // windykacja-ocr-parse.ts (czyste funkcje z testami).
+    const p = parseOcrJsonText(text);
+    if (!p) return emptyWindContract("ai_error");
     try {
-      const cleaned = text.replace(/^```json\s*|\s*```$/g, "").trim();
-      const p = JSON.parse(cleaned) as Record<string, unknown>;
-      const nip = str(p.nip, 20);
-      return {
-        reason: "ok",
-        imie_nazwisko: str(p.imie_nazwisko),
-        typ:
-          p.typ === "firma"
-            ? "firma"
-            : p.typ === "osoba_fizyczna"
-              ? "osoba_fizyczna"
-              : nip
-                ? "firma"
-                : "osoba_fizyczna",
-        pesel: str(p.pesel, 20),
-        nip,
-        email: str(p.email, 200),
-        telefon: str(p.telefon, 40),
-        adres: str(p.adres, 300),
-        numer_umowy: str(p.numer_umowy, 80),
-        data_umowy: toIsoDate(p.data_umowy),
-        kwota_pozyczki: toNumber(p.kwota_pozyczki),
-        kwota_calkowita: toNumber(p.kwota_calkowita),
-        prowizja: toNumber(p.prowizja),
-        termin_splaty: toIsoDate(p.termin_splaty),
-        numer_kw: str(p.numer_kw, 40),
-        oprocentowanie_roczne: toNumber(p.oprocentowanie_roczne),
-        odsetki_za_opoznienie: toNumber(p.odsetki_za_opoznienie),
-        oplaty_windykacyjne: parseContractFees(p.oplaty_windykacyjne),
-        podsumowanie: typeof p.podsumowanie === "string" ? p.podsumowanie.slice(0, 500) : "",
-      };
+      return parseWindContractJson(p);
     } catch {
-      return emptyContract("ai_error");
+      return emptyWindContract("ai_error");
     }
   });
