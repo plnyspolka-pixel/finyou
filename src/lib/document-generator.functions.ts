@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { LEGACY_KOMUNIKAT, LEGACY_USE_CASE } from "@/lib/legacy-templates";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
@@ -9,6 +11,33 @@ import {
 } from "@/lib/document-fields";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { injectScheduleTable, type ScheduleRow } from "@/lib/schedule-table-docx";
+import { bundledTemplateBytes } from "@/lib/document-templates/bundled";
+
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+/**
+ * Plik wzoru: Storage (z fallbackiem do starego bucketa „documents"), a gdy go
+ * tam nie ma — wzór dołączony do kodu, wgrywany przy okazji do Storage
+ * (best effort), żeby działały też podpisane linki do pobrania.
+ */
+async function downloadTemplateFile(
+  supabase: SupabaseClient<Database>,
+  path: string,
+): Promise<{ file: Blob | null; bucket: string | null; error: string | null }> {
+  let dlErr: string | null = null;
+  for (const bucket of [CLIENT_FILES_BUCKET, "documents"]) {
+    const res = await supabase.storage.from(bucket).download(path);
+    if (!res.error && res.data) return { file: res.data, bucket, error: null };
+    dlErr = res.error?.message ?? "brak pliku";
+  }
+  const bundled = bundledTemplateBytes(path);
+  if (!bundled) return { file: null, bucket: null, error: dlErr };
+  const file = new Blob([bundled], { type: DOCX_MIME });
+  const { error: upErr } = await supabase.storage
+    .from(CLIENT_FILES_BUCKET)
+    .upload(path, file, { upsert: true, contentType: DOCX_MIME });
+  return { file, bucket: upErr ? null : CLIENT_FILES_BUCKET, error: null };
+}
 
 export type DocTemplate = {
   id: string;
@@ -112,19 +141,9 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
     if (tpl?.use_case === LEGACY_USE_CASE) throw new Error(LEGACY_KOMUNIKAT);
     if (!tpl?.template_file_path) throw new Error("Wzór nie ma przypisanego pliku.");
 
-    // 2. Pobierz plik z Storage (fallback do starego bucketa „documents")
-    let file: Blob | null = null;
-    let dlErr: { message: string } | null = null;
-    for (const bucket of [CLIENT_FILES_BUCKET, "documents"]) {
-      const res = await supabase.storage.from(bucket).download(tpl.template_file_path);
-      if (!res.error && res.data) {
-        file = res.data as Blob;
-        dlErr = null;
-        break;
-      }
-      dlErr = res.error ?? { message: "brak pliku" };
-    }
-    if (!file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
+    // 2. Pobierz plik z Storage (fallback: stary bucket „documents", wzór w kodzie)
+    const { file, error: dlErr } = await downloadTemplateFile(supabase, tpl.template_file_path);
+    if (!file) throw new Error(`Pobranie wzoru: ${dlErr ?? "brak pliku"}`);
     const arrayBuf = await file.arrayBuffer();
 
     // 3. Podstaw wartości pozycyjnie w word/document.xml
@@ -217,15 +236,13 @@ export const getDocxTemplateDownloadUrl = createServerFn({ method: "POST" })
         reason: "Brak przypisanego pliku.",
       };
 
-    for (const bucket of [CLIENT_FILES_BUCKET, "documents"]) {
-      const probe = await context.supabase.storage.from(bucket).download(tpl.template_file_path);
-      if (!probe.error && probe.data) {
-        const { data: signed } = await context.supabase.storage
-          .from(bucket)
-          .createSignedUrl(tpl.template_file_path, 300);
-        if (signed?.signedUrl)
-          return { url: signed.signedUrl, exists: true, name: tpl.name, reason: null };
-      }
+    const { bucket } = await downloadTemplateFile(context.supabase, tpl.template_file_path);
+    if (bucket) {
+      const { data: signed } = await context.supabase.storage
+        .from(bucket)
+        .createSignedUrl(tpl.template_file_path, 300);
+      if (signed?.signedUrl)
+        return { url: signed.signedUrl, exists: true, name: tpl.name, reason: null };
     }
     return {
       url: null,
@@ -282,18 +299,11 @@ export const getDocxTemplatePreview = createServerFn({ method: "POST" })
     if (tplErr) throw new Error(tplErr.message);
     if (!tpl?.template_file_path) throw new Error("Wzór nie ma przypisanego pliku.");
 
-    let file: Blob | null = null;
-    let dlErr: { message: string } | null = null;
-    for (const bucket of [CLIENT_FILES_BUCKET, "documents"]) {
-      const res = await context.supabase.storage.from(bucket).download(tpl.template_file_path);
-      if (!res.error && res.data) {
-        file = res.data as Blob;
-        dlErr = null;
-        break;
-      }
-      dlErr = res.error ?? { message: "brak pliku" };
-    }
-    if (!file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
+    const { file, error: dlErr } = await downloadTemplateFile(
+      context.supabase,
+      tpl.template_file_path,
+    );
+    if (!file) throw new Error(`Pobranie wzoru: ${dlErr ?? "brak pliku"}`);
 
     const arrayBuf = await file.arrayBuffer();
     const { default: PizZip } = await import("pizzip");
