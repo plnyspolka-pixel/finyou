@@ -41,7 +41,7 @@ na Claude API, baza na własnym Supabase (Frankfurt), hosting na własnym koncie
 ## Nowy projekt Supabase (utworzony 2026-10-09)
 
 - Organizacja „Finance you sp z oo” (Pro), projekt „Finance you produkcja”
-- Ref `vkzndnaoxhdxrlpntcb`, URL `https://vkzndnaoxhdxrlpntcb.supabase.co`
+- Ref `vkzndnaoxhdxrxlpntcb`, URL `https://vkzndnaoxhdxrxlpntcb.supabase.co`
 - Central EU (Frankfurt, eu-central-1), Micro, Postgres (nie OrioleDB)
 - Data API: włączone; automatyczne wystawianie nowych tabel: WYŁĄCZONE (granty kopiujemy
   dokładnie z produkcji); automatyczny RLS: włączony; GitHub: niepodłączony (świadomie)
