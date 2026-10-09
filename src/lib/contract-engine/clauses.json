@@ -1,6 +1,6 @@
 {
   "$comment": "Biblioteka klauzul. Każda klauzula ma warunek włączenia (wyrażenie nad danymi) i szablon tekstu. Renderer iteruje po sekcjach w kolejności 'order'.",
-  "wersja": "1.6",
+  "wersja": "1.7",
   "sekcje": {
     "PRZEDMIOT": {
       "tytul": "PRZEDMIOT UMOWY",
@@ -73,22 +73,15 @@
       "id": "KWO_02_prowizja_nie_potracana",
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 20,
-      "warunek": "warunki.prowizja.model == 'nie_potracana_raty' and not ma_prowizje_w_racie_koncowej",
-      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla {{pb_dop}}, odracza jej zapłatę i rozkłada ją na raty miesięczne zgodnie z Załącznikiem nr 1. Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji. W razie wcześniejszej spłaty całości pożyczki przed upływem 1 roku od dnia zawarcia Umowy prowizja ulega obniżeniu o 30%, a w razie takiej spłaty po upływie 1 roku, lecz przed upływem 2 lat od dnia zawarcia Umowy — o 20%; przy spłacie po upływie 2 lat od dnia zawarcia Umowy prowizja nie podlega obniżeniu. Obniżenie pomniejsza niezapłaconą część prowizji, która w pozostałej wysokości staje się płatna wraz ze spłacanym kapitałem."
+      "warunek": "not ma_prowizje_w_racie_koncowej",
+      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla {{pb_dop}}, odracza jej zapłatę i rozkłada ją na raty miesięczne zgodnie z Załącznikiem nr 1. Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji. W razie wcześniejszej spłaty całości pożyczki przed upływem 1 roku od dnia zawarcia Umowy prowizja ulega obniżeniu o 30%, a w razie takiej spłaty po upływie 1 roku, lecz przed upływem 2 lat od dnia zawarcia Umowy — o 20%; przy spłacie po upływie 2 lat od dnia zawarcia Umowy prowizja nie podlega obniżeniu. Obniżenie pomniejsza niezapłaconą część prowizji, która w pozostałej wysokości staje się płatna wraz ze spłacanym kapitałem."
     },
     {
       "id": "KWO_02c_prowizja_nie_potracana_balon",
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 20,
-      "warunek": "warunki.prowizja.model == 'nie_potracana_raty' and ma_prowizje_w_racie_koncowej",
-      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla {{pb_dop}}, odracza jej zapłatę i rozkłada ją na raty zgodnie z Załącznikiem nr 1, w tym: {{prowizja_ratalna_cyframi}} zł w {{warunki.harmonogram.liczba_rat}} ratach miesięcznych oraz {{warunki.prowizja.w_racie_koncowej.cyframi}} zł płatne wraz z ratą końcową (balonową). Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji. W razie wcześniejszej spłaty całości pożyczki przed upływem 1 roku od dnia zawarcia Umowy prowizja ulega obniżeniu o 30%, a w razie takiej spłaty po upływie 1 roku, lecz przed upływem 2 lat od dnia zawarcia Umowy — o 20%; przy spłacie po upływie 2 lat od dnia zawarcia Umowy prowizja nie podlega obniżeniu. Obniżenie pomniejsza niezapłaconą część prowizji, która w pozostałej wysokości staje się płatna wraz ze spłacanym kapitałem."
-    },
-    {
-      "id": "KWO_02b_prowizja_potracana",
-      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
-      "order": 20,
-      "warunek": "warunki.prowizja.model == 'potracana_z_wyplaty'",
-      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja potrącana jest w całości z Kwoty Pożyczki przy wypłacie. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji."
+      "warunek": "ma_prowizje_w_racie_koncowej",
+      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla {{pb_dop}}, odracza jej zapłatę i rozkłada ją na raty zgodnie z Załącznikiem nr 1, w tym: {{prowizja_ratalna_cyframi}} zł w {{warunki.harmonogram.liczba_rat}} ratach miesięcznych oraz {{warunki.prowizja.w_racie_koncowej.cyframi}} zł płatne wraz z ratą końcową (balonową). Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji. W razie wcześniejszej spłaty całości pożyczki przed upływem 1 roku od dnia zawarcia Umowy prowizja ulega obniżeniu o 30%, a w razie takiej spłaty po upływie 1 roku, lecz przed upływem 2 lat od dnia zawarcia Umowy — o 20%; przy spłacie po upływie 2 lat od dnia zawarcia Umowy prowizja nie podlega obniżeniu. Obniżenie pomniejsza niezapłaconą część prowizji, która w pozostałej wysokości staje się płatna wraz ze spłacanym kapitałem."
     },
     {
       "id": "KWO_03e_prowizja_finance_you",
@@ -101,15 +94,15 @@
       "id": "KWO_03_wyplata_pelna",
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 30,
-      "warunek": "warunki.prowizja.model == 'nie_potracana_raty' and not ma_splaty_wierzycieli and not ma_warunki_zawieszajace and not ma_prowizje_fy",
-      "tekst": "Pożyczkodawca wypłaci {{pb_cel}} całą Kwotę Pożyczki, bez potrącania prowizji, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), przelewem na rachunek bankowy {{pb_dop}} nr {{warunki.rachunki.wyplata}}, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}."
+      "warunek": "not ma_splaty_wierzycieli and not ma_warunki_zawieszajace and not ma_prowizje_fy",
+      "tekst": "Pożyczkodawca wypłaci {{pb_cel}} całą Kwotę Pożyczki, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), przelewem na rachunek bankowy {{pb_dop}} nr {{warunki.rachunki.wyplata}}, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}."
     },
     {
       "id": "KWO_03c_wyplata_pelna_z_warunkami",
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 30,
-      "warunek": "warunki.prowizja.model == 'nie_potracana_raty' and not ma_splaty_wierzycieli and ma_warunki_zawieszajace and not ma_prowizje_fy",
-      "tekst": "Pożyczkodawca wypłaci {{pb_cel}} całą Kwotę Pożyczki, bez potrącania prowizji, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), przelewem na rachunek bankowy {{pb_dop}} nr {{warunki.rachunki.wyplata}}, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}, i spełnienia warunków, o których mowa w {{ref:WZA_00_wprowadzenie}}."
+      "warunek": "not ma_splaty_wierzycieli and ma_warunki_zawieszajace and not ma_prowizje_fy",
+      "tekst": "Pożyczkodawca wypłaci {{pb_cel}} całą Kwotę Pożyczki, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), przelewem na rachunek bankowy {{pb_dop}} nr {{warunki.rachunki.wyplata}}, w ciągu dwóch dni roboczych od przekazania Pożyczkodawcy dokumentów, o których mowa w {{ref:KWO_06_wejscie_w_zycie}}, i spełnienia warunków, o których mowa w {{ref:WZA_00_wprowadzenie}}."
     },
     {
       "id": "KWO_03b_wyplata_z_podzialem",
@@ -571,7 +564,7 @@
       "sekcja": "WINDYKACJA",
       "order": 41,
       "warunek": true,
-      "tekst": "prowizja (o ile nie została potrącona przy wypłacie);",
+      "tekst": "prowizja;",
       "poziom": "podpunkt"
     },
     {

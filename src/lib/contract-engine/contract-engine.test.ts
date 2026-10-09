@@ -72,8 +72,10 @@ describe("B. Scenariusz prosty", () => {
   it("B5 słowo 'Poręczyciel' nie występuje", () =>
     expect(txt1.includes("Poręczyciel")).toBe(false));
   it("B6 kwota prowizji obecna", () => expect(txt1.includes("13 236,19")).toBe(true));
-  it("B7 model prowizji poprawny", () =>
-    expect(txt1.includes("Prowizja nie jest potrącana")).toBe(true));
+  it("B7 model prowizji: tylko w ratach, bez wzmianki o potrącaniu z wypłaty", () => {
+    expect(txt1.includes("rozkłada ją na raty")).toBe(true);
+    expect(/potrąc/i.test(txt1.replace(/Prowizj[aię] od Pożyczkobiorcy[^.]*\./g, ""))).toBe(false);
+  });
   it("B8 brak niepodstawionych pól", () =>
     expect(!txt1.includes("{{") && !txt1.includes("}}")).toBe(true));
   it("B9 ciągła numeracja ustępów", () => {
@@ -793,9 +795,9 @@ describe("E. Determinizm", () => {
 
 // ══ J. Zmiany szablonu generatora (spec) ══
 describe("J. Zmiany szablonu generatora", () => {
-  it("J1 klauzula prowizji: wcześniejsza spłata w 1. roku −30%, w 2. roku −20% (biblioteka 1.6)", () => {
+  it("J1 klauzula prowizji: wcześniejsza spłata w 1. roku −30%, w 2. roku −20% (biblioteka 1.7)", () => {
     const p1 = plaski(S1);
-    expect(p1.includes("Prowizja nie jest potrącana")).toBe(true);
+    expect(p1.includes("potrącana z kwoty wypłaty")).toBe(false);
     expect(p1.includes("wymagalna w całości w dniu zawarcia Umowy")).toBe(true);
     expect(
       p1.includes(

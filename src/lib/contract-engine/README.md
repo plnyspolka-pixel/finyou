@@ -175,6 +175,10 @@ Po wniosku słupskim (KW SL1S/00061444/8) — bez ręcznych korekt operatora:
 - **Wartości domyślne** (`uzupelnienia.ts`) — termin wezwania 777 = 7 dni,
   data graniczna = data umowy + 10 lat, kwota hipoteki ↔ 777, miejscownik
   miejscowości, sąd z kodu KW; podpowiedź 2× do spłaty jako `INFORMACJA`.
+- **Jeden model prowizji inwestora (biblioteka 1.7)** — wyłącznie w ratach;
+  wariant „potrącana z wypłaty” (`KWO_02b`) usunięty, a umowa nie wspomina
+  o potrącaniu prowizji inwestora (KWO_02/02c, KWO_03/03c, WIN_04a, Zał. 1).
+  Prowizja Finance You (Zał. 4) nadal jest potrącana z wypłaty.
 - **Wersje dokumentu** — `get_generated_document_file` (base64) i
   `upload_generated_document_version` (wersja, autor, powód, SHA-256, diff
   względem wersji silnika).

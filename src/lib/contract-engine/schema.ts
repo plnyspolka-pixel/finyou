@@ -316,7 +316,9 @@ const warunki = z
     prowizja: z
       .object({
         kwota: kwotaSchema,
-        model: z.enum(["nie_potracana_raty", "potracana_z_wyplaty"]).optional(),
+        // Jedyny model: prowizja inwestora płatna w ratach (wariant potrącania
+        // z wypłaty usunięty 10.2026). Pole zostaje dla zgodności szkiców.
+        model: z.enum(["nie_potracana_raty"]).optional(),
         // Część prowizji (zawarta w `kwota`) płatna wraz z ratą końcową
         // (balonową); reszta rozkłada się równo na wszystkie raty. Tylko
         // przy modelu "nie_potracana_raty".

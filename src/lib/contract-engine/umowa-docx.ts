@@ -400,10 +400,8 @@ function harmonogramBloki(d: any): Blok[] {
   const w = d.warunki;
   const h = w.harmonogram;
   const raty: any[] = h.raty ?? [];
-  const potracana = w.prowizja?.model === "potracana_z_wyplaty";
-  const K = parseKwota(w.kwota_pozyczki.cyframi);
   const P = parseKwota(w.prowizja.kwota.cyframi);
-  const prowBalon = potracana ? 0 : parseKwota(w.prowizja?.w_racie_koncowej?.cyframi) || 0;
+  const prowBalon = parseKwota(w.prowizja?.w_racie_koncowej?.cyframi) || 0;
   const wid = [2800, 6838];
   const wiersz = (a: string, b: string) => ({
     komorki: [{ tekst: a, bold: true }, { tekst: b }] as Komorka[],
@@ -422,21 +420,14 @@ function harmonogramBloki(d: any): Blok[] {
       szerokosci: wid,
       wiersze: [
         wiersz("Kwota Pożyczki:", zl(w.kwota_pozyczki.cyframi)),
-        wiersz(
-          "Kwota wypłacona:",
-          potracana
-            ? `${zl(formatKwotaPL(round2(K - P)))} (po potrąceniu prowizji)`
-            : `${zl(w.kwota_pozyczki.cyframi)} (bez potrącenia prowizji)`,
-        ),
+        wiersz("Kwota wypłacona:", zl(w.kwota_pozyczki.cyframi)),
         wiersz(
           "Prowizja jednorazowa:",
-          potracana
-            ? `${zl(w.prowizja.kwota.cyframi)} (potrącona z Kwoty Pożyczki przy wypłacie)`
-            : prowBalon > 0
-              ? `${zl(w.prowizja.kwota.cyframi)} (płatna w ratach zgodnie z tabelą rat, w tym ` +
+          prowBalon > 0
+            ? `${zl(w.prowizja.kwota.cyframi)} (płatna w ratach zgodnie z tabelą rat, w tym ` +
                 `${zl(formatKwotaPL(round2(P - prowBalon)))} w ${ratachMiesiecznych(raty.length || Number(h.liczba_rat) || 0)} ` +
                 `oraz ${zl(w.prowizja.w_racie_koncowej.cyframi)} płatne wraz z ratą końcową (balonową))`
-              : `${zl(w.prowizja.kwota.cyframi)} (płatna w ratach zgodnie z tabelą rat)`,
+            : `${zl(w.prowizja.kwota.cyframi)} (płatna w ratach zgodnie z tabelą rat)`,
         ),
         wiersz(
           "Oprocentowanie umowne:",
@@ -566,7 +557,7 @@ function protokolBloki(d: any, doc: Dokument): Blok[] {
     ["Kwota pożyczki, jej wysokość i przeznaczenie", odes("PRZ_01_przedmiot", true)],
     [
       "Wysokość jednorazowej prowizji za udzielenie pożyczki oraz jej uzasadnienie",
-      pierwszy("KWO_02_prowizja_nie_potracana", "KWO_02b_prowizja_potracana"),
+      pierwszy("KWO_02_prowizja_nie_potracana", "KWO_02c_prowizja_nie_potracana_balon"),
     ],
     [
       "Prowizja od Pożyczkobiorcy potrącana z wypłaty (5% Kwoty Udzielonej, min 5 000 zł, bez VAT)",

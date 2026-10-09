@@ -189,7 +189,7 @@ export function EngineUmowaGenerator({ title, subtitle }: EngineUmowaGeneratorPr
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {subtitle ??
-            "Umowa jest składana deterministycznie z biblioteki klauzul (silnik) na podstawie profilu klienta — nie z wypełnianego wzoru z lukami. Prowizja jest rozliczana w ratach (bez potrącania z kwoty brutto). Walidacja jest bramą: błędy blokujące wstrzymują generację."}
+            "Umowa jest składana deterministycznie z biblioteki klauzul (silnik) na podstawie profilu klienta — nie z wypełnianego wzoru z lukami. Prowizja inwestora jest rozliczana w ratach. Walidacja jest bramą: błędy blokujące wstrzymują generację."}
         </p>
       </div>
 

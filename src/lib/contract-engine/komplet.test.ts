@@ -145,7 +145,7 @@ describe("przypadek końcowy zlecenia (a)", () => {
     expect(k1.sha256).toBe(k2.sha256);
     expect(Buffer.from(k1.bytes).equals(Buffer.from(k2.bytes))).toBe(true);
     expect(k1.wersjaBiblioteki).toBe(WERSJA_BIBLIOTEKI);
-    expect(WERSJA_BIBLIOTEKI).toBe("1.6");
+    expect(WERSJA_BIBLIOTEKI).toBe("1.7");
   });
 
   it("plik .docx ma komplet części pakietu (document, styles, relacje)", async () => {

@@ -411,11 +411,6 @@ export function walidujReguly(d: any): Problem[] {
   // i nie większa niż łączna prowizja inwestora.
   const prowBalon = naLiczbeBezp(d.warunki?.prowizja?.w_racie_koncowej?.cyframi);
   if (prowBalon !== null && prowBalon > 0) {
-    if ((d.warunki?.prowizja?.model ?? "nie_potracana_raty") !== "nie_potracana_raty")
-      blad(
-        "warunki.prowizja.w_racie_koncowej",
-        "Część prowizji płatna z ratą końcową wymaga modelu prowizji 'nie_potracana_raty'",
-      );
     const prowRazem = naLiczbeBezp(d.warunki?.prowizja?.kwota?.cyframi);
     if (prowRazem !== null && prowBalon > prowRazem + 1e-9)
       blad(
