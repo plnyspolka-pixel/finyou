@@ -78,6 +78,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   oswiadczenie: "Oświadczenia",
   zalacznik: "Załączniki",
   instrukcja: "Instrukcje",
+  procedura: "Procedury (AML/compliance)",
   inne: "Inne",
 };
 
@@ -88,6 +89,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   oswiadczenie: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200",
   zalacznik: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200",
   instrukcja: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+  procedura: "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-200",
 };
 
 // ════════════════════════════════════════════════════════════════════
