@@ -98,6 +98,7 @@ describe("SinglePageApplicationForm – Meta pixel events", () => {
   beforeEach(() => {
     trackEventMock.mockClear();
     submitMock.mockClear();
+    window.sessionStorage.clear();
   });
 
   it("Lead NIE odpala się gdy dane kontaktowe są niekompletne", async () => {
@@ -175,5 +176,16 @@ describe("SinglePageApplicationForm – Meta pixel events", () => {
       has_kw: true,
       photos_count: 1,
     });
+  });
+
+  it("szkic danych przeżywa odmontowanie formularza (zmiana sekcji / powrót do karty)", async () => {
+    const { unmount } = render(<SinglePageApplicationForm />);
+    await fillContact();
+    unmount();
+
+    render(<SinglePageApplicationForm />);
+    expect(await screen.findByDisplayValue("Kowalska")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^e-mail/i)).toHaveValue("anna@example.com");
+    expect(screen.getByLabelText(/^telefon/i)).toHaveValue("600100200");
   });
 });

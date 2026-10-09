@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -71,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const userIdRef = useRef<string | null>(null);
 
   const loadRoles = async (uid: string | undefined) => {
     if (!uid) {
@@ -115,23 +116,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, newSession) => {
+      const nextUserId = newSession?.user?.id ?? null;
+      const userChanged = nextUserId !== userIdRef.current;
+      userIdRef.current = nextUserId;
       setSession(newSession);
-      setUser(newSession?.user ?? null);
+      // Supabase emituje SIGNED_IN / TOKEN_REFRESHED także po powrocie do karty przeglądarki.
+      // Nie podmieniamy wtedy obiektu `user`, żeby nie przeładowywać zależnych efektów.
+      if (userChanged || event === "USER_UPDATED") setUser(newSession?.user ?? null);
       // Po świeżym zalogowaniu role dociągają się asynchronicznie z bazy. Dopóki ich nie znamy,
       // trzymamy `loading = true`, żeby strażnicy paneli nie uznali użytkownika za „bez roli"
       // i nie wyrzucili go (np. z /admin do /klient), zanim role zdążą się wczytać.
-      if (event === "SIGNED_IN") setLoading(true);
+      // Tylko przy zmianie użytkownika — `loading` odmontowuje cały panel (PanelShell),
+      // więc przy powrocie do karty kasowałby niezapisane formularze (np. „Wprowadź wniosek”).
+      const blockUi = event === "SIGNED_IN" && userChanged;
+      if (blockUi) setLoading(true);
       // Defer to avoid deadlock in onAuthStateChange
       setTimeout(() => {
         void loadRoles(newSession?.user?.id).finally(() => {
-          if (event === "SIGNED_IN") setLoading(false);
+          if (blockUi) setLoading(false);
         });
       }, 0);
     });
 
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
-      setUser(s?.user ?? null);
+      if ((s?.user?.id ?? null) !== userIdRef.current) {
+        userIdRef.current = s?.user?.id ?? null;
+        setUser(s?.user ?? null);
+      }
       void loadRoles(s?.user?.id).finally(() => setLoading(false));
     });
 

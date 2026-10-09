@@ -340,13 +340,116 @@ export function SinglePageApplicationForm({
 
   useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.url)), [photos]);
 
-  const contactValid = useMemo(() => {
-    const fn = firstName.trim();
-    const ln = lastName.trim();
-    const ph = phone.trim().replace(/\D/g, "");
+  // Szkic formularza w sessionStorage (tylko ta karta przeglądarki, znika po jej zamknięciu):
+  // przejście do innej sekcji panelu, odświeżenie czy uśpienie karty nie kasuje wpisanych danych.
+  // Pliki i zgody nie są zapisywane — pliki trzeba dodać ponownie, zgody zaznaczyć świadomie.
+  const draftKey = `financeyou:application-draft:${brokerMode?.sourceLabel ?? "public"}`;
+  const draftRestoredRef = useRef(false);
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(draftKey);
+      const d = raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+      if (d) {
+        const str = (v: unknown) => (typeof v === "string" ? v : undefined);
+        const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+        if (!prefilledContact?.firstName && str(d.firstName)) setFirstName(str(d.firstName)!);
+        if (!prefilledContact?.lastName && str(d.lastName)) setLastName(str(d.lastName)!);
+        if (!prefilledContact?.phone && str(d.phone)) setPhone(str(d.phone)!);
+        if (!prefilledContact?.email && str(d.email)) setEmail(str(d.email)!);
+        if (str(d.kwNumber)) setKwNumber(str(d.kwNumber)!);
+        if (Array.isArray(d.extraKwNumbers)) {
+          setExtraKwNumbers(d.extraKwNumbers.filter((k): k is string => typeof k === "string"));
+        }
+        if (str(d.usableArea)) setUsableArea(str(d.usableArea)!);
+        if (str(d.city)) setCity(str(d.city)!);
+        if (str(d.nip)) setNip(str(d.nip)!);
+        if (str(d.secType)) setSecType(str(d.secType) as SecurityType);
+        if (d.typeSelected === true) setTypeSelected(true);
+        if (d.businessPurpose === true) setBusinessPurpose(true);
+        const bs = str(d.businessStatus);
+        if (bs === "prowadzi" || bs === "zamierza" || bs === "nie_zamierza") setBusinessStatus(bs);
+        if (num(d.amount) !== undefined) setAmount(num(d.amount)!);
+        if (num(d.months) !== undefined) setMonths(num(d.months)!);
+      }
+    } catch {
+      // brak dostępu do sessionStorage (tryb prywatny / blokada) — formularz działa bez szkicu
+    }
+    draftRestoredRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftRestoredRef.current) return;
+    try {
+      window.sessionStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          firstName,
+          lastName,
+          phone,
+          email,
+          kwNumber,
+          extraKwNumbers,
+          usableArea,
+          city,
+          nip,
+          secType,
+          typeSelected,
+          businessPurpose,
+          businessStatus,
+          amount,
+          months,
+        }),
+      );
+    } catch {
+      // ignorujemy — szkic jest tylko udogodnieniem
+    }
+  }, [
+    draftKey,
+    firstName,
+    lastName,
+    phone,
+    email,
+    kwNumber,
+    extraKwNumbers,
+    usableArea,
+    city,
+    nip,
+    secType,
+    typeSelected,
+    businessPurpose,
+    businessStatus,
+    amount,
+    months,
+  ]);
+
+  const clearDraft = () => {
+    try {
+      window.sessionStorage.removeItem(draftKey);
+    } catch {
+      // ignorujemy
+    }
+  };
+
+  // Konkretny komunikat zamiast ogólnego „uzupełnij wszystko” — operatorzy szukali
+  // błędu w imieniu, gdy w rzeczywistości e-mail nie miał kropki w domenie.
+  const contactError = useMemo(() => {
+    const missing: string[] = [];
+    if (!firstName.trim()) missing.push("imię");
+    if (!lastName.trim()) missing.push("nazwisko");
+    if (!phone.trim()) missing.push("telefon");
+    if (!email.trim()) missing.push("e-mail");
+    if (missing.length) return `Uzupełnij: ${missing.join(", ")}.`;
+    if (phone.replace(/\D/g, "").length < 9) {
+      return "Numer telefonu jest za krótki — podaj co najmniej 9 cyfr.";
+    }
     const em = email.trim();
-    return Boolean(fn && ln && ph.length >= 9 && /.+@.+\..+/.test(em));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+      return `Adres e-mail „${em}” jest niepoprawny — sprawdź, czy zawiera „@” i kropkę w domenie (np. imie@gmail.com).`;
+    }
+    return null;
   }, [firstName, lastName, phone, email]);
+  const contactValid = contactError === null;
 
   const fireLead = () => {
     if (leadFiredRef.current || !contactValid) return;
@@ -465,8 +568,8 @@ export function SinglePageApplicationForm({
     }
 
     if (!skipContact) {
-      if (!contactValid) {
-        toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
+      if (contactError) {
+        toast.error(contactError);
         return;
       }
       if (!isBroker && (!consentPrivacy || !consentTerms)) {
@@ -575,6 +678,7 @@ export function SinglePageApplicationForm({
           lastName: lastName.trim(),
         },
       );
+      clearDraft();
       if (brokerMode) {
         toast.success("Wniosek utworzony i przypisany do Ciebie.");
         void navigate({ to: brokerMode.redirectTo ?? "/posrednik/wnioski" });
