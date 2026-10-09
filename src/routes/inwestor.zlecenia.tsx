@@ -31,6 +31,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
+import { maxCapitalRate } from "@/lib/contract-engine/fees";
+import { downloadOfferPdf } from "@/lib/offer-pdf";
+import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { OrderCycleSection } from "@/components/inwestor/order-cycle";
 import {
   accent,
@@ -53,6 +59,7 @@ import {
   getOrderProjectReportDetail,
   orderProjectReport,
   reserveOrderProject,
+  submitOrderProjectOffer,
   type OrderProject,
   type OrderProjectReport,
 } from "@/lib/investor-agreements/order-projects.functions";
@@ -238,6 +245,7 @@ function ProjectCard({
   const [showReport, setShowReport] = useState(p.report.status === "done");
   const [kartaOk, setKartaOk] = useState(false);
   const [karaOk, setKaraOk] = useState(false);
+  const [showOffer, setShowOffer] = useState(false);
   const [reserved, setReserved] = useState<{
     contact: OrderProject["contact"];
     reservationExpiresAt: string | null;
@@ -353,12 +361,10 @@ function ProjectCard({
                 Zamów raport analityczny
               </Button>
             )}
-            {/* Złóż ofertę — formularz z kalkulatorem w pełnym widoku Projektu */}
-            <Button asChild size="sm" variant="outline">
-              <Link to="/inwestor/wniosek/$id" params={{ id: p.applicationId }}>
-                <Send className="mr-2 h-4 w-4" />
-                Złóż ofertę
-              </Link>
+            {/* Złóż ofertę — kalkulator rozwijany pod kartą, jak raport */}
+            <Button size="sm" variant="outline" onClick={() => setShowOffer((s) => !s)}>
+              <Send className="mr-2 h-4 w-4" />
+              {showOffer ? "Ukryj kalkulator oferty" : "Złóż ofertę"}
             </Button>
             {report.status === "running" ? (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -377,6 +383,7 @@ function ProjectCard({
           {showReport && (report.status === "done" || report.status === "running") ? (
             <ReportPanel orderId={p.orderId} applicationId={p.applicationId} report={report} />
           ) : null}
+          {showOffer ? <OfferPanel project={p} onSubmitted={() => setShowOffer(false)} /> : null}
 
           {/* Pobierz dane kontaktowe i rezerwuj */}
           {reserved ? (
@@ -426,6 +433,139 @@ function ProjectCard({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Oferta (kalkulator compliance) ───────────────────────────────────────────
+
+function OfferPanel({
+  project: p,
+  onSubmitted,
+}: {
+  project: OrderProject;
+  onSubmitted: () => void;
+}) {
+  const submitFn = useServerFn(submitOrderProjectOffer);
+  const [calc, setCalc] = useState<LoanCalculatorState | null>(null);
+  const [note, setNote] = useState("");
+  const maxAnnualRate = maxCapitalRate();
+
+  const schedule = (c: LoanCalculatorState) =>
+    c.schedule.map((r) => ({
+      idx: r.idx,
+      date: r.date,
+      rata: r.rata,
+      kapital: r.kap,
+      odsetki: r.ods,
+      prowizja: r.prow ?? 0,
+      saldo: r.saldo,
+    }));
+
+  const submitMut = useMutation({
+    mutationFn: (status: "szkic" | "zlozona") => {
+      if (!calc || !calc.amount || !calc.months) {
+        throw new Error("Uzupełnij parametry oferty w kalkulatorze");
+      }
+      return submitFn({
+        data: {
+          orderId: p.orderId,
+          applicationId: p.applicationId,
+          status,
+          amount: calc.amount,
+          months: calc.months,
+          annualRate: calc.annualRate,
+          commission: calc.commissionPln,
+          balloon: calc.balloon,
+          monthlyPayment: calc.cappedRata,
+          totalToRepay: calc.totalToRepay,
+          schedule: schedule(calc),
+          note: note || null,
+        },
+      });
+    },
+    onSuccess: (_res, status) => {
+      toast.success(status === "zlozona" ? "Oferta złożona" : "Zapisano szkic oferty");
+      onSubmitted();
+    },
+    onError: (e) => toast.error(errMsg(e)),
+  });
+
+  // Art. 952¹ § 2 KPC — pożyczka < 5% wartości nieruchomości mieszkalnej.
+  const block = residentialAuctionBlockRisk({
+    propertyType: p.propertyType ?? "",
+    loanAmountPln: Number(calc?.amount) || Number(p.loanAmount) || 0,
+    propertyValuePln: Number(p.estimatedValue) || 0,
+  });
+
+  return (
+    <div className="space-y-3 rounded-md border p-3">
+      <LoanCalculator
+        initialAmount={Number(p.loanAmount) || 100_000}
+        initialMonths={12}
+        initialAnnualRate={Math.round(maxAnnualRate * 10) / 10}
+        onChange={setCalc}
+      />
+      {block.blocked ? (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <b>Uwaga — możliwa blokada licytacji (art. 952¹ § 2 KPC).</b> {block.message}
+            <span className="mt-1 block text-xs opacity-80">{block.legalBasis}</span>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      <RiskDisclaimer />
+      <Textarea
+        rows={2}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="Opcjonalna notatka do oferty…"
+      />
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!calc || !calc.amount || !calc.months}
+          onClick={() => {
+            if (!calc) return;
+            const ok = downloadOfferPdf({
+              proposed_amount: calc.amount,
+              period_months: calc.months,
+              expected_yearly_yield: calc.annualRate,
+              commission: calc.commissionPln,
+              estimated_monthly_payment: calc.cappedRata,
+              estimated_total_cost: calc.totalToRepay,
+              balloon_amount: calc.balloon > 0 ? calc.balloon : null,
+              schedule: schedule(calc),
+            });
+            if (!ok) toast.error("Uzupełnij parametry oferty w kalkulatorze");
+          }}
+        >
+          <FileText className="mr-2 h-4 w-4" />
+          PDF oferty
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={submitMut.isPending}
+          onClick={() => submitMut.mutate("szkic")}
+        >
+          Zapisz jako szkic
+        </Button>
+        <Button
+          size="sm"
+          disabled={submitMut.isPending}
+          onClick={() => submitMut.mutate("zlozona")}
+        >
+          {submitMut.isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="mr-2 h-4 w-4" />
+          )}
+          Złóż ofertę
+        </Button>
+      </div>
     </div>
   );
 }

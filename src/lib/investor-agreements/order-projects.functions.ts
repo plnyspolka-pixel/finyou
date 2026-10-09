@@ -835,3 +835,77 @@ export const reserveOrderProject = createServerFn({ method: "POST" })
       contact: await loadContact(supabaseAdmin, app.client_id ?? null),
     };
   });
+
+/**
+ * Oferta do Projektu prosto z „Moich zleceń" (kalkulator pod kartą Projektu).
+ * Dostęp jak przy raporcie: przyjęte Zlecenie + Projekt w jego kwocie/oknie
+ * (RLS investor_offers patrzy na abonament, więc zapis idzie przez serwer).
+ */
+export const submitOrderProjectOffer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        orderId: z.string().uuid(),
+        applicationId: z.string().uuid(),
+        status: z.enum(["szkic", "zlozona"]),
+        amount: z.number().positive(),
+        months: z.number().int().positive(),
+        annualRate: z.number().min(0),
+        commission: z.number().min(0),
+        balloon: z.number().min(0),
+        monthlyPayment: z.number().min(0),
+        totalToRepay: z.number().min(0),
+        schedule: z
+          .array(
+            z.object({
+              idx: z.number(),
+              date: z.string(),
+              rata: z.number(),
+              kapital: z.number(),
+              odsetki: z.number(),
+              prowizja: z.number(),
+              saldo: z.number(),
+            }),
+          )
+          .max(600),
+        note: z.string().max(4000).nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const order = await myAcceptedOrder(supabaseAdmin, userId, data.orderId);
+    await eligibleApp(supabaseAdmin, order, data.applicationId);
+    const { data: investor } = await loose(supabaseAdmin)
+      .from("investors")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!investor) throw new Error("Brak profilu inwestora.");
+    const { data: offer, error } = await loose(supabaseAdmin)
+      .from("investor_offers")
+      .insert({
+        loan_application_id: data.applicationId,
+        investor_id: investor.id,
+        offer_status: data.status,
+        proposed_amount: data.amount,
+        period_months: data.months,
+        expected_yearly_yield: data.annualRate,
+        commission: data.commission,
+        collection_protection: false,
+        has_balloon: data.balloon > 0,
+        balloon_amount: data.balloon > 0 ? data.balloon : null,
+        repayment_type: data.balloon > 0 ? "mieszana" : "miesieczna",
+        estimated_monthly_payment: data.monthlyPayment,
+        estimated_total_cost: data.totalToRepay,
+        schedule: data.schedule,
+        investor_note: data.note,
+        submitted_at: data.status === "zlozona" ? new Date().toISOString() : null,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { ok: true, offerId: offer.id as string };
+  });
