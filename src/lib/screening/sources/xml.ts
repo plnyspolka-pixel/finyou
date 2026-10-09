@@ -3,15 +3,36 @@
 // więc wystarczy wyszukiwanie elementów i atrybutów.
 
 const ENTITIES: Record<string, string> = {
-  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", oacute: "ó", Oacute: "Ó",
-  ndash: "–", mdash: "—", bdquo: "„", rdquo: "”", ldquo: "“", rsquo: "’", lsquo: "‘",
-  hellip: "…", sect: "§", deg: "°", eacute: "é", Eacute: "É", uuml: "ü", ouml: "ö", auml: "ä",
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  oacute: "ó",
+  Oacute: "Ó",
+  ndash: "–",
+  mdash: "—",
+  bdquo: "„",
+  rdquo: "”",
+  ldquo: "“",
+  rsquo: "’",
+  lsquo: "‘",
+  hellip: "…",
+  sect: "§",
+  deg: "°",
+  eacute: "é",
+  Eacute: "É",
+  uuml: "ü",
+  ouml: "ö",
+  auml: "ä",
 };
 
 export function decodeEntities(s: string): string {
   return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
     if (e[0] === "#") {
-      const code = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+      const code =
+        e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
       return Number.isFinite(code) ? String.fromCodePoint(code) : m;
     }
     return ENTITIES[e] ?? ENTITIES[e.toLowerCase()] ?? m;

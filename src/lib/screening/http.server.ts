@@ -22,7 +22,10 @@ export class SourceFetchError extends Error {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Zwraca odpowiedź 2xx albo rzuca SourceFetchError po wyczerpaniu prób. 4xx (poza 408/429) nie są ponawiane. */
-export async function fetchWithRetry(url: string, opts: FetchRetryOptions): Promise<{ res: Response; attempts: number }> {
+export async function fetchWithRetry(
+  url: string,
+  opts: FetchRetryOptions,
+): Promise<{ res: Response; attempts: number }> {
   const attempts = opts.attempts ?? 4;
   const base = opts.baseDelayMs ?? 2000;
   let lastErr = "";
@@ -44,7 +47,10 @@ export async function fetchWithRetry(url: string, opts: FetchRetryOptions): Prom
       const retryable = res.status === 408 || res.status === 429 || res.status >= 500;
       if (!retryable) break;
       const ra = Number(res.headers.get("retry-after"));
-      if (i < attempts) await sleep(Number.isFinite(ra) && ra > 0 ? Math.min(ra * 1000, 60_000) : base * 2 ** (i - 1));
+      if (i < attempts)
+        await sleep(
+          Number.isFinite(ra) && ra > 0 ? Math.min(ra * 1000, 60_000) : base * 2 ** (i - 1),
+        );
     } catch (e) {
       clearTimeout(timer);
       lastErr = (e as Error).message;

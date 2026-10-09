@@ -24,6 +24,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FancyShell } from "@/components/landing/fancy-shell";
+import {
+  PepDeclarationSection,
+  type PepDeclarationDraft,
+} from "@/components/screening/pep-declaration-section";
+import { declarationError, emptyDeclaration } from "@/lib/screening/declaration";
 import { PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
@@ -78,6 +83,7 @@ export function LandingWizardForm() {
   const [consentMarketing, setConsentMarketing] = useState(false);
   // Bramka B2B: wymagane oświadczenie o celu gospodarczym.
   const [businessPurpose, setBusinessPurpose] = useState(false);
+  const [pepDeclaration, setPepDeclaration] = useState<PepDeclarationDraft>(emptyDeclaration);
   const [submitting, setSubmitting] = useState(false);
   const leadFiredRef = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -149,9 +155,19 @@ export function LandingWizardForm() {
       /.+@.+\..+/.test(email.trim()) &&
       consentPrivacy &&
       consentTerms &&
-      businessPurpose,
+      businessPurpose &&
+      !declarationError(pepDeclaration),
     );
-  }, [firstName, lastName, phone, email, consentPrivacy, consentTerms, businessPurpose]);
+  }, [
+    firstName,
+    lastName,
+    phone,
+    email,
+    consentPrivacy,
+    consentTerms,
+    businessPurpose,
+    pepDeclaration,
+  ]);
 
   const stepDone: Record<StepId, boolean> = {
     1: typeSelected && city.trim().length > 0,
@@ -205,6 +221,11 @@ export function LandingWizardForm() {
       toast.error(bladKw);
       return;
     }
+    const pepErr = declarationError(pepDeclaration);
+    if (pepErr) {
+      toast.error(`Oświadczenie PEP: ${pepErr}`);
+      return;
+    }
     if (!allDone) {
       toast.error("Uzupełnij wszystkie kroki wizarda, aby wysłać wniosek.");
       return;
@@ -242,6 +263,7 @@ export function LandingWizardForm() {
           photos: photoPayload,
           source: "landing_wizard",
           assigned_operator_id: null,
+          pep_declaration: pepDeclaration as never,
         },
       });
       if (!res?.ok) throw new Error("submit failed");
@@ -660,6 +682,12 @@ export function LandingWizardForm() {
                 </span>
               </label>
             </div>
+            <PepDeclarationSection
+              value={pepDeclaration}
+              onChange={setPepDeclaration}
+              tone="dark"
+              inputClassName={FANCY_INPUT_CLASS}
+            />
           </div>
         </FancyShell>
       )}

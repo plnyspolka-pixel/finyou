@@ -54,7 +54,13 @@ export interface ScoreBreakdown {
   matchedReferenceName: string;
   tokenPairs: Array<{ subject: string; reference: string; similarity: number }>;
   unmatchedTokens: number;
-  dob: "exact" | "year_match" | "mismatch" | "missing_reference" | "missing_subject" | "not_applicable";
+  dob:
+    | "exact"
+    | "year_match"
+    | "mismatch"
+    | "missing_reference"
+    | "missing_subject"
+    | "not_applicable";
   dobAdjustment: number;
   nationality: "match" | "no_overlap" | "unknown";
   nationalityAdjustment: number;
@@ -156,10 +162,15 @@ function effective(sim: number): number {
 export function tokenSetSimilarity(
   s: string[],
   r: string[],
-): { score: number; pairs: Array<{ subject: string; reference: string; similarity: number }>; unmatched: number } {
+): {
+  score: number;
+  pairs: Array<{ subject: string; reference: string; similarity: number }>;
+  unmatched: number;
+} {
   const S = [...new Set(s)];
   const R = [...new Set(r)];
-  if (S.length === 0 || R.length === 0) return { score: 0, pairs: [], unmatched: Math.max(S.length, R.length) };
+  if (S.length === 0 || R.length === 0)
+    return { score: 0, pairs: [], unmatched: Math.max(S.length, R.length) };
   const cand: Array<{ i: number; j: number; sim: number }> = [];
   for (let i = 0; i < S.length; i++) {
     for (let j = 0; j < R.length; j++) cand.push({ i, j, sim: tokenSimilarity(S[i], R[j]) });
@@ -196,13 +207,18 @@ function dobComponent(
   if (!subject.date && !subject.year) return { kind: "missing_subject", adj: 0 };
   if (known.length === 0) return { kind: "missing_reference", adj: 0 };
   // Najkorzystniejsza z dat w rekordzie (rekordy sankcyjne mają często kilka).
-  let best: { kind: ScoreBreakdown["dob"]; adj: number } = { kind: "mismatch", adj: -s.dobMismatchPenalty };
+  let best: { kind: ScoreBreakdown["dob"]; adj: number } = {
+    kind: "mismatch",
+    adj: -s.dobMismatchPenalty,
+  };
   for (const r of known) {
-    if (subject.date && r.date && subject.date === r.date) return { kind: "exact", adj: s.dobExactBonus };
+    if (subject.date && r.date && subject.date === r.date)
+      return { kind: "exact", adj: s.dobExactBonus };
     const sy = subject.year ?? (subject.date ? Number(subject.date.slice(0, 4)) : null);
     const ry = r.year ?? (r.date ? Number(r.date.slice(0, 4)) : null);
     // Zgodny rok liczy się tylko wtedy, gdy jedna ze stron zna wyłącznie rok.
-    if (sy && ry && sy === ry && (!subject.date || !r.date)) best = { kind: "year_match", adj: s.dobYearBonus };
+    if (sy && ry && sy === ry && (!subject.date || !r.date))
+      best = { kind: "year_match", adj: s.dobYearBonus };
   }
   return best;
 }
@@ -226,22 +242,42 @@ export function bandFor(score: number, s: ScoringSettings): Band {
 }
 
 /** Pełny scoring pary podmiot–rekord. */
-export function scoreMatch(subject: ScoreSubject, ref: ScoreReference, s: ScoringSettings = DEFAULT_SCORING): ScoreBreakdown {
+export function scoreMatch(
+  subject: ScoreSubject,
+  ref: ScoreReference,
+  s: ScoringSettings = DEFAULT_SCORING,
+): ScoreBreakdown {
   const entity = subject.kind === "entity";
-  let best = { score: -1, sName: "", rName: "", pairs: [] as ScoreBreakdown["tokenPairs"], unmatched: 0 };
+  let best = {
+    score: -1,
+    sName: "",
+    rName: "",
+    pairs: [] as ScoreBreakdown["tokenPairs"],
+    unmatched: 0,
+  };
   const subjVariants = subject.names.flatMap((n) => nameVariants(n, { entity }));
-  const refVariants = ref.names.flatMap((n) => nameVariants(n, { entity: ref.kind === "entity" || entity }));
+  const refVariants = ref.names.flatMap((n) =>
+    nameVariants(n, { entity: ref.kind === "entity" || entity }),
+  );
   for (const sv of subjVariants) {
     for (const rv of refVariants) {
       const r = tokenSetSimilarity(sv.tokens, rv.tokens);
-      if (r.score > best.score) best = { score: r.score, sName: sv.key, rName: rv.key, pairs: r.pairs, unmatched: r.unmatched };
+      if (r.score > best.score)
+        best = {
+          score: r.score,
+          sName: sv.key,
+          rName: rv.key,
+          pairs: r.pairs,
+          unmatched: r.unmatched,
+        };
     }
   }
   const nameScore = Math.round(Math.max(0, best.score) * 100);
 
-  const dob = entity || ref.kind === "entity"
-    ? { kind: "not_applicable" as const, adj: 0 }
-    : dobComponent(subject.birth, ref.births, s);
+  const dob =
+    entity || ref.kind === "entity"
+      ? { kind: "not_applicable" as const, adj: 0 }
+      : dobComponent(subject.birth, ref.births, s);
   const nat = nationalityComponent(subject.nationality, ref.nationality, s);
 
   let total = nameScore + dob.adj + nat.adj;
@@ -254,7 +290,10 @@ export function scoreMatch(subject: ScoreSubject, ref: ScoreReference, s: Scorin
     const cap = s.strongThreshold - 1;
     if (total > cap) {
       total = cap;
-      capApplied = dob.kind === "missing_reference" ? "brak daty urodzenia w źródle" : "brak daty urodzenia podmiotu";
+      capApplied =
+        dob.kind === "missing_reference"
+          ? "brak daty urodzenia w źródle"
+          : "brak daty urodzenia podmiotu";
     }
   }
 

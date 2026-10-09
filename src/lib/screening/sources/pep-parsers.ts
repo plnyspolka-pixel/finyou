@@ -30,7 +30,11 @@ interface SejmMp {
 }
 
 /** Klucz scalania posła między kadencjami (API nie ma globalnego ID osoby). */
-export function sejmPersonKey(mp: { firstName: string; lastName: string; birthDate?: string | null }): string {
+export function sejmPersonKey(mp: {
+  firstName: string;
+  lastName: string;
+  birthDate?: string | null;
+}): string {
   return `${mp.lastName}|${mp.firstName}|${mp.birthDate ?? ""}`.toLowerCase();
 }
 
@@ -43,7 +47,12 @@ export function parseSejmMps(terms: Array<{ term: SejmTerm; mps: SejmMp[] }>): P
       const key = sejmPersonKey(mp);
       const from = mp.oathDate ?? term.from;
       const to = mp.active ? (term.to ?? null) : (mp.mandateExpiryDate ?? term.to ?? null);
-      const position = { title: `Poseł na Sejm RP (${term.num}. kadencja)`, catalogCode: "PL-007", from, to };
+      const position = {
+        title: `Poseł na Sejm RP (${term.num}. kadencja)`,
+        catalogCode: "PL-007",
+        from,
+        to,
+      };
       const fullName = [mp.firstName, mp.secondName, mp.lastName].filter(Boolean).join(" ");
       const current = !!(mp.active && term.current !== false && !term.to);
       const existing = byKey.get(key);
@@ -154,8 +163,11 @@ export function parseWikidataHolders(
       };
       byPerson.set(qid, rec);
     }
-    const aliasList = [b.nameEn?.value, b.namePl?.value, ...(b.aliases?.value ?? "").split("|")]
-      .filter((x): x is string => !!x && x !== rec.fullName);
+    const aliasList = [
+      b.nameEn?.value,
+      b.namePl?.value,
+      ...(b.aliases?.value ?? "").split("|"),
+    ].filter((x): x is string => !!x && x !== rec.fullName);
     for (const a of aliasList) if (!rec.aliases.includes(a)) rec.aliases.push(a);
     for (const c of (b.cits?.value ?? "").split("|").filter(Boolean)) {
       const code = c.toUpperCase();
@@ -163,10 +175,16 @@ export function parseWikidataHolders(
     }
     const title = b.posLabel?.value || posQid;
     if (!rec.positions.some((p) => p.title === title && p.from === start && p.to === end)) {
-      rec.positions.push({ title, catalogCode: catalogCodeByQid[posQid] ?? null, from: start, to: end });
+      rec.positions.push({
+        title,
+        catalogCode: catalogCodeByQid[posQid] ?? null,
+        from: start,
+        to: end,
+      });
     }
     // Brak daty końca przy znanym początku z ostatnich 15 lat → traktujemy jako trwające.
-    if (!end && (!start || now.getUTCFullYear() - Number(start.slice(0, 4)) <= 15)) rec.current = true;
+    if (!end && (!start || now.getUTCFullYear() - Number(start.slice(0, 4)) <= 15))
+      rec.current = true;
   }
   return [...byPerson.values()];
 }
@@ -190,10 +208,17 @@ function kprmCatalogCode(position: string): string {
  */
 export function parseKprm(html: string, pageUrl: string): PepRecord[] {
   const out: PepRecord[] = [];
-  const re = /<div class="title">\s*<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>\s*<\/div>\s*<div class="position">([\s\S]*?)<\/div>/g;
+  const re =
+    /<div class="title">\s*<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>\s*<\/div>\s*<div class="position">([\s\S]*?)<\/div>/g;
   for (const m of html.matchAll(re)) {
-    const name = m[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    const position = m[3].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const name = m[2]
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const position = m[3]
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
     if (!name || !position) continue;
     const href = m[1].startsWith("http") ? m[1] : `https://www.gov.pl${m[1]}`;
     out.push({
@@ -204,7 +229,9 @@ export function parseKprm(html: string, pageUrl: string): PepRecord[] {
       birthDate: null,
       birthYear: null,
       nationality: ["PL"],
-      positions: [{ title: position, catalogCode: kprmCatalogCode(position), from: null, to: null }],
+      positions: [
+        { title: position, catalogCode: kprmCatalogCode(position), from: null, to: null },
+      ],
       current: true,
       sourceUrl: href || pageUrl,
     });

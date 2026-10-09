@@ -20,6 +20,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { FancyShell } from "@/components/landing/fancy-shell";
+import {
+  PepDeclarationSection,
+  type PepDeclarationDraft,
+} from "@/components/screening/pep-declaration-section";
+import { declarationError, emptyDeclaration } from "@/lib/screening/declaration";
 import { formatPLN, type SecurityType } from "@/lib/loan-math";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
 import { uploadLandingAttachment } from "@/lib/uploads/landing-upload.functions";
@@ -88,6 +93,7 @@ export function EmbedApplicationForm() {
   const [consent, setConsent] = useState(false);
   // Bramka B2B: wymagane oświadczenie o celu gospodarczym.
   const [businessPurpose, setBusinessPurpose] = useState(false);
+  const [pepDeclaration, setPepDeclaration] = useState<PepDeclarationDraft>(emptyDeclaration);
   const [submitting, setSubmitting] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -181,7 +187,7 @@ export function EmbedApplicationForm() {
       case "photos":
         return allPhotosReady;
       case "consent":
-        return consent && businessPurpose && allPhotosReady;
+        return consent && businessPurpose && allPhotosReady && !declarationError(pepDeclaration);
       default:
         return false;
     }
@@ -228,6 +234,7 @@ export function EmbedApplicationForm() {
           business_purpose_declared: businessPurpose,
           photos: photoPayload,
           source: "embed_wniosek",
+          pep_declaration: pepDeclaration as never,
         },
       });
       if (!res?.ok) throw new Error("submit failed");
@@ -579,6 +586,12 @@ export function EmbedApplicationForm() {
                     cele konsumpcyjne ani prywatne potrzeby mieszkaniowe).
                   </span>
                 </label>
+                <PepDeclarationSection
+                  value={pepDeclaration}
+                  onChange={setPepDeclaration}
+                  tone="dark"
+                  inputClassName={INPUT_CLASS}
+                />
               </div>
             )}
           </div>

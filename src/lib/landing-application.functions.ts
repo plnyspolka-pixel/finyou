@@ -3,6 +3,8 @@ import { kwCheckDigitError, normalizeKwNumbersInText } from "@/lib/kw";
 import { z } from "zod";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getRequest } from "@tanstack/react-start/server";
+import { PepDeclarationInput } from "@/lib/screening/declaration";
 
 const PropertyTypeEnum = z.enum([
   "mieszkanie",
@@ -65,6 +67,9 @@ const SubmitSchema = z.object({
   // przypisanie pośrednika wykonuje wyłącznie uwierzytelniona funkcja
   // submitBrokerLoanApplication (autor nie może pochodzić z przeglądarki).
   assigned_operator_id: z.string().uuid().optional().nullable(),
+  // Oświadczenie PEP klienta (ustawa AML). Wymagane w formularzach klienta;
+  // pośrednik nie składa go w imieniu klienta — klient uzupełnia je w panelu.
+  pep_declaration: PepDeclarationInput.optional().nullable(),
 });
 
 type SubmitInput = z.infer<typeof SubmitSchema>;
@@ -160,6 +165,22 @@ async function submitApplicationCore(
       };
     }
     throw new Error(lErr?.message ?? "loan insert failed");
+  }
+
+  // === Oświadczenie PEP (zapis niezmienialny; trigger kolejkuje screening) ===
+  if (data.pep_declaration && !broker) {
+    const { recordPepDeclaration, requestMeta } =
+      await import("@/lib/screening/declaration.server");
+    const meta = requestMeta(getRequest());
+    await recordPepDeclaration({
+      subjectType: "client",
+      subjectId: client.id,
+      loanApplicationId: loan.id,
+      value: data.pep_declaration,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      channel: "landing",
+    });
   }
 
   // === Auto-utworzenie konta klienta + magiczny link do auto-loginu ===
@@ -422,7 +443,13 @@ Podgląd w panelu: ${adminUrl}`;
 
 export const submitLandingLoanApplication = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => SubmitSchema.parse(input))
-  .handler(async ({ data }) => submitApplicationCore(data));
+  .handler(async ({ data }) => {
+    // Klient składający wniosek sam musi złożyć oświadczenie PEP (ustawa AML).
+    if (!data.pep_declaration) {
+      throw new Error("Brak oświadczenia o statusie PEP — uzupełnij formularz.");
+    }
+    return submitApplicationCore(data);
+  });
 
 // Utworzenie oferty przez pośrednika — wymaga zalogowania. Autor (autorstwo
 // niezmienne) i przypisany operator pochodzą z sesji, nigdy z przeglądarki.

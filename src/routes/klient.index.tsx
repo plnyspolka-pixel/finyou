@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { MyPepDeclarationCard } from "@/components/screening/my-pep-declaration-card";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -481,6 +482,7 @@ function KlientDashboard() {
       {/* Dokumenty do e-podpisu (umowa od Finance You / inwestora) — tylko gdy coś czeka. */}
       <ClientEsignBanner />
       {loanRow?.id && <ClientStatusCard />}
+      {loanRow?.id && <MyPepDeclarationCard audience="client" onlyIfMissing />}
       {loanRow?.id && <MissingInfoVoiceAgent />}
       {!loanRow?.id && (
         <SinglePageApplicationForm

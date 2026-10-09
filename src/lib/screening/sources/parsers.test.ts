@@ -4,7 +4,13 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseEuFsf, parseUnSc, parseOfacSdn, parseMswia, parseCsv } from "./sanctions-parsers";
-import { parseSejmMps, parseWikidataHolders, wikidataHoldersQuery, wikidataPositionsQuery, parseKprm } from "./pep-parsers";
+import {
+  parseSejmMps,
+  parseWikidataHolders,
+  wikidataHoldersQuery,
+  wikidataPositionsQuery,
+  parseKprm,
+} from "./pep-parsers";
 
 const fx = (name: string) => readFileSync(join(__dirname, "__fixtures__", name), "utf8");
 
@@ -43,7 +49,10 @@ describe("ONZ — skonsolidowana lista Rady Bezpieczeństwa", () => {
 
 describe("OFAC SDN", () => {
   it("parsuje CSV z cudzysłowami i wyciąga DOB z uwag", () => {
-    const recs = parseOfacSdn(fx("ofac_sdn_sample.csv"), '15582,1,"aka","ROTENBERG, Arkadiy",-0- \n');
+    const recs = parseOfacSdn(
+      fx("ofac_sdn_sample.csv"),
+      '15582,1,"aka","ROTENBERG, Arkadiy",-0- \n',
+    );
     const abbas = recs.find((r) => r.sourceId === "2674")!;
     expect(abbas.primaryName).toBe("Abu ABBAS");
     expect(abbas.birthDates).toEqual(["1948-12-10"]);
@@ -53,7 +62,10 @@ describe("OFAC SDN", () => {
     expect(rot).toBeDefined();
   });
   it("parseCsv obsługuje przecinki i cudzysłowy wewnątrz pól", () => {
-    expect(parseCsv('1,"a, ""b""",c\n2,x,y\n')).toEqual([["1", 'a, "b"', "c"], ["2", "x", "y"]]);
+    expect(parseCsv('1,"a, ""b""",c\n2,x,y\n')).toEqual([
+      ["1", 'a, "b"', "c"],
+      ["2", "x", "y"],
+    ]);
   });
 });
 
@@ -94,7 +106,10 @@ describe("Wikidata", () => {
     expect(wikidataPositionsQuery(["Q83307"], "subclass_pl")).toContain("wdt:P1001 wd:Q36");
   });
   it("agreguje wiersze SPARQL do osób z datą urodzenia i obywatelstwem", () => {
-    const recs = parseWikidataHolders(JSON.parse(fx("wikidata_holders_sample.json")), { Q1054799: "PL-001", Q15051532: "PL-003" });
+    const recs = parseWikidataHolders(JSON.parse(fx("wikidata_holders_sample.json")), {
+      Q1054799: "PL-001",
+      Q15051532: "PL-003",
+    });
     expect(recs.length).toBeGreaterThan(5);
     const kw = recs.find((r) => r.fullName === "Aleksander Kwaśniewski")!;
     expect(kw.birthDate).toBe("1954-11-15");
@@ -106,7 +121,10 @@ describe("Wikidata", () => {
 
 describe("KPRM — skład Rady Ministrów", () => {
   it("parsuje członków rządu i mapuje funkcje na pozycje katalogu", () => {
-    const recs = parseKprm(fx("kprm_sample.html"), "https://www.gov.pl/web/premier/sklad-rady-ministrow");
+    const recs = parseKprm(
+      fx("kprm_sample.html"),
+      "https://www.gov.pl/web/premier/sklad-rady-ministrow",
+    );
     expect(recs).toHaveLength(5);
     expect(recs[0].fullName).toBe("Donald Tusk");
     expect(recs[0].positions[0].catalogCode).toBe("PL-002");

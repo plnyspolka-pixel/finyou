@@ -25,7 +25,9 @@ export function parseEuFsf(xml: string): SanctionRecord[] {
     const names: SanctionName[] = [];
     for (const na of elements(el, "nameAlias")) {
       const n = attrs(na);
-      const whole = (n.wholeName || [n.firstName, n.middleName, n.lastName].filter(Boolean).join(" ")).trim();
+      const whole = (
+        n.wholeName || [n.firstName, n.middleName, n.lastName].filter(Boolean).join(" ")
+      ).trim();
       if (!whole) continue;
       names.push({
         name: whole,
@@ -45,7 +47,11 @@ export function parseEuFsf(xml: string): SanctionRecord[] {
       .map((c) => attrs(c).countryIso2Code)
       .filter((c): c is string => !!c && c !== "00");
     const regs = elements(el, "regulation").map((r) => attrs(r));
-    const listed = regs.map((r) => r.publicationDate).filter(Boolean).sort()[0] ?? null;
+    const listed =
+      regs
+        .map((r) => r.publicationDate)
+        .filter(Boolean)
+        .sort()[0] ?? null;
     const primary = names.find((n) => n.strong && (!n.lang || n.lang === "EN")) ?? names[0];
     out.push({
       sourceId: a.logicalId || a.euReferenceNumber,
@@ -57,7 +63,10 @@ export function parseEuFsf(xml: string): SanctionRecord[] {
       programme: regs.find((r) => r.programme)?.programme ?? null,
       listedAt: listed,
       delistedAt: null,
-      remarks: [a.euReferenceNumber && `EU ref: ${a.euReferenceNumber}`, text(el, "remark")].filter(Boolean).join(" | ") || null,
+      remarks:
+        [a.euReferenceNumber && `EU ref: ${a.euReferenceNumber}`, text(el, "remark")]
+          .filter(Boolean)
+          .join(" | ") || null,
       sourceUrl: text(elements(el, "regulation")[0] ?? "", "publicationUrl"),
     });
   }
@@ -78,7 +87,8 @@ function unDates(el: string): string[] {
     if (year) out.push(year);
     const from = Number(text(d, "FROM_YEAR"));
     const to = Number(text(d, "TO_YEAR"));
-    if (from && to && to >= from && to - from <= 10) for (let y = from; y <= to; y++) out.push(String(y));
+    if (from && to && to >= from && to - from <= 10)
+      for (let y = from; y <= to; y++) out.push(String(y));
   }
   return uniq(out);
 }
@@ -86,15 +96,19 @@ function unDates(el: string): string[] {
 export function parseUnSc(xml: string): SanctionRecord[] {
   const out: SanctionRecord[] = [];
   const build = (el: string, kind: "person" | "entity") => {
-    const parts = ["FIRST_NAME", "SECOND_NAME", "THIRD_NAME", "FOURTH_NAME"].map((t) => text(el, t)).filter(Boolean) as string[];
+    const parts = ["FIRST_NAME", "SECOND_NAME", "THIRD_NAME", "FOURTH_NAME"]
+      .map((t) => text(el, t))
+      .filter(Boolean) as string[];
     if (parts.length === 0) return;
     const primary = parts.join(" ");
-    const names: SanctionName[] = [{
-      name: primary,
-      first: kind === "person" ? parts[0] : null,
-      last: kind === "person" && parts.length > 1 ? parts.slice(1).join(" ") : null,
-      strong: true,
-    }];
+    const names: SanctionName[] = [
+      {
+        name: primary,
+        first: kind === "person" ? parts[0] : null,
+        last: kind === "person" && parts.length > 1 ? parts.slice(1).join(" ") : null,
+        strong: true,
+      },
+    ];
     const original = text(el, "NAME_ORIGINAL_SCRIPT");
     if (original) names.push({ name: original, strong: true, lang: "original" });
     for (const al of elements(el, kind === "person" ? "INDIVIDUAL_ALIAS" : "ENTITY_ALIAS")) {
@@ -115,7 +129,10 @@ export function parseUnSc(xml: string): SanctionRecord[] {
       programme: text(el, "UN_LIST_TYPE"),
       listedAt: text(el, "LISTED_ON")?.slice(0, 10) ?? null,
       delistedAt: null,
-      remarks: [text(el, "REFERENCE_NUMBER"), text(el, "COMMENTS1")?.slice(0, 1000)].filter(Boolean).join(" | ") || null,
+      remarks:
+        [text(el, "REFERENCE_NUMBER"), text(el, "COMMENTS1")?.slice(0, 1000)]
+          .filter(Boolean)
+          .join(" | ") || null,
       sourceUrl: "https://main.un.org/securitycouncil/en/content/un-sc-consolidated-list",
     });
   };
@@ -168,7 +185,10 @@ const OFAC_NULL = (v: string | undefined) => {
 };
 
 /** „ROTENBERG, Arkady Romanovich” → „Arkady Romanovich ROTENBERG”. */
-function ofacName(raw: string, individual: boolean): { name: string; first: string | null; last: string | null } {
+function ofacName(
+  raw: string,
+  individual: boolean,
+): { name: string; first: string | null; last: string | null } {
   if (individual && raw.includes(",")) {
     const [last, ...rest] = raw.split(",");
     const first = rest.join(",").trim();
@@ -178,8 +198,18 @@ function ofacName(raw: string, individual: boolean): { name: string; first: stri
 }
 
 const MONTHS: Record<string, string> = {
-  jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
-  jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+  jan: "01",
+  feb: "02",
+  mar: "03",
+  apr: "04",
+  may: "05",
+  jun: "06",
+  jul: "07",
+  aug: "08",
+  sep: "09",
+  oct: "10",
+  nov: "11",
+  dec: "12",
 };
 
 function ofacDobs(remarks: string): string[] {
@@ -207,7 +237,10 @@ export function parseOfacSdn(sdnCsv: string, altCsv?: string): SanctionRecord[] 
       const name = OFAC_NULL(altName);
       if (!entNum || !name) continue;
       const list = aliases.get(entNum.trim()) ?? [];
-      list.push({ name: ofacName(name, true).name, strong: (OFAC_NULL(altType) ?? "").toLowerCase() === "aka" });
+      list.push({
+        name: ofacName(name, true).name,
+        strong: (OFAC_NULL(altType) ?? "").toLowerCase() === "aka",
+      });
       aliases.set(entNum.trim(), list);
     }
   }
@@ -226,8 +259,17 @@ export function parseOfacSdn(sdnCsv: string, altCsv?: string): SanctionRecord[] 
       .filter((c): c is string => !!c);
     out.push({
       sourceId: id,
-      entityType: individual ? "person" : type === "vessel" ? "vessel" : type === "aircraft" ? "aircraft" : "entity",
-      names: [{ name: n.name, first: n.first, last: n.last, strong: true }, ...(aliases.get(id) ?? [])],
+      entityType: individual
+        ? "person"
+        : type === "vessel"
+          ? "vessel"
+          : type === "aircraft"
+            ? "aircraft"
+            : "entity",
+      names: [
+        { name: n.name, first: n.first, last: n.last, strong: true },
+        ...(aliases.get(id) ?? []),
+      ],
       primaryName: n.name,
       birthDates: individual ? ofacDobs(remarks) : [],
       nationalities: uniq(nats),
@@ -253,7 +295,10 @@ function plDate(s: string): string | null {
  * historia wersji. Kolumny: nazwa | dane identyfikacyjne | uzasadnienie |
  * środki | data umieszczenia | data wykreślenia. Zwraca też numer wersji listy.
  */
-export function parseMswia(html: string): { records: SanctionRecord[]; listVersion: string | null } {
+export function parseMswia(html: string): {
+  records: SanctionRecord[];
+  listVersion: string | null;
+} {
   const tables = html.match(/<table[\s\S]*?<\/table>/gi) ?? [];
   const records: SanctionRecord[] = [];
   let listVersion: string | null = null;
@@ -276,22 +321,39 @@ export function parseMswia(html: string): { records: SanctionRecord[]; listVersi
           name = `${first} ${last}`;
         }
       }
-      const birth = kind === "person" ? parsePolishTextDate(idCell ?? "") : { date: null, year: null };
-      const alias = (idCell ?? "").match(/(?:znany|znana|znane) (?:również |także )?jako[:\s]+([^.;]+)/i)?.[1];
+      const birth =
+        kind === "person" ? parsePolishTextDate(idCell ?? "") : { date: null, year: null };
+      const alias = (idCell ?? "").match(
+        /(?:znany|znana|znane) (?:również |także )?jako[:\s]+([^.;]+)/i,
+      )?.[1];
       records.push({
         sourceId: `${kind}:${nameCell.toUpperCase().replace(/\s+/g, " ").trim()}`,
         entityType: kind,
         names: [
           { name, first, last, strong: true },
-          ...(alias ? alias.split(/,| lub /).map((x) => ({ name: x.trim(), strong: false })).filter((x) => x.name) : []),
+          ...(alias
+            ? alias
+                .split(/,| lub /)
+                .map((x) => ({ name: x.trim(), strong: false }))
+                .filter((x) => x.name)
+            : []),
         ],
         primaryName: name,
         birthDates: birth.date ? [birth.date] : birth.year ? [String(birth.year)] : [],
-        nationalities: kind === "person" ? uniq([/Federacji Rosyjskiej|rosyjsk/i.test(reason ?? "") ? "RU" : "", /Białoru|białorusk/i.test(reason ?? "") ? "BY" : ""].filter(Boolean)) : [],
+        nationalities:
+          kind === "person"
+            ? uniq(
+                [
+                  /Federacji Rosyjskiej|rosyjsk/i.test(reason ?? "") ? "RU" : "",
+                  /Białoru|białorusk/i.test(reason ?? "") ? "BY" : "",
+                ].filter(Boolean),
+              )
+            : [],
         programme: "PL-UA-2022",
         listedAt: plDate(listedCell ?? ""),
         delistedAt: plDate(delistedCell ?? ""),
-        remarks: [idCell, measures?.slice(0, 300)].filter(Boolean).join(" | ").slice(0, 1000) || null,
+        remarks:
+          [idCell, measures?.slice(0, 300)].filter(Boolean).join(" | ").slice(0, 1000) || null,
         sourceUrl: "https://www.gov.pl/web/mswia/lista-osob-i-podmiotow-objetych-sankcjami",
       });
     }
@@ -299,7 +361,9 @@ export function parseMswia(html: string): { records: SanctionRecord[]; listVersi
   tables.forEach((t, i) => {
     const header = stripTags(t.slice(0, 600));
     if (/Wersja/i.test(header) && /Tytuł/i.test(header)) {
-      const m = stripTags(t).match(/Lista os[oó]b i podmiot[oó]w objętych sankcjami (\d+(?:\.\d+)?)/);
+      const m = stripTags(t).match(
+        /Lista os[oó]b i podmiot[oó]w objętych sankcjami (\d+(?:\.\d+)?)/,
+      );
       listVersion = m?.[1] ?? null;
       return;
     }

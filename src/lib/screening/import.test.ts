@@ -16,14 +16,16 @@ beforeEach(() => {
   const fresh = createFakeDb();
   Object.setPrototypeOf(db, Object.getPrototypeOf(fresh));
   Object.assign(db, fresh);
-  db.tables.screening_settings = [{
-    id: 1,
-    sources: {
-      eu_fsf: { enabled: true, url: "https://eu.test/fsf" },
-      sejm_api: { enabled: true, base_url: "https://sejm.test", terms_back: 1 },
-      kprm: { enabled: true, url: "https://kprm.test" },
+  db.tables.screening_settings = [
+    {
+      id: 1,
+      sources: {
+        eu_fsf: { enabled: true, url: "https://eu.test/fsf" },
+        sejm_api: { enabled: true, base_url: "https://sejm.test", terms_back: 1 },
+        kprm: { enabled: true, url: "https://kprm.test" },
+      },
     },
-  }];
+  ];
   db.tables.screening_audit_log = [];
   const enqueued: unknown[] = [];
   db.rpcHandlers.screening_enqueue_portfolio = (p) => {
@@ -33,15 +35,19 @@ beforeEach(() => {
   (db as unknown as { enqueued: unknown[] }).enqueued = enqueued;
   responses = {
     "https://eu.test/fsf": () => new Response(fx("eu_fsf_sample.xml")),
-    "https://sejm.test/term": () => new Response(JSON.stringify([{ num: 10, from: "2023-11-13", current: true }])),
+    "https://sejm.test/term": () =>
+      new Response(JSON.stringify([{ num: 10, from: "2023-11-13", current: true }])),
     "https://sejm.test/term10/MP": () => new Response(fx("sejm_term10_mp_sample.json")),
     "https://kprm.test": () => new Response(fx("kprm_sample.html")),
   };
-  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-    const key = String(url).split("?")[0];
-    const r = responses[key];
-    return r ? r() : new Response("not found", { status: 404 });
-  }));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      const key = String(url).split("?")[0];
+      const r = responses[key];
+      return r ? r() : new Response("not found", { status: 404 });
+    }),
+  );
 });
 
 describe("import listy sankcyjnej UE", () => {
@@ -88,7 +94,9 @@ describe("import listy sankcyjnej UE", () => {
     expect(r.status).toBe("success");
     expect(r.deactivated).toBe(1);
     expect(db.tables.sanctions_reference_entries.filter((e) => e.is_active)).toHaveLength(3);
-    expect((db as unknown as { enqueued: unknown[] }).enqueued).toEqual([{ p_scope: "sanctions", p_trigger: "list_change" }]);
+    expect((db as unknown as { enqueued: unknown[] }).enqueued).toEqual([
+      { p_scope: "sanctions", p_trigger: "list_change" },
+    ]);
   });
 
   it("ponawia pobieranie po błędzie 503", async () => {
@@ -100,7 +108,9 @@ describe("import listy sankcyjnej UE", () => {
     let calls = 0;
     responses["https://eu.test/fsf"] = () => {
       calls++;
-      return calls < 2 ? new Response("busy", { status: 503 }) : new Response(fx("eu_fsf_sample.xml"));
+      return calls < 2
+        ? new Response("busy", { status: 503 })
+        : new Response(fx("eu_fsf_sample.xml"));
     };
     const r = await importSanctions("eu_fsf");
     vi.restoreAllMocks();
@@ -145,7 +155,11 @@ describe("status czasowy PEP", () => {
     const { pepTimeStatus } = await import("./import.server");
     const now = new Date("2026-10-09T00:00:00Z");
     expect(pepTimeStatus({ is_current: true, latest_position_end: null }, 12, now)).toBe("current");
-    expect(pepTimeStatus({ is_current: false, latest_position_end: "2026-01-01" }, 12, now)).toBe("within_grace");
-    expect(pepTimeStatus({ is_current: false, latest_position_end: "2024-01-01" }, 12, now)).toBe("former");
+    expect(pepTimeStatus({ is_current: false, latest_position_end: "2026-01-01" }, 12, now)).toBe(
+      "within_grace",
+    );
+    expect(pepTimeStatus({ is_current: false, latest_position_end: "2024-01-01" }, 12, now)).toBe(
+      "former",
+    );
   });
 });

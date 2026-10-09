@@ -150,7 +150,8 @@ class Query {
       );
     }
     if (this.limitN != null) rows = rows.slice(0, this.limitN);
-    if (this.rangeFrom != null) rows = rows.slice(this.rangeFrom, (this.rangeTo ?? rows.length) + 1);
+    if (this.rangeFrom != null)
+      rows = rows.slice(this.rangeFrom, (this.rangeTo ?? rows.length) + 1);
     return rows;
   }
 
@@ -171,7 +172,8 @@ class Query {
 
     if (this.mode === "select") {
       const rows = this.rows();
-      if (this.countMode) return { data: this.headOnly ? null : rows, error: null, count: rows.length } as any;
+      if (this.countMode)
+        return { data: this.headOnly ? null : rows, error: null, count: rows.length } as any;
       return { data: rows, error: null };
     }
     if (this.mode === "insert" || this.mode === "upsert") {

@@ -61,7 +61,11 @@ export const DEFAULT_SETTINGS: ScreeningSettings = {
 };
 
 export async function getScreeningSettings(): Promise<ScreeningSettings> {
-  const { data, error } = await sdb.from("screening_settings").select("*").eq("id", 1).maybeSingle();
+  const { data, error } = await sdb
+    .from("screening_settings")
+    .select("*")
+    .eq("id", 1)
+    .maybeSingle();
   if (error) throw new Error(`screening_settings: ${error.message}`);
   return { ...DEFAULT_SETTINGS, ...(data ?? {}) } as ScreeningSettings;
 }
@@ -78,7 +82,16 @@ export function scoringFrom(s: ScreeningSettings): ScoringSettings {
   };
 }
 
-export type AuditEntity = "run" | "case" | "hit" | "subject" | "declaration" | "import" | "settings" | "catalog" | "queue";
+export type AuditEntity =
+  | "run"
+  | "case"
+  | "hit"
+  | "subject"
+  | "declaration"
+  | "import"
+  | "settings"
+  | "catalog"
+  | "queue";
 
 /** Wpis do nieusuwalnego logu audytowego. Błąd zapisu logujemy głośno, ale nie przerywamy operacji. */
 export async function screeningAudit(entry: {
@@ -119,7 +132,12 @@ export function stableJson(v: unknown): string {
 }
 
 /** Odczyt wszystkich wierszy zapytania stronami po 1000 (limit PostgREST). */
-export async function selectAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
+export async function selectAll<T>(
+  build: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
   const out: T[] = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await build(from, from + 999);

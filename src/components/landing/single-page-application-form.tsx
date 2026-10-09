@@ -40,6 +40,11 @@ import { compressImageIfNeeded, fileToDataUrl } from "@/lib/uploads/client-image
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 import { FancyShell } from "@/components/landing/fancy-shell";
+import {
+  PepDeclarationSection,
+  type PepDeclarationDraft,
+} from "@/components/screening/pep-declaration-section";
+import { declarationError, emptyDeclaration } from "@/lib/screening/declaration";
 
 const FANCY_INPUT_CLASS =
   "h-12 rounded-xl border-2 border-white/30 bg-white/10 text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40";
@@ -359,6 +364,7 @@ export function SinglePageApplicationForm({
   const [consentPrivacy, setConsentPrivacy] = useState(false);
   const [consentTerms, setConsentTerms] = useState(false);
   const [consentMarketing, setConsentMarketing] = useState(false);
+  const [pepDeclaration, setPepDeclaration] = useState<PepDeclarationDraft>(emptyDeclaration);
   // Bramka B2B (decyzja nadrzędna nr 1): wymagane oświadczenie o celu gospodarczym.
   const [businessPurpose, setBusinessPurpose] = useState(false);
   const [businessStatus, setBusinessStatus] = useState<
@@ -417,6 +423,14 @@ export function SinglePageApplicationForm({
         if (d.consentPrivacy === true) setConsentPrivacy(true);
         if (d.consentTerms === true) setConsentTerms(true);
         if (d.consentMarketing === true) setConsentMarketing(true);
+        if (d.pepDeclaration && typeof d.pepDeclaration === "object") {
+          // Klauzulę odpowiedzialności karnej klient zaznacza ponownie przy każdej wysyłce.
+          setPepDeclaration({
+            ...emptyDeclaration(),
+            ...(d.pepDeclaration as Partial<PepDeclarationDraft>),
+            criminal_liability_acknowledged: false,
+          });
+        }
         if (Array.isArray(d.files)) {
           const restored: PhotoItem[] = [];
           const restoredThumbs: Record<string, string> = {};
@@ -472,6 +486,7 @@ export function SinglePageApplicationForm({
         consentPrivacy,
         consentTerms,
         consentMarketing,
+        pepDeclaration,
       };
       const files: DraftFile[] = photos
         .filter((p) => p.status === "ready" && p.storagePath)
@@ -517,6 +532,7 @@ export function SinglePageApplicationForm({
     consentPrivacy,
     consentTerms,
     consentMarketing,
+    pepDeclaration,
     photos,
     thumbs,
   ]);
@@ -690,6 +706,14 @@ export function SinglePageApplicationForm({
       fireLead();
     }
 
+    if (!isBroker) {
+      const pepErr = declarationError(pepDeclaration);
+      if (pepErr) {
+        toast.error(`Oświadczenie PEP: ${pepErr}`);
+        return;
+      }
+    }
+
     if (!typeSelected) {
       toast.error("Wybierz typ nieruchomości.");
       return;
@@ -755,6 +779,7 @@ export function SinglePageApplicationForm({
           })(),
           photos: photoPayload,
           source: brokerMode?.sourceLabel ?? "landing_single_page",
+          pep_declaration: isBroker ? null : (pepDeclaration as never),
           assigned_operator_id: brokerMode?.assignedOperatorId ?? null,
         },
       });
@@ -966,6 +991,17 @@ export function SinglePageApplicationForm({
               </div>
             )}
           </div>
+        </FancyShell>
+      )}
+
+      {!isBroker && (
+        <FancyShell>
+          <PepDeclarationSection
+            value={pepDeclaration}
+            onChange={setPepDeclaration}
+            tone="dark"
+            inputClassName={FANCY_INPUT_CLASS}
+          />
         </FancyShell>
       )}
 
