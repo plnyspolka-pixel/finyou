@@ -6,7 +6,7 @@
  *  • każda strona oryginału jest osadzona w całości (tekst pozostaje
  *    zaznaczalny), lekko pomniejszona, tak by zwolnić górny pasek i dolną
  *    stopkę — znaczniki NIGDY nie zasłaniają treści;
- *  • górny pasek (jak w Autenti): znak FY, „Podpisano elektronicznie
+ *  • górny pasek (jak w Autenti): okrągły znak Finance You, „Podpisano elektronicznie
  *    w Finance You”, identyfikator dokumentu, adres weryfikacji, skrót
  *    SHA-256 oryginału, numer strony „n z N”;
  *  • dolna stopka (jak znacznik podpisu zaufanego): kto podpisał, w czyim
@@ -15,9 +15,18 @@
  *    (tożsamość Didit, kod jednorazowy, czas, IP, urządzenie, oświadczenia,
  *    identyfikator podpisu), „Historia dokumentu” i informacja prawna.
  */
-import { PDFDocument, degrees, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
+import {
+  PDFDocument,
+  degrees,
+  rgb,
+  type PDFFont,
+  type PDFImage,
+  type PDFPage,
+  type RGB,
+} from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { LIBERATION_SANS } from "@/lib/legal/legal-fonts";
+import { FY_ROUND_LOGO_PNG_BASE64 } from "./esign-logo";
 import {
   capacityLabel,
   describeIdentity,
@@ -106,6 +115,8 @@ interface Fonts {
   regular: PDFFont;
   bold: PDFFont;
   charset: Set<number>;
+  /** Okrągły znak Finance You (pasek górny). */
+  logo: PDFImage;
 }
 
 const REPLACEMENTS: Array<[RegExp, string]> = [
@@ -201,26 +212,8 @@ function bottomBandHeight(signers: StampSigner[]): number {
   return BOTTOM_BASE + BOTTOM_LINE * lines;
 }
 
-function drawMark(page: PDFPage, x: number, y: number, size: number, fonts: Fonts): void {
-  page.drawRectangle({
-    x,
-    y,
-    width: size,
-    height: size,
-    color: NAVY,
-    borderColor: NAVY,
-    borderWidth: 0,
-  });
-  const fs = size * 0.46;
-  const t = "FY";
-  const tw = fonts.bold.widthOfTextAtSize(t, fs);
-  page.drawText(t, {
-    x: x + (size - tw) / 2,
-    y: y + size * 0.3,
-    size: fs,
-    font: fonts.bold,
-    color: WHITE,
-  });
+function drawMark(page: PDFPage, x: number, y: number, size: number, logo: PDFImage): void {
+  page.drawImage(logo, { x, y, width: size, height: size });
 }
 
 function drawCheck(page: PDFPage, cx: number, cy: number, r: number): void {
@@ -258,7 +251,7 @@ function drawBands(
     thickness: 1,
     color: NAVY,
   });
-  drawMark(page, 12, h - TOP_BAND + 9, 20, fonts);
+  drawMark(page, 12, h - TOP_BAND + 8, 22, fonts.logo);
 
   const leftX = 38;
   const rightText = `Strona ${index + 1} z ${total}`;
@@ -640,7 +633,8 @@ export async function stampSignedPdf(input: StampInput): Promise<StampResult> {
   out.registerFontkit(fontkit);
   const regular = await out.embedFont(fontSrc.regular, { subset: true });
   const bold = await out.embedFont(fontSrc.bold, { subset: true });
-  const fonts: Fonts = { regular, bold, charset: new Set(regular.getCharacterSet()) };
+  const logo = await out.embedPng(FY_ROUND_LOGO_PNG_BASE64);
+  const fonts: Fonts = { regular, bold, charset: new Set(regular.getCharacterSet()), logo };
 
   const bottom = bottomBandHeight(input.signers);
   const srcPages = src.getPages();

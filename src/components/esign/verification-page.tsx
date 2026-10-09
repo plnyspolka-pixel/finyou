@@ -16,6 +16,7 @@ import {
   pagesLabel,
   type EnvelopeStatus,
 } from "@/lib/esign/esign-core";
+import { FyMark } from "./fy-mark";
 
 async function fileSha256(file: File): Promise<string> {
   const buf = await file.arrayBuffer();
@@ -47,9 +48,7 @@ export function VerificationPage({ code }: { code: string }) {
     <div className="min-h-screen bg-[radial-gradient(120%_80%_at_50%_-10%,oklch(0.93_0.03_265),transparent_60%)]">
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 md:py-12">
         <header className="flex items-start gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-[oklch(0.28_0.12_265)] text-sm font-black text-white">
-            FY
-          </span>
+          <FyMark />
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Finance You · Weryfikacja podpisu dokumentowego
