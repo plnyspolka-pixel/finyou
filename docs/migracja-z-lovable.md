@@ -80,11 +80,17 @@ na Claude API, baza na własnym Supabase (Frankfurt), hosting na własnym koncie
 
 Ani schemat, ani dane nie idą przez czat ani kontener — stara baza łączy się z nową.
 
-1. Nowa baza (konektor): **tymczasowe hasło** roli `postgres` (`alter role postgres
-   password …`). Po migracji właściciel resetuje je w panelu (Settings → Database →
-   Reset database password) i zapisuje nowe.
-2. Stara baza (produkcja): `create extension dblink` — zmiana tylko dodająca, aplikacja
-   z niej nie korzysta; usunąć po migracji.
+1. Nowa baza (konektor): tymczasowa rola **`migrator`** (login, losowe hasło;
+   `grant migrator to postgres`; `usage, create` w `public`). Pierwotny pomysł
+   (`alter role postgres password …`) jest na Supabase zablokowany — `postgres` to rola
+   uprzywilejowana, hasło zmienia tylko panel — więc hasło `postgres` zostaje nietknięte.
+   Obiekty powstają jako `migrator`; na końcu `reassign owned by migrator to postgres`
+   (sprawdzone w wycofanej transakcji: tabele i funkcje trafiają do `postgres`) i
+   `drop role migrator`. `grant postgres to migrator` jest zablokowany (brak `set role`).
+2. Stara baza (produkcja): `create extension dblink with schema extensions` — zmiana tylko
+   dodająca, aplikacja z niej nie korzysta; usunąć po migracji. Connection string do nowej
+   bazy leży w Vault starej bazy jako sekret `migration_target` (hasło w SQL pojawiło się
+   raz; każde zapytanie `dblink` czyta `vault.decrypted_secrets`).
 3. Test połączenia stara → nowa (pooler sesyjny, port 5432). Jeśli Lovable blokuje ruch
    wychodzący — stop, szukamy innej drogi.
 4. Schemat generowany z katalogu produkcji (enumy, sekwencje, tabele, constrainty, indeksy,
@@ -96,12 +102,33 @@ Ani schemat, ani dane nie idą przez czat ani kontener — stara baza łączy si
    i `auth.identities`; pominąć `net._http_response`, `cron.job_run_details` i 45 329 wpisów
    pętli mailowej leada `8e20abbc…`. Porównanie liczby wierszy w każdej tabeli.
 7. Storage przez Storage API (deduplikacja po sumie kontrolnej, poprawa mimetype filmów).
-8. Sprzątanie: `drop extension dblink` w starej bazie, reset hasła `postgres` w nowej.
+8. Sprzątanie: stara baza — `drop extension dblink`, `delete from vault.secrets where
+   name='migration_target'`; nowa baza — `reassign owned by migrator to postgres`,
+   `drop owned by migrator`, `drop role migrator`.
 9. Najpierw próbna kopia; finalna kopia i przełączenie w oknie serwisowym.
 
-**Status decyzji:** właściciel jeszcze NIE zatwierdził kroków 1–2 (tymczasowe hasło
-`postgres` w nowej bazie i `dblink` w produkcji). Przed nimi zapytać o zgodę.
 Alternatywa odrzucona jako gorsza: przenoszenie schematu porcjami przez czat (~500 kB DDL).
+
+### Postęp (2026-10-09, wieczór)
+
+Właściciel zatwierdził kroki 1–3 (rola `migrator` zamiast hasła `postgres`, `dblink`
+w produkcji, sekret w Vault). Wykonane i zweryfikowane:
+
+- Stara baza: `dblink` 1.2 w schemacie `extensions`; sekret Vault `migration_target`
+  (id `8b2ef014-2cb5-43dd-81c1-371cc1ff33f6`).
+- Nowa baza: rola `migrator` (login, bez `createrole`/`bypassrls`), `postgres` jest jej
+  członkiem, `migrator` ma `usage, create` na `public`. Żadnych obiektów użytkownika.
+- **Połączenie stara → nowa działa** w obu wariantach: session pooler
+  `aws-1-eu-central-1.pooler.supabase.com:5432` (user `migrator.vkzndnaoxhdxrxlpntcb`;
+  `aws-0` zwraca „tenant/user not found”) oraz **bezpośrednio** `db.vkzndnaoxhdxrxlpntcb.supabase.co:5432`
+  (tylko IPv6 — stara baza ma wyjście IPv6, do IPv4 używa NAT64). Wybrano wariant
+  bezpośredni (bez limitów Supavisora przy długich sesjach); sekret zaktualizowany.
+- Nierozstrzygnięte: czy `migrator` może tworzyć polityki na `storage.objects` i trigger
+  na `auth.users` (właściciele: `supabase_storage_admin`, `supabase_auth_admin`). Jeśli nie —
+  te nieliczne obiekty (36 polityk storage, 1 trigger auth, 34 crony) wykonać przez
+  konektor jako `postgres`; duży schemat `public` idzie przez `dblink`.
+
+Następny krok: krok 4 (schemat) — najpierw próbnie, z weryfikacją liczb obiektów (krok 5).
 
 ## Do sprawdzenia w kodzie (osobno)
 
