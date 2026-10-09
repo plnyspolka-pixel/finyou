@@ -120,7 +120,7 @@ export function LoanProductPage({ slug }: { slug: string }) {
                 "Do 1 000 000 zł na rozwój Twojej firmy",
                 "Decyzja zwykle w 24 godziny — bez bankowej biurokracji",
                 "Liczy się nieruchomość, nie scoring BIK",
-                "Wypłata nawet w kilka dni od podpisu u notariusza",
+                "Wypłata nawet w 2–3 dni od podpisu u notariusza",
               ].map((t) => (
                 <li key={t} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                   <span aria-hidden style={{ color: "#6ee7b7", fontWeight: 800 }}>

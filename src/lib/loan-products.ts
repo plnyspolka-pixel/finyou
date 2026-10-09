@@ -54,7 +54,7 @@ export function procedureSteps(docsHint: string): LoanProductStep[] {
       d: "Organizujemy termin w kancelarii notarialnej blisko Ciebie. Notariusz odczytuje umowę i ustanawia hipotekę — to najbezpieczniejsza forma dla obu stron, a całe spotkanie trwa zwykle około godziny.",
     },
     {
-      t: "Pieniądze na Twoim koncie nawet w 2–3 dni od złożenia wniosku",
+      t: "Pieniądze na Twoim koncie nawet w 2–3 dni od podpisu u notariusza",
       d: "Środki trafiają przelewem na rachunek wskazany w umowie.",
     },
   ];
