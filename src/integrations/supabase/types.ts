@@ -10791,6 +10791,173 @@ export type Database = {
         }
         Relationships: []
       }
+      pep_declarations: {
+        Row: {
+          answers: Json
+          any_yes: boolean | null
+          channel: string | null
+          declaration_text: string
+          declaration_text_version: string
+          declared_by_user_id: string | null
+          id: string
+          ip: string | null
+          loan_application_id: string | null
+          related_persons: Json
+          signed_at: string
+          subject_id: string
+          subject_type: string
+          user_agent: string | null
+        }
+        Insert: {
+          answers: Json
+          any_yes?: boolean | null
+          channel?: string | null
+          declaration_text: string
+          declaration_text_version: string
+          declared_by_user_id?: string | null
+          id?: string
+          ip?: string | null
+          loan_application_id?: string | null
+          related_persons?: Json
+          signed_at?: string
+          subject_id: string
+          subject_type: string
+          user_agent?: string | null
+        }
+        Update: {
+          answers?: Json
+          any_yes?: boolean | null
+          channel?: string | null
+          declaration_text?: string
+          declaration_text_version?: string
+          declared_by_user_id?: string | null
+          id?: string
+          ip?: string | null
+          loan_application_id?: string | null
+          related_persons?: Json
+          signed_at?: string
+          subject_id?: string
+          subject_type?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pep_declarations_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pep_position_catalog: {
+        Row: {
+          category: string
+          code: string
+          data_sources: string[]
+          gap_notes: string | null
+          id: string
+          is_active: boolean
+          legal_basis: string | null
+          position_name: string
+          scope: string
+          sort_order: number
+          updated_at: string
+          wikidata_ids: string[]
+          wikidata_mode: string
+        }
+        Insert: {
+          category: string
+          code: string
+          data_sources?: string[]
+          gap_notes?: string | null
+          id?: string
+          is_active?: boolean
+          legal_basis?: string | null
+          position_name: string
+          scope?: string
+          sort_order?: number
+          updated_at?: string
+          wikidata_ids?: string[]
+          wikidata_mode?: string
+        }
+        Update: {
+          category?: string
+          code?: string
+          data_sources?: string[]
+          gap_notes?: string | null
+          id?: string
+          is_active?: boolean
+          legal_basis?: string | null
+          position_name?: string
+          scope?: string
+          sort_order?: number
+          updated_at?: string
+          wikidata_ids?: string[]
+          wikidata_mode?: string
+        }
+        Relationships: []
+      }
+      pep_reference_persons: {
+        Row: {
+          aliases: Json
+          birth_date: string | null
+          birth_year: number | null
+          fetched_at: string
+          first_seen_at: string
+          full_name: string
+          id: string
+          is_active: boolean
+          is_current: boolean
+          latest_position_end: string | null
+          nationality: string[]
+          normalized_name: string
+          positions: Json
+          record_hash: string
+          source: string
+          source_id: string
+          source_url: string | null
+        }
+        Insert: {
+          aliases?: Json
+          birth_date?: string | null
+          birth_year?: number | null
+          fetched_at?: string
+          first_seen_at?: string
+          full_name: string
+          id?: string
+          is_active?: boolean
+          is_current?: boolean
+          latest_position_end?: string | null
+          nationality?: string[]
+          normalized_name: string
+          positions?: Json
+          record_hash: string
+          source: string
+          source_id: string
+          source_url?: string | null
+        }
+        Update: {
+          aliases?: Json
+          birth_date?: string | null
+          birth_year?: number | null
+          fetched_at?: string
+          first_seen_at?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          is_current?: boolean
+          latest_position_end?: string | null
+          nationality?: string[]
+          normalized_name?: string
+          positions?: Json
+          record_hash?: string
+          source?: string
+          source_id?: string
+          source_url?: string | null
+        }
+        Relationships: []
+      }
       population_grid_metrics: {
         Row: {
           buildings: number | null
@@ -12100,6 +12267,718 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "accounting_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sanctions_reference_entries: {
+        Row: {
+          birth_dates: Json
+          delisted_at: string | null
+          entity_type: string
+          fetched_at: string
+          file_checksum: string | null
+          first_seen_at: string
+          id: string
+          is_active: boolean
+          list_name: string
+          listed_at: string | null
+          names: Json
+          nationalities: string[]
+          primary_name: string
+          programme: string | null
+          record_hash: string
+          remarks: string | null
+          source_id: string
+          source_url: string | null
+        }
+        Insert: {
+          birth_dates?: Json
+          delisted_at?: string | null
+          entity_type?: string
+          fetched_at?: string
+          file_checksum?: string | null
+          first_seen_at?: string
+          id?: string
+          is_active?: boolean
+          list_name: string
+          listed_at?: string | null
+          names?: Json
+          nationalities?: string[]
+          primary_name: string
+          programme?: string | null
+          record_hash: string
+          remarks?: string | null
+          source_id: string
+          source_url?: string | null
+        }
+        Update: {
+          birth_dates?: Json
+          delisted_at?: string | null
+          entity_type?: string
+          fetched_at?: string
+          file_checksum?: string | null
+          first_seen_at?: string
+          id?: string
+          is_active?: boolean
+          list_name?: string
+          listed_at?: string | null
+          names?: Json
+          nationalities?: string[]
+          primary_name?: string
+          programme?: string | null
+          record_hash?: string
+          remarks?: string | null
+          source_id?: string
+          source_url?: string | null
+        }
+        Relationships: []
+      }
+      screening_audit_log: {
+        Row: {
+          actor_id: string | null
+          actor_kind: string
+          created_at: string
+          details: Json
+          entity_id: string | null
+          entity_type: string
+          event_type: string
+          id: number
+          prev_hash: string | null
+          row_hash: string | null
+          subject_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_kind?: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type: string
+          event_type: string
+          id?: number
+          prev_hash?: string | null
+          row_hash?: string | null
+          subject_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_kind?: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string
+          event_type?: string
+          id?: number
+          prev_hash?: string | null
+          row_hash?: string | null
+          subject_id?: string | null
+        }
+        Relationships: []
+      }
+      screening_cases: {
+        Row: {
+          application_hold: boolean
+          assigned_to: string | null
+          attachments: Json
+          case_no: number
+          case_type: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision: string | null
+          declaration_id: string | null
+          hits: string[]
+          id: string
+          justification: string | null
+          max_score: number | null
+          priority: string
+          run_id: string | null
+          status: string
+          subject_id: string
+          subject_type: string
+          updated_at: string
+        }
+        Insert: {
+          application_hold?: boolean
+          assigned_to?: string | null
+          attachments?: Json
+          case_no?: number
+          case_type: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string | null
+          declaration_id?: string | null
+          hits?: string[]
+          id?: string
+          justification?: string | null
+          max_score?: number | null
+          priority?: string
+          run_id?: string | null
+          status?: string
+          subject_id: string
+          subject_type: string
+          updated_at?: string
+        }
+        Update: {
+          application_hold?: boolean
+          assigned_to?: string | null
+          attachments?: Json
+          case_no?: number
+          case_type?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string | null
+          declaration_id?: string | null
+          hits?: string[]
+          id?: string
+          justification?: string | null
+          max_score?: number | null
+          priority?: string
+          run_id?: string | null
+          status?: string
+          subject_id?: string
+          subject_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screening_cases_declaration_id_fkey"
+            columns: ["declaration_id"]
+            isOneToOne: false
+            referencedRelation: "pep_declarations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "screening_cases_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "screening_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "screening_cases_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "screening_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      screening_false_positives: {
+        Row: {
+          case_id: string
+          created_at: string
+          decided_by: string
+          id: string
+          reference_hash: string
+          reference_id: string
+          reference_type: string
+          subject_fingerprint: string
+          subject_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          decided_by: string
+          id?: string
+          reference_hash: string
+          reference_id: string
+          reference_type: string
+          subject_fingerprint: string
+          subject_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          decided_by?: string
+          id?: string
+          reference_hash?: string
+          reference_id?: string
+          reference_type?: string
+          subject_fingerprint?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screening_false_positives_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "screening_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "screening_false_positives_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "screening_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      screening_hits: {
+        Row: {
+          band: string
+          case_id: string | null
+          created_at: string
+          id: string
+          reference_hash: string
+          reference_id: string
+          reference_snapshot: Json
+          reference_type: string
+          run_id: string
+          score: number
+          score_breakdown: Json
+          status: string
+        }
+        Insert: {
+          band: string
+          case_id?: string | null
+          created_at?: string
+          id?: string
+          reference_hash: string
+          reference_id: string
+          reference_snapshot: Json
+          reference_type: string
+          run_id: string
+          score: number
+          score_breakdown: Json
+          status?: string
+        }
+        Update: {
+          band?: string
+          case_id?: string | null
+          created_at?: string
+          id?: string
+          reference_hash?: string
+          reference_id?: string
+          reference_snapshot?: Json
+          reference_type?: string
+          run_id?: string
+          score?: number
+          score_breakdown?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screening_hits_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "screening_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "screening_hits_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "screening_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      screening_name_index: {
+        Row: {
+          id: number
+          is_active: boolean
+          name_key: string
+          reference_id: string
+          reference_type: string
+          surname_key: string | null
+        }
+        Insert: {
+          id?: number
+          is_active?: boolean
+          name_key: string
+          reference_id: string
+          reference_type: string
+          surname_key?: string | null
+        }
+        Update: {
+          id?: number
+          is_active?: boolean
+          name_key?: string
+          reference_id?: string
+          reference_type?: string
+          surname_key?: string | null
+        }
+        Relationships: []
+      }
+      screening_queue: {
+        Row: {
+          attempts: number
+          enqueued_at: string
+          id: number
+          last_error: string | null
+          not_before: string
+          processed_at: string | null
+          scope: string
+          source_id: string
+          source_table: string
+          trigger: string
+        }
+        Insert: {
+          attempts?: number
+          enqueued_at?: string
+          id?: number
+          last_error?: string | null
+          not_before?: string
+          processed_at?: string | null
+          scope?: string
+          source_id: string
+          source_table: string
+          trigger: string
+        }
+        Update: {
+          attempts?: number
+          enqueued_at?: string
+          id?: number
+          last_error?: string | null
+          not_before?: string
+          processed_at?: string | null
+          scope?: string
+          source_id?: string
+          source_table?: string
+          trigger?: string
+        }
+        Relationships: []
+      }
+      screening_runs: {
+        Row: {
+          candidates_checked: number | null
+          declaration_id: string | null
+          error: string | null
+          finished_at: string | null
+          id: string
+          max_score: number | null
+          result: string | null
+          scope: string
+          settings_snapshot: Json
+          sources_versions: Json
+          started_at: string
+          subject_id: string
+          subject_snapshot: Json
+          subject_type: string
+          trigger: string
+        }
+        Insert: {
+          candidates_checked?: number | null
+          declaration_id?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          max_score?: number | null
+          result?: string | null
+          scope?: string
+          settings_snapshot?: Json
+          sources_versions?: Json
+          started_at?: string
+          subject_id: string
+          subject_snapshot: Json
+          subject_type: string
+          trigger: string
+        }
+        Update: {
+          candidates_checked?: number | null
+          declaration_id?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          max_score?: number | null
+          result?: string | null
+          scope?: string
+          settings_snapshot?: Json
+          sources_versions?: Json
+          started_at?: string
+          subject_id?: string
+          subject_snapshot?: Json
+          subject_type?: string
+          trigger?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screening_runs_declaration_id_fkey"
+            columns: ["declaration_id"]
+            isOneToOne: false
+            referencedRelation: "pep_declarations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "screening_runs_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "screening_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      screening_settings: {
+        Row: {
+          aml_officer_emails: string[]
+          board_emails: string[]
+          candidate_limit: number
+          candidate_min_similarity: number
+          declaration_text_version: string
+          dob_exact_bonus: number
+          dob_mismatch_penalty: number
+          dob_year_bonus: number
+          frequencies: Json
+          http_user_agent: string
+          id: number
+          import_alert_failed_cycles: number
+          nationality_bonus: number
+          pep_grace_months: number
+          possible_match_threshold: number
+          sources: Json
+          strong_match_threshold: number
+          updated_at: string
+          updated_by: string | null
+          wikidata_min_end_year: number
+        }
+        Insert: {
+          aml_officer_emails?: string[]
+          board_emails?: string[]
+          candidate_limit?: number
+          candidate_min_similarity?: number
+          declaration_text_version?: string
+          dob_exact_bonus?: number
+          dob_mismatch_penalty?: number
+          dob_year_bonus?: number
+          frequencies?: Json
+          http_user_agent?: string
+          id?: number
+          import_alert_failed_cycles?: number
+          nationality_bonus?: number
+          pep_grace_months?: number
+          possible_match_threshold?: number
+          sources?: Json
+          strong_match_threshold?: number
+          updated_at?: string
+          updated_by?: string | null
+          wikidata_min_end_year?: number
+        }
+        Update: {
+          aml_officer_emails?: string[]
+          board_emails?: string[]
+          candidate_limit?: number
+          candidate_min_similarity?: number
+          declaration_text_version?: string
+          dob_exact_bonus?: number
+          dob_mismatch_penalty?: number
+          dob_year_bonus?: number
+          frequencies?: Json
+          http_user_agent?: string
+          id?: number
+          import_alert_failed_cycles?: number
+          nationality_bonus?: number
+          pep_grace_months?: number
+          possible_match_threshold?: number
+          sources?: Json
+          strong_match_threshold?: number
+          updated_at?: string
+          updated_by?: string | null
+          wikidata_min_end_year?: number
+        }
+        Relationships: []
+      }
+      screening_source_imports: {
+        Row: {
+          attempts: number
+          changed: boolean | null
+          deactivated_count: number | null
+          details: Json
+          error: string | null
+          file_checksum: string | null
+          finished_at: string | null
+          id: string
+          record_count: number | null
+          source: string
+          started_at: string
+          status: string
+          upserted_count: number | null
+        }
+        Insert: {
+          attempts?: number
+          changed?: boolean | null
+          deactivated_count?: number | null
+          details?: Json
+          error?: string | null
+          file_checksum?: string | null
+          finished_at?: string | null
+          id?: string
+          record_count?: number | null
+          source: string
+          started_at?: string
+          status?: string
+          upserted_count?: number | null
+        }
+        Update: {
+          attempts?: number
+          changed?: boolean | null
+          deactivated_count?: number | null
+          details?: Json
+          error?: string | null
+          file_checksum?: string | null
+          finished_at?: string | null
+          id?: string
+          record_count?: number | null
+          source?: string
+          started_at?: string
+          status?: string
+          upserted_count?: number | null
+        }
+        Relationships: []
+      }
+      screening_subject_status: {
+        Row: {
+          board_approval_note: string | null
+          board_approval_required: boolean
+          board_approved_at: string | null
+          board_approved_by: string | null
+          enhanced_monitoring: boolean
+          hold_case_id: string | null
+          hold_reason: string | null
+          last_run_id: string | null
+          last_screened_at: string | null
+          operations_hold: boolean
+          pep_status: string
+          sanctions_status: string
+          source_of_funds: string | null
+          source_of_wealth: string | null
+          sow_attachments: Json
+          subject_id: string
+          updated_at: string
+        }
+        Insert: {
+          board_approval_note?: string | null
+          board_approval_required?: boolean
+          board_approved_at?: string | null
+          board_approved_by?: string | null
+          enhanced_monitoring?: boolean
+          hold_case_id?: string | null
+          hold_reason?: string | null
+          last_run_id?: string | null
+          last_screened_at?: string | null
+          operations_hold?: boolean
+          pep_status?: string
+          sanctions_status?: string
+          source_of_funds?: string | null
+          source_of_wealth?: string | null
+          sow_attachments?: Json
+          subject_id: string
+          updated_at?: string
+        }
+        Update: {
+          board_approval_note?: string | null
+          board_approval_required?: boolean
+          board_approved_at?: string | null
+          board_approved_by?: string | null
+          enhanced_monitoring?: boolean
+          hold_case_id?: string | null
+          hold_reason?: string | null
+          last_run_id?: string | null
+          last_screened_at?: string | null
+          operations_hold?: boolean
+          pep_status?: string
+          sanctions_status?: string
+          source_of_funds?: string | null
+          source_of_wealth?: string | null
+          sow_attachments?: Json
+          subject_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screening_subject_status_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: true
+            referencedRelation: "screening_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      screening_subjects: {
+        Row: {
+          birth_date: string | null
+          birth_year: number | null
+          client_id: string | null
+          created_at: string
+          first_name: string | null
+          full_name: string
+          id: string
+          investor_id: string | null
+          is_active: boolean
+          kind: string
+          last_name: string | null
+          nationality: string[]
+          parent_subject_id: string | null
+          relation: string | null
+          source_key: string
+          subject_fingerprint: string
+          subject_type: string
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          birth_year?: number | null
+          client_id?: string | null
+          created_at?: string
+          first_name?: string | null
+          full_name: string
+          id?: string
+          investor_id?: string | null
+          is_active?: boolean
+          kind?: string
+          last_name?: string | null
+          nationality?: string[]
+          parent_subject_id?: string | null
+          relation?: string | null
+          source_key: string
+          subject_fingerprint: string
+          subject_type: string
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          birth_year?: number | null
+          client_id?: string | null
+          created_at?: string
+          first_name?: string | null
+          full_name?: string
+          id?: string
+          investor_id?: string | null
+          is_active?: boolean
+          kind?: string
+          last_name?: string | null
+          nationality?: string[]
+          parent_subject_id?: string | null
+          relation?: string | null
+          source_key?: string
+          subject_fingerprint?: string
+          subject_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screening_subjects_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "screening_subjects_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
+            referencedRelation: "investors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "screening_subjects_parent_subject_id_fkey"
+            columns: ["parent_subject_id"]
+            isOneToOne: false
+            referencedRelation: "screening_subjects"
             referencedColumns: ["id"]
           },
         ]
@@ -13903,6 +14782,50 @@ export type Database = {
         Returns: boolean
       }
       redeem_operator_invite: { Args: { _token: string }; Returns: Json }
+      screening_audit_verify: {
+        Args: never
+        Returns: {
+          broken_ids: number[]
+          checked: number
+        }[]
+      }
+      screening_coverage: {
+        Args: never
+        Returns: {
+          code: string
+          current_persons: number
+          last_fetched_at: string
+          persons: number
+          sources: string[]
+        }[]
+      }
+      screening_enqueue: {
+        Args: {
+          p_id: string
+          p_scope?: string
+          p_table: string
+          p_trigger: string
+        }
+        Returns: undefined
+      }
+      screening_enqueue_portfolio: {
+        Args: { p_scope: string; p_trigger: string }
+        Returns: number
+      }
+      screening_find_candidates: {
+        Args: {
+          p_keys: string[]
+          p_limit: number
+          p_min_similarity: number
+          p_reference_types: string[]
+          p_surnames: string[]
+        }
+        Returns: {
+          best_similarity: number
+          reference_id: string
+          reference_type: string
+        }[]
+      }
     }
     Enums: {
       aml_case_status:
