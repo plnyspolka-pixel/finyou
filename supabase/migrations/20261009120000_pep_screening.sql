@@ -704,9 +704,8 @@ REVOKE UPDATE, DELETE, TRUNCATE ON public.screening_audit_log FROM authenticated
 -- ---------------------------------------------------------------------
 -- 16. Storage: załączniki spraw (źródło majątku / środków, dowody)
 -- ---------------------------------------------------------------------
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('screening-attachments', 'screening-attachments', false)
-ON CONFLICT (id) DO NOTHING;
+-- Prywatny bucket „screening-attachments” zakłada się narzędziem do bucketów
+-- (narzędzie migracji odrzuca INSERT do storage.buckets); tu tylko reguła odczytu.
 
 DROP POLICY IF EXISTS "screening attachments staff read" ON storage.objects;
 CREATE POLICY "screening attachments staff read" ON storage.objects
