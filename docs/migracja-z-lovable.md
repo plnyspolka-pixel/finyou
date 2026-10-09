@@ -46,35 +46,62 @@ na Claude API, baza na własnym Supabase (Frankfurt), hosting na własnym koncie
 - Data API: włączone; automatyczne wystawianie nowych tabel: WYŁĄCZONE (granty kopiujemy
   dokładnie z produkcji); automatyczny RLS: włączony; GitHub: niepodłączony (świadomie)
 
-## Wybrana metoda migracji bazy: baza → baza przez `postgres_fdw`
+## Narzędzia dostępu (stan 2026-10-09)
 
-1. Schemat w nowym projekcie z `supabase/migrations/` + porównanie katalogu z produkcją.
-2. W starej bazie: `create extension postgres_fdw`, serwer do nowej bazy, `INSERT … SELECT`
-   tabela po tabeli (z `auth.users`/`auth.identities` z hashami haseł).
-3. Weryfikacja liczby wierszy we wszystkich tabelach.
-4. Usunięcie mappingu i rozszerzenia w starej bazie; **rotacja hasła nowej bazy** (hasło
-   przechodzi przez Lovable).
-5. Storage: skrypt kopiujący przez Storage API (deduplikacja po sumie kontrolnej).
-6. Crony odtworzone z nowym adresem aplikacji, retencja logów `cron.job_run_details` ~3 dni.
-7. Najpierw próbna kopia; finalna kopia i przełączenie w oknie serwisowym.
+- **Stara baza (Lovable):** `mcp__Lovable__query_database`, projekt Lovable
+  `5394e6ca-0160-41ed-aa82-1afa633ecc0c`, rola `postgres` (nie superuser).
+- **Nowa baza:** konektor claude.ai **Supabase** (OAuth) — `mcp__Supabase__execute_sql`,
+  `apply_migration`, `list_tables`, `get_advisors` itd. Widzi tylko projekt
+  `vkzndnaoxhdxrxlpntcb`. Token Management API NIE jest potrzebny.
+- Kontener sesji wychodzi do sieci tylko przez proxy HTTPS — Postgres (5432) z kontenera
+  nie działa, więc `psql`/`pg_dump` odpadają.
+- Do kopiowania Storage potrzebny network secret z kluczem `service_role` nowego projektu
+  (host `vkzndnaoxhdxrxlpntcb.supabase.co`, nagłówki `apikey` bez prefiksu i
+  `Authorization` z prefiksem `Bearer`) — jeszcze NIEdodany. Nigdy w czacie/repo/zmiennych.
 
-## Dostęp sesji do nowego projektu (tylko „Network secrets”, nigdy w czacie, repo ani zmiennych)
+## Ustalenia dotyczące schematu (2026-10-09)
 
-Ograniczenia środowiska Claude Code (sprawdzone 2026-10-09): kontener wychodzi do sieci
-wyłącznie przez proxy HTTPS — połączenia Postgres (port 5432) z kontenera NIE działają,
-więc `psql`/`pg_dump` do nowej bazy odpadają. Zmienne środowiskowe są czytelne dla sesji,
-a network secrets proxy dokleja do nagłówków HTTP bez ujawniania wartości. Dlatego:
+- Produkcja ma **231** zastosowane migracje (ostatnia `20260916162804`), repo ma **304**
+  pliki (najnowszy 2026-10-09). Migracje z repo ≠ produkcja → **schemat kopiujemy z katalogu
+  produkcji**, nie odtwarzamy z `supabase/migrations/`.
+- Produkcja (`public`): 243 tabele, 2 widoki, 231 funkcji (~129 kB DDL), 374 polityki RLS,
+  145 triggerów, 38 enumów, 677 indeksów, 740 constraintów, 3612 kolumn. `storage`:
+  36 polityk, 13 bucketów. `auth`: trigger `on_auth_user_created -> handle_new_user`.
+- Rozszerzenia produkcji: pg_cron, pg_net, pg_stat_statements, pg_trgm, pgcrypto, pgmq,
+  supabase_vault, uuid-ossp, vector (w schemacie `public`). Schemat `drizzle` też istnieje.
+- Nowa baza ma domyślnie tylko: plpgsql, pgcrypto, uuid-ossp, pg_stat_statements,
+  supabase_vault. `dblink`, `postgres_fdw`, `pg_cron`, `pg_net`, `pgmq`, `vector`, `pg_trgm`
+  dostępne do włączenia.
+- **Crony: 34 aktywne, 30 woła `lovable.app`.** W nowej bazie tworzyć je WYŁĄCZONE
+  i z nowym adresem — inaczej nowa baza uruchamiałaby zadania produkcji drugi raz
+  (podwójne maile/SMS-y). Włączyć dopiero przy przełączeniu.
 
-1. **Supabase Management API** — host `api.supabase.com`, Bearer, wartość: Personal Access
-   Token z supabase.com/dashboard/account/tokens. Służy do wykonywania SQL na nowej bazie
-   (`POST /v1/projects/{ref}/database/query`). Usunąć token po migracji.
-2. **Nowy projekt — klucz serwisowy** — host `<ref>.supabase.co`, nagłówki `apikey` (bez
-   prefiksu) i `Authorization` (prefiks `Bearer`), wartość: legacy `service_role` JWT.
-   Służy do kopiowania Storage.
+## Wybrana metoda: baza → baza przez `dblink` (schemat i dane)
 
-Hasło bazy `postgres` nie jest potrzebne: do transferu `postgres_fdw` (stara baza → nowa)
-tworzę przez Management API tymczasową rolę `migrator` z losowym hasłem i usuwam ją po
-migracji. Hasło tej roli przechodzi przez Lovable, ale rola znika po przeniesieniu danych.
+Ani schemat, ani dane nie idą przez czat ani kontener — stara baza łączy się z nową.
+
+1. Nowa baza (konektor): **tymczasowe hasło** roli `postgres` (`alter role postgres
+   password …`). Po migracji właściciel resetuje je w panelu (Settings → Database →
+   Reset database password) i zapisuje nowe.
+2. Stara baza (produkcja): `create extension dblink` — zmiana tylko dodająca, aplikacja
+   z niej nie korzysta; usunąć po migracji.
+3. Test połączenia stara → nowa (pooler sesyjny, port 5432). Jeśli Lovable blokuje ruch
+   wychodzący — stop, szukamy innej drogi.
+4. Schemat generowany z katalogu produkcji (enumy, sekwencje, tabele, constrainty, indeksy,
+   widoki, funkcje, triggery, RLS + polityki, granty dokładnie jak w produkcji, komentarze,
+   buckety i polityki storage, trigger auth) i wykonany w nowej bazie przez `dblink_exec`.
+   Crony wyłączone.
+5. Weryfikacja: liczby obiektów po obu stronach + `get_advisors` (security, performance).
+6. (Osobna zgoda) Dane: `INSERT … SELECT` tabela po tabeli, w tym `auth.users` (z hashami)
+   i `auth.identities`; pominąć `net._http_response`, `cron.job_run_details` i 45 329 wpisów
+   pętli mailowej leada `8e20abbc…`. Porównanie liczby wierszy w każdej tabeli.
+7. Storage przez Storage API (deduplikacja po sumie kontrolnej, poprawa mimetype filmów).
+8. Sprzątanie: `drop extension dblink` w starej bazie, reset hasła `postgres` w nowej.
+9. Najpierw próbna kopia; finalna kopia i przełączenie w oknie serwisowym.
+
+**Status decyzji:** właściciel jeszcze NIE zatwierdził kroków 1–2 (tymczasowe hasło
+`postgres` w nowej bazie i `dblink` w produkcji). Przed nimi zapytać o zgodę.
+Alternatywa odrzucona jako gorsza: przenoszenie schematu porcjami przez czat (~500 kB DDL).
 
 ## Do sprawdzenia w kodzie (osobno)
 
