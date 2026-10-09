@@ -19,7 +19,10 @@ vi.mock("@/lib/landing-application.functions", () => ({
 }));
 
 vi.mock("@/lib/uploads/landing-upload.functions", () => ({
-  uploadLandingAttachment: vi.fn(async () => ({ ok: true, storagePath: "mock/path" })),
+  uploadLandingAttachment: vi.fn(async () => ({
+    ok: true,
+    path: "landing-inbox/property_photos/mock-foto.jpg",
+  })),
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -187,5 +190,38 @@ describe("SinglePageApplicationForm – Meta pixel events", () => {
     expect(await screen.findByDisplayValue("Kowalska")).toBeInTheDocument();
     expect(screen.getByLabelText(/^e-mail/i)).toHaveValue("anna@example.com");
     expect(screen.getByLabelText(/^telefon/i)).toHaveValue("600100200");
+  });
+
+  it("szkic zachowuje zaznaczone zgody i wgrane pliki — wysyłka bez ponownego dodawania", async () => {
+    const { unmount } = render(<SinglePageApplicationForm />);
+    await fillContact();
+    acceptConsents();
+    await userEvent.click(screen.getByRole("button", { name: /^mieszkanie$/i }));
+    await userEvent.type(screen.getByLabelText(/numer księgi wieczystej/i), "wa1m/00123456/3");
+    addPropertyPhoto();
+    // Plik musi dojść do storage, zanim trafi do szkicu.
+    await waitFor(() => {
+      const raw = window.sessionStorage.getItem("financeyou:application-draft:public");
+      expect(JSON.parse(raw ?? "{}").files).toHaveLength(1);
+    });
+    unmount();
+
+    render(<SinglePageApplicationForm />);
+    expect(await screen.findByDisplayValue("Kowalska")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /politykę prywatności/i })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /regulamin serwisu/i })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /działalnością gospodarczą/i })).toBeChecked();
+
+    await submitForm();
+    await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1));
+    const payload = (submitMock.mock.calls[0] as unknown as [{ data: Record<string, unknown> }])[0];
+    expect(payload.data.photos).toEqual([
+      expect.objectContaining({
+        storagePath: "landing-inbox/property_photos/mock-foto.jpg",
+        bucket: "property_photos",
+      }),
+    ]);
+    // Po udanym wysłaniu szkic jest czyszczony.
+    expect(window.sessionStorage.getItem("financeyou:application-draft:public")).toBeNull();
   });
 });
