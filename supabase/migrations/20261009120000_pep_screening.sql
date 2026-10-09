@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS public.screening_settings (
     "sejm_api": {"enabled": true, "base_url": "https://api.sejm.gov.pl/sejm", "terms_back": 3},
     "wikidata": {"enabled": true, "endpoint": "https://query.wikidata.org/sparql", "page_size": 5000},
     "senat": {"enabled": false, "url": "https://www.senat.gov.pl/sklad/senatorowie/"},
-    "kprm": {"enabled": false, "url": "https://www.gov.pl/web/premier/rada-ministrow"},
+    "kprm": {"enabled": true, "url": "https://www.gov.pl/web/premier/sklad-rady-ministrow"},
     "krs": {"enabled": false, "base_url": "https://api-krs.ms.gov.pl/api/krs", "krs_numbers": []},
     "eu_fsf": {"enabled": true, "url": "https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content"},
     "un_sc": {"enabled": true, "url": "https://scsanctions.un.org/resources/xml/en/consolidated.xml"},
@@ -510,6 +510,29 @@ END $fn$;
 REVOKE ALL ON FUNCTION public.screening_enqueue(text, uuid, text, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.screening_enqueue(text, uuid, text, text) TO service_role;
 
+-- Aktywny portfel: klienci z niezamkniętym wnioskiem / pożyczką oraz aktywni
+-- inwestorzy. Klienci zamknięci nie są rescreenowani (historia zostaje).
+CREATE OR REPLACE FUNCTION public.screening_enqueue_portfolio(p_scope text, p_trigger text)
+RETURNS int LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
+DECLARE n int := 0; k int;
+BEGIN
+  INSERT INTO public.screening_queue (source_table, source_id, trigger, scope)
+  SELECT DISTINCT 'clients', la.client_id, p_trigger, p_scope
+  FROM public.loan_applications la
+  WHERE la.client_id IS NOT NULL AND la.deleted_at IS NULL AND la.archived_at IS NULL
+    AND la.status::text NOT IN ('wniosek_odrzucony','archiwalny','zamkniety','zamkniete','nie_rokuje','brak_kontaktu')
+  ON CONFLICT (source_table, source_id, scope) WHERE processed_at IS NULL DO NOTHING;
+  GET DIAGNOSTICS k = ROW_COUNT; n := n + k;
+
+  INSERT INTO public.screening_queue (source_table, source_id, trigger, scope)
+  SELECT 'investors', i.id, p_trigger, p_scope FROM public.investors i WHERE i.is_active
+  ON CONFLICT (source_table, source_id, scope) WHERE processed_at IS NULL DO NOTHING;
+  GET DIAGNOSTICS k = ROW_COUNT; n := n + k;
+  RETURN n;
+END $fn$;
+REVOKE ALL ON FUNCTION public.screening_enqueue_portfolio(text, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.screening_enqueue_portfolio(text, text) TO service_role;
+
 CREATE OR REPLACE FUNCTION public.screening_clients_trg()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
 BEGIN
@@ -667,6 +690,7 @@ DECLARE
     ARRAY['screening-import-pep',      '23 2 * * 1',  '/api/public/hooks/screening-import',     '{"group":"pep_weekly"}'],
     ARRAY['screening-import-monthly',  '41 3 1 * *', '/api/public/hooks/screening-import',     '{"group":"pep_monthly"}'],
     ARRAY['screening-rescreen-pep',    '47 5 * * 1',  '/api/public/hooks/screening-rescreen',   '{"scope":"pep"}'],
+    ARRAY['screening-import-continue', '*/10 * * * *', '/api/public/hooks/screening-import',    '{"group":"continue"}'],
     ARRAY['screening-health',          '5 7 * * *',   '/api/public/hooks/screening-health',     '{}']
   ];
   j text[];
