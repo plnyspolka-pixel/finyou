@@ -38,6 +38,14 @@ na Claude API, baza na własnym Supabase (Frankfurt), hosting na własnym koncie
   (po sumie kontrolnej), zachowując odwołania w bazie.
 - 19 filmów Akademii ma mimetype `application/octet-stream` — poprawić na `video/mp4`.
 
+## Nowy projekt Supabase (utworzony 2026-10-09)
+
+- Organizacja „Finance you sp z oo” (Pro), projekt „Finance you produkcja”
+- Ref `vkzndnaoxhdxrlpntcb`, URL `https://vkzndnaoxhdxrlpntcb.supabase.co`
+- Central EU (Frankfurt, eu-central-1), Micro, Postgres (nie OrioleDB)
+- Data API: włączone; automatyczne wystawianie nowych tabel: WYŁĄCZONE (granty kopiujemy
+  dokładnie z produkcji); automatyczny RLS: włączony; GitHub: niepodłączony (świadomie)
+
 ## Wybrana metoda migracji bazy: baza → baza przez `postgres_fdw`
 
 1. Schemat w nowym projekcie z `supabase/migrations/` + porównanie katalogu z produkcją.
