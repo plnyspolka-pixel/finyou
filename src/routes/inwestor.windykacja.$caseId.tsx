@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
   getWindCase,
-  updateWindCase,
   updateWindLoan,
   updateWindBorrower,
   changeWindStage,
@@ -33,7 +32,25 @@ import {
   windFeeForAction,
   type WindFeeKind,
 } from "@/lib/windykacja-fees";
-import { WindQuickContactDialog } from "@/components/inwestor/wind-quick-actions";
+import { WindQuickContactDialog, buildWindSmsText } from "@/components/inwestor/wind-quick-actions";
+import { HarmonogramEditor, RatyStanTable } from "@/components/inwestor/wind-harmonogram";
+import {
+  borrowerEditPatch,
+  borrowerToEditForm,
+  formatDataPL,
+  formatStopa,
+  formatZl,
+  generatorFromHarmonogram,
+  harmonogramToForm,
+  hasRaty,
+  liveCaseLite,
+  loanEditPatch,
+  loanToEditForm,
+  type BorrowerEditForm,
+  type GeneratorForm,
+  type LoanEditForm,
+  type RataForm,
+} from "@/components/inwestor/wind-harmonogram-form";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import {
   listDocxTemplates,
@@ -53,7 +70,6 @@ import {
   stageLabel,
   delayColorClass,
   suggestNextAction,
-  effectiveDeliveryDate,
   documentsForPath,
   DOCUMENT_LABELS,
   stepGuide,
@@ -65,12 +81,14 @@ import {
   type StepGuide,
 } from "@/lib/windykacja-procedure";
 import {
-  calculateDebt,
-  splitInvestorPrincipal,
-  maxDelayInterestRate,
-  DEFAULT_NBP_REFERENCE_RATE,
-  type DebtCalcResult,
-} from "@/lib/debt-collection-math";
+  windDebtSnapshot,
+  windLoanIsTerminated,
+  defaultDelayRate,
+  type WindDebtSnapshot,
+} from "@/lib/windykacja-debt";
+import { currentMaxDelayRate } from "@/lib/debt-collection-math";
+import { parseDataISO } from "@/lib/windykacja-harmonogram";
+import { formatRachunekSplaty, warsawToday } from "@/lib/windykacja-recalc";
 import { formatPLN, formatDate, formatDateTime } from "@/lib/labels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -109,7 +127,6 @@ import {
   Send,
   Lightbulb,
   Gavel,
-  Building2,
   ShieldCheck,
   Paperclip,
   Eye,
@@ -122,6 +139,9 @@ import {
   CheckCircle2,
   Settings2,
   ScanLine,
+  Pencil,
+  CalendarDays,
+  AlertTriangle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/windykacja/$caseId")({
@@ -129,7 +149,9 @@ export const Route = createFileRoute("/inwestor/windykacja/$caseId")({
 });
 
 const nowISO = () => new Date().toISOString();
-const todayISO = () => new Date().toISOString().slice(0, 10);
+/** Dzisiejsza data w Polsce — ta sama, na którą serwer przelicza sprawę. */
+const todayISO = () => warsawToday();
+const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
 type ActionKind =
   | "sms"
@@ -170,11 +192,9 @@ const DELIVERY_LABEL: Record<string, string> = {
 
 function WindykacjaCaseCard() {
   const { caseId } = Route.useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
 
   const fetchCase = useServerFn(getWindCase);
-  const saveCase = useServerFn(updateWindCase);
   const saveLoan = useServerFn(updateWindLoan);
   const saveBorrower = useServerFn(updateWindBorrower);
   const doStage = useServerFn(changeWindStage);
@@ -214,6 +234,7 @@ function WindykacjaCaseCard() {
   const [advanced, setAdvanced] = useState(false);
   const [busyNav, setBusyNav] = useState(false);
   const [docPreview, setDocPreview] = useState<WindDocument | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -245,63 +266,24 @@ function WindykacjaCaseCard() {
     [events],
   );
 
-  const suggestion = useMemo(() => {
-    if (!kase) return null;
-    return suggestNextAction(
-      {
-        sciezka: kase.sciezka,
-        etap: kase.etap,
-        opoznienie_dni: kase.opoznienie_dni,
-        kwota_zalegla: kase.kwota_zalegla,
-      },
-      eventsLite,
-      nowISO(),
-    );
-  }, [kase, eventsLite]);
-
-  const terminated = useMemo(
-    () => Boolean(loan?.data_wypowiedzenia) || loan?.status === "wypowiedziana",
-    [loan],
+  // Stan zadłużenia na dziś — ten sam silnik co panel, raport, SMS i telefon
+  // AI: zaległość z harmonogramu rat (albo model z jednym terminem spłaty),
+  // odsetki za opóźnienie i koszty. Po wypowiedzeniu wymagalna jest całość.
+  const snap = useMemo<WindDebtSnapshot | null>(
+    () =>
+      loan && kase
+        ? windDebtSnapshot({ loan, kwotaZalegla: kase.kwota_zalegla, events, asOf: todayISO() })
+        : null,
+    [loan, kase, events],
   );
 
-  // Wyliczenie zadłużenia z odsetkami maksymalnymi (silnik kalkulacyjny).
-  // Logika finansowa zależy od wypowiedzenia: gdy umowa wypowiedziana —
-  // odsetki za opóźnienie od całości; gdy nie — tylko od zaległych rat.
-  const debt = useMemo(() => {
-    if (!loan || !kase) return null;
-    const payments = events
-      .filter((e) => e.typ === "wplata")
-      .map((e) => ({
-        paid_on: e.data_zdarzenia.slice(0, 10),
-        amount: Number((e.metadata as { kwota?: number })?.kwota ?? 0),
-      }));
-    // Opłaty za czynności windykacyjne — doliczane do zadłużenia jako koszty.
-    const actionFees = events
-      .filter((e) => Number(e.oplata) > 0)
-      .map((e) => ({
-        action_date: e.data_zdarzenia.slice(0, 10),
-        fee: Number(e.oplata),
-      }));
-    const { bearing, investorCommission } = splitInvestorPrincipal(loan);
-    return calculateDebt({
-      // Część oprocentowana = kwota na rękę + prowizja Finance You.
-      principalAmount: bearing,
-      // Prowizja inwestora — spłacana z kapitałem, bez odsetek.
-      interestExemptPrincipal: investorCommission,
-      payoutDate: loan.data_umowy,
-      dueDate: loan.termin_splaty,
-      contractualAnnualRate: Number(loan.oprocentowanie_roczne || 0),
-      penaltyAnnualRate: Number(loan.stopa_odsetek_max || 0),
-      maxStatutoryRate: Number(loan.stopa_odsetek_max || 0),
-      terminated,
-      terminationDate: loan.data_wypowiedzenia,
-      overdueInstallmentsAmount: Number(kase.kwota_zalegla || 0),
-      surcharges: Number(loan.kwota_doplat || 0),
-      payments,
-      actionFees,
-      asOf: todayISO(),
-    });
-  }, [loan, kase, events, terminated]);
+  // Podpowiedź procedury z opóźnieniem na dziś (nie z dnia założenia sprawy).
+  const suggestion = useMemo(() => {
+    if (!kase) return null;
+    return suggestNextAction(liveCaseLite(kase, snap), eventsLite, nowISO());
+  }, [kase, snap, eventsLite]);
+
+  const terminated = useMemo(() => (loan ? windLoanIsTerminated(loan) : false), [loan]);
 
   const filteredEvents = useMemo(() => {
     if (eventFilter === "all") return events;
@@ -370,7 +352,10 @@ function WindykacjaCaseCard() {
   const guide = stepGuide(kase.sciezka, kase.etap);
   const prevStage = stageIdx > 0 ? stages[stageIdx - 1] : null;
   const nextStage = stageIdx < stages.length - 1 ? stages[stageIdx + 1] : null;
-  const settled = kase.kwota_zalegla <= 0;
+  // „Uregulowana" = na dziś nic nie jest wymagalne (zaległe raty, odsetki za
+  // opóźnienie i koszty spłacone). Raty przyszłe mogą jeszcze pozostać.
+  const settled = snap ? snap.doZaplatyTeraz <= 0.005 : kase.kwota_zalegla <= 0;
+  const amountDueNow = snap?.doZaplatyTeraz ?? Number(kase.kwota_zalegla || 0);
 
   return (
     <div className="space-y-5">
@@ -411,7 +396,8 @@ function WindykacjaCaseCard() {
         settled={settled}
         terminated={terminated}
         terminationDate={loan.data_wypowiedzenia}
-        debt={debt}
+        remaining={snap?.calosc ?? 0}
+        nextDue={snap?.najblizszaRata ?? null}
         prevLabel={prevStage?.label ?? null}
         nextLabel={nextStage?.label ?? null}
         busy={busyNav}
@@ -424,8 +410,45 @@ function WindykacjaCaseCard() {
       />
 
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-        {/* LEWA — oś czasu */}
+        {/* LEWA — harmonogram rat i oś czasu */}
         <div className="space-y-4">
+          {snap?.zrodlo === "harmonogram" && snap.raty && (
+            <Card>
+              <CardHeader className="flex flex-col items-start gap-2 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4" /> Harmonogram rat — stan na{" "}
+                  {formatDataPL(snap.raty.asOf)}
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                  <Pencil className="h-4 w-4 mr-1" /> Edytuj harmonogram
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="text-xs text-muted-foreground">
+                  {snap.najstarszaZalegla ? (
+                    <>
+                      Najstarsza zaległa rata:{" "}
+                      <span className="font-medium text-foreground">
+                        {formatDataPL(snap.najstarszaZalegla)}
+                      </span>{" "}
+                      ·{" "}
+                      <span className={delayColorClass(snap.dniOpoznienia)}>
+                        opóźnienie {snap.dniOpoznienia} dni
+                      </span>
+                    </>
+                  ) : (
+                    "Brak zaległych rat na dziś."
+                  )}
+                  {snap.najblizszaRata
+                    ? ` · następna rata: ${formatDataPL(snap.najblizszaRata)}`
+                    : ""}
+                  {snap.wypowiedziana ? " · umowa wypowiedziana — wszystkie raty wymagalne" : ""}
+                </div>
+                <RatyStanTable raty={snap.raty.raty} />
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader className="flex flex-col items-start gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-base">Oś czasu zdarzeń</CardTitle>
@@ -489,27 +512,68 @@ function WindykacjaCaseCard() {
               <div>
                 <div className="text-lg font-semibold">{borrower.imie_nazwisko}</div>
                 <div className="text-xs text-muted-foreground">
-                  Umowa {loan.numer_umowy ?? "—"} ·{" "}
-                  {borrower.pesel
-                    ? `PESEL ${borrower.pesel}`
-                    : borrower.nip
-                      ? `NIP ${borrower.nip}`
-                      : ""}
+                  {[
+                    `Umowa ${loan.numer_umowy ?? "—"}`,
+                    borrower.pesel ? `PESEL ${borrower.pesel}` : null,
+                    borrower.nip ? `NIP ${borrower.nip}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </div>
               </div>
               <Separator />
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <Info label="Kwota zaległa" value={formatPLN(kase.kwota_zalegla)} strong />
-                <Info label="Saldo pożyczki" value={formatPLN(loan.saldo_pozostale)} />
+                <Info
+                  label={terminated ? "Do zapłaty teraz (wypowiedziana)" : "Do zapłaty teraz"}
+                  value={formatZl(amountDueNow)}
+                  strong
+                />
+                <Info label="Całe zadłużenie" value={formatZl(snap?.calosc ?? null)} />
+                <Info
+                  label={snap?.zrodlo === "harmonogram" ? "Zaległe raty" : "Kwota zaległa"}
+                  value={formatZl(snap?.zaleglosc ?? kase.kwota_zalegla)}
+                />
                 <Info
                   label="Opóźnienie"
-                  value={`${kase.opoznienie_dni} dni`}
-                  valueClass={delayColorClass(kase.opoznienie_dni)}
+                  value={`${snap?.dniOpoznienia ?? kase.opoznienie_dni} dni`}
+                  valueClass={delayColorClass(snap?.dniOpoznienia ?? kase.opoznienie_dni)}
                 />
-                <Info label="Termin spłaty" value={formatDate(loan.termin_splaty)} />
-                <Info label="KW" value={loan.numer_kw ?? "—"} />
-                <Info label="Akt 777" value={loan.akt_notarialny_777 ?? "—"} />
+                {snap?.zrodlo === "harmonogram" ? (
+                  <>
+                    <Info
+                      label="Najstarsza zaległa rata"
+                      value={formatDataPL(snap.najstarszaZalegla)}
+                    />
+                    <Info label="Następna rata" value={formatDataPL(snap.najblizszaRata)} />
+                  </>
+                ) : (
+                  <Info label="Termin spłaty" value={formatDataPL(loan.termin_splaty)} />
+                )}
+                <Info label="Pożyczkodawca" value={loan.pozyczkodawca ?? "—"} wide />
+                <Info label="Rachunek do spłaty" value={loan.rachunek_splaty ?? "—"} wide />
+                <Info
+                  label="KW / hipoteka"
+                  value={`${loan.numer_kw ?? "—"}${
+                    loan.kwota_hipoteki != null ? ` · ${formatZl(loan.kwota_hipoteki)}` : ""
+                  }`}
+                  wide
+                />
+                <Info
+                  label="Akt 777"
+                  value={`${loan.akt_notarialny_777 ?? "—"}${
+                    loan.kwota_777 != null ? ` · do ${formatZl(loan.kwota_777)}` : ""
+                  }`}
+                  wide
+                />
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-center"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil className="h-4 w-4 mr-1" /> Edytuj dane pożyczki i dłużnika
+              </Button>
               <Separator />
               <Button
                 variant="ghost"
@@ -619,68 +683,14 @@ function WindykacjaCaseCard() {
             </Card>
           )}
 
-          {/* Zadłużenie z odsetkami maksymalnymi */}
-          {debt && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Calculator className="h-4 w-4" /> Wyliczenie zadłużenia
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1.5 text-sm">
-                <RowL
-                  label="Kapitał oprocentowany (na rękę + prow. Finance You)"
-                  value={debt.principalOutstanding}
-                />
-                {debt.investorCommissionOutstanding > 0 && (
-                  <RowL
-                    label="Prowizja inwestora (bez odsetek)"
-                    value={debt.investorCommissionOutstanding}
-                  />
-                )}
-                {debt.contractualInterest > 0 && (
-                  <RowL label="Odsetki kapitałowe (umowne)" value={debt.contractualInterest} />
-                )}
-                {debt.surchargesOutstanding > 0 && (
-                  <RowL label="Dopłaty / koszty umowne" value={debt.surchargesOutstanding} />
-                )}
-                <RowL label="Odsetki za opóźnienie (maks.)" value={debt.delayInterest} />
-                {debt.costsOutstanding > 0 && (
-                  <RowL label="Opłaty za czynności windykacyjne" value={debt.costsOutstanding} />
-                )}
-                <Separator className="my-1" />
-                <div className="flex items-center justify-between font-semibold">
-                  <span>Razem na dziś</span>
-                  <span className="tabular-nums">{formatPLN(debt.totalDue)}</span>
-                </div>
-                <div className="rounded-md bg-muted/60 p-2 text-[11px] text-muted-foreground mt-1 space-y-0.5">
-                  <div>
-                    {debt.delayRegime === "calosc_po_wypowiedzeniu" ? (
-                      <>
-                        <span className="font-medium text-foreground">Umowa wypowiedziana —</span>{" "}
-                        odsetki za opóźnienie od całości oprocentowanej:{" "}
-                        {formatPLN(debt.delayInterestBase)} (kapitał na rękę + prowizja Finance You
-                        + odsetki + dopłaty). Prowizja inwestora jest należna, ale bez odsetek.
-                      </>
-                    ) : debt.delayRegime === "zalegle_raty" ? (
-                      <>
-                        <span className="font-medium text-foreground">
-                          Umowa niewypowiedziana —
-                        </span>{" "}
-                        odsetki za opóźnienie tylko od zaległych rat:{" "}
-                        {formatPLN(debt.delayInterestBase)}.
-                      </>
-                    ) : (
-                      <>Brak wymagalnej zaległości — odsetki za opóźnienie nie są naliczane.</>
-                    )}
-                  </div>
-                  <div>
-                    Stopa odsetek maks.: {debt.effectiveDelayRate}% (limit art. 481 § 2¹ k.c.).
-                    Opóźnienie: {debt.daysOverdue} dni.
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Wyliczenie zadłużenia: do zapłaty teraz i całe zadłużenie */}
+          {snap && (
+            <DebtCard
+              snap={snap}
+              loan={loan}
+              today={todayISO()}
+              onAddHarmonogram={() => setEditOpen(true)}
+            />
           )}
 
           {/* Akcje — tryb zaawansowany (pełna paleta działań) */}
@@ -751,7 +761,8 @@ function WindykacjaCaseCard() {
           caseId={caseId}
           loan={loan}
           borrower={borrower}
-          debtTotal={debt?.totalDue ?? Number(kase.kwota_zalegla || 0)}
+          amountDueNow={amountDueNow}
+          wholeDebt={snap?.calosc ?? null}
           onClose={() => {
             setAction(null);
             setDocPreset(null);
@@ -779,7 +790,7 @@ function WindykacjaCaseCard() {
           borrower={borrower}
           events={events}
           userId={user?.id}
-          debtTotal={debt?.totalDue ?? null}
+          snap={snap}
           fns={{
             doContact,
             doPismo,
@@ -798,6 +809,22 @@ function WindykacjaCaseCard() {
             setAction(null);
             setDocPreset(null);
             refreshAfterEvent(ev);
+          }}
+        />
+      )}
+
+      {/* Edycja danych pożyczki i dłużnika (z harmonogramem rat) */}
+      {editOpen && (
+        <LoanEditDialog
+          caseId={caseId}
+          loan={loan}
+          borrower={borrower}
+          saveLoan={saveLoan}
+          saveBorrower={saveBorrower}
+          onClose={() => setEditOpen(false)}
+          onSaved={(close) => {
+            if (close) setEditOpen(false);
+            void reload();
           }}
         />
       )}
@@ -846,7 +873,7 @@ function TimelineItem({
         </div>
         {e.typ === "wplata" && meta?.kwota != null && (
           <div className="text-sm font-semibold text-green-700 dark:text-green-400 mt-0.5">
-            {formatPLN(meta.kwota)}
+            {formatZl(meta.kwota)}
           </div>
         )}
         {e.tresc && (
@@ -902,17 +929,20 @@ function Info({
   value,
   strong,
   valueClass,
+  wide,
 }: {
   label: string;
   value: string;
   strong?: boolean;
   valueClass?: string;
+  /** Na całą szerokość (długie wartości: rachunek, akt notarialny). */
+  wide?: boolean;
 }) {
   return (
-    <div>
+    <div className={wide ? "col-span-2 min-w-0" : "min-w-0"}>
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div
-        className={`${strong ? "text-base font-bold" : "text-sm"} tabular-nums ${valueClass ?? ""}`}
+        className={`${strong ? "text-base font-bold" : "text-sm"} tabular-nums break-words ${valueClass ?? ""}`}
       >
         {value}
       </div>
@@ -920,12 +950,176 @@ function Info({
   );
 }
 
-function RowL({ label, value }: { label: string; value: number }) {
+function RowL({ label, value, strong }: { label: string; value: number; strong?: boolean }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="tabular-nums">{formatPLN(value)}</span>
+    <div className={`flex items-center justify-between gap-3 ${strong ? "font-semibold" : ""}`}>
+      <span className={strong ? "" : "text-muted-foreground"}>{label}</span>
+      <span className="tabular-nums whitespace-nowrap">{formatZl(value)}</span>
     </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// WYLICZENIE ZADŁUŻENIA — „do zapłaty teraz" (zaległe raty + odsetki za
+// opóźnienie + koszty) i „całe zadłużenie" (także raty przyszłe).
+// ════════════════════════════════════════════════════════════════════
+function DebtCard({
+  snap,
+  loan,
+  today,
+  onAddHarmonogram,
+}: {
+  snap: WindDebtSnapshot;
+  loan: WindLoan;
+  today: string;
+  onAddHarmonogram: () => void;
+}) {
+  const stopaUmowy = Number(loan.stopa_odsetek_max) || 0;
+  const maksDzis = currentMaxDelayRate(today);
+  const raty = snap.raty;
+  const debt = snap.debt;
+  const zalegleRaty = raty ? raty.raty.filter((r) => r.wymagalna && r.pozostalo > 0).length : 0;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Calculator className="h-4 w-4" /> Wyliczenie zadłużenia
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-1.5 text-sm">
+        {raty ? (
+          <>
+            <RowL
+              label={`Zaległe raty (${zalegleRaty} z ${raty.liczbaRatWymagalnych} wymagalnych)`}
+              value={snap.zaleglosc}
+            />
+            <RowL label="Odsetki za opóźnienie" value={snap.odsetkiZaOpoznienie} />
+            {snap.koszty > 0 && (
+              <RowL label="Opłaty za czynności windykacyjne" value={snap.koszty} />
+            )}
+          </>
+        ) : debt ? (
+          <>
+            <RowL
+              label="Kapitał oprocentowany (na rękę + prow. Finance You)"
+              value={debt.principalOutstanding}
+            />
+            {debt.investorCommissionOutstanding > 0 && (
+              <RowL
+                label="Prowizja inwestora (bez odsetek)"
+                value={debt.investorCommissionOutstanding}
+              />
+            )}
+            {debt.contractualInterest > 0 && (
+              <RowL label="Odsetki kapitałowe (umowne)" value={debt.contractualInterest} />
+            )}
+            {debt.surchargesOutstanding > 0 && (
+              <RowL label="Dopłaty / koszty umowne" value={debt.surchargesOutstanding} />
+            )}
+            <RowL label="Odsetki za opóźnienie" value={debt.delayInterest} />
+            {debt.costsOutstanding > 0 && (
+              <RowL label="Opłaty za czynności windykacyjne" value={debt.costsOutstanding} />
+            )}
+          </>
+        ) : null}
+        <Separator className="my-1" />
+        <RowL
+          label={snap.wypowiedziana ? "Do zapłaty teraz (całość wymagalna)" : "Do zapłaty teraz"}
+          value={snap.doZaplatyTeraz}
+          strong
+        />
+        {raty && !snap.wypowiedziana && raty.pozostaleRatyPrzyszle > 0 && (
+          <RowL
+            label={`Raty przyszłe (niewymagalne)${
+              raty.najblizszaRata ? ` — najbliższa ${formatDataPL(raty.najblizszaRata)}` : ""
+            }`}
+            value={raty.pozostaleRatyPrzyszle}
+          />
+        )}
+        <RowL label="Całe zadłużenie" value={snap.calosc} />
+        {raty && raty.nadplata > 0 && <RowL label="Nadpłata" value={raty.nadplata} />}
+
+        <div className="rounded-md bg-muted/60 p-2 text-[11px] text-muted-foreground mt-1 space-y-0.5">
+          {raty ? (
+            <>
+              <div>
+                {snap.wypowiedziana ? (
+                  <>
+                    <span className="font-medium text-foreground">Umowa wypowiedziana —</span>{" "}
+                    wszystkie raty są wymagalne od dnia wypowiedzenia
+                    {loan.data_wypowiedzenia ? ` (${formatDataPL(loan.data_wypowiedzenia)})` : ""},
+                    bez odsetek umownych za okres po wypowiedzeniu (gdy harmonogram je
+                    wyszczególnia). Do zapłaty teraz = całe zadłużenie.
+                  </>
+                ) : (
+                  <>
+                    <span className="font-medium text-foreground">Umowa niewypowiedziana —</span>{" "}
+                    wymagalne są tylko raty po terminie. Odsetki za opóźnienie liczone od każdej
+                    zaległej raty od dnia po jej terminie (termin w dniu wolnym przesuwa się na
+                    najbliższy dzień roboczy — art. 115 k.c.).
+                  </>
+                )}
+              </div>
+              <div>
+                Stopa odsetek za opóźnienie:{" "}
+                {stopaUmowy > 0
+                  ? `${formatStopa(stopaUmowy)}% rocznie (z umowy)`
+                  : "odsetki maksymalne"}
+                , w każdym dniu nie wyższa niż odsetki maksymalne za opóźnienie (dziś{" "}
+                {formatStopa(maksDzis)}%, art. 481 § 2¹ k.c.). Opóźnienie: {snap.dniOpoznienia} dni
+                {snap.najstarszaZalegla
+                  ? ` — od najstarszej zaległej raty (${formatDataPL(snap.najstarszaZalegla)})`
+                  : ""}
+                . Wpłaty zaliczane wg umowy: prowizja z rat wymagalnych → koszty windykacyjne →
+                odsetki za opóźnienie → odsetki umowne → kapitał (od najstarszej raty).
+              </div>
+            </>
+          ) : debt ? (
+            <>
+              <div>
+                {debt.delayRegime === "calosc_po_wypowiedzeniu" ? (
+                  <>
+                    <span className="font-medium text-foreground">Umowa wypowiedziana —</span>{" "}
+                    odsetki za opóźnienie od całości oprocentowanej:{" "}
+                    {formatZl(debt.delayInterestBase)} (kapitał na rękę + prowizja Finance You +
+                    odsetki + dopłaty). Prowizja inwestora jest należna, ale bez odsetek.
+                  </>
+                ) : debt.delayRegime === "zalegle_raty" ? (
+                  <>
+                    <span className="font-medium text-foreground">Umowa niewypowiedziana —</span>{" "}
+                    odsetki za opóźnienie tylko od kwoty zaległej sprawy:{" "}
+                    {formatZl(debt.delayInterestBase)}.
+                  </>
+                ) : (
+                  <>Brak wymagalnej zaległości — odsetki za opóźnienie nie są naliczane.</>
+                )}
+              </div>
+              <div>
+                Stopa odsetek za opóźnienie: {formatStopa(debt.effectiveDelayRate)}% rocznie
+                (odsetki maksymalne dziś: {formatStopa(maksDzis)}%, art. 481 § 2¹ k.c.). Opóźnienie:{" "}
+                {snap.dniOpoznienia} dni od terminu spłaty ({formatDataPL(loan.termin_splaty)}).
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        {!raty && (
+          <div className="mt-1 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-[11px] text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
+            <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0" />
+            <div className="space-y-1">
+              <div>
+                Dodaj harmonogram rat, aby liczyć zaległość z rat. Bez harmonogramu odsetki za
+                opóźnienie liczone są od kwoty zaległej sprawy, dopiero po terminie spłaty.
+              </div>
+              <Button size="sm" variant="outline" className="h-7" onClick={onAddHarmonogram}>
+                <CalendarDays className="h-3.5 w-3.5 mr-1" /> Dodaj harmonogram rat
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -977,7 +1171,8 @@ function WizardCard({
   settled,
   terminated,
   terminationDate,
-  debt,
+  remaining,
+  nextDue,
   prevLabel,
   nextLabel,
   busy,
@@ -996,7 +1191,10 @@ function WizardCard({
   settled: boolean;
   terminated: boolean;
   terminationDate: string | null;
-  debt: DebtCalcResult | null;
+  /** Całe zadłużenie (także raty przyszłe) — gdy zaległość uregulowana. */
+  remaining: number;
+  /** Termin najbliższej raty przyszłej. */
+  nextDue: string | null;
   prevLabel: string | null;
   nextLabel: string | null;
   busy: boolean;
@@ -1089,12 +1287,24 @@ function WizardCard({
         {settled ? (
           <div className="rounded-lg border border-green-300 bg-green-50 p-4 text-sm dark:border-green-800 dark:bg-green-900/20">
             <div className="flex items-center gap-2 font-medium text-green-800 dark:text-green-200">
-              <CheckCircle2 className="h-5 w-5" /> Zaległość uregulowana
+              <CheckCircle2 className="h-5 w-5" />{" "}
+              {remaining > 0.005 ? "Zaległe raty uregulowane" : "Zadłużenie spłacone"}
             </div>
             <p className="mt-1 text-green-700 dark:text-green-300">
-              Klient spłacił zaległość. Możesz zamknąć sprawę z wynikiem „spłacona" w trybie
-              zaawansowanym.
+              {remaining > 0.005
+                ? `Na dziś nic nie jest wymagalne. Do spłaty pozostają raty przyszłe: ${formatZl(remaining)}${
+                    nextDue ? ` (najbliższa ${formatDataPL(nextDue)})` : ""
+                  }. Możesz zamknąć sprawę windykacyjną w trybie zaawansowanym albo monitorować kolejne raty.`
+                : "Klient spłacił całe zadłużenie. Możesz zamknąć sprawę z wynikiem „spłacona” w trybie zaawansowanym."}
             </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={onScan}>
+                <ScanLine className="h-4 w-4 mr-1" /> Zrób zdjęcie dokumentu
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onWplata}>
+                <Wallet className="h-4 w-4 mr-1" /> Odnotuj wpłatę
+              </Button>
+            </div>
           </div>
         ) : (
           <>
@@ -1207,7 +1417,7 @@ function ActionDialog({
   borrower,
   events,
   userId,
-  debtTotal,
+  snap,
   fns,
   onDone,
 }: {
@@ -1220,13 +1430,17 @@ function ActionDialog({
   borrower: WindBorrower;
   events: WindEvent[];
   userId?: string;
-  debtTotal?: number | null;
+  /** Stan zadłużenia na dziś (kwoty domyślne SMS-a, telefonu i pism DOCX). */
+  snap: WindDebtSnapshot | null;
   fns: Fns;
   onDone: (ev?: WindEvent) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  // Do zapłaty teraz: zaległe raty + odsetki za opóźnienie + koszty (po
+  // wypowiedzeniu — całe zadłużenie).
+  const amountDueNow = snap?.doZaplatyTeraz ?? Number(kase.kwota_zalegla || 0);
   const [v, setV] = useState<Record<string, string>>(() =>
-    initialValues(kind, kase, loan, borrower, initialDocType, debtTotal),
+    initialValues(kind, kase, loan, borrower, initialDocType, amountDueNow),
   );
   const [file, setFile] = useState<File | null>(null);
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
@@ -1428,13 +1642,18 @@ function ActionDialog({
           // 1) podgląd → pola → auto-uzupełnienie danymi sprawy
           const { text } = await fns.previewTemplate({ data: { templateId: v.templateId } });
           const fields = extractOrderedFields(text);
+          // Pożyczka z harmonogramem: kwoty z rat na dziś (jak pisma z systemu),
+          // a nie z migawki zapisanej przy ostatniej zmianie sprawy.
+          const zRat = snap?.zrodlo === "harmonogram" && snap.raty ? snap : null;
           const values = buildWindTemplateValues(fields, {
             dluznik: borrower.imie_nazwisko,
             adres: borrower.adres_do_doreczen || borrower.adres_zamieszkania || "",
             pesel: borrower.pesel,
             nip: borrower.nip,
-            kwota_zalegla: Number(kase.kwota_zalegla || 0),
-            saldo: Number(loan.saldo_pozostale || 0),
+            kwota_zalegla: zRat ? zRat.zaleglosc : Number(kase.kwota_zalegla || 0),
+            saldo: zRat
+              ? round2(zRat.zaleglosc + (zRat.raty?.pozostaleRatyPrzyszle ?? 0))
+              : Number(loan.saldo_pozostale || 0),
             prowizja: loan.prowizja,
             kwota_pozyczki: loan.kwota_pozyczki,
             numer_kw: loan.numer_kw,
@@ -1488,9 +1707,12 @@ function ActionDialog({
           )}
           {kind === "botcall" && (
             <DialogDescription>
-              Agent AI (ElevenLabs) zadzwoni do dłużnika w Twoim imieniu i przypomni o konieczności
-              uregulowania należności. Kwota zaległości i Twoje imię są przekazywane do rozmowy
-              automatycznie. Połączenie zostanie zapisane w rejestrze czynności.
+              Agent AI (ElevenLabs) zadzwoni do dłużnika{" "}
+              {loan.pozyczkodawca?.trim()
+                ? `w imieniu pożyczkodawcy (${loan.pozyczkodawca.trim()})`
+                : "w Twoim imieniu"}{" "}
+              i przypomni o konieczności uregulowania należności. Kwota do zapłaty jest przekazywana
+              do rozmowy automatycznie. Połączenie zostanie zapisane w rejestrze czynności.
             </DialogDescription>
           )}
         </DialogHeader>
@@ -1502,9 +1724,18 @@ function ActionDialog({
             </Fld>
           )}
           {kind === "botcall" && (
-            <Fld label="Kwota zaległości do zakomunikowania (zł)">
+            <Fld
+              label="Kwota do zapłaty do zakomunikowania (zł)"
+              hint={
+                windLoanIsTerminated(loan)
+                  ? `Umowa wypowiedziana — domyślnie całe zadłużenie (wymagalne): ${formatZl(amountDueNow)}.`
+                  : `Domyślnie: do zapłaty teraz (zaległe raty + odsetki za opóźnienie + koszty): ${formatZl(amountDueNow)}.`
+              }
+            >
               <Input
                 type="number"
+                min={0}
+                step="0.01"
                 value={v.kwota ?? ""}
                 onChange={(e) => set("kwota", e.target.value)}
               />
@@ -1857,8 +2088,10 @@ function initialValues(
   loan: WindLoan,
   borrower: WindBorrower,
   initialDocType?: WindDocumentType | null,
-  debtTotal?: number | null,
+  amountDueNow?: number | null,
 ): Record<string, string> {
+  // Kwota komunikowana dłużnikowi: do zapłaty teraz (po wypowiedzeniu — całość).
+  const dueNow = Math.max(0, round2(Number(amountDueNow ?? kase.kwota_zalegla) || 0));
   const base: Record<string, string> = { data: todayISO(), data_nadania: todayISO(), oplata: "0" };
   // Opłaty ZGODNIE Z UMOWĄ: tabela opłat z umowy pożyczki, a gdy umowa milczy —
   // domyślna podpowiedź (WIND_FEE_DEFAULTS); umowa bez opłat → 0.
@@ -1871,13 +2104,13 @@ function initialValues(
     base.subject = "Finance You — wezwanie do zapłaty";
   }
   if (kind === "sms") {
-    base.tresc = `Przypomnienie: zaległość z umowy ${loan.numer_umowy ?? ""} wynosi ${formatPLN(debtTotal ?? kase.kwota_zalegla)}. Prosimy o pilną spłatę. Finance You`;
+    base.tresc = buildWindSmsText(loan, dueNow, { wypowiedziana: windLoanIsTerminated(loan) });
     base.oplata = fee("sms");
   }
   if (kind === "email") base.oplata = fee("email");
   if (kind === "telefon") base.oplata = fee("telefon");
   if (kind === "botcall") {
-    base.kwota = String(Math.round(Number(debtTotal ?? kase.kwota_zalegla) || 0));
+    base.kwota = String(dueNow);
     base.oplata = fee("telefon");
   }
   if (kind === "pismo") base.oplata = fee("pismo");
@@ -1899,16 +2132,331 @@ function Fld({
   label,
   children,
   className,
+  hint,
 }: {
   label: string;
   children: React.ReactNode;
   className?: string;
+  /** Podpowiedź pod polem. */
+  hint?: React.ReactNode;
 }) {
   return (
     <div className={`space-y-1 ${className ?? ""}`}>
       <Label className="text-xs">{label}</Label>
       {children}
+      {hint ? <p className="text-[11px] text-muted-foreground">{hint}</p> : null}
     </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// EDYCJA DANYCH POŻYCZKI I DŁUŻNIKA — pożyczkodawca, kwoty, stopa odsetek
+// za opóźnienie, zabezpieczenia, rachunek do spłaty, harmonogram rat oraz
+// dane kontaktowe dłużnika. Zapisujemy tylko zmienione pola; zmiana
+// harmonogramu (albo stopy) przelicza na serwerze kwotę zaległą, opóźnienie
+// i saldo sprawy, a zmiana trafia do akt jako zdarzenie.
+// ════════════════════════════════════════════════════════════════════
+function LoanEditDialog({
+  caseId,
+  loan,
+  borrower,
+  saveLoan,
+  saveBorrower,
+  onClose,
+  onSaved,
+}: {
+  caseId: string;
+  loan: WindLoan;
+  borrower: WindBorrower;
+  saveLoan: ReturnType<typeof useServerFn<typeof updateWindLoan>>;
+  saveBorrower: ReturnType<typeof useServerFn<typeof updateWindBorrower>>;
+  onClose: () => void;
+  /** Po zapisie (także częściowym): odśwież sprawę; `close` — zamknij okno. */
+  onSaved: (close: boolean) => void;
+}) {
+  const [lf, setLf] = useState<LoanEditForm>(() => loanToEditForm(loan));
+  const [bf, setBf] = useState<BorrowerEditForm>(() => borrowerToEditForm(borrower));
+  const [raty, setRaty] = useState<RataForm[]>(() => harmonogramToForm(loan.harmonogram));
+  const [generator, setGenerator] = useState<GeneratorForm>(() =>
+    generatorFromHarmonogram(loan.harmonogram),
+  );
+  const [busy, setBusy] = useState(false);
+  const updL = (k: keyof LoanEditForm, v: string) => setLf((p) => ({ ...p, [k]: v }));
+  const updB = <K extends keyof BorrowerEditForm>(k: K, v: BorrowerEditForm[K]) =>
+    setBf((p) => ({ ...p, [k]: v }));
+
+  const stopaMaks = defaultDelayRate(parseDataISO(lf.data_umowy));
+  const rachunekBledny =
+    lf.rachunek_splaty.trim() !== "" && formatRachunekSplaty(lf.rachunek_splaty) == null;
+  const usuwaHarmonogram = Boolean(loan.harmonogram?.length) && !hasRaty(raty);
+
+  const save = async () => {
+    const l = loanEditPatch(loan, lf, raty);
+    const b = borrowerEditPatch(borrower, bf);
+    const bledy = [...b.bledy, ...l.bledy];
+    if (bledy.length) {
+      toast.error(
+        bledy.slice(0, 3).join(" ") +
+          (bledy.length > 3 ? ` …oraz ${bledy.length - 3} innych błędów.` : ""),
+      );
+      return;
+    }
+    const zmianyB = Object.keys(b.patch).length > 0;
+    const zmianyL = Object.keys(l.patch).length > 0;
+    if (!zmianyB && !zmianyL) {
+      toast.message("Brak zmian do zapisania");
+      onClose();
+      return;
+    }
+    setBusy(true);
+    try {
+      if (zmianyB) await saveBorrower({ data: { id: borrower.id, patch: b.patch } });
+      if (zmianyL) await saveLoan({ data: { id: loan.id, caseId, patch: l.patch } });
+      const zRat = "harmonogram" in l.patch ? l.patch.harmonogram != null : !!loan.harmonogram;
+      const co =
+        zmianyL && zmianyB
+          ? "dane pożyczki i dłużnika"
+          : zmianyL
+            ? "dane pożyczki"
+            : "dane dłużnika";
+      toast.success(
+        zmianyL && zRat
+          ? `Zapisano ${co} — zaległość i opóźnienie przeliczone z harmonogramu rat`
+          : `Zapisano ${co}`,
+      );
+      onSaved(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się zapisać danych");
+      // Część zmian mogła się zapisać (np. dane dłużnika) — odświeżamy sprawę,
+      // okno zostaje otwarte do poprawy.
+      onSaved(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const kwotaInput = (k: keyof LoanEditForm) => (
+    <Input inputMode="decimal" value={lf[k]} onChange={(e) => updL(k, e.target.value)} />
+  );
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && !busy && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="h-4 w-4" /> Dane pożyczki i dłużnika
+          </DialogTitle>
+          <DialogDescription>
+            Zmiana trafi do akt sprawy. Zmiana harmonogramu rat albo stopy odsetek przelicza kwotę
+            zaległą, opóźnienie i saldo sprawy.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          {/* POŻYCZKA */}
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">Umowa i kwoty</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Fld
+                label="Pożyczkodawca (z umowy)"
+                className="sm:col-span-2"
+                hint="Strona udzielająca pożyczki — agent AI dzwoni w jej imieniu."
+              >
+                <Input
+                  value={lf.pozyczkodawca}
+                  placeholder="np. Finance You sp. z o.o."
+                  onChange={(e) => updL("pozyczkodawca", e.target.value)}
+                />
+              </Fld>
+              <Fld label="Numer umowy">
+                <Input
+                  value={lf.numer_umowy}
+                  onChange={(e) => updL("numer_umowy", e.target.value)}
+                />
+              </Fld>
+              <Fld label="Data umowy">
+                <Input
+                  type="date"
+                  value={lf.data_umowy}
+                  onChange={(e) => updL("data_umowy", e.target.value)}
+                />
+              </Fld>
+              <Fld label="Kwota wypłacona (na rękę) (zł)">{kwotaInput("kwota_pozyczki")}</Fld>
+              <Fld label="Prowizja Finance You (potrącona z wypłaty) (zł)">
+                {kwotaInput("prowizja")}
+              </Fld>
+              <Fld
+                label="Kwota do zwrotu bez odsetek (kwota pożyczki + prowizja pożyczkodawcy) (zł)"
+                className="sm:col-span-2"
+                hint="Bez odsetek umownych — nie wpisuj tu sumy rat."
+              >
+                {kwotaInput("kwota_calkowita")}
+              </Fld>
+              <Fld label="Oprocentowanie kapitałowe (% rocznie)">
+                {kwotaInput("oprocentowanie_roczne")}
+              </Fld>
+              <Fld
+                label="Termin spłaty (ostatnia rata)"
+                hint="Przy zmianie harmonogramu ustawimy termin ostatniej raty, jeśli go nie zmienisz."
+              >
+                <Input
+                  type="date"
+                  value={lf.termin_splaty}
+                  onChange={(e) => updL("termin_splaty", e.target.value)}
+                />
+              </Fld>
+              <Fld
+                label="Odsetki za opóźnienie wg umowy (% rocznie)"
+                className="sm:col-span-2"
+                hint={`Puste = odsetki maksymalne za opóźnienie z dnia umowy (${formatStopa(stopaMaks)}%). W każdym dniu kalkulator stosuje nie więcej niż odsetki maksymalne z tego dnia.`}
+              >
+                {kwotaInput("stopa_odsetek_max")}
+              </Fld>
+            </div>
+          </section>
+
+          {/* ZABEZPIECZENIA I RACHUNEK */}
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">Zabezpieczenia i rachunek do spłaty</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Fld
+                label="Rachunek do spłaty (NRB)"
+                className="sm:col-span-2"
+                hint={
+                  rachunekBledny ? (
+                    <span className="text-red-600">
+                      Podaj 26 cyfr numeru rachunku (NRB) albo IBAN PL.
+                    </span>
+                  ) : undefined
+                }
+              >
+                <Input
+                  value={lf.rachunek_splaty}
+                  placeholder="NN NNNN NNNN NNNN NNNN NNNN NNNN"
+                  onChange={(e) => updL("rachunek_splaty", e.target.value)}
+                  onBlur={() => {
+                    const r = formatRachunekSplaty(lf.rachunek_splaty);
+                    if (r) updL("rachunek_splaty", r);
+                  }}
+                />
+              </Fld>
+              <Fld label="Numer KW">
+                <Input value={lf.numer_kw} onChange={(e) => updL("numer_kw", e.target.value)} />
+              </Fld>
+              <Fld label="Kwota hipoteki (zł)">{kwotaInput("kwota_hipoteki")}</Fld>
+              <Fld
+                label="Akt notarialny — poddanie się egzekucji (art. 777 k.p.c.)"
+                hint="Np. Rep. A nr 1234/2026, notariusz …"
+              >
+                <Input
+                  value={lf.akt_notarialny_777}
+                  onChange={(e) => updL("akt_notarialny_777", e.target.value)}
+                />
+              </Fld>
+              <Fld label="Kwota z aktu 777 (zł)">{kwotaInput("kwota_777")}</Fld>
+            </div>
+          </section>
+
+          {/* HARMONOGRAM RAT */}
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold flex items-center gap-1.5">
+              <CalendarDays className="h-4 w-4" /> Harmonogram rat (Załącznik nr 1 do umowy)
+            </h3>
+            <HarmonogramEditor
+              rows={raty}
+              onChange={setRaty}
+              generator={generator}
+              onGeneratorChange={setGenerator}
+              hint="Z harmonogramu liczymy zaległość (raty po terminie minus wpłaty), opóźnienie od najstarszej zaległej raty i odsetki za opóźnienie od każdej raty."
+            />
+            {usuwaHarmonogram && (
+              <p className="flex items-start gap-1 text-[11px] text-amber-700 dark:text-amber-300">
+                <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0" />
+                Bez harmonogramu sprawa wróci do modelu z jednym terminem spłaty — odsetki za
+                opóźnienie od kwoty zaległej sprawy, dopiero po terminie spłaty.
+              </p>
+            )}
+          </section>
+
+          {/* DŁUŻNIK */}
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">Dłużnik</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Fld label="Imię i nazwisko / nazwa" className="sm:col-span-2">
+                <Input
+                  value={bf.imie_nazwisko}
+                  onChange={(e) => updB("imie_nazwisko", e.target.value)}
+                />
+              </Fld>
+              <Fld label="Typ" hint="Jednoosobowa działalność (PESEL + NIP) to osoba fizyczna.">
+                <Select
+                  value={bf.typ}
+                  onValueChange={(v) => updB("typ", v as BorrowerEditForm["typ"])}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="osoba_fizyczna">Osoba fizyczna (także JDG)</SelectItem>
+                    <SelectItem value="firma">Firma (spółka, osoba prawna)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Fld>
+              <Fld label="Telefon">
+                <Input value={bf.telefon} onChange={(e) => updB("telefon", e.target.value)} />
+              </Fld>
+              <Fld label="PESEL">
+                <Input
+                  inputMode="numeric"
+                  value={bf.pesel}
+                  onChange={(e) => updB("pesel", e.target.value)}
+                />
+              </Fld>
+              <Fld label="NIP">
+                <Input
+                  inputMode="numeric"
+                  value={bf.nip}
+                  onChange={(e) => updB("nip", e.target.value)}
+                />
+              </Fld>
+              <Fld label="E-mail" className="sm:col-span-2">
+                <Input value={bf.email} onChange={(e) => updB("email", e.target.value)} />
+              </Fld>
+              <Fld label="Adres zamieszkania" className="sm:col-span-2">
+                <Input
+                  value={bf.adres_zamieszkania}
+                  onChange={(e) => updB("adres_zamieszkania", e.target.value)}
+                />
+              </Fld>
+              <Fld
+                label="Adres do doręczeń"
+                className="sm:col-span-2"
+                hint="Na ten adres trafiają pisma (wezwania, wypowiedzenie)."
+              >
+                <Input
+                  value={bf.adres_do_doreczen}
+                  onChange={(e) => updB("adres_do_doreczen", e.target.value)}
+                />
+              </Fld>
+            </div>
+          </section>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Anuluj
+          </Button>
+          <Button onClick={save} disabled={busy}>
+            {busy ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 mr-1" />
+            )}
+            Zapisz zmiany
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

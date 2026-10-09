@@ -7,11 +7,16 @@
 //   3. nalicza opłatę ZGODNIE Z UMOWĄ (tabela opłat z umowy pożyczki; gdy
 //      umowa milczy — domyślna podpowiedź; umowa bez opłat — 0 zł). Opłata
 //      jest edytowalna przed wysyłką i dolicza się do zadłużenia jako koszt.
+//
+// Kwota komunikowana dłużnikowi (SMS, telefon AI) to „do zapłaty teraz":
+// zaległe raty + odsetki za opóźnienie + koszty windykacyjne — NIE całe
+// saldo pożyczki z ratami przyszłymi. Po wypowiedzeniu umowy „do zapłaty
+// teraz" jest całym zadłużeniem (windDebtSnapshot w windykacja-debt.ts).
 // ════════════════════════════════════════════════════════════════════
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, MessageSquare, Phone, Gavel } from "lucide-react";
+import { Loader2, MessageSquare, Phone, Gavel, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +30,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatPLN } from "@/lib/labels";
+import { windLoanIsTerminated } from "@/lib/windykacja-debt";
+import { formatZl } from "@/components/inwestor/wind-harmonogram-form";
 import {
   performWindContact,
   type WindBorrower,
@@ -42,12 +49,30 @@ const FEE_SOURCE_LABEL: Record<"umowa" | "domyslna" | "brak", string> = {
   brak: "umowa nie przewiduje opłat windykacyjnych — 0 zł",
 };
 
-/** Treść SMS-a windykacyjnego z kwotą zadłużenia (z odsetkami karnymi). */
-export function buildWindSmsText(loan: Pick<WindLoan, "numer_umowy">, debtTotal: number): string {
+const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+
+/**
+ * Treść SMS-a windykacyjnego z kwotą do zapłaty teraz (zaległe raty
+ * z odsetkami za opóźnienie i kosztami). Po wypowiedzeniu umowy — całe
+ * zadłużenie, które stało się wymagalne.
+ */
+export function buildWindSmsText(
+  loan: Pick<WindLoan, "numer_umowy">,
+  amountDueNow: number,
+  opts: { wypowiedziana?: boolean } = {},
+): string {
+  const nr = loan.numer_umowy ?? "";
+  if (opts.wypowiedziana) {
+    return (
+      `Umowa ${nr} została wypowiedziana. Całe zadłużenie wynosi ${formatZl(amountDueNow)} ` +
+      `(z odsetkami za opóźnienie i kosztami) i jest wymagalne. Prosimy o niezwłoczną spłatę. ` +
+      `Brak wpłaty oznacza dalsze czynności windykacyjne i koszty. Finance You`
+    );
+  }
   return (
-    `Przypomnienie: zaległość z umowy ${loan.numer_umowy ?? ""} wynosi ${formatPLN(debtTotal)} ` +
-    `(z odsetkami za opóźnienie). Prosimy o pilną spłatę. Brak wpłaty oznacza dalsze czynności ` +
-    `windykacyjne i koszty. Finance You`
+    `Przypomnienie: do zapłaty z umowy ${nr} jest teraz ${formatZl(amountDueNow)} ` +
+    `(zaległe raty z odsetkami za opóźnienie i kosztami). Prosimy o pilną spłatę. Brak wpłaty oznacza ` +
+    `dalsze czynności windykacyjne i koszty. Finance You`
   );
 }
 
@@ -56,7 +81,8 @@ export function WindQuickContactDialog({
   caseId,
   loan,
   borrower,
-  debtTotal,
+  amountDueNow,
+  wholeDebt,
   onClose,
   onDone,
 }: {
@@ -64,8 +90,14 @@ export function WindQuickContactDialog({
   caseId: string;
   loan: WindLoan;
   borrower: WindBorrower;
-  /** Zadłużenie na dziś (kapitał + odsetki karne + koszty) — komunikowane dłużnikowi. */
-  debtTotal: number;
+  /**
+   * Do zapłaty teraz: zaległe raty + odsetki za opóźnienie + koszty
+   * windykacyjne (po wypowiedzeniu — całe zadłużenie). Domyślna kwota
+   * SMS-a i telefonu AI.
+   */
+  amountDueNow: number;
+  /** Całe zadłużenie z ratami przyszłymi — tylko informacyjnie. */
+  wholeDebt?: number | null;
   onClose: () => void;
   onDone: (ev?: WindEvent) => void;
 }) {
@@ -81,9 +113,14 @@ export function WindQuickContactDialog({
     [feeTable, kind],
   );
 
+  const wypowiedziana = windLoanIsTerminated(loan);
+  const dueNow = Math.max(0, round2(amountDueNow));
+  const pozyczkodawca = loan.pozyczkodawca?.trim() || null;
+
   const [phone, setPhone] = useState(borrower.telefon ?? "");
-  const [amount, setAmount] = useState(String(Math.round(debtTotal)));
-  const [text, setText] = useState(() => buildWindSmsText(loan, debtTotal));
+  // Kwota z groszami — agent AI wypowiada ją dokładnie (nie zaokrąglamy w górę).
+  const [amount, setAmount] = useState(String(dueNow));
+  const [text, setText] = useState(() => buildWindSmsText(loan, dueNow, { wypowiedziana }));
   const [fee, setFee] = useState(String(feeInfo.fee));
   const [busy, setBusy] = useState(false);
 
@@ -116,7 +153,14 @@ export function WindQuickContactDialog({
         onDone(ev);
       } else {
         const res = await doBotCall({
-          data: { caseId, telefon: phone.trim(), kwota: Number(amount) || 0, oplata },
+          // Kwota niezmieniona = 0: serwer liczy „do zapłaty teraz" sam (na
+          // dzień rozmowy) i zapisuje jej rozbicie w aktach; zmieniona — ręczna.
+          data: {
+            caseId,
+            telefon: phone.trim(),
+            kwota: amount.trim() === String(dueNow) ? 0 : Number(amount.replace(",", ".")) || 0,
+            oplata,
+          },
         });
         if (res.ok) {
           toast.success(
@@ -149,7 +193,9 @@ export function WindQuickContactDialog({
           <DialogDescription>
             {kind === "sms"
               ? "SMS zostanie wysłany do dłużnika, a czynność trafi do rejestru czynności windykacyjnych z opłatą naliczoną zgodnie z umową."
-              : "Agent AI zadzwoni do dłużnika w Twoim imieniu, poinformuje o zaległości i zapyta o termin wpłaty. Połączenie trafi do rejestru czynności windykacyjnych z opłatą naliczoną zgodnie z umową."}
+              : `Agent AI zadzwoni do dłużnika ${
+                  pozyczkodawca ? `w imieniu pożyczkodawcy (${pozyczkodawca})` : "w Twoim imieniu"
+                }, poinformuje o kwocie do zapłaty i zapyta o termin wpłaty. Połączenie trafi do rejestru czynności windykacyjnych z opłatą naliczoną zgodnie z umową.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -159,18 +205,44 @@ export function WindQuickContactDialog({
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48…" />
           </div>
 
+          {dueNow <= 0 && (
+            <div className="flex items-start gap-1.5 rounded-md border border-amber-300 bg-amber-50 p-2 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>
+                Na dziś nie ma wymagalnej zaległości (raty po terminie są zapłacone). Sprawdź, czy
+                kontakt windykacyjny jest zasadny.
+              </span>
+            </div>
+          )}
+
           {kind === "botcall" ? (
             <div className="space-y-1">
-              <Label className="text-xs">Kwota zaległości do zakomunikowania (zł)</Label>
-              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <Label className="text-xs">Kwota do zapłaty do zakomunikowania (zł)</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
               <p className="text-[11px] text-muted-foreground">
-                Domyślnie zadłużenie na dziś z odsetkami karnymi: {formatPLN(debtTotal)}.
+                {wypowiedziana
+                  ? `Umowa wypowiedziana — domyślnie całe zadłużenie (wymagalne): ${formatZl(dueNow)}.`
+                  : `Domyślnie: do zapłaty teraz (zaległe raty + odsetki za opóźnienie + koszty): ${formatZl(dueNow)}.`}
+                {!wypowiedziana && wholeDebt != null && wholeDebt > dueNow + 0.005
+                  ? ` Całe zadłużenie z ratami przyszłymi (${formatZl(wholeDebt)}) staje się wymagalne dopiero po wypowiedzeniu umowy.`
+                  : ""}
               </p>
             </div>
           ) : (
             <div className="space-y-1">
               <Label className="text-xs">Treść SMS-a</Label>
               <Textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} />
+              <p className="text-[11px] text-muted-foreground">
+                {wypowiedziana
+                  ? "Umowa wypowiedziana — w treści całe zadłużenie (wymagalne)."
+                  : "Domyślnie: do zapłaty teraz (zaległe raty + odsetki za opóźnienie + koszty)."}
+              </p>
             </div>
           )}
 

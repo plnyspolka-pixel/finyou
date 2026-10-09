@@ -6,12 +6,12 @@ panelu admina (Anthropic) i deterministyczny agent kreatora umowy.
 
 ## Agenty
 
-| Agent                                               | Rola                                                                     | Powierzchnie                                                                  |
-| --------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| **A1 — przyjęcie wniosku** (`intake`)               | JEDEN bot prowadzi klienta od pierwszego kontaktu do kompletnego wniosku | chat na stronie, telefon (voicebot), widget w `/klient`, Messenger/IG, e-mail |
-| **A2 — informacja dla inwestora** (`investor_info`) | pytania o platformę, cennik, FV                                          | chat na `/dla-inwestora`                                                      |
-| **A3 — panel inwestora** (`investor_panel`)         | pomoc w panelu `/inwestor`                                               | widget w panelu                                                               |
-| **A4 — windykacja**                                 | istniejący agent (`windykacja-call.functions`)                           | telefon                                                                       |
+| Agent                                               | Rola                                                                                | Powierzchnie                                                                  |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| **A1 — przyjęcie wniosku** (`intake`)               | JEDEN bot prowadzi klienta od pierwszego kontaktu do kompletnego wniosku            | chat na stronie, telefon (voicebot), widget w `/klient`, Messenger/IG, e-mail |
+| **A2 — informacja dla inwestora** (`investor_info`) | pytania o platformę, cennik, FV                                                     | chat na `/dla-inwestora`                                                      |
+| **A3 — panel inwestora** (`investor_panel`)         | pomoc w panelu `/inwestor`                                                          | widget w panelu                                                               |
+| **A4 — windykacja**                                 | telefon w imieniu inwestora — ustalenie wpłaty (`docs/windykacja-agent-glosowy.md`) | telefon                                                                       |
 
 ID agentów: env (`ELEVENLABS_INTAKE_AGENT_ID` itd.) ma pierwszeństwo, potem
 `voicebot_settings.intake_agent_id / investor_info_agent_id /

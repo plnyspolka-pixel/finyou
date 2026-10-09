@@ -18,16 +18,26 @@ import {
   effectiveDeliveryDate,
   deliveryDeadline,
 } from "@/lib/windykacja-procedure";
-import { calculateDebt, splitInvestorPrincipal } from "@/lib/debt-collection-math";
-import { formatPLN, formatDate, formatDateTime } from "@/lib/labels";
+import { windDebtSnapshot } from "@/lib/windykacja-debt";
+import { currentMaxDelayRate } from "@/lib/debt-collection-math";
+import { opisHarmonogramu, warsawToday } from "@/lib/windykacja-recalc";
+import {
+  RATA_STATUS_LABEL,
+  formatDataPL,
+  formatStopa,
+  formatZl,
+  rataStatus,
+} from "@/components/inwestor/wind-harmonogram-form";
+import { formatDate, formatDateTime } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Loader2 } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/windykacja/$caseId/raport")({
   component: EvidenceReport,
 });
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
+/** Dzisiejsza data w Polsce — ta sama, na którą serwer przelicza sprawę. */
+const todayISO = () => warsawToday();
 
 // CSS druku: chowamy nawigację panelu i przyciski, ustawiamy czysty układ A4.
 const PRINT_CSS = `
@@ -94,35 +104,14 @@ function EvidenceReport() {
     [events],
   );
 
-  const debt = useMemo(() => {
-    if (!loan || !kase) return null;
-    const payments = events
-      .filter((e) => e.typ === "wplata")
-      .map((e) => ({
-        paid_on: e.data_zdarzenia.slice(0, 10),
-        amount: Number((e.metadata as { kwota?: number })?.kwota ?? 0),
-      }));
-    const actionFees = events
-      .filter((e) => Number(e.oplata) > 0)
-      .map((e) => ({ action_date: e.data_zdarzenia.slice(0, 10), fee: Number(e.oplata) }));
-    const { bearing, investorCommission } = splitInvestorPrincipal(loan);
-    return calculateDebt({
-      principalAmount: bearing,
-      interestExemptPrincipal: investorCommission,
-      payoutDate: loan.data_umowy,
-      dueDate: loan.termin_splaty,
-      contractualAnnualRate: Number(loan.oprocentowanie_roczne || 0),
-      penaltyAnnualRate: Number(loan.stopa_odsetek_max || 0),
-      maxStatutoryRate: Number(loan.stopa_odsetek_max || 0),
-      terminated: Boolean(loan.data_wypowiedzenia) || loan.status === "wypowiedziana",
-      terminationDate: loan.data_wypowiedzenia,
-      overdueInstallmentsAmount: Number(kase.kwota_zalegla || 0),
-      surcharges: Number(loan.kwota_doplat || 0),
-      payments,
-      actionFees,
-      asOf: todayISO(),
-    });
-  }, [loan, kase, events]);
+  // Stan zadłużenia na dziś — ten sam silnik co karta sprawy i panel.
+  const snap = useMemo(
+    () =>
+      loan && kase
+        ? windDebtSnapshot({ loan, kwotaZalegla: kase.kwota_zalegla, events, asOf: todayISO() })
+        : null,
+    [loan, kase, events],
+  );
 
   const attachments = useMemo(() => events.filter((e) => e.zalacznik_url), [events]);
 
@@ -183,25 +172,53 @@ function EvidenceReport() {
               <th>Adres do doręczeń</th>
               <td>{borrower.adres_do_doreczen || borrower.adres_zamieszkania || "—"}</td>
             </tr>
+            {loan.pozyczkodawca ? (
+              <tr>
+                <th>Pożyczkodawca</th>
+                <td>{loan.pozyczkodawca}</td>
+              </tr>
+            ) : null}
             <tr>
               <th>Umowa pożyczki</th>
               <td>
-                nr {loan.numer_umowy ?? "—"} z dnia {formatDate(loan.data_umowy)} · kwota{" "}
-                {formatPLN(loan.kwota_pozyczki)} · termin spłaty {formatDate(loan.termin_splaty)}
+                nr {loan.numer_umowy ?? "—"} z dnia {formatDataPL(loan.data_umowy)} · kwota
+                wypłacona {formatZl(loan.kwota_pozyczki)}
+                {Number(loan.kwota_calkowita) > 0
+                  ? ` · do zwrotu bez odsetek ${formatZl(loan.kwota_calkowita)}`
+                  : ""}
+                {loan.harmonogram?.length
+                  ? ` · harmonogram: ${opisHarmonogramu(loan.harmonogram)}`
+                  : ` · termin spłaty ${formatDataPL(loan.termin_splaty)}`}
+                {loan.data_wypowiedzenia
+                  ? ` · wypowiedziana ${formatDataPL(loan.data_wypowiedzenia)}`
+                  : ""}
               </td>
             </tr>
             <tr>
               <th>Zabezpieczenie</th>
               <td>
                 KW {loan.numer_kw ?? "—"}
+                {loan.kwota_hipoteki != null
+                  ? ` (hipoteka do ${formatZl(loan.kwota_hipoteki)})`
+                  : ""}
                 {loan.akt_notarialny_777 ? ` · akt 777: ${loan.akt_notarialny_777}` : ""}
+                {loan.kwota_777 != null ? ` (do ${formatZl(loan.kwota_777)})` : ""}
               </td>
             </tr>
+            {loan.rachunek_splaty ? (
+              <tr>
+                <th>Rachunek do spłaty</th>
+                <td>{loan.rachunek_splaty}</td>
+              </tr>
+            ) : null}
             <tr>
               <th>Ścieżka / etap</th>
               <td>
                 {PATH_LABELS[kase.sciezka]} · {stageLabel(kase.sciezka, kase.etap)} · opóźnienie{" "}
-                {kase.opoznienie_dni} dni
+                {snap?.dniOpoznienia ?? kase.opoznienie_dni} dni
+                {snap?.najstarszaZalegla && snap.zrodlo === "harmonogram"
+                  ? ` (od najstarszej zaległej raty z ${formatDataPL(snap.najstarszaZalegla)})`
+                  : ""}
               </td>
             </tr>
             <tr>
@@ -216,58 +233,157 @@ function EvidenceReport() {
         </table>
 
         {/* Podsumowanie należności */}
-        {debt && (
+        {snap && (
           <div className="mb-5">
-            <h2 className="text-sm font-bold mb-2">Należność na dzień {formatDate(debt.asOf)}</h2>
+            <h2 className="text-sm font-bold mb-2">
+              Należność na dzień {formatDataPL(todayISO())}
+            </h2>
             <table>
               <tbody>
+                {snap.raty ? (
+                  <>
+                    <tr>
+                      <th style={{ width: "45%" }}>
+                        Zaległe raty (
+                        {snap.raty.raty.filter((r) => r.wymagalna && r.pozostalo > 0).length} z{" "}
+                        {snap.raty.liczbaRatWymagalnych} wymagalnych)
+                      </th>
+                      <td>{formatZl(snap.zaleglosc)}</td>
+                    </tr>
+                    <tr>
+                      <th>Odsetki za opóźnienie</th>
+                      <td>{formatZl(snap.odsetkiZaOpoznienie)}</td>
+                    </tr>
+                    {snap.koszty > 0 && (
+                      <tr>
+                        <th>Opłaty za czynności windykacyjne</th>
+                        <td>{formatZl(snap.koszty)}</td>
+                      </tr>
+                    )}
+                  </>
+                ) : snap.debt ? (
+                  <>
+                    <tr>
+                      <th style={{ width: "45%" }}>
+                        Kapitał oprocentowany (na rękę + prow. Finance You)
+                      </th>
+                      <td>{formatZl(snap.debt.principalOutstanding)}</td>
+                    </tr>
+                    {snap.debt.investorCommissionOutstanding > 0 && (
+                      <tr>
+                        <th>Prowizja inwestora (spłacana z kapitałem, bez odsetek)</th>
+                        <td>{formatZl(snap.debt.investorCommissionOutstanding)}</td>
+                      </tr>
+                    )}
+                    {snap.debt.contractualInterest > 0 && (
+                      <tr>
+                        <th>Odsetki kapitałowe (umowne)</th>
+                        <td>{formatZl(snap.debt.contractualInterest)}</td>
+                      </tr>
+                    )}
+                    {snap.debt.surchargesOutstanding > 0 && (
+                      <tr>
+                        <th>Dopłaty / koszty umowne</th>
+                        <td>{formatZl(snap.debt.surchargesOutstanding)}</td>
+                      </tr>
+                    )}
+                    <tr>
+                      <th>
+                        Odsetki za opóźnienie ({formatStopa(snap.debt.effectiveDelayRate)}% rocznie)
+                      </th>
+                      <td>{formatZl(snap.debt.delayInterest)}</td>
+                    </tr>
+                    {snap.debt.costsOutstanding > 0 && (
+                      <tr>
+                        <th>Opłaty za czynności windykacyjne</th>
+                        <td>{formatZl(snap.debt.costsOutstanding)}</td>
+                      </tr>
+                    )}
+                  </>
+                ) : null}
                 <tr>
-                  <th style={{ width: "30%" }}>
-                    Kapitał oprocentowany (na rękę + prow. Finance You)
+                  <th>
+                    Do zapłaty teraz
+                    {snap.wypowiedziana ? " (umowa wypowiedziana — całość wymagalna)" : ""}
                   </th>
-                  <td>{formatPLN(debt.principalOutstanding)}</td>
+                  <td className="font-bold">{formatZl(snap.doZaplatyTeraz)}</td>
                 </tr>
-                {debt.investorCommissionOutstanding > 0 && (
+                {snap.raty && !snap.wypowiedziana && snap.raty.pozostaleRatyPrzyszle > 0 && (
                   <tr>
-                    <th>Prowizja inwestora (spłacana z kapitałem, bez odsetek)</th>
-                    <td>{formatPLN(debt.investorCommissionOutstanding)}</td>
-                  </tr>
-                )}
-                {debt.contractualInterest > 0 && (
-                  <tr>
-                    <th>Odsetki kapitałowe (umowne)</th>
-                    <td>{formatPLN(debt.contractualInterest)}</td>
-                  </tr>
-                )}
-                {debt.surchargesOutstanding > 0 && (
-                  <tr>
-                    <th>Dopłaty / koszty umowne</th>
-                    <td>{formatPLN(debt.surchargesOutstanding)}</td>
+                    <th>Raty przyszłe (jeszcze niewymagalne)</th>
+                    <td>{formatZl(snap.raty.pozostaleRatyPrzyszle)}</td>
                   </tr>
                 )}
                 <tr>
-                  <th>Odsetki za opóźnienie (maks., {debt.effectiveDelayRate}%)</th>
-                  <td>{formatPLN(debt.delayInterest)}</td>
-                </tr>
-                {debt.costsOutstanding > 0 && (
-                  <tr>
-                    <th>Opłaty za czynności windykacyjne</th>
-                    <td>{formatPLN(debt.costsOutstanding)}</td>
-                  </tr>
-                )}
-                <tr>
-                  <th>Razem do zapłaty</th>
-                  <td className="font-bold">{formatPLN(debt.totalDue)}</td>
+                  <th>Całe zadłużenie</th>
+                  <td>{formatZl(snap.calosc)}</td>
                 </tr>
               </tbody>
             </table>
             <p className="text-gray-600 mt-1" style={{ fontSize: "11px" }}>
-              {debt.delayRegime === "calosc_po_wypowiedzeniu"
-                ? `Umowa wypowiedziana — odsetki za opóźnienie naliczone od całości oprocentowanej należności (${formatPLN(debt.delayInterestBase)}; kapitał na rękę + prowizja Finance You + odsetki + dopłaty) na podstawie art. 481 § 2¹ k.c. Prowizja inwestora jest należna, lecz nieoprocentowana.`
-                : debt.delayRegime === "zalegle_raty"
-                  ? `Umowa niewypowiedziana — odsetki za opóźnienie naliczone wyłącznie od zaległych rat (${formatPLN(debt.delayInterestBase)}).`
-                  : "Brak wymagalnej zaległości — odsetki za opóźnienie nie naliczane."}
+              {snap.raty
+                ? snap.wypowiedziana
+                  ? `Umowa wypowiedziana — wszystkie raty wymagalne od dnia wypowiedzenia, bez odsetek umownych za okres po wypowiedzeniu (gdy harmonogram je wyszczególnia). Odsetki za opóźnienie od każdej niezapłaconej raty od dnia po jej terminie (art. 481 k.c.).`
+                  : `Umowa niewypowiedziana — wymagalne są wyłącznie raty po terminie. Odsetki za opóźnienie naliczone od każdej zaległej raty od dnia po jej terminie (termin w dniu wolnym — najbliższy dzień roboczy, art. 115 k.c.).`
+                : snap.debt?.delayRegime === "calosc_po_wypowiedzeniu"
+                  ? `Umowa wypowiedziana — odsetki za opóźnienie naliczone od całości oprocentowanej należności (${formatZl(snap.debt.delayInterestBase)}; kapitał na rękę + prowizja Finance You + odsetki + dopłaty) na podstawie art. 481 § 2¹ k.c. Prowizja inwestora jest należna, lecz nieoprocentowana.`
+                  : snap.debt?.delayRegime === "zalegle_raty"
+                    ? `Umowa niewypowiedziana — odsetki za opóźnienie naliczone wyłącznie od kwoty zaległej (${formatZl(snap.debt.delayInterestBase)}).`
+                    : "Brak wymagalnej zaległości — odsetki za opóźnienie nie naliczane."}{" "}
+              Stopa odsetek za opóźnienie:{" "}
+              {Number(loan.stopa_odsetek_max) > 0
+                ? `${formatStopa(Number(loan.stopa_odsetek_max))}% rocznie wg umowy`
+                : "odsetki maksymalne"}
+              {snap.raty
+                ? `, w każdym dniu nie wyższa niż odsetki maksymalne za opóźnienie (art. 481 § 2¹ k.c.; na dzień raportu ${formatStopa(currentMaxDelayRate(todayISO()))}%). Wpłaty zaliczane wg umowy (art. 451 k.c.): prowizja z rat wymagalnych → koszty windykacyjne → odsetki za opóźnienie → odsetki umowne → kapitał (od najstarszej raty).`
+                : "."}
             </p>
+          </div>
+        )}
+
+        {/* Harmonogram rat — stan każdej raty */}
+        {snap?.raty && (
+          <div className="mb-5">
+            <h2 className="text-sm font-bold mb-2">
+              Harmonogram rat — stan na dzień {formatDataPL(snap.raty.asOf)}
+            </h2>
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: "6%" }}>Nr</th>
+                  <th>Termin</th>
+                  <th>Kwota raty</th>
+                  <th>Zapłacono</th>
+                  <th>Pozostało</th>
+                  <th>Opóźnienie</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {snap.raty.raty.map((r) => (
+                  <tr key={r.nr}>
+                    <td>{r.nr}</td>
+                    <td className="whitespace-nowrap">
+                      {formatDataPL(r.termin)}
+                      {r.terminSkuteczny > r.termin
+                        ? ` (płatna do ${formatDataPL(r.terminSkuteczny)})`
+                        : ""}
+                    </td>
+                    <td className="whitespace-nowrap">{formatZl(r.kwotaWymagana)}</td>
+                    <td className="whitespace-nowrap">
+                      {r.zaplacono > 0 ? formatZl(r.zaplacono) : "—"}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {r.pozostalo > 0 ? formatZl(r.pozostalo) : "—"}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {r.dniOpoznienia > 0 ? `${r.dniOpoznienia} dni` : "—"}
+                    </td>
+                    <td>{RATA_STATUS_LABEL[rataStatus(r)]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
@@ -300,7 +416,7 @@ function EvidenceReport() {
                   <td>
                     <div className="font-medium">{e.tytul}</div>
                     {e.typ === "wplata" && meta?.kwota != null && (
-                      <div>Kwota: {formatPLN(meta.kwota)}</div>
+                      <div>Kwota: {formatZl(meta.kwota)}</div>
                     )}
                     {meta?.numer_nadania && <div>Nr nadania: {meta.numer_nadania}</div>}
                     {e.tresc && <div className="text-gray-600 whitespace-pre-wrap">{e.tresc}</div>}
@@ -343,12 +459,12 @@ function EvidenceReport() {
                   <tr key={e.id}>
                     <td className="whitespace-nowrap">{formatDate(e.data_zdarzenia)}</td>
                     <td>{e.tytul}</td>
-                    <td>{formatPLN(Number(e.oplata))}</td>
+                    <td>{formatZl(Number(e.oplata))}</td>
                   </tr>
                 ))}
                 <tr>
                   <th colSpan={2}>Suma opłat</th>
-                  <td className="font-bold">{formatPLN(feeSum)}</td>
+                  <td className="font-bold">{formatZl(feeSum)}</td>
                 </tr>
               </tbody>
             </table>

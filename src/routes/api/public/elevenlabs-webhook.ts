@@ -209,7 +209,10 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           // kolejna próba nie odbija się od hamulca.
           // Po rozmowie z człowiekiem nie oddzwaniamy — nawet gdy agent uznał ją
           // za nieudaną (patrz `shouldRetryCall`).
-          if (shouldRetryCall(outcome, durationSec)) {
+          // Telefonów windykacyjnych nie ponawiamy automatycznie: wpis
+          // „auto_retry" dzwoniłby domyślnym agentem (Ania, wnioski), a każdy
+          // monit to czynność z rejestru — o kolejnej decyduje inwestor.
+          if (queueRow.source !== "windykacja" && shouldRetryCall(outcome, durationSec)) {
             try {
               let cntQ = supabase
                 .from("call_queue")
@@ -257,7 +260,48 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           willingOnline !== null ||
           directedToWebsite !== null ||
           Object.keys(collected).length > 0;
-        if (hasCollected) {
+        // ── Telefon windykacyjny: wynik rozmowy do akt sprawy ───────────────
+        // Zdarzenie „telefon" zapisał placeWindCollectionCall z conversation_id;
+        // tu dopisujemy ustalenia (deklaracja, przyczyna, propozycja), a gdy
+        // monit nie dotarł do pożyczkobiorcy — zerujemy opłatę za telefon.
+        const isWindCall = queueRow?.source === "windykacja";
+        if (isWindCall && callId) {
+          try {
+            const { summarizeWindCallOutcome } = await import("@/lib/windykacja-call-outcome");
+            const rec = summarizeWindCallOutcome({
+              outcome,
+              outcomeLabel,
+              summary: summary ?? null,
+              collected,
+              durationSec,
+            });
+            const { data: evRows } = await supabase
+              .from("wind_events")
+              .select("id, tresc, metadata")
+              .eq("typ", "telefon")
+              .eq("metadata->>conversation_id", callId)
+              .limit(1);
+            const ev = evRows?.[0];
+            // Ponowna dostawa tego samego webhooka nie dubluje wpisu w aktach.
+            if (ev && !ev.metadata?.call_outcome) {
+              await supabase
+                .from("wind_events")
+                .update({
+                  tytul: rec.tytul,
+                  tresc: [ev.tresc, rec.tresc].filter(Boolean).join("\n\n"),
+                  metadata: { ...(ev.metadata ?? {}), ...rec.metadata },
+                  ...(rec.dotarl ? {} : { oplata: 0 }),
+                })
+                .eq("id", ev.id);
+            }
+          } catch (e) {
+            console.error("[elevenlabs-webhook] zapis wyniku telefonu windykacyjnego", e);
+          }
+        }
+
+        // Dane z rozmowy windykacyjnej nie należą do leada (to inna sprawa
+        // niż wniosek o pożyczkę) — trafiają wyłącznie do akt windykacji.
+        if (hasCollected && !isWindCall) {
           try {
             // 1) loan_applications — uzupełnij loan_amount jeśli puste
             if (queueRow?.loan_application_id && loanAmountRequested !== null) {
