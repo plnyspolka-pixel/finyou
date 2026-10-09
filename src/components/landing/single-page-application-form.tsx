@@ -50,7 +50,8 @@ type PhotoItem = {
   type: string;
   url: string;
   bucket: string;
-  file: File;
+  /** Brak dla plików przywróconych ze szkicu — są już w storage (storagePath). */
+  file?: File;
   status: "uploading" | "ready" | "error";
   storagePath?: string;
   uploadedMime?: string;
@@ -129,6 +130,36 @@ function bucketsFor(sec: SecurityType): BucketDef[] {
 }
 
 const BUILDING_TYPES: SecurityType[] = ["dom"];
+
+/** Miniatura do podglądu w szkicu (sessionStorage) — mała, żeby nie zapchać limitu. */
+async function makeThumbnail(file: File): Promise<string | undefined> {
+  if (!file.type.startsWith("image/") || typeof createImageBitmap !== "function") return undefined;
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 200 / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bmp.width * scale));
+    canvas.height = Math.max(1, Math.round(bmp.height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return undefined;
+    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    bmp.close?.();
+    return canvas.toDataURL("image/jpeg", 0.7);
+  } catch {
+    return undefined;
+  }
+}
+
+type DraftFile = {
+  id: string;
+  name: string;
+  type: string;
+  bucket: string;
+  storagePath: string;
+  uploadedMime?: string;
+  uploadedName?: string;
+  thumb?: string;
+};
 
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -210,7 +241,7 @@ function PhotoBucket({
               key={p.id}
               className="relative overflow-hidden rounded-md border border-white/30 bg-white/10"
             >
-              {p.type.startsWith("image/") ? (
+              {p.type.startsWith("image/") && p.url ? (
                 <img src={p.url} alt={p.name} className="aspect-square w-full object-cover" />
               ) : (
                 <div className="grid aspect-square place-items-center bg-white/10">
@@ -338,11 +369,24 @@ export function SinglePageApplicationForm({
   const leadFiredRef = useRef(false);
   const deedInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.url)), [photos]);
+  // Zwalniamy podglądy (blob:) dopiero przy odmontowaniu — wcześniej cleanup odpalał się przy
+  // każdej zmianie listy i unieważniał podglądy plików, które wciąż są na liście.
+  const photosRef = useRef(photos);
+  photosRef.current = photos;
+  useEffect(
+    () => () =>
+      photosRef.current.forEach((p) => {
+        if (p.url.startsWith("blob:")) URL.revokeObjectURL(p.url);
+      }),
+    [],
+  );
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
 
   // Szkic formularza w sessionStorage (tylko ta karta przeglądarki, znika po jej zamknięciu):
   // przejście do innej sekcji panelu, odświeżenie czy uśpienie karty nie kasuje wpisanych danych.
-  // Pliki i zgody nie są zapisywane — pliki trzeba dodać ponownie, zgody zaznaczyć świadomie.
+  // Zapisujemy też zgody (zaznaczone wcześniej przez użytkownika) i pliki już wgrane do storage
+  // (ścieżka + miniatura) — po powrocie nie trzeba ich dodawać ani zaznaczać ponownie.
+  // Pliki w trakcie wysyłki nie trafiają do szkicu (nie mają jeszcze ścieżki w storage).
   const draftKey = `financeyou:application-draft:${brokerMode?.sourceLabel ?? "public"}`;
   const draftRestoredRef = useRef(false);
   useEffect(() => {
@@ -370,6 +414,34 @@ export function SinglePageApplicationForm({
         if (bs === "prowadzi" || bs === "zamierza" || bs === "nie_zamierza") setBusinessStatus(bs);
         if (num(d.amount) !== undefined) setAmount(num(d.amount)!);
         if (num(d.months) !== undefined) setMonths(num(d.months)!);
+        if (d.consentPrivacy === true) setConsentPrivacy(true);
+        if (d.consentTerms === true) setConsentTerms(true);
+        if (d.consentMarketing === true) setConsentMarketing(true);
+        if (Array.isArray(d.files)) {
+          const restored: PhotoItem[] = [];
+          const restoredThumbs: Record<string, string> = {};
+          for (const raw of d.files as Partial<DraftFile>[]) {
+            if (!raw || typeof raw.id !== "string" || typeof raw.storagePath !== "string") continue;
+            if (typeof raw.bucket !== "string") continue;
+            const thumb = typeof raw.thumb === "string" ? raw.thumb : "";
+            if (thumb) restoredThumbs[raw.id] = thumb;
+            restored.push({
+              id: raw.id,
+              name: str(raw.name) ?? "plik",
+              type: str(raw.type) ?? "",
+              url: thumb,
+              bucket: raw.bucket,
+              status: "ready",
+              storagePath: raw.storagePath,
+              uploadedMime: str(raw.uploadedMime),
+              uploadedName: str(raw.uploadedName),
+            });
+          }
+          if (restored.length) {
+            setPhotos(restored);
+            setThumbs(restoredThumbs);
+          }
+        }
       }
     } catch {
       // brak dostępu do sessionStorage (tryb prywatny / blokada) — formularz działa bez szkicu
@@ -381,26 +453,47 @@ export function SinglePageApplicationForm({
   useEffect(() => {
     if (!draftRestoredRef.current) return;
     try {
-      window.sessionStorage.setItem(
-        draftKey,
-        JSON.stringify({
-          firstName,
-          lastName,
-          phone,
-          email,
-          kwNumber,
-          extraKwNumbers,
-          usableArea,
-          city,
-          nip,
-          secType,
-          typeSelected,
-          businessPurpose,
-          businessStatus,
-          amount,
-          months,
-        }),
-      );
+      const base = {
+        firstName,
+        lastName,
+        phone,
+        email,
+        kwNumber,
+        extraKwNumbers,
+        usableArea,
+        city,
+        nip,
+        secType,
+        typeSelected,
+        businessPurpose,
+        businessStatus,
+        amount,
+        months,
+        consentPrivacy,
+        consentTerms,
+        consentMarketing,
+      };
+      const files: DraftFile[] = photos
+        .filter((p) => p.status === "ready" && p.storagePath)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          type: p.type,
+          bucket: p.bucket,
+          storagePath: p.storagePath!,
+          uploadedMime: p.uploadedMime,
+          uploadedName: p.uploadedName,
+          thumb: thumbs[p.id],
+        }));
+      try {
+        window.sessionStorage.setItem(draftKey, JSON.stringify({ ...base, files }));
+      } catch {
+        // Limit sessionStorage — zapisujemy pliki bez miniatur (podgląd zastąpi ikona).
+        window.sessionStorage.setItem(
+          draftKey,
+          JSON.stringify({ ...base, files: files.map(({ thumb: _t, ...rest }) => rest) }),
+        );
+      }
     } catch {
       // ignorujemy — szkic jest tylko udogodnieniem
     }
@@ -421,6 +514,11 @@ export function SinglePageApplicationForm({
     businessStatus,
     amount,
     months,
+    consentPrivacy,
+    consentTerms,
+    consentMarketing,
+    photos,
+    thumbs,
   ]);
 
   const clearDraft = () => {
@@ -474,6 +572,9 @@ export function SinglePageApplicationForm({
   const uploadFn = useServerFn(uploadLandingAttachment);
 
   const uploadOne = async (id: string, file: File, bucket: string) => {
+    void makeThumbnail(file).then((t) => {
+      if (t) setThumbs((cur) => ({ ...cur, [id]: t }));
+    });
     try {
       const { blob, mimeType, fileName } = await compressImageIfNeeded(file);
       const dataUrl = await fileToDataUrl(blob);
@@ -516,7 +617,7 @@ export function SinglePageApplicationForm({
       status: "uploading" as const,
     }));
     setPhotos((cur) => [...cur, ...next]);
-    for (const item of next) void uploadOne(item.id, item.file, bucket);
+    for (const item of next) void uploadOne(item.id, item.file!, bucket);
   };
 
   const retryUpload = (id: string) => {
@@ -524,14 +625,18 @@ export function SinglePageApplicationForm({
       cur.map((p) => (p.id === id ? { ...p, status: "uploading", errorMsg: undefined } : p)),
     );
     const item = photos.find((p) => p.id === id);
-    if (item) void uploadOne(id, item.file, item.bucket);
+    if (item?.file) void uploadOne(id, item.file, item.bucket);
   };
 
   const removePhoto = (id: string) => {
     setPhotos((cur) => {
       const r = cur.find((p) => p.id === id);
-      if (r) URL.revokeObjectURL(r.url);
+      if (r?.url.startsWith("blob:")) URL.revokeObjectURL(r.url);
       return cur.filter((p) => p.id !== id);
+    });
+    setThumbs((cur) => {
+      const { [id]: _removed, ...rest } = cur;
+      return rest;
     });
   };
 
@@ -620,7 +725,7 @@ export function SinglePageApplicationForm({
                 bucket: p.bucket,
               }
             : {
-                dataUrl: await readAsDataUrl(p.file),
+                dataUrl: await readAsDataUrl(p.file!),
                 mimeType: p.type || "application/octet-stream",
                 fileName: p.name,
                 bucket: p.bucket,
