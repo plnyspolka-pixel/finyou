@@ -71,6 +71,11 @@ export interface CeidgActivity {
     regon: string | null;
     startDate: string | null;
     pkdMain: string | null;
+    /** Imię i nazwisko przedsiębiorcy z CEIDG (aktualne dane — pkt 3 zlecenia). */
+    ownerFirstName?: string | null;
+    ownerLastName?: string | null;
+    /** Miejscowość adresu działalności z CEIDG. */
+    city?: string | null;
   } | null;
   note: string;
 }

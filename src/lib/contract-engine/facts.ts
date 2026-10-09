@@ -7,6 +7,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { jestFinanceYou } from "./finance-you";
 
 const CONSONANT_END = /[bcdfghjklmnprstwzżźćń]$/;
 
@@ -192,6 +193,9 @@ export function oznaczenieStrony(s: any, pelne = true, opts?: OznaczenieOpts): s
     if (s.telefon) ident.push(`tel. ${s.telefon}`);
     if (s.email) ident.push(`e-mail ${s.email}`);
     czesci.push(ident.join(", "));
+    // Zmiana nazwiska przy tym samym PESEL: strona pod aktualnym nazwiskiem
+    // (CEIDG), z adnotacją o nazwisku ujawnionym w dziale II KW.
+    for (const u of s.ujawnienie_w_kw ?? []) czesci.push(adnotacjaUjawnienia(s, u));
     return czesci.join(", ");
   }
 
@@ -223,6 +227,24 @@ export function oznaczenieStrony(s: any, pelne = true, opts?: OznaczenieOpts): s
   }
   if (ident.length) czesci.push(ident.join(", "));
   return czesci.join(", ");
+}
+
+/** „ujawniona w dziale II księgi wieczystej nr … jako …” (rodzaj wg płci strony). */
+export function adnotacjaUjawnienia(s: any, u: { nr_kw: string; imie_nazwisko: string }): string {
+  const ujawniony = jestKobieta(s) ? "ujawniona" : "ujawniony";
+  return `${ujawniony} w dziale II księgi wieczystej nr ${u.nr_kw} jako ${String(u.imie_nazwisko).toUpperCase()}`;
+}
+
+function kwKlucz(nr: unknown): string {
+  return String(nr ?? "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+/** Adnotacje o nazwisku z KW dla danej księgi (do oświadczeń § 5). */
+export function ujawnieniaDlaKw(s: any, nrKw: unknown): { nr_kw: string; imie_nazwisko: string }[] {
+  const k = kwKlucz(nrKw);
+  return (s?.ujawnienie_w_kw ?? []).filter((u: any) => k && kwKlucz(u?.nr_kw) === k);
 }
 
 export function krotkieOznaczenie(s: any): string {
@@ -332,6 +354,7 @@ export function zbudujFakty(d: any): Record<string, any> {
   f.pb_oswiadcza = wielu ? "oświadczają" : "oświadcza";
   f.pb_zobowiazuje = wielu ? "zobowiązują się" : "zobowiązuje się";
   f.pb_potwierdza = wielu ? "potwierdzają" : "potwierdza";
+  f.pb_poleca = wielu ? "polecają" : "poleca";
   f.pb_otrzymal = g("otrzymali", "otrzymała", "otrzymał");
   f.pb_mial = g("mieli", "miała", "miał");
   f.pb_rozumie = wielu ? "rozumieją" : "rozumie";
@@ -374,9 +397,6 @@ export function zbudujFakty(d: any): Record<string, any> {
   f.pb_spelnia = wielu ? "spełniają" : "spełnia";
   f.pb_zlozy = wielu ? "złożą" : "złoży";
   f.pb_dopusci = wielu ? "dopuszczą" : "dopuści";
-  f.pb_podpis_poswiadczony = wielu
-    ? "z podpisami Pożyczkobiorców poświadczonymi notarialnie"
-    : "z podpisem Pożyczkobiorcy poświadczonym notarialnie";
   // Oświadczenie o aktywnym wykonywaniu działalności (CEIDG) — pożyczkobiorca
   // będący osobą fizyczną przedsiębiorcą (nie rolnikiem prowadzącym gospodarstwo).
   f.ma_pb_ceidg = poz.some(
@@ -548,7 +568,10 @@ export function zbudujFakty(d: any): Record<string, any> {
     const kobieta = jestKobieta(wl);
     majatekOsobisty.push({
       ...n,
-      wlasciciel_imie_nazwisko: wl.imie_nazwisko,
+      wlasciciel_imie_nazwisko: ((adn: string[]) =>
+        adn.length ? `${wl.imie_nazwisko}, ${adn.join(", ")},` : wl.imie_nazwisko)(
+        ujawnieniaDlaKw(wl, n.nr_kw).map((u) => adnotacjaUjawnienia(wl, u)),
+      ),
       wlasciciel_oswiadcza: "oświadcza",
       wlasciciel_ujawniony: kobieta ? "ujawniona" : "ujawniony",
       wlasciciel_zaimek: kobieta ? "jej" : "jego",
@@ -679,10 +702,17 @@ export function zbudujFakty(d: any): Record<string, any> {
     !!f.ma_uchwaly_do_przedlozenia ||
     f.ma_splaty_wierzycieli;
 
-  // Prowizja od Pożyczkobiorcy — potrącana z wypłaty (Zał. 4 do Umowy
-  // = Zał. 6 do Umowy ramowej FY): pierwsza transza na rachunek FY.
+  // Prowizja inwestora częściowo płatna z ratą końcową (balonową) — KWO_02c.
+  const prowBalon = naKwote(d.warunki?.prowizja?.w_racie_koncowej?.cyframi);
+  const prowRazem = naKwote(d.warunki?.prowizja?.kwota?.cyframi);
+  f.ma_prowizje_w_racie_koncowej = prowBalon > 0;
+  f.prowizja_ratalna_cyframi = formatKwotyPL(Math.max(0, prowRazem - prowBalon));
+
+  // Prowizja od Pożyczkobiorcy — potrącana z Kwoty Pożyczki przy wypłacie
+  // (opisana wprost w § 2, KWO_03e): pierwsza transza na rachunek FY. Tylko
+  // gdy Pożyczkodawcą NIE jest Finance You.
   const prowFY = d.warunki?.prowizja_finance_you?.kwota?.cyframi;
-  f.ma_prowizje_fy = !!prowFY && prowFY !== "0,00";
+  f.ma_prowizje_fy = !!prowFY && prowFY !== "0,00" && !jestFinanceYou(d.pozyczkodawca);
   f.prowizja_fy_cyframi = prowFY ?? "0,00";
   f.rachunek_fy = d.warunki?.rachunki?.finance_you ?? "";
 
@@ -690,10 +720,7 @@ export function zbudujFakty(d: any): Record<string, any> {
   if (f.ma_prowizje_fy) {
     transze.push({
       kwota: prowFY,
-      opis:
-        `na rachunek Finance You sp. z o.o. nr ${f.rachunek_fy || "wskazany w Załączniku nr 4"}, ` +
-        `tytułem Prowizji od Pożyczkobiorcy potrącanej z wypłaty zgodnie z dyspozycją ` +
-        `${f.pb_dop} (Załącznik nr 4); przelew ten stanowi wypłatę odpowiedniej części Kwoty Pożyczki ${f.pb_cel}`,
+      opis: `na rachunek Finance You sp. z o.o. nr ${f.rachunek_fy}, tytułem Prowizji od Pożyczkobiorcy`,
     });
   }
   if (f.ma_splaty_wierzycieli) {
@@ -730,4 +757,20 @@ export function zbudujFakty(d: any): Record<string, any> {
     : "";
 
   return f;
+}
+
+/** "1 234,56" → 1234.56; brak / błąd → 0. */
+function naKwote(v: unknown): number {
+  const n = parseFloat(
+    String(v ?? "")
+      .replace(/\s/g, "")
+      .replace(",", "."),
+  );
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** 1234.5 → "1 234,50" (format kwot schematu). */
+function formatKwotyPL(n: number): string {
+  const [int, dec] = Math.abs(n).toFixed(2).split(".");
+  return (n < 0 ? "-" : "") + int.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + "," + dec;
 }

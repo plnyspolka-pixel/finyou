@@ -14,7 +14,8 @@
 import { umowaSchema } from "./schema";
 import { maxRateMessage, rateExceedsMax } from "./fees";
 
-export type Poziom = "BLAD" | "OSTRZEZENIE";
+/** INFORMACJA — podpowiedź dla operatora (np. sugerowana kwota), nigdy nie blokuje. */
+export type Poziom = "BLAD" | "OSTRZEZENIE" | "INFORMACJA";
 
 export interface Problem {
   poziom: Poziom;
@@ -405,6 +406,26 @@ export function walidujReguly(d: any): Problem[] {
         `Zadeklarowano ${h.liczba_rat} rat, a tabela zawiera ${h.raty.length}`,
       );
   }
+
+  // R33: część prowizji płatna z ratą końcową — tylko przy prowizji w ratach
+  // i nie większa niż łączna prowizja inwestora.
+  const prowBalon = naLiczbeBezp(d.warunki?.prowizja?.w_racie_koncowej?.cyframi);
+  if (prowBalon !== null && prowBalon > 0) {
+    const prowRazem = naLiczbeBezp(d.warunki?.prowizja?.kwota?.cyframi);
+    if (prowRazem !== null && prowBalon > prowRazem + 1e-9)
+      blad(
+        "warunki.prowizja.w_racie_koncowej",
+        "Część prowizji płatna z ratą końcową przekracza łączną kwotę prowizji",
+      );
+  }
+
+  // R34: wniosek zawiera wyłącznie oświadczenie „nie jestem PEP” (bez pól
+  // wyboru) — wniosku osoby PEP silnik nie składa.
+  if (d.wniosek?.pep === true)
+    blad(
+      "wniosek.pep",
+      "Wnioskodawca jest osobą PEP — wniosek z silnika zawiera wyłącznie oświadczenie, że wnioskodawca nie jest PEP; przygotuj wniosek indywidualnie",
+    );
 
   // R29: oprocentowanie umowne ≤ odsetki maksymalne kapitałowe (art. 359 § 2¹ KC)
   // — twarda blokada; szczegółowe błędy silnika (pułap raty) dolicza

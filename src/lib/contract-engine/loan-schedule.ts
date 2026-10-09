@@ -20,6 +20,14 @@
  *  - niezmienniki: Σ kapitał = K, Σ prowizja = P, saldo maleje o kapitał,
  *    saldo ostatniej raty = 0, rata_razem = kapitał + odsetki + prowizja.
  *    Dzięki temu wynik przechodzi `walidujHarmonogram`.
+ *  - część prowizji inwestora może być płatna wraz z ratą końcową
+ *    (`prowizjaWRacieKoncowej`, pole umowy `warunki.prowizja.w_racie_koncowej`):
+ *    równo na N rat rozkłada się wtedy tylko `P − w_racie_koncowej`, a rata
+ *    końcowa = kapitał + odsetki + rata prowizji + `w_racie_koncowej`,
+ *  - `amortyzacjaKapitalu`: "nadwyzka_raty" (domyślnie) — nadwyżka pułapu
+ *    ponad odsetki i prowizję spłaca kapitał; "w_balonie" — raty 1..N−1 nie
+ *    spłacają kapitału, cały kapitał w racie końcowej. Kalkulator MCP i silnik
+ *    umów liczą tą samą funkcją z tymi samymi parametrami,
  *  - całkowity koszt = odsetki + prowizja inwestora + prowizja FY.
  */
 
@@ -42,11 +50,20 @@ export interface EngineScheduleInput {
   months: number;
   /** Pułap raty klienta; steruje wielkością spłacanego kapitału i balonem. */
   maxMonthlyPayment: number;
+  /**
+   * Część prowizji inwestora (zawartej w `prowizja`) płatna wraz z ratą
+   * końcową (balonową). Domyślnie 0 — cała prowizja równo w ratach.
+   */
+  prowizjaWRacieKoncowej?: number;
+  /** Kapitał w ratach regularnych: nadwyżka pułapu (domyślnie) albo w całości w balonie. */
+  amortyzacjaKapitalu?: AmortyzacjaKapitalu;
   /** Data pierwszej raty — "YYYY-MM-DD" albo "DD.MM.RRRR". */
   firstPaymentDate?: string | null;
   /** Dzień, na który ocenia się odsetki maksymalne (domyślnie dziś). */
   asOf?: Date | string;
 }
+
+export type AmortyzacjaKapitalu = "nadwyzka_raty" | "w_balonie";
 
 export interface EngineScheduleRow {
   nr: number;
@@ -75,6 +92,11 @@ export interface EngineSchedule {
   prowizja: number;
   /** Prowizja inwestora rozłożona w ratach (suma z harmonogramu). */
   prowizjaInwestora: number;
+  /** Część prowizji inwestora płatna wraz z ratą końcową (0 = brak). */
+  prowizjaWRacieKoncowej: number;
+  /** Część prowizji inwestora rozkładana równo na wszystkie raty. */
+  prowizjaRatalna: number;
+  amortyzacjaKapitalu: AmortyzacjaKapitalu;
   months: number;
   /** Nominalna prowizja inwestora miesięczna (P / N). */
   monthlyCommission: number;
@@ -134,6 +156,7 @@ function symuluj(
   mGr: number,
   lastGr: number,
   first: { y: number; m: number; d: number } | null,
+  wBalonie = false,
 ): { rows: EngineScheduleRow[]; capped: boolean } {
   const rows: EngineScheduleRow[] = [];
   let remaining = K;
@@ -145,7 +168,7 @@ function symuluj(
     let kapital: number;
     if (i < N) {
       const capacity = round2(maxPay - odsetki - prowizja);
-      kapital = Math.min(Math.max(0, capacity), remaining);
+      kapital = wBalonie ? 0 : Math.min(Math.max(0, capacity), remaining);
       if (capacity < 0) capped = true;
     } else {
       kapital = remaining; // ostatnia rata: cały pozostały kapitał (balon)
@@ -187,6 +210,9 @@ function pusty(
     kwotaWyplaconaKlientowi: round2(Math.max(0, K - fee)),
     prowizja: P,
     prowizjaInwestora: P,
+    prowizjaWRacieKoncowej: 0,
+    prowizjaRatalna: P,
+    amortyzacjaKapitalu: "nadwyzka_raty",
     months: N,
     monthlyCommission: 0,
     regularPayment: maxPay,
@@ -214,6 +240,14 @@ export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule 
   const asOf = input.asOf ?? new Date();
   const errors: string[] = [];
   const warnings: string[] = [];
+  const amortyzacja: AmortyzacjaKapitalu = input.amortyzacjaKapitalu ?? "nadwyzka_raty";
+  let balon = Math.max(0, round2(input.prowizjaWRacieKoncowej ?? 0));
+  if (balon > P) {
+    errors.push(
+      "Część prowizji płatna z ratą końcową przekracza łączną prowizję inwestora — popraw warunki.prowizja.w_racie_koncowej.",
+    );
+    balon = P;
+  }
 
   if (rateExceedsMax(input.annualRatePercent, asOf)) errors.push(maxRateMessage(asOf));
   if (fee > K && K > 0) {
@@ -235,10 +269,12 @@ export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule 
   const r = input.annualRatePercent / 100 / 12;
   const first = input.firstPaymentDate ? parseAnyDate(input.firstPaymentDate) : null;
 
-  // prowizja inwestora rozłożona równo; ostatnia rata absorbuje zaokrąglenie
-  const mGr = Math.round((P / N) * 100);
-  const lastGr = Math.round(P * 100) - mGr * (N - 1);
-  const sim = symuluj(K, r, N, maxPay, mGr, lastGr, first);
+  // prowizja inwestora (część ratalna) rozłożona równo; ostatnia rata
+  // absorbuje zaokrąglenie i niesie część płatną z ratą końcową
+  const ratalna = round2(P - balon);
+  const mGr = Math.round((ratalna / N) * 100);
+  const lastGr = Math.round(ratalna * 100) - mGr * (N - 1) + Math.round(balon * 100);
+  const sim = symuluj(K, r, N, maxPay, mGr, lastGr, first, amortyzacja === "w_balonie");
   const rows = sim.rows;
   if (sim.capped) {
     errors.push(
@@ -265,6 +301,9 @@ export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule 
     kwotaWyplaconaKlientowi: round2(Math.max(0, K - fee)),
     prowizja: prowizjaRazem,
     prowizjaInwestora: prowizjaRazem,
+    prowizjaWRacieKoncowej: balon,
+    prowizjaRatalna: ratalna,
+    amortyzacjaKapitalu: amortyzacja,
     months: N,
     monthlyCommission,
     regularPayment: maxPay,

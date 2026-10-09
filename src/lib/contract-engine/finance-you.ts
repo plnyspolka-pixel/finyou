@@ -9,7 +9,7 @@ export const FINANCE_YOU = {
   rachunek: COMPANY_DATA.bankAccount,
   /** Rachunek do spłaty pożyczek udzielanych przez Finance You (§ 2 — spłata). */
   rachunekSplaty: COMPANY_DATA.bankAccount,
-  /** Rachunek na Prowizję od Pożyczkobiorcy potrącaną z wypłaty (Zał. 6 / Zał. 4). */
+  /** Rachunek na Prowizję od Pożyczkobiorcy potrącaną z wypłaty (§ 2 umowy pożyczki, KWO_03e). */
   rachunekProwizji: COMPANY_DATA.bankAccount,
 } as const;
 

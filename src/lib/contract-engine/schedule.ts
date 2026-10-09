@@ -143,8 +143,11 @@ function round2(n: number): number {
 export interface KorektaGroszowa {
   sciezka: string;
   komunikat: string;
-  /** O ile skorygowano ratę balonową (zł; dodatnia = podwyższono). */
-  kwota: number;
+  /**
+   * O ile skorygowano ratę balonową (zł; dodatnia = podwyższono). Brak przy
+   * autouzupełnieniach niekwotowych (wartości domyślne, sąd ze słownika KW).
+   */
+  kwota?: number;
 }
 
 /**

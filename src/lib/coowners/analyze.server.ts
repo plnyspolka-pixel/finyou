@@ -66,6 +66,17 @@ export async function analyzeCoOwners(args: {
   primaryClientName?: string | null;
   /** NIP klienta wniosku (kartoteka / wniosek) — sprawdzany przy jego wierszu. */
   primaryClientNip?: string | null;
+  /**
+   * PESEL klienta wniosku — wiersz klienta rozpoznajemy po PESEL z działu II
+   * (także po zmianie nazwiska), a nie tylko po imieniu i nazwisku.
+   */
+  primaryClientPesel?: string | null;
+  /**
+   * Wynik CEIDG klienta ustalony po NIP (clients.ceidg_snapshot) — ten sam,
+   * którego używa analiza ryzyka; przy wierszu klienta nie pytamy CEIDG
+   * ponownie po nazwisku z KW.
+   */
+  primaryClientCeidg?: CeidgActivity | null;
   city?: string | null;
   voivodeship?: string | null;
 }): Promise<CoOwnersAnalysis> {
@@ -115,16 +126,22 @@ export async function analyzeCoOwners(args: {
         );
       }
 
-      const isPrimary = personNamesOverlap(args.primaryClientName, o.fullName);
+      const isPrimary =
+        (!!args.primaryClientPesel && !!o.pesel && o.pesel === args.primaryClientPesel) ||
+        personNamesOverlap(args.primaryClientName, o.fullName);
       const nip = isPrimary ? (args.primaryClientNip ?? null) : null;
+      const wspolnyCeidg =
+        isPrimary && args.primaryClientCeidg?.available ? args.primaryClientCeidg : null;
       const [ceidg, krs] = await Promise.all([
-        lookupBusiness({
-          firstName: o.firstName,
-          lastName: o.lastName,
-          nip,
-          city: args.city ?? null,
-          voivodeship: args.voivodeship ?? null,
-        }),
+        wspolnyCeidg
+          ? Promise.resolve(wspolnyCeidg)
+          : lookupBusiness({
+              firstName: o.firstName,
+              lastName: o.lastName,
+              nip,
+              city: args.city ?? null,
+              voivodeship: args.voivodeship ?? null,
+            }),
         searchKrsForPerson({
           firstName: o.firstName,
           lastName: o.lastName,

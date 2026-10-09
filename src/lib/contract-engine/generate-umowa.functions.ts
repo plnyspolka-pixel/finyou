@@ -24,7 +24,8 @@ import { buildUmowaData, profileToCalcPayload, type BuildUmowaOptions } from "./
 import { waliduj } from "./validator";
 import { autonaprawHarmonogram, walidujHarmonogram, type KorektaGroszowa } from "./schedule";
 import { generujKomplet, tekstKompletu, type KompletWynik } from "./komplet";
-import { normalizujNumeryKw } from "./umowa-agent-core";
+import { normalizujNumeryKw, uzupelnijSlownie } from "./umowa-agent-core";
+import { problemyKosztowe, uzupelnijDomyslne, ustawPoczatekNegocjacji } from "./uzupelnienia";
 import { nieruchomosciZKw } from "./kw-nieruchomosci.server";
 import type { Problem } from "./validator";
 import { zapiszUmoweDocx } from "./umowa-storage.server";
@@ -105,11 +106,20 @@ async function zbudujIzweryfikuj(supabase: any, profile: ClientProfile, input: U
   };
   const umowa = buildUmowaData(profile, calc, opts);
 
+  // Zał. nr 2: okres negocjacji od dnia przyjęcia wniosku do systemu.
+  const { dataPrzyjeciaWniosku, wniosekProfilu } =
+    await import("@/lib/clients/kartoteka-umowy.server");
+  const korektyNegocjacji = ustawPoczatekNegocjacji(
+    umowa,
+    await dataPrzyjeciaWniosku(supabase, await wniosekProfilu(supabase, profile.id)),
+  );
+
   // Auto-uzupełnianie z KW (jak `kw_numbers` w MCP): sąd, opis lokalu z działu
   // I-O, właściciele i PESEL z działu II, obciążenia z działów III/IV. Brak
   // treści w cache nie blokuje — nieruchomość zostaje ze szkicu profilu.
   const problemyKw: Problem[] = [];
   let kwOstrzezenia: string[] = [];
+  let kwAutokorekty: KorektaGroszowa[] = [];
   const kwNumbers = (input.kwNumbers ?? [profile.propertyData?.landRegisterNumber ?? ""]).filter(
     (k) => String(k ?? "").trim(),
   );
@@ -123,6 +133,7 @@ async function zbudujIzweryfikuj(supabase: any, profile: ClientProfile, input: U
         { wymagajTresci: false },
       );
       kwOstrzezenia = r.ostrzezenia;
+      kwAutokorekty = r.autokorekty;
       if (r.nieruchomosci.length) {
         // Hipoteka Pożyczkodawcy wynika z oferty, nie z księgi.
         for (const n of r.nieruchomosci) n.hipoteka ??= stub[0]?.hipoteka;
@@ -142,7 +153,16 @@ async function zbudujIzweryfikuj(supabase: any, profile: ClientProfile, input: U
   // Zmiana 4 (po Kańkowskich): rozjazd groszowy z zaokrągleń domykamy na racie
   // balonowej PRZED walidacją. Korekta jest odnotowana w wyniku (informacja
   // techniczna dla operatora), nie w treści umowy.
-  const autokorekty: KorektaGroszowa[] = autonaprawHarmonogram(umowa.warunki);
+  // Wartości domyślne (termin wezwania 777, data graniczna, kwota hipoteki ↔
+  // 777, miejscownik, sąd z kodu KW) — jak w draft_contract / agencie umowy.
+  const domyslne = uzupelnijDomyslne(umowa);
+  uzupelnijSlownie(umowa);
+  const autokorekty: KorektaGroszowa[] = [
+    ...korektyNegocjacji,
+    ...kwAutokorekty,
+    ...domyslne.autokorekty,
+    ...autonaprawHarmonogram(umowa.warunki),
+  ];
 
   const problemy: Problem[] = [
     ...problemyKw,
@@ -150,6 +170,9 @@ async function zbudujIzweryfikuj(supabase: any, profile: ClientProfile, input: U
     ...kwOstrzezenia.map((k) => ({ poziom: "OSTRZEZENIE" as const, sciezka: "kw", komunikat: k })),
     ...waliduj(umowa),
     ...walidujHarmonogram(umowa.warunki),
+    ...domyslne.problemy,
+    // Ostrzeżenia kosztowe (pkt 6) — nigdy nie blokują.
+    ...problemyKosztowe(umowa),
   ];
   const blocked = problemy.some((p) => p.poziom === "BLAD");
   return { calc, umowa, problemy, blocked, autokorekty, kwOstrzezenia };
