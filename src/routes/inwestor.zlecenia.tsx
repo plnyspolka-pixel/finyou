@@ -403,7 +403,6 @@ function ProjectCard({
               applicationId={p.applicationId}
               reservationExpiresAt={reserved.reservationExpiresAt}
               clientId={p.clientId}
-              myOfferId={p.myOfferId}
             />
           ) : (
             <div className="space-y-2 rounded-md bg-muted/40 p-3">
@@ -982,17 +981,13 @@ function ContactBox({
   applicationId,
   reservationExpiresAt,
   clientId,
-  myOfferId,
 }: {
   contact: OrderProject["contact"];
   applicationId: string;
   reservationExpiresAt: string | null;
   clientId: string | null;
-  myOfferId: string | null;
 }) {
-  const noOfferHint =
-    "Najpierw złóż ofertę („Złóż ofertę” powyżej) — umowa powstaje z jej warunków.";
-  const { createContract, pendingKey } = useCreateContract();
+  const { createContract, prepareContract, pendingKey } = useCreateContract();
   return (
     <div className="space-y-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1046,29 +1041,27 @@ function ContactBox({
           Stwórz umowę
         </Button>
         {/* Dane stron do umowy (klient uzupełnia swoje równolegle). */}
-        {myOfferId ? (
-          <Button asChild size="sm" variant="outline">
-            <Link to="/inwestor/umowa/$offerId" params={{ offerId: myOfferId }}>
-              <FileSignature className="mr-2 h-4 w-4" /> Przygotuj umowę
-            </Link>
-          </Button>
-        ) : (
-          <Button size="sm" variant="outline" disabled title={noOfferHint}>
-            <FileSignature className="mr-2 h-4 w-4" /> Przygotuj umowę
-          </Button>
-        )}
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={pendingKey === `prep:${applicationId}`}
+          onClick={() => void prepareContract(applicationId)}
+        >
+          {pendingKey === `prep:${applicationId}` ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <FileSignature className="mr-2 h-4 w-4" />
+          )}
+          Przygotuj umowę
+        </Button>
         {/* E-podpis (forma dokumentowa): klient jako pierwszy podpisujący. */}
-        {myOfferId && clientId ? (
-          <Button asChild size="sm" variant="outline">
-            <a href={`/inwestor/podpisy?nowa=1&klient=${clientId}&wniosek=${applicationId}`}>
-              <PenLine className="mr-2 h-4 w-4" /> Podpisz umowę
-            </a>
-          </Button>
-        ) : (
-          <Button size="sm" variant="outline" disabled title={noOfferHint}>
+        <Button asChild size="sm" variant="outline">
+          <a
+            href={`/inwestor/podpisy?nowa=1${clientId ? `&klient=${clientId}` : ""}&wniosek=${applicationId}`}
+          >
             <PenLine className="mr-2 h-4 w-4" /> Podpisz umowę
-          </Button>
-        )}
+          </a>
+        </Button>
       </div>
     </div>
   );
