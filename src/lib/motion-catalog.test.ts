@@ -168,3 +168,34 @@ describe("motionWithCueTiming", () => {
     ]);
   });
 });
+
+describe("schemat odpowiedzi projektanta", () => {
+  it("mieści się w limicie API: najwyżej 16 parametrów z unią / anyOf", async () => {
+    const { OUTPUT_SCHEMA } = await import("./motion-designer.server");
+    let unions = 0;
+    const walk = (node: unknown) => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (!node || typeof node !== "object") return;
+      const o = node as Record<string, unknown>;
+      if (Array.isArray(o.anyOf) || Array.isArray(o.type)) unions++;
+      Object.values(o).forEach(walk);
+    };
+    walk(OUTPUT_SCHEMA);
+    expect(unions).toBeLessThanOrEqual(16);
+  });
+
+  it("pusty tekst w polach opcjonalnych czyta się jak brak", () => {
+    const [el] = sanitizeMotionDesign([
+      {
+        component: "stat",
+        zone: "top",
+        sync: "Większość spraw na rynku",
+        endSync: "",
+        itemSync: [],
+        props: { kicker: "", value: "250 tys. zł", caption: "" },
+      },
+    ]);
+    expect(el.endSync).toBeNull();
+    expect(el.props).toEqual({ kicker: null, value: "250 tys. zł", caption: null });
+  });
+});
