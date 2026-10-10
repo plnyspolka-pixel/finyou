@@ -230,8 +230,13 @@ apple 2) przez staging `_mig.auth_*` → `insert` jako `postgres` (bez kolumny g
 
 **Po załadowaniu:** identity z powrotem `always` (7/7), `enable trigger user` (145/145), FK cyklu
 `not deferrable`, `handle_new_user` = oryginał (md5 zgodne), faza 16 `setval` (10 sekwencji;
-np. `cookie_consent_log_id_seq` 59 → następny id 60), `migrator` bez `bypassrls` i bez grantów,
-hashe/tokeny w stagingu `_mig.auth_users` wyzerowane.
+np. `cookie_consent_log_id_seq` 59 → następny id 60), `migrator` bez `bypassrls` i bez grantów.
+**Uwaga:** staging `_mig.auth_users` nadal zawiera hashe haseł i tokeny (konektor anulował `update`
+zerujący te kolumny) — do usunięcia przy sprzątaniu (`drop schema _mig cascade`) albo ręcznie
+w panelu SQL: `update _mig.auth_users set encrypted_password = null, confirmation_token = null,
+recovery_token = null, email_change_token_new = null, email_change_token_current = null,
+phone_change_token = null, reauthentication_token = null, raw_user_meta_data = '{}';
+update _mig.auth_identities set identity_data = '{}';`
 
 **Weryfikacja:** liczby wierszy 245/245 tabel zgodne (268 127 wierszy w nowej bazie; jedyna
 różnica zamierzona: `lead_communications` −45 329). Sumy kontrolne per tabela (ten sam SQL po obu
