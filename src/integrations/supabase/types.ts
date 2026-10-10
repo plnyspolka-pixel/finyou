@@ -13369,6 +13369,7 @@ export type Database = {
           material_audience:
             | Database["public"]["Enums"]["marketing_audience"]
             | null
+          motion_design: Json | null
           prompt: string
           publish_description: string
           publish_privacy: string
@@ -13410,6 +13411,7 @@ export type Database = {
           material_audience?:
             | Database["public"]["Enums"]["marketing_audience"]
             | null
+          motion_design?: Json | null
           prompt: string
           publish_description?: string
           publish_privacy?: string
@@ -13451,6 +13453,7 @@ export type Database = {
           material_audience?:
             | Database["public"]["Enums"]["marketing_audience"]
             | null
+          motion_design?: Json | null
           prompt?: string
           publish_description?: string
           publish_privacy?: string

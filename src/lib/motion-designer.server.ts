@@ -4,12 +4,9 @@
 // strefie, z jaką treścią i przy jakim DOSŁOWNYM fragmencie lektora ma
 // wejść. Czasy liczymy potem sami z SRT (`motionWithCueTiming`) — model nie
 // zgaduje sekund, a element bez dopasowania w mówionym tekście odpada.
-//
-// API Anthropica wołamy przez `fetch` (jak ai-admin.server.ts), nie przez SDK:
-// moduł poświadczeń SDK importuje statycznie node:child_process / node:fs,
-// a ten kod chodzi na Cloudflare Workerze.
 
 import type { SrtCue } from "./caption-style";
+import { STUDIO_CLAUDE_MODEL, claudeJson, isClaudeConfigured } from "./claude-json.server";
 import {
   MOTION_CATALOG_PROMPT,
   MOTION_COMPONENTS,
@@ -18,12 +15,8 @@ import {
   type MotionDesignElement,
 } from "./motion-catalog";
 
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const ANTHROPIC_VERSION = "2023-06-01";
-export const MOTION_DESIGNER_MODEL = "claude-sonnet-5-5";
-
-export const isMotionDesignerConfigured = (): boolean =>
-  !!(process.env.ANTHROPIC_API_KEY ?? "").trim();
+export const MOTION_DESIGNER_MODEL = STUDIO_CLAUDE_MODEL;
+export const isMotionDesignerConfigured = isClaudeConfigured;
 
 const SYSTEM = `Jesteś motion designerem krótkich pionowych rolek (Reels/Shorts) firmy Finance You — pożyczki pod zastaw nieruchomości i inwestowanie w takie pożyczki. Projektujesz elementy graficzne, które pojawiają się nad mówiącym awatarem i tłumaczą widzowi to, co właśnie słyszy.
 
@@ -124,12 +117,6 @@ const OUTPUT_SCHEMA = {
 
 const formatSrtTime = (s: number) => `${s.toFixed(1)}s`;
 
-type AnthropicResponse = {
-  stop_reason: string | null;
-  content: { type: string; text?: string }[];
-  usage?: { input_tokens: number; output_tokens: number };
-};
-
 /**
  * Projekt elementów dynamicznych dla scenariusza z czasami kwestii.
  * Rzuca przy błędzie API / odmowie / pustej odpowiedzi — wołający spada
@@ -140,8 +127,6 @@ export async function designMotion(args: {
   cues: SrtCue[];
   topic?: string | null;
 }): Promise<MotionDesignElement[]> {
-  const key = (process.env.ANTHROPIC_API_KEY ?? "").trim();
-  if (!key) throw new Error("ANTHROPIC_API_KEY nie jest ustawiony.");
   if (!args.cues.length) throw new Error("Brak kwestii SRT — projektant potrzebuje czasów.");
 
   const duration = args.cues[args.cues.length - 1].end;
@@ -160,36 +145,12 @@ export async function designMotion(args: {
     .filter(Boolean)
     .join("\n\n");
 
-  const res = await fetch(ANTHROPIC_URL, {
-    method: "POST",
-    headers: {
-      "x-api-key": key,
-      "anthropic-version": ANTHROPIC_VERSION,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MOTION_DESIGNER_MODEL,
-      max_tokens: 16000,
-      system: SYSTEM,
-      messages: [{ role: "user", content: user }],
-      output_config: {
-        effort: "high",
-        format: { type: "json_schema", schema: OUTPUT_SCHEMA },
-      },
-    }),
+  const parsed = await claudeJson<{ elements?: unknown }>({
+    system: SYSTEM,
+    content: [{ type: "text", text: user }],
+    schema: OUTPUT_SCHEMA,
+    effort: "high",
+    label: "Projektant",
   });
-  if (!res.ok) {
-    throw new Error(`Projektant (Claude) HTTP ${res.status}: ${(await res.text()).slice(0, 400)}`);
-  }
-  const body = (await res.json()) as AnthropicResponse;
-  if (body.stop_reason === "refusal") throw new Error("Projektant (Claude) odmówił odpowiedzi.");
-  if (body.stop_reason === "max_tokens") throw new Error("Projektant (Claude): ucięta odpowiedź.");
-  const text = body.content.find((b) => b.type === "text")?.text ?? "";
-  let parsed: { elements?: unknown };
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error(`Projektant (Claude): niepoprawny JSON: ${text.slice(0, 200)}`);
-  }
   return sanitizeMotionDesign(parsed.elements);
 }

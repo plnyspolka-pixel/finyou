@@ -1119,8 +1119,49 @@ export const addStudioBroll = createServerFn({ method: "POST" })
       source: "url",
       sourceQuery: data.title ?? "",
       userId: context.userId,
+      autoDescribe: !tags.length,
     });
     return { ok: true, id: asset.id, media_url: asset.media_url };
+  });
+
+// Upload pliku z dysku (panel: przeciągnij i upuść, wiele plików — po jednym
+// na wywołanie). Bez tagów grafikę opisuje AI (tytuł sceny, tagi EN/PL).
+export const uploadStudioBroll = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => {
+    if (!(input instanceof FormData)) throw new Error("Oczekiwano FormData");
+    const file = input.get("file");
+    if (!(file instanceof File)) throw new Error("Brak pliku");
+    const str = (k: string) => {
+      const v = input.get(k);
+      return typeof v === "string" ? v : "";
+    };
+    return { file, title: str("title"), tags: str("tags") };
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { addBrollFromBytes } = await import("./studio-broll.server");
+    const tags = data.tags
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+    const asset = await addBrollFromBytes({
+      bytes: new Uint8Array(await data.file.arrayBuffer()),
+      mime: data.file.type || "",
+      title: data.title.trim() || undefined,
+      tags,
+      source: "upload",
+      sourceQuery: data.title.trim(),
+      userId: context.userId,
+      autoDescribe: !tags.length,
+    });
+    return {
+      ok: true,
+      id: asset.id,
+      media_url: asset.media_url,
+      title: asset.title,
+      tags: asset.tags,
+    };
   });
 
 export const setStudioBrollActive = createServerFn({ method: "POST" })

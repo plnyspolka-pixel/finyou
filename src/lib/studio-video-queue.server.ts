@@ -35,7 +35,7 @@ import {
   type CaptionBurnState,
   type HeygenCaptionOutputs,
 } from "./studio-captions";
-import type { CustomCaptionStyleId, DynamicOverlays } from "./caption-style";
+import type { CustomCaptionStyleId, DynamicOverlays, SrtCue } from "./caption-style";
 import type { MotionDesignElement } from "./motion-catalog";
 import { AVATARS_PER_REEL } from "./studio-scenes";
 
@@ -74,6 +74,8 @@ export type StudioJobRow = {
   tts_model_id?: string | null;
   /** Silnik wykończenia (studio-render-engine.ts); brak / `auto` = ustawienie Studia. */
   render_engine?: string | null;
+  /** Projekt elementów dynamicznych (motion-catalog.ts); null = zaprojektuj przy wykończeniu. */
+  motion_design?: unknown;
 };
 
 type JobRow = StudioJobRow;
@@ -143,7 +145,7 @@ async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
   // komponentów (motion-catalog.ts) — zastępują karty. Porażka projektanta
   // spada na zwykłe karty niżej.
   if (script) {
-    const motion = await designMotionForJob(job, script, q?.question ?? job.prompt);
+    const motion = await designMotionForJob(job, q?.question ?? job.prompt);
     if (motion?.length) return { ...(base ?? {}), cards: [], motion };
   }
   if (script) {
@@ -160,25 +162,69 @@ async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
   return base;
 }
 
-/** Projekt elementów dynamicznych (Claude) — tylko silnik Remotion, z SRT; null = brak. */
+/** Kwestie SRT joba (tekst scenariusza z czasami ElevenLabs) — do projektu i podglądu czasów. */
+export async function loadJobCues(job: JobRow): Promise<SrtCue[]> {
+  if (!job.subtitle_url) throw new Error("Zadanie nie ma pliku SRT (napisy z czasami lektora).");
+  const { fetchBytes } = await import("./media-storage.server");
+  const { parseSubtitles } = await import("./caption-style");
+  const { fixBrandInCues } = await import("./caption-brand");
+  const srt = new TextDecoder().decode((await fetchBytes(job.subtitle_url, 2 * 1024 * 1024)).bytes);
+  return fixBrandInCues(parseSubtitles(srt));
+}
+
+/**
+ * Projekt elementów dynamicznych od Claude dla joba — zapisany w
+ * `motion_design`, żeby ponowne wypalenie dało te same elementy (pusta lista
+ * też się zapisuje: „nic tu nie pasuje”, bez pytania modelu przy każdym
+ * wypaleniu). Rzuca przy błędzie.
+ */
+export async function designAndSaveMotion(
+  job: JobRow,
+  topic?: string | null,
+): Promise<MotionDesignElement[]> {
+  const script = job.script?.trim();
+  if (!script) throw new Error("Zadanie nie ma scenariusza.");
+  const { designMotion } = await import("./motion-designer.server");
+  const cues = await loadJobCues(job);
+  const elements = await designMotion({ script, cues, topic: topic ?? job.prompt });
+  await saveMotionDesign(job.id, elements);
+  // Kolejne overlaysForJob na tym samym obiekcie (ten sam przebieg) biorą zapis, nie pytają modelu.
+  job.motion_design = elements;
+  return elements;
+}
+
+export async function saveMotionDesign(
+  jobId: string,
+  elements: MotionDesignElement[] | null,
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("studio_video_jobs")
+    .update({ motion_design: elements as never })
+    .eq("id", jobId);
+  if (error) throw new Error(`studio_video_jobs: ${error.message}`);
+}
+
+/**
+ * Elementy dynamiczne do wykończenia (tylko silnik Remotion): zapisany projekt
+ * (od AI albo wgrany przez robota `set_studio_motion`), a bez niego nowy
+ * projekt Claude. null = brak — wtedy zwykłe karty.
+ */
 async function designMotionForJob(
   job: JobRow,
-  script: string,
   topic: string | null,
 ): Promise<MotionDesignElement[] | null> {
   const { resolveRenderEngine } = await import("./studio-render-engine");
-  if (resolveRenderEngine(job.render_engine) !== "remotion" || !job.subtitle_url) return null;
-  const { isMotionDesignerConfigured, designMotion } = await import("./motion-designer.server");
-  if (!isMotionDesignerConfigured()) return null;
+  if (resolveRenderEngine(job.render_engine) !== "remotion") return null;
+  if (job.motion_design != null) {
+    const { sanitizeMotionDesign } = await import("./motion-catalog");
+    const saved = sanitizeMotionDesign(job.motion_design);
+    return saved.length ? saved : null;
+  }
+  const { isMotionDesignerConfigured } = await import("./motion-designer.server");
+  if (!job.subtitle_url || !isMotionDesignerConfigured()) return null;
   try {
-    const { fetchBytes } = await import("./media-storage.server");
-    const { parseSubtitles } = await import("./caption-style");
-    const { fixBrandInCues } = await import("./caption-brand");
-    const srt = new TextDecoder().decode(
-      (await fetchBytes(job.subtitle_url, 2 * 1024 * 1024)).bytes,
-    );
-    const cues = fixBrandInCues(parseSubtitles(srt));
-    return await designMotion({ script, cues, topic });
+    const elements = await designAndSaveMotion(job, topic);
+    return elements.length ? elements : null;
   } catch (e) {
     console.warn(`[Studio] projekt elementów dynamicznych nieudany (${job.id}): ${errMsg(e)}`);
     return null;
@@ -823,6 +869,8 @@ export async function retryStudioJob(job: JobRow): Promise<{ mode: "captions" | 
       caption_burn_started_at: null,
       caption_burn_attempts: 0,
       scene_plan: null,
+      // Nowy render = nowy SRT; stary projekt elementów miałby złe kotwice.
+      motion_design: null,
     })
     .eq("id", job.id)
     .eq("status", "failed");
