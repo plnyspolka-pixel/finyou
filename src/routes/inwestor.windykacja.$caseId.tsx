@@ -61,6 +61,12 @@ import {
 } from "@/lib/document-generator.functions";
 import { extractOrderedFields } from "@/lib/document-fields";
 import { buildWindTemplateValues } from "@/lib/windykacja-docfill";
+import { windCreditorPurpose } from "@/lib/windykacja-documents";
+import {
+  INVESTOR_PROFILE_PATH,
+  creditorMissingMessage,
+  type WindCreditorView,
+} from "@/lib/investor-party";
 import { SmartScanField } from "@/components/inwestor/wind-smart-scan";
 import type { WindOcrResult } from "@/lib/windykacja-ocr.functions";
 import {
@@ -227,6 +233,7 @@ function WindykacjaCaseCard() {
   const [borrower, setBorrower] = useState<WindBorrower | null>(null);
   const [events, setEvents] = useState<WindEvent[]>([]);
   const [documents, setDocuments] = useState<WindDocument[]>([]);
+  const [creditor, setCreditor] = useState<WindCreditorView | null>(null);
   const [loading, setLoading] = useState(true);
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [action, setAction] = useState<ActionKind>(null);
@@ -244,6 +251,7 @@ function WindykacjaCaseCard() {
       setBorrower(res.borrower);
       setEvents(res.events);
       setDocuments(res.documents);
+      setCreditor(res.creditor);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nie udało się pobrać sprawy");
     } finally {
@@ -385,6 +393,15 @@ function WindykacjaCaseCard() {
           </div>
         }
       />
+
+      {/* Wierzyciel z profilu inwestora — braki blokują pisma, zanim ktoś spróbuje. */}
+      {creditor && (
+        <CreditorAlert
+          creditor={creditor}
+          contractLender={loan.pozyczkodawca}
+          own={!user || user.id === kase.investor_user_id}
+        />
+      )}
 
       {/* ASYSTENT KROK PO KROKU — prosty przewodnik dla inwestora. */}
       <WizardCard
@@ -549,7 +566,21 @@ function WindykacjaCaseCard() {
                 ) : (
                   <Info label="Termin spłaty" value={formatDataPL(loan.termin_splaty)} />
                 )}
-                <Info label="Pożyczkodawca" value={loan.pozyczkodawca ?? "—"} wide />
+                <Info
+                  label={
+                    creditor?.party?.source === "finance_you"
+                      ? "Wierzyciel (sprawa zespołu Finance You)"
+                      : "Wierzyciel (z profilu inwestora)"
+                  }
+                  value={creditor?.party?.legalName || "—"}
+                  wide
+                />
+                <Info
+                  label="Pożyczkodawca (z umowy)"
+                  value={loan.pozyczkodawca ?? "—"}
+                  valueClass={creditor?.conflictWithContract ? "text-amber-700" : undefined}
+                  wide
+                />
                 <Info label="Rachunek do spłaty" value={loan.rachunek_splaty ?? "—"} wide />
                 <Info
                   label="KW / hipoteka"
@@ -763,6 +794,7 @@ function WindykacjaCaseCard() {
           borrower={borrower}
           amountDueNow={amountDueNow}
           wholeDebt={snap?.calosc ?? null}
+          creditorName={creditor?.party?.shortName ?? null}
           onClose={() => {
             setAction(null);
             setDocPreset(null);
@@ -791,6 +823,7 @@ function WindykacjaCaseCard() {
           events={events}
           userId={user?.id}
           snap={snap}
+          creditor={creditor}
           fns={{
             doContact,
             doPismo,
@@ -921,6 +954,69 @@ function TimelineItem({
         ) : null}
       </div>
     </li>
+  );
+}
+
+/**
+ * Wierzyciel sprawy (profil inwestora — właściciela sprawy): brak profilu
+ * albo braki danych blokujące pisma, braki tylko dla wniosków i rozbieżność
+ * z pożyczkodawcą wpisanym z umowy (ostrzeżenie — pisma idą wg profilu).
+ */
+function CreditorAlert({
+  creditor,
+  contractLender,
+  own,
+}: {
+  creditor: WindCreditorView;
+  contractLender: string | null;
+  /** Sprawę ogląda jej właściciel (inaczej — personel w cudzej sprawie). */
+  own: boolean;
+}) {
+  const { party, missing, error, conflictWithContract } = creditor;
+  const blocking =
+    error ?? (missing.pismo.length ? creditorMissingMessage(missing.pismo, own) : null);
+  const forWnioski = !blocking && missing.wniosek.length ? missing.wniosek : null;
+  if (!blocking && !forWnioski && !conflictWithContract) return null;
+  const profileLink = own ? (
+    <Link to={INVESTOR_PROFILE_PATH} className="underline font-medium whitespace-nowrap">
+      Przejdź do Profilu
+    </Link>
+  ) : null;
+  return (
+    <div className="space-y-2">
+      {blocking && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <div>
+            <div className="font-semibold">Uzupełnij dane wierzyciela — pisma są zablokowane</div>
+            <div className="text-xs mt-0.5">
+              {blocking} {profileLink}
+            </div>
+          </div>
+        </div>
+      )}
+      {forWnioski && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>
+            Wnioski do sądu i komornika oraz zawiadomienia wymagają pełnej identyfikacji
+            wierzyciela. W profilu inwestora brakuje: {forWnioski.join(", ")}. Wezwania i pozostałe
+            pisma można już generować. {profileLink}
+          </span>
+        </div>
+      )}
+      {conflictWithContract && party && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>
+            Pożyczkodawca wpisany z umowy ({contractLender}) różni się od wierzyciela z profilu
+            inwestora ({party.legalName}). Pisma, SMS-y i e-maile wychodzą w imieniu wierzyciela z
+            profilu — sprawdź, czy to właściwa strona (np. inna firma inwestora albo cesja
+            wierzytelności).
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1418,6 +1514,7 @@ function ActionDialog({
   events,
   userId,
   snap,
+  creditor,
   fns,
   onDone,
 }: {
@@ -1432,6 +1529,8 @@ function ActionDialog({
   userId?: string;
   /** Stan zadłużenia na dziś (kwoty domyślne SMS-a, telefonu i pism DOCX). */
   snap: WindDebtSnapshot | null;
+  /** Wierzyciel z profilu właściciela sprawy (nadawca pism, SMS-ów i e-maili). */
+  creditor: WindCreditorView | null;
   fns: Fns;
   onDone: (ev?: WindEvent) => void;
 }) {
@@ -1439,9 +1538,23 @@ function ActionDialog({
   // Do zapłaty teraz: zaległe raty + odsetki za opóźnienie + koszty (po
   // wypowiedzeniu — całe zadłużenie).
   const amountDueNow = snap?.doZaplatyTeraz ?? Number(kase.kwota_zalegla || 0);
+  const creditorName = creditor?.party?.shortName ?? null;
   const [v, setV] = useState<Record<string, string>>(() =>
-    initialValues(kind, kase, loan, borrower, initialDocType, amountDueNow),
+    initialValues(kind, kase, loan, borrower, initialDocType, amountDueNow, creditorName),
   );
+  // Pismo w imieniu wierzyciela: brak profilu albo braki danych blokują
+  // generowanie (szablon tekstowy i wzór DOCX) — z listą braków.
+  const ownCase = !userId || userId === kase.investor_user_id;
+  const docPurpose = kind === "dokument" ? windCreditorPurpose(v.typ as WindDocumentType) : null;
+  const docBlocker = !docPurpose
+    ? null
+    : !creditor
+      ? null
+      : creditor.error
+        ? creditor.error
+        : creditor.missing[docPurpose].length
+          ? creditorMissingMessage(creditor.missing[docPurpose], ownCase)
+          : null;
   const [file, setFile] = useState<File | null>(null);
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
   const set = (k: string, val: string) => setV((p) => ({ ...p, [k]: val }));
@@ -1632,6 +1745,11 @@ function ActionDialog({
         toast.success("Dodano notatkę");
         onDone(ev);
       } else if (kind === "dokument") {
+        if (docBlocker) {
+          toast.error(docBlocker);
+          setBusy(false);
+          return;
+        }
         if (v.source === "docx") {
           if (!v.templateId) {
             toast.error("Wybierz wzór DOCX");
@@ -1646,6 +1764,7 @@ function ActionDialog({
           // a nie z migawki zapisanej przy ostatniej zmianie sprawy.
           const zRat = snap?.zrodlo === "harmonogram" && snap.raty ? snap : null;
           const values = buildWindTemplateValues(fields, {
+            wierzyciel: creditor?.party ?? null,
             dluznik: borrower.imie_nazwisko,
             adres: borrower.adres_do_doreczen || borrower.adres_zamieszkania || "",
             pesel: borrower.pesel,
@@ -1708,9 +1827,9 @@ function ActionDialog({
           {kind === "botcall" && (
             <DialogDescription>
               Agent AI (ElevenLabs) zadzwoni do dłużnika{" "}
-              {loan.pozyczkodawca?.trim()
-                ? `w imieniu pożyczkodawcy (${loan.pozyczkodawca.trim()})`
-                : "w Twoim imieniu"}{" "}
+              {loan.pozyczkodawca?.trim() || creditorName
+                ? `w imieniu pożyczkodawcy (${loan.pozyczkodawca?.trim() || creditorName})`
+                : "w imieniu wierzyciela"}{" "}
               i przypomni o konieczności uregulowania należności. Kwota do zapłaty jest przekazywana
               do rozmowy automatycznie. Połączenie zostanie zapisane w rejestrze czynności.
             </DialogDescription>
@@ -1974,10 +2093,30 @@ function ActionDialog({
                     </SelectContent>
                   </Select>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Wzór zostanie automatycznie uzupełniony danymi sprawy (dłużnik, kwoty, KW,
-                    data). Puste pola pozostaną do ręcznego wpełnienia.
+                    Wzór zostanie automatycznie uzupełniony danymi sprawy (wierzyciel z profilu
+                    inwestora, dłużnik, kwoty, KW, data). Puste pola pozostaną do ręcznego
+                    wypełnienia.
                   </p>
                 </Fld>
+              )}
+              {creditor?.party && !docBlocker && (
+                <p className="text-[11px] text-muted-foreground">
+                  Wierzyciel w piśmie: {creditor.party.legalName}
+                  {creditor.party.source === "investor" ? " (dane z profilu inwestora)" : ""}.
+                </p>
+              )}
+              {docBlocker && (
+                <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-[11px] text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>
+                    {docBlocker}{" "}
+                    {ownCase && (
+                      <Link to={INVESTOR_PROFILE_PATH} className="underline font-medium">
+                        Przejdź do Profilu
+                      </Link>
+                    )}
+                  </span>
+                </div>
               )}
             </>
           )}
@@ -2027,7 +2166,7 @@ function ActionDialog({
           <Button variant="ghost" onClick={onClose}>
             Anuluj
           </Button>
-          <Button onClick={submit} disabled={busy}>
+          <Button onClick={submit} disabled={busy || !!docBlocker}>
             {busy ? (
               <Loader2 className="h-4 w-4 mr-1 animate-spin" />
             ) : (
@@ -2089,6 +2228,8 @@ function initialValues(
   borrower: WindBorrower,
   initialDocType?: WindDocumentType | null,
   amountDueNow?: number | null,
+  /** Krótka nazwa wierzyciela (profil właściciela sprawy) — temat e-maila, podpis SMS-a. */
+  creditorName?: string | null,
 ): Record<string, string> {
   // Kwota komunikowana dłużnikowi: do zapłaty teraz (po wypowiedzeniu — całość).
   const dueNow = Math.max(0, round2(Number(amountDueNow ?? kase.kwota_zalegla) || 0));
@@ -2101,10 +2242,13 @@ function initialValues(
     base.target = borrower.telefon ?? "";
   if (kind === "email") {
     base.target = borrower.email ?? "";
-    base.subject = "Finance You — wezwanie do zapłaty";
+    base.subject = `Wezwanie do zapłaty${creditorName ? ` — ${creditorName}` : ""}`;
   }
   if (kind === "sms") {
-    base.tresc = buildWindSmsText(loan, dueNow, { wypowiedziana: windLoanIsTerminated(loan) });
+    base.tresc = buildWindSmsText(loan, dueNow, {
+      wypowiedziana: windLoanIsTerminated(loan),
+      nadawca: creditorName,
+    });
     base.oplata = fee("sms");
   }
   if (kind === "email") base.oplata = fee("email");
@@ -2264,7 +2408,7 @@ function LoanEditDialog({
               >
                 <Input
                   value={lf.pozyczkodawca}
-                  placeholder="np. Finance You sp. z o.o."
+                  placeholder="imię i nazwisko albo nazwa firmy z umowy"
                   onChange={(e) => updL("pozyczkodawca", e.target.value)}
                 />
               </Fld>

@@ -10,6 +10,7 @@ import {
   type WindEvent,
   type WindDocument,
 } from "@/lib/windykacja.functions";
+import type { WindCreditorView } from "@/lib/investor-party";
 import {
   PATH_LABELS,
   stageLabel,
@@ -64,6 +65,7 @@ function EvidenceReport() {
   const [borrower, setBorrower] = useState<WindBorrower | null>(null);
   const [events, setEvents] = useState<WindEvent[]>([]);
   const [documents, setDocuments] = useState<WindDocument[]>([]);
+  const [creditor, setCreditor] = useState<WindCreditorView | null>(null);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
@@ -74,6 +76,7 @@ function EvidenceReport() {
       setBorrower(res.borrower);
       setEvents(res.events);
       setDocuments(res.documents);
+      setCreditor(res.creditor);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nie udało się pobrać sprawy");
     } finally {
@@ -129,6 +132,10 @@ function EvidenceReport() {
   if (!kase || !loan || !borrower)
     return <div className="text-muted-foreground">Nie znaleziono sprawy.</div>;
 
+  // Raport wystawiany na zlecenie wierzyciela — inwestora, właściciela sprawy.
+  const party = creditor?.party ?? null;
+  const wierzyciel = party?.legalName || loan.pozyczkodawca || "—";
+
   return (
     <div className="space-y-5">
       <style>{PRINT_CSS}</style>
@@ -149,7 +156,7 @@ function EvidenceReport() {
       <div className="wind-report mx-auto max-w-[820px] rounded-lg border bg-white p-8 text-sm shadow-sm dark:bg-white">
         {/* Nagłówek */}
         <div className="border-b pb-4 mb-4">
-          <div className="text-xs text-gray-500">Finance You sp. z o.o.</div>
+          <div className="text-xs text-gray-500">Wierzyciel: {wierzyciel}</div>
           <h1 className="text-xl font-bold mt-1">Raport dowodowy sprawy windykacyjnej</h1>
           <div className="text-xs text-gray-500 mt-1">
             Wygenerowano: {formatDateTime(new Date().toISOString())} · Sprawa nr{" "}
@@ -172,9 +179,13 @@ function EvidenceReport() {
               <th>Adres do doręczeń</th>
               <td>{borrower.adres_do_doreczen || borrower.adres_zamieszkania || "—"}</td>
             </tr>
-            {loan.pozyczkodawca ? (
+            <tr>
+              <th>Wierzyciel</th>
+              <td>{party?.description || wierzyciel}</td>
+            </tr>
+            {loan.pozyczkodawca && (!party || creditor?.conflictWithContract) ? (
               <tr>
-                <th>Pożyczkodawca</th>
+                <th>Pożyczkodawca (wg umowy)</th>
                 <td>{loan.pozyczkodawca}</td>
               </tr>
             ) : null}
@@ -501,8 +512,8 @@ function EvidenceReport() {
         )}
 
         <div className="mt-8 pt-4 border-t text-xs text-gray-500">
-          Raport wygenerowany automatycznie z rejestru zdarzeń (append-only). Dokument przeznaczony
-          do akt sprawy. Finance You sp. z o.o.
+          Raport wygenerowany automatycznie z rejestru zdarzeń (append-only) w systemie Finance You
+          {party ? ` na zlecenie ${party.shortName}` : ""}. Dokument przeznaczony do akt sprawy.
         </div>
       </div>
     </div>

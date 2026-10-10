@@ -153,6 +153,8 @@ function WindykacjaDashboard() {
 
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [eventsByCase, setEventsByCase] = useState<Record<string, DashEvent[]>>({});
+  // Krótka nazwa wierzyciela wg sprawy (profil właściciela) — podpis SMS-a.
+  const [creditorNames, setCreditorNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [pathFilter, setPathFilter] = useState<string>("all");
@@ -168,6 +170,7 @@ function WindykacjaDashboard() {
     try {
       const res = await fetchDash();
       setCases(res.cases as CaseRow[]);
+      setCreditorNames(res.creditorNames ?? {});
       const map: Record<string, DashEvent[]> = {};
       for (const e of res.events) {
         (map[e.case_id] ??= []).push(e as unknown as DashEvent);
@@ -428,6 +431,7 @@ function WindykacjaDashboard() {
           borrower={quick.row.loan.borrower}
           amountDueNow={quick.amountDueNow}
           wholeDebt={quick.wholeDebt}
+          creditorName={creditorNames[quick.row.id] ?? null}
           onClose={() => setQuick(null)}
           onDone={() => {
             setQuick(null);
@@ -1209,11 +1213,11 @@ function NewCaseIntake({
           <Fld
             label="Pożyczkodawca (z umowy)"
             className="sm:col-span-2"
-            hint="Strona udzielająca pożyczki — agent AI dzwoni w jej imieniu."
+            hint="Strona udzielająca pożyczki — agent AI dzwoni w jej imieniu. Puste = Twoje dane z profilu inwestora."
           >
             <Input
               value={f.pozyczkodawca}
-              placeholder="np. Finance You sp. z o.o."
+              placeholder="imię i nazwisko albo nazwa firmy z umowy"
               onChange={(e) => upd("pozyczkodawca", e.target.value)}
             />
           </Fld>

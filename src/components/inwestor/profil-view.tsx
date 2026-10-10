@@ -36,8 +36,7 @@ import {
   type BankDetectResult,
 } from "@/lib/polish-bank";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
-
-type EntityType = "osoba_fizyczna" | "firma";
+import { investorEntityVariant, type EntityVariant } from "@/lib/investor-party";
 
 export function InwestorProfil() {
   const { user } = useAuth();
@@ -46,15 +45,15 @@ export function InwestorProfil() {
   const [fetching, setFetching] = useState(false);
   const [fetchingKrs, setFetchingKrs] = useState(false);
   const [krsData, setKrsData] = useState<KrsCompany | null>(null);
-  // "P" = osoba prawna (spółka), "F" = osoba fizyczna prowadząca działalność (JDG)
-  const [gusEntityType, setGusEntityType] = useState<string>("");
   const [bankInfo, setBankInfo] = useState<BankDetectResult | null>(null);
   const [showFullAccount, setShowFullAccount] = useState(false);
   const [bankOverride, setBankOverride] = useState(false);
 
   const [f, setF] = useState({
-    entity_type: "osoba_fizyczna" as EntityType,
-    // osoba fizyczna
+    // Rodzaj podmiotu zapisywany w entity_variant (pipeline i profil zgodnie);
+    // entity_type ma w bazie DEFAULT 'osoba_fizyczna', więc go nie czytamy.
+    entity_variant: "osoba_fizyczna" as EntityVariant,
+    // osoba fizyczna (i właściciel JDG)
     first_name: "",
     last_name: "",
     pesel: "",
@@ -83,15 +82,19 @@ export function InwestorProfil() {
   useEffect(() => {
     if (!user) return;
     void (async () => {
+      // user_id w investors nie jest unikalne — najnowszy wiersz.
       const { data } = await supabase
         .from("investors")
         .select("*")
         .eq("user_id", user.id)
+        .order("lender_data_completed_at", { ascending: false, nullsFirst: false })
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       setInv(data);
       if (data)
         setF({
-          entity_type: (data.entity_type ?? "osoba_fizyczna") as EntityType,
+          entity_variant: investorEntityVariant(data),
           first_name: data.first_name ?? "",
           last_name: data.last_name ?? "",
           pesel: data.pesel ?? "",
@@ -149,8 +152,14 @@ export function InwestorProfil() {
         postal_code: c.address.postalCode || x.postal_code,
         city: c.address.city || x.city,
         country: c.address.country || x.country,
+        // GUS: "F"/"LF" = osoba fizyczna prowadząca działalność (JDG), "P"/"LP" = osoba prawna.
+        entity_variant:
+          c.entityType === "F" || c.entityType === "LF"
+            ? "jdg"
+            : c.entityType === "P" || c.entityType === "LP"
+              ? "osoba_prawna"
+              : x.entity_variant,
       }));
-      setGusEntityType(c.entityType || "");
       // Jeśli mamy numer KRS — zawsze próbujemy pobrać pełny odpis, żeby zaciągnąć zarząd i sposób reprezentacji.
       const krsNumber = (c.krs || "").replace(/\D/g, "");
       if (krsNumber) {
@@ -275,8 +284,14 @@ export function InwestorProfil() {
 
   const save = async () => {
     if (!user) return;
-    if (f.entity_type === "firma" && f.nip && !/^\d{10}$/.test(f.nip.replace(/\D/g, ""))) {
+    const isFirma = f.entity_variant !== "osoba_fizyczna";
+    if (isFirma && f.nip && !/^\d{10}$/.test(f.nip.replace(/\D/g, ""))) {
       toast.error("NIP musi mieć 10 cyfr");
+      return;
+    }
+    const pesel = f.pesel.replace(/\D/g, "");
+    if (!isFirma && pesel && pesel.length !== 11) {
+      toast.error("PESEL musi mieć 11 cyfr");
       return;
     }
     // Walidacja rachunku przed zapisem — wymagaj potwierdzenia jeśli niepoprawny.
@@ -289,25 +304,26 @@ export function InwestorProfil() {
         return;
       }
     }
-    const isJdg = f.entity_type === "firma" && (gusEntityType === "F" || gusEntityType === "LF");
-    const showRepresentation = f.entity_type === "firma" && !isJdg;
+    const showRepresentation = f.entity_variant === "osoba_prawna";
     const normalizedAccount = (() => {
       const c = detectPolishBankAccount(f.bank_account);
       return c.success ? c.normalized : f.bank_account.replace(/[\s-]/g, "").toUpperCase() || null;
     })();
-    // Map entity_type → legacy investor_type (NOT NULL column)
-    const investorType = f.entity_type === "firma" ? "instytucjonalny" : "indywidualny";
+    // Map wariant → legacy investor_type (NOT NULL column)
+    const investorType = isFirma ? "instytucjonalny" : "indywidualny";
     const payload: any = {
-      entity_type: f.entity_type,
+      entity_variant: f.entity_variant,
+      entity_type: isFirma ? "firma" : "osoba_fizyczna",
       investor_type: investorType,
       first_name: f.first_name.trim() || null,
       last_name: f.last_name.trim() || null,
-      pesel: null,
-      company_name: f.entity_type === "firma" ? f.company_name.trim() || null : null,
-      nip: f.entity_type === "firma" ? f.nip.replace(/\D/g, "") || null : null,
-      krs: f.entity_type === "firma" ? f.krs.trim() || null : null,
-      regon: f.entity_type === "firma" ? f.regon.trim() || null : null,
-      legal_form: f.entity_type === "firma" ? f.legal_form.trim() || null : null,
+      // PESEL edytowalny tylko dla osoby fizycznej — przy firmie zostaje zapisany.
+      ...(isFirma ? {} : { pesel: pesel || null }),
+      company_name: isFirma ? f.company_name.trim() || null : null,
+      nip: isFirma ? f.nip.replace(/\D/g, "") || null : null,
+      krs: isFirma ? f.krs.trim() || null : null,
+      regon: isFirma ? f.regon.trim() || null : null,
+      legal_form: isFirma ? f.legal_form.trim() || null : null,
       representative_first_name: showRepresentation
         ? f.representative_first_name.trim() || null
         : null,
@@ -322,22 +338,34 @@ export function InwestorProfil() {
       city: f.city.trim() || null,
       country: f.country.trim() || null,
       bank_account: normalizedAccount,
+      // Nowy numer rachunku wymaga ponownego potwierdzenia (porównanie po cyfrach: NRB = IBAN).
+      ...((normalizedAccount ?? "").replace(/\D/g, "") !==
+      String(inv?.bank_account ?? "").replace(/\D/g, "")
+        ? { bank_account_confirmed_at: null }
+        : {}),
     };
-    const { error } = inv
-      ? await supabase.from("investors").update(payload).eq("id", inv.id)
-      : await supabase.from("investors").insert({ ...payload, user_id: user.id });
+    // Zapisany wiersz wraca do stanu — kolejny zapis aktualizuje go zamiast
+    // wstawiać drugi profil (user_id w investors nie jest unikalne).
+    const { data: saved, error } = inv
+      ? await supabase.from("investors").update(payload).eq("id", inv.id).select("*").maybeSingle()
+      : await supabase
+          .from("investors")
+          .insert({ ...payload, user_id: user.id })
+          .select("*")
+          .maybeSingle();
     if (error) {
       toast.error(error.message);
       return;
     }
+    if (saved) setInv(saved);
     // Bezpieczne logowanie — bez pełnego numeru rachunku.
     if (normalizedAccount)
       console.info("[profil] zapisano rachunek", logSafeAccount(normalizedAccount));
     toast.success("Zapisano");
   };
 
-  const isFirma = f.entity_type === "firma";
-  const isJdg = isFirma && (gusEntityType === "F" || gusEntityType === "LF");
+  const isFirma = f.entity_variant !== "osoba_fizyczna";
+  const isJdg = f.entity_variant === "jdg";
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -353,19 +381,26 @@ export function InwestorProfil() {
         </CardHeader>
         <CardContent>
           <RadioGroup
-            value={f.entity_type}
-            onValueChange={(v) => setF({ ...f, entity_type: v as EntityType })}
-            className="flex gap-6"
+            value={f.entity_variant}
+            onValueChange={(v) => setF({ ...f, entity_variant: v as EntityVariant })}
+            className="flex flex-wrap gap-x-6 gap-y-2"
           >
             <label className="flex items-center gap-2 cursor-pointer">
               <RadioGroupItem value="osoba_fizyczna" id="ef-of" />
               <span>Osoba fizyczna</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-              <RadioGroupItem value="firma" id="ef-f" />
-              <span>Firma / spółka</span>
+              <RadioGroupItem value="jdg" id="ef-jdg" />
+              <span>Jednoosobowa działalność (JDG)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <RadioGroupItem value="osoba_prawna" id="ef-op" />
+              <span>Spółka / osoba prawna</span>
             </label>
           </RadioGroup>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Te dane trafiają do umów oraz pism windykacyjnych wystawianych w Twoim imieniu.
+          </p>
         </CardContent>
       </Card>
 
@@ -486,10 +521,10 @@ export function InwestorProfil() {
             </div>
           </CardContent>
         </Card>
-      ) : !isFirma ? (
+      ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Dane osobowe</CardTitle>
+            <CardTitle>{isJdg ? "Właściciel firmy (opcjonalnie)" : "Dane osobowe"}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             <div>
@@ -508,9 +543,24 @@ export function InwestorProfil() {
                 onChange={(e) => setF({ ...f, last_name: e.target.value })}
               />
             </div>
+            {!isJdg && (
+              <div>
+                <Label>PESEL</Label>
+                <Input
+                  inputMode="numeric"
+                  maxLength={11}
+                  value={f.pesel}
+                  onChange={(e) => setF({ ...f, pesel: e.target.value })}
+                  placeholder="11 cyfr"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Potrzebny we wnioskach do sądu i komornika.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
-      ) : null}
+      )}
 
       <Card>
         <CardHeader>

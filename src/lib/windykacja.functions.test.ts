@@ -1,6 +1,6 @@
 // Funkcje serwerowe windykacji na atrapie bazy (bez Supabase): zakładanie
-// sprawy z harmonogramem, edycja pożyczki (lista pól, przeliczenie sprawy)
-// i wpłata rozliczana na raty.
+// sprawy z harmonogramem, edycja pożyczki (lista pól, przeliczenie sprawy),
+// wpłata rozliczana na raty i pisma w imieniu inwestora (wierzyciel z profilu).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@tanstack/react-start", () => ({
@@ -22,9 +22,43 @@ vi.mock("@tanstack/react-start", () => ({
 }));
 vi.mock("@/lib/investor-plan/pro-middleware", () => ({ requireInvestorPro: {} }));
 
+// Klient z rolą serwisową: profile inwestorów (investors) i is_internal_staff.
+const admin = vi.hoisted(() => ({
+  investors: [] as Array<Record<string, unknown>>,
+  staff: new Set<string>(),
+}));
+vi.mock("@/integrations/supabase/client.server", () => ({
+  supabaseAdmin: {
+    from: (table: string) => {
+      let userId: unknown = null;
+      const q = {
+        select: () => q,
+        eq: (c: string, v: unknown) => {
+          if (c === "user_id") userId = v;
+          return q;
+        },
+        order: () => q,
+        limit: () => q,
+        then: (res: (v: unknown) => unknown) =>
+          Promise.resolve({
+            data: table === "investors" ? admin.investors.filter((r) => r.user_id === userId) : [],
+            error: null,
+          }).then(res),
+      };
+      return q;
+    },
+    rpc: async (_fn: string, args: { _user_id: string }) => ({
+      data: admin.staff.has(args._user_id),
+      error: null,
+    }),
+  },
+}));
+
 import {
   addWindWplata,
   createWindCase,
+  generateWindDocument,
+  recordWindGeneratedDoc,
   seedWindDemo,
   updateWindBorrower,
   updateWindCase,
@@ -120,7 +154,12 @@ function fakeDb() {
 }
 
 let db: ReturnType<typeof fakeDb>;
-const ctx = () => ({ supabase: { from: db.from }, claims: { email: "test@financeyou.pl" } });
+let userId: string | undefined;
+const ctx = () => ({
+  supabase: { from: db.from },
+  userId,
+  claims: { email: "test@financeyou.pl" },
+});
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- atrapa createServerFn przyjmuje { data, context }
 const call = <T>(fn: unknown, data: unknown): Promise<T> => (fn as any)({ data, context: ctx() });
 
@@ -144,6 +183,9 @@ const baseCase = {
 
 beforeEach(() => {
   db = fakeDb();
+  userId = undefined;
+  admin.investors.length = 0;
+  admin.staff.clear();
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-06T10:00:00Z"));
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -425,7 +467,8 @@ describe("seedWindDemo", () => {
     const loan = zRatami[0];
     expect(loan.harmonogram).toHaveLength(24);
     expect(loan.termin_splaty).toBe("2028-02-28");
-    expect(loan.pozyczkodawca).toBe("Finance You sp. z o.o.");
+    // Demo nie podaje Finance You jako pożyczkodawcy (bez profilu — puste).
+    expect(loan.pozyczkodawca).toBeNull();
     // 6 rat zapłaconych w terminie, 7. (2026-09-28) zaległa, 17 przyszłych.
     expect(loan.saldo_pozostale).toBe(72_000);
     const kase = db.tables.wind_collection_cases.find((c) => c.loan_id === loan.id)!;
@@ -433,5 +476,143 @@ describe("seedWindDemo", () => {
     expect(kase.opoznienie_dni).toBe(8);
     // Stopa odsetek za opóźnienie = odsetki maksymalne z dnia umowy, nie 24,5 %.
     for (const l of loans) expect(l.stopa_odsetek_max).toBeLessThanOrEqual(22.5);
+  });
+});
+
+// ── Wierzyciel = inwestor, właściciel sprawy (profil z public.investors) ──
+const OWNER = "11111111-1111-4111-8111-111111111111";
+const STAFF = "22222222-2222-4222-8222-222222222222";
+const jdgProfile = {
+  user_id: OWNER,
+  entity_variant: "jdg",
+  entity_type: "osoba_fizyczna",
+  first_name: "Anna",
+  last_name: "Nowak",
+  company_name: "Nowak Finanse",
+  nip: "5223456789",
+  street: "ul. Długa 1",
+  postal_code: "80-001",
+  city: "Gdańsk",
+  email: "anna@nowak.pl",
+};
+
+/** Sprawa właściciela OWNER z pożyczką i dłużnikiem (atrapa nie robi złączeń). */
+async function ownedCase(loan: Row = {}) {
+  const { caseId, loanId } = await seedLoan(loan);
+  const kase = db.tables.wind_collection_cases.find((c) => c.id === caseId)!;
+  const loanRow = db.tables.wind_loans.find((l) => l.id === loanId)!;
+  kase.investor_user_id = OWNER;
+  kase.loan = { ...loanRow, borrower: db.tables.wind_borrowers[0] };
+  return caseId;
+}
+
+describe("generateWindDocument — pismo w imieniu inwestora", () => {
+  it("wierzyciel z profilu właściciela sprawy, nie Finance You; migawka w metadata", async () => {
+    admin.investors.push(jdgProfile);
+    const caseId = await ownedCase();
+    // Generuje operator (inna osoba niż właściciel) — wierzycielem zostaje właściciel.
+    userId = STAFF;
+    admin.staff.add(STAFF);
+    const res = await call<{ event: Row; document: Row }>(generateWindDocument, {
+      caseId,
+      typ: "wezwanie",
+    });
+    const tresc = String(res.event.tresc);
+    expect(tresc).toContain("Wierzyciel: Nowak Finanse");
+    expect(tresc).toContain("Działając jako pożyczkodawca");
+    expect(tresc).toMatch(/Z poważaniem,\n\nAnna Nowak\nwłaściciel\nNowak Finanse$/);
+    expect(tresc.startsWith("Gdańsk, dnia")).toBe(true);
+    expect(tresc).not.toMatch(/Finance You|Bielak/);
+    expect(res.event.metadata).toEqual({
+      wierzyciel: {
+        kind: "jdg",
+        legalName: "Nowak Finanse",
+        nip: "5223456789",
+        krs: null,
+        source: "investor",
+      },
+    });
+    expect(db.tables.wind_documents).toHaveLength(1);
+  });
+
+  it("niekompletny profil → czytelny błąd z brakami i odesłaniem do Profilu; nic nie zapisane", async () => {
+    admin.investors.push({ ...jdgProfile, postal_code: null, city: "" });
+    const caseId = await ownedCase();
+    userId = OWNER;
+    const n = db.tables.wind_events.length;
+    await expect(call(generateWindDocument, { caseId, typ: "wezwanie" })).rejects.toThrow(
+      /Brakuje danych: kod pocztowy, miejscowość\. Uzupełnij je w zakładce Profil \(\/inwestor\/profil\)/,
+    );
+    expect(db.tables.wind_events).toHaveLength(n);
+    expect(db.tables.wind_documents).toBeUndefined();
+  });
+
+  it("wniosek do komornika: osoba fizyczna bez PESEL → blokada; notatka bez wymagań", async () => {
+    admin.investors.push({
+      user_id: OWNER,
+      entity_variant: "osoba_fizyczna",
+      first_name: "Jan",
+      last_name: "Kowalski",
+      street: "ul. Polna 5",
+      postal_code: "00-001",
+      city: "Warszawa",
+    });
+    const caseId = await ownedCase();
+    userId = OWNER;
+    await expect(call(generateWindDocument, { caseId, typ: "wniosek_komornik" })).rejects.toThrow(
+      "Brakuje danych: PESEL",
+    );
+    const res = await call<{ event: Row }>(generateWindDocument, { caseId, typ: "notatka" });
+    expect(String(res.event.tresc)).toContain("Wierzyciel: Jan Kowalski");
+  });
+
+  it("właściciel bez profilu inwestora → błąd; personel bez profilu → Finance You", async () => {
+    const caseId = await ownedCase();
+    userId = OWNER;
+    await expect(call(generateWindDocument, { caseId, typ: "wezwanie" })).rejects.toThrow(
+      "Uzupełnij dane w zakładce Profil (/inwestor/profil)",
+    );
+
+    admin.staff.add(OWNER);
+    const res = await call<{ event: Row }>(generateWindDocument, { caseId, typ: "wezwanie" });
+    const tresc = String(res.event.tresc);
+    expect(tresc).toContain("Działając w imieniu Finance You sp. z o.o.");
+    expect(tresc).toMatch(/Filip Bielak\nPrezes Zarządu\nFinance You sp\. z o\.o\.$/);
+    expect((res.event.metadata as Row).wierzyciel).toMatchObject({ source: "finance_you" });
+  });
+});
+
+describe("recordWindGeneratedDoc — DOCX z migawką wierzyciela", () => {
+  it("zapisuje wierzyciela i braki profilu w metadata zdarzenia", async () => {
+    admin.investors.push({ ...jdgProfile, nip: null });
+    const caseId = await ownedCase();
+    userId = OWNER;
+    const res = await call<{ event: Row }>(recordWindGeneratedDoc, {
+      caseId,
+      typ: "wniosek_klauzula",
+      tytul: "Wniosek o klauzulę",
+      plik_url: "generated/x.docx",
+    });
+    expect(res.event.metadata).toEqual({
+      wierzyciel: {
+        kind: "jdg",
+        legalName: "Nowak Finanse",
+        nip: null,
+        krs: null,
+        source: "investor",
+      },
+      braki: ["NIP"],
+    });
+  });
+});
+
+describe("createWindCase — domyślny pożyczkodawca z profilu", () => {
+  it("puste pole → krótka nazwa z profilu zakładającego; wpisane — bez zmian", async () => {
+    admin.investors.push(jdgProfile);
+    userId = OWNER;
+    await call(createWindCase, { ...baseCase, termin_splaty: "2027-06-10", pozyczkodawca: " " });
+    expect(db.tables.wind_loans[0].pozyczkodawca).toBe("Nowak Finanse");
+    await call(createWindCase, { ...baseCase, pozyczkodawca: "Jan Inwestor" });
+    expect(db.tables.wind_loans[1].pozyczkodawca).toBe("Jan Inwestor");
   });
 });

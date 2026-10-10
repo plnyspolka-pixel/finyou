@@ -16,6 +16,8 @@ import {
   type GeneratedDoc,
 } from "@/lib/document-generator.functions";
 import { gusCompanyLookup, type GusLookupResult } from "@/lib/gus-bir.functions";
+import { getMyCreditorParty } from "@/lib/investor-party.functions";
+import { creditorFieldValue, type CreditorParty } from "@/lib/investor-party";
 import { krsCompanyLookup, type KrsLookupResult } from "@/lib/krs.functions";
 import {
   extractOrderedFields,
@@ -153,6 +155,7 @@ interface BundleResult {
 export function DocumentCreatorPage({
   excludeCategories,
   embedded = false,
+  lenderFromProfile = embedded,
 }: {
   /** Kategorie wzorów ukryte w tym panelu (np. „umowa" u inwestora,
    *  gdzie umowy powstają wyłącznie w zakładce „Tworzenie umowy"). */
@@ -160,6 +163,9 @@ export function DocumentCreatorPage({
   /** Osadzenie w innym module (np. zakładka „Dokumenty i umowy" inwestora):
    *  bez własnego nagłówka strony — nagłówek daje moduł nadrzędny. */
   embedded?: boolean;
+  /** Strona „Pożyczkodawca / Wierzyciel" wstępnie z profilu zalogowanego
+   *  inwestora (domyślnie w panelu inwestora, czyli przy osadzeniu). */
+  lenderFromProfile?: boolean;
 } = {}) {
   const _list = useServerFn(listDocxTemplates);
   const _generate = useServerFn(generateDocxFromTemplate);
@@ -168,6 +174,7 @@ export function DocumentCreatorPage({
   const _preview = useServerFn(getDocxTemplatePreview);
   const _gus = useServerFn(gusCompanyLookup);
   const _krs = useServerFn(krsCompanyLookup);
+  const _myParty = useServerFn(getMyCreditorParty);
 
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
   const [history, setHistory] = useState<GeneratedDoc[]>([]);
@@ -220,6 +227,36 @@ export function DocumentCreatorPage({
   const formFields = useMemo(() => fields.filter((f) => !dupMap[f.id]), [fields, dupMap]);
   const groups = useMemo<FieldGroup[]>(() => groupFields(formFields), [formFields]);
   const docValues = useMemo(() => expandDuplicateValues(values, dupMap), [values, dupMap]);
+
+  // Inwestor jest pożyczkodawcą / wierzycielem swoich pism — jego profil.
+  const [myParty, setMyParty] = useState<CreditorParty | null>(null);
+  useEffect(() => {
+    if (!lenderFromProfile) return;
+    _myParty()
+      .then(setMyParty)
+      .catch(() => {
+        /* brak profilu — pola strony zostają do uzupełnienia ręcznie */
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lenderFromProfile]);
+  // Po wczytaniu wzoru: puste pola strony wierzyciela z profilu — nigdy nie
+  // nadpisujemy wartości wpisanych przez użytkownika.
+  useEffect(() => {
+    if (!myParty || formFields.length === 0) return;
+    setValues((v) => {
+      let changed = false;
+      const next = { ...v };
+      for (const f of formFields) {
+        if ((next[f.id] ?? "").trim()) continue;
+        const val = creditorFieldValue(f, myParty);
+        if (val) {
+          next[f.id] = val;
+          changed = true;
+        }
+      }
+      return changed ? next : v;
+    });
+  }, [myParty, formFields]);
   // Kalkulator pokazujemy WYŁĄCZNIE przy Umowie pożyczki.
   const showCalculator = useMemo(() => isLoanAgreement(selected), [selected]);
 
