@@ -8,7 +8,7 @@
 -- kadry: rules_staff_select/limits_staff_select), investor_module_access_active (0 użyć w kodzie;
 -- produkcyjne investor_has_full_access/get_access_state jej nie wołają).
 
--- ── tabela rcn_transactions (z 20260718130000_rcn_transactions) ──
+-- ── tabela rcn_transactions (z 20260718130001_rcn_transactions) ──
 CREATE TABLE IF NOT EXISTS public.rcn_transactions (
   id             UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   source         TEXT NOT NULL DEFAULT 'deweloperuch/rejestr-cen-nieruchomosci',
@@ -239,16 +239,16 @@ CREATE INDEX IF NOT EXISTS idx_video_pipeline_status
 CREATE INDEX IF NOT EXISTS investor_assistant_messages_user_idx
   ON public.investor_assistant_messages (user_id, created_at);
 
--- ── indeks rcn_tx_date_idx (z 20260718130000_rcn_transactions) ──
+-- ── indeks rcn_tx_date_idx (z 20260718130001_rcn_transactions) ──
 CREATE INDEX IF NOT EXISTS rcn_tx_date_idx ON public.rcn_transactions (tx_date);
 
--- ── indeks rcn_tx_kind_idx (z 20260718130000_rcn_transactions) ──
+-- ── indeks rcn_tx_kind_idx (z 20260718130001_rcn_transactions) ──
 CREATE INDEX IF NOT EXISTS rcn_tx_kind_idx ON public.rcn_transactions (property_kind);
 
--- ── indeks rcn_tx_lat_idx (z 20260718130000_rcn_transactions) ──
+-- ── indeks rcn_tx_lat_idx (z 20260718130001_rcn_transactions) ──
 CREATE INDEX IF NOT EXISTS rcn_tx_lat_idx  ON public.rcn_transactions (lat);
 
--- ── indeks rcn_tx_lng_idx (z 20260718130000_rcn_transactions) ──
+-- ── indeks rcn_tx_lng_idx (z 20260718130001_rcn_transactions) ──
 CREATE INDEX IF NOT EXISTS rcn_tx_lng_idx  ON public.rcn_transactions (lng);
 
 -- ── polityka pr_opportunities.pr_opportunities_staff_read (z 20260803160000_pr_module) ──
@@ -275,7 +275,7 @@ DO $do$ BEGIN
   END IF;
 END $do$;
 
--- ── polityka rcn_transactions.rcn_tx_staff_all (z 20260718130000_rcn_transactions) ──
+-- ── polityka rcn_transactions.rcn_tx_staff_all (z 20260718130001_rcn_transactions) ──
 DO $do$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON c.oid = p.polrelid WHERE c.relnamespace = 'public'::regnamespace AND c.relname = 'rcn_transactions' AND p.polname = 'rcn_tx_staff_all') THEN
     EXECUTE 'CREATE POLICY rcn_tx_staff_all ON public.rcn_transactions FOR ALL TO authenticated
