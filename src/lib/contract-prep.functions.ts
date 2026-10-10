@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { ClientProfile, FieldSource } from "./client-profile-types";
+import { inwestorDoProfiluKlienta } from "./contract-engine/inwestor-do-umowy";
 
 // Pola wymagane od klienta do podpisania umowy
 const CLIENT_REQUIRED_FIELDS: Array<{ path: string; label: string }> = [
@@ -199,22 +200,14 @@ async function buildOrGetProfile(
   );
   property.owner = property.owner ?? { isBorrower: true };
 
-  const investorData = { ...(existingProfile?.investorData ?? {}) };
-  const invFullName = `${inv.first_name ?? ""} ${inv.last_name ?? ""}`.trim() || undefined;
-  investorData.fullName = setIfAuto(
-    "investorData.fullName",
-    investorData.fullName,
-    invFullName,
-    "Wniosek",
-  );
-  investorData.companyName = setIfAuto(
-    "investorData.companyName",
-    investorData.companyName,
-    inv.company_name,
-    "Wniosek",
-  );
-  investorData.email = setIfAuto("investorData.email", investorData.email, inv.email, "Wniosek");
-  investorData.phone = setIfAuto("investorData.phone", investorData.phone, inv.phone, "Wniosek");
+  // WSZYSTKIE dostępne dane inwestora z jego profilu (pipeline inwestora:
+  // wariant strony, identyfikatory, adres, kontakt, reprezentant, rachunek do
+  // spłaty) — kreator umowy nie pyta o to, co system już wie. Pola wpisane
+  // ręcznie zostają (setIfAuto pilnuje źródła).
+  const investorData: Record<string, any> = { ...(existingProfile?.investorData ?? {}) };
+  for (const [key, value] of Object.entries(inwestorDoProfiluKlienta(inv))) {
+    investorData[key] = setIfAuto(`investorData.${key}`, investorData[key], value, "Wniosek");
+  }
 
   const offerData = { ...(existingProfile?.offerData ?? {}) };
   offerData.netAmountToClient = setIfAuto(
@@ -360,9 +353,16 @@ export const saveContractPartyData = createServerFn({ method: "POST" })
             "propertyData.estimatedValue",
           ])
         : INVESTOR_REQUIRED_FIELDS.map((f) => f.path).concat([
+            // Dane Pożyczkodawcy wpisane z profilu inwestora — można je tu
+            // poprawić (wtedy źródłem pola staje się „Ręcznie").
             "investorData.companyName",
+            "investorData.legalForm",
+            "investorData.pesel",
             "investorData.nip",
+            "investorData.krs",
+            "investorData.regon",
             "investorData.representativeName",
+            "investorData.representativeRole",
           ]);
 
     const sources: Record<string, FieldSource> = { ...(profile.fieldSources ?? {}) };

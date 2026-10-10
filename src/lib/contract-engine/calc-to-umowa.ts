@@ -78,14 +78,19 @@ export function kalkulacjaDoSzkicu(payload: LoanCalcPayload): Record<string, any
     raty: raty.length ? raty : undefined,
   });
 
-  const warunki = usunPuste({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- fragment szkicu umowy
+  const warunki: Record<string, any> = usunPuste({
     rachunki: prowizjaFY > 0 ? { finance_you: FINANCE_YOU.rachunek } : undefined,
     kwota_pozyczki: kwota(payload.nominal),
     prowizja: { kwota: kwota(prowizjaInwestora), model: "nie_potracana_raty" },
-    prowizja_finance_you: prowizjaFY > 0 ? { kwota: kwota(prowizjaFY) } : undefined,
     oprocentowanie: oprocentowanie(payload.annualRate),
     harmonogram,
   });
+  // Prowizja FY zawsze JAWNIE (po `usunPuste`, które wycina null): kwota albo
+  // `null` = „bez prowizji Finance You". Pominięcie pola znaczy w silniku
+  // „dolicz 5 %", więc kalkulacja bez prowizji (Pożyczkodawcą jest FY, oferta
+  // wewnętrzna pośrednika, Zlecenie z wyłączoną prowizją) musi dać null.
+  warunki.prowizja_finance_you = prowizjaFY > 0 ? { kwota: kwota(prowizjaFY) } : null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- patch szkicu
   const patch: Record<string, any> = { warunki };

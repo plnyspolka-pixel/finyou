@@ -113,17 +113,35 @@ describe("Rozliczenie z Finance You (Pożyczkodawca ≠ Finance You)", () => {
     expect(u.warunki.rachunki.finance_you).toBe(FINANCE_YOU.rachunek);
   });
 
-  it("jawne null = umowa bez prowizji FY; Finance You jako Pożyczkodawca — bez zmian", () => {
+  it("jawne null = umowa bez prowizji FY (i bez rachunku prowizyjnego)", () => {
     const bez: any = umowaInwestora();
     bez.warunki.prowizja_finance_you = null;
     uzupelnijRozliczenieFinanceYou(bez);
     expect(bez.warunki.prowizja_finance_you).toBeNull();
     expect(bez.warunki.rachunki).toBeUndefined();
+  });
 
+  it("Pożyczkodawcą jest Finance You → prowizji FY nie ma (po NIP albo po nazwie)", () => {
+    for (const strona of [
+      { nazwa: "Finance You sp. z o.o.", nip: FINANCE_YOU.nip },
+      { nazwa: "FINANCE YOU SP. Z O.O." }, // sama nazwa, bez identyfikatorów
+      { nazwa: "Spółka", krs: FINANCE_YOU.krs },
+    ]) {
+      const fy: any = umowaInwestora();
+      fy.pozyczkodawca = strona;
+      uzupelnijRozliczenieFinanceYou(fy);
+      expect(fy.warunki.prowizja_finance_you).toBeNull();
+    }
+  });
+
+  it("kasuje prowizję FY wpisaną wcześniej, gdy Pożyczkodawcą jest Finance You", () => {
     const fy: any = umowaInwestora();
     fy.pozyczkodawca = { nazwa: "Finance You sp. z o.o.", nip: FINANCE_YOU.nip };
+    fy.warunki.prowizja_finance_you = { kwota: { cyframi: "5 000,00", slownie: "" } };
+    fy.warunki.rachunki = { wyplata: "", splata: "", finance_you: FINANCE_YOU.rachunek };
     uzupelnijRozliczenieFinanceYou(fy);
-    expect(fy.warunki.prowizja_finance_you).toBeUndefined();
+    expect(fy.warunki.prowizja_finance_you).toBeNull();
+    expect(fy.warunki.rachunki.finance_you).toBeUndefined();
   });
 
   it("bez wskazanego Pożyczkodawcy nic nie dopisuje", () => {

@@ -160,5 +160,9 @@ i trafia do dziennika cyklu (`investor_order_events`, zdarzenie
 - Zlecenie z wyłączoną prowizją ma w listach Zleceń plakietkę „Bez prowizji
   FY", a kalkulator oferty do Projektu w „Moich zleceniach" liczy wypłatę bez
   prowizji (`hideFinanceYouFee` → 0 zł, cała Kwota Udzielona do Klienta).
-- Kreator umowy (silnik umów) nadal domyślnie liczy prowizję — przy Zleceniu
-  bez prowizji trzeba ją wyzerować w kalkulatorze przed wysyłką do kreatora.
+- Kreator umowy dostaje z kalkulatora JAWNE „bez prowizji FY"
+  (`prowizja_finance_you: null`), więc umowa do takiego Zlecenia powstaje bez
+  prowizji — silnik nie dolicza domyślnych 5 %.
+- Niezależnie od Zlecenia: gdy Pożyczkodawcą jest sama Finance You, prowizji
+  nie ma z definicji (nie ma pośrednictwa) — silnik zeruje ją w umowie
+  (`src/lib/contract-engine/README.md`).

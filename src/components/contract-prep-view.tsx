@@ -49,15 +49,23 @@ const CLIENT_FORM_FIELDS: FieldDef[] = [
   },
 ];
 
+// Pola Pożyczkodawcy — system wypełnia je z profilu inwestora (pipeline:
+// dane pożyczkodawcy + rachunek do spłaty); tu można je tylko sprawdzić
+// i poprawić.
 const INVESTOR_FORM_FIELDS: FieldDef[] = [
   { path: "investorData.fullName", label: "Imię i nazwisko / nazwa" },
+  { path: "investorData.pesel", label: "PESEL (osoba fizyczna)" },
   { path: "investorData.companyName", label: "Nazwa firmy (jeśli dotyczy)" },
+  { path: "investorData.legalForm", label: "Forma prawna (jeśli firma)" },
   { path: "investorData.nip", label: "NIP (jeśli firma)" },
+  { path: "investorData.krs", label: "KRS (jeśli spółka)" },
+  { path: "investorData.regon", label: "REGON (jeśli firma)" },
   { path: "investorData.address", label: "Adres" },
   { path: "investorData.phone", label: "Telefon" },
   { path: "investorData.email", label: "Email" },
   { path: "investorData.bankAccount", label: "Numer rachunku bankowego" },
   { path: "investorData.representativeName", label: "Reprezentant (dla spółek)" },
+  { path: "investorData.representativeRole", label: "Funkcja reprezentanta" },
 ];
 
 function getByPath(obj: any, path: string): any {
