@@ -268,6 +268,72 @@ przed pierwszym `supabase db push`.
 `drop schema _mig cascade`, `drop role migrator` (`drop owned by migrator` wcześniej). Konektor
 Supabase wymaga potwierdzenia dla `drop`/`delete`/`truncate`.
 
+### Historia migracji: repo vs produkcja (2026-10-10)
+
+Repo: 304 pliki `supabase/migrations/` (20260518124329 … 20261009130000). Produkcja
+(`supabase_migrations.schema_migrations`, skopiowana do nowej bazy): 231 wersji
+(20260518124328 … 20260916162804). Dopasowanie (nazwa pliku = `name` wersji, UUID w nazwie
+albo znacznik czasu ±5 s): **~166 par**. Pozostałe: ~138 plików „nazwanych” (ręczne migracje:
+`*_project_module_core`, `*_pep_screening` …) bez wpisu w historii oraz ~65 wersji zastosowanych
+przez Lovable (20.07–16.09, nazwy UUID) bez pliku w repo — Lovable nadawał własne znaczniki przy
+stosowaniu ręcznych migracji, więc historia i pliki rozjechały się dwustronnie. Wniosek:
+`supabase db push` z obecną historią uznałby wszystkie 304 pliki za niezastosowane.
+
+Kontrola treści niedopasowanych plików względem schematu (773 obiektów: tabele, funkcje,
+indeksy, kolumny, polityki) wykazała, że **nie wszystko z repo trafiło do produkcji**:
+- brak tabel: `comms_suppressions` (20260730090000_bot_loop_guard), `pr_opportunities`,
+  `pr_outreach_log` (20260803160000_pr_module), `rcn_transactions` (20260718130000),
+  `seo_location_pages` (20260803150000), `seo_location_report_entries` (20260803153000),
+  `video_pipeline` (20260803170000);
+- brak funkcji: `enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq`
+  (kolejka e-mail na pgmq z `email_infra`; produkcja nie ma kolejek pgmq),
+  `investor_module_access_active` (20260802120000_module_access_full_investor);
+- brak 20 indeksów, m.in. `call_queue`/`lead_communications` z
+  20260925130000_dogonienie_cennika_i_indeksy_timeoutow (plik zastosowany **częściowo**),
+  `access_payments_unlock_one_in_flight`, `investor_assistant_messages_user_idx`;
+- brak kolumn: `text_agent_knowledge.audience`, `ai_seo_articles.youtube_video_id`,
+  `seo_location_pages.youtube_video_id`; brak 10 polityk (w tym `investors.investors_partner_select`,
+  `affiliate_commission_rules.rules_select_all`, `affiliate_unregistered_activity_limits.limits_select_all`).
+Narzędzia MCP aplikacji (`list_pr_opportunities`, `list_seo_location_pages`, `generate_video`…)
+odwołują się do brakujących tabel — te funkcje w produkcji nie mogą działać.
+
+**Rekomendacja baseline'u (do decyzji właściciela):** w nowej bazie zastąpić historię Lovable
+dokładnie 304 wersjami z repo (`supabase migration repair --status applied` albo wstawienie
+wierszy `version/name/statements`) i dodać **jedną nową, idempotentną migrację „dogonienie”**
+z brakującymi obiektami (szkic generowany automatycznie z plików źródłowych — do przeglądu
+przed zastosowaniem). Dzięki temu `db push` ma czystą bazę, a różnica jest jawna i zrecenzowana.
+Alternatywa (gorsza): zostawić ~10 plików jako „niezastosowane” i puścić `db push` — pliki
+zastosowane częściowo wywaliłyby się na `create table` bez `if not exists`.
+
+### Storage (krok 7) — inwentarz i droga
+
+Inwentarz `storage.objects`: 2 535 obiektów, 4,63 GB; **unikalnych po eTag 3,99 GB**
+(283 grupy duplikatów = 1 451 zbędnych kopii / 655 MB; `pliki-klienta`: 2 020 obiektów → 630
+unikalnych, 901 → 532 MB). Buckety wg rozmiaru: `marketing-materials` 2 051 MB (351),
+`training-videos` 1 038 MB (35; 19 filmów `application/octet-stream` = 814 MB → `video/mp4`),
+`pliki-klienta` 901 MB, `studio-media` 730 MB (publiczny), reszta < 15 MB; 5 bucketów pustych.
+Największe pliki 147 MB i 106 MB — przekraczają limit 100 MB części bucketów (na czas kopii:
+`file_size_limit = null`, potem przywrócić). Odwołania do ścieżek w bazie: `documents.file_path/
+file_url`, `marketing_materials.storage_path`, `training_videos.file_path`, `studio_images.storage_path`,
+`lead_magnets.file_path/file_url`, `aml_*.*_storage_path`, `esign_envelopes.source_bucket` …
+→ kopia 1:1 (tryb `full`) jest bezpieczna; deduplikacja (`dedup`) wymaga przepisania odwołań.
+
+Skrypt: `docs/migracja/storage-copy.py` (lista rekurencyjna, pobranie, poprawa mimetype, upload
+z `x-upsert`, wznawialny, 4 wątki). Kontener dosięga obu projektów (sprawdzone). **Potrzebne od
+właściciela (jako sekrety sieciowe środowiska, nigdy w czacie):** `NEW_SERVICE_KEY` (service_role
+nowego projektu — Supabase → Settings → API) oraz `OLD_SERVICE_KEY` (service_role starego projektu,
+jeśli Lovable Cloud go pokazuje). Awaryjnie bez klucza starego projektu: MCP aplikacji
+`supabase_storage/signed_url` (do 7 dni) — ~1 100 unikalnych plików = ~1 100 wywołań, manifest
+`--signed-manifest`. `app.settings.jwt_secret` w starej bazie nie jest czytelny.
+
+### Crony — przepisanie na nowy adres
+
+`docs/migracja/cron-rewrite.sql`: podmiana `https://project--5394e6ca-….lovable.app` →
+`__NEW_HOOKS_BASE__` (adres nowego hostingu — do uzupełnienia) i klucza `anon` starego projektu na
+nowy (`eyJ…ImpxdmVweGh1bHhkbmJ3Ym9na2hlI…` → klucz z `get_publishable_keys` nowego projektu;
+URL API: `https://vkzndnaoxhdxrxlpntcb.supabase.co`). Włączenie dopiero przy przełączeniu;
+4 joby czysto SQL-owe można włączyć wcześniej.
+
 ## Do sprawdzenia w kodzie (osobno)
 
 - Zabezpieczenie przed pętlą mailową (odpowiedzi na własną domenę / autorespondery).
