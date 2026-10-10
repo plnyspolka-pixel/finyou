@@ -301,7 +301,17 @@ export function sanitizeMotionDesign(raw: unknown): MotionDesignElement[] {
     if (!component) continue;
     const sync = typeof e.sync === "string" ? e.sync.trim() : "";
     if (sync.split(/\s+/).filter(Boolean).length < 2) continue;
-    const props = sanitizeMotionProps(component, e.props);
+    // Projektant AI oddaje propsy jako tekst JSON (`props_json` — płaski schemat
+    // odpowiedzi); robot przez MCP podaje obiekt `props`.
+    let rawProps: unknown = e.props;
+    if (rawProps == null && typeof e.props_json === "string") {
+      try {
+        rawProps = JSON.parse(e.props_json);
+      } catch {
+        continue;
+      }
+    }
+    const props = sanitizeMotionProps(component, rawProps);
     if (!props) continue;
     const zone: MotionZone = e.zone === "center" ? "center" : "top";
     const endSync = typeof e.endSync === "string" && e.endSync.trim() ? e.endSync.trim() : null;
