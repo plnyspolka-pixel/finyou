@@ -166,12 +166,16 @@ function InwestorOferty() {
                             <FileDown className="mr-1 h-3.5 w-3.5" />
                             PDF
                           </Button>
-                          {o.offer_status === "zaakceptowana_przez_klienta" && (
+                          {o.offer_status !== "szkic" && (
                             <Button
                               size="sm"
                               variant="outline"
-                              title="Otwórz kreator umowy z danymi klienta, KW i parametrami tej oferty"
-                              disabled={creatingFor === o.id}
+                              title={
+                                o.contractUnlocked
+                                  ? "Otwórz kreator umowy z danymi klienta, KW i parametrami tej oferty"
+                                  : "Dostępne po odsłonięciu danych kontaktowych klienta (rezerwacja w „Moich zleceniach”) albo po akceptacji oferty"
+                              }
+                              disabled={!o.contractUnlocked || creatingFor === o.id}
                               onClick={() => void createContract(o.id)}
                             >
                               {creatingFor === o.id ? (

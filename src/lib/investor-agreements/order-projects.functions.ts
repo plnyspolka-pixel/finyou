@@ -150,6 +150,30 @@ function propertyOf(app: any): any | null {
 
 const DISCLOSED_STATUSES = ["rezerwacja", "transakcja"];
 
+/**
+ * Wnioski, przy których inwestor ma odsłonięte dane kontaktowe klienta
+ * (Ujawnienie w „Moich zleceniach": rezerwacja albo transakcja).
+ */
+export async function disclosedApplicationIds(db: any, userId: string): Promise<Set<string>> {
+  const { data: orders } = await loose(db)
+    .from("investor_orders")
+    .select("id")
+    .eq("user_id", userId);
+  const orderIds = (orders ?? []).map((o: any) => o.id as string);
+  if (!orderIds.length) return new Set();
+  const { data: matches } = await loose(db)
+    .from("investor_order_matches")
+    .select("application_id")
+    .in("order_id", orderIds)
+    .in("status", DISCLOSED_STATUSES);
+  return new Set((matches ?? []).map((m: any) => m.application_id as string));
+}
+
+/** „Stwórz umowę": po Ujawnieniu danych kontaktowych albo po akceptacji klienta. */
+export function contractUnlocked(offerStatus: string, disclosed: boolean): boolean {
+  return disclosed || offerStatus === "zaakceptowana_przez_klienta";
+}
+
 async function myAcceptedOrder(db: any, userId: string, orderId: string) {
   const { data: order } = await loose(db)
     .from("investor_orders")
@@ -932,6 +956,8 @@ export interface MyOfferRow {
   estimated_total_cost: number | null;
   balloon_amount: number | null;
   schedule: Array<Record<string, number | string>> | null;
+  /** Czy można już otworzyć kreator umowy z danymi klienta i KW. */
+  contractUnlocked: boolean;
   loan_application: Record<string, any> | null;
   project: {
     propertyType: string | null;
@@ -972,10 +998,12 @@ export const getMyInvestorOffers = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const { maskKwRaw } = await import("@/lib/location-scoring/masking");
+    const disclosed = await disclosedApplicationIds(supabaseAdmin, context.userId);
     return Promise.all(
       (offers ?? []).map(async (o: any): Promise<MyOfferRow> => {
         const app = o.loan_application;
-        if (!app) return { ...o, project: null };
+        const unlocked = contractUnlocked(o.offer_status, disclosed.has(o.loan_application_id));
+        if (!app) return { ...o, contractUnlocked: unlocked, project: null };
         const p = propertyOf(app);
         const { properties: _props, ...appRest } = app;
         const kwRaw = String(p?.land_register_number ?? "").trim();
@@ -986,6 +1014,7 @@ export const getMyInvestorOffers = createServerFn({ method: "GET" })
         );
         return {
           ...o,
+          contractUnlocked: unlocked,
           loan_application: appRest,
           project: {
             propertyType: p?.property_type ?? null,

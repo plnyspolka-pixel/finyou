@@ -1,7 +1,7 @@
 // „Stwórz umowę" z listy „Moje oferty": komplet danych do kreatora umowy —
 // pełne dane klienta (pożyczkobiorcy), nieruchomości z numerami KW i
 // parametry złożonej oferty (harmonogram liczy front tym samym silnikiem co PDF).
-// Tylko właściciel oferty i tylko oferta zaakceptowana przez klienta. Każde odsłonięcie
+// Tylko właściciel oferty, po Ujawnieniu danych kontaktowych albo akceptacji klienta. Każde odsłonięcie
 // danych klienta logujemy w automation_events.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -66,9 +66,15 @@ export const getOfferContractContext = createServerFn({ method: "POST" })
     if (!offer || offer.investor?.user_id !== context.userId) {
       throw new Error("Nie znaleziono oferty.");
     }
-    // Dane identyfikujące klienta dopiero po akceptacji oferty przez klienta.
-    if (offer.offer_status !== "zaakceptowana_przez_klienta") {
-      throw new Error("Umowę można stworzyć dopiero po akceptacji oferty przez klienta.");
+    // Dane identyfikujące klienta dopiero po odsłonięciu danych kontaktowych
+    // (rezerwacja w „Moich zleceniach") albo po akceptacji oferty przez klienta.
+    const { contractUnlocked, disclosedApplicationIds } =
+      await import("@/lib/investor-agreements/order-projects.functions");
+    const disclosed = await disclosedApplicationIds(supabaseAdmin, context.userId);
+    if (!contractUnlocked(offer.offer_status, disclosed.has(offer.loan?.id))) {
+      throw new Error(
+        "Umowę można stworzyć po odsłonięciu danych kontaktowych klienta albo po akceptacji oferty.",
+      );
     }
     const app = offer.loan ?? {};
     const c = app.client ?? {};
