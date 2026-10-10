@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   DEFAULT_TEMPLATES,
+  briefFromDocumentText,
   extensionOf,
   leadMagnetFileNameFrom,
   leadMagnetStoragePath,
@@ -356,5 +357,40 @@ describe("plik materiału", () => {
       "Wzór umowy.pdf",
     );
     expect(leadMagnetFileNameFrom("  ", null, "pdf")).toBe("materiał.pdf");
+  });
+});
+
+describe("brief z treści dokumentu", () => {
+  const strona = (n: number) =>
+    [
+      "financeyou.pl",
+      "Wzór umowy pożyczki · pożyczkodawca: osoba fizyczna",
+      `Treść merytoryczna strony ${n}: zabezpieczenie hipoteką i egzekucja z art. 777 k.p.c.`,
+      "Finance You sp. z o.o. · ul. Nowogrodzka 31, 00-511 Warszawa · financeyou.pl",
+    ].join("\n");
+
+  it("wycina powtarzające się nagłówki i stopki stron", () => {
+    const out = briefFromDocumentText([1, 2, 3, 4].map(strona).join("\n"));
+    expect(out).not.toContain("financeyou.pl");
+    expect(out).not.toContain("pożyczkodawca: osoba fizyczna");
+    expect(out).toContain("Treść merytoryczna strony 1");
+    expect(out).toContain("Treść merytoryczna strony 4");
+  });
+
+  it("zostawia powtórzoną linię, gdy jest długa (to już treść, nie stopka)", () => {
+    const dluga = "a".repeat(100);
+    const out = briefFromDocumentText([dluga, "x", dluga, "y", dluga].join("\n"));
+    expect(out.split("\n").filter((l) => l === dluga)).toHaveLength(3);
+  });
+
+  it("skleja białe znaki, usuwa puste linie i sąsiednie duplikaty", () => {
+    expect(briefFromDocumentText("  a   b  \n\n\n  a   b \n c ")).toBe("a b\nc");
+  });
+
+  it("przycina do limitu i znosi pusty wsad", () => {
+    expect(briefFromDocumentText("x".repeat(9000)).length).toBe(4000);
+    expect(briefFromDocumentText("x".repeat(500), 100).length).toBe(100);
+    expect(briefFromDocumentText(null)).toBe("");
+    expect(briefFromDocumentText("   ")).toBe("");
   });
 });

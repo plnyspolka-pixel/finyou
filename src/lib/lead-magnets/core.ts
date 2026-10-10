@@ -445,3 +445,34 @@ export function leadMagnetFileNameFrom(
   if (fromUrl) return decodeURIComponent(fromUrl).slice(0, 200);
   return `materiał.${ext}`;
 }
+
+// ── Brief z treści dokumentu ─────────────────────────────────────────────────
+
+/** Ile znaków tekstu dokumentu trafia do AI jako brief (limit server function). */
+export const LEAD_MAGNET_BRIEF_MAX_CHARS = 4000;
+
+/**
+ * Brief dla AI z surowego tekstu wyciągniętego z materiału (PDF). Nagłówki i
+ * stopki powtarzają się na każdej stronie, więc krótkie linie występujące
+ * wielokrotnie wylatują — zostaje treść, z której da się napisać stronę.
+ */
+export function briefFromDocumentText(
+  text: string | null | undefined,
+  maxChars: number = LEAD_MAGNET_BRIEF_MAX_CHARS,
+): string {
+  const lines = String(text ?? "")
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((l) => l.replace(/[ \t]+/g, " ").trim())
+    .filter(Boolean);
+  const counts = new Map<string, number>();
+  for (const l of lines) counts.set(l, (counts.get(l) ?? 0) + 1);
+  const kept: string[] = [];
+  for (const l of lines) {
+    // Powtórzona krótka linia = nagłówek/stopka strony, a nie treść.
+    if (l.length < 80 && (counts.get(l) ?? 0) > 2) continue;
+    if (kept[kept.length - 1] === l) continue;
+    kept.push(l);
+  }
+  return kept.join("\n").slice(0, maxChars).trim();
+}

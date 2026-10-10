@@ -25,6 +25,7 @@ import {
   LEAD_MAGNET_PLATFORMS,
   PLATFORM_LABELS,
   leadMagnetUrl,
+  briefFromDocumentText,
   parseKeywords,
   suggestedCaption,
   type EmailInDmPlatform,
@@ -545,7 +546,7 @@ function EditorDialog({
   saving,
 }: {
   form: FormState;
-  setForm: (f: FormState | null) => void;
+  setForm: React.Dispatch<React.SetStateAction<FormState | null>>;
   onSave: () => void;
   saving: boolean;
 }) {
@@ -554,26 +555,35 @@ function EditorDialog({
   const [brief, setBrief] = useState("");
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [readingDoc, setReadingDoc] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm({ ...form, [k]: v });
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
+    setForm((f) => (f ? { ...f, [k]: v } : f));
 
   const aiMut = useMutation({
-    mutationFn: () => aiFn({ data: { brief, audience: form.audience } }),
+    // Brief z argumentu (treść wgranego dokumentu) albo z zakładki „AI Copy”.
+    mutationFn: (override?: string) =>
+      aiFn({ data: { brief: override ?? brief, audience: form.audience } }),
     onSuccess: (r) => {
-      setForm({
-        ...form,
-        title: r.title || form.title,
-        slug: form.slug || slugify(r.title || form.title),
-        headline: r.headline || form.headline,
-        subheadline: r.subheadline || form.subheadline,
-        benefits: r.benefits.length ? r.benefits.join("\n") : form.benefits,
-        cta_text: r.cta_text || form.cta_text,
-        meta_description: r.meta_description || form.meta_description,
-        trigger_keywords: r.trigger_keywords.length
-          ? r.trigger_keywords.join(", ")
-          : form.trigger_keywords,
-      });
+      // Aktualizacja funkcyjna: w trakcie generowania mógł dojść plik.
+      setForm((f) =>
+        f
+          ? {
+              ...f,
+              title: r.title || f.title,
+              slug: f.slug || slugify(r.title || f.title),
+              headline: r.headline || f.headline,
+              subheadline: r.subheadline || f.subheadline,
+              benefits: r.benefits.length ? r.benefits.join("\n") : f.benefits,
+              cta_text: r.cta_text || f.cta_text,
+              meta_description: r.meta_description || f.meta_description,
+              trigger_keywords: r.trigger_keywords.length
+                ? r.trigger_keywords.join(", ")
+                : f.trigger_keywords,
+            }
+          : f,
+      );
       if (r.caption) setCaption(r.caption);
       toast.success("Wygenerowano treść");
     },
@@ -599,6 +609,31 @@ function EditorDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  /**
+   * Po wgraniu PDF-a czyta jego treść i tym briefem uzupełnia puste pola strony
+   * (tytuł, slug, nagłówek, korzyści, CTA, meta, hasła, propozycja posta).
+   * Skan bez warstwy tekstowej albo inny format = cicho pomijamy.
+   */
+  async function autofillFromDocument(f: File) {
+    if (f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf")) return;
+    setReadingDoc(true);
+    try {
+      const { extractPdfText } = await import("@/lib/lead-magnets/pdf-text.client");
+      const text = await extractPdfText(f);
+      const docBrief = briefFromDocumentText(text);
+      if (docBrief.length < 200) {
+        toast.message("Nie udało się odczytać treści dokumentu — wypełnij pola ręcznie.");
+        return;
+      }
+      setBrief(docBrief);
+      await aiMut.mutateAsync(docBrief);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Nie udało się uzupełnić pól z dokumentu");
+    } finally {
+      setReadingDoc(false);
+    }
+  }
+
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
@@ -621,15 +656,20 @@ function EditorDialog({
           .remove([form.file_path])
           .catch(() => null);
       }
-      setForm({
-        ...form,
-        file_path: path,
-        file_name: f.name,
-        file_size: f.size,
-        mime_type: f.type || "",
-        file_url: "",
-      });
+      setForm((prev) =>
+        prev
+          ? {
+              ...prev,
+              file_path: path,
+              file_name: f.name,
+              file_size: f.size,
+              mime_type: f.type || "",
+              file_url: "",
+            }
+          : prev,
+      );
       toast.success(`Wgrano ${f.name}`);
+      await autofillFromDocument(f);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Błąd uploadu");
     } finally {
@@ -844,8 +884,18 @@ function EditorDialog({
                       <ExternalLink className="mr-1 h-3 w-3" /> Podgląd
                     </Button>
                   )}
-                  <Button size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
-                    {uploading ? "Wgrywam…" : form.file_path ? "Zamień plik" : "Wgraj plik"}
+                  <Button
+                    size="sm"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading || readingDoc}
+                  >
+                    {uploading
+                      ? "Wgrywam…"
+                      : readingDoc
+                        ? "Czytam dokument…"
+                        : form.file_path
+                          ? "Zamień plik"
+                          : "Wgraj plik"}
                   </Button>
                   <input
                     ref={fileRef}
@@ -859,6 +909,11 @@ function EditorDialog({
               <p className="mt-2 text-xs text-muted-foreground">
                 Plik leży w prywatnym buckecie — pobranie działa wyłącznie przez osobisty link z
                 tokenem (/pobierz-plik/…), więc nikt nie udostępni go dalej bez zapisu.
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Po wgraniu PDF-a automat czyta jego treść i uzupełnia puste pola strony: tytuł,
+                slug, nagłówek, korzyści, CTA, meta description, hasła i propozycję posta. Pola,
+                które już wypełniłeś, zostają bez zmian — tak samo mail i szablony odpowiedzi.
               </p>
             </div>
             <div>
@@ -1121,7 +1176,10 @@ function EditorDialog({
                 }
               />
             </div>
-            <Button onClick={() => aiMut.mutate()} disabled={aiMut.isPending || brief.length < 10}>
+            <Button
+              onClick={() => aiMut.mutate(brief)}
+              disabled={aiMut.isPending || brief.length < 10}
+            >
               <Sparkles className="mr-2 h-4 w-4" />
               {aiMut.isPending ? "Generuję…" : "Wygeneruj treść"}
             </Button>
