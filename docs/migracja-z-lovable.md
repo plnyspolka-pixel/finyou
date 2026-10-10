@@ -128,7 +128,37 @@ w produkcji, sekret w Vault). Wykonane i zweryfikowane:
   te nieliczne obiekty (36 polityk storage, 1 trigger auth, 34 crony) wykonać przez
   konektor jako `postgres`; duży schemat `public` idzie przez `dblink`.
 
-Następny krok: krok 4 (schemat) — najpierw próbnie, z weryfikacją liczb obiektów (krok 5).
+### Krok 4 (schemat) — przebieg (2026-10-10)
+
+Zmiana metody wykonania względem pierwotnego planu (lepsza, uzgodniona z właścicielem):
+stara baza tylko **generuje** DDL z katalogu (czyste `SELECT`-y, plik generatorów trzymany
+poza repo) i wysyła go przez `dblink` do tabeli roboczej `_mig.ddl` w nowej bazie; **wykonuje**
+go konektor jako `postgres` (funkcja `_mig.run(faza_od, faza_do, limit)`: każda instrukcja
+w osobnej podtransakcji, błędy w `_mig.ddl_log`, ponowienia tylko nieudanych; limit konektora
+2 min/wywołanie → porcje). Dzięki temu właścicielem obiektów jest od razu `postgres`
+(bez `reassign owned`), a polityki `storage`, trigger `auth` i crony nie wymagają sztuczek
+(sprawdzone w wycofanych transakcjach). Rola `migrator` jest tylko kurierem (właściciel `_mig`).
+
+- Rozszerzenia w nowej bazie = produkcja (10 szt.; `vector` 0.8.2 w `public`, `pg_net` 0.20.4,
+  `pg_cron` 1.6.4, `pgmq` 1.5.1, `pg_trgm` 1.6; produkcja ma dodatkowo tylko `dblink` na czas migracji).
+- Wygenerowano i przesłano **3875 instrukcji (727 952 B)**, transport zweryfikowany co do bajta.
+  Fazy: 0 schematy (`drizzle`, `supabase_migrations`), 1 enumy 38, 2 sekwencje nie-identity 6,
+  3 tabele 245 (243 + 2), 4 `owned by` 5, 5 constrainty 743 (p 245, u 89, c 211, f 198),
+  6 indeksy poza PK/unique 346, 7 funkcje 113 (118 funkcji `vector` pochodzą z rozszerzenia),
+  8 widoki 2, 9 triggery 145, 10 RLS 243 + polityki 374, 11 `revoke`/`grant` 260 + 746 na
+  relacjach i 113 + 297 na funkcjach (dokładnie jak produkcja; granty roli `sandbox_exec`
+  Lovable pominięte, bo rola nie istnieje), 12 komentarze 79, 13 buckety 13 + polityki storage 36,
+  14 trigger `auth.users` 1, 15 crony 34 × (`cron.schedule` + `alter_job active=false`).
+- Świadome różnice względem produkcji: brak `sandbox_exec`; **default privileges nie są
+  kopiowane** (właściciel wyłączył auto-wystawianie nowych tabel w nowej bazie — nowe tabele
+  tworzone w przyszłości NIE dostaną automatycznie grantów dla `anon`/`authenticated`/
+  `service_role`; migracje aplikacji muszą nadawać granty jawnie albo trzeba to włączyć);
+  `jobid` cronów nie są zachowane (nazwy tak); polecenia cronów zawierają stary URL
+  `lovable.app` i klucz `anon` starego projektu — do przepisania przy przełączeniu.
+- Generatory przeszły niezależną recenzję adwersarialną (5 perspektyw + weryfikacja każdego
+  znaleziska) przed wykonaniem; wynik i poprawki — dopisane po zakończeniu recenzji.
+
+
 
 ## Do sprawdzenia w kodzie (osobno)
 
