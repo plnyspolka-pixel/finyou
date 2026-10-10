@@ -352,3 +352,96 @@ export type PublicLeadMagnet = {
   consent_text: string;
   url: string;
 };
+
+// ── Plik materiału ───────────────────────────────────────────────────────────
+
+/** Limit wielkości materiału — ten sam co w panelu (/admin/marketing/lead-magnety). */
+export const LEAD_MAGNET_MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Typy przyjmowane jako materiał — lista odpowiada polu `accept` uploadu w
+ * panelu, żeby konektor i panel wpuszczały dokładnie to samo.
+ */
+export const LEAD_MAGNET_MIME_BY_EXT: Record<string, string> = {
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  zip: "application/zip",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  mp4: "video/mp4",
+};
+
+const EXT_BY_LEAD_MAGNET_MIME: Record<string, string> = {
+  "application/pdf": "pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+  "application/zip": "zip",
+  "application/x-zip-compressed": "zip",
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "video/mp4": "mp4",
+};
+
+/** Rozszerzenie z nazwy pliku albo ze ścieżki adresu (bez query stringa). */
+export function extensionOf(nameOrUrl: string | null | undefined): string | null {
+  const raw = String(nameOrUrl ?? "").split(/[?#]/)[0];
+  const ext = /\.([a-z0-9]{2,5})$/i.exec(raw.trim())?.[1]?.toLowerCase();
+  return ext ?? null;
+}
+
+/**
+ * Typ materiału z nazwy pliku, nagłówka `content-type` i adresu źródłowego.
+ * Nazwa pliku ma pierwszeństwo (serwery często oddają `application/octet-stream`),
+ * potem nagłówek, na końcu rozszerzenie z adresu. `null` = typ spoza listy.
+ */
+export function resolveLeadMagnetFileType(opts: {
+  fileName?: string | null;
+  contentType?: string | null;
+  url?: string | null;
+}): { ext: string; mime: string } | null {
+  const fromName = extensionOf(opts.fileName);
+  if (fromName && LEAD_MAGNET_MIME_BY_EXT[fromName]) {
+    return { ext: fromName, mime: LEAD_MAGNET_MIME_BY_EXT[fromName] };
+  }
+  const mime = String(opts.contentType ?? "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+  const fromMime = EXT_BY_LEAD_MAGNET_MIME[mime];
+  if (fromMime) return { ext: fromMime, mime: LEAD_MAGNET_MIME_BY_EXT[fromMime] };
+  const fromUrl = extensionOf(opts.url);
+  if (fromUrl && LEAD_MAGNET_MIME_BY_EXT[fromUrl]) {
+    return { ext: fromUrl, mime: LEAD_MAGNET_MIME_BY_EXT[fromUrl] };
+  }
+  return null;
+}
+
+/** Ścieżka w buckecie `lead-magnets` — ten sam układ co w panelu: <grupa>/<uuid>.<ext>. */
+export function leadMagnetStoragePath(
+  audience: LeadMagnetAudience,
+  ext: string,
+  id: string = crypto.randomUUID(),
+): string {
+  return `${audience}/${id}.${ext}`;
+}
+
+/** Nazwa pokazywana w panelu i w mailu, gdy wgrywający jej nie podał. */
+export function leadMagnetFileNameFrom(
+  fileName: string | null | undefined,
+  url: string | null | undefined,
+  ext: string,
+): string {
+  const given = String(fileName ?? "").trim();
+  if (given) return given.slice(0, 200);
+  const fromUrl = String(url ?? "")
+    .split(/[?#]/)[0]
+    .split("/")
+    .filter(Boolean)
+    .pop();
+  if (fromUrl) return decodeURIComponent(fromUrl).slice(0, 200);
+  return `materiał.${ext}`;
+}

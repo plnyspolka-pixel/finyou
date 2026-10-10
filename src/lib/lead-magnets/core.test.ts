@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
   DEFAULT_TEMPLATES,
+  extensionOf,
+  leadMagnetFileNameFrom,
+  leadMagnetStoragePath,
+  resolveLeadMagnetFileType,
   consentTextFor,
   dmConsentTextFor,
   downloadUrl,
@@ -296,5 +300,61 @@ describe("tryb „e-mail w wiadomości” (bez linku)", () => {
 
   it("zgoda z wiadomości prywatnej mówi, gdzie padł adres", () => {
     expect(dmConsentTextFor("klient", "instagram")).toContain("wiadomości prywatnej na Instagram");
+  });
+});
+
+describe("plik materiału", () => {
+  it("rozszerzenie z nazwy i z adresu (bez query stringa)", () => {
+    expect(extensionOf("Umowa WZÓR.pdf")).toBe("pdf");
+    expect(extensionOf("https://example.com/a/b/plik.PDF?token=xyz")).toBe("pdf");
+    expect(extensionOf("https://example.com/bez-rozszerzenia")).toBeNull();
+    expect(extensionOf(null)).toBeNull();
+  });
+
+  it("nazwa pliku ma pierwszeństwo nad nagłówkiem content-type", () => {
+    expect(
+      resolveLeadMagnetFileType({
+        fileName: "wzor.pdf",
+        contentType: "application/octet-stream",
+      }),
+    ).toEqual({ ext: "pdf", mime: "application/pdf" });
+  });
+
+  it("bez nazwy decyduje content-type, a na końcu adres", () => {
+    expect(resolveLeadMagnetFileType({ contentType: "application/pdf; charset=binary" })).toEqual({
+      ext: "pdf",
+      mime: "application/pdf",
+    });
+    expect(
+      resolveLeadMagnetFileType({
+        contentType: "application/octet-stream",
+        url: "https://example.com/plik.docx?v=2",
+      })?.ext,
+    ).toBe("docx");
+    expect(resolveLeadMagnetFileType({ contentType: "image/jpeg" })).toEqual({
+      ext: "jpg",
+      mime: "image/jpeg",
+    });
+  });
+
+  it("typ spoza listy odrzucony", () => {
+    expect(resolveLeadMagnetFileType({ fileName: "skrypt.exe" })).toBeNull();
+    expect(
+      resolveLeadMagnetFileType({ contentType: "text/html", url: "https://example.com/" }),
+    ).toBeNull();
+    expect(resolveLeadMagnetFileType({})).toBeNull();
+  });
+
+  it("ścieżka w buckecie: grupa/uuid.ext", () => {
+    expect(leadMagnetStoragePath("inwestor", "pdf", "abc-123")).toBe("inwestor/abc-123.pdf");
+    expect(leadMagnetStoragePath("klient", "zip", "x")).toBe("klient/x.zip");
+  });
+
+  it("nazwa pliku: podana, z adresu, awaryjna", () => {
+    expect(leadMagnetFileNameFrom("Komplet.pdf", "https://e.pl/x.pdf", "pdf")).toBe("Komplet.pdf");
+    expect(leadMagnetFileNameFrom(null, "https://e.pl/a/Wz%C3%B3r%20umowy.pdf?t=1", "pdf")).toBe(
+      "Wzór umowy.pdf",
+    );
+    expect(leadMagnetFileNameFrom("  ", null, "pdf")).toBe("materiał.pdf");
   });
 });

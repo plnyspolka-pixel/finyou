@@ -133,12 +133,17 @@ pobrań i dopasowanych komentarzy utrzymują triggery w bazie; odsłony — RPC
 ## Narzędzia MCP
 
 `list_lead_magnets`, `get_lead_magnet`, `create_lead_magnet`,
-`update_lead_magnet`, `delete_lead_magnet`, `link_lead_magnet_post`,
-`unlink_lead_magnet_post`, `list_lead_magnet_signups`,
+`update_lead_magnet`, `upload_lead_magnet_file`, `delete_lead_magnet`,
+`link_lead_magnet_post`, `unlink_lead_magnet_post`, `list_lead_magnet_signups`,
 `list_lead_magnet_triggers`, `check_lead_magnet_youtube_comments` (realna
-publikacja odpowiedzi), `generate_lead_magnet_copy`. Plik wgrywa się w panelu
-(albo `supabase_storage` do bucketa `lead-magnets` i `file_path` w
-`update_lead_magnet`).
+publikacja odpowiedzi), `generate_lead_magnet_copy`.
+
+Plik wgrywa panel albo `upload_lead_magnet_file`: `url` (publiczny adres https —
+serwer pobiera plik) albo `file_base64` (treść pliku), dokładnie jedno z nich.
+Przyjmowane typy i limit 50 MB jak w panelu (pdf, docx, xlsx, pptx, zip, png,
+jpg, mp4); gdy adres nie ma rozszerzenia, decyduje `file_name`. Plik ląduje pod
+`<grupa>/<uuid>.<ext>` w prywatnym buckecie, poprzedni jest kasowany, a
+`file_url` czyszczone — tak samo jak przy wgraniu w panelu.
 
 ## Typowy scenariusz
 
