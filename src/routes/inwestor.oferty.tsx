@@ -166,7 +166,7 @@ function InwestorOferty() {
                             <FileDown className="mr-1 h-3.5 w-3.5" />
                             PDF
                           </Button>
-                          {o.offer_status !== "szkic" && (
+                          {o.offer_status === "zaakceptowana_przez_klienta" && (
                             <Button
                               size="sm"
                               variant="outline"
