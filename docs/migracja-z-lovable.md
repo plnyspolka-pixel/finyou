@@ -297,13 +297,38 @@ indeksy, kolumny, polityki) wykazała, że **nie wszystko z repo trafiło do pro
 Narzędzia MCP aplikacji (`list_pr_opportunities`, `list_seo_location_pages`, `generate_video`…)
 odwołują się do brakujących tabel — te funkcje w produkcji nie mogą działać.
 
+**Migracja „dogonienie” — gotowa, przetestowana, nie zastosowana.** Plik
+`supabase/migrations/20261010120000_dogonienie_niezastosowanych_z_repo.sql` (442 linie) zbiera
+brakujące obiekty, treść 1:1 z plików źródłowych (podanych w nagłówkach sekcji), wszystko
+idempotentnie (`CREATE TABLE/INDEX IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, polityki i triggery
+w blokach `DO` z kontrolą istnienia, funkcje `CREATE OR REPLACE`): 7 tabel z RLS, 3 kolumny,
+20 indeksów, 7 polityk, 5 triggerów `updated_at`, 4 funkcje pgmq (`enqueue_email`,
+`read_email_batch`, `delete_email`, `move_to_dlq`). Świadomie pominięte (uzasadnienie w nagłówku
+pliku): `investors_partner_select` (usunięta celowo przez 20260719123238), `rules_select_all` /
+`limits_select_all` (produkcja ma wersje tylko dla kadry), `investor_module_access_active` (0 użyć).
+Próbne wykonanie w nowej bazie 2026-10-10 w transakcji wycofanej na końcu (`begin; … rollback;`):
+**0 błędów**, po wycofaniu żadna z tabel ani funkcji nie została (kontrola w `pg_class`/`pg_proc`).
+
+Dwie rzeczy, których pliki źródłowe nie miały, a nowa baza wymaga:
+- **jawne granty** — nowy projekt ma wyłączone automatyczne wystawianie tabel przez API
+  (default privileges ról `anon`/`authenticated`/`service_role` nie zawierają nowych tabel; funkcje
+  domyślnie tylko `postgres`), więc migracja nadaje `GRANT` 1:1 z intencją plików źródłowych
+  (`authenticated`/`service_role`; `anon` tylko `SELECT` na dwóch tabelach SEO z publicznymi
+  politykami). **Ta sama zasada obowiązuje każdą przyszłą migrację** — bez grantu tabela jest
+  niewidoczna przez PostgREST niezależnie od polityk RLS;
+- **utwardzenie wrapperów pgmq** — `SECURITY DEFINER` bez `search_path` i wykonywalne przez
+  wszystkich w plikach źródłowych; tutaj `SET search_path = ''`, `REVOKE … FROM PUBLIC, anon,
+  authenticated`, `GRANT EXECUTE … TO service_role` (woła je tylko backend przez klucz service_role,
+  `src/routes/lovable/email/queue/process.ts`).
+
 **Rekomendacja baseline'u (do decyzji właściciela):** w nowej bazie zastąpić historię Lovable
 dokładnie 304 wersjami z repo (`supabase migration repair --status applied` albo wstawienie
-wierszy `version/name/statements`) i dodać **jedną nową, idempotentną migrację „dogonienie”**
-z brakującymi obiektami (szkic generowany automatycznie z plików źródłowych — do przeglądu
-przed zastosowaniem). Dzięki temu `db push` ma czystą bazę, a różnica jest jawna i zrecenzowana.
-Alternatywa (gorsza): zostawić ~10 plików jako „niezastosowane” i puścić `db push` — pliki
-zastosowane częściowo wywaliłyby się na `create table` bez `if not exists`.
+wierszy `version/name/statements`) i zastosować powyższą migrację jako 305. wersję
+(`supabase db push` albo `apply_migration` przez konektor). Dzięki temu `db push` ma czystą bazę,
+a różnica względem produkcji jest jawna i zrecenzowana. Alternatywa (gorsza): zostawić ~10 plików
+jako „niezastosowane” i puścić `db push` — pliki zastosowane częściowo wywaliłyby się na
+`create table` bez `if not exists`. Zastosowanie dogonienia przed finalną kopią danych jest
+bezpieczne: `data-sync.sql` ładuje tylko tabele istniejące w produkcji, a nowe tabele są puste.
 
 ### Storage (krok 7) — inwentarz i droga
 
