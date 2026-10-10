@@ -334,7 +334,9 @@ Narzędzia (`docs/migracja/`): `baseline-historii.py` generuje z repo i listy we
 `baseline-wersje-repo.txt` (304), `baseline-wersje-lovable.txt` (208 do usunięcia) i
 `baseline-historii.sql` — (1) archiwum starej historii do `_mig.lovable_schema_migrations`,
 (2) **DELETE** 208 wierszy (destrukcyjne — konektor poprosi o potwierdzenie), (3) `INSERT … ON CONFLICT`
-304 wierszy, (4) kontrola. Wariant w repo ma `statements = NULL` (100 KB); wariant z treścią plików
+304 wierszy, (4) kontrola — składnia i semantyka `on conflict` sprawdzone w nowej bazie w transakcji
+wycofanej (archiwum 231 wierszy, wersja wspólna: nazwa nadpisana, `statements` zachowane). Wariant
+w repo ma `statements = NULL` (100 KB); wariant z treścią plików
 (bez `--no-statements`, 3,8 MB) generuje się na żądanie. Równoważnik przez CLI (zapisuje też
 `statements`, wymaga hasła bazy): `supabase migration repair --status reverted $(cat
 baseline-wersje-lovable.txt)` → `--status applied $(cat baseline-wersje-repo.txt)` → `migration list`
