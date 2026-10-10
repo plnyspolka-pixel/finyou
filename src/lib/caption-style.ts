@@ -864,6 +864,39 @@ const CARD_ICONS = { check: "✓", dot: "•" } as const;
  * się po kolei, każdy z \fad i lekkim uniesieniem \move — wejście jak
  * karty na stronie.
  */
+/**
+ * Geometria karty wspólna dla ASS i planu Remotion. Najdłuższy wiersz
+ * (szacunek z `charWidth`) musi się zmieścić w kadrze z marginesem — gdy nie,
+ * karta dostaje mniejszą czcionkę (`scale` < 1), zamiast wyjść za krawędź
+ * (AI pisze wiersz do 26 znaków + wartość do 10, a w 720 px mieści się ~31).
+ */
+export function overlayCardGeometry(
+  card: OverlayCard,
+  dims: AssDimensions = DEFAULT_ASS_DIMENSIONS,
+): { scale: number; panelW: number; panelH: number; panelX: number; panelY: number } {
+  const C = OVERLAY_CARD_LAYOUT;
+  const iconW = card.rows.some((r) => r.icon) ? C.iconWidth : 0;
+  const rowChars = (r: OverlayCardRow) => r.text.length + (r.value ? r.value.length + 2 : 0);
+  const maxChars = Math.max(
+    ...card.rows.map(rowChars),
+    card.title ? Math.round((card.title.length * C.titleFontSize) / C.fontSize) : 0,
+  );
+  const maxPanelW = dims.width - 72;
+  const textW = maxChars * C.fontSize * C.charWidth;
+  const room = maxPanelW - C.padding * 2 - iconW;
+  const scale = textW > room ? Math.max(0.5, room / textW) : 1;
+  const innerW = iconW + Math.ceil(textW * scale);
+  const panelW = Math.min(Math.max(C.padding * 2 + innerW, 300), maxPanelW);
+  const contentH = (card.title ? C.titleHeight : 0) + card.rows.length * C.rowHeight;
+  return {
+    scale,
+    panelW,
+    panelH: C.padding * 2 + contentH,
+    panelX: Math.round((dims.width - panelW) / 2),
+    panelY: Math.round(dims.height * (card.y ?? C.defaultTop)),
+  };
+}
+
 export function overlayCardEvents(
   card: OverlayCard,
   dims: AssDimensions = DEFAULT_ASS_DIMENSIONS,
@@ -872,18 +905,9 @@ export function overlayCardEvents(
   const C = OVERLAY_CARD_LAYOUT;
   const B = OVERLAY_BRAND;
   const panel = card.frame === "panel";
-  const hasIcons = card.rows.some((r) => r.icon);
-  const rowChars = (r: OverlayCardRow) => r.text.length + (r.value ? r.value.length + 2 : 0);
-  const maxChars = Math.max(
-    ...card.rows.map(rowChars),
-    card.title ? Math.round((card.title.length * C.titleFontSize) / C.fontSize) : 0,
-  );
-  const innerW = (hasIcons ? C.iconWidth : 0) + Math.ceil(maxChars * C.fontSize * C.charWidth);
-  const panelW = Math.min(Math.max(C.padding * 2 + innerW, 300), dims.width - 72);
-  const contentH = (card.title ? C.titleHeight : 0) + card.rows.length * C.rowHeight;
-  const panelH = C.padding * 2 + contentH;
-  const panelX = Math.round((dims.width - panelW) / 2);
-  const panelY = Math.round(dims.height * (card.y ?? C.defaultTop));
+  const { scale, panelW, panelH, panelX, panelY } = overlayCardGeometry(card, dims);
+  const fontSize = Math.round(C.fontSize * scale);
+  const titleFontSize = Math.round(C.titleFontSize * scale);
 
   const startCs = toCentis(card.startSeconds);
   const endCs =
@@ -916,7 +940,7 @@ export function overlayCardEvents(
     const ty = Math.round(contentTop + C.titleHeight / 2);
     const titleTags =
       `{\\an5${rise(Math.round(dims.width / 2), ty, 260)}\\fad(200,0)` +
-      `\\fs${C.titleFontSize}\\fsp${C.titleSpacing}`;
+      `\\fs${titleFontSize}\\fsp${Math.round(C.titleSpacing * scale * 10) / 10}`;
     if (!panel) {
       events.push(
         `Dialogue: ${OVERLAY_GLOW_LAYER},${tStart},${tEnd},OvGlow,,0,0,0,,` +
@@ -939,7 +963,7 @@ export function overlayCardEvents(
         ? Math.max(toCentis(row.startSeconds), startCs)
         : startCs + 25 + Math.round(i * C.revealStagger * 100);
     const tRowStart = assTime(Math.min(rowStartCs, endCs));
-    const rowTags = `{\\an4${rise(textX, ry, 220)}\\fad(150,0)\\fs${C.fontSize}`;
+    const rowTags = `{\\an4${rise(textX, ry, 220)}\\fad(150,0)\\fs${fontSize}`;
     const icon = row.icon ? `{\\1c&H${gold}&}${CARD_ICONS[row.icon]}\\h\\h{\\1c&HFFFFFF&}` : "";
     const value = row.value ? `\\h\\h{\\1c&H${gold}&}${escapeAss(row.value)}` : "";
     if (!panel) {

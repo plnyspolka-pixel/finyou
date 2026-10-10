@@ -17,6 +17,7 @@ import {
   OVERLAY_CARD_LAYOUT,
   chunkCues,
   layoutLines,
+  overlayCardGeometry,
   overlaysWithCueTiming,
   parseSubtitles,
   type AiBadgeSpec,
@@ -74,6 +75,8 @@ export type ReelCard = {
   start: number;
   /** null = do końca filmu. */
   end: number | null;
+  /** Zmniejszenie czcionki karty, by najdłuższy wiersz zmieścił się w kadrze (≤ 1). */
+  scale: number;
   panel: { x: number; y: number; width: number; height: number } | null;
   title: { text: string; y: number } | null;
   rows: ReelCardRow[];
@@ -87,7 +90,7 @@ export type ReelPlan = {
   overlays: {
     brand: typeof OVERLAY_BRAND;
     layout: typeof DYNAMIC_OVERLAY_LAYOUT;
-    cardLayout: typeof OVERLAY_CARD_LAYOUT;
+    cardLayout: { readonly [K in keyof typeof OVERLAY_CARD_LAYOUT]: number };
     tag: ReelTag | null;
     headline: ReelHeadline | null;
     cards: ReelCard[];
@@ -143,19 +146,7 @@ function cardPlan(card: OverlayCard, dims = DEFAULT_ASS_DIMENSIONS): ReelCard | 
   if (!card.rows.length) return null;
   const C = OVERLAY_CARD_LAYOUT;
   const panel = card.frame === "panel";
-  const hasIcons = card.rows.some((r) => r.icon);
-  const rowChars = (r: OverlayCard["rows"][number]) =>
-    r.text.length + (r.value ? r.value.length + 2 : 0);
-  const maxChars = Math.max(
-    ...card.rows.map(rowChars),
-    card.title ? Math.round((card.title.length * C.titleFontSize) / C.fontSize) : 0,
-  );
-  const innerW = (hasIcons ? C.iconWidth : 0) + Math.ceil(maxChars * C.fontSize * C.charWidth);
-  const panelW = Math.min(Math.max(C.padding * 2 + innerW, 300), dims.width - 72);
-  const contentH = (card.title ? C.titleHeight : 0) + card.rows.length * C.rowHeight;
-  const panelH = C.padding * 2 + contentH;
-  const panelX = Math.round((dims.width - panelW) / 2);
-  const panelY = Math.round(dims.height * (card.y ?? C.defaultTop));
+  const { scale, panelW, panelH, panelX, panelY } = overlayCardGeometry(card, dims);
   const start = Math.max(0, card.startSeconds);
   const end = card.endSeconds == null ? null : Math.max(card.endSeconds, start + 1);
 
@@ -182,6 +173,7 @@ function cardPlan(card: OverlayCard, dims = DEFAULT_ASS_DIMENSIONS): ReelCard | 
   return {
     start,
     end,
+    scale,
     panel: panel ? { x: panelX, y: panelY, width: panelW, height: panelH } : null,
     title,
     rows,
@@ -209,10 +201,24 @@ function overlaysPlan(ov: DynamicOverlays): NonNullable<ReelPlan["overlays"]> {
     };
   }
   const cards = (ov.cards ?? []).map((c) => cardPlan(c)).filter((c): c is ReelCard => c !== null);
+  // Kompozycja bierze rozmiar czcionki kart z `cardLayout` (wspólny dla
+  // wszystkich kart), więc dostaje najmniejszą skalę z planu — karta, która
+  // by się nie zmieściła, nie wychodzi za kadr. Pozycje i plansze są już
+  // policzone per karta; mniejszy tekst mieści się w każdej z nich.
+  const scale = Math.min(1, ...cards.map((c) => c.scale));
+  const C = OVERLAY_CARD_LAYOUT;
   return {
     brand: OVERLAY_BRAND,
     layout: DYNAMIC_OVERLAY_LAYOUT,
-    cardLayout: OVERLAY_CARD_LAYOUT,
+    cardLayout:
+      scale < 1
+        ? {
+            ...C,
+            fontSize: C.fontSize * scale,
+            titleFontSize: C.titleFontSize * scale,
+            titleSpacing: C.titleSpacing * scale,
+          }
+        : C,
     tag,
     headline,
     cards,
