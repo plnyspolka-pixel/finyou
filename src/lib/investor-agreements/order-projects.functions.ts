@@ -150,6 +150,30 @@ function propertyOf(app: any): any | null {
 
 const DISCLOSED_STATUSES = ["rezerwacja", "transakcja"];
 
+/**
+ * Wnioski, przy których inwestor ma odsłonięte dane kontaktowe klienta
+ * (Ujawnienie w „Moich zleceniach": rezerwacja albo transakcja).
+ */
+export async function disclosedApplicationIds(db: any, userId: string): Promise<Set<string>> {
+  const { data: orders } = await loose(db)
+    .from("investor_orders")
+    .select("id")
+    .eq("user_id", userId);
+  const orderIds = (orders ?? []).map((o: any) => o.id as string);
+  if (!orderIds.length) return new Set();
+  const { data: matches } = await loose(db)
+    .from("investor_order_matches")
+    .select("application_id")
+    .in("order_id", orderIds)
+    .in("status", DISCLOSED_STATUSES);
+  return new Set((matches ?? []).map((m: any) => m.application_id as string));
+}
+
+/** „Stwórz umowę": po Ujawnieniu danych kontaktowych albo po akceptacji klienta. */
+export function contractUnlocked(offerStatus: string, disclosed: boolean): boolean {
+  return disclosed || offerStatus === "zaakceptowana_przez_klienta";
+}
+
 async function myAcceptedOrder(db: any, userId: string, orderId: string) {
   const { data: order } = await loose(db)
     .from("investor_orders")
@@ -834,4 +858,176 @@ export const reserveOrderProject = createServerFn({ method: "POST" })
       reservationExpiresAt: (m.reservation_expires_at as string | null) ?? null,
       contact: await loadContact(supabaseAdmin, app.client_id ?? null),
     };
+  });
+
+/**
+ * Oferta do Projektu prosto z „Moich zleceń" (kalkulator pod kartą Projektu).
+ * Dostęp jak przy raporcie: przyjęte Zlecenie + Projekt w jego kwocie/oknie
+ * (RLS investor_offers patrzy na abonament, więc zapis idzie przez serwer).
+ */
+export const submitOrderProjectOffer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        orderId: z.string().uuid(),
+        applicationId: z.string().uuid(),
+        status: z.enum(["szkic", "zlozona"]),
+        amount: z.number().positive(),
+        months: z.number().int().positive(),
+        annualRate: z.number().min(0),
+        commission: z.number().min(0),
+        balloon: z.number().min(0),
+        monthlyPayment: z.number().min(0),
+        totalToRepay: z.number().min(0),
+        schedule: z
+          .array(
+            z.object({
+              idx: z.number(),
+              date: z.string(),
+              rata: z.number(),
+              kapital: z.number(),
+              odsetki: z.number(),
+              prowizja: z.number(),
+              saldo: z.number(),
+            }),
+          )
+          .max(600),
+        note: z.string().max(4000).nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const order = await myAcceptedOrder(supabaseAdmin, userId, data.orderId);
+    await eligibleApp(supabaseAdmin, order, data.applicationId);
+    const { data: investor } = await loose(supabaseAdmin)
+      .from("investors")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!investor) throw new Error("Brak profilu inwestora.");
+    const { data: offer, error } = await loose(supabaseAdmin)
+      .from("investor_offers")
+      .insert({
+        loan_application_id: data.applicationId,
+        investor_id: investor.id,
+        offer_status: data.status,
+        proposed_amount: data.amount,
+        period_months: data.months,
+        expected_yearly_yield: data.annualRate,
+        commission: data.commission,
+        collection_protection: false,
+        has_balloon: data.balloon > 0,
+        balloon_amount: data.balloon > 0 ? data.balloon : null,
+        repayment_type: data.balloon > 0 ? "mieszana" : "miesieczna",
+        estimated_monthly_payment: data.monthlyPayment,
+        estimated_total_cost: data.totalToRepay,
+        schedule: data.schedule,
+        investor_note: data.note,
+        submitted_at: data.status === "zlozona" ? new Date().toISOString() : null,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    // Powiadomienie autora wniosku (mail, Messenger, krótki telefon) — best-effort.
+    if (data.status === "zlozona") {
+      try {
+        const { notifyInvestorOfferSubmitted } = await import("@/lib/investor-offer-notify.server");
+        await notifyInvestorOfferSubmitted(offer.id as string);
+      } catch (e) {
+        console.error("[order-projects] offer notify failed:", e);
+      }
+    }
+    return { ok: true, offerId: offer.id as string };
+  });
+
+export interface MyOfferRow {
+  id: string;
+  created_at: string;
+  submitted_at: string | null;
+  offer_status: string;
+  proposed_amount: number | null;
+  period_months: number | null;
+  expected_yearly_yield: number | null;
+  commission: number | null;
+  estimated_monthly_payment: number | null;
+  estimated_total_cost: number | null;
+  balloon_amount: number | null;
+  schedule: Array<Record<string, number | string>> | null;
+  /** Czy można już otworzyć kreator umowy z danymi klienta i KW. */
+  contractUnlocked: boolean;
+  loan_application: Record<string, any> | null;
+  project: {
+    propertyType: string | null;
+    city: string | null;
+    voivodeship: string | null;
+    areaSqm: number | null;
+    estimatedValue: number | null;
+    loanAmount: number | null;
+    kwMasked: string | null;
+    description: string | null;
+    photos: OrderProjectFile[];
+  } | null;
+}
+
+/**
+ * „Moje oferty" — oferty inwestora z prowizją, danymi Projektu i zdjęciami.
+ * Przez serwer, bo oferty złożone z „Moich zleceń" mogą należeć do inwestora
+ * bez abonamentu (RLS investor_offers / loan_applications by je ukrył).
+ * Dane Projektu jak w „Moich zleceniach": bez danych identyfikujących, KW zamaskowana.
+ */
+export const getMyInvestorOffers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<MyOfferRow[]> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = loose(supabaseAdmin);
+    const { data: inv } = await db
+      .from("investors")
+      .select("id")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (!inv) return [];
+    const { data: offers, error } = await db
+      .from("investor_offers")
+      .select(
+        "*, loan_application:loan_applications(id, loan_amount, investor_description, situation_description, is_startup, startup_funding_dependency, business_status, business_legal_form, nip, business_nip_verified_at, investor_purpose, client:clients(bik_report_uploaded_at, bank_account_verified_at, phone_verified_at), properties(property_type, city, voivodeship, estimated_value, area_sqm, land_register_number, photos, created_at))",
+      )
+      .eq("investor_id", inv.id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    const { maskKwRaw } = await import("@/lib/location-scoring/masking");
+    const disclosed = await disclosedApplicationIds(supabaseAdmin, context.userId);
+    return Promise.all(
+      (offers ?? []).map(async (o: any): Promise<MyOfferRow> => {
+        const app = o.loan_application;
+        const unlocked = contractUnlocked(o.offer_status, disclosed.has(o.loan_application_id));
+        if (!app) return { ...o, contractUnlocked: unlocked, project: null };
+        const p = propertyOf(app);
+        const { properties: _props, ...appRest } = app;
+        const kwRaw = String(p?.land_register_number ?? "").trim();
+        const { photos } = await loadProjectFiles(
+          supabaseAdmin,
+          app.id,
+          (p?.photos as string[] | null) ?? null,
+        );
+        return {
+          ...o,
+          contractUnlocked: unlocked,
+          loan_application: appRest,
+          project: {
+            propertyType: p?.property_type ?? null,
+            city: p?.city ?? null,
+            voivodeship: p?.voivodeship ?? null,
+            areaSqm: p?.area_sqm != null ? Number(p.area_sqm) : null,
+            estimatedValue: p?.estimated_value != null ? Number(p.estimated_value) : null,
+            loanAmount: app.loan_amount != null ? Number(app.loan_amount) : null,
+            kwMasked: kwRaw ? maskKwRaw(kwRaw) : null,
+            description: app.investor_description ?? app.situation_description ?? null,
+            photos,
+          },
+        };
+      }),
+    );
   });
