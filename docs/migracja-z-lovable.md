@@ -303,7 +303,10 @@ brakujące obiekty, treść 1:1 z plików źródłowych (podanych w nagłówkach
 idempotentnie (`CREATE TABLE/INDEX IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, polityki i triggery
 w blokach `DO` z kontrolą istnienia, funkcje `CREATE OR REPLACE`): 7 tabel z RLS, 3 kolumny,
 20 indeksów, 7 polityk, 5 triggerów `updated_at`, 4 funkcje pgmq (`enqueue_email`,
-`read_email_batch`, `delete_email`, `move_to_dlq`). Świadomie pominięte (uzasadnienie w nagłówku
+`read_email_batch`, `delete_email`, `move_to_dlq`) oraz — dopisane po skanie DROP-ów (niżej) — 4 `DROP FUNCTION IF EXISTS`
+(`reconcile_object_names/shadow_upsert/shadow_delete`, `free_investor_usage`; bez zależności w katalogu i użyć
+w kodzie; tej części konektor nie przetestuje — czeka na potwierdzenie instrukcji destrukcyjnych — do sprawdzenia
+w panelu SQL). Świadomie pominięte (uzasadnienie w nagłówku
 pliku): `investors_partner_select` (usunięta celowo przez 20260719123238), `rules_select_all` /
 `limits_select_all` (produkcja ma wersje tylko dla kadry), `investor_module_access_active` (0 użyć).
 Próbne wykonanie w nowej bazie 2026-10-10 w transakcji wycofanej na końcu (`begin; … rollback;`):
@@ -347,6 +350,32 @@ Alternatywa (gorsza): zostawić historię Lovable i puścić `db push` — uzna�
 niezastosowane, a pliki zastosowane częściowo wywaliłyby się na `create table` bez `if not exists`.
 Zastosowanie dogonienia przed finalną kopią danych jest bezpieczne: `data-sync.sql` ładuje tylko
 tabele istniejące w produkcji, a nowe tabele są puste.
+
+**Druga ścieżka migracji: Drizzle.** Oprócz `supabase/migrations/` repo ma `drizzle/migrations/` (31 plików
+`0000`–`0030` + `meta/_journal.json`), a deploy Lovable stosował je przez `drizzle-kit migrate` (`drizzle.config.ts`,
+zmienna `LOVABLE_DB_MIGRATION_URL`) — tak „ręczne” migracje od 24.09 trafiały do produkcji (test
+`src/lib/security/migrations-mirror.test.ts` pilnuje luster supabase↔drizzle). Tabela `drizzle.__drizzle_migrations`
+(32 wiersze) została skopiowana do nowej bazy razem z danymi — parytet potwierdzony (32/32, te same hashe i
+`created_at`), więc `drizzle-kit migrate` na nowej bazie nie zrobi nic ponad nowe pliki. **Po odejściu od Lovable
+deploy musi sam uruchamiać `drizzle-kit migrate`** (albo zespół przechodzi na jedną ścieżkę `supabase db push` —
+decyzja). 30/32 wpisów pasuje do obecnych plików; 2 nie: id 31 = wcześniejsza wersja `0030_pep_screening`
+(zastosowana dwa razy, finalna treść = HEAD) oraz **id 25 = `0024_prowizja_od_pozyczkobiorcy` zastosowany 30.09,
+a plik przepisany 1.10 (commit 5a8a9bc „Prowizja Finance You 5%”) bez nowego `when`** — Drizzle porównuje tylko
+`when`, więc nigdy go nie powtórzył.
+
+**Skutek: pakiet prawny „5%” nie jest w produkcji.** `legal_documents.umowa_ramowa v7` ma sha256 `887010c826b8…`
+= treść z commita 103e61f (30.09; 6 wzmianek o 7%), repo ma `e5b6d1a4e924…` (26×5%, 0×7%);
+`consent_documents.terms v3` (aktywny regulamin klienta) md5 `1f25eed96f04…` = 103e61f (2×7%), repo
+`a32bb67d7091…` (2×5%). NDA v6 zgodne. Nowa baza (kopia próbna) ma dokładnie to, co produkcja. Naprawa to decyzja
+właściciela z prawnikiem: nowa migracja (nowa wersja supabase + lustro drizzle z nowym `when`) wstawiająca **nowe
+wersje** dokumentów (umowa v8 / terms v4), nie podmiana treści w miejscu — użytkownicy akceptowali v7/v3 w brzmieniu
+z 30.09.
+
+**Skan DROP-ów.** Wcześniejsza kontrola brała pod uwagę obiekty tworzone; dodatkowy skan 304 plików wskazał
+45 obiektów, których ostatnią akcją w repo jest DROP — 41 w produkcji już nie ma, zostały 4 funkcje
+(`reconcile_*` ×3 z 20260718130000_cleanup_reconcile_helpers, `free_investor_usage` z
+20260802120001_remove_investor_free_tier) → dopisane do migracji dogonienia. Ograniczenie: migracji zmieniających
+tylko dane albo robiących `ALTER` nie da się zweryfikować z katalogu — przykład z pakietem prawnym to dokładnie ta klasa.
 
 ### Storage (krok 7) — inwentarz i droga
 
@@ -430,6 +459,60 @@ T0 (okno serwisowe): crony w starej bazie `active = false` i zatrzymanie publika
 kopia danych (`data-sync.sql`) → delta Storage (`storage-copy.py`, wznawialny) → przepięcie domeny
 `app.financeyou.pl` → `cron-rewrite.sql` i włączenie cronów w nowej bazie → webhook Didit → kontrola
 (logowanie, wniosek, plik, mail, cron) → sprzątanie (sekcja kroku 6).
+
+### Przegląd bezpieczeństwa funkcji RPC (2026-10-10)
+
+**Metoda.** 113 funkcji w `public` z EXECUTE dla `anon`/`authenticated`/PUBLIC (83 SECURITY DEFINER, właściciel
+`postgres` z BYPASSRLS) — wszystko, co PostgREST wystawia pod `/rest/v1/rpc/<nazwa>`. Przegląd w 13 niezależnych
+partiach; każde znalezisko critical/high sprawdzane przez 2 niezależnych weryfikatorów z dostępem do kodu i żywego
+katalogu nowej bazy (= produkcja). Wynik po weryfikacji: **1 krytyczne, 1 wysokie, 20 średnich, 24 niskie, 67 bez
+uwag** (31 agentów; weryfikator nr 2 dla `protect_loan_application_staff_fields` nie dokończył — limit sesji — więc
+to znalezisko ma jeden głos).
+
+- **Krytyczne — `dedup_loan_applications()`** (2/2): każdy zalogowany użytkownik może uruchomić jako `postgres`
+  4-przebiegowe scalanie wszystkich niezamkniętych wniosków po numerze KW / telefonie / e-mailu. Samodzielnie
+  zarejestrowany klient zakłada klienta i wniosek z danymi ofiary; scalanie przepina ~44 tabele (dokumenty,
+  nieruchomości, oferty, analizy KW, koperty e-sign…) na jego wniosek i wypełnia jego rekord klienta danymi ofiary.
+  Grant dla `authenticated` to dryf: migracje 20260718054115/054214/110000 go odbierają, ale po kolejnym
+  `CREATE OR REPLACE` stary projekt nadał go z powrotem (domyślne uprawnienia Lovable Cloud). Cron
+  `dedup-loan-applications` jest w produkcji nieaktywny, więc RPC jest dziś jedyną drogą do tej procedury.
+- **Wysokie — `increment_order_rejections(uuid)`** (2/2): każdy zalogowany może podbijać licznik odrzuceń
+  dowolnego Zlecenia inwestora, a po 5 wywołaniach wygasić je z fabrykowanym uzasadnieniem umownym; zero
+  wywołań w kodzie.
+- **Średnie (20):** `exec_admin_any/select/write` (bramka administratora poprawna, ale wystawienie dla
+  `authenticated` oznacza, że wyciek dowolnego JWT administratora = dowolny SQL jako `postgres`; jedyny
+  wywołujący to backend przez `supabaseAdmin`); wyrocznie o cudzych kontach po dowolnym UUID (`is_internal_staff`,
+  `is_external_partner`, `investor_has_full_access`, `has_active_paid_access`, `investor_*` ×4 — te ostatnie także
+  dla `anon`); liczniki bez sprawdzenia właściciela (`increment_loan_view`, `increment_email_variant_*` ×3); dryf
+  grantów wbrew migracji 20260722102000 (`project_assignment_open`, `project_expire_assignments`);
+  `reconcile_object_names` (listowanie wszystkich ścieżek bucketu `pliki-klienta` z pominięciem RLS);
+  `redeem_operator_invite` (zaproszenie nie jest wiązane z e-mailem adresata, `max_uses` może być NULL);
+  `protect_loan_application_staff_fields` / `loan_applications_block_internal_updates` — triggery tylko
+  BEFORE UPDATE, więc **INSERT do `loan_applications` przez klienta nie jest strzeżony**: da się wstawić wniosek od
+  razu ze statusem `wyslany_do_inwestorow`, oceną, LTV, operatorem (weryfikator potwierdził w żywym katalogu).
+- **Obniżone po weryfikacji:** `handle_new_user` (rola `posrednik` z metadanych rejestracji — tak samo działa
+  sankcjonowana ścieżka `selectAccountRole`, a polityka `investors_partner_select`, która dawałaby przez nią
+  dostęp, nigdy nie trafiła do produkcji → bez ryzyka, do decyzji produktowej); `dedup_leads` (ta sama procedura
+  i tak odpala się z triggera przy każdym anonimowym leadzie → niskie); `reconcile_shadow_delete/upsert`
+  (DELETE blokowany przez trigger `storage.protect_delete` → bez ryzyka; i tak usuwane przez dogonienie).
+
+**Co z tym zrobić — przygotowane:**
+- `supabase/migrations/20261010130000_utwardzenie_grantow_rpc.sql` (szkic, **nie zastosowany**): 11 funkcji
+  wołanych tylko przez backend lub cron → EXECUTE tylko `service_role` (`dedup_*` ×2, `exec_admin_*` ×3,
+  `increment_order_rejections`, `increment_email_variant_*` ×3, `project_assignment_open`,
+  `project_expire_assignments`); 4 wyrocznie `investor_*` → bez `anon`/PUBLIC. Każda sprawdzona w katalogu
+  (0 polityk, triggerów, widoków, domyślnych wartości) i w kodzie (klient `supabaseAdmin` albo cron jako
+  `postgres`); test w wycofanej transakcji: po `revoke` zostają `postgres`+`service_role` (A) oraz
+  `postgres`+`authenticated`+`service_role` (B). Nie dotyka funkcji z polityk RLS (`has_role` 228 polityk,
+  `is_internal_staff` 106, `investor_has_full_access` 25) ani wołanych z przeglądarki (`increment_loan_view`,
+  `redeem_operator_invite`, `get_operator_invite`, `get_public_tracking_settings`).
+- Te same `revoke` warto wykonać **od razu w produkcji Lovable** (narzędzie `query_database`) — luka jest żywa
+  dziś. Nowy projekt ma wyłączone automatyczne granty dla nowych funkcji, więc ten rodzaj dryfu nie wróci.
+- Do osobnych zadań w kodzie (poza migracją): strażnik INSERT na `loan_applications` (trigger
+  `BEFORE INSERT OR UPDATE`), wiązanie zaproszenia operatora z e-mailem + `max_uses NOT NULL DEFAULT 1`, bramka
+  `auth.uid()` w `increment_loan_view` i wyroczniach, `is_internal_staff` zamiast `has_role(…,'operator')`
+  w `loan_applications_block_internal_updates`, zakres `dedup_leads` do wstawionego wiersza, audyt `exec_admin_*`.
+  Pełny raport (113 wpisów z dowodami): plik wyjściowy workflow w tej sesji; skrót powyżej.
 
 ## Do sprawdzenia w kodzie (osobno)
 

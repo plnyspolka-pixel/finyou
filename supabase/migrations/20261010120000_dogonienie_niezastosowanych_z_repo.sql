@@ -440,3 +440,13 @@ GRANT EXECUTE ON FUNCTION public.enqueue_email(TEXT, JSONB) TO service_role;
 GRANT EXECUTE ON FUNCTION public.read_email_batch(TEXT, INT, INT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.delete_email(TEXT, BIGINT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.move_to_dlq(TEXT, TEXT, BIGINT, JSONB) TO service_role;
+
+-- ── usunięcia z niezastosowanych migracji repo (skan DROP-ów z 2026-10-10: z 45 obiektów, które repo
+--    zamierzało usunąć, w produkcji zostały tylko te 4 funkcje; żadna nie ma zależności w katalogu
+--    ani użyć w kodzie) ──
+-- z 20260718130000_cleanup_reconcile_helpers: martwe pomocniki po nieudanym odzysku plików
+DROP FUNCTION IF EXISTS public.reconcile_object_names(integer, integer);
+DROP FUNCTION IF EXISTS public.reconcile_shadow_upsert(text, text);
+DROP FUNCTION IF EXISTS public.reconcile_shadow_delete(text, text);
+-- z 20260802120001_remove_investor_free_tier: wycofane darmowe konto inwestora
+DROP FUNCTION IF EXISTS public.free_investor_usage(uuid);
