@@ -25,8 +25,10 @@ import {
 } from "@/lib/contract-engine/umowa-agent.functions";
 import {
   buildCalcHandoffMessage,
+  buildContextOnlyMessage,
   onCalcHandoffChange,
   readCalcHandoff,
+  readContractContextHandoff,
 } from "@/lib/loan-calc-handoff";
 import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
 
@@ -224,18 +226,23 @@ export function UmowaAgentPanel() {
   useEffect(() => {
     const tryStart = () => {
       if (sending || startedFromCalcRef.current) return;
+      const consumed = readConsumedCalcTs();
       const h = readCalcHandoff();
-      if (!h || h.ts <= readConsumedCalcTs()) return;
+      // Sam kontekst (dane klienta i KW) — „Stwórz umowę" przed złożeniem oferty.
+      const c = readContractContextHandoff();
+      const useCalc = !!h && h.ts > consumed && (!c || h.ts >= c.ts);
+      const useCtx = !useCalc && !!c && c.ts > consumed;
+      if (!useCalc && !useCtx) return;
       startedFromCalcRef.current = true;
-      markCalcConsumed(h.ts);
+      markCalcConsumed(useCalc ? h!.ts : c!.ts);
       setProblemy([]);
       setAutokorekty([]);
       setMissing([]);
       setPreview("");
-      void send(buildCalcHandoffMessage(h.payload, h.context), {
-        calc: h.payload,
-        fresh: true,
-      }).finally(() => {
+      const started = useCalc
+        ? send(buildCalcHandoffMessage(h!.payload, h!.context), { calc: h!.payload, fresh: true })
+        : send(buildContextOnlyMessage(c!.text), { fresh: true });
+      void started.finally(() => {
         startedFromCalcRef.current = false;
       });
     };

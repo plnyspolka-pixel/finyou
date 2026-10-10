@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCalcHandoffMessage } from "./loan-calc-handoff";
+import { buildCalcHandoffMessage, buildContextOnlyMessage } from "./loan-calc-handoff";
 import type { LoanCalcPayload } from "./loan-calc-pdf";
 
 function payload(months: number): LoanCalcPayload {
@@ -61,6 +61,15 @@ describe("buildCalcHandoffMessage", () => {
     expect(m).toContain("PESEL: 80010112345");
     expect(m).toContain("LD1M/00012345/6");
     expect(m).toContain("Wpisz do umowy podane wyżej dane");
+    expect(m.length).toBeLessThan(6_000);
+  });
+});
+
+describe("buildContextOnlyMessage", () => {
+  it("bez oferty: dane klienta i KW, prośba o ustalenie warunków w rozmowie", () => {
+    const m = buildContextOnlyMessage("Dane pożyczkobiorcy (z wniosku):\n• KW: LD1M/00012345/6");
+    expect(m).toContain("LD1M/00012345/6");
+    expect(m).toContain("warunki finansowe");
     expect(m.length).toBeLessThan(6_000);
   });
 });

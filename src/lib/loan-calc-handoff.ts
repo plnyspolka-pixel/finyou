@@ -129,3 +129,50 @@ export function buildCalcHandoffMessage(p: LoanCalcPayload, context?: string): s
   text = [text, ...lines].join("\n") + "\n" + tail;
   return text;
 }
+
+// ════════════════════════════════════════════════════════════════════
+// SAM KONTEKST DLA AGENTA UMOWY (bez kalkulacji) — „Stwórz umowę" z
+// „Moich zleceń", zanim inwestor złoży ofertę: dane klienta i KW.
+// Osobny klucz, bo inne kreatory czytają tylko kalkulację.
+// ════════════════════════════════════════════════════════════════════
+
+const CTX_KEY = "finyou.contractContextHandoff.v1";
+
+export interface ContractContextHandoff {
+  text: string;
+  ts: number;
+}
+
+export function saveContractContextHandoff(text: string): void {
+  try {
+    sessionStorage.setItem(CTX_KEY, JSON.stringify({ text, ts: Date.now() }));
+    window.dispatchEvent(new CustomEvent(EVT));
+  } catch {
+    /* brak dostępu do sessionStorage — pomiń */
+  }
+}
+
+export function readContractContextHandoff(): ContractContextHandoff | null {
+  try {
+    const s = sessionStorage.getItem(CTX_KEY);
+    if (!s) return null;
+    const o = JSON.parse(s);
+    if (typeof o?.text === "string" && o.text.trim()) return o as ContractContextHandoff;
+  } catch {
+    /* uszkodzony wpis */
+  }
+  return null;
+}
+
+/** Pierwsza wiadomość do agenta, gdy nie ma jeszcze oferty — tylko strony i KW. */
+export function buildContextOnlyMessage(context: string): string {
+  const text = [
+    "Zacznijmy nową umowę pożyczki dla tego Projektu.",
+    "",
+    context.trim(),
+    "",
+    "Wpisz do umowy podane wyżej dane pożyczkobiorcy i nieruchomości (z KW), " +
+      "a potem poprowadź mnie przez warunki finansowe, moje dane i zabezpieczenia.",
+  ].join("\n");
+  return text.slice(0, MAX_MESSAGE_CHARS);
+}

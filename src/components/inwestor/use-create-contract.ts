@@ -6,9 +6,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { buildOfferPdfPayload } from "@/lib/offer-pdf";
-import { saveCalcHandoff } from "@/lib/loan-calc-handoff";
+import { saveCalcHandoff, saveContractContextHandoff } from "@/lib/loan-calc-handoff";
 import { formatPLN, propertyTypeLabels } from "@/lib/labels";
 import {
+  ensureContractOffer,
   getOfferContractContext,
   type OfferContractContext,
 } from "@/lib/offer-contract-handoff.functions";
@@ -25,13 +26,14 @@ export function useCreateContract() {
     setPendingKey(key);
     try {
       const ctx = await fetchCtx({ data: target });
-      const payload = buildOfferPdfPayload(ctx.offer);
-      if (!payload) {
-        toast.error("Oferta nie ma kompletu parametrów do umowy.");
-        return;
+      const payload = ctx.offer ? buildOfferPdfPayload(ctx.offer) : null;
+      if (payload) {
+        payload.clientName = ctx.client.fullName || null;
+        saveCalcHandoff(payload, contractContextText(ctx));
+      } else {
+        // Bez (kompletnej) oferty: agent dostaje strony i KW, warunki ustala w rozmowie.
+        saveContractContextHandoff(contractContextText(ctx));
       }
-      payload.clientName = ctx.client.fullName || null;
-      saveCalcHandoff(payload, contractContextText(ctx));
       void navigate({ to: "/inwestor/dokumenty", hash: "kreator-umowy" });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nie udało się przygotować umowy.");
@@ -40,7 +42,22 @@ export function useCreateContract() {
     }
   };
 
-  return { createContract, pendingKey };
+  // „Przygotuj umowę": ekran danych stron działa na ofercie — bierzemy
+  // istniejącą albo serwer tworzy szkic z parametrów wniosku.
+  const ensureOffer = useServerFn(ensureContractOffer);
+  const prepareContract = async (applicationId: string) => {
+    setPendingKey(`prep:${applicationId}`);
+    try {
+      const { offerId } = await ensureOffer({ data: { applicationId } });
+      void navigate({ to: "/inwestor/umowa/$offerId", params: { offerId } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się przygotować umowy.");
+    } finally {
+      setPendingKey(null);
+    }
+  };
+
+  return { createContract, prepareContract, pendingKey };
 }
 
 /** Blok danych stron i nieruchomości do pierwszej wiadomości agenta umowy. */
@@ -49,7 +66,22 @@ export function contractContextText(ctx: OfferContractContext): string {
   const p = ctx.property;
   const line = (k: string, v: string | number | null | undefined) =>
     v != null && String(v).trim() !== "" ? `• ${k}: ${v}` : null;
-  const lines = [
+  const lines: Array<string | null> = [];
+  if (!ctx.offer) {
+    lines.push(
+      "Parametry z wniosku (oferta jeszcze niezłożona):",
+      line(
+        "Wnioskowana kwota",
+        ctx.application.loanAmount ? formatPLN(ctx.application.loanAmount) : null,
+      ),
+      line(
+        "Preferowany okres",
+        ctx.application.periodMonths ? `${ctx.application.periodMonths} mies.` : null,
+      ),
+      "",
+    );
+  }
+  lines.push(
     "Dane pożyczkobiorcy (z wniosku):",
     line("Imię i nazwisko", c.fullName),
     line("PESEL", c.pesel),
@@ -61,7 +93,7 @@ export function contractContextText(ctx: OfferContractContext): string {
     line("REGON", c.regon),
     line("KRS", c.krs),
     line("Rachunek bankowy", c.bankAccount),
-  ];
+  );
   if (p) {
     lines.push(
       "",

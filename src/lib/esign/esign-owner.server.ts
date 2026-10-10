@@ -182,7 +182,7 @@ async function investorIdOf(userId: string): Promise<string | null> {
 /**
  * Klienci, których dana rola może wskazać jako podpisujących: personel — wszyscy
  * (null = bez ograniczeń); inwestor — klienci z wniosków, na które złożył ofertę,
- * oraz klienci z jego wcześniejszych kopert.
+ * z Projektów z odkrytymi danymi kontaktowymi oraz z jego wcześniejszych kopert.
  */
 async function allowedClientIds(role: OwnerRole, userId: string): Promise<string[] | null> {
   if (role !== "inwestor") return null;
@@ -204,6 +204,17 @@ async function allowedClientIds(role: OwnerRole, userId: string): Promise<string
         .in("id", appIds);
       for (const a of apps ?? []) if (a.client_id) ids.add(a.client_id);
     }
+  }
+  // Klienci Projektów z odkrytymi danymi kontaktowymi („Moje zlecenia").
+  const { disclosedApplicationIds } =
+    await import("@/lib/investor-agreements/order-projects.functions");
+  const disclosedApps = [...(await disclosedApplicationIds(db(), userId))];
+  if (disclosedApps.length) {
+    const { data: apps } = await db()
+      .from("loan_applications")
+      .select("client_id")
+      .in("id", disclosedApps);
+    for (const a of apps ?? []) if (a.client_id) ids.add(a.client_id);
   }
   const { data: envs } = await db()
     .from("esign_envelopes")
