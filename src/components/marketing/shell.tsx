@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { MktButton } from "./primitives";
 import { ACTIVE_SOCIAL_LINKS, type SocialKey } from "./social-links";
+import { LOAN_PRODUCTS } from "@/lib/loan-products";
 
 /**
  * Finance You — marketing chrome (header, footer, sticky CTA) + shell wrapper.
@@ -76,6 +77,27 @@ const INVESTOR_ANCHORS: { label: string; hash: string; hidden?: boolean }[] = [
   { label: "Cennik", hash: "#cennik" },
 ];
 
+/** Rozwijane menu „Klient” — podstrony produktów z lib/loan-products. */
+const CLIENT_MENU_GROUPS: { label: string; links: { label: string; href: string }[] }[] = [
+  {
+    label: "Pożyczki pod zastaw",
+    links: LOAN_PRODUCTS.filter((p) => p.group === "zastaw").map((p) => ({
+      label: p.menuLabel,
+      href: `/${p.slug}`,
+    })),
+  },
+  {
+    label: "Dla kogo",
+    links: [
+      ...LOAN_PRODUCTS.filter((p) => p.group === "segment").map((p) => ({
+        label: p.menuLabel,
+        href: `/${p.slug}`,
+      })),
+      { label: "Pożyczki wg miast", href: "/pozyczki" },
+    ],
+  },
+];
+
 export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   const [open, setOpen] = useState(false);
   const nav = [
@@ -135,6 +157,27 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
                 {n.label}
               </a>
             );
+            if (n.key === "klient") {
+              return (
+                <div key={n.key} className="fy-nav-drop">
+                  {link}
+                  <div className="fy-nav-drop-panel fy-nav-drop-panel--groups">
+                    <div className="fy-nav-drop-groups">
+                      {CLIENT_MENU_GROUPS.map((g) => (
+                        <div key={g.label}>
+                          <div className="fy-nav-drop-label">{g.label}</div>
+                          {g.links.map((l) => (
+                            <a key={l.href} href={l.href}>
+                              {l.label}
+                            </a>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
             if (n.key !== "inwestor") return link;
             return (
               <div key={n.key} className="fy-nav-drop">
@@ -220,6 +263,18 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
             >
               {n.label}
             </a>,
+            ...(n.key === "klient"
+              ? [
+                  <details key="klient-sub" className="fy-nav-mobile-sub">
+                    <summary>Rodzaje pożyczek</summary>
+                    {CLIENT_MENU_GROUPS.flatMap((g) => g.links).map((l) => (
+                      <a key={l.href} href={l.href} onClick={() => setOpen(false)}>
+                        {l.label}
+                      </a>
+                    ))}
+                  </details>,
+                ]
+              : []),
             ...(n.key === "inwestor"
               ? investorLinks.map((l) => (
                   <a
@@ -293,6 +348,10 @@ export function SiteFooter() {
       ],
     },
     {
+      h: "Pożyczki",
+      links: LOAN_PRODUCTS.map((p) => ({ t: p.menuLabel, href: `/${p.slug}` })),
+    },
+    {
       h: "Platforma",
       links: [
         { t: "Jak działa", href: "/#jak-dziala" },
@@ -320,7 +379,7 @@ export function SiteFooter() {
           padding: "3.5rem 1.5rem",
           display: "grid",
           gap: "2.5rem",
-          gridTemplateColumns: "1.6fr 1fr 1fr 1fr",
+          gridTemplateColumns: "1.6fr 1fr 1.4fr 1fr 1fr",
         }}
       >
         <div>
