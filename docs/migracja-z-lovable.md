@@ -282,7 +282,7 @@ stosowaniu ręcznych migracji, więc historia i pliki rozjechały się dwustronn
 Kontrola treści niedopasowanych plików względem schematu (773 obiektów: tabele, funkcje,
 indeksy, kolumny, polityki) wykazała, że **nie wszystko z repo trafiło do produkcji**:
 - brak tabel: `comms_suppressions` (20260730090000_bot_loop_guard), `pr_opportunities`,
-  `pr_outreach_log` (20260803160000_pr_module), `rcn_transactions` (20260718130000),
+  `pr_outreach_log` (20260803160000_pr_module), `rcn_transactions` (20260718130001),
   `seo_location_pages` (20260803150000), `seo_location_report_entries` (20260803153000),
   `video_pipeline` (20260803170000);
 - brak funkcji: `enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq`
@@ -321,14 +321,30 @@ Dwie rzeczy, których pliki źródłowe nie miały, a nowa baza wymaga:
   authenticated`, `GRANT EXECUTE … TO service_role` (woła je tylko backend przez klucz service_role,
   `src/routes/lovable/email/queue/process.ts`).
 
-**Rekomendacja baseline'u (do decyzji właściciela):** w nowej bazie zastąpić historię Lovable
-dokładnie 304 wersjami z repo (`supabase migration repair --status applied` albo wstawienie
-wierszy `version/name/statements`) i zastosować powyższą migrację jako 305. wersję
-(`supabase db push` albo `apply_migration` przez konektor). Dzięki temu `db push` ma czystą bazę,
-a różnica względem produkcji jest jawna i zrecenzowana. Alternatywa (gorsza): zostawić ~10 plików
-jako „niezastosowane” i puścić `db push` — pliki zastosowane częściowo wywaliłyby się na
-`create table` bez `if not exists`. Zastosowanie dogonienia przed finalną kopią danych jest
-bezpieczne: `data-sync.sql` ładuje tylko tabele istniejące w produkcji, a nowe tabele są puste.
+**Baseline historii — gotowy do decyzji właściciela.** Cel: historia w nowej bazie = dokładnie
+pliki z repo, żeby `supabase db push` miał czystą bazę. Stan: 231 wersji Lovable w bazie vs 304 plików
+w repo (bez dogonienia); **wspólne tylko 23**, 208 wersji Lovable nie ma odpowiednika w repo. Po drodze
+wyszły **4 pary plików o tej samej wersji** (`version` jest kluczem głównym historii, więc `db push`
+i `migration repair` wywaliłyby się na drugim pliku pary) — drugi plik każdej pary przesunięty
+o 1 s: `20260718130001_rcn_transactions`, `20260721120001_didit_kyc`,
+`20260730120001_offer_card_distribution`, `20260802120001_remove_investor_free_tier` (zmiana tylko
+nazwy; treść i baza nietknięte; odwołania w docs poprawione).
+
+Narzędzia (`docs/migracja/`): `baseline-historii.py` generuje z repo i listy wersji z bazy:
+`baseline-wersje-repo.txt` (304), `baseline-wersje-lovable.txt` (208 do usunięcia) i
+`baseline-historii.sql` — (1) archiwum starej historii do `_mig.lovable_schema_migrations`,
+(2) **DELETE** 208 wierszy (destrukcyjne — konektor poprosi o potwierdzenie), (3) `INSERT … ON CONFLICT`
+304 wierszy, (4) kontrola. Wariant w repo ma `statements = NULL` (100 KB); wariant z treścią plików
+(`--bez --no-statements`, 3,8 MB) generuje się na żądanie. Równoważnik przez CLI (zapisuje też
+`statements`, wymaga hasła bazy): `supabase migration repair --status reverted $(cat
+baseline-wersje-lovable.txt)` → `--status applied $(cat baseline-wersje-repo.txt)` → `migration list`
+→ `db push` (zastosuje i zarejestruje `20261010120000` dogonienie). **Nie** rejestrować dogonienia
+przez `apply_migration` konektora — nadaje własną wersję (bieżący czas), co znów rozjedzie historię
+z plikiem; przez konektor: `execute_sql` z treścią pliku + jawny `insert` wersji `20261010120000`.
+Alternatywa (gorsza): zostawić historię Lovable i puścić `db push` — uznałby 281 plików za
+niezastosowane, a pliki zastosowane częściowo wywaliłyby się na `create table` bez `if not exists`.
+Zastosowanie dogonienia przed finalną kopią danych jest bezpieczne: `data-sync.sql` ładuje tylko
+tabele istniejące w produkcji, a nowe tabele są puste.
 
 ### Storage (krok 7) — inwentarz i droga
 
