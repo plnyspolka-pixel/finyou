@@ -28,8 +28,13 @@ import {
 } from "@/lib/lead-magnets/schema";
 import {
   LEAD_MAGNET_AUDIENCES,
+  LEAD_MAGNET_MAX_FILE_BYTES,
+  LEAD_MAGNET_MIME_BY_EXT,
   LEAD_MAGNET_PLATFORMS,
+  leadMagnetFileNameFrom,
+  leadMagnetStoragePath,
   leadMagnetUrl,
+  resolveLeadMagnetFileType,
   suggestedCaption,
 } from "@/lib/lead-magnets/core";
 
@@ -97,7 +102,7 @@ export const createLeadMagnet = defineTool({
   name: "create_lead_magnet",
   title: "Create lead magnet",
   description:
-    "Tworzy lead magnet (ten sam schemat co panel): slug, tytuł, `audience` (klient / inwestor), nagłówki, `benefits` (co jest w środku), CTA, okładka, plik (`file_path` w buckecie lead-magnets — wgrany w panelu) albo `file_url`, mail z linkiem ({imie}, {tytul}, {link}, {strona}), hasła `trigger_keywords` (np. PRZEWODNIK), `match_any_post`, szablony odpowiedzi ({imie}, {tytul}, {link}), `email_in_dm_platforms` (facebook / instagram — tam zamiast linku automat prosi w wiadomości prywatnej o e-mail; domyślnie instagram, bo konto ma zablokowane linki) z szablonami `reply_ask_email_template` i `reply_email_received_template` ({imie}, {tytul}, {email}), `posts` (powiązane posty FB / IG / YouTube), `published`. Treść z briefu podpowie `generate_lead_magnet_copy`. Strona: /pobierz/<slug>. Tylko administrator/operator.",
+    "Tworzy lead magnet (ten sam schemat co panel): slug, tytuł, `audience` (klient / inwestor), nagłówki, `benefits` (co jest w środku), CTA, okładka, plik (wgraj `upload_lead_magnet_file` — z adresu https albo base64; `file_path` przyjmuje też gotową ścieżkę w buckecie lead-magnets) albo `file_url`, mail z linkiem ({imie}, {tytul}, {link}, {strona}), hasła `trigger_keywords` (np. PRZEWODNIK), `match_any_post`, szablony odpowiedzi ({imie}, {tytul}, {link}), `email_in_dm_platforms` (facebook / instagram — tam zamiast linku automat prosi w wiadomości prywatnej o e-mail; domyślnie instagram, bo konto ma zablokowane linki) z szablonami `reply_ask_email_template` i `reply_email_received_template` ({imie}, {tytul}, {email}), `posts` (powiązane posty FB / IG / YouTube), `published`. Treść z briefu podpowie `generate_lead_magnet_copy`. Strona: /pobierz/<slug>. Tylko administrator/operator.",
   inputSchema: createBody.shape,
   annotations: WRITE,
   handler: (a, ctx: ToolContext) =>
@@ -181,11 +186,109 @@ export const updateLeadMagnet = defineTool({
     }),
 });
 
+export const uploadLeadMagnetFile = defineTool({
+  name: "upload_lead_magnet_file",
+  title: "Upload lead magnet file",
+  description:
+    "Wgrywa materiał lead magnetu do prywatnego bucketa `lead-magnets` i podpina go pod lead magnet (`file_path`, `file_name`, `file_size`, `mime_type`) — to samo, co przycisk „Wgraj plik” w panelu. Źródło: `url` (publiczny adres https, serwer pobiera plik) albo `file_base64` (treść pliku zakodowana base64) — dokładnie jedno z nich. Przyjmuje pdf, docx, xlsx, pptx, zip, png, jpg, mp4, do 50 MB; gdy adres nie ma rozszerzenia, podaj `file_name`. Poprzedni plik materiału jest kasowany, a `file_url` czyszczone (wgrany plik ma pierwszeństwo). Po wgraniu lead magnet można opublikować (`update_lead_magnet` z `published`). Tylko administrator/operator.",
+  inputSchema: {
+    lead_magnet_id: z.string().uuid(),
+    url: z
+      .string()
+      .url()
+      .max(2000)
+      .refine((u) => u.toLowerCase().startsWith("https://"), "Adres musi zaczynać się od https://")
+      .optional(),
+    file_base64: z.string().min(1).optional(),
+    file_name: z
+      .string()
+      .min(1)
+      .max(200)
+      .optional()
+      .describe("Nazwa pokazywana w panelu i w mailu; z rozszerzeniem rozpoznaje typ pliku."),
+  },
+  annotations: WRITE,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      const s = await requireTeamAdmin(ctx);
+      if (!a.url === !a.file_base64) {
+        return fail("Podaj dokładnie jedno źródło pliku: `url` albo `file_base64`.");
+      }
+      const current = await oneOf(
+        s.from("lead_magnets").select("id, slug, audience, file_path").eq("id", a.lead_magnet_id),
+        "lead_magnets",
+      );
+      if (!current) return fail("Nie znaleziono lead magnetu.");
+
+      let bytes: Uint8Array;
+      let contentType: string | null = null;
+      if (a.url) {
+        const { fetchBytes } = await import("@/lib/media-storage.server");
+        const fetched = await fetchBytes(a.url, LEAD_MAGNET_MAX_FILE_BYTES);
+        bytes = new Uint8Array(fetched.bytes);
+        contentType = fetched.contentType;
+      } else {
+        const buf = Buffer.from(a.file_base64 ?? "", "base64");
+        if (!buf.byteLength) return fail("`file_base64` nie zawiera danych.");
+        if (buf.byteLength > LEAD_MAGNET_MAX_FILE_BYTES) {
+          return fail(`Plik za duży (limit ${LEAD_MAGNET_MAX_FILE_BYTES} B).`);
+        }
+        bytes = new Uint8Array(buf);
+      }
+      if (!bytes.byteLength) return fail("Pobrany plik jest pusty.");
+
+      const type = resolveLeadMagnetFileType({
+        fileName: a.file_name,
+        contentType,
+        url: a.url,
+      });
+      if (!type) {
+        return fail(
+          `Nieobsługiwany typ pliku (${contentType || "nieznany"}). Przyjmujemy: ${Object.keys(
+            LEAD_MAGNET_MIME_BY_EXT,
+          ).join(", ")}. Gdy adres nie ma rozszerzenia, podaj \`file_name\` z rozszerzeniem.`,
+        );
+      }
+
+      const { LEAD_MAGNETS_BUCKET } = await import("@/lib/lead-magnets/lead-magnets.server");
+      const path = leadMagnetStoragePath(current.audience, type.ext);
+      const { error: upErr } = await s.storage
+        .from(LEAD_MAGNETS_BUCKET)
+        .upload(path, bytes, { contentType: type.mime, upsert: false });
+      if (upErr) throw new Error(`Storage (${LEAD_MAGNETS_BUCKET}): ${upErr.message}`);
+      if (current.file_path) {
+        // Stary plik nie jest już nikomu potrzebny — linki w mailach idą przez token, nie przez ścieżkę.
+        await s.storage.from(LEAD_MAGNETS_BUCKET).remove([current.file_path]);
+      }
+
+      const file_name = leadMagnetFileNameFrom(a.file_name, a.url, type.ext);
+      const row = await updateOne(
+        s,
+        "lead_magnets",
+        a.lead_magnet_id,
+        {
+          file_path: path,
+          file_name,
+          file_size: bytes.byteLength,
+          mime_type: type.mime,
+          file_url: null,
+        },
+        "id, slug, title, audience, published, file_name, file_size, mime_type, updated_at",
+      );
+      return ok({
+        ok: true,
+        lead_magnet: withUrl(row),
+        file: { path, name: file_name, size: bytes.byteLength, mime: type.mime },
+        replaced: current.file_path ?? null,
+      });
+    }),
+});
+
 export const deleteLeadMagnet = defineTool({
   name: "delete_lead_magnet",
   title: "Delete lead magnet",
   description:
-    "Usuwa lead magnet razem z zapisami, dziennikiem komentarzy i powiązaniami postów (plik w Storage zostaje — usuń go `supabase_storage`, jeśli trzeba). Nieodwracalne. Tylko administrator/operator.",
+    "Usuwa lead magnet razem z zapisami, dziennikiem komentarzy i powiązaniami postów (plik w Storage zostaje). Nieodwracalne. Tylko administrator/operator.",
   inputSchema: { lead_magnet_id: z.string().uuid() },
   annotations: DESTRUCTIVE,
   handler: ({ lead_magnet_id }, ctx: ToolContext) =>
@@ -349,6 +452,7 @@ export const leadMagnetTools = [
   getLeadMagnet,
   createLeadMagnet,
   updateLeadMagnet,
+  uploadLeadMagnetFile,
   deleteLeadMagnet,
   linkLeadMagnetPost,
   unlinkLeadMagnetPost,
