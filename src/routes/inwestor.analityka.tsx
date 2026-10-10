@@ -40,6 +40,7 @@ import {
   StepEmpty,
 } from "@/components/inwestor/analytics-steps";
 import { ExternalKwChecks } from "@/components/inwestor/external-kw-checks";
+import { ReportPdfButton } from "@/components/inwestor/report-pdf-button";
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
 import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
@@ -642,6 +643,7 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
                 </Link>
               </Button>
             )}
+            <ReportPdfButton source={{ kind: "analityka", detail: d }} disabled={done === 0} />
             <Button
               size="sm"
               disabled={!d.canRequestRun || runMut.isPending}

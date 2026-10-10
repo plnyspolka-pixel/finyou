@@ -41,6 +41,7 @@ import { downloadOfferPdf } from "@/lib/offer-pdf";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { OrderCycleSection } from "@/components/inwestor/order-cycle";
 import { useCreateContract } from "@/components/inwestor/use-create-contract";
+import { ReportPdfButton } from "@/components/inwestor/report-pdf-button";
 import {
   accent,
   CoOwnersStep,
@@ -740,17 +741,20 @@ function ReportPanel({
                   : "Wyniki z analiz zespołu Finance You."}
             </p>
           </div>
-          {d.disclosed ? (
-            <Button size="sm" variant="outline" asChild>
-              <Link to="/inwestor/analityka" search={{ app: applicationId }}>
-                <BarChart3 className="mr-2 h-4 w-4" /> Otwórz w Analityce
-              </Link>
-            </Button>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-[0.68rem] font-semibold text-muted-foreground">
-              <Lock className="h-3 w-3" /> dane właściciela po rezerwacji
-            </span>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <ReportPdfButton source={{ kind: "zlecenie", detail: d }} disabled={done === 0} />
+            {d.disclosed ? (
+              <Button size="sm" variant="outline" asChild>
+                <Link to="/inwestor/analityka" search={{ app: applicationId }}>
+                  <BarChart3 className="mr-2 h-4 w-4" /> Otwórz w Analityce
+                </Link>
+              </Button>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-[0.68rem] font-semibold text-muted-foreground">
+                <Lock className="h-3 w-3" /> dane właściciela po rezerwacji
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 flex items-center gap-3">

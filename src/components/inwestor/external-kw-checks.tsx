@@ -43,6 +43,7 @@ import {
   type KwCheckPropertyType,
 } from "@/lib/investor-analytics/types";
 import { accent, CoOwnersStep, KwStep, StepCard, StepEmpty } from "./analytics-steps";
+import { ReportPdfButton } from "./report-pdf-button";
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : "Wystąpił błąd";
@@ -413,19 +414,22 @@ function CheckDetail({ id }: { id: string }) {
               <span>zlecono {formatDateTime(item.createdAt)}</span>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={detailQ.isFetching}
-            onClick={() => void detailQ.refetch()}
-          >
-            {detailQ.isFetching ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            Odśwież
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <ReportPdfButton source={{ kind: "kw_check", detail: d }} disabled={done === 0} />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={detailQ.isFetching}
+              onClick={() => void detailQ.refetch()}
+            >
+              {detailQ.isFetching ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Odśwież
+            </Button>
+          </div>
         </div>
 
         <div className="mt-4 flex items-center gap-3">

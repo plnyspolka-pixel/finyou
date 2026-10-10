@@ -32,7 +32,7 @@ export interface AnalyticsRun {
 export type AnalyticsSource = "okazja" | "oferta" | "przekazany";
 
 export const ANALYTICS_SOURCE_LABELS: Record<AnalyticsSource, string> = {
-  okazja: "Okazja z Twojego Zlecenia",
+  okazja: "Projekt z Twojego Zlecenia",
   oferta: "Twoja oferta",
   przekazany: "Wniosek przekazany przez Finance You",
 };

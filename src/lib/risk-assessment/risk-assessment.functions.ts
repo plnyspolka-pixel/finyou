@@ -37,8 +37,14 @@ import { fetchMarketComparables } from "./market-comparables.server";
 
 import { clampLoanTermYears } from "./life-expectancy";
 import { combineRiskAssessment } from "./risk-scoring";
-import type { InvestmentRiskAssessment, GovBenchmark, OcrSummary } from "./types";
-import { recommendationLabel } from "./types";
+import type {
+  InvestmentRiskAssessment,
+  GovBenchmark,
+  OcrSummary,
+  Recommendation,
+  RiskGrade,
+} from "./types";
+import { gradeFromScore, recommendationLabel } from "./types";
 
 type SupabaseLike = { from: (t: string) => any };
 
@@ -927,8 +933,16 @@ export const getInvestmentRiskAssessment = createServerFn({ method: "GET" })
 // ---- Podsumowanie dla kalkulatora inwestora (bezpieczny podzbiór) ----
 // Zawiera WYŁĄCZNIE dane o nieruchomości i rynku: prognozowaną wartość, szybką/
 // wymuszoną sprzedaż oraz ludność/otoczenie. NIE zawiera danych właściciela
-// (PESEL/trwanie życia) ani analizy korespondencji.
+// (PESEL/trwanie życia) ani analizy korespondencji. Ocena inwestycyjna A–E
+// (wynik, klasa, profil ryzyka) to zapisane kolumny oceny, nie dane osobowe.
 export interface InvestorValuationSummary {
+  /** Klasa ryzyka A–E (skala GRADE_BANDS); null = ocena bez wyniku. */
+  riskGrade: RiskGrade | null;
+  /** Ocena inwestycyjna 0–100 (wyżej = bezpieczniej). */
+  investmentScore: number | null;
+  recommendation: Recommendation | null;
+  /** Neutralny opis profilu ryzyka (recommendationLabel) — nie rekomendacja. */
+  recommendationLabel: string | null;
   predictedValue: {
     lowPln: number | null;
     midPln: number | null;
@@ -1031,7 +1045,13 @@ export function buildInvestorValuationSummary(
 ): InvestorValuationSummary {
   const mv = r.masterValuation;
   const cb = r.collateralAnalysis?.valuationBenchmark ?? null;
+  const score = Number.isFinite(r.investmentScore) ? Math.round(r.investmentScore) : null;
+  const recommendation = r.recommendation ?? null;
   return {
+    riskGrade: r.riskGrade ?? (score != null ? gradeFromScore(score) : null),
+    investmentScore: score,
+    recommendation,
+    recommendationLabel: recommendation ? recommendationLabel(recommendation) : null,
     predictedValue: {
       lowPln: mv.estimatedValueLowPln ?? cb?.conservativeLowPln ?? null,
       midPln: mv.estimatedValueMidPln ?? cb?.estimatedValueMedianPln ?? null,
