@@ -5,16 +5,16 @@
 
 import { claudeJson, isClaudeConfigured } from "./claude-json.server";
 
-/** Limit API na obraz (base64 ~ +33%) — większe pliki zostają bez opisu AI. */
-const MAX_VISION_BYTES = 3.6 * 1024 * 1024;
-const VISION_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+/** Formaty, które Claude czyta jako obraz (HEIC i AVIF — nie). */
+export const VISION_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 const SYSTEM = `Opisujesz grafiki do banku przebitek (B-roll) krótkich rolek firmy Finance You — pożyczki pod zastaw nieruchomości i inwestowanie w nie. Przebitki dobiera automat po tagach do angielskich fraz typu "signing mortgage contract", "apartment building exterior", "calculator and documents".
 
 Zwróć:
 - title: krótki opis sceny PO ANGIELSKU w stylu frazy stockowej (3–7 słów, bez kropki), np. "couple signing loan documents".
 - tags: 8–16 tagów, małymi literami: najpierw angielskie rzeczowniki i czynności widoczne w kadrze (obiekty, miejsce, czynność), potem te same pojęcia po polsku. Bez ogólników typu "image", "photo", "stock".
-- orientation: "portrait" (wyższy niż szerszy), "landscape" albo "square".`;
+- orientation: "portrait" (wyższy niż szerszy), "landscape" albo "square".
+Gdy dostajesz kadr z klipu wideo, opisz scenę klipu (to, co dzieje się w ujęciu), nie sam kadr.`;
 
 const SCHEMA = {
   type: "object",
@@ -27,27 +27,25 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
-function toBase64(bytes: Uint8Array): string {
-  let bin = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(bin);
-}
-
+/**
+ * Opis grafiki (albo kadru z klipu) spod publicznego URL-a — Claude pobiera
+ * obraz sam, więc rozmiar pliku nie gra roli. null = brak klucza / format,
+ * którego model nie czyta.
+ */
 export async function describeBrollImage(
-  bytes: Uint8Array,
+  url: string,
   mime: string,
+  opts?: { video?: boolean },
 ): Promise<{ title: string; tags: string[]; orientation: string } | null> {
-  if (!isClaudeConfigured() || !VISION_TYPES.has(mime) || bytes.byteLength > MAX_VISION_BYTES) {
-    return null;
-  }
+  if (!isClaudeConfigured() || !VISION_TYPES.has(mime)) return null;
   const out = await claudeJson<{ title?: unknown; tags?: unknown; orientation?: unknown }>({
     system: SYSTEM,
     content: [
-      { type: "image", source: { type: "base64", media_type: mime, data: toBase64(bytes) } },
-      { type: "text", text: "Opisz tę grafikę." },
+      { type: "image", source: { type: "url", url } },
+      {
+        type: "text",
+        text: opts?.video ? "To kadr z klipu wideo. Opisz klip." : "Opisz tę grafikę.",
+      },
     ],
     schema: SCHEMA,
     effort: "low",
