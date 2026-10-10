@@ -82,10 +82,16 @@ async function verifyCallerForOffer(userId: string, offerId: string) {
   }
 
   // Strona inwestorska przygotowania umowy wymaga aktywnego pełnego
-  // (płatnego) dostępu inwestora.
+  // (płatnego) dostępu inwestora — albo Ujawnienia danych kontaktowych
+  // klienta w „Moich zleceniach" (rezerwacja/transakcja tego Projektu).
   if (side === "investor") {
-    const { assertInvestorFullAccess } = await import("@/lib/access/guards.server");
-    await assertInvestorFullAccess(userId);
+    const { disclosedApplicationIds } =
+      await import("@/lib/investor-agreements/order-projects.functions");
+    const disclosed = await disclosedApplicationIds(supabaseAdmin, userId);
+    if (!disclosed.has((offer as any).loan_application_id)) {
+      const { assertInvestorFullAccess } = await import("@/lib/access/guards.server");
+      await assertInvestorFullAccess(userId);
+    }
   }
   return { offer, side };
 }

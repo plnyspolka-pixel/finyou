@@ -14,11 +14,13 @@ import {
   BarChart3,
   BookOpenCheck,
   Clock,
-  Eye,
+  FilePen,
+  FileSignature,
   FileText,
   Loader2,
   Lock,
   MapPin,
+  PenLine,
   Phone,
   Send,
   ShieldCheck,
@@ -38,6 +40,7 @@ import { maxCapitalRate } from "@/lib/contract-engine/fees";
 import { downloadOfferPdf } from "@/lib/offer-pdf";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { OrderCycleSection } from "@/components/inwestor/order-cycle";
+import { useCreateContract } from "@/components/inwestor/use-create-contract";
 import {
   accent,
   CoOwnersStep,
@@ -383,7 +386,15 @@ function ProjectCard({
           {showReport && (report.status === "done" || report.status === "running") ? (
             <ReportPanel orderId={p.orderId} applicationId={p.applicationId} report={report} />
           ) : null}
-          {showOffer ? <OfferPanel project={p} onSubmitted={() => setShowOffer(false)} /> : null}
+          {showOffer ? (
+            <OfferPanel
+              project={p}
+              onSubmitted={() => {
+                setShowOffer(false);
+                onChanged();
+              }}
+            />
+          ) : null}
 
           {/* Pobierz dane kontaktowe i rezerwuj */}
           {reserved ? (
@@ -391,6 +402,8 @@ function ProjectCard({
               contact={reserved.contact}
               applicationId={p.applicationId}
               reservationExpiresAt={reserved.reservationExpiresAt}
+              clientId={p.clientId}
+              myOfferId={p.myOfferId}
             />
           ) : (
             <div className="space-y-2 rounded-md bg-muted/40 p-3">
@@ -968,11 +981,18 @@ function ContactBox({
   contact,
   applicationId,
   reservationExpiresAt,
+  clientId,
+  myOfferId,
 }: {
   contact: OrderProject["contact"];
   applicationId: string;
   reservationExpiresAt: string | null;
+  clientId: string | null;
+  myOfferId: string | null;
 }) {
+  const noOfferHint =
+    "Najpierw złóż ofertę („Złóż ofertę” powyżej) — umowa powstaje z jej warunków.";
+  const { createContract, pendingKey } = useCreateContract();
   return (
     <div className="space-y-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1009,15 +1029,47 @@ function ContactBox({
           </span>
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">
-          Dane kontaktowe klienta znajdziesz w pełnym widoku Projektu.
-        </p>
+        <p className="text-xs text-muted-foreground">Brak danych kontaktowych klienta.</p>
       )}
-      <Button asChild size="sm" variant="outline">
-        <Link to="/inwestor/wniosek/$id" params={{ id: applicationId }}>
-          <Eye className="mr-2 h-4 w-4" /> Pełne dane Projektu (KW, dokumenty, czat)
-        </Link>
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        {/* Po Ujawnieniu: kreator umowy z danymi klienta, KW i złożoną ofertą. */}
+        <Button
+          size="sm"
+          disabled={pendingKey === applicationId}
+          onClick={() => void createContract({ applicationId })}
+        >
+          {pendingKey === applicationId ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <FilePen className="mr-2 h-4 w-4" />
+          )}
+          Stwórz umowę
+        </Button>
+        {/* Dane stron do umowy (klient uzupełnia swoje równolegle). */}
+        {myOfferId ? (
+          <Button asChild size="sm" variant="outline">
+            <Link to="/inwestor/umowa/$offerId" params={{ offerId: myOfferId }}>
+              <FileSignature className="mr-2 h-4 w-4" /> Przygotuj umowę
+            </Link>
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" disabled title={noOfferHint}>
+            <FileSignature className="mr-2 h-4 w-4" /> Przygotuj umowę
+          </Button>
+        )}
+        {/* E-podpis (forma dokumentowa): klient jako pierwszy podpisujący. */}
+        {myOfferId && clientId ? (
+          <Button asChild size="sm" variant="outline">
+            <a href={`/inwestor/podpisy?nowa=1&klient=${clientId}&wniosek=${applicationId}`}>
+              <PenLine className="mr-2 h-4 w-4" /> Podpisz umowę
+            </a>
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" disabled title={noOfferHint}>
+            <PenLine className="mr-2 h-4 w-4" /> Podpisz umowę
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

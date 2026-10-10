@@ -117,6 +117,10 @@ export interface OrderProject {
   } | null;
   /** Dane kontaktowe — tylko po Ujawnieniu (rezerwacja / transakcja). */
   contact: OrderProjectContact | null;
+  /** Id klienta — tylko po Ujawnieniu (prefill e-podpisu). */
+  clientId: string | null;
+  /** Ostatnia złożona (nie szkic) oferta tego inwestora do Projektu. */
+  myOfferId: string | null;
 }
 
 export interface MyOrderProjectsResult {
@@ -372,6 +376,7 @@ async function buildProject(
   order: any,
   app: any,
   match: any | null,
+  myOfferId: string | null = null,
 ): Promise<OrderProject> {
   const p = propertyOf(app);
   const { maskKwRaw } = await import("@/lib/location-scoring/masking");
@@ -413,6 +418,8 @@ async function buildProject(
         }
       : null,
     contact,
+    clientId: disclosed ? (app.client_id ?? null) : null,
+    myOfferId,
   };
 }
 
@@ -499,6 +506,27 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
     );
     apps = apps.filter((a) => contactComplete(contacts.get(a.client_id) ?? null));
 
+    // Moje złożone oferty do tych Projektów (najnowsza na wniosek).
+    const myOfferByApp = new Map<string, string>();
+    {
+      const { data: inv } = await loose(supabaseAdmin)
+        .from("investors")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const appIds = apps.map((a: any) => a.id);
+      if (inv && appIds.length) {
+        const { data: offers } = await loose(supabaseAdmin)
+          .from("investor_offers")
+          .select("id, loan_application_id")
+          .eq("investor_id", inv.id)
+          .in("loan_application_id", appIds)
+          .neq("offer_status", "szkic")
+          .order("created_at", { ascending: true });
+        for (const of of offers ?? []) myOfferByApp.set(of.loan_application_id, of.id);
+      }
+    }
+
     const result: MyOrderProjectsResult["orders"] = [];
     for (const o of orders ?? []) {
       const projects: OrderProject[] = [];
@@ -516,7 +544,9 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
             if ((myMatches ?? []).some((m: any) => m.application_id === app.id)) continue;
           }
           seen.add(app.id);
-          projects.push(await buildProject(supabaseAdmin, o, app, match));
+          projects.push(
+            await buildProject(supabaseAdmin, o, app, match, myOfferByApp.get(app.id) ?? null),
+          );
         }
       }
       result.push({
