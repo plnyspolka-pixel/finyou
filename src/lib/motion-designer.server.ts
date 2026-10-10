@@ -36,8 +36,9 @@ ZASADY KOMPOZYCJI
 
 KOTWICE CZASU
 - "sync": DOSŁOWNY, ciągły fragment tekstu lektora (3–10 słów, skopiowany znak w znak ze scenariusza), przy którym element ma wejść — zwykle początek zdania, którego dotyczy.
-- "endSync": dosłowny fragment, po którym element ma zniknąć, albo null (zniknie przed następnym).
-- "itemSync": tylko dla checklist / steps — dla każdej pozycji dosłowny fragment, przy którym ma się odsłonić (albo null); dla innych komponentów null.
+- "endSync": dosłowny fragment, po którym element ma zniknąć, albo pusty tekst (zniknie przed następnym).
+- "itemSync": tylko dla checklist / steps — dla każdej pozycji dosłowny fragment, przy którym ma się odsłonić (albo pusty tekst); dla innych komponentów pusta lista.
+- Pola opisane w katalogu jako „może być null” zostaw jako pusty tekst, gdy ich nie używasz.
 
 ${MOTION_CATALOG_PROMPT}
 
@@ -45,7 +46,10 @@ Gdy w tekście nie ma nic, co sensownie układa się w grafikę, zwróć pustą 
 
 // Schemat odpowiedzi — structured outputs (bez ograniczeń długości: te
 // pilnuje walidator; nieobsługiwane słowa kluczowe API i tak by odrzuciło).
-const nullableString = { anyOf: [{ type: "string" }, { type: "null" }] };
+// Pole opcjonalne = tekst, pusty znaczy „brak” (walidator czyta "" jak null).
+// Bez unii string|null: API kompiluje schemat z limitem 16 parametrów z
+// unią / anyOf — z nullable wyszło 28 i całe zapytanie dostawało HTTP 400.
+const nullableString = { type: "string", description: "pusty tekst = brak" };
 const PROPS_SCHEMA: Record<string, Record<string, unknown>> = {
   stat: { kicker: nullableString, value: { type: "string" }, caption: nullableString },
   range: {
@@ -95,7 +99,9 @@ const ELEMENT_SCHEMAS = MOTION_COMPONENTS.map((component) => ({
     sync: { type: "string" },
     endSync: nullableString,
     itemSync: {
-      anyOf: [{ type: "array", items: nullableString }, { type: "null" }],
+      type: "array",
+      items: nullableString,
+      description: "tylko checklist/steps; dla innych pusta lista",
     },
     props: {
       type: "object",
@@ -108,7 +114,7 @@ const ELEMENT_SCHEMAS = MOTION_COMPONENTS.map((component) => ({
   additionalProperties: false,
 }));
 
-const OUTPUT_SCHEMA = {
+export const OUTPUT_SCHEMA = {
   type: "object",
   properties: { elements: { type: "array", items: { anyOf: ELEMENT_SCHEMAS } } },
   required: ["elements"],
