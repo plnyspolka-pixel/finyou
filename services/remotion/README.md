@@ -71,3 +71,19 @@ npx remotion still StudioReel out.png --props=props.json --frame=45
 ```
 
 gdzie `props.json` to `{"videoUrl": "...", "plan": <wynik buildReelPlan>}`.
+
+### Elementy dynamiczne (`src/Motion.tsx`)
+
+Dla silnika `remotion` elementy graficzne nad awatarem projektuje Claude
+(`src/lib/motion-designer.server.ts`, model `claude-sonnet-5-5`, sekret
+`ANTHROPIC_API_KEY`) z katalogu w `src/lib/motion-catalog.ts`: `stat`,
+`range`, `threshold`, `versus`, `checklist`, `steps`, `keyword`,
+`mythFact`, `alert`, `cta`. Model wybiera komponent, treść i dosłowny
+fragment lektora jako kotwicę czasu; walidator odrzuca za długie teksty i
+elementy bez pokrycia w SRT, a czasy liczy serwer. Bez klucza albo przy
+błędzie projektanta zostają zwykłe karty (Gemini).
+
+Nowy komponent = wpis w katalogu (typ, limity, opis w `MOTION_CATALOG_PROMPT`,
+walidacja), schemat w projektancie i rysunek w `Motion.tsx`, potem
+`npm run lambda:deploy`. Podgląd lokalny: `npx remotion still StudioReel …
+--props=props.json --browser-executable=<chrome-headless-shell>`.

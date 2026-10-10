@@ -36,6 +36,7 @@ import {
   type HeygenCaptionOutputs,
 } from "./studio-captions";
 import type { CustomCaptionStyleId, DynamicOverlays } from "./caption-style";
+import type { MotionDesignElement } from "./motion-catalog";
 import { AVATARS_PER_REEL } from "./studio-scenes";
 
 export type StudioJobRow = {
@@ -138,6 +139,13 @@ async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
   }
 
   const script = job.script?.trim();
+  // Silnik Remotion: elementy dynamiczne projektuje Claude z katalogu
+  // komponentów (motion-catalog.ts) — zastępują karty. Porażka projektanta
+  // spada na zwykłe karty niżej.
+  if (script) {
+    const motion = await designMotionForJob(job, script, q?.question ?? job.prompt);
+    if (motion?.length) return { ...(base ?? {}), cards: [], motion };
+  }
   if (script) {
     try {
       const { generateOverlayCards } = await import("./studio-ai.server");
@@ -150,6 +158,31 @@ async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
     }
   }
   return base;
+}
+
+/** Projekt elementów dynamicznych (Claude) — tylko silnik Remotion, z SRT; null = brak. */
+async function designMotionForJob(
+  job: JobRow,
+  script: string,
+  topic: string | null,
+): Promise<MotionDesignElement[] | null> {
+  const { resolveRenderEngine } = await import("./studio-render-engine");
+  if (resolveRenderEngine(job.render_engine) !== "remotion" || !job.subtitle_url) return null;
+  const { isMotionDesignerConfigured, designMotion } = await import("./motion-designer.server");
+  if (!isMotionDesignerConfigured()) return null;
+  try {
+    const { fetchBytes } = await import("./media-storage.server");
+    const { parseSubtitles } = await import("./caption-style");
+    const { fixBrandInCues } = await import("./caption-brand");
+    const srt = new TextDecoder().decode(
+      (await fetchBytes(job.subtitle_url, 2 * 1024 * 1024)).bytes,
+    );
+    const cues = fixBrandInCues(parseSubtitles(srt));
+    return await designMotion({ script, cues, topic });
+  } catch (e) {
+    console.warn(`[Studio] projekt elementów dynamicznych nieudany (${job.id}): ${errMsg(e)}`);
+    return null;
+  }
 }
 
 // Przetwarza do `limit` jobów 'queued': scenariusz → TTS → HeyGen → rendering.

@@ -8,6 +8,7 @@
 // skaluje je do faktycznej rozdzielczości mastera.
 
 import { fixBrandInCues } from "./caption-brand";
+import { motionWithCueTiming, type ReelMotion } from "./motion-catalog";
 import {
   AI_BADGE,
   CUSTOM_CAPTION_STYLES,
@@ -94,6 +95,8 @@ export type ReelPlan = {
     tag: ReelTag | null;
     headline: ReelHeadline | null;
     cards: ReelCard[];
+    /** Elementy z katalogu motion-catalog.ts (czasy z SRT); brak w starszych planach. */
+    motion?: ReelMotion[];
   } | null;
 };
 
@@ -180,7 +183,7 @@ function cardPlan(card: OverlayCard, dims = DEFAULT_ASS_DIMENSIONS): ReelCard | 
   };
 }
 
-function overlaysPlan(ov: DynamicOverlays): NonNullable<ReelPlan["overlays"]> {
+function overlaysPlan(ov: DynamicOverlays, cues: SrtCue[]): NonNullable<ReelPlan["overlays"]> {
   const L = DYNAMIC_OVERLAY_LAYOUT;
   let tag: ReelTag | null = null;
   if (ov.tag) {
@@ -222,6 +225,7 @@ function overlaysPlan(ov: DynamicOverlays): NonNullable<ReelPlan["overlays"]> {
     tag,
     headline,
     cards,
+    motion: ov.motion?.length ? motionWithCueTiming(ov.motion, cues) : [],
   };
 }
 
@@ -269,7 +273,10 @@ export function buildReelPlan(input: {
     };
   }
   const overlays = input.overlays
-    ? overlaysPlan(parsed.length ? overlaysWithCueTiming(input.overlays, parsed) : input.overlays)
+    ? overlaysPlan(
+        parsed.length ? overlaysWithCueTiming(input.overlays, parsed) : input.overlays,
+        parsed,
+      )
     : null;
   const badge = input.aiBadge ? AI_BADGE : null;
   if (!captions && !badge && !overlays) {
