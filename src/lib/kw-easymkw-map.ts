@@ -4,6 +4,7 @@
 // współwłaściciele, hipoteki) działają identycznie niezależnie od dostawcy.
 
 import type { KwExtraction, KwExtractionOwner } from "@/lib/kw-render";
+import { jestBrakWpisu } from "@/lib/risk-assessment/kw-parse-core";
 
 type Any = Record<string, any>;
 
@@ -137,7 +138,9 @@ function mapDzial3(d: Any | undefined): KwExtraction["dzial3"] {
       rodzaj: s(e?.rodzajWpisu ?? e?.rodzaj ?? e?.typWpisu),
       tresc: entryText(e),
     }))
-    .filter((w) => w.rodzaj || w.tresc);
+    .filter((w) => w.rodzaj || w.tresc)
+    // „BRAK WPISU" podany jako wpis to pusty dział (wspólna normalizacja).
+    .filter((w) => !(jestBrakWpisu(w.rodzaj) && jestBrakWpisu(w.tresc)));
   return { brakWpisu: wpisy.length === 0, wpisy };
 }
 
@@ -172,8 +175,8 @@ function mapDzial1s(d: Any | undefined): KwExtraction["dzial1sp"] {
     ...(d.spoldzielnieMieszkaniowe ?? []),
   ]
     .map((e: Any) => entryText(e))
-    .filter((v): v is string => !!v);
-  return { wpisy };
+    .filter((v): v is string => !!v && !jestBrakWpisu(v));
+  return { brakWpisu: wpisy.length === 0, wpisy };
 }
 
 /** Surowy JSON EasyMKW → KwExtraction (wejście dla renderKwSections). */

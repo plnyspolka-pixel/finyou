@@ -12,6 +12,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { KwExtraction, KwExtractionOwner } from "../kw-render";
+import { jestBrakWpisu } from "../risk-assessment/kw-parse-core";
 
 export interface KwMapContext {
   /** Lokalny identyfikator nieruchomości w danych umowy, np. "N1". */
@@ -164,6 +165,8 @@ export function mapujKwDoNieruchomosci(kw: KwExtraction, ctx: KwMapContext): KwM
   const obciazenia: any[] = [];
   for (const w of kw.dzial3?.wpisy ?? []) {
     if (!w) continue;
+    // „BRAK WPISU" (np. „Wpisy BRAK WPISU" ze starszej ekstrakcji) to nie obciążenie.
+    if (jestBrakWpisu(w.rodzaj) && jestBrakWpisu(w.tresc)) continue;
     const rodzaj = klasyfikujDzialIII(w.rodzaj);
     obciazenia.push({
       dzial: "III",
@@ -178,6 +181,13 @@ export function mapujKwDoNieruchomosci(kw: KwExtraction, ctx: KwMapContext): KwM
   }
   for (const hip of kw.dzial4?.hipoteki ?? []) {
     if (!hip) continue;
+    if (
+      jestBrakWpisu(hip.rodzaj) &&
+      jestBrakWpisu(hip.tresc) &&
+      hip.sumaKwota == null &&
+      !hip.wierzyciel
+    )
+      continue;
     const waluta = (hip.walutaSumy ?? "").toUpperCase().replace(/\s/g, "");
     if (waluta && waluta !== "ZŁ" && waluta !== "ZL" && waluta !== "PLN")
       ostrzezenia.push(

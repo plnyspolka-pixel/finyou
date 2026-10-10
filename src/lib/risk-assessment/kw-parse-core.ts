@@ -20,6 +20,39 @@ export function stripHtml(s: string | null | undefined): string {
     .trim();
 }
 
+// „BRAK WPISU" — wspólna normalizacja pustego działu (I-O, I-Sp, II, III, IV).
+// Dział uznajemy za pusty, gdy po usunięciu nagłówków strony EKW i tabeli
+// (etykiety „Wpisy", „Lp.", nazwy działu), pipe'ów, myślników i białych znaków
+// zostaje wyłącznie „BRAK WPISU" / „BRAK WPISÓW" (dowolna wielkość liter) albo
+// nic. Wcześniej treść „Wpisy | BRAK WPISU" w dziale III dawała fantomowy wpis.
+const BRAK_WPISU_CHROME: RegExp[] = [
+  /tresc\s+ksiegi\s+wieczystej(?:\s+nr)?\s*[a-z0-9/]*/g,
+  /dzial\s+(?:i\s*-\s*o|i\s*-\s*sp|iv|iii|ii|io|isp)\b/g,
+  /oznaczenie\s+nieruchomosci/g,
+  /spis\s+praw\s+zwiazanych\s+z\s+wlasnoscia/g,
+  /wlasnosc(?:\s+i\s+inne\s+prawa\s+rzeczowe)?/g,
+  /uzytkowanie\s+wieczyste/g,
+  /prawa[,\s]+roszczenia[,\s]+(?:i\s+)?ograniczenia/g,
+  /hipotek[ai]?/g,
+  /\b(?:wpisy|wpis|lp|numer\s+wpisu|powrot)\b/g,
+];
+
+function normBrak(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u0142/g, "l");
+}
+
+/** true, gdy treść działu (HTML albo tekst) oznacza wyłącznie „brak wpisu" (albo jest pusta). */
+export function jestBrakWpisu(tresc: string | null | undefined): boolean {
+  let t = normBrak(stripHtml(tresc));
+  for (const re of BRAK_WPISU_CHROME) t = t.replace(re, " ");
+  const rest = t.replace(/[^a-z0-9]/g, "");
+  return rest === "" || rest === "brakwpisu" || rest === "brakwpisow";
+}
+
 // Wyciąga kwotę PLN z tekstu typu "1 234 567,89 zł" / "500000 PLN".
 function extractAmountPln(text: string): { amount: number | null; currency: string | null } {
   // Najpierw preferuj kwoty z jednostką waluty.
@@ -371,6 +404,7 @@ export function parseEncumbrances(dzial3: string | null | undefined): {
   hasUsufruct: boolean;
 } {
   const text = stripHtml(dzial3);
+  if (jestBrakWpisu(text)) return { encumbrances: [], hasEnforcement: false, hasUsufruct: false };
   const entries = splitEntries(text);
   const low = text.toLowerCase();
   const hasEnforcement = ENFORCEMENT_KEYWORDS.some((k) => low.includes(k));
@@ -609,7 +643,7 @@ export function parseMortgages(dzial4: string | null | undefined): KwLegalAnalys
   const raw = stripHtml(dzial4);
   if (!raw) return [];
   const text = stripSectionFourChrome(raw);
-  if (!text) return [];
+  if (!text || jestBrakWpisu(text)) return [];
 
   const hasEntryMarkers = MORTGAGE_ENTRY_RE.test(text);
   // „brak wpisu" kończy analizę TYLKO, gdy dział naprawdę nie zawiera wpisu

@@ -8,7 +8,7 @@
 //
 // Moduł czysty (bez Supabase) — testowalny.
 
-import { stripHtml, parseMortgages } from "@/lib/risk-assessment/kw-parse-core";
+import { stripHtml, parseMortgages, jestBrakWpisu } from "@/lib/risk-assessment/kw-parse-core";
 import {
   extractKwOwnerEntries,
   extractKwOwnerPesels,
@@ -423,7 +423,7 @@ function parseSectionThree(doc: KwDocumentSections): NormalizedSectionThreeEntry
   if (!raw) return [];
   const text = stripSectionThreeChrome(raw);
   if (!text) return [];
-  if (/brak\s+wpis/i.test(text) && norm(text).length < 40) return [];
+  if (jestBrakWpisu(text) || (/brak\s+wpis/i.test(text) && norm(text).length < 40)) return [];
   const out: NormalizedSectionThreeEntry[] = [];
   let idx = 0;
   for (const seg of splitEntries(text)) {

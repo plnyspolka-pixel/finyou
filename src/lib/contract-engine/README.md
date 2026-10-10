@@ -148,9 +148,44 @@ zwraca go w polu `tekst`; `get_generated_document_text(id)` odczytuje tekst
 pliku z rejestru i porównuje SHA-256 z audytem.
 
 **KW:** kreator uzupełnia nieruchomość z treści KW w cache (jak `kw_numbers`
-w MCP; brak treści = ostrzeżenie, nie blokada). Sąd — z okładki księgi albo
-innej księgi tego samego wydziału w cache; statycznej tabeli „kod wydziału →
-sąd” celowo nie ma (wymaga zweryfikowanego wykazu kodów wydziałów).
+w MCP; brak treści = ostrzeżenie, nie blokada). Sąd — z okładki księgi, a gdy
+jej brak — ze słownika kodów wydziałów (`src/lib/kw-court-codes.ts` = tabela
+`kw_court_codes`, 345 kodów z załącznika do rozporządzenia MS, Dz.U. 2019
+poz. 2222), w ostateczności z innej księgi tego samego wydziału w cache;
+każde uzupełnienie trafia do `autokorekty`.
+
+## Przypadki graniczne wniosek → KW → umowa (październik 2026)
+
+Po wniosku słupskim (KW SL1S/00061444/8) — bez ręcznych korekt operatora:
+
+- **„BRAK WPISU”** — wspólna normalizacja `jestBrakWpisu` (kw-parse-core) dla
+  działów I-Sp, II, III, IV; mapper nie tworzy obciążeń z takich wpisów.
+- **Zmiana nazwiska (ten sam PESEL)** — strona pod nazwiskiem z CEIDG, pole
+  `ujawnienie_w_kw` → komparycja i § 5 („ujawniona w dziale II księgi
+  wieczystej nr … jako …”); `nieruchomosciZKw` dopisuje je sam.
+  R-IDENTITY = warunek wypłaty (`WARUNKOWO_DOPUSZCZALNE`), nie blokada umowy.
+- **Prowizja w racie balonowej** — `warunki.prowizja.w_racie_koncowej`
+  (klauzula `KWO_02c`, Zał. 1 i 2) i `harmonogram.amortyzacja_kapitalu`
+  (`nadwyzka_raty` | `w_balonie`); kalkulator MCP liczy tą samą funkcją
+  (`buildEngineSchedule`) i zwraca `draft_contract_patch`.
+- **Ostrzeżenia kosztowe** (`cost-warnings.ts`) — zawsze `OSTRZEZENIE`,
+  nigdy nie blokują: próg prowizji min(10% + 10% × lata, 45%) kwoty netto,
+  koszt pozaodsetkowy/całkowity w skali roku, art. 359 § 2² i art. 388 k.c.,
+  JDG < 30 dni przed umową.
+- **Wartości domyślne** (`uzupelnienia.ts`) — termin wezwania 777 = 7 dni,
+  data graniczna = data umowy + 10 lat, kwota hipoteki ↔ 777, miejscownik
+  miejscowości, sąd z kodu KW; podpowiedź 2× do spłaty jako `INFORMACJA`.
+- **Jeden model prowizji inwestora (biblioteka 1.7)** — wyłącznie w ratach;
+  wariant „potrącana z wypłaty” (`KWO_02b`) usunięty, a umowa nie wspomina
+  o potrącaniu prowizji inwestora (KWO_02/02c, KWO_03/03c, WIN_04a, Zał. 1).
+- **Bez Załącznika nr 4 (biblioteka 1.8)** — Prowizja od Pożyczkobiorcy na
+  rzecz Finance You (5%, min 5 000 zł) jest potrącana z Kwoty Pożyczki
+  — w § 2 jest tylko dyspozycja przelewu (`KWO_03e`, biblioteka 1.9);
+  odsetki liczone od całej Kwoty Pożyczki. Tylko gdy Pożyczkodawcą nie jest
+  Finance You.
+- **Wersje dokumentu** — `get_generated_document_file` (base64) i
+  `upload_generated_document_version` (wersja, autor, powód, SHA-256, diff
+  względem wersji silnika).
 
 ## Agent umowy (AI) — główny ekran /inwestor
 

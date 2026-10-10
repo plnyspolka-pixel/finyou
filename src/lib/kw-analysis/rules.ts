@@ -283,30 +283,37 @@ const ruleIdentity: Rule = {
           }),
         );
       } else if (m.kind === "NAME_DIFF_PESEL_MATCH") {
+        // Zasada zarządu: nazwisko do umowy z CEIDG (aktualne dane), a
+        // rozbieżność z KW nie blokuje umowy — blokuje WYPŁATĘ do czasu
+        // przedstawienia dokumentu zmiany nazwiska. Inny PESEL = PESEL_CONFLICT (STOP).
+        const kwName =
+          `${m.matchedOwner?.firstName ?? ""} ${m.matchedOwner?.lastName ?? ""}`.trim() || "—";
         out.push(
           mkFinding({
             ruleId: "R-IDENTITY",
             ruleVersion: V,
             category: "IDENTITY",
-            status: "WSTRZYMANE",
+            status: "WARUNKOWO_DOPUSZCZALNE",
             title: `Inne nazwisko, ten sam PESEL: ${partyName}`,
-            plainLanguageSummary:
-              "Dane nazwiska w dokumentach i KW są różne; prawdopodobnie chodzi o tę samą osobę, ale potrzebny jest dokument potwierdzający zmianę.",
+            plainLanguageSummary: `W KW strona jest ujawniona jako „${kwName}”, a w dokumentach/CEIDG jako „${partyName}” przy tym samym PESEL — to ta sama osoba po zmianie nazwiska. Umowę zawieramy na aktualne nazwisko z adnotacją o nazwisku z KW; wypłata po przedstawieniu dokumentu zmiany nazwiska.`,
             source: src,
             whyItMatters:
-              "Do aktualizacji Działu II i skutecznej hipoteki potrzeba udokumentowania zmiany nazwiska.",
+              "Do wpisu hipoteki i aktualizacji Działu II potrzeba udokumentowania zmiany nazwiska — wniosek o sprostowanie składa się razem z wnioskiem o wpis hipoteki.",
             rankImpact: "POSSIBLE",
-            expectedFromClient: "Dokument potwierdzający zmianę nazwiska.",
+            expectedFromClient:
+              "Akt małżeństwa / dokument USC / decyzja o zmianie nazwiska (skan przed wypłatą).",
             requestedDocuments: [DOCS.MARRIAGE_CERT, DOCS.MENTION_APPLICATION],
             proposedResolution:
-              "Uzyskaj akt małżeństwa/USC/decyzję; zaktualizuj Dział II (ewentualnie razem z wnioskiem o hipotekę).",
-            agreementCondition: "Aktualizacja Działu II do aktualnego nazwiska.",
+              "Umowa na nazwisko z CEIDG z adnotacją „ujawniona w dziale II księgi wieczystej nr … jako …”; przed wypłatą dokument zmiany nazwiska + wniosek o sprostowanie Działu II składany razem z wnioskiem o wpis hipoteki.",
+            agreementCondition: null,
+            payoutCondition:
+              "Akt małżeństwa / dokument USC / decyzja o zmianie nazwiska + wniosek o sprostowanie Działu II składany razem z wnioskiem o wpis hipoteki.",
             intermediaryMessage:
-              "Inne nazwisko niż w KW, ale ten sam PESEL — to zwykle zmiana nazwiska. Poproś o akt małżeństwa lub dokument USC.",
+              "Inne nazwisko niż w KW, ale ten sam PESEL — to zmiana nazwiska. Umowa może być podpisana; do wypłaty poproś o akt małżeństwa lub dokument USC.",
             clientMessage:
-              "Nazwisko w dokumentach różni się od tego w KW. Prosimy o dokument potwierdzający zmianę nazwiska (np. akt małżeństwa).",
+              "Nazwisko w dokumentach różni się od tego w księdze wieczystej. Przed wypłatą prosimy o skan dokumentu potwierdzającego zmianę nazwiska (np. akt małżeństwa).",
             investorMessage:
-              "Rozbieżność nazwiska przy zgodnym PESEL — WSTRZYMANE do dokumentu zmiany nazwiska; to nie jest inna osoba.",
+              "Rozbieżność nazwiska przy zgodnym PESEL — WARUNKOWE: umowa na aktualne nazwisko, wypłata po dokumencie zmiany nazwiska; to nie jest inna osoba.",
           }),
         );
       } else if (m.kind === "PESEL_CONFLICT") {

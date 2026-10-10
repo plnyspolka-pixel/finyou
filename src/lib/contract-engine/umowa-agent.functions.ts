@@ -45,8 +45,8 @@ const SYSTEM_PROMPT =
   '3. NIE licz harmonogramu rat (tabeli "raty") ani kwoty raty końcowej — policzy je silnik, gdy podasz ' +
   "kwotę, prowizję, oprocentowanie, liczbę rat, typ, datę pierwszej raty i (przy balonie) pułap kwota_raty. " +
   "Nie nadawaj identyfikatorów nieruchomości (id) — nada je system.\n" +
-  "4. Domyślne praktyki Finance You (stosuj, gdy rozmówca nie wskaże inaczej): prowizja model " +
-  '"nie_potracana_raty"; hipoteka i kwota z art. 777 zwykle na 2× łącznej kwoty do spłaty — ale kwoty te ' +
+  "4. Domyślne praktyki Finance You (stosuj, gdy rozmówca nie wskaże inaczej): prowizja inwestora " +
+  "zawsze w ratach (pola model nie podawaj); hipoteka i kwota z art. 777 zwykle na 2× łącznej kwoty do spłaty — ale kwoty te " +
   "zawsze potwierdź z rozmówcą, nie wpisuj ich bez akceptacji.\n" +
   '5. W "reply" odpowiadaj zwięźle po polsku: potwierdź, co uzupełniłeś, wskaż, co jeszcze blokuje umowę ' +
   "(dostaniesz listę problemów walidatora), i zadaj JEDNO najważniejsze pytanie o brakujące dane.\n" +

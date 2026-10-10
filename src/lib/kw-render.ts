@@ -66,8 +66,8 @@ export interface KwExtraction {
     dzialki?: KwExtractionDzialka[] | null;
     inne?: string[] | null;
   } | null;
-  dzial1sp?: { wpisy?: string[] | null } | null;
-  dzial2?: { wlasciciele?: KwExtractionOwner[] | null } | null;
+  dzial1sp?: { brakWpisu?: boolean | null; wpisy?: string[] | null } | null;
+  dzial2?: { brakWpisu?: boolean | null; wlasciciele?: KwExtractionOwner[] | null } | null;
   dzial3?: {
     brakWpisu?: boolean | null;
     wpisy?: Array<{ rodzaj?: string | null; tresc?: string | null }> | null;
