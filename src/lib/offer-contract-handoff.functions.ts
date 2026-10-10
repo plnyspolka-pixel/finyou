@@ -52,17 +52,50 @@ const join = (...parts: Array<string | null | undefined>) =>
 
 export const getOfferContractContext = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ offerId: z.string().uuid() }).parse(d))
+  .inputValidator((d) =>
+    z
+      .union([
+        z.object({ offerId: z.string().uuid() }),
+        // Z „Moich zleceń": ostatnia złożona oferta tego inwestora do wniosku.
+        z.object({ applicationId: z.string().uuid() }),
+      ])
+      .parse(d),
+  )
   .handler(async ({ data, context }): Promise<OfferContractContext> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db = supabaseAdmin as any;
-    const { data: offer } = await db
-      .from("investor_offers")
-      .select(
-        "id, offer_status, proposed_amount, period_months, expected_yearly_yield, commission, estimated_monthly_payment, estimated_total_cost, balloon_amount, schedule, created_at, submitted_at, investor:investors(user_id), loan:loan_applications(id, nip, client:clients(*), properties(*))",
-      )
-      .eq("id", data.offerId)
-      .maybeSingle();
+    const select =
+      "id, offer_status, proposed_amount, period_months, expected_yearly_yield, commission, estimated_monthly_payment, estimated_total_cost, balloon_amount, schedule, created_at, submitted_at, investor:investors(user_id), loan:loan_applications(id, nip, client:clients(*), properties(*))";
+    let offer: any = null;
+    if ("offerId" in data) {
+      ({ data: offer } = await db
+        .from("investor_offers")
+        .select(select)
+        .eq("id", data.offerId)
+        .maybeSingle());
+    } else {
+      const { data: inv } = await db
+        .from("investors")
+        .select("id")
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      if (inv) {
+        ({ data: offer } = await db
+          .from("investor_offers")
+          .select(select)
+          .eq("investor_id", inv.id)
+          .eq("loan_application_id", data.applicationId)
+          .neq("offer_status", "szkic")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle());
+      }
+      if (!offer) {
+        throw new Error(
+          "Najpierw złóż ofertę („Złóż ofertę” przy Projekcie) — umowę przygotujemy z jej warunków.",
+        );
+      }
+    }
     if (!offer || offer.investor?.user_id !== context.userId) {
       throw new Error("Nie znaleziono oferty.");
     }

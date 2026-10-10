@@ -15,6 +15,7 @@ import {
   BookOpenCheck,
   Clock,
   Eye,
+  FilePen,
   FileText,
   Loader2,
   Lock,
@@ -38,6 +39,7 @@ import { maxCapitalRate } from "@/lib/contract-engine/fees";
 import { downloadOfferPdf } from "@/lib/offer-pdf";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { OrderCycleSection } from "@/components/inwestor/order-cycle";
+import { useCreateContract } from "@/components/inwestor/use-create-contract";
 import {
   accent,
   CoOwnersStep,
@@ -973,6 +975,7 @@ function ContactBox({
   applicationId: string;
   reservationExpiresAt: string | null;
 }) {
+  const { createContract, pendingKey } = useCreateContract();
   return (
     <div className="space-y-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1013,11 +1016,26 @@ function ContactBox({
           Dane kontaktowe klienta znajdziesz w pełnym widoku Projektu.
         </p>
       )}
-      <Button asChild size="sm" variant="outline">
-        <Link to="/inwestor/wniosek/$id" params={{ id: applicationId }}>
-          <Eye className="mr-2 h-4 w-4" /> Pełne dane Projektu (KW, dokumenty, czat)
-        </Link>
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        {/* Po Ujawnieniu: kreator umowy z danymi klienta, KW i złożoną ofertą. */}
+        <Button
+          size="sm"
+          disabled={pendingKey === applicationId}
+          onClick={() => void createContract({ applicationId })}
+        >
+          {pendingKey === applicationId ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <FilePen className="mr-2 h-4 w-4" />
+          )}
+          Stwórz umowę
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link to="/inwestor/wniosek/$id" params={{ id: applicationId }}>
+            <Eye className="mr-2 h-4 w-4" /> Pełne dane Projektu (KW, dokumenty, czat)
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }
