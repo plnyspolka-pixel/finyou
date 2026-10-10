@@ -53,4 +53,14 @@ describe("buildCalcHandoffMessage", () => {
     expect(m.length).toBeLessThan(6_000);
     expect(m).toMatch(/oraz \d+ kolejnych rat/);
   });
+
+  it("dokleja dane pożyczkobiorcy i KW („Stwórz umowę”) i nadal mieści się w limicie", () => {
+    const ctx =
+      "Dane pożyczkobiorcy (z wniosku):\n• PESEL: 80010112345\n• Numer(y) KW: LD1M/00012345/6";
+    const m = buildCalcHandoffMessage(payload(120), ctx);
+    expect(m).toContain("PESEL: 80010112345");
+    expect(m).toContain("LD1M/00012345/6");
+    expect(m).toContain("Wpisz do umowy podane wyżej dane");
+    expect(m.length).toBeLessThan(6_000);
+  });
 });

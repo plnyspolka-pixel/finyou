@@ -37,6 +37,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { openOrCreateThread } from "@/lib/chat.functions";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
+import { notifyMyOfferSubmitted } from "@/lib/investor-offer-notify.functions";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
@@ -74,6 +75,7 @@ function InwestorWniosek() {
   const [submitting, setSubmitting] = useState(false);
   const openThread = useServerFn(openOrCreateThread);
   const fetchRates = useServerFn(getNbpRates);
+  const notifyOffer = useServerFn(notifyMyOfferSubmitted);
   const ratesQ = useQuery({
     queryKey: ["nbp-rates"],
     queryFn: () => fetchRates(),
@@ -176,11 +178,21 @@ function InwestorWniosek() {
       investor_note: note || null,
       submitted_at: status === "zlozona" ? new Date().toISOString() : null,
     };
-    const { error } = await supabase.from("investor_offers").insert(payload);
+    const { data: created, error } = await supabase
+      .from("investor_offers")
+      .insert(payload)
+      .select("id")
+      .single();
     setSubmitting(false);
     if (error) {
       toast.error(error.message);
       return;
+    }
+    // Powiadomienie autora wniosku (mail, Messenger, telefon) — nie blokuje.
+    if (status === "zlozona" && created?.id) {
+      void notifyOffer({ data: { offerId: created.id } }).catch((e) =>
+        console.error("[oferta] powiadomienie nie wyszło:", e),
+      );
     }
     toast.success(status === "zlozona" ? "Oferta złożona" : "Zapisano szkic");
     void navigate({ to: "/inwestor/oferty" });
