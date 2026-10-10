@@ -335,7 +335,7 @@ Narzędzia (`docs/migracja/`): `baseline-historii.py` generuje z repo i listy we
 `baseline-historii.sql` — (1) archiwum starej historii do `_mig.lovable_schema_migrations`,
 (2) **DELETE** 208 wierszy (destrukcyjne — konektor poprosi o potwierdzenie), (3) `INSERT … ON CONFLICT`
 304 wierszy, (4) kontrola. Wariant w repo ma `statements = NULL` (100 KB); wariant z treścią plików
-(`--bez --no-statements`, 3,8 MB) generuje się na żądanie. Równoważnik przez CLI (zapisuje też
+(bez `--no-statements`, 3,8 MB) generuje się na żądanie. Równoważnik przez CLI (zapisuje też
 `statements`, wymaga hasła bazy): `supabase migration repair --status reverted $(cat
 baseline-wersje-lovable.txt)` → `--status applied $(cat baseline-wersje-repo.txt)` → `migration list`
 → `db push` (zastosuje i zarejestruje `20261010120000` dogonienie). **Nie** rejestrować dogonienia
@@ -374,6 +374,60 @@ jeśli Lovable Cloud go pokazuje). Awaryjnie bez klucza starego projektu: MCP ap
 nowy (`eyJ…ImpxdmVweGh1bHhkbmJ3Ym9na2hlI…` → klucz z `get_publishable_keys` nowego projektu;
 URL API: `https://vkzndnaoxhdxrxlpntcb.supabase.co`). Włączenie dopiero przy przełączeniu;
 4 joby czysto SQL-owe można włączyć wcześniej.
+
+### Poza bazą: co przełączyć w aplikacji i w projekcie Supabase (inwentarz 2026-10-10)
+
+Sprawdzone pod kątem rzeczy, których kopia katalogu nie obejmuje. **Parytet potwierdzony:** rozszerzenia
+(nowa baza ma wszystkie poza `dblink`/`postgres_fdw`, które w starej są tylko narzędziem migracji),
+publikacja Realtime pusta po obu stronach, brak webhooków bazodanowych (`supabase_functions.hooks`)
+i triggerów `pg_net`, brak kolejek pgmq (rozszerzenie jest, kolejek nie ma), Vault w starej bazie
+zawiera tylko `migration_target`, brak hooków Auth (custom access token itp.).
+
+**Do zrobienia przed przełączeniem (decyzje/akcje właściciela, wszystko przygotowane):**
+1. **Funkcje Edge** — repo ma 4 (`supabase/functions/`: `didit-webhook`, `rcn-proxy`, `registry-proxy`,
+   `tpay-proxy`), nowy projekt ma **0**. Wdrożenie: `supabase functions deploy --project-ref
+   vkzndnaoxhdxrxlpntcb` (`config.toml`: `verify_jwt = false` dla `rcn-proxy`, `tpay-proxy`,
+   `registry-proxy`) albo `deploy_edge_function` przez konektor. Sekrety funkcji (Dashboard → Edge
+   Functions → Secrets): `DIDIT_WEBHOOK_SECRET`, `PROXY_SHARED_SECRET` (`SUPABASE_URL` i
+   `SUPABASE_SERVICE_ROLE_KEY` są wstrzykiwane automatycznie). W panelu Didit zmienić adres webhooka
+   na `https://vkzndnaoxhdxrxlpntcb.supabase.co/functions/v1/didit-webhook`. Pozostałe webhooki
+   zewnętrzne (Tpay, Resend, Meta, Twilio, ElevenLabs) wskazują adres aplikacji, nie projektu.
+2. **Konfiguracja aplikacji** (stary ref `jqvepxhulxdnbwbogkhe` siedzi w): `.env` (6 zmiennych:
+   `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PROJECT_ID` i ich odpowiedniki `VITE_*`),
+   `wrangler.jsonc` (`vars.SUPABASE_URL`; sekrety workera — `SUPABASE_SERVICE_ROLE_KEY` użyty w 72
+   miejscach po stronie serwera — przez `wrangler secret put`), `supabase/config.toml` (`project_id`),
+   `.lovable/mcp/manifest.json` (`issuer` = Auth starego projektu; po nim logują się konektory MCP,
+   np. „Finance you” w tej sesji), `src/routes/dla-inwestora.tsx:76` (zaszyty publiczny URL filmu
+   z bucketu `studio-media`). Nowy klucz anon jest w `cron-rewrite.sql`.
+3. **Hosting i adres hooków** — dziś backend chodzi na hostingu Lovable (`project--5394e6ca-….lovable.app`,
+   tam biją crony; `finyou.lovable.app` w README); `wrangler.jsonc` to gotowa konfiguracja Cloudflare
+   Workers na własne konto. Kod zakłada `https://app.financeyou.pl` jako adres aplikacji (domyślne
+   `APP_URL`, linki w mailach, reply-to `kontakt@app.financeyou.pl`) → proponowane
+   `__NEW_HOOKS_BASE__ = https://app.financeyou.pl`, o ile domena przechodzi razem z aplikacją.
+4. **Auth w nowym projekcie** (ustawienia panelu, nieczytelne z SQL starego projektu — spisać z panelu
+   Lovable Cloud): Site URL i Redirect URLs (`https://app.financeyou.pl/**`, `https://financeyou.pl/**`,
+   adres dev); **własny SMTP** (domyślny SMTP Supabase ma limit kilku maili/godz. — np. Resend SMTP)
+   i polskie szablony maili Auth; logowanie społecznościowe idzie dziś przez `@lovable.dev/cloud-auth-js`
+   (klienci OAuth Google/Apple zarządzani przez Lovable) → własne klienty OAuth w Google Cloud / Apple
+   Developer + zamiana w kodzie na `supabase.auth.signInWithOAuth` (`src/components/auth/social-sign-in.tsx`,
+   `src/integrations/lovable/index.ts`). Tożsamości: 24 Google (`sub` Google jest globalny dla konta,
+   więc powinny dopasować się 1:1), 2 Apple (`sub` zależy od zespołu Apple Developer — przy innym
+   zespole powstanie nowa tożsamość, Supabase dołączy ją do konta po zweryfikowanym e-mailu).
+   Hasła (bcrypt) skopiowane — użytkownicy logują się dotychczasowymi; inny sekret JWT = wszystkie
+   sesje wygasają w chwili przełączenia (oczekiwane).
+5. **Realtime** — `src/components/chat-thread-view.tsx` subskrybuje `postgres_changes`, a publikacja
+   `supabase_realtime` w produkcji jest pusta, więc czat nie odświeża się na żywo już dziś; po migracji
+   opcjonalnie `alter publication supabase_realtime add table <tabela wiadomości czatu>` (poza zakresem).
+6. **Klucze usług** — poza Lovable Connector gateway (tabela na początku dokumentu) także
+   `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_*`/`MAPBOX` w `.env` → własne klucze.
+
+**Kolejność przełączenia (szkic do zatwierdzenia):** T−1: baseline historii + dogonienie (sekcja wyżej),
+funkcje Edge + sekrety, Auth (SMTP, redirecty, OAuth), wdrożenie aplikacji na własny hosting pod
+adresem tymczasowym z nowymi kluczami → test na próbnej kopii danych (loguje się, wnioski, pliki).
+T0 (okno serwisowe): crony w starej bazie `active = false` i zatrzymanie publikacji Lovable → finalna
+kopia danych (`data-sync.sql`) → delta Storage (`storage-copy.py`, wznawialny) → przepięcie domeny
+`app.financeyou.pl` → `cron-rewrite.sql` i włączenie cronów w nowej bazie → webhook Didit → kontrola
+(logowanie, wniosek, plik, mail, cron) → sprzątanie (sekcja kroku 6).
 
 ## Do sprawdzenia w kodzie (osobno)
 
