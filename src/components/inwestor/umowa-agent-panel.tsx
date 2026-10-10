@@ -232,11 +232,12 @@ export function UmowaAgentPanel() {
       setAutokorekty([]);
       setMissing([]);
       setPreview("");
-      void send(buildCalcHandoffMessage(h.payload), { calc: h.payload, fresh: true }).finally(
-        () => {
-          startedFromCalcRef.current = false;
-        },
-      );
+      void send(buildCalcHandoffMessage(h.payload, h.context), {
+        calc: h.payload,
+        fresh: true,
+      }).finally(() => {
+        startedFromCalcRef.current = false;
+      });
     };
     tryStart();
     return onCalcHandoffChange(tryStart);

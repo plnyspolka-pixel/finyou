@@ -13,12 +13,14 @@ const EVT = "finyou:calc-handoff";
 export interface CalcHandoff {
   payload: LoanCalcPayload;
   ts: number;
+  /** Dodatkowy kontekst dla agenta (np. dane klienta i KW z „Stwórz umowę"). */
+  context?: string;
 }
 
 /** Zapisuje kalkulację do przekazania i powiadamia otwarte kreatory. */
-export function saveCalcHandoff(payload: LoanCalcPayload): void {
+export function saveCalcHandoff(payload: LoanCalcPayload, context?: string): void {
   try {
-    sessionStorage.setItem(KEY, JSON.stringify({ payload, ts: Date.now() }));
+    sessionStorage.setItem(KEY, JSON.stringify({ payload, ts: Date.now(), context }));
     window.dispatchEvent(new CustomEvent(EVT));
   } catch {
     /* brak dostępu do sessionStorage — pomiń */
@@ -81,7 +83,7 @@ const pct = (n: number | null | undefined) => {
 };
 
 /** Treść pierwszej wiadomości rozmowy z agentem umowy — harmonogram z kalkulatora. */
-export function buildCalcHandoffMessage(p: LoanCalcPayload): string {
+export function buildCalcHandoffMessage(p: LoanCalcPayload, context?: string): string {
   const rows = Array.isArray(p.schedule) ? p.schedule : [];
   const head: string[] = [
     "Wysyłam harmonogram spłat z kalkulatora pożyczki — zacznijmy od niego nową umowę.",
@@ -96,10 +98,14 @@ export function buildCalcHandoffMessage(p: LoanCalcPayload): string {
   ];
   if (p.agreementDate) head.push(`• Data umowy: ${p.agreementDate}`);
   if (p.clientName) head.push(`• Pożyczkobiorca (z kalkulatora): ${p.clientName}`);
+  if (context?.trim()) head.push("", context.trim());
 
-  const tail =
-    "\nWarunki finansowe i harmonogram są już wpisane do szkicu umowy — nie przepisuj ich. " +
-    "Poprowadź mnie przez resztę: strony umowy, nieruchomość z numerem KW i zabezpieczenia.";
+  const tail = context?.trim()
+    ? "\nWarunki finansowe i harmonogram są już wpisane do szkicu umowy — nie przepisuj ich. " +
+      "Wpisz do umowy podane wyżej dane pożyczkobiorcy i nieruchomości (z KW), " +
+      "a potem poprowadź mnie przez to, czego jeszcze brakuje (moje dane, zabezpieczenia)."
+    : "\nWarunki finansowe i harmonogram są już wpisane do szkicu umowy — nie przepisuj ich. " +
+      "Poprowadź mnie przez resztę: strony umowy, nieruchomość z numerem KW i zabezpieczenia.";
 
   const lines: string[] = [];
   if (rows.length) {

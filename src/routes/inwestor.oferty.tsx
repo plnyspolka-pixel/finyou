@@ -14,10 +14,15 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileSignature, FileDown, MapPin, ShieldCheck } from "lucide-react";
+import { FileSignature, FileDown, FilePen, Loader2, MapPin, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { formatPLN, offerStatusLabels, formatDate, propertyTypeLabels } from "@/lib/labels";
-import { downloadOfferPdf } from "@/lib/offer-pdf";
+import { buildOfferPdfPayload, downloadOfferPdf } from "@/lib/offer-pdf";
+import { saveCalcHandoff } from "@/lib/loan-calc-handoff";
+import {
+  getOfferContractContext,
+  type OfferContractContext,
+} from "@/lib/offer-contract-handoff.functions";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import {
@@ -45,6 +50,28 @@ function InwestorOferty() {
     enabled: !!user,
   });
   const offers: MyOfferRow[] = offersQ.data ?? [];
+
+  // „Stwórz umowę": pełne dane klienta + KW + złożona oferta → kreator umowy.
+  const fetchContractCtx = useServerFn(getOfferContractContext);
+  const [creatingFor, setCreatingFor] = useState<string | null>(null);
+  const createContract = async (offerId: string) => {
+    setCreatingFor(offerId);
+    try {
+      const ctx = await fetchContractCtx({ data: { offerId } });
+      const payload = buildOfferPdfPayload(ctx.offer);
+      if (!payload) {
+        toast.error("Oferta nie ma kompletu parametrów do umowy.");
+        return;
+      }
+      payload.clientName = ctx.client.fullName || null;
+      saveCalcHandoff(payload, contractContextText(ctx));
+      void navigate({ to: "/inwestor/dokumenty", hash: "kreator-umowy" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się przygotować umowy.");
+    } finally {
+      setCreatingFor(null);
+    }
+  };
   const accepted = offers.filter((o) => o.offer_status === "zaakceptowana_przez_klienta");
   return (
     <div className="space-y-6">
@@ -139,6 +166,22 @@ function InwestorOferty() {
                             <FileDown className="mr-1 h-3.5 w-3.5" />
                             PDF
                           </Button>
+                          {o.offer_status !== "szkic" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              title="Otwórz kreator umowy z danymi klienta, KW i parametrami tej oferty"
+                              disabled={creatingFor === o.id}
+                              onClick={() => void createContract(o.id)}
+                            >
+                              {creatingFor === o.id ? (
+                                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <FilePen className="mr-1 h-3.5 w-3.5" />
+                              )}
+                              Stwórz umowę
+                            </Button>
+                          )}
                           {o.offer_status === "zaakceptowana_przez_klienta" && (
                             <Button
                               size="sm"
@@ -241,4 +284,39 @@ function OfferProject({ project: p }: { project: NonNullable<MyOfferRow["project
       </div>
     </div>
   );
+}
+
+/** Blok danych stron i nieruchomości do pierwszej wiadomości agenta umowy. */
+function contractContextText(ctx: OfferContractContext): string {
+  const c = ctx.client;
+  const p = ctx.property;
+  const line = (k: string, v: string | number | null | undefined) =>
+    v != null && String(v).trim() !== "" ? `• ${k}: ${v}` : null;
+  const lines = [
+    "Dane pożyczkobiorcy (z wniosku):",
+    line("Imię i nazwisko", c.fullName),
+    line("PESEL", c.pesel),
+    line("Adres", c.address),
+    line("Telefon", c.phone),
+    line("E-mail", c.email),
+    line("Firma", c.companyName),
+    line("NIP", c.nip),
+    line("REGON", c.regon),
+    line("KRS", c.krs),
+    line("Rachunek bankowy", c.bankAccount),
+  ];
+  if (p) {
+    lines.push(
+      "",
+      "Nieruchomość (zabezpieczenie):",
+      line("Numer(y) KW", p.landRegisterNumbers.join(", ")),
+      line("Adres", p.address),
+      line("Rodzaj", p.type ? (propertyTypeLabels[p.type] ?? p.type) : null),
+      line("Powierzchnia", p.areaSqm ? `${p.areaSqm} m²` : null),
+      line("Szacowana wartość", p.estimatedValue ? formatPLN(p.estimatedValue) : null),
+      p.hasMortgage != null ? `• Obciążona hipoteką: ${p.hasMortgage ? "tak" : "nie"}` : null,
+      p.hasCoOwners != null ? `• Współwłaściciele: ${p.hasCoOwners ? "tak" : "nie"}` : null,
+    );
+  }
+  return lines.filter((l): l is string => l !== null).join("\n");
 }
