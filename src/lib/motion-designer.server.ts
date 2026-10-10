@@ -38,85 +38,38 @@ KOTWICE CZASU
 - "sync": DOSŁOWNY, ciągły fragment tekstu lektora (3–10 słów, skopiowany znak w znak ze scenariusza), przy którym element ma wejść — zwykle początek zdania, którego dotyczy.
 - "endSync": dosłowny fragment, po którym element ma zniknąć, albo pusty tekst (zniknie przed następnym).
 - "itemSync": tylko dla checklist / steps — dla każdej pozycji dosłowny fragment, przy którym ma się odsłonić (albo pusty tekst); dla innych komponentów pusta lista.
-- Pola opisane w katalogu jako „może być null” zostaw jako pusty tekst, gdy ich nie używasz.
+- "props_json": propsy komponentu jako obiekt JSON zapisany w tekście, dokładnie wg katalogu, np. {"title":"Typowa sprawa na rynku","from":100,"to":300,"max":500,"unit":"tys. zł","caption":null}. Pola „może być null” ustaw na null, gdy ich nie używasz.
 
 ${MOTION_CATALOG_PROMPT}
 
 Gdy w tekście nie ma nic, co sensownie układa się w grafikę, zwróć pustą listę elementów.`;
 
-// Schemat odpowiedzi — structured outputs (bez ograniczeń długości: te
-// pilnuje walidator; nieobsługiwane słowa kluczowe API i tak by odrzuciło).
-// Pole opcjonalne = tekst, pusty znaczy „brak” (walidator czyta "" jak null).
-// Bez unii string|null: API kompiluje schemat z limitem 16 parametrów z
-// unią / anyOf — z nullable wyszło 28 i całe zapytanie dostawało HTTP 400.
-const nullableString = { type: "string", description: "pusty tekst = brak" };
-const PROPS_SCHEMA: Record<string, Record<string, unknown>> = {
-  stat: { kicker: nullableString, value: { type: "string" }, caption: nullableString },
-  range: {
-    title: { type: "string" },
-    from: { type: "number" },
-    to: { type: "number" },
-    max: { type: "number" },
-    unit: { type: "string" },
-    caption: nullableString,
-  },
-  threshold: {
-    title: { type: "string" },
-    value: { type: "number" },
-    max: { type: "number" },
-    unit: { type: "string" },
-    below: { type: "string" },
-    above: { type: "string" },
-  },
-  versus: {
-    title: nullableString,
-    left: side(),
-    right: side(),
-    winner: { type: "string", enum: ["left", "right", "none"] },
-  },
-  checklist: { title: nullableString, items: { type: "array", items: { type: "string" } } },
-  steps: { title: nullableString, items: { type: "array", items: { type: "string" } } },
-  keyword: { text: { type: "string" }, highlight: nullableString },
-  mythFact: { myth: { type: "string" }, fact: { type: "string" } },
-  alert: { title: { type: "string" }, text: { type: "string" } },
-  cta: { text: { type: "string" }, sub: nullableString },
-};
-
-function side() {
-  return {
-    type: "object",
-    properties: { label: { type: "string" }, value: { type: "string" } },
-    required: ["label", "value"],
-    additionalProperties: false,
-  };
-}
-
-const ELEMENT_SCHEMAS = MOTION_COMPONENTS.map((component) => ({
-  type: "object",
-  properties: {
-    component: { type: "string", const: component },
-    zone: { type: "string", enum: ["top", "center"] },
-    sync: { type: "string" },
-    endSync: nullableString,
-    itemSync: {
-      type: "array",
-      items: nullableString,
-      description: "tylko checklist/steps; dla innych pusta lista",
-    },
-    props: {
-      type: "object",
-      properties: PROPS_SCHEMA[component],
-      required: Object.keys(PROPS_SCHEMA[component]),
-      additionalProperties: false,
-    },
-  },
-  required: ["component", "zone", "sync", "endSync", "itemSync", "props"],
-  additionalProperties: false,
-}));
-
+// Schemat odpowiedzi — structured outputs. Celowo płaski: API kompiluje
+// schemat do gramatyki i odrzuca zbyt duże (HTTP 400 „compiled grammar is
+// too large” przy 10 wariantach komponentów z osobnymi propsami; wcześniej
+// także limit 16 unii). Propsy idą więc jako tekst JSON (`props_json`), a
+// ich kształt i limity pilnuje walidator (sanitizeMotionDesign) wg katalogu.
+// Pola opcjonalne = tekst, pusty znaczy „brak”.
 export const OUTPUT_SCHEMA = {
   type: "object",
-  properties: { elements: { type: "array", items: { anyOf: ELEMENT_SCHEMAS } } },
+  properties: {
+    elements: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          component: { type: "string", enum: [...MOTION_COMPONENTS] },
+          zone: { type: "string", enum: ["top", "center"] },
+          sync: { type: "string" },
+          endSync: { type: "string" },
+          itemSync: { type: "array", items: { type: "string" } },
+          props_json: { type: "string" },
+        },
+        required: ["component", "zone", "sync", "endSync", "itemSync", "props_json"],
+        additionalProperties: false,
+      },
+    },
+  },
   required: ["elements"],
   additionalProperties: false,
 };

@@ -184,6 +184,23 @@ describe("schemat odpowiedzi projektanta", () => {
     expect(unions).toBeLessThanOrEqual(16);
   });
 
+  it("propsy jako tekst JSON (props_json) od projektanta AI", () => {
+    const [el] = sanitizeMotionDesign([
+      {
+        component: "range",
+        zone: "top",
+        sync: "Większość spraw na rynku",
+        endSync: "",
+        itemSync: [],
+        props_json:
+          '{"title":"Typowa sprawa","from":100,"to":300,"max":500,"unit":"tys. zł","caption":null}',
+      },
+      { component: "stat", zone: "top", sync: "Nie pięć milionów", props_json: "{zepsuty" },
+    ]);
+    expect(el.component).toBe("range");
+    expect(el.props).toMatchObject({ from: 100, to: 300, caption: null });
+  });
+
   it("pusty tekst w polach opcjonalnych czyta się jak brak", () => {
     const [el] = sanitizeMotionDesign([
       {
