@@ -103,8 +103,9 @@ Ani schemat, ani dane nie idą przez czat ani kontener — stara baza łączy si
    pętli mailowej leada `8e20abbc…`. Porównanie liczby wierszy w każdej tabeli.
 7. Storage przez Storage API (deduplikacja po sumie kontrolnej, poprawa mimetype filmów).
 8. Sprzątanie: stara baza — `drop extension dblink`, `delete from vault.secrets where
-   name='migration_target'`; nowa baza — `reassign owned by migrator to postgres`,
-   `drop owned by migrator`, `drop role migrator`.
+   name='migration_target'`; nowa baza — `drop schema _mig cascade` (tabele `ddl`, `ddl_log`,
+   funkcje `run`, `run2`), `drop owned by migrator`, `drop role migrator`. Uwaga: konektor
+   Supabase wymaga osobnego potwierdzenia dla `drop`/`delete`.
 9. Najpierw próbna kopia; finalna kopia i przełączenie w oknie serwisowym.
 
 Alternatywa odrzucona jako gorsza: przenoszenie schematu porcjami przez czat (~500 kB DDL).
@@ -131,8 +132,7 @@ w produkcji, sekret w Vault). Wykonane i zweryfikowane:
 ### Krok 4 (schemat) — przebieg (2026-10-10)
 
 Zmiana metody wykonania względem pierwotnego planu (lepsza, uzgodniona z właścicielem):
-stara baza tylko **generuje** DDL z katalogu (czyste `SELECT`-y, plik generatorów trzymany
-poza repo) i wysyła go przez `dblink` do tabeli roboczej `_mig.ddl` w nowej bazie; **wykonuje**
+stara baza tylko **generuje** DDL z katalogu (czyste `SELECT`-y, plik `docs/migracja/ddl-generators.sql`) i wysyła go przez `dblink` do tabeli roboczej `_mig.ddl` w nowej bazie; **wykonuje**
 go konektor jako `postgres` (funkcja `_mig.run(faza_od, faza_do, limit)`: każda instrukcja
 w osobnej podtransakcji, błędy w `_mig.ddl_log`, ponowienia tylko nieudanych; limit konektora
 2 min/wywołanie → porcje). Dzięki temu właścicielem obiektów jest od razu `postgres`
@@ -156,9 +156,62 @@ w osobnej podtransakcji, błędy w `_mig.ddl_log`, ponowienia tylko nieudanych; 
   `jobid` cronów nie są zachowane (nazwy tak); polecenia cronów zawierają stary URL
   `lovable.app` i klucz `anon` starego projektu — do przepisania przy przełączeniu.
 - Generatory przeszły niezależną recenzję adwersarialną (5 perspektyw + weryfikacja każdego
-  znaleziska) przed wykonaniem; wynik i poprawki — dopisane po zakończeniu recenzji.
+  znaleziska) przed wykonaniem; wynik i poprawki — niżej.
 
 
+
+#### Wynik kroku 4 i weryfikacja (krok 5) — 2026-10-10
+
+Recenzja generatorów (5 perspektyw, 16 znalezisk, 4 obalone jako już poprawione) — przyjęte:
+- **crony atomowo** — `cron.alter_job(job_id := cron.schedule(...), active := false)` w jednej
+  instrukcji (osobne wiersze mogły zostać rozdzielone granicą porcji i job przez chwilę byłby aktywny);
+- bucket: dodana kolumna `versioning_status`; `lifecycle_*` celowo NULL (trigger storage);
+- pozycje sekwencji (`setval`) to stan danych → faza 16 generatorów, do uruchomienia **po** danych;
+- wykonawca `_mig.run2` (licznik prób, pierwszy błąd w wyniku, `search_path` przypięty) i transfer
+  upsertem z kontrolą obecności sekretu; kontrole wstępne: uprawnienia EXECUTE 118 funkcji `vector`
+  identyczne (118/118/118), `supabase_migrations.schema_migrations` nie istniała wcześniej.
+
+Wykonanie: **3841 instrukcji, 0 błędów, 0 ponowień** w trzech wywołaniach (fazy 0–6: 1385;
+7–14: 2422; 15: 34). Crony: 34 zaplanowane, **0 aktywnych**.
+
+Weryfikacja: liczby obiektów identyczne z produkcją (243 tabele, 2 widoki, 12 sekwencji, 38 enumów,
+113 funkcji własnych, 145 + 1 triggerów, 374 + 36 polityk, RLS 243/243, 677 indeksów, 740 constraintów,
+79 komentarzy, granty tabel anon 222 / authenticated 243 / service_role 245, 256 grantów funkcji dla
+ról API, 13 bucketów, wszystko własnością `postgres`). Diff strukturalny baza↔baza przez `dblink`
+(`docs/migracja/schema-diff.sql`, ~3 800 podpisów: kolumny, constrainty, indeksy, definicje funkcji,
+triggery, polityki, widoki, enumy, sekwencje, granty, komentarze): **jedyna różnica to
+`public.rls_auto_enable()` + event trigger `ensure_rls`** — opcja Supabase „automatyczny RLS”
+zaznaczona przy tworzeniu projektu (zostaje; włącza RLS na nowych tabelach w `public`).
+
+`get_advisors` nowej bazy — wszystko odziedziczone z produkcji, nic nie wynika z migracji:
+- security: 14 funkcji `SECURITY DEFINER` wykonywalnych przez `anon` i 72 przez `authenticated`
+  — w tym **`exec_admin_any(_sql text)`, `exec_admin_select`, `exec_admin_write`** (wykonują SQL
+  przekazany jako tekst; zakładam kontrolę roli wewnątrz — **do osobnego przeglądu bezpieczeństwa**);
+  5 tabel z RLS bez polityk (`messenger_outbox`, `push_subscriptions`, `tiktok_integration`,
+  `x_integration`, `youtube_integration` — jak w produkcji, dostęp tylko przez `service_role`);
+  `esign_events_immutable` bez `search_path`; `vector` w `public` (świadome); `_mig.run` (sprzątanie).
+- performance: 85 FK bez indeksu, 355 polityk z `auth.uid()` bez `(select …)`, 92 tabele z wieloma
+  politykami permisywnymi, 2 pary zduplikowanych indeksów (`kw_fetch_attempts`, `kw_section_sources`),
+  325 „nieużywanych” indeksów (pusta baza). Materiał na optymalizację po migracji, nie przed.
+
+Przy finalnej kopii (okno serwisowe), jeśli schemat produkcji zmieni się do tego czasu: ponownie
+uruchomić `schema-diff.sql`, a różnice dogenerować z `ddl-generators.sql` (upsert do `_mig.ddl`,
+`_mig.run2` ponawia tylko zmienione wiersze).
+
+### Krok 6 (dane) — do decyzji właściciela
+
+Propozycja: `postgres_fdw` w starej bazie (dodające: rozszerzenie, `server`, `user mapping` roli
+`migrator`, `import foreign schema` do schematu roboczego) i `insert into <zdalna> select * from
+<lokalna>` tabela po tabeli — natywne typy, strumieniowo, bez JSON. Po stronie nowej bazy na czas
+ładowania: `migrator` z `bypassrls` (do sprawdzenia, czy `postgres` może nadać) albo staging w `_mig`
++ przepisanie jako `postgres`; `disable trigger user` na tabelach (145 triggerów nie może
+„przetwarzać” kopiowanych wierszy), FK (198) zdjęte i odtworzone z `_mig.ddl` po załadowaniu
+(walidacja danych), trigger `auth.users` nieaktywny podczas ładowania `auth.users`
+(inaczej `handle_new_user` dublowałby profile); kolumny identity przez `overriding system value`.
+Pominąć: `net._http_response`, `cron.job_run_details`, 45 329 wpisów pętli leada `8e20abbc…`.
+Po załadowaniu: porównanie liczby wierszy per tabela, faza 16 (`setval`), FK, triggery, trigger auth.
+Otwarte: czy kopiować 231 wierszy `supabase_migrations.schema_migrations` (historia migracji
+Lovable; repo ma 304 pliki — niezgodność do uzgodnienia przed pierwszym `supabase db push`).
 
 ## Do sprawdzenia w kodzie (osobno)
 
