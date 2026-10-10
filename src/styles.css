@@ -584,6 +584,30 @@
 @media (prefers-reduced-motion: reduce) {
   .fy-module-card:hover, .fy-module-card:focus-visible { transform: none; }
 }
+/* Skala A–E (Analityk AI): 5 klas w rzędzie, pod nimi składowe oceny i twarde reguły. */
+.fy-grade-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fy-grade-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+@media (max-width: 1100px) {
+  .fy-grade-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .fy-grade-details { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .fy-grade-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 900px) {
   .fy-fab-grid { grid-template-columns: 1fr; gap: 1.7rem; }
   .fy-fab-cell + .fy-fab-cell::before { content: "↓"; left: 50%; top: -1.45rem; transform: translateX(-50%); }

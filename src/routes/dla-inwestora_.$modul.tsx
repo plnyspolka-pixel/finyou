@@ -14,7 +14,12 @@ import {
 } from "@/components/marketing/sections";
 import { MktBadge, MktButton } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
-import { FabLegend, FabList, ModuleCards } from "@/components/marketing/investor-module-ui";
+import {
+  FabLegend,
+  FabList,
+  GradeScale,
+  ModuleCards,
+} from "@/components/marketing/investor-module-ui";
 import {
   INVESTOR_MODULES,
   investorModuleBySlug,
@@ -95,7 +100,19 @@ function InvestorModulePage() {
         <FabList rows={m.fab} />
       </Section>
 
-      <Section id="jak-to-dziala" tint>
+      {m.gradeScale && (
+        <Section id="skala-a-e" tint>
+          <SectionHead
+            center
+            eyebrow="Skala A–E"
+            title="Ocena inwestycyjna w skali A–E"
+            sub="Każdy Projekt dostaje wynik od 0 do 100 punktów i klasę od A do E. Im wyższy wynik, tym niższe ryzyko."
+          />
+          <GradeScale components={m.gradeScale.components} caps={m.gradeScale.caps} />
+        </Section>
+      )}
+
+      <Section id="jak-to-dziala" tint={!m.gradeScale}>
         <SectionHead center eyebrow="Jak to działa" title="Cztery kroki w panelu inwestora" />
         <div style={{ marginTop: "2.5rem" }}>
           <ProcessSteps steps={m.steps} cols={4} />

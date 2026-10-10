@@ -225,7 +225,7 @@ const BENEFITS: FeatureItemData[] = [
   {
     icon: "knowledge",
     t: "Decyzja na podstawie faktów",
-    d: "Raport o nieruchomości, stanie prawnym, LTV i ryzyku przy każdym Projekcie — bez limitu raportów.",
+    d: "Ocena ryzyka w skali A–E i wycena w 15 minut przy każdym Projekcie — ponad 400 punktów danych i raport do pobrania w PDF.",
   },
   {
     icon: "procedures",
@@ -250,12 +250,12 @@ const BENEFITS: FeatureItemData[] = [
   {
     icon: "complianceAml",
     t: "Obowiązki AML pod kontrolą",
-    d: "Klienci, transakcje, ocena ryzyka, zgłoszenia i UPO w jednym module.",
+    d: "Wsparcie raportowania do GIIF, screening list sankcyjnych i rejestr czynności ponadprogowych w jednym module.",
   },
   {
     icon: "aibrain",
     t: "Odzyskujesz należności krok po kroku",
-    d: "Windykacja AI prowadzi sześć etapów — od pierwszego kontaktu po egzekucję. Decyzje zostają po Twojej stronie.",
+    d: "Wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia aż na biurko komornika, z pismami w Twoim imieniu.",
   },
   {
     icon: "training",
@@ -449,7 +449,7 @@ const COMPLIANCE: { icon: Icon3DName; t: string }[] = [
 const FAQ_ALL: FAQItem[] = [
   {
     q: "Czym jest Finance You dla inwestora?",
-    a: "Zestawem narzędzi i szkoleniem dla osób, które chcą finansować pożyczki dla firm zabezpieczone hipoteką. Dostajesz dopasowane Projekty, raporty, dokumenty, obsługę spłat i windykacji oraz Akademię inwestora. Jeśli chcesz działać pod marką Finance You, możesz też korzystać z naszej sieci sprzedaży.",
+    a: "Zestawem narzędzi i szkoleniem dla osób, które chcą finansować pożyczki dla firm zabezpieczone hipoteką. Dostajesz dopasowane Projekty, raporty, dokumenty, obsługę spłat i windykacji oraz Akademię inwestora. Projekty pochodzą z ogólnopolskiej sieci sprzedaży Finance You — na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego.",
   },
   {
     q: "Ile to kosztuje?",
@@ -481,11 +481,11 @@ const FAQ_ALL: FAQItem[] = [
   },
   {
     q: "Jak zacząć?",
-    a: "Zakładasz konto i opłacasz abonament — to otwiera panel. Żeby dostawać Projekty, przechodzisz zdalną weryfikację tożsamości, akceptujesz umowy z Finance You i składasz Zlecenie z kwotą i oczekiwanym zyskiem.",
+    a: "Zakładasz konto i opłacasz abonament — to otwiera panel. Żeby dostawać Projekty, przechodzisz zdalną weryfikację tożsamości, akceptujesz umowy z Finance You i składasz Zlecenie z maksymalną kwotą finansowania.",
   },
   {
     q: "Co jeśli klient nie płaci?",
-    a: "Moduł windykacji prowadzi sprawę krok po kroku — od przypomnień, przez wezwania i ugodę, po egzekucję. Każdą decyzję podejmujesz Ty.",
+    a: "Windykator AI: wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia, przez wezwania i ugodę, aż na biurko komornika. Pisma wystawiamy w Twoim imieniu, a każdą decyzję podejmujesz Ty.",
   },
 ];
 

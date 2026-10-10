@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { INVESTOR_MODULES, investorModuleBySlug, investorModulePath } from "./investor-modules";
+import { WEIGHTS } from "@/lib/risk-assessment/risk-scoring";
 import { SiteHeader } from "./shell";
 
 describe("moduły Klubu Inwestorów — dane podstron", () => {
@@ -29,6 +30,18 @@ describe("moduły Klubu Inwestorów — dane podstron", () => {
       expect(existsSync(join(process.cwd(), "public", m.image))).toBe(true);
     },
   );
+
+  it("skala A–E Analityka AI: wagi składowych zgodne z oceną ryzyka i sumują się do 100%", () => {
+    const scale = investorModuleBySlug("analityk-ai")?.gradeScale;
+    expect(scale).toBeDefined();
+    const weights = scale!.components.map((c) => c.weight);
+    expect(weights.reduce((a, b) => a + b, 0)).toBe(100);
+    expect([...weights].sort((a, b) => b - a)).toEqual(
+      Object.values(WEIGHTS)
+        .map((w) => Math.round(w * 100))
+        .sort((a, b) => b - a),
+    );
+  });
 
   it("wyszukuje moduł po slugu i zwraca undefined dla nieznanego", () => {
     expect(investorModuleBySlug("analityk-ai")?.name).toBe("Analityk AI");

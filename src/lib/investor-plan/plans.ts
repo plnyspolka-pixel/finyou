@@ -202,13 +202,14 @@ export const ACCESS_PRESENTATION: TierPresentation = {
     },
     {
       cecha: "Wewnętrzna sieć sprzedaży",
-      zaleta: "Korzystasz z naszej sieci sprzedaży i działasz pod sprawdzoną marką Finance You.",
+      zaleta:
+        "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do ich potrzeb i możliwości — Projekty z całej Polski trafiają do Ciebie.",
       korzysc: "Nie szukasz klientów — to oni szukają Ciebie!",
     },
     {
       cecha: "Zaawansowany moduł analizy nieruchomości",
       zaleta:
-        "Księga wieczysta, właściciele, obciążenia, wycena, LTV i ocena ryzyka — pełne raporty bez limitu.",
+        "Ocena ryzyka w skali A–E i wycena w 15 minut — w tym czasie skanujemy i oceniamy ponad 400 punktów danych: księgę wieczystą, właścicieli, obciążenia, wartość i LTV. Raport pobierasz w PDF.",
       korzysc: "Masz własnego, profesjonalnego analityka AI, zanim wyłożysz pieniądze.",
     },
     {
@@ -225,13 +226,14 @@ export const ACCESS_PRESENTATION: TierPresentation = {
     },
     {
       cecha: "Moduł AML",
-      zaleta: "Procedury, dokumentacja i zgłoszenia AML w jednym miejscu.",
+      zaleta:
+        "Wspieramy raportowanie do GIIF, screening list sankcyjnych i rejestr czynności ponadprogowych — w jednym miejscu.",
       korzysc: "Obowiązki AML wypełniasz sprawnie, bez osobnego systemu.",
     },
     {
       cecha: "Windykator AI",
       zaleta:
-        "Dzwoni, pisze i przygotowuje wezwania. Prowadzi sprawę od pierwszego dnia opóźnienia — przypomnienia, ugoda, klauzula wykonalności — aż na biurko komornika.",
+        "Wszystkie procedury uruchamiamy jednym kliknięciem i skutecznie prowadzimy sprawy od pierwszego upomnienia aż na biurko komornika — z pismami w Twoim imieniu.",
       korzysc: "Nie zostajesz sam z niespłaconą pożyczką.",
     },
   ],
