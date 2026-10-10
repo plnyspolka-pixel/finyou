@@ -27,6 +27,7 @@ import type {
   ReelPlan,
   ReelTag,
 } from "../../../src/lib/studio-reel-plan";
+import { MotionLayer } from "./Motion";
 
 // Inter z paczki strony (public/fonts, licencja OFL) — bez pobierania z sieci
 // w trakcie renderu; ta sama czcionka co w obrazie caption-burnera.
@@ -457,6 +458,9 @@ export const StudioReel: React.FC<StudioReelProps> = ({ videoUrl, plan }) => {
       {ov?.cards.map((card, i) => (
         <Card key={i} ov={ov} card={card} t={t} k={k} width={width} />
       ))}
+      {ov?.motion?.length ? (
+        <MotionLayer items={ov.motion} c={{ t, fps, k, height, fontFamily }} />
+      ) : null}
       {plan?.captions ? <Captions plan={plan.captions} t={t} k={k} /> : null}
       {ov?.tag ? <Tag ov={ov} tag={ov.tag} t={t} k={k} width={width} height={height} /> : null}
       {ov?.headline ? <Headline ov={ov} head={ov.headline} t={t} k={k} height={height} /> : null}

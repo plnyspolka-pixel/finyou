@@ -38,6 +38,7 @@ import {
   setStudioBrollActive,
   deleteStudioBroll,
   seedStudioBroll,
+  uploadStudioBroll,
   type StudioPlatform,
   type StudioVideoJob,
   type StudioAvatar,
@@ -128,6 +129,7 @@ import {
   Plus,
   Eye,
   EyeOff,
+  ImageUp,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/studio-publikacji")({
@@ -277,6 +279,7 @@ function StudioPage() {
   const brollActiveFn = useServerFn(setStudioBrollActive);
   const deleteBrollFn = useServerFn(deleteStudioBroll);
   const seedBrollFn = useServerFn(seedStudioBroll);
+  const uploadBrollFn = useServerFn(uploadStudioBroll);
   const tiktokStatusFn = useServerFn(getTiktokIntegrationStatus);
   const tiktokCreatorFn = useServerFn(getTiktokCreatorInfo);
 
@@ -622,6 +625,42 @@ function StudioPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // Upload z dysku: po jednym pliku na wywołanie (limit rozmiaru żądania),
+  // błędy pojedynczych plików nie przerywają reszty.
+  const [brollUpload, setBrollUpload] = useState<{
+    done: number;
+    total: number;
+    failed: string[];
+  } | null>(null);
+  const [brollDragOver, setBrollDragOver] = useState(false);
+  const uploadBrollFiles = async (list: FileList | File[]) => {
+    const files = Array.from(list).filter((f) => f.type.startsWith("image/"));
+    if (!files.length) {
+      toast.error("Wybierz pliki graficzne (JPG, PNG, WEBP).");
+      return;
+    }
+    const failed: string[] = [];
+    setBrollUpload({ done: 0, total: files.length, failed });
+    for (let i = 0; i < files.length; i++) {
+      const fd = new FormData();
+      fd.append("file", files[i]);
+      fd.append("title", files.length === 1 ? newBrollTitle.trim() : "");
+      fd.append("tags", newBrollTags);
+      try {
+        await uploadBrollFn({ data: fd });
+      } catch (e) {
+        failed.push(`${files[i].name}: ${(e as Error).message}`);
+      }
+      setBrollUpload({ done: i + 1, total: files.length, failed: [...failed] });
+    }
+    refreshBroll();
+    const ok = files.length - failed.length;
+    if (ok) toast.success(`Dodano do banku: ${ok} ${ok === 1 ? "plik" : "plików"}`);
+    if (failed.length) toast.error(`Nieudane (${failed.length}): ${failed.join("; ")}`);
+    setBrollUpload(null);
+    if (ok && files.length === 1) setNewBrollTitle("");
+  };
 
   const seedBrollM = useMutation({
     // Serwer przerabia jedną porcję fraz na wywołanie (limit żądań funkcji),
@@ -2520,9 +2559,56 @@ function StudioPage() {
                 usuń — nie wejdą do doboru.
               </p>
 
+              <label
+                className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 text-center text-sm transition-colors ${
+                  brollDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+                } ${brollUpload ? "pointer-events-none opacity-70" : ""}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setBrollDragOver(true);
+                }}
+                onDragLeave={() => setBrollDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setBrollDragOver(false);
+                  void uploadBrollFiles(e.dataTransfer.files);
+                }}
+              >
+                {brollUpload ? (
+                  <>
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span>
+                      Wgrywam {brollUpload.done}/{brollUpload.total}
+                      {brollUpload.failed.length ? ` (nieudane: ${brollUpload.failed.length})` : ""}
+                      …
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <ImageUp className="h-6 w-6 text-muted-foreground" />
+                    <span className="font-medium">Wgraj własne przebitki z dysku</span>
+                    <span className="text-xs text-muted-foreground">
+                      Przeciągnij pliki albo kliknij — JPG, PNG, WEBP, do 15 MB, wiele naraz. Bez
+                      tagów poniżej każdą grafikę opisze AI (scena, tagi PL/EN), żeby planer ją
+                      dobierał.
+                    </span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) void uploadBrollFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+
               <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_1fr_auto]">
                 <div className="space-y-2 md:col-span-3">
-                  <Label>Dodaj własny materiał (publiczny URL grafiki)</Label>
+                  <Label>…albo z publicznego URL-a grafiki</Label>
                   <Input
                     value={newBrollUrl}
                     onChange={(e) => setNewBrollUrl(e.target.value)}
@@ -2561,7 +2647,9 @@ function StudioPage() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Tagi decydują o doborze — wpisuj je tak, jak planer opisuje kadr (po angielsku), a
-                dla wygody także po polsku. Nazwa i tagi same wchodzą do słów kluczowych.
+                dla wygody także po polsku. Nazwa i tagi same wchodzą do słów kluczowych. Puste tagi
+                = opis AI. Wpisane tagi i nazwa dotyczą też plików wgrywanych z dysku (nazwa tylko
+                przy jednym pliku).
               </p>
             </CardContent>
           </Card>

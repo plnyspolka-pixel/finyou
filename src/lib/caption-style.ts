@@ -16,6 +16,8 @@
 
 import { fixBrandInCues } from "./caption-brand";
 
+import type { MotionDesignElement } from "./motion-catalog";
+
 export type SrtCue = {
   /** Sekundy od początku filmu. */
   start: number;
@@ -684,6 +686,11 @@ export type DynamicOverlays = {
   headlineSyncText?: string | null;
   /** Karty informacyjne (checklisty, tabelki) — opcjonalne. */
   cards?: OverlayCard[];
+  /**
+   * Elementy dynamiczne z katalogu (motion-catalog.ts) zaprojektowane przez
+   * AI — rysuje je tylko silnik Remotion; plik ASS (caption-burner) je pomija.
+   */
+  motion?: MotionDesignElement[] | null;
 };
 
 /**

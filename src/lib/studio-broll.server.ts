@@ -179,6 +179,11 @@ export type AddBrollInput = {
   orientation?: string | null;
   attribution?: string;
   userId?: string | null;
+  /**
+   * Bez tagów od człowieka opisz grafikę AI (Claude patrzy na obraz: tytuł
+   * sceny, tagi EN/PL, orientacja) — inaczej planer nigdy jej nie dobierze.
+   */
+  autoDescribe?: boolean;
 };
 
 /**
@@ -196,13 +201,43 @@ export async function addBrollFromUrl(input: AddBrollInput): Promise<BrollAsset>
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Pobranie grafiki nieudane: ${res.status}`);
   const mime = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  return addBrollFromBytes({ ...input, bytes, mime });
+}
+
+export type AddBrollBytesInput = Omit<AddBrollInput, "url"> & {
+  bytes: Uint8Array;
+  mime: string;
+};
+
+/** Zapis grafiki do bucketu `studio-media` i wpis do banku (z URL-a albo z pliku z panelu). */
+export async function addBrollFromBytes(input: AddBrollBytesInput): Promise<BrollAsset> {
+  const mime = input.mime.toLowerCase();
+  const buf = input.bytes;
   if (!mime.startsWith("image/")) {
     throw new Error(`To nie jest grafika (${mime || "nieznany typ"}). Bank przyjmuje obrazy.`);
   }
-  const buf = new Uint8Array(await res.arrayBuffer());
   if (!buf.byteLength) throw new Error("Pusty plik.");
   if (buf.byteLength > MAX_ASSET_BYTES) {
     throw new Error(`Plik za duży (${Math.round(buf.byteLength / 1024 / 1024)} MB, limit 15 MB).`);
+  }
+
+  let title = (input.title ?? "").trim();
+  let tags = input.tags ?? [];
+  let orientation = input.orientation ?? null;
+  if (input.autoDescribe && !tags.length) {
+    try {
+      const { describeBrollImage } = await import("./broll-describer.server");
+      const d = await describeBrollImage(buf, mime);
+      if (d) {
+        title = title || d.title;
+        tags = d.tags;
+        orientation = orientation ?? d.orientation;
+      }
+    } catch (e) {
+      // Opis to wygoda — materiał i tak wchodzi do banku z nazwą pliku.
+      console.warn(`[B-roll] opis AI nieudany: ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   const ext = EXT_BY_MIME[mime] ?? mime.split("/")[1] ?? "jpg";
@@ -214,8 +249,8 @@ export async function addBrollFromUrl(input: AddBrollInput): Promise<BrollAsset>
   const { data: pub } = supabaseAdmin.storage.from(STORAGE_BUCKET).getPublicUrl(path);
 
   const sourceQuery = (input.sourceQuery ?? "").trim();
-  const title = (input.title ?? "").trim() || sourceQuery || "Materiał b-roll";
-  const tags = [...new Set([...(input.tags ?? []), ...keywordsFrom(`${title} ${sourceQuery}`)])]
+  title = title || sourceQuery || "Materiał b-roll";
+  tags = [...new Set([...tags, ...keywordsFrom(`${title} ${sourceQuery}`)])]
     .map((t) => t.toLowerCase())
     .slice(0, 24);
 
@@ -229,7 +264,7 @@ export async function addBrollFromUrl(input: AddBrollInput): Promise<BrollAsset>
       storage_path: path,
       source: input.source ?? "url",
       source_query: sourceQuery,
-      orientation: input.orientation ?? null,
+      orientation,
       attribution: input.attribution ?? "",
       created_by: input.userId ?? null,
     })
