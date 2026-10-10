@@ -297,7 +297,9 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
   const { resolveBrollImage, markBrollUsed } = await import("./studio-broll.server");
   const usedAssets = new Set<string>();
   const images: (string | null)[] = [];
+  const mediaTypes: ("image" | "video")[] = [];
   for (const item of plan) {
+    mediaTypes.push("image");
     if (item.kind === "avatar") {
       images.push(null);
       continue;
@@ -306,6 +308,7 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
       const broll = await resolveBrollImage(item.query, usedAssets);
       if (broll?.assetId) usedAssets.add(broll.assetId);
       images.push(broll?.url ?? null);
+      if (broll) mediaTypes[mediaTypes.length - 1] = broll.mediaType;
     } catch (e) {
       console.warn(
         `[Studio] materiał dla sceny "${item.query ?? item.kind}" nieudany: ${
@@ -334,6 +337,7 @@ export async function renderStudioVideo(args: RenderArgs): Promise<StudioRenderR
       item,
       audioAssetId: await uploadAudioToHeygen(narration.pieces[i]),
       imageUrl: images[i],
+      mediaType: mediaTypes[i],
     });
   }
 

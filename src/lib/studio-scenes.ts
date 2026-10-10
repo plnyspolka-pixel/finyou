@@ -214,8 +214,10 @@ export function planHasBroll(items: ScenePlanItem[]): boolean {
 export type ResolvedScene = {
   item: ScenePlanItem;
   audioAssetId: string;
-  /** URL grafiki ze stocku; brak = przebitka schodzi z powrotem na awatara. */
+  /** URL grafiki / klipu przebitki; brak = przebitka schodzi z powrotem na awatara. */
   imageUrl: string | null;
+  /** Klip z banku b-rolli → scena `video` (pętla, wyciszony pod lektorem). */
+  mediaType?: "image" | "video";
 };
 
 export type HeygenStudioScene =
@@ -228,7 +230,14 @@ export type HeygenStudioScene =
         background?: { type: "color"; color: string };
       };
     }
-  | { type: "image"; source: { type: "url"; url: string }; audio_asset_id: string };
+  | { type: "image"; source: { type: "url"; url: string }; audio_asset_id: string }
+  | {
+      type: "video";
+      source: { type: "url"; url: string };
+      audio_asset_id: string;
+      /** Długość sceny = lektor; klip się zapętla, jego dźwięk wyciszamy. */
+      playback: { mode: "loop"; mute: true };
+    };
 
 /**
  * Buduje listę scen dla HeyGena. Przebitka bez grafiki (pusty wynik
@@ -238,7 +247,15 @@ export function buildStudioScenes(
   resolved: ResolvedScene[],
   opts: { avatarId: string; backgroundColor?: string },
 ): HeygenStudioScene[] {
-  return resolved.map(({ item, audioAssetId, imageUrl }) => {
+  return resolved.map(({ item, audioAssetId, imageUrl, mediaType }) => {
+    if (item.kind !== "avatar" && imageUrl && mediaType === "video") {
+      return {
+        type: "video" as const,
+        source: { type: "url" as const, url: imageUrl },
+        audio_asset_id: audioAssetId,
+        playback: { mode: "loop" as const, mute: true as const },
+      };
+    }
     if (item.kind !== "avatar" && imageUrl) {
       return {
         type: "image" as const,

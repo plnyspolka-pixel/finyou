@@ -1,6 +1,7 @@
 // Studio publikacji — jedno miejsce do: publikacji wideo (YouTube / Instagram
 // Reels / Facebook Reels / TikTok / post na Facebooku), generowania wideo HeyGen
 // z promptu, generatora promptów i generatora grafik AI.
+import { supabase } from "@/integrations/supabase/client";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -38,7 +39,8 @@ import {
   setStudioBrollActive,
   deleteStudioBroll,
   seedStudioBroll,
-  uploadStudioBroll,
+  createStudioBrollUpload,
+  registerStudioBroll,
   type StudioPlatform,
   type StudioVideoJob,
   type StudioAvatar,
@@ -131,6 +133,52 @@ import {
   EyeOff,
   ImageUp,
 } from "lucide-react";
+
+/**
+ * Kadr podglądowy (JPEG), długość i orientacja klipu — liczone w przeglądarce
+ * przy uploadzie (serwer nie dekoduje wideo). Klip, którego przeglądarka nie
+ * odtworzy (np. HEVC w MOV), wchodzi bez podglądu.
+ */
+async function videoPreview(
+  file: File,
+): Promise<{ thumb: Blob | null; duration: number | null; orientation: string | null }> {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.src = url;
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error("nie do odtworzenia"));
+      setTimeout(() => reject(new Error("timeout")), 15000);
+    });
+    const duration = Number.isFinite(video.duration) ? video.duration : null;
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    const orientation =
+      !w || !h ? null : h > w * 1.05 ? "portrait" : w > h * 1.05 ? "landscape" : "square";
+    video.currentTime = Math.min(1, (duration ?? 3) / 3);
+    await new Promise<void>((resolve) => {
+      video.onseeked = () => resolve();
+      setTimeout(resolve, 5000);
+    });
+    const scale = Math.min(1, 1080 / Math.max(w, h, 1));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(w * scale));
+    canvas.height = Math.max(1, Math.round(h * scale));
+    canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const thumb = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.85),
+    );
+    return { thumb, duration, orientation };
+  } catch {
+    return { thumb: null, duration: null, orientation: null };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 
 export const Route = createFileRoute("/admin/studio-publikacji")({
   component: StudioPage,
@@ -279,7 +327,8 @@ function StudioPage() {
   const brollActiveFn = useServerFn(setStudioBrollActive);
   const deleteBrollFn = useServerFn(deleteStudioBroll);
   const seedBrollFn = useServerFn(seedStudioBroll);
-  const uploadBrollFn = useServerFn(uploadStudioBroll);
+  const createBrollUploadFn = useServerFn(createStudioBrollUpload);
+  const registerBrollFn = useServerFn(registerStudioBroll);
   const tiktokStatusFn = useServerFn(getTiktokIntegrationStatus);
   const tiktokCreatorFn = useServerFn(getTiktokCreatorInfo);
 
@@ -626,38 +675,87 @@ function StudioPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Upload z dysku: po jednym pliku na wywołanie (limit rozmiaru żądania),
-  // błędy pojedynczych plików nie przerywają reszty.
+  // Upload z dysku: plik leci z przeglądarki prosto do Storage (podpisany
+  // link), po 3 naraz; serwer rezerwuje ścieżkę i potem wpisuje plik do banku.
+  // Błąd jednego pliku nie przerywa reszty — lista nieudanych zostaje na ekranie.
   const [brollUpload, setBrollUpload] = useState<{
     done: number;
     total: number;
     failed: string[];
   } | null>(null);
+  const [brollUploadFailed, setBrollUploadFailed] = useState<string[]>([]);
   const [brollDragOver, setBrollDragOver] = useState(false);
-  const uploadBrollFiles = async (list: FileList | File[]) => {
-    const files = Array.from(list).filter((f) => f.type.startsWith("image/"));
-    if (!files.length) {
-      toast.error("Wybierz pliki graficzne (JPG, PNG, WEBP).");
-      return;
-    }
-    const failed: string[] = [];
-    setBrollUpload({ done: 0, total: files.length, failed });
-    for (let i = 0; i < files.length; i++) {
-      const fd = new FormData();
-      fd.append("file", files[i]);
-      fd.append("title", files.length === 1 ? newBrollTitle.trim() : "");
-      fd.append("tags", newBrollTags);
-      try {
-        await uploadBrollFn({ data: fd });
-      } catch (e) {
-        failed.push(`${files[i].name}: ${(e as Error).message}`);
+  const uploadOneBroll = async (file: File, title: string) => {
+    const mime = file.type || (/\.mov$/i.test(file.name) ? "video/quicktime" : "");
+    const slot = await createBrollUploadFn({
+      data: { name: file.name, mime, size: file.size },
+    });
+    const up = await supabase.storage
+      .from("studio-media")
+      .uploadToSignedUrl(slot.path, slot.token, file, { contentType: mime });
+    if (up.error) throw new Error(`Storage: ${up.error.message}`);
+    let thumbnailPath: string | null = null;
+    let durationSeconds: number | null = null;
+    let orientation: string | null = null;
+    if (slot.mediaType === "video") {
+      const preview = await videoPreview(file);
+      durationSeconds = preview.duration;
+      orientation = preview.orientation;
+      if (preview.thumb) {
+        const t = await createBrollUploadFn({
+          data: {
+            name: "thumb.jpg",
+            mime: "image/jpeg",
+            size: preview.thumb.size,
+            thumbnail: true,
+          },
+        });
+        const tu = await supabase.storage
+          .from("studio-media")
+          .uploadToSignedUrl(t.path, t.token, preview.thumb, { contentType: "image/jpeg" });
+        if (!tu.error) thumbnailPath = t.path;
       }
-      setBrollUpload({ done: i + 1, total: files.length, failed: [...failed] });
     }
+    await registerBrollFn({
+      data: {
+        path: slot.path,
+        mime,
+        name: file.name,
+        title,
+        tags: newBrollTags,
+        thumbnailPath,
+        durationSeconds,
+        orientation,
+      },
+    });
+  };
+  const uploadBrollFiles = async (list: FileList | File[]) => {
+    const files = Array.from(list);
+    if (!files.length) return;
+    const failed: string[] = [];
+    let done = 0;
+    setBrollUploadFailed([]);
+    setBrollUpload({ done: 0, total: files.length, failed });
+    const title = files.length === 1 ? newBrollTitle.trim() : "";
+    let next = 0;
+    const worker = async () => {
+      while (next < files.length) {
+        const file = files[next++];
+        try {
+          await uploadOneBroll(file, title);
+        } catch (e) {
+          failed.push(`${file.name}: ${(e as Error).message}`);
+        }
+        done++;
+        setBrollUpload({ done, total: files.length, failed: [...failed] });
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
     refreshBroll();
     const ok = files.length - failed.length;
-    if (ok) toast.success(`Dodano do banku: ${ok} ${ok === 1 ? "plik" : "plików"}`);
-    if (failed.length) toast.error(`Nieudane (${failed.length}): ${failed.join("; ")}`);
+    if (ok) toast.success(`Dodano do banku: ${ok} z ${files.length}`);
+    if (failed.length) toast.error(`Nieudane: ${failed.length} — lista pod polem wgrywania.`);
+    setBrollUploadFailed(failed);
     setBrollUpload(null);
     if (ok && files.length === 1) setNewBrollTitle("");
   };
@@ -2588,15 +2686,16 @@ function StudioPage() {
                     <ImageUp className="h-6 w-6 text-muted-foreground" />
                     <span className="font-medium">Wgraj własne przebitki z dysku</span>
                     <span className="text-xs text-muted-foreground">
-                      Przeciągnij pliki albo kliknij — JPG, PNG, WEBP, do 15 MB, wiele naraz. Bez
-                      tagów poniżej każdą grafikę opisze AI (scena, tagi PL/EN), żeby planer ją
-                      dobierał.
+                      Przeciągnij pliki albo kliknij — zdjęcia JPG/PNG/WEBP (do 25 MB) i klipy
+                      MP4/MOV/WEBM (do 50 MB), dowolnie dużo naraz (wgrywamy po 3). Bez tagów
+                      poniżej każdy materiał opisze AI (scena, tagi PL/EN), żeby planer go dobierał.
+                      Klip w rolce leci w pętli, wyciszony pod lektorem.
                     </span>
                   </>
                 )}
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm,.mov,.heic"
                   multiple
                   className="hidden"
                   onChange={(e) => {
@@ -2605,6 +2704,21 @@ function StudioPage() {
                   }}
                 />
               </label>
+              {brollUploadFailed.length > 0 && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs">
+                  <div className="mb-1 flex items-center justify-between font-medium text-destructive">
+                    <span>Nie wgrano ({brollUploadFailed.length}):</span>
+                    <Button size="sm" variant="ghost" onClick={() => setBrollUploadFailed([])}>
+                      Zamknij
+                    </Button>
+                  </div>
+                  <ul className="max-h-40 list-disc space-y-0.5 overflow-auto pl-4">
+                    {brollUploadFailed.map((f) => (
+                      <li key={f}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_1fr_auto]">
                 <div className="space-y-2 md:col-span-3">
@@ -2695,13 +2809,32 @@ function StudioPage() {
                       key={a.id}
                       className={`space-y-2 rounded-lg border p-3 ${a.active ? "" : "opacity-60"}`}
                     >
-                      <img
-                        src={a.media_url}
-                        alt={a.title}
-                        className="aspect-[9/16] w-full rounded-md object-cover"
-                        loading="lazy"
-                      />
+                      {a.media_type === "video" ? (
+                        <video
+                          src={a.media_url}
+                          poster={a.thumbnail_url ?? undefined}
+                          className="aspect-[9/16] w-full rounded-md bg-black object-cover"
+                          muted
+                          loop
+                          playsInline
+                          preload="none"
+                          onMouseEnter={(e) => void e.currentTarget.play().catch(() => {})}
+                          onMouseLeave={(e) => e.currentTarget.pause()}
+                        />
+                      ) : (
+                        <img
+                          src={a.media_url}
+                          alt={a.title}
+                          className="aspect-[9/16] w-full rounded-md object-cover"
+                          loading="lazy"
+                        />
+                      )}
                       <div className="flex flex-wrap items-center gap-1">
+                        {a.media_type === "video" && (
+                          <Badge variant="secondary">
+                            wideo{a.duration_seconds ? ` ${Math.round(a.duration_seconds)} s` : ""}
+                          </Badge>
+                        )}
                         {!a.active && <Badge variant="outline">wyłączony</Badge>}
                         <span className="text-[11px] text-muted-foreground">
                           użyć: {a.use_count}

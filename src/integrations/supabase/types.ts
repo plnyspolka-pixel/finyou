@@ -13218,6 +13218,9 @@ export type Database = {
           kind: string
           last_used_at: string | null
           media_url: string
+          media_type: string
+          duration_seconds: number | null
+          thumbnail_url: string | null
           orientation: string | null
           source: string
           source_query: string
@@ -13236,6 +13239,9 @@ export type Database = {
           kind?: string
           last_used_at?: string | null
           media_url: string
+          media_type?: string
+          duration_seconds?: number | null
+          thumbnail_url?: string | null
           orientation?: string | null
           source?: string
           source_query?: string
@@ -13254,6 +13260,9 @@ export type Database = {
           kind?: string
           last_used_at?: string | null
           media_url?: string
+          media_type?: string
+          duration_seconds?: number | null
+          thumbnail_url?: string | null
           orientation?: string | null
           source?: string
           source_query?: string

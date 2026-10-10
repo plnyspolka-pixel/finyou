@@ -41,7 +41,7 @@ export type ClaudeContent =
   | { type: "text"; text: string }
   | {
       type: "image";
-      source: { type: "base64"; media_type: string; data: string };
+      source: { type: "base64"; media_type: string; data: string } | { type: "url"; url: string };
     };
 
 type AnthropicResponse = {

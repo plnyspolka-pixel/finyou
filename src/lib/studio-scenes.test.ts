@@ -117,6 +117,19 @@ describe("buildStudioScenes", () => {
     expect(scenes[2].type).toBe("avatar_video");
   });
 
+  it("klip z banku idzie jako scena video — w pętli i wyciszony pod lektorem", () => {
+    const [scene] = buildStudioScenes(
+      [{ item: plan[1], audioAssetId: "a2", imageUrl: "https://v/1.mp4", mediaType: "video" }],
+      { avatarId: "av_1" },
+    );
+    expect(scene).toEqual({
+      type: "video",
+      source: { type: "url", url: "https://v/1.mp4" },
+      audio_asset_id: "a2",
+      playback: { mode: "loop", mute: true },
+    });
+  });
+
   it("przebitka bez grafiki wraca na awatara zamiast zostawiać dziurę", () => {
     const scenes = buildStudioScenes([{ item: plan[1], audioAssetId: "a2", imageUrl: null }], {
       avatarId: "av_1",

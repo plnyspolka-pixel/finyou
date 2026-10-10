@@ -54,10 +54,17 @@ export type BrollAsset = {
   use_count: number;
   last_used_at: string | null;
   created_at: string;
+  /** "image" | "video" — klip idzie do HeyGena jako scena `video` (pętla, wyciszony). */
+  media_type: BrollMediaType;
+  /** Kadr podglądowy klipu (grafika: null — podglądem jest sam plik). */
+  thumbnail_url: string | null;
+  duration_seconds: number | null;
 };
 
+export type BrollMediaType = "image" | "video";
+
 const SELECT_COLUMNS =
-  "id, kind, title, tags, media_url, storage_path, source, source_query, orientation, attribution, active, use_count, last_used_at, created_at";
+  "id, kind, title, tags, media_url, storage_path, source, source_query, orientation, attribution, active, use_count, last_used_at, created_at, media_type, thumbnail_url, duration_seconds";
 
 function asAsset(row: Record<string, unknown>): BrollAsset {
   return {
@@ -75,6 +82,9 @@ function asAsset(row: Record<string, unknown>): BrollAsset {
     use_count: Number(row.use_count ?? 0),
     last_used_at: (row.last_used_at as string | null) ?? null,
     created_at: String(row.created_at),
+    media_type: row.media_type === "video" ? "video" : "image",
+    thumbnail_url: (row.thumbnail_url as string | null) ?? null,
+    duration_seconds: row.duration_seconds == null ? null : Number(row.duration_seconds),
   };
 }
 
@@ -222,24 +232,6 @@ export async function addBrollFromBytes(input: AddBrollBytesInput): Promise<Brol
     throw new Error(`Plik za duży (${Math.round(buf.byteLength / 1024 / 1024)} MB, limit 15 MB).`);
   }
 
-  let title = (input.title ?? "").trim();
-  let tags = input.tags ?? [];
-  let orientation = input.orientation ?? null;
-  if (input.autoDescribe && !tags.length) {
-    try {
-      const { describeBrollImage } = await import("./broll-describer.server");
-      const d = await describeBrollImage(buf, mime);
-      if (d) {
-        title = title || d.title;
-        tags = d.tags;
-        orientation = orientation ?? d.orientation;
-      }
-    } catch (e) {
-      // Opis to wygoda — materiał i tak wchodzi do banku z nazwą pliku.
-      console.warn(`[B-roll] opis AI nieudany: ${e instanceof Error ? e.message : e}`);
-    }
-  }
-
   const ext = EXT_BY_MIME[mime] ?? mime.split("/")[1] ?? "jpg";
   const path = `broll/broll/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${ext}`;
   const { error: upErr } = await supabaseAdmin.storage
@@ -248,8 +240,64 @@ export async function addBrollFromBytes(input: AddBrollBytesInput): Promise<Brol
   if (upErr) throw new Error(`Zapis do Storage: ${upErr.message}`);
   const { data: pub } = supabaseAdmin.storage.from(STORAGE_BUCKET).getPublicUrl(path);
 
+  return insertBrollAsset({
+    ...input,
+    mediaType: "image",
+    mime,
+    path,
+    publicUrl: pub.publicUrl,
+  });
+}
+
+/** Opis AI → tytuł, tagi, orientacja (gdy człowiek nie podał tagów). Nigdy nie rzuca. */
+async function describeForBank(
+  imageUrl: string,
+  mime: string,
+  video: boolean,
+): Promise<{ title: string; tags: string[]; orientation: string } | null> {
+  try {
+    const { describeBrollImage } = await import("./broll-describer.server");
+    return await describeBrollImage(imageUrl, mime, { video });
+  } catch (e) {
+    // Opis to wygoda — materiał i tak wchodzi do banku z nazwą pliku.
+    console.warn(`[B-roll] opis AI nieudany: ${e instanceof Error ? e.message : e}`);
+    return null;
+  }
+}
+
+/** Wpis do banku dla pliku, który już leży w `studio-media`. Sprząta plik, gdy wpis padnie. */
+async function insertBrollAsset(
+  input: Omit<AddBrollInput, "url"> & {
+    mediaType: BrollMediaType;
+    mime: string;
+    path: string;
+    publicUrl: string;
+    thumbnailUrl?: string | null;
+    thumbnailPath?: string | null;
+    durationSeconds?: number | null;
+  },
+): Promise<BrollAsset> {
+  let title = (input.title ?? "").trim();
+  let tags = input.tags ?? [];
+  let orientation = input.orientation ?? null;
+  if (input.autoDescribe && !tags.length) {
+    const image = input.mediaType === "video" ? input.thumbnailUrl : input.publicUrl;
+    const d = image
+      ? await describeForBank(
+          image,
+          input.mediaType === "video" ? "image/jpeg" : input.mime,
+          input.mediaType === "video",
+        )
+      : null;
+    if (d) {
+      title = title || d.title;
+      tags = d.tags;
+      orientation = orientation ?? d.orientation;
+    }
+  }
+
   const sourceQuery = (input.sourceQuery ?? "").trim();
-  title = title || sourceQuery || "Materiał b-roll";
+  title = title || sourceQuery || (input.mediaType === "video" ? "Klip b-roll" : "Materiał b-roll");
   tags = [...new Set([...tags, ...keywordsFrom(`${title} ${sourceQuery}`)])]
     .map((t) => t.toLowerCase())
     .slice(0, 24);
@@ -260,22 +308,147 @@ export async function addBrollFromBytes(input: AddBrollBytesInput): Promise<Brol
       kind: "broll",
       title: title.slice(0, 160),
       tags,
-      media_url: pub.publicUrl,
-      storage_path: path,
+      media_url: input.publicUrl,
+      storage_path: input.path,
       source: input.source ?? "url",
       source_query: sourceQuery,
       orientation,
       attribution: input.attribution ?? "",
       created_by: input.userId ?? null,
+      media_type: input.mediaType,
+      thumbnail_url: input.thumbnailUrl ?? null,
+      duration_seconds: input.durationSeconds ?? null,
     })
     .select(SELECT_COLUMNS)
     .single();
   if (insErr) {
-    // Wpis nie wszedł — nie zostawiaj sieroty w buckecie.
-    await supabaseAdmin.storage.from(STORAGE_BUCKET).remove([path]);
+    // Wpis nie wszedł — nie zostawiaj sierot w buckecie.
+    await supabaseAdmin.storage
+      .from(STORAGE_BUCKET)
+      .remove([input.path, ...(input.thumbnailPath ? [input.thumbnailPath] : [])]);
     throw new Error(insErr.message);
   }
   return asAsset(row as Record<string, unknown>);
+}
+
+// ── Upload z panelu: przeglądarka → Storage (podpisany link) ────────────────
+// Plik nie idzie przez serwer aplikacji (Worker ma limit ciała żądania), więc
+// klipy wideo i duże zdjęcia przechodzą bez problemu. Serwer tylko rezerwuje
+// ścieżkę, a po wgraniu sprawdza plik i wpisuje go do banku.
+
+export const BROLL_UPLOAD_LIMITS = {
+  imageBytes: 25 * 1024 * 1024,
+  videoBytes: 50 * 1024 * 1024,
+  imageTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+  videoTypes: ["video/mp4", "video/quicktime", "video/webm"],
+} as const;
+
+const VIDEO_EXT: Record<string, string> = {
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+  "video/webm": "webm",
+};
+
+/** Typ pliku z panelu → rodzaj materiału; rzuca z czytelnym powodem. */
+export function brollKindOfUpload(mime: string, size: number, name: string): BrollMediaType {
+  const m = mime.toLowerCase();
+  const L = BROLL_UPLOAD_LIMITS;
+  if (/\.hei[cf]$/i.test(name) || m === "image/heic" || m === "image/heif") {
+    throw new Error("HEIC (zdjęcie z iPhone'a) — zapisz jako JPG i wgraj ponownie.");
+  }
+  if ((L.imageTypes as readonly string[]).includes(m)) {
+    if (size > L.imageBytes)
+      throw new Error(`Grafika za duża (limit ${L.imageBytes / 1024 / 1024} MB).`);
+    return "image";
+  }
+  if ((L.videoTypes as readonly string[]).includes(m)) {
+    if (size > L.videoBytes)
+      throw new Error(`Klip za duży (limit ${L.videoBytes / 1024 / 1024} MB).`);
+    return "video";
+  }
+  throw new Error(
+    `Nieobsługiwany typ pliku (${m || "nieznany"}). Bank przyjmuje JPG/PNG/WEBP i MP4/MOV/WEBM.`,
+  );
+}
+
+/** Rezerwuje ścieżkę w `studio-media` i podpisany link do wgrania pliku z przeglądarki. */
+export async function createBrollUploadSlot(input: {
+  name: string;
+  mime: string;
+  size: number;
+  thumbnail?: boolean;
+}): Promise<{ path: string; token: string; mediaType: BrollMediaType }> {
+  const mediaType = input.thumbnail
+    ? "image"
+    : brollKindOfUpload(input.mime, input.size, input.name);
+  const ext = input.thumbnail
+    ? "jpg"
+    : mediaType === "video"
+      ? (VIDEO_EXT[input.mime.toLowerCase()] ?? "mp4")
+      : (EXT_BY_MIME[input.mime.toLowerCase()] ?? "jpg");
+  const folder = input.thumbnail ? "broll/thumbs" : "broll/broll";
+  const path = `${folder}/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${ext}`;
+  const { data, error } = await supabaseAdmin.storage
+    .from(STORAGE_BUCKET)
+    .createSignedUploadUrl(path);
+  if (error || !data) throw new Error(`Storage: ${error?.message ?? "brak podpisanego linku"}`);
+  return { path: data.path ?? path, token: data.token, mediaType };
+}
+
+/** Plik wgrany przez przeglądarkę → wpis w banku (z opisem AI, gdy brak tagów). */
+export async function registerUploadedBroll(input: {
+  path: string;
+  mime: string;
+  name: string;
+  title?: string;
+  tags?: string[];
+  thumbnailPath?: string | null;
+  durationSeconds?: number | null;
+  orientation?: string | null;
+  userId?: string | null;
+}): Promise<BrollAsset> {
+  if (!input.path.startsWith("broll/broll/")) throw new Error("Zła ścieżka pliku.");
+  if (input.thumbnailPath && !input.thumbnailPath.startsWith("broll/thumbs/")) {
+    throw new Error("Zła ścieżka podglądu.");
+  }
+  const bucket = supabaseAdmin.storage.from(STORAGE_BUCKET);
+  // Plik musi faktycznie leżeć w buckecie (podpisany link mógł nie zostać użyty).
+  const dir = input.path.slice(0, input.path.lastIndexOf("/"));
+  const file = input.path.slice(input.path.lastIndexOf("/") + 1);
+  const { data: listed } = await bucket.list(dir, { search: file, limit: 1 });
+  const meta = listed?.find((o) => o.name === file);
+  if (!meta) throw new Error("Plik nie dotarł do Storage — wgraj go ponownie.");
+  const size = Number((meta.metadata as { size?: number } | null)?.size ?? 0);
+  let mediaType: BrollMediaType;
+  try {
+    mediaType = brollKindOfUpload(input.mime, size, input.name);
+  } catch (e) {
+    await bucket.remove([input.path, ...(input.thumbnailPath ? [input.thumbnailPath] : [])]);
+    throw e;
+  }
+  const publicUrl = bucket.getPublicUrl(input.path).data.publicUrl;
+  const thumbnailUrl = input.thumbnailPath
+    ? bucket.getPublicUrl(input.thumbnailPath).data.publicUrl
+    : null;
+  return insertBrollAsset({
+    title: input.title,
+    tags: input.tags,
+    source: "upload",
+    sourceQuery: input.title ?? "",
+    userId: input.userId ?? null,
+    orientation: input.orientation ?? null,
+    autoDescribe: !(input.tags ?? []).length,
+    mediaType,
+    mime: input.mime,
+    path: input.path,
+    publicUrl,
+    thumbnailUrl,
+    thumbnailPath: input.thumbnailPath ?? null,
+    durationSeconds:
+      input.durationSeconds != null && Number.isFinite(input.durationSeconds)
+        ? Math.round(input.durationSeconds * 10) / 10
+        : null,
+  });
 }
 
 export async function setBrollActive(id: string, active: boolean): Promise<void> {
@@ -375,7 +548,12 @@ export async function searchStockImage(query: string): Promise<StockHit | null> 
   return (await searchStockImages(query, 1))[0] ?? null;
 }
 
-export type ResolvedBroll = { url: string; assetId: string | null };
+export type ResolvedBroll = {
+  url: string;
+  assetId: string | null;
+  /** Klip z banku idzie do HeyGena jako scena `video`; stock to zawsze grafiki. */
+  mediaType: BrollMediaType;
+};
 
 /**
  * JEDYNE wejście renderu po przebitkę: bank → stock → bank.
@@ -389,14 +567,18 @@ export async function resolveBrollImage(
 ): Promise<ResolvedBroll | null> {
   const phrase = query?.trim() ?? "";
   const fromBank = phrase ? await pickBrollFromBank(phrase, exclude) : null;
-  if (fromBank) return { url: fromBank.media_url, assetId: fromBank.id };
+  if (fromBank) {
+    return { url: fromBank.media_url, assetId: fromBank.id, mediaType: fromBank.media_type };
+  }
 
   const hit = phrase ? await searchStockImage(phrase) : null;
   if (!hit) {
     // Bez frazy (albo gdy stock nic nie oddał) lepszy jest materiał z banku
     // niż dziura w montażu — bank jest tematyczny, więc nie odleci od treści.
     const fallback = await pickLeastUsedFromBank(exclude);
-    return fallback ? { url: fallback.media_url, assetId: fallback.id } : null;
+    return fallback
+      ? { url: fallback.media_url, assetId: fallback.id, mediaType: fallback.media_type }
+      : null;
   }
   try {
     const stored = await addBrollFromUrl({
@@ -407,10 +589,10 @@ export async function resolveBrollImage(
       orientation: hit.orientation,
       attribution: hit.attribution,
     });
-    return { url: stored.media_url, assetId: stored.id };
+    return { url: stored.media_url, assetId: stored.id, mediaType: "image" };
   } catch (e) {
     console.warn(`[Bank] nie zapisałem stocku "${phrase}": ${e instanceof Error ? e.message : e}`);
-    return { url: hit.url, assetId: null };
+    return { url: hit.url, assetId: null, mediaType: "image" };
   }
 }
 
