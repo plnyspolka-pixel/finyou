@@ -137,3 +137,28 @@ w `/inwestor/umowy` i bramki serwerowe: dane pożyczkodawcy → rachunek spłaty
 KYC → screening → doręczenie pakietu (Konsument) → NDA → Umowa ramowa → RODO →
 Zlecenie. Limity Zleceń i rezerwacji pochodzą z `project_module_settings`
 (`docs/projekty-inwestycyjne.md`).
+
+## Przełącznik Prowizji od Pożyczkobiorcy przy Zleceniu
+
+Standardem jest Prowizja od Pożyczkobiorcy (prowizja Finance You): 5 % Kwoty
+Udzielonej, min 5 000 zł, bez VAT, potrącana z wypłaty
+(`src/lib/contract-engine/fees.ts` — jedno źródło prawdy).
+
+Przy składaniu Zlecenia (krok 9, `/inwestor/umowy`) osoba mająca
+**jednocześnie** uprawnienia inwestora i administratora (role `inwestor`
+i `administrator` w `user_roles`) widzi przycisk „Prowizja włączona /
+Prowizja wyłączona". Wybór zapisuje się per Zlecenie w kolumnie
+`investor_orders.fy_commission_enabled` (migracja
+`20261010230000_zlecenie_przelacznik_prowizji_fy.sql`, lustro drizzle `0031`)
+i trafia do dziennika cyklu (`investor_order_events`, zdarzenie
+`zlecenie_zlozone`).
+
+- Uprawnienia weryfikuje serwer: `resolveFyCommissionEnabled`
+  (`src/lib/investor-agreements/order-cycle-core.ts`) nadpisuje żądanie na
+  `true` dla każdego, kto nie ma obu rol — podrobiony request nie wyłączy
+  prowizji.
+- Zlecenie z wyłączoną prowizją ma w listach Zleceń plakietkę „Bez prowizji
+  FY", a kalkulator oferty do Projektu w „Moich zleceniach" liczy wypłatę bez
+  prowizji (`hideFinanceYouFee` → 0 zł, cała Kwota Udzielona do Klienta).
+- Kreator umowy (silnik umów) nadal domyślnie liczy prowizję — przy Zleceniu
+  bez prowizji trzeba ją wyzerować w kalkulatorze przed wysyłką do kreatora.

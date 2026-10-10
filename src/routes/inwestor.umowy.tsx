@@ -17,7 +17,7 @@ import { MyPepDeclarationCard } from "@/components/screening/my-pep-declaration-
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BadgeCheck, FileText, Loader2, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { BadgeCheck, FileText, Loader2, Mail, Percent, ShieldCheck, Sparkles } from "lucide-react";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ import {
   withdrawInvestorOrder,
 } from "@/lib/investor-agreements/legal-pack.functions";
 import { getInvestorPipelineState } from "@/lib/investor-agreements/pipeline.functions";
+import { FY_COMMISSION_LABEL, fyCommission } from "@/lib/contract-engine/fees";
 import { getMyInvestorPlan } from "@/lib/investor-plan/plan.functions";
 import {
   startInvestorSelfVerification,
@@ -221,6 +222,7 @@ function PipelinePage() {
           <OrderForm
             canSubmit={pipe.pipeline.canSubmitOrder}
             isConsumer={pipe.input.isConsumer}
+            canToggleFyCommission={Boolean(legal.canToggleFyCommission)}
             limits={limitsQ.data ?? null}
             onDone={refresh}
           />
@@ -683,11 +685,14 @@ type OrderLimitsView = {
 function OrderForm({
   canSubmit,
   isConsumer,
+  canToggleFyCommission,
   limits,
   onDone,
 }: {
   canSubmit: boolean;
   isConsumer: boolean;
+  /** Uprawnienia inwestora + administratora: przełącznik prowizji Finance You. */
+  canToggleFyCommission: boolean;
   /** Limity z project_module_settings (null = jeszcze nie wczytane). */
   limits: OrderLimitsView | null;
   onDone: () => void;
@@ -698,6 +703,8 @@ function OrderForm({
   const [s1, setS1] = useState(false);
   const [s2, setS2] = useState(false);
   const [s3, setS3] = useState(false);
+  // Prowizja od Pożyczkobiorcy (prowizja Finance You) — standardowo włączona.
+  const [fyFeeOn, setFyFeeOn] = useState(true);
 
   const mut = useMutation({
     mutationFn: () =>
@@ -710,6 +717,7 @@ function OrderForm({
             projekty_tylko_w_wykonaniu_zlecenia: true as const,
           },
           consumerChoice: (isConsumer ? consumerChoice : "nie_dotyczy") as any,
+          fyCommissionEnabled: canToggleFyCommission ? fyFeeOn : true,
         },
       }),
     onSuccess: (res: any) => {
@@ -719,6 +727,7 @@ function OrderForm({
       setS2(false);
       setS3(false);
       setConsumerChoice("");
+      setFyFeeOn(true);
       onDone();
     },
     onError: (e) => toast.error(errMsg(e)),
@@ -782,6 +791,37 @@ function OrderForm({
           </div>
         ))}
       </div>
+
+      {/* Przełącznik prowizji Finance You — tylko uprawnienia inwestora + administratora. */}
+      {canToggleFyCommission ? (
+        <div className="space-y-2 rounded-md border border-dashed p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <Label className="text-xs">Prowizja Finance You (Prowizja od Pożyczkobiorcy)</Label>
+              <p className="text-[11px] text-muted-foreground">
+                {FY_COMMISSION_LABEL} — potrącana z wypłaty. Przełącznik widzisz, bo masz
+                uprawnienia inwestora i administratora; dotyczy tylko tego Zlecenia.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant={fyFeeOn ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFyFeeOn((v) => !v)}
+            >
+              <Percent className="mr-2 h-4 w-4" />
+              {fyFeeOn ? "Prowizja włączona" : "Prowizja wyłączona"}
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {fyFeeOn
+              ? Number(amount) > 0
+                ? `Dla kwoty ${Number(amount).toLocaleString("pl-PL")} zł prowizja wyniesie ${fyCommission(Number(amount)).toLocaleString("pl-PL")} zł — Klient otrzyma resztę wypłaty.`
+                : "Prowizję policzymy od Kwoty Udzielonej w ofercie do konkretnego Projektu."
+              : "Projekty w wykonaniu tego Zlecenia wycenimy bez prowizji Finance You — kalkulator oferty pokaże 0 zł, a cała Kwota Udzielona trafi do Klienta."}
+          </p>
+        </div>
+      ) : null}
 
       {isConsumer ? (
         <div className="space-y-1.5">
@@ -858,6 +898,9 @@ function OrdersList({ state, onDone }: { state: any; onDone: () => void }) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {o.fy_commission_enabled === false ? (
+                  <Badge className="bg-amber-100 text-amber-800">Bez prowizji FY</Badge>
+                ) : null}
                 <Badge className={st.tone}>{st.label}</Badge>
                 {["zlozone", "przyjete"].includes(o.status) ? (
                   <Button

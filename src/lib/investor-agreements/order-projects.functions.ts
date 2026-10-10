@@ -92,6 +92,9 @@ export interface OrderProjectContact {
 export interface OrderProject {
   applicationId: string;
   orderId: string;
+  /** Czy Zlecenie, w wykonaniu którego pokazujemy Projekt, obciąża
+   *  Prowizja od Pożyczkobiorcy (prowizja Finance You). */
+  fyCommissionEnabled: boolean;
   createdAt: string;
   loanAmount: number | null;
   periodMonths: number | null;
@@ -129,6 +132,8 @@ export interface MyOrderProjectsResult {
     orderSeq: number;
     amountPln: number;
     status: string;
+    /** false = Zlecenie bez prowizji Finance You (przełącznik admin+inwestor). */
+    fyCommissionEnabled: boolean;
     submittedAt: string | null;
     expiresAt: string | null;
     projects: OrderProject[];
@@ -181,7 +186,9 @@ export function contractUnlocked(offerStatus: string, disclosed: boolean): boole
 async function myAcceptedOrder(db: any, userId: string, orderId: string) {
   const { data: order } = await loose(db)
     .from("investor_orders")
-    .select("id, order_seq, user_id, amount_pln, status, expires_at, submitted_at")
+    .select(
+      "id, order_seq, user_id, amount_pln, status, fy_commission_enabled, expires_at, submitted_at",
+    )
     .eq("id", orderId)
     .maybeSingle();
   if (!order || order.user_id !== userId) throw new Error("Nie znaleziono Zlecenia.");
@@ -392,6 +399,7 @@ async function buildProject(
   return {
     applicationId: app.id,
     orderId: order.id,
+    fyCommissionEnabled: order.fy_commission_enabled !== false,
     createdAt: app.created_at,
     loanAmount: app.loan_amount != null ? Number(app.loan_amount) : null,
     periodMonths: app.preferred_period_months != null ? Number(app.preferred_period_months) : null,
@@ -434,7 +442,9 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
     const [{ data: orders }, { data: investor }] = await Promise.all([
       loose(supabaseAdmin)
         .from("investor_orders")
-        .select("id, order_seq, amount_pln, status, expires_at, submitted_at")
+        .select(
+          "id, order_seq, amount_pln, status, fy_commission_enabled, expires_at, submitted_at",
+        )
         .eq("user_id", userId)
         .order("submitted_at", { ascending: false }),
       loose(supabaseAdmin)
@@ -554,6 +564,7 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
         orderSeq: Number(o.order_seq),
         amountPln: Number(o.amount_pln),
         status: o.status,
+        fyCommissionEnabled: o.fy_commission_enabled !== false,
         submittedAt: o.submitted_at ?? null,
         expiresAt: o.expires_at ?? null,
         projects,

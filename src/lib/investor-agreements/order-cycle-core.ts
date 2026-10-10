@@ -157,6 +157,25 @@ export function clientProvisionPln(payoutAmountPln: number): number {
   return fyCommission(payoutAmountPln);
 }
 
+/** Role, które razem pozwalają sterować prowizją Finance You przy Zleceniu. */
+export const FY_COMMISSION_TOGGLE_ROLES = ["inwestor", "administrator"] as const;
+
+/** Czy użytkownik może włączać/wyłączać Prowizję od Pożyczkobiorcy przy
+ *  składaniu Zlecenia — tylko uprawnienia inwestora I administratora razem. */
+export function canToggleFyCommission(roles: readonly string[] | null | undefined): boolean {
+  const set = new Set(roles ?? []);
+  return FY_COMMISSION_TOGGLE_ROLES.every((r) => set.has(r));
+}
+
+/** Wartość flagi do zapisu w Zleceniu: bez uprawnień prowizja zostaje włączona. */
+export function resolveFyCommissionEnabled(
+  roles: readonly string[] | null | undefined,
+  requested: boolean | undefined,
+): boolean {
+  if (!canToggleFyCommission(roles)) return true;
+  return requested !== false;
+}
+
 /** Zlecenie: jedyny parametr to kwota maksymalna (Zał. 7) — Projekt pasuje,
  *  gdy jego kwota nie przekracza kwoty Zlecenia. */
 export function amountMatchesOrder(orderMaxAmountPln: number, projectAmountPln: number): boolean {
