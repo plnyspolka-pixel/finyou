@@ -6,7 +6,19 @@
 // Narzędzia wołają DOKŁADNIE te same funkcje serwerowe co dotychczasowe boty
 // (executeTool z elevenlabs-text-agent.server), więc zapisy w bazie wyglądają
 // identycznie; do tego odczyt statusu wniosku, brief braków i issue_invoice.
+//
+// Od 2026-10 dodatkowo (src/lib/agent-toolkit):
+//   • rozpoznanie agenta po `agent_id` (zmienna systemowa system__agent_id) →
+//     powierzchnia (intake / investor_info / investor_panel / phone),
+//   • polityka narzędzi per powierzchnia + limit na godzinę + dziennik KAŻDEGO
+//     wywołania (ai_growth_action_log, module "agent_tools"),
+//   • nowe narzędzia: get_offer_facts, estimate_cost, search_knowledge,
+//     get_case_snapshot, get_market_snapshot, flag_urgent, log_insight,
+//     request_capability,
+//   • sekret porównywany w stałym czasie.
 import { createFileRoute } from "@tanstack/react-router";
+import { safeEqual } from "@/lib/cron-auth.server";
+import type { ToolSurface } from "@/lib/agent-toolkit/policy";
 
 const WRITE_TOOLS = new Set([
   "update_lead_data",
@@ -95,8 +107,8 @@ export const Route = createFileRoute("/api/public/agent-tools")({
         const secret = process.env.AGENT_TOOLS_SECRET;
         const url = new URL(request.url);
         const provided =
-          request.headers.get("x-agent-tools-secret") ?? url.searchParams.get("token");
-        if (!secret || provided !== secret) return unauthorized();
+          request.headers.get("x-agent-tools-secret") ?? url.searchParams.get("token") ?? "";
+        if (!secret || !provided || !safeEqual(provided, secret)) return unauthorized();
 
         let body: any;
         try {
@@ -108,6 +120,45 @@ export const Route = createFileRoute("/api/public/agent-tools")({
         const args = body?.args ?? {};
 
         try {
+          const {
+            surfaceForAgentId,
+            gateToolCall,
+            auditToolCall,
+            runNewAgentTool,
+            NEW_AGENT_TOOLS,
+          } = await import("@/lib/agent-toolkit/tools.server");
+          const surface: ToolSurface = await surfaceForAgentId(
+            typeof body?.agent_id === "string" ? body.agent_id : null,
+          );
+          const channel = typeof body?.channel === "string" ? body.channel : null;
+
+          // ── Nowe narzędzia (polityka + limit + audyt w środku) ──────────────
+          if (NEW_AGENT_TOOLS.has(tool)) {
+            const leadId = await resolveLeadId(body);
+            const res = await runNewAgentTool({ tool, surface, leadId, args, channel });
+            return Response.json(res);
+          }
+
+          // ── Dotychczasowe narzędzia: ta sama polityka i dziennik ────────────
+          const started = Date.now();
+          const gateLead = await resolveLeadId(body);
+          const denied = await gateToolCall({ tool, surface, leadId: gateLead, args, channel });
+          if (denied) {
+            await auditToolCall(
+              { tool, surface, leadId: gateLead, args, channel },
+              { ok: false, error: denied },
+              0,
+            );
+            return Response.json({ ok: false, error: denied });
+          }
+          // Audyt po fakcie — nie blokuje odpowiedzi narzędzia.
+          const audit = (ok: boolean, error?: string) =>
+            auditToolCall(
+              { tool, surface, leadId: gateLead, args, channel },
+              { ok, error },
+              Date.now() - started,
+            ).catch(() => {});
+
           // ── Narzędzia zapisu — reuse istniejącego executor-a botów ─────────
           if (WRITE_TOOLS.has(tool)) {
             let leadId = await resolveLeadId(body);
@@ -139,7 +190,15 @@ export const Route = createFileRoute("/api/public/agent-tools")({
             const { executeTool } = await import("@/lib/elevenlabs-text-agent.server");
             const result = await executeTool(leadId, "agent_tool", tool, args, {
               applicationLink: "https://financeyou.pl/klient",
+              // Agent inwestorski nie może promować leada do wniosku pożyczkowego.
+              variant:
+                surface === "investor_info"
+                  ? "inwestor"
+                  : surface === "investor_panel"
+                    ? "inwestor_prywatny"
+                    : "klient",
             });
+            await audit(true);
             return Response.json({ ok: true, result });
           }
 
@@ -159,6 +218,7 @@ export const Route = createFileRoute("/api/public/agent-tools")({
             const { clientLoanStatusView, describeLoanStatusForAgent } =
               await import("@/lib/loan-status");
             const view = clientLoanStatusView(app?.status);
+            await audit(true);
             return Response.json({
               ok: true,
               result: {
@@ -183,6 +243,7 @@ export const Route = createFileRoute("/api/public/agent-tools")({
               await import("@/lib/missing-info-follow-up/engine.server");
             const bundles = await buildBriefBundles([applicationId]);
             const brief = bundles.get(applicationId)?.brief;
+            await audit(true);
             return Response.json({
               ok: true,
               result: {
@@ -213,6 +274,7 @@ export const Route = createFileRoute("/api/public/agent-tools")({
               buyerPostalCode: args?.kod_pocztowy ?? null,
               buyerCity: args?.miasto ?? null,
             });
+            await audit(result.ok);
             return Response.json({ ok: result.ok, result });
           }
 

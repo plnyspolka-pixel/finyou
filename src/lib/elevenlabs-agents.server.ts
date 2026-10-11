@@ -20,6 +20,7 @@ import {
   RAPPORT_RULES,
   buildChannelRulesSection,
 } from "@/lib/agent-channel-rules";
+import { managedRules, stripManagedBlocks } from "@/lib/agent-toolkit/prompt-blocks";
 
 const EL_BASE = "https://api.elevenlabs.io/v1";
 
@@ -70,11 +71,16 @@ const INTAKE_HARD_RULES =
  * stronie, widget głosowy i wiadomości, więc zasady kanałów dostaje wszystkie
  * i wybiera po zmiennej {{channel}}) + twarde zasady A1.
  */
-function buildAgentPrompt(surface: AgentSurface, basePrompt: string): string {
-  // Zakaz zmyślania danych kontaktowych dotyczy każdego agenta.
-  if (surface !== "intake") return basePrompt + NO_INVENTED_CONTACT_RULES;
+export function buildAgentPrompt(surface: AgentSurface, basePrompt: string): string {
+  // Uczciwość, fakty z systemu (liczone z umów i cennika — zmiana stawki w
+  // kodzie zmienia odcisk promptu, więc agent dostaje ją sam) i rozpoznanie
+  // potrzeb: blok zarządzany kodem. Kopię wklejoną w panelu wycinamy i
+  // doklejamy świeżą (src/lib/agent-toolkit/prompt-blocks.ts).
+  const base = stripManagedBlocks(basePrompt);
+  if (surface !== "intake") return base + managedRules(surface) + NO_INVENTED_CONTACT_RULES;
   return (
-    basePrompt +
+    base +
+    managedRules("intake") +
     RAPPORT_RULES +
     buildChannelRulesSection() +
     INTAKE_HARD_RULES +
@@ -389,6 +395,23 @@ export async function ensureAgentPromptsFresh(
   freshnessCheckInFlight = (async () => {
     try {
       const res = await syncElevenLabsAgentPrompts({ onlyIfChanged: true, surfaces });
+      // Nowe narzędzia (src/lib/agent-toolkit) dopinamy tym samym, dławionym
+      // torem — przy aktualnej wersji zestawu to jeden odczyt z bazy.
+      try {
+        const { ensureAgentToolsAttached } =
+          await import("@/lib/agent-toolkit/elevenlabs-tools.server");
+        const tools = await ensureAgentToolsAttached();
+        if (tools.created.length || tools.attached.length) {
+          console.log(
+            `[el-agents] narzędzia: utworzone ${tools.created.join(", ") || "—"}, dopięte ${
+              tools.attached.map((a) => `${a.surface}+${a.added}`).join(", ") || "—"
+            }`,
+          );
+        }
+        for (const e of tools.errors) console.error(`[el-agents] narzędzia: ${e}`);
+      } catch (e) {
+        console.error("[el-agents] dopinanie narzędzi", e);
+      }
       if (res.updated.length > 0) {
         console.log(
           `[el-agents] prompt zsynchronizowany automatycznie: ${res.updated
