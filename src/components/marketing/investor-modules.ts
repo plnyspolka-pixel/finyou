@@ -69,27 +69,28 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     nameLead: "Analityk",
     nameAccent: "AI",
     menuLabel: "Analityk AI",
-    tagline: "Ocena ryzyka i wycena w 15 minut — w skali A–E",
+    tagline: "Ocena ryzyka i wycena w skali A–E",
     image: "/marketing/moduly/analityk-ai.webp",
     imageAlt:
       "Analityk AI — karty analizy nieruchomości: LTV, wartość rynkowa i ocena ryzyka na ekranie laptopa",
     metaTitle: "Analityk AI — analiza zabezpieczenia i ryzyka dla inwestora | Finance You",
     metaDescription:
-      "Ocena ryzyka i wycena w 15 minut: ponad 400 punktów danych, księga wieczysta, LTV, płynność, klasa A–E i raport PDF. Poznaj Analityka AI.",
-    lead: "Zanim wyłożysz kapitał, Analityk AI pobiera księgę wieczystą, sprawdza właścicieli w rejestrach, wycenia nieruchomość na danych z rynku i ocenia ryzyko w skali A–E. Ocena ryzyka i wycena są gotowe w 15 minut — w tym czasie skanujemy i oceniamy dla Ciebie ponad 400 punktów danych. Raport pobierasz jednym kliknięciem w PDF, a decyzja zostaje po Twojej stronie.",
+      "Ocena ryzyka i wycena na ponad 400 punktach danych: księga wieczysta, właściciele, LTV, płynność i klasa A–E. Poznaj Analityka AI.",
+    lead: "Zanim wyłożysz kapitał, Analityk AI pobiera księgę wieczystą, sprawdza właścicieli w rejestrach, wycenia nieruchomość na danych z rynku i ocenia ryzyko w skali A–E. Do oceny ryzyka i wyceny skanujemy i oceniamy dla Ciebie ponad 400 punktów danych. Ty dostajesz czytelny raport, a decyzja zostaje po Twojej stronie.",
     highlights: [
-      "Ocena ryzyka i wycena w 15 minut",
+      "Ocena ryzyka i wycena",
       "Skala A–E i ponad 400 punktów danych",
-      "Raport do pobrania w PDF",
+      "Księga wieczysta i właściciele",
     ],
     fab: [
       {
-        title: "15 minut, ponad 400 punktów danych",
+        title: "Ponad 400 punktów danych",
         icon: "updates",
-        cecha: "Ocena ryzyka i wycena nieruchomości gotowe w 15 minut od uruchomienia analizy.",
+        cecha:
+          "Ocena ryzyka i wycena nieruchomości liczone automatycznie po pobraniu księgi wieczystej.",
         zaleta:
-          "W tym czasie skanujemy i oceniamy dla Ciebie ponad 400 punktów danych — wpisy księgi wieczystej, rejestry, transakcje i oferty z rynku, dane GUS, mapy powodziowe i infrastrukturę okolicy.",
-        korzysc: "Decyzję podejmujesz tego samego dnia, a nie po tygodniu czekania na analizę.",
+          "Skanujemy i oceniamy dla Ciebie ponad 400 punktów danych — wpisy księgi wieczystej, rejestry, transakcje i oferty z rynku, dane GUS, mapy powodziowe i infrastrukturę okolicy.",
+        korzysc: "Decyzję opierasz na danych, a nie na deklaracjach klienta.",
       },
       {
         title: "Księga wieczysta przeczytana za Ciebie",
@@ -153,17 +154,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
           "Ocena inwestycyjna 0–100 i klasa od A (bardzo niskie ryzyko) do E (wysokie ryzyko), liczona z siedmiu składowych — od łatwości sprzedaży i stanu prawnego po dokumenty.",
         zaleta:
           "Twarde reguły nie pozwalają zawyżyć wyniku: egzekucja w toku albo bardzo wysokie ryzyko powodzi oznacza klasę E, a niezgodność właściciela z księgą wieczystą — najwyżej D.",
-        korzysc: "Jednym spojrzeniem porównujesz Projekty i widzisz, które wymagają ostrożności.",
-      },
-      {
-        title: "Raport PDF jednym kliknięciem",
-        icon: "dossier",
-        cecha:
-          "Eksport całego raportu do PDF: księga wieczysta, właściciele, wycena, klasa A–E, płynność i karta zabezpieczenia.",
-        zaleta:
-          "Plik ma datę i Twoje dane w stopce, a dane identyfikujące pozostają ukryte, dopóki nie zarezerwujesz Projektu.",
-        korzysc:
-          "Dokumentację decyzji inwestycyjnej archiwizujesz i przekazujesz dalej bez kopiowania ekranów.",
+        korzysc: "Jednym spojrzeniem widzisz, czy zabezpieczenie wymaga ostrożności.",
       },
       {
         title: "Analiza Twojej własnej transakcji",
@@ -185,11 +176,11 @@ export const INVESTOR_MODULES: InvestorModule[] = [
         d: "System pobiera księgę wieczystą, sprawdza właścicieli i analizuje każdy wpis.",
       },
       {
-        t: "Ocena ryzyka i wycena w 15 minut",
-        d: "W tym czasie skanujemy i oceniamy dla Ciebie ponad 400 punktów danych i nadajemy klasę A–E.",
+        t: "Dostajesz ocenę ryzyka i wycenę",
+        d: "Skanujemy i oceniamy dla Ciebie ponad 400 punktów danych i nadajemy klasę A–E.",
       },
       {
-        t: "Pobierasz raport PDF i decydujesz",
+        t: "Decydujesz na faktach",
         d: "Z pełnym obrazem zabezpieczenia — decyzja o finansowaniu zawsze należy do Ciebie.",
       },
     ],
@@ -219,12 +210,12 @@ export const INVESTOR_MODULES: InvestorModule[] = [
       "Windykator AI — robot AI z wezwaniem do zapłaty, kalendarzem terminów i segregatorami spraw windykacyjnych",
     metaTitle: "Windykator AI — windykacja pożyczek jednym kliknięciem dla inwestora | Finance You",
     metaDescription:
-      "Wszystkie procedury windykacyjne jednym kliknięciem: pisma w Twoim imieniu, SMS, e-mail, telefon AI i sprawa aż na biurko komornika. Poznaj Windykatora AI.",
-    lead: "Wszystkie procedury windykacyjne uruchamiamy jednym kliknięciem i skutecznie prowadzimy sprawy od pierwszego upomnienia aż na biurko komornika. Windykator AI podpowiada ścieżkę i następny krok, liczy zadłużenie z odsetkami, przygotowuje pisma w Twoim imieniu — z danymi z Twojego profilu — wysyła SMS-y i e-maile, a nawet dzwoni do dłużnika głosem AI.",
+      "Wszystkie procedury windykacyjne jednym kliknięciem: wezwania i pisma z danymi sprawy, SMS, e-mail, telefon AI — aż na biurko komornika. Poznaj Windykatora AI.",
+    lead: "Wszystkie procedury windykacyjne uruchamiamy jednym kliknięciem i skutecznie prowadzimy sprawy od pierwszego upomnienia aż na biurko komornika. Windykator AI podpowiada ścieżkę i następny krok, liczy zadłużenie z odsetkami, przygotowuje pisma z danymi sprawy, wysyła SMS-y i e-maile, a nawet dzwoni do dłużnika głosem AI.",
     highlights: [
       "Wszystkie procedury jednym kliknięciem",
       "Od upomnienia aż do komornika",
-      "Pisma w Twoim imieniu",
+      "Pisma z danymi sprawy",
     ],
     fab: [
       {
@@ -247,14 +238,13 @@ export const INVESTOR_MODULES: InvestorModule[] = [
         korzysc: "Wiesz, co zrobić dziś — nawet jeśli to Twoja pierwsza windykacja.",
       },
       {
-        title: "Pisma w Twoim imieniu",
+        title: "Wezwania i pisma gotowe do wysłania",
         icon: "documents",
         cecha:
           "Wzory pism: wezwanie do zapłaty, wypowiedzenie umowy, porozumienie ratalne, ugoda, wniosek o klauzulę wykonalności, wniosek do komornika i zawiadomienie o przestępstwie.",
         zaleta:
-          "Pisma wystawiamy w Twoim imieniu jako wierzyciela — z danymi z Twojego profilu — a dane dłużnika, kwoty i terminy wstawiają się same.",
-        korzysc:
-          "Pismo masz od ręki, z właściwą stroną umowy jako wierzycielem i bez przepisywania danych.",
+          "Dane dłużnika, kwoty i terminy wstawiają się same, a do sprawy możesz też podpiąć wzory z Kancelarii AI.",
+        korzysc: "Pismo masz od ręki, bez przepisywania danych i bez czekania na kancelarię.",
       },
       {
         title: "Saldo i odsetki co do dnia",
@@ -272,7 +262,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
         cecha:
           "Kontakt z dłużnikiem z poziomu sprawy: SMS, e-mail i rozmowa prowadzona przez agenta głosowego AI.",
         zaleta:
-          "Wiadomości podpisujemy Twoim imieniem, a agent AI dzwoni w Twoim imieniu, podaje kwotę zaległości i pyta o termin spłaty — bez gróźb, bez negocjowania kwoty długu, tylko w godzinach 8:00–22:00, nie w niedziele i nie częściej niż raz na dobę.",
+          "Agent AI dzwoni w Twoim imieniu, podaje kwotę zaległości i pyta o termin spłaty — bez gróźb, bez negocjowania kwoty długu, tylko w godzinach 8:00–22:00, nie w niedziele i nie częściej niż raz na dobę.",
         korzysc:
           "Nie musisz sam prowadzić trudnych rozmów, a kontakt pozostaje w granicach prawa i dobrych obyczajów.",
       },
@@ -311,7 +301,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
       },
       {
         t: "Uruchamiasz procedurę jednym kliknięciem",
-        d: "Upomnienie, SMS, e-mail, telefon AI albo pismo w Twoim imieniu.",
+        d: "Upomnienie, SMS, e-mail, telefon AI albo pismo z danymi sprawy.",
       },
       {
         t: "Prowadzimy sprawę etap po etapie",
@@ -480,8 +470,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
         icon: "crmfolder",
         cecha:
           "Pobieranie danych kontrahenta po numerze NIP, REGON albo KRS — z GUS, KRS i Białej Listy.",
-        zaleta:
-          "Dane rejestrowe kontrahenta trafiają do dokumentu bez przepisywania, a Twoje dane jako pożyczkodawcy i wierzyciela uzupełniają się z profilu.",
+        zaleta: "Dane rejestrowe trafiają do dokumentu bez przepisywania.",
         korzysc: "Mniej pomyłek w oznaczeniu stron — mniej problemów przy egzekucji.",
       },
       {
@@ -496,8 +485,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
         title: "Wzory z danymi sprawy windykacyjnej",
         icon: "procedures",
         cecha: "W module windykacji wzory wypełniają się danymi konkretnej sprawy.",
-        zaleta:
-          "Dłużnik, kwoty i terminy trafiają do pisma automatycznie, a pismo wystawiamy w Twoim imieniu.",
+        zaleta: "Dłużnik, kwoty i terminy trafiają do pisma automatycznie.",
         korzysc: "Wezwanie czy wniosek przygotowujesz w chwili, gdy jest potrzebny.",
       },
       {

@@ -198,7 +198,7 @@ export function ModuleCards({ modules, cols = 3 }: { modules: InvestorModule[]; 
 
 /**
  * Skala A–E oceny inwestycyjnej (Analityk AI): pięć klas z progami i kolorami
- * z GRADE_BANDS — tymi samymi, których używa panel inwestora i raport PDF —
+ * z GRADE_BANDS (te same progi co ocena ryzyka w panelu inwestora) —
  * pod nimi składowe oceny z wagami i twarde ograniczenia klasy.
  */
 export function GradeScale({
@@ -245,15 +245,13 @@ export function GradeScale({
               >
                 {b.grade}
               </span>
-              <div>
-                <div style={{ fontSize: "0.98rem", fontWeight: 800 }}>
-                  <span className="sr-only">Klasa {b.grade}: </span>
-                  {b.label}
-                </div>
-                <div style={{ fontSize: "0.78rem", color: "var(--muted-foreground)" }}>
-                  {gradeRangeLabel(b)} pkt
-                </div>
-              </div>
+              <span style={{ fontSize: "0.8rem", color: "var(--muted-foreground)" }}>
+                {gradeRangeLabel(b)} pkt
+              </span>
+            </div>
+            <div style={{ fontSize: "0.98rem", fontWeight: 800, lineHeight: 1.25 }}>
+              <span className="sr-only">Klasa {b.grade}: </span>
+              {b.label}
             </div>
             <p
               style={{
@@ -351,8 +349,7 @@ export function GradeScale({
               color: "var(--muted-foreground)",
             }}
           >
-            Klasa jest neutralną klasyfikacją ryzyka, a nie rekomendacją inwestycyjną — widzisz ją w
-            panelu przy wycenie Projektu i w raporcie PDF.
+            Klasa jest neutralną klasyfikacją ryzyka, a nie rekomendacją inwestycyjną.
           </p>
         </div>
       </div>

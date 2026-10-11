@@ -52,7 +52,11 @@ describe("moduły Klubu Inwestorów — dane podstron", () => {
 /** Odnośniki z rozwijanego panelu "Inwestor" (desktop) w kolejności z DOM. */
 function dropdownHrefs(page: "inwestor" | "inwestorModul") {
   const { container, unmount } = render(<SiteHeader page={page} />);
-  const hrefs = Array.from(container.querySelectorAll(".fy-nav-drop-panel a")).map((a) =>
+  // Panel pod pozycją „Inwestor” (menu „Klient” ma własny panel z grupami).
+  const drop = Array.from(container.querySelectorAll(".fy-nav-drop")).find(
+    (d) => d.querySelector(":scope > a")?.textContent === "Inwestor",
+  );
+  const hrefs = Array.from(drop?.querySelectorAll(".fy-nav-drop-panel a") ?? []).map((a) =>
     a.getAttribute("href"),
   );
   unmount();

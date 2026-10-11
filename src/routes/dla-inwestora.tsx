@@ -225,7 +225,7 @@ const BENEFITS: FeatureItemData[] = [
   {
     icon: "knowledge",
     t: "Decyzja na podstawie faktów",
-    d: "Ocena ryzyka w skali A–E i wycena w 15 minut przy każdym Projekcie — ponad 400 punktów danych i raport do pobrania w PDF.",
+    d: "Wycena i ocena ryzyka przy każdym Projekcie — na ponad 400 punktach danych.",
   },
   {
     icon: "procedures",
@@ -255,7 +255,7 @@ const BENEFITS: FeatureItemData[] = [
   {
     icon: "aibrain",
     t: "Odzyskujesz należności krok po kroku",
-    d: "Wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia aż na biurko komornika, z pismami w Twoim imieniu.",
+    d: "Wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia aż na biurko komornika.",
   },
   {
     icon: "training",
@@ -485,7 +485,7 @@ const FAQ_ALL: FAQItem[] = [
   },
   {
     q: "Co jeśli klient nie płaci?",
-    a: "Windykator AI: wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia, przez wezwania i ugodę, aż na biurko komornika. Pisma wystawiamy w Twoim imieniu, a każdą decyzję podejmujesz Ty.",
+    a: "Windykator AI: wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia, przez wezwania i ugodę, aż na biurko komornika. Każdą decyzję podejmujesz Ty.",
   },
 ];
 
